@@ -16,6 +16,8 @@
 
 extern crate winapi;
 extern crate direct2d;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod menu;
 pub mod paint;
@@ -24,3 +26,5 @@ pub mod win_main;
 pub mod window;
 
 pub use util::Error;
+
+pub use util::init;

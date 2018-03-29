@@ -14,17 +14,42 @@
 
 //! Windows main loop.
 
+use std::cell::RefCell;
 use std::mem;
 use std::ptr::null_mut;
+use std::rc::Rc;
 use winapi::um::winbase::*;
+use winapi::um::winnt::*;
 use winapi::um::winuser::*;
 
+#[derive(Clone, Default)]
+pub struct RunLoopHandle(Rc<RefCell<RunLoopState>>);
+
+#[derive(Default)]
+struct RunLoopState {
+    listeners: Vec<Listener>,
+}
+
+struct Listener {
+    h: HANDLE,
+    callback: Box<FnMut()>,
+}
+
 pub struct RunLoop {
+    handle: RunLoopHandle,
 }
 
 impl RunLoop {
     pub fn new() -> RunLoop {
-        RunLoop {}
+        RunLoop {
+            handle: Default::default(),
+        }
+    }
+
+    /// Get a handle to the run loop state so a client can add listeners,
+    /// etc.
+    pub fn get_handle(&self) -> RunLoopHandle {
+        self.handle.clone()
     }
 
     pub fn run(&mut self) {
@@ -45,9 +70,13 @@ impl RunLoop {
 
             loop {
                 // let handles = [semaphore.get_handle()];
-                let handles = [];
-                let _res = MsgWaitForMultipleObjectsEx(
-                    handles.len() as u32,
+                let mut handles = Vec::new();
+                for listener in &self.handle.0.borrow().listeners {
+                    handles.push(listener.h);
+                }
+                let len = handles.len() as u32;
+                let res = MsgWaitForMultipleObjectsEx(
+                    len,
                     handles.as_ptr(),
                     INFINITE,
                     QS_ALLEVENTS,
@@ -70,6 +99,11 @@ impl RunLoop {
                     DispatchMessageW(&mut msg);
                 }
 
+                if res >= WAIT_OBJECT_0 && res < WAIT_OBJECT_0 + len {
+                    let ix = (res - WAIT_OBJECT_0) as usize;
+                    (&mut self.handle.0.borrow_mut().listeners[ix].callback)();
+                }
+
                 /*
                 // Handle xi events
                 loop {
@@ -88,8 +122,21 @@ impl RunLoop {
     }
 }
 
+/// Request to quit the application, exiting the runloop.
 pub fn request_quit() {
     unsafe {
         PostQuitMessage(0);
+    }
+}
+
+impl RunLoopHandle {
+    pub unsafe fn add_handler<F>(&self, h: HANDLE, callback: F)
+        where F: FnMut() + 'static
+    {
+        let listener = Listener {
+            h,
+            callback: Box::new(callback),
+        };
+        self.0.borrow_mut().listeners.push(listener);
     }
 }

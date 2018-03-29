@@ -104,7 +104,7 @@ pub struct OptionalFunctions {
 }
 
 #[allow(non_snake_case)] // For local variables
-pub fn load_optional_functions() -> OptionalFunctions { 
+fn load_optional_functions() -> OptionalFunctions { 
     // Tries to load $function from $lib. $function should be one of the types defined just before 
     // `load_optional_functions`. This sets the corresponding local field to `Some(function pointer)`
     // if it manages to load the function.
@@ -168,5 +168,19 @@ pub fn load_optional_functions() -> OptionalFunctions {
         GetDpiForSystem,
         GetDpiForMonitor,
         SetProcessDpiAwareness,
+    }
+}
+
+lazy_static! {
+    pub static ref OPTIONAL_FUNCTIONS: OptionalFunctions = load_optional_functions();
+}
+
+/// Initialize the app. At the moment, this is mostly needed for hi-dpi.
+pub fn init() {
+    if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
+        // This function is only supported on windows 10
+        unsafe {
+            func(PROCESS_SYSTEM_DPI_AWARE); // TODO: per monitor (much harder)
+        }
     }
 }

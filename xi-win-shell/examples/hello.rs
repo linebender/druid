@@ -55,25 +55,32 @@ impl WinHandler for HelloState {
         }
     }
 
-    fn close(&self) {
+    fn char(&self, ch: u32) {
+        println!("got char 0x{:x}", ch);
+    }
+
+    fn keydown(&self, vk_code: i32) {
+        println!("got key code 0x{:x}", vk_code);
+    }
+
+    fn destroy(&self) {
         win_main::request_quit();
     }
 }
 
 fn main() {
-    println!("hello windows");
-    let optional_functions = util::load_optional_functions();
+    xi_win_shell::init();
 
     let mut file_menu = Menu::new();
     file_menu.add_item(0x100, "E&xit");
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "&File");
 
-    let mut builder = WindowBuilder::new(); 
+    let mut builder = WindowBuilder::new();
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
-    let window = builder.build(&optional_functions).unwrap();
+    let window = builder.build().unwrap();
     window.show();
     let mut run_loop = win_main::RunLoop::new();
     run_loop.run();

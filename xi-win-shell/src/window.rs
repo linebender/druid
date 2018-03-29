@@ -18,7 +18,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::mem;
-use std::ptr::null_mut;
+use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 
 use winapi::ctypes::c_int;
@@ -36,7 +36,7 @@ use direct2d::render_target::RenderTarget;
 use Error;
 use menu::Menu;
 use paint::{self, PaintCtx};
-use util::{OptionalFunctions, ToWide};
+use util::{OPTIONAL_FUNCTIONS, ToWide};
 
 /// Builder abstraction for creating new windows.
 pub struct WindowBuilder {
@@ -71,11 +71,22 @@ pub trait WinHandler {
     /// Called when a menu item is selected.
     fn command(&self, id: u32) {}
 
-    /// Called when the window is closing. Note that this happens earlier
-    /// in the sequence than drop (at WM_DESTROY, while the latter is
+    /// Called on keyboard input of a single character. This corresponds
+    /// to the WM_CHAR message. Handling of text input will continue to
+    /// evolve, we need to handle input methods and more.
+    #[allow(unused_variables)]
+    fn char(&self, ch: u32) {}
+
+    /// Called on a key down event. This corresponds to the WM_KEYDOWN
+    /// message. The key code is as WM_KEYDOWN. We'll want to add stuff
+    /// like the modifier state.
+    #[allow(unused_variables)]
+    fn keydown(&self, vkey_code: i32) {}
+
+    /// Called when the window is being destroyed. Note that this happens
+    /// earlier in the sequence than drop (at WM_DESTROY, while the latter is
     /// WM_NCDESTROY).
-    // Maybe rename to destroy, or hook WM_CLOSE, so terminology is consistent?
-    fn close(&self) {}
+    fn destroy(&self) {}
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -134,8 +145,16 @@ impl WndProc for MyWndProc {
                 self.handler.command(wparam as u32);
                 Some(0)
             }
+            WM_CHAR => {
+                self.handler.char(wparam as u32);
+                Some(0)
+            }
+            WM_KEYDOWN => {
+                self.handler.keydown(wparam as i32);
+                Some(0)
+            }
             WM_DESTROY => {
-                self.handler.close();
+                self.handler.destroy();
                 None
             }
             _ => None
@@ -179,7 +198,7 @@ impl WindowBuilder {
         self.menu = Some(menu)
     }
 
-    pub fn build(self, optional_functions: &OptionalFunctions)
+    pub fn build(self)
         -> Result<WindowHandle, Error>
     {
         unsafe {
@@ -215,7 +234,7 @@ impl WindowBuilder {
             let handle = WindowHandle(Rc::downgrade(&win));
 
             // Simple scaling based on System Dpi (96 is equivalent to 100%)
-            let dpi = if let Some(func) = optional_functions.GetDpiForSystem {
+            let dpi = if let Some(func) = OPTIONAL_FUNCTIONS.GetDpiForSystem {
                 // Only supported on windows 10
                 func() as f32
             } else {
@@ -300,5 +319,20 @@ impl WindowHandle {
                 DestroyWindow(hwnd);
             }
         }
+    }
+
+    pub fn invalidate(&self) {
+        if let Some(w) = self.0.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                InvalidateRect(hwnd, null(), FALSE);
+            }
+        }
+    }
+
+    /// Get the raw HWND handle, for uses that are not wrapped in
+    /// xi_win_shell.
+    pub fn get_hwnd(&self) -> Option<HWND> {
+        self.0.upgrade().map(|w| w.hwnd.get())
     }
 }
