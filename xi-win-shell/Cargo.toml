@@ -1,0 +1,16 @@
+[package]
+name = "xi-win-shell"
+version = "0.1.0"
+license = "Apache-2.0"
+authors = ["Raph Levien <raph@google.com>"]
+description = "Windows-specific application shell used for xi editor."
+
+[dependencies]
+directwrite = "0.0.9"
+direct2d = "0.0.9"
+
+lazy_static = "1.0"
+
+[dependencies.winapi]
+version = "0.3"
+features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser", "shellscalingapi", "shobjidl", "combaseapi", "synchapi"]
