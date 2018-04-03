@@ -22,11 +22,19 @@ use std::mem;
 use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 
-use winapi::ctypes::c_int;
+use winapi::ctypes::{c_int, c_void};
 use winapi::shared::basetsd::*;
+use winapi::shared::dxgi::*;
+use winapi::shared::dxgi1_2::*;
+use winapi::shared::dxgi1_3::*;
+use winapi::shared::dxgitype::*;
+use winapi::shared::dxgiformat::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
-use winapi::um::d2d1::*;
+use winapi::shared::winerror::*;
+use winapi::um::d3d11::*;
+use winapi::um::d3dcommon::*;
+use winapi::um::unknwnbase::*;
 use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
@@ -163,7 +171,7 @@ pub enum MouseType {
 
 /// Generic handler trait for the winapi window procedure entry point.
 trait WndProc {
-    fn connect(&self, handle: &WindowHandle);
+    fn connect(&self, handle: &WindowHandle, *mut IDXGISwapChain1);
 
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
         -> Option<LRESULT>;
@@ -176,6 +184,7 @@ struct MyWndProc {
     handle: RefCell<WindowHandle>,
     runloop: RunLoopHandle,
     d2d_factory: direct2d::Factory,
+    swap_chain: Cell<*mut IDXGISwapChain1>,
     render_target: RefCell<Option<RenderTarget>>,
 }
 
@@ -189,10 +198,20 @@ fn get_mod_state(lparam: LPARAM) -> u32 {
     }
 }
 
+impl MyWndProc {
+    fn rebuild_render_target(&self) {
+        unsafe {
+            *self.render_target.borrow_mut() =
+                paint::create_render_target_dxgi(&self.d2d_factory, self.swap_chain.get()).ok();
+        }
+    }
+}
+
 impl WndProc for MyWndProc {
-    fn connect(&self, handle: &WindowHandle) {
+    fn connect(&self, handle: &WindowHandle, swap_chain: *mut IDXGISwapChain1) {
         *self.handle.borrow_mut() = handle.clone();
         self.handler.connect(handle);
+        self.swap_chain.set(swap_chain);
     }
 
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
@@ -219,6 +238,7 @@ impl WndProc for MyWndProc {
                 if let Err(e) = res {
                     println!("EndDraw error: {:?}", e);
                 }
+                (*self.swap_chain.get()).Present(1, 0);
                 ValidateRect(hwnd, null_mut());
                 if anim {
                     let handle = self.handle.borrow().clone();
@@ -229,13 +249,16 @@ impl WndProc for MyWndProc {
             WM_SIZE => unsafe {
                 let width = LOWORD(lparam as u32) as u32;
                 let height = HIWORD(lparam as u32) as u32;
-                if let Some(ref mut rt) = self.render_target.borrow_mut().as_mut() {
-                    if let Some(hrt) = rt.hwnd_rt() {
-                        let width = LOWORD(lparam as u32) as u32;
-                        let height = HIWORD(lparam as u32) as u32;
-                        hrt.Resize(&D2D1_SIZE_U { width, height });
-                        InvalidateRect(hwnd, null_mut(), FALSE);
-                    }
+                *self.render_target.borrow_mut() = None;
+                let res = (*self.swap_chain.get()).ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+                if SUCCEEDED(res) {
+                    self.rebuild_render_target();
+                    //state.render(true);
+                    //(*state.swap_chain).Present(0, 0);
+                    InvalidateRect(hwnd, null_mut(), FALSE);
+                    //ValidateRect(hwnd, null_mut());
+                } else {
+                    println!("ResizeBuffers failed: 0x{:x}", res);
                 }
                 self.handler.size(width, height);
                 Some(0)
@@ -393,6 +416,7 @@ impl WindowBuilder {
                 handle: Default::default(),
                 runloop: self.runloop,
                 d2d_factory: direct2d::Factory::new().unwrap(),
+                swap_chain: Cell::new(null_mut()),
                 render_target: RefCell::new(None),
             };
 
@@ -421,15 +445,44 @@ impl WindowBuilder {
                 Some(menu) => menu.into_hmenu(),
                 None => 0 as HMENU,
             };
-            let hwnd = create_window(0, class_name.as_ptr(),
+            let dwExStyle = WS_EX_NOREDIRECTIONBITMAP;
+            let hwnd = create_window(dwExStyle, class_name.as_ptr(),
                 self.title.to_wide().as_ptr(), self.dwStyle,
                 CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0 as HWND, hmenu, 0 as HINSTANCE,
                 win.clone());
             if hwnd.is_null() {
                 return Err(Error::Null);
             }
+
+            let mut d3d11_device: *mut ID3D11Device = null_mut();
+            let flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;  // could probably set single threaded
+            D3D11CreateDevice(null_mut(), D3D_DRIVER_TYPE_HARDWARE, null_mut(), flags,
+                null(), 0, D3D11_SDK_VERSION, &mut d3d11_device, null_mut(), null_mut());
+            println!("d3d11 device pointer = {:?}", d3d11_device);
+            let mut factory: *mut IDXGIFactory2 = null_mut();
+            let hres = CreateDXGIFactory2(0, &IID_IDXGIFactory2,
+                &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void);
+            println!("dxgi factory pointer = {:?}", factory);
+            let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
+            let desc = DXGI_SWAP_CHAIN_DESC1 {
+                Width: 0,
+                Height: 0,
+                Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                Stereo: FALSE,
+                SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0},
+                BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
+                BufferCount: 2,
+                Scaling: DXGI_SCALING_NONE,
+                SwapEffect: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
+                AlphaMode: DXGI_ALPHA_MODE_UNSPECIFIED,
+                Flags: 0,
+            };
+            let res = (*factory).CreateSwapChainForHwnd(d3d11_device as *mut IUnknown, hwnd, &desc,
+                null(), null_mut(), &mut swap_chain);
+            println!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
+
             win.hwnd.set(hwnd);
-            win.wndproc.connect(&handle);
+            win.wndproc.connect(&handle, swap_chain);
             mem::drop(win);
             Ok(handle)
         }
