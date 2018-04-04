@@ -14,4 +14,4 @@ time = "0.1.39"
 
 [dependencies.winapi]
 version = "0.3"
-features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser", "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "d3d11"]
+features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser", "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "d3d11", "dwmapi"]
