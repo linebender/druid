@@ -113,7 +113,7 @@ impl WndProc for MyWndProc {
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
         -> Option<LRESULT>
     {
-        println!("wndproc msg: {}", msg);
+        //println!("wndproc msg: {}", msg);
         match msg {
             WM_PAINT => unsafe {
                 if self.render_target.borrow_mut().is_none() {
