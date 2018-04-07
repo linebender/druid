@@ -16,6 +16,7 @@
 
 #![allow(non_snake_case)]
 
+use std::borrow::Borrow;
 use std::cell::{Cell, RefCell};
 use std::mem;
 use std::ptr::{null, null_mut};
@@ -37,10 +38,12 @@ use Error;
 use menu::Menu;
 use paint::{self, PaintCtx};
 use util::{OPTIONAL_FUNCTIONS, ToWide};
+use win_main::RunLoopHandle;
 
 /// Builder abstraction for creating new windows.
 pub struct WindowBuilder {
-    handler: Option<MyWndProc>,
+    handler: Option<Box<WinHandler>>,
+    runloop: RunLoopHandle,
     dwStyle: DWORD,
     title: String,
     menu: Option<Menu>,
@@ -64,8 +67,10 @@ pub trait WinHandler {
     /// invalidate or make other requests.
     fn connect(&self, handle: &WindowHandle);
 
-    /// Request the handler to paint the window contents.
-    fn paint(&self, ctx: &mut PaintCtx);
+    /// Request the handler to paint the window contents. Return value
+    /// indicates whether window is animating, i.e. whether another paint
+    /// should be scheduled for the next animation frame.
+    fn paint(&self, ctx: &mut PaintCtx) -> bool;
 
     #[allow(unused_variables)]
     /// Called when a menu item is selected.
@@ -101,12 +106,15 @@ trait WndProc {
 // implements policies such as the use of Direct2D for painting.
 struct MyWndProc {
     handler: Box<WinHandler>,
+    handle: RefCell<WindowHandle>,
+    runloop: RunLoopHandle,
     d2d_factory: direct2d::Factory,
     render_target: RefCell<Option<RenderTarget>>,
 }
 
 impl WndProc for MyWndProc {
     fn connect(&self, handle: &WindowHandle) {
+        *self.handle.borrow_mut() = handle.clone();
         self.handler.connect(handle);
     }
 
@@ -123,12 +131,16 @@ impl WndProc for MyWndProc {
                 let mut tmp = self.render_target.borrow_mut();
                 let rt = tmp.as_mut().unwrap();
                 rt.begin_draw();
-                self.handler.paint(&mut PaintCtx {
+                let anim = self.handler.paint(&mut PaintCtx {
                     d2d_factory: &self.d2d_factory,
                     render_target: rt,
                 });
                 let _ = rt.end_draw();
                 ValidateRect(hwnd, null_mut());
+                if anim {
+                    let handle = self.handle.borrow().clone();
+                    self.runloop.borrow().add_idle(move || handle.invalidate());
+                }
                 Some(0)
             },
             WM_SIZE => unsafe {
@@ -137,6 +149,7 @@ impl WndProc for MyWndProc {
                         let width = LOWORD(lparam as u32) as u32;
                         let height = HIWORD(lparam as u32) as u32;
                         hrt.Resize(&D2D1_SIZE_U { width, height });
+                        InvalidateRect(hwnd, null_mut(), FALSE);
                     }
                 }
                 Some(0)
@@ -163,9 +176,10 @@ impl WndProc for MyWndProc {
 }
 
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
+    pub fn new(runloop: RunLoopHandle) -> WindowBuilder {
         WindowBuilder {
             handler: None,
+            runloop,
             dwStyle: WS_OVERLAPPEDWINDOW,
             title: String::new(),
             menu: None,
@@ -173,11 +187,7 @@ impl WindowBuilder {
     }
 
     pub fn set_handler(&mut self, handler: Box<WinHandler>) {
-        self.handler = Some(MyWndProc {
-            handler,
-            d2d_factory: direct2d::Factory::new().unwrap(),
-            render_target: RefCell::new(None),
-        });
+        self.handler = Some(handler);
     }
 
     pub fn set_scroll(&mut self, hscroll: bool, vscroll: bool) {
@@ -226,9 +236,17 @@ impl WindowBuilder {
             if class_atom == 0 {
                 return Err(Error::Null);
             }
+            let wndproc = MyWndProc {
+                handler: self.handler.unwrap(),
+                handle: Default::default(),
+                runloop: self.runloop,
+                d2d_factory: direct2d::Factory::new().unwrap(),
+                render_target: RefCell::new(None),
+            };
+
             let window = WindowState {
                 hwnd: Cell::new(0 as HWND),
-                wndproc: Box::new(self.handler.unwrap()),
+                wndproc: Box::new(wndproc),
             };
             let win = Rc::new(window);
             let handle = WindowHandle(Rc::downgrade(&win));

@@ -21,7 +21,6 @@ use direct2d::math::*;
 
 use xi_win_shell::menu::Menu;
 use xi_win_shell::paint::PaintCtx;
-use xi_win_shell::util;
 use xi_win_shell::win_main;
 use xi_win_shell::window::{WindowBuilder, WindowHandle, WinHandler};
 
@@ -35,7 +34,7 @@ impl WinHandler for HelloState {
         *self.handle.borrow_mut() = handle.clone();
     }
 
-    fn paint(&self, paint_ctx: &mut PaintCtx) {
+    fn paint(&self, paint_ctx: &mut PaintCtx) -> bool {
         let rt = paint_ctx.render_target();
         let size = rt.get_size();
         let rect = RectF::from((0.0, 0.0, size.width, size.height));
@@ -46,6 +45,7 @@ impl WinHandler for HelloState {
             &BrushProperties::default()).unwrap();
         rt.draw_line(&Point2F::from((10.0, 50.0)), &Point2F::from((90.0, 90.0)),
                 &fg, 1.0, None);
+        false
     }
 
     fn command(&self, id: u32) {
@@ -76,12 +76,12 @@ fn main() {
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "&File");
 
-    let mut builder = WindowBuilder::new();
+    let mut run_loop = win_main::RunLoop::new();
+    let mut builder = WindowBuilder::new(run_loop.get_handle());
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
     let window = builder.build().unwrap();
     window.show();
-    let mut run_loop = win_main::RunLoop::new();
     run_loop.run();
 }
