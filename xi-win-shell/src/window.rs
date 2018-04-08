@@ -60,6 +60,30 @@ pub struct WindowBuilder {
     dwStyle: DWORD,
     title: String,
     menu: Option<Menu>,
+    present_strategy: PresentStrategy,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+/// It's very tricky to get smooth dynamics (especially resizing) and
+/// good performance on Windows. This setting lets clients experiment
+/// with different strategies.
+pub enum PresentStrategy {
+    /// Corresponds to the swap effect DXGI_SWAP_EFFECT_SEQUENTIAL. In
+    /// testing, it causes diagonal banding artifacts with Nvidia
+    /// adapters, and incremental present doesn't work. However, it
+    /// is compatible with GDI (such as menus).
+    Sequential,
+
+    /// Corresponds to the swap effect DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL.
+    /// In testing, it seems to perform well (including allowing smooth
+    /// resizing when the frame can be rendered quickly), but isn't
+    /// compatible with GDI.
+    Flip,
+
+    /// Corresponds to the swap effect DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL
+    /// but with a redirection surface for GDI compatibility. Resize is
+    /// very laggy and artifacty.
+    FlipRedirect,
 }
 
 #[derive(Clone, Default)]
@@ -190,6 +214,15 @@ struct MyWndProc {
     d2d_factory: direct2d::Factory,
     swap_chain: Cell<*mut IDXGISwapChain1>,
     render_target: RefCell<Option<RenderTarget>>,
+    present_strategy: PresentStrategy,
+}
+
+impl Default for PresentStrategy {
+    fn default() -> PresentStrategy {
+        // We probably want to change this, but we need GDI to work. Too bad about
+        // the artifacty resizing.
+        PresentStrategy::FlipRedirect
+    }
 }
 
 fn get_mod_state(lparam: LPARAM) -> u32 {
@@ -263,10 +296,14 @@ impl WndProc for MyWndProc {
                 let res = (*self.swap_chain.get()).ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
                 if SUCCEEDED(res) {
                     self.rebuild_render_target();
-                    self.render();
-                    (*self.swap_chain.get()).Present(0, 0);
-                    DwmFlush();
-                    ValidateRect(hwnd, null_mut());
+                    if self.present_strategy == PresentStrategy::Flip {
+                        self.render();
+                        (*self.swap_chain.get()).Present(0, 0);
+                        DwmFlush();
+                        ValidateRect(hwnd, null_mut());
+                    } else {
+                        InvalidateRect(hwnd, null_mut(), FALSE);
+                    }
                 } else {
                     println!("ResizeBuffers failed: 0x{:x}", res);
                 }
@@ -368,6 +405,7 @@ impl WindowBuilder {
             dwStyle: WS_OVERLAPPEDWINDOW,
             title: String::new(),
             menu: None,
+            present_strategy: Default::default(),
         }
     }
 
@@ -390,7 +428,11 @@ impl WindowBuilder {
     }
 
     pub fn set_menu(&mut self, menu: Menu) {
-        self.menu = Some(menu)
+        self.menu = Some(menu);
+    }
+
+    pub fn set_present_strategy(&mut self, present_strategy: PresentStrategy) {
+        self.present_strategy = present_strategy;
     }
 
     pub fn build(self)
@@ -428,6 +470,7 @@ impl WindowBuilder {
                 d2d_factory: direct2d::Factory::new().unwrap(),
                 swap_chain: Cell::new(null_mut()),
                 render_target: RefCell::new(None),
+                present_strategy: self.present_strategy,
             };
 
             let window = WindowState {
@@ -455,7 +498,10 @@ impl WindowBuilder {
                 Some(menu) => menu.into_hmenu(),
                 None => 0 as HMENU,
             };
-            let dwExStyle = WS_EX_NOREDIRECTIONBITMAP;
+            let mut dwExStyle = 0;
+            if self.present_strategy == PresentStrategy::Flip {
+                dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
+            }
             let hwnd = create_window(dwExStyle, class_name.as_ptr(),
                 self.title.to_wide().as_ptr(), self.dwStyle,
                 CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0 as HWND, hmenu, 0 as HINSTANCE,
@@ -476,6 +522,12 @@ impl WindowBuilder {
                 null(), 0, D3D11_SDK_VERSION, &mut d3d11_device, null_mut(), null_mut());
             println!("d3d11 device pointer = {:?}", d3d11_device);
             let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
+            let (swap_effect, scaling, bufs) = match self.present_strategy {
+                PresentStrategy::Sequential =>
+                    (DXGI_SWAP_EFFECT_SEQUENTIAL, DXGI_SCALING_STRETCH, 1),
+                PresentStrategy::Flip | PresentStrategy::FlipRedirect =>
+                    (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, DXGI_SCALING_NONE, 2),
+            };
             let desc = DXGI_SWAP_CHAIN_DESC1 {
                 Width: 0,
                 Height: 0,
@@ -483,9 +535,9 @@ impl WindowBuilder {
                 Stereo: FALSE,
                 SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0},
                 BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
-                BufferCount: 2,
-                Scaling: DXGI_SCALING_NONE,
-                SwapEffect: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
+                BufferCount: bufs,
+                Scaling: scaling,
+                SwapEffect: swap_effect,
                 AlphaMode: DXGI_ALPHA_MODE_UNSPECIFIED,
                 Flags: 0,
             };

@@ -27,7 +27,7 @@ use directwrite::text_format;
 use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::util::default_text_options;
 use xi_win_shell::win_main;
-use xi_win_shell::window::{WindowBuilder, WindowHandle, WinHandler};
+use xi_win_shell::window::{PresentStrategy, WindowBuilder, WindowHandle, WinHandler};
 
 struct PerfTest(RefCell<PerfState>);
 
@@ -133,6 +133,8 @@ fn main() {
     };
     builder.set_handler(Box::new(PerfTest(RefCell::new(perf_state))));
     builder.set_title("Performance tester");
+    // Note: experiment with changing this
+    builder.set_present_strategy(PresentStrategy::Flip);
     let window = builder.build().unwrap();
     window.show();
     run_loop.run();
