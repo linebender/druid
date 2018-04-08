@@ -45,7 +45,7 @@ use direct2d::render_target::RenderTarget;
 use Error;
 use menu::Menu;
 use paint::{self, PaintCtx};
-use util::{OPTIONAL_FUNCTIONS, ToWide};
+use util::{OPTIONAL_FUNCTIONS, FromWide, ToWide};
 use win_main::RunLoopHandle;
 use win_main::XI_RUN_IDLE;
 
@@ -464,15 +464,17 @@ impl WindowBuilder {
                 return Err(Error::Null);
             }
 
-            let mut d3d11_device: *mut ID3D11Device = null_mut();
-            let flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;  // could probably set single threaded
-            D3D11CreateDevice(null_mut(), D3D_DRIVER_TYPE_HARDWARE, null_mut(), flags,
-                null(), 0, D3D11_SDK_VERSION, &mut d3d11_device, null_mut(), null_mut());
-            println!("d3d11 device pointer = {:?}", d3d11_device);
             let mut factory: *mut IDXGIFactory2 = null_mut();
             let hres = CreateDXGIFactory2(0, &IID_IDXGIFactory2,
                 &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void);
             println!("dxgi factory pointer = {:?}", factory);
+            let adapter = choose_adapter(factory);
+            println!("adapter = {:?}", adapter);
+            let mut d3d11_device: *mut ID3D11Device = null_mut();
+            let flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;  // could probably set single threaded
+            D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, null_mut(), flags,
+                null(), 0, D3D11_SDK_VERSION, &mut d3d11_device, null_mut(), null_mut());
+            println!("d3d11 device pointer = {:?}", d3d11_device);
             let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
             let desc = DXGI_SWAP_CHAIN_DESC1 {
                 Width: 0,
@@ -498,6 +500,36 @@ impl WindowBuilder {
         }
     }
 }
+
+/// Choose an adapter. Here the heuristic is to choose the adapter with the
+/// largest video memory, which will generally be the discrete adapter. It's
+/// possible that on some systems the integrated adapter might be a better
+/// choice, but that probably depends on usage.
+unsafe fn choose_adapter(factory: *mut IDXGIFactory2) -> *mut IDXGIAdapter {
+    let mut i = 0;
+    let mut best_adapter = null_mut();
+    let mut best_vram = 0;
+    loop {
+        let mut adapter: *mut IDXGIAdapter = null_mut();
+        if !SUCCEEDED((*factory).EnumAdapters(i, &mut adapter)) {
+            break;
+        }
+        let mut desc: DXGI_ADAPTER_DESC = mem::uninitialized();
+        (*adapter).GetDesc(&mut desc);
+        let vram = desc.DedicatedVideoMemory;
+        if i == 0 || vram > best_vram {
+            best_vram = vram;
+            best_adapter = adapter;
+        }
+        println!("{:?}: desc = {:?}, vram = {}",
+            adapter,
+            (&mut desc.Description[0] as LPWSTR).from_wide(),
+            desc.DedicatedVideoMemory);
+        i += 1;
+    }
+    best_adapter
+}
+
 
 unsafe extern "system" fn win_proc_dispatch(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
     -> LRESULT
