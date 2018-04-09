@@ -18,6 +18,7 @@ use std::cell::RefCell;
 use std::mem;
 use std::ptr::null_mut;
 use std::rc::Rc;
+use winapi::shared::winerror::*;
 use winapi::um::winbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
@@ -28,6 +29,7 @@ pub struct RunLoopHandle(Rc<RefCell<RunLoopState>>);
 #[derive(Default)]
 struct RunLoopState {
     listeners: Vec<Listener>,
+    idle: Vec<Box<IdleCallback>>,
 }
 
 struct Listener {
@@ -37,6 +39,16 @@ struct Listener {
 
 pub struct RunLoop {
     handle: RunLoopHandle,
+}
+
+pub trait IdleCallback {
+    fn call(self: Box<Self>);
+}
+
+impl<F: FnOnce()> IdleCallback for F {
+    fn call(self: Box<F>) {
+        (*self)()
+    }
 }
 
 impl RunLoop {
@@ -53,32 +65,19 @@ impl RunLoop {
     }
 
     pub fn run(&mut self) {
-    // let optional_functions = util::load_optional_functions();
 
         unsafe {
-            /*
-            if let Some(func) = optional_functions.SetProcessDpiAwareness {
-                // This function is only supported on windows 10
-                func(PROCESS_SYSTEM_DPI_AWARE); // TODO: per monitor (much harder)
-            }
-
-            let (xi_peer, rx, semaphore) = start_xi_thread();
-            let (hwnd, main_win) = create_main(&optional_functions, xi_peer).unwrap();
-            ShowWindow(hwnd, SW_SHOWNORMAL);
-            UpdateWindow(hwnd);
-            */
-
             loop {
-                // let handles = [semaphore.get_handle()];
                 let mut handles = Vec::new();
                 for listener in &self.handle.0.borrow().listeners {
                     handles.push(listener.h);
                 }
                 let len = handles.len() as u32;
+                let has_idle = !self.handle.0.borrow().idle.is_empty();
                 let res = MsgWaitForMultipleObjectsEx(
                     len,
                     handles.as_ptr(),
-                    INFINITE,
+                    if has_idle { 0 } else { INFINITE },
                     QS_ALLEVENTS,
                     0
                 );
@@ -102,21 +101,12 @@ impl RunLoop {
                 if res >= WAIT_OBJECT_0 && res < WAIT_OBJECT_0 + len {
                     let ix = (res - WAIT_OBJECT_0) as usize;
                     (&mut self.handle.0.borrow_mut().listeners[ix].callback)();
-                }
-
-                /*
-                // Handle xi events
-                loop {
-                    match rx.try_recv() {
-                        Ok(v) => main_win.handle_cmd(&v),
-                        Err(TryRecvError::Disconnected) => {
-                            println!("core disconnected");
-                            break;
-                        }
-                        Err(TryRecvError::Empty) => break,
+                } else if res == WAIT_TIMEOUT {
+                    let idles = mem::replace(&mut self.handle.0.borrow_mut().idle, Vec::new());
+                    for callback in idles {
+                        callback.call();
                     }
                 }
-                */
             }
         }
     }
@@ -130,6 +120,8 @@ pub fn request_quit() {
 }
 
 impl RunLoopHandle {
+    /// Add a listener for a Windows handle. Considered unsafe because the
+    /// handle must be valid.
     pub unsafe fn add_handler<F>(&self, h: HANDLE, callback: F)
         where F: FnMut() + 'static
     {
@@ -138,5 +130,11 @@ impl RunLoopHandle {
             callback: Box::new(callback),
         };
         self.0.borrow_mut().listeners.push(listener);
+    }
+
+    /// Add an idle handler, which is called (once) when the message loop
+    /// is empty.
+    pub fn add_idle<F>(&self, callback: F) where F: FnOnce() + 'static {
+        self.0.borrow_mut().idle.push(Box::new(callback));
     }
 }
