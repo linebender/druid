@@ -32,6 +32,7 @@ use winapi::shared::dxgiformat::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
+use winapi::um::d2d1::*;
 use winapi::um::d3d11::*;
 use winapi::um::d3dcommon::*;
 use winapi::um::unknwnbase::*;
@@ -43,6 +44,7 @@ use direct2d;
 use direct2d::render_target::RenderTarget;
 
 use Error;
+use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use menu::Menu;
 use paint::{self, PaintCtx};
 use util::{OPTIONAL_FUNCTIONS, FromWide, ToWide};
@@ -115,6 +117,9 @@ pub trait WinHandler {
     /// indicates whether window is animating, i.e. whether another paint
     /// should be scheduled for the next animation frame.
     fn paint(&self, ctx: &mut PaintCtx) -> bool;
+
+    /// Called when the resources need to be rebuilt.
+    fn rebuild_resources(&self) {}
 
     #[allow(unused_variables)]
     /// Called when a menu item is selected.
@@ -199,7 +204,7 @@ pub enum MouseType {
 
 /// Generic handler trait for the winapi window procedure entry point.
 trait WndProc {
-    fn connect(&self, handle: &WindowHandle, *mut IDXGISwapChain1);
+    fn connect(&self, handle: &WindowHandle, state: WndState);
 
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
         -> Option<LRESULT>;
@@ -212,9 +217,17 @@ struct MyWndProc {
     handle: RefCell<WindowHandle>,
     runloop: RunLoopHandle,
     d2d_factory: direct2d::Factory,
-    swap_chain: Cell<*mut IDXGISwapChain1>,
-    render_target: RefCell<Option<RenderTarget>>,
-    present_strategy: PresentStrategy,
+    state: RefCell<Option<WndState>>,
+}
+
+struct WndState {
+    swap_chain: *mut IDXGISwapChain1,
+    render_target: Option<RenderTarget>,
+    dcomp_device: DCompositionDevice,
+    dcomp_target: DCompositionTarget,
+    swapchain_visual: DCompositionVisual,
+    dpi: f32,
+    sizing: bool,
 }
 
 impl Default for PresentStrategy {
@@ -238,15 +251,18 @@ fn get_mod_state(lparam: LPARAM) -> u32 {
 impl MyWndProc {
     fn rebuild_render_target(&self) {
         unsafe {
-            *self.render_target.borrow_mut() =
-                paint::create_render_target_dxgi(&self.d2d_factory, self.swap_chain.get()).ok();
+            let mut state = self.state.borrow_mut();
+            let s = state.as_mut().unwrap();
+            let rt = paint::create_render_target_dxgi(&self.d2d_factory, s.swap_chain, s.dpi).ok();
+            s.render_target = rt;
         }
     }
 
     // Renders but does not present.
     fn render(&self) {
-        let mut tmp = self.render_target.borrow_mut();
-        let rt = tmp.as_mut().unwrap();
+        let mut state = self.state.borrow_mut();
+        let s = state.as_mut().unwrap();
+        let rt = s.render_target.as_mut().unwrap();
         rt.begin_draw();
         let anim = self.handler.paint(&mut PaintCtx {
             d2d_factory: &self.d2d_factory,
@@ -265,10 +281,10 @@ impl MyWndProc {
 }
 
 impl WndProc for MyWndProc {
-    fn connect(&self, handle: &WindowHandle, swap_chain: *mut IDXGISwapChain1) {
+    fn connect(&self, handle: &WindowHandle, state: WndState) {
         *self.handle.borrow_mut() = handle.clone();
         self.handler.connect(handle);
-        self.swap_chain.set(swap_chain);
+        *self.state.borrow_mut() = Some(state);
     }
 
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
@@ -280,32 +296,89 @@ impl WndProc for MyWndProc {
                 Some(0)
             }
             WM_PAINT => unsafe {
-                if self.render_target.borrow_mut().is_none() {
+                if self.state.borrow().as_ref().unwrap().render_target.is_none() {
                     let rt = paint::create_render_target(&self.d2d_factory, hwnd);
-                    *self.render_target.borrow_mut() = rt.ok();
+                    self.state.borrow_mut().as_mut().unwrap().render_target = rt.ok();
                 }
                 self.render();
-                (*self.swap_chain.get()).Present(1, 0);
+                let mut state = self.state.borrow_mut();
+                let s = state.as_mut().unwrap();
+                (*s.swap_chain).Present(1, 0);
+                s.dcomp_device.commit();
                 ValidateRect(hwnd, null_mut());
                 Some(0)
             },
+            WM_ENTERSIZEMOVE => unsafe {
+                let rt = paint::create_render_target(&self.d2d_factory, hwnd);
+                self.state.borrow_mut().as_mut().unwrap().render_target = rt.ok();
+                self.handler.rebuild_resources();
+                self.render();
+
+                let mut state = self.state.borrow_mut();
+                let s = state.as_mut().unwrap();
+                s.dcomp_target.clear_root();
+                s.dcomp_device.commit();
+                s.sizing = true;
+                None
+            }
+            WM_EXITSIZEMOVE => unsafe {
+                let mut rect: RECT = mem::uninitialized();
+                GetClientRect(hwnd, &mut rect);
+                let width = (rect.right - rect.left) as u32;
+                let height = (rect.bottom - rect.top) as u32;
+                let res = (*self.state.borrow_mut().as_mut().unwrap().swap_chain)
+                    .ResizeBuffers(2, width, height, DXGI_FORMAT_UNKNOWN, 0);
+                if SUCCEEDED(res) {
+                    self.handler.rebuild_resources();
+                    self.rebuild_render_target();
+                    self.render();
+                    let mut state = self.state.borrow_mut();
+                    let mut s = state.as_mut().unwrap();
+                    (*s.swap_chain).Present(0, 0);
+                } else {
+                    println!("ResizeBuffers failed: 0x{:x}", res);
+                }
+
+                // Flush to present flicker artifact (old swapchain composited)
+                // It might actually be better to create a new swapchain here.
+                DwmFlush();
+
+                let mut state = self.state.borrow_mut();
+                let mut s = state.as_mut().unwrap();
+                s.dcomp_target.set_root(&mut s.swapchain_visual);
+                s.dcomp_device.commit();
+                s.sizing = false;
+                None
+            }
             WM_SIZE => unsafe {
                 let width = LOWORD(lparam as u32) as u32;
                 let height = HIWORD(lparam as u32) as u32;
-                *self.render_target.borrow_mut() = None;
-                let res = (*self.swap_chain.get()).ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
-                if SUCCEEDED(res) {
-                    self.rebuild_render_target();
-                    if self.present_strategy == PresentStrategy::Flip {
+                if self.state.borrow_mut().as_ref().unwrap().sizing {
+                    let mut state = self.state.borrow_mut();
+                    let mut s = state.as_mut().unwrap();
+                    if let Some(ref mut rt) = s.render_target {
+                        if let Some(hrt) = rt.hwnd_rt() {
+                            let width = LOWORD(lparam as u32) as u32;
+                            let height = HIWORD(lparam as u32) as u32;
+                            hrt.Resize(&D2D1_SIZE_U { width, height });
+                        }
+                    }
+                    InvalidateRect(hwnd, null_mut(), FALSE);
+                } else {
+                    self.state.borrow_mut().as_mut().unwrap().render_target = None;
+                    let res = (*self.state.borrow_mut().as_mut().unwrap().swap_chain)
+                        .ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+                    if SUCCEEDED(res) {
+                        self.rebuild_render_target();
                         self.render();
-                        (*self.swap_chain.get()).Present(0, 0);
-                        DwmFlush();
+                        let mut state = self.state.borrow_mut();
+                        let mut s = state.as_mut().unwrap();
+                        (*s.swap_chain).Present(0, 0);
+                        s.dcomp_device.commit();
                         ValidateRect(hwnd, null_mut());
                     } else {
-                        InvalidateRect(hwnd, null_mut(), FALSE);
+                        println!("ResizeBuffers failed: 0x{:x}", res);
                     }
-                } else {
-                    println!("ResizeBuffers failed: 0x{:x}", res);
                 }
                 self.handler.size(width, height);
                 Some(0)
@@ -463,14 +536,13 @@ impl WindowBuilder {
             if class_atom == 0 {
                 return Err(Error::Null);
             }
+
             let wndproc = MyWndProc {
                 handler: self.handler.unwrap(),
                 handle: Default::default(),
                 runloop: self.runloop,
                 d2d_factory: direct2d::Factory::new().unwrap(),
-                swap_chain: Cell::new(null_mut()),
-                render_target: RefCell::new(None),
-                present_strategy: self.present_strategy,
+                state: RefCell::new(None),
             };
 
             let window = WindowState {
@@ -510,17 +582,17 @@ impl WindowBuilder {
                 return Err(Error::Null);
             }
 
+            let mut d3d11_device = D3D11Device::new_simple()?;
+            let mut d2d1_device = d3d11_device.create_d2d1_device()?;
+            let mut dcomp_device = d2d1_device.create_composition_device()?;
+            let mut dcomp_target = dcomp_device.create_target_for_hwnd(hwnd, true)?;
+
             let mut factory: *mut IDXGIFactory2 = null_mut();
             let hres = CreateDXGIFactory2(0, &IID_IDXGIFactory2,
                 &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void);
             println!("dxgi factory pointer = {:?}", factory);
             let adapter = choose_adapter(factory);
             println!("adapter = {:?}", adapter);
-            let mut d3d11_device: *mut ID3D11Device = null_mut();
-            let flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;  // could probably set single threaded
-            D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, null_mut(), flags,
-                null(), 0, D3D11_SDK_VERSION, &mut d3d11_device, null_mut(), null_mut());
-            println!("d3d11 device pointer = {:?}", d3d11_device);
             let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
             let (swap_effect, scaling, bufs) = match self.present_strategy {
                 PresentStrategy::Sequential =>
@@ -529,24 +601,34 @@ impl WindowBuilder {
                     (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, DXGI_SCALING_NONE, 2),
             };
             let desc = DXGI_SWAP_CHAIN_DESC1 {
-                Width: 0,
-                Height: 0,
+                Width: 1024,
+                Height: 768,
                 Format: DXGI_FORMAT_B8G8R8A8_UNORM,
                 Stereo: FALSE,
                 SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0},
                 BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
                 BufferCount: bufs,
-                Scaling: scaling,
+                Scaling: DXGI_SCALING_STRETCH,
                 SwapEffect: swap_effect,
-                AlphaMode: DXGI_ALPHA_MODE_UNSPECIFIED,
+                AlphaMode: DXGI_ALPHA_MODE_IGNORE,
                 Flags: 0,
             };
-            let res = (*factory).CreateSwapChainForHwnd(d3d11_device as *mut IUnknown, hwnd, &desc,
-                null(), null_mut(), &mut swap_chain);
+            let res = (*factory).CreateSwapChainForComposition(d3d11_device.raw_ptr() as *mut IUnknown,
+                &desc, null_mut(), &mut swap_chain);
             println!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
 
+            let mut swapchain_visual = dcomp_device.create_visual()?;
+            swapchain_visual.set_content_raw(swap_chain as *mut IUnknown)?;
+            dcomp_target.set_root(&mut swapchain_visual)?;
+
             win.hwnd.set(hwnd);
-            win.wndproc.connect(&handle, swap_chain);
+            let state = WndState {
+                render_target: None,
+                swap_chain, dcomp_device, dcomp_target, swapchain_visual,
+                dpi,
+                sizing: false,
+            };
+            win.wndproc.connect(&handle, state);
             mem::drop(win);
             Ok(handle)
         }

@@ -16,9 +16,11 @@
 
 extern crate winapi;
 extern crate direct2d;
+extern crate wio;
 #[macro_use]
 extern crate lazy_static;
 
+mod dcomp;
 pub mod menu;
 pub mod paint;
 pub mod util;

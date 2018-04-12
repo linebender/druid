@@ -102,7 +102,7 @@ pub(crate) unsafe fn create_render_target(d2d_factory: &direct2d::Factory, hwnd:
     d2d_factory.create_render_target(params).map_err(|_| Error::D2Error)
 }
 
-struct DxgiBacking(*mut IDXGISurface);
+struct DxgiBacking(*mut IDXGISurface, f32);
 
 unsafe impl RenderTargetBacking for DxgiBacking {
     fn create_target(self, factory: &mut ID2D1Factory1) -> Result<*mut ID2D1RenderTarget, HRESULT> {
@@ -113,8 +113,8 @@ unsafe impl RenderTargetBacking for DxgiBacking {
                     format: DXGI_FORMAT_B8G8R8A8_UNORM,
                     alphaMode: D2D1_ALPHA_MODE_IGNORE,
                 },
-                dpiX: 192.0, // TODO: get this from window etc.
-                dpiY: 192.0,
+                dpiX: self.1,
+                dpiY: self.1,
                 usage: D2D1_RENDER_TARGET_USAGE_NONE,
                 minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
             };
@@ -132,12 +132,12 @@ unsafe impl RenderTargetBacking for DxgiBacking {
 }
 
 pub(crate) unsafe fn create_render_target_dxgi(d2d_factory: &direct2d::Factory,
-    swap_chain: *mut IDXGISwapChain1) -> Result<RenderTarget, Error>
+    swap_chain: *mut IDXGISwapChain1, dpi: f32) -> Result<RenderTarget, Error>
 {
     let mut buffer: *mut IDXGISurface = null_mut();
     let res = (*swap_chain).GetBuffer(0, &IDXGISurface::uuidof(),
         &mut buffer as *mut _ as *mut *mut c_void);
-    let backing = DxgiBacking(buffer);
+    let backing = DxgiBacking(buffer, dpi);
     let result = d2d_factory.create_render_target(backing);
     (*buffer).Release();
     result.map_err(|_| Error::D2Error)

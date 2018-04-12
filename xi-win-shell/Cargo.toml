@@ -8,10 +8,11 @@ description = "Windows-specific application shell used for xi editor."
 [dependencies]
 directwrite = "0.0.9"
 direct2d = "0.0.9"
+wio = "0.2"
 
 lazy_static = "1.0"
 time = "0.1.39"
 
 [dependencies.winapi]
 version = "0.3"
-features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser", "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "d3d11", "dwmapi"]
+features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser", "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "dcomp", "d3d11", "dwmapi"]

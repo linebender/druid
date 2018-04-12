@@ -134,7 +134,7 @@ fn main() {
     builder.set_handler(Box::new(PerfTest(RefCell::new(perf_state))));
     builder.set_title("Performance tester");
     // Note: experiment with changing this
-    builder.set_present_strategy(PresentStrategy::Flip);
+    builder.set_present_strategy(PresentStrategy::FlipRedirect);
     let window = builder.build().unwrap();
     window.show();
     run_loop.run();
