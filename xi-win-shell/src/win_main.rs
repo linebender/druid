@@ -18,10 +18,15 @@ use std::cell::RefCell;
 use std::mem;
 use std::ptr::null_mut;
 use std::rc::Rc;
-use winapi::shared::winerror::*;
+use winapi::shared::minwindef::UINT;
 use winapi::um::winbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
+
+use window::WindowHandle;
+
+/// Message indicating there are idle tasks to run.
+pub(crate) const XI_RUN_IDLE: UINT = WM_USER;
 
 #[derive(Clone, Default)]
 pub struct RunLoopHandle(Rc<RefCell<RunLoopState>>);
@@ -73,11 +78,10 @@ impl RunLoop {
                     handles.push(listener.h);
                 }
                 let len = handles.len() as u32;
-                let has_idle = !self.handle.0.borrow().idle.is_empty();
                 let res = MsgWaitForMultipleObjectsEx(
                     len,
                     handles.as_ptr(),
-                    if has_idle { 0 } else { INFINITE },
+                    INFINITE,
                     QS_ALLEVENTS,
                     0
                 );
@@ -101,11 +105,6 @@ impl RunLoop {
                 if res >= WAIT_OBJECT_0 && res < WAIT_OBJECT_0 + len {
                     let ix = (res - WAIT_OBJECT_0) as usize;
                     (&mut self.handle.0.borrow_mut().listeners[ix].callback)();
-                } else if res == WAIT_TIMEOUT {
-                    let idles = mem::replace(&mut self.handle.0.borrow_mut().idle, Vec::new());
-                    for callback in idles {
-                        callback.call();
-                    }
                 }
             }
         }
@@ -133,8 +132,25 @@ impl RunLoopHandle {
     }
 
     /// Add an idle handler, which is called (once) when the message loop
-    /// is empty.
-    pub fn add_idle<F>(&self, callback: F) where F: FnOnce() + 'static {
-        self.0.borrow_mut().idle.push(Box::new(callback));
+    /// is empty. The idle handler will be run from the specified window's
+    /// wndproc, which means it won't be scheduled if the window is closed.
+    pub fn add_idle<F>(&self, window: &WindowHandle, callback: F) where F: FnOnce() + 'static {
+        let mut state = self.0.borrow_mut();
+        if state.idle.is_empty() {
+            if let Some(hwnd) = window.get_hwnd() {
+                unsafe {
+                    PostMessageW(hwnd, XI_RUN_IDLE, 0, 0);
+                }
+            }
+        }
+        state.idle.push(Box::new(callback));
+    }
+
+    /// Run the idle tasks.
+    pub(crate) fn run_idle(&self) {
+        let idles = mem::replace(&mut self.0.borrow_mut().idle, Vec::new());
+        for callback in idles {
+            callback.call();
+        }
     }
 }
