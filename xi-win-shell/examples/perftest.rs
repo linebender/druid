@@ -22,10 +22,10 @@ use std::cell::RefCell;
 use time::get_time;
 
 use direct2d::math::*;
-use direct2d::render_target::DrawTextOption;
 use directwrite::text_format;
 
 use xi_win_shell::paint::PaintCtx;
+use xi_win_shell::util::default_text_options;
 use xi_win_shell::win_main;
 use xi_win_shell::window::{WindowBuilder, WindowHandle, WinHandler};
 
@@ -79,7 +79,7 @@ impl WinHandler for PerfTest {
             &text_format,
             &RectF::from((10.0, 210.0, 100.0, 300.0)),
             &fg,
-            &[DrawTextOption::EnableColorFont]
+            default_text_options()
         );
 
         let msg = "Hello DWrite! This is a somewhat longer string of text intended to provoke slightly longer draw times.";
@@ -93,7 +93,7 @@ impl WinHandler for PerfTest {
                 &text_format,
                 &RectF::from((x0, y, x0 + 900.0, y + 80.0)),
                 &fg,
-                &[DrawTextOption::EnableColorFont]
+                default_text_options()
             );
         }
 

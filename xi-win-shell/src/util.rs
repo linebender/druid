@@ -28,6 +28,8 @@ use winapi::shared::windef::*;
 use winapi::um::libloaderapi::*;
 use winapi::um::shellscalingapi::*;
 
+use direct2d::render_target::DrawTextOption;
+
 #[derive(Debug)]
 /// Error codes. At the moment, this is little more than HRESULT, but that
 /// might change.
@@ -182,5 +184,16 @@ pub fn init() {
         unsafe {
             func(PROCESS_SYSTEM_DPI_AWARE); // TODO: per monitor (much harder)
         }
+    }
+}
+
+/// Determine a suitable default set of text options. Enables color fonts
+/// on systems that are capable of them (8.1 and above).
+pub fn default_text_options() -> &'static [DrawTextOption] {
+    // This is an arbitrary optional function that is 8.1 and above.
+    if OPTIONAL_FUNCTIONS.SetProcessDpiAwareness.is_some() {
+        &[DrawTextOption::EnableColorFont]
+    } else {
+        &[]
     }
 }
