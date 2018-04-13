@@ -39,6 +39,7 @@ use menu::Menu;
 use paint::{self, PaintCtx};
 use util::{OPTIONAL_FUNCTIONS, ToWide};
 use win_main::RunLoopHandle;
+use win_main::XI_RUN_IDLE;
 
 /// Builder abstraction for creating new windows.
 pub struct WindowBuilder {
@@ -123,6 +124,9 @@ impl WndProc for MyWndProc {
     {
         //println!("wndproc msg: {}", msg);
         match msg {
+            WM_ERASEBKGND => {
+                Some(0)
+            }
             WM_PAINT => unsafe {
                 if self.render_target.borrow_mut().is_none() {
                     let rt = paint::create_render_target(&self.d2d_factory, hwnd);
@@ -135,11 +139,14 @@ impl WndProc for MyWndProc {
                     d2d_factory: &self.d2d_factory,
                     render_target: rt,
                 });
-                let _ = rt.end_draw();
+                let res = rt.end_draw();
+                if let Err(e) = res {
+                    println!("EndDraw error: {:?}", e);
+                }
                 ValidateRect(hwnd, null_mut());
                 if anim {
                     let handle = self.handle.borrow().clone();
-                    self.runloop.borrow().add_idle(move || handle.invalidate());
+                    self.runloop.borrow().add_idle(&handle.clone(), move || handle.invalidate());
                 }
                 Some(0)
             },
@@ -169,6 +176,10 @@ impl WndProc for MyWndProc {
             WM_DESTROY => {
                 self.handler.destroy();
                 None
+            }
+            XI_RUN_IDLE => {
+                self.runloop.borrow().run_idle();
+                Some(0)
             }
             _ => None
         }
