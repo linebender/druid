@@ -55,18 +55,25 @@ pub struct WindowHandle(Weak<WindowState>);
 
 struct WindowState {
     hwnd: Cell<HWND>,
+    dpi: Cell<f32>,
     wndproc: Box<WndProc>,
 }
 
-/// App behavior, supplied by the app. Many of the "window procedure"
-/// messages map to calls to this trait. The methods are non-mut because
-/// the window procedure can be called recursively; implementers are
-/// expected to use `RefCell` or the like, but should be careful to keep
-/// the lifetime of the borrow short.
+/// App behavior, supplied by the app.
+///
+/// Many of the "window procedure" messages map to calls to this trait.
+/// The methods are non-mut because the window procedure can be called
+/// recursively; implementers are expected to use `RefCell` or the like,
+/// but should be careful to keep the lifetime of the borrow short.
 pub trait WinHandler {
     /// Provide the handler with a handle to the window so that it can
     /// invalidate or make other requests.
     fn connect(&self, handle: &WindowHandle);
+
+    /// Called when the size of the window is changed. Note that size
+    /// is in physical pixels.
+    #[allow(unused_variables)]
+    fn size(&self, width: u32, height: u32) {}
 
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
@@ -111,9 +118,13 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn mouse_hwheel(&self, delta: i32, mods: u32) {}
 
+    /// Called when the mouse moves. Note that the x, y coordinates are
+    /// in absolute pixels.
     #[allow(unused_variables)]
     fn mouse_move(&self, x: i32, y: i32, mods: u32) {}
 
+    /// Called on mouse button up or down. Note that the x, y
+    /// coordinates are in absolute pixels.
     #[allow(unused_variables)]
     fn mouse(&self, x: i32, y: i32, mods: u32, which: MouseButton, ty: MouseType) {}
 
@@ -216,6 +227,8 @@ impl WndProc for MyWndProc {
                 Some(0)
             },
             WM_SIZE => unsafe {
+                let width = LOWORD(lparam as u32) as u32;
+                let height = HIWORD(lparam as u32) as u32;
                 if let Some(ref mut rt) = self.render_target.borrow_mut().as_mut() {
                     if let Some(hrt) = rt.hwnd_rt() {
                         let width = LOWORD(lparam as u32) as u32;
@@ -224,6 +237,7 @@ impl WndProc for MyWndProc {
                         InvalidateRect(hwnd, null_mut(), FALSE);
                     }
                 }
+                self.handler.size(width, height);
                 Some(0)
             },
             WM_COMMAND => {
@@ -384,6 +398,7 @@ impl WindowBuilder {
 
             let window = WindowState {
                 hwnd: Cell::new(0 as HWND),
+                dpi: Cell::new(0.0),
                 wndproc: Box::new(wndproc),
             };
             let win = Rc::new(window);
@@ -395,8 +410,10 @@ impl WindowBuilder {
                 func() as f32
             } else {
                 // TODO GetDpiForMonitor is supported on windows 8.1, try falling back to that here
+                // Probably GetDeviceCaps(..., LOGPIXELSX) is the best to do pre-10
                 96.0
             };
+            win.dpi.set(dpi);
             let width = (500.0 * (dpi/96.0)) as i32;
             let height = (400.0 * (dpi/96.0)) as i32;
 
@@ -404,7 +421,7 @@ impl WindowBuilder {
                 Some(menu) => menu.into_hmenu(),
                 None => 0 as HMENU,
             };
-            let hwnd = create_window(WS_EX_OVERLAPPEDWINDOW, class_name.as_ptr(),
+            let hwnd = create_window(0, class_name.as_ptr(),
                 self.title.to_wide().as_ptr(), self.dwStyle,
                 CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0 as HWND, hmenu, 0 as HINSTANCE,
                 win.clone());
@@ -490,5 +507,36 @@ impl WindowHandle {
     /// xi_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
         self.0.upgrade().map(|w| w.hwnd.get())
+    }
+
+    /// Get the dpi of the window.
+    pub fn get_dpi(&self) -> f32 {
+        if let Some(w) = self.0.upgrade() {
+            w.dpi.get()
+        } else {
+            96.0
+        }
+    }
+
+    /// Convert a dimension in px units to physical pixels (rounding).
+    pub fn px_to_pixels(&self, x: f32) -> i32 {
+        (x * self.get_dpi() * (1.0 / 96.0)).round() as i32
+    }
+
+    /// Convert a point in px units to physical pixels (rounding).
+    pub fn px_to_pixels_xy(&self, x: f32, y: f32) -> (i32, i32) {
+        let scale = self.get_dpi() * (1.0 / 96.0);
+        ((x * scale).round() as i32, (y * scale).round() as i32)
+    }
+
+    /// Convert a dimension in physical pixels to px units.
+    pub fn pixels_to_px<T: Into<f64>>(&self, x: T) -> f32 {
+        (x.into() as f32) * 96.0 / self.get_dpi()
+    }
+
+    /// Convert a point in physical pixels to px units.
+    pub fn pixels_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f32, f32) {
+        let scale = 96.0 / self.get_dpi();
+        ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
 }
