@@ -80,19 +80,74 @@ pub trait WinHandler {
     /// Called on keyboard input of a single character. This corresponds
     /// to the WM_CHAR message. Handling of text input will continue to
     /// evolve, we need to handle input methods and more.
+    ///
+    /// The modifiers are 1: alt, 2: control, 4: shift.
     #[allow(unused_variables)]
-    fn char(&self, ch: u32) {}
+    fn char(&self, ch: u32, mods: u32) {}
 
     /// Called on a key down event. This corresponds to the WM_KEYDOWN
     /// message. The key code is as WM_KEYDOWN. We'll want to add stuff
     /// like the modifier state.
+    ///
+    /// The modifiers are 1: alt, 2: control, 4: shift.
+    ///
+    /// Return `true` if the event is handled.
     #[allow(unused_variables)]
-    fn keydown(&self, vkey_code: i32) {}
+    fn keydown(&self, vkey_code: i32, mods: u32) -> bool { false }
+
+    /// Called on a mouse wheel event. This corresponds to a
+    /// [WM_MOUSEWHEEL](https://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx)
+    /// message.
+    ///
+    /// The modifiers are the same as WM_MOUSEWHEEL.
+    #[allow(unused_variables)]
+    fn mouse_wheel(&self, delta: i32, mods: u32) {}
+
+    /// Called on a mouse horizontal wheel event. This corresponds to a
+    /// [WM_MOUSEHWHEEL](https://msdn.microsoft.com/en-us/library/windows/desktop/ms645614(v=vs.85).aspx)
+    /// message.
+    ///
+    /// The modifiers are the same as WM_MOUSEHWHEEL.
+    #[allow(unused_variables)]
+    fn mouse_hwheel(&self, delta: i32, mods: u32) {}
+
+    #[allow(unused_variables)]
+    fn mouse_move(&self, x: i32, y: i32, mods: u32) {}
+
+    #[allow(unused_variables)]
+    fn mouse(&self, x: i32, y: i32, mods: u32, which: MouseButton, ty: MouseType) {}
 
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is
     /// WM_NCDESTROY).
     fn destroy(&self) {}
+}
+
+/// An indicator of which mouse button was pressed.
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum MouseButton {
+    /// Left mouse button.
+    Left,
+    /// Middle mouse button.
+    Middle,
+    /// Right mouse button.
+    Right,
+    /// First X button.
+    X1,
+    /// Second X button.
+    X2,
+}
+
+/// An indicator of the state change of a mouse button.
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum MouseType {
+    /// Mouse down event.
+    Down,
+    /// Note: DoubleClick is currently disabled, as we don't use the
+    /// Windows processing.
+    DoubleClick,
+    /// Mouse up event.
+    Up,
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -111,6 +166,16 @@ struct MyWndProc {
     runloop: RunLoopHandle,
     d2d_factory: direct2d::Factory,
     render_target: RefCell<Option<RenderTarget>>,
+}
+
+fn get_mod_state(lparam: LPARAM) -> u32 {
+    unsafe {
+        let mut mod_state = 0;
+        if (lparam & (1 << 29)) != 0 { mod_state |= MOD_ALT as u32; }
+        if GetKeyState(VK_CONTROL) < 0 { mod_state |= MOD_CONTROL as u32; }
+        if GetKeyState(VK_SHIFT) < 0 { mod_state |= MOD_SHIFT as u32; }
+        mod_state
+    }
 }
 
 impl WndProc for MyWndProc {
@@ -166,11 +231,73 @@ impl WndProc for MyWndProc {
                 Some(0)
             }
             WM_CHAR => {
-                self.handler.char(wparam as u32);
+                let mods = get_mod_state(lparam);
+                self.handler.char(wparam as u32, mods);
                 Some(0)
             }
-            WM_KEYDOWN => {
-                self.handler.keydown(wparam as i32);
+            WM_KEYDOWN | WM_SYSKEYDOWN => {
+                let mods = get_mod_state(lparam);
+                let handled = self.handler.keydown(wparam as i32, mods);
+                if handled {
+                    Some(0)
+                } else {
+                    None
+                }
+            }
+            WM_MOUSEWHEEL => {
+                let delta = HIWORD(wparam as u32) as i16 as i32;
+                let mods = LOWORD(wparam as u32) as u32;
+                self.handler.mouse_wheel(delta, mods);
+                Some(0)
+            }
+            WM_MOUSEHWHEEL => {
+                let delta = HIWORD(wparam as u32) as i16 as i32;
+                let mods = LOWORD(wparam as u32) as u32;
+                self.handler.mouse_hwheel(delta, mods);
+                Some(0)
+            }
+            WM_MOUSEMOVE => {
+                let x = LOWORD(lparam as u32) as i16 as i32;
+                let y = LOWORD(lparam as u32) as i16 as i32;
+                let mods = LOWORD(wparam as u32) as u32;
+                self.handler.mouse_move(x, y, mods);
+                Some(0)
+            }
+            // TODO: not clear where double-click processing should happen. Currently disabled
+            // because CS_DBLCLKS is not set
+            WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP |
+                WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP |
+                WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP |
+                WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP =>
+            {
+                let button = match msg {
+                    WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => MouseButton::Left,
+                    WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP => MouseButton::Middle,
+                    WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => MouseButton::Right,
+                    WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP =>
+                        match HIWORD(wparam as u32) {
+                            1 => MouseButton::X1,
+                            2 => MouseButton::X2,
+                            _ => {
+                                println!("unexpected X button event");
+                                return None;
+                            }
+                        },
+                    _ => unreachable!()
+                };
+                let ty = match msg {
+                    WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN =>
+                        MouseType::Down,
+                    WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK | WM_XBUTTONDBLCLK =>
+                        MouseType::DoubleClick,
+                    WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP =>
+                        MouseType::Up,
+                    _ => unreachable!(),
+                };
+                let x = LOWORD(lparam as u32) as i16 as i32;
+                let y = LOWORD(lparam as u32) as i16 as i32;
+                let mods = LOWORD(wparam as u32) as u32;
+                self.handler.mouse(x, y, mods, button, ty);
                 Some(0)
             }
             WM_DESTROY => {
