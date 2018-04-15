@@ -107,12 +107,13 @@ impl WinHandler for PerfTest {
         }
     }
 
-    fn char(&self, ch: u32) {
-        println!("got char 0x{:x}", ch);
+    fn char(&self, ch: u32, mods: u32) {
+        println!("got char 0x{:x} {:02x}", ch, mods);
     }
 
-    fn keydown(&self, vk_code: i32) {
-        println!("got key code 0x{:x}", vk_code);
+    fn keydown(&self, vk_code: i32, mods: u32) -> bool {
+        println!("got key code 0x{:x} {:02x}", vk_code, mods);
+        false
     }
 
     fn destroy(&self) {
