@@ -43,6 +43,8 @@ use direct2d::error::D2D1Error;
 use direct2d::math::Matrix3x2F;
 use direct2d::render_target::RenderTargetBacking;
 
+use util::OPTIONAL_FUNCTIONS;
+
 unsafe fn wrap<T, U, F>(hr: HRESULT, ptr: *mut T, f: F) -> Result<U, HRESULT>
     where F: Fn(ComPtr<T>) -> U, T: Interface
 {
@@ -96,10 +98,13 @@ impl D3D11Device {
 }
 
 impl D2D1Device {
+    /// Create a wrapped DCompositionDevice object. Note: returns Err(0) on systems
+    /// not supporting DirectComposition, available 8.1 and above.
     pub fn create_composition_device(&mut self) -> Result<DCompositionDevice, HRESULT> {
         unsafe {
+            let create = OPTIONAL_FUNCTIONS.DCompositionCreateDevice2.ok_or(0)?;
             let mut dcomp_device: *mut IDCompositionDevice = null_mut();
-            let hr = DCompositionCreateDevice2(self.0.as_raw() as *mut IUnknown,
+            let hr = create(self.0.as_raw() as *mut IUnknown,
                 &IDCompositionDevice::uuidof(),
                 &mut dcomp_device as *mut _ as *mut _);
             wrap(hr, dcomp_device, DCompositionDevice)
