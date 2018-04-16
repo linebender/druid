@@ -55,18 +55,25 @@ pub struct WindowHandle(Weak<WindowState>);
 
 struct WindowState {
     hwnd: Cell<HWND>,
+    dpi: Cell<f32>,
     wndproc: Box<WndProc>,
 }
 
-/// App behavior, supplied by the app. Many of the "window procedure"
-/// messages map to calls to this trait. The methods are non-mut because
-/// the window procedure can be called recursively; implementers are
-/// expected to use `RefCell` or the like, but should be careful to keep
-/// the lifetime of the borrow short.
+/// App behavior, supplied by the app.
+///
+/// Many of the "window procedure" messages map to calls to this trait.
+/// The methods are non-mut because the window procedure can be called
+/// recursively; implementers are expected to use `RefCell` or the like,
+/// but should be careful to keep the lifetime of the borrow short.
 pub trait WinHandler {
     /// Provide the handler with a handle to the window so that it can
     /// invalidate or make other requests.
     fn connect(&self, handle: &WindowHandle);
+
+    /// Called when the size of the window is changed. Note that size
+    /// is in physical pixels.
+    #[allow(unused_variables)]
+    fn size(&self, width: u32, height: u32) {}
 
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
@@ -80,19 +87,78 @@ pub trait WinHandler {
     /// Called on keyboard input of a single character. This corresponds
     /// to the WM_CHAR message. Handling of text input will continue to
     /// evolve, we need to handle input methods and more.
+    ///
+    /// The modifiers are 1: alt, 2: control, 4: shift.
     #[allow(unused_variables)]
-    fn char(&self, ch: u32) {}
+    fn char(&self, ch: u32, mods: u32) {}
 
     /// Called on a key down event. This corresponds to the WM_KEYDOWN
     /// message. The key code is as WM_KEYDOWN. We'll want to add stuff
     /// like the modifier state.
+    ///
+    /// The modifiers are 1: alt, 2: control, 4: shift.
+    ///
+    /// Return `true` if the event is handled.
     #[allow(unused_variables)]
-    fn keydown(&self, vkey_code: i32) {}
+    fn keydown(&self, vkey_code: i32, mods: u32) -> bool { false }
+
+    /// Called on a mouse wheel event. This corresponds to a
+    /// [WM_MOUSEWHEEL](https://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx)
+    /// message.
+    ///
+    /// The modifiers are the same as WM_MOUSEWHEEL.
+    #[allow(unused_variables)]
+    fn mouse_wheel(&self, delta: i32, mods: u32) {}
+
+    /// Called on a mouse horizontal wheel event. This corresponds to a
+    /// [WM_MOUSEHWHEEL](https://msdn.microsoft.com/en-us/library/windows/desktop/ms645614(v=vs.85).aspx)
+    /// message.
+    ///
+    /// The modifiers are the same as WM_MOUSEHWHEEL.
+    #[allow(unused_variables)]
+    fn mouse_hwheel(&self, delta: i32, mods: u32) {}
+
+    /// Called when the mouse moves. Note that the x, y coordinates are
+    /// in absolute pixels.
+    #[allow(unused_variables)]
+    fn mouse_move(&self, x: i32, y: i32, mods: u32) {}
+
+    /// Called on mouse button up or down. Note that the x, y
+    /// coordinates are in absolute pixels.
+    #[allow(unused_variables)]
+    fn mouse(&self, x: i32, y: i32, mods: u32, which: MouseButton, ty: MouseType) {}
 
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is
     /// WM_NCDESTROY).
     fn destroy(&self) {}
+}
+
+/// An indicator of which mouse button was pressed.
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum MouseButton {
+    /// Left mouse button.
+    Left,
+    /// Middle mouse button.
+    Middle,
+    /// Right mouse button.
+    Right,
+    /// First X button.
+    X1,
+    /// Second X button.
+    X2,
+}
+
+/// An indicator of the state change of a mouse button.
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum MouseType {
+    /// Mouse down event.
+    Down,
+    /// Note: DoubleClick is currently disabled, as we don't use the
+    /// Windows processing.
+    DoubleClick,
+    /// Mouse up event.
+    Up,
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -111,6 +177,16 @@ struct MyWndProc {
     runloop: RunLoopHandle,
     d2d_factory: direct2d::Factory,
     render_target: RefCell<Option<RenderTarget>>,
+}
+
+fn get_mod_state(lparam: LPARAM) -> u32 {
+    unsafe {
+        let mut mod_state = 0;
+        if (lparam & (1 << 29)) != 0 { mod_state |= MOD_ALT as u32; }
+        if GetKeyState(VK_CONTROL) < 0 { mod_state |= MOD_CONTROL as u32; }
+        if GetKeyState(VK_SHIFT) < 0 { mod_state |= MOD_SHIFT as u32; }
+        mod_state
+    }
 }
 
 impl WndProc for MyWndProc {
@@ -151,6 +227,8 @@ impl WndProc for MyWndProc {
                 Some(0)
             },
             WM_SIZE => unsafe {
+                let width = LOWORD(lparam as u32) as u32;
+                let height = HIWORD(lparam as u32) as u32;
                 if let Some(ref mut rt) = self.render_target.borrow_mut().as_mut() {
                     if let Some(hrt) = rt.hwnd_rt() {
                         let width = LOWORD(lparam as u32) as u32;
@@ -159,6 +237,7 @@ impl WndProc for MyWndProc {
                         InvalidateRect(hwnd, null_mut(), FALSE);
                     }
                 }
+                self.handler.size(width, height);
                 Some(0)
             },
             WM_COMMAND => {
@@ -166,11 +245,73 @@ impl WndProc for MyWndProc {
                 Some(0)
             }
             WM_CHAR => {
-                self.handler.char(wparam as u32);
+                let mods = get_mod_state(lparam);
+                self.handler.char(wparam as u32, mods);
                 Some(0)
             }
-            WM_KEYDOWN => {
-                self.handler.keydown(wparam as i32);
+            WM_KEYDOWN | WM_SYSKEYDOWN => {
+                let mods = get_mod_state(lparam);
+                let handled = self.handler.keydown(wparam as i32, mods);
+                if handled {
+                    Some(0)
+                } else {
+                    None
+                }
+            }
+            WM_MOUSEWHEEL => {
+                let delta = HIWORD(wparam as u32) as i16 as i32;
+                let mods = LOWORD(wparam as u32) as u32;
+                self.handler.mouse_wheel(delta, mods);
+                Some(0)
+            }
+            WM_MOUSEHWHEEL => {
+                let delta = HIWORD(wparam as u32) as i16 as i32;
+                let mods = LOWORD(wparam as u32) as u32;
+                self.handler.mouse_hwheel(delta, mods);
+                Some(0)
+            }
+            WM_MOUSEMOVE => {
+                let x = LOWORD(lparam as u32) as i16 as i32;
+                let y = LOWORD(lparam as u32) as i16 as i32;
+                let mods = LOWORD(wparam as u32) as u32;
+                self.handler.mouse_move(x, y, mods);
+                Some(0)
+            }
+            // TODO: not clear where double-click processing should happen. Currently disabled
+            // because CS_DBLCLKS is not set
+            WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP |
+                WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP |
+                WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP |
+                WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP =>
+            {
+                let button = match msg {
+                    WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => MouseButton::Left,
+                    WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP => MouseButton::Middle,
+                    WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => MouseButton::Right,
+                    WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP =>
+                        match HIWORD(wparam as u32) {
+                            1 => MouseButton::X1,
+                            2 => MouseButton::X2,
+                            _ => {
+                                println!("unexpected X button event");
+                                return None;
+                            }
+                        },
+                    _ => unreachable!()
+                };
+                let ty = match msg {
+                    WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN =>
+                        MouseType::Down,
+                    WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK | WM_XBUTTONDBLCLK =>
+                        MouseType::DoubleClick,
+                    WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP =>
+                        MouseType::Up,
+                    _ => unreachable!(),
+                };
+                let x = LOWORD(lparam as u32) as i16 as i32;
+                let y = LOWORD(lparam as u32) as i16 as i32;
+                let mods = LOWORD(wparam as u32) as u32;
+                self.handler.mouse(x, y, mods, button, ty);
                 Some(0)
             }
             WM_DESTROY => {
@@ -257,6 +398,7 @@ impl WindowBuilder {
 
             let window = WindowState {
                 hwnd: Cell::new(0 as HWND),
+                dpi: Cell::new(0.0),
                 wndproc: Box::new(wndproc),
             };
             let win = Rc::new(window);
@@ -268,8 +410,10 @@ impl WindowBuilder {
                 func() as f32
             } else {
                 // TODO GetDpiForMonitor is supported on windows 8.1, try falling back to that here
+                // Probably GetDeviceCaps(..., LOGPIXELSX) is the best to do pre-10
                 96.0
             };
+            win.dpi.set(dpi);
             let width = (500.0 * (dpi/96.0)) as i32;
             let height = (400.0 * (dpi/96.0)) as i32;
 
@@ -277,7 +421,7 @@ impl WindowBuilder {
                 Some(menu) => menu.into_hmenu(),
                 None => 0 as HMENU,
             };
-            let hwnd = create_window(WS_EX_OVERLAPPEDWINDOW, class_name.as_ptr(),
+            let hwnd = create_window(0, class_name.as_ptr(),
                 self.title.to_wide().as_ptr(), self.dwStyle,
                 CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0 as HWND, hmenu, 0 as HINSTANCE,
                 win.clone());
@@ -363,5 +507,36 @@ impl WindowHandle {
     /// xi_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
         self.0.upgrade().map(|w| w.hwnd.get())
+    }
+
+    /// Get the dpi of the window.
+    pub fn get_dpi(&self) -> f32 {
+        if let Some(w) = self.0.upgrade() {
+            w.dpi.get()
+        } else {
+            96.0
+        }
+    }
+
+    /// Convert a dimension in px units to physical pixels (rounding).
+    pub fn px_to_pixels(&self, x: f32) -> i32 {
+        (x * self.get_dpi() * (1.0 / 96.0)).round() as i32
+    }
+
+    /// Convert a point in px units to physical pixels (rounding).
+    pub fn px_to_pixels_xy(&self, x: f32, y: f32) -> (i32, i32) {
+        let scale = self.get_dpi() * (1.0 / 96.0);
+        ((x * scale).round() as i32, (y * scale).round() as i32)
+    }
+
+    /// Convert a dimension in physical pixels to px units.
+    pub fn pixels_to_px<T: Into<f64>>(&self, x: T) -> f32 {
+        (x.into() as f32) * 96.0 / self.get_dpi()
+    }
+
+    /// Convert a point in physical pixels to px units.
+    pub fn pixels_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f32, f32) {
+        let scale = 96.0 / self.get_dpi();
+        ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
 }

@@ -22,7 +22,7 @@ use direct2d::math::*;
 use xi_win_shell::menu::Menu;
 use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::win_main;
-use xi_win_shell::window::{WindowBuilder, WindowHandle, WinHandler};
+use xi_win_shell::window::{MouseButton, MouseType, WindowBuilder, WindowHandle, WinHandler};
 
 #[derive(Default)]
 struct HelloState {
@@ -55,12 +55,29 @@ impl WinHandler for HelloState {
         }
     }
 
-    fn char(&self, ch: u32) {
-        println!("got char 0x{:x}", ch);
+    fn char(&self, ch: u32, mods: u32) {
+        println!("got char 0x{:x} {:02x}", ch, mods);
     }
 
-    fn keydown(&self, vk_code: i32) {
-        println!("got key code 0x{:x}", vk_code);
+    fn keydown(&self, vk_code: i32, mods: u32) -> bool {
+        println!("got key code 0x{:x} {:02x}", vk_code, mods);
+        false
+    }
+
+    fn mouse_wheel(&self, delta: i32, mods: u32) {
+        println!("mouse_wheel {} {:02x}", delta, mods);
+    }
+
+    fn mouse_hwheel(&self, delta: i32, mods: u32) {
+        println!("mouse_hwheel {} {:02x}", delta, mods);
+    }
+
+    fn mouse_move(&self, x: i32, y: i32, mods: u32) {
+        println!("mouse_move ({}, {}) {:02x}", x, y, mods);
+    }
+
+    fn mouse(&self, x: i32, y: i32, mods: u32, button: MouseButton, ty: MouseType) {
+        println!("mouse_move ({}, {}) {:02x} {:?} {:?}", x, y, mods, button, ty);
     }
 
     fn destroy(&self) {

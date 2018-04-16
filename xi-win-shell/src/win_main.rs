@@ -86,6 +86,12 @@ impl RunLoop {
                     0
                 );
 
+                // Prioritize rpc results above windows messages
+                if res >= WAIT_OBJECT_0 && res < WAIT_OBJECT_0 + len {
+                    let ix = (res - WAIT_OBJECT_0) as usize;
+                    (&mut self.handle.0.borrow_mut().listeners[ix].callback)();
+                }
+
                 // Handle windows messages
                 loop {
                     let mut msg = mem::uninitialized();
@@ -100,11 +106,6 @@ impl RunLoop {
                     }
                     TranslateMessage(&mut msg);
                     DispatchMessageW(&mut msg);
-                }
-
-                if res >= WAIT_OBJECT_0 && res < WAIT_OBJECT_0 + len {
-                    let ix = (res - WAIT_OBJECT_0) as usize;
-                    (&mut self.handle.0.borrow_mut().listeners[ix].callback)();
                 }
             }
         }
