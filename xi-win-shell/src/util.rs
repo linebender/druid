@@ -25,6 +25,7 @@ use std::mem;
 use winapi::shared::minwindef::*;
 use winapi::shared::ntdef::*;
 use winapi::shared::windef::*;
+use winapi::shared::winerror::SUCCEEDED;
 use winapi::um::libloaderapi::*;
 use winapi::um::shellscalingapi::*;
 
@@ -40,14 +41,13 @@ pub enum Error {
     D2Error,
 }
 
-/*
 pub fn as_result(hr: HRESULT) -> Result<(), Error> {
-    match hr {
-        S_OK => Ok(()),
-        _ => Err(Error::Hr(hr)),
+    if SUCCEEDED(hr) {
+        Ok(())
+    } else {
+        Err(Error::Hr(hr))
     }
 }
-*/
 
 impl From<HRESULT> for Error {
     fn from(hr: HRESULT) -> Error {

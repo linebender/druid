@@ -38,6 +38,7 @@ use direct2d;
 use direct2d::render_target::{RenderTarget, RenderTargetBacking};
 
 use Error;
+use util::as_result;
 
 /// Context for painting by app into window.
 pub struct PaintCtx<'a> {
@@ -135,8 +136,8 @@ pub(crate) unsafe fn create_render_target_dxgi(d2d_factory: &direct2d::Factory,
     swap_chain: *mut IDXGISwapChain1, dpi: f32) -> Result<RenderTarget, Error>
 {
     let mut buffer: *mut IDXGISurface = null_mut();
-    let res = (*swap_chain).GetBuffer(0, &IDXGISurface::uuidof(),
-        &mut buffer as *mut _ as *mut *mut c_void);
+    as_result((*swap_chain).GetBuffer(0, &IDXGISurface::uuidof(),
+        &mut buffer as *mut _ as *mut *mut c_void))?;
     let backing = DxgiBacking(buffer, dpi);
     let result = d2d_factory.create_render_target(backing);
     (*buffer).Release();

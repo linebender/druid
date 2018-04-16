@@ -33,8 +33,6 @@ use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
 use winapi::um::d2d1::*;
-use winapi::um::d3d11::*;
-use winapi::um::d3dcommon::*;
 use winapi::um::unknwnbase::*;
 use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
@@ -47,7 +45,7 @@ use Error;
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use menu::Menu;
 use paint::{self, PaintCtx};
-use util::{OPTIONAL_FUNCTIONS, FromWide, ToWide};
+use util::{OPTIONAL_FUNCTIONS, as_result, FromWide, ToWide};
 use win_main::RunLoopHandle;
 use win_main::XI_RUN_IDLE;
 
@@ -304,7 +302,7 @@ impl WndProc for MyWndProc {
                 let mut state = self.state.borrow_mut();
                 let s = state.as_mut().unwrap();
                 (*s.swap_chain).Present(1, 0);
-                s.dcomp_device.commit();
+                let _ = s.dcomp_device.commit();
                 ValidateRect(hwnd, null_mut());
                 Some(0)
             },
@@ -316,8 +314,8 @@ impl WndProc for MyWndProc {
 
                 let mut state = self.state.borrow_mut();
                 let s = state.as_mut().unwrap();
-                s.dcomp_target.clear_root();
-                s.dcomp_device.commit();
+                let _ = s.dcomp_target.clear_root();
+                let _ = s.dcomp_device.commit();
                 s.sizing = true;
                 None
             }
@@ -345,8 +343,8 @@ impl WndProc for MyWndProc {
 
                 let mut state = self.state.borrow_mut();
                 let mut s = state.as_mut().unwrap();
-                s.dcomp_target.set_root(&mut s.swapchain_visual);
-                s.dcomp_device.commit();
+                let _ = s.dcomp_target.set_root(&mut s.swapchain_visual);
+                let _ = s.dcomp_device.commit();
                 s.sizing = false;
                 None
             }
@@ -374,7 +372,7 @@ impl WndProc for MyWndProc {
                         let mut state = self.state.borrow_mut();
                         let mut s = state.as_mut().unwrap();
                         (*s.swap_chain).Present(0, 0);
-                        s.dcomp_device.commit();
+                        let _ = s.dcomp_device.commit();
                         ValidateRect(hwnd, null_mut());
                     } else {
                         println!("ResizeBuffers failed: 0x{:x}", res);
@@ -588,17 +586,16 @@ impl WindowBuilder {
             let mut dcomp_target = dcomp_device.create_target_for_hwnd(hwnd, true)?;
 
             let mut factory: *mut IDXGIFactory2 = null_mut();
-            let hres = CreateDXGIFactory2(0, &IID_IDXGIFactory2,
-                &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void);
+            as_result(CreateDXGIFactory2(0, &IID_IDXGIFactory2,
+                &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void))?;
             println!("dxgi factory pointer = {:?}", factory);
             let adapter = choose_adapter(factory);
             println!("adapter = {:?}", adapter);
             let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
-            let (swap_effect, scaling, bufs) = match self.present_strategy {
-                PresentStrategy::Sequential =>
-                    (DXGI_SWAP_EFFECT_SEQUENTIAL, DXGI_SCALING_STRETCH, 1),
+            let (swap_effect, bufs) = match self.present_strategy {
+                PresentStrategy::Sequential => (DXGI_SWAP_EFFECT_SEQUENTIAL, 1),
                 PresentStrategy::Flip | PresentStrategy::FlipRedirect =>
-                    (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, DXGI_SCALING_NONE, 2),
+                    (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, 2),
             };
             let desc = DXGI_SWAP_CHAIN_DESC1 {
                 Width: 1024,
