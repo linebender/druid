@@ -22,11 +22,15 @@ use std::os::windows::ffi::OsStrExt;
 use std::slice;
 use std::mem;
 
+use winapi::ctypes::c_void;
+use winapi::shared::guiddef::REFIID;
 use winapi::shared::minwindef::*;
 use winapi::shared::ntdef::*;
 use winapi::shared::windef::*;
+use winapi::shared::winerror::SUCCEEDED;
 use winapi::um::libloaderapi::*;
 use winapi::um::shellscalingapi::*;
+use winapi::um::unknwnbase::IUnknown;
 
 use direct2d::render_target::DrawTextOption;
 
@@ -38,16 +42,17 @@ pub enum Error {
     Hr(HRESULT),
     // Maybe include the full error from the direct2d crate.
     D2Error,
+    /// A function is available on newer version of windows.
+    OldWindows,
 }
 
-/*
 pub fn as_result(hr: HRESULT) -> Result<(), Error> {
-    match hr {
-        S_OK => Ok(()),
-        _ => Err(Error::Hr(hr)),
+    if SUCCEEDED(hr) {
+        Ok(())
+    } else {
+        Err(Error::Hr(hr))
     }
 }
-*/
 
 impl From<HRESULT> for Error {
     fn from(hr: HRESULT) -> Error {
@@ -97,12 +102,24 @@ type GetDpiForSystem = unsafe extern "system" fn() -> UINT;
 type GetDpiForMonitor = unsafe extern "system" fn(HMONITOR, MONITOR_DPI_TYPE, *mut UINT, *mut UINT);
 // from user32.dll
 type SetProcessDpiAwareness = unsafe extern "system" fn(PROCESS_DPI_AWARENESS) -> HRESULT;
+type DCompositionCreateDevice2 = unsafe extern "system" fn(
+    renderingDevice: *const IUnknown,
+    iid: REFIID,
+    dcompositionDevice: *mut *mut c_void,
+) -> HRESULT;
+type CreateDXGIFactory2 = unsafe extern "system" fn(
+    Flags: UINT,
+    riid: REFIID,
+    ppFactory: *mut *mut c_void,
+) -> HRESULT;
 
 #[allow(non_snake_case)] // For member fields
 pub struct OptionalFunctions {
     pub GetDpiForSystem: Option<GetDpiForSystem>,
     pub GetDpiForMonitor: Option<GetDpiForMonitor>,
     pub SetProcessDpiAwareness: Option<SetProcessDpiAwareness>,
+    pub DCompositionCreateDevice2: Option<DCompositionCreateDevice2>,
+    pub CreateDXGIFactory2: Option<CreateDXGIFactory2>,
 }
 
 #[allow(non_snake_case)] // For local variables
@@ -135,7 +152,7 @@ fn load_optional_functions() -> OptionalFunctions {
     fn load_library(name: &str) -> HMODULE {
         let encoded_name = name.to_wide();
 
-        // If we allready have loaded the library (somewhere else in the process) we don't need to
+        // If we already have loaded the library (somewhere else in the process) we don't need to
         // call LoadLibrary again
         let library = unsafe { GetModuleHandleW(encoded_name.as_ptr()) };
         if !library.is_null() {
@@ -148,10 +165,14 @@ fn load_optional_functions() -> OptionalFunctions {
 
     let shcore = load_library("shcore.dll");
     let user32 = load_library("user32.dll");
+    let dcomp = load_library("dcomp.dll");
+    let dxgi = load_library("dxgi.dll");
 
     let mut GetDpiForSystem = None;
     let mut GetDpiForMonitor = None;
     let mut SetProcessDpiAwareness = None;
+    let mut DCompositionCreateDevice2 = None;
+    let mut CreateDXGIFactory2 = None;
 
     if shcore.is_null() {
         println!("No shcore.dll");
@@ -166,10 +187,20 @@ fn load_optional_functions() -> OptionalFunctions {
         load_function!(user32, GetDpiForSystem, "10");
     }
 
+    if !dcomp.is_null() {
+        load_function!(dcomp, DCompositionCreateDevice2, "8.1");
+    }
+
+    if !dxgi.is_null() {
+        load_function!(dxgi, CreateDXGIFactory2, "8.1");
+    }
+
     OptionalFunctions {
         GetDpiForSystem,
         GetDpiForMonitor,
         SetProcessDpiAwareness,
+        DCompositionCreateDevice2,
+        CreateDXGIFactory2,
     }
 }
 
