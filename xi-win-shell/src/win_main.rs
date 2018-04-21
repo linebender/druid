@@ -14,29 +14,23 @@
 
 //! Windows main loop.
 
-use std::cell::RefCell;
 use std::mem;
 use std::ptr::null_mut;
-use std::rc::Rc;
-use winapi::shared::minwindef::UINT;
+use std::sync::{Arc, Mutex};
 use winapi::um::winbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
 
-use window::WindowHandle;
-
-/// Message indicating there are idle tasks to run.
-pub(crate) const XI_RUN_IDLE: UINT = WM_USER;
-
 #[derive(Clone, Default)]
-pub struct RunLoopHandle(Rc<RefCell<RunLoopState>>);
+pub struct RunLoopHandle(Arc<Mutex<RunLoopState>>);
 
 #[derive(Default)]
 struct RunLoopState {
     listeners: Vec<Listener>,
-    idle: Vec<Box<IdleCallback>>,
 }
 
+// It's only safe to add listeners from the same thread as the runloop.
+unsafe impl Send for Listener {}
 struct Listener {
     h: HANDLE,
     callback: Box<FnMut()>,
@@ -44,16 +38,6 @@ struct Listener {
 
 pub struct RunLoop {
     handle: RunLoopHandle,
-}
-
-pub trait IdleCallback {
-    fn call(self: Box<Self>);
-}
-
-impl<F: FnOnce()> IdleCallback for F {
-    fn call(self: Box<F>) {
-        (*self)()
-    }
 }
 
 impl RunLoop {
@@ -74,7 +58,7 @@ impl RunLoop {
         unsafe {
             loop {
                 let mut handles = Vec::new();
-                for listener in &self.handle.0.borrow().listeners {
+                for listener in &self.handle.0.lock().unwrap().listeners {
                     handles.push(listener.h);
                 }
                 let len = handles.len() as u32;
@@ -89,7 +73,7 @@ impl RunLoop {
                 // Prioritize rpc results above windows messages
                 if res >= WAIT_OBJECT_0 && res < WAIT_OBJECT_0 + len {
                     let ix = (res - WAIT_OBJECT_0) as usize;
-                    (&mut self.handle.0.borrow_mut().listeners[ix].callback)();
+                    (&mut self.handle.0.lock().unwrap().listeners[ix].callback)();
                 }
 
                 // Handle windows messages
@@ -121,7 +105,7 @@ pub fn request_quit() {
 
 impl RunLoopHandle {
     /// Add a listener for a Windows handle. Considered unsafe because the
-    /// handle must be valid.
+    /// handle must be valid. Also unsafe because it is not thread safe.
     pub unsafe fn add_handler<F>(&self, h: HANDLE, callback: F)
         where F: FnMut() + 'static
     {
@@ -129,29 +113,6 @@ impl RunLoopHandle {
             h,
             callback: Box::new(callback),
         };
-        self.0.borrow_mut().listeners.push(listener);
-    }
-
-    /// Add an idle handler, which is called (once) when the message loop
-    /// is empty. The idle handler will be run from the specified window's
-    /// wndproc, which means it won't be scheduled if the window is closed.
-    pub fn add_idle<F>(&self, window: &WindowHandle, callback: F) where F: FnOnce() + 'static {
-        let mut state = self.0.borrow_mut();
-        if state.idle.is_empty() {
-            if let Some(hwnd) = window.get_hwnd() {
-                unsafe {
-                    PostMessageW(hwnd, XI_RUN_IDLE, 0, 0);
-                }
-            }
-        }
-        state.idle.push(Box::new(callback));
-    }
-
-    /// Run the idle tasks.
-    pub(crate) fn run_idle(&self) {
-        let idles = mem::replace(&mut self.0.borrow_mut().idle, Vec::new());
-        for callback in idles {
-            callback.call();
-        }
+        self.0.lock().unwrap().listeners.push(listener);
     }
 }

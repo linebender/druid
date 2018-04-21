@@ -17,6 +17,7 @@ extern crate direct2d;
 extern crate directwrite;
 extern crate time;
 
+use std::any::Any;
 use std::cell::RefCell;
 
 use time::get_time;
@@ -119,13 +120,15 @@ impl WinHandler for PerfTest {
     fn destroy(&self) {
         win_main::request_quit();
     }
+
+    fn as_any(&self) -> &Any { self }
 }
 
 fn main() {
     xi_win_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
-    let mut builder = WindowBuilder::new(run_loop.get_handle());
+    let mut builder = WindowBuilder::new();
     let perf_state = PerfState {
         dwrite_factory: directwrite::Factory::new().unwrap(),
         handle: Default::default(),

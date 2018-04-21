@@ -15,6 +15,7 @@
 extern crate xi_win_shell;
 extern crate direct2d;
 
+use std::any::Any;
 use std::cell::RefCell;
 
 use direct2d::math::*;
@@ -83,6 +84,8 @@ impl WinHandler for HelloState {
     fn destroy(&self) {
         win_main::request_quit();
     }
+
+    fn as_any(&self) -> &Any { self }
 }
 
 fn main() {
@@ -94,7 +97,7 @@ fn main() {
     menubar.add_dropdown(file_menu, "&File");
 
     let mut run_loop = win_main::RunLoop::new();
-    let mut builder = WindowBuilder::new(run_loop.get_handle());
+    let mut builder = WindowBuilder::new();
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
