@@ -369,6 +369,7 @@ impl WndProc for MyWndProc {
             WM_SIZE => unsafe {
                 let width = LOWORD(lparam as u32) as u32;
                 let height = HIWORD(lparam as u32) as u32;
+                self.handler.size(width, height);
                 let use_hwnd = if let Some(ref dcomp_state) =
                     self.state.borrow().as_ref().unwrap().dcomp_state
                 {
@@ -405,7 +406,6 @@ impl WndProc for MyWndProc {
                         println!("ResizeBuffers failed: 0x{:x}", res);
                     }
                 }
-                self.handler.size(width, height);
                 Some(0)
             },
             WM_COMMAND => {
