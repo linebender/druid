@@ -16,11 +16,12 @@
 
 #![allow(non_snake_case)]
 
-use std::borrow::Borrow;
+use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::mem;
 use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
+use std::sync::{Arc, Mutex};
 
 use winapi::ctypes::{c_int, c_void};
 use winapi::shared::basetsd::*;
@@ -45,8 +46,6 @@ use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVis
 use menu::Menu;
 use paint::{self, PaintCtx};
 use util::{OPTIONAL_FUNCTIONS, as_result, FromWide, ToWide};
-use win_main::RunLoopHandle;
-use win_main::XI_RUN_IDLE;
 
 extern "system" {
     pub fn DwmFlush();
@@ -55,7 +54,6 @@ extern "system" {
 /// Builder abstraction for creating new windows.
 pub struct WindowBuilder {
     handler: Option<Box<WinHandler>>,
-    runloop: RunLoopHandle,
     dwStyle: DWORD,
     title: String,
     menu: Option<Menu>,
@@ -88,10 +86,31 @@ pub enum PresentStrategy {
 #[derive(Clone, Default)]
 pub struct WindowHandle(Weak<WindowState>);
 
+/// A handle that can get used to schedule an idle handler. Note that
+/// this handle is thread safe. If the handle is used after the hwnd
+/// has been destroyed, probably not much will go wrong (the XI_RUN_IDLE
+/// message may be sent to a stray window).
+#[derive(Clone)]
+pub struct IdleHandle {
+    pub(crate) hwnd: HWND,
+    queue: Arc<Mutex<Vec<Box<IdleCallback>>>>,
+}
+
+trait IdleCallback: Send {
+    fn call(self: Box<Self>, a: &Any);
+}
+
+impl<F: FnOnce(&Any) + Send> IdleCallback for F {
+    fn call(self: Box<F>, a: &Any) {
+        (*self)(a)
+    }
+}
+
 struct WindowState {
     hwnd: Cell<HWND>,
     dpi: Cell<f32>,
     wndproc: Box<WndProc>,
+    idle_queue: Arc<Mutex<Vec<Box<IdleCallback>>>>,
 }
 
 /// App behavior, supplied by the app.
@@ -170,6 +189,9 @@ pub trait WinHandler {
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is
     /// WM_NCDESTROY).
     fn destroy(&self) {}
+
+    /// Get a reference to the handler state. Used mostly by idle handlers.
+    fn as_any(&self) -> &Any;
 }
 
 /// An indicator of which mouse button was pressed.
@@ -212,7 +234,6 @@ trait WndProc {
 struct MyWndProc {
     handler: Box<WinHandler>,
     handle: RefCell<WindowHandle>,
-    runloop: RunLoopHandle,
     d2d_factory: direct2d::Factory,
     state: RefCell<Option<WndState>>,
 }
@@ -233,6 +254,9 @@ struct DCompState {
     // True if in a drag-resizing gesture (at which point the swapchain is disabled)
     sizing: bool,
 }
+
+/// Message indicating there are idle tasks to run.
+const XI_RUN_IDLE: UINT = WM_USER;
 
 impl Default for PresentStrategy {
     fn default() -> PresentStrategy {
@@ -278,8 +302,10 @@ impl MyWndProc {
             println!("EndDraw error: {:?}", e);
         }
         if anim {
-            let handle = self.handle.borrow().clone();
-            self.runloop.borrow().add_idle(&handle.clone(), move || handle.invalidate());
+            let handle = self.handle.borrow().get_idle_handle().unwrap();
+            // Note: maybe add WindowHandle as arg to idle handler so we don't need this.
+            let handle2 = handle.clone();
+            handle.add_idle(move |_| handle2.invalidate());
         }
     }
 }
@@ -487,7 +513,11 @@ impl WndProc for MyWndProc {
                 None
             }
             XI_RUN_IDLE => {
-                self.runloop.borrow().run_idle();
+                let queue = self.handle.borrow().take_idle_queue();
+                let handler_as_any = self.handler.as_any();
+                for callback in queue {
+                    callback.call(handler_as_any);
+                }
                 Some(0)
             }
             _ => None
@@ -496,10 +526,9 @@ impl WndProc for MyWndProc {
 }
 
 impl WindowBuilder {
-    pub fn new(runloop: RunLoopHandle) -> WindowBuilder {
+    pub fn new() -> WindowBuilder {
         WindowBuilder {
             handler: None,
-            runloop,
             dwStyle: WS_OVERLAPPEDWINDOW,
             title: String::new(),
             menu: None,
@@ -565,7 +594,6 @@ impl WindowBuilder {
             let wndproc = MyWndProc {
                 handler: self.handler.unwrap(),
                 handle: Default::default(),
-                runloop: self.runloop,
                 d2d_factory: direct2d::Factory::new().unwrap(),
                 state: RefCell::new(None),
             };
@@ -574,6 +602,7 @@ impl WindowBuilder {
                 hwnd: Cell::new(0 as HWND),
                 dpi: Cell::new(0.0),
                 wndproc: Box::new(wndproc),
+                idle_queue: Default::default(),
             };
             let win = Rc::new(window);
             let handle = WindowHandle(Rc::downgrade(&win));
@@ -770,6 +799,25 @@ impl WindowHandle {
         self.0.upgrade().map(|w| w.hwnd.get())
     }
 
+
+    /// Get a handle that can be used to schedule an idle task.
+    pub fn get_idle_handle(&self) -> Option<IdleHandle> {
+        self.0.upgrade().map(|w|
+            IdleHandle {
+                hwnd: w.hwnd.get(),
+                queue: w.idle_queue.clone(),
+            }
+        )
+    }
+
+    fn take_idle_queue(&self) -> Vec<Box<IdleCallback>> {
+        if let Some(w) = self.0.upgrade() {
+            mem::replace(&mut w.idle_queue.lock().unwrap(), Vec::new())
+        } else {
+            Vec::new()
+        }
+    }
+
     /// Get the dpi of the window.
     pub fn get_dpi(&self) -> f32 {
         if let Some(w) = self.0.upgrade() {
@@ -799,5 +847,31 @@ impl WindowHandle {
     pub fn pixels_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f32, f32) {
         let scale = 96.0 / self.get_dpi();
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
+    }
+}
+
+// There is a tiny risk of things going wrong when hwnd is sent across threads.
+unsafe impl Send for IdleHandle {}
+
+impl IdleHandle {
+    /// Add an idle handler, which is called (once) when the message loop
+    /// is empty. The idle handler will be run from the window's wndproc,
+    /// which means it won't be scheduled if the window is closed.
+    pub fn add_idle<F>(&self, callback: F)
+        where F: FnOnce(&Any) + Send + 'static
+    {
+        let mut queue = self.queue.lock().unwrap();
+        if queue.is_empty() {
+            unsafe {
+                PostMessageW(self.hwnd, XI_RUN_IDLE, 0, 0);
+            }
+        }
+        queue.push(Box::new(callback));
+    }
+
+    fn invalidate(&self) {
+        unsafe {
+            InvalidateRect(self.hwnd, null(), FALSE);
+        }        
     }
 }
