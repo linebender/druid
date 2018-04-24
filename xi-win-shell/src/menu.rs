@@ -15,6 +15,7 @@
 //! Safe wrapper for menus.
 
 use std::mem;
+use std::ptr::null;
 
 use winapi::shared::basetsd::*;
 use winapi::shared::windef::*;
@@ -61,9 +62,17 @@ impl Menu {
         }
     }
 
+    /// Add an item to the menu.
     pub fn add_item(&mut self, id: u32, text: &str) {
         unsafe {
             AppendMenuW(self.hmenu, MF_STRING, id as UINT_PTR, text.to_wide().as_ptr());
+        }
+    }
+
+    /// Add a separator to the menu.
+    pub fn add_separator(&mut self) {
+        unsafe {
+            AppendMenuW(self.hmenu, MF_SEPARATOR, 0, null());
         }
     }
 }
