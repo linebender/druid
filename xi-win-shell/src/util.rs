@@ -228,3 +228,15 @@ pub fn default_text_options() -> &'static [DrawTextOption] {
         &[]
     }
 }
+
+/// Convenience macro for defining accelerator tables.
+#[macro_export]
+macro_rules! accel {
+    ( $( $fVirt:expr, $key:expr, $cmd:expr, )* ) => {
+        [
+            $(
+                ACCEL { fVirt: $fVirt | FVIRTKEY, key: $key as WORD, cmd: $cmd as WORD },
+            )*
+        ]
+    }
+}

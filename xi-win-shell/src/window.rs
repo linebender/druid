@@ -444,7 +444,7 @@ impl WndProc for MyWndProc {
                 Some(0)
             },
             WM_COMMAND => {
-                self.handler.command(wparam as u32);
+                self.handler.command(LOWORD(wparam as u32) as u32);
                 Some(0)
             }
             WM_CHAR => {
