@@ -23,7 +23,9 @@ use std::cell::RefCell;
 use time::get_time;
 
 use direct2d::math::*;
-use directwrite::text_format;
+use direct2d::RenderTarget;
+use direct2d::brush::SolidColorBrush;
+use directwrite::TextFormat;
 
 use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::util::default_text_options;
@@ -48,28 +50,23 @@ impl WinHandler for PerfTest {
         let rt = paint_ctx.render_target();
         let size = rt.get_size();
         let rect = RectF::from((0.0, 0.0, size.width, size.height));
-        let bg = rt.create_solid_color_brush(0x272822,
-            &BrushProperties::default()).unwrap();
-        rt.fill_rectangle(&rect, &bg);
-        let fg = rt.create_solid_color_brush(0xf0f0ea,
-            &BrushProperties::default()).unwrap();
+        let bg = SolidColorBrush::create(rt).with_color(0x272822).build().unwrap();
+        let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
+        rt.fill_rectangle(rect, &bg);
 
-        rt.draw_line(&Point2F::from((0.0, size.height)),
-            &Point2F::from((size.width, 0.0)),
-            &fg, 1.0, None);
+        rt.draw_line((0.0, size.height), (size.width, 0.0), &fg, 1.0, None);
 
         let th = ::std::f32::consts::PI * (get_time().nsec as f32) * 2e-9;
         let dx = 100.0 * th.sin();
         let dy = 100.0 * th.cos();
-        rt.draw_line(&Point2F::from((100.0, 100.0)),
-            &Point2F::from((100.0 + dx, 100.0 - dy)),
+        rt.draw_line((100.0, 100.0), (100.0 + dx, 100.0 - dy),
             &fg, 1.0, None);
 
-        let text_format_params = text_format::ParamBuilder::new()
-            .size(15.0)
-            .family("Consolas")
-            .build().unwrap();
-        let text_format = state.dwrite_factory.create(text_format_params).unwrap();
+        let text_format = TextFormat::create(&state.dwrite_factory)
+            .with_family("Consolas")
+            .with_size(15.0)
+            .build()
+            .unwrap();
 
         let now = get_time();
         let now = now.sec as f64 + 1e-9 * now.nsec as f64;
@@ -78,7 +75,7 @@ impl WinHandler for PerfTest {
         rt.draw_text(
             &msg,
             &text_format,
-            &RectF::from((10.0, 210.0, 100.0, 300.0)),
+            (10.0, 210.0, 100.0, 300.0),
             &fg,
             default_text_options()
         );
@@ -92,7 +89,7 @@ impl WinHandler for PerfTest {
             rt.draw_text(
                 msg,
                 &text_format,
-                &RectF::from((x0, y, x0 + 900.0, y + 80.0)),
+                (x0, y, x0 + 900.0, y + 80.0),
                 &fg,
                 default_text_options()
             );

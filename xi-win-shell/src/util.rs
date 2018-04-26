@@ -32,7 +32,7 @@ use winapi::um::libloaderapi::*;
 use winapi::um::shellscalingapi::*;
 use winapi::um::unknwnbase::IUnknown;
 
-use direct2d::render_target::DrawTextOption;
+use direct2d::enums::DrawTextOptions;
 
 #[derive(Debug)]
 /// Error codes. At the moment, this is little more than HRESULT, but that
@@ -220,12 +220,12 @@ pub fn init() {
 
 /// Determine a suitable default set of text options. Enables color fonts
 /// on systems that are capable of them (8.1 and above).
-pub fn default_text_options() -> &'static [DrawTextOption] {
+pub fn default_text_options() -> DrawTextOptions {
     // This is an arbitrary optional function that is 8.1 and above.
     if OPTIONAL_FUNCTIONS.SetProcessDpiAwareness.is_some() {
-        &[DrawTextOption::EnableColorFont]
+        DrawTextOptions::ENABLE_COLOR_FONT
     } else {
-        &[]
+        DrawTextOptions::NONE
     }
 }
 

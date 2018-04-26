@@ -19,6 +19,8 @@ use std::any::Any;
 use std::cell::RefCell;
 
 use direct2d::math::*;
+use direct2d::RenderTarget;
+use direct2d::brush::SolidColorBrush;
 
 use xi_win_shell::menu::Menu;
 use xi_win_shell::paint::PaintCtx;
@@ -39,12 +41,10 @@ impl WinHandler for HelloState {
         let rt = paint_ctx.render_target();
         let size = rt.get_size();
         let rect = RectF::from((0.0, 0.0, size.width, size.height));
-        let bg = rt.create_solid_color_brush(0x272822,
-            &BrushProperties::default()).unwrap();
-        rt.fill_rectangle(&rect, &bg);
-        let fg = rt.create_solid_color_brush(0xf0f0ea,
-            &BrushProperties::default()).unwrap();
-        rt.draw_line(&Point2F::from((10.0, 50.0)), &Point2F::from((90.0, 90.0)),
+        let bg = SolidColorBrush::create(rt).with_color(0x272822).build().unwrap();
+        let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
+        rt.fill_rectangle(rect, &bg);
+        rt.draw_line((10.0, 50.0), (90.0, 90.0),
                 &fg, 1.0, None);
         false
     }
