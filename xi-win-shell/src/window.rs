@@ -512,7 +512,7 @@ impl WndProc for MyWndProc {
                     _ => unreachable!(),
                 };
                 let x = LOWORD(lparam as u32) as i16 as i32;
-                let y = LOWORD(lparam as u32) as i16 as i32;
+                let y = HIWORD(lparam as u32) as i16 as i32;
                 let mods = LOWORD(wparam as u32) as u32;
                 self.handler.mouse(x, y, mods, button, ty);
                 Some(0)
