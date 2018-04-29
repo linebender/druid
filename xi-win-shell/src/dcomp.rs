@@ -77,6 +77,9 @@ impl D3D11Device {
             let flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;  // could probably set single threaded
             let hr = D3D11CreateDevice(null_mut(), D3D_DRIVER_TYPE_HARDWARE, null_mut(), flags,
                 null(), 0, D3D11_SDK_VERSION, &mut d3d11_device, null_mut(), null_mut());
+            if !SUCCEEDED(hr) {
+                println!("Error on D3D11CreateDevice: 0x{:x}", hr);
+            }
             wrap(hr, d3d11_device, D3D11Device)
         }
     }
