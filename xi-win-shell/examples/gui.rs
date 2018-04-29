@@ -16,6 +16,7 @@
 
 extern crate xi_win_shell;
 extern crate direct2d;
+extern crate directwrite;
 
 use std::any::Any;
 use std::cell::RefCell;
@@ -29,15 +30,14 @@ use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::win_main;
 use xi_win_shell::window::{MouseButton, MouseType, WindowBuilder, WindowHandle, WinHandler};
 
-#[derive(Default)]
 struct GuiMain {
     state: RefCell<GuiState>,
 }
 
 type Id = usize;
 
-#[derive(Default)]
 struct GuiState {
+    dwrite_factory: directwrite::Factory,
     handle: WindowHandle,
     widgets: Vec<Box<Widget>>,
 
@@ -75,7 +75,7 @@ enum LayoutResult {
 struct LayoutCtx<'a>(&'a mut [Geometry]);
 
 trait Widget {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry);
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {}
 
     /// `size` is the size of the child previously requested by a RequestChild return.
     fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
@@ -86,7 +86,10 @@ trait Widget {
     fn poke(&mut self, payload: &mut Any, ctx: &mut PokeCtx) -> bool { false }
 }
 
+// TODO
 struct PokeCtx;
+
+// Widgets
 
 struct FooWidget;
 
@@ -96,6 +99,17 @@ struct Row {
     ix: usize,
     width_per_flex: f32,
     height: f32,
+}
+
+struct Padding {
+    left: f32,
+    right: f32,
+    top: f32,
+    bottom: f32,
+}
+
+struct Button {
+    label: String,
 }
 
 impl Geometry {
@@ -117,18 +131,29 @@ impl Widget for FooWidget {
         let rt = paint_ctx.render_target();
         let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
         let (x, y) = geom.pos;
-        rt.draw_line((x + 10.0, y + 50.0), (x + 90.0, y + 90.0),
+        rt.draw_line((x, y), (x + geom.size.0, y + geom.size.1),
                 &fg, 1.0, None);
     }
 
-    fn layout(&mut self, _bc: &BoxConstraints, _children: &[Id], _size: Option<(f32, f32)>,
+    fn layout(&mut self, bc: &BoxConstraints, _children: &[Id], _size: Option<(f32, f32)>,
         _ctx: &mut LayoutCtx) -> LayoutResult
     {
-        LayoutResult::Size((100.0, 100.0))
+        LayoutResult::Size(bc.constrain((100.0, 100.0)))
     }
 }
 
 impl GuiState {
+    pub fn new() -> GuiState {
+        GuiState {
+            dwrite_factory: directwrite::Factory::new().unwrap(),
+            widgets: Vec::new(),
+            geom: Vec::new(),
+            handle: Default::default(),
+            graph: Default::default(),
+        }
+    }
+    /// Put a widget in the graph and add its children. Returns newly allocated
+    /// id for the node.
     pub fn instantiate_widget<W>(&mut self, widget: W, children: &[Id]) -> Id
         where W: Widget + 'static
     {
@@ -182,6 +207,16 @@ fn layout_rec(widgets: &mut [Box<Widget>], geom: &mut [Geometry], graph: &Graph,
     }
 }
 
+fn clamp(val: f32, min: f32, max: f32) -> f32 {
+    if val < min {
+        min
+    } else if val > max {
+        max
+    } else {
+        val
+    }
+}
+
 impl BoxConstraints {
     pub fn tight(size: (f32, f32)) -> BoxConstraints {
         BoxConstraints {
@@ -190,6 +225,11 @@ impl BoxConstraints {
             min_height: size.1,
             max_height: size.1,
         }
+    }
+
+    pub fn constrain(&self, size: (f32, f32)) -> (f32, f32) {
+        (clamp(size.0, self.min_width, self.max_width),
+            clamp(size.1, self.min_height, self.max_height))
     }
 }
 
@@ -204,10 +244,6 @@ impl<'a> LayoutCtx<'a> {
 }
 
 impl Widget for Row {
-    // Maybe there should be a no-op default method, for containers in general?
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {        
-    }
-
     fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
         ctx: &mut LayoutCtx) -> LayoutResult
     {
@@ -240,7 +276,38 @@ impl Widget for Row {
             min_height: bc.min_height,
             max_height: bc.max_height,
         };
-        LayoutResult::RequestChild(self.ix, child_bc)
+        LayoutResult::RequestChild(children[self.ix], child_bc)
+    }
+}
+
+impl Padding {
+    fn uniform(padding: f32) -> Padding {
+        Padding {
+            left: padding,
+            right: padding,
+            top: padding,
+            bottom: padding,
+        }
+    }
+}
+
+impl Widget for Padding {
+    fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
+        ctx: &mut LayoutCtx) -> LayoutResult
+    {
+        if let Some(size) = size {
+            ctx.position_child(children[0], (self.left, self.top));
+            LayoutResult::Size((size.0 + self.left + self.right,
+                size.1 + self.top + self.bottom))
+        } else {
+            let child_bc = BoxConstraints {
+                min_width: bc.min_width - (self.left + self.right),
+                max_width: bc.max_width - (self.left + self.right),
+                min_height: bc.min_height - (self.top + self.bottom),
+                max_height: bc.max_height - (self.top + self.bottom),
+            };
+            LayoutResult::RequestChild(children[0], child_bc)
+        }
     }
 }
 
@@ -316,9 +383,11 @@ fn main() {
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
-    let mut state = GuiState::default();
+    let mut state = GuiState::new();
     let foo1 = state.instantiate_widget(FooWidget, &[]);
+    let foo1 = state.instantiate_widget(Padding::uniform(10.0), &[foo1]);
     let foo2 = state.instantiate_widget(FooWidget, &[]);
+    let foo2 = state.instantiate_widget(Padding::uniform(10.0), &[foo2]);
     let root = state.instantiate_widget(Row::default(), &[foo1, foo2]);
     state.set_root(root);
     builder.set_handler(Box::new(GuiMain { state: RefCell::new(state) }));
