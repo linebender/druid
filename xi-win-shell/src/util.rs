@@ -18,6 +18,7 @@
 //! which are only supported on certain versions of windows.
 
 use std::ffi::{OsStr, CString};
+use std::fmt;
 use std::os::windows::ffi::OsStrExt;
 use std::slice;
 use std::mem;
@@ -34,7 +35,6 @@ use winapi::um::unknwnbase::IUnknown;
 
 use direct2d::enums::DrawTextOptions;
 
-#[derive(Debug)]
 /// Error codes. At the moment, this is little more than HRESULT, but that
 /// might change.
 pub enum Error {
@@ -44,6 +44,17 @@ pub enum Error {
     D2Error,
     /// A function is available on newer version of windows.
     OldWindows,
+}
+
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match *self {
+            Error::Null => write!(f, "Null error"),
+            Error::Hr(hr) => write!(f, "HRESULT 0x{:x}", hr),
+            Error::D2Error => write!(f, "Direct2D error"),
+            Error::OldWindows => write!(f, "Attempted newer API on older Windows"),
+        }
+    }
 }
 
 pub fn as_result(hr: HRESULT) -> Result<(), Error> {

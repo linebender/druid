@@ -662,7 +662,11 @@ impl WindowBuilder {
                 return Err(Error::Null);
             }
 
-            let dcomp_state = create_dcomp_state(self.present_strategy, hwnd)?;
+            let dcomp_state = create_dcomp_state(self.present_strategy, hwnd)
+                .unwrap_or_else(|e| {
+                    println!("Error creating swapchain, falling back to hwnd: {:?}", e);
+                    None
+                });
 
             win.hwnd.set(hwnd);
             let state = WndState {
@@ -713,11 +717,6 @@ unsafe fn create_dcomp_state(present_strategy: PresentStrategy, hwnd: HWND)
         return Ok(None);
     }
     if let Some(create_dxgi_factory2) = OPTIONAL_FUNCTIONS.CreateDXGIFactory2 {
-        let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
-        let mut d3d11_device = D3D11Device::new_simple()?;
-        let mut d2d1_device = d3d11_device.create_d2d1_device()?;
-        let mut dcomp_device = d2d1_device.create_composition_device()?;
-        let mut dcomp_target = dcomp_device.create_target_for_hwnd(hwnd, true)?;
 
         let mut factory: *mut IDXGIFactory2 = null_mut();
         as_result(create_dxgi_factory2(0, &IID_IDXGIFactory2,
@@ -725,6 +724,12 @@ unsafe fn create_dcomp_state(present_strategy: PresentStrategy, hwnd: HWND)
         println!("dxgi factory pointer = {:?}", factory);
         let adapter = choose_adapter(factory);
         println!("adapter = {:?}", adapter);
+
+        let mut d3d11_device = D3D11Device::new_simple()?;
+        let mut d2d1_device = d3d11_device.create_d2d1_device()?;
+        let mut dcomp_device = d2d1_device.create_composition_device()?;
+        let mut dcomp_target = dcomp_device.create_target_for_hwnd(hwnd, true)?;
+
         let (swap_effect, bufs) = match present_strategy {
             PresentStrategy::Hwnd => unreachable!(),
             PresentStrategy::Sequential => (DXGI_SWAP_EFFECT_SEQUENTIAL, 1),
@@ -744,6 +749,7 @@ unsafe fn create_dcomp_state(present_strategy: PresentStrategy, hwnd: HWND)
             AlphaMode: DXGI_ALPHA_MODE_IGNORE,
             Flags: 0,
         };
+        let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
         let res = (*factory).CreateSwapChainForComposition(d3d11_device.raw_ptr() as *mut IUnknown,
             &desc, null_mut(), &mut swap_chain);
         println!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
