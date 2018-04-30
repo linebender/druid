@@ -39,9 +39,7 @@ use winapi::um::winnt::HRESULT;
 use wio::com::ComPtr;
 
 use direct2d::{self, RenderTarget};
-use direct2d::error::D2D1Error;
 use direct2d::math::Matrix3x2F;
-use direct2d::render_target::RenderTargetBacking;
 
 use util::OPTIONAL_FUNCTIONS;
 
@@ -184,6 +182,10 @@ impl DCompositionVisual {
     }
 }
 
+// We don't actually need to draw into DirectComposition virtual surfaces now, this is
+// experimental and based on an older version of direct2d-rs. Probably delete.
+
+/*
 struct DcBacking(*mut ID2D1DeviceContext);
 unsafe impl RenderTargetBacking for DcBacking {
     fn create_target(self, _factory: &mut ID2D1Factory1) -> Result<*mut ID2D1RenderTarget, HRESULT> {
@@ -212,7 +214,7 @@ impl DCompositionVirtualSurface {
             let backing = DcBacking(dc);
             let mut rt = d2d_factory.create_render_target(backing).map_err(|e|
                 match e {
-                    D2D1Error::ComError(hr) => hr,
+                    direct2d::Error::ComError(hr) => hr,
                     _ => 0,
                 })?;
             // TODO: either move dpi scaling somewhere else or figure out how to
@@ -241,3 +243,5 @@ impl Content for DCompositionVirtualSurface {
         self.0.as_raw() as *mut IUnknown
     }
 }
+
+*/

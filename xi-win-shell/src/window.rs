@@ -23,6 +23,7 @@ use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 
+use winapi::Interface;
 use winapi::ctypes::{c_int, c_void};
 use winapi::shared::basetsd::*;
 use winapi::shared::dxgi::*;
@@ -39,7 +40,8 @@ use winapi::um::winnt::*;
 use winapi::um::winuser::*;
 
 use direct2d;
-use direct2d::render_target::RenderTarget;
+use direct2d::math::SizeU;
+use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarget};
 
 use Error;
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
@@ -249,7 +251,7 @@ struct MyWndProc {
 
 struct WndState {
     swap_chain: *mut IDXGISwapChain1,
-    render_target: Option<RenderTarget>,
+    render_target: Option<GenericRenderTarget>,
     dcomp_state: Option<DCompState>,
     dpi: f32,
 }
@@ -290,8 +292,9 @@ impl MyWndProc {
         unsafe {
             let mut state = self.state.borrow_mut();
             let s = state.as_mut().unwrap();
-            let rt = paint::create_render_target_dxgi(&self.d2d_factory, s.swap_chain, s.dpi).ok();
-            s.render_target = rt;
+            let rt = paint::create_render_target_dxgi(&self.d2d_factory, s.swap_chain, s.dpi)
+                .map(|rt| rt.as_generic());
+            s.render_target = rt.ok();
         }
     }
 
@@ -336,7 +339,8 @@ impl WndProc for MyWndProc {
             }
             WM_PAINT => unsafe {
                 if self.state.borrow().as_ref().unwrap().render_target.is_none() {
-                    let rt = paint::create_render_target(&self.d2d_factory, hwnd);
+                    let rt = paint::create_render_target(&self.d2d_factory, hwnd)
+                        .map(|rt| rt.as_generic());
                     self.state.borrow_mut().as_mut().unwrap().render_target = rt.ok();
                 }
                 self.render();
@@ -353,7 +357,8 @@ impl WndProc for MyWndProc {
             },
             WM_ENTERSIZEMOVE => unsafe {
                 if self.state.borrow().as_ref().unwrap().dcomp_state.is_some() {
-                    let rt = paint::create_render_target(&self.d2d_factory, hwnd);
+                    let rt = paint::create_render_target(&self.d2d_factory, hwnd)
+                        .map(|rt| rt.as_generic());
                     self.state.borrow_mut().as_mut().unwrap().render_target = rt.ok();
                     self.handler.rebuild_resources();
                     self.render();
@@ -416,10 +421,11 @@ impl WndProc for MyWndProc {
                     let mut state = self.state.borrow_mut();
                     let mut s = state.as_mut().unwrap();
                     if let Some(ref mut rt) = s.render_target {
-                        if let Some(hrt) = rt.hwnd_rt() {
+                        if let Some(hrt) = cast_to_hwnd(rt) {
                             let width = LOWORD(lparam as u32) as u32;
                             let height = HIWORD(lparam as u32) as u32;
-                            hrt.Resize(&D2D1_SIZE_U { width, height });
+                            let size = SizeU(D2D1_SIZE_U { width, height });
+                            let _ = hrt.resize(size);
                         }
                     }
                     InvalidateRect(hwnd, null_mut(), FALSE);
@@ -646,6 +652,7 @@ impl WindowBuilder {
             }
 
             let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
+            // TODO: make this sensitive to PresentStrategy
             let dcomp_state = if let Some(create_dxgi_factory2) = OPTIONAL_FUNCTIONS.CreateDXGIFactory2 {
                 let mut d3d11_device = D3D11Device::new_simple()?;
                 let mut d2d1_device = d3d11_device.create_d2d1_device()?;
@@ -882,5 +889,19 @@ impl IdleHandle {
         unsafe {
             InvalidateRect(self.hwnd, null(), FALSE);
         }        
+    }
+}
+
+/// Casts render target to hwnd variant.
+///
+/// TODO: investigate whether there's a better way to do this.
+unsafe fn cast_to_hwnd(rt: &GenericRenderTarget) -> Option<HwndRenderTarget> {
+    let raw_ptr = rt.clone().get_raw();
+    let mut hwnd = null_mut();
+    let err = (*raw_ptr).QueryInterface(&ID2D1HwndRenderTarget::uuidof(), &mut hwnd);
+    if SUCCEEDED(err) {
+        Some(HwndRenderTarget::from_raw(hwnd as *mut ID2D1HwndRenderTarget))
+    } else {
+        None
     }
 }

@@ -6,8 +6,8 @@ authors = ["Raph Levien <raph@google.com>"]
 description = "Windows-specific application shell used for xi editor."
 
 [dependencies]
-directwrite = "0.0.9"
-direct2d = "0.0.9"
+directwrite = "0.1.2"
+direct2d = "0.1.1"
 wio = "0.2"
 
 lazy_static = "1.0"
