@@ -24,9 +24,11 @@ use std::cell::RefCell;
 use direct2d::math::*;
 use direct2d::RenderTarget;
 use direct2d::brush::SolidColorBrush;
+use directwrite::{TextFormat, TextLayout};
 
 use xi_win_shell::menu::Menu;
 use xi_win_shell::paint::PaintCtx;
+use xi_win_shell::util::default_text_options;
 use xi_win_shell::win_main;
 use xi_win_shell::window::{MouseButton, MouseType, WindowBuilder, WindowHandle, WinHandler};
 
@@ -311,6 +313,49 @@ impl Widget for Padding {
     }
 }
 
+impl Button {
+    fn new<S: Into<String>>(label: S) -> Button {
+        Button {
+            label: label.into(),
+        }
+    }
+
+    fn get_layout<R: RenderTarget>(&self, rt: &mut R) -> TextLayout {
+        // TODO: caching of both the format and the layout
+        // TODO: directwrite factory plumbing
+        let dwrite_factory = directwrite::Factory::new().unwrap();
+        let format = TextFormat::create(&dwrite_factory)
+            .with_family("Segoe UI")
+            .with_size(15.0)
+            .build()
+            .unwrap();
+        let layout = TextLayout::create(&dwrite_factory)
+            .with_text(&self.label)
+            .with_font(&format)
+            .with_width(1e6)
+            .with_height(1e6)
+            .build().unwrap();
+        layout
+    }
+}
+
+impl Widget for Button {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+        let rt = paint_ctx.render_target();
+        let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
+        let (x, y) = geom.pos;
+        let text_layout = self.get_layout(rt);
+        rt.draw_text_layout((x, y), &text_layout, &fg, default_text_options());
+    }
+
+    fn layout(&mut self, bc: &BoxConstraints, _children: &[Id], _size: Option<(f32, f32)>,
+        _ctx: &mut LayoutCtx) -> LayoutResult
+    {
+        // TODO: need a render target plumbed down to measure text properly
+        LayoutResult::Size(bc.constrain((100.0, 17.0)))
+    }
+}
+
 impl WinHandler for GuiMain {
     fn connect(&self, handle: &WindowHandle) {
         self.state.borrow_mut().handle = handle.clone();
@@ -388,7 +433,8 @@ fn main() {
     let foo1 = state.instantiate_widget(Padding::uniform(10.0), &[foo1]);
     let foo2 = state.instantiate_widget(FooWidget, &[]);
     let foo2 = state.instantiate_widget(Padding::uniform(10.0), &[foo2]);
-    let root = state.instantiate_widget(Row::default(), &[foo1, foo2]);
+    let button = state.instantiate_widget(Button::new("Press me"), &[]);
+    let root = state.instantiate_widget(Row::default(), &[foo1, foo2, button]);
     state.set_root(root);
     builder.set_handler(Box::new(GuiMain { state: RefCell::new(state) }));
     builder.set_title("Hello example");
