@@ -20,6 +20,9 @@ extern crate directwrite;
 
 use std::any::Any;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::mem;
+use std::ops::Deref;
 
 use direct2d::math::*;
 use direct2d::RenderTarget;
@@ -41,11 +44,20 @@ type Id = usize;
 struct GuiState {
     dwrite_factory: directwrite::Factory,
     handle: WindowHandle,
+
+    /// The individual widget trait objects.
     widgets: Vec<Box<Widget>>,
 
-    // The position in the geometry is relative to the parent.
+    /// Bounding box of each widget. The position is relative to the parent.
     geom: Vec<Geometry>,
+
+    /// Graph of widgets (actually a strict tree structure, so maybe should be renamed).
     graph: Graph,
+
+    /// Queue of events to distribute to listeners
+    event_q: Vec<(Id, Box<Any>)>,
+
+    listeners: BTreeMap<Id, Vec<Box<FnMut(&Any, &mut ListenerCtx)>>>,
 }
 
 #[derive(Default)]
@@ -76,6 +88,17 @@ enum LayoutResult {
 
 struct LayoutCtx<'a>(&'a mut [Geometry]);
 
+pub struct HandlerCtx<'a> {
+    /// The id of the node sending the event
+    id: Id,
+
+    /// Reference for event queue, for sending events to listeners.
+    event_q: &'a mut Vec<(Id, Box<Any>)>,
+
+    /// For invalidation.
+    handle: &'a WindowHandle,
+}
+
 trait Widget {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {}
 
@@ -83,13 +106,32 @@ trait Widget {
     fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
         ctx: &mut LayoutCtx) -> LayoutResult;
 
+    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType,
+        ctx: &mut HandlerCtx) -> bool
+    { false }
+
     /// An `escape hatch` of sorts for accessing widget state beyond the widget
     /// methods. Returns true if it is handled.
     fn poke(&mut self, payload: &mut Any, ctx: &mut PokeCtx) -> bool { false }
 }
 
-// TODO
-struct PokeCtx;
+/// Context given to "poke" methods.
+struct PokeCtx<'a> {
+    /// For invalidation.
+    handle: &'a WindowHandle,
+}
+
+/// Context given to listeners, allowing responsive update to the GUI.
+///
+/// Currently mostly for "poke" actions, but we also want to allow reconfiguration
+/// of the widget graph, etc. Probably want to have a single unified interface for
+/// graph manipulations.
+pub struct ListenerCtx<'a> {
+    widgets: &'a mut [Box<Widget>],
+
+    /// For invalidation.
+    handle: &'a WindowHandle,
+}
 
 // Widgets
 
@@ -152,11 +194,14 @@ impl GuiState {
             geom: Vec::new(),
             handle: Default::default(),
             graph: Default::default(),
+            event_q: Vec::new(),
+            listeners: Default::default(),
         }
     }
+
     /// Put a widget in the graph and add its children. Returns newly allocated
     /// id for the node.
-    pub fn instantiate_widget<W>(&mut self, widget: W, children: &[Id]) -> Id
+    pub fn add<W>(&mut self, widget: W, children: &[Id]) -> Id
         where W: Widget + 'static
     {
         let id = self.graph.alloc_node();
@@ -170,6 +215,20 @@ impl GuiState {
 
     pub fn set_root(&mut self, root: Id) {
         self.graph.root = root;
+    }
+
+    /// Add a listener that expects a specific type.
+    pub fn add_listener<A, F>(&mut self, node: Id, mut f: F)
+        where A: Any + Copy, F: FnMut(A, &mut ListenerCtx) + 'static
+    {
+        let wrapper: Box<FnMut(&Any, &mut ListenerCtx)> = Box::new(move |a, ctx| {
+            if let Some(arg) = a.downcast_ref() {
+                f(*arg, ctx)
+            } else {
+                println!("type mismatch in listener arg");
+            }
+        });
+        self.listeners.entry(node).or_insert(Vec::new()).push(wrapper);
     }
 
     // Do pre-order traversal on graph, painting each node in turn.
@@ -187,6 +246,33 @@ impl GuiState {
 
     fn layout(&mut self, bc: &BoxConstraints, root: Id) {
         layout_rec(&mut self.widgets, &mut self.geom, &self.graph, bc, root);
+    }
+
+    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType) {
+        mouse_rec(&mut self.widgets, &self.geom, &self.graph,
+            x, y, mods, which, ty,
+            &mut HandlerCtx {
+                id: self.graph.root,
+                event_q: &mut self.event_q,
+                handle: &self.handle,
+            }
+        );
+        self.dispatch_events();
+    }
+
+    fn dispatch_events(&mut self) {
+        let event_q = mem::replace(&mut self.event_q, Vec::new());
+        for (id, event) in event_q {
+            if let Some(listeners) = self.listeners.get_mut(&id) {
+                for listener in listeners {
+                    let mut ctx = ListenerCtx {
+                        handle: &self.handle,
+                        widgets: &mut self.widgets,
+                    };
+                    listener(event.deref(), &mut ctx);
+                }
+            }
+        }
     }
 }
 
@@ -242,6 +328,73 @@ impl<'a> LayoutCtx<'a> {
 
     pub fn get_child_size(&self, child: Id) -> (f32, f32) {
         self.0[child].size
+    }
+}
+
+fn mouse_rec(widgets: &mut [Box<Widget>], geom: &[Geometry], graph: &Graph,
+    x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType, ctx: &mut HandlerCtx)
+    -> bool
+{
+    let node = ctx.id;
+    let g = &geom[node];
+    let x = x - g.pos.0;
+    let y = y - g.pos.1;
+    let mut handled = false;
+    if x >= 0.0 && y >= 0.0 && x < g.size.0 && y < g.size.1 {
+        handled = widgets[node].mouse(x, y, mods, which, ty, ctx);
+        for child in graph.children[node].iter().rev() {
+            if handled {
+                break;
+            }
+            ctx.id = *child;
+            handled = mouse_rec(widgets, geom, graph, x, y, mods, which, ty, ctx);
+        }
+    }
+    handled
+}
+
+// TODO: we're going to want a common set of invalidation methods; should we
+// have a trait? Maybe a deref to the common methods?
+impl<'a> HandlerCtx<'a> {
+    pub fn invalidate(&self) {
+        self.handle.invalidate();
+    }
+
+    // Send an event, to be handled by listeners.
+    pub fn send_event<A: Any>(&mut self, a: A) {
+        let id = self.id;
+        self.event_q.push((id, Box::new(a)));
+    }
+}
+
+impl<'a> PokeCtx<'a> {
+    /// Invalidate the widget appearance.
+    ///
+    /// Right now, it invalidates the whole window, but the intent is to invalidate
+    /// just the geometry of the widget. We also want to have even more fine-grained
+    /// invalidation (for content areas).
+    pub fn invalidate(&self) {
+        self.handle.invalidate();
+    }
+}
+
+impl<'a> ListenerCtx<'a> {
+    /// Invalidate the widget appearance.
+    ///
+    /// Right now, it invalidates the whole window, but the intent is to invalidate
+    /// just the geometry of the widget. We also want to have even more fine-grained
+    /// invalidation (for content areas).
+    pub fn invalidate(&self) {
+        self.handle.invalidate();
+    }
+
+    /// Send an arbitrary payload to a widget. The type an interpretation of the
+    /// payload depends on the specific target widget.
+    pub fn poke<A: Any>(&mut self, node: Id, payload: &mut A) -> bool {
+        let mut ctx = PokeCtx {
+            handle: self.handle,
+        };
+        self.widgets[node].poke(payload, &mut ctx)
     }
 }
 
@@ -354,6 +507,27 @@ impl Widget for Button {
         // TODO: need a render target plumbed down to measure text properly
         LayoutResult::Size(bc.constrain((100.0, 17.0)))
     }
+
+    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType,
+        ctx: &mut HandlerCtx) -> bool
+    {
+        println!("button {} {} {:x} {:?} {:?}", x, y, mods, which, ty);
+        if ty == MouseType::Down {
+            ctx.send_event(true);
+        }
+        true
+    }
+
+    fn poke(&mut self, payload: &mut Any, ctx: &mut PokeCtx) -> bool {
+        if let Some(string) = payload.downcast_ref::<String>() {
+            self.label = string.clone();
+            ctx.invalidate();
+            true
+        } else {
+            println!("downcast failed");
+            false
+        }
+    }
 }
 
 impl WinHandler for GuiMain {
@@ -408,7 +582,11 @@ impl WinHandler for GuiMain {
     }
 
     fn mouse(&self, x: i32, y: i32, mods: u32, button: MouseButton, ty: MouseType) {
-        println!("mouse_move ({}, {}) {:02x} {:?} {:?}", x, y, mods, button, ty);
+        println!("mouse ({}, {}) {:02x} {:?} {:?}", x, y, mods, button, ty);
+        let mut state = self.state.borrow_mut();
+        let (x, y) = state.handle.pixels_to_px_xy(x, y);
+        // TODO: detect multiple clicks and pass that down
+        state.mouse(x, y, mods, button, ty);
     }
 
     fn destroy(&self) {
@@ -429,13 +607,20 @@ fn main() {
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut state = GuiState::new();
-    let foo1 = state.instantiate_widget(FooWidget, &[]);
-    let foo1 = state.instantiate_widget(Padding::uniform(10.0), &[foo1]);
-    let foo2 = state.instantiate_widget(FooWidget, &[]);
-    let foo2 = state.instantiate_widget(Padding::uniform(10.0), &[foo2]);
-    let button = state.instantiate_widget(Button::new("Press me"), &[]);
-    let root = state.instantiate_widget(Row::default(), &[foo1, foo2, button]);
+    let foo1 = state.add(FooWidget, &[]);
+    let foo1 = state.add(Padding::uniform(10.0), &[foo1]);
+    let foo2 = state.add(FooWidget, &[]);
+    let foo2 = state.add(Padding::uniform(10.0), &[foo2]);
+    let button = state.add(Button::new("Press me"), &[]);
+    let button2 = state.add(Button::new("Don't press me"), &[]);
+    let root = state.add(Row::default(), &[foo1, foo2, button, button2]);
     state.set_root(root);
+    state.add_listener(button, move |state: bool, ctx| {
+        let _ = ctx.poke(button2, &mut "You clicked it!".to_string());
+    });
+    state.add_listener(button2, move |state: bool, ctx| {
+        let _ = ctx.poke(button2, &mut "Naughty naughty".to_string());
+    });
     builder.set_handler(Box::new(GuiMain { state: RefCell::new(state) }));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
