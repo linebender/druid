@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Sketch of entity-component based GUI.
+//! Simple entity-component-system based GUI.
 
 extern crate xi_win_shell;
 extern crate direct2d;
@@ -29,20 +29,22 @@ use direct2d::RenderTarget;
 use direct2d::brush::SolidColorBrush;
 use directwrite::{TextFormat, TextLayout};
 
-use xi_win_shell::menu::Menu;
 use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::util::default_text_options;
 use xi_win_shell::win_main;
-use xi_win_shell::window::{MouseButton, MouseType, WindowBuilder, WindowHandle, WinHandler};
+use xi_win_shell::window::{MouseButton, MouseType, WindowHandle, WinHandler};
 
-struct GuiMain {
+pub struct GuiMain {
     state: RefCell<GuiState>,
 }
 
 type Id = usize;
 
-struct GuiState {
+pub struct GuiState {
+    // TODO: plumbing
+    #[allow(unused)]
     dwrite_factory: directwrite::Factory,
+
     handle: WindowHandle,
 
     /// The individual widget trait objects.
@@ -68,25 +70,25 @@ struct Graph {
 }
 
 #[derive(Default)]
-struct Geometry {
+pub struct Geometry {
     // Maybe PointF is a better type, then we could use the math from direct2d?
     pos: (f32, f32),
     size: (f32, f32),
 }
 
-struct BoxConstraints {
+pub struct BoxConstraints {
     min_width: f32,
     max_width: f32,
     min_height: f32,
     max_height: f32,
 }
 
-enum LayoutResult {
+pub enum LayoutResult {
     Size((f32, f32)),
     RequestChild(Id, BoxConstraints),
 }
 
-struct LayoutCtx<'a>(&'a mut [Geometry]);
+pub struct LayoutCtx<'a>(&'a mut [Geometry]);
 
 pub struct HandlerCtx<'a> {
     /// The id of the node sending the event
@@ -99,24 +101,27 @@ pub struct HandlerCtx<'a> {
     handle: &'a WindowHandle,
 }
 
-trait Widget {
+pub trait Widget {
+    #[allow(unused)]
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {}
 
     /// `size` is the size of the child previously requested by a RequestChild return.
     fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
         ctx: &mut LayoutCtx) -> LayoutResult;
 
+    #[allow(unused)]
     fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType,
         ctx: &mut HandlerCtx) -> bool
     { false }
 
     /// An `escape hatch` of sorts for accessing widget state beyond the widget
     /// methods. Returns true if it is handled.
+    #[allow(unused)]
     fn poke(&mut self, payload: &mut Any, ctx: &mut PokeCtx) -> bool { false }
 }
 
 /// Context given to "poke" methods.
-struct PokeCtx<'a> {
+pub struct PokeCtx<'a> {
     /// For invalidation.
     handle: &'a WindowHandle,
 }
@@ -135,24 +140,24 @@ pub struct ListenerCtx<'a> {
 
 // Widgets
 
-struct FooWidget;
+pub struct FooWidget;
 
 #[derive(Default)]
-struct Row {
+pub struct Row {
     // layout continuation state
     ix: usize,
     width_per_flex: f32,
     height: f32,
 }
 
-struct Padding {
+pub struct Padding {
     left: f32,
     right: f32,
     top: f32,
     bottom: f32,
 }
 
-struct Button {
+pub struct Button {
     label: String,
 }
 
@@ -163,11 +168,6 @@ impl Geometry {
             size: self.size
         }
     }
-}
-
-// Functions like this suggest a proper size newtype.
-fn add_pos(a: (f32, f32), b: (f32, f32)) -> (f32, f32) {
-    (a.0 + b.0, a.1 + b.1)
 }
 
 impl Widget for FooWidget {
@@ -183,6 +183,12 @@ impl Widget for FooWidget {
         _ctx: &mut LayoutCtx) -> LayoutResult
     {
         LayoutResult::Size(bc.constrain((100.0, 100.0)))
+    }
+}
+
+impl GuiMain {
+    pub fn new(state: GuiState) -> GuiMain {
+        GuiMain { state: RefCell::new(state) }
     }
 }
 
@@ -354,7 +360,7 @@ fn mouse_rec(widgets: &mut [Box<Widget>], geom: &[Geometry], graph: &Graph,
 }
 
 // TODO: we're going to want a common set of invalidation methods; should we
-// have a trait? Maybe a deref to the common methods?
+// have a trait?
 impl<'a> HandlerCtx<'a> {
     pub fn invalidate(&self) {
         self.handle.invalidate();
@@ -436,7 +442,7 @@ impl Widget for Row {
 }
 
 impl Padding {
-    fn uniform(padding: f32) -> Padding {
+    pub fn uniform(padding: f32) -> Padding {
         Padding {
             left: padding,
             right: padding,
@@ -467,13 +473,13 @@ impl Widget for Padding {
 }
 
 impl Button {
-    fn new<S: Into<String>>(label: S) -> Button {
+    pub fn new<S: Into<String>>(label: S) -> Button {
         Button {
             label: label.into(),
         }
     }
 
-    fn get_layout<R: RenderTarget>(&self, rt: &mut R) -> TextLayout {
+    fn get_layout(&self) -> TextLayout {
         // TODO: caching of both the format and the layout
         // TODO: directwrite factory plumbing
         let dwrite_factory = directwrite::Factory::new().unwrap();
@@ -497,7 +503,7 @@ impl Widget for Button {
         let rt = paint_ctx.render_target();
         let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
         let (x, y) = geom.pos;
-        let text_layout = self.get_layout(rt);
+        let text_layout = self.get_layout();
         rt.draw_text_layout((x, y), &text_layout, &fg, default_text_options());
     }
 
@@ -554,6 +560,7 @@ impl WinHandler for GuiMain {
     }
 
     fn command(&self, id: u32) {
+        // TODO: plumb through to client
         match id {
             0x100 => self.state.borrow().handle.close(),
             _ => println!("unexpected id {}", id),
@@ -594,39 +601,6 @@ impl WinHandler for GuiMain {
     }
 
     fn as_any(&self) -> &Any { self }
-}
-
-fn main() {
-    xi_win_shell::init();
-
-    let mut file_menu = Menu::new();
-    file_menu.add_item(0x100, "E&xit");
-    let mut menubar = Menu::new();
-    menubar.add_dropdown(file_menu, "&File");
-
-    let mut run_loop = win_main::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-    let mut state = GuiState::new();
-    let foo1 = state.add(FooWidget, &[]);
-    let foo1 = state.add(Padding::uniform(10.0), &[foo1]);
-    let foo2 = state.add(FooWidget, &[]);
-    let foo2 = state.add(Padding::uniform(10.0), &[foo2]);
-    let button = state.add(Button::new("Press me"), &[]);
-    let button2 = state.add(Button::new("Don't press me"), &[]);
-    let root = state.add(Row::default(), &[foo1, foo2, button, button2]);
-    state.set_root(root);
-    state.add_listener(button, move |state: bool, ctx| {
-        let _ = ctx.poke(button2, &mut "You clicked it!".to_string());
-    });
-    state.add_listener(button2, move |state: bool, ctx| {
-        let _ = ctx.poke(button2, &mut "Naughty naughty".to_string());
-    });
-    builder.set_handler(Box::new(GuiMain { state: RefCell::new(state) }));
-    builder.set_title("Hello example");
-    builder.set_menu(menubar);
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
 }
 
 impl Graph {
