@@ -19,13 +19,40 @@ extern crate xi_win_ui;
 extern crate direct2d;
 extern crate directwrite;
 
+use direct2d::brush::SolidColorBrush;
+use direct2d::RenderTarget;
+
 use xi_win_shell::menu::Menu;
+use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::win_main;
 use xi_win_shell::window::WindowBuilder;
 
 use xi_win_ui::{GuiMain, GuiState};
-use xi_win_ui::{Button, FooWidget, Padding, Row};
+use xi_win_ui::widget::{Button, Row, Padding};
 use xi_win_ui::COMMAND_EXIT;
+
+use xi_win_ui::{BoxConstraints, Geometry, LayoutResult};
+use xi_win_ui::{Id, LayoutCtx};
+use xi_win_ui::widget::Widget;
+
+/// A very simple custom widget.
+pub struct FooWidget;
+
+impl Widget for FooWidget {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+        let rt = paint_ctx.render_target();
+        let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
+        let (x, y) = geom.pos;
+        rt.draw_line((x, y), (x + geom.size.0, y + geom.size.1),
+                &fg, 1.0, None);
+    }
+
+    fn layout(&mut self, bc: &BoxConstraints, _children: &[Id], _size: Option<(f32, f32)>,
+        _ctx: &mut LayoutCtx) -> LayoutResult
+    {
+        LayoutResult::Size(bc.constrain((100.0, 100.0)))
+    }
+}
 
 fn main() {
     xi_win_shell::init();

@@ -27,18 +27,22 @@ use std::ops::Deref;
 use direct2d::math::*;
 use direct2d::RenderTarget;
 use direct2d::brush::SolidColorBrush;
-use directwrite::{TextFormat, TextLayout};
 
 use xi_win_shell::paint::PaintCtx;
-use xi_win_shell::util::default_text_options;
 use xi_win_shell::win_main;
 use xi_win_shell::window::{MouseButton, MouseType, WindowHandle, WinHandler};
+
+pub mod widget;
+
+pub use widget::Widget;
 
 pub struct GuiMain {
     state: RefCell<GuiState>,
 }
 
-type Id = usize;
+/// An identifier for widgets, scoped to a GuiMain instance. This is the
+/// "entity" of the entity-component-system architecture.
+pub type Id = usize;
 
 pub struct GuiState {
     // TODO: plumbing
@@ -72,8 +76,8 @@ struct Graph {
 #[derive(Default)]
 pub struct Geometry {
     // Maybe PointF is a better type, then we could use the math from direct2d?
-    pos: (f32, f32),
-    size: (f32, f32),
+    pub pos: (f32, f32),
+    pub size: (f32, f32),
 }
 
 pub struct BoxConstraints {
@@ -88,8 +92,14 @@ pub enum LayoutResult {
     RequestChild(Id, BoxConstraints),
 }
 
+// Contexts for widget methods.
+
+/// Context given to layout methods.
+///
+/// TODO: plumb directwrite factory.
 pub struct LayoutCtx<'a>(&'a mut [Geometry]);
 
+/// Context given to handlers.
 pub struct HandlerCtx<'a> {
     /// The id of the node sending the event
     id: Id,
@@ -99,25 +109,6 @@ pub struct HandlerCtx<'a> {
 
     /// For invalidation.
     handle: &'a WindowHandle,
-}
-
-pub trait Widget {
-    #[allow(unused)]
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {}
-
-    /// `size` is the size of the child previously requested by a RequestChild return.
-    fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
-        ctx: &mut LayoutCtx) -> LayoutResult;
-
-    #[allow(unused)]
-    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType,
-        ctx: &mut HandlerCtx) -> bool
-    { false }
-
-    /// An `escape hatch` of sorts for accessing widget state beyond the widget
-    /// methods. Returns true if it is handled.
-    #[allow(unused)]
-    fn poke(&mut self, payload: &mut Any, ctx: &mut PokeCtx) -> bool { false }
 }
 
 /// Context given to "poke" methods.
@@ -138,29 +129,6 @@ pub struct ListenerCtx<'a> {
     handle: &'a WindowHandle,
 }
 
-// Widgets
-
-pub struct FooWidget;
-
-#[derive(Default)]
-pub struct Row {
-    // layout continuation state
-    ix: usize,
-    width_per_flex: f32,
-    height: f32,
-}
-
-pub struct Padding {
-    left: f32,
-    right: f32,
-    top: f32,
-    bottom: f32,
-}
-
-pub struct Button {
-    label: String,
-}
-
 /// A command for exiting. TODO: move commands entirely to client.
 pub const COMMAND_EXIT: u32 = 0x100;
 
@@ -170,22 +138,6 @@ impl Geometry {
             pos: (self.pos.0 + offset.0, self.pos.1 + offset.1),
             size: self.size
         }
-    }
-}
-
-impl Widget for FooWidget {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let rt = paint_ctx.render_target();
-        let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
-        let (x, y) = geom.pos;
-        rt.draw_line((x, y), (x + geom.size.0, y + geom.size.1),
-                &fg, 1.0, None);
-    }
-
-    fn layout(&mut self, bc: &BoxConstraints, _children: &[Id], _size: Option<(f32, f32)>,
-        _ctx: &mut LayoutCtx) -> LayoutResult
-    {
-        LayoutResult::Size(bc.constrain((100.0, 100.0)))
     }
 }
 
@@ -404,138 +356,6 @@ impl<'a> ListenerCtx<'a> {
             handle: self.handle,
         };
         self.widgets[node].poke(payload, &mut ctx)
-    }
-}
-
-impl Widget for Row {
-    fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
-        ctx: &mut LayoutCtx) -> LayoutResult
-    {
-        if let Some(size) = size {
-            if size.1 > self.height {
-                self.height = size.1;
-            }
-            self.ix += 1;
-            if self.ix == children.len() {
-                // measured all children
-                let mut x = 0.0;
-                for &child in children {
-                    // top-align, could do center etc. based on child height
-                    ctx.position_child(child, (x, 0.0));
-                    x += self.width_per_flex;
-                }
-                return LayoutResult::Size((bc.max_width, self.height));
-            }
-        } else {
-            if children.is_empty() {
-                return LayoutResult::Size((bc.min_width, bc.min_height));
-            }
-            self.ix = 0;
-            self.height = bc.min_height;
-            self.width_per_flex = bc.max_width / (children.len() as f32);
-        }
-        let child_bc = BoxConstraints {
-            min_width: self.width_per_flex,
-            max_width: self.width_per_flex,
-            min_height: bc.min_height,
-            max_height: bc.max_height,
-        };
-        LayoutResult::RequestChild(children[self.ix], child_bc)
-    }
-}
-
-impl Padding {
-    pub fn uniform(padding: f32) -> Padding {
-        Padding {
-            left: padding,
-            right: padding,
-            top: padding,
-            bottom: padding,
-        }
-    }
-}
-
-impl Widget for Padding {
-    fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
-        ctx: &mut LayoutCtx) -> LayoutResult
-    {
-        if let Some(size) = size {
-            ctx.position_child(children[0], (self.left, self.top));
-            LayoutResult::Size((size.0 + self.left + self.right,
-                size.1 + self.top + self.bottom))
-        } else {
-            let child_bc = BoxConstraints {
-                min_width: bc.min_width - (self.left + self.right),
-                max_width: bc.max_width - (self.left + self.right),
-                min_height: bc.min_height - (self.top + self.bottom),
-                max_height: bc.max_height - (self.top + self.bottom),
-            };
-            LayoutResult::RequestChild(children[0], child_bc)
-        }
-    }
-}
-
-impl Button {
-    pub fn new<S: Into<String>>(label: S) -> Button {
-        Button {
-            label: label.into(),
-        }
-    }
-
-    fn get_layout(&self) -> TextLayout {
-        // TODO: caching of both the format and the layout
-        // TODO: directwrite factory plumbing
-        let dwrite_factory = directwrite::Factory::new().unwrap();
-        let format = TextFormat::create(&dwrite_factory)
-            .with_family("Segoe UI")
-            .with_size(15.0)
-            .build()
-            .unwrap();
-        let layout = TextLayout::create(&dwrite_factory)
-            .with_text(&self.label)
-            .with_font(&format)
-            .with_width(1e6)
-            .with_height(1e6)
-            .build().unwrap();
-        layout
-    }
-}
-
-impl Widget for Button {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let rt = paint_ctx.render_target();
-        let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
-        let (x, y) = geom.pos;
-        let text_layout = self.get_layout();
-        rt.draw_text_layout((x, y), &text_layout, &fg, default_text_options());
-    }
-
-    fn layout(&mut self, bc: &BoxConstraints, _children: &[Id], _size: Option<(f32, f32)>,
-        _ctx: &mut LayoutCtx) -> LayoutResult
-    {
-        // TODO: need a render target plumbed down to measure text properly
-        LayoutResult::Size(bc.constrain((100.0, 17.0)))
-    }
-
-    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType,
-        ctx: &mut HandlerCtx) -> bool
-    {
-        println!("button {} {} {:x} {:?} {:?}", x, y, mods, which, ty);
-        if ty == MouseType::Down {
-            ctx.send_event(true);
-        }
-        true
-    }
-
-    fn poke(&mut self, payload: &mut Any, ctx: &mut PokeCtx) -> bool {
-        if let Some(string) = payload.downcast_ref::<String>() {
-            self.label = string.clone();
-            ctx.invalidate();
-            true
-        } else {
-            println!("downcast failed");
-            false
-        }
     }
 }
 
