@@ -23,7 +23,6 @@ use direct2d::brush::SolidColorBrush;
 use direct2d::RenderTarget;
 
 use xi_win_shell::menu::Menu;
-use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::win_main;
 use xi_win_shell::window::WindowBuilder;
 
@@ -32,7 +31,7 @@ use xi_win_ui::widget::{Button, Row, Padding};
 use xi_win_ui::COMMAND_EXIT;
 
 use xi_win_ui::{BoxConstraints, Geometry, LayoutResult};
-use xi_win_ui::{Id, LayoutCtx};
+use xi_win_ui::{Id, LayoutCtx, PaintCtx};
 use xi_win_ui::widget::Widget;
 
 /// A very simple custom widget.

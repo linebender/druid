@@ -26,9 +26,10 @@ use std::ops::Deref;
 
 use direct2d::math::*;
 use direct2d::RenderTarget;
+use direct2d::render_target::GenericRenderTarget;
 use direct2d::brush::SolidColorBrush;
 
-use xi_win_shell::paint::PaintCtx;
+use xi_win_shell::paint;
 use xi_win_shell::win_main;
 use xi_win_shell::window::{MouseButton, MouseType, WindowHandle, WinHandler};
 
@@ -61,8 +62,6 @@ pub struct ListenerCtx {
 }
 
 pub struct LayoutCtx {
-    // TODO: plumbing
-    #[allow(unused)]
     dwrite_factory: directwrite::Factory,
 
     handle: WindowHandle,
@@ -108,6 +107,11 @@ pub struct HandlerCtx<'a> {
     id: Id,
 
     c: &'a mut LayoutCtx,
+}
+
+pub struct PaintCtx<'a, 'b: 'a>  {
+    inner: &'a mut paint::PaintCtx<'b>,
+    dwrite_factory: &'a directwrite::Factory,
 }
 
 /// A command for exiting. TODO: move commands entirely to client.
@@ -177,17 +181,13 @@ impl GuiState {
         self.listeners.entry(node).or_insert(Vec::new()).push(wrapper);
     }
 
-    // Do pre-order traversal on graph, painting each node in turn.
-    //
-    // Implemented as a recursion, but we could use an explicit queue instead.
-    fn paint_rec(&mut self, paint_ctx: &mut PaintCtx, node: Id, pos: (f32, f32)) {
-        let geom = self.b.c.geom[node].offset(pos);
-        self.b.widgets[node].paint(paint_ctx, &geom);
-        // Note: we could eliminate the clone here by carrying widgets as a mut ref,
-        // and the graph as a non-mut ref.
-        for child in self.b.graph.children[node].clone() {
-            self.paint_rec(paint_ctx, child, geom.pos);
-        }
+    fn paint(&mut self, paint_ctx: &mut paint::PaintCtx, root: Id) {
+        let mut paint_ctx = PaintCtx {
+            inner: paint_ctx,
+            dwrite_factory: &self.b.c.dwrite_factory,
+        };
+        paint_rec(&mut self.b.widgets, &self.b.graph, &self.b.c.geom,
+            &mut paint_ctx, root, (0.0, 0.0));
     }
 
     fn layout(&mut self, bc: &BoxConstraints, root: Id) {
@@ -217,6 +217,20 @@ impl GuiState {
         }
     }
 }
+
+// Do pre-order traversal on graph, painting each node in turn.
+//
+// Implemented as a recursion, but we could use an explicit queue instead.
+fn paint_rec(widgets: &mut [Box<Widget>], graph: &Graph, geom: &[Geometry],
+    paint_ctx: &mut PaintCtx, node: Id, pos: (f32, f32))
+{
+    let g = geom[node].offset(pos);
+    widgets[node].paint(paint_ctx, &g);
+    for child in graph.children[node].clone() {
+        paint_rec(widgets, graph, geom, paint_ctx, child, g.pos);
+    }
+}
+
 fn layout_rec(widgets: &mut [Box<Widget>], ctx: &mut LayoutCtx, graph: &Graph,
     bc: &BoxConstraints, node: Id) -> (f32, f32)
 {
@@ -262,6 +276,10 @@ impl BoxConstraints {
 }
 
 impl LayoutCtx {
+    pub fn dwrite_factory(&self) -> &directwrite::Factory {
+        &self.dwrite_factory
+    }
+
     pub fn position_child(&mut self, child: Id, pos: (f32, f32)) {
         self.geom[child].pos = pos;
     }
@@ -317,12 +335,22 @@ impl ListenerCtx {
     }
 }
 
+impl<'a, 'b> PaintCtx<'a, 'b> {
+    pub fn dwrite_factory(&self) -> &directwrite::Factory {
+        self.dwrite_factory
+    }
+
+    pub fn render_target(&mut self) -> &mut GenericRenderTarget {
+        self.inner.render_target()
+    }
+}
+
 impl WinHandler for GuiMain {
     fn connect(&self, handle: &WindowHandle) {
         self.state.borrow_mut().b.c.handle = handle.clone();
     }
 
-    fn paint(&self, paint_ctx: &mut PaintCtx) -> bool {
+    fn paint(&self, paint_ctx: &mut paint::PaintCtx) -> bool {
         let size;
         {
             let rt = paint_ctx.render_target();
@@ -336,7 +364,7 @@ impl WinHandler for GuiMain {
         let bc = BoxConstraints::tight((size.width, size.height));
         // TODO: be lazier about relayout
         state.layout(&bc, root);
-        state.paint_rec(paint_ctx, root, (0.0, 0.0));
+        state.paint(paint_ctx, root);
         false
     }
 

@@ -16,11 +16,10 @@
 
 use std::any::Any;
 
-use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::window::{MouseButton, MouseType};
 
 use {BoxConstraints, Geometry, LayoutResult};
-use {HandlerCtx, Id, LayoutCtx};
+use {HandlerCtx, Id, LayoutCtx, PaintCtx};
 
 mod button;
 pub use widget::button::Button;
