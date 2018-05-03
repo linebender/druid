@@ -161,6 +161,9 @@ pub struct Button {
     label: String,
 }
 
+/// A command for exiting. TODO: move commands entirely to client.
+pub const COMMAND_EXIT: u32 = 0x100;
+
 impl Geometry {
     fn offset(&self, offset: (f32, f32)) -> Geometry {
         Geometry {

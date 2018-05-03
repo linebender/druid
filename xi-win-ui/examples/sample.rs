@@ -25,12 +25,13 @@ use xi_win_shell::window::WindowBuilder;
 
 use xi_win_ui::{GuiMain, GuiState};
 use xi_win_ui::{Button, FooWidget, Padding, Row};
+use xi_win_ui::COMMAND_EXIT;
 
 fn main() {
     xi_win_shell::init();
 
     let mut file_menu = Menu::new();
-    file_menu.add_item(0x100, "E&xit");
+    file_menu.add_item(COMMAND_EXIT, "E&xit");
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "&File");
 
