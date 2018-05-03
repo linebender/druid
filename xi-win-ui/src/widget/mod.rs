@@ -20,7 +20,7 @@ use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::window::{MouseButton, MouseType};
 
 use {BoxConstraints, Geometry, LayoutResult};
-use {HandlerCtx, Id, LayoutCtx, PokeCtx};
+use {HandlerCtx, Id, LayoutCtx};
 
 mod button;
 pub use widget::button::Button;
@@ -57,5 +57,5 @@ pub trait Widget {
     /// An `escape hatch` of sorts for accessing widget state beyond the widget
     /// methods. Returns true if it is handled.
     #[allow(unused)]
-    fn poke(&mut self, payload: &mut Any, ctx: &mut PokeCtx) -> bool { false }
+    fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool { false }
 }

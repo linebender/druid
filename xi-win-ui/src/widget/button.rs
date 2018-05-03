@@ -25,7 +25,7 @@ use xi_win_shell::util::default_text_options;
 use xi_win_shell::window::{MouseButton, MouseType};
 
 use {BoxConstraints, Geometry, LayoutResult};
-use {HandlerCtx, Id, LayoutCtx, PokeCtx};
+use {HandlerCtx, Id, LayoutCtx};
 use widget::Widget;
 
 pub struct Button {
@@ -85,7 +85,7 @@ impl Widget for Button {
         true
     }
 
-    fn poke(&mut self, payload: &mut Any, ctx: &mut PokeCtx) -> bool {
+    fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
         if let Some(string) = payload.downcast_ref::<String>() {
             self.label = string.clone();
             ctx.invalidate();

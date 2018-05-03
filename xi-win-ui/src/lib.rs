@@ -111,12 +111,6 @@ pub struct HandlerCtx<'a> {
     handle: &'a WindowHandle,
 }
 
-/// Context given to "poke" methods.
-pub struct PokeCtx<'a> {
-    /// For invalidation.
-    handle: &'a WindowHandle,
-}
-
 /// Context given to listeners, allowing responsive update to the GUI.
 ///
 /// Currently mostly for "poke" actions, but we also want to allow reconfiguration
@@ -124,6 +118,12 @@ pub struct PokeCtx<'a> {
 /// graph manipulations.
 pub struct ListenerCtx<'a> {
     widgets: &'a mut [Box<Widget>],
+
+    // The next 2 fields are not directly used by listeners, but passed
+    // through to handler context (on "poke").
+
+    /// Reference for event queue, for sending events to listeners.
+    event_q: &'a mut Vec<(Id, Box<Any>)>,
 
     /// For invalidation.
     handle: &'a WindowHandle,
@@ -228,6 +228,7 @@ impl GuiState {
                 for listener in listeners {
                     let mut ctx = ListenerCtx {
                         handle: &self.handle,
+                        event_q: &mut self.event_q,
                         widgets: &mut self.widgets,
                     };
                     listener(event.deref(), &mut ctx);
@@ -236,7 +237,6 @@ impl GuiState {
         }
     }
 }
-
 fn layout_rec(widgets: &mut [Box<Widget>], geom: &mut [Geometry], graph: &Graph,
     bc: &BoxConstraints, node: Id) -> (f32, f32)
 {
@@ -328,32 +328,14 @@ impl<'a> HandlerCtx<'a> {
     }
 }
 
-impl<'a> PokeCtx<'a> {
-    /// Invalidate the widget appearance.
-    ///
-    /// Right now, it invalidates the whole window, but the intent is to invalidate
-    /// just the geometry of the widget. We also want to have even more fine-grained
-    /// invalidation (for content areas).
-    pub fn invalidate(&self) {
-        self.handle.invalidate();
-    }
-}
-
 impl<'a> ListenerCtx<'a> {
-    /// Invalidate the widget appearance.
-    ///
-    /// Right now, it invalidates the whole window, but the intent is to invalidate
-    /// just the geometry of the widget. We also want to have even more fine-grained
-    /// invalidation (for content areas).
-    pub fn invalidate(&self) {
-        self.handle.invalidate();
-    }
-
-    /// Send an arbitrary payload to a widget. The type an interpretation of the
+    /// Send an arbitrary payload to a widget. The type and interpretation of the
     /// payload depends on the specific target widget.
     pub fn poke<A: Any>(&mut self, node: Id, payload: &mut A) -> bool {
-        let mut ctx = PokeCtx {
+        let mut ctx = HandlerCtx {
+            id: node,
             handle: self.handle,
+            event_q: self.event_q,
         };
         self.widgets[node].poke(payload, &mut ctx)
     }
@@ -385,7 +367,7 @@ impl WinHandler for GuiMain {
     fn command(&self, id: u32) {
         // TODO: plumb through to client
         match id {
-            0x100 => self.state.borrow().handle.close(),
+            COMMAND_EXIT => self.state.borrow().handle.close(),
             _ => println!("unexpected id {}", id),
         }
     }
