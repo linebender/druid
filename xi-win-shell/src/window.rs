@@ -67,6 +67,10 @@ pub struct WindowBuilder {
 /// good performance on Windows. This setting lets clients experiment
 /// with different strategies.
 pub enum PresentStrategy {
+    /// Don't try to use DXGI at all, only create Hwnd render targets.
+    /// Note: on Windows 7 this is the only mode available.
+    Hwnd,
+
     /// Corresponds to the swap effect DXGI_SWAP_EFFECT_SEQUENTIAL. In
     /// testing, it causes diagonal banding artifacts with Nvidia
     /// adapters, and incremental present doesn't work. However, it
@@ -250,7 +254,6 @@ struct MyWndProc {
 }
 
 struct WndState {
-    swap_chain: *mut IDXGISwapChain1,
     render_target: Option<GenericRenderTarget>,
     dcomp_state: Option<DCompState>,
     dpi: f32,
@@ -259,6 +262,7 @@ struct WndState {
 /// State for DirectComposition. This is optional because it is only supported
 /// on 8.1 and up.
 struct DCompState {
+    swap_chain: *mut IDXGISwapChain1,
     dcomp_device: DCompositionDevice,
     dcomp_target: DCompositionTarget,
     swapchain_visual: DCompositionVisual,
@@ -292,7 +296,8 @@ impl MyWndProc {
         unsafe {
             let mut state = self.state.borrow_mut();
             let s = state.as_mut().unwrap();
-            let rt = paint::create_render_target_dxgi(&self.d2d_factory, s.swap_chain, s.dpi)
+            let swap_chain = s.dcomp_state.as_ref().unwrap().swap_chain;
+            let rt = paint::create_render_target_dxgi(&self.d2d_factory, swap_chain, s.dpi)
                 .map(|rt| rt.as_generic());
             s.render_target = rt.ok();
         }
@@ -348,7 +353,7 @@ impl WndProc for MyWndProc {
                 let s = state.as_mut().unwrap();
                 if let Some(ref mut ds) = s.dcomp_state {
                     if !ds.sizing {
-                        (*s.swap_chain).Present(1, 0);
+                        (*ds.swap_chain).Present(1, 0);
                         let _ = ds.dcomp_device.commit();
                     }
                 }
@@ -379,7 +384,8 @@ impl WndProc for MyWndProc {
                     GetClientRect(hwnd, &mut rect);
                     let width = (rect.right - rect.left) as u32;
                     let height = (rect.bottom - rect.top) as u32;
-                    let res = (*self.state.borrow_mut().as_mut().unwrap().swap_chain)
+                    let res = (*self.state.borrow_mut().as_mut().unwrap()
+                        .dcomp_state.as_mut().unwrap().swap_chain)
                         .ResizeBuffers(2, width, height, DXGI_FORMAT_UNKNOWN, 0);
                     if SUCCEEDED(res) {
                         self.handler.rebuild_resources();
@@ -387,7 +393,7 @@ impl WndProc for MyWndProc {
                         self.render();
                         let mut state = self.state.borrow_mut();
                         let mut s = state.as_mut().unwrap();
-                        (*s.swap_chain).Present(0, 0);
+                        (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
                     } else {
                         println!("ResizeBuffers failed: 0x{:x}", res);
                     }
@@ -430,16 +436,21 @@ impl WndProc for MyWndProc {
                     }
                     InvalidateRect(hwnd, null_mut(), FALSE);
                 } else {
-                    self.state.borrow_mut().as_mut().unwrap().render_target = None;
-                    let res = (*self.state.borrow_mut().as_mut().unwrap().swap_chain)
-                        .ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+                    let res;
+                    {
+                        let mut state = self.state.borrow_mut();
+                        let mut s = state.as_mut().unwrap();
+                        s.render_target = None;
+                        res = (*s.dcomp_state.as_mut().unwrap().swap_chain)
+                            .ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+                    }
                     if SUCCEEDED(res) {
                         self.rebuild_render_target();
                         self.render();
                         let mut state = self.state.borrow_mut();
                         let mut s = state.as_mut().unwrap();
-                        (*s.swap_chain).Present(0, 0);
                         if let Some(ref mut dcomp_state) = s.dcomp_state {
+                            (*dcomp_state.swap_chain).Present(0, 0);
                             let _ = dcomp_state.dcomp_device.commit();
                         }
                         ValidateRect(hwnd, null_mut());
@@ -651,57 +662,15 @@ impl WindowBuilder {
                 return Err(Error::Null);
             }
 
-            let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
-            // TODO: make this sensitive to PresentStrategy
-            let dcomp_state = if let Some(create_dxgi_factory2) = OPTIONAL_FUNCTIONS.CreateDXGIFactory2 {
-                let mut d3d11_device = D3D11Device::new_simple()?;
-                let mut d2d1_device = d3d11_device.create_d2d1_device()?;
-                let mut dcomp_device = d2d1_device.create_composition_device()?;
-                let mut dcomp_target = dcomp_device.create_target_for_hwnd(hwnd, true)?;
-
-                let mut factory: *mut IDXGIFactory2 = null_mut();
-                as_result(create_dxgi_factory2(0, &IID_IDXGIFactory2,
-                    &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void))?;
-                println!("dxgi factory pointer = {:?}", factory);
-                let adapter = choose_adapter(factory);
-                println!("adapter = {:?}", adapter);
-                let (swap_effect, bufs) = match self.present_strategy {
-                    PresentStrategy::Sequential => (DXGI_SWAP_EFFECT_SEQUENTIAL, 1),
-                    PresentStrategy::Flip | PresentStrategy::FlipRedirect =>
-                        (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, 2),
-                };
-                let desc = DXGI_SWAP_CHAIN_DESC1 {
-                    Width: 1024,
-                    Height: 768,
-                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    Stereo: FALSE,
-                    SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0},
-                    BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
-                    BufferCount: bufs,
-                    Scaling: DXGI_SCALING_STRETCH,
-                    SwapEffect: swap_effect,
-                    AlphaMode: DXGI_ALPHA_MODE_IGNORE,
-                    Flags: 0,
-                };
-                let res = (*factory).CreateSwapChainForComposition(d3d11_device.raw_ptr() as *mut IUnknown,
-                    &desc, null_mut(), &mut swap_chain);
-                println!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
-
-                let mut swapchain_visual = dcomp_device.create_visual()?;
-                swapchain_visual.set_content_raw(swap_chain as *mut IUnknown)?;
-                dcomp_target.set_root(&mut swapchain_visual)?;
-                Some(DCompState {
-                    dcomp_device, dcomp_target, swapchain_visual,
-                    sizing: false,
-                })
-            } else {
-                None
-            };
+            let dcomp_state = create_dcomp_state(self.present_strategy, hwnd)
+                .unwrap_or_else(|e| {
+                    println!("Error creating swapchain, falling back to hwnd: {:?}", e);
+                    None
+                });
 
             win.hwnd.set(hwnd);
             let state = WndState {
                 render_target: None,
-                swap_chain,
                 dcomp_state,
                 dpi,
             };
@@ -741,6 +710,61 @@ unsafe fn choose_adapter(factory: *mut IDXGIFactory2) -> *mut IDXGIAdapter {
     best_adapter
 }
 
+unsafe fn create_dcomp_state(present_strategy: PresentStrategy, hwnd: HWND)
+    -> Result<Option<DCompState>, Error>
+{
+    if present_strategy == PresentStrategy::Hwnd {
+        return Ok(None);
+    }
+    if let Some(create_dxgi_factory2) = OPTIONAL_FUNCTIONS.CreateDXGIFactory2 {
+
+        let mut factory: *mut IDXGIFactory2 = null_mut();
+        as_result(create_dxgi_factory2(0, &IID_IDXGIFactory2,
+            &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void))?;
+        println!("dxgi factory pointer = {:?}", factory);
+        let adapter = choose_adapter(factory);
+        println!("adapter = {:?}", adapter);
+
+        let mut d3d11_device = D3D11Device::new_simple()?;
+        let mut d2d1_device = d3d11_device.create_d2d1_device()?;
+        let mut dcomp_device = d2d1_device.create_composition_device()?;
+        let mut dcomp_target = dcomp_device.create_target_for_hwnd(hwnd, true)?;
+
+        let (swap_effect, bufs) = match present_strategy {
+            PresentStrategy::Hwnd => unreachable!(),
+            PresentStrategy::Sequential => (DXGI_SWAP_EFFECT_SEQUENTIAL, 1),
+            PresentStrategy::Flip | PresentStrategy::FlipRedirect =>
+                (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, 2),
+        };
+        let desc = DXGI_SWAP_CHAIN_DESC1 {
+            Width: 1024,
+            Height: 768,
+            Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+            Stereo: FALSE,
+            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
+            BufferCount: bufs,
+            Scaling: DXGI_SCALING_STRETCH,
+            SwapEffect: swap_effect,
+            AlphaMode: DXGI_ALPHA_MODE_IGNORE,
+            Flags: 0,
+        };
+        let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
+        let res = (*factory).CreateSwapChainForComposition(d3d11_device.raw_ptr() as *mut IUnknown,
+            &desc, null_mut(), &mut swap_chain);
+        println!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
+
+        let mut swapchain_visual = dcomp_device.create_visual()?;
+        swapchain_visual.set_content_raw(swap_chain as *mut IUnknown)?;
+        dcomp_target.set_root(&mut swapchain_visual)?;
+        Ok(Some(DCompState {
+            swap_chain, dcomp_device, dcomp_target, swapchain_visual,
+            sizing: false,
+        }))
+    } else {
+        Ok(None)
+    }
+}
 
 unsafe extern "system" fn win_proc_dispatch(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
     -> LRESULT

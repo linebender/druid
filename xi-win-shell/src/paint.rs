@@ -34,7 +34,7 @@ use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
 
 use direct2d;
-use direct2d::enums::AlphaMode;
+use direct2d::enums::{AlphaMode, RenderTargetType};
 use direct2d::render_target::{DxgiSurfaceRenderTarget, GenericRenderTarget, HwndRenderTarget};
 
 use Error;
@@ -53,12 +53,16 @@ pub(crate) unsafe fn create_render_target(d2d_factory: &direct2d::Factory, hwnd:
     GetClientRect(hwnd, &mut rect);
     let width = (rect.right - rect.left) as u32;
     let height = (rect.bottom - rect.top) as u32;
-    HwndRenderTarget::create(d2d_factory)
+    let res = HwndRenderTarget::create(d2d_factory)
         .with_hwnd(hwnd)
+        .with_target_type(RenderTargetType::Default)
         .with_alpha_mode(AlphaMode::Unknown)
         .with_pixel_size(width, height)
-        .build()
-        .map_err(|_| Error::D2Error)
+        .build();
+    if let Err(ref e) = res {
+        println!("Error creating hwnd render target: {:?}", e);
+    }
+    res.map_err(|_| Error::D2Error)
 }
 
 /// Create a render target from a DXGI swapchain.
