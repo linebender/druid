@@ -15,7 +15,7 @@
 //! A button widget
 
 use {BoxConstraints, LayoutResult};
-use {Id, LayoutCtx};
+use {Id, LayoutCtx, ListenerCtx};
 use widget::Widget;
 
 #[derive(Default)]
@@ -24,6 +24,12 @@ pub struct Row {
     ix: usize,
     width_per_flex: f32,
     height: f32,
+}
+
+impl Row {
+    pub fn bind(self, children: &[Id], ctx: &mut ListenerCtx) -> Id {
+        ctx.add(self, children)
+    }
 }
 
 impl Widget for Row {

@@ -31,7 +31,7 @@ use xi_win_ui::widget::{Button, Row, Padding};
 use xi_win_ui::COMMAND_EXIT;
 
 use xi_win_ui::{BoxConstraints, Geometry, LayoutResult};
-use xi_win_ui::{Id, LayoutCtx, PaintCtx};
+use xi_win_ui::{Id, LayoutCtx, ListenerCtx, PaintCtx};
 use xi_win_ui::widget::Widget;
 
 /// A very simple custom widget.
@@ -53,6 +53,12 @@ impl Widget for FooWidget {
     }
 }
 
+impl FooWidget {
+    fn bind(self, ctx: &mut ListenerCtx) -> Id {
+        ctx.add(self, &[])
+    }
+}
+
 fn main() {
     xi_win_shell::init();
 
@@ -64,13 +70,13 @@ fn main() {
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut state = GuiState::new();
-    let foo1 = state.add(FooWidget, &[]);
-    let foo1 = state.add(Padding::uniform(10.0), &[foo1]);
-    let foo2 = state.add(FooWidget, &[]);
-    let foo2 = state.add(Padding::uniform(10.0), &[foo2]);
-    let button = state.add(Button::new("Press me"), &[]);
-    let button2 = state.add(Button::new("Don't press me"), &[]);
-    let root = state.add(Row::default(), &[foo1, foo2, button, button2]);
+    let foo1 = FooWidget.bind(&mut state);
+    let foo1 = Padding::uniform(10.0).bind(foo1, &mut state);
+    let foo2 = FooWidget.bind(&mut state);
+    let foo2 = Padding::uniform(10.0).bind(foo2, &mut state);
+    let button = Button::new("Press me").bind(&mut state);
+    let button2 = Button::new("Don't press me").bind(&mut state);
+    let root = Row::default().bind(&[foo1, foo2, button, button2], &mut state);
     state.set_root(root);
     state.add_listener(button, move |_: bool, ctx| {
         ctx.poke(button2, &mut "You clicked it!".to_string());

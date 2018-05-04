@@ -24,7 +24,7 @@ use xi_win_shell::util::default_text_options;
 use xi_win_shell::window::{MouseButton, MouseType};
 
 use {BoxConstraints, Geometry, LayoutResult};
-use {HandlerCtx, Id, LayoutCtx, PaintCtx};
+use {HandlerCtx, Id, LayoutCtx, ListenerCtx, PaintCtx};
 use widget::Widget;
 
 pub struct Button {
@@ -37,6 +37,10 @@ impl Button {
         Button {
             label: label.into(),
         }
+    }
+
+    pub fn bind(self, ctx: &mut ListenerCtx) -> Id {
+        ctx.add(self, &[])
     }
 
     fn get_layout(&self, dwrite_factory: &directwrite::Factory) -> TextLayout {
