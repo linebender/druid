@@ -48,9 +48,14 @@ pub type Id = usize;
 pub struct GuiState {
     listeners: BTreeMap<Id, Vec<Box<FnMut(&Any, &mut ListenerCtx)>>>,
 
-    b: ListenerCtx,
+    /// The widget tree and associated state is split off into a separate struct
+    /// so that we can use a mutable reference to it as the listener context.
+    inner: ListenerCtx,
 }
 
+/// The context given to listeners.
+///
+/// Listeners are allowed to poke widgets and mutate the graph.
 pub struct ListenerCtx {
     /// The individual widget trait objects.
     widgets: Vec<Box<Widget>>,
@@ -58,9 +63,12 @@ pub struct ListenerCtx {
     /// Graph of widgets (actually a strict tree structure, so maybe should be renamed).
     graph: Graph,
 
+    /// The state (other than widget tree) is a separate object, so that a
+    /// mutable reference to it can be used as a layout context.
     c: LayoutCtx,
 }
 
+/// The context given to layout methods.
 pub struct LayoutCtx {
     dwrite_factory: directwrite::Factory,
 
@@ -136,7 +144,7 @@ impl GuiState {
     pub fn new() -> GuiState {
         GuiState {
             listeners: Default::default(),
-            b: ListenerCtx {
+            inner: ListenerCtx {
                 widgets: Vec::new(),
                 graph: Default::default(),
                 c: LayoutCtx {
@@ -147,24 +155,6 @@ impl GuiState {
                 }
             }
         }
-    }
-
-    /// Put a widget in the graph and add its children. Returns newly allocated
-    /// id for the node.
-    pub fn add<W>(&mut self, widget: W, children: &[Id]) -> Id
-        where W: Widget + 'static
-    {
-        let id = self.b.graph.alloc_node();
-        self.b.widgets.push(Box::new(widget));
-        self.b.c.geom.push(Default::default());
-        for &child in children {
-            self.b.graph.append_child(id, child);
-        }
-        id
-    }
-
-    pub fn set_root(&mut self, root: Id) {
-        self.b.graph.root = root;
     }
 
     /// Add a listener that expects a specific type.
@@ -181,37 +171,23 @@ impl GuiState {
         self.listeners.entry(node).or_insert(Vec::new()).push(wrapper);
     }
 
-    fn paint(&mut self, paint_ctx: &mut paint::PaintCtx, root: Id) {
-        let mut paint_ctx = PaintCtx {
-            inner: paint_ctx,
-            dwrite_factory: &self.b.c.dwrite_factory,
-        };
-        paint_rec(&mut self.b.widgets, &self.b.graph, &self.b.c.geom,
-            &mut paint_ctx, root, (0.0, 0.0));
-    }
-
-    fn layout(&mut self, bc: &BoxConstraints, root: Id) {
-        layout_rec(&mut self.b.widgets, &mut self.b.c, &self.b.graph, bc, root);
-    }
-
     fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType) {
-        mouse_rec(&mut self.b.widgets, &self.b.graph,
+        mouse_rec(&mut self.inner.widgets, &self.inner.graph,
             x, y, mods, which, ty,
             &mut HandlerCtx {
-                id: self.b.graph.root,
-                c: &mut self.b.c,
+                id: self.inner.graph.root,
+                c: &mut self.inner.c,
             }
         );
         self.dispatch_events();
     }
 
     fn dispatch_events(&mut self) {
-        let event_q = mem::replace(&mut self.b.c.event_q, Vec::new());
+        let event_q = mem::replace(&mut self.c.event_q, Vec::new());
         for (id, event) in event_q {
             if let Some(listeners) = self.listeners.get_mut(&id) {
                 for listener in listeners {
-                    let mut ctx = &mut self.b;
-                    listener(event.deref(), &mut ctx);
+                    listener(event.deref(), &mut self.inner);
                 }
             }
         }
@@ -256,6 +232,66 @@ fn clamp(val: f32, min: f32, max: f32) -> f32 {
         max
     } else {
         val
+    }
+}
+
+impl Deref for GuiState {
+    type Target = ListenerCtx;
+
+    fn deref(&self) -> &ListenerCtx {
+        &self.inner
+    }
+}
+
+impl ::std::ops::DerefMut for GuiState {
+    fn deref_mut(&mut self) -> &mut ListenerCtx {
+        &mut self.inner
+    }
+}
+
+impl ListenerCtx {
+    /// Send an arbitrary payload to a widget. The type and interpretation of the
+    /// payload depends on the specific target widget.
+    pub fn poke<A: Any>(&mut self, node: Id, payload: &mut A) -> bool {
+        let mut ctx = HandlerCtx {
+            id: node,
+            c: &mut self.c,
+        };
+        self.widgets[node].poke(payload, &mut ctx)
+    }
+
+    /// Put a widget in the graph and add its children. Returns newly allocated
+    /// id for the node.
+    pub fn add<W>(&mut self, widget: W, children: &[Id]) -> Id
+        where W: Widget + 'static
+    {
+        let id = self.graph.alloc_node();
+        self.widgets.push(Box::new(widget));
+        self.c.geom.push(Default::default());
+        for &child in children {
+            self.graph.append_child(id, child);
+        }
+        id
+    }
+
+    pub fn set_root(&mut self, root: Id) {
+        self.graph.root = root;
+    }
+
+    // The following methods are really GuiState methods, but don't need access to listeners
+    // so are more concise to implement here.
+
+    fn paint(&mut self, paint_ctx: &mut paint::PaintCtx, root: Id) {
+        let mut paint_ctx = PaintCtx {
+            inner: paint_ctx,
+            dwrite_factory: &self.c.dwrite_factory,
+        };
+        paint_rec(&mut self.widgets, &self.graph, &self.c.geom,
+            &mut paint_ctx, root, (0.0, 0.0));
+    }
+
+    fn layout(&mut self, bc: &BoxConstraints, root: Id) {
+        layout_rec(&mut self.widgets, &mut self.c, &self.graph, bc, root);
     }
 }
 
@@ -323,18 +359,6 @@ impl<'a> HandlerCtx<'a> {
     }
 }
 
-impl ListenerCtx {
-    /// Send an arbitrary payload to a widget. The type and interpretation of the
-    /// payload depends on the specific target widget.
-    pub fn poke<A: Any>(&mut self, node: Id, payload: &mut A) -> bool {
-        let mut ctx = HandlerCtx {
-            id: node,
-            c: &mut self.c,
-        };
-        self.widgets[node].poke(payload, &mut ctx)
-    }
-}
-
 impl<'a, 'b> PaintCtx<'a, 'b> {
     pub fn dwrite_factory(&self) -> &directwrite::Factory {
         self.dwrite_factory
@@ -347,7 +371,7 @@ impl<'a, 'b> PaintCtx<'a, 'b> {
 
 impl WinHandler for GuiMain {
     fn connect(&self, handle: &WindowHandle) {
-        self.state.borrow_mut().b.c.handle = handle.clone();
+        self.state.borrow_mut().c.handle = handle.clone();
     }
 
     fn paint(&self, paint_ctx: &mut paint::PaintCtx) -> bool {
@@ -360,7 +384,7 @@ impl WinHandler for GuiMain {
             rt.fill_rectangle(rect, &bg);
         }
         let mut state = self.state.borrow_mut();
-        let root = state.b.graph.root;
+        let root = state.graph.root;
         let bc = BoxConstraints::tight((size.width, size.height));
         // TODO: be lazier about relayout
         state.layout(&bc, root);
@@ -371,7 +395,7 @@ impl WinHandler for GuiMain {
     fn command(&self, id: u32) {
         // TODO: plumb through to client
         match id {
-            COMMAND_EXIT => self.state.borrow().b.c.handle.close(),
+            COMMAND_EXIT => self.state.borrow().c.handle.close(),
             _ => println!("unexpected id {}", id),
         }
     }
@@ -400,7 +424,7 @@ impl WinHandler for GuiMain {
     fn mouse(&self, x: i32, y: i32, mods: u32, button: MouseButton, ty: MouseType) {
         println!("mouse ({}, {}) {:02x} {:?} {:?}", x, y, mods, button, ty);
         let mut state = self.state.borrow_mut();
-        let (x, y) = state.b.c.handle.pixels_to_px_xy(x, y);
+        let (x, y) = state.c.handle.pixels_to_px_xy(x, y);
         // TODO: detect multiple clicks and pass that down
         state.mouse(x, y, mods, button, ty);
     }
