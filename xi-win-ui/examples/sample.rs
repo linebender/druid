@@ -35,7 +35,7 @@ use xi_win_ui::{Id, LayoutCtx, ListenerCtx, PaintCtx};
 use xi_win_ui::widget::Widget;
 
 /// A very simple custom widget.
-pub struct FooWidget;
+struct FooWidget;
 
 impl Widget for FooWidget {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {

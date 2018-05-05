@@ -117,6 +117,13 @@ impl Button {
 
 impl Widget for Button {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+        {
+            let rt = paint_ctx.render_target();
+            let bg = SolidColorBrush::create(rt).with_color(0x404048).build().unwrap();
+            rt.fill_rectangle(
+                (geom.pos.0, geom.pos.1, geom.pos.0 + geom.size.0, geom.pos.1 + geom.size.1),
+                &bg);
+        }
         self.label.paint(paint_ctx, geom);
     }
 
