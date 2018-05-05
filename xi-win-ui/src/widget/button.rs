@@ -27,14 +27,19 @@ use {BoxConstraints, Geometry, LayoutResult};
 use {HandlerCtx, Id, LayoutCtx, ListenerCtx, PaintCtx};
 use widget::Widget;
 
-pub struct Button {
+/// A text label with no interaction.
+pub struct Label {
     label: String,
 }
 
+/// A clickable button with a label.
+pub struct Button {
+    label: Label,
+}
 
-impl Button {
-    pub fn new<S: Into<String>>(label: S) -> Button {
-        Button {
+impl Label {
+    pub fn new<S: Into<String>>(label: S) -> Label {
+        Label {
             label: label.into(),
         }
     }
@@ -60,7 +65,7 @@ impl Button {
     }
 }
 
-impl Widget for Button {
+impl Widget for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         let text_layout = self.get_layout(paint_ctx.dwrite_factory());
         let rt = paint_ctx.render_target();
@@ -72,7 +77,7 @@ impl Widget for Button {
     fn layout(&mut self, bc: &BoxConstraints, _children: &[Id], _size: Option<(f32, f32)>,
         _ctx: &mut LayoutCtx) -> LayoutResult
     {
-        // TODO: need a render target plumbed down to measure text properly
+        // TODO: measure text properly
         LayoutResult::Size(bc.constrain((100.0, 17.0)))
     }
 
@@ -95,5 +100,43 @@ impl Widget for Button {
             println!("downcast failed");
             false
         }
+    }
+}
+
+impl Button {
+    pub fn new<S: Into<String>>(label: S) -> Button {
+        Button {
+            label: Label::new(label),
+        }
+    }
+
+    pub fn bind(self, ctx: &mut ListenerCtx) -> Id {
+        ctx.add(self, &[])
+    }
+}
+
+impl Widget for Button {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+        self.label.paint(paint_ctx, geom);
+    }
+
+    fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
+        ctx: &mut LayoutCtx) -> LayoutResult
+    {
+        self.label.layout(bc, children, size, ctx)
+    }
+
+    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType,
+        ctx: &mut HandlerCtx) -> bool
+    {
+        println!("button {} {} {:x} {:?} {:?}", x, y, mods, which, ty);
+        if ty == MouseType::Down {
+            ctx.send_event(true);
+        }
+        true
+    }
+
+    fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
+        self.label.poke(payload, ctx)
     }
 }
