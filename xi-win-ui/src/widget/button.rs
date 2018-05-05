@@ -20,12 +20,11 @@ use direct2d::RenderTarget;
 use direct2d::brush::SolidColorBrush;
 use directwrite::{self, TextFormat, TextLayout};
 
-use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::util::default_text_options;
 use xi_win_shell::window::{MouseButton, MouseType};
 
 use {BoxConstraints, Geometry, LayoutResult};
-use {HandlerCtx, Id, LayoutCtx};
+use {HandlerCtx, Id, LayoutCtx, ListenerCtx, PaintCtx};
 use widget::Widget;
 
 pub struct Button {
@@ -40,10 +39,12 @@ impl Button {
         }
     }
 
-    fn get_layout(&self) -> TextLayout {
+    pub fn bind(self, ctx: &mut ListenerCtx) -> Id {
+        ctx.add(self, &[])
+    }
+
+    fn get_layout(&self, dwrite_factory: &directwrite::Factory) -> TextLayout {
         // TODO: caching of both the format and the layout
-        // TODO: directwrite factory plumbing
-        let dwrite_factory = directwrite::Factory::new().unwrap();
         let format = TextFormat::create(&dwrite_factory)
             .with_family("Segoe UI")
             .with_size(15.0)
@@ -61,10 +62,10 @@ impl Button {
 
 impl Widget for Button {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+        let text_layout = self.get_layout(paint_ctx.dwrite_factory());
         let rt = paint_ctx.render_target();
         let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
         let (x, y) = geom.pos;
-        let text_layout = self.get_layout();
         rt.draw_text_layout((x, y), &text_layout, &fg, default_text_options());
     }
 
