@@ -26,12 +26,12 @@ use xi_win_shell::menu::Menu;
 use xi_win_shell::win_main;
 use xi_win_shell::window::WindowBuilder;
 
-use xi_win_ui::{GuiMain, GuiState};
+use xi_win_ui::{UiMain, UiState, UiInner};
 use xi_win_ui::widget::{Button, Row, Padding};
 use xi_win_ui::COMMAND_EXIT;
 
 use xi_win_ui::{BoxConstraints, Geometry, LayoutResult};
-use xi_win_ui::{Id, LayoutCtx, ListenerCtx, PaintCtx};
+use xi_win_ui::{Id, LayoutCtx, PaintCtx};
 use xi_win_ui::widget::Widget;
 
 /// A very simple custom widget.
@@ -54,7 +54,7 @@ impl Widget for FooWidget {
 }
 
 impl FooWidget {
-    fn bind(self, ctx: &mut ListenerCtx) -> Id {
+    fn ui(self, ctx: &mut UiInner) -> Id {
         ctx.add(self, &[])
     }
 }
@@ -69,22 +69,25 @@ fn main() {
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
-    let mut state = GuiState::new();
-    let foo1 = FooWidget.bind(&mut state);
-    let foo1 = Padding::uniform(10.0).bind(foo1, &mut state);
-    let foo2 = FooWidget.bind(&mut state);
-    let foo2 = Padding::uniform(10.0).bind(foo2, &mut state);
-    let button = Button::new("Press me").bind(&mut state);
-    let button2 = Button::new("Don't press me").bind(&mut state);
-    let root = Row::new().bind(&[foo1, foo2, button, button2], &mut state);
+    let mut state = UiState::new();
+    let foo1 = FooWidget.ui(&mut state);
+    let foo1 = Padding::uniform(10.0).ui(foo1, &mut state);
+    let foo2 = FooWidget.ui(&mut state);
+    let foo2 = Padding::uniform(10.0).ui(foo2, &mut state);
+    let button = Button::new("Press me").ui(&mut state);
+    let buttonp = Padding::uniform(10.0).ui(button, &mut state);
+    let button2 = Button::new("Don't press me").ui(&mut state);
+    let button2p = Padding::uniform(10.0).ui(button2, &mut state);
+    let root = Row::new().ui(&[foo1, foo2, buttonp, button2p], &mut state);
     state.set_root(root);
-    state.add_listener(button, move |_: bool, ctx| {
+    state.add_listener(button, move |_: &mut bool, mut ctx| {
+        println!("click");
         ctx.poke(button2, &mut "You clicked it!".to_string());
     });
-    state.add_listener(button2, move |_: bool, ctx| {
+    state.add_listener(button2, move |_: &mut bool, mut ctx| {
         ctx.poke(button2, &mut "Naughty naughty".to_string());
     });
-    builder.set_handler(Box::new(GuiMain::new(state)));
+    builder.set_handler(Box::new(UiMain::new(state)));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
     let window = builder.build().unwrap();

@@ -15,7 +15,7 @@
 //! A widget that arranges its children in a one-dimensional array.
 
 use {BoxConstraints, LayoutResult};
-use {Id, LayoutCtx, ListenerCtx};
+use {Id, LayoutCtx, UiInner};
 use widget::Widget;
 
 pub struct Row;
@@ -83,7 +83,7 @@ impl Column {
 }
 
 impl Flex {
-    pub fn bind(self, children: &[Id], ctx: &mut ListenerCtx) -> Id {
+    pub fn ui(self, children: &[Id], ctx: &mut UiInner) -> Id {
         ctx.add(self, children)
     }
 }

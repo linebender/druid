@@ -24,7 +24,7 @@ use xi_win_shell::util::default_text_options;
 use xi_win_shell::window::{MouseButton, MouseType};
 
 use {BoxConstraints, Geometry, LayoutResult};
-use {HandlerCtx, Id, LayoutCtx, ListenerCtx, PaintCtx};
+use {HandlerCtx, Id, LayoutCtx, UiInner, PaintCtx};
 use widget::Widget;
 
 /// A text label with no interaction.
@@ -44,7 +44,7 @@ impl Label {
         }
     }
 
-    pub fn bind(self, ctx: &mut ListenerCtx) -> Id {
+    pub fn ui(self, ctx: &mut UiInner) -> Id {
         ctx.add(self, &[])
     }
 
@@ -110,7 +110,7 @@ impl Button {
         }
     }
 
-    pub fn bind(self, ctx: &mut ListenerCtx) -> Id {
+    pub fn ui(self, ctx: &mut UiInner) -> Id {
         ctx.add(self, &[])
     }
 }
