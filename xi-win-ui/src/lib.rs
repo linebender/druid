@@ -22,7 +22,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::mem;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use direct2d::math::*;
 use direct2d::RenderTarget;
@@ -37,26 +37,26 @@ pub mod widget;
 
 pub use widget::Widget;
 
-pub struct GuiMain {
-    state: RefCell<GuiState>,
+pub struct UiMain {
+    state: RefCell<UiState>,
 }
 
-/// An identifier for widgets, scoped to a GuiMain instance. This is the
+/// An identifier for widgets, scoped to a UiMain instance. This is the
 /// "entity" of the entity-component-system architecture.
 pub type Id = usize;
 
-pub struct GuiState {
-    listeners: BTreeMap<Id, Vec<Box<FnMut(&Any, &mut ListenerCtx)>>>,
+pub struct UiState {
+    listeners: BTreeMap<Id, Vec<Box<FnMut(&mut Any, ListenerCtx)>>>,
 
     /// The widget tree and associated state is split off into a separate struct
     /// so that we can use a mutable reference to it as the listener context.
-    inner: ListenerCtx,
+    inner: UiInner,
 }
 
 /// The context given to listeners.
 ///
 /// Listeners are allowed to poke widgets and mutate the graph.
-pub struct ListenerCtx {
+pub struct UiInner {
     /// The individual widget trait objects.
     widgets: Vec<Box<Widget>>,
 
@@ -95,6 +95,7 @@ pub struct Geometry {
     pub size: (f32, f32),
 }
 
+#[derive(Clone, Copy)]
 pub struct BoxConstraints {
     min_width: f32,
     max_width: f32,
@@ -117,6 +118,12 @@ pub struct HandlerCtx<'a> {
     c: &'a mut LayoutCtx,
 }
 
+pub struct ListenerCtx<'a> {
+    id: Id,
+
+    inner: &'a mut UiInner,
+}
+
 pub struct PaintCtx<'a, 'b: 'a>  {
     inner: &'a mut paint::PaintCtx<'b>,
     dwrite_factory: &'a directwrite::Factory,
@@ -134,17 +141,17 @@ impl Geometry {
     }
 }
 
-impl GuiMain {
-    pub fn new(state: GuiState) -> GuiMain {
-        GuiMain { state: RefCell::new(state) }
+impl UiMain {
+    pub fn new(state: UiState) -> UiMain {
+        UiMain { state: RefCell::new(state) }
     }
 }
 
-impl GuiState {
-    pub fn new() -> GuiState {
-        GuiState {
+impl UiState {
+    pub fn new() -> UiState {
+        UiState {
             listeners: Default::default(),
-            inner: ListenerCtx {
+            inner: UiInner {
                 widgets: Vec::new(),
                 graph: Default::default(),
                 c: LayoutCtx {
@@ -159,11 +166,11 @@ impl GuiState {
 
     /// Add a listener that expects a specific type.
     pub fn add_listener<A, F>(&mut self, node: Id, mut f: F)
-        where A: Any + Copy, F: FnMut(A, &mut ListenerCtx) + 'static
+        where A: Any, F: FnMut(&mut A, ListenerCtx) + 'static
     {
-        let wrapper: Box<FnMut(&Any, &mut ListenerCtx)> = Box::new(move |a, ctx| {
-            if let Some(arg) = a.downcast_ref() {
-                f(*arg, ctx)
+        let wrapper: Box<FnMut(&mut Any, ListenerCtx)> = Box::new(move |a, ctx| {
+            if let Some(arg) = a.downcast_mut() {
+                f(arg, ctx)
             } else {
                 println!("type mismatch in listener arg");
             }
@@ -184,10 +191,14 @@ impl GuiState {
 
     fn dispatch_events(&mut self) {
         let event_q = mem::replace(&mut self.c.event_q, Vec::new());
-        for (id, event) in event_q {
+        for (id, mut event) in event_q {
             if let Some(listeners) = self.listeners.get_mut(&id) {
                 for listener in listeners {
-                    listener(event.deref(), &mut self.inner);
+                    let ctx = ListenerCtx {
+                        id,
+                        inner: &mut self.inner,
+                    };
+                    listener(event.deref_mut(), ctx);
                 }
             }
         }
@@ -235,21 +246,21 @@ fn clamp(val: f32, min: f32, max: f32) -> f32 {
     }
 }
 
-impl Deref for GuiState {
-    type Target = ListenerCtx;
+impl Deref for UiState {
+    type Target = UiInner;
 
-    fn deref(&self) -> &ListenerCtx {
+    fn deref(&self) -> &UiInner {
         &self.inner
     }
 }
 
-impl ::std::ops::DerefMut for GuiState {
-    fn deref_mut(&mut self) -> &mut ListenerCtx {
+impl DerefMut for UiState {
+    fn deref_mut(&mut self) -> &mut UiInner {
         &mut self.inner
     }
 }
 
-impl ListenerCtx {
+impl UiInner {
     /// Send an arbitrary payload to a widget. The type and interpretation of the
     /// payload depends on the specific target widget.
     pub fn poke<A: Any>(&mut self, node: Id, payload: &mut A) -> bool {
@@ -278,7 +289,7 @@ impl ListenerCtx {
         self.graph.root = root;
     }
 
-    // The following methods are really GuiState methods, but don't need access to listeners
+    // The following methods are really UiState methods, but don't need access to listeners
     // so are more concise to implement here.
 
     fn paint(&mut self, paint_ctx: &mut paint::PaintCtx, root: Id) {
@@ -354,8 +365,40 @@ impl<'a> HandlerCtx<'a> {
 
     // Send an event, to be handled by listeners.
     pub fn send_event<A: Any>(&mut self, a: A) {
-        let id = self.id;
-        self.c.event_q.push((id, Box::new(a)));
+        self.c.event_q.push((self.id, Box::new(a)));
+    }
+}
+
+impl<'a> Deref for ListenerCtx<'a> {
+    type Target = UiInner;
+
+    fn deref(&self) -> &UiInner {
+        self.inner
+    }
+}
+
+impl<'a> DerefMut for ListenerCtx<'a> {
+    fn deref_mut(&mut self) -> &mut UiInner {
+        self.inner
+    }
+}
+
+impl<'a> ListenerCtx<'a> {
+    /// Bubble a poke action up the widget hierarchy, until a widget handles it.
+    ///
+    /// Returns true if any widget handled the action.
+    pub fn poke_up<A: Any>(&mut self, payload: &mut A) -> bool {
+        let mut node = self.id;
+        loop {
+            let parent = self.graph.parent[node];
+            if parent == node {
+                return false;
+            }
+            node = parent;
+            if self.poke(node, payload) {
+                return true;
+            }
+        }
     }
 }
 
@@ -369,7 +412,7 @@ impl<'a, 'b> PaintCtx<'a, 'b> {
     }
 }
 
-impl WinHandler for GuiMain {
+impl WinHandler for UiMain {
     fn connect(&self, handle: &WindowHandle) {
         self.state.borrow_mut().c.handle = handle.clone();
     }

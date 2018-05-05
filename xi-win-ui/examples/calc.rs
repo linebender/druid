@@ -23,7 +23,7 @@ use std::rc::Rc;
 use xi_win_shell::win_main;
 use xi_win_shell::window::WindowBuilder;
 
-use xi_win_ui::{GuiMain, GuiState};
+use xi_win_ui::{UiMain, UiState};
 use xi_win_ui::widget::{Button, Column, Label, Row, Padding};
 
 use xi_win_ui::Id;
@@ -121,16 +121,16 @@ impl CalcState {
     }
 }
 
-fn pad(widget: Id, ui: &mut GuiState) -> Id {
-    Padding::uniform(5.0).bind(widget, ui)
+fn pad(widget: Id, ui: &mut UiState) -> Id {
+    Padding::uniform(5.0).ui(widget, ui)
 }
 
-fn digit_button(ui: &mut GuiState, display: Id, calc: &Rc<RefCell<CalcState>>,
+fn digit_button(ui: &mut UiState, display: Id, calc: &Rc<RefCell<CalcState>>,
     digit: u8) -> Id
 {
-    let button = Button::new(digit.to_string()).bind(ui);
+    let button = Button::new(digit.to_string()).ui(ui);
     let calc = calc.clone();
-    ui.add_listener(button, move |_: bool, ctx| {
+    ui.add_listener(button, move |_: &mut bool, mut ctx| {
         let mut calc = calc.borrow_mut();
         calc.digit(digit);
         ctx.poke(display, &mut calc.display);
@@ -138,12 +138,12 @@ fn digit_button(ui: &mut GuiState, display: Id, calc: &Rc<RefCell<CalcState>>,
     pad(button, ui)
 }
 
-fn op_button_label(ui: &mut GuiState, display: Id, calc: &Rc<RefCell<CalcState>>,
+fn op_button_label(ui: &mut UiState, display: Id, calc: &Rc<RefCell<CalcState>>,
     op: char, label: String) -> Id
 {
-    let button = Button::new(label).bind(ui);
+    let button = Button::new(label).ui(ui);
     let calc = calc.clone();
-    ui.add_listener(button, move |_: bool, ctx| {
+    ui.add_listener(button, move |_: &mut bool, mut ctx| {
         let mut calc = calc.borrow_mut();
         calc.op(op);
         ctx.poke(display, &mut calc.display);
@@ -151,13 +151,13 @@ fn op_button_label(ui: &mut GuiState, display: Id, calc: &Rc<RefCell<CalcState>>
     pad(button, ui)
 }
 
-fn op_button(ui: &mut GuiState, display: Id, calc: &Rc<RefCell<CalcState>>,
+fn op_button(ui: &mut UiState, display: Id, calc: &Rc<RefCell<CalcState>>,
     op: char) -> Id
 {
     op_button_label(ui, display, calc, op, op.to_string())
 }
 
-fn build_calc(ui: &mut GuiState) {
+fn build_calc(ui: &mut UiState) {
     let calc = Rc::new(RefCell::new(CalcState {
         display: "0".to_string(),
         operand: 0.0,
@@ -165,40 +165,40 @@ fn build_calc(ui: &mut GuiState) {
         in_num: false,
     }));
 
-    let display = Label::new(calc.borrow().display.clone()).bind(ui);
+    let display = Label::new(calc.borrow().display.clone()).ui(ui);
     let row0 = pad(display, ui);
 
-    let row1 = Row::new().bind(&[
+    let row1 = Row::new().ui(&[
         op_button_label(ui, display, &calc, 'c', "CE".to_string()),
         op_button(ui, display, &calc, 'C'),
         op_button(ui, display, &calc, '⌫'),
         op_button(ui, display, &calc, '÷'),
     ], ui);
-    let row2 = Row::new().bind(&[
+    let row2 = Row::new().ui(&[
         digit_button(ui, display, &calc, 7),
         digit_button(ui, display, &calc, 8),
         digit_button(ui, display, &calc, 9),
         op_button(ui, display, &calc, '×'),
     ], ui);
-    let row3 = Row::new().bind(&[
+    let row3 = Row::new().ui(&[
         digit_button(ui, display, &calc, 4),
         digit_button(ui, display, &calc, 5),
         digit_button(ui, display, &calc, 6),
         op_button(ui, display, &calc, '−'),
     ], ui);
-    let row4 = Row::new().bind(&[
+    let row4 = Row::new().ui(&[
         digit_button(ui, display, &calc, 1),
         digit_button(ui, display, &calc, 2),
         digit_button(ui, display, &calc, 3),
         op_button(ui, display, &calc, '+'),
     ], ui);
-    let row5 = Row::new().bind(&[
+    let row5 = Row::new().ui(&[
         op_button(ui, display, &calc, '±'),
         digit_button(ui, display, &calc, 0),
         op_button(ui, display, &calc, '.'),
         op_button(ui, display, &calc, '='),
     ], ui);
-    let panel = Column::new().bind(&[row0, row1, row2, row3, row4, row5], ui);
+    let panel = Column::new().ui(&[row0, row1, row2, row3, row4, row5], ui);
     let root = pad(panel, ui);
     ui.set_root(root);
 }
@@ -208,9 +208,9 @@ fn main() {
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
-    let mut state = GuiState::new();
+    let mut state = UiState::new();
     build_calc(&mut state);
-    builder.set_handler(Box::new(GuiMain::new(state)));
+    builder.set_handler(Box::new(UiMain::new(state)));
     builder.set_title("Calculator");
     let window = builder.build().unwrap();
     window.show();

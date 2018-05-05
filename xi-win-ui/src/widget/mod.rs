@@ -42,8 +42,21 @@ pub trait Widget {
     /// Participate in the layout protocol.
     ///
     /// `size` is the size of the child previously requested by a RequestChild return.
+    ///
+    /// The default implementation is suitable for widgets with a single child, and
+    /// just forwards the layout unmodified.
     fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
-        ctx: &mut LayoutCtx) -> LayoutResult;
+        ctx: &mut LayoutCtx) -> LayoutResult
+    {
+        if let Some(size) = size {
+            // Maybe this is not necessary, rely on default value.
+            ctx.position_child(children[0], (0.0, 0.0));
+            LayoutResult::Size(size)
+        } else {
+            LayoutResult::RequestChild(children[0], *bc)
+        }
+    }
+
 
     /// Handle a mouse event.
     ///
