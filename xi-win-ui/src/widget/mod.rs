@@ -22,10 +22,10 @@ use {BoxConstraints, Geometry, LayoutResult};
 use {HandlerCtx, Id, LayoutCtx, PaintCtx};
 
 mod button;
-pub use widget::button::Button;
+pub use widget::button::{Button, Label};
 
-mod row;
-pub use widget::row::Row;
+mod flex;
+pub use widget::flex::{Column, Flex, Row};
 
 mod padding;
 pub use widget::padding::Padding;

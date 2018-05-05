@@ -35,7 +35,7 @@ use xi_win_ui::{Id, LayoutCtx, ListenerCtx, PaintCtx};
 use xi_win_ui::widget::Widget;
 
 /// A very simple custom widget.
-pub struct FooWidget;
+struct FooWidget;
 
 impl Widget for FooWidget {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
@@ -76,7 +76,7 @@ fn main() {
     let foo2 = Padding::uniform(10.0).bind(foo2, &mut state);
     let button = Button::new("Press me").bind(&mut state);
     let button2 = Button::new("Don't press me").bind(&mut state);
-    let root = Row::default().bind(&[foo1, foo2, button, button2], &mut state);
+    let root = Row::new().bind(&[foo1, foo2, button, button2], &mut state);
     state.set_root(root);
     state.add_listener(button, move |_: bool, ctx| {
         ctx.poke(button2, &mut "You clicked it!".to_string());
