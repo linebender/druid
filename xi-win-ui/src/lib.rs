@@ -179,6 +179,28 @@ impl UiState {
     }
 
     fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType) {
+        fn mouse_rec(widgets: &mut [Box<Widget>], graph: &Graph,
+            x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType, ctx: &mut HandlerCtx)
+            -> bool
+        {
+            let node = ctx.id;
+            let g = ctx.c.geom[node];
+            let x = x - g.pos.0;
+            let y = y - g.pos.1;
+            let mut handled = false;
+            if x >= 0.0 && y >= 0.0 && x < g.size.0 && y < g.size.1 {
+                handled = widgets[node].mouse(x, y, mods, which, ty, ctx);
+                for child in graph.children[node].iter().rev() {
+                    if handled {
+                        break;
+                    }
+                    ctx.id = *child;
+                    handled = mouse_rec(widgets, graph, x, y, mods, which, ty, ctx);
+                }
+            }
+            handled
+        }
+
         mouse_rec(&mut self.inner.widgets, &self.inner.graph,
             x, y, mods, which, ty,
             &mut HandlerCtx {
@@ -200,37 +222,6 @@ impl UiState {
                     };
                     listener(event.deref_mut(), ctx);
                 }
-            }
-        }
-    }
-}
-
-// Do pre-order traversal on graph, painting each node in turn.
-//
-// Implemented as a recursion, but we could use an explicit queue instead.
-fn paint_rec(widgets: &mut [Box<Widget>], graph: &Graph, geom: &[Geometry],
-    paint_ctx: &mut PaintCtx, node: Id, pos: (f32, f32))
-{
-    let g = geom[node].offset(pos);
-    widgets[node].paint(paint_ctx, &g);
-    for child in graph.children[node].clone() {
-        paint_rec(widgets, graph, geom, paint_ctx, child, g.pos);
-    }
-}
-
-fn layout_rec(widgets: &mut [Box<Widget>], ctx: &mut LayoutCtx, graph: &Graph,
-    bc: &BoxConstraints, node: Id) -> (f32, f32)
-{
-    let mut size = None;
-    loop {
-        let layout_res = widgets[node].layout(bc, &graph.children[node], size, ctx);
-        match layout_res {
-            LayoutResult::Size(size) => {
-                ctx.geom[node].size = size;
-                return size;
-            }
-            LayoutResult::RequestChild(child, child_bc) => {
-                size = Some(layout_rec(widgets, ctx, graph, &child_bc, child));
             }
         }
     }
@@ -293,6 +284,19 @@ impl UiInner {
     // so are more concise to implement here.
 
     fn paint(&mut self, paint_ctx: &mut paint::PaintCtx, root: Id) {
+        // Do pre-order traversal on graph, painting each node in turn.
+        //
+        // Implemented as a recursion, but we could use an explicit queue instead.
+        fn paint_rec(widgets: &mut [Box<Widget>], graph: &Graph, geom: &[Geometry],
+            paint_ctx: &mut PaintCtx, node: Id, pos: (f32, f32))
+        {
+            let g = geom[node].offset(pos);
+            widgets[node].paint(paint_ctx, &g);
+            for child in graph.children[node].clone() {
+                paint_rec(widgets, graph, geom, paint_ctx, child, g.pos);
+            }
+        }
+
         let mut paint_ctx = PaintCtx {
             inner: paint_ctx,
             dwrite_factory: &self.c.dwrite_factory,
@@ -302,6 +306,24 @@ impl UiInner {
     }
 
     fn layout(&mut self, bc: &BoxConstraints, root: Id) {
+        fn layout_rec(widgets: &mut [Box<Widget>], ctx: &mut LayoutCtx, graph: &Graph,
+            bc: &BoxConstraints, node: Id) -> (f32, f32)
+        {
+            let mut size = None;
+            loop {
+                let layout_res = widgets[node].layout(bc, &graph.children[node], size, ctx);
+                match layout_res {
+                    LayoutResult::Size(size) => {
+                        ctx.geom[node].size = size;
+                        return size;
+                    }
+                    LayoutResult::RequestChild(child, child_bc) => {
+                        size = Some(layout_rec(widgets, ctx, graph, &child_bc, child));
+                    }
+                }
+            }
+        }
+
         layout_rec(&mut self.widgets, &mut self.c, &self.graph, bc, root);
     }
 }
@@ -334,28 +356,6 @@ impl LayoutCtx {
     pub fn get_child_size(&self, child: Id) -> (f32, f32) {
         self.geom[child].size
     }
-}
-
-fn mouse_rec(widgets: &mut [Box<Widget>], graph: &Graph,
-    x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType, ctx: &mut HandlerCtx)
-    -> bool
-{
-    let node = ctx.id;
-    let g = ctx.c.geom[node];
-    let x = x - g.pos.0;
-    let y = y - g.pos.1;
-    let mut handled = false;
-    if x >= 0.0 && y >= 0.0 && x < g.size.0 && y < g.size.1 {
-        handled = widgets[node].mouse(x, y, mods, which, ty, ctx);
-        for child in graph.children[node].iter().rev() {
-            if handled {
-                break;
-            }
-            ctx.id = *child;
-            handled = mouse_rec(widgets, graph, x, y, mods, which, ty, ctx);
-        }
-    }
-    handled
 }
 
 impl<'a> HandlerCtx<'a> {
