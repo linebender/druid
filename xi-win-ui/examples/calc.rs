@@ -17,13 +17,11 @@
 extern crate xi_win_shell;
 extern crate xi_win_ui;
 
-use std::any::Any;
-
 use xi_win_shell::win_main;
 use xi_win_shell::window::WindowBuilder;
 
-use xi_win_ui::{HandlerCtx, UiInner, UiMain, UiState, Widget};
-use xi_win_ui::widget::{Button, Column, Label, Row, Padding};
+use xi_win_ui::{UiMain, UiState};
+use xi_win_ui::widget::{Button, Column, EventForwarder, Label, Row, Padding};
 
 use xi_win_ui::Id;
 
@@ -35,25 +33,18 @@ struct CalcState {
     in_num: bool,
 }
 
-impl Widget for CalcState {
-    fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
-        if let Some(digit) = payload.downcast_ref::<u8>() {
-            self.digit(*digit);
-            ctx.send_event(self.value.clone());
-            true
-        } else if let Some(op) = payload.downcast_ref::<char>() {
-            self.op(*op);
-            ctx.send_event(self.value.clone());
-            true
-        } else {
-            false
-        }
-    }
+#[derive(Debug, Clone)]
+enum CalcAction {
+    Digit(u8),
+    Op(char),
 }
 
 impl CalcState {
-    pub fn ui(self, ctx: &mut UiInner, child: Id) -> Id {
-        ctx.add(self, &[child])
+    fn action(&mut self, action: &CalcAction) {
+        match *action {
+            CalcAction::Digit(digit) => self.digit(digit),
+            CalcAction::Op(op) => self.op(op),
+        }
     }
 
     fn digit(&mut self, digit: u8) {
@@ -149,6 +140,7 @@ fn digit_button(ui: &mut UiState, mut digit: u8) -> Id
     let button = Button::new(digit.to_string()).ui(ui);
     ui.add_listener(button, move |_: &mut bool, mut ctx| {
         ctx.poke_up(&mut digit);
+        ctx.poke_up(&mut CalcAction::Digit(digit));
     });
     pad(button, ui)
 }
@@ -158,6 +150,7 @@ fn op_button_label(ui: &mut UiState, mut op: char, label: String) -> Id
     let button = Button::new(label).ui(ui);
     ui.add_listener(button, move |_: &mut bool, mut ctx| {
         ctx.poke_up(&mut op);
+        ctx.poke_up(&mut CalcAction::Op(op));
     });
     pad(button, ui)
 }
@@ -202,16 +195,18 @@ fn build_calc(ui: &mut UiState) {
         op_button(ui, '='),
     ], ui);
     let panel = Column::new().ui(&[row0, row1, row2, row3, row4, row5], ui);
-    let calc_state = CalcState {
+    let forwarder = EventForwarder::<CalcAction>::new().ui(panel, ui);
+    let mut calc_state = CalcState {
         value: "0".to_string(),
         operand: 0.0,
         operator: 'C',
         in_num: false,
-    }.ui(ui, panel);
-    ui.add_listener(calc_state, move |value: &mut String, mut ctx| {
-        ctx.poke(display, value);
+    };
+    ui.add_listener(forwarder, move |action: &mut CalcAction, mut ctx| {
+        calc_state.action(action);
+        ctx.poke(display, &mut calc_state.value);
     });
-    let root = pad(calc_state, ui);
+    let root = pad(forwarder, ui);
     ui.set_root(root);
 }
 
