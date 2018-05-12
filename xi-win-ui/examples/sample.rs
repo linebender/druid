@@ -28,11 +28,12 @@ use xi_win_shell::window::WindowBuilder;
 
 use xi_win_ui::{UiMain, UiState, UiInner};
 use xi_win_ui::widget::{Button, Row, Padding};
-use xi_win_ui::COMMAND_EXIT;
 
 use xi_win_ui::{BoxConstraints, Geometry, LayoutResult};
 use xi_win_ui::{Id, LayoutCtx, PaintCtx};
 use xi_win_ui::widget::Widget;
+
+const COMMAND_EXIT: u32 = 0x100;
 
 /// A very simple custom widget.
 struct FooWidget;
@@ -86,6 +87,12 @@ fn main() {
     });
     state.add_listener(button2, move |_: &mut bool, mut ctx| {
         ctx.poke(button2, &mut "Naughty naughty".to_string());
+    });
+    state.set_command_listener(|cmd, mut ctx| {
+        match cmd {
+            COMMAND_EXIT => ctx.close(),
+            _ => println!("unexpected command {}", cmd),
+        }
     });
     builder.set_handler(Box::new(UiMain::new(state)));
     builder.set_title("Hello example");

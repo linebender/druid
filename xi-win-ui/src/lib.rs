@@ -50,6 +50,8 @@ pub type Id = usize;
 pub struct UiState {
     listeners: BTreeMap<Id, Vec<Box<FnMut(&mut Any, ListenerCtx)>>>,
 
+    command_listener: Option<Box<FnMut(u32, ListenerCtx)>>,
+
     /// The widget tree and associated state is split off into a separate struct
     /// so that we can use a mutable reference to it as the listener context.
     inner: UiInner,
@@ -134,9 +136,6 @@ pub struct PaintCtx<'a, 'b: 'a>  {
     dwrite_factory: &'a directwrite::Factory,
 }
 
-/// A command for exiting. TODO: move commands entirely to client.
-pub const COMMAND_EXIT: u32 = 0x100;
-
 impl Geometry {
     fn offset(&self, offset: (f32, f32)) -> Geometry {
         Geometry {
@@ -156,6 +155,7 @@ impl UiState {
     pub fn new() -> UiState {
         UiState {
             listeners: Default::default(),
+            command_listener: None,
             inner: UiInner {
                 widgets: Vec::new(),
                 graph: Default::default(),
@@ -182,6 +182,13 @@ impl UiState {
             }
         });
         self.listeners.entry(node).or_insert(Vec::new()).push(wrapper);
+    }
+
+    /// Set a listener for menu commands.
+    pub fn set_command_listener<F>(&mut self, f: F)
+        where F: FnMut(u32, ListenerCtx) + 'static
+    {
+        self.command_listener = Some(Box::new(f));
     }
 
     fn mouse(&mut self, x: f32, y: f32, raw_event: &window::MouseEvent) {
@@ -227,7 +234,7 @@ impl UiState {
     fn handle_key_event(&mut self, event: &KeyEvent) -> bool {
         if let Some(id) = self.c.focused {
             let handled = {
-                    let mut ctx = HandlerCtx {
+                let mut ctx = HandlerCtx {
                     id,
                     c: &mut self.inner.c,
                 };
@@ -237,6 +244,18 @@ impl UiState {
             handled
         } else {
             false
+        }
+    }
+
+    fn handle_command(&mut self, cmd: u32) {
+        if let Some(ref mut listener) = self.command_listener {
+            let ctx = ListenerCtx {
+                id: self.inner.graph.root,
+                inner: &mut self.inner,
+            };
+            listener(cmd, ctx);
+        } else {
+            println!("command received but no handler");
         }
     }
 
@@ -436,6 +455,11 @@ impl<'a> ListenerCtx<'a> {
             }
         }
     }
+
+    /// Request the window to be closed.
+    pub fn close(&mut self) {
+        self.c.handle.close();
+    }
 }
 
 impl<'a, 'b> PaintCtx<'a, 'b> {
@@ -473,10 +497,8 @@ impl WinHandler for UiMain {
 
     fn command(&self, id: u32) {
         // TODO: plumb through to client
-        match id {
-            COMMAND_EXIT => self.state.borrow().c.handle.close(),
-            _ => println!("unexpected id {}", id),
-        }
+        let mut state = self.state.borrow_mut();
+        state.handle_command(id);
     }
 
     fn char(&self, ch: u32, mods: u32) {
