@@ -17,9 +17,11 @@
 extern crate xi_win_shell;
 extern crate direct2d;
 extern crate directwrite;
+extern crate winapi;
 
 use std::any::Any;
 use std::cell::RefCell;
+use std::char;
 use std::collections::BTreeMap;
 use std::mem;
 use std::ops::{Deref, DerefMut};
@@ -35,7 +37,7 @@ use xi_win_shell::window::{self, MouseType, WindowHandle, WinHandler};
 
 pub mod widget;
 
-pub use widget::{MouseEvent, Widget};
+pub use widget::{KeyEvent, KeyVariant, MouseEvent, Widget};
 
 pub struct UiMain {
     state: RefCell<UiState>,
@@ -79,6 +81,9 @@ pub struct LayoutCtx {
 
     /// Queue of events to distribute to listeners
     event_q: Vec<(Id, Box<Any>)>,
+
+    /// Which widget is currently focused, if any.
+    focused: Option<Id>,
 }
 
 #[derive(Default)]
@@ -159,6 +164,7 @@ impl UiState {
                     geom: Vec::new(),
                     handle: Default::default(),
                     event_q: Vec::new(),
+                    focused: None,
                 }
             }
         }
@@ -216,6 +222,22 @@ impl UiState {
             }
         );
         self.dispatch_events();
+    }
+
+    fn handle_key_event(&mut self, event: &KeyEvent) -> bool {
+        if let Some(id) = self.c.focused {
+            let handled = {
+                    let mut ctx = HandlerCtx {
+                    id,
+                    c: &mut self.inner.c,
+                };
+                self.inner.widgets[id].key(event, &mut ctx)
+            };
+            self.dispatch_events();
+            handled
+        } else {
+            false
+        }
     }
 
     fn dispatch_events(&mut self) {
@@ -287,6 +309,11 @@ impl UiInner {
 
     pub fn set_root(&mut self, root: Id) {
         self.graph.root = root;
+    }
+
+    /// Set the focused widget.
+    pub fn set_focus(&mut self, node: Option<Id>) {
+        self.c.focused = node;
     }
 
     // The following methods are really UiState methods, but don't need access to listeners
@@ -453,12 +480,19 @@ impl WinHandler for UiMain {
     }
 
     fn char(&self, ch: u32, mods: u32) {
-        println!("got char 0x{:x} {:02x}", ch, mods);
+        if let Some(ch) = char::from_u32(ch) {
+            let key_event = KeyEvent { key: KeyVariant::Char(ch), mods };
+            let mut state = self.state.borrow_mut();
+            state.handle_key_event(&key_event);
+        } else {
+            println!("invalid code point 0x{:x}", ch);
+        }
     }
 
     fn keydown(&self, vk_code: i32, mods: u32) -> bool {
-        println!("got key code 0x{:x} {:02x}", vk_code, mods);
-        false
+        let key_event = KeyEvent { key: KeyVariant::Vkey(vk_code), mods };
+        let mut state = self.state.borrow_mut();
+        state.handle_key_event(&key_event)
     }
 
     fn mouse_wheel(&self, delta: i32, mods: u32) {

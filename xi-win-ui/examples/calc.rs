@@ -14,14 +14,18 @@
 
 //! Simple calculator.
 
+extern crate winapi;
+
 extern crate xi_win_shell;
 extern crate xi_win_ui;
+
+use winapi::um::winuser::*;
 
 use xi_win_shell::win_main;
 use xi_win_shell::window::WindowBuilder;
 
-use xi_win_ui::{UiMain, UiState};
-use xi_win_ui::widget::{Button, Column, EventForwarder, Label, Row, Padding};
+use xi_win_ui::{KeyEvent, KeyVariant, UiMain, UiState};
+use xi_win_ui::widget::{Button, Column, EventForwarder, KeyListener, Label, Row, Padding};
 
 use xi_win_ui::Id;
 
@@ -195,19 +199,50 @@ fn build_calc(ui: &mut UiState) {
         op_button(ui, '='),
     ], ui);
     let panel = Column::new().ui(&[row0, row1, row2, row3, row4, row5], ui);
-    let forwarder = EventForwarder::<CalcAction>::new().ui(panel, ui);
+    let key_listener = KeyListener::new().ui(panel, ui);
+    let forwarder = EventForwarder::<CalcAction>::new().ui(key_listener, ui);
     let mut calc_state = CalcState {
         value: "0".to_string(),
         operand: 0.0,
         operator: 'C',
         in_num: false,
     };
+    ui.add_listener(key_listener, move |event: &mut KeyEvent, mut ctx| {
+        if let Some(mut action) = action_for_key(event) {
+            ctx.poke_up(&mut action);
+        }
+    });
     ui.add_listener(forwarder, move |action: &mut CalcAction, mut ctx| {
         calc_state.action(action);
         ctx.poke(display, &mut calc_state.value);
     });
     let root = pad(forwarder, ui);
     ui.set_root(root);
+    ui.set_focus(Some(key_listener));
+}
+
+fn action_for_key(event: &KeyEvent) -> Option<CalcAction> {
+    match event.key {
+        KeyVariant::Char(ch) => {
+            if ch >= '0' && ch <= '9' {
+                return Some(CalcAction::Digit(ch as u8 - b'0'));
+            }
+            match ch {
+                '.' | '+' | '=' | 'c' | 'C' => Some(CalcAction::Op(ch)),
+                '-' => Some(CalcAction::Op('−')),
+                '*' => Some(CalcAction::Op('×')),
+                '/' => Some(CalcAction::Op('÷')),
+                _ => None,
+            }
+        }
+        KeyVariant::Vkey(vk) => {
+            match vk {
+                VK_BACK => Some(CalcAction::Op('⌫')),
+                VK_RETURN => Some(CalcAction::Op('=')),
+                _ => None,
+            }
+        }
+    }
 }
 
 fn main() {
