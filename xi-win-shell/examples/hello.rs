@@ -25,7 +25,7 @@ use direct2d::brush::SolidColorBrush;
 use xi_win_shell::menu::Menu;
 use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::win_main;
-use xi_win_shell::window::{MouseButton, MouseType, WindowBuilder, WindowHandle, WinHandler};
+use xi_win_shell::window::{MouseEvent, WindowBuilder, WindowHandle, WinHandler};
 
 #[derive(Default)]
 struct HelloState {
@@ -77,8 +77,8 @@ impl WinHandler for HelloState {
         println!("mouse_move ({}, {}) {:02x}", x, y, mods);
     }
 
-    fn mouse(&self, x: i32, y: i32, mods: u32, button: MouseButton, ty: MouseType) {
-        println!("mouse_move ({}, {}) {:02x} {:?} {:?}", x, y, mods, button, ty);
+    fn mouse(&self, event: &MouseEvent) {
+        println!("mouse {:?}", event);
     }
 
     fn destroy(&self) {

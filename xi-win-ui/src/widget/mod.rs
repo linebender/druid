@@ -16,7 +16,7 @@
 
 use std::any::Any;
 
-use xi_win_shell::window::{MouseButton, MouseType};
+pub use xi_win_shell::window::MouseButton;
 
 use {BoxConstraints, Geometry, LayoutResult};
 use {HandlerCtx, Id, LayoutCtx, PaintCtx};
@@ -65,12 +65,18 @@ pub trait Widget {
     ///
     /// TODO: `MouseType` will be replaced by a click count.
     #[allow(unused)]
-    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType,
-        ctx: &mut HandlerCtx) -> bool
-    { false }
+    fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool { false }
 
     /// An `escape hatch` of sorts for accessing widget state beyond the widget
     /// methods. Returns true if it is handled.
     #[allow(unused)]
     fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool { false }
+}
+
+pub struct MouseEvent {
+    pub x: f32,
+    pub y: f32,
+    pub mods: u32,
+    pub which: MouseButton,
+    pub count: u32,
 }

@@ -21,10 +21,9 @@ use direct2d::brush::SolidColorBrush;
 use directwrite::{self, TextFormat, TextLayout};
 
 use xi_win_shell::util::default_text_options;
-use xi_win_shell::window::{MouseButton, MouseType};
 
 use {BoxConstraints, Geometry, LayoutResult};
-use {HandlerCtx, Id, LayoutCtx, UiInner, PaintCtx};
+use {HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, UiInner};
 use widget::Widget;
 
 /// A text label with no interaction.
@@ -81,16 +80,6 @@ impl Widget for Label {
         LayoutResult::Size(bc.constrain((100.0, 17.0)))
     }
 
-    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType,
-        ctx: &mut HandlerCtx) -> bool
-    {
-        println!("button {} {} {:x} {:?} {:?}", x, y, mods, which, ty);
-        if ty == MouseType::Down {
-            ctx.send_event(true);
-        }
-        true
-    }
-
     fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
         if let Some(string) = payload.downcast_ref::<String>() {
             self.label = string.clone();
@@ -133,11 +122,8 @@ impl Widget for Button {
         self.label.layout(bc, children, size, ctx)
     }
 
-    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType,
-        ctx: &mut HandlerCtx) -> bool
-    {
-        println!("button {} {} {:x} {:?} {:?}", x, y, mods, which, ty);
-        if ty == MouseType::Down {
+    fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
+        if event.count > 0 {
             ctx.send_event(true);
         }
         true

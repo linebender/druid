@@ -31,11 +31,11 @@ use direct2d::brush::SolidColorBrush;
 
 use xi_win_shell::paint;
 use xi_win_shell::win_main;
-use xi_win_shell::window::{MouseButton, MouseType, WindowHandle, WinHandler};
+use xi_win_shell::window::{self, MouseType, WindowHandle, WinHandler};
 
 pub mod widget;
 
-pub use widget::Widget;
+pub use widget::{MouseEvent, Widget};
 
 pub struct UiMain {
     state: RefCell<UiState>,
@@ -178,9 +178,9 @@ impl UiState {
         self.listeners.entry(node).or_insert(Vec::new()).push(wrapper);
     }
 
-    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType) {
+    fn mouse(&mut self, x: f32, y: f32, raw_event: &window::MouseEvent) {
         fn mouse_rec(widgets: &mut [Box<Widget>], graph: &Graph,
-            x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType, ctx: &mut HandlerCtx)
+            x: f32, y: f32, raw_event: &window::MouseEvent, ctx: &mut HandlerCtx)
             -> bool
         {
             let node = ctx.id;
@@ -189,20 +189,27 @@ impl UiState {
             let y = y - g.pos.1;
             let mut handled = false;
             if x >= 0.0 && y >= 0.0 && x < g.size.0 && y < g.size.1 {
-                handled = widgets[node].mouse(x, y, mods, which, ty, ctx);
+                let count = if raw_event.ty == MouseType::Down { 1 } else { 0 };
+                let event = MouseEvent {
+                    x, y,
+                    mods: raw_event.mods,
+                    which: raw_event.which,
+                    count,
+                };
+                handled = widgets[node].mouse(&event, ctx);
                 for child in graph.children[node].iter().rev() {
                     if handled {
                         break;
                     }
                     ctx.id = *child;
-                    handled = mouse_rec(widgets, graph, x, y, mods, which, ty, ctx);
+                    handled = mouse_rec(widgets, graph, x, y, raw_event, ctx);
                 }
             }
             handled
         }
 
         mouse_rec(&mut self.inner.widgets, &self.inner.graph,
-            x, y, mods, which, ty,
+            x, y, raw_event,
             &mut HandlerCtx {
                 id: self.inner.graph.root,
                 c: &mut self.inner.c,
@@ -212,15 +219,17 @@ impl UiState {
     }
 
     fn dispatch_events(&mut self) {
-        let event_q = mem::replace(&mut self.c.event_q, Vec::new());
-        for (id, mut event) in event_q {
-            if let Some(listeners) = self.listeners.get_mut(&id) {
-                for listener in listeners {
-                    let ctx = ListenerCtx {
-                        id,
-                        inner: &mut self.inner,
-                    };
-                    listener(event.deref_mut(), ctx);
+        while !self.c.event_q.is_empty() {
+            let event_q = mem::replace(&mut self.c.event_q, Vec::new());
+            for (id, mut event) in event_q {
+                if let Some(listeners) = self.listeners.get_mut(&id) {
+                    for listener in listeners {
+                        let ctx = ListenerCtx {
+                            id,
+                            inner: &mut self.inner,
+                        };
+                        listener(event.deref_mut(), ctx);
+                    }
                 }
             }
         }
@@ -464,12 +473,12 @@ impl WinHandler for UiMain {
         println!("mouse_move ({}, {}) {:02x}", x, y, mods);
     }
 
-    fn mouse(&self, x: i32, y: i32, mods: u32, button: MouseButton, ty: MouseType) {
-        println!("mouse ({}, {}) {:02x} {:?} {:?}", x, y, mods, button, ty);
+    fn mouse(&self, event: &window::MouseEvent) {
+        println!("mouse {:?}", event);
         let mut state = self.state.borrow_mut();
-        let (x, y) = state.c.handle.pixels_to_px_xy(x, y);
+        let (x, y) = state.c.handle.pixels_to_px_xy(event.x, event.y);
         // TODO: detect multiple clicks and pass that down
-        state.mouse(x, y, mods, button, ty);
+        state.mouse(x, y, event);
     }
 
     fn destroy(&self) {
