@@ -24,6 +24,9 @@ use {HandlerCtx, Id, LayoutCtx, PaintCtx};
 mod button;
 pub use widget::button::{Button, Label};
 
+mod event_forwarder;
+pub use widget::event_forwarder::EventForwarder;
+
 mod flex;
 pub use widget::flex::{Column, Flex, Row};
 
