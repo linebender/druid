@@ -16,7 +16,7 @@
 
 use std::any::Any;
 
-use xi_win_shell::window::{MouseButton, MouseType};
+pub use xi_win_shell::window::MouseButton;
 
 use {BoxConstraints, Geometry, LayoutResult};
 use {HandlerCtx, Id, LayoutCtx, PaintCtx};
@@ -29,6 +29,9 @@ pub use widget::event_forwarder::EventForwarder;
 
 mod flex;
 pub use widget::flex::{Column, Flex, Row};
+
+mod key_listener;
+pub use widget::key_listener::KeyListener;
 
 mod padding;
 pub use widget::padding::Padding;
@@ -61,16 +64,59 @@ pub trait Widget {
     }
 
 
-    /// Handle a mouse event.
+    /// Sent to the widget on mouse event.
     ///
-    /// TODO: `MouseType` will be replaced by a click count.
+    /// Mouse events are propagated in a post-order traversal of the widget tree,
+    /// culled by geometry. Propagation stops as soon as the event is handled.
     #[allow(unused)]
-    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType,
-        ctx: &mut HandlerCtx) -> bool
-    { false }
+    fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool { false }
 
-    /// An `escape hatch` of sorts for accessing widget state beyond the widget
+    /// An "escape hatch" of sorts for accessing widget state beyond the widget
     /// methods. Returns true if it is handled.
     #[allow(unused)]
     fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool { false }
+
+    /// Sent to the widget on key event.
+    ///
+    /// Key events are only sent to the focused widget.
+    ///
+    /// Note that keys that are interpreted as characters are sent twice, first
+    /// as a `Vkey`, then as a `Char`.
+    ///
+    /// This is a fairly thin wrapper over WM messages. Keyboard input will be
+    /// changing quite a bit when IME is implemented.
+    ///
+    /// Returns true if the event is handled.
+    #[allow(unused)]
+    fn key(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool { false }
+}
+
+pub struct MouseEvent {
+    /// X coordinate in px units, relative to top left of widget.
+    pub x: f32,
+    /// Y coordinate in px units, relative to top left of widget.
+    pub y: f32,
+    /// The modifiers, which have the same interpretation as the raw WM message.
+    ///
+    /// TODO: rationalize this with mouse mods.
+    pub mods: u32,
+    /// Which mouse button was pressed.
+    pub which: MouseButton,
+    /// Count of multiple clicks, is 0 for mouse up event.
+    pub count: u32,
+}
+
+#[derive(Clone)]
+pub struct KeyEvent {
+    pub key: KeyVariant,
+    /// The modifiers, a combinations of `M_ALT`, `M_CTRL`, `M_SHIFT`.
+    pub mods: u32,
+}
+
+#[derive(Clone)]
+pub enum KeyVariant {
+    /// A virtual-key code, same as WM_KEYDOWN message.
+    Vkey(i32),
+    /// A Unicode character.
+    Char(char),
 }

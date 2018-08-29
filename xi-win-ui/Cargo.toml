@@ -9,5 +9,8 @@ description = "Simple Entity Component System UI toolkit layer."
 directwrite = "0.1.2"
 direct2d = "0.1.1"
 
+# this is only included for VK_ constants, maybe remove
+winapi = "0.3"
+
 [dependencies.xi-win-shell]
 path = "../xi-win-shell"

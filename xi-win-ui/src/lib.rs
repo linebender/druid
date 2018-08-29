@@ -17,9 +17,11 @@
 extern crate xi_win_shell;
 extern crate direct2d;
 extern crate directwrite;
+extern crate winapi;
 
 use std::any::Any;
 use std::cell::RefCell;
+use std::char;
 use std::collections::BTreeMap;
 use std::mem;
 use std::ops::{Deref, DerefMut};
@@ -31,11 +33,11 @@ use direct2d::brush::SolidColorBrush;
 
 use xi_win_shell::paint;
 use xi_win_shell::win_main;
-use xi_win_shell::window::{MouseButton, MouseType, WindowHandle, WinHandler};
+use xi_win_shell::window::{self, MouseType, WindowHandle, WinHandler};
 
 pub mod widget;
 
-pub use widget::Widget;
+pub use widget::{KeyEvent, KeyVariant, MouseEvent, Widget};
 
 pub struct UiMain {
     state: RefCell<UiState>,
@@ -47,6 +49,8 @@ pub type Id = usize;
 
 pub struct UiState {
     listeners: BTreeMap<Id, Vec<Box<FnMut(&mut Any, ListenerCtx)>>>,
+
+    command_listener: Option<Box<FnMut(u32, ListenerCtx)>>,
 
     /// The widget tree and associated state is split off into a separate struct
     /// so that we can use a mutable reference to it as the listener context.
@@ -79,6 +83,9 @@ pub struct LayoutCtx {
 
     /// Queue of events to distribute to listeners
     event_q: Vec<(Id, Box<Any>)>,
+
+    /// Which widget is currently focused, if any.
+    focused: Option<Id>,
 }
 
 #[derive(Default)]
@@ -129,9 +136,6 @@ pub struct PaintCtx<'a, 'b: 'a>  {
     dwrite_factory: &'a directwrite::Factory,
 }
 
-/// A command for exiting. TODO: move commands entirely to client.
-pub const COMMAND_EXIT: u32 = 0x100;
-
 impl Geometry {
     fn offset(&self, offset: (f32, f32)) -> Geometry {
         Geometry {
@@ -151,6 +155,7 @@ impl UiState {
     pub fn new() -> UiState {
         UiState {
             listeners: Default::default(),
+            command_listener: None,
             inner: UiInner {
                 widgets: Vec::new(),
                 graph: Default::default(),
@@ -159,6 +164,7 @@ impl UiState {
                     geom: Vec::new(),
                     handle: Default::default(),
                     event_q: Vec::new(),
+                    focused: None,
                 }
             }
         }
@@ -178,9 +184,16 @@ impl UiState {
         self.listeners.entry(node).or_insert(Vec::new()).push(wrapper);
     }
 
-    fn mouse(&mut self, x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType) {
+    /// Set a listener for menu commands.
+    pub fn set_command_listener<F>(&mut self, f: F)
+        where F: FnMut(u32, ListenerCtx) + 'static
+    {
+        self.command_listener = Some(Box::new(f));
+    }
+
+    fn mouse(&mut self, x: f32, y: f32, raw_event: &window::MouseEvent) {
         fn mouse_rec(widgets: &mut [Box<Widget>], graph: &Graph,
-            x: f32, y: f32, mods: u32, which: MouseButton, ty: MouseType, ctx: &mut HandlerCtx)
+            x: f32, y: f32, raw_event: &window::MouseEvent, ctx: &mut HandlerCtx)
             -> bool
         {
             let node = ctx.id;
@@ -189,20 +202,27 @@ impl UiState {
             let y = y - g.pos.1;
             let mut handled = false;
             if x >= 0.0 && y >= 0.0 && x < g.size.0 && y < g.size.1 {
-                handled = widgets[node].mouse(x, y, mods, which, ty, ctx);
+                let count = if raw_event.ty == MouseType::Down { 1 } else { 0 };
+                let event = MouseEvent {
+                    x, y,
+                    mods: raw_event.mods,
+                    which: raw_event.which,
+                    count,
+                };
+                handled = widgets[node].mouse(&event, ctx);
                 for child in graph.children[node].iter().rev() {
                     if handled {
                         break;
                     }
                     ctx.id = *child;
-                    handled = mouse_rec(widgets, graph, x, y, mods, which, ty, ctx);
+                    handled = mouse_rec(widgets, graph, x, y, raw_event, ctx);
                 }
             }
             handled
         }
 
         mouse_rec(&mut self.inner.widgets, &self.inner.graph,
-            x, y, mods, which, ty,
+            x, y, raw_event,
             &mut HandlerCtx {
                 id: self.inner.graph.root,
                 c: &mut self.inner.c,
@@ -211,16 +231,46 @@ impl UiState {
         self.dispatch_events();
     }
 
+    fn handle_key_event(&mut self, event: &KeyEvent) -> bool {
+        if let Some(id) = self.c.focused {
+            let handled = {
+                let mut ctx = HandlerCtx {
+                    id,
+                    c: &mut self.inner.c,
+                };
+                self.inner.widgets[id].key(event, &mut ctx)
+            };
+            self.dispatch_events();
+            handled
+        } else {
+            false
+        }
+    }
+
+    fn handle_command(&mut self, cmd: u32) {
+        if let Some(ref mut listener) = self.command_listener {
+            let ctx = ListenerCtx {
+                id: self.inner.graph.root,
+                inner: &mut self.inner,
+            };
+            listener(cmd, ctx);
+        } else {
+            println!("command received but no handler");
+        }
+    }
+
     fn dispatch_events(&mut self) {
-        let event_q = mem::replace(&mut self.c.event_q, Vec::new());
-        for (id, mut event) in event_q {
-            if let Some(listeners) = self.listeners.get_mut(&id) {
-                for listener in listeners {
-                    let ctx = ListenerCtx {
-                        id,
-                        inner: &mut self.inner,
-                    };
-                    listener(event.deref_mut(), ctx);
+        while !self.c.event_q.is_empty() {
+            let event_q = mem::replace(&mut self.c.event_q, Vec::new());
+            for (id, mut event) in event_q {
+                if let Some(listeners) = self.listeners.get_mut(&id) {
+                    for listener in listeners {
+                        let ctx = ListenerCtx {
+                            id,
+                            inner: &mut self.inner,
+                        };
+                        listener(event.deref_mut(), ctx);
+                    }
                 }
             }
         }
@@ -278,6 +328,11 @@ impl UiInner {
 
     pub fn set_root(&mut self, root: Id) {
         self.graph.root = root;
+    }
+
+    /// Set the focused widget.
+    pub fn set_focus(&mut self, node: Option<Id>) {
+        self.c.focused = node;
     }
 
     // The following methods are really UiState methods, but don't need access to listeners
@@ -400,6 +455,11 @@ impl<'a> ListenerCtx<'a> {
             }
         }
     }
+
+    /// Request the window to be closed.
+    pub fn close(&mut self) {
+        self.c.handle.close();
+    }
 }
 
 impl<'a, 'b> PaintCtx<'a, 'b> {
@@ -437,19 +497,24 @@ impl WinHandler for UiMain {
 
     fn command(&self, id: u32) {
         // TODO: plumb through to client
-        match id {
-            COMMAND_EXIT => self.state.borrow().c.handle.close(),
-            _ => println!("unexpected id {}", id),
-        }
+        let mut state = self.state.borrow_mut();
+        state.handle_command(id);
     }
 
     fn char(&self, ch: u32, mods: u32) {
-        println!("got char 0x{:x} {:02x}", ch, mods);
+        if let Some(ch) = char::from_u32(ch) {
+            let key_event = KeyEvent { key: KeyVariant::Char(ch), mods };
+            let mut state = self.state.borrow_mut();
+            state.handle_key_event(&key_event);
+        } else {
+            println!("invalid code point 0x{:x}", ch);
+        }
     }
 
     fn keydown(&self, vk_code: i32, mods: u32) -> bool {
-        println!("got key code 0x{:x} {:02x}", vk_code, mods);
-        false
+        let key_event = KeyEvent { key: KeyVariant::Vkey(vk_code), mods };
+        let mut state = self.state.borrow_mut();
+        state.handle_key_event(&key_event)
     }
 
     fn mouse_wheel(&self, delta: i32, mods: u32) {
@@ -464,12 +529,12 @@ impl WinHandler for UiMain {
         println!("mouse_move ({}, {}) {:02x}", x, y, mods);
     }
 
-    fn mouse(&self, x: i32, y: i32, mods: u32, button: MouseButton, ty: MouseType) {
-        println!("mouse ({}, {}) {:02x} {:?} {:?}", x, y, mods, button, ty);
+    fn mouse(&self, event: &window::MouseEvent) {
+        println!("mouse {:?}", event);
         let mut state = self.state.borrow_mut();
-        let (x, y) = state.c.handle.pixels_to_px_xy(x, y);
+        let (x, y) = state.c.handle.pixels_to_px_xy(event.x, event.y);
         // TODO: detect multiple clicks and pass that down
-        state.mouse(x, y, mods, button, ty);
+        state.mouse(x, y, event);
     }
 
     fn destroy(&self) {

@@ -183,13 +183,15 @@ pub trait WinHandler {
 
     /// Called when the mouse moves. Note that the x, y coordinates are
     /// in absolute pixels.
+    ///
+    /// TODO: should we reuse the MouseEvent struct for this method as well?
     #[allow(unused_variables)]
     fn mouse_move(&self, x: i32, y: i32, mods: u32) {}
 
     /// Called on mouse button up or down. Note that the x, y
     /// coordinates are in absolute pixels.
     #[allow(unused_variables)]
-    fn mouse(&self, x: i32, y: i32, mods: u32, which: MouseButton, ty: MouseType) {}
+    fn mouse(&self, event: &MouseEvent) {}
 
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is
@@ -198,6 +200,21 @@ pub trait WinHandler {
 
     /// Get a reference to the handler state. Used mostly by idle handlers.
     fn as_any(&self) -> &Any;
+}
+
+/// A mouse button press or release event.
+#[derive(Debug)]
+pub struct MouseEvent {
+    /// X coordinate in absolute pixels.
+    pub x: i32,
+    /// Y coordinate in absolute pixels.
+    pub y: i32,
+    /// Modifiers, as in raw WM message
+    pub mods: u32,
+    /// Which button was pressed or released.
+    pub which: MouseButton,
+    /// Type of event.
+    pub ty: MouseType,
 }
 
 /// An indicator of which mouse button was pressed.
@@ -504,7 +521,7 @@ impl WndProc for MyWndProc {
                 WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP |
                 WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP =>
             {
-                let button = match msg {
+                let which = match msg {
                     WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => MouseButton::Left,
                     WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP => MouseButton::Middle,
                     WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => MouseButton::Right,
@@ -531,7 +548,8 @@ impl WndProc for MyWndProc {
                 let x = LOWORD(lparam as u32) as i16 as i32;
                 let y = HIWORD(lparam as u32) as i16 as i32;
                 let mods = LOWORD(wparam as u32) as u32;
-                self.handler.mouse(x, y, mods, button, ty);
+                let event = MouseEvent { x, y, mods, which, ty };
+                self.handler.mouse(&event);
                 Some(0)
             }
             WM_DESTROY => {
