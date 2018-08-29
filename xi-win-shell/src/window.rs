@@ -509,7 +509,7 @@ impl WndProc for MyWndProc {
             }
             WM_MOUSEMOVE => {
                 let x = LOWORD(lparam as u32) as i16 as i32;
-                let y = LOWORD(lparam as u32) as i16 as i32;
+                let y = HIWORD(lparam as u32) as i16 as i32;
                 let mods = LOWORD(wparam as u32) as u32;
                 self.handler.mouse_move(x, y, mods);
                 Some(0)
