@@ -86,6 +86,9 @@ pub struct LayoutCtx {
 
     /// Which widget is currently focused, if any.
     focused: Option<Id>,
+
+    /// Which widget is active (mouse is pressed), if any.
+    active: Option<Id>,
 }
 
 #[derive(Default)]
@@ -132,6 +135,7 @@ pub struct ListenerCtx<'a> {
 }
 
 pub struct PaintCtx<'a, 'b: 'a>  {
+    is_active: bool,
     inner: &'a mut paint::PaintCtx<'b>,
     dwrite_factory: &'a directwrite::Factory,
 }
@@ -165,6 +169,7 @@ impl UiState {
                     handle: Default::default(),
                     event_q: Vec::new(),
                     focused: None,
+                    active: None,
                 }
             }
         }
@@ -192,6 +197,19 @@ impl UiState {
     }
 
     fn mouse(&mut self, x: f32, y: f32, raw_event: &window::MouseEvent) {
+        fn dispatch_mouse(widgets: &mut [Box<Widget>], node: Id,
+            x: f32, y: f32, raw_event: &window::MouseEvent, ctx: &mut HandlerCtx) -> bool
+        {
+            let count = if raw_event.ty == MouseType::Down { 1 } else { 0 };
+            let event = MouseEvent {
+                x, y,
+                mods: raw_event.mods,
+                which: raw_event.which,
+                count,
+            };
+            widgets[node].mouse(&event, ctx)
+        }
+
         fn mouse_rec(widgets: &mut [Box<Widget>], graph: &Graph,
             x: f32, y: f32, raw_event: &window::MouseEvent, ctx: &mut HandlerCtx)
             -> bool
@@ -202,14 +220,7 @@ impl UiState {
             let y = y - g.pos.1;
             let mut handled = false;
             if x >= 0.0 && y >= 0.0 && x < g.size.0 && y < g.size.1 {
-                let count = if raw_event.ty == MouseType::Down { 1 } else { 0 };
-                let event = MouseEvent {
-                    x, y,
-                    mods: raw_event.mods,
-                    which: raw_event.which,
-                    count,
-                };
-                handled = widgets[node].mouse(&event, ctx);
+                handled = dispatch_mouse(widgets, node, x, y, raw_event, ctx);
                 for child in graph.children[node].iter().rev() {
                     if handled {
                         break;
@@ -221,13 +232,36 @@ impl UiState {
             handled
         }
 
-        mouse_rec(&mut self.inner.widgets, &self.inner.graph,
-            x, y, raw_event,
-            &mut HandlerCtx {
-                id: self.inner.graph.root,
-                c: &mut self.inner.c,
+        if let Some(active) = self.c.active {
+            // Send mouse event directly to active widget.
+            let mut n = active;
+            let mut x = x;
+            let mut y = y;
+            loop {
+                let g = self.c.geom[n];
+                x -= g.pos.0;
+                y -= g.pos.1;
+                let parent = self.graph.parent[n];
+                if parent == n {
+                    break;
+                }
+                n = parent;
             }
-        );
+            dispatch_mouse(&mut self.inner.widgets, active, x, y, raw_event,
+                &mut HandlerCtx {
+                    id: active,
+                    c: &mut self.inner.c,
+                }
+            );
+        } else {
+            mouse_rec(&mut self.inner.widgets, &self.inner.graph,
+                x, y, raw_event,
+                &mut HandlerCtx {
+                    id: self.inner.graph.root,
+                    c: &mut self.inner.c,
+                }
+            );
+        }
         self.dispatch_events();
     }
 
@@ -343,21 +377,23 @@ impl UiInner {
         //
         // Implemented as a recursion, but we could use an explicit queue instead.
         fn paint_rec(widgets: &mut [Box<Widget>], graph: &Graph, geom: &[Geometry],
-            paint_ctx: &mut PaintCtx, node: Id, pos: (f32, f32))
+            paint_ctx: &mut PaintCtx, node: Id, pos: (f32, f32), active: Option<Id>)
         {
             let g = geom[node].offset(pos);
+            paint_ctx.is_active = active == Some(node);
             widgets[node].paint(paint_ctx, &g);
             for child in graph.children[node].clone() {
-                paint_rec(widgets, graph, geom, paint_ctx, child, g.pos);
+                paint_rec(widgets, graph, geom, paint_ctx, child, g.pos, active);
             }
         }
 
         let mut paint_ctx = PaintCtx {
+            is_active: false,
             inner: paint_ctx,
             dwrite_factory: &self.c.dwrite_factory,
         };
         paint_rec(&mut self.widgets, &self.graph, &self.c.geom,
-            &mut paint_ctx, root, (0.0, 0.0));
+            &mut paint_ctx, root, (0.0, 0.0), self.c.active);
     }
 
     fn layout(&mut self, bc: &BoxConstraints, root: Id) {
@@ -414,13 +450,26 @@ impl LayoutCtx {
 }
 
 impl<'a> HandlerCtx<'a> {
+    /// Invalidate this widget. Finer-grained invalidation is not yet implemented,
+    /// but when it is, this method will invalidate the widget's bounding box.
     pub fn invalidate(&self) {
         self.c.handle.invalidate();
     }
 
-    // Send an event, to be handled by listeners.
+    /// Send an event, to be handled by listeners.
     pub fn send_event<A: Any>(&mut self, a: A) {
         self.c.event_q.push((self.id, Box::new(a)));
+    }
+
+    /// Set the active widget to this one, or unset.
+    // TODO: this should call SetCapture/ReleaseCapture as well.
+    pub fn set_active(&mut self, active: bool) {
+        self.c.active = if active { Some(self.id) } else { None };
+    }
+
+    /// Determine whether this widget is active.
+    pub fn is_active(&self) -> bool {
+        self.c.active == Some(self.id)
     }
 }
 
@@ -469,6 +518,11 @@ impl<'a, 'b> PaintCtx<'a, 'b> {
 
     pub fn render_target(&mut self) -> &mut GenericRenderTarget {
         self.inner.render_target()
+    }
+
+    /// Determine whether this widget is the active one.
+    pub fn is_active(&self) -> bool {
+        self.is_active
     }
 }
 
