@@ -108,8 +108,13 @@ impl Widget for Button {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         {
             let is_active = paint_ctx.is_active();
+            let is_hot = paint_ctx.is_hot();
             let rt = paint_ctx.render_target();
-            let bg_color = if is_active { 0x505058 } else { 0x404048 };
+            let bg_color = match (is_active, is_hot) {
+                (true, true) => 0x606068,
+                (false, true) => 0x505058,
+                _ => 0x404048,
+            };
             let bg = SolidColorBrush::create(rt).with_color(bg_color).build().unwrap();
             rt.fill_rectangle(
                 (geom.pos.0, geom.pos.1, geom.pos.0 + geom.size.0, geom.pos.1 + geom.size.1),
@@ -129,10 +134,16 @@ impl Widget for Button {
             ctx.set_active(true);
         } else {
             ctx.set_active(false);
-            ctx.send_event(true);
+            if ctx.is_hot() {
+                ctx.send_event(true);
+            }
         }
         ctx.invalidate();
         true
+    }
+
+    fn on_hot_changed(&mut self, _hot: bool, ctx: &mut HandlerCtx) {
+        ctx.invalidate();
     }
 
     fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {

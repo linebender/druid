@@ -89,6 +89,9 @@ pub struct LayoutCtx {
 
     /// Which widget is active (mouse is pressed), if any.
     active: Option<Id>,
+
+    /// Which widget is hot (hovered), if any.
+    hot: Option<Id>,
 }
 
 #[derive(Default)]
@@ -135,7 +138,9 @@ pub struct ListenerCtx<'a> {
 }
 
 pub struct PaintCtx<'a, 'b: 'a>  {
+    // TODO: maybe this should be a 3-way enum: normal/hot/active
     is_active: bool,
+    is_hot: bool,
     inner: &'a mut paint::PaintCtx<'b>,
     dwrite_factory: &'a directwrite::Factory,
 }
@@ -170,6 +175,7 @@ impl UiState {
                     event_q: Vec::new(),
                     focused: None,
                     active: None,
+                    hot: None,
                 }
             }
         }
@@ -234,19 +240,7 @@ impl UiState {
 
         if let Some(active) = self.c.active {
             // Send mouse event directly to active widget.
-            let mut n = active;
-            let mut x = x;
-            let mut y = y;
-            loop {
-                let g = self.c.geom[n];
-                x -= g.pos.0;
-                y -= g.pos.1;
-                let parent = self.graph.parent[n];
-                if parent == n {
-                    break;
-                }
-                n = parent;
-            }
+            let (x, y) = self.xy_to_local(active, x, y);
             dispatch_mouse(&mut self.inner.widgets, active, x, y, raw_event,
                 &mut HandlerCtx {
                     id: active,
@@ -263,6 +257,69 @@ impl UiState {
             );
         }
         self.dispatch_events();
+    }
+
+    fn mouse_move(&mut self, x: f32, y: f32) {
+        // Note: this logic is similar to that for hit testing on mouse, but is
+        // slightly different if child geom's overlap. Maybe we reconcile them,
+        // maybe it's fine.
+        let mut node = self.graph.root;
+        let mut new_hot = None;
+        let (mut tx, mut ty) = (x, y);
+        loop {
+            let g = self.c.geom[node];
+            tx -= g.pos.0;
+            ty -= g.pos.1;
+            if self.graph.children[node].is_empty() {
+                new_hot = Some(node);
+                break;
+            }
+            let mut child_hot = None;
+            for child in self.graph.children[node].iter().rev() {
+                let child_g = self.c.geom[*child];
+                let cx = tx - child_g.pos.0;
+                let cy = ty - child_g.pos.1;
+                if cx >= 0.0 && cy >= 0.0 && cx < child_g.size.0 && cy < child_g.size.1 {
+                    child_hot = Some(child);
+                    break;
+                }
+            }
+            if let Some(child) = child_hot {
+                node = *child;
+            } else {
+                break;
+            }
+        }
+        let old_hot = self.c.hot;
+        if new_hot != old_hot {
+            self.c.hot = new_hot;
+            if let Some(old_hot) = old_hot {
+                self.inner.widgets[old_hot].on_hot_changed(false,
+                    &mut HandlerCtx {
+                        id: old_hot,
+                        c: &mut self.inner.c,
+                    }
+                );
+            }
+            if let Some(new_hot) = new_hot {
+                self.inner.widgets[new_hot].on_hot_changed(true,
+                    &mut HandlerCtx {
+                        id: new_hot,
+                        c: &mut self.inner.c,
+                    }
+                );
+            }
+        }
+
+        if let Some(node) = self.c.active.or(new_hot) {
+            let (x, y) = self.xy_to_local(node, x, y);
+            self.inner.widgets[node].mouse_moved(x, y,
+                &mut HandlerCtx {
+                    id: node,
+                    c: &mut self.inner.c,
+                }
+            );
+        }
     }
 
     fn handle_key_event(&mut self, event: &KeyEvent) -> bool {
@@ -308,6 +365,21 @@ impl UiState {
                 }
             }
         }
+    }
+
+    /// Translate coordinates to local coordinates of widget
+    fn xy_to_local(&mut self, mut node: Id, mut x: f32, mut y: f32) -> (f32, f32) {
+        loop {
+            let g = self.c.geom[node];
+            x -= g.pos.0;
+            y -= g.pos.1;
+            let parent = self.graph.parent[node];
+            if parent == node {
+                break;
+            }
+            node = parent;
+        }
+        (x, y)
     }
 }
 
@@ -377,23 +449,26 @@ impl UiInner {
         //
         // Implemented as a recursion, but we could use an explicit queue instead.
         fn paint_rec(widgets: &mut [Box<Widget>], graph: &Graph, geom: &[Geometry],
-            paint_ctx: &mut PaintCtx, node: Id, pos: (f32, f32), active: Option<Id>)
+            paint_ctx: &mut PaintCtx, node: Id, pos: (f32, f32), active: Option<Id>,
+            hot: Option<Id>)
         {
             let g = geom[node].offset(pos);
             paint_ctx.is_active = active == Some(node);
+            paint_ctx.is_hot = hot == Some(node) && (paint_ctx.is_active || active.is_none());
             widgets[node].paint(paint_ctx, &g);
             for child in graph.children[node].clone() {
-                paint_rec(widgets, graph, geom, paint_ctx, child, g.pos, active);
+                paint_rec(widgets, graph, geom, paint_ctx, child, g.pos, active, hot);
             }
         }
 
         let mut paint_ctx = PaintCtx {
             is_active: false,
+            is_hot: false,
             inner: paint_ctx,
             dwrite_factory: &self.c.dwrite_factory,
         };
         paint_rec(&mut self.widgets, &self.graph, &self.c.geom,
-            &mut paint_ctx, root, (0.0, 0.0), self.c.active);
+            &mut paint_ctx, root, (0.0, 0.0), self.c.active, self.c.hot);
     }
 
     fn layout(&mut self, bc: &BoxConstraints, root: Id) {
@@ -461,7 +536,7 @@ impl<'a> HandlerCtx<'a> {
         self.c.event_q.push((self.id, Box::new(a)));
     }
 
-    /// Set the active widget to this one, or unset.
+    /// Set or unset the widget as active.
     // TODO: this should call SetCapture/ReleaseCapture as well.
     pub fn set_active(&mut self, active: bool) {
         self.c.active = if active { Some(self.id) } else { None };
@@ -470,6 +545,12 @@ impl<'a> HandlerCtx<'a> {
     /// Determine whether this widget is active.
     pub fn is_active(&self) -> bool {
         self.c.active == Some(self.id)
+    }
+
+    /// Determine whether this widget is hot. A widget can be both hot and active, but
+    /// if a widget is active, it is the only widget that can be hot.
+    pub fn is_hot(&self) -> bool {
+        self.c.hot == Some(self.id) && (self.is_active() || self.c.active.is_none())
     }
 }
 
@@ -523,6 +604,11 @@ impl<'a, 'b> PaintCtx<'a, 'b> {
     /// Determine whether this widget is the active one.
     pub fn is_active(&self) -> bool {
         self.is_active
+    }
+
+    /// Determine whether this widget is hot.
+    pub fn is_hot(&self) -> bool {
+        self.is_hot
     }
 }
 
@@ -579,8 +665,10 @@ impl WinHandler for UiMain {
         println!("mouse_hwheel {} {:02x}", delta, mods);
     }
 
-    fn mouse_move(&self, x: i32, y: i32, mods: u32) {
-        println!("mouse_move ({}, {}) {:02x}", x, y, mods);
+    fn mouse_move(&self, x: i32, y: i32, _mods: u32) {
+        let mut state = self.state.borrow_mut();
+        let (x, y) = state.c.handle.pixels_to_px_xy(x, y);
+        state.mouse_move(x, y);
     }
 
     fn mouse(&self, event: &window::MouseEvent) {
