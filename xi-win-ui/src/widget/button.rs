@@ -107,8 +107,10 @@ impl Button {
 impl Widget for Button {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         {
+            let is_active = paint_ctx.is_active();
             let rt = paint_ctx.render_target();
-            let bg = SolidColorBrush::create(rt).with_color(0x404048).build().unwrap();
+            let bg_color = if is_active { 0x505058 } else { 0x404048 };
+            let bg = SolidColorBrush::create(rt).with_color(bg_color).build().unwrap();
             rt.fill_rectangle(
                 (geom.pos.0, geom.pos.1, geom.pos.0 + geom.size.0, geom.pos.1 + geom.size.1),
                 &bg);
@@ -124,8 +126,12 @@ impl Widget for Button {
 
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
         if event.count > 0 {
+            ctx.set_active(true);
+        } else {
+            ctx.set_active(false);
             ctx.send_event(true);
         }
+        ctx.invalidate();
         true
     }
 
