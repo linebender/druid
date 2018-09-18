@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC
+// Copyright 2018 The xi-editor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -70,6 +70,15 @@ pub trait Widget {
     /// culled by geometry. Propagation stops as soon as the event is handled.
     #[allow(unused)]
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool { false }
+
+    /// Sent to the active or hot widget on mouse move events.
+    // TODO: should mods be plumbed here?
+    #[allow(unused)]
+    fn mouse_moved(&mut self, x: f32, y: f32, ctx: &mut HandlerCtx) {}
+
+    /// Sent to the widget when its "hot" status changes.
+    #[allow(unused)]
+    fn on_hot_changed(&mut self, hot: bool, ctx: &mut HandlerCtx) {}
 
     /// An "escape hatch" of sorts for accessing widget state beyond the widget
     /// methods. Returns true if it is handled.

@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC
+// Copyright 2018 The xi-editor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -107,8 +107,15 @@ impl Button {
 impl Widget for Button {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         {
+            let is_active = paint_ctx.is_active();
+            let is_hot = paint_ctx.is_hot();
             let rt = paint_ctx.render_target();
-            let bg = SolidColorBrush::create(rt).with_color(0x404048).build().unwrap();
+            let bg_color = match (is_active, is_hot) {
+                (true, true) => 0x606068,
+                (false, true) => 0x505058,
+                _ => 0x404048,
+            };
+            let bg = SolidColorBrush::create(rt).with_color(bg_color).build().unwrap();
             rt.fill_rectangle(
                 (geom.pos.0, geom.pos.1, geom.pos.0 + geom.size.0, geom.pos.1 + geom.size.1),
                 &bg);
@@ -124,9 +131,19 @@ impl Widget for Button {
 
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
         if event.count > 0 {
-            ctx.send_event(true);
+            ctx.set_active(true);
+        } else {
+            ctx.set_active(false);
+            if ctx.is_hot() {
+                ctx.send_event(true);
+            }
         }
+        ctx.invalidate();
         true
+    }
+
+    fn on_hot_changed(&mut self, _hot: bool, ctx: &mut HandlerCtx) {
+        ctx.invalidate();
     }
 
     fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
