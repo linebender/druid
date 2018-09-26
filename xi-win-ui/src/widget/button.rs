@@ -116,9 +116,7 @@ impl Widget for Button {
                 _ => 0x404048,
             };
             let bg = SolidColorBrush::create(rt).with_color(bg_color).build().unwrap();
-            rt.fill_rectangle(
-                (geom.pos.0, geom.pos.1, geom.pos.0 + geom.size.0, geom.pos.1 + geom.size.1),
-                &bg);
+            rt.fill_rectangle(geom, &bg);
         }
         self.label.paint(paint_ctx, geom);
     }

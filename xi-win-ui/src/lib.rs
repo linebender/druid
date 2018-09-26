@@ -154,6 +154,12 @@ impl Geometry {
     }
 }
 
+impl<'a> From<&'a Geometry> for RectF {
+    fn from(geom: &Geometry) -> RectF {
+        (geom.pos.0, geom.pos.1, geom.pos.0 + geom.size.0, geom.pos.1 + geom.size.1).into()
+    }
+}
+
 impl UiMain {
     pub fn new(state: UiState) -> UiMain {
         UiMain { state: RefCell::new(state) }
@@ -593,6 +599,10 @@ impl<'a> ListenerCtx<'a> {
 }
 
 impl<'a, 'b> PaintCtx<'a, 'b> {
+    pub fn d2d_factory(&self) -> &direct2d::Factory {
+        self.inner.d2d_factory()
+    }
+
     pub fn dwrite_factory(&self) -> &directwrite::Factory {
         self.dwrite_factory
     }
