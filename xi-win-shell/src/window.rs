@@ -58,6 +58,7 @@ pub struct WindowBuilder {
     handler: Option<Box<WinHandler>>,
     dwStyle: DWORD,
     title: String,
+    cursor: Cursor,
     menu: Option<Menu>,
     present_strategy: PresentStrategy,
 }
@@ -242,6 +243,12 @@ pub enum MouseType {
     DoubleClick,
     /// Mouse up event.
     Up,
+}
+
+/// Standard cursor types. This is only a subset, others can be added as needed.
+pub enum Cursor {
+    Arrow,
+    IBeam,
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -575,6 +582,7 @@ impl WindowBuilder {
             handler: None,
             dwStyle: WS_OVERLAPPEDWINDOW,
             title: String::new(),
+            cursor: Cursor::Arrow,
             menu: None,
             present_strategy: Default::default(),
         }
@@ -598,6 +606,11 @@ impl WindowBuilder {
         self.title = title.into();
     }
 
+    /// Set the default cursor for the window.
+    pub fn set_cursor(&mut self, cursor: Cursor) {
+        self.cursor = cursor;
+    }
+
     pub fn set_menu(&mut self, menu: Menu) {
         self.menu = Some(menu);
     }
@@ -616,7 +629,7 @@ impl WindowBuilder {
             // TODO: probably want configurable class name.
             let class_name = "Xi Editor".to_wide();
             let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
-            let cursor = LoadCursorW(0 as HINSTANCE, IDC_IBEAM);
+            let cursor = LoadCursorW(0 as HINSTANCE, self.cursor.get_lpcwstr());
             let brush = CreateSolidBrush(0xffffff);
             let wnd = WNDCLASSW {
                 style: 0,
@@ -820,6 +833,15 @@ unsafe fn create_window(
 {
     CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, x, y,
         nWidth, nHeight, hWndParent, hMenu, hInstance, Rc::into_raw(wndproc) as LPVOID)
+}
+
+impl Cursor {
+    fn get_lpcwstr(&self) -> LPCWSTR {
+        match self {
+            Cursor::Arrow => IDC_ARROW,
+            Cursor::IBeam => IDC_IBEAM,
+        }
+    }
 }
 
 impl WindowHandle {

@@ -326,6 +326,7 @@ impl UiState {
                 }
             );
         }
+        self.dispatch_events();
     }
 
     fn handle_key_event(&mut self, event: &KeyEvent) -> bool {
@@ -682,7 +683,7 @@ impl WinHandler for UiMain {
     }
 
     fn mouse(&self, event: &window::MouseEvent) {
-        println!("mouse {:?}", event);
+        //println!("mouse {:?}", event);
         let mut state = self.state.borrow_mut();
         let (x, y) = state.c.handle.pixels_to_px_xy(event.x, event.y);
         // TODO: detect multiple clicks and pass that down
