@@ -28,9 +28,9 @@ This is not an official Google product.
 
 ## Contributions
 
-We gladly accept contributions via GitHub pull requests, as long as
-the author has signed the Google Contributor License. Please see
-[CONTRIBUTING.md](CONTRIBUTING.md) for more details.
+We gladly accept contributions via GitHub pull requests. Please see CONTRIBUTING.md for more details.
+
+If you are interested in contributing but not sure where to start, there is an active IRC channel at #xi on irc.mozilla.org. There is also a subreddit at /r/xi_editor.
 
 ## Authors
 
