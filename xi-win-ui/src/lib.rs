@@ -33,7 +33,7 @@ use direct2d::brush::SolidColorBrush;
 
 use xi_win_shell::paint;
 use xi_win_shell::win_main;
-use xi_win_shell::window::{self, MouseType, WindowHandle, WinHandler};
+use xi_win_shell::window::{self, IdleHandle, MouseType, WindowHandle, WinHandler};
 
 pub mod widget;
 
@@ -163,6 +163,17 @@ impl<'a> From<&'a Geometry> for RectF {
 impl UiMain {
     pub fn new(state: UiState) -> UiMain {
         UiMain { state: RefCell::new(state) }
+    }
+
+    /// Send an event to a specific widget. This calls the widget's `poke` method
+    /// at some time in the future.
+    pub fn send_ext<A: Any + Send>(idle_handle: &IdleHandle, id: Id, a: A) {
+        let mut boxed_a = Box::new(a);
+        idle_handle.add_idle(move |a| {
+            let ui_main = a.downcast_ref::<UiMain>().unwrap();
+            let mut state = ui_main.state.borrow_mut();
+            state.poke(id, boxed_a.deref_mut());
+        });
     }
 }
 
