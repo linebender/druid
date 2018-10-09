@@ -25,6 +25,7 @@ use std::char;
 use std::collections::BTreeMap;
 use std::mem;
 use std::ops::{Deref, DerefMut};
+use std::time::Instant;
 
 use direct2d::math::*;
 use direct2d::RenderTarget;
@@ -81,6 +82,18 @@ pub struct LayoutCtx {
     /// Bounding box of each widget. The position is relative to the parent.
     geom: Vec<Geometry>,
 
+    /// Additional state per widget.
+    ///
+    /// A case can be made to fold `geom` here instead of having a separate array;
+    /// this is the general SOA vs AOS discussion.
+    per_widget: Vec<PerWidgetState>,
+
+    /// State of animation request.
+    anim_state: AnimState,
+
+    /// The time of the last paint cycle.
+    prev_paint_time: Option<Instant>,
+
     /// Queue of events to distribute to listeners
     event_q: Vec<(Id, Box<Any>)>,
 
@@ -106,6 +119,18 @@ pub struct Geometry {
     // Maybe PointF is a better type, then we could use the math from direct2d?
     pub pos: (f32, f32),
     pub size: (f32, f32),
+}
+
+#[derive(Default)]
+struct PerWidgetState {
+    anim_frame_requested: bool,
+}
+
+enum AnimState {
+    Idle,
+    InvalidationRequested,
+    AnimFrameStart,
+    AnimFrameRequested,
 }
 
 #[derive(Clone, Copy)]
@@ -177,6 +202,9 @@ impl UiState {
                 c: LayoutCtx {
                     dwrite_factory: directwrite::Factory::new().unwrap(),
                     geom: Vec::new(),
+                    per_widget: Vec::new(),
+                    anim_state: AnimState::Idle,
+                    prev_paint_time: None,
                     handle: Default::default(),
                     event_q: Vec::new(),
                     focused: None,
@@ -374,6 +402,34 @@ impl UiState {
         }
     }
 
+    // Process an animation frame. This consists mostly of calling anim_frame on
+    // widgets that have requested a frame.
+    fn anim_frame(&mut self) {
+        // TODO: this is just wall-clock time, which will have jitter making
+        // animations not as smooth. Should be extracting actual refresh rate
+        // from presentation statistics and then doing some processing.
+        let this_paint_time = Instant::now();
+        let interval = if let Some(last) = self.c.prev_paint_time {
+            let duration = this_paint_time.duration_since(last);
+            1_000_000_000 * duration.as_secs() + (duration.subsec_nanos() as u64)
+        } else {
+            0
+        };
+        self.c.anim_state = AnimState::AnimFrameStart;
+        for node in 0..self.widgets.len() {
+            if self.c.per_widget[node].anim_frame_requested {
+                self.c.per_widget[node].anim_frame_requested = false;
+                self.inner.widgets[node].anim_frame(interval,
+                    &mut HandlerCtx {
+                        id: node,
+                        c: &mut self.inner.c,
+                    }
+                );
+            }
+        }
+        self.c.prev_paint_time = Some(this_paint_time);
+    }
+
     /// Translate coordinates to local coordinates of widget
     fn xy_to_local(&mut self, mut node: Id, mut x: f32, mut y: f32) -> (f32, f32) {
         loop {
@@ -433,6 +489,7 @@ impl UiInner {
         let id = self.graph.alloc_node();
         self.widgets.push(Box::new(widget));
         self.c.geom.push(Default::default());
+        self.c.per_widget.push(Default::default());
         for &child in children {
             self.graph.append_child(id, child);
         }
@@ -534,8 +591,14 @@ impl LayoutCtx {
 impl<'a> HandlerCtx<'a> {
     /// Invalidate this widget. Finer-grained invalidation is not yet implemented,
     /// but when it is, this method will invalidate the widget's bounding box.
-    pub fn invalidate(&self) {
-        self.c.handle.invalidate();
+    pub fn invalidate(&mut self) {
+        match self.c.anim_state {
+            AnimState::Idle => {
+                self.c.handle.invalidate();
+                self.c.anim_state = AnimState::InvalidationRequested;
+            }
+            _ => (),
+        }
     }
 
     /// Send an event, to be handled by listeners.
@@ -558,6 +621,23 @@ impl<'a> HandlerCtx<'a> {
     /// if a widget is active, it is the only widget that can be hot.
     pub fn is_hot(&self) -> bool {
         self.c.hot == Some(self.id) && (self.is_active() || self.c.active.is_none())
+    }
+
+    /// Request an animation frame.
+    ///
+    /// Calling this schedules an animation frame, and also causes `anim_frame` to be
+    /// called on this widget at the beginning of that frame.
+    pub fn request_anim_frame(&mut self) {
+        self.c.per_widget[self.id].anim_frame_requested = true;
+        match self.c.anim_state {
+            AnimState::Idle => {
+                self.invalidate();
+            }
+            AnimState::AnimFrameStart => {
+                self.c.anim_state = AnimState::AnimFrameRequested;
+            }
+            _ => (),
+        }
     }
 }
 
@@ -629,6 +709,8 @@ impl WinHandler for UiMain {
     }
 
     fn paint(&self, paint_ctx: &mut paint::PaintCtx) -> bool {
+        let mut state = self.state.borrow_mut();
+        state.anim_frame();
         let size;
         {
             let rt = paint_ctx.render_target();
@@ -637,13 +719,19 @@ impl WinHandler for UiMain {
             let bg = SolidColorBrush::create(rt).with_color(0x272822).build().unwrap();
             rt.fill_rectangle(rect, &bg);
         }
-        let mut state = self.state.borrow_mut();
         let root = state.graph.root;
         let bc = BoxConstraints::tight((size.width, size.height));
         // TODO: be lazier about relayout
         state.layout(&bc, root);
         state.paint(paint_ctx, root);
-        false
+        match state.c.anim_state {
+            AnimState::AnimFrameRequested => true,
+            _ => {
+                state.c.anim_state = AnimState::Idle;
+                state.c.prev_paint_time = None;
+                false
+            }
+        }
     }
 
     fn command(&self, id: u32) {
