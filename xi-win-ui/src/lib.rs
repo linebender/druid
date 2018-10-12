@@ -428,6 +428,7 @@ impl UiState {
             }
         }
         self.c.prev_paint_time = Some(this_paint_time);
+        self.dispatch_events();
     }
 
     /// Translate coordinates to local coordinates of widget
