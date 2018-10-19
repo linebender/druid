@@ -22,10 +22,6 @@ pipelines, with less emphasis on features; it may be a while before
 this is really useful as an editor. That said, I certainly welcome
 any help in getting there sooner.
 
-## Disclaimer
-
-This is not an official Google product.
-
 ## Contributions
 
 We gladly accept contributions via GitHub pull requests. Please see CONTRIBUTING.md for more details.
