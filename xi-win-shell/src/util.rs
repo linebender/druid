@@ -19,19 +19,26 @@
 
 use std::ffi::{OsStr, OsString, CString};
 use std::fmt;
-use std::os::windows::ffi::{OsStrExt, OsStringExt};
-use std::slice;
 use std::mem;
-
+use std::os::windows::ffi::{OsStrExt, OsStringExt};
+use std::ptr;
+use std::slice;
 use winapi::ctypes::c_void;
 use winapi::shared::guiddef::REFIID;
 use winapi::shared::minwindef::*;
 use winapi::shared::ntdef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::SUCCEEDED;
+use winapi::um::fileapi::*;
+use winapi::um::handleapi::*;
 use winapi::um::libloaderapi::*;
+use winapi::um::processenv::*;
 use winapi::um::shellscalingapi::*;
 use winapi::um::unknwnbase::IUnknown;
+use winapi::um::winbase::*;
+use winapi::um::wincon::*;
+// This needs to be explicit, otherwise HRESULT will conflict
+use winapi::um::winnt::{GENERIC_READ, GENERIC_WRITE, FILE_SHARE_WRITE};
 
 use direct2d::enums::DrawTextOptions;
 
@@ -227,6 +234,7 @@ lazy_static! {
 
 /// Initialize the app. At the moment, this is mostly needed for hi-dpi.
 pub fn init() {
+    attach_console();
     if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
         // This function is only supported on windows 10
         unsafe {
@@ -257,3 +265,37 @@ macro_rules! accel {
         ]
     }
 }
+
+/// Attach the process to the console of the parent process. This allows xi-win to
+/// correctly print to a console when run from powershell or cmd.
+/// If no console is available, allocate a new console.
+fn attach_console() {
+    unsafe {
+        let stdout = GetStdHandle(STD_OUTPUT_HANDLE);
+        if stdout != INVALID_HANDLE_VALUE && GetFileType(stdout) != FILE_TYPE_UNKNOWN {
+            // We already have a perfectly valid stdout and must not attach.
+            // This happens, for example in MingW consoles like git bash.
+            return;
+        }
+
+        if AttachConsole(ATTACH_PARENT_PROCESS) > 0 {
+            let chnd = CreateFileA(
+                CString::new("CONOUT$").unwrap().as_ptr(),
+                GENERIC_READ | GENERIC_WRITE,
+                FILE_SHARE_WRITE,
+                ptr::null_mut(),
+                OPEN_EXISTING,
+                0,
+                ptr::null_mut());
+
+            if chnd == INVALID_HANDLE_VALUE {
+                // CreateFileA failed.
+                return;
+            }
+
+            SetStdHandle(STD_OUTPUT_HANDLE, chnd);
+            SetStdHandle(STD_ERROR_HANDLE, chnd);
+        }
+    }
+}
+
