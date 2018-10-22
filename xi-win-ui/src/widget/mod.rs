@@ -98,6 +98,30 @@ pub trait Widget {
     /// Returns true if the event is handled.
     #[allow(unused)]
     fn key(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool { false }
+
+    /// Called at the beginning of a new animation frame.
+    ///
+    /// The `interval` argument is the time in nanoseconds between frames, for
+    /// the purpose of computing animations. When framerate is steady, it should
+    /// be exactly the reciprocal of the refresh rate of the monitor. If we are
+    /// skipping frames, its cumulative sum should approximately track the
+    /// passage of wall clock time and otherwise should be chosen to optimize
+    /// for smoothness of animations.
+    ///
+    /// The ideal heuristic for computing this interval is a deep topic, ideally
+    /// the subject of a blog post when I figure it out.
+    ///
+    /// On the first frame when transitioning from idle to animating, `interval`
+    /// will be 0. (This logic is presently per-window but might change to
+    /// per-widget to make it more consistent).
+    ///
+    /// This method should call `invalidate` on the context if the visual display
+    /// updates. In the current implementation, that's not very useful, but it
+    /// will become much more so when there's fine grained invalidation.
+    ///
+    /// The method can also call `request_anim_frame` to keep the animation running.
+    #[allow(unused)]
+    fn anim_frame(&mut self, interval: u64, ctx: &mut HandlerCtx) {}
 }
 
 pub struct MouseEvent {
