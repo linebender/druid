@@ -164,41 +164,56 @@ fn op_button(ui: &mut UiState, op: char) -> Id
     op_button_label(ui, op, op.to_string())
 }
 
+// Create a row where all children are flex
+fn flex_row(children: &[Id], ui: &mut UiState) -> Id {
+    let mut row = Row::new();
+    for child in children {
+        row.set_flex(*child, 1.0);
+    }
+    row.ui(children, ui)
+}
+
 fn build_calc(ui: &mut UiState) {
     let display = Label::new("0".to_string()).ui(ui);
     let row0 = pad(display, ui);
 
-    let row1 = Row::new().ui(&[
+    let row1 = flex_row(&[
         op_button_label(ui, 'c', "CE".to_string()),
         op_button(ui, 'C'),
         op_button(ui, '⌫'),
         op_button(ui, '÷'),
     ], ui);
-    let row2 = Row::new().ui(&[
+    let row2 = flex_row(&[
         digit_button(ui, 7),
         digit_button(ui, 8),
         digit_button(ui, 9),
         op_button(ui, '×'),
     ], ui);
-    let row3 = Row::new().ui(&[
+    let row3 = flex_row(&[
         digit_button(ui, 4),
         digit_button(ui, 5),
         digit_button(ui, 6),
         op_button(ui, '−'),
     ], ui);
-    let row4 = Row::new().ui(&[
+    let row4 = flex_row(&[
         digit_button(ui, 1),
         digit_button(ui, 2),
         digit_button(ui, 3),
         op_button(ui, '+'),
     ], ui);
-    let row5 = Row::new().ui(&[
+    let row5 = flex_row(&[
         op_button(ui, '±'),
         digit_button(ui, 0),
         op_button(ui, '.'),
         op_button(ui, '='),
     ], ui);
-    let panel = Column::new().ui(&[row0, row1, row2, row3, row4, row5], ui);
+    let mut column = Column::new();
+    column.set_flex(row1, 1.0);
+    column.set_flex(row2, 1.0);
+    column.set_flex(row3, 1.0);
+    column.set_flex(row4, 1.0);
+    column.set_flex(row5, 1.0);
+    let panel = column.ui(&[row0, row1, row2, row3, row4, row5], ui);
     let key_listener = KeyListener::new().ui(panel, ui);
     let forwarder = EventForwarder::<CalcAction>::new().ui(key_listener, ui);
     let mut calc_state = CalcState {
