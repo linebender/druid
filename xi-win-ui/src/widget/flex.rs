@@ -59,6 +59,17 @@ struct Params {
     flex: f32,
 }
 
+impl Params {
+    // Determine the phase in which this child should be measured.
+    fn get_flex_phase(&self) -> Phase {
+        if self.flex == 0.0 {
+            Phase::NonFlex
+        } else {
+            Phase::Flex
+        }
+    }
+}
+
 impl Axis {
     fn major(&self, coords: (f32, f32)) -> f32 {
         match *self {
@@ -140,7 +151,7 @@ impl Flex {
     /// the specified phase.
     fn get_next_child(&self, children: &[Id], start: usize, phase: Phase) -> Option<usize> {
         for ix in start..children.len() {
-            if (self.get_params(children[ix]).flex == 0.0) == (phase == Phase::NonFlex) {
+            if self.get_params(children[ix]).get_flex_phase() == phase {
                 return Some(ix);
             }
         }
