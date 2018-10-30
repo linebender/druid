@@ -18,6 +18,7 @@
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
+use std::ffi::OsString;
 use std::mem;
 use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
@@ -44,6 +45,7 @@ use direct2d::math::SizeU;
 use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarget};
 
 use Error;
+use dialog::{FileDialogOptions, FileDialogType, get_file_dialog_path};
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use menu::Menu;
 use paint::{self, PaintCtx};
@@ -879,6 +881,12 @@ impl WindowHandle {
         self.0.upgrade().map(|w| w.hwnd.get())
     }
 
+    pub fn file_dialog(&self, ty: FileDialogType, options: FileDialogOptions)
+        -> Result<OsString, Error>
+    {
+        let hwnd = self.get_hwnd().ok_or(Error::Null)?;
+        unsafe { get_file_dialog_path(hwnd, ty, options) }
+    }
 
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {

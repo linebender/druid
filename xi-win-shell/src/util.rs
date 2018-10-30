@@ -17,9 +17,9 @@
 //! Also includes some code to dynamically load functions at runtime. This is needed for functions
 //! which are only supported on certain versions of windows.
 
-use std::ffi::{OsStr, CString};
+use std::ffi::{OsStr, OsString, CString};
 use std::fmt;
-use std::os::windows::ffi::OsStrExt;
+use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::slice;
 use std::mem;
 
@@ -86,25 +86,31 @@ impl<T> ToWide for T where T: AsRef<OsStr> {
 }
 
 pub trait FromWide {
-    fn from_wide(&self) -> Option<String>;
+    fn to_u16_slice(&self) -> &[u16];
+
+    fn to_os_string(&self) -> OsString {
+        OsStringExt::from_wide(self.to_u16_slice())
+    }
+
+    fn from_wide(&self) -> Option<String> {
+        String::from_utf16(self.to_u16_slice()).ok()
+    }
 }
 
 impl FromWide for LPWSTR {
-    fn from_wide(&self) -> Option<String> {
+    fn to_u16_slice(&self) -> &[u16] {
         unsafe {
             let mut len = 0;
             while *self.offset(len) != 0 {
                 len += 1;
             }
-            slice::from_raw_parts(*self, len as usize).from_wide()
+            slice::from_raw_parts(*self, len as usize)
         }
     }
 }
 
 impl FromWide for [u16] {
-    fn from_wide(&self) -> Option<String> {
-        String::from_utf16(self).ok()
-    }
+    fn to_u16_slice(&self) -> &[u16] { self }
 }
 
 // Types for functions we want to load, which are only supported on newer windows versions

@@ -28,12 +28,14 @@ use xi_win_shell::window::WindowBuilder;
 
 use xi_win_ui::{UiMain, UiState, UiInner};
 use xi_win_ui::widget::{Button, Row, Padding};
+use xi_win_ui::{FileDialogOptions, FileDialogType};
 
 use xi_win_ui::{BoxConstraints, Geometry, LayoutResult};
 use xi_win_ui::{Id, LayoutCtx, PaintCtx};
 use xi_win_ui::widget::Widget;
 
 const COMMAND_EXIT: u32 = 0x100;
+const COMMAND_OPEN: u32 = 0x101;
 
 /// A very simple custom widget.
 struct FooWidget;
@@ -65,6 +67,7 @@ fn main() {
 
     let mut file_menu = Menu::new();
     file_menu.add_item(COMMAND_EXIT, "E&xit");
+    file_menu.add_item(COMMAND_OPEN, "O&pen");
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "&File");
 
@@ -91,6 +94,11 @@ fn main() {
     state.set_command_listener(|cmd, mut ctx| {
         match cmd {
             COMMAND_EXIT => ctx.close(),
+            COMMAND_OPEN => {
+                let options = FileDialogOptions::default();
+                let result = ctx.file_dialog(FileDialogType::Open, options);
+                println!("result = {:?}", result);
+            }
             _ => println!("unexpected command {}", cmd),
         }
     });
