@@ -22,6 +22,7 @@ use direct2d::math::*;
 use direct2d::RenderTarget;
 use direct2d::brush::SolidColorBrush;
 
+use xi_win_shell::dialog::{FileDialogOptions, FileDialogType};
 use xi_win_shell::menu::Menu;
 use xi_win_shell::paint::PaintCtx;
 use xi_win_shell::win_main;
@@ -52,6 +53,12 @@ impl WinHandler for HelloState {
     fn command(&self, id: u32) {
         match id {
             0x100 => self.handle.borrow().close(),
+            0x101 => {
+                let mut options = FileDialogOptions::default();
+                options.set_show_hidden();
+                let filename = self.handle.borrow().file_dialog(FileDialogType::Open, options);
+                println!("result: {:?}", filename);
+            }
             _ => println!("unexpected id {}", id),
         }
     }
@@ -93,6 +100,7 @@ fn main() {
 
     let mut file_menu = Menu::new();
     file_menu.add_item(0x100, "E&xit");
+    file_menu.add_item(0x101, "O&pen");
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "&File");
 

@@ -23,6 +23,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::char;
 use std::collections::BTreeMap;
+use std::ffi::OsString;
 use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::time::Instant;
@@ -32,6 +33,7 @@ use direct2d::RenderTarget;
 use direct2d::render_target::GenericRenderTarget;
 use direct2d::brush::SolidColorBrush;
 
+pub use xi_win_shell::dialog::{FileDialogOptions, FileDialogType};
 use xi_win_shell::paint;
 use xi_win_shell::win_main;
 use xi_win_shell::window::{self, IdleHandle, MouseType, WindowHandle, WinHandler};
@@ -168,6 +170,17 @@ pub struct PaintCtx<'a, 'b: 'a>  {
     is_hot: bool,
     inner: &'a mut paint::PaintCtx<'b>,
     dwrite_factory: &'a directwrite::Factory,
+}
+
+#[derive(Debug)]
+pub enum Error {
+    ShellError(xi_win_shell::Error),
+}
+
+impl From<xi_win_shell::Error> for Error {
+    fn from(e: xi_win_shell::Error) -> Error {
+        Error::ShellError(e)
+    }
 }
 
 impl Geometry {
@@ -688,6 +701,13 @@ impl<'a> ListenerCtx<'a> {
     /// Request the window to be closed.
     pub fn close(&mut self) {
         self.c.handle.close();
+    }
+
+    pub fn file_dialog(&mut self, ty: FileDialogType, options: FileDialogOptions)
+        -> Result<OsString, Error>
+    {
+        let result = self.c.handle.file_dialog(ty, options)?;
+        Ok(result)
     }
 }
 

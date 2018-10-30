@@ -14,6 +14,7 @@
 
 //! Windows-specific application shell used for xi editor.
 
+#[macro_use]
 extern crate winapi;
 extern crate direct2d;
 extern crate wio;
@@ -21,6 +22,7 @@ extern crate wio;
 extern crate lazy_static;
 
 mod dcomp;
+pub mod dialog;
 pub mod menu;
 pub mod paint;
 pub mod util;
