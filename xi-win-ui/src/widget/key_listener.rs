@@ -18,7 +18,7 @@ use winapi::um::winuser::*;
 use xi_win_shell::window::M_ALT;
 
 use widget::Widget;
-use {HandlerCtx, Id, KeyEvent, KeyVariant, UiInner};
+use {HandlerCtx, Id, KeyEvent, KeyVariant, Ui};
 
 pub struct KeyListener;
 
@@ -27,7 +27,7 @@ impl KeyListener {
         KeyListener
     }
 
-    pub fn ui(self, child: Id, ctx: &mut UiInner) -> Id {
+    pub fn ui(self, child: Id, ctx: &mut Ui) -> Id {
         ctx.add(self, &[child])
     }
 }

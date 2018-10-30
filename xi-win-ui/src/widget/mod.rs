@@ -33,6 +33,9 @@ pub use widget::flex::{Column, Flex, Row};
 mod key_listener;
 pub use widget::key_listener::KeyListener;
 
+mod null;
+pub(crate) use widget::null::NullWidget;
+
 mod padding;
 pub use widget::padding::Padding;
 
@@ -122,6 +125,10 @@ pub trait Widget {
     /// The method can also call `request_anim_frame` to keep the animation running.
     #[allow(unused)]
     fn anim_frame(&mut self, interval: u64, ctx: &mut HandlerCtx) {}
+
+    /// Called when a child widget is removed.
+    #[allow(unused)]
+    fn on_child_removed(&mut self, child: Id) {}
 }
 
 pub struct MouseEvent {

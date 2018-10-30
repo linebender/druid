@@ -15,7 +15,7 @@
 //! A widget that just adds padding during layout.
 
 use {BoxConstraints, LayoutResult};
-use {Id, LayoutCtx, UiInner};
+use {Id, LayoutCtx, Ui};
 use widget::Widget;
 
 /// A padding widget. Is expected to have exactly one child.
@@ -37,7 +37,7 @@ impl Padding {
         }
     }
 
-    pub fn ui(self, child: Id, ctx: &mut UiInner) -> Id {
+    pub fn ui(self, child: Id, ctx: &mut Ui) -> Id {
         ctx.add(self, &[child])
     }
 }

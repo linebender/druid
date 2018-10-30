@@ -18,7 +18,7 @@ use std::any::Any;
 use std::marker::PhantomData;
 
 use widget::Widget;
-use {HandlerCtx, Id, UiInner};
+use {HandlerCtx, Id, Ui};
 
 pub struct EventForwarder<T>(PhantomData<T>);
 
@@ -27,7 +27,7 @@ impl<T: Any + Clone> EventForwarder<T> {
         EventForwarder(Default::default())
     }
 
-    pub fn ui(self, child: Id, ctx: &mut UiInner) -> Id {
+    pub fn ui(self, child: Id, ctx: &mut Ui) -> Id {
         ctx.add(self, &[child])
     }
 }

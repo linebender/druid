@@ -25,7 +25,7 @@ use direct2d::RenderTarget;
 use xi_win_shell::win_main;
 use xi_win_shell::window::WindowBuilder;
 
-use xi_win_ui::{UiMain, UiState, UiInner};
+use xi_win_ui::{UiMain, UiState, Ui};
 
 use xi_win_ui::{BoxConstraints, Geometry, LayoutResult};
 use xi_win_ui::{HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx};
@@ -68,7 +68,7 @@ impl Widget for AnimWidget {
 }
 
 impl AnimWidget {
-    fn ui(self, ctx: &mut UiInner) -> Id {
+    fn ui(self, ctx: &mut Ui) -> Id {
         ctx.add(self, &[])
     }
 }

@@ -26,7 +26,7 @@ use xi_win_shell::menu::Menu;
 use xi_win_shell::win_main;
 use xi_win_shell::window::WindowBuilder;
 
-use xi_win_ui::{UiMain, UiState, UiInner};
+use xi_win_ui::{UiMain, UiState, Ui};
 use xi_win_ui::widget::{Button, Row, Padding};
 use xi_win_ui::{FileDialogOptions, FileDialogType};
 
@@ -57,7 +57,7 @@ impl Widget for FooWidget {
 }
 
 impl FooWidget {
-    fn ui(self, ctx: &mut UiInner) -> Id {
+    fn ui(self, ctx: &mut Ui) -> Id {
         ctx.add(self, &[])
     }
 }

@@ -23,7 +23,7 @@ use directwrite::{self, TextFormat, TextLayout};
 use xi_win_shell::util::default_text_options;
 
 use {BoxConstraints, Geometry, LayoutResult};
-use {HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, UiInner};
+use {HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, Ui};
 use widget::Widget;
 
 /// A text label with no interaction.
@@ -43,7 +43,7 @@ impl Label {
         }
     }
 
-    pub fn ui(self, ctx: &mut UiInner) -> Id {
+    pub fn ui(self, ctx: &mut Ui) -> Id {
         ctx.add(self, &[])
     }
 
@@ -99,7 +99,7 @@ impl Button {
         }
     }
 
-    pub fn ui(self, ctx: &mut UiInner) -> Id {
+    pub fn ui(self, ctx: &mut Ui) -> Id {
         ctx.add(self, &[])
     }
 }
