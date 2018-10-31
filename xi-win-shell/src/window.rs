@@ -590,6 +590,7 @@ impl WindowBuilder {
         }
     }
 
+    /// This takes ownership, and is typically used with UiMain
     pub fn set_handler(&mut self, handler: Box<WinHandler>) {
         self.handler = Some(handler);
     }
