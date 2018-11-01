@@ -15,7 +15,7 @@
 //! Widget for forwarding key events to a listener.
 
 use winapi::um::winuser::*;
-use xi_win_shell::window::M_ALT;
+use druid_win_shell::window::M_ALT;
 
 use widget::Widget;
 use {HandlerCtx, Id, KeyEvent, KeyVariant, Ui};

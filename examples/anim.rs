@@ -14,22 +14,22 @@
 
 //! Example of animation frames.
 
-extern crate xi_win_shell;
-extern crate xi_win_ui;
+extern crate druid_win_shell;
+extern crate druid;
 extern crate direct2d;
 extern crate directwrite;
 
 use direct2d::brush::SolidColorBrush;
 use direct2d::RenderTarget;
 
-use xi_win_shell::win_main;
-use xi_win_shell::window::WindowBuilder;
+use druid_win_shell::win_main;
+use druid_win_shell::window::WindowBuilder;
 
-use xi_win_ui::{UiMain, UiState, Ui};
+use druid::{UiMain, UiState, Ui};
 
-use xi_win_ui::{BoxConstraints, Geometry, LayoutResult};
-use xi_win_ui::{HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx};
-use xi_win_ui::widget::Widget;
+use druid::{BoxConstraints, Geometry, LayoutResult};
+use druid::{HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx};
+use druid::widget::Widget;
 
 /// A custom widget with animations.
 struct AnimWidget(f32);
@@ -74,7 +74,7 @@ impl AnimWidget {
 }
 
 fn main() {
-    xi_win_shell::init();
+    druid_win_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();

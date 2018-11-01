@@ -877,7 +877,7 @@ impl WindowHandle {
     }
 
     /// Get the raw HWND handle, for uses that are not wrapped in
-    /// xi_win_shell.
+    /// druid_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
         self.0.upgrade().map(|w| w.hwnd.get())
     }

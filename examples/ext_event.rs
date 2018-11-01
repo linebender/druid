@@ -14,19 +14,19 @@
 
 //! Example of sending external events to the UI.
 
-extern crate xi_win_shell;
-extern crate xi_win_ui;
+extern crate druid_win_shell;
+extern crate druid;
 
 use std::{thread, time};
 
-use xi_win_shell::win_main;
-use xi_win_shell::window::WindowBuilder;
+use druid_win_shell::win_main;
+use druid_win_shell::window::WindowBuilder;
 
-use xi_win_ui::{UiMain, UiState};
-use xi_win_ui::widget::Label;
+use druid::{UiMain, UiState};
+use druid::widget::Label;
 
 fn main() {
-    xi_win_shell::init();
+    druid_win_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();

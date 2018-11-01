@@ -14,25 +14,25 @@
 
 //! Sample GUI app.
 
-extern crate xi_win_shell;
-extern crate xi_win_ui;
+extern crate druid_win_shell;
+extern crate druid;
 extern crate direct2d;
 extern crate directwrite;
 
 use direct2d::brush::SolidColorBrush;
 use direct2d::RenderTarget;
 
-use xi_win_shell::menu::Menu;
-use xi_win_shell::win_main;
-use xi_win_shell::window::WindowBuilder;
+use druid_win_shell::menu::Menu;
+use druid_win_shell::win_main;
+use druid_win_shell::window::WindowBuilder;
 
-use xi_win_ui::{UiMain, UiState, Ui};
-use xi_win_ui::widget::{Button, Row, Padding};
-use xi_win_ui::{FileDialogOptions, FileDialogType};
+use druid::{UiMain, UiState, Ui};
+use druid::widget::{Button, Row, Padding};
+use druid::{FileDialogOptions, FileDialogType};
 
-use xi_win_ui::{BoxConstraints, Geometry, LayoutResult};
-use xi_win_ui::{Id, LayoutCtx, PaintCtx};
-use xi_win_ui::widget::Widget;
+use druid::{BoxConstraints, Geometry, LayoutResult};
+use druid::{Id, LayoutCtx, PaintCtx};
+use druid::widget::Widget;
 
 const COMMAND_EXIT: u32 = 0x100;
 const COMMAND_OPEN: u32 = 0x101;
@@ -63,7 +63,7 @@ impl FooWidget {
 }
 
 fn main() {
-    xi_win_shell::init();
+    druid_win_shell::init();
 
     let mut file_menu = Menu::new();
     file_menu.add_item(COMMAND_EXIT, "E&xit");

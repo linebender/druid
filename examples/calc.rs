@@ -16,18 +16,18 @@
 
 extern crate winapi;
 
-extern crate xi_win_shell;
-extern crate xi_win_ui;
+extern crate druid_win_shell;
+extern crate druid;
 
 use winapi::um::winuser::*;
 
-use xi_win_shell::win_main;
-use xi_win_shell::window::WindowBuilder;
+use druid_win_shell::win_main;
+use druid_win_shell::window::WindowBuilder;
 
-use xi_win_ui::{KeyEvent, KeyVariant, UiMain, UiState};
-use xi_win_ui::widget::{Button, Column, EventForwarder, KeyListener, Label, Row, Padding};
+use druid::{KeyEvent, KeyVariant, UiMain, UiState};
+use druid::widget::{Button, Column, EventForwarder, KeyListener, Label, Row, Padding};
 
-use xi_win_ui::Id;
+use druid::Id;
 
 struct CalcState {
     /// The number displayed. Generally a valid float.
@@ -261,7 +261,7 @@ fn action_for_key(event: &KeyEvent) -> Option<CalcAction> {
 }
 
 fn main() {
-    xi_win_shell::init();
+    druid_win_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
