@@ -17,3 +17,4 @@ winapi = "0.3.6"
 
 [dependencies.druid-win-shell]
 path = "druid-win-shell"
+version = "0.1.0"
