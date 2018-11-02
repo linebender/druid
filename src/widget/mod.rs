@@ -16,7 +16,7 @@
 
 use std::any::Any;
 
-pub use xi_win_shell::window::MouseButton;
+pub use druid_win_shell::window::MouseButton;
 
 use {BoxConstraints, Geometry, LayoutResult};
 use {HandlerCtx, Id, LayoutCtx, PaintCtx};

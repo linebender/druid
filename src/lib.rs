@@ -14,7 +14,7 @@
 
 //! Simple entity-component-system based GUI.
 
-extern crate xi_win_shell;
+extern crate druid_win_shell;
 extern crate direct2d;
 extern crate directwrite;
 extern crate winapi;
@@ -33,10 +33,10 @@ use direct2d::RenderTarget;
 use direct2d::render_target::GenericRenderTarget;
 use direct2d::brush::SolidColorBrush;
 
-pub use xi_win_shell::dialog::{FileDialogOptions, FileDialogType};
-use xi_win_shell::paint;
-use xi_win_shell::win_main;
-use xi_win_shell::window::{self, IdleHandle, MouseType, WindowHandle, WinHandler};
+pub use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
+use druid_win_shell::paint;
+use druid_win_shell::win_main;
+use druid_win_shell::window::{self, IdleHandle, MouseType, WindowHandle, WinHandler};
 
 mod graph;
 pub mod widget;
@@ -48,9 +48,9 @@ use widget::NullWidget;
 /// The top-level handler for the UI.
 ///
 /// This struct ultimately has ownership of all components within the UI.
-/// It implements the `WinHandler` trait of xi-win-shell, and, after the
+/// It implements the `WinHandler` trait of druid-win-shell, and, after the
 /// UI is built, ownership is transferred to the window, through `set_handler`
-/// in the xi-win-shell window building sequence.
+/// in the druid-win-shell window building sequence.
 pub struct UiMain {
     state: RefCell<UiState>,
 }
@@ -192,11 +192,11 @@ pub struct PaintCtx<'a, 'b: 'a>  {
 
 #[derive(Debug)]
 pub enum Error {
-    ShellError(xi_win_shell::Error),
+    ShellError(druid_win_shell::Error),
 }
 
-impl From<xi_win_shell::Error> for Error {
-    fn from(e: xi_win_shell::Error) -> Error {
+impl From<druid_win_shell::Error> for Error {
+    fn from(e: druid_win_shell::Error) -> Error {
         Error::ShellError(e)
     }
 }

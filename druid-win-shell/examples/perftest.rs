@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate xi_win_shell;
+extern crate druid_win_shell;
 extern crate direct2d;
 extern crate directwrite;
 extern crate time;
@@ -27,10 +27,10 @@ use direct2d::RenderTarget;
 use direct2d::brush::SolidColorBrush;
 use directwrite::TextFormat;
 
-use xi_win_shell::paint::PaintCtx;
-use xi_win_shell::util::default_text_options;
-use xi_win_shell::win_main;
-use xi_win_shell::window::{PresentStrategy, WindowBuilder, WindowHandle, WinHandler};
+use druid_win_shell::paint::PaintCtx;
+use druid_win_shell::util::default_text_options;
+use druid_win_shell::win_main;
+use druid_win_shell::window::{PresentStrategy, WindowBuilder, WindowHandle, WinHandler};
 
 struct PerfTest(RefCell<PerfState>);
 
@@ -122,7 +122,7 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
-    xi_win_shell::init();
+    druid_win_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();

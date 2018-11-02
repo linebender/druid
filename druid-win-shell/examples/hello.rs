@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate xi_win_shell;
+extern crate druid_win_shell;
 extern crate direct2d;
 
 use std::any::Any;
@@ -22,11 +22,11 @@ use direct2d::math::*;
 use direct2d::RenderTarget;
 use direct2d::brush::SolidColorBrush;
 
-use xi_win_shell::dialog::{FileDialogOptions, FileDialogType};
-use xi_win_shell::menu::Menu;
-use xi_win_shell::paint::PaintCtx;
-use xi_win_shell::win_main;
-use xi_win_shell::window::{MouseEvent, WindowBuilder, WindowHandle, WinHandler};
+use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
+use druid_win_shell::menu::Menu;
+use druid_win_shell::paint::PaintCtx;
+use druid_win_shell::win_main;
+use druid_win_shell::window::{MouseEvent, WindowBuilder, WindowHandle, WinHandler};
 
 #[derive(Default)]
 struct HelloState {
@@ -96,7 +96,7 @@ impl WinHandler for HelloState {
 }
 
 fn main() {
-    xi_win_shell::init();
+    druid_win_shell::init();
 
     let mut file_menu = Menu::new();
     file_menu.add_item(0x100, "E&xit");

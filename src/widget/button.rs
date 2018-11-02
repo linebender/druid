@@ -20,7 +20,7 @@ use direct2d::RenderTarget;
 use direct2d::brush::SolidColorBrush;
 use directwrite::{self, TextFormat, TextLayout};
 
-use xi_win_shell::util::default_text_options;
+use druid_win_shell::util::default_text_options;
 
 use {BoxConstraints, Geometry, LayoutResult};
 use {HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, Ui};

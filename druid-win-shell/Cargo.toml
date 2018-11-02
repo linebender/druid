@@ -1,9 +1,9 @@
 [package]
-name = "xi-win-shell"
+name = "druid-win-shell"
 version = "0.1.0"
 license = "Apache-2.0"
-authors = ["Raph Levien <raph@google.com>"]
-description = "Windows-specific application shell used for xi editor."
+authors = ["Raph Levien <raph.levien@gmail.com>"]
+description = "Windows-specific application shell used for druid toolkit."
 
 [dependencies]
 directwrite = "0.1.2"
