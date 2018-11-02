@@ -4,6 +4,9 @@ version = "0.1.0"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Data-oriented Rust UI design toolkit."
+repository = "https://github.com/xi-editor/druid"
+categories = ["gui"]
+keywords = ["gui", "ui", "toolkit"]
 
 [dependencies]
 directwrite = "0.1.2"
