@@ -15,7 +15,7 @@ The layout protocol is inspired by Flutter. It is originally being developed
 primarily for use by [xi-win], but has the potential to be useful for other
 applications. Due to its focus on performance and the relative paucity of
 toolkit-provided components, it is more likely to be useful for games and
-music software than general-purpose GUI apppplications. It is currently used
+music software than general-purpose GUI applications. It is currently used
 as the basis for [Synthesizer IO].
 
 ### The druid-win-shell layer
