@@ -1,0 +1,25 @@
+language: rust
+
+rust:
+  - stable
+  - nightly
+
+os:
+  - windows
+
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+
+# windows builds run in git bash so these (should) Just Work
+cache:
+  directories:
+    - $HOME/.cargo
+
+script:
+  - export RUST_BACKTRACE=1
+  - RUSTFLAGS="-D warnings" cargo check --all || exit
+  - RUSTFLAGS="-D warnings" cargo check --examples || exit
+  - cargo test --all || exit
+  - cargo test --examples || exit
