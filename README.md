@@ -1,33 +1,70 @@
-# xi-win
+# druid
 
-## Xi editor for Windows
+## Data-oriented Rust User Interface Design toolkit
 
-This project is currently a seedling, which I am hopeful will grow
-into a useful front-end for [xi editor](https://github.com/google/xi-editor).
+Druid is a new Rust-native UI toolkit, still in early stages. Its main
+goal is performance, also aiming for small binary size and compile time,
+fast startup, and very easy build configuration (just `cargo run`). It
+is currently Windows-only, but with hope for porting.
 
-It makes some decisions which are fairly unusual for GUI software
-written in 2017. It targets winapi directly, rather than using a
-toolkit, and is written in Rust. The main reason is so that we can
-target performance; winapi has api's for Direct2D rendering that may
-enable significantly lower latency and smoother scrolling than
-accessible through a toolkit. Part of the reason for taking on this
-project is to quantify the relative performance.
+Raph gave a talk at the July 2018 SF Rust Meetup ([video][jul-2018-video],
+[slides][jul-2018-slides]) about the design. Traditional object-oriented
+designs have proved to be cumbersome.
 
-Other important dimensions of performance are startup speed and
-executable size.
+The layout protocol is inspired by Flutter. It is originally being developed
+primarily for use by [xi-win], but has the potential to be useful for other
+applications. Due to its focus on performance and the relative paucity of
+toolkit-provided components, it is more likely to be useful for games and
+music software than general-purpose GUI apppplications. It is currently used
+as the basis for [Synthesizer IO].
 
-Given the goals of this project and the (current) flux in the xi
-protocol, I expect the focus of this project to be input and rendering
-pipelines, with less emphasis on features; it may be a while before
-this is really useful as an editor. That said, I certainly welcome
-any help in getting there sooner.
+### The druid-win-shell layer
+
+The druid-win-shell layer is primarily an abstraction for displaying a window
+and receiving events. As such, it is an alternative to [winit].
+
+Ideally all Windows-specific logic (including all uses of `unsafe`) are isolated
+to the druid-win-shell subcrate, and druid proper is cross platform and with
+no unsafe code. That is not entirely the case now.
+
+## Evolution
+
+This crate is currently in early stages. More features will be built out as
+needed for use in the flagship apps, and this will inevitably lead to API
+instability. Features hoped-for soon include:
+
+  - [ ] More of the basic widgets
+  - [ ] Incremental presentation
+  - [ ] Some simple theming support
+
+The biggest single obstacle to porting is 2d graphics, as druid currently
+uses Direct2D (and DirectWrite for text). One way forward is to create a
+[2d graphics] abstraction.
+
+## Alternatives
+
+In addition to wrappers for mature UI toolkits (mostly C++), [conrod]
+and [azul] are interesting Rust-native efforts with promise to become usable.
+
+With a focus on 2D games, [ggez] also looks promising.
 
 ## Contributions
 
 We gladly accept contributions via GitHub pull requests. Please see CONTRIBUTING.md for more details.
 
-If you are interested in contributing but not sure where to start, there is an active IRC channel at #xi on irc.mozilla.org. There is also a subreddit at /r/xi_editor.
+A very good place to ask questions and discuss development work is our
+[Zulip chat instance](https://xi.zulipchat.com), in the #druid channel.
 
 ## Authors
 
 The main author is Raph Levien.
+
+[xi-win]: https://github.com/xi-editor/xi-win
+[winit]: https://github.com/tomaka/winit
+[Synthesizer IO]: https://github.com/raphlinus/synthesizer-io
+[jul-2018-video]: https://www.youtube.com/watch?v=4YTfxresvS8
+[jul-2018-slides]: https://docs.google.com/presentation/d/1aDTRl5R-icAF38Di-qJ4FzAl3pLlutTKVFcr3mUGgYo/edit?usp=sharing
+[2d graphics]: https://raphlinus.github.io/rust/graphics/2018/10/11/2d-graphics.html
+[conrod]: https://github.com/PistonDevelopers/conrod
+[azul]: https://github.com/maps4print/azul
+[ggez]: https://github.com/ggez/ggez
