@@ -14,17 +14,16 @@
 
 //! Sample GUI app.
 
-extern crate druid_win_shell;
+extern crate druid_shell;
 extern crate druid;
-extern crate direct2d;
-extern crate directwrite;
+extern crate piet;
 
-use direct2d::brush::SolidColorBrush;
-use direct2d::RenderTarget;
+use piet::brush::SolidColorBrush;
+use piet::RenderTarget;
 
-use druid_win_shell::menu::Menu;
-use druid_win_shell::win_main;
-use druid_win_shell::window::WindowBuilder;
+use druid_shell::menu::Menu;
+use druid_shell::win_main;
+use druid_shell::window::WindowBuilder;
 
 use druid::{UiMain, UiState, Ui};
 use druid::widget::{Button, Row, Padding};
@@ -63,7 +62,7 @@ impl FooWidget {
 }
 
 fn main() {
-    druid_win_shell::init();
+    druid_shell::init();
 
     let mut file_menu = Menu::new();
     file_menu.add_item(COMMAND_EXIT, "E&xit");

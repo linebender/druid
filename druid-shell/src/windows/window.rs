@@ -38,7 +38,7 @@ use winapi::um::d2d1::*;
 use winapi::um::unknwnbase::*;
 use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
-use winapi::um::winuser::*;
+pub use winapi::um::winuser::*;
 
 use direct2d;
 use direct2d::math::SizeU;
@@ -46,7 +46,7 @@ use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarge
 
 use Error;
 use dialog::{FileDialogOptions, FileDialogType, get_file_dialog_path};
-use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
+use windows::dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use menu::Menu;
 use paint::{self, PaintCtx};
 use util::{OPTIONAL_FUNCTIONS, as_result, FromWide, ToWide};

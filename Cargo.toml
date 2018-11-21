@@ -8,13 +8,10 @@ repository = "https://github.com/xi-editor/druid"
 categories = ["gui"]
 keywords = ["gui", "ui", "toolkit"]
 
-[dependencies]
-directwrite = "0.1.2"
-direct2d = "0.2.0"
+[dependencies.piet]
+path = "piet"
+version = "0.1.0"
 
-# this is only included for VK_ constants, maybe remove
-winapi = "0.3.6"
-
-[dependencies.druid-win-shell]
-path = "druid-win-shell"
+[dependencies.druid-shell]
+path = "druid-shell"
 version = "0.1.0"

@@ -14,10 +14,8 @@
 
 //! Simple entity-component-system based GUI.
 
-extern crate druid_win_shell;
-extern crate direct2d;
-extern crate directwrite;
-extern crate winapi;
+extern crate druid_shell;
+extern crate piet;
 
 use std::any::Any;
 use std::cell::RefCell;
@@ -28,15 +26,16 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::time::Instant;
 
-use direct2d::math::*;
-use direct2d::RenderTarget;
-use direct2d::render_target::GenericRenderTarget;
-use direct2d::brush::SolidColorBrush;
+use piet::math::*;
+use piet::RenderTarget;
+use piet::render_target::GenericRenderTarget;
+use piet::brush::SolidColorBrush;
+use piet::write;
 
-pub use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
-use druid_win_shell::paint;
-use druid_win_shell::win_main;
-use druid_win_shell::window::{self, IdleHandle, MouseType, WindowHandle, WinHandler};
+pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
+use druid_shell::paint;
+use druid_shell::win_main;
+use druid_shell::window::{self, IdleHandle, MouseType, WindowHandle, WinHandler};
 
 mod graph;
 pub mod widget;
@@ -88,7 +87,7 @@ pub struct Ui {
 
 /// The context given to layout methods.
 pub struct LayoutCtx {
-    dwrite_factory: directwrite::Factory,
+    dwrite_factory: write::Factory,
 
     handle: WindowHandle,
 
@@ -187,16 +186,16 @@ pub struct PaintCtx<'a, 'b: 'a>  {
     is_active: bool,
     is_hot: bool,
     inner: &'a mut paint::PaintCtx<'b>,
-    dwrite_factory: &'a directwrite::Factory,
+    dwrite_factory: &'a write::Factory,
 }
 
 #[derive(Debug)]
 pub enum Error {
-    ShellError(druid_win_shell::Error),
+    ShellError(druid_shell::Error),
 }
 
-impl From<druid_win_shell::Error> for Error {
-    fn from(e: druid_win_shell::Error) -> Error {
+impl From<druid_shell::Error> for Error {
+    fn from(e: druid_shell::Error) -> Error {
         Error::ShellError(e)
     }
 }
@@ -242,7 +241,7 @@ impl UiState {
                 widgets: Vec::new(),
                 graph: Default::default(),
                 c: LayoutCtx {
-                    dwrite_factory: directwrite::Factory::new().unwrap(),
+                    dwrite_factory: write::Factory::new().unwrap(),
                     geom: Vec::new(),
                     per_widget: Vec::new(),
                     anim_state: AnimState::Idle,
@@ -677,7 +676,7 @@ impl BoxConstraints {
 }
 
 impl LayoutCtx {
-    pub fn dwrite_factory(&self) -> &directwrite::Factory {
+    pub fn dwrite_factory(&self) -> &write::Factory {
         &self.dwrite_factory
     }
 
@@ -803,11 +802,11 @@ impl<'a> ListenerCtx<'a> {
 }
 
 impl<'a, 'b> PaintCtx<'a, 'b> {
-    pub fn d2d_factory(&self) -> &direct2d::Factory {
+    pub fn d2d_factory(&self) -> &piet::Factory {
         self.inner.d2d_factory()
     }
 
-    pub fn dwrite_factory(&self) -> &directwrite::Factory {
+    pub fn dwrite_factory(&self) -> &write::Factory {
         self.dwrite_factory
     }
 

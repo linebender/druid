@@ -14,15 +14,14 @@
 
 //! An example of dynamic graph mutation.
 
-extern crate druid_win_shell;
+extern crate druid_shell;
 extern crate druid;
-extern crate direct2d;
-extern crate directwrite;
+extern crate piet;
 
 use std::collections::BTreeMap;
 
-use druid_win_shell::win_main;
-use druid_win_shell::window::WindowBuilder;
+use druid_shell::win_main;
+use druid_shell::window::WindowBuilder;
 
 use druid::{Id, UiMain, UiState};
 use druid::widget::{Button, Column, EventForwarder, Label, Row, Padding};
@@ -43,7 +42,7 @@ enum Action {
 }
 
 fn main() {
-    druid_win_shell::init();
+    druid_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();

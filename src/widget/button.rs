@@ -16,11 +16,11 @@
 
 use std::any::Any;
 
-use direct2d::RenderTarget;
-use direct2d::brush::SolidColorBrush;
-use directwrite::{self, TextFormat, TextLayout};
+use piet::RenderTarget;
+use piet::brush::SolidColorBrush;
+use piet::write::{self, TextFormat, TextLayout};
 
-use druid_win_shell::util::default_text_options;
+use druid_shell::util::default_text_options;
 
 use {BoxConstraints, Geometry, LayoutResult};
 use {HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, Ui};
@@ -47,7 +47,7 @@ impl Label {
         ctx.add(self, &[])
     }
 
-    fn get_layout(&self, dwrite_factory: &directwrite::Factory) -> TextLayout {
+    fn get_layout(&self, dwrite_factory: &write::Factory) -> TextLayout {
         // TODO: caching of both the format and the layout
         let format = TextFormat::create(&dwrite_factory)
             .with_family("Segoe UI")

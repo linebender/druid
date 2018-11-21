@@ -14,16 +14,15 @@
 
 //! Example of animation frames.
 
-extern crate druid_win_shell;
+extern crate druid_shell;
 extern crate druid;
-extern crate direct2d;
-extern crate directwrite;
+extern crate piet;
 
-use direct2d::brush::SolidColorBrush;
-use direct2d::RenderTarget;
+use piet::brush::SolidColorBrush;
+use piet::RenderTarget;
 
-use druid_win_shell::win_main;
-use druid_win_shell::window::WindowBuilder;
+use druid_shell::win_main;
+use druid_shell::window::WindowBuilder;
 
 use druid::{UiMain, UiState, Ui};
 
@@ -74,7 +73,7 @@ impl AnimWidget {
 }
 
 fn main() {
-    druid_win_shell::init();
+    druid_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
@@ -84,6 +83,9 @@ fn main() {
     builder.set_handler(Box::new(UiMain::new(state)));
     builder.set_title("Animation example");
     let window = builder.build().unwrap();
+    println!("hi1");
     window.show();
+    println!("hi2");
     run_loop.run();
+    println!("hi3");
 }

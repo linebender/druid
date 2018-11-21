@@ -14,15 +14,13 @@
 
 //! Simple calculator.
 
-extern crate winapi;
-
-extern crate druid_win_shell;
+extern crate druid_shell;
 extern crate druid;
 
-use winapi::um::winuser::*;
+use druid_shell::window::*;
 
-use druid_win_shell::win_main;
-use druid_win_shell::window::WindowBuilder;
+use druid_shell::win_main;
+use druid_shell::window::WindowBuilder;
 
 use druid::{KeyEvent, KeyVariant, UiMain, UiState};
 use druid::widget::{Button, Column, EventForwarder, KeyListener, Label, Row, Padding};
@@ -261,7 +259,7 @@ fn action_for_key(event: &KeyEvent) -> Option<CalcAction> {
 }
 
 fn main() {
-    druid_win_shell::init();
+    druid_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();

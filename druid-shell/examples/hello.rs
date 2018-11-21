@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate druid_win_shell;
-extern crate direct2d;
+extern crate druid_shell;
+extern crate piet;
 
 use std::any::Any;
 use std::cell::RefCell;
 
-use direct2d::math::*;
-use direct2d::RenderTarget;
-use direct2d::brush::SolidColorBrush;
+use piet::math::*;
+use piet::RenderTarget;
+use piet::brush::SolidColorBrush;
 
-use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
-use druid_win_shell::menu::Menu;
-use druid_win_shell::paint::PaintCtx;
-use druid_win_shell::win_main;
-use druid_win_shell::window::{MouseEvent, WindowBuilder, WindowHandle, WinHandler};
+use druid_shell::dialog::{FileDialogOptions, FileDialogType};
+use druid_shell::menu::Menu;
+use druid_shell::paint::PaintCtx;
+use druid_shell::win_main;
+use druid_shell::window::{MouseEvent, WindowBuilder, WindowHandle, WinHandler};
 
 #[derive(Default)]
 struct HelloState {
@@ -96,7 +96,7 @@ impl WinHandler for HelloState {
 }
 
 fn main() {
-    druid_win_shell::init();
+    druid_shell::init();
 
     let mut file_menu = Menu::new();
     file_menu.add_item(0x100, "E&xit");

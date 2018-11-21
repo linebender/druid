@@ -1,18 +1,25 @@
 [package]
-name = "druid-win-shell"
+name = "druid-shell"
 version = "0.1.0"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
-description = "Windows-specific application shell used for druid toolkit."
+description = "Platform-specific application shell used for druid toolkit."
 
 [dependencies]
+lazy_static = "1.0"
+time = "0.1.39"
+
+[tartget.'cfg(target_os = "windows")'.dependencies]
 directwrite = "0.1.2"
 direct2d = "0.2.0"
 wio = "0.2"
 
-lazy_static = "1.0"
-time = "0.1.39"
-
-[dependencies.winapi]
+[target.'cfg(target_os = "windows")'.dependencies.winapi]
 version = "0.3.6"
 features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser", "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "dcomp", "d3d11", "dwmapi", "wincon", "fileapi", "processenv", "winbase", "handleapi"]
+
+[dependencies.piet]
+path = "../piet"
+version = "0.1.0"
+
+
