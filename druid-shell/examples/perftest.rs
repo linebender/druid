@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate druid_win_shell;
-extern crate direct2d;
-extern crate directwrite;
+extern crate druid_shell;
+extern crate piet;
 extern crate time;
 
 use std::any::Any;
@@ -22,22 +21,22 @@ use std::cell::RefCell;
 
 use time::get_time;
 
-use direct2d::math::*;
-use direct2d::RenderTarget;
-use direct2d::brush::SolidColorBrush;
-use directwrite::TextFormat;
+use piet::math::*;
+use piet::RenderTarget;
+use piet::brush::SolidColorBrush;
+use piet::write::{self,TextFormat};
 
-use druid_win_shell::paint::PaintCtx;
-use druid_win_shell::util::default_text_options;
-use druid_win_shell::win_main;
-use druid_win_shell::window::{PresentStrategy, WindowBuilder, WindowHandle, WinHandler};
+use druid_shell::paint::PaintCtx;
+use druid_shell::util::default_text_options;
+use druid_shell::win_main;
+use druid_shell::window::{PresentStrategy, WindowBuilder, WindowHandle, WinHandler};
 
 struct PerfTest(RefCell<PerfState>);
 
 struct PerfState {
     handle: WindowHandle,
     last_time: f64,
-    dwrite_factory: directwrite::Factory,
+    write_factory: write::Factory,
 }
 
 impl WinHandler for PerfTest {
@@ -62,7 +61,7 @@ impl WinHandler for PerfTest {
         rt.draw_line((100.0, 100.0), (100.0 + dx, 100.0 - dy),
             &fg, 1.0, None);
 
-        let text_format = TextFormat::create(&state.dwrite_factory)
+        let text_format = TextFormat::create(&state.write_factory)
             .with_family("Consolas")
             .with_size(15.0)
             .build()
@@ -122,12 +121,12 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
-    druid_win_shell::init();
+    druid_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let perf_state = PerfState {
-        dwrite_factory: directwrite::Factory::new().unwrap(),
+        write_factory: directwrite::Factory::new().unwrap(),
         handle: Default::default(),
         last_time: 0.0,
     };

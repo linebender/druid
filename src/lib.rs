@@ -87,7 +87,7 @@ pub struct Ui {
 
 /// The context given to layout methods.
 pub struct LayoutCtx {
-    dwrite_factory: write::Factory,
+    write_factory: write::Factory,
 
     handle: WindowHandle,
 
@@ -186,7 +186,7 @@ pub struct PaintCtx<'a, 'b: 'a>  {
     is_active: bool,
     is_hot: bool,
     inner: &'a mut paint::PaintCtx<'b>,
-    dwrite_factory: &'a write::Factory,
+    write_factory: &'a write::Factory,
 }
 
 #[derive(Debug)]
@@ -241,7 +241,8 @@ impl UiState {
                 widgets: Vec::new(),
                 graph: Default::default(),
                 c: LayoutCtx {
-                    dwrite_factory: write::Factory::new().unwrap(),
+                    write_factory
+            : write::Factory::new().unwrap(),
                     geom: Vec::new(),
                     per_widget: Vec::new(),
                     anim_state: AnimState::Idle,
@@ -630,7 +631,9 @@ impl Ui {
             is_active: false,
             is_hot: false,
             inner: paint_ctx,
-            dwrite_factory: &self.c.dwrite_factory,
+            write_factory
+    : &self.c.write_factory
+    ,
         };
         paint_rec(&mut self.widgets, &self.graph, &self.c.geom,
             &mut paint_ctx, root, (0.0, 0.0), self.c.active, self.c.hot);
@@ -676,8 +679,9 @@ impl BoxConstraints {
 }
 
 impl LayoutCtx {
-    pub fn dwrite_factory(&self) -> &write::Factory {
-        &self.dwrite_factory
+    pub fn write_factory(&self) -> &write::Factory {
+        &self.write_factory
+
     }
 
     pub fn position_child(&mut self, child: Id, pos: (f32, f32)) {
@@ -806,8 +810,9 @@ impl<'a, 'b> PaintCtx<'a, 'b> {
         self.inner.d2d_factory()
     }
 
-    pub fn dwrite_factory(&self) -> &write::Factory {
-        self.dwrite_factory
+    pub fn write_factory(&self) -> &write::Factory {
+        self.write_factory
+
     }
 
     pub fn render_target(&mut self) -> &mut GenericRenderTarget {

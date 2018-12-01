@@ -47,14 +47,14 @@ impl Label {
         ctx.add(self, &[])
     }
 
-    fn get_layout(&self, dwrite_factory: &write::Factory) -> TextLayout {
+    fn get_layout(&self, write_factory: &write::Factory) -> TextLayout {
         // TODO: caching of both the format and the layout
-        let format = TextFormat::create(&dwrite_factory)
+        let format = TextFormat::create(&write_factory)
             .with_family("Segoe UI")
             .with_size(15.0)
             .build()
             .unwrap();
-        let layout = TextLayout::create(&dwrite_factory)
+        let layout = TextLayout::create(&write_factory)
             .with_text(&self.label)
             .with_font(&format)
             .with_width(1e6)
@@ -66,7 +66,7 @@ impl Label {
 
 impl Widget for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let text_layout = self.get_layout(paint_ctx.dwrite_factory());
+        let text_layout = self.get_layout(paint_ctx.write_factory());
         let rt = paint_ctx.render_target();
         let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
         let (x, y) = geom.pos;

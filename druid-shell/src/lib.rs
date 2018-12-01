@@ -13,8 +13,6 @@
 // limitations under the License.
 
 //! Windows-specific application shell used for xi editor.
-
-#[macro_use]
 extern crate piet;
 
 #[macro_use]

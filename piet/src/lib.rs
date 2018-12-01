@@ -1,5 +1,4 @@
 #[cfg(target_os = "windows")]
-#[macro_use]
 extern crate direct2d;
 
 #[cfg(target_os = "windows")]

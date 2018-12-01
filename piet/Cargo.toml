@@ -1,6 +1,10 @@
 [package]
 name = "piet"
 version = "0.1.0"
+license = "MIT/Apache-2.0"
+authors = ["Raph Levien <raph.levien@gmail.com>"]
+description = "Data-oriented Rust 2D graphics toolkit."
+repository = "https://github.com/xi-editor/druid"
 
 [dependencies]
 directwrite = "0.1.2"
