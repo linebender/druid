@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Various utilities for working with windows. Includes utilities for converting between Windows 
-//! and Rust types, including strings. 
+//! Various utilities for working with windows. Includes utilities for converting between Windows
+//! and Rust types, including strings.
 //! Also includes some code to dynamically load functions at runtime. This is needed for functions
 //! which are only supported on certain versions of windows.
 
-use std::ffi::{OsStr, OsString, CString};
+use std::ffi::{CString, OsStr, OsString};
 use std::fmt;
 use std::mem;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
@@ -38,7 +38,7 @@ use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winbase::*;
 use winapi::um::wincon::*;
 // This needs to be explicit, otherwise HRESULT will conflict
-use winapi::um::winnt::{GENERIC_READ, GENERIC_WRITE, FILE_SHARE_WRITE};
+use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
 
 use direct2d::enums::DrawTextOptions;
 
@@ -83,7 +83,10 @@ pub trait ToWide {
     fn to_wide(&self) -> Vec<u16>;
 }
 
-impl<T> ToWide for T where T: AsRef<OsStr> {
+impl<T> ToWide for T
+where
+    T: AsRef<OsStr>,
+{
     fn to_wide_sized(&self) -> Vec<u16> {
         self.as_ref().encode_wide().collect()
     }
@@ -117,7 +120,9 @@ impl FromWide for LPWSTR {
 }
 
 impl FromWide for [u16] {
-    fn to_u16_slice(&self) -> &[u16] { self }
+    fn to_u16_slice(&self) -> &[u16] {
+        self
+    }
 }
 
 // Types for functions we want to load, which are only supported on newer windows versions
@@ -131,11 +136,8 @@ type DCompositionCreateDevice2 = unsafe extern "system" fn(
     iid: REFIID,
     dcompositionDevice: *mut *mut c_void,
 ) -> HRESULT;
-type CreateDXGIFactory2 = unsafe extern "system" fn(
-    Flags: UINT,
-    riid: REFIID,
-    ppFactory: *mut *mut c_void,
-) -> HRESULT;
+type CreateDXGIFactory2 =
+    unsafe extern "system" fn(Flags: UINT, riid: REFIID, ppFactory: *mut *mut c_void) -> HRESULT;
 
 #[allow(non_snake_case)] // For member fields
 pub struct OptionalFunctions {
@@ -147,8 +149,8 @@ pub struct OptionalFunctions {
 }
 
 #[allow(non_snake_case)] // For local variables
-fn load_optional_functions() -> OptionalFunctions { 
-    // Tries to load $function from $lib. $function should be one of the types defined just before 
+fn load_optional_functions() -> OptionalFunctions {
+    // Tries to load $function from $lib. $function should be one of the types defined just before
     // `load_optional_functions`. This sets the corresponding local field to `Some(function pointer)`
     // if it manages to load the function.
     macro_rules! load_function {
@@ -286,7 +288,8 @@ fn attach_console() {
                 ptr::null_mut(),
                 OPEN_EXISTING,
                 0,
-                ptr::null_mut());
+                ptr::null_mut(),
+            );
 
             if chnd == INVALID_HANDLE_VALUE {
                 // CreateFileA failed.
@@ -298,4 +301,3 @@ fn attach_console() {
         }
     }
 }
-

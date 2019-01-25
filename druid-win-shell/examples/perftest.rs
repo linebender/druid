@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate druid_win_shell;
 extern crate direct2d;
 extern crate directwrite;
+extern crate druid_win_shell;
 extern crate time;
 
 use std::any::Any;
@@ -22,15 +22,15 @@ use std::cell::RefCell;
 
 use time::get_time;
 
+use direct2d::brush::SolidColorBrush;
 use direct2d::math::*;
 use direct2d::RenderTarget;
-use direct2d::brush::SolidColorBrush;
 use directwrite::TextFormat;
 
 use druid_win_shell::paint::PaintCtx;
 use druid_win_shell::util::default_text_options;
 use druid_win_shell::win_main;
-use druid_win_shell::window::{PresentStrategy, WindowBuilder, WindowHandle, WinHandler};
+use druid_win_shell::window::{PresentStrategy, WinHandler, WindowBuilder, WindowHandle};
 
 struct PerfTest(RefCell<PerfState>);
 
@@ -50,8 +50,14 @@ impl WinHandler for PerfTest {
         let rt = paint_ctx.render_target();
         let size = rt.get_size();
         let rect = RectF::from((0.0, 0.0, size.width, size.height));
-        let bg = SolidColorBrush::create(rt).with_color(0x272822).build().unwrap();
-        let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
+        let bg = SolidColorBrush::create(rt)
+            .with_color(0x272822)
+            .build()
+            .unwrap();
+        let fg = SolidColorBrush::create(rt)
+            .with_color(0xf0f0ea)
+            .build()
+            .unwrap();
         rt.fill_rectangle(rect, &bg);
 
         rt.draw_line((0.0, size.height), (size.width, 0.0), &fg, 1.0, None);
@@ -59,8 +65,7 @@ impl WinHandler for PerfTest {
         let th = ::std::f32::consts::PI * (get_time().nsec as f32) * 2e-9;
         let dx = 100.0 * th.sin();
         let dy = 100.0 * th.cos();
-        rt.draw_line((100.0, 100.0), (100.0 + dx, 100.0 - dy),
-            &fg, 1.0, None);
+        rt.draw_line((100.0, 100.0), (100.0 + dx, 100.0 - dy), &fg, 1.0, None);
 
         let text_format = TextFormat::create(&state.dwrite_factory)
             .with_family("Consolas")
@@ -77,7 +82,7 @@ impl WinHandler for PerfTest {
             &text_format,
             (10.0, 210.0, 100.0, 300.0),
             &fg,
-            default_text_options()
+            default_text_options(),
         );
 
         let msg = "Hello DWrite! This is a somewhat longer string of text intended to provoke slightly longer draw times.";
@@ -91,11 +96,11 @@ impl WinHandler for PerfTest {
                 &text_format,
                 (x0, y, x0 + 900.0, y + 80.0),
                 &fg,
-                default_text_options()
+                default_text_options(),
             );
         }
 
-    true
+        true
     }
 
     fn command(&self, id: u32) {
@@ -118,7 +123,9 @@ impl WinHandler for PerfTest {
         win_main::request_quit();
     }
 
-    fn as_any(&self) -> &Any { self }
+    fn as_any(&self) -> &Any {
+        self
+    }
 }
 
 fn main() {

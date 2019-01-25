@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate druid_win_shell;
 extern crate direct2d;
+extern crate druid_win_shell;
 
 use std::any::Any;
 use std::cell::RefCell;
 
+use direct2d::brush::SolidColorBrush;
 use direct2d::math::*;
 use direct2d::RenderTarget;
-use direct2d::brush::SolidColorBrush;
 
 use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
 use druid_win_shell::menu::Menu;
 use druid_win_shell::paint::PaintCtx;
 use druid_win_shell::win_main;
-use druid_win_shell::window::{MouseEvent, WindowBuilder, WindowHandle, WinHandler};
+use druid_win_shell::window::{MouseEvent, WinHandler, WindowBuilder, WindowHandle};
 
 #[derive(Default)]
 struct HelloState {
@@ -42,11 +42,16 @@ impl WinHandler for HelloState {
         let rt = paint_ctx.render_target();
         let size = rt.get_size();
         let rect = RectF::from((0.0, 0.0, size.width, size.height));
-        let bg = SolidColorBrush::create(rt).with_color(0x272822).build().unwrap();
-        let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
+        let bg = SolidColorBrush::create(rt)
+            .with_color(0x272822)
+            .build()
+            .unwrap();
+        let fg = SolidColorBrush::create(rt)
+            .with_color(0xf0f0ea)
+            .build()
+            .unwrap();
         rt.fill_rectangle(rect, &bg);
-        rt.draw_line((10.0, 50.0), (90.0, 90.0),
-                &fg, 1.0, None);
+        rt.draw_line((10.0, 50.0), (90.0, 90.0), &fg, 1.0, None);
         false
     }
 
@@ -56,7 +61,10 @@ impl WinHandler for HelloState {
             0x101 => {
                 let mut options = FileDialogOptions::default();
                 options.set_show_hidden();
-                let filename = self.handle.borrow().file_dialog(FileDialogType::Open, options);
+                let filename = self
+                    .handle
+                    .borrow()
+                    .file_dialog(FileDialogType::Open, options);
                 println!("result: {:?}", filename);
             }
             _ => println!("unexpected id {}", id),
@@ -92,7 +100,9 @@ impl WinHandler for HelloState {
         win_main::request_quit();
     }
 
-    fn as_any(&self) -> &Any { self }
+    fn as_any(&self) -> &Any {
+        self
+    }
 }
 
 fn main() {
