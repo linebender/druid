@@ -14,10 +14,10 @@
 
 //! Example of animation frames.
 
-extern crate druid_win_shell;
-extern crate druid;
 extern crate direct2d;
 extern crate directwrite;
+extern crate druid;
+extern crate druid_win_shell;
 
 use direct2d::brush::SolidColorBrush;
 use direct2d::RenderTarget;
@@ -25,11 +25,11 @@ use direct2d::RenderTarget;
 use druid_win_shell::win_main;
 use druid_win_shell::window::WindowBuilder;
 
-use druid::{UiMain, UiState, Ui};
+use druid::{Ui, UiMain, UiState};
 
+use druid::widget::Widget;
 use druid::{BoxConstraints, Geometry, LayoutResult};
 use druid::{HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx};
-use druid::widget::Widget;
 
 /// A custom widget with animations.
 struct AnimWidget(f32);
@@ -37,15 +37,27 @@ struct AnimWidget(f32);
 impl Widget for AnimWidget {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         let rt = paint_ctx.render_target();
-        let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
+        let fg = SolidColorBrush::create(rt)
+            .with_color(0xf0f0ea)
+            .build()
+            .unwrap();
         let (x, y) = geom.pos;
-        rt.draw_line((x, y), (x + geom.size.0, y + self.0 * geom.size.1),
-                &fg, 1.0, None);
+        rt.draw_line(
+            (x, y),
+            (x + geom.size.0, y + self.0 * geom.size.1),
+            &fg,
+            1.0,
+            None,
+        );
     }
 
-    fn layout(&mut self, bc: &BoxConstraints, _children: &[Id], _size: Option<(f32, f32)>,
-        _ctx: &mut LayoutCtx) -> LayoutResult
-    {
+    fn layout(
+        &mut self,
+        bc: &BoxConstraints,
+        _children: &[Id],
+        _size: Option<(f32, f32)>,
+        _ctx: &mut LayoutCtx,
+    ) -> LayoutResult {
         LayoutResult::Size(bc.constrain((100.0, 100.0)))
     }
 

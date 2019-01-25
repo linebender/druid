@@ -16,16 +16,16 @@
 
 extern crate winapi;
 
-extern crate druid_win_shell;
 extern crate druid;
+extern crate druid_win_shell;
 
 use winapi::um::winuser::*;
 
 use druid_win_shell::win_main;
 use druid_win_shell::window::WindowBuilder;
 
+use druid::widget::{Button, Column, EventForwarder, KeyListener, Label, Padding, Row};
 use druid::{KeyEvent, KeyVariant, UiMain, UiState};
-use druid::widget::{Button, Column, EventForwarder, KeyListener, Label, Row, Padding};
 
 use druid::Id;
 
@@ -139,8 +139,7 @@ fn pad(widget: Id, ui: &mut UiState) -> Id {
     Padding::uniform(5.0).ui(widget, ui)
 }
 
-fn digit_button(ui: &mut UiState, mut digit: u8) -> Id
-{
+fn digit_button(ui: &mut UiState, mut digit: u8) -> Id {
     let button = Button::new(digit.to_string()).ui(ui);
     ui.add_listener(button, move |_: &mut bool, mut ctx| {
         ctx.poke_up(&mut digit);
@@ -149,8 +148,7 @@ fn digit_button(ui: &mut UiState, mut digit: u8) -> Id
     pad(button, ui)
 }
 
-fn op_button_label(ui: &mut UiState, mut op: char, label: String) -> Id
-{
+fn op_button_label(ui: &mut UiState, mut op: char, label: String) -> Id {
     let button = Button::new(label).ui(ui);
     ui.add_listener(button, move |_: &mut bool, mut ctx| {
         ctx.poke_up(&mut op);
@@ -159,8 +157,7 @@ fn op_button_label(ui: &mut UiState, mut op: char, label: String) -> Id
     pad(button, ui)
 }
 
-fn op_button(ui: &mut UiState, op: char) -> Id
-{
+fn op_button(ui: &mut UiState, op: char) -> Id {
     op_button_label(ui, op, op.to_string())
 }
 
@@ -177,36 +174,51 @@ fn build_calc(ui: &mut UiState) {
     let display = Label::new("0".to_string()).ui(ui);
     let row0 = pad(display, ui);
 
-    let row1 = flex_row(&[
-        op_button_label(ui, 'c', "CE".to_string()),
-        op_button(ui, 'C'),
-        op_button(ui, '⌫'),
-        op_button(ui, '÷'),
-    ], ui);
-    let row2 = flex_row(&[
-        digit_button(ui, 7),
-        digit_button(ui, 8),
-        digit_button(ui, 9),
-        op_button(ui, '×'),
-    ], ui);
-    let row3 = flex_row(&[
-        digit_button(ui, 4),
-        digit_button(ui, 5),
-        digit_button(ui, 6),
-        op_button(ui, '−'),
-    ], ui);
-    let row4 = flex_row(&[
-        digit_button(ui, 1),
-        digit_button(ui, 2),
-        digit_button(ui, 3),
-        op_button(ui, '+'),
-    ], ui);
-    let row5 = flex_row(&[
-        op_button(ui, '±'),
-        digit_button(ui, 0),
-        op_button(ui, '.'),
-        op_button(ui, '='),
-    ], ui);
+    let row1 = flex_row(
+        &[
+            op_button_label(ui, 'c', "CE".to_string()),
+            op_button(ui, 'C'),
+            op_button(ui, '⌫'),
+            op_button(ui, '÷'),
+        ],
+        ui,
+    );
+    let row2 = flex_row(
+        &[
+            digit_button(ui, 7),
+            digit_button(ui, 8),
+            digit_button(ui, 9),
+            op_button(ui, '×'),
+        ],
+        ui,
+    );
+    let row3 = flex_row(
+        &[
+            digit_button(ui, 4),
+            digit_button(ui, 5),
+            digit_button(ui, 6),
+            op_button(ui, '−'),
+        ],
+        ui,
+    );
+    let row4 = flex_row(
+        &[
+            digit_button(ui, 1),
+            digit_button(ui, 2),
+            digit_button(ui, 3),
+            op_button(ui, '+'),
+        ],
+        ui,
+    );
+    let row5 = flex_row(
+        &[
+            op_button(ui, '±'),
+            digit_button(ui, 0),
+            op_button(ui, '.'),
+            op_button(ui, '='),
+        ],
+        ui,
+    );
     let mut column = Column::new();
     column.set_flex(row1, 1.0);
     column.set_flex(row2, 1.0);
@@ -250,13 +262,11 @@ fn action_for_key(event: &KeyEvent) -> Option<CalcAction> {
                 _ => None,
             }
         }
-        KeyVariant::Vkey(vk) => {
-            match vk {
-                VK_BACK => Some(CalcAction::Op('⌫')),
-                VK_RETURN => Some(CalcAction::Op('=')),
-                _ => None,
-            }
-        }
+        KeyVariant::Vkey(vk) => match vk {
+            VK_BACK => Some(CalcAction::Op('⌫')),
+            VK_RETURN => Some(CalcAction::Op('=')),
+            _ => None,
+        },
     }
 }
 

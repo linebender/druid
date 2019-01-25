@@ -14,18 +14,18 @@
 
 //! An example of dynamic graph mutation.
 
-extern crate druid_win_shell;
-extern crate druid;
 extern crate direct2d;
 extern crate directwrite;
+extern crate druid;
+extern crate druid_win_shell;
 
 use std::collections::BTreeMap;
 
 use druid_win_shell::win_main;
 use druid_win_shell::window::WindowBuilder;
 
+use druid::widget::{Button, Column, EventForwarder, Label, Padding, Row};
 use druid::{Id, UiMain, UiState};
-use druid::widget::{Button, Column, EventForwarder, Label, Row, Padding};
 
 #[derive(Default)]
 struct AppState {
@@ -61,8 +61,9 @@ fn main() {
     let forwarder = EventForwarder::<Action>::new().ui(col, &mut state);
     state.set_root(forwarder);
     let mut app = AppState::default();
-    state.add_listener(forwarder, move |action: &mut Action, mut ctx| {
-        match action {
+    state.add_listener(
+        forwarder,
+        move |action: &mut Action, mut ctx| match action {
             Action::AddButton => {
                 let n = app.count;
                 app.count += 1;
@@ -97,8 +98,8 @@ fn main() {
                 app.selected = Some(*n);
                 ctx.poke(label, &mut format!("Selection: {:?}", app.selected));
             }
-        }
-    });
+        },
+    );
     state.add_listener(add_button, move |_: &mut bool, mut ctx| {
         ctx.poke_up(&mut Action::AddButton);
     });

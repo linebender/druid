@@ -54,9 +54,13 @@ pub trait Widget {
     ///
     /// The default implementation is suitable for widgets with a single child, and
     /// just forwards the layout unmodified.
-    fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
-        ctx: &mut LayoutCtx) -> LayoutResult
-    {
+    fn layout(
+        &mut self,
+        bc: &BoxConstraints,
+        children: &[Id],
+        size: Option<(f32, f32)>,
+        ctx: &mut LayoutCtx,
+    ) -> LayoutResult {
         if let Some(size) = size {
             // Maybe this is not necessary, rely on default value.
             ctx.position_child(children[0], (0.0, 0.0));
@@ -66,13 +70,14 @@ pub trait Widget {
         }
     }
 
-
     /// Sent to the widget on mouse event.
     ///
     /// Mouse events are propagated in a post-order traversal of the widget tree,
     /// culled by geometry. Propagation stops as soon as the event is handled.
     #[allow(unused)]
-    fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool { false }
+    fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
+        false
+    }
 
     /// Sent to the active or hot widget on mouse move events.
     // TODO: should mods be plumbed here?
@@ -86,7 +91,9 @@ pub trait Widget {
     /// An "escape hatch" of sorts for accessing widget state beyond the widget
     /// methods. Returns true if it is handled.
     #[allow(unused)]
-    fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool { false }
+    fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
+        false
+    }
 
     /// Sent to the widget on key event.
     ///
@@ -100,7 +107,9 @@ pub trait Widget {
     ///
     /// Returns true if the event is handled.
     #[allow(unused)]
-    fn key(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool { false }
+    fn key(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
+        false
+    }
 
     /// Called at the beginning of a new animation frame.
     ///

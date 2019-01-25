@@ -16,15 +16,15 @@
 
 use std::any::Any;
 
-use direct2d::RenderTarget;
 use direct2d::brush::SolidColorBrush;
+use direct2d::RenderTarget;
 use directwrite::{self, TextFormat, TextLayout};
 
 use druid_win_shell::util::default_text_options;
 
+use widget::Widget;
 use {BoxConstraints, Geometry, LayoutResult};
 use {HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, Ui};
-use widget::Widget;
 
 /// A text label with no interaction.
 pub struct Label {
@@ -59,7 +59,8 @@ impl Label {
             .with_font(&format)
             .with_width(1e6)
             .with_height(1e6)
-            .build().unwrap();
+            .build()
+            .unwrap();
         layout
     }
 }
@@ -68,14 +69,21 @@ impl Widget for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         let text_layout = self.get_layout(paint_ctx.dwrite_factory());
         let rt = paint_ctx.render_target();
-        let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
+        let fg = SolidColorBrush::create(rt)
+            .with_color(0xf0f0ea)
+            .build()
+            .unwrap();
         let (x, y) = geom.pos;
         rt.draw_text_layout((x, y), &text_layout, &fg, default_text_options());
     }
 
-    fn layout(&mut self, bc: &BoxConstraints, _children: &[Id], _size: Option<(f32, f32)>,
-        _ctx: &mut LayoutCtx) -> LayoutResult
-    {
+    fn layout(
+        &mut self,
+        bc: &BoxConstraints,
+        _children: &[Id],
+        _size: Option<(f32, f32)>,
+        _ctx: &mut LayoutCtx,
+    ) -> LayoutResult {
         // TODO: measure text properly
         LayoutResult::Size(bc.constrain((100.0, 17.0)))
     }
@@ -115,15 +123,22 @@ impl Widget for Button {
                 (false, true) => 0x505058,
                 _ => 0x404048,
             };
-            let bg = SolidColorBrush::create(rt).with_color(bg_color).build().unwrap();
+            let bg = SolidColorBrush::create(rt)
+                .with_color(bg_color)
+                .build()
+                .unwrap();
             rt.fill_rectangle(geom, &bg);
         }
         self.label.paint(paint_ctx, geom);
     }
 
-    fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
-        ctx: &mut LayoutCtx) -> LayoutResult
-    {
+    fn layout(
+        &mut self,
+        bc: &BoxConstraints,
+        children: &[Id],
+        size: Option<(f32, f32)>,
+        ctx: &mut LayoutCtx,
+    ) -> LayoutResult {
         self.label.layout(bc, children, size, ctx)
     }
 

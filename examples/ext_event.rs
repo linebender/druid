@@ -14,16 +14,16 @@
 
 //! Example of sending external events to the UI.
 
-extern crate druid_win_shell;
 extern crate druid;
+extern crate druid_win_shell;
 
 use std::{thread, time};
 
 use druid_win_shell::win_main;
 use druid_win_shell::window::WindowBuilder;
 
-use druid::{UiMain, UiState};
 use druid::widget::Label;
+use druid::{UiMain, UiState};
 
 fn main() {
     druid_win_shell::init();

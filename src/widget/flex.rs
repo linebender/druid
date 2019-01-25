@@ -16,9 +16,9 @@
 
 use std::collections::BTreeMap;
 
+use widget::Widget;
 use {BoxConstraints, LayoutResult};
 use {Id, LayoutCtx, Ui};
-use widget::Widget;
 
 pub struct Row;
 pub struct Column;
@@ -28,7 +28,6 @@ pub struct Flex {
     direction: Axis,
 
     // layout continuation state
-
     phase: Phase,
     ix: usize,
     minor: f32,
@@ -144,7 +143,10 @@ impl Flex {
     }
 
     fn get_params(&self, child: Id) -> Params {
-        self.params.get(&child).cloned().unwrap_or(Default::default())
+        self.params
+            .get(&child)
+            .cloned()
+            .unwrap_or(Default::default())
     }
 
     /// Return the index (within `children`) of the next child that belongs in
@@ -159,9 +161,12 @@ impl Flex {
     }
 
     /// Position all children, after the children have all been measured.
-    fn finish_layout(&self, bc: &BoxConstraints, children: &[Id], ctx: &mut LayoutCtx)
-        -> LayoutResult
-    {
+    fn finish_layout(
+        &self,
+        bc: &BoxConstraints,
+        children: &[Id],
+        ctx: &mut LayoutCtx,
+    ) -> LayoutResult {
         let mut major = 0.0;
         for &child in children {
             // top-align, could do center etc. based on child height
@@ -174,9 +179,13 @@ impl Flex {
 }
 
 impl Widget for Flex {
-    fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
-        ctx: &mut LayoutCtx) -> LayoutResult
-    {
+    fn layout(
+        &mut self,
+        bc: &BoxConstraints,
+        children: &[Id],
+        size: Option<(f32, f32)>,
+        ctx: &mut LayoutCtx,
+    ) -> LayoutResult {
         if let Some(size) = size {
             let minor = self.direction.minor(size);
             self.minor = self.minor.max(minor);
@@ -195,7 +204,7 @@ impl Widget for Flex {
                     return self.finish_layout(bc, children, ctx);
                 }
             } else {
-                return self.finish_layout(bc, children, ctx)
+                return self.finish_layout(bc, children, ctx);
             }
         } else {
             // Start layout process, no children measured yet.

@@ -14,10 +14,10 @@
 
 //! Sample GUI app.
 
-extern crate druid_win_shell;
-extern crate druid;
 extern crate direct2d;
 extern crate directwrite;
+extern crate druid;
+extern crate druid_win_shell;
 
 use direct2d::brush::SolidColorBrush;
 use direct2d::RenderTarget;
@@ -26,13 +26,13 @@ use druid_win_shell::menu::Menu;
 use druid_win_shell::win_main;
 use druid_win_shell::window::WindowBuilder;
 
-use druid::{UiMain, UiState, Ui};
-use druid::widget::{Button, Row, Padding};
+use druid::widget::{Button, Padding, Row};
 use druid::{FileDialogOptions, FileDialogType};
+use druid::{Ui, UiMain, UiState};
 
+use druid::widget::Widget;
 use druid::{BoxConstraints, Geometry, LayoutResult};
 use druid::{Id, LayoutCtx, PaintCtx};
-use druid::widget::Widget;
 
 const COMMAND_EXIT: u32 = 0x100;
 const COMMAND_OPEN: u32 = 0x101;
@@ -43,15 +43,21 @@ struct FooWidget;
 impl Widget for FooWidget {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         let rt = paint_ctx.render_target();
-        let fg = SolidColorBrush::create(rt).with_color(0xf0f0ea).build().unwrap();
+        let fg = SolidColorBrush::create(rt)
+            .with_color(0xf0f0ea)
+            .build()
+            .unwrap();
         let (x, y) = geom.pos;
-        rt.draw_line((x, y), (x + geom.size.0, y + geom.size.1),
-                &fg, 1.0, None);
+        rt.draw_line((x, y), (x + geom.size.0, y + geom.size.1), &fg, 1.0, None);
     }
 
-    fn layout(&mut self, bc: &BoxConstraints, _children: &[Id], _size: Option<(f32, f32)>,
-        _ctx: &mut LayoutCtx) -> LayoutResult
-    {
+    fn layout(
+        &mut self,
+        bc: &BoxConstraints,
+        _children: &[Id],
+        _size: Option<(f32, f32)>,
+        _ctx: &mut LayoutCtx,
+    ) -> LayoutResult {
         LayoutResult::Size(bc.constrain((100.0, 100.0)))
     }
 }
@@ -91,16 +97,14 @@ fn main() {
     state.add_listener(button2, move |_: &mut bool, mut ctx| {
         ctx.poke(button2, &mut "Naughty naughty".to_string());
     });
-    state.set_command_listener(|cmd, mut ctx| {
-        match cmd {
-            COMMAND_EXIT => ctx.close(),
-            COMMAND_OPEN => {
-                let options = FileDialogOptions::default();
-                let result = ctx.file_dialog(FileDialogType::Open, options);
-                println!("result = {:?}", result);
-            }
-            _ => println!("unexpected command {}", cmd),
+    state.set_command_listener(|cmd, mut ctx| match cmd {
+        COMMAND_EXIT => ctx.close(),
+        COMMAND_OPEN => {
+            let options = FileDialogOptions::default();
+            let result = ctx.file_dialog(FileDialogType::Open, options);
+            println!("result = {:?}", result);
         }
+        _ => println!("unexpected command {}", cmd),
     });
     builder.set_handler(Box::new(UiMain::new(state)));
     builder.set_title("Hello example");
