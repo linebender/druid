@@ -17,6 +17,8 @@
 extern crate direct2d;
 extern crate directwrite;
 extern crate druid_win_shell;
+extern crate piet;
+extern crate piet_common;
 extern crate winapi;
 
 use std::any::Any;
@@ -28,13 +30,12 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::time::Instant;
 
-use direct2d::brush::SolidColorBrush;
 use direct2d::math::*;
-use direct2d::render_target::GenericRenderTarget;
 use direct2d::RenderTarget;
 
+use piet::RenderContext;
+
 pub use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
-use druid_win_shell::paint;
 use druid_win_shell::win_main;
 use druid_win_shell::window::{self, IdleHandle, MouseType, WinHandler, WindowHandle};
 
@@ -186,7 +187,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     // TODO: maybe this should be a 3-way enum: normal/hot/active
     is_active: bool,
     is_hot: bool,
-    inner: &'a mut paint::PaintCtx<'b>,
+    inner: &'a mut piet_common::Piet<'b>,
     dwrite_factory: &'a directwrite::Factory,
 }
 
@@ -650,7 +651,7 @@ impl Ui {
     // The following methods are really UiState methods, but don't need access to listeners
     // so are more concise to implement here.
 
-    fn paint(&mut self, paint_ctx: &mut paint::PaintCtx, root: Id) {
+    fn paint(&mut self, render_ctx: &mut piet_common::Piet, root: Id) {
         // Do pre-order traversal on graph, painting each node in turn.
         //
         // Implemented as a recursion, but we could use an explicit queue instead.
@@ -676,7 +677,7 @@ impl Ui {
         let mut paint_ctx = PaintCtx {
             is_active: false,
             is_hot: false,
-            inner: paint_ctx,
+            inner: render_ctx,
             dwrite_factory: &self.c.dwrite_factory,
         };
         paint_rec(
@@ -865,16 +866,16 @@ impl<'a> ListenerCtx<'a> {
 }
 
 impl<'a, 'b> PaintCtx<'a, 'b> {
-    pub fn d2d_factory(&self) -> &direct2d::Factory {
-        self.inner.d2d_factory()
-    }
+    // pub fn d2d_factory(&self) -> &direct2d::Factory {
+    //     self.inner.d2d_factory()
+    // }
 
     pub fn dwrite_factory(&self) -> &directwrite::Factory {
         self.dwrite_factory
     }
 
-    pub fn render_target(&mut self) -> &mut GenericRenderTarget {
-        self.inner.render_target()
+    pub fn render_target(&'a mut self) -> &'a mut piet_common::Piet<'b> {
+        self.inner
     }
 
     /// Determine whether this widget is the active one.
@@ -897,22 +898,15 @@ impl WinHandler for UiMain {
         state.dispatch_events();
     }
 
-    fn paint(&self, paint_ctx: &mut paint::PaintCtx) -> bool {
+    fn paint(&self, paint_ctx: &mut piet_common::Piet) -> bool {
         let mut state = self.state.borrow_mut();
         state.anim_frame();
-        let size;
         {
-            let rt = paint_ctx.render_target();
-            size = rt.get_size();
-            let rect = RectF::from((0.0, 0.0, size.width, size.height));
-            let bg = SolidColorBrush::create(rt)
-                .with_color(0x272822)
-                .build()
-                .unwrap();
-            rt.fill_rectangle(rect, &bg);
+            paint_ctx.clear(0x272822);
         }
         let root = state.graph.root;
-        let bc = BoxConstraints::tight((size.width, size.height));
+        let bc = BoxConstraints::tight((100.0, 100.0)); //TODO: get actual size
+
         // TODO: be lazier about relayout
         state.layout(&bc, root);
         state.paint(paint_ctx, root);

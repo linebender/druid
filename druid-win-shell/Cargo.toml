@@ -9,6 +9,7 @@ description = "Windows-specific application shell used for druid toolkit."
 directwrite = "0.1.2"
 direct2d = "0.2.0"
 wio = "0.2"
+piet-common = { path = "../../piet/piet-common"}
 
 lazy_static = "1.0"
 time = "0.1.39"

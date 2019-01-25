@@ -141,7 +141,7 @@ pub trait WinHandler {
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
     /// should be scheduled for the next animation frame.
-    fn paint(&self, ctx: &mut PaintCtx) -> bool;
+    fn paint(&self, ctx: &mut piet_common::Piet) -> bool;
 
     /// Called when the resources need to be rebuilt.
     fn rebuild_resources(&self) {}
@@ -343,10 +343,15 @@ impl MyWndProc {
         let s = state.as_mut().unwrap();
         let rt = s.render_target.as_mut().unwrap();
         rt.begin_draw();
-        let anim = self.handler.paint(&mut PaintCtx {
-            d2d_factory: &self.d2d_factory,
-            render_target: rt,
-        });
+        // let anim = self.handler.paint(&mut PaintCtx {
+        //     d2d_factory: &self.d2d_factory,
+        //     render_target: rt,
+        // });
+        let anim = self.handler.paint(&mut piet_common::Piet::new(
+            &self.d2d_factory,
+            &directwrite::Factory::new().unwrap(),
+            rt,
+        ));
         // Maybe should deal with lost device here...
         let res = rt.end_draw();
         if let Err(e) = res {
