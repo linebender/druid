@@ -53,19 +53,28 @@ impl Menu {
 
     /// Add a dropdown menu. This takes the menu by ownership, but we'll
     /// probably want to change that so we can manipulate it later.
-    /// 
+    ///
     /// The `text` field has all the fun behavior of winapi CreateMenu.
     pub fn add_dropdown(&mut self, menu: Menu, text: &str) {
         unsafe {
-            AppendMenuW(self.hmenu, MF_POPUP, menu.into_hmenu() as UINT_PTR,
-                text.to_wide().as_ptr());
+            AppendMenuW(
+                self.hmenu,
+                MF_POPUP,
+                menu.into_hmenu() as UINT_PTR,
+                text.to_wide().as_ptr(),
+            );
         }
     }
 
     /// Add an item to the menu.
     pub fn add_item(&mut self, id: u32, text: &str) {
         unsafe {
-            AppendMenuW(self.hmenu, MF_STRING, id as UINT_PTR, text.to_wide().as_ptr());
+            AppendMenuW(
+                self.hmenu,
+                MF_STRING,
+                id as UINT_PTR,
+                text.to_wide().as_ptr(),
+            );
         }
     }
 

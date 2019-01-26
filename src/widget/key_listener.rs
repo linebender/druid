@@ -14,8 +14,8 @@
 
 //! Widget for forwarding key events to a listener.
 
-use winapi::um::winuser::*;
 use druid_win_shell::window::M_ALT;
+use winapi::um::winuser::*;
 
 use widget::Widget;
 use {HandlerCtx, Id, KeyEvent, KeyVariant, Ui};
@@ -37,9 +37,7 @@ impl Widget for KeyListener {
         // TODO: maybe some configuration of which keys are handled. Right
         // now we handle everything except a few keys.
         if let KeyVariant::Vkey(vk) = event.key {
-            if (vk == VK_F4 && (event.mods & M_ALT) != 0)
-                || vk == VK_F10 || vk == VK_MENU
-            {
+            if (vk == VK_F4 && (event.mods & M_ALT) != 0) || vk == VK_F10 || vk == VK_MENU {
                 return false;
             }
         }

@@ -17,8 +17,8 @@
 use std::mem;
 use std::ptr::null_mut;
 use std::sync::{Arc, Mutex};
-use winapi::shared::windef::*;
 use winapi::ctypes::c_int;
+use winapi::shared::windef::*;
 use winapi::um::winbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
@@ -60,13 +60,11 @@ impl RunLoop {
     /// Set an accelerator table
     pub fn set_accel(&mut self, accel: &[ACCEL]) {
         unsafe {
-            self.accel = CreateAcceleratorTableW(accel as *const _ as *mut _,
-                accel.len() as c_int);
+            self.accel = CreateAcceleratorTableW(accel as *const _ as *mut _, accel.len() as c_int);
         }
     }
 
     pub fn run(&mut self) {
-
         unsafe {
             loop {
                 let mut handles = Vec::new();
@@ -74,13 +72,8 @@ impl RunLoop {
                     handles.push(listener.h);
                 }
                 let len = handles.len() as u32;
-                let res = MsgWaitForMultipleObjectsEx(
-                    len,
-                    handles.as_ptr(),
-                    INFINITE,
-                    QS_ALLEVENTS,
-                    0
-                );
+                let res =
+                    MsgWaitForMultipleObjectsEx(len, handles.as_ptr(), INFINITE, QS_ALLEVENTS, 0);
 
                 // Prioritize rpc results above windows messages
                 if res >= WAIT_OBJECT_0 && res < WAIT_OBJECT_0 + len {
@@ -100,8 +93,8 @@ impl RunLoop {
                     if res <= 0 {
                         return;
                     }
-                    if self.accel.is_null() ||
-                        TranslateAcceleratorW(msg.hwnd, self.accel, &mut msg) == 0
+                    if self.accel.is_null()
+                        || TranslateAcceleratorW(msg.hwnd, self.accel, &mut msg) == 0
                     {
                         TranslateMessage(&mut msg);
                         DispatchMessageW(&mut msg);
@@ -123,7 +116,8 @@ impl RunLoopHandle {
     /// Add a listener for a Windows handle. Considered unsafe because the
     /// handle must be valid. Also unsafe because it is not thread safe.
     pub unsafe fn add_handler<F>(&self, h: HANDLE, callback: F)
-        where F: FnMut() + 'static
+    where
+        F: FnMut() + 'static,
     {
         let listener = Listener {
             h,

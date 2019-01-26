@@ -24,13 +24,12 @@ use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 
-use winapi::Interface;
 use winapi::ctypes::{c_int, c_void};
 use winapi::shared::basetsd::*;
 use winapi::shared::dxgi::*;
 use winapi::shared::dxgi1_2::*;
-use winapi::shared::dxgitype::*;
 use winapi::shared::dxgiformat::*;
+use winapi::shared::dxgitype::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
@@ -39,17 +38,18 @@ use winapi::um::unknwnbase::*;
 use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
+use winapi::Interface;
 
 use direct2d;
 use direct2d::math::SizeU;
 use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarget};
 
-use Error;
-use dialog::{FileDialogOptions, FileDialogType, get_file_dialog_path};
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
+use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 use menu::Menu;
 use paint::{self, PaintCtx};
-use util::{OPTIONAL_FUNCTIONS, as_result, FromWide, ToWide};
+use util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
+use Error;
 
 extern "system" {
     pub fn DwmFlush();
@@ -166,7 +166,9 @@ pub trait WinHandler {
     ///
     /// Return `true` if the event is handled.
     #[allow(unused_variables)]
-    fn keydown(&self, vkey_code: i32, mods: u32) -> bool { false }
+    fn keydown(&self, vkey_code: i32, mods: u32) -> bool {
+        false
+    }
 
     /// Called on a mouse wheel event. This corresponds to a
     /// [WM_MOUSEWHEEL](https://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx)
@@ -310,9 +312,15 @@ impl Default for PresentStrategy {
 fn get_mod_state(lparam: LPARAM) -> u32 {
     unsafe {
         let mut mod_state = 0;
-        if (lparam & (1 << 29)) != 0 { mod_state |= MOD_ALT as u32; }
-        if GetKeyState(VK_CONTROL) < 0 { mod_state |= MOD_CONTROL as u32; }
-        if GetKeyState(VK_SHIFT) < 0 { mod_state |= MOD_SHIFT as u32; }
+        if (lparam & (1 << 29)) != 0 {
+            mod_state |= MOD_ALT as u32;
+        }
+        if GetKeyState(VK_CONTROL) < 0 {
+            mod_state |= MOD_CONTROL as u32;
+        }
+        if GetKeyState(VK_SHIFT) < 0 {
+            mod_state |= MOD_SHIFT as u32;
+        }
         mod_state
     }
 }
@@ -360,16 +368,25 @@ impl WndProc for MyWndProc {
         *self.state.borrow_mut() = Some(state);
     }
 
-    fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
-        -> Option<LRESULT>
-    {
+    fn window_proc(
+        &self,
+        hwnd: HWND,
+        msg: UINT,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> Option<LRESULT> {
         //println!("wndproc msg: {}", msg);
         match msg {
-            WM_ERASEBKGND => {
-                Some(0)
-            }
+            WM_ERASEBKGND => Some(0),
             WM_PAINT => unsafe {
-                if self.state.borrow().as_ref().unwrap().render_target.is_none() {
+                if self
+                    .state
+                    .borrow()
+                    .as_ref()
+                    .unwrap()
+                    .render_target
+                    .is_none()
+                {
                     let rt = paint::create_render_target(&self.d2d_factory, hwnd)
                         .map(|rt| rt.as_generic());
                     self.state.borrow_mut().as_mut().unwrap().render_target = rt.ok();
@@ -403,15 +420,22 @@ impl WndProc for MyWndProc {
                     }
                 }
                 None
-            }
+            },
             WM_EXITSIZEMOVE => unsafe {
                 if self.state.borrow().as_ref().unwrap().dcomp_state.is_some() {
                     let mut rect: RECT = mem::uninitialized();
                     GetClientRect(hwnd, &mut rect);
                     let width = (rect.right - rect.left) as u32;
                     let height = (rect.bottom - rect.top) as u32;
-                    let res = (*self.state.borrow_mut().as_mut().unwrap()
-                        .dcomp_state.as_mut().unwrap().swap_chain)
+                    let res = (*self
+                        .state
+                        .borrow_mut()
+                        .as_mut()
+                        .unwrap()
+                        .dcomp_state
+                        .as_mut()
+                        .unwrap()
+                        .swap_chain)
                         .ResizeBuffers(2, width, height, DXGI_FORMAT_UNKNOWN, 0);
                     if SUCCEEDED(res) {
                         self.handler.rebuild_resources();
@@ -437,7 +461,7 @@ impl WndProc for MyWndProc {
                     }
                 }
                 None
-            }
+            },
             WM_SIZE => unsafe {
                 let width = LOWORD(lparam as u32) as u32;
                 let height = HIWORD(lparam as u32) as u32;
@@ -467,8 +491,13 @@ impl WndProc for MyWndProc {
                         let mut state = self.state.borrow_mut();
                         let mut s = state.as_mut().unwrap();
                         s.render_target = None;
-                        res = (*s.dcomp_state.as_mut().unwrap().swap_chain)
-                            .ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+                        res = (*s.dcomp_state.as_mut().unwrap().swap_chain).ResizeBuffers(
+                            0,
+                            width,
+                            height,
+                            DXGI_FORMAT_UNKNOWN,
+                            0,
+                        );
                     }
                     if SUCCEEDED(res) {
                         self.rebuild_render_target();
@@ -525,39 +554,44 @@ impl WndProc for MyWndProc {
             }
             // TODO: not clear where double-click processing should happen. Currently disabled
             // because CS_DBLCLKS is not set
-            WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP |
-                WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP |
-                WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP |
-                WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP =>
-            {
+            WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MBUTTONDBLCLK
+            | WM_MBUTTONDOWN | WM_MBUTTONUP | WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP
+            | WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
                 let which = match msg {
                     WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => MouseButton::Left,
                     WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP => MouseButton::Middle,
                     WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => MouseButton::Right,
-                    WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP =>
-                        match HIWORD(wparam as u32) {
-                            1 => MouseButton::X1,
-                            2 => MouseButton::X2,
-                            _ => {
-                                println!("unexpected X button event");
-                                return None;
-                            }
-                        },
-                    _ => unreachable!()
+                    WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => match HIWORD(wparam as u32)
+                    {
+                        1 => MouseButton::X1,
+                        2 => MouseButton::X2,
+                        _ => {
+                            println!("unexpected X button event");
+                            return None;
+                        }
+                    },
+                    _ => unreachable!(),
                 };
                 let ty = match msg {
-                    WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN =>
-                        MouseType::Down,
-                    WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK | WM_XBUTTONDBLCLK =>
-                        MouseType::DoubleClick,
-                    WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP =>
-                        MouseType::Up,
+                    WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN => {
+                        MouseType::Down
+                    }
+                    WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK | WM_XBUTTONDBLCLK => {
+                        MouseType::DoubleClick
+                    }
+                    WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP => MouseType::Up,
                     _ => unreachable!(),
                 };
                 let x = LOWORD(lparam as u32) as i16 as i32;
                 let y = HIWORD(lparam as u32) as i16 as i32;
                 let mods = LOWORD(wparam as u32) as u32;
-                let event = MouseEvent { x, y, mods, which, ty };
+                let event = MouseEvent {
+                    x,
+                    y,
+                    mods,
+                    which,
+                    ty,
+                };
                 self.handler.mouse(&event);
                 Some(0)
             }
@@ -573,7 +607,7 @@ impl WndProc for MyWndProc {
                 }
                 Some(0)
             }
-            _ => None
+            _ => None,
         }
     }
 }
@@ -622,9 +656,7 @@ impl WindowBuilder {
         self.present_strategy = present_strategy;
     }
 
-    pub fn build(self)
-        -> Result<WindowHandle, Error>
-    {
+    pub fn build(self) -> Result<WindowHandle, Error> {
         unsafe {
             // Maybe separate registration in build api? Probably only need to
             // register once even for multiple window creation.
@@ -677,8 +709,8 @@ impl WindowBuilder {
                 96.0
             };
             win.dpi.set(dpi);
-            let width = (500.0 * (dpi/96.0)) as i32;
-            let height = (400.0 * (dpi/96.0)) as i32;
+            let width = (500.0 * (dpi / 96.0)) as i32;
+            let height = (400.0 * (dpi / 96.0)) as i32;
 
             let hmenu = match self.menu {
                 Some(menu) => menu.into_hmenu(),
@@ -688,19 +720,28 @@ impl WindowBuilder {
             if self.present_strategy == PresentStrategy::Flip {
                 dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
             }
-            let hwnd = create_window(dwExStyle, class_name.as_ptr(),
-                self.title.to_wide().as_ptr(), self.dwStyle,
-                CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0 as HWND, hmenu, 0 as HINSTANCE,
-                win.clone());
+            let hwnd = create_window(
+                dwExStyle,
+                class_name.as_ptr(),
+                self.title.to_wide().as_ptr(),
+                self.dwStyle,
+                CW_USEDEFAULT,
+                CW_USEDEFAULT,
+                width,
+                height,
+                0 as HWND,
+                hmenu,
+                0 as HINSTANCE,
+                win.clone(),
+            );
             if hwnd.is_null() {
                 return Err(Error::Null);
             }
 
-            let dcomp_state = create_dcomp_state(self.present_strategy, hwnd)
-                .unwrap_or_else(|e| {
-                    println!("Error creating swapchain, falling back to hwnd: {:?}", e);
-                    None
-                });
+            let dcomp_state = create_dcomp_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
+                println!("Error creating swapchain, falling back to hwnd: {:?}", e);
+                None
+            });
 
             win.hwnd.set(hwnd);
             let state = WndState {
@@ -735,26 +776,31 @@ unsafe fn choose_adapter(factory: *mut IDXGIFactory2) -> *mut IDXGIAdapter {
             best_vram = vram;
             best_adapter = adapter;
         }
-        println!("{:?}: desc = {:?}, vram = {}",
+        println!(
+            "{:?}: desc = {:?}, vram = {}",
             adapter,
             (&mut desc.Description[0] as LPWSTR).from_wide(),
-            desc.DedicatedVideoMemory);
+            desc.DedicatedVideoMemory
+        );
         i += 1;
     }
     best_adapter
 }
 
-unsafe fn create_dcomp_state(present_strategy: PresentStrategy, hwnd: HWND)
-    -> Result<Option<DCompState>, Error>
-{
+unsafe fn create_dcomp_state(
+    present_strategy: PresentStrategy,
+    hwnd: HWND,
+) -> Result<Option<DCompState>, Error> {
     if present_strategy == PresentStrategy::Hwnd {
         return Ok(None);
     }
     if let Some(create_dxgi_factory2) = OPTIONAL_FUNCTIONS.CreateDXGIFactory2 {
-
         let mut factory: *mut IDXGIFactory2 = null_mut();
-        as_result(create_dxgi_factory2(0, &IID_IDXGIFactory2,
-            &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void))?;
+        as_result(create_dxgi_factory2(
+            0,
+            &IID_IDXGIFactory2,
+            &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void,
+        ))?;
         println!("dxgi factory pointer = {:?}", factory);
         let adapter = choose_adapter(factory);
         println!("adapter = {:?}", adapter);
@@ -767,15 +813,19 @@ unsafe fn create_dcomp_state(present_strategy: PresentStrategy, hwnd: HWND)
         let (swap_effect, bufs) = match present_strategy {
             PresentStrategy::Hwnd => unreachable!(),
             PresentStrategy::Sequential => (DXGI_SWAP_EFFECT_SEQUENTIAL, 1),
-            PresentStrategy::Flip | PresentStrategy::FlipRedirect =>
-                (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, 2),
+            PresentStrategy::Flip | PresentStrategy::FlipRedirect => {
+                (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, 2)
+            }
         };
         let desc = DXGI_SWAP_CHAIN_DESC1 {
             Width: 1024,
             Height: 768,
             Format: DXGI_FORMAT_B8G8R8A8_UNORM,
             Stereo: FALSE,
-            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
             BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
             BufferCount: bufs,
             Scaling: DXGI_SCALING_STRETCH,
@@ -784,15 +834,22 @@ unsafe fn create_dcomp_state(present_strategy: PresentStrategy, hwnd: HWND)
             Flags: 0,
         };
         let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
-        let res = (*factory).CreateSwapChainForComposition(d3d11_device.raw_ptr() as *mut IUnknown,
-            &desc, null_mut(), &mut swap_chain);
+        let res = (*factory).CreateSwapChainForComposition(
+            d3d11_device.raw_ptr() as *mut IUnknown,
+            &desc,
+            null_mut(),
+            &mut swap_chain,
+        );
         println!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
 
         let mut swapchain_visual = dcomp_device.create_visual()?;
         swapchain_visual.set_content_raw(swap_chain as *mut IUnknown)?;
         dcomp_target.set_root(&mut swapchain_visual)?;
         Ok(Some(DCompState {
-            swap_chain, dcomp_device, dcomp_target, swapchain_visual,
+            swap_chain,
+            dcomp_device,
+            dcomp_target,
+            swapchain_visual,
             sizing: false,
         }))
     } else {
@@ -800,9 +857,12 @@ unsafe fn create_dcomp_state(present_strategy: PresentStrategy, hwnd: HWND)
     }
 }
 
-unsafe extern "system" fn win_proc_dispatch(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
-    -> LRESULT
-{
+unsafe extern "system" fn win_proc_dispatch(
+    hwnd: HWND,
+    msg: UINT,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
     if msg == WM_CREATE {
         let create_struct = &*(lparam as *const CREATESTRUCTW);
         let wndproc_ptr = create_struct.lpCreateParams;
@@ -830,12 +890,33 @@ unsafe extern "system" fn win_proc_dispatch(hwnd: HWND, msg: UINT, wparam: WPARA
 
 /// Create a window (same parameters as CreateWindowExW) with associated WndProc.
 unsafe fn create_window(
-        dwExStyle: DWORD, lpClassName: LPCWSTR, lpWindowName: LPCWSTR, dwStyle: DWORD, x: c_int,
-        y: c_int, nWidth: c_int, nHeight: c_int, hWndParent: HWND, hMenu: HMENU,
-        hInstance: HINSTANCE, wndproc: Rc<WindowState>) -> HWND
-{
-    CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, x, y,
-        nWidth, nHeight, hWndParent, hMenu, hInstance, Rc::into_raw(wndproc) as LPVOID)
+    dwExStyle: DWORD,
+    lpClassName: LPCWSTR,
+    lpWindowName: LPCWSTR,
+    dwStyle: DWORD,
+    x: c_int,
+    y: c_int,
+    nWidth: c_int,
+    nHeight: c_int,
+    hWndParent: HWND,
+    hMenu: HMENU,
+    hInstance: HINSTANCE,
+    wndproc: Rc<WindowState>,
+) -> HWND {
+    CreateWindowExW(
+        dwExStyle,
+        lpClassName,
+        lpWindowName,
+        dwStyle,
+        x,
+        y,
+        nWidth,
+        nHeight,
+        hWndParent,
+        hMenu,
+        hInstance,
+        Rc::into_raw(wndproc) as LPVOID,
+    )
 }
 
 impl Cursor {
@@ -882,21 +963,21 @@ impl WindowHandle {
         self.0.upgrade().map(|w| w.hwnd.get())
     }
 
-    pub fn file_dialog(&self, ty: FileDialogType, options: FileDialogOptions)
-        -> Result<OsString, Error>
-    {
+    pub fn file_dialog(
+        &self,
+        ty: FileDialogType,
+        options: FileDialogOptions,
+    ) -> Result<OsString, Error> {
         let hwnd = self.get_hwnd().ok_or(Error::Null)?;
         unsafe { get_file_dialog_path(hwnd, ty, options) }
     }
 
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        self.0.upgrade().map(|w|
-            IdleHandle {
-                hwnd: w.hwnd.get(),
-                queue: w.idle_queue.clone(),
-            }
-        )
+        self.0.upgrade().map(|w| IdleHandle {
+            hwnd: w.hwnd.get(),
+            queue: w.idle_queue.clone(),
+        })
     }
 
     fn take_idle_queue(&self) -> Vec<Box<IdleCallback>> {
@@ -947,7 +1028,8 @@ impl IdleHandle {
     /// is empty. The idle handler will be run from the window's wndproc,
     /// which means it won't be scheduled if the window is closed.
     pub fn add_idle<F>(&self, callback: F)
-        where F: FnOnce(&Any) + Send + 'static
+    where
+        F: FnOnce(&Any) + Send + 'static,
     {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {
@@ -961,7 +1043,7 @@ impl IdleHandle {
     fn invalidate(&self) {
         unsafe {
             InvalidateRect(self.hwnd, null(), FALSE);
-        }        
+        }
     }
 }
 
@@ -973,7 +1055,9 @@ unsafe fn cast_to_hwnd(rt: &GenericRenderTarget) -> Option<HwndRenderTarget> {
     let mut hwnd = null_mut();
     let err = (*raw_ptr).QueryInterface(&ID2D1HwndRenderTarget::uuidof(), &mut hwnd);
     if SUCCEEDED(err) {
-        Some(HwndRenderTarget::from_raw(hwnd as *mut ID2D1HwndRenderTarget))
+        Some(HwndRenderTarget::from_raw(
+            hwnd as *mut ID2D1HwndRenderTarget,
+        ))
     } else {
         None
     }

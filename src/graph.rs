@@ -45,7 +45,9 @@ impl Graph {
     }
 
     pub fn add_before(&mut self, parent: Id, sibling: Id, child: Id) {
-        let pos = self.children[parent].iter().position(|&x| x == sibling)
+        let pos = self.children[parent]
+            .iter()
+            .position(|&x| x == sibling)
             .expect("tried add_before nonexistent sibling");
         self.children[parent].insert(pos, child);
         self.parent[child] = parent;
@@ -56,7 +58,9 @@ impl Graph {
     /// Can panic if the graph structure is invalid. This function leaves the
     /// child in an unparented state, i.e. it can be added again.
     pub fn remove_child(&mut self, parent: Id, child: Id) {
-        let ix = self.children[parent].iter().position(|&x| x == child)
+        let ix = self.children[parent]
+            .iter()
+            .position(|&x| x == child)
             .expect("tried to remove nonexistent child");
         self.children[parent].remove(ix);
         self.parent[child] = child;
@@ -71,7 +75,8 @@ impl Graph {
             let node = self.free_list[ix];
             ix += 1;
             self.parent[node] = node;
-            self.free_list.extend(mem::replace(&mut self.children[node], Vec::new()));
+            self.free_list
+                .extend(mem::replace(&mut self.children[node], Vec::new()));
         }
     }
 }

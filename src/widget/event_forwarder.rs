@@ -41,5 +41,4 @@ impl<T: Any + Clone> Widget for EventForwarder<T> {
             false
         }
     }
-
 }

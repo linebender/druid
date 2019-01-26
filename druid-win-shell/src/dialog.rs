@@ -16,7 +16,6 @@
 
 #![allow(non_upper_case_globals)]
 
-use winapi::Interface;
 use winapi::shared::minwindef::*;
 use winapi::shared::ntdef::LPWSTR;
 use winapi::shared::windef::*;
@@ -24,10 +23,11 @@ use winapi::shared::wtypesbase::*;
 use winapi::um::combaseapi::*;
 use winapi::um::shobjidl::*;
 use winapi::um::shobjidl_core::*;
+use winapi::Interface;
 use wio::com::ComPtr;
 
-use std::ptr::null_mut;
 use std::ffi::OsString;
+use std::ptr::null_mut;
 use util::{as_result, Error, FromWide};
 
 /// Type of file dialog.
@@ -58,25 +58,28 @@ impl FileDialogOptions {
 }
 
 // TODO: remove these when they get added to winapi
-DEFINE_GUID!{CLSID_FileOpenDialog,
-    0xDC1C5A9C, 0xE88A, 0x4DDE, 0xA5, 0xA1, 0x60, 0xF8, 0x2A, 0x20, 0xAE, 0xF7}
-DEFINE_GUID!{CLSID_FileSaveDialog,
-    0xC0B4E2F3, 0xBA21, 0x4773, 0x8D, 0xBA, 0x33, 0x5E, 0xC9, 0x46, 0xEB, 0x8B}
+DEFINE_GUID! {CLSID_FileOpenDialog,
+0xDC1C5A9C, 0xE88A, 0x4DDE, 0xA5, 0xA1, 0x60, 0xF8, 0x2A, 0x20, 0xAE, 0xF7}
+DEFINE_GUID! {CLSID_FileSaveDialog,
+0xC0B4E2F3, 0xBA21, 0x4773, 0x8D, 0xBA, 0x33, 0x5E, 0xC9, 0x46, 0xEB, 0x8B}
 
-pub(crate) unsafe fn get_file_dialog_path(hwnd_owner: HWND, ty: FileDialogType,
-    options: FileDialogOptions) -> Result<OsString, Error>
-{
+pub(crate) unsafe fn get_file_dialog_path(
+    hwnd_owner: HWND,
+    ty: FileDialogType,
+    options: FileDialogOptions,
+) -> Result<OsString, Error> {
     let mut pfd: *mut IFileDialog = null_mut();
     let (class, id) = match ty {
         FileDialogType::Open => (&CLSID_FileOpenDialog, IFileOpenDialog::uuidof()),
         FileDialogType::Save => (&CLSID_FileSaveDialog, IFileSaveDialog::uuidof()),
     };
-    as_result(CoCreateInstance(class,
-            null_mut(),
-            CLSCTX_INPROC_SERVER,
-            &id,
-            &mut pfd as *mut *mut IFileDialog as *mut LPVOID
-            ))?;
+    as_result(CoCreateInstance(
+        class,
+        null_mut(),
+        CLSCTX_INPROC_SERVER,
+        &id,
+        &mut pfd as *mut *mut IFileDialog as *mut LPVOID,
+    ))?;
     let file_dialog = ComPtr::from_raw(pfd);
     as_result(file_dialog.SetOptions(options.0))?;
     as_result(file_dialog.Show(hwnd_owner))?;

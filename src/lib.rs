@@ -14,9 +14,9 @@
 
 //! Simple entity-component-system based GUI.
 
-extern crate druid_win_shell;
 extern crate direct2d;
 extern crate directwrite;
+extern crate druid_win_shell;
 extern crate winapi;
 
 use std::any::Any;
@@ -28,22 +28,22 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::time::Instant;
 
-use direct2d::math::*;
-use direct2d::RenderTarget;
-use direct2d::render_target::GenericRenderTarget;
 use direct2d::brush::SolidColorBrush;
+use direct2d::math::*;
+use direct2d::render_target::GenericRenderTarget;
+use direct2d::RenderTarget;
 
 pub use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
 use druid_win_shell::paint;
 use druid_win_shell::win_main;
-use druid_win_shell::window::{self, IdleHandle, MouseType, WindowHandle, WinHandler};
+use druid_win_shell::window::{self, IdleHandle, MouseType, WinHandler, WindowHandle};
 
 mod graph;
 pub mod widget;
 
 use graph::Graph;
-pub use widget::{KeyEvent, KeyVariant, MouseEvent, Widget};
 use widget::NullWidget;
+pub use widget::{KeyEvent, KeyVariant, MouseEvent, Widget};
 
 /// The top-level handler for the UI.
 ///
@@ -182,7 +182,7 @@ pub struct ListenerCtx<'a> {
     inner: &'a mut Ui,
 }
 
-pub struct PaintCtx<'a, 'b: 'a>  {
+pub struct PaintCtx<'a, 'b: 'a> {
     // TODO: maybe this should be a 3-way enum: normal/hot/active
     is_active: bool,
     is_hot: bool,
@@ -205,20 +205,28 @@ impl Geometry {
     fn offset(&self, offset: (f32, f32)) -> Geometry {
         Geometry {
             pos: (self.pos.0 + offset.0, self.pos.1 + offset.1),
-            size: self.size
+            size: self.size,
         }
     }
 }
 
 impl<'a> From<&'a Geometry> for RectF {
     fn from(geom: &Geometry) -> RectF {
-        (geom.pos.0, geom.pos.1, geom.pos.0 + geom.size.0, geom.pos.1 + geom.size.1).into()
+        (
+            geom.pos.0,
+            geom.pos.1,
+            geom.pos.0 + geom.size.0,
+            geom.pos.1 + geom.size.1,
+        )
+            .into()
     }
 }
 
 impl UiMain {
     pub fn new(state: UiState) -> UiMain {
-        UiMain { state: RefCell::new(state) }
+        UiMain {
+            state: RefCell::new(state),
+        }
     }
 
     /// Send an event to a specific widget. This calls the widget's `poke` method
@@ -252,25 +260,36 @@ impl UiState {
                     focused: None,
                     active: None,
                     hot: None,
-                }
-            }
+                },
+            },
         }
     }
 
     /// Set a listener for menu commands.
     pub fn set_command_listener<F>(&mut self, f: F)
-        where F: FnMut(u32, ListenerCtx) + 'static
+    where
+        F: FnMut(u32, ListenerCtx) + 'static,
     {
         self.command_listener = Some(Box::new(f));
     }
 
     fn mouse(&mut self, x: f32, y: f32, raw_event: &window::MouseEvent) {
-        fn dispatch_mouse(widgets: &mut [Box<Widget>], node: Id,
-            x: f32, y: f32, raw_event: &window::MouseEvent, ctx: &mut HandlerCtx) -> bool
-        {
-            let count = if raw_event.ty == MouseType::Down { 1 } else { 0 };
+        fn dispatch_mouse(
+            widgets: &mut [Box<Widget>],
+            node: Id,
+            x: f32,
+            y: f32,
+            raw_event: &window::MouseEvent,
+            ctx: &mut HandlerCtx,
+        ) -> bool {
+            let count = if raw_event.ty == MouseType::Down {
+                1
+            } else {
+                0
+            };
             let event = MouseEvent {
-                x, y,
+                x,
+                y,
                 mods: raw_event.mods,
                 which: raw_event.which,
                 count,
@@ -278,10 +297,14 @@ impl UiState {
             widgets[node].mouse(&event, ctx)
         }
 
-        fn mouse_rec(widgets: &mut [Box<Widget>], graph: &Graph,
-            x: f32, y: f32, raw_event: &window::MouseEvent, ctx: &mut HandlerCtx)
-            -> bool
-        {
+        fn mouse_rec(
+            widgets: &mut [Box<Widget>],
+            graph: &Graph,
+            x: f32,
+            y: f32,
+            raw_event: &window::MouseEvent,
+            ctx: &mut HandlerCtx,
+        ) -> bool {
             let node = ctx.id;
             let g = ctx.c.geom[node];
             let x = x - g.pos.0;
@@ -303,19 +326,28 @@ impl UiState {
         if let Some(active) = self.c.active {
             // Send mouse event directly to active widget.
             let (x, y) = self.xy_to_local(active, x, y);
-            dispatch_mouse(&mut self.inner.widgets, active, x, y, raw_event,
+            dispatch_mouse(
+                &mut self.inner.widgets,
+                active,
+                x,
+                y,
+                raw_event,
                 &mut HandlerCtx {
                     id: active,
                     c: &mut self.inner.c,
-                }
+                },
             );
         } else {
-            mouse_rec(&mut self.inner.widgets, &self.inner.graph,
-                x, y, raw_event,
+            mouse_rec(
+                &mut self.inner.widgets,
+                &self.inner.graph,
+                x,
+                y,
+                raw_event,
                 &mut HandlerCtx {
                     id: self.inner.graph.root,
                     c: &mut self.inner.c,
-                }
+                },
             );
         }
         self.dispatch_events();
@@ -356,30 +388,34 @@ impl UiState {
         if new_hot != old_hot {
             self.c.hot = new_hot;
             if let Some(old_hot) = old_hot {
-                self.inner.widgets[old_hot].on_hot_changed(false,
+                self.inner.widgets[old_hot].on_hot_changed(
+                    false,
                     &mut HandlerCtx {
                         id: old_hot,
                         c: &mut self.inner.c,
-                    }
+                    },
                 );
             }
             if let Some(new_hot) = new_hot {
-                self.inner.widgets[new_hot].on_hot_changed(true,
+                self.inner.widgets[new_hot].on_hot_changed(
+                    true,
                     &mut HandlerCtx {
                         id: new_hot,
                         c: &mut self.inner.c,
-                    }
+                    },
                 );
             }
         }
 
         if let Some(node) = self.c.active.or(new_hot) {
             let (x, y) = self.xy_to_local(node, x, y);
-            self.inner.widgets[node].mouse_moved(x, y,
+            self.inner.widgets[node].mouse_moved(
+                x,
+                y,
                 &mut HandlerCtx {
                     id: node,
                     c: &mut self.inner.c,
-                }
+                },
             );
         }
         self.dispatch_events();
@@ -457,11 +493,12 @@ impl UiState {
         for node in 0..self.widgets.len() {
             if self.c.per_widget[node].anim_frame_requested {
                 self.c.per_widget[node].anim_frame_requested = false;
-                self.inner.widgets[node].anim_frame(interval,
+                self.inner.widgets[node].anim_frame(
+                    interval,
                     &mut HandlerCtx {
                         id: node,
                         c: &mut self.inner.c,
-                    }
+                    },
                 );
             }
         }
@@ -523,7 +560,8 @@ impl Ui {
     /// Put a widget in the graph and add its children. Returns newly allocated
     /// id for the node.
     pub fn add<W>(&mut self, widget: W, children: &[Id]) -> Id
-        where W: Widget + 'static
+    where
+        W: Widget + 'static,
     {
         let id = self.graph.alloc_node();
         if id < self.widgets.len() {
@@ -552,7 +590,9 @@ impl Ui {
 
     /// Add a listener that expects a specific type.
     pub fn add_listener<A, F>(&mut self, node: Id, mut f: F)
-        where A: Any, F: FnMut(&mut A, ListenerCtx) + 'static
+    where
+        A: Any,
+        F: FnMut(&mut A, ListenerCtx) + 'static,
     {
         let wrapper: Box<FnMut(&mut Any, ListenerCtx)> = Box::new(move |a, ctx| {
             if let Some(arg) = a.downcast_mut() {
@@ -614,10 +654,16 @@ impl Ui {
         // Do pre-order traversal on graph, painting each node in turn.
         //
         // Implemented as a recursion, but we could use an explicit queue instead.
-        fn paint_rec(widgets: &mut [Box<Widget>], graph: &Graph, geom: &[Geometry],
-            paint_ctx: &mut PaintCtx, node: Id, pos: (f32, f32), active: Option<Id>,
-            hot: Option<Id>)
-        {
+        fn paint_rec(
+            widgets: &mut [Box<Widget>],
+            graph: &Graph,
+            geom: &[Geometry],
+            paint_ctx: &mut PaintCtx,
+            node: Id,
+            pos: (f32, f32),
+            active: Option<Id>,
+            hot: Option<Id>,
+        ) {
             let g = geom[node].offset(pos);
             paint_ctx.is_active = active == Some(node);
             paint_ctx.is_hot = hot == Some(node) && (paint_ctx.is_active || active.is_none());
@@ -633,14 +679,26 @@ impl Ui {
             inner: paint_ctx,
             dwrite_factory: &self.c.dwrite_factory,
         };
-        paint_rec(&mut self.widgets, &self.graph, &self.c.geom,
-            &mut paint_ctx, root, (0.0, 0.0), self.c.active, self.c.hot);
+        paint_rec(
+            &mut self.widgets,
+            &self.graph,
+            &self.c.geom,
+            &mut paint_ctx,
+            root,
+            (0.0, 0.0),
+            self.c.active,
+            self.c.hot,
+        );
     }
 
     fn layout(&mut self, bc: &BoxConstraints, root: Id) {
-        fn layout_rec(widgets: &mut [Box<Widget>], ctx: &mut LayoutCtx, graph: &Graph,
-            bc: &BoxConstraints, node: Id) -> (f32, f32)
-        {
+        fn layout_rec(
+            widgets: &mut [Box<Widget>],
+            ctx: &mut LayoutCtx,
+            graph: &Graph,
+            bc: &BoxConstraints,
+            node: Id,
+        ) -> (f32, f32) {
             let mut size = None;
             loop {
                 let layout_res = widgets[node].layout(bc, &graph.children[node], size, ctx);
@@ -671,8 +729,10 @@ impl BoxConstraints {
     }
 
     pub fn constrain(&self, size: (f32, f32)) -> (f32, f32) {
-        (clamp(size.0, self.min_width, self.max_width),
-            clamp(size.1, self.min_height, self.max_height))
+        (
+            clamp(size.0, self.min_width, self.max_width),
+            clamp(size.1, self.min_height, self.max_height),
+        )
     }
 }
 
@@ -794,9 +854,11 @@ impl<'a> ListenerCtx<'a> {
         self.c.handle.close();
     }
 
-    pub fn file_dialog(&mut self, ty: FileDialogType, options: FileDialogOptions)
-        -> Result<OsString, Error>
-    {
+    pub fn file_dialog(
+        &mut self,
+        ty: FileDialogType,
+        options: FileDialogOptions,
+    ) -> Result<OsString, Error> {
         let result = self.c.handle.file_dialog(ty, options)?;
         Ok(result)
     }
@@ -843,7 +905,10 @@ impl WinHandler for UiMain {
             let rt = paint_ctx.render_target();
             size = rt.get_size();
             let rect = RectF::from((0.0, 0.0, size.width, size.height));
-            let bg = SolidColorBrush::create(rt).with_color(0x272822).build().unwrap();
+            let bg = SolidColorBrush::create(rt)
+                .with_color(0x272822)
+                .build()
+                .unwrap();
             rt.fill_rectangle(rect, &bg);
         }
         let root = state.graph.root;
@@ -869,7 +934,10 @@ impl WinHandler for UiMain {
 
     fn char(&self, ch: u32, mods: u32) {
         if let Some(ch) = char::from_u32(ch) {
-            let key_event = KeyEvent { key: KeyVariant::Char(ch), mods };
+            let key_event = KeyEvent {
+                key: KeyVariant::Char(ch),
+                mods,
+            };
             let mut state = self.state.borrow_mut();
             state.handle_key_event(&key_event);
         } else {
@@ -878,7 +946,10 @@ impl WinHandler for UiMain {
     }
 
     fn keydown(&self, vk_code: i32, mods: u32) -> bool {
-        let key_event = KeyEvent { key: KeyVariant::Vkey(vk_code), mods };
+        let key_event = KeyEvent {
+            key: KeyVariant::Vkey(vk_code),
+            mods,
+        };
         let mut state = self.state.borrow_mut();
         state.handle_key_event(&key_event)
     }
@@ -909,5 +980,7 @@ impl WinHandler for UiMain {
         win_main::request_quit();
     }
 
-    fn as_any(&self) -> &Any { self }
+    fn as_any(&self) -> &Any {
+        self
+    }
 }

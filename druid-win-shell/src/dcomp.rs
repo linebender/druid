@@ -18,10 +18,9 @@
 // for now we're just using what we need to get a swapchain up.
 #![allow(unused)]
 
-use std::ops::{Deref, DerefMut};
 use std::mem;
+use std::ops::{Deref, DerefMut};
 use std::ptr::{null, null_mut};
-use winapi::Interface;
 use winapi::shared::dxgi::IDXGIDevice;
 use winapi::shared::dxgi1_2::DXGI_ALPHA_MODE_IGNORE;
 use winapi::shared::dxgiformat::DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -32,19 +31,22 @@ use winapi::um::d2d1::*;
 use winapi::um::d2d1_1::*;
 use winapi::um::d3d11::*;
 use winapi::um::d3dcommon::D3D_DRIVER_TYPE_HARDWARE;
-use winapi::um::unknwnbase::IUnknown;
 use winapi::um::dcomp::*;
 use winapi::um::dcompanimation::*;
+use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winnt::HRESULT;
+use winapi::Interface;
 use wio::com::ComPtr;
 
-use direct2d::{self, RenderTarget};
 use direct2d::math::Matrix3x2F;
+use direct2d::{self, RenderTarget};
 
 use util::OPTIONAL_FUNCTIONS;
 
 unsafe fn wrap<T, U, F>(hr: HRESULT, ptr: *mut T, f: F) -> Result<U, HRESULT>
-    where F: Fn(ComPtr<T>) -> U, T: Interface
+where
+    F: Fn(ComPtr<T>) -> U,
+    T: Interface,
 {
     if SUCCEEDED(hr) {
         Ok(f(ComPtr::from_raw(ptr)))
@@ -54,7 +56,11 @@ unsafe fn wrap<T, U, F>(hr: HRESULT, ptr: *mut T, f: F) -> Result<U, HRESULT>
 }
 
 fn unit_err(hr: HRESULT) -> Result<(), HRESULT> {
-    if SUCCEEDED(hr) { Ok(()) } else { Err(hr) }
+    if SUCCEEDED(hr) {
+        Ok(())
+    } else {
+        Err(hr)
+    }
 }
 
 pub struct D3D11Device(ComPtr<ID3D11Device>);
@@ -74,9 +80,19 @@ impl D3D11Device {
     pub fn new_simple() -> Result<D3D11Device, HRESULT> {
         unsafe {
             let mut d3d11_device: *mut ID3D11Device = null_mut();
-            let flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;  // could probably set single threaded
-            let hr = D3D11CreateDevice(null_mut(), D3D_DRIVER_TYPE_HARDWARE, null_mut(), flags,
-                null(), 0, D3D11_SDK_VERSION, &mut d3d11_device, null_mut(), null_mut());
+            let flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT; // could probably set single threaded
+            let hr = D3D11CreateDevice(
+                null_mut(),
+                D3D_DRIVER_TYPE_HARDWARE,
+                null_mut(),
+                flags,
+                null(),
+                0,
+                D3D11_SDK_VERSION,
+                &mut d3d11_device,
+                null_mut(),
+                null_mut(),
+            );
             if !SUCCEEDED(hr) {
                 println!("Error on D3D11CreateDevice: 0x{:x}", hr);
             }
@@ -105,21 +121,26 @@ impl D2D1Device {
         unsafe {
             let create = OPTIONAL_FUNCTIONS.DCompositionCreateDevice2.ok_or(0)?;
             let mut dcomp_device: *mut IDCompositionDevice = null_mut();
-            let hr = create(self.0.as_raw() as *mut IUnknown,
+            let hr = create(
+                self.0.as_raw() as *mut IUnknown,
                 &IDCompositionDevice::uuidof(),
-                &mut dcomp_device as *mut _ as *mut _);
+                &mut dcomp_device as *mut _ as *mut _,
+            );
             wrap(hr, dcomp_device, DCompositionDevice)
         }
     }
 }
 
 impl DCompositionDevice {
-    pub unsafe fn create_target_for_hwnd(&mut self, hwnd: HWND, topmost: bool)
-        -> Result<DCompositionTarget, HRESULT>
-    {
+    pub unsafe fn create_target_for_hwnd(
+        &mut self,
+        hwnd: HWND,
+        topmost: bool,
+    ) -> Result<DCompositionTarget, HRESULT> {
         let mut dcomp_target: *mut IDCompositionTarget = null_mut();
-        let hr = self.0.CreateTargetForHwnd(hwnd, if topmost { TRUE } else { FALSE },
-            &mut dcomp_target);
+        let hr =
+            self.0
+                .CreateTargetForHwnd(hwnd, if topmost { TRUE } else { FALSE }, &mut dcomp_target);
         wrap(hr, dcomp_target, DCompositionTarget)
     }
 
@@ -132,44 +153,43 @@ impl DCompositionDevice {
     }
 
     /// Creates an RGB surface. Probably should allow more options (including alpha).
-    pub fn create_virtual_surface(&mut self, height: u32, width: u32)
-        -> Result<DCompositionVirtualSurface, HRESULT>
-    {
+    pub fn create_virtual_surface(
+        &mut self,
+        height: u32,
+        width: u32,
+    ) -> Result<DCompositionVirtualSurface, HRESULT> {
         unsafe {
             let mut surface: *mut IDCompositionVirtualSurface = null_mut();
-            let hr = self.0.CreateVirtualSurface(width, height, DXGI_FORMAT_B8G8R8A8_UNORM,
-                DXGI_ALPHA_MODE_IGNORE, &mut surface);
+            let hr = self.0.CreateVirtualSurface(
+                width,
+                height,
+                DXGI_FORMAT_B8G8R8A8_UNORM,
+                DXGI_ALPHA_MODE_IGNORE,
+                &mut surface,
+            );
             wrap(hr, surface, DCompositionVirtualSurface)
         }
     }
 
     pub fn commit(&mut self) -> Result<(), HRESULT> {
-        unsafe {
-            unit_err(self.0.Commit())
-        }
+        unsafe { unit_err(self.0.Commit()) }
     }
 }
 
 impl DCompositionTarget {
     // alternatively could be set_root with an option
     pub fn clear_root(&mut self) -> Result<(), HRESULT> {
-        unsafe {
-            unit_err(self.0.SetRoot(null_mut()))
-        }
+        unsafe { unit_err(self.0.SetRoot(null_mut())) }
     }
 
     pub fn set_root(&mut self, visual: &mut DCompositionVisual) -> Result<(), HRESULT> {
-        unsafe {
-            unit_err(self.0.SetRoot(visual.0.as_raw()))
-        }
+        unsafe { unit_err(self.0.SetRoot(visual.0.as_raw())) }
     }
 }
 
 impl DCompositionVisual {
     pub fn set_content<T: Content>(&mut self, content: &mut T) -> Result<(), HRESULT> {
-        unsafe {
-            self.set_content_raw(content.unknown_ptr())
-        }
+        unsafe { self.set_content_raw(content.unknown_ptr()) }
     }
 
     // TODO: impl Content trait for swapchain, for type safety

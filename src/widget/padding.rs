@@ -14,9 +14,9 @@
 
 //! A widget that just adds padding during layout.
 
+use widget::Widget;
 use {BoxConstraints, LayoutResult};
 use {Id, LayoutCtx, Ui};
-use widget::Widget;
 
 /// A padding widget. Is expected to have exactly one child.
 pub struct Padding {
@@ -43,13 +43,19 @@ impl Padding {
 }
 
 impl Widget for Padding {
-    fn layout(&mut self, bc: &BoxConstraints, children: &[Id], size: Option<(f32, f32)>,
-        ctx: &mut LayoutCtx) -> LayoutResult
-    {
+    fn layout(
+        &mut self,
+        bc: &BoxConstraints,
+        children: &[Id],
+        size: Option<(f32, f32)>,
+        ctx: &mut LayoutCtx,
+    ) -> LayoutResult {
         if let Some(size) = size {
             ctx.position_child(children[0], (self.left, self.top));
-            LayoutResult::Size((size.0 + self.left + self.right,
-                size.1 + self.top + self.bottom))
+            LayoutResult::Size((
+                size.0 + self.left + self.right,
+                size.1 + self.top + self.bottom,
+            ))
         } else {
             let child_bc = BoxConstraints {
                 min_width: bc.min_width - (self.left + self.right),
