@@ -120,11 +120,13 @@ impl Widget for Button {
                 _ => 0x404048,
             };
             let brush = paint_ctx.render_ctx.solid_brush(bg_color).unwrap();
+            let (x, y) = geom.pos;
+            let (width, height) = geom.size;
             let rect = Rect::new(
-                geom.pos.0.into(),
-                geom.pos.1.into(),
-                geom.size.0.into(),
-                geom.size.1.into(),
+                x as f64,
+                y as f64,
+                x as f64 + width as f64,
+                y as f64 + height as f64,
             );
             paint_ctx
                 .render_ctx

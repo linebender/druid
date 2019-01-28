@@ -119,6 +119,8 @@ pub struct LayoutCtx {
 
     /// Which widget is hot (hovered), if any.
     hot: Option<Id>,
+
+    size: (f32, f32),
 }
 
 #[derive(Default, Clone, Copy)]
@@ -260,6 +262,7 @@ impl UiState {
                     focused: None,
                     active: None,
                     hot: None,
+                    size: (0.0, 0.0),
                 },
             },
         }
@@ -891,7 +894,7 @@ impl WinHandler for UiMain {
             paint_ctx.clear(0x272822).unwrap();
         }
         let root = state.graph.root;
-        let bc = BoxConstraints::tight((100.0, 100.0)); //TODO: get actual size
+        let bc = BoxConstraints::tight(state.inner.c.size);
 
         // TODO: be lazier about relayout
         state.layout(&bc, root);
@@ -962,5 +965,9 @@ impl WinHandler for UiMain {
 
     fn as_any(&self) -> &Any {
         self
+    }
+
+    fn size(&self, width: u32, height: u32) {
+        self.state.borrow_mut().inner.c.size = (width as f32, height as f32);
     }
 }
