@@ -65,7 +65,7 @@ impl Label {
 impl Widget for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         let text_layout = self.get_layout(paint_ctx.render_ctx);
-        let brush = paint_ctx.render_ctx.solid_brush(0xf0f0ea).unwrap();
+        let brush = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
 
         // TODO: bring back default_text_options from win-shell
         paint_ctx
@@ -115,9 +115,9 @@ impl Widget for Button {
             let is_active = paint_ctx.is_active();
             let is_hot = paint_ctx.is_hot();
             let bg_color = match (is_active, is_hot) {
-                (true, true) => 0x606068,
-                (false, true) => 0x505058,
-                _ => 0x404048,
+                (true, true) => 0x606068ff,
+                (false, true) => 0x505058ff,
+                _ => 0x404048ff,
             };
             let brush = paint_ctx.render_ctx.solid_brush(bg_color).unwrap();
             let (x, y) = geom.pos;
