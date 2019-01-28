@@ -968,6 +968,9 @@ impl WinHandler for UiMain {
     }
 
     fn size(&self, width: u32, height: u32) {
-        self.state.borrow_mut().inner.c.size = (width as f32, height as f32);
+        let mut state = self.state.borrow_mut();
+        let dpi = state.c.handle.get_dpi();
+        let scale = 96.0 / dpi;
+        state.inner.c.size = (width as f32 * scale, height as f32 * scale);
     }
 }
