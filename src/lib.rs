@@ -187,8 +187,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     // TODO: maybe this should be a 3-way enum: normal/hot/active
     is_active: bool,
     is_hot: bool,
-    pub inner: &'a mut piet_common::Piet<'b>,
-    dwrite_factory: &'a directwrite::Factory,
+    pub render_ctx: &'a mut piet_common::Piet<'b>,
 }
 
 #[derive(Debug)]
@@ -677,8 +676,7 @@ impl Ui {
         let mut paint_ctx = PaintCtx {
             is_active: false,
             is_hot: false,
-            inner: render_ctx,
-            dwrite_factory: &self.c.dwrite_factory,
+            render_ctx: render_ctx,
         };
         paint_rec(
             &mut self.widgets,
@@ -866,18 +864,6 @@ impl<'a> ListenerCtx<'a> {
 }
 
 impl<'a, 'b> PaintCtx<'a, 'b> {
-    // pub fn d2d_factory(&self) -> &direct2d::Factory {
-    //     self.inner.d2d_factory()
-    // }
-
-    pub fn dwrite_factory(&self) -> &directwrite::Factory {
-        self.dwrite_factory
-    }
-
-    pub fn render_target(&'a mut self) -> &'a mut piet_common::Piet<'b> {
-        self.inner
-    }
-
     /// Determine whether this widget is the active one.
     pub fn is_active(&self) -> bool {
         self.is_active

@@ -64,12 +64,12 @@ impl Label {
 
 impl Widget for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let text_layout = self.get_layout(paint_ctx.inner);
-        let brush = paint_ctx.inner.solid_brush(0xf0f0ea).unwrap();
+        let text_layout = self.get_layout(paint_ctx.render_ctx);
+        let brush = paint_ctx.render_ctx.solid_brush(0xf0f0ea).unwrap();
 
         // TODO: bring back default_text_options from win-shell
         paint_ctx
-            .inner
+            .render_ctx
             .draw_text(&text_layout, geom.pos, &brush)
             .unwrap();
     }
@@ -119,7 +119,7 @@ impl Widget for Button {
                 (false, true) => 0x505058,
                 _ => 0x404048,
             };
-            let brush = paint_ctx.inner.solid_brush(bg_color).unwrap();
+            let brush = paint_ctx.render_ctx.solid_brush(bg_color).unwrap();
             let rect = Rect::new(
                 geom.pos.0.into(),
                 geom.pos.1.into(),
@@ -127,7 +127,7 @@ impl Widget for Button {
                 geom.size.1.into(),
             );
             paint_ctx
-                .inner
+                .render_ctx
                 .fill(rect, &brush, FillRule::NonZero)
                 .unwrap();
         }

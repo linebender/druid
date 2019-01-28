@@ -47,7 +47,7 @@ use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarge
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 use menu::Menu;
-use paint::{self, PaintCtx};
+use paint;
 use util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use Error;
 
@@ -343,10 +343,6 @@ impl MyWndProc {
         let s = state.as_mut().unwrap();
         let rt = s.render_target.as_mut().unwrap();
         rt.begin_draw();
-        // let anim = self.handler.paint(&mut PaintCtx {
-        //     d2d_factory: &self.d2d_factory,
-        //     render_target: rt,
-        // });
         let anim = self.handler.paint(&mut piet_common::Piet::new(
             &self.d2d_factory,
             &directwrite::Factory::new().unwrap(),
