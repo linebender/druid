@@ -17,6 +17,7 @@
 extern crate direct2d;
 extern crate directwrite;
 extern crate druid_win_shell;
+extern crate kurbo;
 extern crate piet;
 extern crate piet_common;
 extern crate winapi;
@@ -31,7 +32,6 @@ use std::ops::{Deref, DerefMut};
 use std::time::Instant;
 
 use direct2d::math::*;
-use direct2d::RenderTarget;
 
 use piet::RenderContext;
 
@@ -187,7 +187,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     // TODO: maybe this should be a 3-way enum: normal/hot/active
     is_active: bool,
     is_hot: bool,
-    inner: &'a mut piet_common::Piet<'b>,
+    pub inner: &'a mut piet_common::Piet<'b>,
     dwrite_factory: &'a directwrite::Factory,
 }
 
@@ -902,7 +902,7 @@ impl WinHandler for UiMain {
         let mut state = self.state.borrow_mut();
         state.anim_frame();
         {
-            paint_ctx.clear(0x272822);
+            paint_ctx.clear(0x272822).unwrap();
         }
         let root = state.graph.root;
         let bc = BoxConstraints::tight((100.0, 100.0)); //TODO: get actual size

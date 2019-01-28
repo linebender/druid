@@ -128,6 +128,7 @@ dependencies = [
  "direct2d 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "directwrite 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "druid-win-shell 0.1.0",
+ "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piet 0.1.0",
  "piet-common 0.1.0",
  "winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
