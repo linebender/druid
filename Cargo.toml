@@ -11,13 +11,11 @@ keywords = ["gui", "ui", "toolkit"]
 [dependencies]
 directwrite = "0.1.2"
 direct2d = "0.2.0"
-# direct3d11 = "0.1.7"
-# dxgi = "0.1.7"
 
 # this is only included for VK_ constants, maybe remove
 winapi = "0.3.6"
-piet-common = { path = "../piet/piet-common"}
-piet = { path = "../piet/piet"}
+piet-common = { git = "https://github.com/linebender/piet", branch = "common" }
+piet = { git = "https://github.com/linebender/piet", branch = "common" }
 kurbo = "0.2.0"
 
 

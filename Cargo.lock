@@ -129,8 +129,8 @@ dependencies = [
  "directwrite 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "druid-win-shell 0.1.0",
  "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet 0.1.0",
- "piet-common 0.1.0",
+ "piet 0.0.1 (git+https://github.com/linebender/piet?branch=common)",
+ "piet-common 0.0.1 (git+https://github.com/linebender/piet?branch=common)",
  "winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -141,7 +141,7 @@ dependencies = [
  "direct2d 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "directwrite 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet-common 0.1.0",
+ "piet-common 0.0.1 (git+https://github.com/linebender/piet?branch=common)",
  "time 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "wio 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -352,23 +352,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "piet"
-version = "0.1.0"
+version = "0.0.1"
+source = "git+https://github.com/linebender/piet?branch=common#9d4caadce93184f76487827226ca1d0bc45d5735"
 dependencies = [
  "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "piet-cairo"
-version = "0.1.0"
+version = "0.0.1"
+source = "git+https://github.com/linebender/piet?branch=common#9d4caadce93184f76487827226ca1d0bc45d5735"
 dependencies = [
  "cairo-rs 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet 0.1.0",
+ "piet 0.0.1 (git+https://github.com/linebender/piet?branch=common)",
 ]
 
 [[package]]
 name = "piet-common"
-version = "0.1.0"
+version = "0.0.1"
+source = "git+https://github.com/linebender/piet?branch=common#9d4caadce93184f76487827226ca1d0bc45d5735"
 dependencies = [
  "cairo-rs 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "direct2d 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -376,31 +379,33 @@ dependencies = [
  "directwrite 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "dxgi 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet 0.1.0",
- "piet-cairo 0.1.0",
- "piet-direct2d 0.1.0",
- "piet-web 0.1.0",
+ "piet 0.0.1 (git+https://github.com/linebender/piet?branch=common)",
+ "piet-cairo 0.0.1 (git+https://github.com/linebender/piet?branch=common)",
+ "piet-direct2d 0.0.1 (git+https://github.com/linebender/piet?branch=common)",
+ "piet-web 0.1.0 (git+https://github.com/linebender/piet?branch=common)",
 ]
 
 [[package]]
 name = "piet-direct2d"
-version = "0.1.0"
+version = "0.0.1"
+source = "git+https://github.com/linebender/piet?branch=common#9d4caadce93184f76487827226ca1d0bc45d5735"
 dependencies = [
  "direct2d 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "directwrite 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "dxgi 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet 0.1.0",
+ "piet 0.0.1 (git+https://github.com/linebender/piet?branch=common)",
  "winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "piet-web"
 version = "0.1.0"
+source = "git+https://github.com/linebender/piet?branch=common#9d4caadce93184f76487827226ca1d0bc45d5735"
 dependencies = [
  "js-sys 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet 0.1.0",
+ "piet 0.0.1 (git+https://github.com/linebender/piet?branch=common)",
  "wasm-bindgen 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "web-sys 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -738,6 +743,11 @@ dependencies = [
 "checksum num-iter 0.1.37 (registry+https://github.com/rust-lang/crates.io-index)" = "af3fdbbc3291a5464dc57b03860ec37ca6bf915ed6ee385e7c6c052c422b2124"
 "checksum num-rational 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)" = "ee314c74bd753fc86b4780aa9475da469155f3848473a261d2d18e35245a784e"
 "checksum num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "0b3a5d7cc97d6d30d8b9bc8fa19bf45349ffe46241e8816f50f62f6d6aaabee1"
+"checksum piet 0.0.1 (git+https://github.com/linebender/piet?branch=common)" = "<none>"
+"checksum piet-cairo 0.0.1 (git+https://github.com/linebender/piet?branch=common)" = "<none>"
+"checksum piet-common 0.0.1 (git+https://github.com/linebender/piet?branch=common)" = "<none>"
+"checksum piet-direct2d 0.0.1 (git+https://github.com/linebender/piet?branch=common)" = "<none>"
+"checksum piet-web 0.1.0 (git+https://github.com/linebender/piet?branch=common)" = "<none>"
 "checksum pkg-config 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "676e8eb2b1b4c9043511a9b7bea0915320d7e502b0a079fb03f9635a5252b18c"
 "checksum proc-macro2 0.4.26 (registry+https://github.com/rust-lang/crates.io-index)" = "38fddd23d98b2144d197c0eca5705632d4fe2667d14a6be5df8934f8d74f1978"
 "checksum quick-error 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "9274b940887ce9addde99c4eee6b5c44cc494b182b97e73dc8ffdcb3397fd3f0"
