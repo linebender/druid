@@ -14,8 +14,6 @@
 
 //! Example of animation frames.
 
-extern crate direct2d;
-extern crate directwrite;
 extern crate druid;
 extern crate druid_win_shell;
 extern crate kurbo;

@@ -14,13 +14,10 @@
 
 //! Simple entity-component-system based GUI.
 
-extern crate direct2d;
-extern crate directwrite;
 extern crate druid_win_shell;
 extern crate kurbo;
 extern crate piet;
 extern crate piet_common;
-extern crate winapi;
 
 use std::any::Any;
 use std::cell::RefCell;
@@ -30,8 +27,6 @@ use std::ffi::OsString;
 use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::time::Instant;
-
-use direct2d::math::*;
 
 use piet::RenderContext;
 
@@ -89,8 +84,6 @@ pub struct Ui {
 
 /// The context given to layout methods.
 pub struct LayoutCtx {
-    dwrite_factory: directwrite::Factory,
-
     handle: WindowHandle,
 
     /// Bounding box of each widget. The position is relative to the parent.
@@ -212,18 +205,6 @@ impl Geometry {
     }
 }
 
-impl<'a> From<&'a Geometry> for RectF {
-    fn from(geom: &Geometry) -> RectF {
-        (
-            geom.pos.0,
-            geom.pos.1,
-            geom.pos.0 + geom.size.0,
-            geom.pos.1 + geom.size.1,
-        )
-            .into()
-    }
-}
-
 impl UiMain {
     pub fn new(state: UiState) -> UiMain {
         UiMain {
@@ -252,7 +233,6 @@ impl UiState {
                 widgets: Vec::new(),
                 graph: Default::default(),
                 c: LayoutCtx {
-                    dwrite_factory: directwrite::Factory::new().unwrap(),
                     geom: Vec::new(),
                     per_widget: Vec::new(),
                     anim_state: AnimState::Idle,
@@ -739,10 +719,6 @@ impl BoxConstraints {
 }
 
 impl LayoutCtx {
-    pub fn dwrite_factory(&self) -> &directwrite::Factory {
-        &self.dwrite_factory
-    }
-
     pub fn position_child(&mut self, child: Id, pos: (f32, f32)) {
         self.geom[child].pos = pos;
     }

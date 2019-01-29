@@ -125,13 +125,10 @@ dependencies = [
 name = "druid"
 version = "0.1.0"
 dependencies = [
- "direct2d 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "directwrite 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "druid-win-shell 0.1.0",
  "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piet 0.0.1 (git+https://github.com/linebender/piet?branch=common)",
  "piet-common 0.0.1 (git+https://github.com/linebender/piet?branch=common)",
- "winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

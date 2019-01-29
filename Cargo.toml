@@ -9,11 +9,6 @@ categories = ["gui"]
 keywords = ["gui", "ui", "toolkit"]
 
 [dependencies]
-directwrite = "0.1.2"
-direct2d = "0.2.0"
-
-# this is only included for VK_ constants, maybe remove
-winapi = "0.3.6"
 piet-common = { git = "https://github.com/linebender/piet", branch = "common" }
 piet = { git = "https://github.com/linebender/piet", branch = "common" }
 kurbo = "0.2.0"
