@@ -14,10 +14,10 @@
 
 //! Simple entity-component-system based GUI.
 
-extern crate direct2d;
-extern crate directwrite;
 extern crate druid_win_shell;
-extern crate winapi;
+extern crate kurbo;
+extern crate piet;
+extern crate piet_common;
 
 use std::any::Any;
 use std::cell::RefCell;
@@ -28,13 +28,9 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::time::Instant;
 
-use direct2d::brush::SolidColorBrush;
-use direct2d::math::*;
-use direct2d::render_target::GenericRenderTarget;
-use direct2d::RenderTarget;
+use piet::RenderContext;
 
 pub use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
-use druid_win_shell::paint;
 use druid_win_shell::win_main;
 use druid_win_shell::window::{self, IdleHandle, MouseType, WinHandler, WindowHandle};
 
@@ -88,8 +84,6 @@ pub struct Ui {
 
 /// The context given to layout methods.
 pub struct LayoutCtx {
-    dwrite_factory: directwrite::Factory,
-
     handle: WindowHandle,
 
     /// Bounding box of each widget. The position is relative to the parent.
@@ -118,6 +112,8 @@ pub struct LayoutCtx {
 
     /// Which widget is hot (hovered), if any.
     hot: Option<Id>,
+
+    size: (f32, f32),
 }
 
 #[derive(Default, Clone, Copy)]
@@ -186,8 +182,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     // TODO: maybe this should be a 3-way enum: normal/hot/active
     is_active: bool,
     is_hot: bool,
-    inner: &'a mut paint::PaintCtx<'b>,
-    dwrite_factory: &'a directwrite::Factory,
+    pub render_ctx: &'a mut piet_common::Piet<'b>,
 }
 
 #[derive(Debug)]
@@ -207,18 +202,6 @@ impl Geometry {
             pos: (self.pos.0 + offset.0, self.pos.1 + offset.1),
             size: self.size,
         }
-    }
-}
-
-impl<'a> From<&'a Geometry> for RectF {
-    fn from(geom: &Geometry) -> RectF {
-        (
-            geom.pos.0,
-            geom.pos.1,
-            geom.pos.0 + geom.size.0,
-            geom.pos.1 + geom.size.1,
-        )
-            .into()
     }
 }
 
@@ -250,7 +233,6 @@ impl UiState {
                 widgets: Vec::new(),
                 graph: Default::default(),
                 c: LayoutCtx {
-                    dwrite_factory: directwrite::Factory::new().unwrap(),
                     geom: Vec::new(),
                     per_widget: Vec::new(),
                     anim_state: AnimState::Idle,
@@ -260,6 +242,7 @@ impl UiState {
                     focused: None,
                     active: None,
                     hot: None,
+                    size: (0.0, 0.0),
                 },
             },
         }
@@ -650,7 +633,7 @@ impl Ui {
     // The following methods are really UiState methods, but don't need access to listeners
     // so are more concise to implement here.
 
-    fn paint(&mut self, paint_ctx: &mut paint::PaintCtx, root: Id) {
+    fn paint(&mut self, render_ctx: &mut piet_common::Piet, root: Id) {
         // Do pre-order traversal on graph, painting each node in turn.
         //
         // Implemented as a recursion, but we could use an explicit queue instead.
@@ -676,8 +659,7 @@ impl Ui {
         let mut paint_ctx = PaintCtx {
             is_active: false,
             is_hot: false,
-            inner: paint_ctx,
-            dwrite_factory: &self.c.dwrite_factory,
+            render_ctx: render_ctx,
         };
         paint_rec(
             &mut self.widgets,
@@ -737,10 +719,6 @@ impl BoxConstraints {
 }
 
 impl LayoutCtx {
-    pub fn dwrite_factory(&self) -> &directwrite::Factory {
-        &self.dwrite_factory
-    }
-
     pub fn position_child(&mut self, child: Id, pos: (f32, f32)) {
         self.geom[child].pos = pos;
     }
@@ -865,18 +843,6 @@ impl<'a> ListenerCtx<'a> {
 }
 
 impl<'a, 'b> PaintCtx<'a, 'b> {
-    pub fn d2d_factory(&self) -> &direct2d::Factory {
-        self.inner.d2d_factory()
-    }
-
-    pub fn dwrite_factory(&self) -> &directwrite::Factory {
-        self.dwrite_factory
-    }
-
-    pub fn render_target(&mut self) -> &mut GenericRenderTarget {
-        self.inner.render_target()
-    }
-
     /// Determine whether this widget is the active one.
     pub fn is_active(&self) -> bool {
         self.is_active
@@ -897,22 +863,15 @@ impl WinHandler for UiMain {
         state.dispatch_events();
     }
 
-    fn paint(&self, paint_ctx: &mut paint::PaintCtx) -> bool {
+    fn paint(&self, paint_ctx: &mut piet_common::Piet) -> bool {
         let mut state = self.state.borrow_mut();
         state.anim_frame();
-        let size;
         {
-            let rt = paint_ctx.render_target();
-            size = rt.get_size();
-            let rect = RectF::from((0.0, 0.0, size.width, size.height));
-            let bg = SolidColorBrush::create(rt)
-                .with_color(0x272822)
-                .build()
-                .unwrap();
-            rt.fill_rectangle(rect, &bg);
+            paint_ctx.clear(0x272822).unwrap();
         }
         let root = state.graph.root;
-        let bc = BoxConstraints::tight((size.width, size.height));
+        let bc = BoxConstraints::tight(state.inner.c.size);
+
         // TODO: be lazier about relayout
         state.layout(&bc, root);
         state.paint(paint_ctx, root);
@@ -982,5 +941,12 @@ impl WinHandler for UiMain {
 
     fn as_any(&self) -> &Any {
         self
+    }
+
+    fn size(&self, width: u32, height: u32) {
+        let mut state = self.state.borrow_mut();
+        let dpi = state.c.handle.get_dpi();
+        let scale = 96.0 / dpi;
+        state.inner.c.size = (width as f32 * scale, height as f32 * scale);
     }
 }

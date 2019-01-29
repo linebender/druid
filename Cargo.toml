@@ -15,11 +15,10 @@ default-target = "x86_64-pc-windows-msvc"
 travis-ci = { repository = "xi-editor/druid" }
 
 [dependencies]
-directwrite = "0.1.2"
-direct2d = "0.2.0"
+piet-common = "0.0.1"
+piet = "0.0.1"
+kurbo = "0.2.0"
 
-# this is only included for VK_ constants, maybe remove
-winapi = "0.3.6"
 
 [dependencies.druid-win-shell]
 path = "druid-win-shell"

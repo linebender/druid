@@ -16,11 +16,9 @@
 
 use std::any::Any;
 
-use direct2d::brush::SolidColorBrush;
-use direct2d::RenderTarget;
-use directwrite::{self, TextFormat, TextLayout};
-
-use druid_win_shell::util::default_text_options;
+use kurbo::Rect;
+use piet::{FillRule, FontBuilder, RenderContext, Text, TextLayoutBuilder};
+use piet_common::Piet;
 
 use widget::Widget;
 use {BoxConstraints, Geometry, LayoutResult};
@@ -47,34 +45,37 @@ impl Label {
         ctx.add(self, &[])
     }
 
-    fn get_layout(&self, dwrite_factory: &directwrite::Factory) -> TextLayout {
+    fn get_layout(
+        &self,
+        rt: &mut Piet,
+        font_size: f32,
+    ) -> <Piet as RenderContext>::TextLayout {
         // TODO: caching of both the format and the layout
-        let format = TextFormat::create(&dwrite_factory)
-            .with_family("Segoe UI")
-            .with_size(15.0)
+        let font = rt
+            .text()
+            .new_font_by_name("Segoe UI", font_size)
+            .unwrap()
             .build()
             .unwrap();
-        let layout = TextLayout::create(&dwrite_factory)
-            .with_text(&self.label)
-            .with_font(&format)
-            .with_width(1e6)
-            .with_height(1e6)
+        rt.text()
+            .new_text_layout(&font, &self.label)
+            .unwrap()
             .build()
-            .unwrap();
-        layout
+            .unwrap()
     }
 }
 
 impl Widget for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let text_layout = self.get_layout(paint_ctx.dwrite_factory());
-        let rt = paint_ctx.render_target();
-        let fg = SolidColorBrush::create(rt)
-            .with_color(0xf0f0ea)
-            .build()
+        let font_size = 15.0;
+        let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
+        let brush = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
+
+        let pos = (geom.pos.0, geom.pos.1 + font_size);
+        paint_ctx
+            .render_ctx
+            .draw_text(&text_layout, pos, &brush)
             .unwrap();
-        let (x, y) = geom.pos;
-        rt.draw_text_layout((x, y), &text_layout, &fg, default_text_options());
     }
 
     fn layout(
@@ -117,17 +118,24 @@ impl Widget for Button {
         {
             let is_active = paint_ctx.is_active();
             let is_hot = paint_ctx.is_hot();
-            let rt = paint_ctx.render_target();
             let bg_color = match (is_active, is_hot) {
-                (true, true) => 0x606068,
-                (false, true) => 0x505058,
-                _ => 0x404048,
+                (true, true) => 0x606068ff,
+                (false, true) => 0x505058ff,
+                _ => 0x404048ff,
             };
-            let bg = SolidColorBrush::create(rt)
-                .with_color(bg_color)
-                .build()
+            let brush = paint_ctx.render_ctx.solid_brush(bg_color).unwrap();
+            let (x, y) = geom.pos;
+            let (width, height) = geom.size;
+            let rect = Rect::new(
+                x as f64,
+                y as f64,
+                x as f64 + width as f64,
+                y as f64 + height as f64,
+            );
+            paint_ctx
+                .render_ctx
+                .fill(rect, &brush, FillRule::NonZero)
                 .unwrap();
-            rt.fill_rectangle(geom, &bg);
         }
         self.label.paint(paint_ctx, geom);
     }

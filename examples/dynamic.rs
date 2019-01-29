@@ -14,8 +14,6 @@
 
 //! An example of dynamic graph mutation.
 
-extern crate direct2d;
-extern crate directwrite;
 extern crate druid;
 extern crate druid_win_shell;
 

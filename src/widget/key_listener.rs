@@ -15,12 +15,16 @@
 //! Widget for forwarding key events to a listener.
 
 use druid_win_shell::window::M_ALT;
-use winapi::um::winuser::*;
 
 use widget::Widget;
 use {HandlerCtx, Id, KeyEvent, KeyVariant, Ui};
 
 pub struct KeyListener;
+
+// TODO: This is Windows specific
+const VK_MENU: i32 = 0x12;
+const VK_F4: i32 = 0x73;
+const VK_F10: i32 = 0x79;
 
 impl KeyListener {
     pub fn new() -> Self {

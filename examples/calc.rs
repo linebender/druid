@@ -14,12 +14,8 @@
 
 //! Simple calculator.
 
-extern crate winapi;
-
 extern crate druid;
 extern crate druid_win_shell;
-
-use winapi::um::winuser::*;
 
 use druid_win_shell::win_main;
 use druid_win_shell::window::WindowBuilder;
@@ -28,6 +24,10 @@ use druid::widget::{Button, Column, EventForwarder, KeyListener, Label, Padding,
 use druid::{KeyEvent, KeyVariant, UiMain, UiState};
 
 use druid::Id;
+
+// TODO: Windows specific
+const VK_BACK: i32 = 0x08;
+const VK_RETURN: i32 = 0x0d;
 
 struct CalcState {
     /// The number displayed. Generally a valid float.

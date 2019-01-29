@@ -47,7 +47,7 @@ use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarge
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 use menu::Menu;
-use paint::{self, PaintCtx};
+use paint;
 use util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use Error;
 
@@ -141,7 +141,7 @@ pub trait WinHandler {
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
     /// should be scheduled for the next animation frame.
-    fn paint(&self, ctx: &mut PaintCtx) -> bool;
+    fn paint(&self, ctx: &mut piet_common::Piet) -> bool;
 
     /// Called when the resources need to be rebuilt.
     fn rebuild_resources(&self) {}
@@ -278,6 +278,7 @@ struct MyWndProc {
     handler: Box<WinHandler>,
     handle: RefCell<WindowHandle>,
     d2d_factory: direct2d::Factory,
+    dwrite_factory: directwrite::Factory,
     state: RefCell<Option<WndState>>,
 }
 
@@ -343,10 +344,11 @@ impl MyWndProc {
         let s = state.as_mut().unwrap();
         let rt = s.render_target.as_mut().unwrap();
         rt.begin_draw();
-        let anim = self.handler.paint(&mut PaintCtx {
-            d2d_factory: &self.d2d_factory,
-            render_target: rt,
-        });
+        let anim = self.handler.paint(&mut piet_common::Piet::new(
+            &self.d2d_factory,
+            &self.dwrite_factory,
+            rt,
+        ));
         // Maybe should deal with lost device here...
         let res = rt.end_draw();
         if let Err(e) = res {
@@ -687,6 +689,7 @@ impl WindowBuilder {
                 handler: self.handler.unwrap(),
                 handle: Default::default(),
                 d2d_factory: direct2d::Factory::new().unwrap(),
+                dwrite_factory: directwrite::Factory::new().unwrap(),
                 state: RefCell::new(None),
             };
 

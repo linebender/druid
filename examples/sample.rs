@@ -14,13 +14,13 @@
 
 //! Sample GUI app.
 
-extern crate direct2d;
-extern crate directwrite;
 extern crate druid;
 extern crate druid_win_shell;
+extern crate kurbo;
+extern crate piet;
 
-use direct2d::brush::SolidColorBrush;
-use direct2d::RenderTarget;
+use kurbo::Line;
+use piet::RenderContext;
 
 use druid_win_shell::menu::Menu;
 use druid_win_shell::win_main;
@@ -42,13 +42,21 @@ struct FooWidget;
 
 impl Widget for FooWidget {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let rt = paint_ctx.render_target();
-        let fg = SolidColorBrush::create(rt)
-            .with_color(0xf0f0ea)
-            .build()
-            .unwrap();
+        let fg = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
+
         let (x, y) = geom.pos;
-        rt.draw_line((x, y), (x + geom.size.0, y + geom.size.1), &fg, 1.0, None);
+        paint_ctx
+            .render_ctx
+            .stroke(
+                Line::new(
+                    (x as f64, y as f64),
+                    (x as f64 + geom.size.0 as f64, y as f64 + geom.size.1 as f64),
+                ),
+                &fg,
+                1.0,
+                None,
+            )
+            .unwrap();
     }
 
     fn layout(
