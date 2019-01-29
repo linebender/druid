@@ -21,10 +21,11 @@ extern crate druid_win_shell;
 extern crate kurbo;
 extern crate piet;
 
-use druid_win_shell::win_main;
-use druid_win_shell::window::WindowBuilder;
 use kurbo::Line;
 use piet::RenderContext;
+
+use druid_win_shell::win_main;
+use druid_win_shell::window::WindowBuilder;
 
 use druid::{Ui, UiMain, UiState};
 
