@@ -278,6 +278,7 @@ struct MyWndProc {
     handler: Box<WinHandler>,
     handle: RefCell<WindowHandle>,
     d2d_factory: direct2d::Factory,
+    dwrite_factory: directwrite::Factory,
     state: RefCell<Option<WndState>>,
 }
 
@@ -345,7 +346,7 @@ impl MyWndProc {
         rt.begin_draw();
         let anim = self.handler.paint(&mut piet_common::Piet::new(
             &self.d2d_factory,
-            &directwrite::Factory::new().unwrap(),
+            &self.dwrite_factory,
             rt,
         ));
         // Maybe should deal with lost device here...
@@ -688,6 +689,7 @@ impl WindowBuilder {
                 handler: self.handler.unwrap(),
                 handle: Default::default(),
                 d2d_factory: direct2d::Factory::new().unwrap(),
+                dwrite_factory: directwrite::Factory::new().unwrap(),
                 state: RefCell::new(None),
             };
 
