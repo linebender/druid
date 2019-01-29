@@ -49,7 +49,7 @@ impl Label {
         &self,
         rt: &mut Piet,
         font_size: f32,
-    ) -> <<Piet as RenderContext>::Text as Text>::TextLayout {
+    ) -> <Piet as RenderContext>::TextLayout {
         // TODO: caching of both the format and the layout
         let font = rt
             .text()
@@ -57,7 +57,6 @@ impl Label {
             .unwrap()
             .build()
             .unwrap();
-        // TODO: Layout height and width: 1e6
         rt.text()
             .new_text_layout(&font, &self.label)
             .unwrap()
@@ -72,7 +71,6 @@ impl Widget for Label {
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
         let brush = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
 
-        // TODO: bring back default_text_options from win-shell
         let pos = (geom.pos.0, geom.pos.1 + font_size);
         paint_ctx
             .render_ctx

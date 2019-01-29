@@ -9,8 +9,8 @@ categories = ["gui"]
 keywords = ["gui", "ui", "toolkit"]
 
 [dependencies]
-piet-common = { git = "https://github.com/linebender/piet", branch = "common" }
-piet = { git = "https://github.com/linebender/piet", branch = "common" }
+piet-common = "0.0.1"
+piet = "0.0.1"
 kurbo = "0.2.0"
 
 
