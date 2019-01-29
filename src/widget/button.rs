@@ -45,11 +45,15 @@ impl Label {
         ctx.add(self, &[])
     }
 
-    fn get_layout(&self, rt: &mut Piet) -> <<Piet as RenderContext>::Text as Text>::TextLayout {
+    fn get_layout(
+        &self,
+        rt: &mut Piet,
+        font_size: f32,
+    ) -> <<Piet as RenderContext>::Text as Text>::TextLayout {
         // TODO: caching of both the format and the layout
         let font = rt
             .text()
-            .new_font_by_name("Segoe UI", 15.0)
+            .new_font_by_name("Segoe UI", font_size)
             .unwrap()
             .build()
             .unwrap();
@@ -64,13 +68,15 @@ impl Label {
 
 impl Widget for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let text_layout = self.get_layout(paint_ctx.render_ctx);
+        let font_size = 15.0;
+        let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
         let brush = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
 
         // TODO: bring back default_text_options from win-shell
+        let pos = (geom.pos.0, geom.pos.1 + font_size);
         paint_ctx
             .render_ctx
-            .draw_text(&text_layout, geom.pos, &brush)
+            .draw_text(&text_layout, pos, &brush)
             .unwrap();
     }
 
