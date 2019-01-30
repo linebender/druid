@@ -28,6 +28,7 @@ pub mod paint;
 pub mod util;
 pub mod win_main;
 pub mod window;
+pub mod windows;
 
 pub use util::Error;
 

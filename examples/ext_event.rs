@@ -20,7 +20,7 @@ extern crate druid_win_shell;
 use std::{thread, time};
 
 use druid_win_shell::win_main;
-use druid_win_shell::window::WindowBuilder;
+use druid_win_shell::windows::WindowBuilder;
 
 use druid::widget::Label;
 use druid::{UiMain, UiState};

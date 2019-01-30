@@ -32,7 +32,8 @@ use piet::RenderContext;
 
 pub use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
 use druid_win_shell::win_main;
-use druid_win_shell::window::{self, IdleHandle, MouseType, WinHandler, WindowHandle};
+use druid_win_shell::window::{self, MouseType, WinHandler, WindowHandle};
+use druid_win_shell::windows::IdleHandle;
 
 mod graph;
 pub mod widget;
