@@ -30,8 +30,8 @@ use std::time::Instant;
 
 use piet::RenderContext;
 
+use druid_win_shell::application::Application;
 pub use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
-use druid_win_shell::win_main;
 use druid_win_shell::window::{self, MouseType, WinHandler, WindowHandle};
 use druid_win_shell::windows::IdleHandle;
 
@@ -954,7 +954,7 @@ impl WinHandler for UiMain {
     }
 
     fn destroy(&self) {
-        win_main::request_quit();
+        Application::quit();
     }
 
     fn as_any(&self) -> &Any {

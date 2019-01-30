@@ -3,6 +3,7 @@ use std::ops::Deref;
 
 use windows;
 
+// Handle to Window Level Utilities
 #[derive(Clone, Default)]
 pub struct WindowHandle {
     pub inner: windows::WindowHandle,
