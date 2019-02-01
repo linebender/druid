@@ -18,7 +18,7 @@ extern crate druid;
 extern crate druid_win_shell;
 
 use druid_win_shell::win_main;
-use druid_win_shell::window::WindowBuilder;
+use druid_win_shell::windows::WindowBuilder;
 
 use druid::widget::{Button, Column, EventForwarder, KeyListener, Label, Padding, Row};
 use druid::{KeyEvent, KeyVariant, UiMain, UiState};

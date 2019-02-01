@@ -14,7 +14,7 @@
 
 //! Widget for forwarding key events to a listener.
 
-use druid_win_shell::window::M_ALT;
+use druid_win_shell::windows::M_ALT;
 
 use widget::Widget;
 use {HandlerCtx, Id, KeyEvent, KeyVariant, Ui};

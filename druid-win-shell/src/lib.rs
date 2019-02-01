@@ -21,6 +21,7 @@ extern crate wio;
 #[macro_use]
 extern crate lazy_static;
 
+pub mod application;
 mod dcomp;
 pub mod dialog;
 pub mod menu;
@@ -28,6 +29,7 @@ pub mod paint;
 pub mod util;
 pub mod win_main;
 pub mod window;
+pub mod windows;
 
 pub use util::Error;
 

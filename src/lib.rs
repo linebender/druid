@@ -30,9 +30,10 @@ use std::time::Instant;
 
 use piet::RenderContext;
 
+use druid_win_shell::application::Application;
 pub use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
-use druid_win_shell::win_main;
-use druid_win_shell::window::{self, IdleHandle, MouseType, WinHandler, WindowHandle};
+use druid_win_shell::window::{self, MouseType, WinHandler, WindowHandle};
+use druid_win_shell::windows::IdleHandle;
 
 mod graph;
 pub mod widget;
@@ -79,7 +80,7 @@ pub struct Ui {
 
     /// The state (other than widget tree) is a separate object, so that a
     /// mutable reference to it can be used as a layout context.
-    c: LayoutCtx,
+    layout_ctx: LayoutCtx,
 }
 
 /// The context given to layout methods.
@@ -113,6 +114,7 @@ pub struct LayoutCtx {
     /// Which widget is hot (hovered), if any.
     hot: Option<Id>,
 
+    /// The size of the paint surface
     size: (f32, f32),
 }
 
@@ -166,7 +168,7 @@ pub struct HandlerCtx<'a> {
     /// The id of the node sending the event
     id: Id,
 
-    c: &'a mut LayoutCtx,
+    layout_ctx: &'a mut LayoutCtx,
 }
 
 /// The context given to listeners.
@@ -232,7 +234,7 @@ impl UiState {
             inner: Ui {
                 widgets: Vec::new(),
                 graph: Default::default(),
-                c: LayoutCtx {
+                layout_ctx: LayoutCtx {
                     geom: Vec::new(),
                     per_widget: Vec::new(),
                     anim_state: AnimState::Idle,
@@ -289,7 +291,7 @@ impl UiState {
             ctx: &mut HandlerCtx,
         ) -> bool {
             let node = ctx.id;
-            let g = ctx.c.geom[node];
+            let g = ctx.layout_ctx.geom[node];
             let x = x - g.pos.0;
             let y = y - g.pos.1;
             let mut handled = false;
@@ -306,7 +308,7 @@ impl UiState {
             handled
         }
 
-        if let Some(active) = self.c.active {
+        if let Some(active) = self.layout_ctx.active {
             // Send mouse event directly to active widget.
             let (x, y) = self.xy_to_local(active, x, y);
             dispatch_mouse(
@@ -317,7 +319,7 @@ impl UiState {
                 raw_event,
                 &mut HandlerCtx {
                     id: active,
-                    c: &mut self.inner.c,
+                    layout_ctx: &mut self.inner.layout_ctx,
                 },
             );
         } else {
@@ -329,7 +331,7 @@ impl UiState {
                 raw_event,
                 &mut HandlerCtx {
                     id: self.inner.graph.root,
-                    c: &mut self.inner.c,
+                    layout_ctx: &mut self.inner.layout_ctx,
                 },
             );
         }
@@ -344,7 +346,7 @@ impl UiState {
         let mut new_hot = None;
         let (mut tx, mut ty) = (x, y);
         loop {
-            let g = self.c.geom[node];
+            let g = self.layout_ctx.geom[node];
             tx -= g.pos.0;
             ty -= g.pos.1;
             if self.graph.children[node].is_empty() {
@@ -353,7 +355,7 @@ impl UiState {
             }
             let mut child_hot = None;
             for child in self.graph.children[node].iter().rev() {
-                let child_g = self.c.geom[*child];
+                let child_g = self.layout_ctx.geom[*child];
                 let cx = tx - child_g.pos.0;
                 let cy = ty - child_g.pos.1;
                 if cx >= 0.0 && cy >= 0.0 && cx < child_g.size.0 && cy < child_g.size.1 {
@@ -367,15 +369,15 @@ impl UiState {
                 break;
             }
         }
-        let old_hot = self.c.hot;
+        let old_hot = self.layout_ctx.hot;
         if new_hot != old_hot {
-            self.c.hot = new_hot;
+            self.layout_ctx.hot = new_hot;
             if let Some(old_hot) = old_hot {
                 self.inner.widgets[old_hot].on_hot_changed(
                     false,
                     &mut HandlerCtx {
                         id: old_hot,
-                        c: &mut self.inner.c,
+                        layout_ctx: &mut self.inner.layout_ctx,
                     },
                 );
             }
@@ -384,20 +386,20 @@ impl UiState {
                     true,
                     &mut HandlerCtx {
                         id: new_hot,
-                        c: &mut self.inner.c,
+                        layout_ctx: &mut self.inner.layout_ctx,
                     },
                 );
             }
         }
 
-        if let Some(node) = self.c.active.or(new_hot) {
+        if let Some(node) = self.layout_ctx.active.or(new_hot) {
             let (x, y) = self.xy_to_local(node, x, y);
             self.inner.widgets[node].mouse_moved(
                 x,
                 y,
                 &mut HandlerCtx {
                     id: node,
-                    c: &mut self.inner.c,
+                    layout_ctx: &mut self.inner.layout_ctx,
                 },
             );
         }
@@ -405,11 +407,11 @@ impl UiState {
     }
 
     fn handle_key_event(&mut self, event: &KeyEvent) -> bool {
-        if let Some(id) = self.c.focused {
+        if let Some(id) = self.layout_ctx.focused {
             let handled = {
                 let mut ctx = HandlerCtx {
                     id,
-                    c: &mut self.inner.c,
+                    layout_ctx: &mut self.inner.layout_ctx,
                 };
                 self.inner.widgets[id].key(event, &mut ctx)
             };
@@ -433,8 +435,8 @@ impl UiState {
     }
 
     fn dispatch_events(&mut self) {
-        while !self.c.event_q.is_empty() {
-            let event_q = mem::replace(&mut self.c.event_q, Vec::new());
+        while !self.layout_ctx.event_q.is_empty() {
+            let event_q = mem::replace(&mut self.layout_ctx.event_q, Vec::new());
             for event in event_q {
                 match event {
                     Event::Event(id, mut event) => {
@@ -466,33 +468,33 @@ impl UiState {
         // animations not as smooth. Should be extracting actual refresh rate
         // from presentation statistics and then doing some processing.
         let this_paint_time = Instant::now();
-        let interval = if let Some(last) = self.c.prev_paint_time {
+        let interval = if let Some(last) = self.layout_ctx.prev_paint_time {
             let duration = this_paint_time.duration_since(last);
             1_000_000_000 * duration.as_secs() + (duration.subsec_nanos() as u64)
         } else {
             0
         };
-        self.c.anim_state = AnimState::AnimFrameStart;
+        self.layout_ctx.anim_state = AnimState::AnimFrameStart;
         for node in 0..self.widgets.len() {
-            if self.c.per_widget[node].anim_frame_requested {
-                self.c.per_widget[node].anim_frame_requested = false;
+            if self.layout_ctx.per_widget[node].anim_frame_requested {
+                self.layout_ctx.per_widget[node].anim_frame_requested = false;
                 self.inner.widgets[node].anim_frame(
                     interval,
                     &mut HandlerCtx {
                         id: node,
-                        c: &mut self.inner.c,
+                        layout_ctx: &mut self.inner.layout_ctx,
                     },
                 );
             }
         }
-        self.c.prev_paint_time = Some(this_paint_time);
+        self.layout_ctx.prev_paint_time = Some(this_paint_time);
         self.dispatch_events();
     }
 
     /// Translate coordinates to local coordinates of widget
     fn xy_to_local(&mut self, mut node: Id, mut x: f32, mut y: f32) -> (f32, f32) {
         loop {
-            let g = self.c.geom[node];
+            let g = self.layout_ctx.geom[node];
             x -= g.pos.0;
             y -= g.pos.1;
             let parent = self.graph.parent[node];
@@ -535,7 +537,7 @@ impl Ui {
     pub fn poke<A: Any>(&mut self, node: Id, payload: &mut A) -> bool {
         let mut ctx = HandlerCtx {
             id: node,
-            c: &mut self.c,
+            layout_ctx: &mut self.layout_ctx,
         };
         self.widgets[node].poke(payload, &mut ctx)
     }
@@ -549,12 +551,12 @@ impl Ui {
         let id = self.graph.alloc_node();
         if id < self.widgets.len() {
             self.widgets[id] = Box::new(widget);
-            self.c.geom[id] = Default::default();
-            self.c.per_widget[id] = Default::default();
+            self.layout_ctx.geom[id] = Default::default();
+            self.layout_ctx.per_widget[id] = Default::default();
         } else {
             self.widgets.push(Box::new(widget));
-            self.c.geom.push(Default::default());
-            self.c.per_widget.push(Default::default());
+            self.layout_ctx.geom.push(Default::default());
+            self.layout_ctx.per_widget.push(Default::default());
         }
         for &child in children {
             self.graph.append_child(id, child);
@@ -568,7 +570,7 @@ impl Ui {
 
     /// Set the focused widget.
     pub fn set_focus(&mut self, node: Option<Id>) {
-        self.c.focused = node;
+        self.layout_ctx.focused = node;
     }
 
     /// Add a listener that expects a specific type.
@@ -584,20 +586,22 @@ impl Ui {
                 println!("type mismatch in listener arg");
             }
         });
-        self.c.event_q.push(Event::AddListener(node, wrapper));
+        self.layout_ctx
+            .event_q
+            .push(Event::AddListener(node, wrapper));
     }
 
     /// Add a child dynamically, in the last position.
     pub fn append_child(&mut self, node: Id, child: Id) {
         // TODO: could do some validation of graph structure (cycles would be bad).
         self.graph.append_child(node, child);
-        self.c.request_layout();
+        self.layout_ctx.request_layout();
     }
 
     /// Add a child dynamically, before the given sibling.
     pub fn add_before(&mut self, node: Id, sibling: Id, child: Id) {
         self.graph.add_before(node, sibling, child);
-        self.c.request_layout();
+        self.layout_ctx.request_layout();
     }
 
     /// Remove a child.
@@ -607,7 +611,7 @@ impl Ui {
     pub fn remove_child(&mut self, node: Id, child: Id) {
         self.graph.remove_child(node, child);
         self.widgets[node].on_child_removed(child);
-        self.c.request_layout();
+        self.layout_ctx.request_layout();
     }
 
     /// Delete a child.
@@ -625,7 +629,12 @@ impl Ui {
                 delete_rec(widgets, q, graph, child);
             }
         }
-        delete_rec(&mut self.widgets, &mut self.c.event_q, &self.graph, child);
+        delete_rec(
+            &mut self.widgets,
+            &mut self.layout_ctx.event_q,
+            &self.graph,
+            child,
+        );
         self.remove_child(node, child);
         self.graph.free_subtree(child);
     }
@@ -664,12 +673,12 @@ impl Ui {
         paint_rec(
             &mut self.widgets,
             &self.graph,
-            &self.c.geom,
+            &self.layout_ctx.geom,
             &mut paint_ctx,
             root,
             (0.0, 0.0),
-            self.c.active,
-            self.c.hot,
+            self.layout_ctx.active,
+            self.layout_ctx.hot,
         );
     }
 
@@ -696,7 +705,13 @@ impl Ui {
             }
         }
 
-        layout_rec(&mut self.widgets, &mut self.c, &self.graph, bc, root);
+        layout_rec(
+            &mut self.widgets,
+            &mut self.layout_ctx,
+            &self.graph,
+            bc,
+            root,
+        );
     }
 }
 
@@ -747,34 +762,37 @@ impl<'a> HandlerCtx<'a> {
     /// Invalidate this widget. Finer-grained invalidation is not yet implemented,
     /// but when it is, this method will invalidate the widget's bounding box.
     pub fn invalidate(&mut self) {
-        self.c.invalidate();
+        self.layout_ctx.invalidate();
     }
 
     /// Request layout; implies invalidation.
     pub fn request_layout(&mut self) {
-        self.c.request_layout();
+        self.layout_ctx.request_layout();
     }
 
     /// Send an event, to be handled by listeners.
     pub fn send_event<A: Any>(&mut self, a: A) {
-        self.c.event_q.push(Event::Event(self.id, Box::new(a)));
+        self.layout_ctx
+            .event_q
+            .push(Event::Event(self.id, Box::new(a)));
     }
 
     /// Set or unset the widget as active.
     // TODO: this should call SetCapture/ReleaseCapture as well.
     pub fn set_active(&mut self, active: bool) {
-        self.c.active = if active { Some(self.id) } else { None };
+        self.layout_ctx.active = if active { Some(self.id) } else { None };
     }
 
     /// Determine whether this widget is active.
     pub fn is_active(&self) -> bool {
-        self.c.active == Some(self.id)
+        self.layout_ctx.active == Some(self.id)
     }
 
     /// Determine whether this widget is hot. A widget can be both hot and active, but
     /// if a widget is active, it is the only widget that can be hot.
     pub fn is_hot(&self) -> bool {
-        self.c.hot == Some(self.id) && (self.is_active() || self.c.active.is_none())
+        self.layout_ctx.hot == Some(self.id)
+            && (self.is_active() || self.layout_ctx.active.is_none())
     }
 
     /// Request an animation frame.
@@ -782,13 +800,13 @@ impl<'a> HandlerCtx<'a> {
     /// Calling this schedules an animation frame, and also causes `anim_frame` to be
     /// called on this widget at the beginning of that frame.
     pub fn request_anim_frame(&mut self) {
-        self.c.per_widget[self.id].anim_frame_requested = true;
-        match self.c.anim_state {
+        self.layout_ctx.per_widget[self.id].anim_frame_requested = true;
+        match self.layout_ctx.anim_state {
             AnimState::Idle => {
                 self.invalidate();
             }
             AnimState::AnimFrameStart => {
-                self.c.anim_state = AnimState::AnimFrameRequested;
+                self.layout_ctx.anim_state = AnimState::AnimFrameRequested;
             }
             _ => (),
         }
@@ -829,7 +847,7 @@ impl<'a> ListenerCtx<'a> {
 
     /// Request the window to be closed.
     pub fn close(&mut self) {
-        self.c.handle.close();
+        self.layout_ctx.handle.close();
     }
 
     pub fn file_dialog(
@@ -837,7 +855,7 @@ impl<'a> ListenerCtx<'a> {
         ty: FileDialogType,
         options: FileDialogOptions,
     ) -> Result<OsString, Error> {
-        let result = self.c.handle.file_dialog(ty, options)?;
+        let result = self.layout_ctx.handle.file_dialog(ty, options)?;
         Ok(result)
     }
 }
@@ -857,7 +875,7 @@ impl<'a, 'b> PaintCtx<'a, 'b> {
 impl WinHandler for UiMain {
     fn connect(&self, handle: &WindowHandle) {
         let mut state = self.state.borrow_mut();
-        state.c.handle = handle.clone();
+        state.layout_ctx.handle = handle.clone();
 
         // Dispatch events; this is mostly to add listeners.
         state.dispatch_events();
@@ -870,16 +888,16 @@ impl WinHandler for UiMain {
             paint_ctx.clear(0x272822).unwrap();
         }
         let root = state.graph.root;
-        let bc = BoxConstraints::tight(state.inner.c.size);
+        let bc = BoxConstraints::tight(state.inner.layout_ctx.size);
 
         // TODO: be lazier about relayout
         state.layout(&bc, root);
         state.paint(paint_ctx, root);
-        match state.c.anim_state {
+        match state.layout_ctx.anim_state {
             AnimState::AnimFrameRequested => true,
             _ => {
-                state.c.anim_state = AnimState::Idle;
-                state.c.prev_paint_time = None;
+                state.layout_ctx.anim_state = AnimState::Idle;
+                state.layout_ctx.prev_paint_time = None;
                 false
             }
         }
@@ -923,20 +941,20 @@ impl WinHandler for UiMain {
 
     fn mouse_move(&self, x: i32, y: i32, _mods: u32) {
         let mut state = self.state.borrow_mut();
-        let (x, y) = state.c.handle.pixels_to_px_xy(x, y);
+        let (x, y) = state.layout_ctx.handle.pixels_to_px_xy(x, y);
         state.mouse_move(x, y);
     }
 
     fn mouse(&self, event: &window::MouseEvent) {
         //println!("mouse {:?}", event);
         let mut state = self.state.borrow_mut();
-        let (x, y) = state.c.handle.pixels_to_px_xy(event.x, event.y);
+        let (x, y) = state.layout_ctx.handle.pixels_to_px_xy(event.x, event.y);
         // TODO: detect multiple clicks and pass that down
         state.mouse(x, y, event);
     }
 
     fn destroy(&self) {
-        win_main::request_quit();
+        Application::quit();
     }
 
     fn as_any(&self) -> &Any {
@@ -945,8 +963,8 @@ impl WinHandler for UiMain {
 
     fn size(&self, width: u32, height: u32) {
         let mut state = self.state.borrow_mut();
-        let dpi = state.c.handle.get_dpi();
+        let dpi = state.layout_ctx.handle.get_dpi();
         let scale = 96.0 / dpi;
-        state.inner.c.size = (width as f32 * scale, height as f32 * scale);
+        state.inner.layout_ctx.size = (width as f32 * scale, height as f32 * scale);
     }
 }

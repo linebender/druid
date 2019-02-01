@@ -20,7 +20,7 @@ extern crate druid_win_shell;
 use std::collections::BTreeMap;
 
 use druid_win_shell::win_main;
-use druid_win_shell::window::WindowBuilder;
+use druid_win_shell::windows::WindowBuilder;
 
 use druid::widget::{Button, Column, EventForwarder, Label, Padding, Row};
 use druid::{Id, UiMain, UiState};

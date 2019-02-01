@@ -23,7 +23,7 @@ use kurbo::Line;
 use piet::RenderContext;
 
 use druid_win_shell::win_main;
-use druid_win_shell::window::WindowBuilder;
+use druid_win_shell::windows::WindowBuilder;
 
 use druid::{Ui, UiMain, UiState};
 
