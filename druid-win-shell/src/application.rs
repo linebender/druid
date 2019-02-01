@@ -1,6 +1,6 @@
 use win_main;
 
-pub struct Application {}
+pub struct Application;
 
 impl Application {
     pub fn quit() {
