@@ -15,16 +15,16 @@
 //! Sample GUI app.
 
 extern crate druid;
-extern crate druid_win_shell;
+extern crate druid_shell;
 extern crate kurbo;
 extern crate piet;
 
 use kurbo::Line;
 use piet::RenderContext;
 
-use druid_win_shell::menu::Menu;
-use druid_win_shell::win_main;
-use druid_win_shell::windows::WindowBuilder;
+use druid_shell::menu::Menu;
+use druid_shell::win_main;
+use druid_shell::windows::WindowBuilder;
 
 use druid::widget::{Button, Padding, Row};
 use druid::{FileDialogOptions, FileDialogType};
@@ -77,7 +77,7 @@ impl FooWidget {
 }
 
 fn main() {
-    druid_win_shell::init();
+    druid_shell::init();
 
     let mut file_menu = Menu::new();
     file_menu.add_item(COMMAND_EXIT, "E&xit");

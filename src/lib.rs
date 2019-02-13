@@ -14,7 +14,7 @@
 
 //! Simple entity-component-system based GUI.
 
-extern crate druid_win_shell;
+extern crate druid_shell;
 extern crate kurbo;
 extern crate piet;
 extern crate piet_common;
@@ -30,10 +30,10 @@ use std::time::Instant;
 
 use piet::RenderContext;
 
-use druid_win_shell::application::Application;
-pub use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
-use druid_win_shell::window::{self, MouseType, WinHandler, WindowHandle};
-use druid_win_shell::windows::IdleHandle;
+use druid_shell::application::Application;
+pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
+use druid_shell::window::{self, MouseType, WinHandler, WindowHandle};
+use druid_shell::windows::IdleHandle;
 
 mod graph;
 pub mod widget;
@@ -189,11 +189,11 @@ pub struct PaintCtx<'a, 'b: 'a> {
 
 #[derive(Debug)]
 pub enum Error {
-    ShellError(druid_win_shell::Error),
+    ShellError(druid_shell::Error),
 }
 
-impl From<druid_win_shell::Error> for Error {
-    fn from(e: druid_win_shell::Error) -> Error {
+impl From<druid_shell::Error> for Error {
+    fn from(e: druid_shell::Error) -> Error {
         Error::ShellError(e)
     }
 }

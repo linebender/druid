@@ -1,5 +1,5 @@
 [package]
-name = "druid-win-shell"
+name = "druid-shell"
 version = "0.1.1"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
@@ -22,3 +22,7 @@ time = "0.1.39"
 [dependencies.winapi]
 version = "0.3.6"
 features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser", "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "dcomp", "d3d11", "dwmapi", "wincon", "fileapi", "processenv", "winbase", "handleapi"]
+
+[dev-dependencies]
+kurbo = "0.2"
+piet = "0.0.1"

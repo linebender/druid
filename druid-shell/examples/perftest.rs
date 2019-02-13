@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate direct2d;
-extern crate directwrite;
-extern crate druid_win_shell;
+extern crate druid_shell;
+extern crate kurbo;
+extern crate piet;
+extern crate piet_common;
 extern crate time;
 
 use std::any::Any;
@@ -22,22 +23,19 @@ use std::cell::RefCell;
 
 use time::get_time;
 
-use direct2d::brush::SolidColorBrush;
-use direct2d::math::*;
-use direct2d::RenderTarget;
-use directwrite::TextFormat;
+use kurbo::{Line, Rect};
+use piet::{FillRule, FontBuilder, RenderContext, Text, TextLayoutBuilder};
 
-use druid_win_shell::paint::PaintCtx;
-use druid_win_shell::util::default_text_options;
-use druid_win_shell::win_main;
-use druid_win_shell::window::{PresentStrategy, WinHandler, WindowBuilder, WindowHandle};
+use druid_shell::win_main;
+use druid_shell::window::{WinHandler, WindowHandle};
+use druid_shell::windows::{PresentStrategy, WindowBuilder};
 
 struct PerfTest(RefCell<PerfState>);
 
 struct PerfState {
     handle: WindowHandle,
+    size: (f64, f64),
     last_time: f64,
-    dwrite_factory: directwrite::Factory,
 }
 
 impl WinHandler for PerfTest {
@@ -45,31 +43,30 @@ impl WinHandler for PerfTest {
         self.0.borrow_mut().handle = handle.clone();
     }
 
-    fn paint(&self, paint_ctx: &mut PaintCtx) -> bool {
+    fn paint(&self, rc: &mut piet_common::Piet) -> bool {
         let mut state = self.0.borrow_mut();
-        let rt = paint_ctx.render_target();
-        let size = rt.get_size();
-        let rect = RectF::from((0.0, 0.0, size.width, size.height));
-        let bg = SolidColorBrush::create(rt)
-            .with_color(0x272822)
-            .build()
-            .unwrap();
-        let fg = SolidColorBrush::create(rt)
-            .with_color(0xf0f0ea)
-            .build()
-            .unwrap();
-        rt.fill_rectangle(rect, &bg);
+        let (width, height) = state.size;
+        let bg = rc.solid_brush(0x272822ff).unwrap();
+        let fg = rc.solid_brush(0xf0f0eaff).unwrap();
+        let rect = Rect::new(0.0, 0.0, width, height);
+        rc.fill(rect, &bg, FillRule::NonZero);
 
-        rt.draw_line((0.0, size.height), (size.width, 0.0), &fg, 1.0, None);
+        rc.stroke(Line::new((0.0, height), (width, 0.0)), &fg, 1.0, None);
 
-        let th = ::std::f32::consts::PI * (get_time().nsec as f32) * 2e-9;
+        let th = ::std::f64::consts::PI * (get_time().nsec as f64) * 2e-9;
         let dx = 100.0 * th.sin();
         let dy = 100.0 * th.cos();
-        rt.draw_line((100.0, 100.0), (100.0 + dx, 100.0 - dy), &fg, 1.0, None);
+        rc.stroke(
+            Line::new((100.0, 100.0), (100.0 + dx, 100.0 - dy)),
+            &fg,
+            1.0,
+            None,
+        );
 
-        let text_format = TextFormat::create(&state.dwrite_factory)
-            .with_family("Consolas")
-            .with_size(15.0)
+        let font = rc
+            .text()
+            .new_font_by_name("Consolas", 15.0)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -77,27 +74,27 @@ impl WinHandler for PerfTest {
         let now = now.sec as f64 + 1e-9 * now.nsec as f64;
         let msg = format!("{:3.1}ms", 1e3 * (now - state.last_time));
         state.last_time = now;
-        rt.draw_text(
-            &msg,
-            &text_format,
-            (10.0, 210.0, 100.0, 300.0),
-            &fg,
-            default_text_options(),
-        );
+        let layout = rc
+            .text()
+            .new_text_layout(&font, &msg)
+            .unwrap()
+            .build()
+            .unwrap();
+        rc.draw_text(&layout, (10.0, 210.0), &fg);
 
         let msg = "Hello DWrite! This is a somewhat longer string of text intended to provoke slightly longer draw times.";
+        let layout = rc
+            .text()
+            .new_text_layout(&font, &msg)
+            .unwrap()
+            .build()
+            .unwrap();
         let dy = 15.0;
         let x0 = 210.0;
         let y0 = 10.0;
         for i in 0..60 {
             let y = y0 + (i as f32) * dy;
-            rt.draw_text(
-                msg,
-                &text_format,
-                (x0, y, x0 + 900.0, y + 80.0),
-                &fg,
-                default_text_options(),
-            );
+            rc.draw_text(&layout, (x0, y), &fg);
         }
 
         true
@@ -119,6 +116,15 @@ impl WinHandler for PerfTest {
         false
     }
 
+    fn size(&self, width: u32, height: u32) {
+        let mut state = self.0.borrow_mut();
+        let dpi = state.handle.get_dpi();
+        let dpi_scale = dpi as f64 / 96.0;
+        let width_f = (width as f64) / dpi_scale;
+        let height_f = (height as f64) / dpi_scale;
+        state.size = (width_f, height_f);
+    }
+
     fn destroy(&self) {
         win_main::request_quit();
     }
@@ -129,12 +135,12 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
-    druid_win_shell::init();
+    druid_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let perf_state = PerfState {
-        dwrite_factory: directwrite::Factory::new().unwrap(),
+        size: Default::default(),
         handle: Default::default(),
         last_time: 0.0,
     };

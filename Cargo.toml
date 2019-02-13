@@ -20,6 +20,6 @@ piet = "0.0.1"
 kurbo = "0.2.0"
 
 
-[dependencies.druid-win-shell]
-path = "druid-win-shell"
+[dependencies.druid-shell]
+path = "druid-shell"
 version = "0.1.1"
