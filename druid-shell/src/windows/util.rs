@@ -18,7 +18,6 @@
 //! which are only supported on certain versions of windows.
 
 use std::ffi::{CString, OsStr, OsString};
-use std::fmt;
 use std::mem;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::ptr;
@@ -42,27 +41,7 @@ use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
 
 use direct2d::enums::DrawTextOptions;
 
-/// Error codes. At the moment, this is little more than HRESULT, but that
-/// might change.
-pub enum Error {
-    Null,
-    Hr(HRESULT),
-    // Maybe include the full error from the direct2d crate.
-    D2Error,
-    /// A function is available on newer version of windows.
-    OldWindows,
-}
-
-impl fmt::Debug for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            Error::Null => write!(f, "Null error"),
-            Error::Hr(hr) => write!(f, "HRESULT 0x{:x}", hr),
-            Error::D2Error => write!(f, "Direct2D error"),
-            Error::OldWindows => write!(f, "Attempted newer API on older Windows"),
-        }
-    }
-}
+use Error;
 
 pub fn as_result(hr: HRESULT) -> Result<(), Error> {
     if SUCCEEDED(hr) {

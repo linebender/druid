@@ -12,25 +12,47 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Windows-specific application shell used for xi editor.
+//! Platform abstraction for druid toolkit.
 
+#[cfg(target_os = "windows")]
 #[macro_use]
 extern crate winapi;
+#[cfg(target_os = "windows")]
 extern crate direct2d;
+#[cfg(target_os = "windows")]
 extern crate wio;
+
 #[macro_use]
 extern crate lazy_static;
 
-pub mod application;
-mod dcomp;
-pub mod dialog;
-pub mod menu;
-pub mod paint;
-pub mod util;
-pub mod win_main;
-pub mod window;
+pub mod error;
+
+#[cfg(target_os = "windows")]
 pub mod windows;
+#[cfg(target_os = "windows")]
+pub use windows as platform;
 
-pub use util::Error;
+#[cfg(target_os = "windows")]
+pub use windows::application;
+#[cfg(target_os = "windows")]
+use windows::dcomp;
+#[cfg(target_os = "windows")]
+pub use windows::dialog;
+#[cfg(target_os = "windows")]
+pub use windows::menu;
+#[cfg(target_os = "windows")]
+pub use windows::paint;
+#[cfg(target_os = "windows")]
+pub use windows::win_main;
+#[cfg(target_os = "windows")]
+pub use windows::window;
 
+#[cfg(target_os = "macos")]
+pub mod mac;
+#[cfg(target_os = "macos")]
+pub use mac as platform;
+
+pub use error::Error;
+
+pub use platform::util;
 pub use util::init;

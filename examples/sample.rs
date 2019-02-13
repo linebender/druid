@@ -24,7 +24,7 @@ use piet::RenderContext;
 
 use druid_shell::menu::Menu;
 use druid_shell::win_main;
-use druid_shell::windows::WindowBuilder;
+use druid_shell::platform::WindowBuilder;
 
 use druid::widget::{Button, Padding, Row};
 use druid::{FileDialogOptions, FileDialogType};

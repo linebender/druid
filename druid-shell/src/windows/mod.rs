@@ -16,6 +16,15 @@
 
 #![allow(non_snake_case)]
 
+pub mod application;
+pub mod dcomp;
+pub mod dialog;
+pub mod menu;
+pub mod paint;
+pub mod util;
+pub mod win_main;
+pub mod window;
+
 use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::ffi::OsString;
@@ -47,11 +56,10 @@ use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarge
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 use menu::Menu;
-use paint;
 use util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use Error;
 
-use window::{self, Cursor, MouseButton, MouseEvent, MouseType, WinHandler};
+use window::{Cursor, MouseButton, MouseEvent, MouseType, WinHandler};
 
 extern "system" {
     pub fn DwmFlush();
