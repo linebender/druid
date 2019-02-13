@@ -22,8 +22,20 @@ extern crate direct2d;
 #[cfg(target_os = "windows")]
 extern crate wio;
 
+#[cfg(target_os = "macos")]
+extern crate cocoa;
+#[cfg(target_os = "macos")]
+extern crate core_graphics;
+#[cfg(target_os = "macos")]
+#[macro_use]
+extern crate objc;
+#[cfg(target_os = "macos")]
+extern crate cairo;
+
 #[macro_use]
 extern crate lazy_static;
+
+extern crate piet_common;
 
 pub mod error;
 pub mod window;
@@ -38,13 +50,9 @@ pub use windows::application;
 #[cfg(target_os = "windows")]
 use windows::dcomp;
 #[cfg(target_os = "windows")]
-pub use windows::dialog;
-#[cfg(target_os = "windows")]
 pub use windows::menu;
 #[cfg(target_os = "windows")]
 pub use windows::paint;
-#[cfg(target_os = "windows")]
-pub use windows::win_main;
 
 #[cfg(target_os = "macos")]
 pub mod mac;
@@ -53,5 +61,8 @@ pub use mac as platform;
 
 pub use error::Error;
 
+pub use platform::dialog;
+pub use platform::menu;
 pub use platform::util;
+pub use platform::win_main; // TODO: rename to "runloop"
 pub use util::init;

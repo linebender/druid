@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Creation and management of windows.
+//! Platform independent window types.
 
 use std::any::Any;
 use std::ops::Deref;

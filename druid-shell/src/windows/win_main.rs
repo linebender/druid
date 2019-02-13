@@ -23,6 +23,7 @@ use winapi::um::winbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
 
+// TODO: remove this, it's been obsoleted by IdleHandle
 #[derive(Clone, Default)]
 pub struct RunLoopHandle(Arc<Mutex<RunLoopState>>);
 

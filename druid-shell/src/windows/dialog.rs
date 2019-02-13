@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! File open/save dialogs.
+//! File open/save dialogs, Windows implementation.
 
 #![allow(non_upper_case_globals)]
 

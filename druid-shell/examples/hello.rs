@@ -25,9 +25,9 @@ use piet::{FillRule, RenderContext};
 
 use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 use druid_shell::menu::Menu;
+use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 use druid_shell::window::{MouseEvent, WinHandler, WindowHandle};
-use druid_shell::platform::WindowBuilder;
 
 #[derive(Default)]
 struct HelloState {
