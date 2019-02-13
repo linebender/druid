@@ -12,24 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate direct2d;
-extern crate druid_win_shell;
+extern crate druid_shell;
+extern crate kurbo;
+extern crate piet;
+extern crate piet_common;
 
 use std::any::Any;
 use std::cell::RefCell;
 
-use direct2d::brush::SolidColorBrush;
-use direct2d::math::*;
-use direct2d::RenderTarget;
+use kurbo::{Line, Rect};
+use piet::{FillRule, RenderContext};
 
-use druid_win_shell::dialog::{FileDialogOptions, FileDialogType};
-use druid_win_shell::menu::Menu;
-use druid_win_shell::paint::PaintCtx;
-use druid_win_shell::win_main;
-use druid_win_shell::window::{MouseEvent, WinHandler, WindowBuilder, WindowHandle};
+use druid_shell::dialog::{FileDialogOptions, FileDialogType};
+use druid_shell::menu::Menu;
+use druid_shell::win_main;
+use druid_shell::window::{MouseEvent, WinHandler, WindowHandle};
+use druid_shell::windows::WindowBuilder;
 
 #[derive(Default)]
 struct HelloState {
+    size: RefCell<(f64, f64)>,
     handle: RefCell<WindowHandle>,
 }
 
@@ -38,20 +40,13 @@ impl WinHandler for HelloState {
         *self.handle.borrow_mut() = handle.clone();
     }
 
-    fn paint(&self, paint_ctx: &mut PaintCtx) -> bool {
-        let rt = paint_ctx.render_target();
-        let size = rt.get_size();
-        let rect = RectF::from((0.0, 0.0, size.width, size.height));
-        let bg = SolidColorBrush::create(rt)
-            .with_color(0x272822)
-            .build()
-            .unwrap();
-        let fg = SolidColorBrush::create(rt)
-            .with_color(0xf0f0ea)
-            .build()
-            .unwrap();
-        rt.fill_rectangle(rect, &bg);
-        rt.draw_line((10.0, 50.0), (90.0, 90.0), &fg, 1.0, None);
+    fn paint(&self, rc: &mut piet_common::Piet) -> bool {
+        let bg = rc.solid_brush(0x272822ff).unwrap();
+        let fg = rc.solid_brush(0xf0f0eaff).unwrap();
+        let (width, height) = *self.size.borrow();
+        let rect = Rect::new(0.0, 0.0, width, height);
+        rc.fill(rect, &bg, FillRule::NonZero);
+        rc.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &fg, 1.0, None);
         false
     }
 
@@ -96,6 +91,14 @@ impl WinHandler for HelloState {
         println!("mouse {:?}", event);
     }
 
+    fn size(&self, width: u32, height: u32) {
+        let dpi = self.handle.borrow().get_dpi();
+        let dpi_scale = dpi as f64 / 96.0;
+        let width_f = (width as f64) / dpi_scale;
+        let height_f = (height as f64) / dpi_scale;
+        *self.size.borrow_mut() = (width_f, height_f);
+    }
+
     fn destroy(&self) {
         win_main::request_quit();
     }
@@ -106,7 +109,7 @@ impl WinHandler for HelloState {
 }
 
 fn main() {
-    druid_win_shell::init();
+    druid_shell::init();
 
     let mut file_menu = Menu::new();
     file_menu.add_item(0x100, "E&xit");
