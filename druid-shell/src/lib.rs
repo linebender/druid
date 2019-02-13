@@ -26,6 +26,7 @@ extern crate wio;
 extern crate lazy_static;
 
 pub mod error;
+pub mod window;
 
 #[cfg(target_os = "windows")]
 pub mod windows;
@@ -44,8 +45,6 @@ pub use windows::menu;
 pub use windows::paint;
 #[cfg(target_os = "windows")]
 pub use windows::win_main;
-#[cfg(target_os = "windows")]
-pub use windows::window;
 
 #[cfg(target_os = "macos")]
 pub mod mac;

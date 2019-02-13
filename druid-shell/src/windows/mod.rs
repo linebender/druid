@@ -23,7 +23,6 @@ pub mod menu;
 pub mod paint;
 pub mod util;
 pub mod win_main;
-pub mod window;
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
@@ -59,7 +58,7 @@ use menu::Menu;
 use util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use Error;
 
-use window::{Cursor, MouseButton, MouseEvent, MouseType, WinHandler};
+use window::{self, Cursor, MouseButton, MouseEvent, MouseType, WinHandler};
 
 extern "system" {
     pub fn DwmFlush();

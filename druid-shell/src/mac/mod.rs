@@ -15,3 +15,6 @@
 //! macOS implementation of window creation.
 
 pub mod util;
+
+#[derive(Clone, Default)]
+pub struct WindowHandle;
