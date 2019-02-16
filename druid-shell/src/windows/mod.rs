@@ -220,11 +220,13 @@ impl MyWndProc {
         let s = state.as_mut().unwrap();
         let rt = s.render_target.as_mut().unwrap();
         rt.begin_draw();
-        let anim = self.handler.paint(&mut piet_common::Piet::new(
+        let mut piet_ctx = piet_common::Piet::new(
             &self.d2d_factory,
             &self.dwrite_factory,
             rt,
-        ));
+        );
+        let anim = self.handler.paint(&mut piet_ctx);
+        piet_ctx.finish(); // TODO: log error
         // Maybe should deal with lost device here...
         let res = rt.end_draw();
         if let Err(e) = res {

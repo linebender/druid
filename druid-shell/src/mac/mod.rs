@@ -20,10 +20,11 @@ pub mod menu;
 pub mod util;
 pub mod win_main;
 
-use platform::dialog::{FileDialogOptions, FileDialogType};
-use platform::menu::Menu;
+use std::any::Any;
 use std::ffi::c_void;
 use std::ffi::OsString;
+use std::mem;
+use std::sync::{Arc, Mutex, Weak};
 
 use cocoa::appkit::{
     NSApplicationActivateIgnoringOtherApps, NSAutoresizingMaskOptions, NSBackingStoreBuffered,
@@ -38,8 +39,11 @@ use objc::runtime::{Class, Object, Sel};
 
 use cairo::{Context, QuartzSurface};
 
+use piet::RenderContext;
 use piet_common::Piet;
 
+use platform::dialog::{FileDialogOptions, FileDialogType};
+use platform::menu::Menu;
 use window::{Cursor, WinHandler};
 use Error;
 
@@ -53,6 +57,7 @@ pub struct WindowHandle {
     /// TODO: remove option (issue has been filed against objc, or we could manually impl default with nil)
     /// https://github.com/SSheldon/rust-objc/issues/77
     nsview: Option<WeakPtr>,
+    queue: Weak<Mutex<Vec<Box<IdleCallback>>>>,
 }
 
 /// Builder abstraction for creating new windows.
@@ -62,9 +67,26 @@ pub struct WindowBuilder {
     cursor: Cursor,
 }
 
+#[derive(Clone)]
+pub struct IdleHandle {
+    nsview: WeakPtr,
+    queue: Weak<Mutex<Vec<Box<IdleCallback>>>>,
+}
+
+// TODO: move this out of platform-dependent section.
+trait IdleCallback: Send {
+    fn call(self: Box<Self>, a: &Any);
+}
+
+impl<F: FnOnce(&Any) + Send> IdleCallback for F {
+    fn call(self: Box<F>, a: &Any) {
+        (*self)(a)
+    }
+}
 /// This is the state associated with our custom NSView.
 struct ViewState {
     handler: Box<dyn WinHandler>,
+    idle_queue: Arc<Mutex<Vec<Box<IdleCallback>>>>,
 }
 
 impl WindowBuilder {
@@ -106,7 +128,7 @@ impl WindowBuilder {
             window.setTitle_(make_nsstring(&self.title));
             window.makeKeyAndOrderFront_(nil);
 
-            let view = make_view(self.handler.unwrap());
+            let (view, queue) = make_view(self.handler.unwrap());
             let content_view = window.contentView();
             let frame = NSView::frame(content_view);
             view.initWithFrame_(frame);
@@ -116,6 +138,7 @@ impl WindowBuilder {
 
             Ok(WindowHandle {
                 nsview: Some(WeakPtr::new(view)),
+                queue,
             })
         }
     }
@@ -168,19 +191,32 @@ lazy_static! {
             sel!(drawRect:),
             draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
         );
+        decl.add_method(
+            sel!(runIdle),
+            run_idle as extern "C" fn(&mut Object, Sel),
+        );
+        decl.add_method(
+            sel!(redraw),
+            redraw as extern "C" fn(&mut Object, Sel),
+        );
         ViewClass(decl.register())
     };
 }
 
-fn make_view(handler: Box<WinHandler>) -> id {
+fn make_view(handler: Box<WinHandler>) -> (id, Weak<Mutex<Vec<Box<IdleCallback>>>>) {
     unsafe {
-        let state = ViewState { handler };
+        let idle_queue = Arc::new(Mutex::new(Vec::new()));
+        let queue_handle = Arc::downgrade(&idle_queue);
+        let state = ViewState {
+            handler,
+            idle_queue,
+        };
         let state_ptr = Box::into_raw(Box::new(state));
         let view: id = msg_send![VIEW_CLASS.0, new];
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
         let options: NSAutoresizingMaskOptions = NSViewWidthSizable | NSViewHeightSizable;
         view.setAutoresizingMask_(options);
-        view.autorelease()
+        (view.autorelease(), queue_handle)
     }
 }
 
@@ -235,11 +271,36 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let anim = (*view_state).handler.paint(&mut piet_ctx);
+        piet_ctx.finish();
+        // TODO: log errors
 
-        // TODO: handle animation
+        if anim {
+            // TODO: synchronize with screen refresh rate using CVDisplayLink instead.
+            let () = msg_send!(this as *const _, performSelectorOnMainThread: sel!(redraw)
+                withObject: nil waitUntilDone: NO);
+        }
 
         let superclass = msg_send![this, superclass];
         let () = msg_send![super(this, superclass), drawRect: dirtyRect];
+    }
+}
+
+extern "C" fn run_idle(this: &mut Object, _: Sel) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        let queue: Vec<_> = mem::replace(&mut view_state.idle_queue.lock().unwrap(), Vec::new());
+        let handler_as_any = view_state.handler.as_any();
+        for callback in queue {
+            callback.call(handler_as_any);
+        }
+    }
+}
+
+
+extern "C" fn redraw(this: &mut Object, _: Sel) {
+    unsafe {
+        let () = msg_send!(this as *const _, setNeedsDisplay: YES);
     }
 }
 
@@ -262,6 +323,15 @@ impl WindowHandle {
         }
     }
 
+    /// Get a handle that can be used to schedule an idle task.
+    pub fn get_idle_handle(&self) -> Option<IdleHandle> {
+        // TODO: maybe try harder to return None if window has been dropped.
+        self.nsview.as_ref().map(|nsview| IdleHandle {
+            nsview: nsview.clone(),
+            queue: self.queue.clone(),
+        })
+    }
+
     pub fn get_dpi(&self) -> f32 {
         // TODO: get actual dpi
         96.0
@@ -273,6 +343,28 @@ impl WindowHandle {
         options: FileDialogOptions,
     ) -> Result<OsString, Error> {
         unimplemented!()
+    }
+}
+
+impl IdleHandle {
+    /// Add an idle handler, which is called (once) when the message loop
+    /// is empty. The idle handler will be run from the main UI thread, and
+    /// won't be scheduled if the associated view has been dropped.
+    pub fn add_idle<F>(&self, callback: F)
+    where
+        F: FnOnce(&Any) + Send + 'static,
+    {
+        if let Some(queue) = self.queue.upgrade() {
+            let mut queue = queue.lock().unwrap();
+            if queue.is_empty() {
+                unsafe {
+                    let nsview = self.nsview.load();
+                    let () = msg_send!(*nsview, performSelectorOnMainThread: sel!(runIdle)
+                        withObject: nil waitUntilDone: NO);
+                }
+            }
+            queue.push(Box::new(callback));
+        }
     }
 }
 
