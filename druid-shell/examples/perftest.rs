@@ -28,7 +28,7 @@ use piet::{FillRule, FontBuilder, RenderContext, Text, TextLayoutBuilder};
 
 use druid_shell::win_main;
 use druid_shell::window::{WinHandler, WindowHandle};
-use druid_shell::windows::{PresentStrategy, WindowBuilder};
+use druid_shell::platform::{PresentStrategy, WindowBuilder};
 
 struct PerfTest(RefCell<PerfState>);
 

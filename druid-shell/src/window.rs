@@ -17,16 +17,16 @@
 use std::any::Any;
 use std::ops::Deref;
 
-use windows;
+use platform;
 
 // Handle to Window Level Utilities
 #[derive(Clone, Default)]
 pub struct WindowHandle {
-    pub inner: windows::WindowHandle,
+    pub inner: platform::WindowHandle,
 }
 
 impl Deref for WindowHandle {
-    type Target = windows::WindowHandle;
+    type Target = platform::WindowHandle;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
