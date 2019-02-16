@@ -50,8 +50,6 @@ pub use windows::application;
 #[cfg(target_os = "windows")]
 use windows::dcomp;
 #[cfg(target_os = "windows")]
-pub use windows::menu;
-#[cfg(target_os = "windows")]
 pub use windows::paint;
 
 #[cfg(target_os = "macos")]
