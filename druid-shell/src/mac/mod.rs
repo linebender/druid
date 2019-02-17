@@ -51,6 +51,7 @@ pub struct WindowHandle {
     /// a view. Also, this is better for hosted applications such as VST.
     ///
     /// TODO: remove option (issue has been filed against objc, or we could manually impl default with nil)
+    /// https://github.com/SSheldon/rust-objc/issues/77
     nsview: Option<WeakPtr>,
 }
 
