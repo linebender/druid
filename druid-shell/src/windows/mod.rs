@@ -52,6 +52,8 @@ use direct2d;
 use direct2d::math::SizeU;
 use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarget};
 
+use piet::RenderContext;
+
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 use menu::Menu;
