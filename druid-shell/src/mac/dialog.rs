@@ -12,20 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Utilities, macOS specific.
+//! File open/save dialogs, macOS implementation.
 
-use cocoa::base::{BOOL, YES};
+// TODO: maybe these types should be platform-independent?
 
-pub fn init() {}
+/// Type of file dialog.
+pub enum FileDialogType {
+    /// File open dialog.
+    Open,
+    /// File save dialog.
+    Save,
+}
 
-/// Panic if not on the main thread.assert_main_thread()
-///
-/// Many Cocoa operations are only valid on the main thread, and (I think)
-/// undefined behavior is possible if invoked from other threads. If so,
-/// failing on non main thread is necessary for safety.
-pub fn assert_main_thread() {
-    unsafe {
-        let is_main_thread: BOOL = msg_send!(class!(NSThread), isMainThread);
-        assert_eq!(is_main_thread, YES);
+/// Options for file dialog.
+#[derive(Default)]
+pub struct FileDialogOptions;
+
+impl FileDialogOptions {
+    pub fn set_show_hidden(&mut self) {
+        // TODO
     }
 }

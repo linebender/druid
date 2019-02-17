@@ -26,9 +26,12 @@ use time::get_time;
 use kurbo::{Line, Rect};
 use piet::{FillRule, FontBuilder, RenderContext, Text, TextLayoutBuilder};
 
+#[cfg(target_os = "windows")]
+use druid_shell::platform::PresentStrategy;
+
+use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 use druid_shell::window::{WinHandler, WindowHandle};
-use druid_shell::platform::{PresentStrategy, WindowBuilder};
 
 struct PerfTest(RefCell<PerfState>);
 
@@ -146,8 +149,11 @@ fn main() {
     };
     builder.set_handler(Box::new(PerfTest(RefCell::new(perf_state))));
     builder.set_title("Performance tester");
+
     // Note: experiment with changing this
+    #[cfg(target_os = "windows")]
     builder.set_present_strategy(PresentStrategy::FlipRedirect);
+
     let window = builder.build().unwrap();
     window.show();
     run_loop.run();

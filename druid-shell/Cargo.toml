@@ -1,11 +1,11 @@
 [package]
 name = "druid-shell"
-version = "0.1.1"
+version = "0.2.0"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Platform abstracting application shell used for druid toolkit."
 repository = "https://github.com/xi-editor/druid"
-categories = ["os::windows-apis", "gui"]
+categories = ["os::macos-apis", "os::windows-apis", "gui"]
 
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"
@@ -24,6 +24,12 @@ wio = "0.2"
 [target.'cfg(target_os="windows")'.dependencies.winapi]
 version = "0.3.6"
 features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser", "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "dcomp", "d3d11", "dwmapi", "wincon", "fileapi", "processenv", "winbase", "handleapi"]
+
+[target.'cfg(target_os="macos")'.dependencies]
+cocoa = "0.18.4"
+objc = "0.2.5"
+core-graphics = "0.17.3"
+cairo-rs = { version = "0.5.0", default_features = false }
 
 [dev-dependencies]
 kurbo = "0.2"
