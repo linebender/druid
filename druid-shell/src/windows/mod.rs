@@ -230,7 +230,10 @@ impl MyWndProc {
                 rt,
             );
             anim = self.handler.paint(&mut piet_ctx);
-            piet_ctx.finish(); // TODO: log error
+            if let Err(e) = piet_ctx.finish() {
+                // TODO: use proper log infrastructure
+                eprintln!("piet error on render: {:?}", e);
+            }
         }
         // Maybe should deal with lost device here...
         let res = rt.end_draw();
