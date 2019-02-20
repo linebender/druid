@@ -57,7 +57,7 @@ pub struct WindowHandle {
     /// TODO: remove option (issue has been filed against objc, or we could manually impl default with nil)
     /// https://github.com/SSheldon/rust-objc/issues/77
     nsview: Option<WeakPtr>,
-    queue: Weak<Mutex<Vec<Box<IdleCallback>>>>,
+    idle_queue: Weak<Mutex<Vec<Box<IdleCallback>>>>,
 }
 
 /// Builder abstraction for creating new windows.
@@ -70,7 +70,7 @@ pub struct WindowBuilder {
 #[derive(Clone)]
 pub struct IdleHandle {
     nsview: WeakPtr,
-    queue: Weak<Mutex<Vec<Box<IdleCallback>>>>,
+    idle_queue: Weak<Mutex<Vec<Box<IdleCallback>>>>,
 }
 
 // TODO: move this out of platform-dependent section.
@@ -128,7 +128,7 @@ impl WindowBuilder {
             window.setTitle_(make_nsstring(&self.title));
             window.makeKeyAndOrderFront_(nil);
 
-            let (view, queue) = make_view(self.handler.unwrap());
+            let (view, idle_queue) = make_view(self.handler.unwrap());
             let content_view = window.contentView();
             let frame = NSView::frame(content_view);
             view.initWithFrame_(frame);
@@ -138,7 +138,7 @@ impl WindowBuilder {
 
             Ok(WindowHandle {
                 nsview: Some(WeakPtr::new(view)),
-                queue,
+                idle_queue,
             })
         }
     }
@@ -204,14 +204,14 @@ lazy_static! {
 }
 
 fn make_view(handler: Box<WinHandler>) -> (id, Weak<Mutex<Vec<Box<IdleCallback>>>>) {
+    let idle_queue = Arc::new(Mutex::new(Vec::new()));
+    let queue_handle = Arc::downgrade(&idle_queue);
+    let state = ViewState {
+        handler,
+        idle_queue,
+    };
+    let state_ptr = Box::into_raw(Box::new(state));
     unsafe {
-        let idle_queue = Arc::new(Mutex::new(Vec::new()));
-        let queue_handle = Arc::downgrade(&idle_queue);
-        let state = ViewState {
-            handler,
-            idle_queue,
-        };
-        let state_ptr = Box::into_raw(Box::new(state));
         let view: id = msg_send![VIEW_CLASS.0, new];
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
         let options: NSAutoresizingMaskOptions = NSViewWidthSizable | NSViewHeightSizable;
@@ -244,12 +244,12 @@ extern "C" fn mouse_down(this: &mut Object, _: Sel, nsevent: id) {
 
 extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
     let characters = get_characters(nsevent);
-    unsafe {
+    let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
-        let view_state = &mut *(view_state as *mut ViewState);
-        for c in characters.chars() {
-            (*view_state).handler.char(c as u32, 0);
-        }
+        &mut *(view_state as *mut ViewState)
+    };
+    for c in characters.chars() {
+        (*view_state).handler.char(c as u32, 0);
     }
 }
 
@@ -286,14 +286,14 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
 }
 
 extern "C" fn run_idle(this: &mut Object, _: Sel) {
-    unsafe {
+    let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
-        let view_state = &mut *(view_state as *mut ViewState);
-        let queue: Vec<_> = mem::replace(&mut view_state.idle_queue.lock().unwrap(), Vec::new());
-        let handler_as_any = view_state.handler.as_any();
-        for callback in queue {
-            callback.call(handler_as_any);
-        }
+        &mut *(view_state as *mut ViewState)
+    };
+    let queue: Vec<_> = mem::replace(&mut view_state.idle_queue.lock().unwrap(), Vec::new());
+    let handler_as_any = view_state.handler.as_any();
+    for callback in queue {
+        callback.call(handler_as_any);
     }
 }
 
@@ -328,7 +328,7 @@ impl WindowHandle {
         // TODO: maybe try harder to return None if window has been dropped.
         self.nsview.as_ref().map(|nsview| IdleHandle {
             nsview: nsview.clone(),
-            queue: self.queue.clone(),
+            idle_queue: self.idle_queue.clone(),
         })
     }
 
@@ -350,15 +350,19 @@ impl IdleHandle {
     /// Add an idle handler, which is called (once) when the message loop
     /// is empty. The idle handler will be run from the main UI thread, and
     /// won't be scheduled if the associated view has been dropped.
+    ///
+    /// Note: the name "idle" suggests that it will be scheduled with a lower
+    /// priority than other UI events, but that's not necessarily the case.
     pub fn add_idle<F>(&self, callback: F)
     where
         F: FnOnce(&Any) + Send + 'static,
     {
-        if let Some(queue) = self.queue.upgrade() {
+        if let Some(queue) = self.idle_queue.upgrade() {
             let mut queue = queue.lock().unwrap();
             if queue.is_empty() {
                 unsafe {
                     let nsview = self.nsview.load();
+                    // Note: the nsview might be nil here if the window has been dropped, but that's ok.
                     let () = msg_send!(*nsview, performSelectorOnMainThread: sel!(runIdle)
                         withObject: nil waitUntilDone: NO);
                 }
