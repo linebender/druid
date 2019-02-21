@@ -17,7 +17,7 @@ travis-ci = { repository = "xi-editor/druid" }
 [dependencies]
 piet-common = "0.0.1"
 piet = "0.0.1"
-kurbo = "0.2.0"
+kurbo = "0.2.1"
 
 
 [dependencies.druid-shell]

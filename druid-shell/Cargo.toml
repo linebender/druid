@@ -33,4 +33,4 @@ core-graphics = "0.17.3"
 cairo-rs = { version = "0.5.0", default_features = false }
 
 [dev-dependencies]
-kurbo = "0.2"
+kurbo = "0.2.1"
