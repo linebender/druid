@@ -56,6 +56,7 @@ use piet::RenderContext;
 
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
+use keycodes::{M_ALT, M_CTRL, M_SHIFT};
 use menu::Menu;
 use util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use Error;
@@ -140,15 +141,6 @@ trait WndProc {
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
         -> Option<LRESULT>;
 }
-
-/// Modifier mask for alt key in `keydown` and `char` events.
-pub const M_ALT: u32 = 1;
-
-/// Modifier mask for control key in `keydown` and `char` events.
-pub const M_CTRL: u32 = 2;
-
-/// Modifier mask for shift key in `keydown` and `char` events.
-pub const M_SHIFT: u32 = 4;
 
 // State and logic for the winapi window procedure entry point. Note that this level
 // implements policies such as the use of Direct2D for painting.

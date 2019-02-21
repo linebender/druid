@@ -885,7 +885,7 @@ impl WinHandler for UiMain {
         let mut state = self.state.borrow_mut();
         state.anim_frame();
         {
-            paint_ctx.clear(0x272822).unwrap();
+            paint_ctx.clear(0x272822);
         }
         let root = state.graph.root;
         let bc = BoxConstraints::tight(state.inner.layout_ctx.size);

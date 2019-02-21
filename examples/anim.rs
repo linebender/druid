@@ -51,8 +51,7 @@ impl Widget for AnimWidget {
                 &fg,
                 1.0,
                 None,
-            )
-            .unwrap();
+            );
     }
 
     fn layout(

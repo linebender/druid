@@ -15,6 +15,7 @@
 //! macOS implementation of window creation.
 #![allow(non_snake_case)]
 
+pub mod application;
 pub mod dialog;
 pub mod menu;
 pub mod util;
@@ -300,7 +301,7 @@ extern "C" fn run_idle(this: &mut Object, _: Sel) {
 
 extern "C" fn redraw(this: &mut Object, _: Sel) {
     unsafe {
-        let () = msg_send!(this as *const _, setNeedsDisplay: YES);
+        let () = msg_send![this as *const _, setNeedsDisplay: YES];
     }
 }
 
@@ -323,6 +324,16 @@ impl WindowHandle {
         }
     }
 
+    // Request invalidation of the entire window contents.
+    pub fn invalidate(&self) {
+        if let Some(ref nsview) = self.nsview {
+            unsafe {
+                // We could share impl with redraw, but we'd need to deal with nil.
+                let () = msg_send![*nsview.load(), setNeedsDisplay: YES];
+            }
+        }
+    }
+
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
         // TODO: maybe try harder to return None if window has been dropped.
@@ -332,9 +343,39 @@ impl WindowHandle {
         })
     }
 
+    /// Get the dpi of the window.
+    ///
+    /// TODO: we want to migrate this from dpi (with 96 as nominal) to a scale
+    /// factor (with 1 as nominal).
     pub fn get_dpi(&self) -> f32 {
         // TODO: get actual dpi
         96.0
+    }
+
+    // TODO: the following methods are cut'n'paste code. A good way to DRY
+    // would be to have a platform-independent trait with these as methods with
+    // default implementations.
+
+    /// Convert a dimension in px units to physical pixels (rounding).
+    pub fn px_to_pixels(&self, x: f32) -> i32 {
+        (x * self.get_dpi() * (1.0 / 96.0)).round() as i32
+    }
+
+    /// Convert a point in px units to physical pixels (rounding).
+    pub fn px_to_pixels_xy(&self, x: f32, y: f32) -> (i32, i32) {
+        let scale = self.get_dpi() * (1.0 / 96.0);
+        ((x * scale).round() as i32, (y * scale).round() as i32)
+    }
+
+    /// Convert a dimension in physical pixels to px units.
+    pub fn pixels_to_px<T: Into<f64>>(&self, x: T) -> f32 {
+        (x.into() as f32) * 96.0 / self.get_dpi()
+    }
+
+    /// Convert a point in physical pixels to px units.
+    pub fn pixels_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f32, f32) {
+        let scale = 96.0 / self.get_dpi();
+        ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
 
     pub fn file_dialog(
@@ -345,6 +386,8 @@ impl WindowHandle {
         unimplemented!()
     }
 }
+
+unsafe impl Send for IdleHandle {}
 
 impl IdleHandle {
     /// Add an idle handler, which is called (once) when the message loop

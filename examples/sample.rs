@@ -55,8 +55,7 @@ impl Widget for FooWidget {
                 &fg,
                 1.0,
                 None,
-            )
-            .unwrap();
+            );
     }
 
     fn layout(
