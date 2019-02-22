@@ -56,7 +56,6 @@ use piet::RenderContext;
 
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
-use keycodes::{M_ALT, M_CTRL, M_SHIFT};
 use menu::Menu;
 use util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use Error;
