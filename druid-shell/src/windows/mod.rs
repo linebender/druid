@@ -52,6 +52,8 @@ use direct2d;
 use direct2d::math::SizeU;
 use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarget};
 
+use piet::RenderContext;
+
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 use menu::Menu;
@@ -220,11 +222,19 @@ impl MyWndProc {
         let s = state.as_mut().unwrap();
         let rt = s.render_target.as_mut().unwrap();
         rt.begin_draw();
-        let anim = self.handler.paint(&mut piet_common::Piet::new(
-            &self.d2d_factory,
-            &self.dwrite_factory,
-            rt,
-        ));
+        let anim;
+        {
+            let mut piet_ctx = piet_common::Piet::new(
+                &self.d2d_factory,
+                &self.dwrite_factory,
+                rt,
+            );
+            anim = self.handler.paint(&mut piet_ctx);
+            if let Err(e) = piet_ctx.finish() {
+                // TODO: use proper log infrastructure
+                eprintln!("piet error on render: {:?}", e);
+            }
+        }
         // Maybe should deal with lost device here...
         let res = rt.end_draw();
         if let Err(e) = res {

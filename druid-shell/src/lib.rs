@@ -35,6 +35,7 @@ extern crate cairo;
 #[macro_use]
 extern crate lazy_static;
 
+extern crate piet;
 extern crate piet_common;
 
 pub mod error;
