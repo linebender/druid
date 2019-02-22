@@ -45,7 +45,7 @@ use piet_common::Piet;
 
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
-use crate::window::WinHandler;
+use crate::window::{MouseButton, MouseEvent, MouseType, WinHandler};
 use crate::Error;
 
 use util::assert_main_thread;
@@ -137,6 +137,9 @@ impl WindowBuilder {
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
             window.makeKeyAndOrderFront_(nil);
+            // TODO: this should probably be a tracking area instead
+            window.setAcceptsMouseMovedEvents_(YES);
+
             let (view, idle_queue) = make_view(self.handler.expect("view"));
             let content_view = window.contentView();
             let frame = NSView::frame(content_view);
@@ -145,13 +148,21 @@ impl WindowBuilder {
                 Some(menu) => NSApp().setMainMenu_(menu.menu),
                 _ => (),
             }
-            // This is to invoke the size handler; maybe do it more directly
-            let () = msg_send!(view, setFrameSize: frame.size);
             content_view.addSubview_(view);
-            Ok(WindowHandle {
+            let handle = WindowHandle {
                 nsview: Some(WeakPtr::new(view)),
                 idle_queue,
-            })
+            };
+            let view_state: *mut c_void = *(*view).get_ivar("viewState");
+            let view_state = &mut *(view_state as *mut ViewState);
+            (*view_state).handler.connect(&crate::window::WindowHandle {
+                inner: handle.clone(),
+            });
+            (*view_state)
+                .handler
+                .size(frame.size.width as u32, frame.size.height as u32);
+
+            Ok(handle)
         }
     }
 }
@@ -196,12 +207,16 @@ lazy_static! {
             mouse_down as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
-            sel!(keyDown:),
-            key_down as extern "C" fn(&mut Object, Sel, id),
+            sel!(mouseUp:),
+            mouse_up as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
             sel!(mouseMoved:),
-            mouse_moved as extern "C" fn(&mut Object, Sel, id),
+            mouse_move as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
+            sel!(keyDown:),
+            key_down as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
             sel!(drawRect:),
@@ -243,21 +258,49 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
     }
 }
 
-extern "C" fn mouse_down(this: &mut Object, _: Sel, nsevent: id) {
+fn mouse_event(nsevent: id, view: id, ty: MouseType) -> MouseEvent {
     unsafe {
         let point = nsevent.locationInWindow();
-        println!("mouse down, point: {}, {}", point.x, point.y);
-        let view_state: *mut c_void = *this.get_ivar("viewState");
-        &mut *(view_state as *mut ViewState);
+        let view_point = view.convertPoint_fromView_(point, nil);
+        MouseEvent {
+            x: view_point.x as i32,
+            y: view_point.y as i32,
+            mods: 0,                  // TODO
+            which: MouseButton::Left, // TODO
+            ty,
+        }
     }
 }
 
-extern "C" fn mouse_moved(_this: &mut Object, _: Sel, nsevent: id) {
+extern "C" fn mouse_down(this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
-        let point = nsevent.locationInWindow();
-        println!("mouse moved, point: {}, {}", point.x, point.y);
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        let event = mouse_event(nsevent, this as id, MouseType::Down);
+        (*view_state).handler.mouse(&event);
     }
 }
+
+extern "C" fn mouse_up(this: &mut Object, _: Sel, nsevent: id) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        let event = mouse_event(nsevent, this as id, MouseType::Up);
+        (*view_state).handler.mouse(&event);
+    }
+}
+
+extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        let event = mouse_event(nsevent, this as id, MouseType::Down);
+        (*view_state)
+            .handler
+            .mouse_move(event.x, event.y, event.mods);
+    }
+}
+
 extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
     let characters = get_characters(nsevent);
     dbg!(&characters);
