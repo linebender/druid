@@ -15,8 +15,8 @@ default-target = "x86_64-pc-windows-msvc"
 travis-ci = { repository = "xi-editor/druid" }
 
 [dependencies]
-piet-common = "0.0.1"
-piet = "0.0.1"
+piet-common = "0.0.2"
+piet = "0.0.2"
 kurbo = "0.2.1"
 
 

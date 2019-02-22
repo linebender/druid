@@ -11,8 +11,8 @@ categories = ["os::macos-apis", "os::windows-apis", "gui"]
 default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
-piet-common = "0.0.1"
-piet = "0.0.1"
+piet-common = "0.0.2"
+piet = "0.0.2"
 
 lazy_static = "1.0"
 time = "0.1.39"
