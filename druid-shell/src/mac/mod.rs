@@ -26,8 +26,10 @@ use std::ffi::c_void;
 use std::ffi::OsString;
 use std::mem;
 use std::sync::{Arc, Mutex, Weak};
-
+pub use menu::Menu;
 use cocoa::appkit::{
+    NSApp,
+    NSApplication,
     NSApplicationActivateIgnoringOtherApps, NSAutoresizingMaskOptions, NSBackingStoreBuffered,
     NSEvent, NSRunningApplication, NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow,
     NSWindowStyleMask,
@@ -66,6 +68,7 @@ pub struct WindowBuilder {
     title: String,
     cursor: Cursor,
     enable_mouse_move_events: bool,
+    menu: Option<Menu>,
 }
 
 #[derive(Clone)]
@@ -90,6 +93,26 @@ struct ViewState {
     idle_queue: Arc<Mutex<Vec<Box<IdleCallback>>>>,
 }
 
+// fn build_menu() -> Strong<NSMenu> {
+//   let app_name = NSProcessInfo::process_info().process_name();
+//   let quit_string = nsstring!("Quit ").string_by_appending_string(app_name);
+
+//   let quit_button = NSMenuItem::alloc().init_with_title_action_key_equivalent(
+//     &quit_string,
+//     selector!("terminate:"),
+//     nsstring!("q"),
+//   );
+//   let mut app_menu = NSMenu::new();
+//   app_menu.add_item(quit_button);
+
+//   let mut app_menu_button = NSMenuItem::new();
+//   app_menu_button.set_submenu(app_menu);
+
+//   let mut menu = NSMenu::new();
+//   menu.add_item(app_menu_button);
+//   return menu;
+// }
+
 impl WindowBuilder {
     pub fn new() -> WindowBuilder {
         WindowBuilder {
@@ -97,6 +120,7 @@ impl WindowBuilder {
             title: String::new(),
             cursor: Cursor::Arrow,
             enable_mouse_move_events: true,
+            menu: Some(Menu::default()),
         }
     }
 
@@ -109,6 +133,7 @@ impl WindowBuilder {
     }
 
     pub fn set_menu(&mut self, menu: Menu) {
+        self.menu = Some(menu);
         // TODO
     }
     pub fn set_enable_mouse_move_events(&mut self, to: bool) {
@@ -143,6 +168,10 @@ impl WindowBuilder {
             let content_view = window.contentView();
             let frame = NSView::frame(content_view);
             view.initWithFrame_(frame);
+            match self.menu {
+                Some(menu) => NSApp().setMainMenu_(menu.menu),
+                _ => (),
+            }
             // This is to invoke the size handler; maybe do it more directly
             let () = msg_send!(view, setFrameSize: frame.size);
             content_view.addSubview_(view);
