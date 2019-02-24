@@ -93,26 +93,6 @@ struct ViewState {
     idle_queue: Arc<Mutex<Vec<Box<IdleCallback>>>>,
 }
 
-// fn build_menu() -> Strong<NSMenu> {
-//   let app_name = NSProcessInfo::process_info().process_name();
-//   let quit_string = nsstring!("Quit ").string_by_appending_string(app_name);
-
-//   let quit_button = NSMenuItem::alloc().init_with_title_action_key_equivalent(
-//     &quit_string,
-//     selector!("terminate:"),
-//     nsstring!("q"),
-//   );
-//   let mut app_menu = NSMenu::new();
-//   app_menu.add_item(quit_button);
-
-//   let mut app_menu_button = NSMenuItem::new();
-//   app_menu_button.set_submenu(app_menu);
-
-//   let mut menu = NSMenu::new();
-//   menu.add_item(app_menu_button);
-//   return menu;
-// }
-
 impl WindowBuilder {
     pub fn new() -> WindowBuilder {
         WindowBuilder {
@@ -211,7 +191,6 @@ lazy_static! {
         extern "C" fn enableMouseMoveEvents(this: &mut Object, _: Sel) {
             unsafe { this.set_ivar("acceptsMouseMove", YES) }
         }
-
         extern "C" fn disableMouseMoveEvents(this: &mut Object, _: Sel) {
             unsafe { this.set_ivar("acceptsMouseMove", NO) }
         }
