@@ -65,6 +65,7 @@ pub struct WindowBuilder {
     handler: Option<Box<WinHandler>>,
     title: String,
     cursor: Cursor,
+    enable_mouse_move_events: bool,
 }
 
 #[derive(Clone)]
@@ -95,6 +96,7 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             cursor: Cursor::Arrow,
+            enable_mouse_move_events: true,
         }
     }
 
@@ -109,33 +111,41 @@ impl WindowBuilder {
     pub fn set_menu(&mut self, menu: Menu) {
         // TODO
     }
+    pub fn set_enable_mouse_move_events(&mut self, to: bool) {
+        self.enable_mouse_move_events = to;
+    }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
         assert_main_thread();
         unsafe {
-            let window = NSWindow::alloc(nil)
-                .initWithContentRect_styleMask_backing_defer_(
-                    NSRect::new(NSPoint::new(0., 0.), NSSize::new(500., 400.)),
-                    NSWindowStyleMask::NSTitledWindowMask
-                        | NSWindowStyleMask::NSClosableWindowMask
-                        | NSWindowStyleMask::NSMiniaturizableWindowMask
-                        | NSWindowStyleMask::NSResizableWindowMask,
-                    NSBackingStoreBuffered,
-                    NO,
-                )
-                .autorelease();
+            let style_mask =
+                  NSWindowStyleMask::NSTitledWindowMask
+                | NSWindowStyleMask::NSClosableWindowMask
+                | NSWindowStyleMask::NSMiniaturizableWindowMask
+                | NSWindowStyleMask::NSResizableWindowMask;
+            let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(500., 400.));
+
+            let window: id = msg_send![WINDOW_CLASS.0, alloc];
+            let mouse_move = if self.enable_mouse_move_events { YES } else { NO };
+            (*window).set_ivar("acceptsMouseMove", mouse_move);
+            
+            msg_send!(window,
+                      initWithContentRect: rect
+                      styleMask: style_mask
+                      backing: NSBackingStoreBuffered
+                      defer: NO
+                      );
+            window.autorelease();
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
             window.makeKeyAndOrderFront_(nil);
-
-            let (view, idle_queue) = make_view(self.handler.unwrap());
+            let (view, idle_queue) = make_view(self.handler.expect("view"));
             let content_view = window.contentView();
             let frame = NSView::frame(content_view);
             view.initWithFrame_(frame);
             // This is to invoke the size handler; maybe do it more directly
             let () = msg_send!(view, setFrameSize: frame.size);
             content_view.addSubview_(view);
-
             Ok(WindowHandle {
                 nsview: Some(WeakPtr::new(view)),
                 idle_queue,
@@ -144,13 +154,48 @@ impl WindowBuilder {
     }
 }
 
+struct WindowClass(*const Class);
+unsafe impl Sync for WindowClass {}
+
+lazy_static! {
+    static ref WINDOW_CLASS: WindowClass = unsafe {
+        let mut decl =
+            ClassDecl::new("DruidWindow", class!(NSWindow))
+            .expect("Window class defined");
+
+        decl.add_ivar::<BOOL>("acceptsMouseMove");
+        decl.add_method(
+            sel!(acceptsMouseMovedEvents),
+            acceptsMouseMovedEvents as extern "C" fn (&Object, Sel) -> BOOL
+        );
+        decl.add_method(
+            sel!(enableMouseMoveEvents),
+            enableMouseMoveEvents as extern "C" fn (&mut Object, Sel)
+        );
+        decl.add_method(
+            sel!(disableMouseMoveEvents),
+            disableMouseMoveEvents as extern "C" fn (&mut Object, Sel)
+        );
+        extern "C" fn acceptsMouseMovedEvents(this: &Object, _: Sel) -> BOOL {
+            unsafe { *this.get_ivar("acceptsMouseMove") }
+        }
+        extern "C" fn enableMouseMoveEvents(this: &mut Object, _: Sel) {
+            unsafe { this.set_ivar("acceptsMouseMove", YES) }
+        }
+
+        extern "C" fn disableMouseMoveEvents(this: &mut Object, _: Sel) {
+            unsafe { this.set_ivar("acceptsMouseMove", NO) }
+        }
+        WindowClass(decl.register())
+    };
+}
 // Wrap pointer because lazy_static requires Sync.
 struct ViewClass(*const Class);
 unsafe impl Sync for ViewClass {}
 
 lazy_static! {
     static ref VIEW_CLASS: ViewClass = unsafe {
-        let mut decl = ClassDecl::new("DruidView", class!(NSView)).unwrap();
+        let mut decl = ClassDecl::new("DruidView", class!(NSView)).expect("View class defined");
         decl.add_ivar::<*mut c_void>("viewState");
 
         decl.add_method(
@@ -186,6 +231,10 @@ lazy_static! {
         decl.add_method(
             sel!(keyDown:),
             key_down as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
+            sel!(mouseMoved:),
+            mouse_moved as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
             sel!(drawRect:),
@@ -236,14 +285,21 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
 extern "C" fn mouse_down(this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
         let point = nsevent.locationInWindow();
-        println!("point: {}, {}", point.x, point.y);
+        println!("mouse down, point: {}, {}", point.x, point.y);
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
     }
 }
 
+extern "C" fn mouse_moved(this: &mut Object, _: Sel, nsevent: id) {
+  unsafe {
+    let point = nsevent.locationInWindow();
+    println!("mouse moved, point: {}, {}", point.x, point.y);
+  }
+}
 extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
     let characters = get_characters(nsevent);
+    dbg!(&characters);
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
@@ -263,7 +319,7 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let frame = NSView::frame(this as *mut _);
         let width = frame.size.width as u32;
         let height = frame.size.height as u32;
-        let cairo_surface = QuartzSurface::create_for_cg_context(cgcontext, width, height).unwrap();
+        let cairo_surface = QuartzSurface::create_for_cg_context(cgcontext, width, height).expect("cairo surface");
         let mut cairo_ctx = Context::new(&cairo_surface);
         cairo_ctx.set_source_rgb(0.0, 0.5, 0.0);
         cairo_ctx.paint();
@@ -290,7 +346,7 @@ extern "C" fn run_idle(this: &mut Object, _: Sel) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    let queue: Vec<_> = mem::replace(&mut view_state.idle_queue.lock().unwrap(), Vec::new());
+    let queue: Vec<_> = mem::replace(&mut view_state.idle_queue.lock().expect("queue"), Vec::new());
     let handler_as_any = view_state.handler.as_any();
     for callback in queue {
         callback.call(handler_as_any);
@@ -400,7 +456,7 @@ impl IdleHandle {
         F: FnOnce(&Any) + Send + 'static,
     {
         if let Some(queue) = self.idle_queue.upgrade() {
-            let mut queue = queue.lock().unwrap();
+            let mut queue = queue.lock().expect("queue lock");
             if queue.is_empty() {
                 unsafe {
                     let nsview = self.nsview.load();
