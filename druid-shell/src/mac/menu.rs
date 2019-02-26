@@ -81,6 +81,7 @@ impl Menu {
         }
     }
 
+    // TODO: how do we use the text here?
     pub fn add_dropdown(&mut self, menu: Menu, text: &str) {
         unsafe {
             let menu_item = NSMenuItem::new(nil).autorelease();
@@ -106,11 +107,11 @@ impl Menu {
 
 impl Default for Menu {
     fn default() -> Menu {
+        // The top level menu is just to contain the menus
         let mut menu = Menu::new();
+        // this one is our actual menu
         let mut submenu = Menu::new();
         submenu.add_item(1, "Quit", "q");
-        submenu.add_separator();
-        submenu.add_item(1, "Also Quit", "q");
         menu.add_dropdown(submenu, "Application");
         menu
     }
