@@ -17,26 +17,13 @@
 #[cfg(target_os = "windows")]
 #[macro_use]
 extern crate winapi;
-#[cfg(target_os = "windows")]
-extern crate direct2d;
-#[cfg(target_os = "windows")]
-extern crate wio;
 
-#[cfg(target_os = "macos")]
-extern crate cocoa;
-#[cfg(target_os = "macos")]
-extern crate core_graphics;
 #[cfg(target_os = "macos")]
 #[macro_use]
 extern crate objc;
-#[cfg(target_os = "macos")]
-extern crate cairo;
 
 #[macro_use]
 extern crate lazy_static;
-
-extern crate piet;
-extern crate piet_common;
 
 pub mod error;
 pub mod keycodes;
@@ -46,9 +33,6 @@ pub mod window;
 pub mod windows;
 #[cfg(target_os = "windows")]
 pub use windows as platform;
-
-#[cfg(target_os = "windows")]
-use windows::dcomp;
 #[cfg(target_os = "windows")]
 pub use windows::paint;
 

@@ -21,7 +21,7 @@ use winapi::shared::basetsd::*;
 use winapi::shared::windef::*;
 use winapi::um::winuser::*;
 
-use util::ToWide;
+use crate::util::ToWide;
 
 /// A menu object, which can be either a top-level menubar or a
 /// submenu.

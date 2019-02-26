@@ -17,7 +17,7 @@
 use std::any::Any;
 use std::ops::Deref;
 
-use platform;
+use crate::platform;
 
 // Handle to Window Level Utilities
 #[derive(Clone, Default)]

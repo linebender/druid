@@ -14,11 +14,6 @@
 
 //! Simple entity-component-system based GUI.
 
-extern crate druid_shell;
-extern crate kurbo;
-extern crate piet;
-extern crate piet_common;
-
 use std::any::Any;
 use std::cell::RefCell;
 use std::char;
@@ -32,8 +27,8 @@ use piet::RenderContext;
 
 use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
-use druid_shell::window::{self, MouseType, WinHandler, WindowHandle};
 use druid_shell::platform::IdleHandle;
+use druid_shell::window::{self, MouseType, WinHandler, WindowHandle};
 
 mod graph;
 pub mod widget;

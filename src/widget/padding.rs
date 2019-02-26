@@ -14,9 +14,9 @@
 
 //! A widget that just adds padding during layout.
 
-use widget::Widget;
-use {BoxConstraints, LayoutResult};
-use {Id, LayoutCtx, Ui};
+use crate::widget::Widget;
+use crate::{BoxConstraints, LayoutResult};
+use crate::{Id, LayoutCtx, Ui};
 
 /// A padding widget. Is expected to have exactly one child.
 pub struct Padding {

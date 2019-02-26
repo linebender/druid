@@ -6,6 +6,7 @@ authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Platform abstracting application shell used for druid toolkit."
 repository = "https://github.com/xi-editor/druid"
 categories = ["os::macos-apis", "os::windows-apis", "gui"]
+edition = "2018"
 
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"

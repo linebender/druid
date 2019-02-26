@@ -41,7 +41,7 @@ use wio::com::ComPtr;
 use direct2d::math::Matrix3x2F;
 use direct2d::{self, RenderTarget};
 
-use util::OPTIONAL_FUNCTIONS;
+use crate::util::OPTIONAL_FUNCTIONS;
 
 unsafe fn wrap<T, U, F>(hr: HRESULT, ptr: *mut T, f: F) -> Result<U, HRESULT>
 where

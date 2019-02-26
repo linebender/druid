@@ -20,9 +20,9 @@ use kurbo::Rect;
 use piet::{FillRule, FontBuilder, RenderContext, Text, TextLayoutBuilder};
 use piet_common::Piet;
 
-use widget::Widget;
-use {BoxConstraints, Geometry, LayoutResult};
-use {HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, Ui};
+use crate::widget::Widget;
+use crate::{BoxConstraints, Geometry, LayoutResult};
+use crate::{HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, Ui};
 
 /// A text label with no interaction.
 pub struct Label {
@@ -45,11 +45,7 @@ impl Label {
         ctx.add(self, &[])
     }
 
-    fn get_layout(
-        &self,
-        rt: &mut Piet,
-        font_size: f32,
-    ) -> <Piet as RenderContext>::TextLayout {
+    fn get_layout(&self, rt: &mut Piet, font_size: f32) -> <Piet as RenderContext>::TextLayout {
         // TODO: caching of both the format and the layout
         let font = rt
             .text()

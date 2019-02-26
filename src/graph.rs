@@ -16,7 +16,7 @@
 
 use std::mem;
 
-use Id;
+use crate::Id;
 
 #[derive(Default)]
 pub struct Graph {

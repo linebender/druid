@@ -16,8 +16,7 @@
 
 use std::any::Any;
 
-use widget::Widget;
-use HandlerCtx;
+use crate::{widget::Widget, HandlerCtx};
 
 pub struct NullWidget;
 
