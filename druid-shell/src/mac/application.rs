@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Windows implementation of features at the application scope.
+//! macOS implementation of features at the application scope.
 
-use win_main;
+use cocoa::appkit::NSApp;
+use cocoa::base::nil;
 
 pub struct Application;
 
 impl Application {
     pub fn quit() {
-        win_main::request_quit();
+        unsafe {
+            let () = msg_send![NSApp(), terminate: nil];
+        }
     }
 }

@@ -74,8 +74,7 @@ impl Widget for Label {
         let pos = (geom.pos.0, geom.pos.1 + font_size);
         paint_ctx
             .render_ctx
-            .draw_text(&text_layout, pos, &brush)
-            .unwrap();
+            .draw_text(&text_layout, pos, &brush);
     }
 
     fn layout(
@@ -134,8 +133,7 @@ impl Widget for Button {
             );
             paint_ctx
                 .render_ctx
-                .fill(rect, &brush, FillRule::NonZero)
-                .unwrap();
+                .fill(rect, &brush, FillRule::NonZero);
         }
         self.label.paint(paint_ctx, geom);
     }

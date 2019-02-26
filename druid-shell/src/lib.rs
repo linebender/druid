@@ -39,6 +39,7 @@ extern crate piet;
 extern crate piet_common;
 
 pub mod error;
+pub mod keycodes;
 pub mod window;
 
 #[cfg(target_os = "windows")]
@@ -46,8 +47,6 @@ pub mod windows;
 #[cfg(target_os = "windows")]
 pub use windows as platform;
 
-#[cfg(target_os = "windows")]
-pub use windows::application;
 #[cfg(target_os = "windows")]
 use windows::dcomp;
 #[cfg(target_os = "windows")]
@@ -60,6 +59,7 @@ pub use mac as platform;
 
 pub use error::Error;
 
+pub use platform::application;
 pub use platform::dialog;
 pub use platform::menu;
 pub use platform::util;

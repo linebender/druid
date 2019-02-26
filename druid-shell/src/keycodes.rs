@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2018 The xi-editor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Windows implementation of features at the application scope.
+//! Keycode constants.
 
-use win_main;
+/// Modifier mask for alt key in `keydown` and `char` events.
+pub const M_ALT: u32 = 1;
 
-pub struct Application;
+/// Modifier mask for control key in `keydown` and `char` events.
+pub const M_CTRL: u32 = 2;
 
-impl Application {
-    pub fn quit() {
-        win_main::request_quit();
-    }
-}
+/// Modifier mask for shift key in `keydown` and `char` events.
+pub const M_SHIFT: u32 = 4;
+
