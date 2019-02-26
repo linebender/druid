@@ -21,7 +21,8 @@ cache:
 script:
   - if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then brew update; brew install cairo; fi
   - export RUST_BACKTRACE=1
-  - RUSTFLAGS="-D warnings" cargo check --all || exit
-  - RUSTFLAGS="-D warnings" cargo check --examples || exit
+  - # TODO: deny warnings
+  - cargo check --all || exit
+  - cargo check --examples || exit
   - cargo test --all || exit
   - cargo test --examples || exit
