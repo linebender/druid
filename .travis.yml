@@ -6,6 +6,7 @@ rust:
 
 os:
   - windows
+  - osx
 
 matrix:
   allow_failures:
