@@ -41,7 +41,7 @@ use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
 
 use direct2d::enums::DrawTextOptions;
 
-use Error;
+use crate::Error;
 
 pub fn as_result(hr: HRESULT) -> Result<(), Error> {
     if SUCCEEDED(hr) {

@@ -16,8 +16,8 @@
 
 use druid_shell::keycodes::M_ALT;
 
-use widget::Widget;
-use {HandlerCtx, Id, KeyEvent, KeyVariant, Ui};
+use crate::widget::Widget;
+use crate::{HandlerCtx, Id, KeyEvent, KeyVariant, Ui};
 
 pub struct KeyListener;
 

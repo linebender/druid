@@ -17,8 +17,8 @@
 use std::any::Any;
 use std::marker::PhantomData;
 
-use widget::Widget;
-use {HandlerCtx, Id, Ui};
+use crate::widget::Widget;
+use crate::{HandlerCtx, Id, Ui};
 
 pub struct EventForwarder<T>(PhantomData<T>);
 

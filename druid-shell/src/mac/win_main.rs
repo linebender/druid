@@ -18,7 +18,7 @@ use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicyRegular};
 use cocoa::base::{id, nil};
 use cocoa::foundation::NSAutoreleasePool;
 
-use util::assert_main_thread;
+use crate::util::assert_main_thread;
 
 pub struct RunLoop {
     ns_app: id,

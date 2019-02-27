@@ -37,8 +37,8 @@ use direct2d;
 use direct2d::enums::{AlphaMode, RenderTargetType};
 use direct2d::render_target::{DxgiSurfaceRenderTarget, GenericRenderTarget, HwndRenderTarget};
 
-use util::as_result;
-use Error;
+use crate::util::as_result;
+use crate::Error;
 
 /// Context for painting by app into window.
 pub struct PaintCtx<'a> {

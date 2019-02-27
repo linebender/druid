@@ -7,6 +7,7 @@ description = "Data-oriented Rust UI design toolkit."
 repository = "https://github.com/xi-editor/druid"
 categories = ["gui"]
 keywords = ["gui", "ui", "toolkit"]
+edition = "2018"
 
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"
@@ -18,7 +19,6 @@ travis-ci = { repository = "xi-editor/druid" }
 piet-common = "0.0.2"
 piet = "0.0.2"
 kurbo = "0.2.1"
-
 
 [dependencies.druid-shell]
 path = "druid-shell"

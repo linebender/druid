@@ -28,8 +28,8 @@ use wio::com::ComPtr;
 
 use std::ffi::OsString;
 use std::ptr::null_mut;
-use util::{as_result, FromWide};
-use Error;
+use crate::util::{as_result, FromWide};
+use crate::Error;
 
 /// Type of file dialog.
 pub enum FileDialogType {

@@ -18,26 +18,26 @@ use std::any::Any;
 
 pub use druid_shell::window::MouseButton;
 
-use {BoxConstraints, Geometry, LayoutResult};
-use {HandlerCtx, Id, LayoutCtx, PaintCtx};
+use crate::{BoxConstraints, Geometry, LayoutResult};
+use crate::{HandlerCtx, Id, LayoutCtx, PaintCtx};
 
 mod button;
-pub use widget::button::{Button, Label};
+pub use crate::widget::button::{Button, Label};
 
 mod event_forwarder;
-pub use widget::event_forwarder::EventForwarder;
+pub use crate::widget::event_forwarder::EventForwarder;
 
 mod flex;
-pub use widget::flex::{Column, Flex, Row};
+pub use crate::widget::flex::{Column, Flex, Row};
 
 mod key_listener;
-pub use widget::key_listener::KeyListener;
+pub use crate::widget::key_listener::KeyListener;
 
 mod null;
-pub(crate) use widget::null::NullWidget;
+pub(crate) use crate::widget::null::NullWidget;
 
 mod padding;
-pub use widget::padding::Padding;
+pub use crate::widget::padding::Padding;
 
 /// The trait implemented by all widgets.
 pub trait Widget {

@@ -43,10 +43,9 @@ use cairo::{Context, QuartzSurface};
 use piet::RenderContext;
 use piet_common::Piet;
 
-use platform::dialog::{FileDialogOptions, FileDialogType};
-use platform::menu::Menu;
-use window::{Cursor, WinHandler};
-use Error;
+use crate::platform::{menu::Menu, dialog::{FileDialogOptions, FileDialogType}};
+use crate::window::{Cursor, WinHandler};
+use crate::Error;
 
 use util::assert_main_thread;
 

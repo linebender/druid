@@ -56,11 +56,11 @@ use piet::RenderContext;
 
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
-use menu::Menu;
-use util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
-use Error;
+use crate::menu::Menu;
+use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
+use crate::Error;
 
-use window::{self, Cursor, MouseButton, MouseEvent, MouseType, WinHandler};
+use crate::window::{self, Cursor, MouseButton, MouseEvent, MouseType, WinHandler};
 
 extern "system" {
     pub fn DwmFlush();
@@ -323,7 +323,7 @@ impl WndProc for MyWndProc {
                         self.rebuild_render_target();
                         self.render();
                         let mut state = self.state.borrow_mut();
-                        let mut s = state.as_mut().unwrap();
+                        let s = state.as_mut().unwrap();
                         (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
                     } else {
                         println!("ResizeBuffers failed: 0x{:x}", res);
@@ -334,7 +334,7 @@ impl WndProc for MyWndProc {
                     DwmFlush();
 
                     let mut state = self.state.borrow_mut();
-                    let mut s = state.as_mut().unwrap();
+                    let s = state.as_mut().unwrap();
                     if let Some(ref mut ds) = s.dcomp_state {
                         let _ = ds.dcomp_target.set_root(&mut ds.swapchain_visual);
                         let _ = ds.dcomp_device.commit();
@@ -356,7 +356,7 @@ impl WndProc for MyWndProc {
                 };
                 if use_hwnd {
                     let mut state = self.state.borrow_mut();
-                    let mut s = state.as_mut().unwrap();
+                    let s = state.as_mut().unwrap();
                     if let Some(ref mut rt) = s.render_target {
                         if let Some(hrt) = cast_to_hwnd(rt) {
                             let width = LOWORD(lparam as u32) as u32;
@@ -384,7 +384,7 @@ impl WndProc for MyWndProc {
                         self.rebuild_render_target();
                         self.render();
                         let mut state = self.state.borrow_mut();
-                        let mut s = state.as_mut().unwrap();
+                        let s = state.as_mut().unwrap();
                         if let Some(ref mut dcomp_state) = s.dcomp_state {
                             (*dcomp_state.swap_chain).Present(0, 0);
                             let _ = dcomp_state.dcomp_device.commit();
