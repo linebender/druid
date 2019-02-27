@@ -32,7 +32,7 @@ use piet_common::Piet;
 
 use platform::dialog::{FileDialogOptions, FileDialogType};
 use platform::menu::Menu;
-use window::{Cursor, WinHandler};
+use window::{self, Cursor, WinHandler};
 use Error;
 
 use util::assert_main_thread;
@@ -147,9 +147,15 @@ impl WindowBuilder {
 
         window.add(&drawing_area);
 
-        Ok(WindowHandle {
+        let tr = WindowHandle {
             window: Some(window),
-        })
+        };
+
+        handler.connect(&window::WindowHandle{
+            inner: tr.clone()
+        });
+
+        Ok(tr)
     }
 }
 
