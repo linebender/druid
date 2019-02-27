@@ -21,11 +21,12 @@ pub mod util;
 pub mod win_main;
 
 use std::any::Any;
-use std::ffi::OsString;
 use std::cell::Cell;
+use std::ffi::OsString;
 use std::sync::{Arc, Mutex, Weak};
 
 use gtk::ApplicationWindow;
+use gtk::Inhibit;
 
 use piet::RenderContext;
 use piet_common::Piet;
@@ -112,21 +113,22 @@ impl WindowBuilder {
 
         let drawing_area = gtk::DrawingArea::new();
 
+        drawing_area.set_events(gdk::EventMask::all().bits() as i32);
+
         {
             let mut last_size = Cell::new((0, 0));
             let handler = Arc::clone(&handler);
             drawing_area.connect_draw(move |widget, context| {
-                use gtk::Inhibit;
-
                 let extents = context.clip_extents();
-                let size = ((extents.2 - extents.0) as u32, (extents.3 - extents.1) as u32);
+                let size = (
+                    (extents.2 - extents.0) as u32,
+                    (extents.3 - extents.1) as u32,
+                );
 
                 if last_size.get() != size {
                     last_size.set(size);
                     handler.size(size.0, size.1);
                 }
-
-                eprintln!("Clip extents: {:?}", context.clip_extents());
 
                 context.set_source_rgb(0.0, 0.0, 0.0);
                 context.paint();
@@ -139,7 +141,16 @@ impl WindowBuilder {
                 // For some reason piet needs a mutable context, so give it one I guess.
                 let mut context = context.clone();
                 let mut piet_context = Piet::new(&mut context);
-                handler.paint(&mut piet_context);
+                let anim = handler.paint(&mut piet_context);
+                piet_context.finish();
+
+                if anim {
+                    widget.queue_draw();
+                }
+
+                Inhibit(false)
+            });
+        }
 
                 Inhibit(false)
             });
@@ -184,7 +195,11 @@ impl WindowHandle {
 
     // Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
-        unimplemented!("WindowHandle::invalidate");
+        use gtk::WidgetExt;
+        match self.window.as_ref() {
+            Some(window) => window.queue_draw(),
+            None => {},
+        }
     }
 
     /// Get a handle that can be used to schedule an idle task.
