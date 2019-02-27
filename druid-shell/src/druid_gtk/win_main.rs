@@ -32,6 +32,7 @@ pub struct RunLoop {}
 impl RunLoop {
     pub fn new() -> RunLoop {
         use gio::ApplicationExt;
+        use gtk::GtkApplicationExt;
 
         assert_main_thread();
 
@@ -39,6 +40,13 @@ impl RunLoop {
         let application =
             Application::new("com.github.xi-editor.druid", ApplicationFlags::FLAGS_NONE)
                 .expect("Unable to create GTK application");
+
+        application.connect_activate(|app| {
+            eprintln!("Activated application");
+        });
+
+        application.register(None);
+        application.activate();
 
         GTK_APPLICATION.with(move |x| *x.borrow_mut() = Some(application));
 
@@ -65,6 +73,7 @@ pub fn request_quit() {
     gtk::main_quit();
 }
 
+#[inline]
 pub(crate) fn with_application<F, R>(f: F) -> R
 where
     F: std::ops::FnOnce(Application) -> R,

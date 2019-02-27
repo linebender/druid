@@ -26,6 +26,9 @@ use std::sync::{Arc, Mutex, Weak};
 
 use gtk::ApplicationWindow;
 
+use piet::RenderContext;
+use piet_common::Piet;
+
 use platform::dialog::{FileDialogOptions, FileDialogType};
 use platform::menu::Menu;
 use window::{Cursor, WinHandler};
@@ -85,12 +88,17 @@ impl WindowBuilder {
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
-        use gdk::WindowExt;
-        use gtk::GtkWindowExt;
-
+        use gtk::{ContainerExt, GtkWindowExt, WidgetExt};
         assert_main_thread();
 
+        let handler = self
+            .handler
+            .expect("Tried to build a window without setting the handler");
+
+        let handler = Arc::new(handler);
+
         let mut window = with_application(|app| ApplicationWindow::new(&app));
+
         window.set_title(&self.title);
         // TODO(bobtwinkles): enable this when I figure out how to set the cursor on application windows
         // window.set_cursor(gdk::Cursor::new_from_nane(
@@ -101,6 +109,34 @@ impl WindowBuilder {
         //     },
         // ));
 
+        let drawing_area = gtk::DrawingArea::new();
+
+        {
+            let handler = Arc::clone(&handler);
+            drawing_area.connect_draw(move |widget, context| {
+                use gtk::Inhibit;
+
+                eprintln!("Clip extents: {:?}", context.clip_extents());
+
+                context.set_source_rgb(0.0, 0.0, 0.0);
+                context.paint();
+
+                context.set_source_rgb(1.0, 0.0, 0.0);
+                context.rectangle(0.0, 0.0, 100.0, 100.0);
+
+                context.fill();
+
+                // For some reason piet needs a mutable context, so give it one I guess.
+                let mut context = context.clone();
+                let mut piet_context = Piet::new(&mut context);
+                handler.paint(&mut piet_context);
+
+                Inhibit(false)
+            });
+        }
+
+        window.add(&drawing_area);
+
         Ok(WindowHandle {
             window: Some(window),
         })
@@ -109,12 +145,25 @@ impl WindowBuilder {
 
 impl WindowHandle {
     pub fn show(&self) {
-        unimplemented!("WindowHandle::show");
+        use gtk::WidgetExt;
+        match self.window.as_ref() {
+            Some(window) => window.show_all(),
+            None => return,
+        }
+        // self.window.map(|window| window.show_all());
     }
 
     /// Close the window.
     pub fn close(&self) {
-        unimplemented!("WindowHandle::close");
+        use gtk::GtkApplicationExt;
+        match self.window.as_ref() {
+            Some(window) => {
+                with_application(|app| {
+                    app.remove_window(window);
+                });
+            }
+            None => return,
+        }
     }
 
     // Request invalidation of the entire window contents.
