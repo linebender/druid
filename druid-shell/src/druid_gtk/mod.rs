@@ -22,6 +22,7 @@ pub mod win_main;
 
 use std::any::Any;
 use std::ffi::OsString;
+use std::cell::Cell;
 use std::sync::{Arc, Mutex, Weak};
 
 use gtk::ApplicationWindow;
@@ -112,9 +113,18 @@ impl WindowBuilder {
         let drawing_area = gtk::DrawingArea::new();
 
         {
+            let mut last_size = Cell::new((0, 0));
             let handler = Arc::clone(&handler);
             drawing_area.connect_draw(move |widget, context| {
                 use gtk::Inhibit;
+
+                let extents = context.clip_extents();
+                let size = ((extents.2 - extents.0) as u32, (extents.3 - extents.1) as u32);
+
+                if last_size.get() != size {
+                    last_size.set(size);
+                    handler.size(size.0, size.1);
+                }
 
                 eprintln!("Clip extents: {:?}", context.clip_extents());
 
