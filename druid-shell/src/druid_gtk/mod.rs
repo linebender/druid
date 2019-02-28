@@ -25,6 +25,7 @@ use std::cell::Cell;
 use std::ffi::OsString;
 use std::sync::{Arc, Mutex, Weak};
 
+use gdk::EventMask;
 use gtk::ApplicationWindow;
 use gtk::Inhibit;
 
@@ -113,7 +114,16 @@ impl WindowBuilder {
 
         let drawing_area = gtk::DrawingArea::new();
 
-        drawing_area.set_events(gdk::EventMask::all().bits() as i32);
+        drawing_area.set_events(
+            (EventMask::EXPOSURE_MASK
+                | EventMask::POINTER_MOTION_MASK
+                | EventMask::BUTTON_PRESS_MASK
+                | EventMask::BUTTON_RELEASE_MASK
+                | EventMask::KEY_PRESS_MASK
+                | EventMask::KEY_RELEASE_MASK
+                | EventMask::SCROLL_MASK)
+                .bits() as i32,
+        );
 
         {
             let mut last_size = Cell::new((0, 0));
@@ -152,7 +162,85 @@ impl WindowBuilder {
             });
         }
 
-                Inhibit(false)
+        {
+            let handler = Arc::clone(&handler);
+            drawing_area.connect_button_press_event(move |_widget, button| {
+                // XXX: what units is this in
+                let position = button.get_position();
+                handler.mouse(&window::MouseEvent {
+                    x: position.0 as i32,
+                    y: position.1 as i32,
+                    mods: 0, // TODO: thread this state through somehow
+                    which: gtk_button_to_druid(button.get_button()),
+                    ty: window::MouseType::Down,
+                });
+
+                Inhibit(true)
+            });
+        }
+
+        {
+            let handler = Arc::clone(&handler);
+            drawing_area.connect_button_release_event(move |_widget, button| {
+                // XXX: what units is this in
+                let position = button.get_position();
+                handler.mouse(&window::MouseEvent {
+                    x: position.0 as i32,
+                    y: position.1 as i32,
+                    mods: 0, // TODO: thread this state through somehow
+                    which: gtk_button_to_druid(button.get_button()),
+                    ty: window::MouseType::Up,
+                });
+
+                Inhibit(true)
+            });
+        }
+
+        {
+            let handler = Arc::clone(&handler);
+            drawing_area.connect_motion_notify_event(move |_widget, motion| {
+                let position = motion.get_position();
+
+                handler.mouse_move(position.0 as i32, position.1 as i32, 0);
+
+                Inhibit(true)
+            });
+        }
+
+        {
+            let handler = Arc::clone(&handler);
+            drawing_area.connect_scroll_event(move |_widget, scroll| {
+                use gdk::ScrollDirection;
+                let deltas = scroll.get_scroll_deltas();
+
+                // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
+                // They claim that one "tick" on a scroll wheel should be 120 units.
+                // GTK simply reports the direction
+                match scroll.get_direction() {
+                    ScrollDirection::Up => {
+                        handler.mouse_wheel(120, 0);
+                    }
+                    ScrollDirection::Down => {
+                        handler.mouse_wheel(-120, 0);
+                    }
+                    ScrollDirection::Left => {
+                        // Note: this direction is just a guess, I (bobtwinkles) don't
+                        // have a way to test horizontal scroll events under GTK.
+                        // If it's wrong, the right direction also needs to be changed
+                        handler.mouse_hwheel(120, 0);
+                    }
+                    ScrollDirection::Right => {
+                        handler.mouse_hwheel(-120, 0);
+                    }
+                    ScrollDirection::Smooth => {
+                        eprintln!("Warning: somehow the Druid widget got a smooth scroll event");
+                    }
+                    e => {
+                        eprintln!("Warning: the Druid widget got some whacky scroll direction {:?}", e);
+                    }
+                }
+
+                Inhibit(true)
             });
         }
 
@@ -271,5 +359,18 @@ impl IdleHandle {
             }
             queue.push(Box::new(callback));
         }
+    }
+}
+
+/// Map a GTK mouse button to a Druid one
+#[inline]
+fn gtk_button_to_druid(button: u32) -> window::MouseButton {
+    use window::MouseButton;
+    match button {
+        1 => MouseButton::Left,
+        2 => MouseButton::Middle,
+        3 => MouseButton::Right,
+        4 => MouseButton::X1,
+        _ => MouseButton::X2,
     }
 }
