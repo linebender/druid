@@ -50,6 +50,7 @@ pub struct WindowBuilder {
     handler: Option<Box<WinHandler>>,
     title: String,
     cursor: Cursor,
+    menu: Option<menu::Menu>,
 }
 
 #[derive(Clone)]
@@ -75,6 +76,7 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             cursor: Cursor::Arrow,
+            menu: None,
         }
     }
 
@@ -87,11 +89,11 @@ impl WindowBuilder {
     }
 
     pub fn set_menu(&mut self, menu: Menu) {
-        // TODO
+        self.menu = Some(menu);
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
-        use gtk::{ContainerExt, GtkWindowExt, WidgetExt};
+        use gtk::{BoxExt, ContainerExt, GtkWindowExt, WidgetExt};
         assert_main_thread();
 
         let handler = self
@@ -111,6 +113,14 @@ impl WindowBuilder {
         //         IBeam => "text",
         //     },
         // ));
+
+        let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        window.add(&vbox);
+
+        if let Some(menu) = self.menu {
+            let menu = menu.into_gtk_menubar();
+            vbox.pack_start(&menu, false, false, 0);
+        }
 
         let drawing_area = gtk::DrawingArea::new();
 
@@ -302,7 +312,7 @@ impl WindowBuilder {
             });
         }
 
-        window.add(&drawing_area);
+        vbox.pack_end(&drawing_area, true, true, 0);
 
         let tr = WindowHandle {
             window: Some(window),
