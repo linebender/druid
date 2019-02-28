@@ -301,9 +301,7 @@ impl WindowBuilder {
             window: Some(window),
         };
 
-        handler.connect(&window::WindowHandle{
-            inner: tr.clone()
-        });
+        handler.connect(&window::WindowHandle { inner: tr.clone() });
 
         Ok(tr)
     }
@@ -337,7 +335,7 @@ impl WindowHandle {
         use gtk::WidgetExt;
         match self.window.as_ref() {
             Some(window) => window.queue_draw(),
-            None => {},
+            None => {}
         }
     }
 
