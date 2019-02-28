@@ -295,6 +295,13 @@ impl WindowBuilder {
             });
         }
 
+        {
+            let handler = Arc::clone(&handler);
+            drawing_area.connect_destroy(move |widget| {
+                handler.destroy();
+            });
+        }
+
         window.add(&drawing_area);
 
         let tr = WindowHandle {

@@ -14,10 +14,12 @@
 
 //! GTK implementation of features at the application scope.
 
+use gtk;
+
 pub struct Application;
 
 impl Application {
     pub fn quit() {
-        unimplemented!("Quitting the application");
+        // Nothing to do: if this is called, we're already shutting down and GTK will pick it up (I hope?)
     }
 }
