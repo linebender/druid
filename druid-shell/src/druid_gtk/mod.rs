@@ -170,7 +170,7 @@ impl WindowBuilder {
                 handler.mouse(&window::MouseEvent {
                     x: position.0 as i32,
                     y: position.1 as i32,
-                    mods: 0, // TODO: thread this state through somehow
+                    mods: gtk_modifiers_to_druid(button.get_state()),
                     which: gtk_button_to_druid(button.get_button()),
                     ty: window::MouseType::Down,
                 });
@@ -187,7 +187,7 @@ impl WindowBuilder {
                 handler.mouse(&window::MouseEvent {
                     x: position.0 as i32,
                     y: position.1 as i32,
-                    mods: 0, // TODO: thread this state through somehow
+                    mods: gtk_modifiers_to_druid(button.get_state()),
                     which: gtk_button_to_druid(button.get_button()),
                     ty: window::MouseType::Up,
                 });
@@ -201,7 +201,11 @@ impl WindowBuilder {
             drawing_area.connect_motion_notify_event(move |_widget, motion| {
                 let position = motion.get_position();
 
-                handler.mouse_move(position.0 as i32, position.1 as i32, 0);
+                handler.mouse_move(
+                    position.0 as i32,
+                    position.1 as i32,
+                    gtk_modifiers_to_druid(motion.get_state()),
+                );
 
                 Inhibit(true)
             });
@@ -212,31 +216,35 @@ impl WindowBuilder {
             drawing_area.connect_scroll_event(move |_widget, scroll| {
                 use gdk::ScrollDirection;
                 let deltas = scroll.get_scroll_deltas();
+                let modifiers = gtk_modifiers_to_druid(scroll.get_state());
 
                 // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
                 // They claim that one "tick" on a scroll wheel should be 120 units.
                 // GTK simply reports the direction
                 match scroll.get_direction() {
                     ScrollDirection::Up => {
-                        handler.mouse_wheel(120, 0);
+                        handler.mouse_wheel(120, modifiers);
                     }
                     ScrollDirection::Down => {
-                        handler.mouse_wheel(-120, 0);
+                        handler.mouse_wheel(-120, modifiers);
                     }
                     ScrollDirection::Left => {
                         // Note: this direction is just a guess, I (bobtwinkles) don't
                         // have a way to test horizontal scroll events under GTK.
                         // If it's wrong, the right direction also needs to be changed
-                        handler.mouse_hwheel(120, 0);
+                        handler.mouse_hwheel(120, modifiers);
                     }
                     ScrollDirection::Right => {
-                        handler.mouse_hwheel(-120, 0);
+                        handler.mouse_hwheel(-120, modifiers);
                     }
                     ScrollDirection::Smooth => {
                         eprintln!("Warning: somehow the Druid widget got a smooth scroll event");
                     }
                     e => {
-                        eprintln!("Warning: the Druid widget got some whacky scroll direction {:?}", e);
+                        eprintln!(
+                            "Warning: the Druid widget got some whacky scroll direction {:?}",
+                            e
+                        );
                     }
                 }
 
@@ -373,4 +381,25 @@ fn gtk_button_to_druid(button: u32) -> window::MouseButton {
         4 => MouseButton::X1,
         _ => MouseButton::X2,
     }
+}
+
+/// Map the GTK modifiers into Druid bits
+#[inline]
+fn gtk_modifiers_to_druid(modifiers: gdk::ModifierType) -> u32 {
+    use gdk::ModifierType;
+    use keycodes;
+
+    let mut output = 0;
+
+    if modifiers.contains(ModifierType::MOD1_MASK) {
+        output |= keycodes::M_ALT;
+    }
+    if modifiers.contains(ModifierType::CONTROL_MASK) {
+        output |= keycodes::M_CTRL;
+    }
+    if modifiers.contains(ModifierType::SHIFT_MASK) {
+        output |= keycodes::M_SHIFT;
+    }
+
+    output
 }
