@@ -120,10 +120,20 @@ impl WindowBuilder {
                 | EventMask::BUTTON_PRESS_MASK
                 | EventMask::BUTTON_RELEASE_MASK
                 | EventMask::KEY_PRESS_MASK
+                | EventMask::ENTER_NOTIFY_MASK
                 | EventMask::KEY_RELEASE_MASK
                 | EventMask::SCROLL_MASK)
                 .bits() as i32,
         );
+
+        drawing_area.set_can_focus(true);
+        drawing_area.grab_focus();
+
+        drawing_area.connect_enter_notify_event(|widget, _| {
+            widget.grab_focus();
+
+            Inhibit(true)
+        });
 
         {
             let mut last_size = Cell::new((0, 0));
@@ -245,6 +255,39 @@ impl WindowBuilder {
                             "Warning: the Druid widget got some whacky scroll direction {:?}",
                             e
                         );
+                    }
+                }
+
+                Inhibit(true)
+            });
+        }
+
+        {
+            let handler = Arc::clone(&handler);
+            drawing_area.connect_key_press_event(move |_widget, key| {
+                handler.keydown(
+                    key.get_hardware_keycode() as i32,
+                    gtk_modifiers_to_druid(key.get_state()),
+                );
+
+                Inhibit(true)
+            });
+        }
+
+        {
+            let handler = Arc::clone(&handler);
+            drawing_area.connect_key_release_event(move |_widget, key| {
+                let modifiers = gtk_modifiers_to_druid(key.get_state());
+
+                match gdk::keyval_to_unicode(key.get_keyval()) {
+                    Some(chr) => handler.char(chr as u32, modifiers),
+                    None => {
+                        use gdk::enums::key;
+
+                        match key.get_keyval() {
+                            key::KP_Enter => handler.char('\n' as u32, modifiers),
+                            v => eprintln!("Warning: Druid got bogus key value {:?}", v),
+                        }
                     }
                 }
 
