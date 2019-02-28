@@ -118,7 +118,7 @@ impl WindowBuilder {
         window.add(&vbox);
 
         if let Some(menu) = self.menu {
-            let menu = menu.into_gtk_menubar();
+            let menu = menu.into_gtk_menubar(handler.clone());
             vbox.pack_start(&menu, false, false, 0);
         }
 

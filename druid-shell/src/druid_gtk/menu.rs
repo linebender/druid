@@ -13,54 +13,86 @@
 // limitations under the License.
 
 //! GTK implementation of menus.
+
+use window;
+
+use std::sync::Arc;
+
 use gtk::Menu as GtkMenu;
-use gtk::{MenuItem, MenuBar};
+use gtk::MenuBar as GtkMenuBar;
+use gtk::MenuItem as GtkMenuItem;
 use gtk::{MenuExt, MenuItemExt, MenuShellExt};
 
 pub struct Menu {
     items: Vec<MenuItem>,
 }
 
-impl Menu {
-    pub fn new() -> Menu {
-        Menu {
-            items: Vec::new(),
+enum MenuItem {
+    Entry(String, u32),
+    SubMenu(String, Menu),
+}
+
+impl MenuItem {
+    /// Get the name of this menu item
+    fn name(&self) -> &str {
+        match self {
+            MenuItem::Entry(name, _) | MenuItem::SubMenu(name, _) => name,
         }
     }
 
+    fn into_gtk_menu_item(self, handler: Arc<Box<window::WinHandler>>) -> GtkMenuItem {
+        match self {
+            MenuItem::Entry(name, id) => {
+                let item = GtkMenuItem::new_with_label(&name);
+                item.connect_activate(move |_| {
+                    handler.command(id);
+                });
+
+                item
+            }
+            MenuItem::SubMenu(name, submenu) => {
+                let item = GtkMenuItem::new_with_label(&name);
+                item.set_submenu(&submenu.into_gtk_menu(handler));
+
+                item
+            }
+        }
+    }
+}
+
+impl Menu {
+    pub fn new() -> Menu {
+        Menu { items: Vec::new() }
+    }
+
     pub fn add_dropdown(&mut self, menu: Menu, text: &str) {
-        let item = MenuItem::new_with_label(text);
-        item.set_submenu(&menu.into_gtk_menu());
-        self.items.push(item);
+        self.items.push(MenuItem::SubMenu(text.into(), menu));
     }
 
     pub fn add_item(&mut self, id: u32, text: &str) {
-        let item = MenuItem::new_with_label(text);
-        item.connect_activate(move |_widget| {
-            eprintln!("Menu event emission is not yet implemented: {:?}", id);
-        });
-        self.items.push(item);
+        // TODO: handle accelerator shortcuts by parsing `text`
+        self.items.push(MenuItem::Entry(text.into(), id));
     }
 
     pub fn add_separator(&mut self) {
         eprintln!("Warning: GTK separators are not yet implemented");
     }
 
-    pub(crate) fn into_gtk_menubar(self) -> MenuBar {
-        let menu = MenuBar::new();
+    pub(crate) fn into_gtk_menubar(self, handler: Arc<Box<window::WinHandler>>) -> GtkMenuBar {
+        let menu = GtkMenuBar::new();
 
         for item in self.items {
-            menu.append(&item);
+            menu.append(&item.into_gtk_menu_item(handler.clone()));
         }
 
         menu
     }
 
-    fn into_gtk_menu(self) -> GtkMenu {
+    fn into_gtk_menu(self, handler: Arc<Box<window::WinHandler>>) -> GtkMenu {
         let menu = GtkMenu::new();
 
         for item in self.items {
-            menu.append(&item);
+            menu.append(&item.into_gtk_menu_item(handler.clone()));
         }
 
         menu
