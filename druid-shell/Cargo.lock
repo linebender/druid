@@ -174,11 +174,11 @@ dependencies = [
  "core-graphics 0.17.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "direct2d 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "directwrite 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kurbo 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "objc 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet-common 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet-common 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "wio 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -285,7 +285,7 @@ dependencies = [
 
 [[package]]
 name = "kurbo"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "arrayvec 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -415,25 +415,25 @@ dependencies = [
 
 [[package]]
 name = "piet"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kurbo 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "piet-cairo"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cairo-rs 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kurbo 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "piet-common"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cairo-rs 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -441,34 +441,34 @@ dependencies = [
  "direct3d11 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "directwrite 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "dxgi 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet-cairo 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet-direct2d 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet-web 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kurbo 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet-cairo 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet-direct2d 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet-web 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "piet-direct2d"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "direct2d 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "directwrite 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "dxgi 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kurbo 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "piet-web"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "js-sys 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kurbo 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen 0.2.36 (registry+https://github.com/rust-lang/crates.io-index)",
  "web-sys 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -799,7 +799,7 @@ dependencies = [
 "checksum heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "20564e78d53d2bb135c343b3f47714a56af2061f1c928fdb541dc7b9fdd94205"
 "checksum humantime 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3ca7e5f2e110db35f93b837c81797f3714500b81d517bf20c431b16d3ca4f114"
 "checksum js-sys 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)" = "9639a5b9944fc99bc02992f25ac25f8617e81860b0b31f61eb15a1f4fe4b39f3"
-"checksum kurbo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f77c5f5c9d4ce0da64bf0603bef3f818e75edbe0e5552666892dca27583ecbd3"
+"checksum kurbo 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2b957a4dfbd317dba024db63c05192b35156e09785fd7e026524ce5390ac6c88"
 "checksum lazy_static 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ca488b89a5657b0a2ecd45b95609b3e848cf1755da332a0da46e2b2b1cb371a7"
 "checksum libc 0.2.48 (registry+https://github.com/rust-lang/crates.io-index)" = "e962c7641008ac010fa60a7dfdc1712449f29c44ef2d4702394aea943ee75047"
 "checksum log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)" = "c84ec4b527950aa83a329754b01dbe3f58361d1c5efacd1f6d68c494d08a17c6"
@@ -815,11 +815,11 @@ dependencies = [
 "checksum num-rational 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)" = "ee314c74bd753fc86b4780aa9475da469155f3848473a261d2d18e35245a784e"
 "checksum num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "0b3a5d7cc97d6d30d8b9bc8fa19bf45349ffe46241e8816f50f62f6d6aaabee1"
 "checksum objc 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "9833ab0efe5361b1e2122a0544a5d3359576911a42cb098c2e59be8650807367"
-"checksum piet 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "6159205d94492d7a3a994453962e5802a30928df6c60cc7e2b3569fb1df265d8"
-"checksum piet-cairo 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8d62a79522d88f71eacf566628e55e485b7098dc083f908f36dc8e0047cecefa"
-"checksum piet-common 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b7ef47c4daca4883aec89d1bf41ab823b2a88f16a496780b923be143474da21b"
-"checksum piet-direct2d 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4ceef59e137b22e707a81b8ac1ee0ee40e427d5b0405372518bb0a3e984549f2"
-"checksum piet-web 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d94adb5abdf091d5618907e83a5c359455e1bb156c4404c19ca6d2e1651febe6"
+"checksum piet 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ea1c80a4f78b007b0e317e46926daa8e93eecd97d4ecba6dcf99502a6c3c05c8"
+"checksum piet-cairo 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6bb723ae52a0b0d3b834564e8ab022afaca775d7b08de2d99d56e23e43fd8ed3"
+"checksum piet-common 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "95b5830eca10c9de0ed1454237cac28e66181b185518be1e8811f6e5b486ad8b"
+"checksum piet-direct2d 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "38147f6e1668ad1c725374f26e58fa6785fdc487ca7527ab91116198edb35bcf"
+"checksum piet-web 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ec8a5d1053c0e2ded9e12ddd4097c0943c15ef29a8333d974690d7b66f62bda2"
 "checksum pkg-config 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "676e8eb2b1b4c9043511a9b7bea0915320d7e502b0a079fb03f9635a5252b18c"
 "checksum proc-macro2 0.4.27 (registry+https://github.com/rust-lang/crates.io-index)" = "4d317f9caece796be1980837fd5cb3dfec5613ebdb04ad0956deea83ce168915"
 "checksum quick-error 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "9274b940887ce9addde99c4eee6b5c44cc494b182b97e73dc8ffdcb3397fd3f0"
