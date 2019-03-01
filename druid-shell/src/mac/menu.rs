@@ -20,6 +20,9 @@ use lazy_static::lazy_static;
 use objc::declare::ClassDecl;
 use objc::runtime::{Class, Object, Sel};
 
+use keycodes::{KeySpec, MenuKey};
+use util::make_nsstring;
+
 struct MenuItemProxyClass(*const Class);
 unsafe impl Sync for MenuItemProxyClass {}
 
@@ -40,18 +43,30 @@ lazy_static! {
         }
     };
 }
+
 pub struct Menu {
     pub menu: id,
 }
-fn make_basic_menu_item(id: u32, text: &str, key: &str) -> id {
+
+/// Make a string in the syntax expected as the keyEquivalent argument to
+/// NSMenuItem initWithTitle:action:keyEquivalent:
+fn make_key_equivalent(key: impl Into<MenuKey>) -> String {
+    // TODO: handle modifiers and other fun things
+    let key = key.into();
+    match key.key {
+        KeySpec::Char(c) => c.to_string(),
+    }
+}
+
+fn make_basic_menu_item(id: u32, text: &str, key: impl Into<MenuKey>) -> id {
+    let key_equivalent = make_key_equivalent(key);
     unsafe {
         NSMenuItem::alloc(nil)
             .initWithTitle_action_keyEquivalent_(
-                NSString::alloc(nil).init_str(text),
+                make_nsstring(text),
                 sel!(trigger),
-                NSString::alloc(nil).init_str(key),
-            )
-            .autorelease()
+                make_nsstring(&key_equivalent),
+            ).autorelease()
     }
 }
 
@@ -62,9 +77,7 @@ fn make_proxy(id: u32) -> id {
         target.autorelease()
     }
 }
-fn make_menu_item(id: u32, text: &str, key: &str) -> id {
-    let target = make_proxy(id);
-    let mut menu_item = make_basic_menu_item(id, text, key);
+fn make_menu_item(id: u32, text: &str, key: impl Into<MenuKey>) -> id {
     unsafe {
         msg_send![menu_item, setTarget: target];
     }
@@ -88,8 +101,7 @@ impl Menu {
         }
     }
 
-    pub fn add_item(&mut self, id: u32, text: &str, key: &str) {
-        let menu_item = make_menu_item(id, text, key);
+    pub fn add_item(&mut self, id: u32, text: &str, key: impl Into<MenuKey>) {
         unsafe {
             self.menu.addItem_(menu_item);
         }
@@ -109,7 +121,7 @@ impl Default for Menu {
         let mut menu = Menu::new();
         // this one is our actual menu
         let mut submenu = Menu::new();
-        submenu.add_item(1, "Quit", "q");
+        submenu.add_item(1, "Quit", 'q');
         menu.add_dropdown(submenu, "Application");
         menu
     }

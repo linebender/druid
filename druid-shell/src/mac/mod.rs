@@ -43,9 +43,10 @@ use cairo::{Context, QuartzSurface};
 use piet::RenderContext;
 use piet_common::Piet;
 
-use crate::platform::dialog::{FileDialogOptions, FileDialogType};
-use crate::window::{Cursor, WinHandler};
-use crate::Error;
+use platform::dialog::{FileDialogOptions, FileDialogType};
+use window::{Cursor, WinHandler};
+use util::make_nsstring;
+use Error;
 
 use util::assert_main_thread;
 
@@ -433,10 +434,6 @@ impl IdleHandle {
             queue.push(Box::new(callback));
         }
     }
-}
-
-fn make_nsstring(s: &str) -> id {
-    unsafe { NSString::alloc(nil).init_str(s) }
 }
 
 fn get_characters(event: id) -> String {
