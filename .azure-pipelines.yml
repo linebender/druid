@@ -1,0 +1,11 @@
+pr: ["master"]
+
+pool:
+  vmImage: 'Ubuntu-16.04'
+
+jobs:
+  - job: 
+  steps:
+    - template: ci/install-rust.yml
+      parameters:
+        rust_version: stable
