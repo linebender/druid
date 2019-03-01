@@ -21,6 +21,7 @@ use winapi::shared::basetsd::*;
 use winapi::shared::windef::*;
 use winapi::um::winuser::*;
 
+use crate::keycodes::MenuKey;
 use crate::util::ToWide;
 
 /// A menu object, which can be either a top-level menubar or a
@@ -67,7 +68,7 @@ impl Menu {
     }
 
     /// Add an item to the menu.
-    pub fn add_item(&mut self, id: u32, text: &str, _key: &str) {
+    pub fn add_item(&mut self, id: u32, text: &str, _key: impl Into<MenuKey>) {
         // TODO: actually wire up accelerators for key.
         unsafe {
             AppendMenuW(
