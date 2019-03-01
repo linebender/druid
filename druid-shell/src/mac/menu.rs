@@ -67,12 +67,10 @@ fn make_proxy(id: u32) -> id {
     }
 }
 fn make_menu_item(id: u32, text: &str, key: &str) -> id {
-    unsafe {
-        let target = make_proxy(id);
-        let mut menu_item = make_basic_menu_item(id, text, key);
-        msg_send![menu_item, setTarget: target];
-        menu_item
-    }
+    let target = make_proxy(id);
+    let mut menu_item = make_basic_menu_item(id, text, key);
+    unsafe { msg_send![menu_item, setTarget: target]; }
+    menu_item
 }
 impl Menu {
     pub fn new() -> Menu {
@@ -91,10 +89,8 @@ impl Menu {
     }
 
     pub fn add_item(&mut self, id: u32, text: &str, key: &str) {
-        unsafe {
-            let menu_item = make_menu_item(id, text, key);
-            self.menu.addItem_(menu_item);
-        }
+        let menu_item = make_menu_item(id, text, key);
+        unsafe { self.menu.addItem_(menu_item); }
     }
 
     pub fn add_separator(&mut self) {
