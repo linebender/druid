@@ -1,8 +1,5 @@
 pr: ["master"]
 
-pool:
-  vmImage: 'Ubuntu-16.04'
-
 jobs:
   - job: 
   steps:
