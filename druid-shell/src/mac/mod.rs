@@ -21,31 +21,29 @@ pub mod menu;
 pub mod util;
 pub mod win_main;
 
+use cocoa::appkit::{
+    NSApp, NSApplication, NSApplicationActivateIgnoringOtherApps, NSAutoresizingMaskOptions,
+    NSBackingStoreBuffered, NSEvent, NSRunningApplication, NSView, NSViewHeightSizable,
+    NSViewWidthSizable, NSWindow, NSWindowStyleMask,
+};
+use cocoa::base::{id, nil, BOOL, NO, YES};
+use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSRect, NSSize, NSString};
+pub use menu::Menu;
+use objc::declare::ClassDecl;
+use objc::rc::WeakPtr;
+use objc::runtime::{Class, Object, Sel};
 use std::any::Any;
 use std::ffi::c_void;
 use std::ffi::OsString;
 use std::mem;
 use std::sync::{Arc, Mutex, Weak};
-pub use menu::Menu;
-use cocoa::appkit::{
-    NSApp,
-    NSApplication,
-    NSApplicationActivateIgnoringOtherApps, NSAutoresizingMaskOptions, NSBackingStoreBuffered,
-    NSEvent, NSRunningApplication, NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow,
-    NSWindowStyleMask,
-};
-use cocoa::base::{id, nil, BOOL, NO, YES};
-use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSRect, NSSize, NSString};
-use objc::declare::ClassDecl;
-use objc::rc::WeakPtr;
-use objc::runtime::{Class, Object, Sel};
 
 use cairo::{Context, QuartzSurface};
 
 use piet::RenderContext;
 use piet_common::Piet;
 
-use crate::platform::{dialog::{FileDialogOptions, FileDialogType}};
+use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::window::{Cursor, WinHandler};
 use crate::Error;
 
@@ -123,17 +121,18 @@ impl WindowBuilder {
     pub fn build(self) -> Result<WindowHandle, Error> {
         assert_main_thread();
         unsafe {
-            let style_mask =
-                  NSWindowStyleMask::NSTitledWindowMask
+            let style_mask = NSWindowStyleMask::NSTitledWindowMask
                 | NSWindowStyleMask::NSClosableWindowMask
                 | NSWindowStyleMask::NSMiniaturizableWindowMask
                 | NSWindowStyleMask::NSResizableWindowMask;
             let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(500., 400.));
 
-            let window = NSWindow::alloc(nil)
-                .initWithContentRect_styleMask_backing_defer_(
-                rect, style_mask, NSBackingStoreBuffered, NO
-                );
+            let window = NSWindow::alloc(nil).initWithContentRect_styleMask_backing_defer_(
+                rect,
+                style_mask,
+                NSBackingStoreBuffered,
+                NO,
+            );
 
             window.autorelease();
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
@@ -209,14 +208,8 @@ lazy_static! {
             sel!(drawRect:),
             draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
         );
-        decl.add_method(
-            sel!(runIdle),
-            run_idle as extern "C" fn(&mut Object, Sel),
-        );
-        decl.add_method(
-            sel!(redraw),
-            redraw as extern "C" fn(&mut Object, Sel),
-        );
+        decl.add_method(sel!(runIdle), run_idle as extern "C" fn(&mut Object, Sel));
+        decl.add_method(sel!(redraw), redraw as extern "C" fn(&mut Object, Sel));
         ViewClass(decl.register())
     };
 }
@@ -261,10 +254,10 @@ extern "C" fn mouse_down(this: &mut Object, _: Sel, nsevent: id) {
 }
 
 extern "C" fn mouse_moved(this: &mut Object, _: Sel, nsevent: id) {
-  unsafe {
-    let point = nsevent.locationInWindow();
-    println!("mouse moved, point: {}, {}", point.x, point.y);
-  }
+    unsafe {
+        let point = nsevent.locationInWindow();
+        println!("mouse moved, point: {}, {}", point.x, point.y);
+    }
 }
 extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
     let characters = get_characters(nsevent);
@@ -288,7 +281,8 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let frame = NSView::frame(this as *mut _);
         let width = frame.size.width as u32;
         let height = frame.size.height as u32;
-        let cairo_surface = QuartzSurface::create_for_cg_context(cgcontext, width, height).expect("cairo surface");
+        let cairo_surface =
+            QuartzSurface::create_for_cg_context(cgcontext, width, height).expect("cairo surface");
         let mut cairo_ctx = Context::new(&cairo_surface);
         cairo_ctx.set_source_rgb(0.0, 0.5, 0.0);
         cairo_ctx.paint();
@@ -315,13 +309,15 @@ extern "C" fn run_idle(this: &mut Object, _: Sel) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    let queue: Vec<_> = mem::replace(&mut view_state.idle_queue.lock().expect("queue"), Vec::new());
+    let queue: Vec<_> = mem::replace(
+        &mut view_state.idle_queue.lock().expect("queue"),
+        Vec::new(),
+    );
     let handler_as_any = view_state.handler.as_any();
     for callback in queue {
         callback.call(handler_as_any);
     }
 }
-
 
 extern "C" fn redraw(this: &mut Object, _: Sel) {
     unsafe {

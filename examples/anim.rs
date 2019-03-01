@@ -22,8 +22,8 @@ extern crate piet;
 use kurbo::Line;
 use piet::RenderContext;
 
-use druid_shell::win_main;
 use druid_shell::platform::WindowBuilder;
+use druid_shell::win_main;
 
 use druid::{Ui, UiMain, UiState};
 
@@ -38,20 +38,18 @@ impl Widget for AnimWidget {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         let fg = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
         let (x, y) = geom.pos;
-        paint_ctx
-            .render_ctx
-            .stroke(
-                Line::new(
-                    (x as f64, y as f64),
-                    (
-                        x as f64 + geom.size.0 as f64,
-                        y as f64 + self.0 as f64 * geom.size.1 as f64,
-                    ),
+        paint_ctx.render_ctx.stroke(
+            Line::new(
+                (x as f64, y as f64),
+                (
+                    x as f64 + geom.size.0 as f64,
+                    y as f64 + self.0 as f64 * geom.size.1 as f64,
                 ),
-                &fg,
-                1.0,
-                None,
-            );
+            ),
+            &fg,
+            1.0,
+            None,
+        );
     }
 
     fn layout(
