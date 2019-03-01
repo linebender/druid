@@ -45,7 +45,7 @@ use cairo::{Context, QuartzSurface};
 use piet::RenderContext;
 use piet_common::Piet;
 
-use crate::platform::{menu::Menu, dialog::{FileDialogOptions, FileDialogType}};
+use crate::platform::{dialog::{FileDialogOptions, FileDialogType}};
 use crate::window::{Cursor, WinHandler};
 use crate::Error;
 
