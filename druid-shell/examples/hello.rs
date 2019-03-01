@@ -112,8 +112,8 @@ fn main() {
     druid_shell::init();
 
     let mut file_menu = Menu::new();
-    file_menu.add_item(0x100, "E&xit");
-    file_menu.add_item(0x101, "O&pen");
+    file_menu.add_item(0x100, "E&xit", "x"); // TODO: these are placeholders
+    file_menu.add_item(0x101, "O&pen", "o");
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "&File");
 
