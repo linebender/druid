@@ -2,6 +2,14 @@ pr: ["master"]
 
 jobs:
   - job: 
+    strategy:
+      matrix:
+    # mac:
+    #   imageName: 'macos-10.13'
+        windows:
+          imageName: 'vs2017-win2016'
+    pool:
+      vmImage: $(imageName)
     steps:
       - template: ci/install-rust.yml
         parameters:
