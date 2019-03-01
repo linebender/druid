@@ -15,8 +15,8 @@
 //! Keycode constants.
 
 /// The type for keyboard modifiers.
-pub type Modifiers = u32;
 // TODO: migrate this type to bitflags.
+pub type Modifiers = u32;
 
 /// Modifier mask for alt key in `keydown` and `char` events.
 pub const M_ALT: u32 = 1;
@@ -27,28 +27,35 @@ pub const M_CTRL: u32 = 2;
 /// Modifier mask for shift key in `keydown` and `char` events.
 pub const M_SHIFT: u32 = 4;
 
+/// Modifier mask for meta key in `keydown` and `char` events.
+///
+/// This is the windows key on Windows, the command key on macOS.
+pub const M_META: u32 = 8;
+
 /// A specifier for a menu shortcut key.
 pub struct MenuKey {
     /// Modifiers of menu key.
-    /// 
+    ///
     /// TODO: this should migrate to a bitflags type
     pub modifiers: u32,
     /// The unmodified key.
     pub key: KeySpec,
 }
 
-/// A specifier for a key (not including modifiers)
+/// A specifier for a key (not including modifiers).
 pub enum KeySpec {
     /// The key represents a single Unicode codepoint.
     Char(char),
+    /// No key (ie a menu item with no accelerator).
+    None,
     // TODO: other variants representing function keys, arrows, etc.
 }
 
-impl From<char> for MenuKey {
-    fn from(c: char) -> MenuKey {
+impl<K: Into<KeySpec>> From<K> for MenuKey {
+    fn from(key: K) -> MenuKey {
         MenuKey {
             modifiers: 0,
-            key: c.into(),
+            key: key.into(),
         }
     }
 }
@@ -59,13 +66,48 @@ impl From<char> for KeySpec {
     }
 }
 
-pub fn command_modifier() -> u32;
+impl From<()> for KeySpec {
+    fn from(_: ()) -> KeySpec {
+        KeySpec::None
+    }
+}
+
+/// Get the modifier corresponding to the default command key on the platform.
+pub const fn command_modifier() -> Modifiers {
+    #[cfg(target_os = "macos")]
+    {
+        M_META
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        M_CTRL
+    }
+}
 
 impl MenuKey {
     pub fn command(k: impl Into<KeySpec>) -> MenuKey {
         MenuKey {
-            modifiers: M_CTRL,
+            modifiers: command_modifier(),
             key: k.into(),
+        }
+    }
+
+    /// The platform-standard menu key for the "quit application" action.
+    pub const fn std_quit() -> MenuKey {
+        #[cfg(target_os = "macos")]
+        {
+            MenuKey {
+                modifiers: M_META,
+                key: KeySpec::Char('q'),
+            }
+        }
+        // TODO: Alt-F4 on Windows
+        #[cfg(not(target_os = "macos"))]
+        {
+            MenuKey {
+                modifiers: 0,
+                key: KeySpec::None,
+            }
         }
     }
 }

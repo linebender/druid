@@ -43,10 +43,10 @@ use cairo::{Context, QuartzSurface};
 use piet::RenderContext;
 use piet_common::Piet;
 
-use platform::dialog::{FileDialogOptions, FileDialogType};
-use window::{Cursor, WinHandler};
-use util::make_nsstring;
-use Error;
+use crate::platform::dialog::{FileDialogOptions, FileDialogType};
+use crate::util::make_nsstring;
+use crate::window::{Cursor, WinHandler};
+use crate::Error;
 
 use util::assert_main_thread;
 
