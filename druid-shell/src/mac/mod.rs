@@ -130,16 +130,11 @@ impl WindowBuilder {
                 | NSWindowStyleMask::NSResizableWindowMask;
             let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(500., 400.));
 
-            let window: id = msg_send![WINDOW_CLASS.0, alloc];
-            let mouse_move = if self.enable_mouse_move_events { YES } else { NO };
-            (*window).set_ivar("acceptsMouseMove", mouse_move);
-            
-            msg_send!(window,
-                      initWithContentRect: rect
-                      styleMask: style_mask
-                      backing: NSBackingStoreBuffered
-                      defer: NO
-                      );
+            let window = NSWindow::alloc(nil)
+                .initWithContentRect_styleMask_backing_defer_(
+                rect, style_mask, NSBackingStoreBuffered, NO
+                );
+
             window.autorelease();
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
@@ -163,40 +158,6 @@ impl WindowBuilder {
     }
 }
 
-struct WindowClass(*const Class);
-unsafe impl Sync for WindowClass {}
-
-lazy_static! {
-    static ref WINDOW_CLASS: WindowClass = unsafe {
-        let mut decl =
-            ClassDecl::new("DruidWindow", class!(NSWindow))
-            .expect("Window class defined");
-
-        decl.add_ivar::<BOOL>("acceptsMouseMove");
-        decl.add_method(
-            sel!(acceptsMouseMovedEvents),
-            acceptsMouseMovedEvents as extern "C" fn (&Object, Sel) -> BOOL
-        );
-        decl.add_method(
-            sel!(enableMouseMoveEvents),
-            enableMouseMoveEvents as extern "C" fn (&mut Object, Sel)
-        );
-        decl.add_method(
-            sel!(disableMouseMoveEvents),
-            disableMouseMoveEvents as extern "C" fn (&mut Object, Sel)
-        );
-        extern "C" fn acceptsMouseMovedEvents(this: &Object, _: Sel) -> BOOL {
-            unsafe { *this.get_ivar("acceptsMouseMove") }
-        }
-        extern "C" fn enableMouseMoveEvents(this: &mut Object, _: Sel) {
-            unsafe { this.set_ivar("acceptsMouseMove", YES) }
-        }
-        extern "C" fn disableMouseMoveEvents(this: &mut Object, _: Sel) {
-            unsafe { this.set_ivar("acceptsMouseMove", NO) }
-        }
-        WindowClass(decl.register())
-    };
-}
 // Wrap pointer because lazy_static requires Sync.
 struct ViewClass(*const Class);
 unsafe impl Sync for ViewClass {}
