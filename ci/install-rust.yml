@@ -26,3 +26,7 @@ steps:
         rustc -Vv
         cargo -V
     displayName: Query rust and cargo versions
+
+  - script: |
+        rustup install nightly
+    displayName: Install nightly

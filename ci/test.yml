@@ -1,0 +1,9 @@
+steps:
+  - bash: |
+      export RUST_BACKTRACE=1
+      RUSTFLAGS="-D warnings" cargo +${{parameters.toolchain}} check --all || exit
+      RUSTFLAGS="-D warnings" cargo +${{parameters.toolchain}} check --examples || exit
+      cargo +${{parameters.toolchain}} test --all || exit
+      cargo +${{parameters.toolchain}} test --examples || exit
+    displayName: Run cargo check and test on ${{parameters.toolchain}}
+

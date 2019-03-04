@@ -1,13 +1,13 @@
 pr: ["master"]
 
 jobs:
-  - job: 
+  - job:
     strategy:
       matrix:
         mac:
           imageName: 'macos-10.13'
-        # windows:
-        #   imageName: 'vs2017-win2016'
+        windows:
+          imageName: 'vs2017-win2016'
     pool:
       vmImage: $(imageName)
     steps:
@@ -18,10 +18,10 @@ jobs:
         parameters:
           rust_version: stable
 
-      - bash: |
-          export RUST_BACKTRACE=1
-          RUSTFLAGS="-D warnings" cargo check --all || exit
-          RUSTFLAGS="-D warnings" cargo check --examples || exit
-          cargo test --all || exit
-          cargo test --examples || exit
-        displayName: Run cargo check and test
+      - template: ci/test.yml
+        parameters:
+          toolchain: stable
+
+      - template: ci/test.yml
+        parameters:
+          toolchain: nightly
