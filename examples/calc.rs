@@ -279,7 +279,7 @@ fn main() {
     build_calc(&mut state);
     builder.set_handler(Box::new(UiMain::new(state)));
     builder.set_title("Calculator");
-    let window = builder.build().unwrap();
+    let window = builder.build().expect("built window");
     window.show();
     run_loop.run();
 }

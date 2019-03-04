@@ -67,7 +67,8 @@ impl Menu {
     }
 
     /// Add an item to the menu.
-    pub fn add_item(&mut self, id: u32, text: &str) {
+    pub fn add_item(&mut self, id: u32, text: &str, _key: &str) {
+        // TODO: actually wire up accelerators for key.
         unsafe {
             AppendMenuW(
                 self.hmenu,
