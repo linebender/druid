@@ -41,6 +41,11 @@ pub mod mac;
 #[cfg(target_os = "macos")]
 pub use mac as platform;
 
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+pub mod web;
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+pub use web as platform;
+
 pub use error::Error;
 
 pub use platform::application;

@@ -21,7 +21,6 @@ use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::mem;
 use std::ops::{Deref, DerefMut};
-use std::time::Instant;
 
 use piet::RenderContext;
 
@@ -95,7 +94,7 @@ pub struct LayoutCtx {
     anim_state: AnimState,
 
     /// The time of the last paint cycle.
-    prev_paint_time: Option<Instant>,
+    paint_timer: timer::Timer,
 
     /// Queue of events to dispatch after build or handler.
     event_q: Vec<Event>,
@@ -233,7 +232,7 @@ impl UiState {
                     geom: Vec::new(),
                     per_widget: Vec::new(),
                     anim_state: AnimState::Idle,
-                    prev_paint_time: None,
+                    paint_timer: timer::Timer::new(),
                     handle: Default::default(),
                     event_q: Vec::new(),
                     focused: None,
@@ -462,13 +461,7 @@ impl UiState {
         // TODO: this is just wall-clock time, which will have jitter making
         // animations not as smooth. Should be extracting actual refresh rate
         // from presentation statistics and then doing some processing.
-        let this_paint_time = Instant::now();
-        let interval = if let Some(last) = self.layout_ctx.prev_paint_time {
-            let duration = this_paint_time.duration_since(last);
-            1_000_000_000 * duration.as_secs() + (duration.subsec_nanos() as u64)
-        } else {
-            0
-        };
+        let interval = self.layout_ctx.paint_timer.get_duration();
         self.layout_ctx.anim_state = AnimState::AnimFrameStart;
         for node in 0..self.widgets.len() {
             if self.layout_ctx.per_widget[node].anim_frame_requested {
@@ -482,7 +475,6 @@ impl UiState {
                 );
             }
         }
-        self.layout_ctx.prev_paint_time = Some(this_paint_time);
         self.dispatch_events();
     }
 
@@ -892,7 +884,7 @@ impl WinHandler for UiMain {
             AnimState::AnimFrameRequested => true,
             _ => {
                 state.layout_ctx.anim_state = AnimState::Idle;
-                state.layout_ctx.prev_paint_time = None;
+                state.layout_ctx.paint_timer.clear();
                 false
             }
         }
@@ -961,5 +953,84 @@ impl WinHandler for UiMain {
         let dpi = state.layout_ctx.handle.get_dpi();
         let scale = 96.0 / dpi;
         state.inner.layout_ctx.size = (width as f32 * scale, height as f32 * scale);
+    }
+}
+
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+pub fn instant_now() -> f64 {
+    web_sys::window().expect("should have a window in this context")
+        .performance()
+        .expect("performance should be available")
+        .now()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+mod timer {
+    use std::time::Instant;
+
+    pub struct Timer {
+        last: Option<Instant>,
+    }
+
+    impl Timer {
+        pub fn new() -> Timer {
+            Timer {
+                last: None,
+            }
+        }
+
+        pub fn get_duration(&mut self) -> u64 {
+            let now = Instant::now();
+            let interval = if let Some(last) = self.last {
+                let duration = now.duration_since(last);
+                1_000_000_000 * duration.as_secs() + (duration.subsec_nanos() as u64)
+            } else {
+                0
+            };
+            self.last = Some(now);
+
+            interval
+        }
+
+        pub fn clear(&mut self) {
+            self.last = None;
+        }
+    }
+}
+
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+mod timer {
+    pub struct Timer {
+        last: Option<u64>,
+    }
+
+    impl Timer {
+        pub fn new() -> Timer {
+            Timer {
+                last: None,
+            }
+        }
+
+        pub fn get_duration(&mut self) -> u64 {
+            let amt = web_sys::window().expect("should have a window in this context")
+                .performance()
+                .expect("performance should be available")
+                .now();
+            let now = (amt as u64) * 1_000_000_000;
+
+            let interval = if let Some(last) = self.last {
+                now - last
+            } else {
+                0
+            };
+
+            self.last = Some(now);
+
+            interval
+        }
+
+        pub fn clear(&mut self) {
+            self.last = None;
+        }
     }
 }
