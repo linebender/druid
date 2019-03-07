@@ -12,117 +12,281 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Simple calculator.
+
 extern crate druid;
 extern crate druid_shell;
-extern crate kurbo;
-extern crate piet;
 extern crate web_sys;
 
 use wasm_bindgen::prelude::*;
-use kurbo::Line;
-use piet::RenderContext;
 
-use druid_shell::menu::Menu;
 use druid_shell::win_main;
 use druid_shell::platform::WindowBuilder;
 
-use druid::widget::{Button, Padding, Row};
-use druid::{FileDialogOptions, FileDialogType};
-use druid::{Ui, UiMain, UiState};
+use druid::widget::{Button, Column, EventForwarder, KeyListener, Label, Padding, Row};
+use druid::{KeyEvent, KeyVariant, UiMain, UiState};
 
-use druid::widget::Widget;
-use druid::{BoxConstraints, Geometry, LayoutResult};
-use druid::{Id, LayoutCtx, PaintCtx};
+use druid::Id;
 
-const COMMAND_EXIT: u32 = 0x100;
-const COMMAND_OPEN: u32 = 0x101;
+// TODO: Windows specific
+const VK_BACK: i32 = 0x08;
+const VK_RETURN: i32 = 0x0d;
 
-/// A very simple custom widget.
-struct FooWidget;
+struct CalcState {
+    /// The number displayed. Generally a valid float.
+    value: String,
+    operand: f64,
+    operator: char,
+    in_num: bool,
+}
 
-impl Widget for FooWidget {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let fg = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
+#[derive(Debug, Clone)]
+enum CalcAction {
+    Digit(u8),
+    Op(char),
+}
 
-        let (x, y) = geom.pos;
-        paint_ctx
-            .render_ctx
-            .stroke(
-                Line::new(
-                    (x as f64, y as f64),
-                    (x as f64 + geom.size.0 as f64, y as f64 + geom.size.1 as f64),
-                ),
-                &fg,
-                1.0,
-                None,
-            );
+impl CalcState {
+    fn action(&mut self, action: &CalcAction) {
+        match *action {
+            CalcAction::Digit(digit) => self.digit(digit),
+            CalcAction::Op(op) => self.op(op),
+        }
     }
 
-    fn layout(
-        &mut self,
-        bc: &BoxConstraints,
-        _children: &[Id],
-        _size: Option<(f32, f32)>,
-        _ctx: &mut LayoutCtx,
-    ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain((100.0, 100.0)))
+    fn digit(&mut self, digit: u8) {
+        if !self.in_num {
+            self.value.clear();
+            self.in_num = true;
+        }
+        let ch = (b'0' + digit) as char;
+        self.value.push(ch);
+    }
+
+    fn display(&mut self) {
+        // TODO: change hyphen-minus to actual minus
+        self.value = self.operand.to_string();
+    }
+
+    fn compute(&mut self) {
+        if self.in_num {
+            let operand2 = self.value.parse().unwrap_or(0.0);
+            let result = match self.operator {
+                '+' => Some(self.operand + operand2),
+                '−' => Some(self.operand - operand2),
+                '×' => Some(self.operand * operand2),
+                '÷' => Some(self.operand / operand2),
+                _ => None,
+            };
+            if let Some(result) = result {
+                self.operand = result;
+                self.display();
+                self.in_num = false;
+            }
+        }
+    }
+
+    fn op(&mut self, op: char) {
+        match op {
+            '+' | '−' | '×' | '÷' | '=' => {
+                self.compute();
+                self.operand = self.value.parse().unwrap_or(0.0);
+                self.operator = op;
+                self.in_num = false;
+            }
+            '±' => {
+                if self.in_num {
+                    if self.value.starts_with('−') {
+                        self.value = self.value[3..].to_string();
+                    } else {
+                        self.value = ["−", &self.value].concat();
+                    }
+                } else {
+                    self.operand = -self.operand;
+                    self.display();
+                }
+            }
+            '.' => {
+                if !self.in_num {
+                    self.value = "0".to_string();
+                    self.in_num = true;
+                }
+                if self.value.find('.').is_none() {
+                    self.value.push('.');
+                }
+            }
+            'c' => {
+                self.value = "0".to_string();
+                self.in_num = false;
+            }
+            'C' => {
+                self.value = "0".to_string();
+                self.operator = 'C';
+                self.in_num = false;
+            }
+            '⌫' => {
+                if self.in_num {
+                    self.value.pop();
+                    if self.value.is_empty() || self.value == "−" {
+                        self.value = "0".to_string();
+                        self.in_num = false;
+                    }
+                }
+            }
+            _ => unreachable!(),
+        }
     }
 }
 
-impl FooWidget {
-    fn ui(self, ctx: &mut Ui) -> Id {
-        ctx.add(self, &[])
-    }
+fn pad(widget: Id, ui: &mut UiState) -> Id {
+    Padding::uniform(5.0).ui(widget, ui)
 }
 
+fn digit_button(ui: &mut UiState, mut digit: u8) -> Id {
+    let button = Button::new(digit.to_string()).ui(ui);
+    ui.add_listener(button, move |_: &mut bool, mut ctx| {
+        web_sys::console::log_1(&format!("press {}", digit).into());
+        ctx.poke_up(&mut digit);
+        ctx.poke_up(&mut CalcAction::Digit(digit));
+    });
+    pad(button, ui)
+}
+
+fn op_button_label(ui: &mut UiState, mut op: char, label: String) -> Id {
+    let label2 = label.clone();
+    let button = Button::new(label).ui(ui);
+    ui.add_listener(button, move |_: &mut bool, mut ctx| {
+        web_sys::console::log_1(&format!("press {}", label2).into());
+        ctx.poke_up(&mut op);
+        ctx.poke_up(&mut CalcAction::Op(op));
+    });
+    pad(button, ui)
+}
+
+fn op_button(ui: &mut UiState, op: char) -> Id {
+    op_button_label(ui, op, op.to_string())
+}
+
+// Create a row where all children are flex
+fn flex_row(children: &[Id], ui: &mut UiState) -> Id {
+    let mut row = Row::new();
+    for child in children {
+        row.set_flex(*child, 1.0);
+    }
+    row.ui(children, ui)
+}
+
+fn build_calc(ui: &mut UiState) {
+    let display = Label::new("0".to_string()).ui(ui);
+    let row0 = pad(display, ui);
+
+    let row1 = flex_row(
+        &[
+            op_button_label(ui, 'c', "CE".to_string()),
+            op_button(ui, 'C'),
+            op_button(ui, '⌫'),
+            op_button(ui, '÷'),
+        ],
+        ui,
+    );
+    let row2 = flex_row(
+        &[
+            digit_button(ui, 7),
+            digit_button(ui, 8),
+            digit_button(ui, 9),
+            op_button(ui, '×'),
+        ],
+        ui,
+    );
+    let row3 = flex_row(
+        &[
+            digit_button(ui, 4),
+            digit_button(ui, 5),
+            digit_button(ui, 6),
+            op_button(ui, '−'),
+        ],
+        ui,
+    );
+    let row4 = flex_row(
+        &[
+            digit_button(ui, 1),
+            digit_button(ui, 2),
+            digit_button(ui, 3),
+            op_button(ui, '+'),
+        ],
+        ui,
+    );
+    let row5 = flex_row(
+        &[
+            op_button(ui, '±'),
+            digit_button(ui, 0),
+            op_button(ui, '.'),
+            op_button(ui, '='),
+        ],
+        ui,
+    );
+    let mut column = Column::new();
+    column.set_flex(row1, 1.0);
+    column.set_flex(row2, 1.0);
+    column.set_flex(row3, 1.0);
+    column.set_flex(row4, 1.0);
+    column.set_flex(row5, 1.0);
+    let panel = column.ui(&[row0, row1, row2, row3, row4, row5], ui);
+    let key_listener = KeyListener::new().ui(panel, ui);
+    let forwarder = EventForwarder::<CalcAction>::new().ui(key_listener, ui);
+    let mut calc_state = CalcState {
+        value: "0".to_string(),
+        operand: 0.0,
+        operator: 'C',
+        in_num: false,
+    };
+    ui.add_listener(key_listener, move |event: &mut KeyEvent, mut ctx| {
+        if let Some(mut action) = action_for_key(event) {
+            ctx.poke_up(&mut action);
+        }
+    });
+    ui.add_listener(forwarder, move |action: &mut CalcAction, mut ctx| {
+        calc_state.action(action);
+        ctx.poke(display, &mut calc_state.value);
+    });
+    let root = pad(forwarder, ui);
+    ui.set_root(root);
+    ui.set_focus(Some(key_listener));
+}
+
+fn action_for_key(event: &KeyEvent) -> Option<CalcAction> {
+    match event.key {
+        KeyVariant::Char(ch) => {
+            if ch >= '0' && ch <= '9' {
+                return Some(CalcAction::Digit(ch as u8 - b'0'));
+            }
+            match ch {
+                '.' | '+' | '=' | 'c' | 'C' => Some(CalcAction::Op(ch)),
+                '-' => Some(CalcAction::Op('−')),
+                '*' => Some(CalcAction::Op('×')),
+                '/' => Some(CalcAction::Op('÷')),
+                _ => None,
+            }
+        }
+        KeyVariant::Vkey(vk) => match vk {
+            VK_BACK => Some(CalcAction::Op('⌫')),
+            VK_RETURN => Some(CalcAction::Op('=')),
+            _ => None,
+        },
+    }
+}
 
 #[wasm_bindgen]
 pub fn run() {
-    web_sys::console::log_1(&"FOOOO".into());
-
     druid_shell::init();
-
-    let mut file_menu = Menu::new();
-    file_menu.add_item(COMMAND_EXIT, "E&xit", "x"); // TODO: these are placeholders
-    file_menu.add_item(COMMAND_OPEN, "O&pen", "o");
-    let mut menubar = Menu::new();
-    menubar.add_dropdown(file_menu, "&File");
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut state = UiState::new();
-    let foo1 = FooWidget.ui(&mut state);
-    let foo1 = Padding::uniform(10.0).ui(foo1, &mut state);
-    let foo2 = FooWidget.ui(&mut state);
-    let foo2 = Padding::uniform(10.0).ui(foo2, &mut state);
-    let button = Button::new("Press me").ui(&mut state);
-    let buttonp = Padding::uniform(10.0).ui(button, &mut state);
-    let button2 = Button::new("Don't press me").ui(&mut state);
-    let button2p = Padding::uniform(10.0).ui(button2, &mut state);
-    let root = Row::new().ui(&[foo1, foo2, buttonp, button2p], &mut state);
-    state.set_root(root);
-    state.add_listener(button, move |_: &mut bool, mut ctx| {
-        println!("click");
-        web_sys::console::log_1(&"click".into());
-        ctx.poke(button2, &mut "You clicked it!".to_string());
-    });
-    state.add_listener(button2, move |_: &mut bool, mut ctx| {
-        web_sys::console::log_1(&"naughty naughty".into());
-        ctx.poke(button2, &mut "Naughty naughty".to_string());
-    });
-    state.set_command_listener(|cmd, mut ctx| match cmd {
-        COMMAND_EXIT => ctx.close(),
-        COMMAND_OPEN => {
-            let options = FileDialogOptions::default();
-            let result = ctx.file_dialog(FileDialogType::Open, options);
-            println!("result = {:?}", result);
-        }
-        _ => println!("unexpected command {}", cmd),
-    });
+    build_calc(&mut state);
     builder.set_handler(Box::new(UiMain::new(state)));
-    builder.set_title("Hello example");
-    builder.set_menu(menubar);
-    let window = builder.build().unwrap();
+    builder.set_title("Calculator");
+    let window = builder.build().expect("built window");
     window.show();
     run_loop.run();
 }

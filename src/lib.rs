@@ -964,7 +964,7 @@ pub fn instant_now() -> f64 {
         .now()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 mod timer {
     use std::time::Instant;
 

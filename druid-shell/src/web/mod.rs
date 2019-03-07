@@ -102,6 +102,7 @@ impl<F: FnOnce(&Any) + Send> IdleCallback for F {
 
 struct WindowState {
     dpi: Cell<f32>,
+    dpr: Cell<f64>,
     idle_queue: Arc<Mutex<Vec<Box<IdleCallback>>>>,
     handler: Box<WinHandler>,
 
@@ -122,6 +123,7 @@ impl WindowState {
     fn render(&self) {
         let window = web_sys::window().expect("web_sys window");
         let ref mut canvas_ctx = *self.canvas_ctx.borrow_mut();
+        canvas_ctx.clear_rect(0.0, 0.0, self.get_width() as f64, self.get_height() as f64);
         let mut piet_ctx = piet_common::Piet::new(
             canvas_ctx, &window);
         self.handler.paint(&mut piet_ctx);
@@ -140,6 +142,14 @@ impl WindowState {
         for callback in queue.drain(..) {
             callback.call(&self.handler);
         }
+    }
+
+    fn get_width(&self) -> u32 {
+        (self.canvas.offset_width() as f64 * self.dpr.get()) as u32
+    }
+
+    fn get_height(&self) -> u32 {
+        (self.canvas.offset_height() as f64 * self.dpr.get()) as u32
     }
 }
 
@@ -267,18 +277,19 @@ impl WindowBuilder {
             .unwrap();
 
         let dpr = window.device_pixel_ratio();
-        canvas.set_width((canvas.offset_width() as f64 * dpr) as u32);
-        canvas.set_height((canvas.offset_height() as f64 * dpr) as u32);
+        let canvas_w = (canvas.offset_width() as f64 * dpr) as u32;
+        let canvas_h = (canvas.offset_height() as f64 * dpr) as u32;
+        canvas.set_width(canvas_w);
+        canvas.set_height(canvas_h);
         let _ = context.scale(dpr, dpr);
 
         let handler = self.handler.unwrap();
 
-        handler.size(
-            (canvas.offset_width() as f64 * dpr) as u32,
-            (canvas.offset_height() as f64 * dpr) as u32);
+        handler.size(canvas_w, canvas_h);
 
         let window = Rc::new(WindowState {
-            dpi: Cell::new(0.0),
+            dpi: Cell::new(96.0),
+            dpr: Cell::new(dpr),
             idle_queue: Default::default(),
             handler: handler,
             canvas: canvas,
