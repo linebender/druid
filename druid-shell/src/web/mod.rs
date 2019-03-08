@@ -140,6 +140,7 @@ impl WindowState {
     fn process_idle_queue(&self) {
         let mut queue = self.idle_queue.lock().expect("process_idle_queue");
         for callback in queue.drain(..) {
+            web_sys::console::log_1(&"idle callback".into());
             callback.call(&self.handler);
         }
     }
@@ -166,7 +167,7 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
 
             let event = MouseEvent {
                 x: event.offset_x() as i32,
-                y: event.offset_x() as i32,
+                y: event.offset_y() as i32,
                 mods: 0,
                 which: button,
                 ty: MouseType::Down,
@@ -207,7 +208,7 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
 
             let event = MouseEvent {
                 x: event.offset_x() as i32,
-                y: event.offset_x() as i32,
+                y: event.offset_y() as i32,
                 mods: 0,
                 which: button,
                 ty: MouseType::Up,
