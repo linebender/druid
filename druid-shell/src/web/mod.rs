@@ -32,7 +32,7 @@ use std::sync::{Arc, Mutex};
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{window, HtmlCanvasElement};
+use web_sys::{HtmlCanvasElement};
 
 use piet::RenderContext;
 
@@ -87,8 +87,11 @@ pub struct WindowHandle(Weak<WindowState>);
 /// message may be sent to a stray window).
 #[derive(Clone)]
 pub struct IdleHandle {
+    window_state: WindowHandle,
     queue: Arc<Mutex<Vec<Box<IdleCallback>>>>,
 }
+
+//impl Send for IdleHandle { }
 
 trait IdleCallback: Send {
     fn call(self: Box<Self>, a: &Any);
@@ -121,7 +124,7 @@ impl Default for PresentStrategy {
 impl WindowState {
     // Renders but does not present.
     fn render(&self) {
-        let window = web_sys::window().expect("web_sys window");
+        let window = window();
         let ref mut canvas_ctx = *self.canvas_ctx.borrow_mut();
         canvas_ctx.clear_rect(0.0, 0.0, self.get_width() as f64, self.get_height() as f64);
         let mut piet_ctx = piet_common::Piet::new(
@@ -174,7 +177,6 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
             };
             state.handler.mouse(&event);
 
-            state.process_idle_queue();
             state.render();
         }) as Box<dyn FnMut(_)>);
         window_state.canvas
@@ -189,7 +191,6 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
 	    let mods = 0;
 	    state.handler.mouse_move(x, y, mods);
 
-            state.process_idle_queue();
             state.render();
         }) as Box<dyn FnMut(_)>);
         window_state.canvas
@@ -215,7 +216,6 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
             };
             state.handler.mouse(&event);
 
-            state.process_idle_queue();
             state.render();
         }) as Box<dyn FnMut(_)>);
         window_state.canvas
@@ -262,7 +262,7 @@ impl WindowBuilder {
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
-        let window = window().expect("web_sys window");
+        let window = window();
         let canvas = window
             .document()
             .unwrap()
@@ -331,6 +331,7 @@ impl WindowHandle {
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
         self.0.upgrade().map(|w| IdleHandle {
+            window_state: self.clone(),
             queue: w.idle_queue.clone(),
         })
     }
@@ -378,13 +379,31 @@ impl WindowHandle {
 unsafe impl Send for IdleHandle {}
 
 impl IdleHandle {
-    /// Add an idle handler, which is called (once) when the message loop
-    /// is empty.
+    /// Add an idle handler, which is called (once) when the main thread is idle.
     pub fn add_idle<F>(&self, callback: F)
     where
         F: FnOnce(&Any) + Send + 'static,
     {
-        let mut queue = self.queue.lock().expect("add_idle queue");
+        let mut queue = self.queue.lock().expect("IdleHandle::add_idle queue");
         queue.push(Box::new(callback));
+
+        if queue.len() == 1 {
+            let window_state = self.window_state.0.clone();
+            request_animation_frame(move || {
+                if let Some(w) = window_state.upgrade() {
+                    w.process_idle_queue();
+                }
+            });
+        }
     }
+}
+
+fn window() -> web_sys::Window {
+    web_sys::window().expect("druid_shell web_sys: no global `window` exists")
+}
+
+fn request_animation_frame(f: impl FnOnce() + 'static) {
+    window()
+        .request_animation_frame(Closure::once_into_js(f).as_ref().unchecked_ref())
+        .expect("druid_shell web_sys::Window::request_animation_frame");
 }

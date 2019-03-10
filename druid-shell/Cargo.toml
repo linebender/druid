@@ -34,10 +34,10 @@ core-graphics = "0.17.3"
 cairo-rs = { version = "0.5.0", default_features = false }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-wasm-bindgen = "0.2.30"
-js-sys = "0.3.10"
+wasm-bindgen = "0.2.38"
+js-sys = "0.3.15"
 [dependencies.web-sys]
-version = "0.3.10"
+version = "0.3.15"
 features = [
     "console", "Window", "CanvasGradient", "CanvasRenderingContext2d", "CanvasWindingRule",
     "Document", "Element", 'EventTarget', "HtmlElement", "HtmlCanvasElement", "ImageBitmap", "ImageData",
