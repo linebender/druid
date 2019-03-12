@@ -44,6 +44,7 @@ use piet::RenderContext;
 use piet_common::Piet;
 
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
+use crate::util::make_nsstring;
 use crate::window::WinHandler;
 use crate::Error;
 
@@ -433,10 +434,6 @@ impl IdleHandle {
             queue.push(Box::new(callback));
         }
     }
-}
-
-fn make_nsstring(s: &str) -> id {
-    unsafe { NSString::alloc(nil).init_str(s) }
 }
 
 fn get_characters(event: id) -> String {

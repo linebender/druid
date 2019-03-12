@@ -24,6 +24,7 @@ use kurbo::{Line, Rect};
 use piet::{FillRule, RenderContext};
 
 use druid_shell::dialog::{FileDialogOptions, FileDialogType};
+use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
@@ -112,8 +113,8 @@ fn main() {
     druid_shell::init();
 
     let mut file_menu = Menu::new();
-    file_menu.add_item(0x100, "E&xit", "x"); // TODO: these are placeholders
-    file_menu.add_item(0x101, "O&pen", "o");
+    file_menu.add_item(0x100, "E&xit", MenuKey::std_quit());
+    file_menu.add_item(0x101, "O&pen", MenuKey::command('o'));
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "&File");
 

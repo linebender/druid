@@ -14,7 +14,8 @@
 
 //! Utilities, macOS specific.
 
-use cocoa::base::{BOOL, YES};
+use cocoa::base::{id, nil, BOOL, YES};
+use cocoa::foundation::NSString;
 
 pub fn init() {}
 
@@ -28,4 +29,8 @@ pub fn assert_main_thread() {
         let is_main_thread: BOOL = msg_send!(class!(NSThread), isMainThread);
         assert_eq!(is_main_thread, YES);
     }
+}
+
+pub(crate) fn make_nsstring(s: &str) -> id {
+    unsafe { NSString::alloc(nil).init_str(s) }
 }

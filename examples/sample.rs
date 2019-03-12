@@ -22,6 +22,7 @@ extern crate piet;
 use kurbo::Line;
 use piet::RenderContext;
 
+use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
@@ -77,8 +78,8 @@ fn main() {
     druid_shell::init();
 
     let mut file_menu = Menu::new();
-    file_menu.add_item(COMMAND_EXIT, "E&xit", "x"); // TODO: these are placeholders
-    file_menu.add_item(COMMAND_OPEN, "O&pen", "o");
+    file_menu.add_item(COMMAND_EXIT, "E&xit", MenuKey::std_quit());
+    file_menu.add_item(COMMAND_OPEN, "O&pen", 'o');
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "&File");
 
