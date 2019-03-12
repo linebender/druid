@@ -13,9 +13,9 @@
 // limitations under the License.
 
 //! macOS implementation of menus.
-use cocoa::appkit::{NSApplication, NSMenu, NSMenuItem};
-use cocoa::base::{id, nil, BOOL, NO, YES};
-use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSRect, NSSize, NSString};
+use cocoa::appkit::{NSMenu, NSMenuItem};
+use cocoa::base::{id, nil};
+use cocoa::foundation::{NSAutoreleasePool, NSString};
 use lazy_static::lazy_static;
 use objc::declare::ClassDecl;
 use objc::runtime::{Class, Object, Sel};
@@ -43,7 +43,7 @@ lazy_static! {
 pub struct Menu {
     pub menu: id,
 }
-fn make_basic_menu_item(id: u32, text: &str, key: &str) -> id {
+fn make_basic_menu_item(_id: u32, text: &str, key: &str) -> id {
     unsafe {
         NSMenuItem::alloc(nil)
             .initWithTitle_action_keyEquivalent_(
@@ -57,14 +57,14 @@ fn make_basic_menu_item(id: u32, text: &str, key: &str) -> id {
 
 fn make_proxy(id: u32) -> id {
     unsafe {
-        let mut target: id = msg_send![MENU_ITEM_PROXY_CLASS.0, alloc];
+        let target: id = msg_send![MENU_ITEM_PROXY_CLASS.0, alloc];
         (*target).set_ivar("menu_id", id);
         target.autorelease()
     }
 }
 fn make_menu_item(id: u32, text: &str, key: &str) -> id {
     let target = make_proxy(id);
-    let mut menu_item = make_basic_menu_item(id, text, key);
+    let menu_item = make_basic_menu_item(id, text, key);
     unsafe {
         msg_send![menu_item, setTarget: target];
     }
@@ -80,7 +80,7 @@ impl Menu {
     }
 
     // TODO: how do we use the text here?
-    pub fn add_dropdown(&mut self, menu: Menu, text: &str) {
+    pub fn add_dropdown(&mut self, menu: Menu, _text: &str) {
         unsafe {
             let menu_item = NSMenuItem::new(nil).autorelease();
             menu_item.setSubmenu_(menu.menu);
