@@ -156,6 +156,25 @@ impl WindowBuilder {
             })
         }
     }
+
+    /// Create a view (not an actual platform window) and attach to a parent view.
+    ///
+    /// This method is useful when embedding into an existing app, or writing a VST
+    /// plug-in. It is unsafe because the parent_view handle must be valid.
+    ///
+    /// On macOS, the parent_view is an NSView object.
+    pub unsafe fn attach(self, parent_view: id) -> Result<WindowHandle, Error> {
+        // Note: some of this is duplicated with `build`, perhaps dedup.
+        let (view, idle_queue) = make_view(self.handler.expect("view"));
+        let frame = NSView::frame(parent_view);
+        view.initWithFrame_(frame);
+        let () = msg_send!(view, setFrameSize: frame.size);
+        parent_view.addSubview_(view);
+        Ok(WindowHandle {
+            nsview: Some(WeakPtr::new(view)),
+            idle_queue,
+        })
+    }
 }
 
 // Wrap pointer because lazy_static requires Sync.
