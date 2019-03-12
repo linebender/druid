@@ -13,12 +13,12 @@
 // limitations under the License.
 
 //! macOS implementation of menus.
-use lazy_static::lazy_static;
-use objc::runtime::{Class, Object, Sel};
-use objc::declare::ClassDecl;
+use cocoa::appkit::{NSApplication, NSMenu, NSMenuItem};
 use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSRect, NSSize, NSString};
-use cocoa::appkit::{NSMenu,NSMenuItem, NSApplication};
+use lazy_static::lazy_static;
+use objc::declare::ClassDecl;
+use objc::runtime::{Class, Object, Sel};
 
 struct MenuItemProxyClass(*const Class);
 unsafe impl Sync for MenuItemProxyClass {}
@@ -26,14 +26,10 @@ unsafe impl Sync for MenuItemProxyClass {}
 lazy_static! {
     static ref MENU_ITEM_PROXY_CLASS: MenuItemProxyClass = {
         unsafe {
-            let mut decl = 
-                ClassDecl::new("DruidMenuItemProxy", class!(NSObject))
-                .expect("Menu class defined");
+            let mut decl =
+                ClassDecl::new("DruidMenuItemProxy", class!(NSObject)).expect("Menu class defined");
             decl.add_ivar::<u32>("menu_id");
-            decl.add_method(
-                sel!(trigger),
-                trigger as extern "C" fn (&Object, Sel)
-            );
+            decl.add_method(sel!(trigger), trigger as extern "C" fn(&Object, Sel));
             extern "C" fn trigger(this: &Object, _: Sel) {
                 unsafe {
                     let menu_id: u32 = *this.get_ivar("menu_id");
@@ -49,13 +45,13 @@ pub struct Menu {
 }
 fn make_basic_menu_item(id: u32, text: &str, key: &str) -> id {
     unsafe {
-        NSMenuItem
-            ::alloc(nil)
+        NSMenuItem::alloc(nil)
             .initWithTitle_action_keyEquivalent_(
                 NSString::alloc(nil).init_str(text),
                 sel!(trigger),
-                NSString::alloc(nil).init_str(key)
-            ).autorelease()
+                NSString::alloc(nil).init_str(key),
+            )
+            .autorelease()
     }
 }
 
@@ -69,13 +65,17 @@ fn make_proxy(id: u32) -> id {
 fn make_menu_item(id: u32, text: &str, key: &str) -> id {
     let target = make_proxy(id);
     let mut menu_item = make_basic_menu_item(id, text, key);
-    unsafe { msg_send![menu_item, setTarget: target]; }
+    unsafe {
+        msg_send![menu_item, setTarget: target];
+    }
     menu_item
 }
 impl Menu {
     pub fn new() -> Menu {
         unsafe {
-            Menu { menu: NSMenu::alloc(nil) }
+            Menu {
+                menu: NSMenu::alloc(nil),
+            }
         }
     }
 
@@ -90,7 +90,9 @@ impl Menu {
 
     pub fn add_item(&mut self, id: u32, text: &str, key: &str) {
         let menu_item = make_menu_item(id, text, key);
-        unsafe { self.menu.addItem_(menu_item); }
+        unsafe {
+            self.menu.addItem_(menu_item);
+        }
     }
 
     pub fn add_separator(&mut self) {

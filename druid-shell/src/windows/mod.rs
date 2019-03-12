@@ -54,11 +54,11 @@ use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarge
 
 use piet::RenderContext;
 
-use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
-use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 use crate::menu::Menu;
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use crate::Error;
+use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
+use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 
 use crate::window::{self, Cursor, MouseButton, MouseEvent, MouseType, WinHandler};
 
@@ -215,11 +215,7 @@ impl MyWndProc {
         rt.begin_draw();
         let anim;
         {
-            let mut piet_ctx = piet_common::Piet::new(
-                &self.d2d_factory,
-                &self.dwrite_factory,
-                rt,
-            );
+            let mut piet_ctx = piet_common::Piet::new(&self.d2d_factory, &self.dwrite_factory, rt);
             anim = self.handler.paint(&mut piet_ctx);
             if let Err(e) = piet_ctx.finish() {
                 // TODO: use proper log infrastructure

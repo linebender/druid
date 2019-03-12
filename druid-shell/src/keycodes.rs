@@ -22,4 +22,3 @@ pub const M_CTRL: u32 = 2;
 
 /// Modifier mask for shift key in `keydown` and `char` events.
 pub const M_SHIFT: u32 = 4;
-
