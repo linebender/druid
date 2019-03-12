@@ -13,9 +13,9 @@
 // limitations under the License.
 
 //! macOS implementation of menus.
-use cocoa::appkit::{NSApplication, NSMenu, NSMenuItem};
-use cocoa::base::{id, nil, BOOL, NO, YES};
-use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSRect, NSSize, NSString};
+use cocoa::appkit::{NSMenu, NSMenuItem};
+use cocoa::base::{id, nil};
+use cocoa::foundation::NSAutoreleasePool;
 use lazy_static::lazy_static;
 use objc::declare::ClassDecl;
 use objc::runtime::{Class, Object, Sel};
@@ -120,7 +120,7 @@ impl Menu {
     }
 
     // TODO: how do we use the text here?
-    pub fn add_dropdown(&mut self, menu: Menu, text: &str) {
+    pub fn add_dropdown(&mut self, menu: Menu, _text: &str) {
         unsafe {
             let menu_item = NSMenuItem::new(nil).autorelease();
             menu_item.setSubmenu_(menu.menu);

@@ -45,7 +45,7 @@ use piet_common::Piet;
 
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
-use crate::window::{Cursor, WinHandler};
+use crate::window::WinHandler;
 use crate::Error;
 
 use util::assert_main_thread;
@@ -65,7 +65,6 @@ pub struct WindowHandle {
 pub struct WindowBuilder {
     handler: Option<Box<WinHandler>>,
     title: String,
-    cursor: Cursor,
     enable_mouse_move_events: bool,
     menu: Option<Menu>,
 }
@@ -97,7 +96,6 @@ impl WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),
-            cursor: Cursor::Arrow,
             enable_mouse_move_events: true,
             menu: Some(Menu::default()),
         }
@@ -250,11 +248,11 @@ extern "C" fn mouse_down(this: &mut Object, _: Sel, nsevent: id) {
         let point = nsevent.locationInWindow();
         println!("mouse down, point: {}, {}", point.x, point.y);
         let view_state: *mut c_void = *this.get_ivar("viewState");
-        let view_state = &mut *(view_state as *mut ViewState);
+        &mut *(view_state as *mut ViewState);
     }
 }
 
-extern "C" fn mouse_moved(this: &mut Object, _: Sel, nsevent: id) {
+extern "C" fn mouse_moved(_this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
         let point = nsevent.locationInWindow();
         println!("mouse moved, point: {}, {}", point.x, point.y);
@@ -291,7 +289,9 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let anim = (*view_state).handler.paint(&mut piet_ctx);
-        piet_ctx.finish();
+        if let Err(e) = piet_ctx.finish() {
+            eprintln!("Error: {}", e);
+        }
         // TODO: log errors
 
         if anim {
@@ -401,8 +401,8 @@ impl WindowHandle {
 
     pub fn file_dialog(
         &self,
-        ty: FileDialogType,
-        options: FileDialogOptions,
+        _ty: FileDialogType,
+        _options: FileDialogOptions,
     ) -> Result<OsString, Error> {
         unimplemented!()
     }
