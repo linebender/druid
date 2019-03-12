@@ -1,19 +1,27 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+pr: ["master"]
 
-trigger:
-- master
+jobs:
+  - job:
+    strategy:
+      matrix:
+        mac:
+          imageName: 'macos-10.13'
+        windows:
+          imageName: 'vs2017-win2016'
+    pool:
+      vmImage: $(imageName)
+    steps:
+      - bash: brew install cairo
+        condition: eq(variables['Agent.OS'], 'Darwin')
 
-pool:
-  vmImage: 'Ubuntu-16.04'
+      - template: ci/install-rust.yml
+        parameters:
+          rust_version: stable
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+      - template: ci/test.yml
+        parameters:
+          toolchain: stable
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+      - template: ci/test.yml
+        parameters:
+          toolchain: nightly
