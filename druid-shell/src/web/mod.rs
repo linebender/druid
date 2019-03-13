@@ -123,13 +123,13 @@ impl Default for PresentStrategy {
 
 impl WindowState {
     // Renders but does not present.
-    fn render(&self) {
+    fn render(&self) -> bool {
         let window = window();
         let ref mut canvas_ctx = *self.canvas_ctx.borrow_mut();
         canvas_ctx.clear_rect(0.0, 0.0, self.get_width() as f64, self.get_height() as f64);
         let mut piet_ctx = piet_common::Piet::new(
             canvas_ctx, &window);
-        self.handler.paint(&mut piet_ctx);
+        let want_anim_frame = self.handler.paint(&mut piet_ctx);
         if let Err(e) = piet_ctx.finish() {
             // TODO: use proper log infrastructure
             eprintln!("piet error on render: {:?}", e);
@@ -138,12 +138,12 @@ impl WindowState {
         if let Err(e) = res {
             println!("EndDraw error: {:?}", e);
         }
+        want_anim_frame
     }
 
     fn process_idle_queue(&self) {
         let mut queue = self.idle_queue.lock().expect("process_idle_queue");
         for callback in queue.drain(..) {
-            web_sys::console::log_1(&"idle callback".into());
             callback.call(&self.handler);
         }
     }
@@ -176,8 +176,6 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
                 ty: MouseType::Down,
             };
             state.handler.mouse(&event);
-
-            state.render();
         }) as Box<dyn FnMut(_)>);
         window_state.canvas
             .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref()).unwrap();
@@ -190,8 +188,6 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
 	    let y = event.offset_y() as i32;
 	    let mods = 0;
 	    state.handler.mouse_move(x, y, mods);
-
-            state.render();
         }) as Box<dyn FnMut(_)>);
         window_state.canvas
             .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref()).unwrap();
@@ -215,8 +211,6 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
                 ty: MouseType::Up,
             };
             state.handler.mouse(&event);
-
-            state.render();
         }) as Box<dyn FnMut(_)>);
         window_state.canvas
             .add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref()).unwrap();
@@ -299,14 +293,20 @@ impl WindowBuilder {
 
         setup_web_callbacks(&window);
 
-        Ok(WindowHandle(Rc::downgrade(&window)))
+        let handle = WindowHandle(Rc::downgrade(&window));
+
+        window.handler.connect(&window::WindowHandle {
+            inner: handle.clone(),
+        });
+
+        Ok(handle)
     }
 }
 
 impl WindowHandle {
     pub fn show(&self) {
         if let Some(w) = self.0.upgrade() {
-            w.render();
+            self.render();
         }
     }
 
@@ -315,8 +315,18 @@ impl WindowHandle {
     }
 
     pub fn invalidate(&self) {
+        self.render();
+    }
+
+    fn render(&self) {
         if let Some(w) = self.0.upgrade() {
-            w.render();
+            let handle = self.clone();
+            request_animation_frame(move || {
+                let want_anim_frame = w.render();
+                if want_anim_frame {
+                    handle.render();
+                }
+            });
         }
     }
 
