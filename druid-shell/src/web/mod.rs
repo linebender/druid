@@ -305,9 +305,7 @@ impl WindowBuilder {
 
 impl WindowHandle {
     pub fn show(&self) {
-        if let Some(w) = self.0.upgrade() {
-            self.render();
-        }
+        self.render_soon();
     }
 
     pub fn close(&self) {
@@ -315,16 +313,16 @@ impl WindowHandle {
     }
 
     pub fn invalidate(&self) {
-        self.render();
+        self.render_soon();
     }
 
-    fn render(&self) {
+    fn render_soon(&self) {
         if let Some(w) = self.0.upgrade() {
             let handle = self.clone();
             request_animation_frame(move || {
                 let want_anim_frame = w.render();
                 if want_anim_frame {
-                    handle.render();
+                    handle.render_soon();
                 }
             });
         }
