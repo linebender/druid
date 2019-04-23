@@ -215,6 +215,10 @@ lazy_static! {
             mouse_move as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
+            sel!(scrollWheel:),
+            scroll_wheel as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
             sel!(keyDown:),
             key_down as extern "C" fn(&mut Object, Sel, id),
         );
@@ -298,6 +302,27 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
         (*view_state)
             .handler
             .mouse_move(event.x, event.y, event.mods);
+    }
+}
+
+extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        let dx = nsevent.scrollingDeltaX() as i32;
+        let dy = nsevent.scrollingDeltaY() as i32;
+        let mods = 0; // TODO:
+        if dx != 0 {
+            (*view_state)
+                .handler
+                .mouse_hwheel(dx, mods);
+        }
+
+        if dy != 0 {
+            (*view_state)
+                .handler
+                .mouse_wheel(dy, mods);
+        }
     }
 }
 

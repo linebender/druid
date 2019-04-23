@@ -111,6 +111,12 @@ pub trait Widget {
         false
     }
 
+    #[allow(unused)]
+    fn scroll(&mut self, dy: f32, ctx: &mut HandlerCtx) {}
+
+    #[allow(unused)]
+    fn hscroll(&mut self, dx: f32, ctx: &mut HandlerCtx) {}
+
     /// Called at the beginning of a new animation frame.
     ///
     /// The `interval` argument is the time in nanoseconds between frames, for
@@ -155,14 +161,14 @@ pub struct MouseEvent {
     pub count: u32,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct KeyEvent {
     pub key: KeyVariant,
     /// The modifiers, a combinations of `M_ALT`, `M_CTRL`, `M_SHIFT`.
     pub mods: u32,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum KeyVariant {
     /// A virtual-key code, same as WM_KEYDOWN message.
     Vkey(i32),
