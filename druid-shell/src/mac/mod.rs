@@ -309,8 +309,15 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let dx = nsevent.scrollingDeltaX() as i32;
-        let dy = nsevent.scrollingDeltaY() as i32;
+        let (dx, dy) = {
+            let dx = nsevent.scrollingDeltaX() as i32;
+            let dy = nsevent.scrollingDeltaY() as i32;
+            if nsevent.hasPreciseScrollingDeltas() == cocoa::base::YES {
+                (dx, dy)
+            } else {
+                (dx * 32, dy * 32)
+            }
+        };
         let mods = 0; // TODO:
         if dx != 0 {
             (*view_state)

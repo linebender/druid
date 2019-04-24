@@ -16,7 +16,7 @@
 
 use std::any::Any;
 
-pub use druid_shell::window::MouseButton;
+pub use druid_shell::window::{MouseButton, ScrollEvent};
 
 use crate::{BoxConstraints, Geometry, LayoutResult};
 use crate::{HandlerCtx, Id, LayoutCtx, PaintCtx};
@@ -112,10 +112,7 @@ pub trait Widget {
     }
 
     #[allow(unused)]
-    fn scroll(&mut self, dy: f32, ctx: &mut HandlerCtx) {}
-
-    #[allow(unused)]
-    fn hscroll(&mut self, dx: f32, ctx: &mut HandlerCtx) {}
+    fn scroll(&mut self, event: &ScrollEvent, ctx: &mut HandlerCtx) {}
 
     /// Called at the beginning of a new animation frame.
     ///

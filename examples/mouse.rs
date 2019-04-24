@@ -28,7 +28,7 @@ use druid_shell::win_main;
 
 use druid::{Ui, UiMain, UiState};
 
-use druid::widget::Widget;
+use druid::widget::{Widget, ScrollEvent};
 use druid::HandlerCtx;
 use druid::{BoxConstraints, Geometry, LayoutResult};
 use druid::{Id, LayoutCtx, PaintCtx};
@@ -69,13 +69,9 @@ impl Widget for FooWidget {
         LayoutResult::Size(bc.constrain((100.0, 100.0)))
     }
 
-    fn scroll(&mut self, dy: f32, ctx: &mut HandlerCtx) {
-        self.size.1 += dy as f64;
-        ctx.invalidate();
-    }
-
-    fn hscroll(&mut self, dx: f32, ctx: &mut HandlerCtx) {
-        self.size.0 += dx as f64;
+    fn scroll(&mut self, event: &ScrollEvent, ctx: &mut HandlerCtx) {
+        self.size.0 += event.dx as f64;
+        self.size.1 += event.dy as f64;
         ctx.invalidate();
     }
 

@@ -417,24 +417,13 @@ impl UiState {
         }
     }
 
-    fn handle_scroll(&mut self, dy: f32) {
+    fn handle_scroll(&mut self, event: &window::ScrollEvent) {
         if let Some(id) = self.layout_ctx.hot {
             let mut ctx = HandlerCtx {
                 id,
                 layout_ctx: &mut self.inner.layout_ctx,
             };
-            self.inner.widgets[id].scroll(dy, &mut ctx);
-            self.dispatch_events();
-        }
-    }
-
-    fn handle_hscroll(&mut self, dx: f32) {
-        if let Some(id) = self.layout_ctx.hot {
-            let mut ctx = HandlerCtx {
-                id,
-                layout_ctx: &mut self.inner.layout_ctx,
-            };
-            self.inner.widgets[id].hscroll(dx, &mut ctx);
+            self.inner.widgets[id].scroll(event, &mut ctx);
             self.dispatch_events();
         }
     }
@@ -948,14 +937,22 @@ impl WinHandler for UiMain {
         state.handle_key_event(&key_event)
     }
 
-    fn mouse_wheel(&self, delta: i32, _mods: u32) {
+    fn mouse_wheel(&self, dy: i32, mods: u32) {
         let mut state = self.state.borrow_mut();
-        state.handle_scroll(delta as f32);
+        state.handle_scroll(&window::ScrollEvent{
+            dx: 0.0,
+            dy: dy as f32,
+            mods,
+        });
     }
 
-    fn mouse_hwheel(&self, delta: i32, _mods: u32) {
+    fn mouse_hwheel(&self, dx: i32, mods: u32) {
         let mut state = self.state.borrow_mut();
-        state.handle_hscroll(delta as f32);
+        state.handle_scroll(&window::ScrollEvent{
+            dx: dx as f32,
+            dy: 0.0,
+            mods,
+        });
     }
 
     fn mouse_move(&self, x: i32, y: i32, _mods: u32) {
