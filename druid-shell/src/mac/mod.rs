@@ -311,7 +311,7 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
         let view_state = &mut *(view_state as *mut ViewState);
         let (dx, dy) = {
             let dx = nsevent.scrollingDeltaX() as i32;
-            let dy = nsevent.scrollingDeltaY() as i32;
+            let dy = -nsevent.scrollingDeltaY() as i32;
             if nsevent.hasPreciseScrollingDeltas() == cocoa::base::YES {
                 (dx, dy)
             } else {
