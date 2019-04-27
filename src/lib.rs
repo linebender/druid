@@ -417,6 +417,17 @@ impl UiState {
         }
     }
 
+    fn handle_scroll(&mut self, event: &window::ScrollEvent) {
+        if let Some(id) = self.layout_ctx.hot {
+            let mut ctx = HandlerCtx {
+                id,
+                layout_ctx: &mut self.inner.layout_ctx,
+            };
+            self.inner.widgets[id].scroll(event, &mut ctx);
+            self.dispatch_events();
+        }
+    }
+
     fn handle_command(&mut self, cmd: u32) {
         if let Some(ref mut listener) = self.command_listener {
             let ctx = ListenerCtx {
@@ -926,12 +937,22 @@ impl WinHandler for UiMain {
         state.handle_key_event(&key_event)
     }
 
-    fn mouse_wheel(&self, delta: i32, mods: u32) {
-        println!("mouse_wheel {} {:02x}", delta, mods);
+    fn mouse_wheel(&self, dy: i32, mods: u32) {
+        let mut state = self.state.borrow_mut();
+        state.handle_scroll(&window::ScrollEvent{
+            dx: 0.0,
+            dy: dy as f32,
+            mods,
+        });
     }
 
-    fn mouse_hwheel(&self, delta: i32, mods: u32) {
-        println!("mouse_hwheel {} {:02x}", delta, mods);
+    fn mouse_hwheel(&self, dx: i32, mods: u32) {
+        let mut state = self.state.borrow_mut();
+        state.handle_scroll(&window::ScrollEvent{
+            dx: dx as f32,
+            dy: 0.0,
+            mods,
+        });
     }
 
     fn mouse_move(&self, x: i32, y: i32, _mods: u32) {

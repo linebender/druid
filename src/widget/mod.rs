@@ -16,7 +16,7 @@
 
 use std::any::Any;
 
-pub use druid_shell::window::MouseButton;
+pub use druid_shell::window::{MouseButton, ScrollEvent};
 
 use crate::{BoxConstraints, Geometry, LayoutResult};
 use crate::{HandlerCtx, Id, LayoutCtx, PaintCtx};
@@ -111,6 +111,9 @@ pub trait Widget {
         false
     }
 
+    #[allow(unused)]
+    fn scroll(&mut self, event: &ScrollEvent, ctx: &mut HandlerCtx) {}
+
     /// Called at the beginning of a new animation frame.
     ///
     /// The `interval` argument is the time in nanoseconds between frames, for
@@ -155,14 +158,14 @@ pub struct MouseEvent {
     pub count: u32,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct KeyEvent {
     pub key: KeyVariant,
     /// The modifiers, a combinations of `M_ALT`, `M_CTRL`, `M_SHIFT`.
     pub mods: u32,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum KeyVariant {
     /// A virtual-key code, same as WM_KEYDOWN message.
     Vkey(i32),

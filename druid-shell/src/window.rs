@@ -165,3 +165,14 @@ pub enum Cursor {
     Arrow,
     IBeam,
 }
+
+/// A scroll wheel event.
+#[derive(Debug)]
+pub struct ScrollEvent {
+    /// The scroll wheel’s horizontal delta.
+    pub dx: f32,
+    /// The scroll wheel’s vertical delta.
+    pub dy: f32,
+    /// Modifiers, as in raw WM message
+    pub mods: u32,
+}
