@@ -106,7 +106,14 @@ impl Widget for TextBox {
     let brush = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
 
     let pos = (geom.pos.0, geom.pos.1 + font_size);
-    paint_ctx.render_ctx.draw_text(&text_layout, pos, &brush);
+    paint_ctx
+      .render_ctx
+      .with_save(|rc| {
+        rc.clip(rect, FillRule::NonZero);
+        rc.draw_text(&text_layout, pos, &brush);
+        Ok(())
+      })
+      .unwrap();
 
     // Paint the cursor if focused
     if paint_ctx.is_focused() {
@@ -166,6 +173,7 @@ impl Widget for TextBox {
     ctx.invalidate();
     true
   }
+}
 
 //When we receive a mouseclick we give the focus to our text box
 //which gives us key inputs, which lets us update our state
