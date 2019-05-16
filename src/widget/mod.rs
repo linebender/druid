@@ -39,6 +39,9 @@ pub(crate) use crate::widget::null::NullWidget;
 mod padding;
 pub use crate::widget::padding::Padding;
 
+mod textbox;
+pub use crate::widget::textbox::TextBox;
+
 /// The trait implemented by all widgets.
 pub trait Widget {
     /// Paint the widget's appearance into the paint context.
