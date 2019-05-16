@@ -30,98 +30,95 @@ const VK_BACK: i32 = 0x08;
 const VK_RETURN: i32 = 0x0d;
 
 struct TypingState {
-  value: String,
-  cursor: usize,
+    value: String,
+    cursor: usize,
 }
 
 #[derive(Debug, Clone)]
 enum TypingAction {
-  Append(char),
-  Delete(),
+    Append(char),
+    Delete(),
 }
 
 impl TypingState {
-  fn action(&mut self, action: &TypingAction) {
-    match *action {
-      TypingAction::Append(ch) => self.append(ch),
-      TypingAction::Delete() => self.delete(),
+    fn action(&mut self, action: &TypingAction) {
+        match *action {
+            TypingAction::Append(ch) => self.append(ch),
+            TypingAction::Delete() => self.delete(),
+        }
     }
-  }
 
-  fn move_cursor(&mut self) {}
+    fn move_cursor(&mut self) {}
 
-  fn append(&mut self, ch: char) {
-    self.value.push(ch);
-  }
+    fn append(&mut self, ch: char) {
+        self.value.push(ch);
+    }
 
-  fn delete(&mut self) {
-    self.value.pop();
-  }
-
+    fn delete(&mut self) {
+        self.value.pop();
+    }
 }
 
 fn pad(widget: Id, ui: &mut UiState) -> Id {
-  Padding::uniform(5.0).ui(widget, ui)
+    Padding::uniform(5.0).ui(widget, ui)
 }
 
 fn build_typing(ui: &mut UiState) {
-  let display = Label::new("".to_string()).ui(ui);
-  let row0 = pad(display, ui);
+    let display = Label::new("".to_string()).ui(ui);
+    let row0 = pad(display, ui);
 
-  let mut column = Column::new();
+    let mut column = Column::new();
 
-  let panel = column.ui(&[row0], ui);
-  let key_listener = KeyListener::new().ui(panel, ui);
-  let forwarder = EventForwarder::<TypingAction>::new().ui(key_listener, ui);
-  let mut typing_state = TypingState {
-    value: "".to_string(),
-    cursor: 0,
-  };
+    let panel = column.ui(&[row0], ui);
+    let key_listener = KeyListener::new().ui(panel, ui);
+    let forwarder = EventForwarder::<TypingAction>::new().ui(key_listener, ui);
+    let mut typing_state = TypingState {
+        value: "".to_string(),
+        cursor: 0,
+    };
 
-  ui.add_listener(key_listener, move |event: &mut KeyEvent, mut ctx| {
-    if let Some(mut action) = action_for_key(event) {
-      ctx.poke_up(&mut action);
-    }
-  });
+    ui.add_listener(key_listener, move |event: &mut KeyEvent, mut ctx| {
+        if let Some(mut action) = action_for_key(event) {
+            ctx.poke_up(&mut action);
+        }
+    });
 
-  ui.add_listener(forwarder, move |action: &mut TypingAction, mut ctx| {
-    typing_state.action(action);
-    ctx.poke(display, &mut typing_state.value);
-  });
+    ui.add_listener(forwarder, move |action: &mut TypingAction, mut ctx| {
+        typing_state.action(action);
+        ctx.poke(display, &mut typing_state.value);
+    });
 
-  let root = pad(forwarder, ui);
-  ui.set_root(root);
-  ui.set_focus(Some(key_listener));
+    let root = pad(forwarder, ui);
+    ui.set_root(root);
+    ui.set_focus(Some(key_listener));
 }
 
 fn action_for_key(event: &KeyEvent) -> Option<TypingAction> {
-  match event.key {
-
-    KeyVariant::Char(ch) => {
-      if ch == '\u{7f}' {
-        return Some(TypingAction::Delete());
-      } else {
-        return Some(TypingAction::Append(ch));
-      }
+    match event.key {
+        KeyVariant::Char(ch) => {
+            if ch == '\u{7f}' {
+                return Some(TypingAction::Delete());
+            } else {
+                return Some(TypingAction::Append(ch));
+            }
+        }
+        KeyVariant::Vkey(vk) => match vk {
+            VK_BACK => Some(TypingAction::Delete()),
+            _ => None,
+        },
     }
-    KeyVariant::Vkey(vk) => match vk {
-      VK_BACK => Some(TypingAction::Delete()),
-      _ => None,
-    },
-  }
-
 }
 
 fn main() {
-  druid_shell::init();
+    druid_shell::init();
 
-  let mut run_loop = win_main::RunLoop::new();
-  let mut builder = WindowBuilder::new();
-  let mut state = UiState::new();
-  build_typing(&mut state);
-  builder.set_handler(Box::new(UiMain::new(state)));
-  builder.set_title("Typing!");
-  let window = builder.build().expect("built window");
-  window.show();
-  run_loop.run();
+    let mut run_loop = win_main::RunLoop::new();
+    let mut builder = WindowBuilder::new();
+    let mut state = UiState::new();
+    build_typing(&mut state);
+    builder.set_handler(Box::new(UiMain::new(state)));
+    builder.set_title("Typing!");
+    let window = builder.build().expect("built window");
+    window.show();
+    run_loop.run();
 }

@@ -29,7 +29,7 @@ const BOX_HEIGHT: f32 = 24.;
 pub struct TextBox {
     text: String,
     width: f64,
-    font: Option<CairoFont>
+    font: Option<<<Piet<'static> as RenderContext>::Text as Text>::Font>
 }
 
 impl TextBox {

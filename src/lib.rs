@@ -113,7 +113,7 @@ pub struct LayoutCtx {
     size: (f32, f32),
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct Geometry {
     // Maybe PointF is a better type, then we could use the math from direct2d?
     pub pos: (f32, f32),
@@ -179,6 +179,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     // TODO: maybe this should be a 3-way enum: normal/hot/active
     is_active: bool,
     is_hot: bool,
+    is_focused: bool,
     pub render_ctx: &'a mut piet_common::Piet<'b>,
 }
 
@@ -661,19 +662,24 @@ impl Ui {
             pos: (f32, f32),
             active: Option<Id>,
             hot: Option<Id>,
+            focused: Option<Id>,
         ) {
             let g = geom[node].offset(pos);
             paint_ctx.is_active = active == Some(node);
             paint_ctx.is_hot = hot == Some(node) && (paint_ctx.is_active || active.is_none());
+            paint_ctx.is_focused = focused == Some(node);
             widgets[node].paint(paint_ctx, &g);
             for &child in &graph.children[node] {
-                paint_rec(widgets, graph, geom, paint_ctx, child, g.pos, active, hot);
+                paint_rec(
+                    widgets, graph, geom, paint_ctx, child, g.pos, active, hot, focused,
+                );
             }
         }
 
         let mut paint_ctx = PaintCtx {
             is_active: false,
             is_hot: false,
+            is_focused: false,
             render_ctx: render_ctx,
         };
         paint_rec(
@@ -685,6 +691,7 @@ impl Ui {
             (0.0, 0.0),
             self.layout_ctx.active,
             self.layout_ctx.hot,
+            self.layout_ctx.focused,
         );
     }
 
@@ -789,9 +796,18 @@ impl<'a> HandlerCtx<'a> {
         self.layout_ctx.active = if active { Some(self.id) } else { None };
     }
 
+    pub fn set_focused(&mut self, focused: bool) {
+        self.layout_ctx.focused = if focused { Some(self.id) } else { None };
+    }
+
     /// Determine whether this widget is active.
     pub fn is_active(&self) -> bool {
         self.layout_ctx.active == Some(self.id)
+    }
+
+    /// Determine whether this widget is focused.
+    pub fn is_focused(&self) -> bool {
+        self.layout_ctx.focused == Some(self.id)
     }
 
     /// Determine whether this widget is hot. A widget can be both hot and active, but
@@ -876,6 +892,11 @@ impl<'a, 'b> PaintCtx<'a, 'b> {
     pub fn is_hot(&self) -> bool {
         self.is_hot
     }
+
+    /// Determine whether this widget is focused.
+    pub fn is_focused(&self) -> bool {
+        self.is_focused
+    }
 }
 
 impl WinHandler for UiMain {
@@ -939,7 +960,7 @@ impl WinHandler for UiMain {
 
     fn mouse_wheel(&self, dy: i32, mods: u32) {
         let mut state = self.state.borrow_mut();
-        state.handle_scroll(&window::ScrollEvent{
+        state.handle_scroll(&window::ScrollEvent {
             dx: 0.0,
             dy: dy as f32,
             mods,
@@ -948,7 +969,7 @@ impl WinHandler for UiMain {
 
     fn mouse_hwheel(&self, dx: i32, mods: u32) {
         let mut state = self.state.borrow_mut();
-        state.handle_scroll(&window::ScrollEvent{
+        state.handle_scroll(&window::ScrollEvent {
             dx: dx as f32,
             dy: 0.0,
             mods,
