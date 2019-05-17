@@ -45,6 +45,9 @@ pub use crate::widget::textbox::TextBox;
 mod slider;
 pub use crate::widget::slider::Slider;
 
+mod progress_bar;
+pub use crate::widget::progress_bar::ProgressBar;
+
 /// The trait implemented by all widgets.
 pub trait Widget {
     /// Paint the widget's appearance into the paint context.

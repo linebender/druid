@@ -17,7 +17,7 @@
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::widget::{Column, EventForwarder, KeyListener, Label, Padding, Row, Slider, TextBox};
+use druid::widget::{Column, EventForwarder, KeyListener, Label, Padding, Row, Slider, TextBox, ProgressBar};
 use druid::{KeyEvent, KeyVariant, UiMain, UiState};
 
 use druid::Id;
@@ -50,18 +50,25 @@ fn main() {
     let label_2 = Label::new("0.50").ui(&mut state);
     let label_2_padded = pad(label_2, &mut state);
 
+    let progress_bar_1 = ProgressBar::new(0.0).ui(&mut state);
+    let progress_bar_1_padded = pad(progress_bar_1, &mut state);
+
     let mut row_1 = Row::new();
     let mut row_2 = Row::new();
+    let mut row_3 = Row::new();
 
     row_1.set_flex(slider_1_padded, 1.0);
     row_2.set_flex(slider_2_padded, 1.0);
+    row_3.set_flex(progress_bar_1_padded, 1.0);
 
     let row_1 = row_1.ui(&[slider_1_padded, label_1_padded], &mut state);
     let row_2 = row_2.ui(&[slider_2_padded, label_2_padded], &mut state);
+    let row_3 = row_3.ui(&[progress_bar_1_padded], &mut state);
 
-    let panel = column.ui(&[text_box1, text_box2, row_1, row_2], &mut state);
+    let panel = column.ui(&[text_box1, text_box2, row_1, row_2, row_3], &mut state);
 
     state.add_listener(slider_1, move |value: &mut f64, mut ctx| {
+        ctx.poke(progress_bar_1, value);
         ctx.poke(label_1, &mut format!("{:.2}", value));
     });
 
