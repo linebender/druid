@@ -106,7 +106,7 @@ impl Widget for TextBox {
     let clip_rect = Rect::new(
       x as f64,
       y as f64,
-      x as f64 + self.width as f64 - BORDER_WIDTH as f64,
+      x as f64 + width as f64 - BORDER_WIDTH as f64,
       y as f64 + height as f64,
     );
 
