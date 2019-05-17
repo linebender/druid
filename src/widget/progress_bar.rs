@@ -24,7 +24,7 @@ use crate::{
 use kurbo::{Line, Rect};
 use piet::{FillRule, RenderContext};
 
-const BOX_HEIGHT: f32 = 24.;
+const BOX_HEIGHT: f64 = 24.;
 
 pub struct ProgressBar {
     value: f64,
@@ -86,7 +86,7 @@ impl Widget for ProgressBar {
         _size: Option<(f32, f32)>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain((bc.max_width, BOX_HEIGHT)))
+        LayoutResult::Size(bc.constrain((bc.max_width, BOX_HEIGHT as f32)))
     }
 
     fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
