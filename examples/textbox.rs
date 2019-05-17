@@ -17,7 +17,7 @@
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::widget::{Column, EventForwarder, KeyListener, Label, Padding, Row, TextBox};
+use druid::widget::{Column, EventForwarder, KeyListener, Label, Padding, Row, Slider, TextBox};
 use druid::{KeyEvent, KeyVariant, UiMain, UiState};
 
 use druid::Id;
@@ -36,9 +36,12 @@ fn main() {
     let mut column = Column::new();
 
     let text_box1 = pad(TextBox::new(None, 50.).ui(&mut state), &mut state);
-    let text_box2 = pad(TextBox::new(None, 50.).ui(&mut state), &mut state);
+    let text_box2 = pad(TextBox::new(None, 500.).ui(&mut state), &mut state);
 
-    let panel = column.ui(&[text_box1, text_box2], &mut state);
+    let slider_1 = pad(Slider::new(1.0).ui(&mut state), &mut state);
+    let slider_2 = pad(Slider::new(0.5).ui(&mut state), &mut state);
+
+    let panel = column.ui(&[text_box1, text_box2, slider_1, slider_2], &mut state);
 
     state.set_root(panel);
     builder.set_handler(Box::new(UiMain::new(state)));
