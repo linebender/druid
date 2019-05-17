@@ -22,9 +22,10 @@ use crate::{
 
 use kurbo::{Line, Rect};
 use piet::{FillRule, Font, FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
-use piet_common::{CairoFont, Piet};
+use piet_common::{Piet};
 
 const BOX_HEIGHT: f32 = 24.;
+const BORDER_WIDTH: f32 = 2.;
 
 pub struct TextBox {
   text: String,
@@ -87,9 +88,12 @@ impl Widget for TextBox {
       0x55_55_55_ff
     };
 
-    let brush = paint_ctx.render_ctx.solid_brush(border_color).unwrap();
+    let text_color = 0xf0f0eaff;
+
 
     // Paint the border
+    let brush = paint_ctx.render_ctx.solid_brush(border_color).unwrap();
+
     let (x, y) = geom.pos;
     let (width, height) = geom.size;
     let rect = Rect::new(
@@ -98,39 +102,54 @@ impl Widget for TextBox {
       x as f64 + width as f64,
       y as f64 + height as f64,
     );
-    paint_ctx.render_ctx.stroke(rect, &brush, 1., None);
+
+    let clip_rect = Rect::new(
+      x as f64,
+      y as f64,
+      x as f64 + self.width as f64 - BORDER_WIDTH as f64,
+      y as f64 + height as f64,
+    );
+
+    paint_ctx
+      .render_ctx
+      .stroke(rect, &brush, BORDER_WIDTH, None);
 
     // Paint the text
     let font_size = BOX_HEIGHT - 4.;
     let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
-    let brush = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
+    let brush = paint_ctx.render_ctx.solid_brush(text_color).unwrap();
 
     let pos = (geom.pos.0, geom.pos.1 + font_size);
+
+    let focused = paint_ctx.is_focused();
+
+    //Render text and cursor inside a clip
     paint_ctx
       .render_ctx
       .with_save(|rc| {
-        rc.clip(rect, FillRule::NonZero);
+        rc.clip(clip_rect, FillRule::NonZero);
         rc.draw_text(&text_layout, pos, &brush);
+
+        // Paint the cursor if focused
+        if focused {
+          let brush = rc.solid_brush(0xffffffff).unwrap();
+
+          let (x, y) = (
+            geom.pos.0 + text_layout.width() as f32 + 2.,
+            geom.pos.1 + 2.,
+          );
+
+          let line = Line::new(
+            (x as f64, y as f64),
+            (x as f64, y as f64 + font_size as f64),
+          );
+
+          rc.stroke(line, &brush, 1., None);
+        }
         Ok(())
       })
       .unwrap();
 
-    // Paint the cursor if focused
-    if paint_ctx.is_focused() {
-      let brush = paint_ctx.render_ctx.solid_brush(0xffffffff).unwrap();
-
-      let (x, y) = (
-        geom.pos.0 + text_layout.width() as f32 + 2.,
-        geom.pos.1 + 2.,
-      );
-
-      let line = Line::new(
-        (x as f64, y as f64),
-        (x as f64, y as f64 + font_size as f64),
-      );
-
-      paint_ctx.render_ctx.stroke(line, &brush, 1., None);
-    };
   }
 
   fn layout(
