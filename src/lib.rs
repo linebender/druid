@@ -833,6 +833,10 @@ impl<'a> HandlerCtx<'a> {
             _ => (),
         }
     }
+
+    pub fn get_geom(&self) -> &Geometry {
+        &self.layout_ctx.geom[self.id]
+    }
 }
 
 impl<'a> Deref for ListenerCtx<'a> {

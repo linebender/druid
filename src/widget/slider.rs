@@ -72,7 +72,7 @@ impl Widget for Slider {
         let (x, y) = geom.pos;
         let (x, y) = (x as f64, y as f64);
 
-        let slider_absolute_position = width * self.value;
+        let slider_absolute_position = (width - BOX_HEIGHT as f64) * self.value + BOX_HEIGHT as f64 / 2.;
         let half_box = height / 2.;
         let full_box = height;
 
@@ -106,9 +106,8 @@ impl Widget for Slider {
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
         if event.count == 1 {
             ctx.set_active(true);
-            self.value = event.x as f64 / (ctx.layout_ctx.size.0 as f64 - BOX_HEIGHT as f64 / 2.); 
-            dbg!(event.x);
-            dbg!(self.value);
+            self.value = ((event.x as f64 - BOX_HEIGHT as f64 / 2.) / (ctx.get_geom().size.0 as f64 - BOX_HEIGHT as f64)).max(0.0).min(1.0);
+            ctx.send_event(self.value);
         } else {
             ctx.set_active(false);
         }
@@ -117,10 +116,11 @@ impl Widget for Slider {
     }
 
     fn mouse_moved(&mut self, x: f32, y: f32, ctx: &mut HandlerCtx) {
-          if ctx.is_active() {
-                self.value = x as f64 / ctx.layout_ctx.size.0 as f64; 
-                ctx.invalidate();
-          dbg!(x);
-       }
+        if ctx.is_active() {
+            self.value = ((x as f64 - BOX_HEIGHT as f64 / 2.) / (ctx.get_geom().size.0 as f64 - BOX_HEIGHT as f64)).max(0.0).min(1.0);
+
+            ctx.send_event(self.value);
+            ctx.invalidate();
+        }
     }
 }

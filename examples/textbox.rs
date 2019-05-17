@@ -33,15 +33,41 @@ fn main() {
     let mut builder = WindowBuilder::new();
     let mut state = UiState::new();
 
-    let mut column = Column::new();
+    let column = Column::new();
 
     let text_box1 = pad(TextBox::new(None, 50.).ui(&mut state), &mut state);
     let text_box2 = pad(TextBox::new(None, 500.).ui(&mut state), &mut state);
 
-    let slider_1 = pad(Slider::new(1.0).ui(&mut state), &mut state);
-    let slider_2 = pad(Slider::new(0.5).ui(&mut state), &mut state);
+    let slider_1 = Slider::new(1.0).ui(&mut state);
+    let slider_1_padded = pad(slider_1, &mut state);
 
-    let panel = column.ui(&[text_box1, text_box2, slider_1, slider_2], &mut state);
+    let slider_2 = Slider::new(0.5).ui(&mut state);
+    let slider_2_padded = pad(slider_2, &mut state);
+
+    let label_1 = Label::new("1.00").ui(&mut state);
+    let label_1_padded = pad(label_1, &mut state);
+
+    let label_2 = Label::new("0.50").ui(&mut state);
+    let label_2_padded = pad(label_2, &mut state);
+
+    let mut row_1 = Row::new();
+    let mut row_2 = Row::new();
+
+    row_1.set_flex(slider_1_padded, 1.0);
+    row_2.set_flex(slider_2_padded, 1.0);
+
+    let row_1 = row_1.ui(&[slider_1_padded, label_1_padded], &mut state);
+    let row_2 = row_2.ui(&[slider_2_padded, label_2_padded], &mut state);
+
+    let panel = column.ui(&[text_box1, text_box2, row_1, row_2], &mut state);
+
+    state.add_listener(slider_1, move |value: &mut f64, mut ctx| {
+        ctx.poke(label_1, &mut format!("{:.2}", value));
+    });
+
+    state.add_listener(slider_2, move |value: &mut f64, mut ctx| {
+        ctx.poke(label_2, &mut format!("{:.2}", value));
+    });
 
     state.set_root(panel);
     builder.set_handler(Box::new(UiMain::new(state)));

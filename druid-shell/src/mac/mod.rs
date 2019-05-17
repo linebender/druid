@@ -215,6 +215,10 @@ lazy_static! {
             mouse_move as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
+            sel!(mouseDragged:),
+            mouse_move as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
             sel!(scrollWheel:),
             scroll_wheel as extern "C" fn(&mut Object, Sel, id),
         );
