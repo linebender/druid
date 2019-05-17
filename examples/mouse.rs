@@ -28,7 +28,7 @@ use druid_shell::win_main;
 
 use druid::{Ui, UiMain, UiState};
 
-use druid::widget::{ScrollEvent, Widget};
+use druid::widget::{Widget, ScrollEvent};
 use druid::HandlerCtx;
 use druid::{BoxConstraints, Geometry, LayoutResult};
 use druid::{Id, LayoutCtx, PaintCtx};
@@ -48,7 +48,12 @@ impl Widget for FooWidget {
         let (x, y) = (x + self.pos.0, y + self.pos.1);
 
         paint_ctx.render_ctx.fill(
-            Rect::new(x, y, x + self.size.0, y + self.size.1),
+            Rect::new(
+                x,
+                y,
+                x + self.size.0,
+                y + self.size.1,
+            ),
             &fg,
             FillRule::NonZero,
         );

@@ -193,7 +193,3 @@ impl Widget for TextBox {
     true
   }
 }
-
-//When we receive a mouseclick we give the focus to our text box
-//which gives us key inputs, which lets us update our state
-//and then we invalidate our state and...
