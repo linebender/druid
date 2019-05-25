@@ -152,6 +152,7 @@ pub trait Widget {
     fn on_child_removed(&mut self, child: Id) {}
 }
 
+#[derive(Debug, Clone)]
 pub struct MouseEvent {
     /// X coordinate in px units, relative to top left of widget.
     pub x: f32,
