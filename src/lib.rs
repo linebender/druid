@@ -132,7 +132,7 @@ enum AnimState {
     AnimFrameRequested,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct BoxConstraints {
     min_width: f32,
     max_width: f32,
@@ -743,6 +743,16 @@ impl BoxConstraints {
             clamp(size.0, self.min_width, self.max_width),
             clamp(size.1, self.min_height, self.max_height),
         )
+    }
+
+    /// Returns the max size of these constraints.
+    pub fn max(&self) -> (f32, f32) {
+        (self.max_width, self.max_height)
+    }
+
+    /// Returns the min size of these constraints.
+    pub fn min(&self) -> (f32, f32) {
+        (self.min_width, self.min_height)
     }
 }
 
