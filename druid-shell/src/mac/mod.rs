@@ -136,7 +136,6 @@ impl WindowBuilder {
             window.autorelease();
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
-            window.makeKeyAndOrderFront_(nil);
             // TODO: this should probably be a tracking area instead
             window.setAcceptsMouseMovedEvents_(YES);
 
@@ -406,7 +405,10 @@ impl WindowHandle {
         unsafe {
             let current_app = NSRunningApplication::currentApplication(nil);
             current_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps);
-            // TODO: do makeKeyAndOrderFront_ here (not in window build)
+            if let Some(ref nsview) = self.nsview {
+                let window: id = msg_send![*nsview.load(), window];
+                window.makeKeyAndOrderFront_(nil)
+            }
         }
     }
 
