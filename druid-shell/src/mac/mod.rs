@@ -23,8 +23,8 @@ pub mod win_main;
 
 use cocoa::appkit::{
     NSApp, NSApplication, NSApplicationActivateIgnoringOtherApps, NSAutoresizingMaskOptions,
-    NSBackingStoreBuffered, NSEvent, NSRunningApplication, NSView, NSViewHeightSizable,
-    NSViewWidthSizable, NSWindow, NSWindowStyleMask,
+    NSBackingStoreBuffered, NSEvent, NSEventModifierFlags, NSRunningApplication, NSView,
+    NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
 };
 use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSRect, NSSize, NSString};
@@ -44,7 +44,7 @@ use piet_common::{Piet, RenderContext};
 
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
-use crate::window::{MouseButton, MouseEvent, MouseType, WinHandler};
+use crate::window::{KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseType, WinHandler};
 use crate::Error;
 
 use util::assert_main_thread;
@@ -332,15 +332,12 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
 }
 
 extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
-    let characters = get_characters(nsevent);
-    dbg!(&characters);
+    let event = make_key_event(nsevent);
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    for c in characters.chars() {
-        (*view_state).handler.char(c as u32, 0);
-    }
+    (*view_state).handler.keydown(event);
 }
 
 extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
@@ -512,11 +509,44 @@ impl IdleHandle {
     }
 }
 
-fn get_characters(event: id) -> String {
+fn make_key_event(event: id) -> KeyEvent {
     unsafe {
-        let characters = event.characters();
-        let slice =
-            std::slice::from_raw_parts(characters.UTF8String() as *const _, characters.len());
-        std::str::from_utf8_unchecked(slice).to_owned()
+        let chars = event.characters();
+        let slice = std::slice::from_raw_parts(chars.UTF8String() as *const _, chars.len());
+        let chars = std::str::from_utf8_unchecked(slice);
+        let chars = crate::smallstr::SmallStr::new(chars);
+
+        let unmodified_chars = event.characters();
+        let slice = std::slice::from_raw_parts(
+            unmodified_chars.UTF8String() as *const _,
+            unmodified_chars.len(),
+        );
+        let unmodified_chars = std::str::from_utf8_unchecked(slice);
+        let unmodified_chars = crate::smallstr::SmallStr::new(unmodified_chars);
+
+        let virtual_key = event.keyCode();
+        //TODO: this is missing and i'm currently lazy:
+        // https://github.com/servo/core-foundation-rs/issues/316
+        //let is_repeat = event.isRepeat();
+        let is_repeat = false;
+        let modifiers = event.modifierFlags();
+        let modifiers = make_modifiers(modifiers);
+
+        KeyEvent {
+            virtual_key,
+            is_repeat,
+            modifiers,
+            chars,
+            unmodified_chars,
+        }
+    }
+}
+
+fn make_modifiers(raw: NSEventModifierFlags) -> KeyModifiers {
+    KeyModifiers {
+        shift: raw.contains(NSEventModifierFlags::NSShiftKeyMask),
+        alt: raw.contains(NSEventModifierFlags::NSAlternateKeyMask),
+        ctrl: raw.contains(NSEventModifierFlags::NSControlKeyMask),
+        meta: raw.contains(NSEventModifierFlags::NSCommandKeyMask),
     }
 }

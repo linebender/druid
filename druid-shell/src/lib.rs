@@ -30,6 +30,7 @@ extern crate lazy_static;
 
 pub mod error;
 pub mod keycodes;
+mod smallstr;
 pub mod window;
 
 #[cfg(target_os = "windows")]

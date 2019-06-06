@@ -21,13 +21,13 @@ use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
 use druid::widget::{Button, Column, EventForwarder, KeyListener, Label, Padding, Row};
-use druid::{KeyEvent, KeyVariant, UiMain, UiState};
+use druid::{KeyEvent, UiMain, UiState};
 
 use druid::Id;
 
 // TODO: Windows specific
-const VK_BACK: i32 = 0x08;
-const VK_RETURN: i32 = 0x0d;
+const VK_BACK: u16 = 0x08;
+const VK_RETURN: u16 = 0x0d;
 
 struct CalcState {
     /// The number displayed. Generally a valid float.
@@ -249,24 +249,23 @@ fn build_calc(ui: &mut UiState) {
 }
 
 fn action_for_key(event: &KeyEvent) -> Option<CalcAction> {
-    match event.key {
-        KeyVariant::Char(ch) => {
-            if ch >= '0' && ch <= '9' {
-                return Some(CalcAction::Digit(ch as u8 - b'0'));
-            }
-            match ch {
-                '.' | '+' | '=' | 'c' | 'C' => Some(CalcAction::Op(ch)),
-                '-' => Some(CalcAction::Op('−')),
-                '*' => Some(CalcAction::Op('×')),
-                '/' => Some(CalcAction::Op('÷')),
-                _ => None,
-            }
+    if let Some(ch) = event.chars().and_then(|s| s.chars().next()) {
+        if ch >= '0' && ch <= '9' {
+            return Some(CalcAction::Digit(ch as u8 - b'0'));
         }
-        KeyVariant::Vkey(vk) => match vk {
-            VK_BACK => Some(CalcAction::Op('⌫')),
-            VK_RETURN => Some(CalcAction::Op('=')),
+        match ch {
+            '.' | '+' | '=' | 'c' | 'C' => Some(CalcAction::Op(ch)),
+            '-' => Some(CalcAction::Op('−')),
+            '*' => Some(CalcAction::Op('×')),
+            '/' => Some(CalcAction::Op('÷')),
             _ => None,
-        },
+        }
+    } else if event.virtual_key == VK_BACK {
+        Some(CalcAction::Op('⌫'))
+    } else if event.virtual_key == VK_RETURN {
+        Some(CalcAction::Op('='))
+    } else {
+        None
     }
 }
 

@@ -21,7 +21,7 @@ use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
 use druid::widget::{Column, EventForwarder, KeyListener, Label, Padding};
-use druid::{KeyEvent, KeyVariant, UiMain, UiState};
+use druid::{KeyEvent, UiMain, UiState};
 
 use druid::Id;
 
@@ -36,22 +36,22 @@ struct TypingState {
 
 #[derive(Debug, Clone)]
 enum TypingAction {
-    Append(char),
+    Append(String),
     Delete(),
 }
 
 impl TypingState {
     fn action(&mut self, action: &TypingAction) {
-        match *action {
-            TypingAction::Append(ch) => self.append(ch),
+        match action {
+            TypingAction::Append(ch) => self.append(&ch),
             TypingAction::Delete() => self.delete(),
         }
     }
 
     fn move_cursor(&mut self) {}
 
-    fn append(&mut self, ch: char) {
-        self.value.push(ch);
+    fn append(&mut self, s: &str) {
+        self.value.push_str(s);
     }
 
     fn delete(&mut self) {
@@ -94,18 +94,18 @@ fn build_typing(ui: &mut UiState) {
 }
 
 fn action_for_key(event: &KeyEvent) -> Option<TypingAction> {
-    match event.key {
-        KeyVariant::Char(ch) => {
-            if ch == '\u{7f}' {
-                return Some(TypingAction::Delete());
-            } else {
-                return Some(TypingAction::Append(ch));
-            }
+    if let Some(chars) = event.chars() {
+        if chars == "\u{7f}" {
+            return Some(TypingAction::Delete());
+        } else {
+            Some(TypingAction::Append(chars.to_string()))
         }
-        KeyVariant::Vkey(vk) => match vk {
-            VK_BACK => Some(TypingAction::Delete()),
-            _ => None,
-        },
+    //FIXME: real 'keys' enum, cross platform
+    } else if event.virtual_key == VK_BACK as u16 {
+        // backspace (win only?)
+        Some(TypingAction::Delete())
+    } else {
+        None
     }
 }
 

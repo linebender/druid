@@ -25,7 +25,7 @@ use druid_shell::platform::PresentStrategy;
 
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
-use druid_shell::window::{WinHandler, WindowHandle};
+use druid_shell::window::{KeyEvent, WinHandler, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb24(0x27_28_22);
 const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
@@ -107,12 +107,8 @@ impl WinHandler for PerfTest {
         }
     }
 
-    fn char(&self, ch: u32, mods: u32) {
-        println!("got char 0x{:x} {:02x}", ch, mods);
-    }
-
-    fn keydown(&self, vk_code: i32, mods: u32) -> bool {
-        println!("got key code 0x{:x} {:02x}", vk_code, mods);
+    fn keydown(&self, event: KeyEvent) -> bool {
+        println!("keydown: {:?}", event);
         false
     }
 
