@@ -32,13 +32,14 @@ use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, MouseType, WinHandler, WindowHandle};
+pub use druid_shell::window::{KeyEvent, KeyModifiers};
 
 mod graph;
 pub mod widget;
 
 use graph::Graph;
 use widget::NullWidget;
-pub use widget::{KeyEvent, KeyVariant, MouseEvent, Widget};
+pub use widget::{MouseEvent, Widget};
 
 //FIXME: this should come from a theme or environment at some point.
 const BACKGROUND_COLOR: Color = Color::rgb24(0x27_28_22);
@@ -390,6 +391,7 @@ impl UiState {
     }
 
     fn handle_key_event(&mut self, event: &KeyEvent) -> bool {
+        dbg!(event);
         if let Some(id) = self.layout_ctx.focused {
             let handled = {
                 let mut ctx = HandlerCtx {
@@ -933,26 +935,26 @@ impl WinHandler for UiMain {
         state.handle_command(id);
     }
 
-    fn char(&self, ch: u32, mods: u32) {
-        if let Some(ch) = char::from_u32(ch) {
-            let key_event = KeyEvent {
-                key: KeyVariant::Char(ch),
-                mods,
-            };
-            let mut state = self.state.borrow_mut();
-            state.handle_key_event(&key_event);
-        } else {
-            println!("invalid code point 0x{:x}", ch);
-        }
-    }
+    //fn char(&self, ch: u32, mods: u32) {
+    //if let Some(ch) = char::from_u32(ch) {
+    //let key_event = KeyEvent {
+    //key: KeyVariant::Char(ch),
+    //mods,
+    //};
+    //let mut state = self.state.borrow_mut();
+    //state.handle_key_event(&key_event);
+    //} else {
+    //println!("invalid code point 0x{:x}", ch);
+    //}
+    //}
 
-    fn keydown(&self, vk_code: i32, mods: u32) -> bool {
-        let key_event = KeyEvent {
-            key: KeyVariant::Vkey(vk_code),
-            mods,
-        };
+    fn keydown(&self, event: KeyEvent) -> bool {
+        //let key_event = KeyEvent {
+        //key: KeyVariant::Vkey(vk_code),
+        //mods,
+        //};
         let mut state = self.state.borrow_mut();
-        state.handle_key_event(&key_event)
+        state.handle_key_event(&event)
     }
 
     fn mouse_wheel(&self, dy: i32, mods: u32) {

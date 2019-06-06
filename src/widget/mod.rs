@@ -16,7 +16,7 @@
 
 use std::any::Any;
 
-pub use druid_shell::window::{MouseButton, ScrollEvent};
+pub use druid_shell::window::{KeyEvent, MouseButton, ScrollEvent};
 
 use crate::kurbo::{Point, Rect, Size};
 use crate::{BoxConstraints, LayoutResult};
@@ -165,13 +165,6 @@ pub struct MouseEvent {
     pub which: MouseButton,
     /// Count of multiple clicks, is 0 for mouse up event.
     pub count: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct KeyEvent {
-    pub key: KeyVariant,
-    /// The modifiers, a combinations of `M_ALT`, `M_CTRL`, `M_SHIFT`.
-    pub mods: u32,
 }
 
 #[derive(Debug, Clone)]

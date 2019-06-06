@@ -16,7 +16,7 @@
 
 use crate::widget::Widget;
 use crate::{
-    BoxConstraints, HandlerCtx, Id, KeyEvent, KeyVariant, LayoutCtx, LayoutResult, MouseEvent,
+    BoxConstraints, HandlerCtx, Id, KeyEvent, LayoutCtx, LayoutResult, MouseEvent,
     PaintCtx, Ui,
 };
 
@@ -148,25 +148,20 @@ impl Widget for TextBox {
         }
         true
     }
+
     fn key(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
         //match on key event
-        match event.key {
-            KeyVariant::Char(ch) => {
-                if ch == '\u{7f}' {
-                    self.text.pop();
-                } else {
-                    self.text.push(ch);
-                }
+        if let Some(chars) = event.chars() {
+            if chars == "\u{7f}" {
+                self.text.pop();
+            } else {
+                self.text.push_str(chars);
             }
-            KeyVariant::Vkey(vk) => match vk {
-                VK_BACK => {
-                    self.text.pop();
-                }
-                _ => {}
-            },
+        //FIXME: real 'keys' enum, cross platform
+        } else if event.virtual_key == 0x08 {
+            // backspace (win only?)
+            self.text.pop();
         }
-        // update the text string
-        // call invalidate
 
         ctx.invalidate();
         true

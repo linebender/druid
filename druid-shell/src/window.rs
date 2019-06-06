@@ -18,6 +18,7 @@ use std::any::Any;
 use std::ops::Deref;
 
 use crate::platform;
+use crate::smallstr::SmallStr;
 
 // Handle to Window Level Utilities
 #[derive(Clone, Default)]
@@ -66,18 +67,15 @@ pub trait WinHandler {
     /// evolve, we need to handle input methods and more.
     ///
     /// The modifiers are a combination of `M_ALT`, `M_CTRL`, `M_SHIFT`.
-    #[allow(unused_variables)]
-    fn char(&self, ch: u32, mods: u32) {}
+    //#[allow(unused_variables)]
+    //fn char(&self, ch: u32, mods: u32) {}
 
     /// Called on a key down event. This corresponds to the WM_KEYDOWN
-    /// message. The key code is as WM_KEYDOWN. We'll want to add stuff
-    /// like the modifier state.
-    ///
-    /// The modifiers are a combination of `M_ALT`, `M_CTRL`, `M_SHIFT`.
+    /// message on Windows, or keyDown(withEvent:) on macOS.
     ///
     /// Return `true` if the event is handled.
     #[allow(unused_variables)]
-    fn keydown(&self, vkey_code: i32, mods: u32) -> bool {
+    fn keydown(&self, event: KeyEvent) -> bool {
         false
     }
 
@@ -175,4 +173,53 @@ pub struct ScrollEvent {
     pub dy: f32,
     /// Modifiers, as in raw WM message
     pub mods: u32,
+}
+
+/// A key event.
+#[derive(Debug, Clone, Copy)]
+pub struct KeyEvent {
+    /// The platform specific virtual key code.
+    pub virtual_key: u16,
+    /// Whether or not this event is a repeat (the key was held down)
+    pub is_repeat: bool,
+    /// The modifiers for this event.
+    pub modifiers: KeyModifiers,
+    // these are exposed via methods, below. The rationale for this approach is
+    // that a key might produce more than a single 'char' of input, but we don't
+    // want to need a heap allocation in the trivial case. This gives us 15 bytes
+    // of string storage, which... might be enough?
+    pub(crate) chars: SmallStr,
+    pub(crate) unmodified_chars: SmallStr,
+}
+
+impl KeyEvent {
+    /// The resolved input text for this event. This takes into account modifiers,
+    /// e.g. the `chars` on macOS for opt+s is 'ß'.
+    pub fn chars(&self) -> Option<&str> {
+        if self.chars.len == 0 {
+            None
+        } else {
+            Some(self.chars.as_str())
+        }
+    }
+
+    /// The unmodified input text for this event. On macOS, for opt+s, this is 's'.
+    pub fn unmod_chars(&self) -> Option<&str> {
+        if self.unmodified_chars.len == 0 {
+            None
+        } else {
+            Some(self.unmodified_chars.as_str())
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct KeyModifiers {
+    pub shift: bool,
+    /// Option on macOS.
+    pub alt: bool,
+    /// Control.
+    pub ctrl: bool,
+    /// Meta / Windows / Command
+    pub meta: bool,
 }
