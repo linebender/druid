@@ -520,31 +520,21 @@ fn make_key_event(event: id) -> KeyData {
     unsafe {
         let chars = event.characters();
         let slice = std::slice::from_raw_parts(chars.UTF8String() as *const _, chars.len());
-        let chars = std::str::from_utf8_unchecked(slice);
-        let text = crate::keyboard::SmallStr::new(chars);
+        let text = std::str::from_utf8_unchecked(slice);
 
         let unmodified_chars = event.charactersIgnoringModifiers();
         let slice = std::slice::from_raw_parts(
             unmodified_chars.UTF8String() as *const _,
             unmodified_chars.len(),
         );
-        let unmodified_chars = std::str::from_utf8_unchecked(slice);
-        let unmodified_text = crate::keyboard::SmallStr::new(unmodified_chars);
+        let unmodified_text = std::str::from_utf8_unchecked(slice);
 
         let virtual_key: std::os::raw::c_ushort = msg_send!(event, keyCode);
-        let key_code = KeyCode::from_mac_vk_code(virtual_key);
 
         let is_repeat: bool = msg_send!(event, isARepeat);
         let modifiers = event.modifierFlags();
         let modifiers = make_modifiers(modifiers);
-
-        KeyData {
-            key_code,
-            is_repeat,
-            modifiers,
-            text,
-            unmodified_text,
-        }
+        KeyData::new(virtual_key, is_repeat, modifiers, text, unmodified_text)
     }
 }
 

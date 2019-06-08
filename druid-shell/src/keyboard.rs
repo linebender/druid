@@ -51,12 +51,46 @@ pub struct KeyData {
     // that a key might produce more than a single 'char' of input, but we don't
     // want to need a heap allocation in the trivial case. This gives us 15 bytes
     // of string storage, which... might be enough?
-    pub(crate) text: SmallStr,
-    pub(crate) unmodified_text: SmallStr,
+    text: SmallStr,
+    /// The 'unmodified text' is the text that would be produced by this keystroke
+    /// in the absence of ctrl+alt modifiers or preceding dead keys.
+    unmodified_text: SmallStr,
     //TODO: add time
 }
 
 impl KeyData {
+    /// Create a new `KeyData` struct. This accepts either &str or char for the last
+    /// two arguments.
+    pub(crate) fn new<T, S, K>(
+        key_code: K,
+        is_repeat: bool,
+        modifiers: KeyModifiers,
+        text: T,
+        unmodified_text: S,
+    ) -> Self
+    where
+        T: Into<StrOrChar>,
+        S: Into<StrOrChar>,
+        K: Into<KeyCode>,
+    {
+        let text = match text.into() {
+            StrOrChar::Char(c) => c.into(),
+            StrOrChar::Str(s) => SmallStr::new(s),
+        };
+        let unmodified_text = match unmodified_text.into() {
+            StrOrChar::Char(c) => c.into(),
+            StrOrChar::Str(s) => SmallStr::new(s),
+        };
+
+        KeyData {
+            key_code: key_code.into(),
+            is_repeat,
+            modifiers,
+            text,
+            unmodified_text,
+        }
+    }
+
     /// The resolved input text for this event. This takes into account modifiers,
     /// e.g. the `chars` on macOS for opt+s is 'ß'.
     pub fn text(&self) -> Option<&str> {
@@ -223,10 +257,11 @@ impl KeyCode {
             _other => true,
         }
     }
+}
 
-    //#[cfg(target_os = "macos")]
-    #[cfg(any(test, target_os = "macos"))]
-    pub(crate) fn from_mac_vk_code(raw: u16) -> Self {
+#[cfg(any(test, target_os = "macos"))]
+impl From<u16> for KeyCode {
+    fn from(raw: u16) -> KeyCode {
         match raw {
             0x00 => KeyCode::KeyA,
             0x01 => KeyCode::KeyS,
@@ -361,12 +396,14 @@ impl KeyCode {
             _ => KeyCode::Unknown,
         }
     }
+}
 
-    #[cfg(any(test, target_os = "windows"))]
-    pub(crate) fn from_win_vk_code(raw: i32) -> Self {
+#[cfg(any(test, target_os = "windows"))]
+impl From<i32> for KeyCode {
+    fn from(src: i32) -> KeyCode {
         use crate::keycodes::win_vks::*;
 
-        match raw {
+        match src {
             //VK_LSHIFT => KeyCode::LeftShift,
             //VK_RSHIFT => KeyCode::RightShift,
             //VK_LCONTROL => KeyCode::LeftControl,
@@ -487,13 +524,13 @@ impl KeyCode {
 
 /// A stack allocated string.
 #[derive(Clone, Copy)]
-pub(crate) struct SmallStr {
-    pub(crate) len: u8,
-    pub(crate) buf: [u8; 15],
+struct SmallStr {
+    len: u8,
+    buf: [u8; 15],
 }
 
 impl SmallStr {
-    pub(crate) fn new<S: AsRef<str>>(s: S) -> Self {
+    fn new<S: AsRef<str>>(s: S) -> Self {
         let s = s.as_ref();
         let len = match s.len() {
             l @ 0..=15 => l,
@@ -519,7 +556,7 @@ impl SmallStr {
         }
     }
 
-    pub(crate) fn as_str(&self) -> &str {
+    fn as_str(&self) -> &str {
         unsafe { std::str::from_utf8_unchecked(&self.buf[..self.len as usize]) }
     }
 }
@@ -534,6 +571,25 @@ impl From<char> for SmallStr {
             len: len as u8,
             buf,
         }
+    }
+}
+
+/// A type we use in th constructor of `KeyData`, specifically to avoid exposing
+/// internals.
+pub enum StrOrChar {
+    Char(char),
+    Str(&'static str),
+}
+
+impl From<&'static str> for StrOrChar {
+    fn from(src: &'static str) -> Self {
+        StrOrChar::Str(src)
+    }
+}
+
+impl From<char> for StrOrChar {
+    fn from(src: char) -> StrOrChar {
+        StrOrChar::Char(src)
     }
 }
 
@@ -620,15 +676,15 @@ mod tests {
 
     #[test]
     fn vk_mac() {
-        assert_eq!(KeyCode::from_mac_vk_code(0x30), KeyCode::Tab);
+        assert_eq!(KeyCode::from(0x30_u16), KeyCode::Tab);
         //F17
-        assert_eq!(KeyCode::from_mac_vk_code(0x40), KeyCode::Unknown);
+        assert_eq!(KeyCode::from(0x40_u16), KeyCode::Unknown);
     }
 
     #[test]
     fn win_vk() {
-        assert_eq!(KeyCode::from_win_vk_code(0x4F), KeyCode::KeyO);
+        assert_eq!(KeyCode::from(0x4F_i32), KeyCode::KeyO);
         // VK_ZOOM
-        assert_eq!(KeyCode::from_win_vk_code(0xFB), KeyCode::Unknown);
+        assert_eq!(KeyCode::from(0xFB_i32), KeyCode::Unknown);
     }
 }
