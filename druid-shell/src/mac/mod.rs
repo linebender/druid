@@ -42,7 +42,7 @@ use cairo::{Context, QuartzSurface};
 
 use piet_common::{Piet, RenderContext};
 
-use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+use crate::keyboard::{KeyCode, KeyData, KeyEvent, KeyModifiers};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
 use crate::window::{MouseButton, MouseEvent, MouseType, WinHandler};
@@ -333,7 +333,13 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
 }
 
 extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
-    let event = make_key_event(nsevent);
+    let payload = make_key_event(nsevent);
+    let event = if payload.key_code.is_printable() {
+        KeyEvent::Character(payload)
+    } else {
+        KeyEvent::NonCharacter(payload)
+    };
+
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
@@ -510,20 +516,20 @@ impl IdleHandle {
     }
 }
 
-fn make_key_event(event: id) -> KeyEvent {
+fn make_key_event(event: id) -> KeyData {
     unsafe {
         let chars = event.characters();
         let slice = std::slice::from_raw_parts(chars.UTF8String() as *const _, chars.len());
         let chars = std::str::from_utf8_unchecked(slice);
-        let chars = crate::keyboard::SmallStr::new(chars);
+        let text = crate::keyboard::SmallStr::new(chars);
 
-        let unmodified_chars = event.characters();
+        let unmodified_chars = event.charactersIgnoringModifiers();
         let slice = std::slice::from_raw_parts(
             unmodified_chars.UTF8String() as *const _,
             unmodified_chars.len(),
         );
         let unmodified_chars = std::str::from_utf8_unchecked(slice);
-        let unmodified_chars = crate::keyboard::SmallStr::new(unmodified_chars);
+        let unmodified_text = crate::keyboard::SmallStr::new(unmodified_chars);
 
         let virtual_key: std::os::raw::c_ushort = msg_send!(event, keyCode);
         let key_code = KeyCode::from_mac_vk_code(virtual_key);
@@ -532,12 +538,12 @@ fn make_key_event(event: id) -> KeyEvent {
         let modifiers = event.modifierFlags();
         let modifiers = make_modifiers(modifiers);
 
-        KeyEvent {
+        KeyData {
             key_code,
             is_repeat,
             modifiers,
-            chars,
-            unmodified_chars,
+            text,
+            unmodified_text,
         }
     }
 }

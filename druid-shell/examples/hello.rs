@@ -19,11 +19,12 @@ use piet_common::kurbo::{Line, Rect};
 use piet_common::{Color, FillRule, RenderContext};
 
 use druid_shell::dialog::{FileDialogOptions, FileDialogType};
+use druid_shell::keyboard::KeyEvent;
 use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
-use druid_shell::window::{KeyEvent, MouseEvent, WinHandler, WindowHandle};
+use druid_shell::window::{MouseEvent, WinHandler, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb24(0x27_28_22);
 const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
