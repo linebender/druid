@@ -21,7 +21,7 @@ use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
 use druid::widget::{Column, EventForwarder, KeyListener, Label, Padding};
-use druid::{KeyEvent, UiMain, UiState};
+use druid::{KeyCode, KeyEvent, UiMain, UiState};
 
 use druid::Id;
 
@@ -100,9 +100,7 @@ fn action_for_key(event: &KeyEvent) -> Option<TypingAction> {
         } else {
             Some(TypingAction::Append(chars.to_string()))
         }
-    //FIXME: real 'keys' enum, cross platform
-    } else if event.virtual_key == VK_BACK as u16 {
-        // backspace (win only?)
+    } else if event.key_code == KeyCode::Backspace {
         Some(TypingAction::Delete())
     } else {
         None

@@ -16,7 +16,8 @@
 
 use std::any::Any;
 
-pub use druid_shell::window::{KeyEvent, MouseButton, ScrollEvent};
+pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+pub use druid_shell::window::{MouseButton, ScrollEvent};
 
 use crate::kurbo::{Point, Rect, Size};
 use crate::{BoxConstraints, LayoutResult};

@@ -42,9 +42,10 @@ use cairo::{Context, QuartzSurface};
 
 use piet_common::{Piet, RenderContext};
 
+use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
-use crate::window::{KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseType, WinHandler};
+use crate::window::{MouseButton, MouseEvent, MouseType, WinHandler};
 use crate::Error;
 
 use util::assert_main_thread;
@@ -514,7 +515,7 @@ fn make_key_event(event: id) -> KeyEvent {
         let chars = event.characters();
         let slice = std::slice::from_raw_parts(chars.UTF8String() as *const _, chars.len());
         let chars = std::str::from_utf8_unchecked(slice);
-        let chars = crate::smallstr::SmallStr::new(chars);
+        let chars = crate::keyboard::SmallStr::new(chars);
 
         let unmodified_chars = event.characters();
         let slice = std::slice::from_raw_parts(
@@ -522,18 +523,17 @@ fn make_key_event(event: id) -> KeyEvent {
             unmodified_chars.len(),
         );
         let unmodified_chars = std::str::from_utf8_unchecked(slice);
-        let unmodified_chars = crate::smallstr::SmallStr::new(unmodified_chars);
+        let unmodified_chars = crate::keyboard::SmallStr::new(unmodified_chars);
 
-        let virtual_key = event.keyCode();
-        //TODO: this is missing and i'm currently lazy:
-        // https://github.com/servo/core-foundation-rs/issues/316
-        //let is_repeat = event.isRepeat();
-        let is_repeat = false;
+        let virtual_key: std::os::raw::c_ushort = msg_send!(event, keyCode);
+        let key_code = KeyCode::from_mac_vk_code(virtual_key);
+
+        let is_repeat: bool = msg_send!(event, isARepeat);
         let modifiers = event.modifierFlags();
         let modifiers = make_modifiers(modifiers);
 
         KeyEvent {
-            virtual_key,
+            key_code,
             is_repeat,
             modifiers,
             chars,
