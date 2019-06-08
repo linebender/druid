@@ -123,8 +123,8 @@ pub enum KeyCode {
     KeyO,
     KeyP,
     /// '['
-    LBracket,
-    RBracket,
+    LeftBracket,
+    RightBracket,
     Return,
 
     KeyA,
@@ -158,8 +158,9 @@ pub enum KeyCode {
     Meta,
     Menu,
 
+    //FIXME: support lshift/rshift etc?
     Space,
-    Capslock,
+    CapsLock,
     F1,
     F2,
     F3,
@@ -174,7 +175,7 @@ pub enum KeyCode {
     F12,
 
     PrintScreen,
-    Scrolllock,
+    ScrollLock,
     Pause,
 
     Insert,
@@ -201,7 +202,7 @@ pub enum KeyCode {
     NumpadDecimal,
     NumpadMultiply,
     NumpadDivide,
-    Numlock,
+    NumLock,
     NumpadEnter,
 
     ArrowUp,
@@ -217,13 +218,14 @@ impl KeyCode {
         use KeyCode::*;
         match self {
             ArrowDown | ArrowUp | ArrowLeft | ArrowRight | Backspace | Home | PageDown | PageUp
-            | End | Insert | Delete | Pause | Scrolllock | PrintScreen | Escape | F1 | F2 | F3
+            | End | Insert | Delete | Pause | ScrollLock | PrintScreen | Escape | F1 | F2 | F3
             | F4 | F5 | F6 | F7 | F8 | F9 | F10 => false,
             _other => true,
         }
     }
 
-    #[cfg(target_os = "macos")]
+    //#[cfg(target_os = "macos")]
+    #[cfg(any(test, target_os = "macos"))]
     pub(crate) fn from_mac_vk_code(raw: u16) -> Self {
         match raw {
             0x00 => KeyCode::KeyA,
@@ -256,10 +258,10 @@ impl KeyCode {
             0x1b => KeyCode::Minus,
             0x1c => KeyCode::Key8,
             0x1d => KeyCode::Key0,
-            0x1e => KeyCode::RBracket,
+            0x1e => KeyCode::RightBracket,
             0x1f => KeyCode::KeyO,
             0x20 => KeyCode::KeyU,
-            0x21 => KeyCode::LBracket,
+            0x21 => KeyCode::LeftBracket,
             0x22 => KeyCode::KeyI,
             0x23 => KeyCode::KeyP,
             0x24 => KeyCode::Return,
@@ -283,7 +285,7 @@ impl KeyCode {
             //0x36 => KeyCode::RLogo,
             //0x37 => KeyCode::LLogo,
             //0x38 => KeyCode::LShift,
-            0x39 => KeyCode::Capslock,
+            0x39 => KeyCode::CapsLock,
             //0x3a => KeyCode::LAlt,
             //0x3b => KeyCode::LControl,
             //0x3c => KeyCode::RShift,
@@ -297,7 +299,7 @@ impl KeyCode {
             //0x44 => unkown,
             0x45 => KeyCode::NumpadAdd,
             //0x46 => unkown,
-            0x47 => KeyCode::Numlock,
+            0x47 => KeyCode::NumLock,
             //0x48 => KeypadClear,
             //0x49 => KeyCode::VolumeUp,
             //0x4a => KeyCode::VolumeDown,
@@ -359,6 +361,128 @@ impl KeyCode {
             _ => KeyCode::Unknown,
         }
     }
+
+    #[cfg(any(test, target_os = "windows"))]
+    pub(crate) fn from_win_vk_code(raw: i32) -> Self {
+        use crate::keycodes::win_vks::*;
+
+        match raw {
+            //VK_LSHIFT => KeyCode::LeftShift,
+            //VK_RSHIFT => KeyCode::RightShift,
+            //VK_LCONTROL => KeyCode::LeftControl,
+            //VK_RCONTROL => KeyCode::RightControl,
+            //VK_LMENU => KeyCode::LeftAlt,
+            //VK_RMENU => KeyCode::RightAlt,
+            //VK_OEM_PLUS => KeyCode::Add,
+            VK_OEM_COMMA => KeyCode::Comma,
+            VK_OEM_MINUS => KeyCode::Minus,
+            VK_OEM_PERIOD => KeyCode::Period,
+            VK_OEM_1 => KeyCode::Semicolon,
+            VK_OEM_2 => KeyCode::Slash,
+            //TODO: does this map to backtick?
+            //VK_OEM_3 => KeyCode::Tilde,
+            VK_OEM_4 => KeyCode::LeftBracket,
+            VK_OEM_5 => KeyCode::Backslash,
+            VK_OEM_6 => KeyCode::RightBracket,
+            VK_OEM_7 => KeyCode::Quote,
+            VK_BACK => KeyCode::Backspace,
+            VK_TAB => KeyCode::Tab,
+            VK_RETURN => KeyCode::Return,
+            VK_PAUSE => KeyCode::Pause,
+            VK_ESCAPE => KeyCode::Escape,
+            VK_SPACE => KeyCode::Space,
+            VK_PRIOR => KeyCode::PageUp,
+            VK_NEXT => KeyCode::PageDown,
+            VK_END => KeyCode::End,
+            VK_HOME => KeyCode::Home,
+            VK_LEFT => KeyCode::ArrowLeft,
+            VK_UP => KeyCode::ArrowUp,
+            VK_RIGHT => KeyCode::ArrowRight,
+            VK_DOWN => KeyCode::ArrowDown,
+            VK_SNAPSHOT => KeyCode::PrintScreen,
+            VK_INSERT => KeyCode::Insert,
+            VK_DELETE => KeyCode::Delete,
+            VK_CAPITAL => KeyCode::CapsLock,
+            VK_NUMLOCK => KeyCode::NumLock,
+            VK_SCROLL => KeyCode::ScrollLock,
+            VK_0 => KeyCode::Key0,
+            VK_1 => KeyCode::Key1,
+            VK_2 => KeyCode::Key2,
+            VK_3 => KeyCode::Key3,
+            VK_4 => KeyCode::Key4,
+            VK_5 => KeyCode::Key5,
+            VK_6 => KeyCode::Key6,
+            VK_7 => KeyCode::Key7,
+            VK_8 => KeyCode::Key8,
+            VK_9 => KeyCode::Key9,
+            VK_A => KeyCode::KeyA,
+            VK_B => KeyCode::KeyB,
+            VK_C => KeyCode::KeyC,
+            VK_D => KeyCode::KeyD,
+            VK_E => KeyCode::KeyE,
+            VK_F => KeyCode::KeyF,
+            VK_G => KeyCode::KeyG,
+            VK_H => KeyCode::KeyH,
+            VK_I => KeyCode::KeyI,
+            VK_J => KeyCode::KeyJ,
+            VK_K => KeyCode::KeyK,
+            VK_L => KeyCode::KeyL,
+            VK_M => KeyCode::KeyM,
+            VK_N => KeyCode::KeyN,
+            VK_O => KeyCode::KeyO,
+            VK_P => KeyCode::KeyP,
+            VK_Q => KeyCode::KeyQ,
+            VK_R => KeyCode::KeyR,
+            VK_S => KeyCode::KeyS,
+            VK_T => KeyCode::KeyT,
+            VK_U => KeyCode::KeyU,
+            VK_V => KeyCode::KeyV,
+            VK_W => KeyCode::KeyW,
+            VK_X => KeyCode::KeyX,
+            VK_Y => KeyCode::KeyY,
+            VK_Z => KeyCode::KeyZ,
+            VK_NUMPAD0 => KeyCode::Numpad0,
+            VK_NUMPAD1 => KeyCode::Numpad1,
+            VK_NUMPAD2 => KeyCode::Numpad2,
+            VK_NUMPAD3 => KeyCode::Numpad3,
+            VK_NUMPAD4 => KeyCode::Numpad4,
+            VK_NUMPAD5 => KeyCode::Numpad5,
+            VK_NUMPAD6 => KeyCode::Numpad6,
+            VK_NUMPAD7 => KeyCode::Numpad7,
+            VK_NUMPAD8 => KeyCode::Numpad8,
+            VK_NUMPAD9 => KeyCode::Numpad9,
+            VK_MULTIPLY => KeyCode::NumpadMultiply,
+            VK_ADD => KeyCode::NumpadAdd,
+            VK_SUBTRACT => KeyCode::NumpadSubtract,
+            VK_DECIMAL => KeyCode::NumpadDecimal,
+            VK_DIVIDE => KeyCode::NumpadDivide,
+            VK_F1 => KeyCode::F1,
+            VK_F2 => KeyCode::F2,
+            VK_F3 => KeyCode::F3,
+            VK_F4 => KeyCode::F4,
+            VK_F5 => KeyCode::F5,
+            VK_F6 => KeyCode::F6,
+            VK_F7 => KeyCode::F7,
+            VK_F8 => KeyCode::F8,
+            VK_F9 => KeyCode::F9,
+            VK_F10 => KeyCode::F10,
+            //VK_F11 => KeyCode::F11,
+            //VK_F12 => KeyCode::F12,
+            //VK_F13 => KeyCode::F13,
+            //VK_F14 => KeyCode::F14,
+            //VK_F15 => KeyCode::F15,
+            //VK_F16 => KeyCode::F16,
+            //VK_F17 => KeyCode::F17,
+            //VK_F18 => KeyCode::F18,
+            //VK_F19 => KeyCode::F19,
+            //VK_F20 => KeyCode::F20,
+            //VK_F21 => KeyCode::F21,
+            //VK_F22 => KeyCode::F22,
+            //VK_F23 => KeyCode::F23,
+            //VK_F24 => KeyCode::F24,
+            _ => KeyCode::Unknown,
+        }
+    }
 }
 
 /// A stack allocated string.
@@ -400,6 +524,19 @@ impl SmallStr {
     }
 }
 
+impl From<char> for SmallStr {
+    fn from(src: char) -> SmallStr {
+        let len = src.len_utf8();
+        let mut buf = [0; 15];
+        src.encode_utf8(&mut buf);
+
+        SmallStr {
+            len: len as u8,
+            buf,
+        }
+    }
+}
+
 impl fmt::Display for SmallStr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.as_str())
@@ -409,6 +546,12 @@ impl fmt::Display for SmallStr {
 impl fmt::Debug for SmallStr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "SmallStr(\"{}\")", self.as_str())
+    }
+}
+
+impl std::default::Default for SmallStr {
+    fn default() -> Self {
+        SmallStr::new("")
     }
 }
 
@@ -448,6 +591,17 @@ impl fmt::Debug for KeyModifiers {
     }
 }
 
+impl std::default::Default for KeyModifiers {
+    fn default() -> Self {
+        KeyModifiers {
+            shift: false,
+            ctrl: false,
+            meta: false,
+            alt: false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -462,5 +616,19 @@ mod tests {
         assert_eq!(s_16.len(), 16);
         assert!(!s_16.is_char_boundary(15));
         let _too_big = SmallStr::new("😍🥰😘😗");
+    }
+
+    #[test]
+    fn vk_mac() {
+        assert_eq!(KeyCode::from_mac_vk_code(0x30), KeyCode::Tab);
+        //F17
+        assert_eq!(KeyCode::from_mac_vk_code(0x40), KeyCode::Unknown);
+    }
+
+    #[test]
+    fn win_vk() {
+        assert_eq!(KeyCode::from_win_vk_code(0x4F), KeyCode::KeyO);
+        // VK_ZOOM
+        assert_eq!(KeyCode::from_win_vk_code(0xFB), KeyCode::Unknown);
     }
 }

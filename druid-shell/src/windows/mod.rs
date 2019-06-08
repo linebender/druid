@@ -60,7 +60,7 @@ use crate::Error;
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 
-use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+use crate::keyboard::{KeyCode, KeyData, KeyEvent, KeyModifiers};
 use crate::window::{self, Cursor, MouseButton, MouseEvent, MouseType, WinHandler};
 
 extern "system" {
@@ -180,17 +180,19 @@ impl Default for PresentStrategy {
     }
 }
 
-fn get_mod_state(lparam: LPARAM) -> u32 {
+fn get_mod_state(lparam: LPARAM) -> KeyModifiers {
+    //FIXME: does not handle windows key
     unsafe {
-        let mut mod_state = 0;
+        let mut mod_state = KeyModifiers::default();
+        //FIXME: @cmyr I think this shoulld be doing GetKeyState(VK_MENU)?
         if (lparam & (1 << 29)) != 0 {
-            mod_state |= MOD_ALT as u32;
+            mod_state.alt = true;
         }
         if GetKeyState(VK_CONTROL) < 0 {
-            mod_state |= MOD_CONTROL as u32;
+            mod_state.ctrl = true;
         }
         if GetKeyState(VK_SHIFT) < 0 {
-            mod_state |= MOD_SHIFT as u32;
+            mod_state.shift = true;
         }
         mod_state
     }
@@ -398,14 +400,53 @@ impl WndProc for MyWndProc {
                 Some(0)
             }
             WM_CHAR => {
-                let mods = get_mod_state(lparam);
-                self.handler.char(wparam as u32, mods);
-                Some(0)
+                //FIXME: figure out how to persist this state
+                let key_code = KeyCode::Unknown;
+                let text = match std::char::from_u32(wparam as u32) {
+                    Some(c) => c.into(),
+                    None => {
+                        eprintln!("failed to convert WM_CHAR to char: {:#X}", wparam);
+                        return None;
+                    }
+                };
+
+                let modifiers = get_mod_state(lparam);
+                let is_repeat = (lparam & 0xFFFF) > 0;
+                let event = KeyEvent::Character(KeyData {
+                    key_code,
+                    is_repeat,
+                    modifiers,
+                    text,
+                    unmodified_text: text,
+                });
+
+                if self.handler.keydown(event) {
+                    Some(0)
+                } else {
+                    None
+                }
             }
             WM_KEYDOWN | WM_SYSKEYDOWN => {
-                let mods = get_mod_state(lparam);
-                let handled = self.handler.keydown(wparam as i32, mods);
-                if handled {
+                let key_code = KeyCode::from_win_vk_code(wparam as i32);
+                if key_code.is_printable() {
+                    //FIXME: this will fail to propogate key combinations such as alt+s
+                    return None;
+                }
+
+                let modifiers = get_mod_state(lparam);
+                // bits 0-15 of iparam are the repeat count:
+                // https://docs.microsoft.com/en-ca/windows/desktop/inputdev/wm-keydown
+                let is_repeat = (lparam & 0xFFFF) > 0;
+                let text = crate::keyboard::SmallStr::new("");
+                let unmodified_text = crate::keyboard::SmallStr::new("");
+                let event = KeyEvent::NonCharacter(KeyData {
+                    key_code,
+                    is_repeat,
+                    modifiers,
+                    text,
+                    unmodified_text,
+                });
+                if self.handler.keydown(event) {
                     Some(0)
                 } else {
                     None
