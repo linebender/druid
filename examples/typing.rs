@@ -25,10 +25,6 @@ use druid::{KeyCode, KeyEvent, UiMain, UiState};
 
 use druid::Id;
 
-// TODO: Windows specific
-const VK_BACK: i32 = 0x08;
-const VK_RETURN: i32 = 0x0d;
-
 struct TypingState {
     value: String,
     cursor: usize,
@@ -94,16 +90,14 @@ fn build_typing(ui: &mut UiState) {
 }
 
 fn action_for_key(event: &KeyEvent) -> Option<TypingAction> {
-    if let Some(chars) = event.chars() {
-        if chars == "\u{7f}" {
-            return Some(TypingAction::Delete());
-        } else {
-            Some(TypingAction::Append(chars.to_string()))
+    match event {
+        KeyEvent::Character(data) => Some(TypingAction::Append(
+            data.text().map(String::from).unwrap_or_default(),
+        )),
+        KeyEvent::NonCharacter(data) if data.key_code == KeyCode::Backspace => {
+            Some(TypingAction::Delete())
         }
-    } else if event.key_code == KeyCode::Backspace {
-        Some(TypingAction::Delete())
-    } else {
-        None
+        _other => None,
     }
 }
 

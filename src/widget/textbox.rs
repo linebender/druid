@@ -151,15 +151,12 @@ impl Widget for TextBox {
 
     fn key(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
         //match on key event
-        if let Some(chars) = event.chars() {
-            if chars == "\u{7f}" {
-                // DEL
+        match event {
+            KeyEvent::Character(data) => self.text.push_str(data.text().unwrap_or("")),
+            KeyEvent::NonCharacter(data) if data.key_code == KeyCode::Backspace => {
                 self.text.pop();
-            } else {
-                self.text.push_str(chars);
             }
-        } else if event.key_code == KeyCode::Backspace {
-            self.text.pop();
+            _other => return false,
         }
 
         ctx.invalidate();

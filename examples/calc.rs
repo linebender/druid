@@ -245,23 +245,27 @@ fn build_calc(ui: &mut UiState) {
 }
 
 fn action_for_key(event: &KeyEvent) -> Option<CalcAction> {
-    if let Some(ch) = event.chars().and_then(|s| s.chars().next()) {
-        if ch >= '0' && ch <= '9' {
-            return Some(CalcAction::Digit(ch as u8 - b'0'));
+    eprintln!("{:?}", event);
+    match event {
+        KeyEvent::Character(data) if data.key_code == KeyCode::Return => Some(CalcAction::Op('=')),
+        KeyEvent::Character(data) => {
+            let ch = data
+                .text()
+                .and_then(|s| s.chars().next())
+                .unwrap_or('\u{0}');
+            match ch {
+                '0'..='9' => Some(CalcAction::Digit(ch as u8 - b'0')),
+                '.' | '+' | '=' | 'c' | 'C' => Some(CalcAction::Op(ch)),
+                '-' => Some(CalcAction::Op('−')),
+                '*' => Some(CalcAction::Op('×')),
+                '/' => Some(CalcAction::Op('÷')),
+                _ => None,
+            }
         }
-        match ch {
-            '.' | '+' | '=' | 'c' | 'C' => Some(CalcAction::Op(ch)),
-            '-' => Some(CalcAction::Op('−')),
-            '*' => Some(CalcAction::Op('×')),
-            '/' => Some(CalcAction::Op('÷')),
-            _ => None,
+        KeyEvent::NonCharacter(d) if d.key_code == KeyCode::Backspace => {
+            Some(CalcAction::Op('⌫'))
         }
-    } else if event.key_code == KeyCode::Backspace {
-        Some(CalcAction::Op('⌫'))
-    } else if event.key_code == KeyCode::Return {
-        Some(CalcAction::Op('='))
-    } else {
-        None
+        _else => None,
     }
 }
 

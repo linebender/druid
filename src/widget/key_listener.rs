@@ -14,8 +14,7 @@
 
 //! Widget for forwarding key events to a listener.
 
-use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use druid_shell::keycodes::M_ALT;
+use druid_shell::keyboard::{KeyCode, KeyEvent};
 
 use crate::widget::Widget;
 use crate::{HandlerCtx, Id, Ui};
@@ -36,13 +35,12 @@ impl Widget for KeyListener {
     fn key(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
         // TODO: maybe some configuration of which keys are handled. Right
         // now we handle everything except a few keys.
-        if (event.key_code == KeyCode::F4 && event.modifiers.alt)
-            || event.key_code == KeyCode::F10
-            || event.key_code == KeyCode::Menu
-        {
-            return false;
+        match event.key_data().key_code {
+            KeyCode::F4 | KeyCode::F10 | KeyCode::Menu => false,
+            _other => {
+                ctx.send_event(event.clone());
+                true
+            }
         }
-        ctx.send_event(event.clone());
-        true
     }
 }

@@ -23,9 +23,10 @@ use piet_common::{Color, FillRule, FontBuilder, Piet, RenderContext, Text, TextL
 #[cfg(target_os = "windows")]
 use druid_shell::platform::PresentStrategy;
 
+use druid_shell::keyboard::KeyEvent;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
-use druid_shell::window::{KeyEvent, WinHandler, WindowHandle};
+use druid_shell::window::{WinHandler, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb24(0x27_28_22);
 const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);

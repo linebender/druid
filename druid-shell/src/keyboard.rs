@@ -13,10 +13,34 @@
 // limitations under the License.
 
 //! Keyboard event types and helpers
-//!
-/// A key event.
+
+use std::fmt;
+
+/// A keyboard event, generated on every key press and key release.
+#[derive(Debug, Clone)]
+pub enum KeyEvent {
+    /// A printable key, including enter and tab.
+    Character(KeyData),
+    /// A non-printable key, such as the arrow keys, Home, Backspace, etc.
+    NonCharacter(KeyData),
+    /// An event where only a modifier (shift, alt/option, windows/command/system)
+    /// has changed.
+    ModifierChange(KeyData),
+}
+
+impl KeyEvent {
+    pub fn key_data(&self) -> &KeyData {
+        match self {
+            KeyEvent::Character(data) => data,
+            KeyEvent::NonCharacter(data) => data,
+            KeyEvent::ModifierChange(data) => data,
+        }
+    }
+}
+
+/// The state of a key.
 #[derive(Debug, Clone, Copy)]
-pub struct KeyEvent {
+pub struct KeyData {
     /// The platform independent keycode.
     pub key_code: KeyCode,
     /// Whether or not this event is a repeat (the key was held down)
@@ -27,33 +51,33 @@ pub struct KeyEvent {
     // that a key might produce more than a single 'char' of input, but we don't
     // want to need a heap allocation in the trivial case. This gives us 15 bytes
     // of string storage, which... might be enough?
-    pub(crate) chars: SmallStr,
-    pub(crate) unmodified_chars: SmallStr,
+    pub(crate) text: SmallStr,
+    pub(crate) unmodified_text: SmallStr,
     //TODO: add time
 }
 
-impl KeyEvent {
+impl KeyData {
     /// The resolved input text for this event. This takes into account modifiers,
     /// e.g. the `chars` on macOS for opt+s is 'ß'.
-    pub fn chars(&self) -> Option<&str> {
-        if self.chars.len == 0 {
+    pub fn text(&self) -> Option<&str> {
+        if self.text.len == 0 {
             None
         } else {
-            Some(self.chars.as_str())
+            Some(self.text.as_str())
         }
     }
 
     /// The unmodified input text for this event. On macOS, for opt+s, this is 's'.
-    pub fn unmod_chars(&self) -> Option<&str> {
-        if self.unmodified_chars.len == 0 {
+    pub fn unmod_text(&self) -> Option<&str> {
+        if self.unmodified_text.len == 0 {
             None
         } else {
-            Some(self.unmodified_chars.as_str())
+            Some(self.unmodified_text.as_str())
         }
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct KeyModifiers {
     pub shift: bool,
     /// Option on macOS.
@@ -189,6 +213,16 @@ pub enum KeyCode {
 }
 
 impl KeyCode {
+    pub fn is_printable(self) -> bool {
+        use KeyCode::*;
+        match self {
+            ArrowDown | ArrowUp | ArrowLeft | ArrowRight | Backspace | Home | PageDown | PageUp
+            | End | Insert | Delete | Pause | Scrolllock | PrintScreen | Escape | F1 | F2 | F3
+            | F4 | F5 | F6 | F7 | F8 | F9 | F10 => false,
+            _other => true,
+        }
+    }
+
     #[cfg(target_os = "macos")]
     pub(crate) fn from_mac_vk_code(raw: u16) -> Self {
         match raw {
@@ -328,7 +362,7 @@ impl KeyCode {
 }
 
 /// A stack allocated string.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub(crate) struct SmallStr {
     pub(crate) len: u8,
     pub(crate) buf: [u8; 15],
@@ -363,6 +397,54 @@ impl SmallStr {
 
     pub(crate) fn as_str(&self) -> &str {
         unsafe { std::str::from_utf8_unchecked(&self.buf[..self.len as usize]) }
+    }
+}
+
+impl fmt::Display for SmallStr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl fmt::Debug for SmallStr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "SmallStr(\"{}\")", self.as_str())
+    }
+}
+
+impl fmt::Debug for KeyModifiers {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Mods(")?;
+        let mut has_prev = false;
+        if self.meta {
+            write!(f, "meta")?;
+            has_prev = true;
+        }
+        if self.ctrl {
+            if has_prev {
+                write!(f, "+")?;
+            }
+            write!(f, "ctrl")?;
+            has_prev = true;
+        }
+        if self.alt {
+            if has_prev {
+                write!(f, "+")?;
+            }
+            write!(f, "alt")?;
+            has_prev = true;
+        }
+        if self.shift {
+            if has_prev {
+                write!(f, "+")?;
+            }
+            write!(f, "shift")?;
+            has_prev = true;
+        }
+        if !has_prev {
+            write!(f, "None")?;
+        }
+        write!(f, ")")
     }
 }
 
