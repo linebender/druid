@@ -22,6 +22,17 @@ extern crate winapi;
 #[macro_use]
 extern crate objc;
 
+#[cfg(target_os = "linux")]
+extern crate cairo;
+#[cfg(target_os = "linux")]
+extern crate gdk;
+#[cfg(target_os = "linux")]
+extern crate gio;
+#[cfg(target_os = "linux")]
+extern crate gtk;
+#[cfg(target_os = "linux")]
+extern crate glib;
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -40,6 +51,11 @@ pub use windows::paint;
 pub mod mac;
 #[cfg(target_os = "macos")]
 pub use mac as platform;
+
+#[cfg(target_os = "linux")]
+pub mod druid_gtk;
+#[cfg(target_os = "linux")]
+pub use druid_gtk as platform;
 
 pub use error::Error;
 
