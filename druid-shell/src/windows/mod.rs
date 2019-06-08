@@ -401,9 +401,10 @@ impl WndProc for MyWndProc {
             }
             WM_CHAR => {
                 //FIXME: figure out how to persist this state
+                //FIXME: this can receive lone surrogate pairs?
                 let key_code = KeyCode::Unknown;
                 let text = match std::char::from_u32(wparam as u32) {
-                    Some(c) => c.into(),
+                    Some(c) => c,
                     None => {
                         eprintln!("failed to convert WM_CHAR to char: {:#X}", wparam);
                         return None;
@@ -412,13 +413,8 @@ impl WndProc for MyWndProc {
 
                 let modifiers = get_mod_state(lparam);
                 let is_repeat = (lparam & 0xFFFF) > 0;
-                let event = KeyEvent::Character(KeyData {
-                    key_code,
-                    is_repeat,
-                    modifiers,
-                    text,
-                    unmodified_text: text,
-                });
+                let data = KeyData::new(key_code, is_repeat, modifiers, text, text);
+                let event = KeyEvent::Character(data);
 
                 if self.handler.keydown(event) {
                     Some(0)
@@ -427,7 +423,7 @@ impl WndProc for MyWndProc {
                 }
             }
             WM_KEYDOWN | WM_SYSKEYDOWN => {
-                let key_code = KeyCode::from_win_vk_code(wparam as i32);
+                let key_code: KeyCode = (wparam as i32).into();
                 if key_code.is_printable() {
                     //FIXME: this will fail to propogate key combinations such as alt+s
                     return None;
@@ -437,15 +433,9 @@ impl WndProc for MyWndProc {
                 // bits 0-15 of iparam are the repeat count:
                 // https://docs.microsoft.com/en-ca/windows/desktop/inputdev/wm-keydown
                 let is_repeat = (lparam & 0xFFFF) > 0;
-                let text = crate::keyboard::SmallStr::new("");
-                let unmodified_text = crate::keyboard::SmallStr::new("");
-                let event = KeyEvent::NonCharacter(KeyData {
-                    key_code,
-                    is_repeat,
-                    modifiers,
-                    text,
-                    unmodified_text,
-                });
+                let data = KeyData::new(key_code, is_repeat, modifiers, "", "");
+                let event = KeyEvent::NonCharacter(data);
+
                 if self.handler.keydown(event) {
                     Some(0)
                 } else {

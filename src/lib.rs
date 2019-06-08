@@ -18,7 +18,6 @@ pub use druid_shell::{kurbo, piet};
 
 use std::any::Any;
 use std::cell::RefCell;
-use std::char;
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::mem;
