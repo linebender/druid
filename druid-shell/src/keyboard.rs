@@ -398,9 +398,10 @@ impl From<u16> for KeyCode {
     }
 }
 
-#[cfg(any(test, target_os = "windows"))]
+#[cfg(target_os = "windows")]
 impl From<i32> for KeyCode {
     fn from(src: i32) -> KeyCode {
+        use winapi::um::winuser::*;
         use crate::keycodes::win_vks::*;
 
         match src {
@@ -682,6 +683,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "windows")]
     fn win_vk() {
         assert_eq!(KeyCode::from(0x4F_i32), KeyCode::KeyO);
         // VK_ZOOM
