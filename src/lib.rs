@@ -30,9 +30,9 @@ use piet::{Color, Piet, RenderContext};
 
 use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
+pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, MouseType, WinHandler, WindowHandle};
-pub use druid_shell::window::{KeyEvent, KeyModifiers};
 
 mod graph;
 pub mod widget;
@@ -391,7 +391,6 @@ impl UiState {
     }
 
     fn handle_key_event(&mut self, event: &KeyEvent) -> bool {
-        dbg!(event);
         if let Some(id) = self.layout_ctx.focused {
             let handled = {
                 let mut ctx = HandlerCtx {
@@ -935,24 +934,7 @@ impl WinHandler for UiMain {
         state.handle_command(id);
     }
 
-    //fn char(&self, ch: u32, mods: u32) {
-    //if let Some(ch) = char::from_u32(ch) {
-    //let key_event = KeyEvent {
-    //key: KeyVariant::Char(ch),
-    //mods,
-    //};
-    //let mut state = self.state.borrow_mut();
-    //state.handle_key_event(&key_event);
-    //} else {
-    //println!("invalid code point 0x{:x}", ch);
-    //}
-    //}
-
     fn keydown(&self, event: KeyEvent) -> bool {
-        //let key_event = KeyEvent {
-        //key: KeyVariant::Vkey(vk_code),
-        //mods,
-        //};
         let mut state = self.state.borrow_mut();
         state.handle_key_event(&event)
     }

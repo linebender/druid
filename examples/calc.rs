@@ -21,13 +21,9 @@ use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
 use druid::widget::{Button, Column, EventForwarder, KeyListener, Label, Padding, Row};
-use druid::{KeyEvent, UiMain, UiState};
+use druid::{KeyCode, KeyEvent, UiMain, UiState};
 
 use druid::Id;
-
-// TODO: Windows specific
-const VK_BACK: u16 = 0x08;
-const VK_RETURN: u16 = 0x0d;
 
 struct CalcState {
     /// The number displayed. Generally a valid float.
@@ -260,9 +256,9 @@ fn action_for_key(event: &KeyEvent) -> Option<CalcAction> {
             '/' => Some(CalcAction::Op('÷')),
             _ => None,
         }
-    } else if event.virtual_key == VK_BACK {
+    } else if event.key_code == KeyCode::Backspace {
         Some(CalcAction::Op('⌫'))
-    } else if event.virtual_key == VK_RETURN {
+    } else if event.key_code == KeyCode::Return {
         Some(CalcAction::Op('='))
     } else {
         None

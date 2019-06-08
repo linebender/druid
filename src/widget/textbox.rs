@@ -16,7 +16,7 @@
 
 use crate::widget::Widget;
 use crate::{
-    BoxConstraints, HandlerCtx, Id, KeyEvent, LayoutCtx, LayoutResult, MouseEvent,
+    BoxConstraints, HandlerCtx, Id, KeyEvent, KeyCode, LayoutCtx, LayoutResult, MouseEvent,
     PaintCtx, Ui,
 };
 
@@ -153,13 +153,12 @@ impl Widget for TextBox {
         //match on key event
         if let Some(chars) = event.chars() {
             if chars == "\u{7f}" {
+                // DEL
                 self.text.pop();
             } else {
                 self.text.push_str(chars);
             }
-        //FIXME: real 'keys' enum, cross platform
-        } else if event.virtual_key == 0x08 {
-            // backspace (win only?)
+        } else if event.key_code == KeyCode::Backspace {
             self.text.pop();
         }
 

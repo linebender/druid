@@ -60,6 +60,7 @@ use crate::Error;
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 
+use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::window::{self, Cursor, MouseButton, MouseEvent, MouseType, WinHandler};
 
 extern "system" {

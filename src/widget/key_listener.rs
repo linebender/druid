@@ -14,18 +14,13 @@
 
 //! Widget for forwarding key events to a listener.
 
+use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use druid_shell::keycodes::M_ALT;
-use druid_shell::window::{KeyEvent, KeyModifiers};
 
 use crate::widget::Widget;
 use crate::{HandlerCtx, Id, Ui};
 
 pub struct KeyListener;
-
-// TODO: This is Windows specific
-const VK_MENU: u16 = 0x12;
-const VK_F4: u16 = 0x73;
-const VK_F10: u16 = 0x79;
 
 impl KeyListener {
     pub fn new() -> Self {
@@ -41,9 +36,9 @@ impl Widget for KeyListener {
     fn key(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
         // TODO: maybe some configuration of which keys are handled. Right
         // now we handle everything except a few keys.
-        if (event.virtual_key == VK_F4 && event.modifiers.alt)
-            || event.virtual_key == VK_F10
-            || event.virtual_key == VK_MENU
+        if (event.key_code == KeyCode::F4 && event.modifiers.alt)
+            || event.key_code == KeyCode::F10
+            || event.key_code == KeyCode::Menu
         {
             return false;
         }
