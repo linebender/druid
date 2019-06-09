@@ -156,6 +156,13 @@ struct WndState {
     render_target: Option<GenericRenderTarget>,
     dcomp_state: Option<DCompState>,
     dpi: f32,
+    /// The `KeyCode` of the last `WM_KEYDOWN` event. We stash this so we can
+    /// include it when handling `WM_CHAR` events.
+    stashed_key_code: KeyCode,
+    /// The `char` of the last `WM_CHAR` event, if there has not already been
+    /// a `WM_KEYUP` event.
+    stashed_char: Option<char>,
+    //TODO: track surrogate orphan
 }
 
 /// State for DirectComposition. This is optional because it is only supported
@@ -400,10 +407,12 @@ impl WndProc for MyWndProc {
                 Some(0)
             }
             WM_CHAR => {
-                //FIXME: figure out how to persist this state
+                let mut state = self.state.borrow_mut();
+                let mut s = state.as_mut().unwrap();
                 //FIXME: this can receive lone surrogate pairs?
-                let key_code = KeyCode::Unknown;
-                let text = match std::char::from_u32(wparam as u32) {
+                let key_code = s.stashed_key_code;
+                s.stashed_char = std::char::from_u32(wparam as u32);
+                let text = match s.stashed_char {
                     Some(c) => c,
                     None => {
                         eprintln!("failed to convert WM_CHAR to char: {:#X}", wparam);
@@ -423,7 +432,10 @@ impl WndProc for MyWndProc {
                 }
             }
             WM_KEYDOWN | WM_SYSKEYDOWN => {
+                let mut state = self.state.borrow_mut();
+                let mut s = state.as_mut().unwrap();
                 let key_code: KeyCode = (wparam as i32).into();
+                s.stashed_key_code = key_code;
                 if key_code.is_printable() {
                     //FIXME: this will fail to propogate key combinations such as alt+s
                     return None;
@@ -658,6 +670,8 @@ impl WindowBuilder {
                 render_target: None,
                 dcomp_state,
                 dpi,
+                stashed_key_code: KeyCode::Unknown,
+                stashed_char: None,
             };
             win.wndproc.connect(&handle, state);
             mem::drop(win);
