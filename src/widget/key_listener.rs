@@ -32,7 +32,7 @@ impl KeyListener {
 }
 
 impl Widget for KeyListener {
-    fn key(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
+    fn key_down(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
         // TODO: maybe some configuration of which keys are handled. Right
         // now we handle everything except a few keys.
         match event.key_data().key_code {

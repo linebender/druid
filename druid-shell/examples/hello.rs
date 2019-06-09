@@ -66,7 +66,7 @@ impl WinHandler for HelloState {
         }
     }
 
-    fn keydown(&self, event: KeyEvent) -> bool {
+    fn key_down(&self, event: KeyEvent) -> bool {
         println!("keydown: {:?}", event);
         false
     }

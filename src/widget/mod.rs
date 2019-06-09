@@ -110,17 +110,15 @@ pub trait Widget {
     ///
     /// Key events are only sent to the focused widget.
     ///
-    /// Note that keys that are interpreted as characters are sent twice, first
-    /// as a `Vkey`, then as a `Char`.
-    ///
-    /// This is a fairly thin wrapper over WM messages. Keyboard input will be
-    /// changing quite a bit when IME is implemented.
-    ///
     /// Returns true if the event is handled.
     #[allow(unused)]
-    fn key(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
+    fn key_down(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
         false
     }
+
+    /// Sent to the widget when a key is released.
+    #[allow(unused)]
+    fn key_up(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) {}
 
     #[allow(unused)]
     fn scroll(&mut self, event: &ScrollEvent, ctx: &mut HandlerCtx) {}

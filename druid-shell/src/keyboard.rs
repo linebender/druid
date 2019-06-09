@@ -401,8 +401,8 @@ impl From<u16> for KeyCode {
 #[cfg(target_os = "windows")]
 impl From<i32> for KeyCode {
     fn from(src: i32) -> KeyCode {
-        use winapi::um::winuser::*;
         use crate::keycodes::win_vks::*;
+        use winapi::um::winuser::*;
 
         match src {
             //VK_LSHIFT => KeyCode::LeftShift,
@@ -591,6 +591,15 @@ impl From<&'static str> for StrOrChar {
 impl From<char> for StrOrChar {
     fn from(src: char) -> StrOrChar {
         StrOrChar::Char(src)
+    }
+}
+
+impl From<Option<char>> for StrOrChar {
+    fn from(src: Option<char>) -> StrOrChar {
+        match src {
+            Some(c) => StrOrChar::Char(c),
+            None => StrOrChar::Str(""),
+        }
     }
 }
 

@@ -425,7 +425,7 @@ impl WndProc for MyWndProc {
                 let data = KeyData::new(key_code, is_repeat, modifiers, text, text);
                 let event = KeyEvent::Character(data);
 
-                if self.handler.keydown(event) {
+                if self.handler.key_down(event) {
                     Some(0)
                 } else {
                     None
@@ -448,12 +448,29 @@ impl WndProc for MyWndProc {
                 let data = KeyData::new(key_code, is_repeat, modifiers, "", "");
                 let event = KeyEvent::NonCharacter(data);
 
-                if self.handler.keydown(event) {
+                if self.handler.key_down(event) {
                     Some(0)
                 } else {
                     None
                 }
             }
+            WM_KEYUP => {
+                let mut state = self.state.borrow_mut();
+                let s = state.as_mut().unwrap();
+                let key_code: KeyCode = (wparam as i32).into();
+                let modifiers = get_mod_state(lparam);
+                let is_repeat = false;
+                let text = s.stashed_char.take();
+                let data = KeyData::new(key_code, is_repeat, modifiers, text, text);
+                let event = if key_code.is_printable() {
+                    KeyEvent::Character(data)
+                } else {
+                    KeyEvent::NonCharacter(data)
+                };
+                self.handler.key_up(event);
+                Some(0)
+            }
+            //TODO: WM_SYSCOMMAND
             WM_MOUSEWHEEL => {
                 let delta = HIWORD(wparam as u32) as i16 as i32;
                 let mods = LOWORD(wparam as u32) as u32;
