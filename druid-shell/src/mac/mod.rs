@@ -42,7 +42,7 @@ use cairo::{Context, QuartzSurface};
 
 use piet_common::{Piet, RenderContext};
 
-use crate::keyboard::{KeyCode, KeyData, KeyEvent, KeyModifiers};
+use crate::keyboard::{KeyData, KeyEvent, KeyModifiers};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
 use crate::window::{MouseButton, MouseEvent, MouseType, WinHandler};
@@ -225,6 +225,7 @@ lazy_static! {
             sel!(keyDown:),
             key_down as extern "C" fn(&mut Object, Sel, id),
         );
+        decl.add_method(sel!(keyUp:), key_up as extern "C" fn(&mut Object, Sel, id));
         decl.add_method(
             sel!(drawRect:),
             draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
@@ -333,18 +334,22 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
 }
 
 extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
-    let payload = make_key_event(nsevent);
-    let event = if payload.key_code.is_printable() {
-        KeyEvent::Character(payload)
-    } else {
-        KeyEvent::NonCharacter(payload)
-    };
+    let event = make_key_event(nsevent);
 
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    (*view_state).handler.keydown(event);
+    (*view_state).handler.key_down(event);
+}
+
+extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
+    let event = make_key_event(nsevent);
+    let view_state = unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        &mut *(view_state as *mut ViewState)
+    };
+    (*view_state).handler.key_up(event);
 }
 
 extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
@@ -516,7 +521,16 @@ impl IdleHandle {
     }
 }
 
-fn make_key_event(event: id) -> KeyData {
+fn make_key_event(event: id) -> KeyEvent {
+    let data = make_key_data(event);
+    if data.key_code.is_printable() {
+        KeyEvent::Character(data)
+    } else {
+        KeyEvent::NonCharacter(data)
+    }
+}
+
+fn make_key_data(event: id) -> KeyData {
     unsafe {
         let chars = event.characters();
         let slice = std::slice::from_raw_parts(chars.UTF8String() as *const _, chars.len());

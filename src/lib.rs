@@ -389,19 +389,30 @@ impl UiState {
         self.dispatch_events();
     }
 
-    fn handle_key_event(&mut self, event: &KeyEvent) -> bool {
+    fn handle_key_down(&mut self, event: &KeyEvent) -> bool {
         if let Some(id) = self.layout_ctx.focused {
             let handled = {
                 let mut ctx = HandlerCtx {
                     id,
                     layout_ctx: &mut self.inner.layout_ctx,
                 };
-                self.inner.widgets[id].key(event, &mut ctx)
+                self.inner.widgets[id].key_down(event, &mut ctx)
             };
             self.dispatch_events();
             handled
         } else {
             false
+        }
+    }
+
+    fn handle_key_up(&mut self, event: &KeyEvent) {
+        if let Some(id) = self.layout_ctx.focused {
+            let mut ctx = HandlerCtx {
+                id,
+                layout_ctx: &mut self.inner.layout_ctx,
+            };
+            self.inner.widgets[id].key_up(event, &mut ctx);
+            self.dispatch_events();
         }
     }
 
@@ -933,9 +944,14 @@ impl WinHandler for UiMain {
         state.handle_command(id);
     }
 
-    fn keydown(&self, event: KeyEvent) -> bool {
+    fn key_down(&self, event: KeyEvent) -> bool {
         let mut state = self.state.borrow_mut();
-        state.handle_key_event(&event)
+        state.handle_key_down(&event)
+    }
+
+    fn key_up(&self, event: KeyEvent) {
+        let mut state = self.state.borrow_mut();
+        state.handle_key_up(&event);
     }
 
     fn mouse_wheel(&self, dy: i32, mods: u32) {

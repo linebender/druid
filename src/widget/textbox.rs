@@ -149,7 +149,7 @@ impl Widget for TextBox {
         true
     }
 
-    fn key(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
+    fn key_down(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
         //match on key event
         match event {
             KeyEvent::Character(data) => self.text.push_str(data.text().unwrap_or("")),

@@ -67,9 +67,14 @@ pub trait WinHandler {
     ///
     /// Return `true` if the event is handled.
     #[allow(unused_variables)]
-    fn keydown(&self, event: KeyEvent) -> bool {
+    fn key_down(&self, event: KeyEvent) -> bool {
         false
     }
+
+    /// Called when a key is released. This corresponds to the WM_KEYUP message
+    /// on Windows, or keyUp(withEvent:) on macOS.
+    #[allow(unused_variables)]
+    fn key_up(&self, event: KeyEvent) {}
 
     /// Called on a mouse wheel event. This corresponds to a
     /// [WM_MOUSEWHEEL](https://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx)
