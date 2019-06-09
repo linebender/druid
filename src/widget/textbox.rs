@@ -21,7 +21,7 @@ use crate::{
 };
 
 use kurbo::{Line, Rect};
-use piet::{FillRule, Font, FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
+use piet::{FillRule, FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
 use piet_common::{Piet};
 
 const BOX_HEIGHT: f32 = 24.;
