@@ -19,23 +19,22 @@ use crate::{
     BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, MouseEvent, PaintCtx, Ui,
 };
 
-use kurbo::{Line, Rect};
+use kurbo::Rect;
 use piet::{FillRule, RenderContext};
 
 const BOX_HEIGHT: f64 = 24.;
 
 pub struct Slider {
     value: f64,
-    slider_position: f64,
 }
 
 impl Slider {
     pub fn new(initial_value: f64) -> Slider {
         Slider {
             value: initial_value,
-            slider_position: 0.
         }
     }
+
     pub fn ui(self, ctx: &mut Ui) -> Id {
         ctx.add(self, &[])
     }
@@ -112,7 +111,7 @@ impl Widget for Slider {
         true
     }
 
-    fn mouse_moved(&mut self, x: f32, y: f32, ctx: &mut HandlerCtx) {
+    fn mouse_moved(&mut self, x: f32, _y: f32, ctx: &mut HandlerCtx) {
         if ctx.is_active() {
             self.value = ((x as f64 - BOX_HEIGHT / 2.) / (ctx.get_geom().size.0 as f64 - BOX_HEIGHT)).max(0.0).min(1.0);
 

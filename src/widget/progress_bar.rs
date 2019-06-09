@@ -18,10 +18,10 @@ use std::any::Any;
 
 use crate::widget::Widget;
 use crate::{
-    BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, MouseEvent, PaintCtx, Ui,
+    BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, PaintCtx, Ui,
 };
 
-use kurbo::{Line, Rect};
+use kurbo::Rect;
 use piet::{FillRule, RenderContext};
 
 const BOX_HEIGHT: f64 = 24.;
