@@ -84,6 +84,18 @@ impl Value {
             Err(s) => panic!("{}", s),
         }
     }
+
+    fn is_same_type(self, other: Value) -> bool {
+        use Value::*;
+        match (self, other) {
+            (Point(_), Point(_)) => true,
+            (Size(_), Size(_)) => true,
+            (Rect(_), Rect(_)) => true,
+            (Color(_), Color(_)) => true,
+            (Float(_), Float(_)) => true,
+            _ => false,
+        }
+    }
 }
 
 /// A set of typed key/value pairs
@@ -100,9 +112,26 @@ impl Variables {
     }
 
     /// Adds a key/value, acting like a builder.
-    pub fn adding<K: Into<String>, V: Into<Value>>(mut self, key: K, value: V) -> Self {
+    pub(crate) fn adding<K: Into<String>, V: Into<Value>>(mut self, key: K, value: V) -> Self {
         self.store.insert(key.into(), value.into());
         self
+    }
+
+    //NOTE: the idea here is that you can only replace an existing item with an
+    //item of the same type.
+    pub fn set<K: Into<String>, V: Into<Value>>(&mut self, key: K, value: V) {
+        let value = value.into();
+        let key = key.into();
+        if let Some(existing) = self.store.get(&key) {
+            if !existing.is_same_type(value) {
+                panic!(
+                    "Invalid type for key '{}': {:?} differs in kind from {:?}",
+                    key, existing, value
+                );
+            }
+        }
+
+        self.store.insert(key, value);
     }
 
     pub fn get<V: TryFrom<Value, Error = String>>(&self, key: Key<V>) -> V {
@@ -111,6 +140,14 @@ impl Variables {
             None => panic!("No Variables key '{}'", key.key),
         };
         value.into_inner_unchecked()
+    }
+
+    /// Return a value for this key, if it exists, or None.
+    ///
+    /// Note: this will still panic if the value exists but is not of the correct
+    /// concrete type.
+    pub fn checked_get<V: TryFrom<Value, Error = String>>(&self, key: Key<V>) -> Option<V> {
+        self.store.get(*&key.key).map(|v| v.into_inner_unchecked())
     }
 }
 
@@ -192,5 +229,19 @@ mod tests {
 
         let key = Key::<Color>::new("my_point");
         assert_eq!(env.get(key), 0x00);
+    }
+
+    #[test]
+    #[should_panic(expected = "differs in kind")]
+    fn overwrite_different_type() {
+        let point = Point { x: 55., y: 77. };
+        let size = Size {
+            width: 55.,
+            height: 77.,
+        };
+
+        let mut env = Variables::default().adding("my_key", point);
+
+        env.set("my_key", size);
     }
 }

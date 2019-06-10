@@ -79,9 +79,6 @@ pub struct Ui {
     /// The state (other than widget tree) is a separate object, so that a
     /// mutable reference to it can be used as a layout context.
     layout_ctx: LayoutCtx,
-
-    /// The environment state, such as theming information.
-    environment: Environment,
 }
 
 /// The context given to layout methods.
@@ -90,6 +87,12 @@ pub struct LayoutCtx {
 
     /// Bounding box of each widget. The position is relative to the parent.
     geom: Vec<Geometry>,
+
+    //FIXME: where should this live? I put it here because it's the place
+    //where it's easiest to share between layout and draw calls, but is there
+    //a better idea?
+    /// The environment state, such as information about theming.
+    environment: Environment,
 
     /// Additional state per widget.
     ///
@@ -237,9 +240,9 @@ impl UiState {
             inner: Ui {
                 widgets: Vec::new(),
                 graph: Default::default(),
-                environment: Default::default(),
                 layout_ctx: LayoutCtx {
                     geom: Vec::new(),
+                    environment: Environment::default(),
                     per_widget: Vec::new(),
                     anim_state: AnimState::Idle,
                     prev_paint_time: None,
@@ -260,6 +263,12 @@ impl UiState {
         F: FnMut(u32, ListenerCtx) + 'static,
     {
         self.command_listener = Some(Box::new(f));
+    }
+
+    /// Returns a mutable reference to the environment. This is used to override
+    /// defaults when initializing an app.
+    pub fn env(&mut self) -> &mut Environment {
+        &mut self.layout_ctx.environment
     }
 
     fn mouse(&mut self, x: f32, y: f32, raw_event: &window::MouseEvent) {
@@ -671,7 +680,6 @@ impl Ui {
             active: Option<Id>,
             hot: Option<Id>,
             focused: Option<Id>,
-            //environment: &Environment,
         ) {
             let g = geom[node].offset(pos);
             paint_ctx.is_active = active == Some(node);
@@ -690,7 +698,7 @@ impl Ui {
             is_hot: false,
             is_focused: false,
             render_ctx,
-            environment: &self.environment,
+            environment: &self.layout_ctx.environment,
         };
         paint_rec(
             &mut self.widgets,
@@ -773,6 +781,11 @@ impl LayoutCtx {
 
     pub fn get_child_size(&self, child: Id) -> (f32, f32) {
         self.geom[child].size
+    }
+
+    /// Return a reference to the current `Environment`.
+    pub fn env(&self) -> &Environment {
+        &self.environment
     }
 
     /// Internal logic for widget invalidation.
