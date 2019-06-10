@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::marker::PhantomData;
 
-pub use defaults::colors;
+pub use defaults::{colors, text};
 
 //TODO: any key that is accepted has to have a provided default value
 
@@ -38,6 +38,9 @@ pub struct Rect {
     size: Size,
 }
 type Color = u32;
+
+//TODO: this won't work when we're loading from disk; we'll want like Arc<String> or something.
+type Ident = &'static str;
 
 pub struct Environment {
     pub theme: Variables,
@@ -74,6 +77,9 @@ pub enum Value {
     Rect(Rect),
     Color(Color),
     Float(f64),
+    String(Ident),
+    //TODO: consider a separate `TextSize` here, so that we can adjust it based
+    //on accessibility state & system settings.
 }
 
 impl Value {
@@ -93,6 +99,7 @@ impl Value {
             (Rect(_), Rect(_)) => true,
             (Color(_), Color(_)) => true,
             (Float(_), Float(_)) => true,
+            (String(_), String(_)) => true,
             _ => false,
         }
     }
@@ -134,20 +141,20 @@ impl Variables {
         self.store.insert(key, value);
     }
 
+    /// Get the value for a given key.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the value does not exist, or is of the wrong
+    /// concrete type. It is expected that all custom keys are registered
+    /// by widgets in Widget::register_defaults; keys provided by the system
+    /// are registered at launch.
     pub fn get<V: TryFrom<Value, Error = String>>(&self, key: Key<V>) -> V {
         let value = match self.store.get(*&key.key) {
             Some(v) => v,
             None => panic!("No Variables key '{}'", key.key),
         };
         value.into_inner_unchecked()
-    }
-
-    /// Return a value for this key, if it exists, or None.
-    ///
-    /// Note: this will still panic if the value exists but is not of the correct
-    /// concrete type.
-    pub fn checked_get<V: TryFrom<Value, Error = String>>(&self, key: Key<V>) -> Option<V> {
-        self.store.get(*&key.key).map(|v| v.into_inner_unchecked())
     }
 }
 
@@ -186,30 +193,56 @@ impl_try_from!(Color, Color);
 impl_try_from!(Rect, Rect);
 impl_try_from!(Point, Point);
 impl_try_from!(Size, Size);
+impl_try_from!(Ident, String);
 
 pub mod defaults {
 
+    //NOTE: these are intended as examples. We should be methodical,
+    //look at flutter/material/cocoa, and figure out the base set of colors we will
+    //need.
     pub mod colors {
         use super::{Color, Key};
         pub const BACKGROUND: Key<Color> = Key::new("io.xi-editor.background_color");
         pub const TEXT: Key<Color> = Key::new("io.xi-editor.text_color");
+        pub const ACCESSORY: Key<Color> = Key::new("io.xi-editor.accessory_color");
         pub const TINT: Key<Color> = Key::new("io.xi-editor.tint_color");
         pub const DIM_TEXT: Key<Color> = Key::new("io.xi-editor.text_color_dim");
-        pub const HIGHTLIGHT: Key<Color> = Key::new("io.xi-editor.highlight_color");
+        pub const HIGHLIGHT: Key<Color> = Key::new("io.xi-editor.highlight_color");
         pub const SELECTED_ITEM: Key<Color> = Key::new("io.xi-editor.selected_item_color");
         pub const BUTTON_DOWN: Key<Color> = Key::new("io.xi-editor.button_down_color");
     }
 
-    use super::{Color, Environment, Key, Variables};
+    pub mod text {
+        use super::Key;
+        pub const TEXT_SIZE: Key<f64> = Key::new("io.xi-editor.text_size");
+        pub const LABEL_SIZE: Key<f64> = Key::new("io.xi-editor.label_size");
+        pub const FONT_NAME: Key<&str> = Key::new("io.xi-editor.font_name");
+    }
+
+    use super::{Color, Key, Variables};
     use colors::*;
+    use text::*;
 
     pub fn default_theme() -> Variables {
-        Variables::new()
+        let mut vars = Variables::new()
             .adding(BACKGROUND, 0x_24_24_24_FF)
             .adding(TEXT, 0x_EE_EE_EE_FF)
-            .adding(HIGHTLIGHT, 0xfa_fa_fa_ff)
-            .adding(TINT, 0x6a_6a_6a_ff)
+            .adding(ACCESSORY, 0x_34_34_34_FF)
+            .adding(HIGHLIGHT, 0xfa_fa_fa_ff)
+            .adding(TINT, 0x6a_1a_6a_ff)
             .adding(BUTTON_DOWN, 0x_04_24_84_ff)
+            .adding(TEXT_SIZE, 12.)
+            .adding(LABEL_SIZE, 15.);
+
+        #[cfg(target_os = "windows")]
+        {
+            vars = vars.adding(FONT_NAME, "Segoe UI");
+        }
+        #[cfg(target_os = "macos")]
+        {
+            vars = vars.adding(FONT_NAME, "Monaco");
+        }
+        vars
     }
 }
 

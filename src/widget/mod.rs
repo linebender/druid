@@ -19,7 +19,7 @@ use std::any::Any;
 pub use druid_shell::window::{MouseButton, ScrollEvent};
 
 use crate::{BoxConstraints, Geometry, LayoutResult};
-use crate::{HandlerCtx, Id, LayoutCtx, PaintCtx};
+use crate::{Environment, HandlerCtx, Id, LayoutCtx, PaintCtx};
 
 mod button;
 pub use crate::widget::button::{Button, Label};
@@ -50,6 +50,12 @@ pub use crate::widget::progress_bar::ProgressBar;
 
 /// The trait implemented by all widgets.
 pub trait Widget {
+    /// Called when a widget of this type is added to the graph. This is an
+    /// opportunity for the widget to register any custom items (such as theme
+    /// keys) into the environment.
+    #[allow(unused)]
+    fn register_defaults(&self, env: &mut Environment) {}
+
     /// Paint the widget's appearance into the paint context.
     ///
     /// The implementer is responsible for translating the coordinates as

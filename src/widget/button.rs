@@ -20,6 +20,7 @@ use kurbo::Rect;
 use piet::{FillRule, FontBuilder, RenderContext, Text, TextLayoutBuilder};
 use piet_common::Piet;
 
+use crate::environment::{colors, text};
 use crate::widget::Widget;
 use crate::{BoxConstraints, Geometry, LayoutResult};
 use crate::{HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, Ui};
@@ -45,11 +46,16 @@ impl Label {
         ctx.add(self, &[])
     }
 
-    fn get_layout(&self, rt: &mut Piet, font_size: f32) -> <Piet as RenderContext>::TextLayout {
+    fn get_layout(
+        &self,
+        rt: &mut Piet,
+        font_name: &str,
+        font_size: f32,
+    ) -> <Piet as RenderContext>::TextLayout {
         // TODO: caching of both the format and the layout
         let font = rt
             .text()
-            .new_font_by_name("Segoe UI", font_size)
+            .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
@@ -63,9 +69,12 @@ impl Label {
 
 impl Widget for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let font_size = 15.0;
-        let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
-        let brush = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
+        let font_name = paint_ctx.env().theme.get(text::FONT_NAME);
+        let font_size = paint_ctx.env().theme.get(text::LABEL_SIZE) as f32;
+        let text_color = paint_ctx.env().theme.get(colors::TEXT);
+
+        let text_layout = self.get_layout(paint_ctx.render_ctx, font_name, font_size);
+        let brush = paint_ctx.render_ctx.solid_brush(text_color).unwrap();
 
         let pos = (geom.pos.0, geom.pos.1 + font_size);
         paint_ctx.render_ctx.draw_text(&text_layout, pos, &brush);

@@ -20,6 +20,7 @@ extern crate druid_shell;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
+use druid::environment::text;
 use druid::widget::{Button, Column, EventForwarder, KeyListener, Label, Padding, Row};
 use druid::{KeyEvent, KeyVariant, UiMain, UiState};
 
@@ -276,6 +277,7 @@ fn main() {
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut state = UiState::new();
+    state.env().theme.set(text::LABEL_SIZE, 24.);
     build_calc(&mut state);
     builder.set_handler(Box::new(UiMain::new(state)));
     builder.set_title("Calculator");

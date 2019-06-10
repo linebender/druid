@@ -14,6 +14,7 @@
 
 //! A textbox widget.
 
+use crate::environment::{colors, text, Environment, Key};
 use crate::widget::Widget;
 use crate::{
     BoxConstraints, Geometry, HandlerCtx, Id, KeyEvent, KeyVariant, LayoutCtx, LayoutResult,
@@ -24,9 +25,6 @@ use kurbo::{Line, Rect};
 use piet::{FillRule, FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
 use piet_common::Piet;
 
-const BOX_HEIGHT: f32 = 24.;
-const BORDER_WIDTH: f32 = 2.;
-
 pub struct TextBox {
     text: String,
     width: f64,
@@ -34,6 +32,15 @@ pub struct TextBox {
 }
 
 impl TextBox {
+    /// space between the top and bottom bounds of the text and the top and bottom
+    /// of the widget.
+    pub const V_PADDING: Key<f64> = Key::new("druid.textbox.vertical_padding");
+    const DEFAULT_V_PADDING: f64 = 4.0;
+
+    /// The width of the TextBox's stroke
+    pub const STROKE_WIDTH: Key<f64> = Key::new("druid.textbox.stroke_width");
+    const DEFAULT_STROKE_WIDTH: f64 = 2.0;
+
     pub fn new(default_text: Option<String>, width: f64) -> TextBox {
         TextBox {
             text: default_text.unwrap_or_else(|| String::new()),
@@ -45,10 +52,10 @@ impl TextBox {
         ctx.add(self, &[])
     }
 
-    fn load_font(&mut self, rt: &mut Piet, font_size: f32) {
+    fn load_font(&mut self, rt: &mut Piet, font_size: f32, font_name: &str) {
         let font = rt
             .text()
-            .new_font_by_name("Segoe UI", font_size)
+            .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
@@ -56,7 +63,12 @@ impl TextBox {
         self.font = Some(font);
     }
 
-    fn get_layout(&mut self, rt: &mut Piet, font_size: f32) -> <Piet as RenderContext>::TextLayout {
+    fn get_layout(
+        &mut self,
+        rt: &mut Piet,
+        font_size: f32,
+        font_name: &str,
+    ) -> <Piet as RenderContext>::TextLayout {
         // TODO: caching of both the format and the layout
         match &self.font {
             Some(font) => {
@@ -68,27 +80,35 @@ impl TextBox {
                     .unwrap()
             }
             _ => {
-                self.load_font(rt, font_size);
+                self.load_font(rt, font_size, font_name);
 
                 //QUESTION this recursion makes me uncomfortable
                 //but it solved my borrowing issues!
-                return self.get_layout(rt, font_size);
+                return self.get_layout(rt, font_size, font_name);
             }
         };
     }
 }
 
 impl Widget for TextBox {
+    fn register_defaults(&self, env: &mut Environment) {
+        env.theme
+            .set(TextBox::V_PADDING, TextBox::DEFAULT_V_PADDING);
+        env.theme
+            .set(TextBox::STROKE_WIDTH, TextBox::DEFAULT_STROKE_WIDTH);
+    }
+
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         let border_color = if paint_ctx.is_focused() {
-            // Create active color
-            0xff_00_00_ff
+            paint_ctx.env().theme.get(colors::HIGHLIGHT)
         } else {
-            // Create inactive color
-            0x55_55_55_ff
+            paint_ctx.env().theme.get(colors::ACCESSORY)
         };
 
-        let text_color = 0xf0f0eaff;
+        let text_color = paint_ctx.env().theme.get(colors::TEXT);
+        let font_size = paint_ctx.env().theme.get(text::TEXT_SIZE) as f32;
+        let font_name = paint_ctx.env().theme.get(text::FONT_NAME);
+        let stroke_width = paint_ctx.env().theme.get(TextBox::STROKE_WIDTH);
 
         // Paint the border
         let brush = paint_ctx.render_ctx.solid_brush(border_color).unwrap();
@@ -105,17 +125,16 @@ impl Widget for TextBox {
         let clip_rect = Rect::new(
             x as f64,
             y as f64,
-            x as f64 + width as f64 - BORDER_WIDTH as f64,
+            x as f64 + width as f64 - stroke_width as f64,
             y as f64 + height as f64,
         );
 
         paint_ctx
             .render_ctx
-            .stroke(rect, &brush, BORDER_WIDTH, None);
+            .stroke(rect, &brush, stroke_width, None);
 
         // Paint the text
-        let font_size = BOX_HEIGHT - 4.;
-        let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
+        let text_layout = self.get_layout(paint_ctx.render_ctx, font_size, font_name);
         let brush = paint_ctx.render_ctx.solid_brush(text_color).unwrap();
 
         let pos = (geom.pos.0, geom.pos.1 + font_size);
@@ -131,7 +150,7 @@ impl Widget for TextBox {
 
                 // Paint the cursor if focused
                 if focused {
-                    let brush = rc.solid_brush(0xffffffff).unwrap();
+                    let brush = rc.solid_brush(border_color).unwrap();
 
                     let (x, y) = (
                         geom.pos.0 + text_layout.width() as f32 + 2.,
@@ -155,9 +174,10 @@ impl Widget for TextBox {
         bc: &BoxConstraints,
         _children: &[Id],
         _size: Option<(f32, f32)>,
-        _ctx: &mut LayoutCtx,
+        ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain((self.width as f32, BOX_HEIGHT)))
+        let font_size = ctx.env().theme.get(text::TEXT_SIZE) as f32;
+        LayoutResult::Size(bc.constrain((self.width as f32, font_size)))
     }
 
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {

@@ -14,10 +14,10 @@
 
 //! Simple entity-component-system based GUI.
 
-use std::any::Any;
+use std::any::{Any, TypeId};
 use std::cell::RefCell;
 use std::char;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::ffi::OsString;
 use std::mem;
 use std::ops::{Deref, DerefMut};
@@ -79,6 +79,10 @@ pub struct Ui {
     /// The state (other than widget tree) is a separate object, so that a
     /// mutable reference to it can be used as a layout context.
     layout_ctx: LayoutCtx,
+
+    /// A set of TypeIds of widgets that have already had their default environment
+    /// settings registered.
+    registered: HashSet<TypeId>,
 }
 
 /// The context given to layout methods.
@@ -189,7 +193,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     is_active: bool,
     is_hot: bool,
     is_focused: bool,
-    pub environment: &'a Environment,
+    environment: &'a Environment,
     pub render_ctx: &'a mut piet_common::Piet<'b>,
 }
 
@@ -240,6 +244,7 @@ impl UiState {
             inner: Ui {
                 widgets: Vec::new(),
                 graph: Default::default(),
+                registered: Default::default(),
                 layout_ctx: LayoutCtx {
                     geom: Vec::new(),
                     environment: Environment::default(),
@@ -572,6 +577,9 @@ impl Ui {
     where
         W: Widget + 'static,
     {
+        if self.registered.insert(TypeId::of::<W>()) {
+            widget.register_defaults(&mut self.layout_ctx.environment);
+        }
         let id = self.graph.alloc_node();
         if id < self.widgets.len() {
             self.widgets[id] = Box::new(widget);
@@ -933,6 +941,11 @@ impl<'a, 'b> PaintCtx<'a, 'b> {
     /// Determine whether this widget is focused.
     pub fn is_focused(&self) -> bool {
         self.is_focused
+    }
+
+    /// Returns a reference to the active `Environment`.
+    pub fn env(&self) -> &Environment {
+        self.environment
     }
 }
 
