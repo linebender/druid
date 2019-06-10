@@ -30,9 +30,12 @@ pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, MouseType, WinHandler, WindowHandle};
 
+pub mod environment;
 mod graph;
 pub mod widget;
 
+pub use environment::colors;
+use environment::Environment;
 use graph::Graph;
 use widget::NullWidget;
 pub use widget::{KeyEvent, KeyVariant, MouseEvent, Widget};
@@ -76,6 +79,9 @@ pub struct Ui {
     /// The state (other than widget tree) is a separate object, so that a
     /// mutable reference to it can be used as a layout context.
     layout_ctx: LayoutCtx,
+
+    /// The environment state, such as theming information.
+    environment: Environment,
 }
 
 /// The context given to layout methods.
@@ -180,6 +186,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     is_active: bool,
     is_hot: bool,
     is_focused: bool,
+    pub environment: &'a Environment,
     pub render_ctx: &'a mut piet_common::Piet<'b>,
 }
 
@@ -230,6 +237,7 @@ impl UiState {
             inner: Ui {
                 widgets: Vec::new(),
                 graph: Default::default(),
+                environment: Default::default(),
                 layout_ctx: LayoutCtx {
                     geom: Vec::new(),
                     per_widget: Vec::new(),
@@ -663,6 +671,7 @@ impl Ui {
             active: Option<Id>,
             hot: Option<Id>,
             focused: Option<Id>,
+            //environment: &Environment,
         ) {
             let g = geom[node].offset(pos);
             paint_ctx.is_active = active == Some(node);
@@ -681,6 +690,7 @@ impl Ui {
             is_hot: false,
             is_focused: false,
             render_ctx,
+            environment: &self.environment,
         };
         paint_rec(
             &mut self.widgets,
