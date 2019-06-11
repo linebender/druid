@@ -62,8 +62,7 @@ pub trait WinHandler {
     /// Called when a menu item is selected.
     fn command(&self, id: u32) {}
 
-    /// Called on a key down event. This corresponds to the WM_KEYDOWN
-    /// message on Windows, or keyDown(withEvent:) on macOS.
+    /// Called on a key down event.
     ///
     /// Return `true` if the event is handled.
     #[allow(unused_variables)]

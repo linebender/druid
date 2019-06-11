@@ -51,35 +51,30 @@ pub struct KeyData {
     // that a key might produce more than a single 'char' of input, but we don't
     // want to need a heap allocation in the trivial case. This gives us 15 bytes
     // of string storage, which... might be enough?
-    text: SmallStr,
+    text: TinyStr,
     /// The 'unmodified text' is the text that would be produced by this keystroke
     /// in the absence of ctrl+alt modifiers or preceding dead keys.
-    unmodified_text: SmallStr,
+    unmodified_text: TinyStr,
     //TODO: add time
 }
 
 impl KeyData {
     /// Create a new `KeyData` struct. This accepts either &str or char for the last
     /// two arguments.
-    pub(crate) fn new<T, S, K>(
-        key_code: K,
+    pub(crate) fn new(
+        key_code: impl Into<KeyCode>,
         is_repeat: bool,
         modifiers: KeyModifiers,
-        text: T,
-        unmodified_text: S,
-    ) -> Self
-    where
-        T: Into<StrOrChar>,
-        S: Into<StrOrChar>,
-        K: Into<KeyCode>,
-    {
+        text: impl Into<StrOrChar>,
+        unmodified_text: impl Into<StrOrChar>,
+    ) -> Self {
         let text = match text.into() {
             StrOrChar::Char(c) => c.into(),
-            StrOrChar::Str(s) => SmallStr::new(s),
+            StrOrChar::Str(s) => TinyStr::new(s),
         };
         let unmodified_text = match unmodified_text.into() {
             StrOrChar::Char(c) => c.into(),
-            StrOrChar::Str(s) => SmallStr::new(s),
+            StrOrChar::Str(s) => TinyStr::new(s),
         };
 
         KeyData {
@@ -111,7 +106,7 @@ impl KeyData {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct KeyModifiers {
     pub shift: bool,
     /// Option on macOS.
@@ -244,17 +239,28 @@ pub enum KeyCode {
     ArrowLeft,
     ArrowRight,
 
-    Unknown,
+    Unknown(RawKeyCode),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RawKeyCode {
+    Windows(i32),
+    Mac(u16),
 }
 
 impl KeyCode {
     pub fn is_printable(self) -> bool {
         use KeyCode::*;
         match self {
-            ArrowDown | ArrowUp | ArrowLeft | ArrowRight | Backspace | Home | PageDown | PageUp
-            | End | Insert | Delete | Pause | ScrollLock | PrintScreen | Escape | F1 | F2 | F3
-            | F4 | F5 | F6 | F7 | F8 | F9 | F10 => false,
-            _other => true,
+            Backtick | Key0 | Key1 | Key2 | Key3 | Key4 | Key5 | Key6 | Key7 | Key8 | Key9
+            | Minus | Equals | Tab | KeyQ | KeyW | KeyE | KeyR | KeyT | KeyY | KeyU | KeyI
+            | KeyO | KeyP | LeftBracket | RightBracket | Return | KeyA | KeyS | KeyD | KeyF
+            | KeyG | KeyH | KeyJ | KeyK | KeyL | Semicolon | Quote | Backslash | KeyZ | KeyX
+            | KeyC | KeyV | KeyB | KeyN | KeyM | Comma | Period | Slash | Space | Numpad0
+            | Numpad1 | Numpad2 | Numpad3 | Numpad4 | Numpad5 | Numpad6 | Numpad7 | Numpad8
+            | Numpad9 | NumpadEquals | NumpadSubtract | NumpadAdd | NumpadDecimal
+            | NumpadMultiply | NumpadDivide | NumpadEnter => true,
+            _ => false,
         }
     }
 }
@@ -393,8 +399,22 @@ impl From<u16> for KeyCode {
             0x7e => KeyCode::ArrowUp,
             //0x7f =>  unkown,
             //0xa => KeyCode::Caret,
-            _ => KeyCode::Unknown,
+            other => KeyCode::Unknown(RawKeyCode::Mac(other.into())),
         }
+    }
+}
+
+#[cfg(target_os = "windows")]
+impl From<i32> for RawKeyCode {
+    fn from(src: i32) -> RawKeyCode {
+        RawKeyCode::Windows(src)
+    }
+}
+
+#[cfg(target_os = "macos")]
+impl From<u16> for RawKeyCode {
+    fn from(src: u16) -> RawKeyCode {
+        RawKeyCode::Mac(src)
     }
 }
 
@@ -504,8 +524,8 @@ impl From<i32> for KeyCode {
             VK_F8 => KeyCode::F8,
             VK_F9 => KeyCode::F9,
             VK_F10 => KeyCode::F10,
-            //VK_F11 => KeyCode::F11,
-            //VK_F12 => KeyCode::F12,
+            VK_F11 => KeyCode::F11,
+            VK_F12 => KeyCode::F12,
             //VK_F13 => KeyCode::F13,
             //VK_F14 => KeyCode::F14,
             //VK_F15 => KeyCode::F15,
@@ -518,29 +538,46 @@ impl From<i32> for KeyCode {
             //VK_F22 => KeyCode::F22,
             //VK_F23 => KeyCode::F23,
             //VK_F24 => KeyCode::F24,
-            _ => KeyCode::Unknown,
+            other => KeyCode::Unknown(other.into()),
         }
     }
 }
 
-/// A stack allocated string.
+/// Should realistically be (8 * N) - 1; we need one byte for the length.
+const TINY_STR_CAPACITY: usize = 15;
+
+/// A stack allocated string with a fixed capacity.
 #[derive(Clone, Copy)]
-struct SmallStr {
+struct TinyStr {
     len: u8,
-    buf: [u8; 15],
+    buf: [u8; TINY_STR_CAPACITY],
 }
 
-impl SmallStr {
+impl TinyStr {
     fn new<S: AsRef<str>>(s: S) -> Self {
         let s = s.as_ref();
         let len = match s.len() {
             l @ 0..=15 => l,
             more => {
+                // If some user has weird unicode bound to a key, it's better to
+                // mishandle that input then to crash the client application?
                 debug_assert!(
                     false,
-                    "Err 101, Invalid Assumptions: SmallStr::new called with {} (len {}).",
+                    "Err 101, Invalid Assumptions: TinyStr::new \
+                     called with {} (len {}).",
                     s, more
                 );
+                #[cfg(test)]
+                {
+                    // we still want to fail when testing a release build
+                    assert!(
+                        false,
+                        "Err 101, Invalid Assumptions: TinyStr::new \
+                         called with {} (len {}).",
+                        s, more
+                    );
+                }
+
                 // rups. find last valid codepoint offset
                 let mut len = 15;
                 while !s.is_char_boundary(len) {
@@ -551,7 +588,7 @@ impl SmallStr {
         };
         let mut buf = [0; 15];
         buf[..len].copy_from_slice(&s.as_bytes()[..len]);
-        SmallStr {
+        TinyStr {
             len: len as u8,
             buf,
         }
@@ -562,13 +599,13 @@ impl SmallStr {
     }
 }
 
-impl From<char> for SmallStr {
-    fn from(src: char) -> SmallStr {
+impl From<char> for TinyStr {
+    fn from(src: char) -> TinyStr {
         let len = src.len_utf8();
         let mut buf = [0; 15];
         src.encode_utf8(&mut buf);
 
-        SmallStr {
+        TinyStr {
             len: len as u8,
             buf,
         }
@@ -603,21 +640,21 @@ impl From<Option<char>> for StrOrChar {
     }
 }
 
-impl fmt::Display for SmallStr {
+impl fmt::Display for TinyStr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }
 
-impl fmt::Debug for SmallStr {
+impl fmt::Debug for TinyStr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "SmallStr(\"{}\")", self.as_str())
+        write!(f, "TinyStr(\"{}\")", self.as_str())
     }
 }
 
-impl std::default::Default for SmallStr {
+impl std::default::Default for TinyStr {
     fn default() -> Self {
-        SmallStr::new("")
+        TinyStr::new("")
     }
 }
 
@@ -657,38 +694,30 @@ impl fmt::Debug for KeyModifiers {
     }
 }
 
-impl std::default::Default for KeyModifiers {
-    fn default() -> Self {
-        KeyModifiers {
-            shift: false,
-            ctrl: false,
-            meta: false,
-            alt: false,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    #[should_panic(expected("Invalid Assumptions"))]
+    #[should_panic(expected = "Invalid Assumptions")]
     fn smallstr() {
-        let smol = SmallStr::new("hello");
+        let smol = TinyStr::new("hello");
         assert_eq!(smol.as_str(), "hello");
-        let smol = SmallStr::new("");
+        let smol = TinyStr::new("");
         assert_eq!(smol.as_str(), "");
         let s_16 = "😍🥰😘😗";
         assert_eq!(s_16.len(), 16);
         assert!(!s_16.is_char_boundary(15));
-        let _too_big = SmallStr::new("😍🥰😘😗");
+        let _too_big = TinyStr::new("😍🥰😘😗");
     }
 
     #[test]
     fn vk_mac() {
         assert_eq!(KeyCode::from(0x30_u16), KeyCode::Tab);
         //F17
-        assert_eq!(KeyCode::from(0x40_u16), KeyCode::Unknown);
+        assert_eq!(
+            KeyCode::from(0x40_u16),
+            KeyCode::Unknown(RawKeyCode::Mac(64))
+        );
     }
 
     #[test]
@@ -696,6 +725,9 @@ mod tests {
     fn win_vk() {
         assert_eq!(KeyCode::from(0x4F_i32), KeyCode::KeyO);
         // VK_ZOOM
-        assert_eq!(KeyCode::from(0xFB_i32), KeyCode::Unknown);
+        assert_eq!(
+            KeyCode::from(0xFB_i32),
+            KeyCode::Unknown(RawKeyCode::Windows(251))
+        );
     }
 }

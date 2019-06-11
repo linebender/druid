@@ -112,7 +112,10 @@ impl MenuKey {
     }
 }
 
-// adapted from winapi and https://github.com/Eljay/directx
+// Most keys on Windows have VK_ values defined in use winapi::um::winuser,
+// but ASCII digits and letters are the exception. Fill those in here
+// (following https://github.com/Eljay/directx) so all keys have constants,
+// even though these are not official names for virtual-key codes.
 pub mod win_vks {
     pub const VK_0: i32 = 0x30;
     pub const VK_1: i32 = 0x31;
