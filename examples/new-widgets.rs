@@ -17,7 +17,9 @@
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::widget::{Column, EventForwarder, KeyListener, Label, Padding, Row, Slider, TextBox, ProgressBar};
+use druid::widget::{
+    Column, EventForwarder, KeyListener, Label, Padding, ProgressBar, Row, Slider, TextBox,
+};
 use druid::{KeyEvent, KeyVariant, UiMain, UiState};
 
 use druid::Id;

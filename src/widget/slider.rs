@@ -42,7 +42,6 @@ impl Slider {
 
 impl Widget for Slider {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-
         let background_color = 0x55_55_55_ff;
         let slider_color = 0xf0f0eaff;
 
@@ -74,9 +73,9 @@ impl Widget for Slider {
 
         let mut calculated_position = slider_absolute_position - half_box;
         if calculated_position < 0. {
-          calculated_position = 0.;
+            calculated_position = 0.;
         } else if (calculated_position + full_box) > width {
-          calculated_position = width - full_box;
+            calculated_position = width - full_box;
         }
 
         let rect = Rect::new(
@@ -102,7 +101,10 @@ impl Widget for Slider {
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
         if event.count == 1 {
             ctx.set_active(true);
-            self.value = ((event.x as f64 - BOX_HEIGHT / 2.) / (ctx.get_geom().size.0 as f64 - BOX_HEIGHT)).max(0.0).min(1.0);
+            self.value = ((event.x as f64 - BOX_HEIGHT / 2.)
+                / (ctx.get_geom().size.0 as f64 - BOX_HEIGHT))
+                .max(0.0)
+                .min(1.0);
             ctx.send_event(self.value);
         } else {
             ctx.set_active(false);
@@ -113,7 +115,10 @@ impl Widget for Slider {
 
     fn mouse_moved(&mut self, x: f32, _y: f32, ctx: &mut HandlerCtx) {
         if ctx.is_active() {
-            self.value = ((x as f64 - BOX_HEIGHT / 2.) / (ctx.get_geom().size.0 as f64 - BOX_HEIGHT)).max(0.0).min(1.0);
+            self.value = ((x as f64 - BOX_HEIGHT / 2.)
+                / (ctx.get_geom().size.0 as f64 - BOX_HEIGHT))
+                .max(0.0)
+                .min(1.0);
 
             ctx.send_event(self.value);
             ctx.invalidate();

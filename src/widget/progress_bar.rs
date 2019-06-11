@@ -17,9 +17,7 @@
 use std::any::Any;
 
 use crate::widget::Widget;
-use crate::{
-    BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, PaintCtx, Ui,
-};
+use crate::{BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, PaintCtx, Ui};
 
 use kurbo::Rect;
 use piet::{FillRule, RenderContext};
@@ -43,7 +41,6 @@ impl ProgressBar {
 
 impl Widget for ProgressBar {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-
         let background_color = 0x55_55_55_ff;
         let bar_color = 0xf0f0eaff;
 
@@ -61,7 +58,7 @@ impl Widget for ProgressBar {
 
         paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
 
-        //Paint the bar 
+        //Paint the bar
         let brush = paint_ctx.render_ctx.solid_brush(bar_color).unwrap();
 
         let (width, height) = geom.size;
@@ -99,5 +96,4 @@ impl Widget for ProgressBar {
             false
         }
     }
-
 }
