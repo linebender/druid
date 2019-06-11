@@ -543,8 +543,7 @@ fn make_key_data(event: id) -> KeyData {
         );
         let unmodified_text = std::str::from_utf8_unchecked(slice);
 
-        let virtual_key: std::os::raw::c_ushort = msg_send!(event, keyCode);
-
+        let virtual_key = event.keyCode();
         let is_repeat: bool = msg_send!(event, isARepeat);
         let modifiers = event.modifierFlags();
         let modifiers = make_modifiers(modifiers);

@@ -191,8 +191,7 @@ fn get_mod_state(lparam: LPARAM) -> KeyModifiers {
     //FIXME: does not handle windows key
     unsafe {
         let mut mod_state = KeyModifiers::default();
-        //FIXME: @cmyr I think this shoulld be doing GetKeyState(VK_MENU)?
-        if (lparam & (1 << 29)) != 0 {
+        if GetKeyState(VK_MENU) < 0 {
             mod_state.alt = true;
         }
         if GetKeyState(VK_CONTROL) < 0 {
@@ -687,7 +686,7 @@ impl WindowBuilder {
                 render_target: None,
                 dcomp_state,
                 dpi,
-                stashed_key_code: KeyCode::Unknown,
+                stashed_key_code: KeyCode::Unknown(0.into()),
                 stashed_char: None,
             };
             win.wndproc.connect(&handle, state);
