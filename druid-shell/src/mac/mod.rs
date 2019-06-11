@@ -323,15 +323,11 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
         };
         let mods = 0; // TODO:
         if dx != 0 {
-            (*view_state)
-                .handler
-                .mouse_hwheel(dx, mods);
+            (*view_state).handler.mouse_hwheel(dx, mods);
         }
 
         if dy != 0 {
-            (*view_state)
-                .handler
-                .mouse_wheel(dy, mods);
+            (*view_state).handler.mouse_wheel(dy, mods);
         }
     }
 }

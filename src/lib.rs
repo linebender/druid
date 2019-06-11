@@ -680,7 +680,7 @@ impl Ui {
             is_active: false,
             is_hot: false,
             is_focused: false,
-            render_ctx: render_ctx,
+            render_ctx,
         };
         paint_rec(
             &mut self.widgets,
