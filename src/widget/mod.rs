@@ -18,6 +18,7 @@ use std::any::Any;
 
 pub use druid_shell::window::{MouseButton, ScrollEvent};
 
+use crate::animate::Animation;
 use crate::{BoxConstraints, Geometry, LayoutResult};
 use crate::{Environment, HandlerCtx, Id, LayoutCtx, PaintCtx};
 
@@ -152,6 +153,9 @@ pub trait Widget {
     /// The method can also call `request_anim_frame` to keep the animation running.
     #[allow(unused)]
     fn anim_frame(&mut self, interval: u64, ctx: &mut HandlerCtx) {}
+
+    #[allow(unused)]
+    fn animate(&mut self, anim: &Animation, ctx: &mut HandlerCtx) {}
 
     /// Called when a child widget is removed.
     #[allow(unused)]

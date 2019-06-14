@@ -179,6 +179,7 @@ dependencies = [
  "kurbo 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "piet 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "piet-common 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

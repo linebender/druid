@@ -29,11 +29,14 @@ use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, MouseType, WinHandler, WindowHandle};
+use time::precise_time_s;
 
 pub mod environment;
 mod graph;
 pub mod widget;
 
+mod animate;
+pub use animate::{Animation, AnimationCurve};
 pub use environment::colors;
 use environment::Environment;
 use graph::Graph;
@@ -133,9 +136,16 @@ pub struct Geometry {
     pub size: (f32, f32),
 }
 
+#[derive(Debug)]
+struct ActiveAnim {
+    anim: Animation,
+    start: f64,
+}
+
 #[derive(Default)]
 struct PerWidgetState {
     anim_frame_requested: bool,
+    active: Option<ActiveAnim>,
 }
 
 enum AnimState {
@@ -506,14 +516,40 @@ impl UiState {
         self.layout_ctx.anim_state = AnimState::AnimFrameStart;
         for node in 0..self.widgets.len() {
             if self.layout_ctx.per_widget[node].anim_frame_requested {
-                self.layout_ctx.per_widget[node].anim_frame_requested = false;
-                self.inner.widgets[node].anim_frame(
-                    interval,
-                    &mut HandlerCtx {
-                        id: node,
-                        layout_ctx: &mut self.inner.layout_ctx,
-                    },
-                );
+                let mut state = self.layout_ctx.per_widget[node].active.take();
+                if let Some(state) = state.as_mut() {
+                    let t_now = precise_time_s();
+                    let mut delta_t = t_now - state.start;
+                    if delta_t > state.anim.duration() {
+                        if state.anim.rerun_after_completion() {
+                            state.start = t_now;
+                            delta_t = 0.0;
+                        } else {
+                            self.layout_ctx.per_widget[node].anim_frame_requested = false;
+                            self.layout_ctx.per_widget[node].active = None;
+                            continue;
+                        }
+                    }
+                    let rel_t = delta_t / state.anim.duration();
+                    state.anim.update_components(rel_t);
+                    self.inner.widgets[node].animate(
+                        &state.anim,
+                        &mut HandlerCtx {
+                            id: node,
+                            layout_ctx: &mut self.inner.layout_ctx,
+                        },
+                    );
+                } else {
+                    self.layout_ctx.per_widget[node].anim_frame_requested = false;
+                    self.inner.widgets[node].anim_frame(
+                        interval,
+                        &mut HandlerCtx {
+                            id: node,
+                            layout_ctx: &mut self.inner.layout_ctx,
+                        },
+                    );
+                }
+                self.layout_ctx.per_widget[node].active = state;
             }
         }
         self.layout_ctx.prev_paint_time = Some(this_paint_time);
@@ -873,6 +909,16 @@ impl<'a> HandlerCtx<'a> {
             }
             _ => (),
         }
+    }
+
+    pub fn animate(&mut self, animation: Animation) {
+        let state = ActiveAnim {
+            anim: animation,
+            start: precise_time_s(),
+        };
+
+        self.layout_ctx.per_widget[self.id].active = Some(state);
+        self.request_anim_frame();
     }
 
     pub fn get_geom(&self) -> &Geometry {
