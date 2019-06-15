@@ -21,9 +21,15 @@ struct Component {
 #[derive(Debug, Clone, Copy)]
 pub enum AnimationCurve {
     Linear,
+    /// Qaudratic.
     EaseIn,
+    /// Qaudratic.
     EaseOut,
+    /// Qaudratic.
     EaseInOut,
+    OutElastic,
+    OutBounce,
+    OutSine,
 }
 
 impl Animation {
@@ -97,7 +103,58 @@ impl Animation {
 
     pub(crate) fn update_components(&mut self, t: f64) {
         for c in self.components.iter_mut() {
+            let t = c.curve.translate(t);
             c.current = c.start.interpolate(c.end, t)
+        }
+    }
+}
+
+impl AnimationCurve {
+    pub fn translate(self, t: f64) -> f64 {
+        use std::f64::consts::PI;
+        match self {
+            AnimationCurve::Linear => t,
+            AnimationCurve::EaseIn => t * t,
+            AnimationCurve::EaseOut => t * (2.0 - t),
+            AnimationCurve::EaseInOut => {
+                let t = t * 2.0;
+                if t < 1. {
+                    return 0.5 * t * t;
+                } else {
+                    let t = t - 1.;
+                    return -0.5 * (t * (t - 2.) - 1.);
+                }
+            }
+            AnimationCurve::OutElastic => {
+                let p = 0.3;
+                let s = p / 4.0;
+
+                if t < 0.001 {
+                    return 0.;
+                }
+                if t > 0.999 {
+                    return 1.;
+                }
+                return 2.0f64.powf(-10.0 * t) * ((t - s) * (2.0 * PI) / p).sin() + 1.0;
+            }
+            AnimationCurve::OutSine => {
+                return (t * PI * 0.5).sin();
+            }
+            AnimationCurve::OutBounce => {
+                if t < (1. / 2.75) {
+                    return 7.5625 * t * t;
+                }
+                if t < (2. / 2.75) {
+                    let t = t - (1.5 / 2.75);
+                    return 7.5625 * t * t + 0.75;
+                }
+                if t < (2.5 / 2.75) {
+                    let t = t - (2.25 / 2.75);
+                    return 7.5625 * t * t + 0.9375;
+                }
+                let t = t - (2.625 / 2.75);
+                return 7.5625 * t * t + 0.984375;
+            }
         }
     }
 }
@@ -109,7 +166,6 @@ trait Interpolate: Copy {
 
 impl Interpolate for f64 {
     fn interpolate(self, other: Self, t: f64) -> Self {
-        assert!(t >= 0. && t <= 1.0, "{}", t);
         self + (other - self) * t
     }
 }

@@ -19,8 +19,8 @@ extern crate druid_shell;
 extern crate kurbo;
 extern crate piet;
 
-use kurbo::Line;
-use piet::RenderContext;
+use kurbo::Circle;
+use piet::{FillRule, RenderContext};
 
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
@@ -39,10 +39,9 @@ impl Widget for AnimWidget {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         let fg = paint_ctx.render_ctx.solid_brush(self.1).unwrap();
         let (x, y) = geom.pos;
-        let (x2, y2) = (x as f64 + geom.size.0 as f64, y as f64 + self.0 as f64);
-        paint_ctx
-            .render_ctx
-            .stroke(Line::new((x as f64, y as f64), (x2, y2)), &fg, 1.0, None);
+        let (x2, y2) = (x as f64 + geom.size.0 as f64 / 2., y as f64 + self.0 as f64);
+        let circ = Circle::new((x2, y2), 50.);
+        paint_ctx.render_ctx.fill(circ, &fg, FillRule::NonZero);
     }
 
     fn layout(
@@ -63,15 +62,15 @@ impl Widget for AnimWidget {
 
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
         if event.count > 0 {
-            let anim = Animation::with_duration(1.0)
-                .adding_component("a_float", AnimationCurve::Linear, 1.0, 600.0)
+            let anim = Animation::with_duration(2.0)
+                .adding_component("a_float", AnimationCurve::OutElastic, 1.0, 350.0)
                 .adding_component(
                     "a_color",
                     AnimationCurve::Linear,
                     0xFF_00_00_FF,
                     0x00_00_FF_FF,
                 )
-                .looping(true)
+                //.looping(true)
                 .reversing(true);
             ctx.animate(anim);
         }
