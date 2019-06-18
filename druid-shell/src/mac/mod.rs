@@ -408,7 +408,8 @@ impl WindowHandle {
             current_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps);
             if let Some(ref nsview) = self.nsview {
                 let window: id = msg_send![*nsview.load(), window];
-                window.makeKeyAndOrderFront_(nil)
+                window.makeKeyAndOrderFront_(nil);
+                window.setLevel_(0)
             }
         }
     }
