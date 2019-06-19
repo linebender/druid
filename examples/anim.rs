@@ -14,22 +14,17 @@
 
 //! Example of animation frames.
 
-extern crate druid;
-extern crate druid_shell;
-extern crate kurbo;
-extern crate piet;
-
-use kurbo::Line;
-use piet::RenderContext;
+use druid::kurbo::Line;
+use druid::piet::RenderContext;
 
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::{Ui, UiMain, UiState};
-
 use druid::widget::Widget;
-use druid::{BoxConstraints, Geometry, LayoutResult};
-use druid::{HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx};
+use druid::{
+    BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, MouseEvent, PaintCtx, Ui,
+    UiMain, UiState,
+};
 
 /// A custom widget with animations.
 struct AnimWidget(f32);

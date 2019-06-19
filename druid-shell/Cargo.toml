@@ -12,8 +12,8 @@ edition = "2018"
 default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
-piet-common = "0.0.2"
-piet = "0.0.2"
+piet-common = { path = "../../fontville/piet/piet-common" }
+#piet-common = "0.0.2"
 
 lazy_static = "1.0"
 time = "0.1.39"
@@ -32,6 +32,3 @@ cocoa = "0.18.4"
 objc = "0.2.5"
 core-graphics = "0.17.3"
 cairo-rs = { version = "0.5.0", default_features = false }
-
-[dev-dependencies]
-kurbo = "0.2.1"

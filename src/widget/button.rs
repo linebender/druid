@@ -16,9 +16,8 @@
 
 use std::any::Any;
 
-use kurbo::Rect;
-use piet::{FillRule, FontBuilder, RenderContext, Text, TextLayoutBuilder};
-use piet_common::Piet;
+use crate::kurbo::Rect;
+use crate::piet::{FillRule, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
 use crate::widget::Widget;
 use crate::{BoxConstraints, Geometry, LayoutResult};

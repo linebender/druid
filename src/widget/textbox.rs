@@ -20,9 +20,10 @@ use crate::{
     MouseEvent, PaintCtx, Ui,
 };
 
-use kurbo::{Line, Rect};
-use piet::{FillRule, FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
-use piet_common::Piet;
+use crate::kurbo::{Line, Rect};
+use crate::piet::{
+    FillRule, FontBuilder, Piet, RenderContext, Text, TextLayout, TextLayoutBuilder,
+};
 
 const BOX_HEIGHT: f32 = 24.;
 const BORDER_WIDTH: f32 = 2.;

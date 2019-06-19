@@ -14,26 +14,19 @@
 
 //! Sample GUI app.
 
-extern crate druid;
-extern crate druid_shell;
-extern crate kurbo;
-extern crate piet;
-
-use kurbo::Line;
-use piet::RenderContext;
+use druid::kurbo::Line;
+use druid::piet::RenderContext;
 
 use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::widget::{Button, Padding, Row};
-use druid::{FileDialogOptions, FileDialogType};
-use druid::{Ui, UiMain, UiState};
-
-use druid::widget::Widget;
-use druid::{BoxConstraints, Geometry, LayoutResult};
-use druid::{Id, LayoutCtx, PaintCtx};
+use druid::widget::{Button, Padding, Row, Widget};
+use druid::{
+    BoxConstraints, FileDialogOptions, FileDialogType, Geometry, Id, LayoutCtx, LayoutResult,
+    PaintCtx, Ui, UiMain, UiState,
+};
 
 const COMMAND_EXIT: u32 = 0x100;
 const COMMAND_OPEN: u32 = 0x101;

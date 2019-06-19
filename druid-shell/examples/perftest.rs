@@ -12,19 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate druid_shell;
-extern crate kurbo;
-extern crate piet;
-extern crate piet_common;
-extern crate time;
-
 use std::any::Any;
 use std::cell::RefCell;
 
 use time::get_time;
 
-use kurbo::{Line, Rect};
-use piet::{FillRule, FontBuilder, RenderContext, Text, TextLayoutBuilder};
+use piet_common::kurbo::{Line, Rect};
+use piet_common::{FillRule, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
 #[cfg(target_os = "windows")]
 use druid_shell::platform::PresentStrategy;
@@ -46,7 +40,7 @@ impl WinHandler for PerfTest {
         self.0.borrow_mut().handle = handle.clone();
     }
 
-    fn paint(&self, rc: &mut piet_common::Piet) -> bool {
+    fn paint(&self, rc: &mut Piet) -> bool {
         let mut state = self.0.borrow_mut();
         let (width, height) = state.size;
         let bg = rc.solid_brush(0x272822ff).unwrap();

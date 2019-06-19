@@ -12,16 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate druid_shell;
-extern crate kurbo;
-extern crate piet;
-extern crate piet_common;
-
 use std::any::Any;
 use std::cell::RefCell;
 
-use kurbo::{Line, Rect};
-use piet::{FillRule, RenderContext};
+use piet_common::kurbo::{Line, Rect};
+use piet_common::{FillRule, RenderContext};
 
 use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 use druid_shell::keycodes::MenuKey;
