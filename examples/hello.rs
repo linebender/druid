@@ -1,4 +1,4 @@
-// Copyright 2018 The xi-editor Authors.
+// Copyright 2019 The xi-editor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,41 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Example of sending external events to the UI.
-
-extern crate druid;
-extern crate druid_shell;
-
-use std::{thread, time};
-
+use druid::{UiMain, UiState, WidgetBase};
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::widget::Label;
-use druid::{UiMain, UiState};
+use druid::widget::{Column, Label};
 
 fn main() {
     druid_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
-    let mut state = UiState::new();
-    let label = Label::new("Initial state").ui(&mut state);
-    state.set_root(label);
+    let mut root = Column::new();
+    let label1 = WidgetBase::new(Label::new("label1")).boxed();
+    let label2 = WidgetBase::new(Label::new("label2")).boxed();
+    root.add_child(label1, 1.0);
+    root.add_child(label2, 1.0);
+    let state = UiState::new(WidgetBase::new(root).boxed());
+    builder.set_title("Hello example");
     builder.set_handler(Box::new(UiMain::new(state)));
-    builder.set_title("Ext event example");
     let window = builder.build().unwrap();
-    let idle_handle = window.get_idle_handle().unwrap();
-
-    // This will be set from the idle handler, updated just after the window is shown.
-    UiMain::send_ext(&idle_handle, label, "New state".to_string());
-
-    // Illustration of injecting events from another thread.
-    thread::spawn(move || {
-        thread::sleep(time::Duration::from_millis(1000));
-        UiMain::send_ext(&idle_handle, label, "State updated from thread".to_string());
-    });
-
     window.show();
     run_loop.run();
 }
