@@ -52,7 +52,7 @@ use direct2d;
 use direct2d::math::SizeU;
 use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarget};
 
-use piet::RenderContext;
+use piet_common::{Piet, RenderContext};
 
 use crate::menu::Menu;
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
@@ -215,7 +215,7 @@ impl MyWndProc {
         rt.begin_draw();
         let anim;
         {
-            let mut piet_ctx = piet_common::Piet::new(&self.d2d_factory, &self.dwrite_factory, rt);
+            let mut piet_ctx = Piet::new(&self.d2d_factory, &self.dwrite_factory, rt);
             anim = self.handler.paint(&mut piet_ctx);
             if let Err(e) = piet_ctx.finish() {
                 // TODO: use proper log infrastructure

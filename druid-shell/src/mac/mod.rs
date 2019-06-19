@@ -40,8 +40,7 @@ use std::sync::{Arc, Mutex, Weak};
 
 use cairo::{Context, QuartzSurface};
 
-use piet::RenderContext;
-use piet_common::Piet;
+use piet_common::{Piet, RenderContext};
 
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;

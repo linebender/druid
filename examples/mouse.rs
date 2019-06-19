@@ -14,24 +14,17 @@
 
 //! Sample GUI app.
 
-extern crate druid;
-extern crate druid_shell;
-extern crate kurbo;
-extern crate piet;
-
-use kurbo::Rect;
-use piet::FillRule;
-use piet::RenderContext;
+use druid::kurbo::Rect;
+use druid::piet::{FillRule, RenderContext};
 
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::{Ui, UiMain, UiState};
-
 use druid::widget::{ScrollEvent, Widget};
-use druid::HandlerCtx;
-use druid::{BoxConstraints, Geometry, LayoutResult};
-use druid::{Id, LayoutCtx, PaintCtx};
+use druid::{
+    BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, PaintCtx, Ui, UiMain,
+    UiState,
+};
 
 struct FooWidget {
     pos: (f64, f64),

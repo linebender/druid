@@ -19,8 +19,8 @@ use crate::{
     BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, MouseEvent, PaintCtx, Ui,
 };
 
-use kurbo::Rect;
-use piet::{FillRule, RenderContext};
+use crate::kurbo::Rect;
+use crate::piet::{FillRule, RenderContext};
 
 const BOX_HEIGHT: f64 = 24.;
 

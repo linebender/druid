@@ -14,6 +14,8 @@
 
 //! Simple entity-component-system based GUI.
 
+pub use druid_shell::{kurbo, piet};
+
 use std::any::Any;
 use std::cell::RefCell;
 use std::char;
@@ -23,7 +25,7 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::time::Instant;
 
-use piet::RenderContext;
+use druid_shell::piet::{Piet, RenderContext};
 
 use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
@@ -180,7 +182,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     is_active: bool,
     is_hot: bool,
     is_focused: bool,
-    pub render_ctx: &'a mut piet_common::Piet<'b>,
+    pub render_ctx: &'a mut Piet<'b>,
 }
 
 #[derive(Debug)]
@@ -649,7 +651,7 @@ impl Ui {
     // The following methods are really UiState methods, but don't need access to listeners
     // so are more concise to implement here.
 
-    fn paint(&mut self, render_ctx: &mut piet_common::Piet, root: Id) {
+    fn paint(&mut self, render_ctx: &mut Piet, root: Id) {
         // Do pre-order traversal on graph, painting each node in turn.
         //
         // Implemented as a recursion, but we could use an explicit queue instead.
@@ -922,7 +924,7 @@ impl WinHandler for UiMain {
         state.dispatch_events();
     }
 
-    fn paint(&self, paint_ctx: &mut piet_common::Piet) -> bool {
+    fn paint(&self, paint_ctx: &mut Piet) -> bool {
         let mut state = self.state.borrow_mut();
         state.anim_frame();
         {
