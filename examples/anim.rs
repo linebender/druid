@@ -15,7 +15,7 @@
 //! Example of animation frames.
 
 use druid::kurbo::Line;
-use druid::piet::RenderContext;
+use druid::piet::{Color, RenderContext};
 
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
@@ -26,12 +26,14 @@ use druid::{
     UiMain, UiState,
 };
 
+const BG_COLOR: Color = Color::rgb24(0xfb_f8_ef);
+
 /// A custom widget with animations.
 struct AnimWidget(f32);
 
 impl Widget for AnimWidget {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let fg = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
+        let fg = paint_ctx.render_ctx.solid_brush(BG_COLOR);
         let (x, y) = geom.pos;
         paint_ctx.render_ctx.stroke(
             Line::new(

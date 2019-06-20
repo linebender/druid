@@ -16,7 +16,7 @@ use std::any::Any;
 use std::cell::RefCell;
 
 use piet_common::kurbo::{Line, Rect};
-use piet_common::{FillRule, RenderContext};
+use piet_common::{Color, FillRule, RenderContext};
 
 use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 use druid_shell::keycodes::MenuKey;
@@ -24,6 +24,9 @@ use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 use druid_shell::window::{MouseEvent, WinHandler, WindowHandle};
+
+const BG_COLOR: Color = Color::rgb24(0x27_28_22);
+const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 
 #[derive(Default)]
 struct HelloState {
@@ -37,8 +40,8 @@ impl WinHandler for HelloState {
     }
 
     fn paint(&self, rc: &mut piet_common::Piet) -> bool {
-        let bg = rc.solid_brush(0x272822ff).unwrap();
-        let fg = rc.solid_brush(0xf0f0eaff).unwrap();
+        let bg = rc.solid_brush(BG_COLOR);
+        let fg = rc.solid_brush(FG_COLOR);
         let (width, height) = *self.size.borrow();
         let rect = Rect::new(0.0, 0.0, width, height);
         rc.fill(rect, &bg, FillRule::NonZero);

@@ -15,7 +15,7 @@
 //! Sample GUI app.
 
 use druid::kurbo::Line;
-use druid::piet::RenderContext;
+use druid::piet::{Color, RenderContext};
 
 use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
@@ -28,6 +28,7 @@ use druid::{
     PaintCtx, Ui, UiMain, UiState,
 };
 
+const STROKECOLOR: Color = Color::rgb24(0xfb_f8_ef);
 const COMMAND_EXIT: u32 = 0x100;
 const COMMAND_OPEN: u32 = 0x101;
 
@@ -36,7 +37,7 @@ struct FooWidget;
 
 impl Widget for FooWidget {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let fg = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
+        let fg = paint_ctx.render_ctx.solid_brush(STROKECOLOR);
 
         let (x, y) = geom.pos;
         paint_ctx.render_ctx.stroke(

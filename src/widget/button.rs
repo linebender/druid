@@ -17,11 +17,16 @@
 use std::any::Any;
 
 use crate::kurbo::Rect;
-use crate::piet::{FillRule, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
+use crate::piet::{Color, FillRule, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
 use crate::widget::Widget;
 use crate::{BoxConstraints, Geometry, LayoutResult};
 use crate::{HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, Ui};
+
+const BUTTON_BG_COLOR: Color = Color::rgba32(0x40_40_48_ff);
+const BUTTON_HOVER_COLOR: Color = Color::rgba32(0x50_50_58_ff);
+const BUTTON_PRESSED_COLOR: Color = Color::rgba32(0x60_60_68_ff);
+const LABEL_TEXT_COLOR: Color = Color::rgba32(0xf0_f0_ea_ff);
 
 /// A text label with no interaction.
 pub struct Label {
@@ -64,7 +69,7 @@ impl Widget for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
-        let brush = paint_ctx.render_ctx.solid_brush(0xf0f0eaff).unwrap();
+        let brush = paint_ctx.render_ctx.solid_brush(LABEL_TEXT_COLOR);
 
         let pos = (geom.pos.0, geom.pos.1 + font_size);
         paint_ctx.render_ctx.draw_text(&text_layout, pos, &brush);
@@ -111,11 +116,11 @@ impl Widget for Button {
             let is_active = paint_ctx.is_active();
             let is_hot = paint_ctx.is_hot();
             let bg_color = match (is_active, is_hot) {
-                (true, true) => 0x606068ff,
-                (false, true) => 0x505058ff,
-                _ => 0x404048ff,
+                (true, true) => BUTTON_PRESSED_COLOR,
+                (false, true) => BUTTON_HOVER_COLOR,
+                _ => BUTTON_BG_COLOR,
             };
-            let brush = paint_ctx.render_ctx.solid_brush(bg_color).unwrap();
+            let brush = paint_ctx.render_ctx.solid_brush(bg_color);
             let (x, y) = geom.pos;
             let (width, height) = geom.size;
             let rect = Rect::new(

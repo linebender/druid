@@ -20,9 +20,11 @@ use crate::widget::Widget;
 use crate::{BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, PaintCtx, Ui};
 
 use crate::kurbo::Rect;
-use crate::piet::{FillRule, RenderContext};
+use crate::piet::{Color, FillRule, RenderContext};
 
 const BOX_HEIGHT: f64 = 24.;
+const BACKGROUND_COLOR: Color = Color::rgb24(0x55_55_55);
+const BAR_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 
 pub struct ProgressBar {
     value: f64,
@@ -41,11 +43,8 @@ impl ProgressBar {
 
 impl Widget for ProgressBar {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let background_color = 0x55_55_55_ff;
-        let bar_color = 0xf0f0eaff;
-
         //Paint the background
-        let brush = paint_ctx.render_ctx.solid_brush(background_color).unwrap();
+        let brush = paint_ctx.render_ctx.solid_brush(BACKGROUND_COLOR);
 
         let (x, y) = geom.pos;
         let (width, height) = geom.size;
@@ -59,7 +58,7 @@ impl Widget for ProgressBar {
         paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
 
         //Paint the bar
-        let brush = paint_ctx.render_ctx.solid_brush(bar_color).unwrap();
+        let brush = paint_ctx.render_ctx.solid_brush(BAR_COLOR);
 
         let (width, height) = geom.size;
         let (x, y) = geom.pos;

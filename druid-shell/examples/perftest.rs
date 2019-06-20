@@ -18,7 +18,7 @@ use std::cell::RefCell;
 use time::get_time;
 
 use piet_common::kurbo::{Line, Rect};
-use piet_common::{FillRule, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
+use piet_common::{Color, FillRule, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
 #[cfg(target_os = "windows")]
 use druid_shell::platform::PresentStrategy;
@@ -26,6 +26,9 @@ use druid_shell::platform::PresentStrategy;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 use druid_shell::window::{WinHandler, WindowHandle};
+
+const BG_COLOR: Color = Color::rgb24(0x27_28_22);
+const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 
 struct PerfTest(RefCell<PerfState>);
 
@@ -43,8 +46,8 @@ impl WinHandler for PerfTest {
     fn paint(&self, rc: &mut Piet) -> bool {
         let mut state = self.0.borrow_mut();
         let (width, height) = state.size;
-        let bg = rc.solid_brush(0x272822ff).unwrap();
-        let fg = rc.solid_brush(0xf0f0eaff).unwrap();
+        let bg = rc.solid_brush(BG_COLOR);
+        let fg = rc.solid_brush(FG_COLOR);
         let rect = Rect::new(0.0, 0.0, width, height);
         rc.fill(rect, &bg, FillRule::NonZero);
 

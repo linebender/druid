@@ -22,8 +22,13 @@ use crate::{
 
 use crate::kurbo::{Line, Rect};
 use crate::piet::{
-    FillRule, FontBuilder, Piet, RenderContext, Text, TextLayout, TextLayoutBuilder,
+    Color, FillRule, FontBuilder, Piet, RenderContext, Text, TextLayout, TextLayoutBuilder,
 };
+
+const ACTIVE_BORDER_COLOR: Color = Color::rgb24(0xff_00_00);
+const INACTIVE_BORDER_COLOR: Color = Color::rgb24(0x55_55_55);
+const TEXT_COLOR: Color = Color::rgb24(0xf0_f0_ea);
+const CURSOR_COLOR: Color = Color::WHITE;
 
 const BOX_HEIGHT: f32 = 24.;
 const BORDER_WIDTH: f32 = 2.;
@@ -82,17 +87,12 @@ impl TextBox {
 impl Widget for TextBox {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
         let border_color = if paint_ctx.is_focused() {
-            // Create active color
-            0xff_00_00_ff
+            ACTIVE_BORDER_COLOR
         } else {
-            // Create inactive color
-            0x55_55_55_ff
+            INACTIVE_BORDER_COLOR
         };
-
-        let text_color = 0xf0f0eaff;
-
         // Paint the border
-        let brush = paint_ctx.render_ctx.solid_brush(border_color).unwrap();
+        let brush = paint_ctx.render_ctx.solid_brush(border_color);
 
         let (x, y) = geom.pos;
         let (width, height) = geom.size;
@@ -117,7 +117,7 @@ impl Widget for TextBox {
         // Paint the text
         let font_size = BOX_HEIGHT - 4.;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
-        let brush = paint_ctx.render_ctx.solid_brush(text_color).unwrap();
+        let brush = paint_ctx.render_ctx.solid_brush(TEXT_COLOR);
 
         let pos = (geom.pos.0, geom.pos.1 + font_size);
 
@@ -132,7 +132,7 @@ impl Widget for TextBox {
 
                 // Paint the cursor if focused
                 if focused {
-                    let brush = rc.solid_brush(0xffffffff).unwrap();
+                    let brush = rc.solid_brush(CURSOR_COLOR);
 
                     let (x, y) = (
                         geom.pos.0 + text_layout.width() as f32 + 2.,
