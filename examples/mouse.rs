@@ -15,7 +15,7 @@
 //! Sample GUI app.
 
 use druid::kurbo::Rect;
-use druid::piet::{FillRule, RenderContext};
+use druid::piet::{Color, FillRule, RenderContext};
 
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
@@ -26,6 +26,9 @@ use druid::{
     UiState,
 };
 
+const BG_COLOR: Color = Color::rgb24(0xfb_f8_ef);
+const MOUSE_BOX_COLOR: Color = Color::rgb24(0xb8_32_5a);
+
 struct FooWidget {
     pos: (f64, f64),
     size: (f64, f64),
@@ -33,9 +36,9 @@ struct FooWidget {
 
 impl Widget for FooWidget {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        paint_ctx.render_ctx.clear(0xfbf8ef);
+        paint_ctx.render_ctx.clear(BG_COLOR);
 
-        let fg = paint_ctx.render_ctx.solid_brush(0xb8325aff).unwrap();
+        let fg = paint_ctx.render_ctx.solid_brush(MOUSE_BOX_COLOR);
         let (x, y) = geom.pos;
         let (x, y) = (x as f64, y as f64);
         let (x, y) = (x + self.pos.0, y + self.pos.1);

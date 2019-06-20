@@ -25,7 +25,7 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::time::Instant;
 
-use druid_shell::piet::{Piet, RenderContext};
+use druid_shell::piet::{Color, Piet, RenderContext};
 
 use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
@@ -38,6 +38,9 @@ pub mod widget;
 use graph::Graph;
 use widget::NullWidget;
 pub use widget::{KeyEvent, KeyVariant, MouseEvent, Widget};
+
+//FIXME: this should come from a theme or environment at some point.
+const BACKGROUND_COLOR: Color = Color::rgb24(0x27_28_22);
 
 /// The top-level handler for the UI.
 ///
@@ -928,7 +931,7 @@ impl WinHandler for UiMain {
         let mut state = self.state.borrow_mut();
         state.anim_frame();
         {
-            paint_ctx.clear(0x272822);
+            paint_ctx.clear(BACKGROUND_COLOR);
         }
         let root = state.graph.root;
         let bc = BoxConstraints::tight(state.inner.layout_ctx.size);

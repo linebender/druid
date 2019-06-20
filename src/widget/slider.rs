@@ -20,9 +20,11 @@ use crate::{
 };
 
 use crate::kurbo::Rect;
-use crate::piet::{FillRule, RenderContext};
+use crate::piet::{Color, FillRule, RenderContext};
 
 const BOX_HEIGHT: f64 = 24.;
+const BACKGROUND_COLOR: Color = Color::rgb24(0x55_55_55);
+const SLIDER_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 
 pub struct Slider {
     value: f64,
@@ -42,11 +44,8 @@ impl Slider {
 
 impl Widget for Slider {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
-        let background_color = 0x55_55_55_ff;
-        let slider_color = 0xf0f0eaff;
-
         //Paint the background
-        let brush = paint_ctx.render_ctx.solid_brush(background_color).unwrap();
+        let brush = paint_ctx.render_ctx.solid_brush(BACKGROUND_COLOR);
 
         let (x, y) = geom.pos;
         let (width, height) = geom.size;
@@ -60,7 +59,7 @@ impl Widget for Slider {
         paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
 
         //Paint the slider
-        let brush = paint_ctx.render_ctx.solid_brush(slider_color).unwrap();
+        let brush = paint_ctx.render_ctx.solid_brush(SLIDER_COLOR);
 
         let (width, height) = geom.size;
         let (width, height) = (width as f64, height as f64);

@@ -12,8 +12,7 @@ edition = "2018"
 default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
-piet-common = { path = "../../fontville/piet/piet-common" }
-#piet-common = "0.0.2"
+piet-common = "0.0.3"
 
 lazy_static = "1.0"
 time = "0.1.39"
