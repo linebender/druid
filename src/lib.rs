@@ -294,7 +294,7 @@ impl UiState {
 
         if let Some(active) = self.layout_ctx.active {
             // Send mouse event directly to active widget.
-            let pos = self.to_local_point(active, pos);
+            let pos = pos - self.offset_of_widget(active);
             dispatch_mouse(
                 &mut self.inner.widgets,
                 active,
@@ -339,6 +339,9 @@ impl UiState {
                 let child_g = self.layout_ctx.geom[*child];
                 let cpos = tpos - child_g.origin();
                 let Size { width, height } = child_g.size();
+
+                //FIXME: when kurbo 0.3.2 lands, we can write:
+                // if child_g.with_origin(Point::ORIGIN).contains(cpos)
                 if cpos.x >= 0.0 && cpos.y >= 0.0 && cpos.x < width && cpos.y < height {
                     child_hot = Some(child);
                     break;
@@ -374,7 +377,7 @@ impl UiState {
         }
 
         if let Some(node) = self.layout_ctx.active.or(new_hot) {
-            let pos = self.to_local_point(node, pos);
+            let pos = pos - self.offset_of_widget(node);
             self.inner.widgets[node].mouse_moved(
                 pos,
                 &mut HandlerCtx {
@@ -482,18 +485,20 @@ impl UiState {
         self.dispatch_events();
     }
 
-    /// Translate coordinates to local coordinates of widget
-    fn to_local_point(&mut self, mut node: Id, mut pos: Point) -> Point {
+    /// Returns a `Vec2` representing the position of this node relative
+    /// to the origin.
+    fn offset_of_widget(&mut self, mut node: Id) -> Vec2 {
+        let mut delta = Vec2::default();
         loop {
             let g = self.layout_ctx.geom[node];
-            pos -= g.origin().to_vec2();
+            delta += g.origin().to_vec2();
             let parent = self.graph.parent[node];
             if parent == node {
                 break;
             }
             node = parent;
         }
-        pos
+        delta
     }
 }
 
@@ -662,7 +667,7 @@ impl Ui {
             &self.layout_ctx.geom,
             &mut paint_ctx,
             root,
-            Point::ZERO,
+            Point::ORIGIN,
             self.layout_ctx.active,
             self.layout_ctx.hot,
             self.layout_ctx.focused,
