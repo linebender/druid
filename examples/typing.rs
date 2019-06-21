@@ -20,7 +20,7 @@ extern crate druid_shell;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::widget::{Column, EventForwarder, KeyListener, Label, Padding, Row};
+use druid::widget::{Column, EventForwarder, KeyListener, Label, Padding};
 use druid::{KeyEvent, KeyVariant, UiMain, UiState};
 
 use druid::Id;
@@ -67,7 +67,7 @@ fn build_typing(ui: &mut UiState) {
     let display = Label::new("".to_string()).ui(ui);
     let row0 = pad(display, ui);
 
-    let mut column = Column::new();
+    let column = Column::new();
 
     let panel = column.ui(&[row0], ui);
     let key_listener = KeyListener::new().ui(panel, ui);

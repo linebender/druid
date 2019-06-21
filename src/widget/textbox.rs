@@ -16,11 +16,11 @@
 
 use crate::widget::Widget;
 use crate::{
-    BoxConstraints, Geometry, HandlerCtx, Id, KeyEvent, KeyVariant, LayoutCtx, LayoutResult,
-    MouseEvent, PaintCtx, Ui,
+    BoxConstraints, HandlerCtx, Id, KeyEvent, KeyVariant, LayoutCtx, LayoutResult, MouseEvent,
+    PaintCtx, Ui,
 };
 
-use crate::kurbo::{Line, Rect};
+use crate::kurbo::{Line, Rect, Size, Vec2};
 use crate::piet::{
     Color, FillRule, FontBuilder, Piet, RenderContext, Text, TextLayout, TextLayoutBuilder,
 };
@@ -30,8 +30,8 @@ const INACTIVE_BORDER_COLOR: Color = Color::rgb24(0x55_55_55);
 const TEXT_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 const CURSOR_COLOR: Color = Color::WHITE;
 
-const BOX_HEIGHT: f32 = 24.;
-const BORDER_WIDTH: f32 = 2.;
+const BOX_HEIGHT: f64 = 24.;
+const BORDER_WIDTH: f64 = 2.;
 
 pub struct TextBox {
     text: String,
@@ -51,10 +51,10 @@ impl TextBox {
         ctx.add(self, &[])
     }
 
-    fn load_font(&mut self, rt: &mut Piet, font_size: f32) {
+    fn load_font(&mut self, rt: &mut Piet, font_size: f64) {
         let font = rt
             .text()
-            .new_font_by_name("Segoe UI", font_size)
+            .new_font_by_name("Segoe UI", font_size as f32)
             .unwrap()
             .build()
             .unwrap();
@@ -62,7 +62,7 @@ impl TextBox {
         self.font = Some(font);
     }
 
-    fn get_layout(&mut self, rt: &mut Piet, font_size: f32) -> <Piet as RenderContext>::TextLayout {
+    fn get_layout(&mut self, rt: &mut Piet, font_size: f64) -> <Piet as RenderContext>::TextLayout {
         // TODO: caching of both the format and the layout
         match &self.font {
             Some(font) => {
@@ -85,7 +85,7 @@ impl TextBox {
 }
 
 impl Widget for TextBox {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Rect) {
         let border_color = if paint_ctx.is_focused() {
             ACTIVE_BORDER_COLOR
         } else {
@@ -93,33 +93,19 @@ impl Widget for TextBox {
         };
         // Paint the border
         let brush = paint_ctx.render_ctx.solid_brush(border_color);
-
-        let (x, y) = geom.pos;
-        let (width, height) = geom.size;
-        let rect = Rect::new(
-            x as f64,
-            y as f64,
-            x as f64 + width as f64,
-            y as f64 + height as f64,
-        );
-
-        let clip_rect = Rect::new(
-            x as f64,
-            y as f64,
-            x as f64 + width as f64 - BORDER_WIDTH as f64,
-            y as f64 + height as f64,
-        );
+        let clip_rect = geom.with_size(Size::new(geom.width() - BORDER_WIDTH, geom.height()));
 
         paint_ctx
             .render_ctx
-            .stroke(rect, &brush, BORDER_WIDTH, None);
+            .stroke(geom, &brush, BORDER_WIDTH, None);
 
         // Paint the text
         let font_size = BOX_HEIGHT - 4.;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
         let brush = paint_ctx.render_ctx.solid_brush(TEXT_COLOR);
 
-        let pos = (geom.pos.0, geom.pos.1 + font_size);
+        let height_delta = Vec2::new(0., font_size);
+        let pos = geom.origin() + height_delta;
 
         let focused = paint_ctx.is_focused();
 
@@ -128,21 +114,15 @@ impl Widget for TextBox {
             .render_ctx
             .with_save(|rc| {
                 rc.clip(clip_rect, FillRule::NonZero);
-                rc.draw_text(&text_layout, pos, &brush);
+                rc.draw_text(&text_layout, pos.to_vec2(), &brush);
 
                 // Paint the cursor if focused
                 if focused {
                     let brush = rc.solid_brush(CURSOR_COLOR);
 
-                    let (x, y) = (
-                        geom.pos.0 + text_layout.width() as f32 + 2.,
-                        geom.pos.1 + 2.,
-                    );
-
-                    let line = Line::new(
-                        (x as f64, y as f64),
-                        (x as f64, y as f64 + font_size as f64),
-                    );
+                    let xy = geom.origin() + Vec2::new(text_layout.width() as f64 + 2., 2.);
+                    let x2y2 = xy + height_delta;
+                    let line = Line::new(xy, x2y2);
 
                     rc.stroke(line, &brush, 1., None);
                 }
@@ -155,10 +135,10 @@ impl Widget for TextBox {
         &mut self,
         bc: &BoxConstraints,
         _children: &[Id],
-        _size: Option<(f32, f32)>,
+        _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain((self.width as f32, BOX_HEIGHT)))
+        LayoutResult::Size(bc.constrain(Size::new(self.width, BOX_HEIGHT)))
     }
 
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {

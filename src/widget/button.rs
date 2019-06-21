@@ -16,11 +16,11 @@
 
 use std::any::Any;
 
-use crate::kurbo::Rect;
+use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Color, FillRule, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
 use crate::widget::Widget;
-use crate::{BoxConstraints, Geometry, LayoutResult};
+use crate::{BoxConstraints, LayoutResult};
 use crate::{HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, Ui};
 
 const BUTTON_BG_COLOR: Color = Color::rgba32(0x40_40_48_ff);
@@ -66,24 +66,26 @@ impl Label {
 }
 
 impl Widget for Label {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Rect) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
         let brush = paint_ctx.render_ctx.solid_brush(LABEL_TEXT_COLOR);
 
-        let pos = (geom.pos.0, geom.pos.1 + font_size);
-        paint_ctx.render_ctx.draw_text(&text_layout, pos, &brush);
+        let pos = Point::new(geom.origin().x, geom.origin().y + font_size as f64);
+        paint_ctx
+            .render_ctx
+            .draw_text(&text_layout, pos.to_vec2(), &brush);
     }
 
     fn layout(
         &mut self,
         bc: &BoxConstraints,
         _children: &[Id],
-        _size: Option<(f32, f32)>,
+        _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
         // TODO: measure text properly
-        LayoutResult::Size(bc.constrain((100.0, 17.0)))
+        LayoutResult::Size(bc.constrain(Size::new(100.0, 17.0)))
     }
 
     fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
@@ -111,7 +113,7 @@ impl Button {
 }
 
 impl Widget for Button {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Rect) {
         {
             let is_active = paint_ctx.is_active();
             let is_hot = paint_ctx.is_hot();
@@ -121,15 +123,7 @@ impl Widget for Button {
                 _ => BUTTON_BG_COLOR,
             };
             let brush = paint_ctx.render_ctx.solid_brush(bg_color);
-            let (x, y) = geom.pos;
-            let (width, height) = geom.size;
-            let rect = Rect::new(
-                x as f64,
-                y as f64,
-                x as f64 + width as f64,
-                y as f64 + height as f64,
-            );
-            paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
+            paint_ctx.render_ctx.fill(geom, &brush, FillRule::NonZero);
         }
         self.label.paint(paint_ctx, geom);
     }
@@ -138,7 +132,7 @@ impl Widget for Button {
         &mut self,
         bc: &BoxConstraints,
         children: &[Id],
-        size: Option<(f32, f32)>,
+        size: Option<Size>,
         ctx: &mut LayoutCtx,
     ) -> LayoutResult {
         self.label.layout(bc, children, size, ctx)

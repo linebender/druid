@@ -16,6 +16,8 @@
 
 use std::collections::BTreeMap;
 
+use crate::kurbo::Size;
+
 use crate::widget::Widget;
 use crate::{BoxConstraints, LayoutResult};
 use crate::{Id, LayoutCtx, Ui};
@@ -30,13 +32,13 @@ pub struct Flex {
     // layout continuation state
     phase: Phase,
     ix: usize,
-    minor: f32,
+    minor: f64,
 
     // the total measure of non-flex children
-    total_non_flex: f32,
+    total_non_flex: f64,
 
     // the sum of flex parameters of all children
-    flex_sum: f32,
+    flex_sum: f64,
 }
 
 pub enum Axis {
@@ -55,7 +57,7 @@ enum Phase {
 
 #[derive(Copy, Clone, Default)]
 struct Params {
-    flex: f32,
+    flex: f64,
 }
 
 impl Params {
@@ -70,21 +72,21 @@ impl Params {
 }
 
 impl Axis {
-    fn major(&self, coords: (f32, f32)) -> f32 {
+    fn major(&self, coords: Size) -> f64 {
         match *self {
-            Axis::Horizontal => coords.0,
-            Axis::Vertical => coords.1,
+            Axis::Horizontal => coords.width,
+            Axis::Vertical => coords.height,
         }
     }
 
-    fn minor(&self, coords: (f32, f32)) -> f32 {
+    fn minor(&self, coords: Size) -> f64 {
         match *self {
-            Axis::Horizontal => coords.1,
-            Axis::Vertical => coords.0,
+            Axis::Horizontal => coords.height,
+            Axis::Vertical => coords.width,
         }
     }
 
-    fn pack(&self, major: f32, minor: f32) -> (f32, f32) {
+    fn pack(&self, major: f64, minor: f64) -> (f64, f64) {
         match *self {
             Axis::Horizontal => (major, minor),
             Axis::Vertical => (minor, major),
@@ -133,7 +135,7 @@ impl Flex {
     /// This function is used to set flex for a child widget, and is done while
     /// building, before adding to the UI. Likely we will need to think of other
     /// mechanisms to change parameters dynamically after building.
-    pub fn set_flex(&mut self, child: Id, flex: f32) {
+    pub fn set_flex(&mut self, child: Id, flex: f64) {
         let params = self.get_params_mut(child);
         params.flex = flex;
     }
@@ -173,8 +175,9 @@ impl Flex {
             ctx.position_child(child, self.direction.pack(major, 0.0));
             major += self.direction.major(ctx.get_child_size(child));
         }
-        let total_major = self.direction.major((bc.max_width, bc.max_height));
-        LayoutResult::Size(self.direction.pack(total_major, self.minor))
+        let total_major = self.direction.major(bc.max);
+        let (width, height) = self.direction.pack(total_major, self.minor);
+        LayoutResult::Size(Size::new(width, height))
     }
 }
 
@@ -183,7 +186,7 @@ impl Widget for Flex {
         &mut self,
         bc: &BoxConstraints,
         children: &[Id],
-        size: Option<(f32, f32)>,
+        size: Option<Size>,
         ctx: &mut LayoutCtx,
     ) -> LayoutResult {
         if let Some(size) = size {
@@ -209,7 +212,7 @@ impl Widget for Flex {
         } else {
             // Start layout process, no children measured yet.
             if children.is_empty() {
-                return LayoutResult::Size((bc.min_width, bc.min_height));
+                return LayoutResult::Size(bc.min);
             }
             if let Some(ix) = self.get_next_child(children, 0, Phase::NonFlex) {
                 self.ix = ix;
@@ -221,30 +224,26 @@ impl Widget for Flex {
             }
             self.total_non_flex = 0.0;
             self.flex_sum = children.iter().map(|id| self.get_params(*id).flex).sum();
-            self.minor = self.direction.minor((bc.min_width, bc.min_height));
+            self.minor = self.direction.minor(bc.min);
         }
         let (min_major, max_major) = if self.phase == Phase::NonFlex {
-            (0.0, ::std::f32::INFINITY)
+            (0.0, ::std::f64::INFINITY)
         } else {
-            let total_major = self.direction.major((bc.max_width, bc.max_height));
+            let total_major = self.direction.major(bc.max);
             // TODO: should probably max with 0.0 to avoid negative sizes
             let remaining = total_major - self.total_non_flex;
             let major = remaining * self.get_params(children[self.ix]).flex / self.flex_sum;
             (major, major)
         };
         let child_bc = match self.direction {
-            Axis::Horizontal => BoxConstraints {
-                min_width: min_major,
-                max_width: max_major,
-                min_height: bc.min_height,
-                max_height: bc.max_height,
-            },
-            Axis::Vertical => BoxConstraints {
-                min_width: bc.min_width,
-                max_width: bc.max_width,
-                min_height: min_major,
-                max_height: max_major,
-            },
+            Axis::Horizontal => BoxConstraints::new(
+                Size::new(min_major, bc.min.height),
+                Size::new(max_major, bc.max.height),
+            ),
+            Axis::Vertical => BoxConstraints::new(
+                Size::new(bc.min.width, min_major),
+                Size::new(bc.max.width, max_major),
+            ),
         };
         LayoutResult::RequestChild(children[self.ix], child_bc)
     }

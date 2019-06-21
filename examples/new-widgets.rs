@@ -17,12 +17,8 @@
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::widget::{
-    Column, EventForwarder, KeyListener, Label, Padding, ProgressBar, Row, Slider, TextBox,
-};
-use druid::{KeyEvent, KeyVariant, UiMain, UiState};
-
-use druid::Id;
+use druid::widget::{Column, Label, Padding, ProgressBar, Row, Slider, TextBox};
+use druid::{Id, UiMain, UiState};
 
 fn pad(widget: Id, state: &mut UiState) -> Id {
     Padding::uniform(5.0).ui(widget, state)

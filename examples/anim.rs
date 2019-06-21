@@ -14,7 +14,7 @@
 
 //! Example of animation frames.
 
-use druid::kurbo::Line;
+use druid::kurbo::{Line, Rect, Size, Vec2};
 use druid::piet::{Color, RenderContext};
 
 use druid_shell::platform::WindowBuilder;
@@ -22,26 +22,22 @@ use druid_shell::win_main;
 
 use druid::widget::Widget;
 use druid::{
-    BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, MouseEvent, PaintCtx, Ui,
-    UiMain, UiState,
+    BoxConstraints, HandlerCtx, Id, LayoutCtx, LayoutResult, MouseEvent, PaintCtx, Ui, UiMain,
+    UiState,
 };
 
 const BG_COLOR: Color = Color::rgb24(0xfb_f8_ef);
 
 /// A custom widget with animations.
-struct AnimWidget(f32);
+struct AnimWidget(f64);
 
 impl Widget for AnimWidget {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Rect) {
         let fg = paint_ctx.render_ctx.solid_brush(BG_COLOR);
-        let (x, y) = geom.pos;
         paint_ctx.render_ctx.stroke(
             Line::new(
-                (x as f64, y as f64),
-                (
-                    x as f64 + geom.size.0 as f64,
-                    y as f64 + self.0 as f64 * geom.size.1 as f64,
-                ),
+                geom.origin(),
+                geom.origin() + Vec2::new(geom.width(), self.0 * geom.height()),
             ),
             &fg,
             1.0,
@@ -53,17 +49,17 @@ impl Widget for AnimWidget {
         &mut self,
         bc: &BoxConstraints,
         _children: &[Id],
-        _size: Option<(f32, f32)>,
+        _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain((100.0, 100.0)))
+        LayoutResult::Size(bc.constrain(Size::new(100.0, 100.0)))
     }
 
     fn anim_frame(&mut self, interval: u64, ctx: &mut HandlerCtx) {
         println!("anim frame, interval={}", interval);
         if self.0 > 0.0 {
             ctx.request_anim_frame();
-            self.0 = (self.0 - 1e-9 * (interval as f32)).max(0.0);
+            self.0 = (self.0 - 1e-9 * (interval as f64)).max(0.0);
         }
         ctx.invalidate();
     }

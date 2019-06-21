@@ -17,9 +17,9 @@
 use std::any::Any;
 
 use crate::widget::Widget;
-use crate::{BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, PaintCtx, Ui};
+use crate::{BoxConstraints, HandlerCtx, Id, LayoutCtx, LayoutResult, PaintCtx, Ui};
 
-use crate::kurbo::Rect;
+use crate::kurbo::{Rect, Size};
 use crate::piet::{Color, FillRule, RenderContext};
 
 const BOX_HEIGHT: f64 = 24.;
@@ -42,36 +42,18 @@ impl ProgressBar {
 }
 
 impl Widget for ProgressBar {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Rect) {
         //Paint the background
         let brush = paint_ctx.render_ctx.solid_brush(BACKGROUND_COLOR);
 
-        let (x, y) = geom.pos;
-        let (width, height) = geom.size;
-        let rect = Rect::new(
-            x as f64,
-            y as f64,
-            x as f64 + width as f64,
-            y as f64 + height as f64,
-        );
-
-        paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
+        paint_ctx.render_ctx.fill(geom, &brush, FillRule::NonZero);
 
         //Paint the bar
         let brush = paint_ctx.render_ctx.solid_brush(BAR_COLOR);
 
-        let (width, height) = geom.size;
-        let (x, y) = geom.pos;
+        let calculated_bar_width = self.value * geom.width() as f64;
 
-        let calculated_bar_width = self.value * width as f64;
-
-        let rect = Rect::new(
-            x as f64,
-            y as f64,
-            x as f64 + calculated_bar_width,
-            y as f64 + height as f64,
-        );
-
+        let rect = geom.with_size(Size::new(calculated_bar_width, geom.height()));
         paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
     }
 
@@ -79,10 +61,10 @@ impl Widget for ProgressBar {
         &mut self,
         bc: &BoxConstraints,
         _children: &[Id],
-        _size: Option<(f32, f32)>,
+        _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain((bc.max_width, BOX_HEIGHT as f32)))
+        LayoutResult::Size(bc.constrain(Size::new(bc.max.width, BOX_HEIGHT as f64)))
     }
 
     fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
