@@ -13,6 +13,7 @@ jobs:
     steps:
       - bash: brew install cairo
         condition: eq(variables['Agent.OS'], 'Darwin')
+        displayName: Install cairo (macOS)
 
       - template: ci/install-rust.yml
         parameters:
@@ -21,7 +22,19 @@ jobs:
       - template: ci/test.yml
         parameters:
           toolchain: stable
+          crate_path: 'druid-shell'
 
       - template: ci/test.yml
         parameters:
           toolchain: nightly
+          crate_path: 'druid-shell'
+
+      - template: ci/test.yml
+        parameters:
+          toolchain: stable
+          crate_path: '.'
+
+      - template: ci/test.yml
+        parameters:
+          toolchain: nightly
+          crate_path: '.'

@@ -7,5 +7,6 @@ steps:
       cargo +${{parameters.toolchain}} test --all || exit
       cargo +${{parameters.toolchain}} test --examples || exit
 
-    displayName: Run cargo check and test on ${{parameters.toolchain}}
+    workingDirectory: '$(Build.SourcesDirectory)/${{parameters.crate_path}}'
+    displayName: Run cargo check and test ${{parameters.crate_path}} on ${{parameters.toolchain}}
 
