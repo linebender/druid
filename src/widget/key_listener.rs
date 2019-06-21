@@ -35,7 +35,7 @@ impl Widget for KeyListener {
     fn key_down(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
         // TODO: maybe some configuration of which keys are handled. Right
         // now we handle everything except a few keys.
-        match event.key_data().key_code {
+        match event.key_code {
             KeyCode::F4 | KeyCode::F10 | KeyCode::Menu => false,
             _other => {
                 ctx.send_event(event.clone());

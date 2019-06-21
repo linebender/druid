@@ -17,30 +17,8 @@
 use std::fmt;
 
 /// A keyboard event, generated on every key press and key release.
-#[derive(Debug, Clone)]
-pub enum KeyEvent {
-    /// A printable key, including enter and tab.
-    Character(KeyData),
-    /// A non-printable key, such as the arrow keys, Home, Backspace, etc.
-    NonCharacter(KeyData),
-    /// An event where only a modifier (shift, alt/option, windows/command/system)
-    /// has changed.
-    ModifierChange(KeyData),
-}
-
-impl KeyEvent {
-    pub fn key_data(&self) -> &KeyData {
-        match self {
-            KeyEvent::Character(data) => data,
-            KeyEvent::NonCharacter(data) => data,
-            KeyEvent::ModifierChange(data) => data,
-        }
-    }
-}
-
-/// The state of a key.
 #[derive(Debug, Clone, Copy)]
-pub struct KeyData {
+pub struct KeyEvent {
     /// The platform independent keycode.
     pub key_code: KeyCode,
     /// Whether or not this event is a repeat (the key was held down)
@@ -58,8 +36,8 @@ pub struct KeyData {
     //TODO: add time
 }
 
-impl KeyData {
-    /// Create a new `KeyData` struct. This accepts either &str or char for the last
+impl KeyEvent {
+    /// Create a new `KeyEvent` struct. This accepts either &str or char for the last
     /// two arguments.
     pub(crate) fn new(
         key_code: impl Into<KeyCode>,
@@ -77,7 +55,7 @@ impl KeyData {
             StrOrChar::Str(s) => TinyStr::new(s),
         };
 
-        KeyData {
+        KeyEvent {
             key_code: key_code.into(),
             is_repeat,
             modifiers,
@@ -117,6 +95,10 @@ pub struct KeyModifiers {
     pub meta: bool,
 }
 
+//NOTE: This was mostly taken from makepad, which I'm sure took it from somewhere else.
+// I've written this out at least once before, for some xi-thing. The best resource
+// I know of for this is probably the MDN keyboard event docs:
+// https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
 /// A platform-independent key identifier. This ignores things like the user's
 /// keyboard layout.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -612,7 +594,7 @@ impl From<char> for TinyStr {
     }
 }
 
-/// A type we use in th constructor of `KeyData`, specifically to avoid exposing
+/// A type we use in th constructor of `KeyEvent`, specifically to avoid exposing
 /// internals.
 pub enum StrOrChar {
     Char(char),
