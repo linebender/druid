@@ -247,12 +247,10 @@ fn build_calc(ui: &mut UiState) {
 fn action_for_key(event: &KeyEvent) -> Option<CalcAction> {
     eprintln!("{:?}", event);
     match event {
-        KeyEvent::Character(data) if data.key_code == KeyCode::Return => Some(CalcAction::Op('=')),
-        KeyEvent::Character(data) => {
-            let ch = data
-                .text()
-                .and_then(|s| s.chars().next())
-                .unwrap_or('\u{0}');
+        e if e.key_code == KeyCode::Return => Some(CalcAction::Op('=')),
+        e if e.key_code == KeyCode::Backspace => Some(CalcAction::Op('⌫')),
+        e if e.key_code.is_printable() => {
+            let ch = e.text().and_then(|s| s.chars().next()).unwrap_or('\u{0}');
             match ch {
                 '0'..='9' => Some(CalcAction::Digit(ch as u8 - b'0')),
                 '.' | '+' | '=' | 'c' | 'C' => Some(CalcAction::Op(ch)),
@@ -262,10 +260,7 @@ fn action_for_key(event: &KeyEvent) -> Option<CalcAction> {
                 _ => None,
             }
         }
-        KeyEvent::NonCharacter(d) if d.key_code == KeyCode::Backspace => {
-            Some(CalcAction::Op('⌫'))
-        }
-        _else => None,
+        _ => None,
     }
 }
 

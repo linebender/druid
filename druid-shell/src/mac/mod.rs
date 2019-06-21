@@ -42,7 +42,7 @@ use cairo::{Context, QuartzSurface};
 
 use piet_common::{Piet, RenderContext};
 
-use crate::keyboard::{KeyData, KeyEvent, KeyModifiers};
+use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
 use crate::window::{MouseButton, MouseEvent, MouseType, WinHandler};
@@ -522,15 +522,6 @@ impl IdleHandle {
 }
 
 fn make_key_event(event: id) -> KeyEvent {
-    let data = make_key_data(event);
-    if data.key_code.is_printable() {
-        KeyEvent::Character(data)
-    } else {
-        KeyEvent::NonCharacter(data)
-    }
-}
-
-fn make_key_data(event: id) -> KeyData {
     unsafe {
         let chars = event.characters();
         let slice = std::slice::from_raw_parts(chars.UTF8String() as *const _, chars.len());
@@ -547,7 +538,7 @@ fn make_key_data(event: id) -> KeyData {
         let is_repeat: bool = msg_send!(event, isARepeat);
         let modifiers = event.modifierFlags();
         let modifiers = make_modifiers(modifiers);
-        KeyData::new(virtual_key, is_repeat, modifiers, text, unmodified_text)
+        KeyEvent::new(virtual_key, is_repeat, modifiers, text, unmodified_text)
     }
 }
 

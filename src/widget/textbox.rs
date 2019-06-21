@@ -16,7 +16,7 @@
 
 use crate::widget::Widget;
 use crate::{
-    BoxConstraints, HandlerCtx, Id, KeyEvent, KeyCode, LayoutCtx, LayoutResult, MouseEvent,
+    BoxConstraints, HandlerCtx, Id, KeyCode, KeyEvent, LayoutCtx, LayoutResult, MouseEvent,
     PaintCtx, Ui,
 };
 
@@ -150,13 +150,14 @@ impl Widget for TextBox {
     }
 
     fn key_down(&mut self, event: &KeyEvent, ctx: &mut HandlerCtx) -> bool {
-        //match on key event
         match event {
-            KeyEvent::Character(data) => self.text.push_str(data.text().unwrap_or("")),
-            KeyEvent::NonCharacter(data) if data.key_code == KeyCode::Backspace => {
+            event if event.key_code == KeyCode::Backspace => {
                 self.text.pop();
             }
-            _other => return false,
+            event if event.key_code.is_printable() => {
+                self.text.push_str(event.text().unwrap_or(""))
+            }
+            _ => return false,
         }
 
         ctx.invalidate();

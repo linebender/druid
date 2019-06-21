@@ -33,14 +33,14 @@ struct TypingState {
 #[derive(Debug, Clone)]
 enum TypingAction {
     Append(String),
-    Delete(),
+    Delete,
 }
 
 impl TypingState {
     fn action(&mut self, action: &TypingAction) {
         match action {
             TypingAction::Append(ch) => self.append(&ch),
-            TypingAction::Delete() => self.delete(),
+            TypingAction::Delete => self.delete(),
         }
     }
 
@@ -91,13 +91,11 @@ fn build_typing(ui: &mut UiState) {
 
 fn action_for_key(event: &KeyEvent) -> Option<TypingAction> {
     match event {
-        KeyEvent::Character(data) => Some(TypingAction::Append(
-            data.text().map(String::from).unwrap_or_default(),
+        e if e.key_code == KeyCode::Backspace => Some(TypingAction::Delete),
+        e if e.key_code.is_printable() => Some(TypingAction::Append(
+            e.text().map(String::from).unwrap_or_default(),
         )),
-        KeyEvent::NonCharacter(data) if data.key_code == KeyCode::Backspace => {
-            Some(TypingAction::Delete())
-        }
-        _other => None,
+        _ => None,
     }
 }
 

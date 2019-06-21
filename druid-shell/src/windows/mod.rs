@@ -60,7 +60,7 @@ use crate::Error;
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 
-use crate::keyboard::{KeyCode, KeyData, KeyEvent, KeyModifiers};
+use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::window::{self, Cursor, MouseButton, MouseEvent, MouseType, WinHandler};
 
 extern "system" {
@@ -421,8 +421,7 @@ impl WndProc for MyWndProc {
 
                 let modifiers = get_mod_state(lparam);
                 let is_repeat = (lparam & 0xFFFF) > 0;
-                let data = KeyData::new(key_code, is_repeat, modifiers, text, text);
-                let event = KeyEvent::Character(data);
+                let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
 
                 if self.handler.key_down(event) {
                     Some(0)
@@ -444,8 +443,7 @@ impl WndProc for MyWndProc {
                 // bits 0-15 of iparam are the repeat count:
                 // https://docs.microsoft.com/en-ca/windows/desktop/inputdev/wm-keydown
                 let is_repeat = (lparam & 0xFFFF) > 0;
-                let data = KeyData::new(key_code, is_repeat, modifiers, "", "");
-                let event = KeyEvent::NonCharacter(data);
+                let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
 
                 if self.handler.key_down(event) {
                     Some(0)
@@ -460,12 +458,7 @@ impl WndProc for MyWndProc {
                 let modifiers = get_mod_state(lparam);
                 let is_repeat = false;
                 let text = s.stashed_char.take();
-                let data = KeyData::new(key_code, is_repeat, modifiers, text, text);
-                let event = if key_code.is_printable() {
-                    KeyEvent::Character(data)
-                } else {
-                    KeyEvent::NonCharacter(data)
-                };
+                let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
                 self.handler.key_up(event);
                 Some(0)
             }
