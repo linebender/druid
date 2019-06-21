@@ -14,7 +14,7 @@
 
 //! Simple entity-component-system based GUI.
 
-pub use druid_shell::{kurbo, piet};
+pub use druid_shell::{self as shell, kurbo, piet};
 
 use std::any::Any;
 use std::cell::RefCell;
@@ -958,7 +958,7 @@ impl WinHandler for UiMain {
         let mut state = self.state.borrow_mut();
         state.handle_scroll(&window::ScrollEvent {
             dx: 0.0,
-            dy: dy as f32,
+            dy: dy as f64,
             mods,
         });
     }
@@ -966,7 +966,7 @@ impl WinHandler for UiMain {
     fn mouse_hwheel(&self, dx: i32, mods: u32) {
         let mut state = self.state.borrow_mut();
         state.handle_scroll(&window::ScrollEvent {
-            dx: dx as f32,
+            dx: dx as f64,
             dy: 0.0,
             mods,
         });

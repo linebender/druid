@@ -165,11 +165,3 @@ pub struct MouseEvent {
     /// Count of multiple clicks, is 0 for mouse up event.
     pub count: u32,
 }
-
-#[derive(Debug, Clone)]
-pub enum KeyVariant {
-    /// A virtual-key code, same as WM_KEYDOWN message.
-    Vkey(i32),
-    /// A Unicode character.
-    Char(char),
-}

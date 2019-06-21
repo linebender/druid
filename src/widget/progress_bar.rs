@@ -51,7 +51,7 @@ impl Widget for ProgressBar {
         //Paint the bar
         let brush = paint_ctx.render_ctx.solid_brush(BAR_COLOR);
 
-        let calculated_bar_width = self.value * geom.width() as f64;
+        let calculated_bar_width = self.value * geom.width();
 
         let rect = geom.with_size(Size::new(calculated_bar_width, geom.height()));
         paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
@@ -64,7 +64,7 @@ impl Widget for ProgressBar {
         _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain(Size::new(bc.max.width, BOX_HEIGHT as f64)))
+        LayoutResult::Size(bc.constrain((bc.max.width, BOX_HEIGHT)))
     }
 
     fn poke(&mut self, payload: &mut dyn Any, ctx: &mut HandlerCtx) -> bool {

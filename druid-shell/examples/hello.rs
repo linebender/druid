@@ -23,7 +23,7 @@ use druid_shell::keyboard::KeyEvent;
 use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
-use druid_shell::win_main;
+use druid_shell::runloop;
 use druid_shell::window::{MouseEvent, WinHandler, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb24(0x27_28_22);
@@ -96,7 +96,7 @@ impl WinHandler for HelloState {
     }
 
     fn destroy(&self) {
-        win_main::request_quit();
+        runloop::request_quit();
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -113,7 +113,7 @@ fn main() {
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "&File");
 
-    let mut run_loop = win_main::RunLoop::new();
+    let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");

@@ -17,9 +17,7 @@
 use druid::kurbo::{Point, Rect, Size};
 use druid::piet::{Color, FillRule, RenderContext};
 
-use druid_shell::platform::WindowBuilder;
-use druid_shell::win_main;
-
+use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{ScrollEvent, Widget};
 use druid::{
     BoxConstraints, HandlerCtx, Id, LayoutCtx, LayoutResult, PaintCtx, Ui, UiMain, UiState,
@@ -53,7 +51,7 @@ impl Widget for FooWidget {
         _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain(Size::new(100.0, 100.0)))
+        LayoutResult::Size(bc.constrain((100.0, 100.0)))
     }
 
     fn scroll(&mut self, event: &ScrollEvent, ctx: &mut HandlerCtx) {
@@ -84,7 +82,7 @@ impl FooWidget {
 fn main() {
     druid_shell::init();
 
-    let mut run_loop = win_main::RunLoop::new();
+    let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut state = UiState::new();
     let foo = FooWidget::new().ui(&mut state);

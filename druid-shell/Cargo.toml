@@ -1,6 +1,6 @@
 [package]
 name = "druid-shell"
-version = "0.2.0"
+version = "0.3.0"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Platform abstracting application shell used for druid toolkit."
@@ -12,7 +12,7 @@ edition = "2018"
 default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
-piet-common = "0.0.3"
+piet-common = "0.0.4"
 
 lazy_static = "1.0"
 time = "0.1.39"

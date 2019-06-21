@@ -14,8 +14,7 @@
 
 //! Simple textbox example.
 
-use druid_shell::platform::WindowBuilder;
-use druid_shell::win_main;
+use druid::shell::{runloop, WindowBuilder};
 
 use druid::widget::{Column, Label, Padding, ProgressBar, Row, Slider, TextBox};
 use druid::{Id, KeyEvent, UiMain, UiState};
@@ -25,9 +24,9 @@ fn pad(widget: Id, state: &mut UiState) -> Id {
 }
 
 fn main() {
-    druid_shell::init();
+    druid::shell::init();
 
-    let mut run_loop = win_main::RunLoop::new();
+    let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut state = UiState::new();
 

@@ -16,9 +16,7 @@
 
 use druid::kurbo::{Line, Rect, Size, Vec2};
 use druid::piet::{Color, RenderContext};
-
-use druid_shell::platform::WindowBuilder;
-use druid_shell::win_main;
+use druid::shell::{runloop, WindowBuilder};
 
 use druid::widget::Widget;
 use druid::{
@@ -52,7 +50,7 @@ impl Widget for AnimWidget {
         _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain(Size::new(100.0, 100.0)))
+        LayoutResult::Size(bc.constrain((100.0, 100.0)))
     }
 
     fn anim_frame(&mut self, interval: u64, ctx: &mut HandlerCtx) {
@@ -80,9 +78,9 @@ impl AnimWidget {
 }
 
 fn main() {
-    druid_shell::init();
+    druid::shell::init();
 
-    let mut run_loop = win_main::RunLoop::new();
+    let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut state = UiState::new();
     let anim = AnimWidget(1.0).ui(&mut state);
