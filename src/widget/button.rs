@@ -49,7 +49,7 @@ impl Label {
         ctx.add(self, &[])
     }
 
-    fn get_layout(&self, rt: &mut Piet, font_size: f32) -> <Piet as RenderContext>::TextLayout {
+    fn get_layout(&self, rt: &mut Piet, font_size: f64) -> <Piet as RenderContext>::TextLayout {
         // TODO: caching of both the format and the layout
         let font = rt
             .text()
@@ -71,10 +71,8 @@ impl Widget for Label {
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
         let brush = paint_ctx.render_ctx.solid_brush(LABEL_TEXT_COLOR);
 
-        let pos = Point::new(geom.origin().x, geom.origin().y + font_size as f64);
-        paint_ctx
-            .render_ctx
-            .draw_text(&text_layout, pos.to_vec2(), &brush);
+        let pos = Point::new(geom.origin().x, geom.origin().y + font_size);
+        paint_ctx.render_ctx.draw_text(&text_layout, pos, &brush);
     }
 
     fn layout(
@@ -85,7 +83,7 @@ impl Widget for Label {
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
         // TODO: measure text properly
-        LayoutResult::Size(bc.constrain(Size::new(100.0, 17.0)))
+        LayoutResult::Size(bc.constrain((100.0, 17.0)))
     }
 
     fn poke(&mut self, payload: &mut dyn Any, ctx: &mut HandlerCtx) -> bool {

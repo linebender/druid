@@ -164,9 +164,9 @@ pub enum Cursor {
 #[derive(Debug)]
 pub struct ScrollEvent {
     /// The scroll wheel’s horizontal delta.
-    pub dx: f32,
+    pub dx: f64,
     /// The scroll wheel’s vertical delta.
-    pub dy: f32,
+    pub dy: f64,
     /// Modifiers, as in raw WM message
     pub mods: u32,
 }

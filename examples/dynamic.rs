@@ -14,13 +14,9 @@
 
 //! An example of dynamic graph mutation.
 
-extern crate druid;
-extern crate druid_shell;
-
 use std::collections::BTreeMap;
 
-use druid_shell::platform::WindowBuilder;
-use druid_shell::win_main;
+use druid::shell::{runloop, WindowBuilder};
 
 use druid::widget::{Button, Column, EventForwarder, Label, Padding, Row};
 use druid::{Id, UiMain, UiState};
@@ -41,9 +37,9 @@ enum Action {
 }
 
 fn main() {
-    druid_shell::init();
+    druid::shell::init();
 
-    let mut run_loop = win_main::RunLoop::new();
+    let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut state = UiState::new();
     let label = Label::new("Selection: None").ui(&mut state);

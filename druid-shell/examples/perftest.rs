@@ -25,7 +25,7 @@ use druid_shell::platform::PresentStrategy;
 
 use druid_shell::keyboard::KeyEvent;
 use druid_shell::platform::WindowBuilder;
-use druid_shell::win_main;
+use druid_shell::runloop;
 use druid_shell::window::{WinHandler, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb24(0x27_28_22);
@@ -94,7 +94,7 @@ impl WinHandler for PerfTest {
         let x0 = 210.0;
         let y0 = 10.0;
         for i in 0..60 {
-            let y = y0 + (i as f32) * dy;
+            let y = y0 + (i as f64) * dy;
             rc.draw_text(&layout, (x0, y), &fg);
         }
 
@@ -123,7 +123,7 @@ impl WinHandler for PerfTest {
     }
 
     fn destroy(&self) {
-        win_main::request_quit();
+        runloop::request_quit();
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -134,7 +134,7 @@ impl WinHandler for PerfTest {
 fn main() {
     druid_shell::init();
 
-    let mut run_loop = win_main::RunLoop::new();
+    let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let perf_state = PerfState {
         size: Default::default(),

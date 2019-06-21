@@ -17,10 +17,9 @@
 use druid::kurbo::{Line, Rect, Size};
 use druid::piet::{Color, RenderContext};
 
-use druid_shell::keycodes::MenuKey;
-use druid_shell::menu::Menu;
-use druid_shell::platform::WindowBuilder;
-use druid_shell::win_main;
+use druid::shell::keycodes::MenuKey;
+use druid::shell::menu::Menu;
+use druid::shell::{runloop, WindowBuilder};
 
 use druid::widget::{Button, Padding, Row, Widget};
 use druid::{
@@ -53,7 +52,7 @@ impl Widget for FooWidget {
         _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain(Size::new(100.0, 100.0)))
+        LayoutResult::Size(bc.constrain((100.0, 100.0)))
     }
 }
 
@@ -72,7 +71,7 @@ fn main() {
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "&File");
 
-    let mut run_loop = win_main::RunLoop::new();
+    let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut state = UiState::new();
     let foo1 = FooWidget.ui(&mut state);

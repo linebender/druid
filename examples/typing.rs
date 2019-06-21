@@ -17,8 +17,7 @@
 extern crate druid;
 extern crate druid_shell;
 
-use druid_shell::platform::WindowBuilder;
-use druid_shell::win_main;
+use druid::shell::{runloop, WindowBuilder};
 
 use druid::widget::{Column, EventForwarder, KeyListener, Label, Padding};
 use druid::{KeyCode, KeyEvent, UiMain, UiState};
@@ -102,7 +101,7 @@ fn action_for_key(event: &KeyEvent) -> Option<TypingAction> {
 fn main() {
     druid_shell::init();
 
-    let mut run_loop = win_main::RunLoop::new();
+    let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut state = UiState::new();
     build_typing(&mut state);
