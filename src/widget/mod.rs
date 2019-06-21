@@ -18,7 +18,8 @@ use std::any::Any;
 
 pub use druid_shell::window::{MouseButton, ScrollEvent};
 
-use crate::{BoxConstraints, Geometry, LayoutResult};
+use crate::kurbo::{Point, Rect, Size};
+use crate::{BoxConstraints, LayoutResult};
 use crate::{HandlerCtx, Id, LayoutCtx, PaintCtx};
 
 mod button;
@@ -55,7 +56,7 @@ pub trait Widget {
     /// The implementer is responsible for translating the coordinates as
     /// specified in the geometry.
     #[allow(unused)]
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {}
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Rect) {}
 
     /// Participate in the layout protocol.
     ///
@@ -67,12 +68,12 @@ pub trait Widget {
         &mut self,
         bc: &BoxConstraints,
         children: &[Id],
-        size: Option<(f32, f32)>,
+        size: Option<Size>,
         ctx: &mut LayoutCtx,
     ) -> LayoutResult {
         if let Some(size) = size {
             // Maybe this is not necessary, rely on default value.
-            ctx.position_child(children[0], (0.0, 0.0));
+            ctx.position_child(children[0], Point::ORIGIN);
             LayoutResult::Size(size)
         } else {
             LayoutResult::RequestChild(children[0], *bc)
@@ -91,7 +92,7 @@ pub trait Widget {
     /// Sent to the active or hot widget on mouse move events.
     // TODO: should mods be plumbed here?
     #[allow(unused)]
-    fn mouse_moved(&mut self, x: f32, y: f32, ctx: &mut HandlerCtx) {}
+    fn mouse_moved(&mut self, pos: Point, ctx: &mut HandlerCtx) {}
 
     /// Sent to the widget when its "hot" status changes.
     #[allow(unused)]
@@ -154,10 +155,8 @@ pub trait Widget {
 
 #[derive(Debug, Clone)]
 pub struct MouseEvent {
-    /// X coordinate in px units, relative to top left of widget.
-    pub x: f32,
-    /// Y coordinate in px units, relative to top left of widget.
-    pub y: f32,
+    /// The location of the event.
+    pub pos: Point,
     /// The modifiers, which have the same interpretation as the raw WM message.
     ///
     /// TODO: rationalize this with mouse mods.

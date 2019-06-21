@@ -14,7 +14,7 @@
 
 //! Sample GUI app.
 
-use druid::kurbo::Line;
+use druid::kurbo::{Line, Rect, Size};
 use druid::piet::{Color, RenderContext};
 
 use druid_shell::keycodes::MenuKey;
@@ -24,8 +24,8 @@ use druid_shell::win_main;
 
 use druid::widget::{Button, Padding, Row, Widget};
 use druid::{
-    BoxConstraints, FileDialogOptions, FileDialogType, Geometry, Id, LayoutCtx, LayoutResult,
-    PaintCtx, Ui, UiMain, UiState,
+    BoxConstraints, FileDialogOptions, FileDialogType, Id, LayoutCtx, LayoutResult, PaintCtx, Ui,
+    UiMain, UiState,
 };
 
 const STROKECOLOR: Color = Color::rgb24(0xfb_f8_ef);
@@ -36,15 +36,10 @@ const COMMAND_OPEN: u32 = 0x101;
 struct FooWidget;
 
 impl Widget for FooWidget {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Rect) {
         let fg = paint_ctx.render_ctx.solid_brush(STROKECOLOR);
-
-        let (x, y) = geom.pos;
         paint_ctx.render_ctx.stroke(
-            Line::new(
-                (x as f64, y as f64),
-                (x as f64 + geom.size.0 as f64, y as f64 + geom.size.1 as f64),
-            ),
+            Line::new(geom.origin(), geom.origin() + geom.size().to_vec2()),
             &fg,
             1.0,
             None,
@@ -55,10 +50,10 @@ impl Widget for FooWidget {
         &mut self,
         bc: &BoxConstraints,
         _children: &[Id],
-        _size: Option<(f32, f32)>,
+        _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain((100.0, 100.0)))
+        LayoutResult::Size(bc.constrain(Size::new(100.0, 100.0)))
     }
 }
 

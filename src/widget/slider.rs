@@ -15,11 +15,9 @@
 //! A slider widget.
 
 use crate::widget::Widget;
-use crate::{
-    BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, MouseEvent, PaintCtx, Ui,
-};
+use crate::{BoxConstraints, HandlerCtx, Id, LayoutCtx, LayoutResult, MouseEvent, PaintCtx, Ui};
 
-use crate::kurbo::Rect;
+use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Color, FillRule, RenderContext};
 
 const BOX_HEIGHT: f64 = 24.;
@@ -43,65 +41,48 @@ impl Slider {
 }
 
 impl Widget for Slider {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Geometry) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Rect) {
         //Paint the background
         let brush = paint_ctx.render_ctx.solid_brush(BACKGROUND_COLOR);
 
-        let (x, y) = geom.pos;
-        let (width, height) = geom.size;
-        let rect = Rect::new(
-            x as f64,
-            y as f64,
-            x as f64 + width as f64,
-            y as f64 + height as f64,
-        );
-
-        paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
-
+        paint_ctx.render_ctx.fill(geom, &brush, FillRule::NonZero);
         //Paint the slider
         let brush = paint_ctx.render_ctx.solid_brush(SLIDER_COLOR);
 
-        let (width, height) = geom.size;
-        let (width, height) = (width as f64, height as f64);
-        let (x, y) = geom.pos;
-        let (x, y) = (x as f64, y as f64);
+        let slider_absolute_position = (geom.width() - BOX_HEIGHT) * self.value + BOX_HEIGHT / 2.;
+        let half_box = geom.height() / 2.;
+        let full_box = geom.height();
 
-        let slider_absolute_position = (width - BOX_HEIGHT) * self.value + BOX_HEIGHT / 2.;
-        let half_box = height / 2.;
-        let full_box = height;
-
-        let mut calculated_position = slider_absolute_position - half_box;
-        if calculated_position < 0. {
-            calculated_position = 0.;
-        } else if (calculated_position + full_box) > width {
-            calculated_position = width - full_box;
+        let mut position = slider_absolute_position - half_box;
+        if position < 0. {
+            position = 0.;
+        } else if (position + full_box) > geom.width() {
+            position = geom.width() - full_box;
         }
 
-        let rect = Rect::new(
-            x + calculated_position,
-            y,
-            x + calculated_position + full_box,
-            y + height,
-        );
+        let knob_orig = Point::new(geom.origin().x + position, geom.origin().y);
+        let knob_size = Size::new(full_box, geom.height());
+        let knob_rect = Rect::from_origin_size(knob_orig, knob_size);
 
-        paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
+        paint_ctx
+            .render_ctx
+            .fill(knob_rect, &brush, FillRule::NonZero);
     }
 
     fn layout(
         &mut self,
         bc: &BoxConstraints,
         _children: &[Id],
-        _size: Option<(f32, f32)>,
+        _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain((bc.max_width, BOX_HEIGHT as f32)))
+        LayoutResult::Size(bc.constrain(Size::new(bc.max.width, BOX_HEIGHT)))
     }
 
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
         if event.count == 1 {
             ctx.set_active(true);
-            self.value = ((event.x as f64 - BOX_HEIGHT / 2.)
-                / (ctx.get_geom().size.0 as f64 - BOX_HEIGHT))
+            self.value = ((event.pos.x - BOX_HEIGHT / 2.) / (ctx.get_geom().width() - BOX_HEIGHT))
                 .max(0.0)
                 .min(1.0);
             ctx.send_event(self.value);
@@ -112,10 +93,9 @@ impl Widget for Slider {
         true
     }
 
-    fn mouse_moved(&mut self, x: f32, _y: f32, ctx: &mut HandlerCtx) {
+    fn mouse_moved(&mut self, pos: Point, ctx: &mut HandlerCtx) {
         if ctx.is_active() {
-            self.value = ((x as f64 - BOX_HEIGHT / 2.)
-                / (ctx.get_geom().size.0 as f64 - BOX_HEIGHT))
+            self.value = ((pos.x - BOX_HEIGHT / 2.) / (ctx.get_geom().width() - BOX_HEIGHT))
                 .max(0.0)
                 .min(1.0);
 

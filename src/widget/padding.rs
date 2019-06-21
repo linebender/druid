@@ -14,21 +14,22 @@
 
 //! A widget that just adds padding during layout.
 
+use crate::kurbo::Size;
 use crate::widget::Widget;
 use crate::{BoxConstraints, LayoutResult};
 use crate::{Id, LayoutCtx, Ui};
 
 /// A padding widget. Is expected to have exactly one child.
 pub struct Padding {
-    left: f32,
-    right: f32,
-    top: f32,
-    bottom: f32,
+    left: f64,
+    right: f64,
+    top: f64,
+    bottom: f64,
 }
 
 impl Padding {
     /// Create widget with uniform padding.
-    pub fn uniform(padding: f32) -> Padding {
+    pub fn uniform(padding: f64) -> Padding {
         Padding {
             left: padding,
             right: padding,
@@ -47,23 +48,18 @@ impl Widget for Padding {
         &mut self,
         bc: &BoxConstraints,
         children: &[Id],
-        size: Option<(f32, f32)>,
+        size: Option<Size>,
         ctx: &mut LayoutCtx,
     ) -> LayoutResult {
+        let hpad = self.left + self.right;
+        let vpad = self.top + self.bottom;
         if let Some(size) = size {
             ctx.position_child(children[0], (self.left, self.top));
-            LayoutResult::Size((
-                size.0 + self.left + self.right,
-                size.1 + self.top + self.bottom,
-            ))
+            LayoutResult::Size(Size::new(size.width + hpad, size.height + vpad))
         } else {
-            let child_bc = BoxConstraints {
-                min_width: bc.min_width - (self.left + self.right),
-                max_width: bc.max_width - (self.left + self.right),
-                min_height: bc.min_height - (self.top + self.bottom),
-                max_height: bc.max_height - (self.top + self.bottom),
-            };
-            LayoutResult::RequestChild(children[0], child_bc)
+            let min = Size::new(bc.min.width - hpad, bc.min.height - hpad);
+            let max = Size::new(bc.max.width - hpad, bc.max.height - hpad);
+            LayoutResult::RequestChild(children[0], BoxConstraints::new(min, max))
         }
     }
 }

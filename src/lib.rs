@@ -25,7 +25,8 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::time::Instant;
 
-use druid_shell::piet::{Color, Piet, RenderContext};
+use kurbo::{Point, Rect, Size, Vec2};
+use piet::{Color, Piet, RenderContext};
 
 use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
@@ -88,7 +89,7 @@ pub struct LayoutCtx {
     handle: WindowHandle,
 
     /// Bounding box of each widget. The position is relative to the parent.
-    geom: Vec<Geometry>,
+    geom: Vec<Rect>,
 
     /// Additional state per widget.
     ///
@@ -115,15 +116,11 @@ pub struct LayoutCtx {
     hot: Option<Id>,
 
     /// The size of the paint surface
-    size: (f32, f32),
+    size: Size,
 }
 
-#[derive(Default, Clone, Copy, Debug)]
-pub struct Geometry {
-    // Maybe PointF is a better type, then we could use the math from direct2d?
-    pub pos: (f32, f32),
-    pub size: (f32, f32),
-}
+#[deprecated(note = "please use `Rect` directly.")]
+pub type Geometry = Rect;
 
 #[derive(Default)]
 struct PerWidgetState {
@@ -139,14 +136,12 @@ enum AnimState {
 
 #[derive(Clone, Copy, Debug)]
 pub struct BoxConstraints {
-    min_width: f32,
-    max_width: f32,
-    min_height: f32,
-    max_height: f32,
+    min: Size,
+    max: Size,
 }
 
 pub enum LayoutResult {
-    Size((f32, f32)),
+    Size(Size),
     RequestChild(Id, BoxConstraints),
 }
 
@@ -199,15 +194,6 @@ impl From<druid_shell::Error> for Error {
     }
 }
 
-impl Geometry {
-    fn offset(&self, offset: (f32, f32)) -> Geometry {
-        Geometry {
-            pos: (self.pos.0 + offset.0, self.pos.1 + offset.1),
-            size: self.size,
-        }
-    }
-}
-
 impl UiMain {
     pub fn new(state: UiState) -> UiMain {
         UiMain {
@@ -245,7 +231,7 @@ impl UiState {
                     focused: None,
                     active: None,
                     hot: None,
-                    size: (0.0, 0.0),
+                    size: Size::ZERO,
                 },
             },
         }
@@ -259,12 +245,11 @@ impl UiState {
         self.command_listener = Some(Box::new(f));
     }
 
-    fn mouse(&mut self, x: f32, y: f32, raw_event: &window::MouseEvent) {
+    fn mouse(&mut self, pos: Point, raw_event: &window::MouseEvent) {
         fn dispatch_mouse(
             widgets: &mut [Box<Widget>],
             node: Id,
-            x: f32,
-            y: f32,
+            pos: Point,
             raw_event: &window::MouseEvent,
             ctx: &mut HandlerCtx,
         ) -> bool {
@@ -274,8 +259,7 @@ impl UiState {
                 0
             };
             let event = MouseEvent {
-                x,
-                y,
+                pos,
                 mods: raw_event.mods,
                 which: raw_event.which,
                 count,
@@ -286,24 +270,23 @@ impl UiState {
         fn mouse_rec(
             widgets: &mut [Box<Widget>],
             graph: &Graph,
-            x: f32,
-            y: f32,
+            pos: Point,
             raw_event: &window::MouseEvent,
             ctx: &mut HandlerCtx,
         ) -> bool {
             let node = ctx.id;
             let g = ctx.layout_ctx.geom[node];
-            let x = x - g.pos.0;
-            let y = y - g.pos.1;
+            let Vec2 { x, y } = pos - g.origin();
+            let Size { width, height } = g.size();
             let mut handled = false;
-            if x >= 0.0 && y >= 0.0 && x < g.size.0 && y < g.size.1 {
-                handled = dispatch_mouse(widgets, node, x, y, raw_event, ctx);
+            if x >= 0.0 && y >= 0.0 && x < width && y < height {
+                handled = dispatch_mouse(widgets, node, Point::new(x, y), raw_event, ctx);
                 for child in graph.children[node].iter().rev() {
                     if handled {
                         break;
                     }
                     ctx.id = *child;
-                    handled = mouse_rec(widgets, graph, x, y, raw_event, ctx);
+                    handled = mouse_rec(widgets, graph, Point::new(x, y), raw_event, ctx);
                 }
             }
             handled
@@ -311,12 +294,11 @@ impl UiState {
 
         if let Some(active) = self.layout_ctx.active {
             // Send mouse event directly to active widget.
-            let (x, y) = self.xy_to_local(active, x, y);
+            let pos = self.to_local_point(active, pos);
             dispatch_mouse(
                 &mut self.inner.widgets,
                 active,
-                x,
-                y,
+                pos,
                 raw_event,
                 &mut HandlerCtx {
                     id: active,
@@ -327,8 +309,7 @@ impl UiState {
             mouse_rec(
                 &mut self.inner.widgets,
                 &self.inner.graph,
-                x,
-                y,
+                pos,
                 raw_event,
                 &mut HandlerCtx {
                     id: self.inner.graph.root,
@@ -339,17 +320,16 @@ impl UiState {
         self.dispatch_events();
     }
 
-    fn mouse_move(&mut self, x: f32, y: f32) {
+    fn mouse_move(&mut self, pos: Point) {
         // Note: this logic is similar to that for hit testing on mouse, but is
         // slightly different if child geom's overlap. Maybe we reconcile them,
         // maybe it's fine.
         let mut node = self.graph.root;
         let mut new_hot = None;
-        let (mut tx, mut ty) = (x, y);
+        let mut tpos = pos;
         loop {
             let g = self.layout_ctx.geom[node];
-            tx -= g.pos.0;
-            ty -= g.pos.1;
+            tpos -= g.origin().to_vec2();
             if self.graph.children[node].is_empty() {
                 new_hot = Some(node);
                 break;
@@ -357,9 +337,9 @@ impl UiState {
             let mut child_hot = None;
             for child in self.graph.children[node].iter().rev() {
                 let child_g = self.layout_ctx.geom[*child];
-                let cx = tx - child_g.pos.0;
-                let cy = ty - child_g.pos.1;
-                if cx >= 0.0 && cy >= 0.0 && cx < child_g.size.0 && cy < child_g.size.1 {
+                let cpos = tpos - child_g.origin();
+                let Size { width, height } = child_g.size();
+                if cpos.x >= 0.0 && cpos.y >= 0.0 && cpos.x < width && cpos.y < height {
                     child_hot = Some(child);
                     break;
                 }
@@ -394,10 +374,9 @@ impl UiState {
         }
 
         if let Some(node) = self.layout_ctx.active.or(new_hot) {
-            let (x, y) = self.xy_to_local(node, x, y);
+            let pos = self.to_local_point(node, pos);
             self.inner.widgets[node].mouse_moved(
-                x,
-                y,
+                pos,
                 &mut HandlerCtx {
                     id: node,
                     layout_ctx: &mut self.inner.layout_ctx,
@@ -504,28 +483,17 @@ impl UiState {
     }
 
     /// Translate coordinates to local coordinates of widget
-    fn xy_to_local(&mut self, mut node: Id, mut x: f32, mut y: f32) -> (f32, f32) {
+    fn to_local_point(&mut self, mut node: Id, mut pos: Point) -> Point {
         loop {
             let g = self.layout_ctx.geom[node];
-            x -= g.pos.0;
-            y -= g.pos.1;
+            pos -= g.origin().to_vec2();
             let parent = self.graph.parent[node];
             if parent == node {
                 break;
             }
             node = parent;
         }
-        (x, y)
-    }
-}
-
-fn clamp(val: f32, min: f32, max: f32) -> f32 {
-    if val < min {
-        min
-    } else if val > max {
-        max
-    } else {
-        val
+        pos
     }
 }
 
@@ -661,22 +629,23 @@ impl Ui {
         fn paint_rec(
             widgets: &mut [Box<Widget>],
             graph: &Graph,
-            geom: &[Geometry],
+            geom: &[Rect],
             paint_ctx: &mut PaintCtx,
             node: Id,
-            pos: (f32, f32),
+            pos: Point,
             active: Option<Id>,
             hot: Option<Id>,
             focused: Option<Id>,
         ) {
-            let g = geom[node].offset(pos);
+            let g = geom[node] + pos.to_vec2();
             paint_ctx.is_active = active == Some(node);
             paint_ctx.is_hot = hot == Some(node) && (paint_ctx.is_active || active.is_none());
             paint_ctx.is_focused = focused == Some(node);
             widgets[node].paint(paint_ctx, &g);
             for &child in &graph.children[node] {
+                let pos = g.origin();
                 paint_rec(
-                    widgets, graph, geom, paint_ctx, child, g.pos, active, hot, focused,
+                    widgets, graph, geom, paint_ctx, child, pos, active, hot, focused,
                 );
             }
         }
@@ -693,7 +662,7 @@ impl Ui {
             &self.layout_ctx.geom,
             &mut paint_ctx,
             root,
-            (0.0, 0.0),
+            Point::ZERO,
             self.layout_ctx.active,
             self.layout_ctx.hot,
             self.layout_ctx.focused,
@@ -707,13 +676,13 @@ impl Ui {
             graph: &Graph,
             bc: &BoxConstraints,
             node: Id,
-        ) -> (f32, f32) {
+        ) -> Size {
             let mut size = None;
             loop {
                 let layout_res = widgets[node].layout(bc, &graph.children[node], size, ctx);
                 match layout_res {
                     LayoutResult::Size(size) => {
-                        ctx.geom[node].size = size;
+                        ctx.geom[node] = ctx.geom[node].with_size(size);
                         return size;
                     }
                     LayoutResult::RequestChild(child, child_bc) => {
@@ -734,40 +703,39 @@ impl Ui {
 }
 
 impl BoxConstraints {
-    pub fn tight(size: (f32, f32)) -> BoxConstraints {
+    pub fn new(min: Size, max: Size) -> BoxConstraints {
+        BoxConstraints { min, max }
+    }
+
+    pub fn tight(size: Size) -> BoxConstraints {
         BoxConstraints {
-            min_width: size.0,
-            max_width: size.0,
-            min_height: size.1,
-            max_height: size.1,
+            min: size,
+            max: size,
         }
     }
 
-    pub fn constrain(&self, size: (f32, f32)) -> (f32, f32) {
-        (
-            clamp(size.0, self.min_width, self.max_width),
-            clamp(size.1, self.min_height, self.max_height),
-        )
+    pub fn constrain(&self, size: impl Into<Size>) -> Size {
+        size.into().clamp(self.min, self.max)
     }
 
     /// Returns the max size of these constraints.
-    pub fn max(&self) -> (f32, f32) {
-        (self.max_width, self.max_height)
+    pub fn max(&self) -> Size {
+        self.max
     }
 
     /// Returns the min size of these constraints.
-    pub fn min(&self) -> (f32, f32) {
-        (self.min_width, self.min_height)
+    pub fn min(&self) -> Size {
+        self.min
     }
 }
 
 impl LayoutCtx {
-    pub fn position_child(&mut self, child: Id, pos: (f32, f32)) {
-        self.geom[child].pos = pos;
+    pub fn position_child(&mut self, child: Id, pos: impl Into<Point>) {
+        self.geom[child] = self.geom[child].with_origin(pos.into());
     }
 
-    pub fn get_child_size(&self, child: Id) -> (f32, f32) {
-        self.geom[child].size
+    pub fn get_child_size(&self, child: Id) -> Size {
+        self.geom[child].size()
     }
 
     /// Internal logic for widget invalidation.
@@ -849,7 +817,7 @@ impl<'a> HandlerCtx<'a> {
         }
     }
 
-    pub fn get_geom(&self) -> &Geometry {
+    pub fn get_geom(&self) -> &Rect {
         &self.layout_ctx.geom[self.id]
     }
 }
@@ -998,15 +966,17 @@ impl WinHandler for UiMain {
     fn mouse_move(&self, x: i32, y: i32, _mods: u32) {
         let mut state = self.state.borrow_mut();
         let (x, y) = state.layout_ctx.handle.pixels_to_px_xy(x, y);
-        state.mouse_move(x, y);
+        let pos = Point::new(x as f64, y as f64);
+        state.mouse_move(pos);
     }
 
     fn mouse(&self, event: &window::MouseEvent) {
         //println!("mouse {:?}", event);
         let mut state = self.state.borrow_mut();
         let (x, y) = state.layout_ctx.handle.pixels_to_px_xy(event.x, event.y);
+        let pos = Point::new(x as f64, y as f64);
         // TODO: detect multiple clicks and pass that down
-        state.mouse(x, y, event);
+        state.mouse(pos, event);
     }
 
     fn destroy(&self) {
@@ -1019,8 +989,8 @@ impl WinHandler for UiMain {
 
     fn size(&self, width: u32, height: u32) {
         let mut state = self.state.borrow_mut();
-        let dpi = state.layout_ctx.handle.get_dpi();
+        let dpi = state.layout_ctx.handle.get_dpi() as f64;
         let scale = 96.0 / dpi;
-        state.inner.layout_ctx.size = (width as f32 * scale, height as f32 * scale);
+        state.inner.layout_ctx.size = Size::new(width as f64 * scale, height as f64 * scale);
     }
 }
