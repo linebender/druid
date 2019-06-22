@@ -67,7 +67,7 @@ impl Widget for ProgressBar {
         LayoutResult::Size(bc.constrain(Size::new(bc.max.width, BOX_HEIGHT as f64)))
     }
 
-    fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
+    fn poke(&mut self, payload: &mut dyn Any, ctx: &mut HandlerCtx) -> bool {
         if let Some(value) = payload.downcast_ref::<f64>() {
             self.value = *value;
             ctx.invalidate();

@@ -129,7 +129,7 @@ impl WinHandler for PerfTest {
         win_main::request_quit();
     }
 
-    fn as_any(&self) -> &Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 }
