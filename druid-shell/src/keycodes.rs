@@ -152,4 +152,5 @@ pub mod win_vks {
     pub const VK_W: i32 = 0x57;
     pub const VK_X: i32 = 0x58;
     pub const VK_Y: i32 = 0x59;
+    pub const VK_Z: i32 = 0x5A;
 }
