@@ -187,7 +187,9 @@ impl Default for PresentStrategy {
     }
 }
 
-fn get_mod_state(lparam: LPARAM) -> KeyModifiers {
+/// Must only be called while handling a keyboard input message.
+/// This queries the keyboard state at the time of message delivery.
+fn get_mod_state() -> KeyModifiers {
     //FIXME: does not handle windows key
     unsafe {
         let mut mod_state = KeyModifiers::default();
@@ -419,7 +421,7 @@ impl WndProc for MyWndProc {
                     }
                 };
 
-                let modifiers = get_mod_state(lparam);
+                let modifiers = get_mod_state();
                 let is_repeat = (lparam & 0xFFFF) > 0;
                 let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
 
@@ -439,7 +441,7 @@ impl WndProc for MyWndProc {
                     return None;
                 }
 
-                let modifiers = get_mod_state(lparam);
+                let modifiers = get_mod_state();
                 // bits 0-15 of iparam are the repeat count:
                 // https://docs.microsoft.com/en-ca/windows/desktop/inputdev/wm-keydown
                 let is_repeat = (lparam & 0xFFFF) > 0;
@@ -455,7 +457,7 @@ impl WndProc for MyWndProc {
                 let mut state = self.state.borrow_mut();
                 let s = state.as_mut().unwrap();
                 let key_code: KeyCode = (wparam as i32).into();
-                let modifiers = get_mod_state(lparam);
+                let modifiers = get_mod_state();
                 let is_repeat = false;
                 let text = s.stashed_char.take();
                 let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
