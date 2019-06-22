@@ -88,7 +88,7 @@ impl Widget for Label {
         LayoutResult::Size(bc.constrain(Size::new(100.0, 17.0)))
     }
 
-    fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
+    fn poke(&mut self, payload: &mut dyn Any, ctx: &mut HandlerCtx) -> bool {
         if let Some(string) = payload.downcast_ref::<String>() {
             self.label = string.clone();
             ctx.invalidate();
@@ -155,7 +155,7 @@ impl Widget for Button {
         ctx.invalidate();
     }
 
-    fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
+    fn poke(&mut self, payload: &mut dyn Any, ctx: &mut HandlerCtx) -> bool {
         self.label.poke(payload, ctx)
     }
 }

@@ -58,9 +58,9 @@ pub struct UiMain {
 pub type Id = usize;
 
 pub struct UiState {
-    listeners: BTreeMap<Id, Vec<Box<FnMut(&mut Any, ListenerCtx)>>>,
+    listeners: BTreeMap<Id, Vec<Box<dyn FnMut(&mut dyn Any, ListenerCtx)>>>,
 
-    command_listener: Option<Box<FnMut(u32, ListenerCtx)>>,
+    command_listener: Option<Box<dyn FnMut(u32, ListenerCtx)>>,
 
     /// The widget tree and associated state is split off into a separate struct
     /// so that we can use a mutable reference to it as the listener context.
@@ -74,7 +74,7 @@ pub type UiInner = Ui;
 /// The main access point for manipulating the UI.
 pub struct Ui {
     /// The individual widget trait objects.
-    widgets: Vec<Box<Widget>>,
+    widgets: Vec<Box<dyn Widget>>,
 
     /// Graph of widgets (actually a strict tree structure, so maybe should be renamed).
     graph: Graph,
@@ -147,10 +147,10 @@ pub enum LayoutResult {
 
 enum Event {
     /// Event to be delivered to listeners.
-    Event(Id, Box<Any>),
+    Event(Id, Box<dyn Any>),
 
     /// A request to add a listener.
-    AddListener(Id, Box<FnMut(&mut Any, ListenerCtx)>),
+    AddListener(Id, Box<dyn FnMut(&mut dyn Any, ListenerCtx)>),
 
     /// Sent when a widget is removed so its listeners can be deleted.
     ClearListeners(Id),
@@ -247,7 +247,7 @@ impl UiState {
 
     fn mouse(&mut self, pos: Point, raw_event: &window::MouseEvent) {
         fn dispatch_mouse(
-            widgets: &mut [Box<Widget>],
+            widgets: &mut [Box<dyn Widget>],
             node: Id,
             pos: Point,
             raw_event: &window::MouseEvent,
@@ -268,7 +268,7 @@ impl UiState {
         }
 
         fn mouse_rec(
-            widgets: &mut [Box<Widget>],
+            widgets: &mut [Box<dyn Widget>],
             graph: &Graph,
             pos: Point,
             raw_event: &window::MouseEvent,
@@ -564,7 +564,7 @@ impl Ui {
         A: Any,
         F: FnMut(&mut A, ListenerCtx) + 'static,
     {
-        let wrapper: Box<FnMut(&mut Any, ListenerCtx)> = Box::new(move |a, ctx| {
+        let wrapper: Box<dyn FnMut(&mut dyn Any, ListenerCtx)> = Box::new(move |a, ctx| {
             if let Some(arg) = a.downcast_mut() {
                 f(arg, ctx)
             } else {
@@ -607,7 +607,12 @@ impl Ui {
     /// The id of the child may be reused; callers should take care not to use the
     /// child id in any way afterwards.
     pub fn delete_child(&mut self, node: Id, child: Id) {
-        fn delete_rec(widgets: &mut [Box<Widget>], q: &mut Vec<Event>, graph: &Graph, node: Id) {
+        fn delete_rec(
+            widgets: &mut [Box<dyn Widget>],
+            q: &mut Vec<Event>,
+            graph: &Graph,
+            node: Id,
+        ) {
             widgets[node] = Box::new(NullWidget);
             q.push(Event::ClearListeners(node));
             for &child in &graph.children[node] {
@@ -632,7 +637,7 @@ impl Ui {
         //
         // Implemented as a recursion, but we could use an explicit queue instead.
         fn paint_rec(
-            widgets: &mut [Box<Widget>],
+            widgets: &mut [Box<dyn Widget>],
             graph: &Graph,
             geom: &[Rect],
             paint_ctx: &mut PaintCtx,
@@ -676,7 +681,7 @@ impl Ui {
 
     fn layout(&mut self, bc: &BoxConstraints, root: Id) {
         fn layout_rec(
-            widgets: &mut [Box<Widget>],
+            widgets: &mut [Box<dyn Widget>],
             ctx: &mut LayoutCtx,
             graph: &Graph,
             bc: &BoxConstraints,
@@ -988,7 +993,7 @@ impl WinHandler for UiMain {
         Application::quit();
     }
 
-    fn as_any(&self) -> &Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 

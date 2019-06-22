@@ -57,12 +57,12 @@ pub struct WindowHandle {
     /// TODO: remove option (issue has been filed against objc, or we could manually impl default with nil)
     /// https://github.com/SSheldon/rust-objc/issues/77
     nsview: Option<WeakPtr>,
-    idle_queue: Weak<Mutex<Vec<Box<IdleCallback>>>>,
+    idle_queue: Weak<Mutex<Vec<Box<dyn IdleCallback>>>>,
 }
 
 /// Builder abstraction for creating new windows.
 pub struct WindowBuilder {
-    handler: Option<Box<WinHandler>>,
+    handler: Option<Box<dyn WinHandler>>,
     title: String,
     enable_mouse_move_events: bool,
     menu: Option<Menu>,
@@ -71,23 +71,23 @@ pub struct WindowBuilder {
 #[derive(Clone)]
 pub struct IdleHandle {
     nsview: WeakPtr,
-    idle_queue: Weak<Mutex<Vec<Box<IdleCallback>>>>,
+    idle_queue: Weak<Mutex<Vec<Box<dyn IdleCallback>>>>,
 }
 
 // TODO: move this out of platform-dependent section.
 trait IdleCallback: Send {
-    fn call(self: Box<Self>, a: &Any);
+    fn call(self: Box<Self>, a: &dyn Any);
 }
 
-impl<F: FnOnce(&Any) + Send> IdleCallback for F {
-    fn call(self: Box<F>, a: &Any) {
+impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
+    fn call(self: Box<F>, a: &dyn Any) {
         (*self)(a)
     }
 }
 /// This is the state associated with our custom NSView.
 struct ViewState {
     handler: Box<dyn WinHandler>,
-    idle_queue: Arc<Mutex<Vec<Box<IdleCallback>>>>,
+    idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
 }
 
 impl WindowBuilder {
@@ -100,7 +100,7 @@ impl WindowBuilder {
         }
     }
 
-    pub fn set_handler(&mut self, handler: Box<WinHandler>) {
+    pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
         self.handler = Some(handler);
     }
 
@@ -234,7 +234,7 @@ lazy_static! {
     };
 }
 
-fn make_view(handler: Box<WinHandler>) -> (id, Weak<Mutex<Vec<Box<IdleCallback>>>>) {
+fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<Box<dyn IdleCallback>>>>) {
     let idle_queue = Arc::new(Mutex::new(Vec::new()));
     let queue_handle = Arc::downgrade(&idle_queue);
     let state = ViewState {
@@ -495,7 +495,7 @@ impl IdleHandle {
     /// priority than other UI events, but that's not necessarily the case.
     pub fn add_idle<F>(&self, callback: F)
     where
-        F: FnOnce(&Any) + Send + 'static,
+        F: FnOnce(&dyn Any) + Send + 'static,
     {
         if let Some(queue) = self.idle_queue.upgrade() {
             let mut queue = queue.lock().expect("queue lock");

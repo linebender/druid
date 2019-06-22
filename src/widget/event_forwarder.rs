@@ -33,7 +33,7 @@ impl<T: Any + Clone> EventForwarder<T> {
 }
 
 impl<T: Any + Clone> Widget for EventForwarder<T> {
-    fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
+    fn poke(&mut self, payload: &mut dyn Any, ctx: &mut HandlerCtx) -> bool {
         if let Some(event) = payload.downcast_ref::<T>() {
             ctx.send_event(event.clone());
             true

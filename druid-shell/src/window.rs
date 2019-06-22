@@ -115,7 +115,7 @@ pub trait WinHandler {
     fn destroy(&self) {}
 
     /// Get a reference to the handler state. Used mostly by idle handlers.
-    fn as_any(&self) -> &Any;
+    fn as_any(&self) -> &dyn Any;
 }
 
 /// A mouse button press or release event.

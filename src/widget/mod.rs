@@ -101,7 +101,7 @@ pub trait Widget {
     /// An "escape hatch" of sorts for accessing widget state beyond the widget
     /// methods. Returns true if it is handled.
     #[allow(unused)]
-    fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
+    fn poke(&mut self, payload: &mut dyn Any, ctx: &mut HandlerCtx) -> bool {
         false
     }
 

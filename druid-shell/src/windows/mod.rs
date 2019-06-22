@@ -68,7 +68,7 @@ extern "system" {
 
 /// Builder abstraction for creating new windows.
 pub struct WindowBuilder {
-    handler: Option<Box<WinHandler>>,
+    handler: Option<Box<dyn WinHandler>>,
     dwStyle: DWORD,
     title: String,
     cursor: Cursor,
@@ -113,15 +113,15 @@ pub struct WindowHandle(Weak<WindowState>);
 #[derive(Clone)]
 pub struct IdleHandle {
     pub(crate) hwnd: HWND,
-    queue: Arc<Mutex<Vec<Box<IdleCallback>>>>,
+    queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
 }
 
 trait IdleCallback: Send {
-    fn call(self: Box<Self>, a: &Any);
+    fn call(self: Box<Self>, a: &dyn Any);
 }
 
-impl<F: FnOnce(&Any) + Send> IdleCallback for F {
-    fn call(self: Box<F>, a: &Any) {
+impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
+    fn call(self: Box<F>, a: &dyn Any) {
         (*self)(a)
     }
 }
@@ -129,8 +129,8 @@ impl<F: FnOnce(&Any) + Send> IdleCallback for F {
 struct WindowState {
     hwnd: Cell<HWND>,
     dpi: Cell<f32>,
-    wndproc: Box<WndProc>,
-    idle_queue: Arc<Mutex<Vec<Box<IdleCallback>>>>,
+    wndproc: Box<dyn WndProc>,
+    idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -144,7 +144,7 @@ trait WndProc {
 // State and logic for the winapi window procedure entry point. Note that this level
 // implements policies such as the use of Direct2D for painting.
 struct MyWndProc {
-    handler: Box<WinHandler>,
+    handler: Box<dyn WinHandler>,
     handle: RefCell<WindowHandle>,
     d2d_factory: direct2d::Factory,
     dwrite_factory: directwrite::Factory,
@@ -502,7 +502,7 @@ impl WindowBuilder {
     }
 
     /// This takes ownership, and is typically used with UiMain
-    pub fn set_handler(&mut self, handler: Box<WinHandler>) {
+    pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
         self.handler = Some(handler);
     }
 
@@ -858,7 +858,7 @@ impl WindowHandle {
         })
     }
 
-    fn take_idle_queue(&self) -> Vec<Box<IdleCallback>> {
+    fn take_idle_queue(&self) -> Vec<Box<dyn IdleCallback>> {
         if let Some(w) = self.0.upgrade() {
             mem::replace(&mut w.idle_queue.lock().unwrap(), Vec::new())
         } else {
@@ -907,7 +907,7 @@ impl IdleHandle {
     /// which means it won't be scheduled if the window is closed.
     pub fn add_idle<F>(&self, callback: F)
     where
-        F: FnOnce(&Any) + Send + 'static,
+        F: FnOnce(&dyn Any) + Send + 'static,
     {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {
