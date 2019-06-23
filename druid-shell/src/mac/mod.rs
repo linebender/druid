@@ -206,7 +206,15 @@ lazy_static! {
             mouse_down as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
+            sel!(rightMouseDown:),
+            mouse_down as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
             sel!(mouseUp:),
+            mouse_up as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
+            sel!(rightMouseUp:),
             mouse_up as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
@@ -269,13 +277,33 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
 fn mouse_event(nsevent: id, view: id, ty: MouseType) -> MouseEvent {
     unsafe {
         let point = nsevent.locationInWindow();
+        let which = NSEvent::pressedMouseButtons(nsevent);
+        let which = get_mouse_button(which as usize);
         let view_point = view.convertPoint_fromView_(point, nil);
         MouseEvent {
             x: view_point.x as i32,
             y: view_point.y as i32,
-            mods: 0,                  // TODO
-            which: MouseButton::Left, // TODO
+            mods: 0, // TODO
+            which,
             ty,
+        }
+    }
+}
+
+fn get_mouse_button(mask: usize) -> MouseButton {
+    //TODO: this doesn't correctly handle multiple buttons being pressed.
+    match mask {
+        mask if mask & 1 > 0 => MouseButton::Left,
+        mask if mask & 1 << 1 > 0 => MouseButton::Right,
+        mask if mask & 1 << 2 > 0 => MouseButton::Middle,
+        mask if mask & 1 << 3 > 0 => MouseButton::X1,
+        mask if mask & 1 << 4 > 0 => MouseButton::X2,
+        _ => {
+            //FIXME: mouseup events always have a 0 mask.
+            // we should either add a `None` variant, or else
+            // figure out some way to stash the 'down' events and match'
+            // them against 'up'.
+            MouseButton::Left
         }
     }
 }
