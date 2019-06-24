@@ -203,19 +203,19 @@ lazy_static! {
         );
         decl.add_method(
             sel!(mouseDown:),
-            mouse_down as extern "C" fn(&mut Object, Sel, id),
+            mouse_down_left as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
             sel!(rightMouseDown:),
-            mouse_down as extern "C" fn(&mut Object, Sel, id),
+            mouse_down_right as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
             sel!(mouseUp:),
-            mouse_up as extern "C" fn(&mut Object, Sel, id),
+            mouse_up_left as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
             sel!(rightMouseUp:),
-            mouse_up as extern "C" fn(&mut Object, Sel, id),
+            mouse_up_right as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
             sel!(mouseMoved:),
@@ -274,11 +274,15 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
     }
 }
 
-fn mouse_event(nsevent: id, view: id, ty: MouseType) -> MouseEvent {
+// NOTE: If we know the button (because of the origin call) we pass it through,
+// otherwise we get it from the event itself.
+fn mouse_event(nsevent: id, view: id, ty: MouseType, which: Option<MouseButton>) -> MouseEvent {
     unsafe {
+        let which = which.unwrap_or_else(|| {
+            let which = NSEvent::pressedMouseButtons(nsevent);
+            get_mouse_button(which as usize)
+        });
         let point = nsevent.locationInWindow();
-        let which = NSEvent::pressedMouseButtons(nsevent);
-        let which = get_mouse_button(which as usize);
         let view_point = view.convertPoint_fromView_(point, nil);
         MouseEvent {
             x: view_point.x as i32,
@@ -299,29 +303,43 @@ fn get_mouse_button(mask: usize) -> MouseButton {
         mask if mask & 1 << 3 > 0 => MouseButton::X1,
         mask if mask & 1 << 4 > 0 => MouseButton::X2,
         _ => {
-            //FIXME: mouseup events always have a 0 mask.
-            // we should either add a `None` variant, or else
-            // figure out some way to stash the 'down' events and match'
-            // them against 'up'.
+            //FIXME: this gets called when the mouse moves, where there
+            //may be no buttons down. This is mostly a problem with our API?
             MouseButton::Left
         }
     }
 }
 
-extern "C" fn mouse_down(this: &mut Object, _: Sel, nsevent: id) {
+extern "C" fn mouse_down_left(this: &mut Object, _: Sel, nsevent: id) {
+    mouse_down(this, nsevent, MouseButton::Left)
+}
+
+extern "C" fn mouse_down_right(this: &mut Object, _: Sel, nsevent: id) {
+    mouse_down(this, nsevent, MouseButton::Right)
+}
+
+fn mouse_down(this: &mut Object, nsevent: id, button: MouseButton) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, MouseType::Down);
+        let event = mouse_event(nsevent, this as id, MouseType::Down, Some(button));
         (*view_state).handler.mouse(&event);
     }
 }
 
-extern "C" fn mouse_up(this: &mut Object, _: Sel, nsevent: id) {
+extern "C" fn mouse_up_left(this: &mut Object, _: Sel, nsevent: id) {
+    mouse_up(this, nsevent, MouseButton::Left)
+}
+
+extern "C" fn mouse_up_right(this: &mut Object, _: Sel, nsevent: id) {
+    mouse_up(this, nsevent, MouseButton::Right)
+}
+
+fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, MouseType::Up);
+        let event = mouse_event(nsevent, this as id, MouseType::Up, Some(button));
         (*view_state).handler.mouse(&event);
     }
 }
@@ -330,10 +348,10 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, MouseType::Down);
+        let event = mouse_event(nsevent, this as id, MouseType::Down, None);
         (*view_state)
             .handler
-            .mouse_move(event.x, event.y, event.mods);
+            .mouse_move(event.x as i32, event.y as i32, event.mods);
     }
 }
 
