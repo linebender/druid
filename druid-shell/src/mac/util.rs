@@ -34,3 +34,14 @@ pub fn assert_main_thread() {
 pub(crate) fn make_nsstring(s: &str) -> id {
     unsafe { NSString::alloc(nil).init_str(s) }
 }
+
+pub(crate) fn from_nsstring(s: id) -> String {
+    unsafe {
+        let slice = std::slice::from_raw_parts(
+            s.UTF8String() as *const _,
+            s.len(),
+            );
+        let result = std::str::from_utf8_unchecked(slice);
+        result.into()
+    }
+}

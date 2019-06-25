@@ -773,6 +773,10 @@ impl LayoutCtx {
     fn request_layout(&mut self) {
         self.invalidate();
     }
+
+    pub fn locale(&self) -> &str {
+        self.handle.locale()
+    }
 }
 
 impl<'a> HandlerCtx<'a> {
@@ -909,6 +913,7 @@ impl<'a, 'b> PaintCtx<'a, 'b> {
 
 impl WinHandler for UiMain {
     fn connect(&self, handle: &WindowHandle) {
+        eprintln!("locale: {}", handle.locale());
         let mut state = self.state.borrow_mut();
         state.layout_ctx.handle = handle.clone();
 

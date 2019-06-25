@@ -26,3 +26,13 @@ impl Application {
         }
     }
 }
+
+pub trait AppHandler {
+    fn did_finish_launching() {
+
+    }
+
+    fn will_terminate() {
+
+    }
+}

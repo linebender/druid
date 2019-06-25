@@ -84,6 +84,7 @@ impl Widget for Label {
         _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
+        eprintln!("locale: {}", _ctx.locale());
         // TODO: measure text properly
         LayoutResult::Size(bc.constrain(Size::new(100.0, 17.0)))
     }

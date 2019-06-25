@@ -953,6 +953,10 @@ impl WindowHandle {
         let scale = 96.0 / self.get_dpi();
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
+
+    pub fn locale(&self) -> &str {
+        self.locale.as_str()
+    }
 }
 
 // There is a tiny risk of things going wrong when hwnd is sent across threads.

@@ -59,6 +59,7 @@ pub struct WindowHandle {
     /// https://github.com/SSheldon/rust-objc/issues/77
     nsview: Option<WeakPtr>,
     idle_queue: Weak<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    locale: String,
 }
 
 /// Builder abstraction for creating new windows.
@@ -151,6 +152,7 @@ impl WindowBuilder {
             let handle = WindowHandle {
                 nsview: Some(WeakPtr::new(view)),
                 idle_queue,
+                locale: get_locale(),
             };
             let view_state: *mut c_void = *(*view).get_ivar("viewState");
             let view_state = &mut *(view_state as *mut ViewState);
@@ -160,6 +162,7 @@ impl WindowBuilder {
             (*view_state)
                 .handler
                 .size(frame.size.width as u32, frame.size.height as u32);
+
 
             Ok(handle)
         }
@@ -537,6 +540,10 @@ impl WindowHandle {
     ) -> Result<OsString, Error> {
         unimplemented!()
     }
+
+    pub fn locale(&self) -> &str {
+        self.locale.as_str()
+    }
 }
 
 unsafe impl Send for IdleHandle {}
@@ -594,5 +601,14 @@ fn make_modifiers(raw: NSEventModifierFlags) -> KeyModifiers {
         alt: raw.contains(NSEventModifierFlags::NSAlternateKeyMask),
         ctrl: raw.contains(NSEventModifierFlags::NSControlKeyMask),
         meta: raw.contains(NSEventModifierFlags::NSCommandKeyMask),
+    }
+}
+
+fn get_locale() -> String {
+    unsafe {
+        let nslocale_class = class!(NSLocale);
+        let locale: id = msg_send![nslocale_class, currentLocale];
+        let ident: id = msg_send![locale, localeIdentifier];
+        util::from_nsstring(ident)
     }
 }
