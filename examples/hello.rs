@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::{UiMain, UiState, WidgetBase};
+use druid::{UiMain, UiState};
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::widget::{Column, Label};
+use druid::widget::{Button, Column, Padding};
 
 fn main() {
     druid_shell::init();
@@ -24,11 +24,11 @@ fn main() {
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut root = Column::new();
-    let label1 = WidgetBase::new(Label::new("label1")).boxed();
-    let label2 = WidgetBase::new(Label::new("label2")).boxed();
-    root.add_child(label1, 1.0);
-    root.add_child(label2, 1.0);
-    let state = UiState::new(WidgetBase::new(root).boxed());
+    let button1 = Button::new("button1");
+    let button2 = Button::new("button2");
+    root.add_child(Padding::uniform(5.0, button1), (), 1.0);
+    root.add_child(Padding::uniform(5.0, button2), (), 1.0);
+    let state = UiState::new(root);
     builder.set_title("Hello example");
     builder.set_handler(Box::new(UiMain::new(state)));
     let window = builder.build().unwrap();

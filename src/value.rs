@@ -53,6 +53,29 @@ pub enum PathEl {
 // Should be a newtype so we can have methods like join?
 pub type KeyPath = Vec<PathEl>;
 
+pub trait PathFragment {
+    fn len(&self) -> usize;
+
+    fn push_to_path(&self, path: &mut KeyPath);
+
+    fn prepend_to_path(&self, path: &mut KeyPath) {
+        self.push_to_path(path);
+        path.rotate_right(self.len());
+    }
+
+    // Maybe do this as `From<> for KeyPath`? But that might cause coherence problems.
+    // Also, this could be `self` but that would require a `Sized` bound.
+    fn into_key_path(&self) -> KeyPath {
+        let mut path = Vec::new();
+        self.push_to_path(&mut path);
+        path
+    }
+
+    // Maybe add value access methods here to cut down on allocating paths,
+    // but that's just a performance optimization; could also be done with
+    // an iterator.
+}
+
 /// One element of a delta - replaces a subtree at a specific location.
 #[derive(Clone, Debug)]
 pub struct DeltaEl {
@@ -71,7 +94,7 @@ impl Default for Value {
 
 impl Value {
     /// Get a reference to a subtree.
-    pub fn access(&self, path: &KeyPath) -> Option<&Value> {
+    pub fn access_by_path(&self, path: &KeyPath) -> Option<&Value> {
         let mut node = self;
         for el in path {
             match el {
@@ -92,6 +115,11 @@ impl Value {
             }
         }
         Some(node)
+    }
+
+    pub fn access(&self, frag: impl PathFragment) -> Option<&Value> {
+        // TODO: this could be optimized more (not allocating the intermediate path)
+        self.access_by_path(&frag.into_key_path())
     }
 
     /// Apply a delta, resulting in a new value.
@@ -235,5 +263,78 @@ impl From<String> for PathEl {
 impl From<usize> for PathEl {
     fn from(ix: usize) -> PathEl {
         PathEl::List(ix)
+    }
+}
+
+impl PathFragment for () {
+    fn len(&self) -> usize {
+        0
+    }
+
+    fn push_to_path(&self, _path: &mut KeyPath) {}
+
+    fn prepend_to_path(&self, _path: &mut KeyPath) {}
+}
+
+impl<'a> PathFragment for &'a str {
+    fn len(&self) -> usize {
+        1
+    }
+
+    fn push_to_path(&self, path: &mut KeyPath) {
+        path.push(self.to_string().into())
+    }
+}
+
+impl PathFragment for usize {
+    fn len(&self) -> usize {
+        1
+    }
+
+    fn push_to_path(&self, path: &mut KeyPath) {
+        path.push((*self).into())
+    }
+}
+
+impl<P0: PathFragment, P1: PathFragment> PathFragment for (P0, P1) {
+    fn len(&self) -> usize {
+        self.0.len() + self.1.len()
+    }
+
+    fn push_to_path(&self, path: &mut KeyPath) {
+        self.0.push_to_path(path);
+        self.1.push_to_path(path);
+    }
+}
+
+// TODO: larger tuples
+
+impl PathFragment for KeyPath {
+    fn len(&self) -> usize {
+        self.len()
+    }
+
+    fn push_to_path(&self, path: &mut KeyPath) {
+        path.extend(self.iter().cloned());
+    }
+}
+
+impl<'a> PathFragment for &KeyPath {
+    fn len(&self) -> usize {
+        (*self).len()
+    }
+
+    fn push_to_path(&self, path: &mut KeyPath) {
+        path.extend(self.iter().cloned());
+    }
+}
+
+impl<'a> PathFragment for &'a [PathEl] {
+    fn len(&self) -> usize {
+        (*self).len()
+    }
+
+    fn push_to_path(&self, path: &mut KeyPath) {
+        path.extend(self.iter().cloned());
     }
 }

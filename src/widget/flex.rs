@@ -17,8 +17,8 @@
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, WidgetBase,
-    WidgetInner,
+    Action, BaseState, BoxConstraints, BoxedWidget, Env, Event, EventCtx, KeyPath, LayoutCtx,
+    PaintCtx, PathFragment, WidgetBase, WidgetInner,
 };
 
 pub struct Row;
@@ -32,6 +32,7 @@ pub struct Flex {
 
 struct ChildWidget {
     widget: WidgetBase<Box<dyn WidgetInner>>,
+    path: KeyPath,
     params: Params,
 }
 
@@ -90,10 +91,11 @@ impl Column {
 
 impl Flex {
     /// Add a child widget.
-    pub fn add_child(&mut self, child: WidgetBase<Box<dyn WidgetInner>>, flex: f64) {
+    pub fn add_child(&mut self, child: impl Into<BoxedWidget>, frag: impl PathFragment, flex: f64) {
         let params = Params { flex };
         let child = ChildWidget {
-            widget: child,
+            widget: child.into(),
+            path: frag.into_key_path(),
             params,
         };
         self.children.push(child);
@@ -103,7 +105,7 @@ impl Flex {
 impl WidgetInner for Flex {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, env: &Env) {
         for child in &mut self.children {
-            child.widget.paint(paint_ctx, env);
+            child.widget.paint_with_offset(paint_ctx, env, &child.path);
         }
     }
 
@@ -123,7 +125,7 @@ impl WidgetInner for Flex {
                         Size::new(bc.max.width, std::f64::INFINITY),
                     ),
                 };
-                let child_size = child.widget.layout(layout_ctx, &child_bc, env);
+                let child_size = child.widget.layout(layout_ctx, &child_bc, env, &child.path);
                 minor = minor.max(self.direction.minor(child_size));
                 total_non_flex += self.direction.major(child_size);
                 // Stash size.
@@ -150,7 +152,7 @@ impl WidgetInner for Flex {
                         Size::new(bc.max.width, major),
                     ),
                 };
-                let child_size = child.widget.layout(layout_ctx, &child_bc, env);
+                let child_size = child.widget.layout(layout_ctx, &child_bc, env, &child.path);
                 minor = minor.max(self.direction.minor(child_size));
                 // Stash size.
                 let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
@@ -173,6 +175,10 @@ impl WidgetInner for Flex {
     }
 
     fn event(&mut self, event: &Event, ctx: &mut EventCtx, env: &Env) -> Option<Action> {
-        None
+        let mut action = None;
+        for child in &mut self.children {
+            action = Action::merge(action, child.widget.event(event, ctx, env, &child.path));
+        }
+        action
     }
 }
