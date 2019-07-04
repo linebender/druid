@@ -45,7 +45,7 @@ use piet_common::{Piet, RenderContext};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
-use crate::window::{MouseButton, MouseEvent, MouseType, WinHandler};
+use crate::window::{MouseButton, MouseEvent, WinHandler};
 use crate::Error;
 
 use util::assert_main_thread;
@@ -276,20 +276,22 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
 
 // NOTE: If we know the button (because of the origin call) we pass it through,
 // otherwise we get it from the event itself.
-fn mouse_event(nsevent: id, view: id, ty: MouseType, which: Option<MouseButton>) -> MouseEvent {
+fn mouse_event(nsevent: id, view: id, button: Option<MouseButton>) -> MouseEvent {
     unsafe {
-        let which = which.unwrap_or_else(|| {
-            let which = NSEvent::pressedMouseButtons(nsevent);
-            get_mouse_button(which as usize)
+        let button = button.unwrap_or_else(|| {
+            let button = NSEvent::pressedMouseButtons(nsevent);
+            get_mouse_button(button as usize)
         });
         let point = nsevent.locationInWindow();
         let view_point = view.convertPoint_fromView_(point, nil);
+        let modifiers = nsevent.modifierFlags();
+        let modifiers = make_modifiers(modifiers);
         MouseEvent {
             x: view_point.x as i32,
             y: view_point.y as i32,
-            mods: 0, // TODO
-            which,
-            ty,
+            mods: modifiers,
+            count: nsevent.clickCount() as u32,
+            button,
         }
     }
 }
@@ -322,7 +324,7 @@ fn mouse_down(this: &mut Object, nsevent: id, button: MouseButton) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, MouseType::Down, Some(button));
+        let event = mouse_event(nsevent, this as id, Some(button));
         (*view_state).handler.mouse(&event);
     }
 }
@@ -339,7 +341,7 @@ fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, MouseType::Up, Some(button));
+        let event = mouse_event(nsevent, this as id, Some(button));
         (*view_state).handler.mouse(&event);
     }
 }
@@ -348,10 +350,8 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, MouseType::Down, None);
-        (*view_state)
-            .handler
-            .mouse_move(event.x as i32, event.y as i32, event.mods);
+        let event = mouse_event(nsevent, this as id, None);
+        (*view_state).handler.mouse_move(&event);
     }
 }
 
@@ -368,7 +368,9 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
                 (dx * 32, dy * 32)
             }
         };
-        let mods = 0; // TODO:
+        let mods = nsevent.modifierFlags();
+        let mods = make_modifiers(mods);
+
         if dx != 0 {
             (*view_state).handler.mouse_hwheel(dx, mods);
         }
