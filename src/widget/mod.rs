@@ -153,16 +153,20 @@ pub trait Widget {
 }
 
 #[derive(Debug, Clone)]
+/// The state of the mouse for a click, mouse-up, or move event.
 pub struct MouseEvent {
-    /// The location of the event.
+    /// The location of the mouse.
     pub pos: Point,
-    /// The modifiers, which have the same interpretation as the raw WM message.
-    ///
-    /// TODO: rationalize this with mouse mods.
-    pub mods: u32,
-    /// Which mouse button was pressed.
-    pub which: MouseButton,
+    /// The currently active modifiers.
+    pub mods: KeyModifiers,
+    /// Which mouse button was pressed or released.
+    pub button: MouseButton,
     /// Count of multiple clicks, is 0 for mouse up event.
+    ///
+    /// This is something that is handled by the operating system, based on the
+    /// user's settings. It is possible (such as on macOS) for you to receive
+    /// multiple events for a double-click; it will arrive first as a single-click
+    /// and then again as a double-click.
     pub count: u32,
 }
 

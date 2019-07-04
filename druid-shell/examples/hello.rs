@@ -19,7 +19,7 @@ use piet_common::kurbo::{Line, Rect};
 use piet_common::{Color, FillRule, RenderContext};
 
 use druid_shell::dialog::{FileDialogOptions, FileDialogType};
-use druid_shell::keyboard::KeyEvent;
+use druid_shell::keyboard::{KeyEvent, KeyModifiers};
 use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
@@ -71,16 +71,16 @@ impl WinHandler for HelloState {
         false
     }
 
-    fn mouse_wheel(&self, delta: i32, mods: u32) {
-        println!("mouse_wheel {} {:02x}", delta, mods);
+    fn mouse_wheel(&self, delta: i32, mods: KeyModifiers) {
+        println!("mouse_wheel {} {:?}", delta, mods);
     }
 
-    fn mouse_hwheel(&self, delta: i32, mods: u32) {
-        println!("mouse_hwheel {} {:02x}", delta, mods);
+    fn mouse_hwheel(&self, delta: i32, mods: KeyModifiers) {
+        println!("mouse_hwheel {} {:?}", delta, mods);
     }
 
-    fn mouse_move(&self, x: i32, y: i32, mods: u32) {
-        println!("mouse_move ({}, {}) {:02x}", x, y, mods);
+    fn mouse_move(&self, event: &MouseEvent) {
+        println!("mouse_move {:?}", event);
     }
 
     fn mouse(&self, event: &MouseEvent) {

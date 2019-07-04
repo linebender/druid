@@ -31,7 +31,7 @@ use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use druid_shell::platform::IdleHandle;
-use druid_shell::window::{self, MouseType, WinHandler, WindowHandle};
+use druid_shell::window::{self, WinHandler, WindowHandle};
 
 mod graph;
 pub mod widget;
@@ -253,16 +253,11 @@ impl UiState {
             raw_event: &window::MouseEvent,
             ctx: &mut HandlerCtx,
         ) -> bool {
-            let count = if raw_event.ty == MouseType::Down {
-                1
-            } else {
-                0
-            };
             let event = MouseEvent {
                 pos,
                 mods: raw_event.mods,
-                which: raw_event.which,
-                count,
+                button: raw_event.button,
+                count: raw_event.count,
             };
             widgets[node].mouse(&event, ctx)
         }
@@ -954,7 +949,7 @@ impl WinHandler for UiMain {
         state.handle_key_up(&event);
     }
 
-    fn mouse_wheel(&self, dy: i32, mods: u32) {
+    fn mouse_wheel(&self, dy: i32, mods: KeyModifiers) {
         let mut state = self.state.borrow_mut();
         state.handle_scroll(&window::ScrollEvent {
             dx: 0.0,
@@ -963,7 +958,7 @@ impl WinHandler for UiMain {
         });
     }
 
-    fn mouse_hwheel(&self, dx: i32, mods: u32) {
+    fn mouse_hwheel(&self, dx: i32, mods: KeyModifiers) {
         let mut state = self.state.borrow_mut();
         state.handle_scroll(&window::ScrollEvent {
             dx: dx as f32,
@@ -972,9 +967,9 @@ impl WinHandler for UiMain {
         });
     }
 
-    fn mouse_move(&self, x: i32, y: i32, _mods: u32) {
+    fn mouse_move(&self, event: &window::MouseEvent) {
         let mut state = self.state.borrow_mut();
-        let (x, y) = state.layout_ctx.handle.pixels_to_px_xy(x, y);
+        let (x, y) = state.layout_ctx.handle.pixels_to_px_xy(event.x, event.y);
         let pos = Point::new(x as f64, y as f64);
         state.mouse_move(pos);
     }

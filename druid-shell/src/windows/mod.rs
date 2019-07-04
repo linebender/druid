@@ -61,7 +61,7 @@ use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVis
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use crate::window::{self, Cursor, MouseButton, MouseEvent, MouseType, WinHandler};
+use crate::window::{self, Cursor, MouseButton, MouseEvent, WinHandler};
 
 extern "system" {
     pub fn DwmFlush();
@@ -187,7 +187,7 @@ impl Default for PresentStrategy {
     }
 }
 
-/// Must only be called while handling a keyboard input message.
+/// Must only be called while handling an input message.
 /// This queries the keyboard state at the time of message delivery.
 fn get_mod_state() -> KeyModifiers {
     //FIXME: does not handle windows key
@@ -467,21 +467,38 @@ impl WndProc for MyWndProc {
             //TODO: WM_SYSCOMMAND
             WM_MOUSEWHEEL => {
                 let delta = HIWORD(wparam as u32) as i16 as i32;
-                let mods = LOWORD(wparam as u32) as u32;
+                let mods = get_mod_state();
                 self.handler.mouse_wheel(delta, mods);
                 Some(0)
             }
             WM_MOUSEHWHEEL => {
                 let delta = HIWORD(wparam as u32) as i16 as i32;
-                let mods = LOWORD(wparam as u32) as u32;
+                let mods = get_mod_state();
                 self.handler.mouse_hwheel(delta, mods);
                 Some(0)
             }
             WM_MOUSEMOVE => {
                 let x = LOWORD(lparam as u32) as i16 as i32;
                 let y = HIWORD(lparam as u32) as i16 as i32;
-                let mods = LOWORD(wparam as u32) as u32;
-                self.handler.mouse_move(x, y, mods);
+                let mods = get_mod_state();
+                let button = match wparam {
+                    w if (w & 1) > 0 => MouseButton::Left,
+                    w if (w & 1 << 1) > 0 => MouseButton::Right,
+                    w if (w & 1 << 5) > 0 => MouseButton::Middle,
+                    w if (w & 1 << 6) > 0 => MouseButton::X1,
+                    w if (w & 1 << 7) > 0 => MouseButton::X2,
+                    //FIXME: I guess we probably do want `MouseButton::None`?
+                    //this feels bad, but also this gets discarded in druid anyway.
+                    _ => MouseButton::Left,
+                };
+                let event = MouseEvent {
+                    x,
+                    y,
+                    mods,
+                    button,
+                    count: 0,
+                };
+                self.handler.mouse_move(&event);
                 Some(0)
             }
             // TODO: not clear where double-click processing should happen. Currently disabled
@@ -489,7 +506,7 @@ impl WndProc for MyWndProc {
             WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MBUTTONDBLCLK
             | WM_MBUTTONDOWN | WM_MBUTTONUP | WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP
             | WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
-                let which = match msg {
+                let button = match msg {
                     WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => MouseButton::Left,
                     WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP => MouseButton::Middle,
                     WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => MouseButton::Right,
@@ -504,25 +521,21 @@ impl WndProc for MyWndProc {
                     },
                     _ => unreachable!(),
                 };
-                let ty = match msg {
-                    WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN => {
-                        MouseType::Down
-                    }
-                    WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK | WM_XBUTTONDBLCLK => {
-                        MouseType::DoubleClick
-                    }
-                    WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP => MouseType::Up,
+                let count = match msg {
+                    WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN => 1,
+                    WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK | WM_XBUTTONDBLCLK => 2,
+                    WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP => 0,
                     _ => unreachable!(),
                 };
                 let x = LOWORD(lparam as u32) as i16 as i32;
                 let y = HIWORD(lparam as u32) as i16 as i32;
-                let mods = LOWORD(wparam as u32) as u32;
+                let mods = get_mod_state();
                 let event = MouseEvent {
                     x,
                     y,
                     mods,
-                    which,
-                    ty,
+                    button,
+                    count,
                 };
                 self.handler.mouse(&event);
                 Some(0)
