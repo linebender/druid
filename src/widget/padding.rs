@@ -19,47 +19,59 @@ use crate::{
     Size, WidgetBase, WidgetInner,
 };
 
-pub struct Padding {
+pub struct Padding<T: PartialEq + Clone> {
     left: f64,
     right: f64,
     top: f64,
     bottom: f64,
 
-    child: WidgetBase<Box<dyn WidgetInner>>,
+    child: WidgetBase<T, Box<dyn WidgetInner<T>>>,
 }
 
-impl Padding {
+impl<T: PartialEq + Clone> Padding<T> {
     /// Create widget with uniform padding.
-    pub fn uniform(padding: f64, child: impl Into<WidgetBase<Box<dyn WidgetInner>>>) -> Padding {
+    pub fn uniform(padding: f64, child: impl WidgetInner<T> + 'static) -> Padding<T> {
         Padding {
             left: padding,
             right: padding,
             top: padding,
             bottom: padding,
-            child: child.into(),
+            child: WidgetBase::new(child).boxed(),
         }
     }
 }
 
-impl WidgetInner for Padding {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, env: &Env) {
-        self.child.paint_with_offset(paint_ctx, env, ());
+impl<T: PartialEq + Clone> WidgetInner<T> for Padding<T> {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
+        self.child.paint_with_offset(paint_ctx, data, env);
     }
 
-    fn layout(&mut self, layout_ctx: &mut LayoutCtx, bc: &BoxConstraints, env: &Env) -> Size {
+    fn layout(
+        &mut self,
+        layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> Size {
         let hpad = self.left + self.right;
         let vpad = self.top + self.bottom;
         let min = Size::new(bc.min.width - hpad, bc.min.height - vpad);
         let max = Size::new(bc.max.width - hpad, bc.max.height - vpad);
         let child_bc = BoxConstraints::new(min, max);
-        let size = self.child.layout(layout_ctx, &child_bc, env, ());
+        let size = self.child.layout(layout_ctx, &child_bc, data, env);
         let origin = Point::new(self.left, self.top);
         self.child
             .set_layout_rect(Rect::from_origin_size(origin, size));
         Size::new(size.width + hpad, size.height + vpad)
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, env: &Env) -> Option<Action> {
-        self.child.event(event, ctx, env, ())
+    fn event(
+        &mut self,
+        event: &Event,
+        ctx: &mut EventCtx,
+        data: &mut T,
+        env: &Env,
+    ) -> Option<Action> {
+        self.child.event(event, ctx, data, env)
     }
 }

@@ -16,19 +16,20 @@ use druid::{UiMain, UiState};
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::widget::{Button, Column, Padding};
+use druid::widget::{ActionWrapper, Button, Column, DynLabel, Padding};
 
 fn main() {
     druid_shell::init();
 
     let mut run_loop = win_main::RunLoop::new();
     let mut builder = WindowBuilder::new();
-    let mut root = Column::new();
-    let button1 = Button::new("button1");
-    let button2 = Button::new("button2");
-    root.add_child(Padding::uniform(5.0, button1), (), 1.0);
-    root.add_child(Padding::uniform(5.0, button2), (), 1.0);
-    let state = UiState::new(root);
+    let mut col = Column::new();
+    let label = DynLabel::new(|data: &u32, _env| format!("value: {}", data));
+    let button = Button::new("increment");
+    col.add_child(Padding::uniform(5.0, label), 1.0);
+    col.add_child(Padding::uniform(5.0, button), 1.0);
+    let root = ActionWrapper::new(col, |data: &mut u32, _env| *data += 1);
+    let state = UiState::new(root, 0u32);
     builder.set_title("Hello example");
     builder.set_handler(Box::new(UiMain::new(state)));
     let window = builder.build().unwrap();

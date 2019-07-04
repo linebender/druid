@@ -43,36 +43,56 @@ fn build_calc() -> BoxedWidget {
     let mut column = Column::new();
     let display = Label::new("0");
     column.add_child(pad(display), (), 0.0);
-    column.add_child(flex_row(vec![
-        op_button("CE"),
-        op_button("C"),
-        op_button("⌫"),
-        op_button("÷"),
-    ]), (), 1.0);
-    column.add_child(flex_row(vec![
-        op_button("7"),
-        op_button("8"),
-        op_button("9"),
-        op_button("×"),
-    ]), (), 1.0);
-    column.add_child(flex_row(vec![
-        op_button("4"),
-        op_button("5"),
-        op_button("6"),
-        op_button("−"),
-    ]), (), 1.0);
-    column.add_child(flex_row(vec![
-        op_button("1"),
-        op_button("2"),
-        op_button("3"),
-        op_button("+"),
-    ]), (), 1.0);
-    column.add_child(flex_row(vec![
-        op_button("±"),
-        op_button("0"),
-        op_button("."),
-        op_button("="),
-    ]), (), 1.0);
+    column.add_child(
+        flex_row(vec![
+            op_button("CE"),
+            op_button("C"),
+            op_button("⌫"),
+            op_button("÷"),
+        ]),
+        (),
+        1.0,
+    );
+    column.add_child(
+        flex_row(vec![
+            op_button("7"),
+            op_button("8"),
+            op_button("9"),
+            op_button("×"),
+        ]),
+        (),
+        1.0,
+    );
+    column.add_child(
+        flex_row(vec![
+            op_button("4"),
+            op_button("5"),
+            op_button("6"),
+            op_button("−"),
+        ]),
+        (),
+        1.0,
+    );
+    column.add_child(
+        flex_row(vec![
+            op_button("1"),
+            op_button("2"),
+            op_button("3"),
+            op_button("+"),
+        ]),
+        (),
+        1.0,
+    );
+    column.add_child(
+        flex_row(vec![
+            op_button("±"),
+            op_button("0"),
+            op_button("."),
+            op_button("="),
+        ]),
+        (),
+        1.0,
+    );
     column.into()
 }
 

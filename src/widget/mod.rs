@@ -14,8 +14,11 @@
 
 //! Common widgets.
 
+mod action_wrapper;
+pub use crate::widget::action_wrapper::ActionWrapper;
+
 mod button;
-pub use crate::widget::button::{Button, Label};
+pub use crate::widget::button::{Button, DynLabel, Label};
 
 mod flex;
 pub use crate::widget::flex::{Column, Flex, Row};

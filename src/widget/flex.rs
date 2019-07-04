@@ -24,15 +24,14 @@ use crate::{
 pub struct Row;
 pub struct Column;
 
-pub struct Flex {
+pub struct Flex<T: PartialEq + Clone> {
     direction: Axis,
 
-    children: Vec<ChildWidget>,
+    children: Vec<ChildWidget<T>>,
 }
 
-struct ChildWidget {
-    widget: WidgetBase<Box<dyn WidgetInner>>,
-    path: KeyPath,
+struct ChildWidget<T: PartialEq + Clone> {
+    widget: WidgetBase<T, Box<dyn WidgetInner<T>>>,
     params: Params,
 }
 
@@ -70,7 +69,7 @@ impl Axis {
 }
 
 impl Row {
-    pub fn new() -> Flex {
+    pub fn new<T: PartialEq + Clone>() -> Flex<T> {
         Flex {
             direction: Axis::Horizontal,
 
@@ -80,7 +79,7 @@ impl Row {
 }
 
 impl Column {
-    pub fn new() -> Flex {
+    pub fn new<T: PartialEq + Clone>() -> Flex<T> {
         Flex {
             direction: Axis::Vertical,
 
@@ -89,27 +88,32 @@ impl Column {
     }
 }
 
-impl Flex {
+impl<T: PartialEq + Clone> Flex<T> {
     /// Add a child widget.
-    pub fn add_child(&mut self, child: impl Into<BoxedWidget>, frag: impl PathFragment, flex: f64) {
+    pub fn add_child(&mut self, child: impl WidgetInner<T> + 'static, flex: f64) {
         let params = Params { flex };
         let child = ChildWidget {
-            widget: child.into(),
-            path: frag.into_key_path(),
+            widget: WidgetBase::new(child).boxed(),
             params,
         };
         self.children.push(child);
     }
 }
 
-impl WidgetInner for Flex {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, env: &Env) {
+impl<T: PartialEq + Clone> WidgetInner<T> for Flex<T> {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         for child in &mut self.children {
-            child.widget.paint_with_offset(paint_ctx, env, &child.path);
+            child.widget.paint_with_offset(paint_ctx, data, env);
         }
     }
 
-    fn layout(&mut self, layout_ctx: &mut LayoutCtx, bc: &BoxConstraints, env: &Env) -> Size {
+    fn layout(
+        &mut self,
+        layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> Size {
         // Measure non-flex children.
         let mut total_non_flex = 0.0;
         let mut minor = 0.0f64;
@@ -125,7 +129,7 @@ impl WidgetInner for Flex {
                         Size::new(bc.max.width, std::f64::INFINITY),
                     ),
                 };
-                let child_size = child.widget.layout(layout_ctx, &child_bc, env, &child.path);
+                let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
                 minor = minor.max(self.direction.minor(child_size));
                 total_non_flex += self.direction.major(child_size);
                 // Stash size.
@@ -152,7 +156,7 @@ impl WidgetInner for Flex {
                         Size::new(bc.max.width, major),
                     ),
                 };
-                let child_size = child.widget.layout(layout_ctx, &child_bc, env, &child.path);
+                let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
                 minor = minor.max(self.direction.minor(child_size));
                 // Stash size.
                 let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
@@ -174,10 +178,16 @@ impl WidgetInner for Flex {
         Size::new(width, height)
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, env: &Env) -> Option<Action> {
+    fn event(
+        &mut self,
+        event: &Event,
+        ctx: &mut EventCtx,
+        data: &mut T,
+        env: &Env,
+    ) -> Option<Action> {
         let mut action = None;
         for child in &mut self.children {
-            action = Action::merge(action, child.widget.event(event, ctx, env, &child.path));
+            action = Action::merge(action, child.widget.event(event, ctx, data, env));
         }
         action
     }

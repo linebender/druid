@@ -14,6 +14,8 @@
 
 //! A button widget.
 
+use std::marker::PhantomData;
+
 use crate::{
     Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, WidgetInner,
 };
@@ -32,6 +34,11 @@ pub struct Label {
 
 pub struct Button {
     label: Label,
+}
+
+pub struct DynLabel<T: PartialEq + Clone, F: FnMut(&T, &Env) -> String> {
+    label_closure: F,
+    phantom: PhantomData<T>,
 }
 
 impl Label {
@@ -57,8 +64,8 @@ impl Label {
     }
 }
 
-impl WidgetInner for Label {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _env: &Env) {
+impl<T: PartialEq + Clone> WidgetInner<T> for Label {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, _env: &Env) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
         let brush = paint_ctx.render_ctx.solid_brush(LABEL_TEXT_COLOR);
@@ -67,25 +74,37 @@ impl WidgetInner for Label {
         paint_ctx.render_ctx.draw_text(&text_layout, pos, &brush);
     }
 
-    fn layout(&mut self, _layout_ctx: &mut LayoutCtx, bc: &BoxConstraints, _env: &Env) -> Size {
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &T,
+        _env: &Env,
+    ) -> Size {
         bc.constrain(Size::new(100.0, 17.0))
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, env: &Env) -> Option<Action> {
+    fn event(
+        &mut self,
+        event: &Event,
+        ctx: &mut EventCtx,
+        _data: &mut T,
+        env: &Env,
+    ) -> Option<Action> {
         None
     }
 }
 
 impl Button {
-    pub fn new<S: Into<String>>(label: S) -> Button {
+    pub fn new(text: impl Into<String>) -> Button {
         Button {
-            label: Label::new(label),
+            label: Label::new(text),
         }
     }
 }
 
-impl WidgetInner for Button {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, env: &Env) {
+impl<T: PartialEq + Clone> WidgetInner<T> for Button {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let is_active = base_state.is_active();
         let is_hot = base_state.is_hot();
         let bg_color = match (is_active, is_hot) {
@@ -97,14 +116,26 @@ impl WidgetInner for Button {
         let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
         paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
 
-        self.label.paint(paint_ctx, base_state, env);
+        self.label.paint(paint_ctx, base_state, data, env);
     }
 
-    fn layout(&mut self, layout_ctx: &mut LayoutCtx, bc: &BoxConstraints, env: &Env) -> Size {
-        self.label.layout(layout_ctx, bc, env)
+    fn layout(
+        &mut self,
+        layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> Size {
+        self.label.layout(layout_ctx, bc, data, env)
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, _env: &Env) -> Option<Action> {
+    fn event(
+        &mut self,
+        event: &Event,
+        ctx: &mut EventCtx,
+        _data: &mut T,
+        _env: &Env,
+    ) -> Option<Action> {
         let mut result = None;
         match event {
             Event::Mouse(mouse_event) => {
@@ -131,43 +162,22 @@ impl WidgetInner for Button {
     }
 }
 
-/*
-use std::any::Any;
-
-use crate::kurbo::{Point, Rect, Size};
-use crate::piet::{Color, FillRule, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
-
-use crate::widget::Widget;
-use crate::{BoxConstraints, LayoutResult};
-use crate::{HandlerCtx, Id, LayoutCtx, MouseEvent, PaintCtx, Ui};
-
-const BUTTON_BG_COLOR: Color = Color::rgba32(0x40_40_48_ff);
-const BUTTON_HOVER_COLOR: Color = Color::rgba32(0x50_50_58_ff);
-const BUTTON_PRESSED_COLOR: Color = Color::rgba32(0x60_60_68_ff);
-const LABEL_TEXT_COLOR: Color = Color::rgba32(0xf0_f0_ea_ff);
-
-/// A text label with no interaction.
-pub struct Label {
-    label: String,
-}
-
-/// A clickable button with a label.
-pub struct Button {
-    label: Label,
-}
-
-impl Label {
-    pub fn new<S: Into<String>>(label: S) -> Label {
-        Label {
-            label: label.into(),
+impl<T: PartialEq + Clone, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
+    pub fn new(label_closure: F) -> DynLabel<T, F> {
+        DynLabel {
+            label_closure,
+            phantom: Default::default(),
         }
     }
 
-    pub fn ui(self, ctx: &mut Ui) -> Id {
-        ctx.add(self, &[])
-    }
-
-    fn get_layout(&self, rt: &mut Piet, font_size: f32) -> <Piet as RenderContext>::TextLayout {
+    fn get_layout(
+        &mut self,
+        rt: &mut Piet,
+        font_size: f32,
+        data: &T,
+        env: &Env,
+    ) -> <Piet as RenderContext>::TextLayout {
+        let text = (self.label_closure)(data, env);
         // TODO: caching of both the format and the layout
         let font = rt
             .text()
@@ -176,105 +186,40 @@ impl Label {
             .build()
             .unwrap();
         rt.text()
-            .new_text_layout(&font, &self.label)
+            .new_text_layout(&font, &text)
             .unwrap()
             .build()
             .unwrap()
     }
 }
 
-impl Widget for Label {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Rect) {
+impl<T: PartialEq + Clone, F: FnMut(&T, &Env) -> String> WidgetInner<T> for DynLabel<T, F> {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         let font_size = 15.0;
-        let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
+        let text_layout = self.get_layout(paint_ctx.render_ctx, font_size, data, env);
         let brush = paint_ctx.render_ctx.solid_brush(LABEL_TEXT_COLOR);
 
-        let pos = Point::new(geom.origin().x, geom.origin().y + font_size as f64);
-        paint_ctx
-            .render_ctx
-            .draw_text(&text_layout, pos.to_vec2(), &brush);
+        let pos = Vec2::new(0.0, font_size as f64);
+        paint_ctx.render_ctx.draw_text(&text_layout, pos, &brush);
     }
 
     fn layout(
         &mut self,
+        _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _children: &[Id],
-        _size: Option<Size>,
-        _ctx: &mut LayoutCtx,
-    ) -> LayoutResult {
-        // TODO: measure text properly
-        LayoutResult::Size(bc.constrain(Size::new(100.0, 17.0)))
+        _data: &T,
+        _env: &Env,
+    ) -> Size {
+        bc.constrain(Size::new(100.0, 17.0))
     }
 
-    fn poke(&mut self, payload: &mut dyn Any, ctx: &mut HandlerCtx) -> bool {
-        if let Some(string) = payload.downcast_ref::<String>() {
-            self.label = string.clone();
-            ctx.invalidate();
-            true
-        } else {
-            println!("downcast failed");
-            false
-        }
-    }
-}
-
-impl Button {
-    pub fn new<S: Into<String>>(label: S) -> Button {
-        Button {
-            label: Label::new(label),
-        }
-    }
-
-    pub fn ui(self, ctx: &mut Ui) -> Id {
-        ctx.add(self, &[])
-    }
-}
-
-impl Widget for Button {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Rect) {
-        {
-            let is_active = paint_ctx.is_active();
-            let is_hot = paint_ctx.is_hot();
-            let bg_color = match (is_active, is_hot) {
-                (true, true) => BUTTON_PRESSED_COLOR,
-                (false, true) => BUTTON_HOVER_COLOR,
-                _ => BUTTON_BG_COLOR,
-            };
-            let brush = paint_ctx.render_ctx.solid_brush(bg_color);
-            paint_ctx.render_ctx.fill(geom, &brush, FillRule::NonZero);
-        }
-        self.label.paint(paint_ctx, geom);
-    }
-
-    fn layout(
+    fn event(
         &mut self,
-        bc: &BoxConstraints,
-        children: &[Id],
-        size: Option<Size>,
-        ctx: &mut LayoutCtx,
-    ) -> LayoutResult {
-        self.label.layout(bc, children, size, ctx)
-    }
-
-    fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
-        if event.count > 0 {
-            ctx.set_active(true);
-        } else {
-            ctx.set_active(false);
-            if ctx.is_hot() {
-                ctx.send_event(true);
-            }
-        }
-        ctx.invalidate();
-        true
-    }
-
-    fn on_hot_changed(&mut self, _hot: bool, ctx: &mut HandlerCtx) {
-        ctx.invalidate();
-    }
-
-    fn poke(&mut self, payload: &mut dyn Any, ctx: &mut HandlerCtx) -> bool {
-        self.label.poke(payload, ctx)
+        event: &Event,
+        ctx: &mut EventCtx,
+        _data: &mut T,
+        env: &Env,
+    ) -> Option<Action> {
+        None
     }
 }
-*/

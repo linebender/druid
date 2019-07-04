@@ -43,25 +43,27 @@ use value::{Delta, KeyPath, PathEl, PathFragment, Value};
 
 const BACKGROUND_COLOR: Color = Color::rgb24(0x27_28_22);
 
-pub struct UiMain {
-    state: RefCell<UiState>,
+pub struct UiMain<T: PartialEq + Clone> {
+    state: RefCell<UiState<T>>,
 }
 
-pub struct UiState {
-    root: WidgetBase<Box<dyn WidgetInner>>,
+pub struct UiState<T: PartialEq + Clone> {
+    root: WidgetBase<T, Box<dyn WidgetInner<T>>>,
+    data: T,
     // Following fields might move to a separate struct so there's access
     // from contexts.
     handle: WindowHandle,
     size: Size,
 }
 
-pub struct WidgetBase<W: WidgetInner> {
+pub struct WidgetBase<T: PartialEq + Clone, W: WidgetInner<T>> {
     state: BaseState,
+    old_data: Option<T>,
     inner: W,
 }
 
 /// Convenience type for dynamic boxed widget.
-pub type BoxedWidget = WidgetBase<Box<dyn WidgetInner>>;
+pub type BoxedWidget<T> = WidgetBase<T, Box<dyn WidgetInner<T>>>;
 
 #[derive(Default)]
 pub struct BaseState {
@@ -79,25 +81,37 @@ pub struct BaseState {
     has_active: bool,
 }
 
-pub trait WidgetInner {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, env: &Env);
+pub trait WidgetInner<T> {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env);
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, env: &Env) -> Size;
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, env: &Env) -> Option<Action>;
+    fn event(
+        &mut self,
+        event: &Event,
+        ctx: &mut EventCtx,
+        data: &mut T,
+        env: &Env,
+    ) -> Option<Action>;
 }
 
-impl WidgetInner for Box<dyn WidgetInner> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, env: &Env) {
-        self.deref_mut().paint(paint_ctx, base_state, env);
+impl<T> WidgetInner<T> for Box<dyn WidgetInner<T>> {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+        self.deref_mut().paint(paint_ctx, base_state, data, env);
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, env: &Env) -> Size {
-        self.deref_mut().layout(ctx, bc, env)
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+        self.deref_mut().layout(ctx, bc, data, env)
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, env: &Env) -> Option<Action> {
-        self.deref_mut().event(event, ctx, env)
+    fn event(
+        &mut self,
+        event: &Event,
+        ctx: &mut EventCtx,
+        data: &mut T,
+        env: &Env,
+    ) -> Option<Action> {
+        self.deref_mut().event(event, ctx, data, env)
     }
 }
 
@@ -130,10 +144,11 @@ pub struct BoxConstraints {
     max: Size,
 }
 
-impl<W: WidgetInner> WidgetBase<W> {
-    pub fn new(inner: W) -> WidgetBase<W> {
+impl<T: PartialEq + Clone, W: WidgetInner<T>> WidgetBase<T, W> {
+    pub fn new(inner: W) -> WidgetBase<T, W> {
         WidgetBase {
             state: Default::default(),
+            old_data: None,
             inner,
         }
     }
@@ -150,19 +165,13 @@ impl<W: WidgetInner> WidgetBase<W> {
         self.state.layout_rect
     }
 
-    pub fn paint(&mut self, paint_ctx: &mut PaintCtx, env: &Env, frag: impl PathFragment) {
-        let env = env.join(frag);
-        self.inner.paint(paint_ctx, &self.state, &env);
+    pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.inner.paint(paint_ctx, &self.state, data, &env);
     }
 
     /// Paint the widget, translating it by the origin of its layout rectangle.
     // Discussion: should this be `paint` and the other `paint_raw`?
-    pub fn paint_with_offset(
-        &mut self,
-        paint_ctx: &mut PaintCtx,
-        env: &Env,
-        frag: impl PathFragment,
-    ) {
+    pub fn paint_with_offset(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Err(e) = paint_ctx.render_ctx.save() {
             eprintln!("error saving render context: {:?}", e);
             return;
@@ -170,7 +179,7 @@ impl<W: WidgetInner> WidgetBase<W> {
         paint_ctx
             .render_ctx
             .transform(Affine::translate(self.state.layout_rect.origin().to_vec2()));
-        self.paint(paint_ctx, env, frag);
+        self.paint(paint_ctx, data, env);
         if let Err(e) = paint_ctx.render_ctx.restore() {
             eprintln!("error restoring render context: {:?}", e);
         }
@@ -180,11 +189,10 @@ impl<W: WidgetInner> WidgetBase<W> {
         &mut self,
         layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
+        data: &T,
         env: &Env,
-        frag: impl PathFragment,
     ) -> Size {
-        let env = env.join(frag);
-        self.inner.layout(layout_ctx, bc, &env)
+        self.inner.layout(layout_ctx, bc, data, &env)
     }
 
     /// Propagate an event.
@@ -192,8 +200,8 @@ impl<W: WidgetInner> WidgetBase<W> {
         &mut self,
         event: &Event,
         ctx: &mut EventCtx,
+        data: &mut T,
         env: &Env,
-        frag: impl PathFragment,
     ) -> Option<Action> {
         if !event.recurse() {
             // This function is called by containers to propagate an event from
@@ -201,7 +209,6 @@ impl<W: WidgetInner> WidgetBase<W> {
             // from other points in the library.
             return None;
         }
-        let env = env.join(frag);
         let had_active = self.state.has_active;
         let mut child_ctx = EventCtx {
             base_state: &mut self.state,
@@ -230,7 +237,7 @@ impl<W: WidgetInner> WidgetBase<W> {
         child_ctx.base_state.needs_inval = false;
         let action = if recurse {
             child_ctx.base_state.has_active = false;
-            let action = self.inner.event(&child_event, &mut child_ctx, &env);
+            let action = self.inner.event(&child_event, &mut child_ctx, data, &env);
             child_ctx.base_state.has_active |= child_ctx.base_state.is_active;
             action
         } else {
@@ -244,26 +251,31 @@ impl<W: WidgetInner> WidgetBase<W> {
 }
 
 // Consider putting the `'static` bound on the main impl.
-impl<W: WidgetInner + 'static> WidgetBase<W> {
-    pub fn boxed(self) -> BoxedWidget {
+impl<T: PartialEq + Clone, W: WidgetInner<T> + 'static> WidgetBase<T, W> {
+    pub fn boxed(self) -> BoxedWidget<T> {
         WidgetBase {
             state: self.state,
+            old_data: self.old_data,
             inner: Box::new(self.inner),
         }
     }
 }
 
+// The following seems not to work because of the parametrization on T.
+/*
 // Convenience method for conversion to boxed widgets.
-impl<W: WidgetInner + 'static> From<W> for BoxedWidget {
-    fn from(w: W) -> BoxedWidget {
+impl<T: PartialEq + Clone, W: WidgetInner<T> + 'static> From<W> for BoxedWidget<T> {
+    fn from(w: W) -> BoxedWidget<T> {
         WidgetBase::new(w).boxed()
     }
 }
+*/
 
-impl UiState {
-    pub fn new(root: impl Into<BoxedWidget>) -> UiState {
+impl<T: PartialEq + Clone> UiState<T> {
+    pub fn new(root: impl WidgetInner<T> + 'static, data: T) -> UiState<T> {
         UiState {
-            root: root.into(),
+            root: WidgetBase::new(root).boxed(),
+            data,
             handle: Default::default(),
             size: Default::default(),
         }
@@ -281,42 +293,42 @@ impl UiState {
             had_active: self.root.state.has_active,
         };
         let env = self.root_env();
-        let action = self.root.event(&event, &mut ctx, &env, ());
+        let action = self.root.event(&event, &mut ctx, &mut self.data, &env);
         if ctx.base_state.needs_inval {
             self.handle.invalidate();
         }
         // TODO: process actions
-        if let Some(action) = action {
-            println!("action: {:?}", action);
-        }
+    }
+
+    fn paint(&mut self, piet: &mut Piet) -> bool {
+        let bc = BoxConstraints::tight(self.size);
+        let env = self.root_env();
+        let mut layout_ctx = LayoutCtx {};
+        let size = self.root.layout(&mut layout_ctx, &bc, &self.data, &env);
+        self.root.state.layout_rect = Rect::from_origin_size(Point::ORIGIN, size);
+        piet.clear(BACKGROUND_COLOR);
+        let mut paint_ctx = PaintCtx { render_ctx: piet };
+        self.root.paint(&mut paint_ctx, &self.data, &env);
+        false
     }
 }
 
-impl UiMain {
-    pub fn new(state: UiState) -> UiMain {
+impl<T: PartialEq + Clone> UiMain<T> {
+    pub fn new(state: UiState<T>) -> UiMain<T> {
         UiMain {
             state: RefCell::new(state),
         }
     }
 }
 
-impl WinHandler for UiMain {
+impl<T: PartialEq + Clone + 'static> WinHandler for UiMain<T> {
     fn connect(&self, handle: &WindowHandle) {
         let mut state = self.state.borrow_mut();
         state.handle = handle.clone();
     }
 
     fn paint(&self, piet: &mut Piet) -> bool {
-        let mut state = self.state.borrow_mut();
-        let bc = BoxConstraints::tight(state.size);
-        let env = state.root_env();
-        let mut layout_ctx = LayoutCtx {};
-        let size = state.root.layout(&mut layout_ctx, &bc, &env, ());
-        state.root.state.layout_rect = Rect::from_origin_size(Point::ORIGIN, size);
-        piet.clear(BACKGROUND_COLOR);
-        let mut paint_ctx = PaintCtx { render_ctx: piet };
-        state.root.paint(&mut paint_ctx, &env, ());
-        false
+        self.state.borrow_mut().paint(piet)
     }
 
     fn size(&self, width: u32, height: u32) {
