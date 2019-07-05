@@ -17,8 +17,8 @@
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx,
-    PaintCtx, UpdateCtx, WidgetBase, WidgetInner,
+    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
+    WidgetBase, WidgetInner,
 };
 
 pub struct Row;

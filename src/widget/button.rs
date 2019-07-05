@@ -17,7 +17,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx, WidgetInner,
+    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size,
+    UpdateCtx, WidgetInner,
 };
 
 use crate::piet::{Color, FillRule, FontBuilder, Text, TextLayoutBuilder};
@@ -36,7 +37,7 @@ pub struct Button {
     label: Label,
 }
 
-pub struct DynLabel<T: PartialEq + Clone, F: FnMut(&T, &Env) -> String> {
+pub struct DynLabel<T: Data, F: FnMut(&T, &Env) -> String> {
     label_closure: F,
     phantom: PhantomData<T>,
 }
@@ -64,7 +65,7 @@ impl Label {
     }
 }
 
-impl<T: PartialEq + Clone> WidgetInner<T> for Label {
+impl<T: Data> WidgetInner<T> for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, _env: &Env) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
@@ -94,8 +95,7 @@ impl<T: PartialEq + Clone> WidgetInner<T> for Label {
         None
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
-    }
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {}
 }
 
 impl Button {
@@ -106,7 +106,7 @@ impl Button {
     }
 }
 
-impl<T: PartialEq + Clone> WidgetInner<T> for Button {
+impl<T: Data> WidgetInner<T> for Button {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let is_active = base_state.is_active();
         let is_hot = base_state.is_hot();
@@ -164,11 +164,10 @@ impl<T: PartialEq + Clone> WidgetInner<T> for Button {
         result
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
-    }
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {}
 }
 
-impl<T: PartialEq + Clone, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
+impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
     pub fn new(label_closure: F) -> DynLabel<T, F> {
         DynLabel {
             label_closure,
@@ -199,7 +198,7 @@ impl<T: PartialEq + Clone, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
     }
 }
 
-impl<T: PartialEq + Clone, F: FnMut(&T, &Env) -> String> WidgetInner<T> for DynLabel<T, F> {
+impl<T: Data, F: FnMut(&T, &Env) -> String> WidgetInner<T> for DynLabel<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size, data, env);

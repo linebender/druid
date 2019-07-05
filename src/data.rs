@@ -17,9 +17,9 @@
 use std::sync::Arc;
 
 /// A trait used to represent value types.
-/// 
+///
 /// These should be cheap to compare and cheap to clone.
-/// 
+///
 /// See https://sinusoid.es/lager/model.html#id2 for a well-written
 /// explanation of value types (albeit within a C++ context).
 pub trait Data: Clone {
@@ -36,9 +36,37 @@ pub trait Data: Clone {
     fn same(&self, other: &Self) -> bool;
 }
 
-impl Data for u32 {
+/// An impl of `Data` suitable for simple types.
+///
+/// The `same` method is implemented with equality, so the type should
+/// implement `Eq` at least.
+macro_rules! impl_data_simple {
+    ($t:ty) => {
+        impl Data for $t {
+            fn same(&self, other: &Self) -> bool {
+                self == other
+            }
+        }
+    };
+}
+
+impl_data_simple!(i8);
+impl_data_simple!(i16);
+impl_data_simple!(i32);
+impl_data_simple!(i64);
+impl_data_simple!(isize);
+impl_data_simple!(u8);
+impl_data_simple!(u16);
+impl_data_simple!(u32);
+impl_data_simple!(u64);
+impl_data_simple!(usize);
+impl_data_simple!(char);
+impl_data_simple!(bool);
+impl_data_simple!(String);
+
+impl Data for f32 {
     fn same(&self, other: &Self) -> bool {
-        self == other
+        self.to_bits() == other.to_bits()
     }
 }
 
@@ -53,7 +81,5 @@ impl<T> Data for Arc<T> {
         Arc::ptr_eq(self, other)
     }
 }
-
-// TODO: implementation for other primitive types
 
 // TODO: derive macro

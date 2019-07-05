@@ -15,8 +15,8 @@
 //! A widget that just adds padding during layout.
 
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect,
-    Size, UpdateCtx, WidgetBase, WidgetInner,
+    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
+    Rect, Size, UpdateCtx, WidgetBase, WidgetInner,
 };
 
 pub struct Padding<T: Data> {

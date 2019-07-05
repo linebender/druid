@@ -324,9 +324,7 @@ impl<T: Data> UiState<T> {
         };
         let env = self.root_env();
         let action = self.root.event(&event, &mut ctx, &mut self.data, &env);
-        let mut update_ctx = UpdateCtx {
-            needs_inval: false,
-        };
+        let mut update_ctx = UpdateCtx { needs_inval: false };
         // Note: we probably want to aggregate updates so there's only one after
         // a burst of events.
         self.root.update(&mut update_ctx, &self.data, &env);

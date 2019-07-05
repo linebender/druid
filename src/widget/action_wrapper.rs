@@ -15,16 +15,16 @@
 //! A widget that listens for events and invokes a closure.
 
 use crate::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect,
-    Size, UpdateCtx, WidgetInner,
+    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
+    Rect, Size, UpdateCtx, WidgetInner,
 };
 
-pub struct ActionWrapper<T: PartialEq + Clone, F: FnMut(&mut T, &Env)> {
+pub struct ActionWrapper<T: Data, F: FnMut(&mut T, &Env)> {
     child: Box<dyn WidgetInner<T>>,
     closure: F,
 }
 
-impl<T: PartialEq + Clone, F: FnMut(&mut T, &Env)> ActionWrapper<T, F> {
+impl<T: Data, F: FnMut(&mut T, &Env)> ActionWrapper<T, F> {
     /// Create widget with uniform padding.
     pub fn new(child: impl WidgetInner<T> + 'static, closure: F) -> ActionWrapper<T, F> {
         ActionWrapper {
@@ -34,7 +34,7 @@ impl<T: PartialEq + Clone, F: FnMut(&mut T, &Env)> ActionWrapper<T, F> {
     }
 }
 
-impl<T: PartialEq + Clone, F: FnMut(&mut T, &Env)> WidgetInner<T> for ActionWrapper<T, F> {
+impl<T: Data, F: FnMut(&mut T, &Env)> WidgetInner<T> for ActionWrapper<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         self.child.paint(paint_ctx, base_state, data, env);
     }
