@@ -17,20 +17,20 @@
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
-    Action, BaseState, BoxConstraints, BoxedWidget, Env, Event, EventCtx, KeyPath, LayoutCtx,
+    Action, BaseState, BoxConstraints, BoxedWidget, Data, Env, Event, EventCtx, KeyPath, LayoutCtx,
     PaintCtx, PathFragment, WidgetBase, WidgetInner,
 };
 
 pub struct Row;
 pub struct Column;
 
-pub struct Flex<T: PartialEq + Clone> {
+pub struct Flex<T: Data> {
     direction: Axis,
 
     children: Vec<ChildWidget<T>>,
 }
 
-struct ChildWidget<T: PartialEq + Clone> {
+struct ChildWidget<T: Data> {
     widget: WidgetBase<T, Box<dyn WidgetInner<T>>>,
     params: Params,
 }
@@ -69,7 +69,7 @@ impl Axis {
 }
 
 impl Row {
-    pub fn new<T: PartialEq + Clone>() -> Flex<T> {
+    pub fn new<T: Data>() -> Flex<T> {
         Flex {
             direction: Axis::Horizontal,
 
@@ -79,7 +79,7 @@ impl Row {
 }
 
 impl Column {
-    pub fn new<T: PartialEq + Clone>() -> Flex<T> {
+    pub fn new<T: Data>() -> Flex<T> {
         Flex {
             direction: Axis::Vertical,
 
@@ -88,7 +88,7 @@ impl Column {
     }
 }
 
-impl<T: PartialEq + Clone> Flex<T> {
+impl<T: Data> Flex<T> {
     /// Add a child widget.
     pub fn add_child(&mut self, child: impl WidgetInner<T> + 'static, flex: f64) {
         let params = Params { flex };
@@ -100,7 +100,7 @@ impl<T: PartialEq + Clone> Flex<T> {
     }
 }
 
-impl<T: PartialEq + Clone> WidgetInner<T> for Flex<T> {
+impl<T: Data> WidgetInner<T> for Flex<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         for child in &mut self.children {
             child.widget.paint_with_offset(paint_ctx, data, env);

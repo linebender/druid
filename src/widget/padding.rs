@@ -15,11 +15,11 @@
 //! A widget that just adds padding during layout.
 
 use crate::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect,
+    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect,
     Size, WidgetBase, WidgetInner,
 };
 
-pub struct Padding<T: PartialEq + Clone> {
+pub struct Padding<T: Data> {
     left: f64,
     right: f64,
     top: f64,
@@ -28,7 +28,7 @@ pub struct Padding<T: PartialEq + Clone> {
     child: WidgetBase<T, Box<dyn WidgetInner<T>>>,
 }
 
-impl<T: PartialEq + Clone> Padding<T> {
+impl<T: Data> Padding<T> {
     /// Create widget with uniform padding.
     pub fn uniform(padding: f64, child: impl WidgetInner<T> + 'static) -> Padding<T> {
         Padding {
@@ -41,7 +41,7 @@ impl<T: PartialEq + Clone> Padding<T> {
     }
 }
 
-impl<T: PartialEq + Clone> WidgetInner<T> for Padding<T> {
+impl<T: Data> WidgetInner<T> for Padding<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         self.child.paint_with_offset(paint_ctx, data, env);
     }

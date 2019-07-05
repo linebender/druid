@@ -18,6 +18,7 @@ pub use druid_shell::{kurbo, piet};
 
 pub mod widget;
 
+mod data;
 mod event;
 mod value;
 
@@ -38,16 +39,17 @@ pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, MouseType, WinHandler, WindowHandle};
 
+pub use data::Data;
 use event::{Event, MouseEvent};
 use value::{Delta, KeyPath, PathEl, PathFragment, Value};
 
 const BACKGROUND_COLOR: Color = Color::rgb24(0x27_28_22);
 
-pub struct UiMain<T: PartialEq + Clone> {
+pub struct UiMain<T: Data> {
     state: RefCell<UiState<T>>,
 }
 
-pub struct UiState<T: PartialEq + Clone> {
+pub struct UiState<T: Data> {
     root: WidgetBase<T, Box<dyn WidgetInner<T>>>,
     data: T,
     // Following fields might move to a separate struct so there's access
@@ -56,7 +58,7 @@ pub struct UiState<T: PartialEq + Clone> {
     size: Size,
 }
 
-pub struct WidgetBase<T: PartialEq + Clone, W: WidgetInner<T>> {
+pub struct WidgetBase<T: Data, W: WidgetInner<T>> {
     state: BaseState,
     old_data: Option<T>,
     inner: W,
@@ -144,7 +146,7 @@ pub struct BoxConstraints {
     max: Size,
 }
 
-impl<T: PartialEq + Clone, W: WidgetInner<T>> WidgetBase<T, W> {
+impl<T: Data, W: WidgetInner<T>> WidgetBase<T, W> {
     pub fn new(inner: W) -> WidgetBase<T, W> {
         WidgetBase {
             state: Default::default(),
@@ -251,7 +253,7 @@ impl<T: PartialEq + Clone, W: WidgetInner<T>> WidgetBase<T, W> {
 }
 
 // Consider putting the `'static` bound on the main impl.
-impl<T: PartialEq + Clone, W: WidgetInner<T> + 'static> WidgetBase<T, W> {
+impl<T: Data, W: WidgetInner<T> + 'static> WidgetBase<T, W> {
     pub fn boxed(self) -> BoxedWidget<T> {
         WidgetBase {
             state: self.state,
@@ -264,14 +266,14 @@ impl<T: PartialEq + Clone, W: WidgetInner<T> + 'static> WidgetBase<T, W> {
 // The following seems not to work because of the parametrization on T.
 /*
 // Convenience method for conversion to boxed widgets.
-impl<T: PartialEq + Clone, W: WidgetInner<T> + 'static> From<W> for BoxedWidget<T> {
+impl<T: Data, W: WidgetInner<T> + 'static> From<W> for BoxedWidget<T> {
     fn from(w: W) -> BoxedWidget<T> {
         WidgetBase::new(w).boxed()
     }
 }
 */
 
-impl<T: PartialEq + Clone> UiState<T> {
+impl<T: Data> UiState<T> {
     pub fn new(root: impl WidgetInner<T> + 'static, data: T) -> UiState<T> {
         UiState {
             root: WidgetBase::new(root).boxed(),
@@ -313,7 +315,7 @@ impl<T: PartialEq + Clone> UiState<T> {
     }
 }
 
-impl<T: PartialEq + Clone> UiMain<T> {
+impl<T: Data> UiMain<T> {
     pub fn new(state: UiState<T>) -> UiMain<T> {
         UiMain {
             state: RefCell::new(state),
@@ -321,7 +323,7 @@ impl<T: PartialEq + Clone> UiMain<T> {
     }
 }
 
-impl<T: PartialEq + Clone + 'static> WinHandler for UiMain<T> {
+impl<T: Data + 'static> WinHandler for UiMain<T> {
     fn connect(&self, handle: &WindowHandle) {
         let mut state = self.state.borrow_mut();
         state.handle = handle.clone();
