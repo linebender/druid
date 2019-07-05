@@ -16,7 +16,7 @@
 
 use crate::{
     Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect,
-    Size, WidgetBase, WidgetInner,
+    Size, UpdateCtx, WidgetBase, WidgetInner,
 };
 
 pub struct Padding<T: Data> {
@@ -73,5 +73,9 @@ impl<T: Data> WidgetInner<T> for Padding<T> {
         env: &Env,
     ) -> Option<Action> {
         self.child.event(event, ctx, data, env)
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        self.child.update(ctx, data, env);
     }
 }

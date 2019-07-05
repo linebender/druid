@@ -16,7 +16,7 @@
 
 use crate::{
     Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect,
-    Size, WidgetInner,
+    Size, UpdateCtx, WidgetInner,
 };
 
 pub struct ActionWrapper<T: PartialEq + Clone, F: FnMut(&mut T, &Env)> {
@@ -62,5 +62,9 @@ impl<T: PartialEq + Clone, F: FnMut(&mut T, &Env)> WidgetInner<T> for ActionWrap
             (self.closure)(data, env);
         }
         None
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+        self.child.update(ctx, old_data, data, env);
     }
 }

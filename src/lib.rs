@@ -95,8 +95,13 @@ pub trait WidgetInner<T> {
         data: &mut T,
         env: &Env,
     ) -> Option<Action>;
+
+    // Consider a no-op default impl.
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env);
 }
 
+// TODO: explore getting rid of this (ie be consistent about using
+// `dyn WidgetInner` only).
 impl<T> WidgetInner<T> for Box<dyn WidgetInner<T>> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         self.deref_mut().paint(paint_ctx, base_state, data, env);
@@ -115,6 +120,10 @@ impl<T> WidgetInner<T> for Box<dyn WidgetInner<T>> {
     ) -> Option<Action> {
         self.deref_mut().event(event, ctx, data, env)
     }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+        self.deref_mut().update(ctx, old_data, data, env);
+    }
 }
 
 #[derive(Clone, Default)]
@@ -132,6 +141,14 @@ pub struct LayoutCtx {}
 pub struct EventCtx<'a> {
     base_state: &'a mut BaseState,
     had_active: bool,
+}
+
+pub struct UpdateCtx {
+    // Discussion: we probably want to propagate more fine-grained
+    // invalidations, which would mean a structure very much like
+    // `EventCtx` (and possibly using the same structure). But for
+    // now keep it super-simple.
+    needs_inval: bool,
 }
 
 #[derive(Debug)]
@@ -250,6 +267,17 @@ impl<T: Data, W: WidgetInner<T>> WidgetBase<T, W> {
         ctx.base_state.has_active |= child_ctx.base_state.has_active;
         action
     }
+
+    /// Propagate a data update.
+    pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
+        if let Some(old_data) = &self.old_data {
+            if old_data.same(data) {
+                return;
+            }
+        }
+        self.inner.update(ctx, self.old_data.as_ref(), data, env);
+        self.old_data = Some(data.clone());
+    }
 }
 
 // Consider putting the `'static` bound on the main impl.
@@ -296,7 +324,13 @@ impl<T: Data> UiState<T> {
         };
         let env = self.root_env();
         let action = self.root.event(&event, &mut ctx, &mut self.data, &env);
-        if ctx.base_state.needs_inval {
+        let mut update_ctx = UpdateCtx {
+            needs_inval: false,
+        };
+        // Note: we probably want to aggregate updates so there's only one after
+        // a burst of events.
+        self.root.update(&mut update_ctx, &self.data, &env);
+        if ctx.base_state.needs_inval || update_ctx.needs_inval {
             self.handle.invalidate();
         }
         // TODO: process actions
@@ -448,6 +482,12 @@ impl<'a> EventCtx<'a> {
 
     pub fn is_active(&self) -> bool {
         self.base_state.is_active
+    }
+}
+
+impl UpdateCtx {
+    pub fn invalidate(&mut self) {
+        self.needs_inval = true;
     }
 }
 

@@ -17,8 +17,8 @@
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
-    Action, BaseState, BoxConstraints, BoxedWidget, Data, Env, Event, EventCtx, KeyPath, LayoutCtx,
-    PaintCtx, PathFragment, WidgetBase, WidgetInner,
+    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx,
+    PaintCtx, UpdateCtx, WidgetBase, WidgetInner,
 };
 
 pub struct Row;
@@ -190,5 +190,11 @@ impl<T: Data> WidgetInner<T> for Flex<T> {
             action = Action::merge(action, child.widget.event(event, ctx, data, env));
         }
         action
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        for child in &mut self.children {
+            child.widget.update(ctx, data, env);
+        }
     }
 }

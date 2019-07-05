@@ -17,7 +17,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, WidgetInner,
+    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx, WidgetInner,
 };
 
 use crate::piet::{Color, FillRule, FontBuilder, Text, TextLayoutBuilder};
@@ -93,6 +93,9 @@ impl<T: PartialEq + Clone> WidgetInner<T> for Label {
     ) -> Option<Action> {
         None
     }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    }
 }
 
 impl Button {
@@ -160,6 +163,9 @@ impl<T: PartialEq + Clone> WidgetInner<T> for Button {
         }
         result
     }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    }
 }
 
 impl<T: PartialEq + Clone, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
@@ -221,5 +227,9 @@ impl<T: PartialEq + Clone, F: FnMut(&T, &Env) -> String> WidgetInner<T> for DynL
         env: &Env,
     ) -> Option<Action> {
         None
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+        ctx.invalidate();
     }
 }
