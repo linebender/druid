@@ -20,6 +20,7 @@ pub mod widget;
 
 mod data;
 mod event;
+mod lens;
 mod value;
 
 use std::any::Any;
@@ -40,8 +41,9 @@ use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, MouseType, WinHandler, WindowHandle};
 
 pub use data::Data;
-use event::{Event, MouseEvent};
-use value::{Delta, KeyPath, PathEl, PathFragment, Value};
+pub use event::{Event, MouseEvent};
+pub use lens::{Lens, LensWrap};
+pub use value::{Delta, KeyPath, PathEl, PathFragment, Value};
 
 const BACKGROUND_COLOR: Color = Color::rgb24(0x27_28_22);
 

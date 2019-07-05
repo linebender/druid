@@ -14,7 +14,7 @@
 
 //! Simple calculator.
 
-use druid::{Data, UiMain, UiState, WidgetInner};
+use druid::{Data, LensWrap, UiMain, UiState, WidgetInner};
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
@@ -27,6 +27,27 @@ struct CalcState {
     operand: f64,
     operator: char,
     in_num: bool,
+}
+
+// All this should be produced by a derive macro.
+mod lenses {
+    // Discussion: if the inner type were listed first, then
+    // the capitalization wouldn't have to be twizzled.
+    pub mod calc_state {
+        use super::super::CalcState;
+        use druid::Lens;
+        pub struct Value;
+
+        impl Lens<CalcState, String> for Value {
+            fn get<'a>(&self, data: &'a CalcState) -> &'a String {
+                &data.value
+            }
+
+            fn with_mut<V, F: FnOnce(&mut String) -> V>(&self, data: &mut CalcState, f: F) -> V {
+                f(&mut data.value)
+            }
+        }
+    }
 }
 
 // It should be able to get this from a derive macro.
@@ -162,7 +183,10 @@ fn flex_row<T: Data>(
 
 fn build_calc() -> impl WidgetInner<CalcState> {
     let mut column = Column::new();
-    let display = DynLabel::new(|data: &CalcState, _env| data.value.clone());
+    let display = LensWrap::new(
+        DynLabel::new(|data: &String, _env| data.clone()),
+        lenses::calc_state::Value,
+    );
     column.add_child(pad(display), 0.0);
     column.add_child(
         flex_row(
