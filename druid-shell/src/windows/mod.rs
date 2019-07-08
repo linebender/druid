@@ -537,7 +537,11 @@ impl WndProc for MyWndProc {
                     button,
                     count,
                 };
-                self.handler.mouse(&event);
+                if count > 0 {
+                    self.handler.mouse_down(&event);
+                } else {
+                    self.handler.mouse_up(&event);
+                }
                 Some(0)
             }
             WM_DESTROY => {

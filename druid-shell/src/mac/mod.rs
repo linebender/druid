@@ -276,7 +276,7 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
 
 // NOTE: If we know the button (because of the origin call) we pass it through,
 // otherwise we get it from the event itself.
-fn mouse_event(nsevent: id, view: id, down: bool, button: Option<MouseButton>) -> MouseEvent {
+fn mouse_event(nsevent: id, view: id, button: Option<MouseButton>) -> MouseEvent {
     unsafe {
         let button = button.unwrap_or_else(|| {
             let button = NSEvent::pressedMouseButtons(nsevent);
@@ -286,7 +286,7 @@ fn mouse_event(nsevent: id, view: id, down: bool, button: Option<MouseButton>) -
         let view_point = view.convertPoint_fromView_(point, nil);
         let modifiers = nsevent.modifierFlags();
         let modifiers = make_modifiers(modifiers);
-        let count = if down { nsevent.clickCount() as u32 } else { 0 };
+        let count = nsevent.clickCount() as u32;
         MouseEvent {
             x: view_point.x as i32,
             y: view_point.y as i32,
@@ -325,8 +325,8 @@ fn mouse_down(this: &mut Object, nsevent: id, button: MouseButton) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, true, Some(button));
-        (*view_state).handler.mouse(&event);
+        let event = mouse_event(nsevent, this as id, Some(button));
+        (*view_state).handler.mouse_down(&event);
     }
 }
 
@@ -342,8 +342,8 @@ fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, false, Some(button));
-        (*view_state).handler.mouse(&event);
+        let event = mouse_event(nsevent, this as id, Some(button));
+        (*view_state).handler.mouse_up(&event);
     }
 }
 
@@ -351,7 +351,7 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, false, None);
+        let event = mouse_event(nsevent, this as id, None);
         (*view_state).handler.mouse_move(&event);
     }
 }

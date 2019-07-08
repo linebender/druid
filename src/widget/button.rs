@@ -141,17 +141,16 @@ impl<T: Data> WidgetInner<T> for Button {
     ) -> Option<Action> {
         let mut result = None;
         match event {
-            Event::Mouse(mouse_event) => {
-                if mouse_event.count > 0 {
-                    ctx.set_active(true);
+            Event::MouseDown(mouse_event) => {
+                ctx.set_active(true);
+                ctx.invalidate();
+            }
+            Event::MouseUp(mouse_event) => {
+                if ctx.is_active() {
+                    ctx.set_active(false);
                     ctx.invalidate();
-                } else {
-                    if ctx.is_active() {
-                        ctx.set_active(false);
-                        ctx.invalidate();
-                        if ctx.is_hot() {
-                            result = Some(Action::from_str("hit"));
-                        }
+                    if ctx.is_hot() {
+                        result = Some(Action::from_str("hit"));
                     }
                 }
             }
