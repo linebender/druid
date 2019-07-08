@@ -18,7 +18,7 @@ use std::marker::PhantomData;
 
 use crate::{
     Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size,
-    UpdateCtx, WidgetInner,
+    UpdateCtx, Widget,
 };
 
 /// A lens is a datatype that gives access to a field within a larger
@@ -53,12 +53,12 @@ impl<U, L, W> LensWrap<U, L, W> {
     }
 }
 
-impl<T, U, L, W> WidgetInner<T> for LensWrap<U, L, W>
+impl<T, U, L, W> Widget<T> for LensWrap<U, L, W>
 where
     T: Data,
     U: Data,
     L: Lens<T, U>,
-    W: WidgetInner<U>,
+    W: Widget<U>,
 {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         self.inner

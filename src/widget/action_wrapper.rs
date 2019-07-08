@@ -16,17 +16,17 @@
 
 use crate::{
     Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    Rect, Size, UpdateCtx, WidgetInner,
+    Rect, Size, UpdateCtx, Widget,
 };
 
 pub struct ActionWrapper<T: Data, F: FnMut(&mut T, &Env)> {
-    child: Box<dyn WidgetInner<T>>,
+    child: Box<dyn Widget<T>>,
     closure: F,
 }
 
 impl<T: Data, F: FnMut(&mut T, &Env)> ActionWrapper<T, F> {
     /// Create widget with uniform padding.
-    pub fn new(child: impl WidgetInner<T> + 'static, closure: F) -> ActionWrapper<T, F> {
+    pub fn new(child: impl Widget<T> + 'static, closure: F) -> ActionWrapper<T, F> {
         ActionWrapper {
             child: Box::new(child),
             closure,
@@ -34,7 +34,7 @@ impl<T: Data, F: FnMut(&mut T, &Env)> ActionWrapper<T, F> {
     }
 }
 
-impl<T: Data, F: FnMut(&mut T, &Env)> WidgetInner<T> for ActionWrapper<T, F> {
+impl<T: Data, F: FnMut(&mut T, &Env)> Widget<T> for ActionWrapper<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         self.child.paint(paint_ctx, base_state, data, env);
     }

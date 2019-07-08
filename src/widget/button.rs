@@ -18,7 +18,7 @@ use std::marker::PhantomData;
 
 use crate::{
     Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size,
-    UpdateCtx, WidgetInner,
+    UpdateCtx, Widget,
 };
 
 use crate::piet::{Color, FillRule, FontBuilder, Text, TextLayoutBuilder};
@@ -44,7 +44,7 @@ pub struct DynLabel<T: Data, F: FnMut(&T, &Env) -> String> {
 
 impl Label {
     /// Discussion question: should this return Label or a wrapped
-    /// widget (with WidgetBase)?
+    /// widget (with WidgetPod)?
     pub fn new(text: impl Into<String>) -> Label {
         Label { text: text.into() }
     }
@@ -65,7 +65,7 @@ impl Label {
     }
 }
 
-impl<T: Data> WidgetInner<T> for Label {
+impl<T: Data> Widget<T> for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, _env: &Env) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
@@ -106,7 +106,7 @@ impl Button {
     }
 }
 
-impl<T: Data> WidgetInner<T> for Button {
+impl<T: Data> Widget<T> for Button {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let is_active = base_state.is_active();
         let is_hot = base_state.is_hot();
@@ -197,7 +197,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
     }
 }
 
-impl<T: Data, F: FnMut(&T, &Env) -> String> WidgetInner<T> for DynLabel<T, F> {
+impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size, data, env);

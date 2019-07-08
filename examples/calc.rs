@@ -15,7 +15,7 @@
 //! Simple calculator.
 
 use druid::shell::{runloop, WindowBuilder};
-use druid::{Data, LensWrap, UiMain, UiState, WidgetInner};
+use druid::{Data, LensWrap, UiMain, UiState, Widget};
 
 use druid::widget::{ActionWrapper, Button, Column, DynLabel, Padding, Row};
 
@@ -144,22 +144,22 @@ impl CalcState {
     }
 }
 
-fn pad<T: Data>(inner: impl WidgetInner<T> + 'static) -> impl WidgetInner<T> {
+fn pad<T: Data>(inner: impl Widget<T> + 'static) -> impl Widget<T> {
     Padding::uniform(5.0, inner)
 }
 
-fn op_button_label(op: char, label: String) -> impl WidgetInner<CalcState> {
+fn op_button_label(op: char, label: String) -> impl Widget<CalcState> {
     pad(ActionWrapper::new(
         Button::new(label),
         move |data: &mut CalcState, _env| data.op(op),
     ))
 }
 
-fn op_button(op: char) -> impl WidgetInner<CalcState> {
+fn op_button(op: char) -> impl Widget<CalcState> {
     op_button_label(op, op.to_string())
 }
 
-fn digit_button(digit: u8) -> impl WidgetInner<CalcState> {
+fn digit_button(digit: u8) -> impl Widget<CalcState> {
     pad(ActionWrapper::new(
         Button::new(format!("{}", digit)),
         move |data: &mut CalcState, _env| data.digit(digit),
@@ -167,11 +167,11 @@ fn digit_button(digit: u8) -> impl WidgetInner<CalcState> {
 }
 
 fn flex_row<T: Data>(
-    w1: impl WidgetInner<T> + 'static,
-    w2: impl WidgetInner<T> + 'static,
-    w3: impl WidgetInner<T> + 'static,
-    w4: impl WidgetInner<T> + 'static,
-) -> impl WidgetInner<T> {
+    w1: impl Widget<T> + 'static,
+    w2: impl Widget<T> + 'static,
+    w3: impl Widget<T> + 'static,
+    w4: impl Widget<T> + 'static,
+) -> impl Widget<T> {
     let mut row = Row::new();
     row.add_child(w1, 1.0);
     row.add_child(w2, 1.0);
@@ -180,7 +180,7 @@ fn flex_row<T: Data>(
     row
 }
 
-fn build_calc() -> impl WidgetInner<CalcState> {
+fn build_calc() -> impl Widget<CalcState> {
     let mut column = Column::new();
     let display = LensWrap::new(
         DynLabel::new(|data: &String, _env| data.clone()),
