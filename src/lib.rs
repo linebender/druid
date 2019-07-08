@@ -14,7 +14,7 @@
 
 //! Simple data-oriented GUI.
 
-pub use druid_shell::{kurbo, piet};
+pub use druid_shell::{self as shell, kurbo, piet};
 
 pub mod widget;
 
@@ -38,7 +38,7 @@ use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use druid_shell::platform::IdleHandle;
-use druid_shell::window::{self, MouseType, WinHandler, WindowHandle};
+use druid_shell::window::{self, WinHandler, WindowHandle};
 
 pub use data::Data;
 pub use event::{Event, MouseEvent};
@@ -380,19 +380,18 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
         println!("mouse {:?} -> ({}, {})", event, x, y);
         let pos = Point::new(x as f64, y as f64);
         // TODO: double-click detection
-        let count = if event.ty == MouseType::Down { 1 } else { 0 };
         let event = Event::Mouse(MouseEvent {
             pos,
             mods: event.mods,
-            which: event.which,
-            count,
+            button: event.button,
+            count: event.count,
         });
         state.do_event(event);
     }
 
-    fn mouse_move(&self, x: i32, y: i32, _mods: u32) {
+    fn mouse_move(&self, event: &window::MouseEvent) {
         let mut state = self.state.borrow_mut();
-        let (x, y) = state.handle.pixels_to_px_xy(x, y);
+        let (x, y) = state.handle.pixels_to_px_xy(event.x, event.y);
         let pos = Point::new(x as f64, y as f64);
         let event = Event::MouseMoved(pos);
         state.do_event(event);

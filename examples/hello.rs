@@ -12,16 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::{UiMain, UiState};
-use druid_shell::platform::WindowBuilder;
-use druid_shell::win_main;
-
+use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{ActionWrapper, Button, Column, DynLabel, Padding};
+use druid::{UiMain, UiState};
 
 fn main() {
-    druid_shell::init();
+    druid::shell::init();
 
-    let mut run_loop = win_main::RunLoop::new();
+    let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut col = Column::new();
     let label = DynLabel::new(|data: &u32, _env| format!("value: {}", data));

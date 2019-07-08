@@ -54,7 +54,7 @@ impl TextBox {
     fn load_font(&mut self, rt: &mut Piet, font_size: f64) {
         let font = rt
             .text()
-            .new_font_by_name("Segoe UI", font_size as f32)
+            .new_font_by_name("Segoe UI", font_size)
             .unwrap()
             .build()
             .unwrap();
@@ -114,13 +114,13 @@ impl Widget for TextBox {
             .render_ctx
             .with_save(|rc| {
                 rc.clip(clip_rect, FillRule::NonZero);
-                rc.draw_text(&text_layout, pos.to_vec2(), &brush);
+                rc.draw_text(&text_layout, pos, &brush);
 
                 // Paint the cursor if focused
                 if focused {
                     let brush = rc.solid_brush(CURSOR_COLOR);
 
-                    let xy = geom.origin() + Vec2::new(text_layout.width() as f64 + 2., 2.);
+                    let xy = geom.origin() + Vec2::new(text_layout.width() + 2., 2.);
                     let x2y2 = xy + height_delta;
                     let line = Line::new(xy, x2y2);
 
@@ -138,7 +138,7 @@ impl Widget for TextBox {
         _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain(Size::new(self.width, BOX_HEIGHT)))
+        LayoutResult::Size(bc.constrain((self.width, BOX_HEIGHT)))
     }
 
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
