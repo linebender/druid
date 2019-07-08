@@ -16,6 +16,7 @@
 
 use crate::Point;
 
+use druid_shell::keyboard::KeyModifiers;
 use druid_shell::window::MouseButton;
 
 #[derive(Debug, Clone)]
@@ -30,11 +31,9 @@ pub struct MouseEvent {
     /// The location of the event.
     pub pos: Point,
     /// The modifiers, which have the same interpretation as the raw WM message.
-    ///
-    /// TODO: rationalize this with mouse mods.
-    pub mods: u32,
+    pub mods: KeyModifiers,
     /// Which mouse button was pressed.
-    pub which: MouseButton,
+    pub button: MouseButton,
     /// Count of multiple clicks, is 0 for mouse up event.
     pub count: u32,
 }

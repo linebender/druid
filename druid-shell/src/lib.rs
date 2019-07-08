@@ -51,5 +51,6 @@ pub use platform::application;
 pub use platform::dialog;
 pub use platform::menu;
 pub use platform::util;
-pub use platform::win_main; // TODO: rename to "runloop"
+pub use platform::win_main as runloop; // TODO: rename to "runloop"
+pub use platform::WindowBuilder;
 pub use util::init;

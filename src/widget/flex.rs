@@ -169,7 +169,7 @@ impl<T: Data> WidgetInner<T> for Flex<T> {
         for child in &mut self.children {
             // top-align, could do center etc. based on child height
             let rect = child.widget.get_layout_rect();
-            let pos = self.direction.pack(major, 0.0).into();
+            let pos: Point = self.direction.pack(major, 0.0).into();
             child.widget.set_layout_rect(rect.with_origin(pos));
             major += self.direction.major(rect.size());
         }

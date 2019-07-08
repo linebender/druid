@@ -18,6 +18,6 @@ pub struct Application;
 
 impl Application {
     pub fn quit() {
-        crate::win_main::request_quit();
+        crate::runloop::request_quit();
     }
 }

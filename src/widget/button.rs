@@ -49,7 +49,7 @@ impl Label {
         Label { text: text.into() }
     }
 
-    fn get_layout(&self, rt: &mut Piet, font_size: f32) -> <Piet as RenderContext>::TextLayout {
+    fn get_layout(&self, rt: &mut Piet, font_size: f64) -> <Piet as RenderContext>::TextLayout {
         // TODO: caching of both the format and the layout
         let font = rt
             .text()
@@ -70,9 +70,9 @@ impl<T: Data> WidgetInner<T> for Label {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
         let brush = paint_ctx.render_ctx.solid_brush(LABEL_TEXT_COLOR);
-
-        let pos = Vec2::new(0.0, font_size as f64);
-        paint_ctx.render_ctx.draw_text(&text_layout, pos, &brush);
+        paint_ctx
+            .render_ctx
+            .draw_text(&text_layout, (0.0, font_size), &brush);
     }
 
     fn layout(
@@ -82,7 +82,7 @@ impl<T: Data> WidgetInner<T> for Label {
         _data: &T,
         _env: &Env,
     ) -> Size {
-        bc.constrain(Size::new(100.0, 17.0))
+        bc.constrain((100.0, 17.0))
     }
 
     fn event(
@@ -178,7 +178,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
     fn get_layout(
         &mut self,
         rt: &mut Piet,
-        font_size: f32,
+        font_size: f64,
         data: &T,
         env: &Env,
     ) -> <Piet as RenderContext>::TextLayout {
@@ -203,9 +203,9 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> WidgetInner<T> for DynLabel<T, F> {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size, data, env);
         let brush = paint_ctx.render_ctx.solid_brush(LABEL_TEXT_COLOR);
-
-        let pos = Vec2::new(0.0, font_size as f64);
-        paint_ctx.render_ctx.draw_text(&text_layout, pos, &brush);
+        paint_ctx
+            .render_ctx
+            .draw_text(&text_layout, (0., font_size), &brush);
     }
 
     fn layout(

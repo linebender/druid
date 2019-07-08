@@ -14,9 +14,8 @@
 
 //! Simple calculator.
 
+use druid::shell::{runloop, WindowBuilder};
 use druid::{Data, LensWrap, UiMain, UiState, WidgetInner};
-use druid_shell::platform::WindowBuilder;
-use druid_shell::win_main;
 
 use druid::widget::{ActionWrapper, Button, Column, DynLabel, Padding, Row};
 
@@ -239,7 +238,7 @@ fn build_calc() -> impl WidgetInner<CalcState> {
 fn main() {
     druid_shell::init();
 
-    let mut run_loop = win_main::RunLoop::new();
+    let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let root = build_calc();
     let calc_state = CalcState {

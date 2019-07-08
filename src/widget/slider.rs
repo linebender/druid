@@ -60,9 +60,9 @@ impl Widget for Slider {
             position = geom.width() - full_box;
         }
 
-        let knob_orig = Point::new(geom.origin().x + position, geom.origin().y);
+        let knob_origin = Point::new(geom.origin().x + position, geom.origin().y);
         let knob_size = Size::new(full_box, geom.height());
-        let knob_rect = Rect::from_origin_size(knob_orig, knob_size);
+        let knob_rect = Rect::from((knob_origin, knob_size));
 
         paint_ctx
             .render_ctx
@@ -76,7 +76,7 @@ impl Widget for Slider {
         _size: Option<Size>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain(Size::new(bc.max.width, BOX_HEIGHT)))
+        LayoutResult::Size(bc.constrain((bc.max.width, BOX_HEIGHT)))
     }
 
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
