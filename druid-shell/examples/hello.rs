@@ -83,8 +83,12 @@ impl WinHandler for HelloState {
         println!("mouse_move {:?}", event);
     }
 
-    fn mouse(&self, event: &MouseEvent) {
-        println!("mouse {:?}", event);
+    fn mouse_down(&self, event: &MouseEvent) {
+        println!("mouse_down {:?}", event);
+    }
+
+    fn mouse_up(&self, event: &MouseEvent) {
+        println!("mouse_up {:?}", event);
     }
 
     fn size(&self, width: u32, height: u32) {

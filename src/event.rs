@@ -21,7 +21,8 @@ use druid_shell::window::MouseButton;
 
 #[derive(Debug, Clone)]
 pub enum Event {
-    Mouse(MouseEvent),
+    MouseDown(MouseEvent),
+    MouseUp(MouseEvent),
     MouseMoved(Point),
     KeyDown(KeyEvent),
     KeyUp(KeyEvent),

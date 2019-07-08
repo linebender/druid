@@ -235,18 +235,23 @@ impl<T: Data, W: WidgetInner<T>> WidgetBase<T, W> {
             base_state: &mut self.state,
             had_active,
         };
+        let rect = child_ctx.base_state.layout_rect;
         // Note: could also represent this as `Option<Event>`.
         let mut recurse = true;
         let child_event = match event {
-            Event::Mouse(mouse_event) => {
-                let rect = child_ctx.base_state.layout_rect;
+            Event::MouseDown(mouse_event) => {
                 recurse = had_active || !ctx.had_active && rect.winding(mouse_event.pos) != 0;
                 let mut mouse_event = mouse_event.clone();
                 mouse_event.pos -= rect.origin().to_vec2();
-                Event::Mouse(mouse_event)
+                Event::MouseDown(mouse_event)
+            }
+            Event::MouseUp(mouse_event) => {
+                recurse = had_active || !ctx.had_active && rect.winding(mouse_event.pos) != 0;
+                let mut mouse_event = mouse_event.clone();
+                mouse_event.pos -= rect.origin().to_vec2();
+                Event::MouseUp(mouse_event)
             }
             Event::MouseMoved(point) => {
-                let rect = child_ctx.base_state.layout_rect;
                 let had_hot = child_ctx.base_state.is_hot;
                 child_ctx.base_state.is_hot = rect.winding(*point) != 0;
                 recurse = had_active || had_hot || child_ctx.base_state.is_hot;
@@ -387,13 +392,28 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
         state.size = Size::new(width as f64 * scale, height as f64 * scale);
     }
 
-    fn mouse(&self, event: &window::MouseEvent) {
+    fn mouse_down(&self, event: &window::MouseEvent) {
         let mut state = self.state.borrow_mut();
         let (x, y) = state.handle.pixels_to_px_xy(event.x, event.y);
-        println!("mouse {:?} -> ({}, {})", event, x, y);
+        //println!("mouse {:?} -> ({}, {})", event, x, y);
         let pos = Point::new(x as f64, y as f64);
         // TODO: double-click detection
-        let event = Event::Mouse(MouseEvent {
+        let event = Event::MouseDown(MouseEvent {
+            pos,
+            mods: event.mods,
+            button: event.button,
+            count: event.count,
+        });
+        state.do_event(event);
+    }
+
+    fn mouse_up(&self, event: &window::MouseEvent) {
+        let mut state = self.state.borrow_mut();
+        let (x, y) = state.handle.pixels_to_px_xy(event.x, event.y);
+        //println!("mouse {:?} -> ({}, {})", event, x, y);
+        let pos = Point::new(x as f64, y as f64);
+        // TODO: double-click detection
+        let event = Event::MouseUp(MouseEvent {
             pos,
             mods: event.mods,
             button: event.button,

@@ -98,10 +98,15 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn mouse_move(&self, event: &MouseEvent) {}
 
-    /// Called on mouse button up or down. Note that the x, y
+    /// Called on mouse button down. Note that the x, y
     /// coordinates are in absolute pixels.
     #[allow(unused_variables)]
-    fn mouse(&self, event: &MouseEvent) {}
+    fn mouse_down(&self, event: &MouseEvent) {}
+
+    /// Called on mouse button up. Note that the x, y
+    /// coordinates are in absolute pixels.
+    #[allow(unused_variables)]
+    fn mouse_up(&self, event: &MouseEvent) {}
 
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is
