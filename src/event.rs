@@ -16,13 +16,15 @@
 
 use crate::Point;
 
-use druid_shell::keyboard::KeyModifiers;
+use druid_shell::keyboard::{KeyEvent, KeyModifiers};
 use druid_shell::window::MouseButton;
 
 #[derive(Debug, Clone)]
 pub enum Event {
     Mouse(MouseEvent),
     MouseMoved(Point),
+    KeyDown(KeyEvent),
+    KeyUp(KeyEvent),
     HotChanged(bool),
 }
 

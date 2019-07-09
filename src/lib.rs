@@ -253,6 +253,9 @@ impl<T: Data, W: WidgetInner<T>> WidgetBase<T, W> {
                 let point = *point - rect.origin().to_vec2();
                 Event::MouseMoved(point)
             }
+            Event::KeyDown(_) | Event::KeyUp(_) if !had_active => return None,
+            Event::KeyDown(e) => Event::KeyDown(*e),
+            Event::KeyUp(e) => Event::KeyUp(*e),
             Event::HotChanged(is_hot) => Event::HotChanged(*is_hot),
         };
         child_ctx.base_state.needs_inval = false;
@@ -313,11 +316,20 @@ impl<T: Data> UiState<T> {
         }
     }
 
+    /// Set the root widget as active, that is, receiving keyboard events.
+    pub fn set_active(&mut self, active: bool) {
+        self.root.state.is_active = active;
+    }
+
     fn root_env(&self) -> Env {
         Default::default()
     }
 
-    fn do_event(&mut self, event: Event) {
+    /// Returns `true` if the event produced an action.
+    ///
+    /// This is principally because in certain cases (such as keydown on windows)
+    /// the OS needs to know if an event was handled.
+    fn do_event(&mut self, event: Event) -> bool {
         // should there be a root base state persisting in the ui state instead?
         let mut base_state = Default::default();
         let mut ctx = EventCtx {
@@ -334,6 +346,7 @@ impl<T: Data> UiState<T> {
             self.handle.invalidate();
         }
         // TODO: process actions
+        action.is_some()
     }
 
     fn paint(&mut self, piet: &mut Piet) -> bool {
@@ -395,6 +408,16 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
         let pos = Point::new(x as f64, y as f64);
         let event = Event::MouseMoved(pos);
         state.do_event(event);
+    }
+
+    fn key_down(&self, event: KeyEvent) -> bool {
+        let mut state = self.state.borrow_mut();
+        state.do_event(Event::KeyDown(event))
+    }
+
+    fn key_up(&self, event: KeyEvent) {
+        let mut state = self.state.borrow_mut();
+        state.do_event(Event::KeyUp(event));
     }
 
     fn as_any(&self) -> &dyn Any {
