@@ -40,6 +40,7 @@ use std::sync::{Arc, Mutex, Weak};
 
 use cairo::{Context, QuartzSurface};
 
+use crate::kurbo::Point;
 use piet_common::{Piet, RenderContext};
 
 use crate::keyboard::{KeyEvent, KeyModifiers};
@@ -284,12 +285,12 @@ fn mouse_event(nsevent: id, view: id, button: Option<MouseButton>) -> MouseEvent
         });
         let point = nsevent.locationInWindow();
         let view_point = view.convertPoint_fromView_(point, nil);
+        let pos = Point::new(view_point.x as f64, view_point.y as f64);
         let modifiers = nsevent.modifierFlags();
         let modifiers = make_modifiers(modifiers);
         let count = nsevent.clickCount() as u32;
         MouseEvent {
-            x: view_point.x as i32,
-            y: view_point.y as i32,
+            pos,
             mods: modifiers,
             count,
             button,

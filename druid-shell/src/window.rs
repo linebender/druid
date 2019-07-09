@@ -18,6 +18,7 @@ use std::any::Any;
 use std::ops::Deref;
 
 use crate::keyboard::{KeyEvent, KeyModifiers};
+use crate::kurbo::Point;
 use crate::platform;
 
 // Handle to Window Level Utilities
@@ -91,20 +92,15 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn mouse_hwheel(&self, delta: i32, mods: KeyModifiers) {}
 
-    /// Called when the mouse moves. Note that the x, y coordinates are
-    /// in absolute pixels.
-    ///
-    /// TODO: should we reuse the MouseEvent struct for this method as well?
+    /// Called when the mouse moves.
     #[allow(unused_variables)]
     fn mouse_move(&self, event: &MouseEvent) {}
 
-    /// Called on mouse button down. Note that the x, y
-    /// coordinates are in absolute pixels.
+    /// Called on mouse button down.
     #[allow(unused_variables)]
     fn mouse_down(&self, event: &MouseEvent) {}
 
-    /// Called on mouse button up. Note that the x, y
-    /// coordinates are in absolute pixels.
+    /// Called on mouse button up.
     #[allow(unused_variables)]
     fn mouse_up(&self, event: &MouseEvent) {}
 
@@ -118,12 +114,12 @@ pub trait WinHandler {
 }
 
 /// The state of the mouse for a click, mouse-up, or move event.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MouseEvent {
-    /// X coordinate in absolute pixels.
-    pub x: i32,
-    /// Y coordinate in absolute pixels.
-    pub y: i32,
+    /// The location of the mouse in the current window.
+    ///
+    /// This is in px units, that is, adjusted for hDPI.
+    pub pos: Point,
     /// Modifiers, as in raw WM message
     pub mods: KeyModifiers,
     /// The number of mouse clicks associated with this event. This will always

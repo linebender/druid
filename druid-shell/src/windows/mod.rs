@@ -54,6 +54,7 @@ use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarge
 
 use piet_common::{Piet, RenderContext};
 
+use crate::kurbo::Point;
 use crate::menu::Menu;
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use crate::Error;
@@ -480,6 +481,8 @@ impl WndProc for MyWndProc {
             WM_MOUSEMOVE => {
                 let x = LOWORD(lparam as u32) as i16 as i32;
                 let y = HIWORD(lparam as u32) as i16 as i32;
+                let (px, py) = self.handle.borrow().pixels_to_px_xy(x, y);
+                let pos = Point::new(px as f64, py as f64);
                 let mods = get_mod_state();
                 let button = match wparam {
                     w if (w & 1) > 0 => MouseButton::Left,
@@ -492,8 +495,7 @@ impl WndProc for MyWndProc {
                     _ => MouseButton::Left,
                 };
                 let event = MouseEvent {
-                    x,
-                    y,
+                    pos,
                     mods,
                     button,
                     count: 0,
@@ -529,10 +531,11 @@ impl WndProc for MyWndProc {
                 };
                 let x = LOWORD(lparam as u32) as i16 as i32;
                 let y = HIWORD(lparam as u32) as i16 as i32;
+                let (px, py) = self.handle.borrow().pixels_to_px_xy(x, y);
+                let pos = Point::new(px as f64, py as f64);
                 let mods = get_mod_state();
                 let event = MouseEvent {
-                    x,
-                    y,
+                    pos,
                     mods,
                     button,
                     count,

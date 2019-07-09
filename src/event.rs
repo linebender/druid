@@ -14,31 +14,17 @@
 
 //! Events.
 
-use crate::Point;
-
-use druid_shell::keyboard::{KeyEvent, KeyModifiers};
-use druid_shell::window::MouseButton;
+use druid_shell::keyboard::KeyEvent;
+use druid_shell::window::MouseEvent;
 
 #[derive(Debug, Clone)]
 pub enum Event {
     MouseDown(MouseEvent),
     MouseUp(MouseEvent),
-    MouseMoved(Point),
+    MouseMoved(MouseEvent),
     KeyDown(KeyEvent),
     KeyUp(KeyEvent),
     HotChanged(bool),
-}
-
-#[derive(Debug, Clone)]
-pub struct MouseEvent {
-    /// The location of the event.
-    pub pos: Point,
-    /// The modifiers, which have the same interpretation as the raw WM message.
-    pub mods: KeyModifiers,
-    /// Which mouse button was pressed.
-    pub button: MouseButton,
-    /// Count of multiple clicks, is 0 for mouse up event.
-    pub count: u32,
 }
 
 impl Event {

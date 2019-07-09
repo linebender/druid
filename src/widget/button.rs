@@ -22,7 +22,7 @@ use crate::{
 };
 
 use crate::piet::{Color, FillRule, FontBuilder, Text, TextLayoutBuilder};
-use crate::{Piet, Point, RenderContext, Vec2};
+use crate::{Piet, Point, RenderContext};
 
 const BUTTON_BG_COLOR: Color = Color::rgba32(0x40_40_48_ff);
 const BUTTON_HOVER_COLOR: Color = Color::rgba32(0x50_50_58_ff);
@@ -87,15 +87,15 @@ impl<T: Data> WidgetInner<T> for Label {
 
     fn event(
         &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
+        _event: &Event,
+        _ctx: &mut EventCtx,
         _data: &mut T,
-        env: &Env,
+        _env: &Env,
     ) -> Option<Action> {
         None
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {}
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}
 }
 
 impl Button {
@@ -141,11 +141,11 @@ impl<T: Data> WidgetInner<T> for Button {
     ) -> Option<Action> {
         let mut result = None;
         match event {
-            Event::MouseDown(mouse_event) => {
+            Event::MouseDown(_) => {
                 ctx.set_active(true);
                 ctx.invalidate();
             }
-            Event::MouseUp(mouse_event) => {
+            Event::MouseUp(_) => {
                 if ctx.is_active() {
                     ctx.set_active(false);
                     ctx.invalidate();
@@ -163,7 +163,7 @@ impl<T: Data> WidgetInner<T> for Button {
         result
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {}
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}
 }
 
 impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
@@ -219,15 +219,15 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> WidgetInner<T> for DynLabel<T, F> {
 
     fn event(
         &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
+        _event: &Event,
+        _ctx: &mut EventCtx,
         _data: &mut T,
-        env: &Env,
+        _env: &Env,
     ) -> Option<Action> {
         None
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {
         ctx.invalidate();
     }
 }
