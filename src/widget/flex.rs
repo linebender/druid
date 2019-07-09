@@ -18,7 +18,7 @@ use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
     Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
-    WidgetBase, WidgetInner,
+    Widget, WidgetPod,
 };
 
 pub struct Row;
@@ -31,7 +31,7 @@ pub struct Flex<T: Data> {
 }
 
 struct ChildWidget<T: Data> {
-    widget: WidgetBase<T, Box<dyn WidgetInner<T>>>,
+    widget: WidgetPod<T, Box<dyn Widget<T>>>,
     params: Params,
 }
 
@@ -90,17 +90,17 @@ impl Column {
 
 impl<T: Data> Flex<T> {
     /// Add a child widget.
-    pub fn add_child(&mut self, child: impl WidgetInner<T> + 'static, flex: f64) {
+    pub fn add_child(&mut self, child: impl Widget<T> + 'static, flex: f64) {
         let params = Params { flex };
         let child = ChildWidget {
-            widget: WidgetBase::new(child).boxed(),
+            widget: WidgetPod::new(child).boxed(),
             params,
         };
         self.children.push(child);
     }
 }
 
-impl<T: Data> WidgetInner<T> for Flex<T> {
+impl<T: Data> Widget<T> for Flex<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         for child in &mut self.children {
             child.widget.paint_with_offset(paint_ctx, data, env);

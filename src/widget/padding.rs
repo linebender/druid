@@ -16,7 +16,7 @@
 
 use crate::{
     Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    Rect, Size, UpdateCtx, WidgetBase, WidgetInner,
+    Rect, Size, UpdateCtx, Widget, WidgetPod,
 };
 
 pub struct Padding<T: Data> {
@@ -25,23 +25,23 @@ pub struct Padding<T: Data> {
     top: f64,
     bottom: f64,
 
-    child: WidgetBase<T, Box<dyn WidgetInner<T>>>,
+    child: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
 impl<T: Data> Padding<T> {
     /// Create widget with uniform padding.
-    pub fn uniform(padding: f64, child: impl WidgetInner<T> + 'static) -> Padding<T> {
+    pub fn uniform(padding: f64, child: impl Widget<T> + 'static) -> Padding<T> {
         Padding {
             left: padding,
             right: padding,
             top: padding,
             bottom: padding,
-            child: WidgetBase::new(child).boxed(),
+            child: WidgetPod::new(child).boxed(),
         }
     }
 }
 
-impl<T: Data> WidgetInner<T> for Padding<T> {
+impl<T: Data> Widget<T> for Padding<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         self.child.paint_with_offset(paint_ctx, data, env);
     }
