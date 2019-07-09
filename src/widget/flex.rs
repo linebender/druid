@@ -18,7 +18,7 @@ use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
     Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
-    WidgetPod, Widget,
+    Widget, WidgetPod,
 };
 
 pub struct Row;

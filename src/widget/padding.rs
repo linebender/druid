@@ -16,7 +16,7 @@
 
 use crate::{
     Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    Rect, Size, UpdateCtx, WidgetPod, Widget,
+    Rect, Size, UpdateCtx, Widget, WidgetPod,
 };
 
 pub struct Padding<T: Data> {
