@@ -39,10 +39,10 @@ pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, WinHandler, WindowHandle};
-pub use druid_shell::window::{MouseButton, MouseEvent, ScrollEvent};
+pub use druid_shell::window::{MouseButton, MouseEvent};
 
 pub use data::Data;
-pub use event::Event;
+pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
 pub use value::{Delta, KeyPath, PathEl, PathFragment, Value};
 
@@ -263,6 +263,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::KeyDown(_) | Event::KeyUp(_) if !had_active => return None,
             Event::KeyDown(e) => Event::KeyDown(*e),
             Event::KeyUp(e) => Event::KeyUp(*e),
+            Event::Wheel(wheel_event) => {
+                recurse = had_active || child_ctx.base_state.is_hot;
+                Event::Wheel(wheel_event.clone())
+            }
             Event::HotChanged(is_hot) => Event::HotChanged(*is_hot),
         };
         child_ctx.base_state.needs_inval = false;
@@ -421,6 +425,12 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
     fn key_up(&self, event: KeyEvent) {
         let mut state = self.state.borrow_mut();
         state.do_event(Event::KeyUp(event));
+    }
+
+    fn wheel(&self, delta: Vec2, mods: KeyModifiers) {
+        let mut state = self.state.borrow_mut();
+        let event = Event::Wheel(WheelEvent { delta, mods });
+        state.do_event(event);
     }
 
     fn as_any(&self) -> &dyn Any {

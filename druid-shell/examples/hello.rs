@@ -15,7 +15,7 @@
 use std::any::Any;
 use std::cell::RefCell;
 
-use piet_common::kurbo::{Line, Rect};
+use piet_common::kurbo::{Line, Rect, Vec2};
 use piet_common::{Color, FillRule, RenderContext};
 
 use druid_shell::dialog::{FileDialogOptions, FileDialogType};
@@ -71,12 +71,8 @@ impl WinHandler for HelloState {
         false
     }
 
-    fn mouse_wheel(&self, delta: i32, mods: KeyModifiers) {
-        println!("mouse_wheel {} {:?}", delta, mods);
-    }
-
-    fn mouse_hwheel(&self, delta: i32, mods: KeyModifiers) {
-        println!("mouse_hwheel {} {:?}", delta, mods);
+    fn wheel(&self, delta: Vec2, mods: KeyModifiers) {
+        println!("mouse_wheel {:?} {:?}", delta, mods);
     }
 
     fn mouse_move(&self, event: &MouseEvent) {

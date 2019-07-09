@@ -40,7 +40,7 @@ use std::sync::{Arc, Mutex, Weak};
 
 use cairo::{Context, QuartzSurface};
 
-use crate::kurbo::Point;
+use crate::kurbo::{Point, Vec2};
 use piet_common::{Piet, RenderContext};
 
 use crate::keyboard::{KeyEvent, KeyModifiers};
@@ -362,24 +362,19 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let (dx, dy) = {
-            let dx = nsevent.scrollingDeltaX() as i32;
-            let dy = -nsevent.scrollingDeltaY() as i32;
+            let dx = -nsevent.scrollingDeltaX() as f64;
+            let dy = -nsevent.scrollingDeltaY() as f64;
             if nsevent.hasPreciseScrollingDeltas() == cocoa::base::YES {
                 (dx, dy)
             } else {
-                (dx * 32, dy * 32)
+                (dx * 32.0, dy * 32.0)
             }
         };
         let mods = nsevent.modifierFlags();
         let mods = make_modifiers(mods);
 
-        if dx != 0 {
-            (*view_state).handler.mouse_hwheel(dx, mods);
-        }
-
-        if dy != 0 {
-            (*view_state).handler.mouse_wheel(dy, mods);
-        }
+        let delta = Vec2::new(dx, dy);
+        (*view_state).handler.wheel(delta, mods);
     }
 }
 
