@@ -25,18 +25,3 @@ pub use crate::widget::flex::{Column, Flex, Row};
 
 mod padding;
 pub use crate::widget::padding::Padding;
-
-/*
-
-// The widget trait should probably at least get its own file. When it does,
-// the following methods should probably go into it:
-
-#[derive(Debug, Clone)]
-pub enum KeyVariant {
-    /// A virtual-key code, same as WM_KEYDOWN message.
-    Vkey(i32),
-    /// A Unicode character.
-    Char(char),
-}
-
-*/

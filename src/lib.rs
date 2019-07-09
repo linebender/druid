@@ -39,9 +39,10 @@ pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, WinHandler, WindowHandle};
+pub use druid_shell::window::{MouseButton, MouseEvent, ScrollEvent};
 
 pub use data::Data;
-pub use event::{Event, MouseEvent};
+pub use event::Event;
 pub use lens::{Lens, LensWrap};
 pub use value::{Delta, KeyPath, PathEl, PathFragment, Value};
 
@@ -251,12 +252,13 @@ impl<T: Data, W: WidgetInner<T>> WidgetBase<T, W> {
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseUp(mouse_event)
             }
-            Event::MouseMoved(point) => {
+            Event::MouseMoved(mouse_event) => {
                 let had_hot = child_ctx.base_state.is_hot;
-                child_ctx.base_state.is_hot = rect.winding(*point) != 0;
+                child_ctx.base_state.is_hot = rect.winding(mouse_event.pos) != 0;
                 recurse = had_active || had_hot || child_ctx.base_state.is_hot;
-                let point = *point - rect.origin().to_vec2();
-                Event::MouseMoved(point)
+                let mut mouse_event = mouse_event.clone();
+                mouse_event.pos -= rect.origin().to_vec2();
+                Event::MouseMoved(mouse_event)
             }
             Event::KeyDown(_) | Event::KeyUp(_) if !had_active => return None,
             Event::KeyDown(e) => Event::KeyDown(*e),
@@ -394,39 +396,20 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
 
     fn mouse_down(&self, event: &window::MouseEvent) {
         let mut state = self.state.borrow_mut();
-        let (x, y) = state.handle.pixels_to_px_xy(event.x, event.y);
-        //println!("mouse {:?} -> ({}, {})", event, x, y);
-        let pos = Point::new(x as f64, y as f64);
         // TODO: double-click detection
-        let event = Event::MouseDown(MouseEvent {
-            pos,
-            mods: event.mods,
-            button: event.button,
-            count: event.count,
-        });
+        let event = Event::MouseDown(event.clone());
         state.do_event(event);
     }
 
-    fn mouse_up(&self, event: &window::MouseEvent) {
+    fn mouse_up(&self, event: &MouseEvent) {
         let mut state = self.state.borrow_mut();
-        let (x, y) = state.handle.pixels_to_px_xy(event.x, event.y);
-        //println!("mouse {:?} -> ({}, {})", event, x, y);
-        let pos = Point::new(x as f64, y as f64);
-        // TODO: double-click detection
-        let event = Event::MouseUp(MouseEvent {
-            pos,
-            mods: event.mods,
-            button: event.button,
-            count: event.count,
-        });
+        let event = Event::MouseUp(event.clone());
         state.do_event(event);
     }
 
-    fn mouse_move(&self, event: &window::MouseEvent) {
+    fn mouse_move(&self, event: &MouseEvent) {
         let mut state = self.state.borrow_mut();
-        let (x, y) = state.handle.pixels_to_px_xy(event.x, event.y);
-        let pos = Point::new(x as f64, y as f64);
-        let event = Event::MouseMoved(pos);
+        let event = Event::MouseMoved(event.clone());
         state.do_event(event);
     }
 

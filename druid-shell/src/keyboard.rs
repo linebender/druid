@@ -84,7 +84,7 @@ impl KeyEvent {
     }
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq)]
 pub struct KeyModifiers {
     pub shift: bool,
     /// Option on macOS.
