@@ -17,8 +17,8 @@
 use std::any::Any;
 use std::ops::Deref;
 
-use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::kurbo::Point;
+pub use crate::keyboard::{KeyEvent, KeyModifiers};
+use crate::kurbo::{Point, Vec2};
 use crate::platform;
 
 // Handle to Window Level Utilities
@@ -76,21 +76,16 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn key_up(&self, event: KeyEvent) {}
 
-    /// Called on a mouse wheel event. This corresponds to a
-    /// [WM_MOUSEWHEEL](https://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx)
-    /// message.
+    /// Called on a mouse wheel event.
     ///
-    /// The modifiers are the same as WM_MOUSEWHEEL.
-    #[allow(unused_variables)]
-    fn mouse_wheel(&self, delta: i32, mods: KeyModifiers) {}
-
-    /// Called on a mouse horizontal wheel event. This corresponds to a
-    /// [WM_MOUSEHWHEEL](https://msdn.microsoft.com/en-us/library/windows/desktop/ms645614(v=vs.85).aspx)
-    /// message.
+    /// The polarity is the amount to be added to the scroll position,
+    /// in other words the opposite of the direction the content should
+    /// move on scrolling. This polarity is consistent with the
+    /// deltaX and deltaY values in a web [WheelEvent].
     ///
-    /// The modifiers are the same as WM_MOUSEHWHEEL.
+    /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
     #[allow(unused_variables)]
-    fn mouse_hwheel(&self, delta: i32, mods: KeyModifiers) {}
+    fn wheel(&self, delta: Vec2, mods: KeyModifiers) {}
 
     /// Called when the mouse moves.
     #[allow(unused_variables)]
@@ -149,15 +144,4 @@ pub enum MouseButton {
 pub enum Cursor {
     Arrow,
     IBeam,
-}
-
-/// A scroll wheel event.
-#[derive(Debug)]
-pub struct ScrollEvent {
-    /// The scroll wheel’s horizontal delta.
-    pub dx: f64,
-    /// The scroll wheel’s vertical delta.
-    pub dy: f64,
-    /// Modifiers, as in raw WM message
-    pub mods: KeyModifiers,
 }

@@ -14,7 +14,9 @@
 
 //! Events.
 
-use druid_shell::keyboard::KeyEvent;
+use crate::kurbo::Vec2;
+
+use druid_shell::keyboard::{KeyEvent, KeyModifiers};
 use druid_shell::window::MouseEvent;
 
 #[derive(Debug, Clone)]
@@ -24,7 +26,23 @@ pub enum Event {
     MouseMoved(MouseEvent),
     KeyDown(KeyEvent),
     KeyUp(KeyEvent),
+    Wheel(WheelEvent),
     HotChanged(bool),
+}
+
+#[derive(Debug, Clone)]
+pub struct WheelEvent {
+    /// The wheel movement.
+    ///
+    /// The polarity is the amount to be added to the scroll position,
+    /// in other words the opposite of the direction the content should
+    /// move on scrolling. This polarity is consistent with the
+    /// deltaX and deltaY values in a web [WheelEvent].
+    ///
+    /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
+    pub delta: Vec2,
+    /// The keyboard modifiers at the time of the event.
+    pub mods: KeyModifiers,
 }
 
 impl Event {

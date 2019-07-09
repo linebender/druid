@@ -54,7 +54,7 @@ use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarge
 
 use piet_common::{Piet, RenderContext};
 
-use crate::kurbo::Point;
+use crate::kurbo::{Point, Vec2};
 use crate::menu::Menu;
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use crate::Error;
@@ -467,15 +467,19 @@ impl WndProc for MyWndProc {
             }
             //TODO: WM_SYSCOMMAND
             WM_MOUSEWHEEL => {
-                let delta = HIWORD(wparam as u32) as i16 as i32;
+                // TODO: apply mouse sensitivity based on
+                // SPI_GETWHEELSCROLLLINES setting.
+                let delta_y = HIWORD(wparam as u32) as i16 as f64;
+                let delta = Vec2::new(0.0, -delta_y);
                 let mods = get_mod_state();
-                self.handler.mouse_wheel(delta, mods);
+                self.handler.wheel(delta, mods);
                 Some(0)
             }
             WM_MOUSEHWHEEL => {
-                let delta = HIWORD(wparam as u32) as i16 as i32;
+                let delta_x = HIWORD(wparam as u32) as i16 as f64;
+                let delta = Vec2::new(delta_x, 0.0);
                 let mods = get_mod_state();
-                self.handler.mouse_hwheel(delta, mods);
+                self.handler.wheel(delta, mods);
                 Some(0)
             }
             WM_MOUSEMOVE => {
