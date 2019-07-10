@@ -1,0 +1,8 @@
+steps:
+  - script: |
+        rustup install nightly
+    displayName: Install nightly
+
+  - script: |
+        rustup component add rustfmt --toolchain nightly
+    displayName: Install rustfmt (nightly)

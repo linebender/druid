@@ -23,15 +23,10 @@ steps:
 
   # All platforms.
   - script: |
+        rustup component add rustfmt
+    displayName: Install rustfmt (stable)
+
+  - script: |
         rustc -Vv
         cargo -V
     displayName: Query rust and cargo versions
-
-  - script: |
-        rustup install nightly
-    displayName: Install nightly
-
-  - script: |
-        rustup component add rustfmt
-        rustup component add rustfmt --toolchain nightly
-    displayName: Install rustfmt
