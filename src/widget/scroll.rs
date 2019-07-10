@@ -100,18 +100,21 @@ impl<T: Data> Widget<T> for Scroll<T> {
     ) -> Option<Action> {
         let size = ctx.base_state.size();
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
-        if let Event::Wheel(wheel) = event {
-            if self.scroll(wheel.delta, size) {
-                ctx.invalidate();
-            }
-        }
-        // TODO: cancellation logic
         let child_event = event.transform_scroll(self.scroll_offset, viewport);
-        if let Some(child_event) = child_event {
+        let action = if let Some(child_event) = child_event {
             self.child.event(&child_event, ctx, data, env)
         } else {
             None
+        };
+        if !ctx.is_handled() {
+            if let Event::Wheel(wheel) = event {
+                if self.scroll(wheel.delta, size) {
+                    ctx.invalidate();
+                    ctx.set_handled();
+                }
+            }
         }
+        action
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
