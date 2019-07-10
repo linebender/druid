@@ -145,6 +145,7 @@ pub struct EventCtx<'a> {
     window: &'a WindowHandle,
     base_state: &'a mut BaseState,
     had_active: bool,
+    is_handled: bool,
 }
 
 pub struct UpdateCtx {
@@ -226,7 +227,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         data: &mut T,
         env: &Env,
     ) -> Option<Action> {
-        if !event.recurse() {
+        if ctx.is_handled || !event.recurse() {
             // This function is called by containers to propagate an event from
             // containers to children. Non-recurse events will be invoked directly
             // from other points in the library.
@@ -237,6 +238,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             window: &ctx.window,
             base_state: &mut self.state,
             had_active,
+            is_handled: false,
         };
         let rect = child_ctx.base_state.layout_rect;
         // Note: could also represent this as `Option<Event>`.
@@ -283,6 +285,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.base_state.needs_inval |= child_ctx.base_state.needs_inval;
         ctx.base_state.is_hot |= child_ctx.base_state.is_hot;
         ctx.base_state.has_active |= child_ctx.base_state.has_active;
+        ctx.is_handled |= child_ctx.is_handled;
         action
     }
 
@@ -349,6 +352,7 @@ impl<T: Data> UiState<T> {
             window: &self.handle,
             base_state: &mut base_state,
             had_active: self.root.state.has_active,
+            is_handled: false,
         };
         let env = self.root_env();
         let action = self.root.event(&event, &mut ctx, &mut self.data, &env);
@@ -360,7 +364,7 @@ impl<T: Data> UiState<T> {
             self.handle.invalidate();
         }
         // TODO: process actions
-        action.is_some()
+        ctx.is_handled()
     }
 
     fn paint(&mut self, piet: &mut Piet) -> bool {
@@ -525,6 +529,17 @@ impl<'a> EventCtx<'a> {
     /// Returns a reference to the current `WindowHandle`.
     pub fn window(&self) -> &WindowHandle {
         &self.window
+    }
+
+    /// Set the event as "handled", which stops its propagation to other
+    /// widgets.
+    pub fn set_handled(&mut self) {
+        self.is_handled = true;
+    }
+
+    /// Determine whether the event has been handled by some other widget.
+    pub fn is_handled(&self) -> bool {
+        self.is_handled
     }
 }
 
