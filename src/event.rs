@@ -78,7 +78,7 @@ impl Event {
                     None
                 }
             }
-            _ => Some(self.clone())
+            _ => Some(self.clone()),
         }
     }
 
