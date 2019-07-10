@@ -25,6 +25,12 @@ use crate::piet::{FillRule, RenderContext};
 
 use crate::kurbo::Affine;
 
+/// A container that scrolls its contents.
+///
+/// This container holds a single child, and uses the wheel to scroll it
+/// when the child's bounds are larger than the viewport.
+///
+/// The child is laid out with completely unconstrained layout bounds.
 pub struct Scroll<T: Data> {
     child: WidgetPod<T, Box<dyn Widget<T>>>,
     child_size: Size,
