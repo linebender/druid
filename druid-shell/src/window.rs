@@ -140,8 +140,18 @@ pub enum MouseButton {
     X2,
 }
 
-/// Standard cursor types. This is only a subset, others can be added as needed.
+//NOTE: this currently only contains cursors that are included by default on
+//both Windows and macOS. We may want to provide polyfills for various additional cursors,
+//and we will also want to add some mechanism for adding custom cursors.
+/// Mouse cursors.
 pub enum Cursor {
+    /// The default arrow cursor.
     Arrow,
+    /// A vertical I-beam, for indicating insertion points in text.
     IBeam,
+    Crosshair,
+    OpenHand,
+    NotAllowed,
+    ResizeLeftRight,
+    ResizeUpDown,
 }

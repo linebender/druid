@@ -39,7 +39,7 @@ pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, WinHandler, WindowHandle};
-pub use druid_shell::window::{MouseButton, MouseEvent};
+pub use druid_shell::window::{Cursor, MouseButton, MouseEvent};
 
 pub use data::Data;
 pub use event::{Event, WheelEvent};
@@ -142,6 +142,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
 pub struct LayoutCtx {}
 
 pub struct EventCtx<'a> {
+    window: &'a WindowHandle,
     base_state: &'a mut BaseState,
     had_active: bool,
 }
@@ -233,6 +234,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
         let had_active = self.state.has_active;
         let mut child_ctx = EventCtx {
+            window: &ctx.window,
             base_state: &mut self.state,
             had_active,
         };
@@ -344,6 +346,7 @@ impl<T: Data> UiState<T> {
         // should there be a root base state persisting in the ui state instead?
         let mut base_state = Default::default();
         let mut ctx = EventCtx {
+            window: &self.handle,
             base_state: &mut base_state,
             had_active: self.root.state.has_active,
         };
@@ -518,6 +521,11 @@ impl<'a> EventCtx<'a> {
     pub fn is_active(&self) -> bool {
         self.base_state.is_active
     }
+
+    /// Returns a reference to the current `WindowHandle`.
+    pub fn window(&self) -> &WindowHandle {
+        &self.window
+    }
 }
 
 impl UpdateCtx {
@@ -532,6 +540,11 @@ impl Action {
     /// Note: this is something of a placeholder and will change.
     pub fn from_str(s: impl Into<String>) -> Action {
         Action { text: s.into() }
+    }
+
+    /// Provides access to the action's string representation.
+    pub fn as_str(&self) -> &str {
+        self.text.as_str()
     }
 
     /// Merge two optional actions.
