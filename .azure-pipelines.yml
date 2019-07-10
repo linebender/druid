@@ -26,13 +26,15 @@ jobs:
 
       - template: ci/test.yml
         parameters:
-          toolchain: nightly
-          crate_path: 'druid-shell'
+          toolchain: stable
+          crate_path: '.'
+
+      - template: ci/install-nightly.yml
 
       - template: ci/test.yml
         parameters:
-          toolchain: stable
-          crate_path: '.'
+          toolchain: nightly
+          crate_path: 'druid-shell'
 
       - template: ci/test.yml
         parameters:
