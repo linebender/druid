@@ -46,7 +46,7 @@ use piet_common::{Piet, RenderContext};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
-use crate::window::{MouseButton, MouseEvent, WinHandler};
+use crate::window::{Cursor, MouseButton, MouseEvent, WinHandler};
 use crate::Error;
 
 use util::assert_main_thread;
@@ -482,6 +482,23 @@ impl WindowHandle {
                 // We could share impl with redraw, but we'd need to deal with nil.
                 let () = msg_send![*nsview.load(), setNeedsDisplay: YES];
             }
+        }
+    }
+
+    /// Set the current mouse cursor.
+    pub fn set_cursor(&self, cursor: &Cursor) {
+        unsafe {
+            let nscursor = class!(NSCursor);
+            let cursor: id = match cursor {
+                Cursor::Arrow => msg_send![nscursor, arrowCursor],
+                Cursor::IBeam => msg_send![nscursor, IBeamCursor],
+                Cursor::Crosshair => msg_send![nscursor, crosshairCursor],
+                Cursor::OpenHand => msg_send![nscursor, openHandCursor],
+                Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],
+                Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
+                Cursor::ResizeUpDown => msg_send![nscursor, ResizeUpDownCursor],
+            };
+            msg_send![cursor, set];
         }
     }
 

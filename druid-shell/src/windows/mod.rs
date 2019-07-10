@@ -883,6 +883,11 @@ impl Cursor {
         match self {
             Cursor::Arrow => IDC_ARROW,
             Cursor::IBeam => IDC_IBEAM,
+            Cursor::Crosshair => IDC_CROSS,
+            Cursor::OpenHand => IDC_HAND,
+            Cursor::NotAllowed => IDC_NO,
+            Cursor::ResizeLeftRight => IDC_SIZEWE,
+            Cursor::ResizeUpDown => IDC_SIZENS,
         }
     }
 }
@@ -913,6 +918,14 @@ impl WindowHandle {
             unsafe {
                 InvalidateRect(hwnd, null(), FALSE);
             }
+        }
+    }
+
+    /// Set the current mouse cursor.
+    pub fn set_cursor(&self, cursor: &Cursor) {
+        unsafe {
+            let cursor = LoadCursorW(0 as HINSTANCE, cursor.get_lpcwstr());
+            SetCursor(cursor);
         }
     }
 
