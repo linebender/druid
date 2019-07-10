@@ -14,7 +14,7 @@
 
 //! Events.
 
-use crate::kurbo::Vec2;
+use crate::kurbo::{Rect, Shape, Vec2};
 
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
 use druid_shell::window::MouseEvent;
@@ -46,6 +46,42 @@ pub struct WheelEvent {
 }
 
 impl Event {
+    /// Transform the event for the contents of a scrolling container.
+    pub fn transform_scroll(&self, offset: Vec2, viewport: Rect) -> Option<Event> {
+        // TODO: need to wire this up so that it always propagates mouse events
+        // if the widget is active.
+        match self {
+            Event::MouseDown(mouse_event) => {
+                if viewport.winding(mouse_event.pos) != 0 {
+                    let mut mouse_event = mouse_event.clone();
+                    mouse_event.pos += offset;
+                    Some(Event::MouseDown(mouse_event))
+                } else {
+                    None
+                }
+            }
+            Event::MouseUp(mouse_event) => {
+                if viewport.winding(mouse_event.pos) != 0 {
+                    let mut mouse_event = mouse_event.clone();
+                    mouse_event.pos += offset;
+                    Some(Event::MouseUp(mouse_event))
+                } else {
+                    None
+                }
+            }
+            Event::MouseMoved(mouse_event) => {
+                if viewport.winding(mouse_event.pos) != 0 {
+                    let mut mouse_event = mouse_event.clone();
+                    mouse_event.pos += offset;
+                    Some(Event::MouseMoved(mouse_event))
+                } else {
+                    None
+                }
+            }
+            _ => Some(self.clone())
+        }
+    }
+
     /// Whether the event should be propagated from parent to children.
     pub(crate) fn recurse(&self) -> bool {
         match self {
