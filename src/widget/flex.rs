@@ -173,8 +173,11 @@ impl<T: Data> Widget<T> for Flex<T> {
             child.widget.set_layout_rect(rect.with_origin(pos));
             major += self.direction.major(rect.size());
         }
+        if flex_sum > 0.0 {
+            major = total_major;
+        }
         // TODO: should be able to make this `into`
-        let (width, height) = self.direction.pack(total_major, minor);
+        let (width, height) = self.direction.pack(major, minor);
         Size::new(width, height)
     }
 
