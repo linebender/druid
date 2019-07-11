@@ -26,7 +26,7 @@ use druid_shell::platform::PresentStrategy;
 use druid_shell::keyboard::KeyEvent;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::runloop;
-use druid_shell::window::{WinHandler, WindowHandle};
+use druid_shell::window::{WinCtx, WinHandler, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb24(0x27_28_22);
 const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
@@ -40,11 +40,11 @@ struct PerfState {
 }
 
 impl WinHandler for PerfTest {
-    fn connect(&self, handle: &WindowHandle) {
+    fn connect(&mut self, handle: &WindowHandle) {
         self.0.borrow_mut().handle = handle.clone();
     }
 
-    fn paint(&self, rc: &mut Piet) -> bool {
+    fn paint(&mut self, rc: &mut Piet) -> bool {
         let mut state = self.0.borrow_mut();
         let (width, height) = state.size;
         let bg = rc.solid_brush(BG_COLOR);
@@ -101,19 +101,19 @@ impl WinHandler for PerfTest {
         true
     }
 
-    fn command(&self, id: u32) {
+    fn command(&mut self, id: u32, _ctx: &mut dyn WinCtx) {
         match id {
             0x100 => self.0.borrow().handle.close(),
             _ => println!("unexpected id {}", id),
         }
     }
 
-    fn key_down(&self, event: KeyEvent) -> bool {
+    fn key_down(&mut self, event: KeyEvent, _ctx: &mut dyn WinCtx) -> bool {
         println!("keydown: {:?}", event);
         false
     }
 
-    fn size(&self, width: u32, height: u32) {
+    fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
         let mut state = self.0.borrow_mut();
         let dpi = state.handle.get_dpi();
         let dpi_scale = dpi as f64 / 96.0;
@@ -122,11 +122,11 @@ impl WinHandler for PerfTest {
         state.size = (width_f, height_f);
     }
 
-    fn destroy(&self) {
+    fn destroy(&mut self, _ctx: &mut dyn WinCtx) {
         runloop::request_quit();
     }
 
-    fn as_any(&self) -> &dyn Any {
+    fn as_any(&mut self) -> &mut dyn Any {
         self
     }
 }

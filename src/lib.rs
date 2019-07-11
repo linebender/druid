@@ -38,7 +38,7 @@ use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use druid_shell::platform::IdleHandle;
-use druid_shell::window::{self, WinHandler, WindowHandle};
+use druid_shell::window::{self, WinCtx, WinHandler, WindowHandle};
 pub use druid_shell::window::{Cursor, MouseButton, MouseEvent};
 
 pub use data::Data;
@@ -345,7 +345,7 @@ impl<T: Data> UiState<T> {
     ///
     /// This is principally because in certain cases (such as keydown on windows)
     /// the OS needs to know if an event was handled.
-    fn do_event(&mut self, event: Event) -> bool {
+    fn do_event(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
         // should there be a root base state persisting in the ui state instead?
         let mut base_state = Default::default();
         let mut ctx = EventCtx {
@@ -361,7 +361,7 @@ impl<T: Data> UiState<T> {
         // a burst of events.
         self.root.update(&mut update_ctx, &self.data, &env);
         if ctx.base_state.needs_inval || update_ctx.needs_inval {
-            self.handle.invalidate();
+            win_ctx.invalidate();
         }
         // TODO: process actions
         ctx.is_handled()
@@ -389,58 +389,58 @@ impl<T: Data> UiMain<T> {
 }
 
 impl<T: Data + 'static> WinHandler for UiMain<T> {
-    fn connect(&self, handle: &WindowHandle) {
+    fn connect(&mut self, handle: &WindowHandle) {
         let mut state = self.state.borrow_mut();
         state.handle = handle.clone();
     }
 
-    fn paint(&self, piet: &mut Piet) -> bool {
+    fn paint(&mut self, piet: &mut Piet) -> bool {
         self.state.borrow_mut().paint(piet)
     }
 
-    fn size(&self, width: u32, height: u32) {
+    fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
         let mut state = self.state.borrow_mut();
         let dpi = state.handle.get_dpi() as f64;
         let scale = 96.0 / dpi;
         state.size = Size::new(width as f64 * scale, height as f64 * scale);
     }
 
-    fn mouse_down(&self, event: &window::MouseEvent) {
+    fn mouse_down(&mut self, event: &window::MouseEvent, ctx: &mut dyn WinCtx) {
         let mut state = self.state.borrow_mut();
         // TODO: double-click detection
         let event = Event::MouseDown(event.clone());
-        state.do_event(event);
+        state.do_event(event, ctx);
     }
 
-    fn mouse_up(&self, event: &MouseEvent) {
+    fn mouse_up(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
         let mut state = self.state.borrow_mut();
         let event = Event::MouseUp(event.clone());
-        state.do_event(event);
+        state.do_event(event, ctx);
     }
 
-    fn mouse_move(&self, event: &MouseEvent) {
+    fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
         let mut state = self.state.borrow_mut();
         let event = Event::MouseMoved(event.clone());
-        state.do_event(event);
+        state.do_event(event, ctx);
     }
 
-    fn key_down(&self, event: KeyEvent) -> bool {
+    fn key_down(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) -> bool {
         let mut state = self.state.borrow_mut();
-        state.do_event(Event::KeyDown(event))
+        state.do_event(Event::KeyDown(event), ctx)
     }
 
-    fn key_up(&self, event: KeyEvent) {
+    fn key_up(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) {
         let mut state = self.state.borrow_mut();
-        state.do_event(Event::KeyUp(event));
+        state.do_event(Event::KeyUp(event), ctx);
     }
 
-    fn wheel(&self, delta: Vec2, mods: KeyModifiers) {
+    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, ctx: &mut dyn WinCtx) {
         let mut state = self.state.borrow_mut();
         let event = Event::Wheel(WheelEvent { delta, mods });
-        state.do_event(event);
+        state.do_event(event, ctx);
     }
 
-    fn as_any(&self) -> &dyn Any {
+    fn as_any(&mut self) -> &mut dyn Any {
         self
     }
 }

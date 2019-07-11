@@ -24,7 +24,7 @@ use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::runloop;
-use druid_shell::window::{MouseEvent, WinHandler, WindowHandle};
+use druid_shell::window::{MouseEvent, WinCtx, WinHandler, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb24(0x27_28_22);
 const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
@@ -36,11 +36,11 @@ struct HelloState {
 }
 
 impl WinHandler for HelloState {
-    fn connect(&self, handle: &WindowHandle) {
+    fn connect(&mut self, handle: &WindowHandle) {
         *self.handle.borrow_mut() = handle.clone();
     }
 
-    fn paint(&self, rc: &mut piet_common::Piet) -> bool {
+    fn paint(&mut self, rc: &mut piet_common::Piet) -> bool {
         let bg = rc.solid_brush(BG_COLOR);
         let fg = rc.solid_brush(FG_COLOR);
         let (width, height) = *self.size.borrow();
@@ -50,7 +50,7 @@ impl WinHandler for HelloState {
         false
     }
 
-    fn command(&self, id: u32) {
+    fn command(&mut self, id: u32, _ctx: &mut dyn WinCtx) {
         match id {
             0x100 => self.handle.borrow().close(),
             0x101 => {
@@ -66,28 +66,28 @@ impl WinHandler for HelloState {
         }
     }
 
-    fn key_down(&self, event: KeyEvent) -> bool {
+    fn key_down(&mut self, event: KeyEvent, _ctx: &mut dyn WinCtx) -> bool {
         println!("keydown: {:?}", event);
         false
     }
 
-    fn wheel(&self, delta: Vec2, mods: KeyModifiers) {
+    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, _ctx: &mut dyn WinCtx) {
         println!("mouse_wheel {:?} {:?}", delta, mods);
     }
 
-    fn mouse_move(&self, event: &MouseEvent) {
+    fn mouse_move(&mut self, event: &MouseEvent, _ctx: &mut dyn WinCtx) {
         println!("mouse_move {:?}", event);
     }
 
-    fn mouse_down(&self, event: &MouseEvent) {
+    fn mouse_down(&mut self, event: &MouseEvent, _ctx: &mut dyn WinCtx) {
         println!("mouse_down {:?}", event);
     }
 
-    fn mouse_up(&self, event: &MouseEvent) {
+    fn mouse_up(&mut self, event: &MouseEvent, _ctx: &mut dyn WinCtx) {
         println!("mouse_up {:?}", event);
     }
 
-    fn size(&self, width: u32, height: u32) {
+    fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
         let dpi = self.handle.borrow().get_dpi();
         let dpi_scale = dpi as f64 / 96.0;
         let width_f = (width as f64) / dpi_scale;
@@ -95,11 +95,11 @@ impl WinHandler for HelloState {
         *self.size.borrow_mut() = (width_f, height_f);
     }
 
-    fn destroy(&self) {
+    fn destroy(&mut self, _ctx: &mut dyn WinCtx) {
         runloop::request_quit();
     }
 
-    fn as_any(&self) -> &dyn Any {
+    fn as_any(&mut self) -> &mut dyn Any {
         self
     }
 }
