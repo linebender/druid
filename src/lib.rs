@@ -147,7 +147,8 @@ pub struct EventCtx<'a> {
     had_active: bool,
 }
 
-pub struct UpdateCtx {
+pub struct UpdateCtx<'a> {
+    window: &'a WindowHandle,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like
     // `EventCtx` (and possibly using the same structure). But for
@@ -352,7 +353,10 @@ impl<T: Data> UiState<T> {
         };
         let env = self.root_env();
         let action = self.root.event(&event, &mut ctx, &mut self.data, &env);
-        let mut update_ctx = UpdateCtx { needs_inval: false };
+        let mut update_ctx = UpdateCtx {
+            window: &self.handle,
+            needs_inval: false,
+        };
         // Note: we probably want to aggregate updates so there's only one after
         // a burst of events.
         self.root.update(&mut update_ctx, &self.data, &env);
@@ -528,9 +532,13 @@ impl<'a> EventCtx<'a> {
     }
 }
 
-impl UpdateCtx {
+impl<'a> UpdateCtx<'a> {
     pub fn invalidate(&mut self) {
         self.needs_inval = true;
+    }
+
+    pub fn window(&self) -> &WindowHandle {
+        &self.window
     }
 }
 
