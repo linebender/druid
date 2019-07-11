@@ -594,7 +594,7 @@ impl From<char> for TinyStr {
     }
 }
 
-/// A type we use in th constructor of `KeyEvent`, specifically to avoid exposing
+/// A type we use in the constructor of `KeyEvent`, specifically to avoid exposing
 /// internals.
 pub enum StrOrChar {
     Char(char),
