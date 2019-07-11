@@ -105,8 +105,11 @@ pub enum PresentStrategy {
     FlipRedirect,
 }
 
-#[derive(Clone, Default)]
-pub struct WindowHandle(Weak<WindowState>);
+#[derive(Default)]
+pub struct WindowHandle {
+    dwrite_factory: Option<RefCell<directwrite::Factory>>,
+    state: Weak<WindowState>,
+}
 
 /// A handle that can get used to schedule an idle handler. Note that
 /// this handle is thread safe. If the handle is used after the hwnd
@@ -639,11 +642,16 @@ impl WindowBuilder {
                 return Err(Error::Null);
             }
 
+            let dwrite_factory = directwrite::Factory::new().unwrap();
+            // Note: there's a clone method in 0.3.0-alpha4. We work around
+            // the lack in 0.1.2 by calling the low-level unsafe operations.
+            (*dwrite_factory.get_raw()).AddRef();
+            let dw_clone = directwrite::Factory::from_raw(dwrite_factory.get_raw());
             let wndproc = MyWndProc {
                 handler: self.handler.unwrap(),
                 handle: Default::default(),
                 d2d_factory: direct2d::Factory::new().unwrap(),
-                dwrite_factory: directwrite::Factory::new().unwrap(),
+                dwrite_factory: dw_clone,
                 state: RefCell::new(None),
             };
 
@@ -654,7 +662,10 @@ impl WindowBuilder {
                 idle_queue: Default::default(),
             };
             let win = Rc::new(window);
-            let handle = WindowHandle(Rc::downgrade(&win));
+            let handle = WindowHandle {
+                dwrite_factory: Some(RefCell::new(dwrite_factory)),
+                state: Rc::downgrade(&win),
+            };
 
             // Simple scaling based on System Dpi (96 is equivalent to 100%)
             let dpi = if let Some(func) = OPTIONAL_FUNCTIONS.GetDpiForSystem {
@@ -892,9 +903,24 @@ impl Cursor {
     }
 }
 
+// TODO: when upgrading to directwrite 0.3, just derive Clone instead.
+impl Clone for WindowHandle {
+    fn clone(&self) -> WindowHandle {
+        let dw_clone = self.dwrite_factory.as_ref().map(|dw| unsafe {
+            let ptr = dw.borrow().get_raw();
+            (*ptr).AddRef();
+            RefCell::new(directwrite::Factory::from_raw(ptr))
+        });
+        WindowHandle {
+            dwrite_factory: dw_clone,
+            state: self.state.clone(),
+        }
+    }
+}
+
 impl WindowHandle {
     pub fn show(&self) {
-        if let Some(w) = self.0.upgrade() {
+        if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
                 ShowWindow(hwnd, SW_SHOWNORMAL);
@@ -904,7 +930,7 @@ impl WindowHandle {
     }
 
     pub fn close(&self) {
-        if let Some(w) = self.0.upgrade() {
+        if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
                 DestroyWindow(hwnd);
@@ -913,7 +939,7 @@ impl WindowHandle {
     }
 
     pub fn invalidate(&self) {
-        if let Some(w) = self.0.upgrade() {
+        if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
                 InvalidateRect(hwnd, null(), FALSE);
@@ -932,7 +958,7 @@ impl WindowHandle {
     /// Get the raw HWND handle, for uses that are not wrapped in
     /// druid_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
-        self.0.upgrade().map(|w| w.hwnd.get())
+        self.state.upgrade().map(|w| w.hwnd.get())
     }
 
     pub fn file_dialog(
@@ -946,14 +972,14 @@ impl WindowHandle {
 
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        self.0.upgrade().map(|w| IdleHandle {
+        self.state.upgrade().map(|w| IdleHandle {
             hwnd: w.hwnd.get(),
             queue: w.idle_queue.clone(),
         })
     }
 
     fn take_idle_queue(&self) -> Vec<Box<dyn IdleCallback>> {
-        if let Some(w) = self.0.upgrade() {
+        if let Some(w) = self.state.upgrade() {
             mem::replace(&mut w.idle_queue.lock().unwrap(), Vec::new())
         } else {
             Vec::new()
@@ -962,7 +988,7 @@ impl WindowHandle {
 
     /// Get the dpi of the window.
     pub fn get_dpi(&self) -> f32 {
-        if let Some(w) = self.0.upgrade() {
+        if let Some(w) = self.state.upgrade() {
             w.dpi.get()
         } else {
             96.0
@@ -989,6 +1015,10 @@ impl WindowHandle {
     pub fn pixels_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f32, f32) {
         let scale = 96.0 / self.get_dpi();
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
+    }
+
+    pub fn get_text(&self) -> &RefCell<directwrite::Factory> {
+        &self.dwrite_factory.as_ref().unwrap()
     }
 }
 
