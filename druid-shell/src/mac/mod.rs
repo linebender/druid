@@ -616,9 +616,9 @@ impl IdleHandle {
 
 impl<'a> WinCtx for WinCtxImpl<'a> {
     fn invalidate(&mut self) {
-            unsafe {
-                let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
-            }
+        unsafe {
+            let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
+        }
     }
 }
 
