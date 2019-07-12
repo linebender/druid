@@ -24,19 +24,18 @@ mod lens;
 mod value;
 
 use std::any::Any;
-use std::cell::RefCell;
-use std::collections::BTreeMap;
-use std::ffi::OsString;
-use std::mem;
-use std::ops::{Deref, DerefMut};
-use std::time::Instant;
+use std::ops::DerefMut;
 
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
 use piet::{Color, Piet, RenderContext};
 
+// TODO: remove these unused annotations when we wire these up; they're
+// placeholders for functionality not yet implemented.
+#[allow(unused)]
 use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+#[allow(unused)]
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, WinCtx, WinHandler, WindowHandle};
 pub use druid_shell::window::{Cursor, MouseButton, MouseEvent};
@@ -48,8 +47,9 @@ pub use value::{Delta, KeyPath, PathEl, PathFragment, Value};
 
 const BACKGROUND_COLOR: Color = Color::rgb24(0x27_28_22);
 
+// We can probably get rid of the distinction between this and UiState.
 pub struct UiMain<T: Data> {
-    state: RefCell<UiState<T>>,
+    state: UiState<T>,
 }
 
 pub struct UiState<T: Data> {
@@ -355,7 +355,7 @@ impl<T: Data> UiState<T> {
             is_handled: false,
         };
         let env = self.root_env();
-        let action = self.root.event(&event, &mut ctx, &mut self.data, &env);
+        let _action = self.root.event(&event, &mut ctx, &mut self.data, &env);
         let mut update_ctx = UpdateCtx { needs_inval: false };
         // Note: we probably want to aggregate updates so there's only one after
         // a burst of events.
@@ -382,62 +382,52 @@ impl<T: Data> UiState<T> {
 
 impl<T: Data> UiMain<T> {
     pub fn new(state: UiState<T>) -> UiMain<T> {
-        UiMain {
-            state: RefCell::new(state),
-        }
+        UiMain { state }
     }
 }
 
 impl<T: Data + 'static> WinHandler for UiMain<T> {
     fn connect(&mut self, handle: &WindowHandle) {
-        let mut state = self.state.borrow_mut();
-        state.handle = handle.clone();
+        self.state.handle = handle.clone();
     }
 
     fn paint(&mut self, piet: &mut Piet) -> bool {
-        self.state.borrow_mut().paint(piet)
+        self.state.paint(piet)
     }
 
     fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
-        let mut state = self.state.borrow_mut();
-        let dpi = state.handle.get_dpi() as f64;
+        let dpi = self.state.handle.get_dpi() as f64;
         let scale = 96.0 / dpi;
-        state.size = Size::new(width as f64 * scale, height as f64 * scale);
+        self.state.size = Size::new(width as f64 * scale, height as f64 * scale);
     }
 
     fn mouse_down(&mut self, event: &window::MouseEvent, ctx: &mut dyn WinCtx) {
-        let mut state = self.state.borrow_mut();
         // TODO: double-click detection
         let event = Event::MouseDown(event.clone());
-        state.do_event(event, ctx);
+        self.state.do_event(event, ctx);
     }
 
     fn mouse_up(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
-        let mut state = self.state.borrow_mut();
         let event = Event::MouseUp(event.clone());
-        state.do_event(event, ctx);
+        self.state.do_event(event, ctx);
     }
 
     fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
-        let mut state = self.state.borrow_mut();
         let event = Event::MouseMoved(event.clone());
-        state.do_event(event, ctx);
+        self.state.do_event(event, ctx);
     }
 
     fn key_down(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) -> bool {
-        let mut state = self.state.borrow_mut();
-        state.do_event(Event::KeyDown(event), ctx)
+        self.state.do_event(Event::KeyDown(event), ctx)
     }
 
     fn key_up(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) {
-        let mut state = self.state.borrow_mut();
-        state.do_event(Event::KeyUp(event), ctx);
+        self.state.do_event(Event::KeyUp(event), ctx);
     }
 
     fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, ctx: &mut dyn WinCtx) {
-        let mut state = self.state.borrow_mut();
         let event = Event::Wheel(WheelEvent { delta, mods });
-        state.do_event(event, ctx);
+        self.state.do_event(event, ctx);
     }
 
     fn as_any(&mut self) -> &mut dyn Any {

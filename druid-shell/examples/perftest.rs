@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::any::Any;
-use std::cell::RefCell;
 
 use time::get_time;
 
@@ -31,9 +30,7 @@ use druid_shell::window::{WinCtx, WinHandler, WindowHandle};
 const BG_COLOR: Color = Color::rgb24(0x27_28_22);
 const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 
-struct PerfTest(RefCell<PerfState>);
-
-struct PerfState {
+struct PerfTest {
     handle: WindowHandle,
     size: (f64, f64),
     last_time: f64,
@@ -41,12 +38,11 @@ struct PerfState {
 
 impl WinHandler for PerfTest {
     fn connect(&mut self, handle: &WindowHandle) {
-        self.0.borrow_mut().handle = handle.clone();
+        self.handle = handle.clone();
     }
 
     fn paint(&mut self, rc: &mut Piet) -> bool {
-        let mut state = self.0.borrow_mut();
-        let (width, height) = state.size;
+        let (width, height) = self.size;
         let bg = rc.solid_brush(BG_COLOR);
         let fg = rc.solid_brush(FG_COLOR);
         let rect = Rect::new(0.0, 0.0, width, height);
@@ -73,8 +69,8 @@ impl WinHandler for PerfTest {
 
         let now = get_time();
         let now = now.sec as f64 + 1e-9 * now.nsec as f64;
-        let msg = format!("{:3.1}ms", 1e3 * (now - state.last_time));
-        state.last_time = now;
+        let msg = format!("{:3.1}ms", 1e3 * (now - self.last_time));
+        self.last_time = now;
         let layout = rc
             .text()
             .new_text_layout(&font, &msg)
@@ -103,7 +99,7 @@ impl WinHandler for PerfTest {
 
     fn command(&mut self, id: u32, _ctx: &mut dyn WinCtx) {
         match id {
-            0x100 => self.0.borrow().handle.close(),
+            0x100 => self.handle.close(),
             _ => println!("unexpected id {}", id),
         }
     }
@@ -114,12 +110,11 @@ impl WinHandler for PerfTest {
     }
 
     fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
-        let mut state = self.0.borrow_mut();
-        let dpi = state.handle.get_dpi();
+        let dpi = self.handle.get_dpi();
         let dpi_scale = dpi as f64 / 96.0;
         let width_f = (width as f64) / dpi_scale;
         let height_f = (height as f64) / dpi_scale;
-        state.size = (width_f, height_f);
+        self.size = (width_f, height_f);
     }
 
     fn destroy(&mut self, _ctx: &mut dyn WinCtx) {
@@ -136,12 +131,12 @@ fn main() {
 
     let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
-    let perf_state = PerfState {
+    let perf_test = PerfTest {
         size: Default::default(),
         handle: Default::default(),
         last_time: 0.0,
     };
-    builder.set_handler(Box::new(PerfTest(RefCell::new(perf_state))));
+    builder.set_handler(Box::new(perf_test));
     builder.set_title("Performance tester");
 
     // Note: experiment with changing this

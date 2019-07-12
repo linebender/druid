@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::any::Any;
-use std::cell::RefCell;
 
 use piet_common::kurbo::{Line, Rect, Vec2};
 use piet_common::{Color, FillRule, RenderContext};
@@ -31,19 +30,19 @@ const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 
 #[derive(Default)]
 struct HelloState {
-    size: RefCell<(f64, f64)>,
-    handle: RefCell<WindowHandle>,
+    size: (f64, f64),
+    handle: WindowHandle,
 }
 
 impl WinHandler for HelloState {
     fn connect(&mut self, handle: &WindowHandle) {
-        *self.handle.borrow_mut() = handle.clone();
+        self.handle = handle.clone();
     }
 
     fn paint(&mut self, rc: &mut piet_common::Piet) -> bool {
         let bg = rc.solid_brush(BG_COLOR);
         let fg = rc.solid_brush(FG_COLOR);
-        let (width, height) = *self.size.borrow();
+        let (width, height) = self.size;
         let rect = Rect::new(0.0, 0.0, width, height);
         rc.fill(rect, &bg, FillRule::NonZero);
         rc.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &fg, 1.0, None);
@@ -52,14 +51,11 @@ impl WinHandler for HelloState {
 
     fn command(&mut self, id: u32, _ctx: &mut dyn WinCtx) {
         match id {
-            0x100 => self.handle.borrow().close(),
+            0x100 => self.handle.close(),
             0x101 => {
                 let mut options = FileDialogOptions::default();
                 options.set_show_hidden();
-                let filename = self
-                    .handle
-                    .borrow()
-                    .file_dialog(FileDialogType::Open, options);
+                let filename = self.handle.file_dialog(FileDialogType::Open, options);
                 println!("result: {:?}", filename);
             }
             _ => println!("unexpected id {}", id),
@@ -88,11 +84,11 @@ impl WinHandler for HelloState {
     }
 
     fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
-        let dpi = self.handle.borrow().get_dpi();
+        let dpi = self.handle.get_dpi();
         let dpi_scale = dpi as f64 / 96.0;
         let width_f = (width as f64) / dpi_scale;
         let height_f = (height as f64) / dpi_scale;
-        *self.size.borrow_mut() = (width_f, height_f);
+        self.size = (width_f, height_f);
     }
 
     fn destroy(&mut self, _ctx: &mut dyn WinCtx) {
