@@ -24,21 +24,20 @@ mod lens;
 mod value;
 
 use std::any::Any;
-use std::cell::RefCell;
-use std::collections::BTreeMap;
-use std::ffi::OsString;
-use std::mem;
-use std::ops::{Deref, DerefMut};
-use std::time::Instant;
+use std::ops::DerefMut;
 
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
 use piet::{Color, Piet, RenderContext};
 
+// TODO: remove these unused annotations when we wire these up; they're
+// placeholders for functionality not yet implemented.
+#[allow(unused)]
 use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+#[allow(unused)]
 use druid_shell::platform::IdleHandle;
-use druid_shell::window::{self, WinHandler, WindowHandle};
+use druid_shell::window::{self, WinCtx, WinHandler, WindowHandle};
 pub use druid_shell::window::{Cursor, MouseButton, MouseEvent};
 
 pub use data::Data;
@@ -48,8 +47,9 @@ pub use value::{Delta, KeyPath, PathEl, PathFragment, Value};
 
 const BACKGROUND_COLOR: Color = Color::rgb24(0x27_28_22);
 
+// We can probably get rid of the distinction between this and UiState.
 pub struct UiMain<T: Data> {
-    state: RefCell<UiState<T>>,
+    state: UiState<T>,
 }
 
 pub struct UiState<T: Data> {
@@ -346,7 +346,7 @@ impl<T: Data> UiState<T> {
     ///
     /// This is principally because in certain cases (such as keydown on windows)
     /// the OS needs to know if an event was handled.
-    fn do_event(&mut self, event: Event) -> bool {
+    fn do_event(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
         // should there be a root base state persisting in the ui state instead?
         let mut base_state = Default::default();
         let mut ctx = EventCtx {
@@ -356,7 +356,7 @@ impl<T: Data> UiState<T> {
             is_handled: false,
         };
         let env = self.root_env();
-        let action = self.root.event(&event, &mut ctx, &mut self.data, &env);
+        let _action = self.root.event(&event, &mut ctx, &mut self.data, &env);
         let mut update_ctx = UpdateCtx {
             window: &self.handle,
             needs_inval: false,
@@ -365,7 +365,7 @@ impl<T: Data> UiState<T> {
         // a burst of events.
         self.root.update(&mut update_ctx, &self.data, &env);
         if ctx.base_state.needs_inval || update_ctx.needs_inval {
-            self.handle.invalidate();
+            win_ctx.invalidate();
         }
         // TODO: process actions
         ctx.is_handled()
@@ -386,65 +386,55 @@ impl<T: Data> UiState<T> {
 
 impl<T: Data> UiMain<T> {
     pub fn new(state: UiState<T>) -> UiMain<T> {
-        UiMain {
-            state: RefCell::new(state),
-        }
+        UiMain { state }
     }
 }
 
 impl<T: Data + 'static> WinHandler for UiMain<T> {
-    fn connect(&self, handle: &WindowHandle) {
-        let mut state = self.state.borrow_mut();
-        state.handle = handle.clone();
+    fn connect(&mut self, handle: &WindowHandle) {
+        self.state.handle = handle.clone();
     }
 
-    fn paint(&self, piet: &mut Piet) -> bool {
-        self.state.borrow_mut().paint(piet)
+    fn paint(&mut self, piet: &mut Piet) -> bool {
+        self.state.paint(piet)
     }
 
-    fn size(&self, width: u32, height: u32) {
-        let mut state = self.state.borrow_mut();
-        let dpi = state.handle.get_dpi() as f64;
+    fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
+        let dpi = self.state.handle.get_dpi() as f64;
         let scale = 96.0 / dpi;
-        state.size = Size::new(width as f64 * scale, height as f64 * scale);
+        self.state.size = Size::new(width as f64 * scale, height as f64 * scale);
     }
 
-    fn mouse_down(&self, event: &window::MouseEvent) {
-        let mut state = self.state.borrow_mut();
+    fn mouse_down(&mut self, event: &window::MouseEvent, ctx: &mut dyn WinCtx) {
         // TODO: double-click detection
         let event = Event::MouseDown(event.clone());
-        state.do_event(event);
+        self.state.do_event(event, ctx);
     }
 
-    fn mouse_up(&self, event: &MouseEvent) {
-        let mut state = self.state.borrow_mut();
+    fn mouse_up(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
         let event = Event::MouseUp(event.clone());
-        state.do_event(event);
+        self.state.do_event(event, ctx);
     }
 
-    fn mouse_move(&self, event: &MouseEvent) {
-        let mut state = self.state.borrow_mut();
+    fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
         let event = Event::MouseMoved(event.clone());
-        state.do_event(event);
+        self.state.do_event(event, ctx);
     }
 
-    fn key_down(&self, event: KeyEvent) -> bool {
-        let mut state = self.state.borrow_mut();
-        state.do_event(Event::KeyDown(event))
+    fn key_down(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) -> bool {
+        self.state.do_event(Event::KeyDown(event), ctx)
     }
 
-    fn key_up(&self, event: KeyEvent) {
-        let mut state = self.state.borrow_mut();
-        state.do_event(Event::KeyUp(event));
+    fn key_up(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) {
+        self.state.do_event(Event::KeyUp(event), ctx);
     }
 
-    fn wheel(&self, delta: Vec2, mods: KeyModifiers) {
-        let mut state = self.state.borrow_mut();
+    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, ctx: &mut dyn WinCtx) {
         let event = Event::Wheel(WheelEvent { delta, mods });
-        state.do_event(event);
+        self.state.do_event(event, ctx);
     }
 
-    fn as_any(&self) -> &dyn Any {
+    fn as_any(&mut self) -> &mut dyn Any {
         self
     }
 }

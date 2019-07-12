@@ -62,7 +62,7 @@ use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVis
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use crate::window::{self, Cursor, MouseButton, MouseEvent, WinHandler};
+use crate::window::{self, Cursor, MouseButton, MouseEvent, WinCtx, WinHandler};
 
 extern "system" {
     pub fn DwmFlush();
@@ -105,8 +105,12 @@ pub enum PresentStrategy {
     FlipRedirect,
 }
 
-#[derive(Clone, Default)]
-pub struct WindowHandle(Weak<WindowState>);
+#[derive(Default)]
+pub struct WindowHandle {
+    // Note: this clone of the dwrite factory might move into WinCtxImpl.
+    dwrite_factory: Option<RefCell<directwrite::Factory>>,
+    state: Weak<WindowState>,
+}
 
 /// A handle that can get used to schedule an idle handler. Note that
 /// this handle is thread safe. If the handle is used after the hwnd
@@ -119,15 +123,17 @@ pub struct IdleHandle {
 }
 
 trait IdleCallback: Send {
-    fn call(self: Box<Self>, a: &dyn Any);
+    fn call(self: Box<Self>, a: &mut dyn Any);
 }
 
-impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
-    fn call(self: Box<F>, a: &dyn Any) {
+impl<F: FnOnce(&mut dyn Any) + Send> IdleCallback for F {
+    fn call(self: Box<F>, a: &mut dyn Any) {
         (*self)(a)
     }
 }
 
+/// This is the low level window state. All mutable contents are protected
+/// by interior mutability, so we can handle reentrant calls.
 struct WindowState {
     hwnd: Cell<HWND>,
     dpi: Cell<f32>,
@@ -146,14 +152,15 @@ trait WndProc {
 // State and logic for the winapi window procedure entry point. Note that this level
 // implements policies such as the use of Direct2D for painting.
 struct MyWndProc {
-    handler: Box<dyn WinHandler>,
     handle: RefCell<WindowHandle>,
     d2d_factory: direct2d::Factory,
     dwrite_factory: directwrite::Factory,
     state: RefCell<Option<WndState>>,
 }
 
+/// The mutable state of the window.
 struct WndState {
+    handler: Box<dyn WinHandler>,
     render_target: Option<GenericRenderTarget>,
     dcomp_state: Option<DCompState>,
     dpi: f32,
@@ -164,6 +171,11 @@ struct WndState {
     /// a `WM_KEYUP` event.
     stashed_char: Option<char>,
     //TODO: track surrogate orphan
+}
+
+/// The Windows implementation of the context provided to WinHandler calls.
+struct WinCtxImpl<'a> {
+    handle: &'a WindowHandle,
 }
 
 /// State for DirectComposition. This is optional because it is only supported
@@ -207,27 +219,28 @@ fn get_mod_state() -> KeyModifiers {
     }
 }
 
-impl MyWndProc {
-    fn rebuild_render_target(&self) {
+impl WndState {
+    fn rebuild_render_target(&mut self, d2d: &direct2d::Factory) {
         unsafe {
-            let mut state = self.state.borrow_mut();
-            let s = state.as_mut().unwrap();
-            let swap_chain = s.dcomp_state.as_ref().unwrap().swap_chain;
-            let rt = paint::create_render_target_dxgi(&self.d2d_factory, swap_chain, s.dpi)
+            let swap_chain = self.dcomp_state.as_ref().unwrap().swap_chain;
+            let rt = paint::create_render_target_dxgi(d2d, swap_chain, self.dpi)
                 .map(|rt| rt.as_generic());
-            s.render_target = rt.ok();
+            self.render_target = rt.ok();
         }
     }
 
     // Renders but does not present.
-    fn render(&self) {
-        let mut state = self.state.borrow_mut();
-        let s = state.as_mut().unwrap();
-        let rt = s.render_target.as_mut().unwrap();
+    fn render(
+        &mut self,
+        d2d: &direct2d::Factory,
+        dw: &directwrite::Factory,
+        handle: &RefCell<WindowHandle>,
+    ) {
+        let rt = self.render_target.as_mut().unwrap();
         rt.begin_draw();
         let anim;
         {
-            let mut piet_ctx = Piet::new(&self.d2d_factory, &self.dwrite_factory, rt);
+            let mut piet_ctx = Piet::new(d2d, dw, rt);
             anim = self.handler.paint(&mut piet_ctx);
             if let Err(e) = piet_ctx.finish() {
                 // TODO: use proper log infrastructure
@@ -240,7 +253,7 @@ impl MyWndProc {
             println!("EndDraw error: {:?}", e);
         }
         if anim {
-            let handle = self.handle.borrow().get_idle_handle().unwrap();
+            let handle = handle.borrow().get_idle_handle().unwrap();
             // Note: maybe add WindowHandle as arg to idle handler so we don't need this.
             let handle2 = handle.clone();
             handle.add_idle(move |_| handle2.invalidate());
@@ -248,10 +261,23 @@ impl MyWndProc {
     }
 }
 
+impl MyWndProc {
+    /// Create debugging output for dropped messages due to wndproc reeentrancy.
+    ///
+    /// In the future, we choose to do something else other than logging and dropping,
+    /// such as queuing and replaying after the nested call returns.
+    fn log_dropped_msg(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM) {
+        eprintln!(
+            "dropped message 0x{:x}, hwnd={:?}, wparam=0x{:x}, lparam=0x{:x}",
+            msg, hwnd, wparam, lparam
+        );
+    }
+}
+
 impl WndProc for MyWndProc {
-    fn connect(&self, handle: &WindowHandle, state: WndState) {
+    fn connect(&self, handle: &WindowHandle, mut state: WndState) {
         *self.handle.borrow_mut() = handle.clone();
-        self.handler.connect(&window::WindowHandle {
+        state.handler.connect(&window::WindowHandle {
             inner: handle.clone(),
         });
         *self.state.borrow_mut() = Some(state);
@@ -268,243 +294,298 @@ impl WndProc for MyWndProc {
         match msg {
             WM_ERASEBKGND => Some(0),
             WM_PAINT => unsafe {
-                if self
-                    .state
-                    .borrow()
-                    .as_ref()
-                    .unwrap()
-                    .render_target
-                    .is_none()
-                {
-                    let rt = paint::create_render_target(&self.d2d_factory, hwnd)
-                        .map(|rt| rt.as_generic());
-                    self.state.borrow_mut().as_mut().unwrap().render_target = rt.ok();
-                }
-                self.render();
-                let mut state = self.state.borrow_mut();
-                let s = state.as_mut().unwrap();
-                if let Some(ref mut ds) = s.dcomp_state {
-                    if !ds.sizing {
-                        (*ds.swap_chain).Present(1, 0);
-                        let _ = ds.dcomp_device.commit();
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    if s.render_target.is_none() {
+                        let rt = paint::create_render_target(&self.d2d_factory, hwnd)
+                            .map(|rt| rt.as_generic());
+                        s.render_target = rt.ok();
                     }
+                    s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                    if let Some(ref mut ds) = s.dcomp_state {
+                        if !ds.sizing {
+                            (*ds.swap_chain).Present(1, 0);
+                            let _ = ds.dcomp_device.commit();
+                        }
+                    }
+                    ValidateRect(hwnd, null_mut());
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
-                ValidateRect(hwnd, null_mut());
                 Some(0)
             },
             WM_ENTERSIZEMOVE => unsafe {
-                if self.state.borrow().as_ref().unwrap().dcomp_state.is_some() {
-                    let rt = paint::create_render_target(&self.d2d_factory, hwnd)
-                        .map(|rt| rt.as_generic());
-                    self.state.borrow_mut().as_mut().unwrap().render_target = rt.ok();
-                    self.handler.rebuild_resources();
-                    self.render();
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    if s.dcomp_state.is_some() {
+                        let rt = paint::create_render_target(&self.d2d_factory, hwnd)
+                            .map(|rt| rt.as_generic());
+                        s.render_target = rt.ok();
+                        let mut ctx = WinCtxImpl {
+                            handle: &self.handle.borrow(),
+                        };
+                        s.handler.rebuild_resources(&mut ctx);
+                        s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
 
-                    let mut state = self.state.borrow_mut();
-                    let s = state.as_mut().unwrap();
-                    if let Some(ref mut ds) = s.dcomp_state {
-                        let _ = ds.dcomp_target.clear_root();
-                        let _ = ds.dcomp_device.commit();
-                        ds.sizing = true;
+                        if let Some(ref mut ds) = s.dcomp_state {
+                            let _ = ds.dcomp_target.clear_root();
+                            let _ = ds.dcomp_device.commit();
+                            ds.sizing = true;
+                        }
                     }
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
                 None
             },
             WM_EXITSIZEMOVE => unsafe {
-                if self.state.borrow().as_ref().unwrap().dcomp_state.is_some() {
-                    let mut rect: RECT = mem::uninitialized();
-                    GetClientRect(hwnd, &mut rect);
-                    let width = (rect.right - rect.left) as u32;
-                    let height = (rect.bottom - rect.top) as u32;
-                    let res = (*self
-                        .state
-                        .borrow_mut()
-                        .as_mut()
-                        .unwrap()
-                        .dcomp_state
-                        .as_mut()
-                        .unwrap()
-                        .swap_chain)
-                        .ResizeBuffers(2, width, height, DXGI_FORMAT_UNKNOWN, 0);
-                    if SUCCEEDED(res) {
-                        self.handler.rebuild_resources();
-                        self.rebuild_render_target();
-                        self.render();
-                        let mut state = self.state.borrow_mut();
-                        let s = state.as_mut().unwrap();
-                        (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
-                    } else {
-                        println!("ResizeBuffers failed: 0x{:x}", res);
-                    }
-
-                    // Flush to present flicker artifact (old swapchain composited)
-                    // It might actually be better to create a new swapchain here.
-                    DwmFlush();
-
-                    let mut state = self.state.borrow_mut();
-                    let s = state.as_mut().unwrap();
-                    if let Some(ref mut ds) = s.dcomp_state {
-                        let _ = ds.dcomp_target.set_root(&mut ds.swapchain_visual);
-                        let _ = ds.dcomp_device.commit();
-                        ds.sizing = false;
-                    }
-                }
-                None
-            },
-            WM_SIZE => unsafe {
-                let width = LOWORD(lparam as u32) as u32;
-                let height = HIWORD(lparam as u32) as u32;
-                self.handler.size(width, height);
-                let use_hwnd = if let Some(ref dcomp_state) =
-                    self.state.borrow().as_ref().unwrap().dcomp_state
-                {
-                    dcomp_state.sizing
-                } else {
-                    true
-                };
-                if use_hwnd {
-                    let mut state = self.state.borrow_mut();
-                    let s = state.as_mut().unwrap();
-                    if let Some(ref mut rt) = s.render_target {
-                        if let Some(hrt) = cast_to_hwnd(rt) {
-                            let width = LOWORD(lparam as u32) as u32;
-                            let height = HIWORD(lparam as u32) as u32;
-                            let size = SizeU(D2D1_SIZE_U { width, height });
-                            let _ = hrt.resize(size);
-                        }
-                    }
-                    InvalidateRect(hwnd, null_mut(), FALSE);
-                } else {
-                    let res;
-                    {
-                        let mut state = self.state.borrow_mut();
-                        let mut s = state.as_mut().unwrap();
-                        s.render_target = None;
-                        res = (*s.dcomp_state.as_mut().unwrap().swap_chain).ResizeBuffers(
-                            0,
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    if s.dcomp_state.is_some() {
+                        let mut rect: RECT = mem::uninitialized();
+                        GetClientRect(hwnd, &mut rect);
+                        let width = (rect.right - rect.left) as u32;
+                        let height = (rect.bottom - rect.top) as u32;
+                        let res = (*s.dcomp_state.as_mut().unwrap().swap_chain).ResizeBuffers(
+                            2,
                             width,
                             height,
                             DXGI_FORMAT_UNKNOWN,
                             0,
                         );
-                    }
-                    if SUCCEEDED(res) {
-                        self.rebuild_render_target();
-                        self.render();
-                        let mut state = self.state.borrow_mut();
-                        let s = state.as_mut().unwrap();
-                        if let Some(ref mut dcomp_state) = s.dcomp_state {
-                            (*dcomp_state.swap_chain).Present(0, 0);
-                            let _ = dcomp_state.dcomp_device.commit();
+                        if SUCCEEDED(res) {
+                            let mut ctx = WinCtxImpl {
+                                handle: &self.handle.borrow(),
+                            };
+                            s.handler.rebuild_resources(&mut ctx);
+                            s.rebuild_render_target(&self.d2d_factory);
+                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                            (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
+                        } else {
+                            println!("ResizeBuffers failed: 0x{:x}", res);
                         }
-                        ValidateRect(hwnd, null_mut());
-                    } else {
-                        println!("ResizeBuffers failed: 0x{:x}", res);
+
+                        // Flush to present flicker artifact (old swapchain composited)
+                        // It might actually be better to create a new swapchain here.
+                        DwmFlush();
+
+                        if let Some(ref mut ds) = s.dcomp_state {
+                            let _ = ds.dcomp_target.set_root(&mut ds.swapchain_visual);
+                            let _ = ds.dcomp_device.commit();
+                            ds.sizing = false;
+                        }
                     }
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
+                None
+            },
+            WM_SIZE => unsafe {
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let width = LOWORD(lparam as u32) as u32;
+                    let height = HIWORD(lparam as u32) as u32;
+                    let mut ctx = WinCtxImpl {
+                        handle: &self.handle.borrow(),
+                    };
+                    s.handler.size(width, height, &mut ctx);
+                    let use_hwnd = if let Some(ref dcomp_state) = s.dcomp_state {
+                        dcomp_state.sizing
+                    } else {
+                        true
+                    };
+                    if use_hwnd {
+                        if let Some(ref mut rt) = s.render_target {
+                            if let Some(hrt) = cast_to_hwnd(rt) {
+                                let width = LOWORD(lparam as u32) as u32;
+                                let height = HIWORD(lparam as u32) as u32;
+                                let size = SizeU(D2D1_SIZE_U { width, height });
+                                let _ = hrt.resize(size);
+                            }
+                        }
+                        InvalidateRect(hwnd, null_mut(), FALSE);
+                    } else {
+                        let res;
+                        {
+                            s.render_target = None;
+                            res = (*s.dcomp_state.as_mut().unwrap().swap_chain).ResizeBuffers(
+                                0,
+                                width,
+                                height,
+                                DXGI_FORMAT_UNKNOWN,
+                                0,
+                            );
+                        }
+                        if SUCCEEDED(res) {
+                            s.rebuild_render_target(&self.d2d_factory);
+                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                            if let Some(ref mut dcomp_state) = s.dcomp_state {
+                                (*dcomp_state.swap_chain).Present(0, 0);
+                                let _ = dcomp_state.dcomp_device.commit();
+                            }
+                            ValidateRect(hwnd, null_mut());
+                        } else {
+                            println!("ResizeBuffers failed: 0x{:x}", res);
+                        }
+                    }
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
                 Some(0)
             },
             WM_COMMAND => {
-                self.handler.command(LOWORD(wparam as u32) as u32);
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let mut ctx = WinCtxImpl {
+                        handle: &self.handle.borrow(),
+                    };
+                    s.handler.command(LOWORD(wparam as u32) as u32, &mut ctx);
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
                 Some(0)
             }
             WM_CHAR => {
-                let mut state = self.state.borrow_mut();
-                let mut s = state.as_mut().unwrap();
-                //FIXME: this can receive lone surrogate pairs?
-                let key_code = s.stashed_key_code;
-                s.stashed_char = std::char::from_u32(wparam as u32);
-                let text = match s.stashed_char {
-                    Some(c) => c,
-                    None => {
-                        eprintln!("failed to convert WM_CHAR to char: {:#X}", wparam);
-                        return None;
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    //FIXME: this can receive lone surrogate pairs?
+                    let key_code = s.stashed_key_code;
+                    s.stashed_char = std::char::from_u32(wparam as u32);
+                    let text = match s.stashed_char {
+                        Some(c) => c,
+                        None => {
+                            eprintln!("failed to convert WM_CHAR to char: {:#X}", wparam);
+                            return None;
+                        }
+                    };
+
+                    let modifiers = get_mod_state();
+                    let is_repeat = (lparam & 0xFFFF) > 0;
+                    let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
+
+                    let mut ctx = WinCtxImpl {
+                        handle: &self.handle.borrow(),
+                    };
+                    if s.handler.key_down(event, &mut ctx) {
+                        Some(0)
+                    } else {
+                        None
                     }
-                };
-
-                let modifiers = get_mod_state();
-                let is_repeat = (lparam & 0xFFFF) > 0;
-                let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
-
-                if self.handler.key_down(event) {
-                    Some(0)
                 } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
                     None
                 }
             }
             WM_KEYDOWN | WM_SYSKEYDOWN => {
-                let mut state = self.state.borrow_mut();
-                let mut s = state.as_mut().unwrap();
-                let key_code: KeyCode = (wparam as i32).into();
-                s.stashed_key_code = key_code;
-                if key_code.is_printable() {
-                    //FIXME: this will fail to propogate key combinations such as alt+s
-                    return None;
-                }
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let key_code: KeyCode = (wparam as i32).into();
+                    s.stashed_key_code = key_code;
+                    if key_code.is_printable() {
+                        //FIXME: this will fail to propogate key combinations such as alt+s
+                        return None;
+                    }
 
-                let modifiers = get_mod_state();
-                // bits 0-15 of iparam are the repeat count:
-                // https://docs.microsoft.com/en-ca/windows/desktop/inputdev/wm-keydown
-                let is_repeat = (lparam & 0xFFFF) > 0;
-                let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
+                    let modifiers = get_mod_state();
+                    // bits 0-15 of iparam are the repeat count:
+                    // https://docs.microsoft.com/en-ca/windows/desktop/inputdev/wm-keydown
+                    let is_repeat = (lparam & 0xFFFF) > 0;
+                    let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
 
-                if self.handler.key_down(event) {
-                    Some(0)
+                    let mut ctx = WinCtxImpl {
+                        handle: &self.handle.borrow(),
+                    };
+                    if s.handler.key_down(event, &mut ctx) {
+                        Some(0)
+                    } else {
+                        None
+                    }
                 } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
                     None
                 }
             }
             WM_KEYUP => {
-                let mut state = self.state.borrow_mut();
-                let s = state.as_mut().unwrap();
-                let key_code: KeyCode = (wparam as i32).into();
-                let modifiers = get_mod_state();
-                let is_repeat = false;
-                let text = s.stashed_char.take();
-                let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
-                self.handler.key_up(event);
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let key_code: KeyCode = (wparam as i32).into();
+                    let modifiers = get_mod_state();
+                    let is_repeat = false;
+                    let text = s.stashed_char.take();
+                    let mut ctx = WinCtxImpl {
+                        handle: &self.handle.borrow(),
+                    };
+                    let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
+                    s.handler.key_up(event, &mut ctx);
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
                 Some(0)
             }
             //TODO: WM_SYSCOMMAND
             WM_MOUSEWHEEL => {
                 // TODO: apply mouse sensitivity based on
                 // SPI_GETWHEELSCROLLLINES setting.
-                let delta_y = HIWORD(wparam as u32) as i16 as f64;
-                let delta = Vec2::new(0.0, -delta_y);
-                let mods = get_mod_state();
-                self.handler.wheel(delta, mods);
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let delta_y = HIWORD(wparam as u32) as i16 as f64;
+                    let delta = Vec2::new(0.0, -delta_y);
+                    let mods = get_mod_state();
+                    let mut ctx = WinCtxImpl {
+                        handle: &self.handle.borrow(),
+                    };
+                    s.handler.wheel(delta, mods, &mut ctx);
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
                 Some(0)
             }
             WM_MOUSEHWHEEL => {
-                let delta_x = HIWORD(wparam as u32) as i16 as f64;
-                let delta = Vec2::new(delta_x, 0.0);
-                let mods = get_mod_state();
-                self.handler.wheel(delta, mods);
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let delta_x = HIWORD(wparam as u32) as i16 as f64;
+                    let delta = Vec2::new(delta_x, 0.0);
+                    let mods = get_mod_state();
+                    let mut ctx = WinCtxImpl {
+                        handle: &self.handle.borrow(),
+                    };
+                    s.handler.wheel(delta, mods, &mut ctx);
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
                 Some(0)
             }
             WM_MOUSEMOVE => {
-                let x = LOWORD(lparam as u32) as i16 as i32;
-                let y = HIWORD(lparam as u32) as i16 as i32;
-                let (px, py) = self.handle.borrow().pixels_to_px_xy(x, y);
-                let pos = Point::new(px as f64, py as f64);
-                let mods = get_mod_state();
-                let button = match wparam {
-                    w if (w & 1) > 0 => MouseButton::Left,
-                    w if (w & 1 << 1) > 0 => MouseButton::Right,
-                    w if (w & 1 << 5) > 0 => MouseButton::Middle,
-                    w if (w & 1 << 6) > 0 => MouseButton::X1,
-                    w if (w & 1 << 7) > 0 => MouseButton::X2,
-                    //FIXME: I guess we probably do want `MouseButton::None`?
-                    //this feels bad, but also this gets discarded in druid anyway.
-                    _ => MouseButton::Left,
-                };
-                let event = MouseEvent {
-                    pos,
-                    mods,
-                    button,
-                    count: 0,
-                };
-                self.handler.mouse_move(&event);
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let x = LOWORD(lparam as u32) as i16 as i32;
+                    let y = HIWORD(lparam as u32) as i16 as i32;
+                    let (px, py) = self.handle.borrow().pixels_to_px_xy(x, y);
+                    let pos = Point::new(px as f64, py as f64);
+                    let mods = get_mod_state();
+                    let button = match wparam {
+                        w if (w & 1) > 0 => MouseButton::Left,
+                        w if (w & 1 << 1) > 0 => MouseButton::Right,
+                        w if (w & 1 << 5) > 0 => MouseButton::Middle,
+                        w if (w & 1 << 6) > 0 => MouseButton::X1,
+                        w if (w & 1 << 7) > 0 => MouseButton::X2,
+                        //FIXME: I guess we probably do want `MouseButton::None`?
+                        //this feels bad, but also this gets discarded in druid anyway.
+                        _ => MouseButton::Left,
+                    };
+                    let event = MouseEvent {
+                        pos,
+                        mods,
+                        button,
+                        count: 0,
+                    };
+                    let mut ctx = WinCtxImpl {
+                        handle: &self.handle.borrow(),
+                    };
+                    s.handler.mouse_move(&event, &mut ctx);
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
                 Some(0)
             }
             // TODO: not clear where double-click processing should happen. Currently disabled
@@ -512,56 +593,79 @@ impl WndProc for MyWndProc {
             WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MBUTTONDBLCLK
             | WM_MBUTTONDOWN | WM_MBUTTONUP | WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP
             | WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
-                let button = match msg {
-                    WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => MouseButton::Left,
-                    WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP => MouseButton::Middle,
-                    WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => MouseButton::Right,
-                    WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => match HIWORD(wparam as u32)
-                    {
-                        1 => MouseButton::X1,
-                        2 => MouseButton::X2,
-                        _ => {
-                            println!("unexpected X button event");
-                            return None;
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let button = match msg {
+                        WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => MouseButton::Left,
+                        WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP => MouseButton::Middle,
+                        WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => MouseButton::Right,
+                        WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
+                            match HIWORD(wparam as u32) {
+                                1 => MouseButton::X1,
+                                2 => MouseButton::X2,
+                                _ => {
+                                    println!("unexpected X button event");
+                                    return None;
+                                }
+                            }
                         }
-                    },
-                    _ => unreachable!(),
-                };
-                let count = match msg {
-                    WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN => 1,
-                    WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK | WM_XBUTTONDBLCLK => 2,
-                    WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP => 0,
-                    _ => unreachable!(),
-                };
-                let x = LOWORD(lparam as u32) as i16 as i32;
-                let y = HIWORD(lparam as u32) as i16 as i32;
-                let (px, py) = self.handle.borrow().pixels_to_px_xy(x, y);
-                let pos = Point::new(px as f64, py as f64);
-                let mods = get_mod_state();
-                let event = MouseEvent {
-                    pos,
-                    mods,
-                    button,
-                    count,
-                };
-                if count > 0 {
-                    self.handler.mouse_down(&event);
+                        _ => unreachable!(),
+                    };
+                    let count = match msg {
+                        WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN => 1,
+                        WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK
+                        | WM_XBUTTONDBLCLK => 2,
+                        WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP => 0,
+                        _ => unreachable!(),
+                    };
+                    let x = LOWORD(lparam as u32) as i16 as i32;
+                    let y = HIWORD(lparam as u32) as i16 as i32;
+                    let (px, py) = self.handle.borrow().pixels_to_px_xy(x, y);
+                    let pos = Point::new(px as f64, py as f64);
+                    let mods = get_mod_state();
+                    let event = MouseEvent {
+                        pos,
+                        mods,
+                        button,
+                        count,
+                    };
+                    let mut ctx = WinCtxImpl {
+                        handle: &self.handle.borrow(),
+                    };
+                    if count > 0 {
+                        s.handler.mouse_down(&event, &mut ctx);
+                    } else {
+                        s.handler.mouse_up(&event, &mut ctx);
+                    }
                 } else {
-                    self.handler.mouse_up(&event);
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
                 Some(0)
             }
             WM_DESTROY => {
-                self.handler.destroy();
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let mut ctx = WinCtxImpl {
+                        handle: &self.handle.borrow(),
+                    };
+                    s.handler.destroy(&mut ctx);
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
                 None
             }
             XI_RUN_IDLE => {
-                let queue = self.handle.borrow().take_idle_queue();
-                let handler_as_any = self.handler.as_any();
-                for callback in queue {
-                    callback.call(handler_as_any);
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let queue = self.handle.borrow().take_idle_queue();
+                    let handler_as_any = s.handler.as_any();
+                    for callback in queue {
+                        callback.call(handler_as_any);
+                    }
+                    Some(0)
+                } else {
+                    None
                 }
-                Some(0)
             }
             _ => None,
         }
@@ -639,11 +743,15 @@ impl WindowBuilder {
                 return Err(Error::Null);
             }
 
+            let dwrite_factory = directwrite::Factory::new().unwrap();
+            // Note: there's a clone method in 0.3.0-alpha4. We work around
+            // the lack in 0.1.2 by calling the low-level unsafe operations.
+            (*dwrite_factory.get_raw()).AddRef();
+            let dw_clone = directwrite::Factory::from_raw(dwrite_factory.get_raw());
             let wndproc = MyWndProc {
-                handler: self.handler.unwrap(),
                 handle: Default::default(),
                 d2d_factory: direct2d::Factory::new().unwrap(),
-                dwrite_factory: directwrite::Factory::new().unwrap(),
+                dwrite_factory: dw_clone,
                 state: RefCell::new(None),
             };
 
@@ -654,7 +762,10 @@ impl WindowBuilder {
                 idle_queue: Default::default(),
             };
             let win = Rc::new(window);
-            let handle = WindowHandle(Rc::downgrade(&win));
+            let handle = WindowHandle {
+                dwrite_factory: Some(RefCell::new(dwrite_factory)),
+                state: Rc::downgrade(&win),
+            };
 
             // Simple scaling based on System Dpi (96 is equivalent to 100%)
             let dpi = if let Some(func) = OPTIONAL_FUNCTIONS.GetDpiForSystem {
@@ -702,6 +813,7 @@ impl WindowBuilder {
 
             win.hwnd.set(hwnd);
             let state = WndState {
+                handler: self.handler.unwrap(),
                 render_target: None,
                 dcomp_state,
                 dpi,
@@ -892,9 +1004,24 @@ impl Cursor {
     }
 }
 
+// TODO: when upgrading to directwrite 0.3, just derive Clone instead.
+impl Clone for WindowHandle {
+    fn clone(&self) -> WindowHandle {
+        let dw_clone = self.dwrite_factory.as_ref().map(|dw| unsafe {
+            let ptr = dw.borrow().get_raw();
+            (*ptr).AddRef();
+            RefCell::new(directwrite::Factory::from_raw(ptr))
+        });
+        WindowHandle {
+            dwrite_factory: dw_clone,
+            state: self.state.clone(),
+        }
+    }
+}
+
 impl WindowHandle {
     pub fn show(&self) {
-        if let Some(w) = self.0.upgrade() {
+        if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
                 ShowWindow(hwnd, SW_SHOWNORMAL);
@@ -904,7 +1031,7 @@ impl WindowHandle {
     }
 
     pub fn close(&self) {
-        if let Some(w) = self.0.upgrade() {
+        if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
                 DestroyWindow(hwnd);
@@ -913,7 +1040,7 @@ impl WindowHandle {
     }
 
     pub fn invalidate(&self) {
-        if let Some(w) = self.0.upgrade() {
+        if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
                 InvalidateRect(hwnd, null(), FALSE);
@@ -932,9 +1059,13 @@ impl WindowHandle {
     /// Get the raw HWND handle, for uses that are not wrapped in
     /// druid_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
-        self.0.upgrade().map(|w| w.hwnd.get())
+        self.state.upgrade().map(|w| w.hwnd.get())
     }
 
+    /// Open a modal file dialog.
+    ///
+    /// Note: this method will be reworked to avoid reentrancy problems.
+    /// Currently, calling it may result in important messages being dropped.
     pub fn file_dialog(
         &self,
         ty: FileDialogType,
@@ -946,14 +1077,14 @@ impl WindowHandle {
 
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        self.0.upgrade().map(|w| IdleHandle {
+        self.state.upgrade().map(|w| IdleHandle {
             hwnd: w.hwnd.get(),
             queue: w.idle_queue.clone(),
         })
     }
 
     fn take_idle_queue(&self) -> Vec<Box<dyn IdleCallback>> {
-        if let Some(w) = self.0.upgrade() {
+        if let Some(w) = self.state.upgrade() {
             mem::replace(&mut w.idle_queue.lock().unwrap(), Vec::new())
         } else {
             Vec::new()
@@ -962,7 +1093,7 @@ impl WindowHandle {
 
     /// Get the dpi of the window.
     pub fn get_dpi(&self) -> f32 {
-        if let Some(w) = self.0.upgrade() {
+        if let Some(w) = self.state.upgrade() {
             w.dpi.get()
         } else {
             96.0
@@ -990,6 +1121,15 @@ impl WindowHandle {
         let scale = 96.0 / self.get_dpi();
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
+
+    /// Get a reference to the text factory.
+    ///
+    /// Note: this is provisional, expected to move to WinCtxImpl, and at
+    /// that point the signature will probably change (getting rid of the
+    /// `RefCell`).
+    pub fn get_text(&self) -> &RefCell<directwrite::Factory> {
+        &self.dwrite_factory.as_ref().unwrap()
+    }
 }
 
 // There is a tiny risk of things going wrong when hwnd is sent across threads.
@@ -1001,7 +1141,7 @@ impl IdleHandle {
     /// which means it won't be scheduled if the window is closed.
     pub fn add_idle<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn Any) + Send + 'static,
     {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {
@@ -1016,6 +1156,14 @@ impl IdleHandle {
         unsafe {
             InvalidateRect(self.hwnd, null(), FALSE);
         }
+    }
+}
+
+// Note: this has mostly methods moved from `WindowHandle`, so mostly forwards
+// to those. As a cleanup, some may be implemented more directly.
+impl<'a> WinCtx for WinCtxImpl<'a> {
+    fn invalidate(&mut self) {
+        self.handle.invalidate();
     }
 }
 

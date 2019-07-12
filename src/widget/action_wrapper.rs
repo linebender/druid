@@ -15,8 +15,8 @@
 //! A widget that listens for events and invokes a closure.
 
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    Rect, Size, UpdateCtx, Widget,
+    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size,
+    UpdateCtx, Widget,
 };
 
 pub struct ActionWrapper<T: Data, F: FnMut(&mut T, &Env)> {
