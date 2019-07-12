@@ -46,7 +46,7 @@ use piet_common::{Piet, RenderContext};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
-use crate::window::{Cursor, MouseButton, MouseEvent, WinHandler};
+use crate::window::{Cursor, MouseButton, MouseEvent, WinCtx, WinHandler};
 use crate::Error;
 
 use util::assert_main_thread;
@@ -88,8 +88,13 @@ impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
 }
 /// This is the state associated with our custom NSView.
 struct ViewState {
+    nsview: WeakPtr,
     handler: Box<dyn WinHandler>,
     idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
+}
+
+struct WinCtxImpl<'a> {
+    nsview: &'a WeakPtr,
 }
 
 impl WindowBuilder {
@@ -149,18 +154,21 @@ impl WindowBuilder {
                 _ => (),
             }
             content_view.addSubview_(view);
-            let handle = WindowHandle {
-                nsview: Some(WeakPtr::new(view)),
-                idle_queue,
-            };
             let view_state: *mut c_void = *(*view).get_ivar("viewState");
             let view_state = &mut *(view_state as *mut ViewState);
+            let handle = WindowHandle {
+                nsview: Some(view_state.nsview.clone()),
+                idle_queue,
+            };
             (*view_state).handler.connect(&crate::window::WindowHandle {
                 inner: handle.clone(),
             });
+            let mut ctx = WinCtxImpl {
+                nsview: handle.nsview.as_ref().unwrap(),
+            };
             (*view_state)
                 .handler
-                .size(frame.size.width as u32, frame.size.height as u32);
+                .size(frame.size.width as u32, frame.size.height as u32, &mut ctx);
 
             Ok(handle)
         }
@@ -248,13 +256,15 @@ lazy_static! {
 fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<Box<dyn IdleCallback>>>>) {
     let idle_queue = Arc::new(Mutex::new(Vec::new()));
     let queue_handle = Arc::downgrade(&idle_queue);
-    let state = ViewState {
-        handler,
-        idle_queue,
-    };
-    let state_ptr = Box::into_raw(Box::new(state));
     unsafe {
         let view: id = msg_send![VIEW_CLASS.0, new];
+        let nsview = WeakPtr::new(view);
+        let state = ViewState {
+            nsview,
+            handler,
+            idle_queue,
+        };
+        let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
         let options: NSAutoresizingMaskOptions = NSViewWidthSizable | NSViewHeightSizable;
         view.setAutoresizingMask_(options);
@@ -267,9 +277,12 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+        };
         (*view_state)
             .handler
-            .size(size.width as u32, size.height as u32);
+            .size(size.width as u32, size.height as u32, &mut ctx);
         let superclass = msg_send![this, superclass];
         let () = msg_send![super(this, superclass), setFrameSize: size];
     }
@@ -327,7 +340,10 @@ fn mouse_down(this: &mut Object, nsevent: id, button: MouseButton) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let event = mouse_event(nsevent, this as id, Some(button));
-        (*view_state).handler.mouse_down(&event);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+        };
+        (*view_state).handler.mouse_down(&event, &mut ctx);
     }
 }
 
@@ -344,7 +360,10 @@ fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let event = mouse_event(nsevent, this as id, Some(button));
-        (*view_state).handler.mouse_up(&event);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+        };
+        (*view_state).handler.mouse_up(&event, &mut ctx);
     }
 }
 
@@ -353,7 +372,10 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let event = mouse_event(nsevent, this as id, None);
-        (*view_state).handler.mouse_move(&event);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+        };
+        (*view_state).handler.mouse_move(&event, &mut ctx);
     }
 }
 
@@ -374,7 +396,10 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
         let mods = make_modifiers(mods);
 
         let delta = Vec2::new(dx, dy);
-        (*view_state).handler.wheel(delta, mods);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+        };
+        (*view_state).handler.wheel(delta, mods, &mut ctx);
     }
 }
 
@@ -385,7 +410,10 @@ extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    (*view_state).handler.key_down(event);
+    let mut ctx = WinCtxImpl {
+        nsview: &(*view_state).nsview,
+    };
+    (*view_state).handler.key_down(event, &mut ctx);
 }
 
 extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
@@ -394,7 +422,10 @@ extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    (*view_state).handler.key_up(event);
+    let mut ctx = WinCtxImpl {
+        nsview: &(*view_state).nsview,
+    };
+    (*view_state).handler.key_up(event, &mut ctx);
 }
 
 extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
@@ -580,6 +611,14 @@ impl IdleHandle {
             }
             queue.push(Box::new(callback));
         }
+    }
+}
+
+impl<'a> WinCtx for WinCtxImpl<'a> {
+    fn invalidate(&mut self) {
+            unsafe {
+                let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
+            }
     }
 }
 
