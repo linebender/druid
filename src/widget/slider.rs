@@ -14,12 +14,10 @@
 
 //! A slider widget.
 
-use std::any::Any;
-
-use crate::kurbo::{Affine, BezPath, Circle, Line, Point, Rect, Shape, Size, Vec2};
+use crate::kurbo::{Circle, Line, Point, Size, Vec2};
 use crate::piet::{Color, FillRule, RenderContext, StrokeStyle, LineCap};
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, KeyEvent, LayoutCtx, PaintCtx,
+    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx,
     UpdateCtx, Widget,
 };
 
@@ -32,6 +30,7 @@ const SLIDER_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 pub struct Slider {
     width: f64,
 }
+
 
 impl Widget<f64> for Slider {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, _env: &Env) {
