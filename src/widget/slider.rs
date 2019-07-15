@@ -14,93 +14,105 @@
 
 //! A slider widget.
 
-use crate::widget::Widget;
-use crate::{BoxConstraints, HandlerCtx, Id, LayoutCtx, LayoutResult, MouseEvent, PaintCtx, Ui};
+use std::any::Any;
 
-use crate::kurbo::{Point, Rect, Size};
-use crate::piet::{Color, FillRule, RenderContext};
+use crate::kurbo::{Affine, BezPath, Circle, Line, Point, Rect, Shape, Size, Vec2};
+use crate::piet::{Color, FillRule, RenderContext, StrokeStyle, LineCap};
+use crate::{
+    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, KeyEvent, LayoutCtx, PaintCtx,
+    UpdateCtx, Widget,
+};
 
-const BOX_HEIGHT: f64 = 24.;
+const KNOB_WIDTH: f64 = 24.;
+const BACKGROUND_THICKNESS: f64 = 4.;
 const BACKGROUND_COLOR: Color = Color::rgb24(0x55_55_55);
 const SLIDER_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 
+#[derive(Debug, Clone, Default)]
 pub struct Slider {
-    value: f64,
+    width: f64,
 }
 
-impl Slider {
-    pub fn new(initial_value: f64) -> Slider {
-        Slider {
-            value: initial_value,
-        }
-    }
+impl Widget<f64> for Slider {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, _env: &Env) {
+        let clamped = data.max(0.0).min(1.0);
+        let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
 
-    pub fn ui(self, ctx: &mut Ui) -> Id {
-        ctx.add(self, &[])
-    }
-}
+        //Store the width so we can calulate slider position from mouse events
+        self.width = rect.width();
 
-impl Widget for Slider {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, geom: &Rect) {
         //Paint the background
+        let background_width = rect.width() - KNOB_WIDTH;
+        let background_origin = rect.origin() + Vec2::new(KNOB_WIDTH / 2., rect.height() / 2.);
+        let background_line = Line::new(
+            background_origin,
+            background_origin + Vec2::new(background_width, 0.),
+        );
         let brush = paint_ctx.render_ctx.solid_brush(BACKGROUND_COLOR);
-
-        paint_ctx.render_ctx.fill(geom, &brush, FillRule::NonZero);
-        //Paint the slider
-        let brush = paint_ctx.render_ctx.solid_brush(SLIDER_COLOR);
-
-        let slider_absolute_position = (geom.width() - BOX_HEIGHT) * self.value + BOX_HEIGHT / 2.;
-        let half_box = geom.height() / 2.;
-        let full_box = geom.height();
-
-        let mut position = slider_absolute_position - half_box;
-        if position < 0. {
-            position = 0.;
-        } else if (position + full_box) > geom.width() {
-            position = geom.width() - full_box;
-        }
-
-        let knob_origin = Point::new(geom.origin().x + position, geom.origin().y);
-        let knob_size = Size::new(full_box, geom.height());
-        let knob_rect = Rect::from((knob_origin, knob_size));
-
+        let mut stroke = StrokeStyle::new();
+        stroke.set_line_cap(LineCap::Round);
         paint_ctx
             .render_ctx
-            .fill(knob_rect, &brush, FillRule::NonZero);
+            .stroke(background_line, &brush, BACKGROUND_THICKNESS, Some(&stroke));
+
+        //Paint the slider
+        let knob_position = (self.width - KNOB_WIDTH) * clamped + KNOB_WIDTH / 2.;
+        let knob_origin = Point::new(
+            rect.origin().x + knob_position,
+            rect.origin().y + rect.height() / 2.,
+        );
+        let knob_circle = Circle::new(knob_origin, KNOB_WIDTH / 2.);
+        let brush = paint_ctx.render_ctx.solid_brush(SLIDER_COLOR);
+        paint_ctx
+            .render_ctx
+            .fill(knob_circle, &brush, FillRule::NonZero);
     }
 
     fn layout(
         &mut self,
+        _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _children: &[Id],
-        _size: Option<Size>,
-        _ctx: &mut LayoutCtx,
-    ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain((bc.max.width, BOX_HEIGHT)))
+        _data: &f64,
+        _env: &Env,
+    ) -> Size {
+        bc.constrain((bc.max.width, bc.max.height))
     }
 
-    fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
-        if event.count == 1 {
-            ctx.set_active(true);
-            self.value = ((event.pos.x - BOX_HEIGHT / 2.) / (ctx.get_geom().width() - BOX_HEIGHT))
-                .max(0.0)
-                .min(1.0);
-            ctx.send_event(self.value);
-        } else {
-            ctx.set_active(false);
+    fn event(
+        &mut self,
+        event: &Event,
+        ctx: &mut EventCtx,
+        data: &mut f64,
+        _env: &Env,
+    ) -> Option<Action> {
+        match event {
+            Event::MouseDown(_) => {
+                ctx.set_active(true);
+            }
+            Event::MouseUp(mouse) => {
+                if ctx.is_active() {
+                    ctx.set_active(false);
+                    *data = ((mouse.pos.x - KNOB_WIDTH / 2.) / (self.width - KNOB_WIDTH))
+                        .max(0.0)
+                        .min(1.0);
+                    ctx.invalidate();
+                }
+            }
+            Event::MouseMoved(mouse) if mouse.count == 1 => {
+                if ctx.is_active() {
+                    *data = ((mouse.pos.x - KNOB_WIDTH / 2.) / (self.width - KNOB_WIDTH))
+                        .max(0.0)
+                        .min(1.0);
+                    ctx.invalidate();
+                }
+            }
+            _ => (),
         }
+
+        None
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {
         ctx.invalidate();
-        true
-    }
-
-    fn mouse_moved(&mut self, pos: Point, ctx: &mut HandlerCtx) {
-        if ctx.is_active() {
-            self.value = ((pos.x - BOX_HEIGHT / 2.) / (ctx.get_geom().width() - BOX_HEIGHT))
-                .max(0.0)
-                .min(1.0);
-
-            ctx.send_event(self.value);
-            ctx.invalidate();
-        }
     }
 }

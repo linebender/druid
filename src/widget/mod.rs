@@ -28,3 +28,9 @@ pub use crate::widget::padding::Padding;
 
 mod scroll;
 pub use crate::widget::scroll::Scroll;
+
+mod progress_bar;
+pub use crate::widget::progress_bar::ProgressBar;
+
+mod slider;
+pub use crate::widget::slider::Slider;
