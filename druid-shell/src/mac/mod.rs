@@ -43,7 +43,7 @@ use cairo::{Context, QuartzSurface};
 use crate::kurbo::{Point, Vec2};
 use piet_common::{Piet, RenderContext};
 
-use crate::keyboard::{KeyEvent, KeyModifiers};
+use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
 use crate::window::{Cursor, MouseButton, MouseEvent, WinCtx, WinHandler};
@@ -91,6 +91,7 @@ struct ViewState {
     nsview: WeakPtr,
     handler: Box<dyn WinHandler>,
     idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    last_mods: KeyModifiers,
 }
 
 struct WinCtxImpl<'a> {
@@ -244,6 +245,10 @@ lazy_static! {
         );
         decl.add_method(sel!(keyUp:), key_up as extern "C" fn(&mut Object, Sel, id));
         decl.add_method(
+            sel!(flagsChanged:),
+            mods_changed as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
             sel!(drawRect:),
             draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
         );
@@ -263,6 +268,7 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<Box<dyn IdleCa
             nsview,
             handler,
             idle_queue,
+            last_mods: KeyModifiers::default(),
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
@@ -414,6 +420,7 @@ extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
         nsview: &(*view_state).nsview,
     };
     (*view_state).handler.key_down(event, &mut ctx);
+    view_state.last_mods = event.modifiers;
 }
 
 extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
@@ -426,6 +433,24 @@ extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
         nsview: &(*view_state).nsview,
     };
     (*view_state).handler.key_up(event, &mut ctx);
+    view_state.last_mods = event.modifiers;
+}
+
+extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
+    let view_state = unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        &mut *(view_state as *mut ViewState)
+    };
+    let (down, event) = mods_changed_key_event(view_state.last_mods, nsevent);
+    view_state.last_mods = event.modifiers;
+    let mut ctx = WinCtxImpl {
+        nsview: &(*view_state).nsview,
+    };
+    if down {
+        (*view_state).handler.key_down(event, &mut ctx);
+    } else {
+        (*view_state).handler.key_down(event, &mut ctx);
+    }
 }
 
 extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
@@ -640,6 +665,25 @@ fn make_key_event(event: id) -> KeyEvent {
         let modifiers = event.modifierFlags();
         let modifiers = make_modifiers(modifiers);
         KeyEvent::new(virtual_key, is_repeat, modifiers, text, unmodified_text)
+    }
+}
+
+fn mods_changed_key_event(prev: KeyModifiers, event: id) -> (bool, KeyEvent) {
+    unsafe {
+        let key_code: KeyCode = event.keyCode().into();
+        let is_repeat = false;
+        let modifiers = event.modifierFlags();
+        let modifiers = make_modifiers(modifiers);
+
+        let down = match key_code {
+            KeyCode::LeftShift | KeyCode::RightShift if prev.shift => false,
+            KeyCode::LeftAlt | KeyCode::RightAlt if prev.alt => false,
+            KeyCode::LeftControl | KeyCode::RightControl if prev.ctrl => false,
+            KeyCode::LeftMeta | KeyCode::RightMeta if prev.meta => false,
+            _ => true,
+        };
+        let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
+        (down, event)
     }
 }
 
