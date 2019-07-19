@@ -60,7 +60,7 @@ impl Widget<f64> for Slider {
 
         //Paint the background
         let background_width = rect.width() - KNOB_WIDTH;
-        let background_origin = rect.origin() + Vec2::new(KNOB_WIDTH / 2., rect.height() / 2.);
+        let background_origin = Point::new(KNOB_WIDTH / 2., rect.height() / 2.);
         let background_line = Line::new(
             background_origin,
             background_origin + Vec2::new(background_width, 0.),
@@ -83,10 +83,7 @@ impl Widget<f64> for Slider {
         };
 
         let knob_position = (self.width - KNOB_WIDTH) * clamped + KNOB_WIDTH / 2.;
-        self.knob_pos = Point::new(
-            rect.origin().x + knob_position,
-            rect.origin().y + rect.height() / 2.,
-        );
+        self.knob_pos = Point::new(knob_position, rect.height() / 2.);
         let knob_circle = Circle::new(self.knob_pos, KNOB_WIDTH / 2.);
         let brush = paint_ctx.render_ctx.solid_brush(knob_color);
         paint_ctx
