@@ -27,12 +27,6 @@ const KNOB_COLOR: Color = Color::rgb24(0xf0_f0_e5);
 const KNOB_HOVER_COLOR: Color = Color::rgb24(0xa0_a0_a5);
 const KNOB_PRESSED_COLOR: Color = Color::rgb24(0x75_75_75);
 
-fn calculate_value(mouse_x: f64, width: f64, knob_width: f64) -> f64 {
-    ((mouse_x - KNOB_WIDTH / 2.) / (width - knob_width))
-        .max(0.0)
-        .min(1.0)
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct Slider {
     width: f64,
@@ -47,6 +41,12 @@ impl Slider {
             return true;
         }
         false
+    }
+
+    fn calculate_value(&self, mouse_x: f64, knob_width: f64) -> f64 {
+        ((mouse_x - KNOB_WIDTH / 2.) / (self.width - knob_width))
+            .max(0.0)
+            .min(1.0)
     }
 }
 
@@ -114,19 +114,19 @@ impl Widget<f64> for Slider {
         match event {
             Event::MouseDown(mouse) => {
                 ctx.set_active(true);
-                *data = calculate_value(mouse.pos.x, self.width, KNOB_WIDTH);
+                *data = self.calculate_value(mouse.pos.x, KNOB_WIDTH);
                 ctx.invalidate();
             }
             Event::MouseUp(mouse) => {
                 if ctx.is_active() {
                     ctx.set_active(false);
-                    *data = calculate_value(mouse.pos.x, self.width, KNOB_WIDTH);
+                    *data = self.calculate_value(mouse.pos.x, KNOB_WIDTH);
                     ctx.invalidate();
                 }
             }
             Event::MouseMoved(mouse) => {
                 if ctx.is_active() {
-                    *data = calculate_value(mouse.pos.x, self.width, KNOB_WIDTH);
+                    *data = self.calculate_value(mouse.pos.x, KNOB_WIDTH);
                 }
                 if ctx.is_hot() {
                     if self.knob_hit_test(KNOB_WIDTH, mouse.pos) {
