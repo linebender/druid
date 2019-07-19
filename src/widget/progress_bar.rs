@@ -14,7 +14,7 @@
 
 //! A progress bar widget.
 
-use crate::kurbo::{Point, Size};
+use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Color, FillRule, RenderContext};
 use crate::{
     Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
@@ -29,7 +29,7 @@ pub struct ProgressBar {}
 impl Widget<f64> for ProgressBar {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, _env: &Env) {
         let clamped = data.max(0.0).min(1.0);
-        let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
+        let rect = Rect::from_origin_size(Point::ORIGIN, base_state.size());
 
         //Paint the background
         let brush = paint_ctx.render_ctx.solid_brush(BACKGROUND_COLOR);
@@ -49,7 +49,7 @@ impl Widget<f64> for ProgressBar {
         _data: &f64,
         _env: &Env,
     ) -> Size {
-        bc.constrain(bc.max)
+        bc.constrain(bc.max())
     }
 
     fn event(

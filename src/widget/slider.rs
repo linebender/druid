@@ -14,7 +14,7 @@
 
 //! A slider widget.
 
-use crate::kurbo::{Circle, Line, Point, Size, Vec2};
+use crate::kurbo::{Circle, Line, Point, Rect, Size, Vec2};
 use crate::piet::{Color, FillRule, LineCap, RenderContext, StrokeStyle};
 use crate::{
     Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
@@ -53,7 +53,7 @@ impl Slider {
 impl Widget<f64> for Slider {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, _env: &Env) {
         let clamped = data.max(0.0).min(1.0);
-        let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
+        let rect = Rect::from_origin_size(Point::ORIGIN, base_state.size());
 
         //Store the width so we can calulate slider position from mouse events
         self.width = rect.width();
@@ -98,7 +98,7 @@ impl Widget<f64> for Slider {
         _data: &f64,
         _env: &Env,
     ) -> Size {
-        bc.constrain(bc.max)
+        bc.constrain(bc.max())
     }
 
     fn event(
