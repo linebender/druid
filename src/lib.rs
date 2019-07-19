@@ -34,7 +34,7 @@ use piet::{Color, Piet, RenderContext};
 #[allow(unused)]
 use druid_shell::application::Application;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
-pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers, ModState};
 #[allow(unused)]
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, WinCtx, WinHandler, WindowHandle};

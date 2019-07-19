@@ -17,6 +17,23 @@
 use std::fmt;
 
 /// A keyboard event, generated on every key press and key release.
+///
+/// For convenience, there are a number of shorthand ways to check the value
+/// of a `KeyEvent`:
+///
+/// ```
+/// use druid_shell::keyboard::{KeyEvent, KeyCode, ModState};
+/// let event = KeyEvent::new(KeyCode::KeyA, false, ModState::AltCtrl.into(), "å", "a");
+///
+/// // compare against the event's unmodified string & active modifiers
+/// assert!(event == ("a", ModState::AltCtrl));
+/// // does not match against the 'resolved' text (from dead keys or system text mapping)
+/// assert!(event != ("å", ModState::AltCtrl));
+/// // modifiers must match exactly
+/// assert!(event != ("a", ModState::Alt));
+/// // can also match against the raw keycode + modstate.
+/// assert!(event == (KeyCode::KeyA, ModState::AltCtrl));
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct KeyEvent {
     /// The platform independent keycode.
@@ -39,7 +56,8 @@ pub struct KeyEvent {
 impl KeyEvent {
     /// Create a new `KeyEvent` struct. This accepts either &str or char for the last
     /// two arguments.
-    pub(crate) fn new(
+    #[doc(hidden)]
+    pub fn new(
         key_code: impl Into<KeyCode>,
         is_repeat: bool,
         mods: KeyModifiers,
@@ -84,6 +102,7 @@ impl KeyEvent {
     }
 }
 
+/// The state of the modifier keys.
 #[derive(Clone, Copy, Default, PartialEq)]
 pub struct KeyModifiers {
     pub shift: bool,
@@ -93,6 +112,36 @@ pub struct KeyModifiers {
     pub ctrl: bool,
     /// Meta / Windows / Command
     pub meta: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The various possible combinations of active modifiers.
+pub enum ModState {
+    None,
+    Alt,
+    Ctrl,
+    Meta,
+    Shift,
+    AltCtrl,
+    AltMeta,
+    AltShift,
+    CtrlShift,
+    CtrlMeta,
+    MetaShift,
+    AltCtrlMeta,
+    AltCtrlShift,
+    AltMetaShift,
+    CtrlMetaShift,
+    AltCtrlMetaShift,
+}
+
+impl KeyModifiers {
+    /// Returns the combined modifier state. Application authors are encouraged
+    /// to use this for determining how to handle a key or mouse event,
+    /// since it is less error prone than determining combined state manually.
+    pub fn state(self) -> ModState {
+        self.into()
+    }
 }
 
 //NOTE: This was mostly taken from makepad, which I'm sure took it from somewhere else.
@@ -679,6 +728,111 @@ impl fmt::Debug for KeyModifiers {
     }
 }
 
+impl From<KeyModifiers> for ModState {
+    fn from(src: KeyModifiers) -> ModState {
+        match (src.alt, src.ctrl, src.meta, src.shift) {
+            (false, false, false, false) => ModState::None,
+            (true, false, false, false) => ModState::Alt,
+            (false, true, false, false) => ModState::Ctrl,
+            (false, false, true, false) => ModState::Meta,
+            (false, false, false, true) => ModState::Shift,
+            (true, true, false, false) => ModState::AltCtrl,
+            (true, false, true, false) => ModState::AltMeta,
+            (true, false, false, true) => ModState::AltShift,
+            (false, true, true, false) => ModState::CtrlMeta,
+            (false, true, false, true) => ModState::CtrlShift,
+            (false, false, true, true) => ModState::MetaShift,
+            (true, true, true, false) => ModState::AltCtrlMeta,
+            (true, false, true, true) => ModState::AltMetaShift,
+            (true, true, false, true) => ModState::AltCtrlShift,
+            (false, true, true, true) => ModState::CtrlMetaShift,
+            (true, true, true, true) => ModState::AltCtrlMetaShift,
+        }
+    }
+}
+
+impl From<ModState> for KeyModifiers {
+    fn from(src: ModState) -> KeyModifiers {
+        let (alt, ctrl, meta, shift) = match src {
+            ModState::None => (false, false, false, false),
+            ModState::Alt => (true, false, false, false),
+            ModState::Ctrl => (false, true, false, false),
+            ModState::Meta => (false, false, true, false),
+            ModState::Shift => (false, false, false, true),
+            ModState::AltCtrl => (true, true, false, false),
+            ModState::AltMeta => (true, false, true, false),
+            ModState::AltShift => (true, false, false, true),
+            ModState::CtrlMeta => (false, true, true, false),
+            ModState::CtrlShift => (false, true, false, true),
+            ModState::MetaShift => (false, false, true, true),
+            ModState::AltCtrlMeta => (true, true, true, false),
+            ModState::AltMetaShift => (true, false, true, true),
+            ModState::AltCtrlShift => (true, true, false, true),
+            ModState::CtrlMetaShift => (false, true, true, true),
+            ModState::AltCtrlMetaShift => (true, true, true, true),
+        };
+        KeyModifiers {
+            alt,
+            ctrl,
+            meta,
+            shift,
+        }
+    }
+}
+
+impl std::cmp::PartialEq<(&'static str, ModState)> for KeyEvent {
+    fn eq(&self, other: &(&'static str, ModState)) -> bool {
+        let mods: KeyModifiers = other.1.into();
+        if mods.shift
+            && other
+                .0
+                .chars()
+                .next()
+                .map(|c| c.is_ascii_lowercase())
+                .unwrap_or(false)
+        {
+            eprintln!(
+                "warning: comparison {:?} contains shift mask but lowercase string, \
+                 but strings already have shift applied.",
+                other
+            );
+        }
+        self.mods == mods && self.unmod_text() == Some(other.0)
+    }
+}
+
+impl std::cmp::PartialEq<KeyEvent> for (&'static str, ModState) {
+    fn eq(&self, other: &KeyEvent) -> bool {
+        other == self
+    }
+}
+
+impl std::cmp::PartialEq<KeyEvent> for (KeyCode, ModState) {
+    fn eq(&self, other: &KeyEvent) -> bool {
+        other.key_code == self.0 && other.mods.state() == self.1
+    }
+}
+
+impl std::cmp::PartialEq<(KeyCode, ModState)> for KeyEvent {
+    fn eq(&self, other: &(KeyCode, ModState)) -> bool {
+        other == self
+    }
+}
+
+impl std::cmp::PartialEq<KeyModifiers> for ModState {
+    fn eq(&self, other: &KeyModifiers) -> bool {
+        other == self
+    }
+}
+
+impl std::cmp::PartialEq<ModState> for KeyModifiers {
+    fn eq(&self, other: &ModState) -> bool {
+        let other: KeyModifiers = (*other).into();
+        *self == other
+    }
+}
+
+#[cfg(test)]
 #[cfg(test)]
 mod tests {
     use super::*;
