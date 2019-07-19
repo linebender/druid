@@ -17,25 +17,17 @@
 use crate::kurbo::{Point, Size};
 use crate::piet::{Color, FillRule, RenderContext};
 use crate::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx,
-    UpdateCtx, Widget,
+    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 const BACKGROUND_COLOR: Color = Color::rgb24(0x55_55_55);
 const BAR_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 
 #[derive(Debug, Clone, Default)]
-pub struct ProgressBar {
-}
+pub struct ProgressBar {}
 
 impl Widget<f64> for ProgressBar {
-    fn paint(
-        &mut self,
-        paint_ctx: &mut PaintCtx, 
-        base_state: &BaseState,
-        data: &f64,
-        _env: &Env,
-    ) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, _env: &Env) {
         let clamped = data.max(0.0).min(1.0);
         let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
 
@@ -55,9 +47,9 @@ impl Widget<f64> for ProgressBar {
         _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         _data: &f64,
-        _env: &Env
+        _env: &Env,
     ) -> Size {
-        bc.constrain((bc.max.width, bc.max.height))
+        bc.constrain(bc.max)
     }
 
     fn event(
@@ -70,13 +62,5 @@ impl Widget<f64> for ProgressBar {
         None
     }
 
-    fn update(
-        &mut self,
-        ctx: &mut UpdateCtx,
-        _old_data: Option<&f64>,
-        _data: &f64,
-        _env: &Env,
-    ) {
-        ctx.invalidate();
-    }
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {}
 }
