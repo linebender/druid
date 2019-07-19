@@ -33,6 +33,8 @@ use std::fmt;
 /// assert!(event != ("a", ModState::Alt));
 /// // can also match against the raw keycode + modstate.
 /// assert!(event == (KeyCode::KeyA, ModState::AltCtrl));
+/// // match any modstate:
+/// assert!(event == (KeyCode::KeyA, ModState::ANY));
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct KeyEvent {
@@ -133,6 +135,16 @@ pub enum ModState {
     AltMetaShift,
     CtrlMetaShift,
     AltCtrlMetaShift,
+}
+
+/// A marker type to allow `ModState::ANY`.
+#[derive(Debug, Clone, Copy)]
+#[doc(hidden)]
+pub struct AnyModState;
+
+impl ModState {
+    /// A value that is considered equal to any `ModState`.
+    pub const ANY: AnyModState = AnyModState;
 }
 
 impl KeyModifiers {
@@ -807,6 +819,18 @@ impl std::cmp::PartialEq<KeyEvent> for (&'static str, ModState) {
     }
 }
 
+impl std::cmp::PartialEq<(&'static str, AnyModState)> for KeyEvent {
+    fn eq(&self, other: &(&'static str, AnyModState)) -> bool {
+        self.unmod_text() == Some(other.0)
+    }
+}
+
+impl std::cmp::PartialEq<KeyEvent> for (&'static str, AnyModState) {
+    fn eq(&self, other: &KeyEvent) -> bool {
+        other == self
+    }
+}
+
 impl std::cmp::PartialEq<KeyEvent> for (KeyCode, ModState) {
     fn eq(&self, other: &KeyEvent) -> bool {
         other.key_code == self.0 && other.mods.state() == self.1
@@ -815,6 +839,18 @@ impl std::cmp::PartialEq<KeyEvent> for (KeyCode, ModState) {
 
 impl std::cmp::PartialEq<(KeyCode, ModState)> for KeyEvent {
     fn eq(&self, other: &(KeyCode, ModState)) -> bool {
+        other == self
+    }
+}
+
+impl std::cmp::PartialEq<KeyEvent> for (KeyCode, AnyModState) {
+    fn eq(&self, other: &KeyEvent) -> bool {
+        other.key_code == self.0
+    }
+}
+
+impl std::cmp::PartialEq<(KeyCode, AnyModState)> for KeyEvent {
+    fn eq(&self, other: &(KeyCode, AnyModState)) -> bool {
         other == self
     }
 }
@@ -829,6 +865,30 @@ impl std::cmp::PartialEq<ModState> for KeyModifiers {
     fn eq(&self, other: &ModState) -> bool {
         let other: KeyModifiers = (*other).into();
         *self == other
+    }
+}
+
+impl std::cmp::PartialEq<AnyModState> for ModState {
+    fn eq(&self, _other: &AnyModState) -> bool {
+        true
+    }
+}
+
+impl std::cmp::PartialEq<ModState> for AnyModState {
+    fn eq(&self, _other: &ModState) -> bool {
+        true
+    }
+}
+
+impl std::cmp::PartialEq<AnyModState> for KeyModifiers {
+    fn eq(&self, _other: &AnyModState) -> bool {
+        true
+    }
+}
+
+impl std::cmp::PartialEq<KeyModifiers> for AnyModState {
+    fn eq(&self, _other: &KeyModifiers) -> bool {
+        true
     }
 }
 
