@@ -15,27 +15,36 @@
 //! A slider widget.
 
 use crate::kurbo::{Circle, Line, Point, Size, Vec2};
-use crate::piet::{Color, FillRule, RenderContext, StrokeStyle, LineCap};
+use crate::piet::{Color, FillRule, LineCap, RenderContext, StrokeStyle};
 use crate::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx,
-    UpdateCtx, Widget,
+    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 const KNOB_WIDTH: f64 = 24.;
 const BACKGROUND_THICKNESS: f64 = 4.;
 const BACKGROUND_COLOR: Color = Color::rgb24(0x55_55_55);
-const SLIDER_COLOR: Color = Color::rgb24(0xf0_f0_ea);
+const KNOB_COLOR: Color = Color::rgb24(0xf0_f0_e5);
+const KNOB_HOVER_COLOR: Color = Color::rgb24(0xa0_a0_a5);
+const KNOB_PRESSED_COLOR: Color = Color::rgb24(0x75_75_75);
+
+fn calculate_value(mouse_x: f64, width: f64, knob_width: f64) -> f64 {
+    ((mouse_x - KNOB_WIDTH / 2.) / (width - knob_width))
+        .max(0.0)
+        .min(1.0)
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct Slider {
     width: f64,
 }
 
-
 impl Widget<f64> for Slider {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, _env: &Env) {
         let clamped = data.max(0.0).min(1.0);
         let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
+
+        let is_active = base_state.is_active();
+        let is_hot = base_state.is_hot();
 
         //Store the width so we can calulate slider position from mouse events
         self.width = rect.width();
@@ -47,6 +56,7 @@ impl Widget<f64> for Slider {
             background_origin,
             background_origin + Vec2::new(background_width, 0.),
         );
+
         let brush = paint_ctx.render_ctx.solid_brush(BACKGROUND_COLOR);
         let mut stroke = StrokeStyle::new();
         stroke.set_line_cap(LineCap::Round);
@@ -55,13 +65,19 @@ impl Widget<f64> for Slider {
             .stroke(background_line, &brush, BACKGROUND_THICKNESS, Some(&stroke));
 
         //Paint the slider
+        let knob_color = match (is_active, is_hot) {
+            (true, _) => KNOB_PRESSED_COLOR,
+            (false, true) => KNOB_HOVER_COLOR,
+            _ => KNOB_COLOR,
+        };
+
         let knob_position = (self.width - KNOB_WIDTH) * clamped + KNOB_WIDTH / 2.;
         let knob_origin = Point::new(
             rect.origin().x + knob_position,
             rect.origin().y + rect.height() / 2.,
         );
         let knob_circle = Circle::new(knob_origin, KNOB_WIDTH / 2.);
-        let brush = paint_ctx.render_ctx.solid_brush(SLIDER_COLOR);
+        let brush = paint_ctx.render_ctx.solid_brush(knob_color);
         paint_ctx
             .render_ctx
             .fill(knob_circle, &brush, FillRule::NonZero);
@@ -74,7 +90,7 @@ impl Widget<f64> for Slider {
         _data: &f64,
         _env: &Env,
     ) -> Size {
-        bc.constrain((bc.max.width, bc.max.height))
+        bc.constrain(bc.max)
     }
 
     fn event(
@@ -85,33 +101,28 @@ impl Widget<f64> for Slider {
         _env: &Env,
     ) -> Option<Action> {
         match event {
-            Event::MouseDown(_) => {
+            Event::MouseDown(mouse) => {
                 ctx.set_active(true);
+                *data = calculate_value(mouse.pos.x, self.width, KNOB_WIDTH);
+                ctx.invalidate();
             }
             Event::MouseUp(mouse) => {
                 if ctx.is_active() {
                     ctx.set_active(false);
-                    *data = ((mouse.pos.x - KNOB_WIDTH / 2.) / (self.width - KNOB_WIDTH))
-                        .max(0.0)
-                        .min(1.0);
+                    *data = calculate_value(mouse.pos.x, self.width, KNOB_WIDTH);
                     ctx.invalidate();
                 }
             }
-            Event::MouseMoved(mouse) if mouse.count == 1 => {
+            Event::MouseMoved(mouse) => {
                 if ctx.is_active() {
-                    *data = ((mouse.pos.x - KNOB_WIDTH / 2.) / (self.width - KNOB_WIDTH))
-                        .max(0.0)
-                        .min(1.0);
-                    ctx.invalidate();
+                    *data = calculate_value(mouse.pos.x, self.width, KNOB_WIDTH);
                 }
+                ctx.invalidate();
             }
             _ => (),
         }
-
         None
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {
-        ctx.invalidate();
-    }
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {}
 }
