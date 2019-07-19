@@ -36,15 +36,24 @@ fn calculate_value(mouse_x: f64, width: f64, knob_width: f64) -> f64 {
 #[derive(Debug, Clone, Default)]
 pub struct Slider {
     width: f64,
+    knob_pos: Point,
+    knob_hovered: bool,
+}
+
+impl Slider {
+    fn knob_hit_test(&self, knob_width: f64, mouse_pos: Point) -> bool {
+        let knob_circle = Circle::new(self.knob_pos, knob_width / 2.);
+        if mouse_pos.distance(knob_circle.center) < knob_circle.radius {
+            return true;
+        }
+        false
+    }
 }
 
 impl Widget<f64> for Slider {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, _env: &Env) {
         let clamped = data.max(0.0).min(1.0);
         let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
-
-        let is_active = base_state.is_active();
-        let is_hot = base_state.is_hot();
 
         //Store the width so we can calulate slider position from mouse events
         self.width = rect.width();
@@ -65,18 +74,20 @@ impl Widget<f64> for Slider {
             .stroke(background_line, &brush, BACKGROUND_THICKNESS, Some(&stroke));
 
         //Paint the slider
-        let knob_color = match (is_active, is_hot) {
+        let is_active = base_state.is_active();
+
+        let knob_color = match (is_active, self.knob_hovered) {
             (true, _) => KNOB_PRESSED_COLOR,
             (false, true) => KNOB_HOVER_COLOR,
             _ => KNOB_COLOR,
         };
 
         let knob_position = (self.width - KNOB_WIDTH) * clamped + KNOB_WIDTH / 2.;
-        let knob_origin = Point::new(
+        self.knob_pos = Point::new(
             rect.origin().x + knob_position,
             rect.origin().y + rect.height() / 2.,
         );
-        let knob_circle = Circle::new(knob_origin, KNOB_WIDTH / 2.);
+        let knob_circle = Circle::new(self.knob_pos, KNOB_WIDTH / 2.);
         let brush = paint_ctx.render_ctx.solid_brush(knob_color);
         paint_ctx
             .render_ctx
@@ -116,6 +127,13 @@ impl Widget<f64> for Slider {
             Event::MouseMoved(mouse) => {
                 if ctx.is_active() {
                     *data = calculate_value(mouse.pos.x, self.width, KNOB_WIDTH);
+                }
+                if ctx.is_hot() {
+                    if self.knob_hit_test(KNOB_WIDTH, mouse.pos) {
+                        self.knob_hovered = true
+                    } else {
+                        self.knob_hovered = false
+                    }
                 }
                 ctx.invalidate();
             }
