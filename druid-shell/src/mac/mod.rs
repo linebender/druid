@@ -420,7 +420,7 @@ extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
         nsview: &(*view_state).nsview,
     };
     (*view_state).handler.key_down(event, &mut ctx);
-    view_state.last_mods = event.modifiers;
+    view_state.last_mods = event.mods;
 }
 
 extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
@@ -433,7 +433,7 @@ extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
         nsview: &(*view_state).nsview,
     };
     (*view_state).handler.key_up(event, &mut ctx);
-    view_state.last_mods = event.modifiers;
+    view_state.last_mods = event.mods;
 }
 
 extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
@@ -442,7 +442,7 @@ extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
         &mut *(view_state as *mut ViewState)
     };
     let (down, event) = mods_changed_key_event(view_state.last_mods, nsevent);
-    view_state.last_mods = event.modifiers;
+    view_state.last_mods = event.mods;
     let mut ctx = WinCtxImpl {
         nsview: &(*view_state).nsview,
     };
