@@ -24,7 +24,7 @@ pub struct KeyEvent {
     /// Whether or not this event is a repeat (the key was held down)
     pub is_repeat: bool,
     /// The modifiers for this event.
-    pub modifiers: KeyModifiers,
+    pub mods: KeyModifiers,
     // these are exposed via methods, below. The rationale for this approach is
     // that a key might produce more than a single 'char' of input, but we don't
     // want to need a heap allocation in the trivial case. This gives us 15 bytes
@@ -42,7 +42,7 @@ impl KeyEvent {
     pub(crate) fn new(
         key_code: impl Into<KeyCode>,
         is_repeat: bool,
-        modifiers: KeyModifiers,
+        mods: KeyModifiers,
         text: impl Into<StrOrChar>,
         unmodified_text: impl Into<StrOrChar>,
     ) -> Self {
@@ -58,7 +58,7 @@ impl KeyEvent {
         KeyEvent {
             key_code: key_code.into(),
             is_repeat,
-            modifiers,
+            mods,
             text,
             unmodified_text,
         }
