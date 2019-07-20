@@ -32,7 +32,7 @@ pub struct Slider {
     width: f64,
     knob_pos: Point,
     knob_hovered: bool,
-    x_offset: f64
+    x_offset: f64,
 }
 
 impl Slider {
@@ -44,17 +44,11 @@ impl Slider {
         false
     }
 
-    fn mouse_knob_x_offset(&self, knob_width: f64, mouse_pos: Point) -> f64 {
-        self.knob_pos.x - mouse_pos.x
-    }
-
     fn calculate_value(&self, mouse_x: f64, knob_width: f64) -> f64 {
         ((mouse_x + self.x_offset - KNOB_WIDTH / 2.) / (self.width - knob_width))
             .max(0.0)
             .min(1.0)
     }
-
-
 }
 
 impl Widget<f64> for Slider {
@@ -119,7 +113,7 @@ impl Widget<f64> for Slider {
             Event::MouseDown(mouse) => {
                 ctx.set_active(true);
                 if self.knob_hit_test(KNOB_WIDTH, mouse.pos) {
-                    self.x_offset = self.mouse_knob_x_offset(KNOB_WIDTH, mouse.pos);
+                    self.x_offset = self.knob_pos.x - mouse.pos.x
                 } else {
                     self.x_offset = 0.;
                     *data = self.calculate_value(mouse.pos.x, KNOB_WIDTH);
