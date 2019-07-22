@@ -270,7 +270,7 @@ impl WndState {
 }
 
 impl MyWndProc {
-    /// Create debugging output for dropped messages due to wndproc reeentrancy.
+    /// Create debugging output for dropped messages due to wndproc reentrancy.
     ///
     /// In the future, we choose to do something else other than logging and dropping,
     /// such as queuing and replaying after the nested call returns.
@@ -292,7 +292,10 @@ impl<'a> WinCtxOwner<'a> {
         WinCtxOwner { handle, dwrite }
     }
 
-    fn ctx(&'a mut self) -> WinCtxImpl<'a> {
+    fn ctx<'b>(&'b mut self) -> WinCtxImpl<'b>
+    where
+        'a: 'b,
+    {
         let text = Text::new(&self.dwrite);
         WinCtxImpl {
             handle: self.handle.deref(),
@@ -348,8 +351,11 @@ impl WndProc for MyWndProc {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd)
                             .map(|rt| rt.as_generic());
                         s.render_target = rt.ok();
-                        let ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                        s.handler.rebuild_resources(&mut ctx.ctx());
+                        {
+                            let mut c =
+                                WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                            s.handler.rebuild_resources(&mut c.ctx());
+                        }
                         s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
 
                         if let Some(ref mut ds) = s.dcomp_state {
@@ -379,8 +385,9 @@ impl WndProc for MyWndProc {
                             0,
                         );
                         if SUCCEEDED(res) {
-                            let ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                            s.handler.rebuild_resources(&mut ctx.ctx());
+                            let mut c =
+                                WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                            s.handler.rebuild_resources(&mut c.ctx());
                             s.rebuild_render_target(&self.d2d_factory);
                             s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
                             (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
@@ -408,8 +415,8 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     let width = LOWORD(lparam as u32) as u32;
                     let height = HIWORD(lparam as u32) as u32;
-                    let ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.size(width, height, &mut ctx.ctx());
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    s.handler.size(width, height, &mut c.ctx());
                     let use_hwnd = if let Some(ref dcomp_state) = s.dcomp_state {
                         dcomp_state.sizing
                     } else {
@@ -457,9 +464,9 @@ impl WndProc for MyWndProc {
             WM_COMMAND => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    let ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
                     s.handler
-                        .command(LOWORD(wparam as u32) as u32, &mut ctx.ctx());
+                        .command(LOWORD(wparam as u32) as u32, &mut c.ctx());
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -483,8 +490,8 @@ impl WndProc for MyWndProc {
                     let is_repeat = (lparam & 0xFFFF) > 0;
                     let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
 
-                    let ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    if s.handler.key_down(event, &mut ctx.ctx()) {
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    if s.handler.key_down(event, &mut c.ctx()) {
                         Some(0)
                     } else {
                         None
@@ -510,8 +517,8 @@ impl WndProc for MyWndProc {
                     let is_repeat = (lparam & 0xFFFF) > 0;
                     let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
 
-                    let ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    if s.handler.key_down(event, &mut ctx.ctx()) {
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    if s.handler.key_down(event, &mut c.ctx()) {
                         Some(0)
                     } else {
                         None
@@ -528,9 +535,9 @@ impl WndProc for MyWndProc {
                     let modifiers = get_mod_state();
                     let is_repeat = false;
                     let text = s.stashed_char.take();
-                    let ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
                     let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
-                    s.handler.key_up(event, &mut ctx.ctx());
+                    s.handler.key_up(event, &mut c.ctx());
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -545,8 +552,8 @@ impl WndProc for MyWndProc {
                     let delta_y = HIWORD(wparam as u32) as i16 as f64;
                     let delta = Vec2::new(0.0, -delta_y);
                     let mods = get_mod_state();
-                    let ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.wheel(delta, mods, &mut ctx.ctx());
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    s.handler.wheel(delta, mods, &mut c.ctx());
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -558,9 +565,8 @@ impl WndProc for MyWndProc {
                     let delta_x = HIWORD(wparam as u32) as i16 as f64;
                     let delta = Vec2::new(delta_x, 0.0);
                     let mods = get_mod_state();
-                    let text = Text::new(&self.dwrite_factory);
-                    let ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.wheel(delta, mods, &mut ctx.ctx());
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    s.handler.wheel(delta, mods, &mut c.ctx());
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -590,8 +596,8 @@ impl WndProc for MyWndProc {
                         button,
                         count: 0,
                     };
-                    let ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.mouse_move(&event, &mut ctx.ctx());
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    s.handler.mouse_move(&event, &mut c.ctx());
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -638,11 +644,11 @@ impl WndProc for MyWndProc {
                         button,
                         count,
                     };
-                    let ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
                     if count > 0 {
-                        s.handler.mouse_down(&event, &mut ctx.ctx());
+                        s.handler.mouse_down(&event, &mut c.ctx());
                     } else {
-                        s.handler.mouse_up(&event, &mut ctx.ctx());
+                        s.handler.mouse_up(&event, &mut c.ctx());
                     }
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
@@ -652,9 +658,8 @@ impl WndProc for MyWndProc {
             WM_DESTROY => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    let mut ctx =
-                        WinCtxImpl::new(&self.handle.borrow().deref(), &self.dwrite_factory);
-                    s.handler.destroy(&mut ctx);
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    s.handler.destroy(&mut c.ctx());
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -1171,7 +1176,15 @@ impl<'a> WinCtx for WinCtxImpl<'a> {
 
     /// Get a reference to the text factory.
     fn text_factory<'b>(&'b mut self) -> &'b mut Text<'b> {
-        &mut self.text
+        // This unsafe transmute is to get around the lack of existential
+        // lifetimes. The statement we want to make is that the `Text`
+        // object will contain references with a lifetime at least as long
+        // as `'b` (the lifetime of `self`).
+        //
+        // But we can't express that (yet), so instead we assert that the
+        // lifetime is the same. This is safe for all uses, as we only
+        // pass a `WinCtx` down to app code.
+        unsafe { std::mem::transmute(&mut self.text) }
     }
 }
 

@@ -46,6 +46,13 @@ pub trait WinCtx {
     /// TODO: finer grained invalidation.
     fn invalidate(&mut self);
 
+    /// Get a reference to an object that can do text layout.
+    ///
+    /// TODO: the lifetime parameter on `Text` should probably be an
+    /// [existential lifetime]. There's a tracking issue for that in
+    /// Rust, but until then unsafe will probably be needed.
+    ///
+    /// [existential lifetime]: https://github.com/rust-lang/rust/issues/60670
     fn text_factory<'a>(&'a mut self) -> &'a mut Text<'a>;
 }
 
