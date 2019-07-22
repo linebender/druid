@@ -177,7 +177,7 @@ struct WndState {
 /// A structure that owns resources for the `WinCtx` (so it lasts long enough).
 struct WinCtxOwner<'a> {
     handle: std::cell::Ref<'a, WindowHandle>,
-    dwrite: directwrite::Factory,
+    dwrite: &'a directwrite::Factory,
 }
 
 /// The Windows implementation of the context provided to WinHandler calls.
@@ -285,10 +285,8 @@ impl MyWndProc {
 impl<'a> WinCtxOwner<'a> {
     fn new(
         handle: std::cell::Ref<'a, WindowHandle>,
-        dwrite: &directwrite::Factory,
+        dwrite: &'a directwrite::Factory,
     ) -> WinCtxOwner<'a> {
-        // TODO: there's probably a way to get rid of this clone.
-        let dwrite = clone_dwrite(dwrite);
         WinCtxOwner { handle, dwrite }
     }
 
@@ -1024,11 +1022,7 @@ impl Cursor {
 // TODO: when upgrading to directwrite 0.3, just derive Clone instead.
 impl Clone for WindowHandle {
     fn clone(&self) -> WindowHandle {
-        let dw_clone = self.dwrite_factory.as_ref().map(|dw| unsafe {
-            let ptr = dw.get_raw();
-            (*ptr).AddRef();
-            directwrite::Factory::from_raw(ptr)
-        });
+        let dw_clone = self.dwrite_factory.as_ref().map(|dw| clone_dwrite(dw));
         WindowHandle {
             dwrite_factory: dw_clone,
             state: self.state.clone(),
