@@ -649,14 +649,14 @@ impl IdleHandle {
     }
 }
 
-impl<'a> WinCtx for WinCtxImpl<'a> {
+impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
     fn invalidate(&mut self) {
         unsafe {
             let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
         }
     }
 
-    fn text_factory<'b>(&'b mut self) -> &'b mut Text<'b> {
+    fn text_factory(&mut self) -> &mut Text<'a> {
         &mut self.text
     }
 }

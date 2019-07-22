@@ -1169,22 +1169,14 @@ impl IdleHandle {
 
 // Note: this has mostly methods moved from `WindowHandle`, so mostly forwards
 // to those. As a cleanup, some may be implemented more directly.
-impl<'a> WinCtx for WinCtxImpl<'a> {
+impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
     fn invalidate(&mut self) {
         self.handle.invalidate();
     }
 
     /// Get a reference to the text factory.
-    fn text_factory<'b>(&'b mut self) -> &'b mut Text<'b> {
-        // This unsafe transmute is to get around the lack of existential
-        // lifetimes. The statement we want to make is that the `Text`
-        // object will contain references with a lifetime at least as long
-        // as `'b` (the lifetime of `self`).
-        //
-        // But we can't express that (yet), so instead we assert that the
-        // lifetime is the same. This is safe for all uses, as we only
-        // pass a `WinCtx` down to app code.
-        unsafe { std::mem::transmute(&mut self.text) }
+    fn text_factory(&mut self) -> &mut Text<'a> {
+        &mut self.text
     }
 }
 
