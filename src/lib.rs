@@ -144,6 +144,11 @@ pub struct LayoutCtx<'a, 'b: 'a> {
 }
 
 /// A mutable context provided to event handling methods of widgets.
+///
+/// Widgets should call [`invalidate`] whenever an event causes a change
+/// in the widget's appearance, to schedule a repaint.
+///
+/// [`invalidate`]: #method.invalidate
 pub struct EventCtx<'a, 'b> {
     win_ctx: &'a mut dyn WinCtx<'b>,
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
@@ -153,7 +158,14 @@ pub struct EventCtx<'a, 'b> {
     is_handled: bool,
 }
 
-pub struct UpdateCtx<'a> {
+/// A mutable context provided to data update methods of widgets.
+///
+/// Widgets should call [`invalidate`] whenever a data change causes a change
+/// in the widget's appearance, to schedule a repaint.
+///
+/// [`invalidate`]: #method.invalidate
+pub struct UpdateCtx<'a, 'b> {
+    win_ctx: &'a mut dyn WinCtx<'b>,
     window: &'a WindowHandle,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like
@@ -364,18 +376,22 @@ impl<T: Data> UiState<T> {
         };
         let env = self.root_env();
         let _action = self.root.event(&event, &mut ctx, &mut self.data, &env);
+        let needs_inval = ctx.base_state.needs_inval;
+        let is_handled = ctx.is_handled();
+
         let mut update_ctx = UpdateCtx {
+            win_ctx,
             window: &self.handle,
             needs_inval: false,
         };
         // Note: we probably want to aggregate updates so there's only one after
         // a burst of events.
         self.root.update(&mut update_ctx, &self.data, &env);
-        if ctx.base_state.needs_inval || update_ctx.needs_inval {
-            ctx.win_ctx.invalidate();
+        if needs_inval || update_ctx.needs_inval {
+            update_ctx.win_ctx.invalidate();
         }
         // TODO: process actions
-        ctx.is_handled()
+        is_handled
     }
 
     fn paint(&mut self, piet: &mut Piet) -> bool {
@@ -581,11 +597,26 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
     }
 }
 
-impl<'a> UpdateCtx<'a> {
+impl<'a, 'b> UpdateCtx<'a, 'b> {
+    /// Invalidate.
+    ///
+    /// See [`EventCtx::invalidate`](struct.EventCtx.html#method.invalidate) for
+    /// more discussion.
     pub fn invalidate(&mut self) {
         self.needs_inval = true;
     }
 
+    /// Get an object which can create text layouts.
+    pub fn text(&mut self) -> &mut Text<'b> {
+        self.win_ctx.text_factory()
+    }
+
+    /// Returns a reference to the current `WindowHandle`.
+    ///
+    /// Note: we're in the process of migrating towards providing functionality
+    /// provided by the window handle in mutable contexts instead. If you're
+    /// considering a new use of this method, try adding it to `WinCtx` and
+    /// plumbing it through instead.
     pub fn window(&self) -> &WindowHandle {
         &self.window
     }
