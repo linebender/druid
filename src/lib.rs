@@ -139,7 +139,9 @@ pub struct PaintCtx<'a, 'b: 'a> {
     pub render_ctx: &'a mut Piet<'b>,
 }
 
-pub struct LayoutCtx {}
+pub struct LayoutCtx<'a, 'b: 'a> {
+    text: &'a mut druid_shell::window::Text<'b>,
+}
 
 pub struct EventCtx<'a> {
     window: &'a WindowHandle,
@@ -374,7 +376,8 @@ impl<T: Data> UiState<T> {
     fn paint(&mut self, piet: &mut Piet) -> bool {
         let bc = BoxConstraints::tight(self.size);
         let env = self.root_env();
-        let mut layout_ctx = LayoutCtx {};
+        let text = piet.text();
+        let mut layout_ctx = LayoutCtx { text };
         let size = self.root.layout(&mut layout_ctx, &bc, &self.data, &env);
         self.root.state.layout_rect = Rect::from_origin_size(Point::ORIGIN, size);
         piet.clear(BACKGROUND_COLOR);
@@ -534,6 +537,12 @@ impl<'a> EventCtx<'a> {
     /// Determine whether the event has been handled by some other widget.
     pub fn is_handled(&self) -> bool {
         self.is_handled
+    }
+}
+
+impl<'a, 'b> LayoutCtx<'a, 'b> {
+    pub fn text(&mut self) -> &mut druid_shell::window::Text<'b> {
+        &mut self.text
     }
 }
 
