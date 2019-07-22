@@ -46,7 +46,7 @@ use piet_common::{Piet, RenderContext};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
-use crate::window::{Cursor, MouseButton, MouseEvent, WinCtx, WinHandler};
+use crate::window::{Cursor, MouseButton, MouseEvent, Text, WinCtx, WinHandler};
 use crate::Error;
 
 use util::assert_main_thread;
@@ -96,6 +96,7 @@ struct ViewState {
 
 struct WinCtxImpl<'a> {
     nsview: &'a WeakPtr,
+    text: Text<'static>,
 }
 
 impl WindowBuilder {
@@ -166,6 +167,7 @@ impl WindowBuilder {
             });
             let mut ctx = WinCtxImpl {
                 nsview: handle.nsview.as_ref().unwrap(),
+                text: Text::new(),
             };
             (*view_state)
                 .handler
@@ -285,6 +287,7 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
         let view_state = &mut *(view_state as *mut ViewState);
         let mut ctx = WinCtxImpl {
             nsview: &(*view_state).nsview,
+            text: Text::new(),
         };
         (*view_state)
             .handler
@@ -348,6 +351,7 @@ fn mouse_down(this: &mut Object, nsevent: id, button: MouseButton) {
         let event = mouse_event(nsevent, this as id, Some(button));
         let mut ctx = WinCtxImpl {
             nsview: &(*view_state).nsview,
+            text: Text::new(),
         };
         (*view_state).handler.mouse_down(&event, &mut ctx);
     }
@@ -368,6 +372,7 @@ fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
         let event = mouse_event(nsevent, this as id, Some(button));
         let mut ctx = WinCtxImpl {
             nsview: &(*view_state).nsview,
+            text: Text::new(),
         };
         (*view_state).handler.mouse_up(&event, &mut ctx);
     }
@@ -380,6 +385,7 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
         let event = mouse_event(nsevent, this as id, None);
         let mut ctx = WinCtxImpl {
             nsview: &(*view_state).nsview,
+            text: Text::new(),
         };
         (*view_state).handler.mouse_move(&event, &mut ctx);
     }
@@ -404,6 +410,7 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
         let delta = Vec2::new(dx, dy);
         let mut ctx = WinCtxImpl {
             nsview: &(*view_state).nsview,
+            text: Text::new(),
         };
         (*view_state).handler.wheel(delta, mods, &mut ctx);
     }
@@ -418,6 +425,7 @@ extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
     };
     let mut ctx = WinCtxImpl {
         nsview: &(*view_state).nsview,
+        text: Text::new(),
     };
     (*view_state).handler.key_down(event, &mut ctx);
     view_state.last_mods = event.mods;
@@ -431,6 +439,7 @@ extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
     };
     let mut ctx = WinCtxImpl {
         nsview: &(*view_state).nsview,
+        text: Text::new(),
     };
     (*view_state).handler.key_up(event, &mut ctx);
     view_state.last_mods = event.mods;
@@ -445,6 +454,7 @@ extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
     view_state.last_mods = event.mods;
     let mut ctx = WinCtxImpl {
         nsview: &(*view_state).nsview,
+        text: Text::new(),
     };
     if down {
         (*view_state).handler.key_down(event, &mut ctx);
@@ -644,6 +654,10 @@ impl<'a> WinCtx for WinCtxImpl<'a> {
         unsafe {
             let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
         }
+    }
+
+    fn text_factory<'b>(&'b mut self) -> &'b mut Text<'b> {
+        &mut self.text
     }
 }
 
