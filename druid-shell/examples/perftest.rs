@@ -41,26 +41,26 @@ impl WinHandler for PerfTest {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, rc: &mut Piet) -> bool {
+    fn paint(&mut self, piet: &mut Piet, _ctx: &mut dyn WinCtx) -> bool {
         let (width, height) = self.size;
-        let bg = rc.solid_brush(BG_COLOR);
-        let fg = rc.solid_brush(FG_COLOR);
+        let bg = piet.solid_brush(BG_COLOR);
+        let fg = piet.solid_brush(FG_COLOR);
         let rect = Rect::new(0.0, 0.0, width, height);
-        rc.fill(rect, &bg, FillRule::NonZero);
+        piet.fill(rect, &bg, FillRule::NonZero);
 
-        rc.stroke(Line::new((0.0, height), (width, 0.0)), &fg, 1.0, None);
+        piet.stroke(Line::new((0.0, height), (width, 0.0)), &fg, 1.0, None);
 
         let th = ::std::f64::consts::PI * (get_time().nsec as f64) * 2e-9;
         let dx = 100.0 * th.sin();
         let dy = 100.0 * th.cos();
-        rc.stroke(
+        piet.stroke(
             Line::new((100.0, 100.0), (100.0 + dx, 100.0 - dy)),
             &fg,
             1.0,
             None,
         );
 
-        let font = rc
+        let font = piet
             .text()
             .new_font_by_name("Consolas", 15.0)
             .unwrap()
@@ -71,16 +71,16 @@ impl WinHandler for PerfTest {
         let now = now.sec as f64 + 1e-9 * now.nsec as f64;
         let msg = format!("{:3.1}ms", 1e3 * (now - self.last_time));
         self.last_time = now;
-        let layout = rc
+        let layout = piet
             .text()
             .new_text_layout(&font, &msg)
             .unwrap()
             .build()
             .unwrap();
-        rc.draw_text(&layout, (10.0, 210.0), &fg);
+        piet.draw_text(&layout, (10.0, 210.0), &fg);
 
         let msg = "Hello DWrite! This is a somewhat longer string of text intended to provoke slightly longer draw times.";
-        let layout = rc
+        let layout = piet
             .text()
             .new_text_layout(&font, &msg)
             .unwrap()
@@ -91,7 +91,7 @@ impl WinHandler for PerfTest {
         let y0 = 10.0;
         for i in 0..60 {
             let y = y0 + (i as f64) * dy;
-            rc.draw_text(&layout, (x0, y), &fg);
+            piet.draw_text(&layout, (x0, y), &fg);
         }
 
         true

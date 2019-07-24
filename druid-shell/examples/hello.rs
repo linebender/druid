@@ -39,13 +39,13 @@ impl WinHandler for HelloState {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, rc: &mut piet_common::Piet) -> bool {
-        let bg = rc.solid_brush(BG_COLOR);
-        let fg = rc.solid_brush(FG_COLOR);
+    fn paint(&mut self, piet: &mut piet_common::Piet, _ctx: &mut dyn WinCtx) -> bool {
+        let bg = piet.solid_brush(BG_COLOR);
+        let fg = piet.solid_brush(FG_COLOR);
         let (width, height) = self.size;
         let rect = Rect::new(0.0, 0.0, width, height);
-        rc.fill(rect, &bg, FillRule::NonZero);
-        rc.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &fg, 1.0, None);
+        piet.fill(rect, &bg, FillRule::NonZero);
+        piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &fg, 1.0, None);
         false
     }
 
