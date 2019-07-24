@@ -243,13 +243,14 @@ impl WndState {
         d2d: &direct2d::Factory,
         dw: &directwrite::Factory,
         handle: &RefCell<WindowHandle>,
+        c: &mut WinCtxOwner,
     ) {
         let rt = self.render_target.as_mut().unwrap();
         rt.begin_draw();
         let anim;
         {
             let mut piet_ctx = Piet::new(d2d, dw, rt);
-            anim = self.handler.paint(&mut piet_ctx);
+            anim = self.handler.paint(&mut piet_ctx, &mut c.ctx());
             if let Err(e) = piet_ctx.finish() {
                 // TODO: use proper log infrastructure
                 eprintln!("piet error on render: {:?}", e);
@@ -329,7 +330,14 @@ impl WndProc for MyWndProc {
                             .map(|rt| rt.as_generic());
                         s.render_target = rt.ok();
                     }
-                    s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    s.handler.rebuild_resources(&mut c.ctx());
+                    s.render(
+                        &self.d2d_factory,
+                        &self.dwrite_factory,
+                        &self.handle,
+                        &mut c,
+                    );
                     if let Some(ref mut ds) = s.dcomp_state {
                         if !ds.sizing {
                             (*ds.swap_chain).Present(1, 0);
@@ -353,8 +361,13 @@ impl WndProc for MyWndProc {
                             let mut c =
                                 WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
                             s.handler.rebuild_resources(&mut c.ctx());
+                            s.render(
+                                &self.d2d_factory,
+                                &self.dwrite_factory,
+                                &self.handle,
+                                &mut c,
+                            );
                         }
-                        s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
 
                         if let Some(ref mut ds) = s.dcomp_state {
                             let _ = ds.dcomp_target.clear_root();
@@ -387,7 +400,14 @@ impl WndProc for MyWndProc {
                                 WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
                             s.handler.rebuild_resources(&mut c.ctx());
                             s.rebuild_render_target(&self.d2d_factory);
-                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                            let mut c =
+                                WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                            s.render(
+                                &self.d2d_factory,
+                                &self.dwrite_factory,
+                                &self.handle,
+                                &mut c,
+                            );
                             (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
                         } else {
                             println!("ResizeBuffers failed: 0x{:x}", res);
@@ -444,7 +464,14 @@ impl WndProc for MyWndProc {
                         }
                         if SUCCEEDED(res) {
                             s.rebuild_render_target(&self.d2d_factory);
-                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                            let mut c =
+                                WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                            s.render(
+                                &self.d2d_factory,
+                                &self.dwrite_factory,
+                                &self.handle,
+                                &mut c,
+                            );
                             if let Some(ref mut dcomp_state) = s.dcomp_state {
                                 (*dcomp_state.swap_chain).Present(0, 0);
                                 let _ = dcomp_state.dcomp_device.commit();

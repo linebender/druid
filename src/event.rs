@@ -28,6 +28,10 @@ pub enum Event {
     KeyUp(KeyEvent),
     Wheel(WheelEvent),
     HotChanged(bool),
+    /// An animation frame has been advanced.
+    ///
+    /// TODO: should probably include a timestamp here.
+    AnimFrame,
 }
 
 #[derive(Debug, Clone)]

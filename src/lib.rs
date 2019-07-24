@@ -74,16 +74,20 @@ pub type BoxedWidget<T> = WidgetPod<T, Box<dyn Widget<T>>>;
 pub struct BaseState {
     layout_rect: Rect,
 
+    // TODO: consider using bitflags for the booleans.
+
     // This should become an invalidation rect.
     needs_inval: bool,
 
-    // TODO: consider using bitflags.
     is_hot: bool,
 
     is_active: bool,
 
     /// Any descendant is active.
     has_active: bool,
+
+    /// Any descendant has requested an animation frame.
+    request_anim: bool,
 }
 
 pub trait Widget<T> {
@@ -296,6 +300,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Event::Wheel(wheel_event.clone())
             }
             Event::HotChanged(is_hot) => Event::HotChanged(*is_hot),
+            Event::AnimFrame => {
+                recurse = child_ctx.base_state.request_anim;
+                child_ctx.base_state.request_anim = false;
+                Event::AnimFrame
+            }
         };
         child_ctx.base_state.needs_inval = false;
         if let Some(is_hot) = hot_changed {
@@ -314,6 +323,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             None
         };
         ctx.base_state.needs_inval |= child_ctx.base_state.needs_inval;
+        ctx.base_state.request_anim |= child_ctx.base_state.request_anim;
         ctx.base_state.is_hot |= child_ctx.base_state.is_hot;
         ctx.base_state.has_active |= child_ctx.base_state.has_active;
         ctx.is_handled |= child_ctx.is_handled;
@@ -363,7 +373,13 @@ impl<T: Data> UiState<T> {
         }
     }
 
-    /// Set the root widget as active, that is, receiving keyboard events.
+    /// Set the root widget as active.
+    ///
+    /// Warning: this is set as deprecated because it's not really meaningful.
+    /// It's likely that the intent was to set a default focus, but focus is
+    /// not yet implemented and there probably needs to be some other way to
+    /// identify the widget which should receive focus on startup.
+    #[deprecated]
     pub fn set_active(&mut self, active: bool) {
         self.root.state.is_active = active;
     }
@@ -372,11 +388,25 @@ impl<T: Data> UiState<T> {
         Default::default()
     }
 
+    /// Send an event to the widget hierarchy.
+    ///
     /// Returns `true` if the event produced an action.
     ///
-    /// This is principally because in certain cases (such as keydown on windows)
+    /// This is principally because in certain cases (such as keydown on Windows)
     /// the OS needs to know if an event was handled.
     fn do_event(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
+        let (is_handled, dirty) = self.do_event_inner(event, win_ctx);
+        if dirty {
+            win_ctx.invalidate();
+        }
+        is_handled
+    }
+
+    /// Send an event to the widget hierarchy.
+    ///
+    /// Returns two flags. The first is true if the event was handled. The
+    /// second is true if an animation frame or invalidation is requested.
+    fn do_event_inner(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> (bool, bool) {
         // should there be a root base state persisting in the ui state instead?
         let mut base_state = Default::default();
         let mut ctx = EventCtx {
@@ -389,6 +419,7 @@ impl<T: Data> UiState<T> {
         let env = self.root_env();
         let _action = self.root.event(&event, &mut ctx, &mut self.data, &env);
         let needs_inval = ctx.base_state.needs_inval;
+        let request_anim = ctx.base_state.request_anim;
         let is_handled = ctx.is_handled();
 
         let mut update_ctx = UpdateCtx {
@@ -399,14 +430,16 @@ impl<T: Data> UiState<T> {
         // Note: we probably want to aggregate updates so there's only one after
         // a burst of events.
         self.root.update(&mut update_ctx, &self.data, &env);
-        if needs_inval || update_ctx.needs_inval {
-            update_ctx.win_ctx.invalidate();
-        }
         // TODO: process actions
-        is_handled
+        let dirty = request_anim || needs_inval || update_ctx.needs_inval;
+        (is_handled, dirty)
     }
 
-    fn paint(&mut self, piet: &mut Piet) -> bool {
+    fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
+        let anim_frame_event = Event::AnimFrame;
+        let (_, request_anim) = self.do_event_inner(anim_frame_event, ctx);
+        // TODO: issue anim_frame_event. Needs a win_ctx for this, which needs to be
+        // plumbed.
         let bc = BoxConstraints::tight(self.size);
         let env = self.root_env();
         let text = piet.text();
@@ -416,7 +449,7 @@ impl<T: Data> UiState<T> {
         piet.clear(BACKGROUND_COLOR);
         let mut paint_ctx = PaintCtx { render_ctx: piet };
         self.root.paint(&mut paint_ctx, &self.data, &env);
-        false
+        request_anim
     }
 }
 
@@ -431,8 +464,8 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
         self.state.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut Piet) -> bool {
-        self.state.paint(piet)
+    fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
+        self.state.paint(piet, ctx)
     }
 
     fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
@@ -599,6 +632,11 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     /// Determine whether the event has been handled by some other widget.
     pub fn is_handled(&self) -> bool {
         self.is_handled
+    }
+
+    /// Request an animation frame.
+    pub fn request_anim_frame(&mut self) {
+        self.base_state.request_anim = true;
     }
 }
 
