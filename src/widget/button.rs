@@ -154,8 +154,7 @@ impl<T: Data> Widget<T> for Button {
                     }
                 }
             }
-            // TODO: don't handle this, handle HotChanged, when that's wired.
-            Event::MouseMoved(_) => {
+            Event::HotChanged(_) => {
                 ctx.invalidate();
             }
             _ => (),

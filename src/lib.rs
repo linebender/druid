@@ -245,6 +245,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         data: &mut T,
         env: &Env,
     ) -> Option<Action> {
+        // TODO: factor as much logic as possible into monomorphic functions.
         if ctx.is_handled || !event.recurse() {
             // This function is called by containers to propagate an event from
             // containers to children. Non-recurse events will be invoked directly
@@ -262,6 +263,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let rect = child_ctx.base_state.layout_rect;
         // Note: could also represent this as `Option<Event>`.
         let mut recurse = true;
+        let mut hot_changed = None;
         let child_event = match event {
             Event::MouseDown(mouse_event) => {
                 recurse = had_active || !ctx.had_active && rect.winding(mouse_event.pos) != 0;
@@ -278,6 +280,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::MouseMoved(mouse_event) => {
                 let had_hot = child_ctx.base_state.is_hot;
                 child_ctx.base_state.is_hot = rect.winding(mouse_event.pos) != 0;
+                if had_hot != child_ctx.base_state.is_hot {
+                    hot_changed = Some(child_ctx.base_state.is_hot);
+                }
                 recurse = had_active || had_hot || child_ctx.base_state.is_hot;
                 let mut mouse_event = mouse_event.clone();
                 mouse_event.pos -= rect.origin().to_vec2();
@@ -293,6 +298,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::HotChanged(is_hot) => Event::HotChanged(*is_hot),
         };
         child_ctx.base_state.needs_inval = false;
+        if let Some(is_hot) = hot_changed {
+            let hot_changed_event = Event::HotChanged(is_hot);
+            // Hot changed events are not expected to return an action.
+            let _action = self
+                .inner
+                .event(&hot_changed_event, &mut child_ctx, data, &env);
+        }
         let action = if recurse {
             child_ctx.base_state.has_active = false;
             let action = self.inner.event(&child_event, &mut child_ctx, data, &env);
