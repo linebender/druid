@@ -66,8 +66,8 @@ impl Widget<u32> for AnimWidget {
                 self.t = 0.0;
                 ctx.request_anim_frame();
             }
-            Event::AnimFrame => {
-                self.t += 0.02;
+            Event::AnimFrame(interval) => {
+                self.t += (*interval as f64) * 1e-9;
                 if self.t < 1.0 {
                     ctx.request_anim_frame();
                 }

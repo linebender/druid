@@ -28,10 +28,12 @@ pub enum Event {
     KeyUp(KeyEvent),
     Wheel(WheelEvent),
     HotChanged(bool),
-    /// An animation frame has been advanced.
+    /// Called at the beginning of a new animation frame.
     ///
-    /// TODO: should probably include a timestamp here.
-    AnimFrame,
+    /// On the first frame when transitioning from idle to animating, `interval`
+    /// will be 0. (This logic is presently per-window but might change to
+    /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
+    AnimFrame(u64),
 }
 
 #[derive(Debug, Clone)]

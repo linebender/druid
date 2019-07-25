@@ -25,6 +25,7 @@ mod value;
 
 use std::any::Any;
 use std::ops::DerefMut;
+use std::time::Instant;
 
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
 use piet::{Color, Piet, RenderContext};
@@ -55,6 +56,7 @@ pub struct UiMain<T: Data> {
 pub struct UiState<T: Data> {
     root: WidgetPod<T, Box<dyn Widget<T>>>,
     data: T,
+    prev_paint_time: Option<Instant>,
     // Following fields might move to a separate struct so there's access
     // from contexts.
     handle: WindowHandle,
@@ -300,10 +302,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Event::Wheel(wheel_event.clone())
             }
             Event::HotChanged(is_hot) => Event::HotChanged(*is_hot),
-            Event::AnimFrame => {
+            Event::AnimFrame(interval) => {
                 recurse = child_ctx.base_state.request_anim;
                 child_ctx.base_state.request_anim = false;
-                Event::AnimFrame
+                Event::AnimFrame(*interval)
             }
         };
         child_ctx.base_state.needs_inval = false;
@@ -368,6 +370,7 @@ impl<T: Data> UiState<T> {
         UiState {
             root: WidgetPod::new(root).boxed(),
             data,
+            prev_paint_time: None,
             handle: Default::default(),
             size: Default::default(),
         }
@@ -436,10 +439,22 @@ impl<T: Data> UiState<T> {
     }
 
     fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
-        let anim_frame_event = Event::AnimFrame;
+        // TODO: this calculation uses wall-clock time of the paint call, which
+        // potentially has jitter.
+        //
+        // See https://github.com/xi-editor/druid/issues/85 for discussion.
+        let this_paint_time = Instant::now();
+        let interval = if let Some(last) = self.prev_paint_time {
+            let duration = this_paint_time.duration_since(last);
+            1_000_000_000 * duration.as_secs() + (duration.subsec_nanos() as u64)
+        } else {
+            0
+        };
+        let anim_frame_event = Event::AnimFrame(interval);
         let (_, request_anim) = self.do_event_inner(anim_frame_event, ctx);
         // TODO: issue anim_frame_event. Needs a win_ctx for this, which needs to be
         // plumbed.
+        self.prev_paint_time = Some(this_paint_time);
         let bc = BoxConstraints::tight(self.size);
         let env = self.root_env();
         let text = piet.text();
@@ -449,6 +464,9 @@ impl<T: Data> UiState<T> {
         piet.clear(BACKGROUND_COLOR);
         let mut paint_ctx = PaintCtx { render_ctx: piet };
         self.root.paint(&mut paint_ctx, &self.data, &env);
+        if !request_anim {
+            self.prev_paint_time = None;
+        }
         request_anim
     }
 }
