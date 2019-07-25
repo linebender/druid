@@ -36,7 +36,7 @@ struct RunLoopState {
 unsafe impl Send for Listener {}
 struct Listener {
     h: HANDLE,
-    callback: Box<FnMut()>,
+    callback: Box<dyn FnMut()>,
 }
 
 pub struct RunLoop {

@@ -21,6 +21,10 @@ pub use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Vec2};
 use crate::platform;
 
+// It's possible we'll want to make this type alias at a lower level,
+// see https://github.com/linebender/piet/pull/37 for more discussion.
+pub type Text<'a> = <piet_common::Piet<'a> as piet_common::RenderContext>::Text;
+
 // Handle to Window Level Utilities
 #[derive(Clone, Default)]
 pub struct WindowHandle {
@@ -36,11 +40,14 @@ impl Deref for WindowHandle {
 }
 
 /// A context supplied to most `WinHandler` methods.
-pub trait WinCtx {
+pub trait WinCtx<'a> {
     /// Invalidate the entire window.
     ///
     /// TODO: finer grained invalidation.
     fn invalidate(&mut self);
+
+    /// Get a reference to an object that can do text layout.
+    fn text_factory(&mut self) -> &mut Text<'a>;
 }
 
 /// App behavior, supplied by the app.

@@ -37,7 +37,7 @@ pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 #[allow(unused)]
 use druid_shell::platform::IdleHandle;
-use druid_shell::window::{self, WinCtx, WinHandler, WindowHandle};
+use druid_shell::window::{self, Text, WinCtx, WinHandler, WindowHandle};
 pub use druid_shell::window::{Cursor, MouseButton, MouseEvent};
 
 pub use data::Data;
@@ -139,16 +139,33 @@ pub struct PaintCtx<'a, 'b: 'a> {
     pub render_ctx: &'a mut Piet<'b>,
 }
 
-pub struct LayoutCtx {}
+pub struct LayoutCtx<'a, 'b: 'a> {
+    text: &'a mut Text<'b>,
+}
 
-pub struct EventCtx<'a> {
+/// A mutable context provided to event handling methods of widgets.
+///
+/// Widgets should call [`invalidate`] whenever an event causes a change
+/// in the widget's appearance, to schedule a repaint.
+///
+/// [`invalidate`]: #method.invalidate
+pub struct EventCtx<'a, 'b> {
+    win_ctx: &'a mut dyn WinCtx<'b>,
+    // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     window: &'a WindowHandle,
     base_state: &'a mut BaseState,
     had_active: bool,
     is_handled: bool,
 }
 
-pub struct UpdateCtx<'a> {
+/// A mutable context provided to data update methods of widgets.
+///
+/// Widgets should call [`invalidate`] whenever a data change causes a change
+/// in the widget's appearance, to schedule a repaint.
+///
+/// [`invalidate`]: #method.invalidate
+pub struct UpdateCtx<'a, 'b> {
+    win_ctx: &'a mut dyn WinCtx<'b>,
     window: &'a WindowHandle,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like
@@ -236,6 +253,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
         let had_active = self.state.has_active;
         let mut child_ctx = EventCtx {
+            win_ctx: ctx.win_ctx,
             window: &ctx.window,
             base_state: &mut self.state,
             had_active,
@@ -350,6 +368,7 @@ impl<T: Data> UiState<T> {
         // should there be a root base state persisting in the ui state instead?
         let mut base_state = Default::default();
         let mut ctx = EventCtx {
+            win_ctx,
             window: &self.handle,
             base_state: &mut base_state,
             had_active: self.root.state.has_active,
@@ -357,24 +376,29 @@ impl<T: Data> UiState<T> {
         };
         let env = self.root_env();
         let _action = self.root.event(&event, &mut ctx, &mut self.data, &env);
+        let needs_inval = ctx.base_state.needs_inval;
+        let is_handled = ctx.is_handled();
+
         let mut update_ctx = UpdateCtx {
+            win_ctx,
             window: &self.handle,
             needs_inval: false,
         };
         // Note: we probably want to aggregate updates so there's only one after
         // a burst of events.
         self.root.update(&mut update_ctx, &self.data, &env);
-        if ctx.base_state.needs_inval || update_ctx.needs_inval {
-            win_ctx.invalidate();
+        if needs_inval || update_ctx.needs_inval {
+            update_ctx.win_ctx.invalidate();
         }
         // TODO: process actions
-        ctx.is_handled()
+        is_handled
     }
 
     fn paint(&mut self, piet: &mut Piet) -> bool {
         let bc = BoxConstraints::tight(self.size);
         let env = self.root_env();
-        let mut layout_ctx = LayoutCtx {};
+        let text = piet.text();
+        let mut layout_ctx = LayoutCtx { text };
         let size = self.root.layout(&mut layout_ctx, &bc, &self.data, &env);
         self.root.state.layout_rect = Rect::from_origin_size(Point::ORIGIN, size);
         piet.clear(BACKGROUND_COLOR);
@@ -498,29 +522,58 @@ impl Env {
     }
 }
 
-impl<'a> EventCtx<'a> {
+impl<'a, 'b> EventCtx<'a, 'b> {
     /// Invalidate.
     ///
     /// Right now, it just invalidates the entire window, but we'll want
     /// finer grained invalidation before long.
     pub fn invalidate(&mut self) {
+        // Note: for the current functionality, we could shortcut and just
+        // request an invalidate on the window. But when we do fine-grained
+        // invalidation, we'll want to compute the invalidation region, and
+        // that needs to be propagated (with, likely, special handling for
+        // scrolling).
         self.base_state.needs_inval = true;
     }
 
+    /// Get an object which can create text layouts.
+    pub fn text(&mut self) -> &mut Text<'b> {
+        self.win_ctx.text_factory()
+    }
+
+    /// Set the "active" state of the widget.
+    ///
+    /// The active state basically captures a mouse press inside the widget.
+    /// Thus, a button should set this to true on mouse down and false on
+    /// mouse up.
+    ///
+    /// While a widget is active, all mouse events are routed to it.
     pub fn set_active(&mut self, active: bool) {
         self.base_state.is_active = active;
         // TODO: plumb mouse grab through to platform (through druid-shell)
     }
 
+    /// Query the "hot" state of the widget.
+    ///
+    /// A widget is hot when the mouse is hovering.
     pub fn is_hot(&self) -> bool {
         self.base_state.is_hot
     }
 
+    /// Query the "active" state of the widget.
+    ///
+    /// This is the same state set by [`set_active`](#method.set_active) and
+    /// is provided as a convenience.
     pub fn is_active(&self) -> bool {
         self.base_state.is_active
     }
 
     /// Returns a reference to the current `WindowHandle`.
+    ///
+    /// Note: we're in the process of migrating towards providing functionality
+    /// provided by the window handle in mutable contexts instead. If you're
+    /// considering a new use of this method, try adding it to `WinCtx` and
+    /// plumbing it through instead.
     pub fn window(&self) -> &WindowHandle {
         &self.window
     }
@@ -537,11 +590,33 @@ impl<'a> EventCtx<'a> {
     }
 }
 
-impl<'a> UpdateCtx<'a> {
+impl<'a, 'b> LayoutCtx<'a, 'b> {
+    /// Get an object which can create text layouts.
+    pub fn text(&mut self) -> &mut Text<'b> {
+        &mut self.text
+    }
+}
+
+impl<'a, 'b> UpdateCtx<'a, 'b> {
+    /// Invalidate.
+    ///
+    /// See [`EventCtx::invalidate`](struct.EventCtx.html#method.invalidate) for
+    /// more discussion.
     pub fn invalidate(&mut self) {
         self.needs_inval = true;
     }
 
+    /// Get an object which can create text layouts.
+    pub fn text(&mut self) -> &mut Text<'b> {
+        self.win_ctx.text_factory()
+    }
+
+    /// Returns a reference to the current `WindowHandle`.
+    ///
+    /// Note: we're in the process of migrating towards providing functionality
+    /// provided by the window handle in mutable contexts instead. If you're
+    /// considering a new use of this method, try adding it to `WinCtx` and
+    /// plumbing it through instead.
     pub fn window(&self) -> &WindowHandle {
         &self.window
     }
