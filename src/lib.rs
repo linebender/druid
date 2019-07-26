@@ -90,6 +90,12 @@ pub struct BaseState {
 
     /// Any descendant has requested an animation frame.
     request_anim: bool,
+
+    /// This widget or a descendant has focus.
+    has_focus: bool,
+
+    /// This widget or a descendant has requested focus.
+    request_focus: bool,
 }
 
 pub trait Widget<T> {
@@ -294,14 +300,27 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseMoved(mouse_event)
             }
-            Event::KeyDown(_) | Event::KeyUp(_) if !had_active => return None,
-            Event::KeyDown(e) => Event::KeyDown(*e),
-            Event::KeyUp(e) => Event::KeyUp(*e),
+            Event::KeyDown(e) => {
+                recurse = child_ctx.base_state.has_focus;
+                Event::KeyDown(*e)
+            }
+            Event::KeyUp(e) => {
+                recurse = child_ctx.base_state.has_focus;
+                Event::KeyUp(*e)
+            }
             Event::Wheel(wheel_event) => {
                 recurse = had_active || child_ctx.base_state.is_hot;
                 Event::Wheel(wheel_event.clone())
             }
             Event::HotChanged(is_hot) => Event::HotChanged(*is_hot),
+            Event::FocusChanged(_is_focused) => {
+                let had_focus = child_ctx.base_state.has_focus;
+                let focus = child_ctx.base_state.request_focus;
+                child_ctx.base_state.request_focus = false;
+                child_ctx.base_state.has_focus = focus;
+                recurse = focus || had_focus;
+                Event::FocusChanged(focus)
+            }
             Event::AnimFrame(interval) => {
                 recurse = child_ctx.base_state.request_anim;
                 child_ctx.base_state.request_anim = false;
@@ -328,6 +347,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.base_state.request_anim |= child_ctx.base_state.request_anim;
         ctx.base_state.is_hot |= child_ctx.base_state.is_hot;
         ctx.base_state.has_active |= child_ctx.base_state.has_active;
+        ctx.base_state.request_focus |= child_ctx.base_state.request_focus;
         ctx.is_handled |= child_ctx.is_handled;
         action
     }
@@ -421,6 +441,14 @@ impl<T: Data> UiState<T> {
         };
         let env = self.root_env();
         let _action = self.root.event(&event, &mut ctx, &mut self.data, &env);
+
+        if ctx.base_state.request_focus {
+            let focus_event = Event::FocusChanged(true);
+            // Focus changed events are not expected to return an action.
+            let _ = self
+                .root
+                .event(&focus_event, &mut ctx, &mut self.data, &env);
+        }
         let needs_inval = ctx.base_state.needs_inval;
         let request_anim = ctx.base_state.request_anim;
         let is_handled = ctx.is_handled();
@@ -533,6 +561,10 @@ impl BaseState {
 
     pub fn is_active(&self) -> bool {
         self.is_active
+    }
+
+    pub fn has_focus(&self) -> bool {
+        self.has_focus
     }
 
     pub fn size(&self) -> Size {
@@ -655,6 +687,17 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     /// Request an animation frame.
     pub fn request_anim_frame(&mut self) {
         self.base_state.request_anim = true;
+    }
+
+    pub fn has_focus(&self) -> bool {
+        self.base_state.has_focus
+    }
+
+    /// Request keyboard focus.
+    ///
+    /// Discussion question: is method needed in contexts other than event?
+    pub fn request_focus(&mut self) {
+        self.base_state.request_focus = true;
     }
 }
 

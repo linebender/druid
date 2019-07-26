@@ -28,6 +28,7 @@ pub enum Event {
     KeyUp(KeyEvent),
     Wheel(WheelEvent),
     HotChanged(bool),
+    FocusChanged(bool),
     /// Called at the beginning of a new animation frame.
     ///
     /// On the first frame when transitioning from idle to animating, `interval`
