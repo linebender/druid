@@ -50,7 +50,7 @@ With a focus on 2D games, [ggez] also looks promising.
 
 ## Contributions
 
-We gladly accept contributions via GitHub pull requests. Please see CONTRIBUTING.md for more details.
+We gladly accept contributions via GitHub pull requests. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
 A very good place to ask questions and discuss development work is our
 [Zulip chat instance](https://xi.zulipchat.com), in the #druid channel.
