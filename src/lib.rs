@@ -151,6 +151,7 @@ pub struct LayoutCtx<'a, 'b: 'a> {
 /// [`invalidate`]: #method.invalidate
 pub struct EventCtx<'a, 'b> {
     win_ctx: &'a mut dyn WinCtx<'b>,
+    cursor: &'a mut Option<Cursor>,
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     window: &'a WindowHandle,
     base_state: &'a mut BaseState,
@@ -254,6 +255,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let had_active = self.state.has_active;
         let mut child_ctx = EventCtx {
             win_ctx: ctx.win_ctx,
+            cursor: ctx.cursor,
             window: &ctx.window,
             base_state: &mut self.state,
             had_active,
@@ -367,8 +369,13 @@ impl<T: Data> UiState<T> {
     fn do_event(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
         // should there be a root base state persisting in the ui state instead?
         let mut base_state = Default::default();
+        let mut cursor = match event {
+            Event::MouseMoved(..) => Some(Cursor::Arrow),
+            _ => None,
+        };
         let mut ctx = EventCtx {
             win_ctx,
+            cursor: &mut cursor,
             window: &self.handle,
             base_state: &mut base_state,
             had_active: self.root.state.has_active,
@@ -378,6 +385,9 @@ impl<T: Data> UiState<T> {
         let _action = self.root.event(&event, &mut ctx, &mut self.data, &env);
         let needs_inval = ctx.base_state.needs_inval;
         let is_handled = ctx.is_handled();
+        if let Some(cursor) = cursor {
+            win_ctx.set_cursor(&cursor);
+        }
 
         let mut update_ctx = UpdateCtx {
             win_ctx,
@@ -539,6 +549,17 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     /// Get an object which can create text layouts.
     pub fn text(&mut self) -> &mut Text<'b> {
         self.win_ctx.text_factory()
+    }
+
+    /// Set the cursor icon.
+    ///
+    /// Call this when handling a mouse move event, to set the cursor for the
+    /// widget. A container widget can safely call this method, then recurse
+    /// to its children, as a sequence of calls within an event propagation
+    /// only has the effect of the last one (ie no need to worry about
+    /// flashing).
+    pub fn set_cursor(&mut self, cursor: &Cursor) {
+        *self.cursor = Some(cursor.clone());
     }
 
     /// Set the "active" state of the widget.
