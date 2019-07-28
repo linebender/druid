@@ -3,6 +3,13 @@
 We'd love to accept your patches and contributions to this project. There are
 just a few small guidelines you need to follow.
 
+## How to build
+Fulfill [gtk-rs dependencies](http://gtk-rs.org/docs/requirements.html) for cairo crate
+
+run `cargo build --target=x86_64-pc-windows-msvc`
+
+> Only windows and macos platforms are supported at the moment
+
 ## Code reviews
 
 All submissions, including submissions by project members, require review. We
