@@ -19,6 +19,7 @@ pub use druid_shell::{self as shell, kurbo, piet};
 pub mod widget;
 
 mod data;
+mod env;
 mod event;
 mod lens;
 mod value;
