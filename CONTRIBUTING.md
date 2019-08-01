@@ -9,7 +9,8 @@ All submissions, including submissions by project members, require review. We
 use GitHub pull requests for this purpose. Consult [GitHub Help] for more
 information on using pull requests.
 
-[GitHub Help]: https://help.github.com/articles/about-pull-requests/
-
-If your name does not already appear in the [AUTHORS](AUTHORS) file, please feel free to
+If your name does not already appear in the [AUTHORS] file, please feel free to
 add it as part of your patch.
+
+[GitHub Help]: https://help.github.com/articles/about-pull-requests/
+[AUTHORS]: AUTHORS
