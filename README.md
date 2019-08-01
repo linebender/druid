@@ -50,10 +50,10 @@ With a focus on 2D games, [ggez] also looks promising.
 
 ## Contributions
 
-We gladly accept contributions via GitHub pull requests. Please see CONTRIBUTING.md for more details.
+We gladly accept contributions via GitHub pull requests. Please see [CONTRIBUTING.md] for more details.
 
 A very good place to ask questions and discuss development work is our
-[Zulip chat instance](https://xi.zulipchat.com), in the #druid channel.
+[Zulip chat instance], in the #druid channel.
 
 ## Authors
 
@@ -68,3 +68,5 @@ The main author is Raph Levien.
 [conrod]: https://github.com/PistonDevelopers/conrod
 [azul]: https://github.com/maps4print/azul
 [ggez]: https://github.com/ggez/ggez
+[CONTRIBUTING.md]: CONTRIBUTING.md
+[Zulip chat instance]: https://xi.zulipchat.com
