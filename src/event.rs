@@ -28,6 +28,13 @@ pub enum Event {
     KeyUp(KeyEvent),
     Wheel(WheelEvent),
     HotChanged(bool),
+    FocusChanged(bool),
+    /// Called at the beginning of a new animation frame.
+    ///
+    /// On the first frame when transitioning from idle to animating, `interval`
+    /// will be 0. (This logic is presently per-window but might change to
+    /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
+    AnimFrame(u64),
 }
 
 #[derive(Debug, Clone)]

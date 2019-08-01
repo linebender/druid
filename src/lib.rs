@@ -25,6 +25,7 @@ mod value;
 
 use std::any::Any;
 use std::ops::DerefMut;
+use std::time::Instant;
 
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
 use piet::{Color, Piet, RenderContext};
@@ -55,6 +56,7 @@ pub struct UiMain<T: Data> {
 pub struct UiState<T: Data> {
     root: WidgetPod<T, Box<dyn Widget<T>>>,
     data: T,
+    prev_paint_time: Option<Instant>,
     // Following fields might move to a separate struct so there's access
     // from contexts.
     handle: WindowHandle,
@@ -74,16 +76,26 @@ pub type BoxedWidget<T> = WidgetPod<T, Box<dyn Widget<T>>>;
 pub struct BaseState {
     layout_rect: Rect,
 
+    // TODO: consider using bitflags for the booleans.
+
     // This should become an invalidation rect.
     needs_inval: bool,
 
-    // TODO: consider using bitflags.
     is_hot: bool,
 
     is_active: bool,
 
     /// Any descendant is active.
     has_active: bool,
+
+    /// Any descendant has requested an animation frame.
+    request_anim: bool,
+
+    /// This widget or a descendant has focus.
+    has_focus: bool,
+
+    /// This widget or a descendant has requested focus.
+    request_focus: bool,
 }
 
 pub trait Widget<T> {
@@ -245,6 +257,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         data: &mut T,
         env: &Env,
     ) -> Option<Action> {
+        // TODO: factor as much logic as possible into monomorphic functions.
         if ctx.is_handled || !event.recurse() {
             // This function is called by containers to propagate an event from
             // containers to children. Non-recurse events will be invoked directly
@@ -262,6 +275,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let rect = child_ctx.base_state.layout_rect;
         // Note: could also represent this as `Option<Event>`.
         let mut recurse = true;
+        let mut hot_changed = None;
         let child_event = match event {
             Event::MouseDown(mouse_event) => {
                 recurse = had_active || !ctx.had_active && rect.winding(mouse_event.pos) != 0;
@@ -278,21 +292,49 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::MouseMoved(mouse_event) => {
                 let had_hot = child_ctx.base_state.is_hot;
                 child_ctx.base_state.is_hot = rect.winding(mouse_event.pos) != 0;
+                if had_hot != child_ctx.base_state.is_hot {
+                    hot_changed = Some(child_ctx.base_state.is_hot);
+                }
                 recurse = had_active || had_hot || child_ctx.base_state.is_hot;
                 let mut mouse_event = mouse_event.clone();
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseMoved(mouse_event)
             }
-            Event::KeyDown(_) | Event::KeyUp(_) if !had_active => return None,
-            Event::KeyDown(e) => Event::KeyDown(*e),
-            Event::KeyUp(e) => Event::KeyUp(*e),
+            Event::KeyDown(e) => {
+                recurse = child_ctx.base_state.has_focus;
+                Event::KeyDown(*e)
+            }
+            Event::KeyUp(e) => {
+                recurse = child_ctx.base_state.has_focus;
+                Event::KeyUp(*e)
+            }
             Event::Wheel(wheel_event) => {
                 recurse = had_active || child_ctx.base_state.is_hot;
                 Event::Wheel(wheel_event.clone())
             }
             Event::HotChanged(is_hot) => Event::HotChanged(*is_hot),
+            Event::FocusChanged(_is_focused) => {
+                let had_focus = child_ctx.base_state.has_focus;
+                let focus = child_ctx.base_state.request_focus;
+                child_ctx.base_state.request_focus = false;
+                child_ctx.base_state.has_focus = focus;
+                recurse = focus || had_focus;
+                Event::FocusChanged(focus)
+            }
+            Event::AnimFrame(interval) => {
+                recurse = child_ctx.base_state.request_anim;
+                child_ctx.base_state.request_anim = false;
+                Event::AnimFrame(*interval)
+            }
         };
         child_ctx.base_state.needs_inval = false;
+        if let Some(is_hot) = hot_changed {
+            let hot_changed_event = Event::HotChanged(is_hot);
+            // Hot changed events are not expected to return an action.
+            let _action = self
+                .inner
+                .event(&hot_changed_event, &mut child_ctx, data, &env);
+        }
         let action = if recurse {
             child_ctx.base_state.has_active = false;
             let action = self.inner.event(&child_event, &mut child_ctx, data, &env);
@@ -302,8 +344,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             None
         };
         ctx.base_state.needs_inval |= child_ctx.base_state.needs_inval;
+        ctx.base_state.request_anim |= child_ctx.base_state.request_anim;
         ctx.base_state.is_hot |= child_ctx.base_state.is_hot;
         ctx.base_state.has_active |= child_ctx.base_state.has_active;
+        ctx.base_state.request_focus |= child_ctx.base_state.request_focus;
         ctx.is_handled |= child_ctx.is_handled;
         action
     }
@@ -346,12 +390,19 @@ impl<T: Data> UiState<T> {
         UiState {
             root: WidgetPod::new(root).boxed(),
             data,
+            prev_paint_time: None,
             handle: Default::default(),
             size: Default::default(),
         }
     }
 
-    /// Set the root widget as active, that is, receiving keyboard events.
+    /// Set the root widget as active.
+    ///
+    /// Warning: this is set as deprecated because it's not really meaningful.
+    /// It's likely that the intent was to set a default focus, but focus is
+    /// not yet implemented and there probably needs to be some other way to
+    /// identify the widget which should receive focus on startup.
+    #[deprecated]
     pub fn set_active(&mut self, active: bool) {
         self.root.state.is_active = active;
     }
@@ -360,11 +411,25 @@ impl<T: Data> UiState<T> {
         Default::default()
     }
 
+    /// Send an event to the widget hierarchy.
+    ///
     /// Returns `true` if the event produced an action.
     ///
-    /// This is principally because in certain cases (such as keydown on windows)
+    /// This is principally because in certain cases (such as keydown on Windows)
     /// the OS needs to know if an event was handled.
     fn do_event(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
+        let (is_handled, dirty) = self.do_event_inner(event, win_ctx);
+        if dirty {
+            win_ctx.invalidate();
+        }
+        is_handled
+    }
+
+    /// Send an event to the widget hierarchy.
+    ///
+    /// Returns two flags. The first is true if the event was handled. The
+    /// second is true if an animation frame or invalidation is requested.
+    fn do_event_inner(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> (bool, bool) {
         // should there be a root base state persisting in the ui state instead?
         let mut base_state = Default::default();
         let mut ctx = EventCtx {
@@ -376,7 +441,16 @@ impl<T: Data> UiState<T> {
         };
         let env = self.root_env();
         let _action = self.root.event(&event, &mut ctx, &mut self.data, &env);
+
+        if ctx.base_state.request_focus {
+            let focus_event = Event::FocusChanged(true);
+            // Focus changed events are not expected to return an action.
+            let _ = self
+                .root
+                .event(&focus_event, &mut ctx, &mut self.data, &env);
+        }
         let needs_inval = ctx.base_state.needs_inval;
+        let request_anim = ctx.base_state.request_anim;
         let is_handled = ctx.is_handled();
 
         let mut update_ctx = UpdateCtx {
@@ -387,14 +461,28 @@ impl<T: Data> UiState<T> {
         // Note: we probably want to aggregate updates so there's only one after
         // a burst of events.
         self.root.update(&mut update_ctx, &self.data, &env);
-        if needs_inval || update_ctx.needs_inval {
-            update_ctx.win_ctx.invalidate();
-        }
         // TODO: process actions
-        is_handled
+        let dirty = request_anim || needs_inval || update_ctx.needs_inval;
+        (is_handled, dirty)
     }
 
-    fn paint(&mut self, piet: &mut Piet) -> bool {
+    fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
+        // TODO: this calculation uses wall-clock time of the paint call, which
+        // potentially has jitter.
+        //
+        // See https://github.com/xi-editor/druid/issues/85 for discussion.
+        let this_paint_time = Instant::now();
+        let interval = if let Some(last) = self.prev_paint_time {
+            let duration = this_paint_time.duration_since(last);
+            1_000_000_000 * duration.as_secs() + (duration.subsec_nanos() as u64)
+        } else {
+            0
+        };
+        let anim_frame_event = Event::AnimFrame(interval);
+        let (_, request_anim) = self.do_event_inner(anim_frame_event, ctx);
+        // TODO: issue anim_frame_event. Needs a win_ctx for this, which needs to be
+        // plumbed.
+        self.prev_paint_time = Some(this_paint_time);
         let bc = BoxConstraints::tight(self.size);
         let env = self.root_env();
         let text = piet.text();
@@ -404,7 +492,10 @@ impl<T: Data> UiState<T> {
         piet.clear(BACKGROUND_COLOR);
         let mut paint_ctx = PaintCtx { render_ctx: piet };
         self.root.paint(&mut paint_ctx, &self.data, &env);
-        false
+        if !request_anim {
+            self.prev_paint_time = None;
+        }
+        request_anim
     }
 }
 
@@ -419,8 +510,8 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
         self.state.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut Piet) -> bool {
-        self.state.paint(piet)
+    fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
+        self.state.paint(piet, ctx)
     }
 
     fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
@@ -470,6 +561,10 @@ impl BaseState {
 
     pub fn is_active(&self) -> bool {
         self.is_active
+    }
+
+    pub fn has_focus(&self) -> bool {
+        self.has_focus
     }
 
     pub fn size(&self) -> Size {
@@ -587,6 +682,22 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     /// Determine whether the event has been handled by some other widget.
     pub fn is_handled(&self) -> bool {
         self.is_handled
+    }
+
+    /// Request an animation frame.
+    pub fn request_anim_frame(&mut self) {
+        self.base_state.request_anim = true;
+    }
+
+    pub fn has_focus(&self) -> bool {
+        self.base_state.has_focus
+    }
+
+    /// Request keyboard focus.
+    ///
+    /// Discussion question: is method needed in contexts other than event?
+    pub fn request_focus(&mut self) {
+        self.base_state.request_focus = true;
     }
 }
 

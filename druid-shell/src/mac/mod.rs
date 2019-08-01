@@ -481,7 +481,11 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let mut piet_ctx = Piet::new(&mut cairo_ctx);
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let anim = (*view_state).handler.paint(&mut piet_ctx);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
+        let anim = (*view_state).handler.paint(&mut piet_ctx, &mut ctx);
         if let Err(e) = piet_ctx.finish() {
             eprintln!("Error: {}", e);
         }

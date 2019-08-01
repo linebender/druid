@@ -69,7 +69,7 @@ pub trait WinHandler {
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
     /// should be scheduled for the next animation frame.
-    fn paint(&mut self, ctx: &mut piet_common::Piet) -> bool;
+    fn paint(&mut self, piet: &mut piet_common::Piet, ctx: &mut dyn WinCtx) -> bool;
 
     /// Called when the resources need to be rebuilt.
     ///
