@@ -19,7 +19,7 @@ use crate::{
     UpdateCtx, Widget,
 };
 
-use crate::kurbo::{Line, Point, RoundedRect, Size, Vec2, Affine};
+use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
 use crate::piet::{
     Color, FillRule, FontBuilder, Piet, RenderContext, Text, TextLayout, TextLayoutBuilder,
 };
@@ -166,14 +166,10 @@ impl Widget<String> for TextBox {
             Event::KeyDown(key_event) => {
                 match key_event {
                     event if event.key_code == KeyCode::Backspace => {
-                        let mut text = data.clone();
-                        text.pop();
-                        *data = text.to_string();
+                        data.pop();
                     }
                     event if event.key_code.is_printable() => {
-                        let mut text = data.clone();
-                        text.push_str(event.text().unwrap_or(""));
-                        *data = text.to_string();
+                        data.push_str(event.text().unwrap_or(""));
                     }
                     _ => {}
                 }
