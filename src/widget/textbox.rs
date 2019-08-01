@@ -19,7 +19,7 @@ use crate::{
     UpdateCtx, Widget,
 };
 
-use crate::kurbo::{Line, Point, RoundedRect, Size, Vec2};
+use crate::kurbo::{Line, Point, RoundedRect, Size, Vec2, Affine};
 use crate::piet::{
     Color, FillRule, FontBuilder, Piet, RenderContext, Text, TextLayout, TextLayoutBuilder,
 };
@@ -114,13 +114,19 @@ impl Widget<String> for TextBox {
             .render_ctx
             .with_save(|rc| {
                 rc.clip(clip_rect, FillRule::NonZero);
+
+                // If overflowing, shift the text
+                if text_layout.width() + (PADDING_LEFT * 2.) > self.width {
+                    let offset = text_layout.width() - self.width + (PADDING_LEFT * 2.) + 1.;
+                    rc.transform(Affine::translate(Vec2::new(-offset, 0.)));
+                }
                 rc.draw_text(&text_layout, text_pos, &brush);
 
                 // Paint the cursor if focused
                 if is_active {
                     let brush = rc.solid_brush(CURSOR_COLOR);
 
-                    let xy = text_pos + Vec2::new(text_layout.width() + 2., 2. - FONT_SIZE);
+                    let xy = text_pos + Vec2::new(text_layout.width() + 1., 2. - FONT_SIZE);
                     let x2y2 = xy + Vec2::new(0., FONT_SIZE + 2.);
                     let line = Line::new(xy, x2y2);
 
