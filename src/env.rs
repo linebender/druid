@@ -28,15 +28,28 @@ use crate::Data;
 // maybe we should use Rc instead of Arc.
 use std::sync::Arc;
 
+/// An environment passed down through all widget traversals.
+///
+/// All widget methods have access to an environment, and it is passed
+/// downwards during traversals.
+///
+/// A widget can retrieve theme parameters (colors, dimensions, etc.). In
+/// addition, it can pass custom data down to all descendants. An important
+/// example of the latter is setting a value for enabled/disabled status
+/// so that an entire subtree can be disabled ("grayed out") with one
+/// setting.
 #[derive(Clone)]
 pub struct Env(Arc<EnvImpl>);
 
-pub struct EnvImpl {
+struct EnvImpl {
     theme: EnvValue,
     // This is always a map, maybe should be a map here.
     values: EnvValue,
 }
 
+/// A value that can be stored in an environment.
+/// 
+/// This is an enum with a variety of common types.
 #[derive(Clone)]
 pub enum EnvValue {
     Float(f64),
@@ -49,6 +62,7 @@ pub enum EnvValue {
 }
 
 impl Env {
+    /// Create an environment with a theme but an empty values map.
     pub fn from_theme(theme: EnvValue) -> Env {
         Env(Arc::new(EnvImpl {
             theme,
@@ -94,6 +108,10 @@ impl Env {
         }
     }
 
+    /// Update a value within the environment map.
+    ///
+    /// Environments are considered immutable, so this returns a new
+    /// environment with the value updated.
     pub fn update(&self, key: &str, value: impl Into<EnvValue>) -> Env {
         // Note: this always does the clone, we might want a variant that
         // takes `self` so doesn't.
@@ -112,10 +130,12 @@ impl Data for Env {
 }
 
 impl EnvValue {
+    /// An empty map as an environment value.
     pub fn empty_map() -> EnvValue {
         EnvValue::Map(Arc::new(HashMap::new()))
     }
 
+    /// Provide the value as a float, if that is its type.
     pub fn as_float(&self) -> Option<f64> {
         match self {
             EnvValue::Float(f) => Some(*f),
@@ -123,6 +143,7 @@ impl EnvValue {
         }
     }
 
+    /// Provide the value as a boolean, if that is its type.
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             EnvValue::Bool(b) => Some(*b),
@@ -130,6 +151,7 @@ impl EnvValue {
         }
     }
 
+    /// Provide the value as a color, if that is its type.
     pub fn as_color(&self) -> Option<Color> {
         match self {
             EnvValue::Color(c) => Some(c.to_owned()),
@@ -137,6 +159,7 @@ impl EnvValue {
         }
     }
 
+    /// Provide the value as a string, if that is its type.
     pub fn as_str(&self) -> Option<&str> {
         match self {
             EnvValue::String(s) => Some(s),
@@ -146,6 +169,10 @@ impl EnvValue {
 
     // Note: for the key here, we probably want to do something like the KeyPath
     // that's in value.rs.
+    /// Update the value for a key in a map.
+    ///
+    /// As environment values are considered immutable, this returns
+    /// a new value with the update applied.
     pub fn update(self, key: impl Into<String>, value: impl Into<EnvValue>) -> EnvValue {
         match self {
             EnvValue::Map(mut m) => {
@@ -185,6 +212,12 @@ impl<'a> From<&'a str> for EnvValue {
 impl<'a> From<String> for EnvValue {
     fn from(x: String) -> EnvValue {
         EnvValue::String(x)
+    }
+}
+
+impl From<HashMap<String, EnvValue>> for EnvValue {
+    fn from(x: HashMap<String, EnvValue>) -> EnvValue {
+        EnvValue::Map(x.into())
     }
 }
 

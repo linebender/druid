@@ -21,13 +21,9 @@ use crate::{
     UpdateCtx, Widget,
 };
 
-use crate::piet::{Color, FillRule, FontBuilder, Text, TextLayoutBuilder};
+use crate::piet::{FillRule, FontBuilder, Text, TextLayoutBuilder};
 use crate::{Piet, Point, RenderContext};
 
-const BUTTON_BG_COLOR: Color = Color::rgba32(0x40_40_48_ff);
-const BUTTON_HOVER_COLOR: Color = Color::rgba32(0x50_50_58_ff);
-const BUTTON_PRESSED_COLOR: Color = Color::rgba32(0x60_60_68_ff);
-const LABEL_TEXT_COLOR: Color = Color::rgba32(0xf0_f0_ea_ff);
 
 /// A label with static text.
 pub struct Label {
@@ -72,10 +68,12 @@ impl Label {
 }
 
 impl<T: Data> Widget<T> for Label {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, _env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, env: &Env) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
-        let brush = paint_ctx.render_ctx.solid_brush(LABEL_TEXT_COLOR);
+        let brush = paint_ctx
+            .render_ctx
+            .solid_brush(env.theme_color("label.color.text"));
         paint_ctx
             .render_ctx
             .draw_text(&text_layout, (0.0, font_size), &brush);
@@ -117,9 +115,9 @@ impl<T: Data> Widget<T> for Button {
         let is_active = base_state.is_active();
         let is_hot = base_state.is_hot();
         let bg_color = match (is_active, is_hot) {
-            (true, true) => BUTTON_PRESSED_COLOR,
-            (false, true) => BUTTON_HOVER_COLOR,
-            _ => BUTTON_BG_COLOR,
+            (true, true) => env.theme_color("button.color.active"),
+            (false, true) => env.theme_color("button.color.hot"),
+            _ => env.theme_color("button.color.bg"),
         };
         let brush = paint_ctx.render_ctx.solid_brush(bg_color);
         let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
@@ -206,7 +204,9 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_size, data, env);
-        let brush = paint_ctx.render_ctx.solid_brush(LABEL_TEXT_COLOR);
+        let brush = paint_ctx
+            .render_ctx
+            .solid_brush(env.theme_color("label.color.text"));
         paint_ctx
             .render_ctx
             .draw_text(&text_layout, (0., font_size), &brush);
