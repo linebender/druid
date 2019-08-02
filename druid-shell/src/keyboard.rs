@@ -24,7 +24,7 @@ pub struct KeyEvent {
     /// Whether or not this event is a repeat (the key was held down)
     pub is_repeat: bool,
     /// The modifiers for this event.
-    pub modifiers: KeyModifiers,
+    pub mods: KeyModifiers,
     // these are exposed via methods, below. The rationale for this approach is
     // that a key might produce more than a single 'char' of input, but we don't
     // want to need a heap allocation in the trivial case. This gives us 15 bytes
@@ -42,7 +42,7 @@ impl KeyEvent {
     pub(crate) fn new(
         key_code: impl Into<KeyCode>,
         is_repeat: bool,
-        modifiers: KeyModifiers,
+        mods: KeyModifiers,
         text: impl Into<StrOrChar>,
         unmodified_text: impl Into<StrOrChar>,
     ) -> Self {
@@ -58,7 +58,7 @@ impl KeyEvent {
         KeyEvent {
             key_code: key_code.into(),
             is_repeat,
-            modifiers,
+            mods,
             text,
             unmodified_text,
         }
@@ -84,7 +84,7 @@ impl KeyEvent {
     }
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq)]
 pub struct KeyModifiers {
     pub shift: bool,
     /// Option on macOS.
@@ -162,12 +162,15 @@ pub enum KeyCode {
     Period,
     Slash,
 
-    Control,
-    Alt,
-    Shift,
+    LeftControl,
+    RightControl,
+    LeftAlt,
+    RightAlt,
+    LeftShift,
+    RightShift,
     /// command / windows / meta
-    Meta,
-    Menu,
+    LeftMeta,
+    RightMeta,
 
     //FIXME: support lshift/rshift etc?
     Space,
@@ -305,15 +308,15 @@ impl From<u16> for KeyCode {
             0x33 => KeyCode::Backspace,
             //0x34 => unkown,
             0x35 => KeyCode::Escape,
-            //0x36 => KeyCode::RLogo,
-            //0x37 => KeyCode::LLogo,
-            //0x38 => KeyCode::LShift,
+            0x36 => KeyCode::RightMeta,
+            0x37 => KeyCode::LeftMeta,
+            0x38 => KeyCode::LeftShift,
             0x39 => KeyCode::CapsLock,
-            //0x3a => KeyCode::LAlt,
-            //0x3b => KeyCode::LControl,
-            //0x3c => KeyCode::RShift,
-            //0x3d => KeyCode::RAlt,
-            //0x3e => KeyCode::RControl,
+            0x3a => KeyCode::LeftAlt,
+            0x3b => KeyCode::LeftControl,
+            0x3c => KeyCode::RightShift,
+            0x3d => KeyCode::RightAlt,
+            0x3e => KeyCode::RightControl,
             //0x3f => Fn key,
             //0x40 => KeyCode::F17,
             0x41 => KeyCode::NumpadDecimal,
@@ -407,12 +410,12 @@ impl From<i32> for KeyCode {
         use winapi::um::winuser::*;
 
         match src {
-            //VK_LSHIFT => KeyCode::LeftShift,
-            //VK_RSHIFT => KeyCode::RightShift,
-            //VK_LCONTROL => KeyCode::LeftControl,
-            //VK_RCONTROL => KeyCode::RightControl,
-            //VK_LMENU => KeyCode::LeftAlt,
-            //VK_RMENU => KeyCode::RightAlt,
+            VK_LSHIFT => KeyCode::LeftShift,
+            VK_RSHIFT => KeyCode::RightShift,
+            VK_LCONTROL => KeyCode::LeftControl,
+            VK_RCONTROL => KeyCode::RightControl,
+            VK_LMENU => KeyCode::LeftAlt,
+            VK_RMENU => KeyCode::RightAlt,
             //VK_OEM_PLUS => KeyCode::Add,
             VK_OEM_COMMA => KeyCode::Comma,
             VK_OEM_MINUS => KeyCode::Minus,

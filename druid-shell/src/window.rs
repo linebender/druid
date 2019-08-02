@@ -17,8 +17,13 @@
 use std::any::Any;
 use std::ops::Deref;
 
-use crate::keyboard::{KeyEvent, KeyModifiers};
+pub use crate::keyboard::{KeyEvent, KeyModifiers};
+use crate::kurbo::{Point, Vec2};
 use crate::platform;
+
+// It's possible we'll want to make this type alias at a lower level,
+// see https://github.com/linebender/piet/pull/37 for more discussion.
+pub type Text<'a> = <piet_common::Piet<'a> as piet_common::RenderContext>::Text;
 
 // Handle to Window Level Utilities
 #[derive(Clone, Default)]
@@ -34,6 +39,20 @@ impl Deref for WindowHandle {
     }
 }
 
+/// A context supplied to most `WinHandler` methods.
+pub trait WinCtx<'a> {
+    /// Invalidate the entire window.
+    ///
+    /// TODO: finer grained invalidation.
+    fn invalidate(&mut self);
+
+    /// Get a reference to an object that can do text layout.
+    fn text_factory(&mut self) -> &mut Text<'a>;
+
+    /// Set the cursor icon.
+    fn set_cursor(&mut self, cursor: &Cursor);
+}
+
 /// App behavior, supplied by the app.
 ///
 /// Many of the "window procedure" messages map to calls to this trait.
@@ -43,82 +62,83 @@ impl Deref for WindowHandle {
 pub trait WinHandler {
     /// Provide the handler with a handle to the window so that it can
     /// invalidate or make other requests.
-    fn connect(&self, handle: &WindowHandle);
+    fn connect(&mut self, handle: &WindowHandle);
 
     /// Called when the size of the window is changed. Note that size
     /// is in physical pixels.
     #[allow(unused_variables)]
-    fn size(&self, width: u32, height: u32) {}
+    fn size(&mut self, width: u32, height: u32, ctx: &mut dyn WinCtx) {}
 
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
     /// should be scheduled for the next animation frame.
-    fn paint(&self, ctx: &mut piet_common::Piet) -> bool;
+    fn paint(&mut self, piet: &mut piet_common::Piet, ctx: &mut dyn WinCtx) -> bool;
 
     /// Called when the resources need to be rebuilt.
-    fn rebuild_resources(&self) {}
-
+    ///
+    /// Discussion: this function is mostly motivated by using
+    /// `GenericRenderTarget` on Direct2D. If we move to `DeviceContext`
+    /// instead, then it's possible we don't need this.
     #[allow(unused_variables)]
+    fn rebuild_resources(&mut self, ctx: &mut dyn WinCtx) {}
+
     /// Called when a menu item is selected.
-    fn command(&self, id: u32) {}
+    #[allow(unused_variables)]
+    fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {}
 
     /// Called on a key down event.
     ///
     /// Return `true` if the event is handled.
     #[allow(unused_variables)]
-    fn key_down(&self, event: KeyEvent) -> bool {
+    fn key_down(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) -> bool {
         false
     }
 
     /// Called when a key is released. This corresponds to the WM_KEYUP message
     /// on Windows, or keyUp(withEvent:) on macOS.
     #[allow(unused_variables)]
-    fn key_up(&self, event: KeyEvent) {}
+    fn key_up(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) {}
 
-    /// Called on a mouse wheel event. This corresponds to a
-    /// [WM_MOUSEWHEEL](https://msdn.microsoft.com/en-us/library/windows/desktop/ms645617(v=vs.85).aspx)
-    /// message.
+    /// Called on a mouse wheel event.
     ///
-    /// The modifiers are the same as WM_MOUSEWHEEL.
-    #[allow(unused_variables)]
-    fn mouse_wheel(&self, delta: i32, mods: KeyModifiers) {}
-
-    /// Called on a mouse horizontal wheel event. This corresponds to a
-    /// [WM_MOUSEHWHEEL](https://msdn.microsoft.com/en-us/library/windows/desktop/ms645614(v=vs.85).aspx)
-    /// message.
+    /// The polarity is the amount to be added to the scroll position,
+    /// in other words the opposite of the direction the content should
+    /// move on scrolling. This polarity is consistent with the
+    /// deltaX and deltaY values in a web [WheelEvent].
     ///
-    /// The modifiers are the same as WM_MOUSEHWHEEL.
+    /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
     #[allow(unused_variables)]
-    fn mouse_hwheel(&self, delta: i32, mods: KeyModifiers) {}
+    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, ctx: &mut dyn WinCtx) {}
 
-    /// Called when the mouse moves. Note that the x, y coordinates are
-    /// in absolute pixels.
-    ///
-    /// TODO: should we reuse the MouseEvent struct for this method as well?
+    /// Called when the mouse moves.
     #[allow(unused_variables)]
-    fn mouse_move(&self, event: &MouseEvent) {}
+    fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {}
 
-    /// Called on mouse button up or down. Note that the x, y
-    /// coordinates are in absolute pixels.
+    /// Called on mouse button down.
     #[allow(unused_variables)]
-    fn mouse(&self, event: &MouseEvent) {}
+    fn mouse_down(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {}
+
+    /// Called on mouse button up.
+    #[allow(unused_variables)]
+    fn mouse_up(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {}
 
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is
     /// WM_NCDESTROY).
-    fn destroy(&self) {}
+    #[allow(unused_variables)]
+    fn destroy(&mut self, ctx: &mut dyn WinCtx) {}
 
     /// Get a reference to the handler state. Used mostly by idle handlers.
-    fn as_any(&self) -> &dyn Any;
+    fn as_any(&mut self) -> &mut dyn Any;
 }
 
 /// The state of the mouse for a click, mouse-up, or move event.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MouseEvent {
-    /// X coordinate in absolute pixels.
-    pub x: i32,
-    /// Y coordinate in absolute pixels.
-    pub y: i32,
+    /// The location of the mouse in the current window.
+    ///
+    /// This is in px units, that is, adjusted for hDPI.
+    pub pos: Point,
     /// Modifiers, as in raw WM message
     pub mods: KeyModifiers,
     /// The number of mouse clicks associated with this event. This will always
@@ -144,19 +164,19 @@ pub enum MouseButton {
     X2,
 }
 
-/// Standard cursor types. This is only a subset, others can be added as needed.
+//NOTE: this currently only contains cursors that are included by default on
+//both Windows and macOS. We may want to provide polyfills for various additional cursors,
+//and we will also want to add some mechanism for adding custom cursors.
+/// Mouse cursors.
+#[derive(Clone)]
 pub enum Cursor {
+    /// The default arrow cursor.
     Arrow,
+    /// A vertical I-beam, for indicating insertion points in text.
     IBeam,
-}
-
-/// A scroll wheel event.
-#[derive(Debug)]
-pub struct ScrollEvent {
-    /// The scroll wheel’s horizontal delta.
-    pub dx: f64,
-    /// The scroll wheel’s vertical delta.
-    pub dy: f64,
-    /// Modifiers, as in raw WM message
-    pub mods: KeyModifiers,
+    Crosshair,
+    OpenHand,
+    NotAllowed,
+    ResizeLeftRight,
+    ResizeUpDown,
 }

@@ -14,31 +14,25 @@
 
 //! A widget that arranges its children in a one-dimensional array.
 
-use std::collections::BTreeMap;
+use crate::kurbo::{Point, Rect, Size};
 
-use crate::kurbo::Size;
-
-use crate::widget::Widget;
-use crate::{BoxConstraints, LayoutResult};
-use crate::{Id, LayoutCtx, Ui};
+use crate::{
+    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
+    Widget, WidgetPod,
+};
 
 pub struct Row;
 pub struct Column;
 
-pub struct Flex {
-    params: BTreeMap<Id, Params>,
+pub struct Flex<T: Data> {
     direction: Axis,
 
-    // layout continuation state
-    phase: Phase,
-    ix: usize,
-    minor: f64,
+    children: Vec<ChildWidget<T>>,
+}
 
-    // the total measure of non-flex children
-    total_non_flex: f64,
-
-    // the sum of flex parameters of all children
-    flex_sum: f64,
+struct ChildWidget<T: Data> {
+    widget: WidgetPod<T, Box<dyn Widget<T>>>,
+    params: Params,
 }
 
 pub enum Axis {
@@ -46,29 +40,9 @@ pub enum Axis {
     Vertical,
 }
 
-// Layout happens in two phases. First, the non-flex children
-// are laid out. Then, the remaining space is divided across
-// the flex children.
-#[derive(Clone, Copy, PartialEq)]
-enum Phase {
-    NonFlex,
-    Flex,
-}
-
 #[derive(Copy, Clone, Default)]
 struct Params {
     flex: f64,
-}
-
-impl Params {
-    // Determine the phase in which this child should be measured.
-    fn get_flex_phase(&self) -> Phase {
-        if self.flex == 0.0 {
-            Phase::NonFlex
-        } else {
-            Phase::Flex
-        }
-    }
 }
 
 impl Axis {
@@ -95,160 +69,135 @@ impl Axis {
 }
 
 impl Row {
-    pub fn new() -> Flex {
+    pub fn new<T: Data>() -> Flex<T> {
         Flex {
-            params: BTreeMap::new(),
             direction: Axis::Horizontal,
 
-            phase: Phase::NonFlex,
-            ix: 0,
-            minor: 0.0,
-            total_non_flex: 0.0,
-            flex_sum: 0.0,
+            children: Vec::new(),
         }
     }
 }
 
 impl Column {
-    pub fn new() -> Flex {
+    pub fn new<T: Data>() -> Flex<T> {
         Flex {
-            params: BTreeMap::new(),
             direction: Axis::Vertical,
 
-            phase: Phase::NonFlex,
-            ix: 0,
-            minor: 0.0,
-            total_non_flex: 0.0,
-            flex_sum: 0.0,
+            children: Vec::new(),
         }
     }
 }
 
-impl Flex {
-    /// Add to UI with children.
-    pub fn ui(self, children: &[Id], ctx: &mut Ui) -> Id {
-        ctx.add(self, children)
-    }
-
-    /// Set the flex for a child widget.
-    ///
-    /// This function is used to set flex for a child widget, and is done while
-    /// building, before adding to the UI. Likely we will need to think of other
-    /// mechanisms to change parameters dynamically after building.
-    pub fn set_flex(&mut self, child: Id, flex: f64) {
-        let params = self.get_params_mut(child);
-        params.flex = flex;
-    }
-
-    fn get_params_mut(&mut self, child: Id) -> &mut Params {
-        self.params.entry(child).or_default()
-    }
-
-    fn get_params(&self, child: Id) -> Params {
-        self.params
-            .get(&child)
-            .cloned()
-            .unwrap_or(Default::default())
-    }
-
-    /// Return the index (within `children`) of the next child that belongs in
-    /// the specified phase.
-    fn get_next_child(&self, children: &[Id], start: usize, phase: Phase) -> Option<usize> {
-        for ix in start..children.len() {
-            if self.get_params(children[ix]).get_flex_phase() == phase {
-                return Some(ix);
-            }
-        }
-        None
-    }
-
-    /// Position all children, after the children have all been measured.
-    fn finish_layout(
-        &self,
-        bc: &BoxConstraints,
-        children: &[Id],
-        ctx: &mut LayoutCtx,
-    ) -> LayoutResult {
-        let mut major = 0.0;
-        for &child in children {
-            // top-align, could do center etc. based on child height
-            ctx.position_child(child, self.direction.pack(major, 0.0));
-            major += self.direction.major(ctx.get_child_size(child));
-        }
-        let total_major = self.direction.major(bc.max);
-        let (width, height) = self.direction.pack(total_major, self.minor);
-        LayoutResult::Size(Size::new(width, height))
+impl<T: Data> Flex<T> {
+    /// Add a child widget.
+    pub fn add_child(&mut self, child: impl Widget<T> + 'static, flex: f64) {
+        let params = Params { flex };
+        let child = ChildWidget {
+            widget: WidgetPod::new(child).boxed(),
+            params,
+        };
+        self.children.push(child);
     }
 }
 
-impl Widget for Flex {
+impl<T: Data> Widget<T> for Flex<T> {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
+        for child in &mut self.children {
+            child.widget.paint_with_offset(paint_ctx, data, env);
+        }
+    }
+
     fn layout(
         &mut self,
+        layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        children: &[Id],
-        size: Option<Size>,
-        ctx: &mut LayoutCtx,
-    ) -> LayoutResult {
-        if let Some(size) = size {
-            let minor = self.direction.minor(size);
-            self.minor = self.minor.max(minor);
-            if self.phase == Phase::NonFlex {
-                self.total_non_flex += self.direction.major(size);
+        data: &T,
+        env: &Env,
+    ) -> Size {
+        // Measure non-flex children.
+        let mut total_non_flex = 0.0;
+        let mut minor = 0.0f64;
+        for child in &mut self.children {
+            if child.params.flex == 0.0 {
+                let child_bc = match self.direction {
+                    Axis::Horizontal => BoxConstraints::new(
+                        Size::new(0.0, bc.min.height),
+                        Size::new(std::f64::INFINITY, bc.max.height),
+                    ),
+                    Axis::Vertical => BoxConstraints::new(
+                        Size::new(bc.min.width, 0.0),
+                        Size::new(bc.max.width, std::f64::INFINITY),
+                    ),
+                };
+                let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
+                minor = minor.max(self.direction.minor(child_size));
+                total_non_flex += self.direction.major(child_size);
+                // Stash size.
+                let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
+                child.widget.set_layout_rect(rect);
             }
-
-            // Advance to the next child; finish non-flex phase if at end.
-            if let Some(ix) = self.get_next_child(children, self.ix + 1, self.phase) {
-                self.ix = ix;
-            } else if self.phase == Phase::NonFlex {
-                if let Some(ix) = self.get_next_child(children, 0, Phase::Flex) {
-                    self.ix = ix;
-                    self.phase = Phase::Flex;
-                } else {
-                    return self.finish_layout(bc, children, ctx);
-                }
-            } else {
-                return self.finish_layout(bc, children, ctx);
-            }
-        } else {
-            // Start layout process, no children measured yet.
-            if children.is_empty() {
-                return LayoutResult::Size(bc.min);
-            }
-            if let Some(ix) = self.get_next_child(children, 0, Phase::NonFlex) {
-                self.ix = ix;
-                self.phase = Phase::NonFlex;
-            } else {
-                // All children are flex, skip non-flex pass.
-                self.ix = 0;
-                self.phase = Phase::Flex;
-            }
-            self.total_non_flex = 0.0;
-            self.flex_sum = children.iter().map(|id| self.get_params(*id).flex).sum();
-            self.minor = self.direction.minor(bc.min);
         }
-        let (min_major, max_major) = if self.phase == Phase::NonFlex {
-            (0.0, ::std::f64::INFINITY)
-        } else {
-            let total_major = self.direction.major(bc.max);
-            // TODO: should probably max with 0.0 to avoid negative sizes
-            let remaining = total_major - self.total_non_flex;
-            let major = remaining * self.get_params(children[self.ix]).flex / self.flex_sum;
-            (major, major)
-        };
-        let child_bc = match self.direction {
-            Axis::Horizontal => BoxConstraints::new(
-                Size::new(min_major, bc.min.height),
-                Size::new(max_major, bc.max.height),
-            ),
-            Axis::Vertical => BoxConstraints::new(
-                Size::new(bc.min.width, min_major),
-                Size::new(bc.max.width, max_major),
-            ),
-        };
-        LayoutResult::RequestChild(children[self.ix], child_bc)
+
+        let total_major = self.direction.major(bc.max);
+        let remaining = total_major - total_non_flex;
+        let flex_sum: f64 = self.children.iter().map(|child| child.params.flex).sum();
+
+        // Measure flex children.
+        for child in &mut self.children {
+            if child.params.flex != 0.0 {
+                let major = remaining * child.params.flex / flex_sum;
+                let child_bc = match self.direction {
+                    Axis::Horizontal => BoxConstraints::new(
+                        Size::new(major, bc.min.height),
+                        Size::new(major, bc.max.height),
+                    ),
+                    Axis::Vertical => BoxConstraints::new(
+                        Size::new(bc.min.width, major),
+                        Size::new(bc.max.width, major),
+                    ),
+                };
+                let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
+                minor = minor.max(self.direction.minor(child_size));
+                // Stash size.
+                let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
+                child.widget.set_layout_rect(rect);
+            }
+        }
+
+        // Finalize layout, assigning positions to each child.
+        let mut major = 0.0;
+        for child in &mut self.children {
+            // top-align, could do center etc. based on child height
+            let rect = child.widget.get_layout_rect();
+            let pos: Point = self.direction.pack(major, 0.0).into();
+            child.widget.set_layout_rect(rect.with_origin(pos));
+            major += self.direction.major(rect.size());
+        }
+        if flex_sum > 0.0 {
+            major = total_major;
+        }
+        // TODO: should be able to make this `into`
+        let (width, height) = self.direction.pack(major, minor);
+        Size::new(width, height)
     }
 
-    fn on_child_removed(&mut self, child: Id) {
-        self.params.remove(&child);
+    fn event(
+        &mut self,
+        event: &Event,
+        ctx: &mut EventCtx,
+        data: &mut T,
+        env: &Env,
+    ) -> Option<Action> {
+        let mut action = None;
+        for child in &mut self.children {
+            action = Action::merge(action, child.widget.event(event, ctx, data, env));
+        }
+        action
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        for child in &mut self.children {
+            child.widget.update(ctx, data, env);
+        }
     }
 }

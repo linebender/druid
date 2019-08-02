@@ -14,52 +14,68 @@
 
 //! A widget that just adds padding during layout.
 
-use crate::kurbo::Size;
-use crate::widget::Widget;
-use crate::{BoxConstraints, LayoutResult};
-use crate::{Id, LayoutCtx, Ui};
+use crate::{
+    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
+    Rect, Size, UpdateCtx, Widget, WidgetPod,
+};
 
-/// A padding widget. Is expected to have exactly one child.
-pub struct Padding {
+pub struct Padding<T: Data> {
     left: f64,
     right: f64,
     top: f64,
     bottom: f64,
+
+    child: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl Padding {
+impl<T: Data> Padding<T> {
     /// Create widget with uniform padding.
-    pub fn uniform(padding: f64) -> Padding {
+    pub fn uniform(padding: f64, child: impl Widget<T> + 'static) -> Padding<T> {
         Padding {
             left: padding,
             right: padding,
             top: padding,
             bottom: padding,
+            child: WidgetPod::new(child).boxed(),
         }
-    }
-
-    pub fn ui(self, child: Id, ctx: &mut Ui) -> Id {
-        ctx.add(self, &[child])
     }
 }
 
-impl Widget for Padding {
+impl<T: Data> Widget<T> for Padding<T> {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
+        self.child.paint_with_offset(paint_ctx, data, env);
+    }
+
     fn layout(
         &mut self,
+        layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        children: &[Id],
-        size: Option<Size>,
-        ctx: &mut LayoutCtx,
-    ) -> LayoutResult {
+        data: &T,
+        env: &Env,
+    ) -> Size {
         let hpad = self.left + self.right;
         let vpad = self.top + self.bottom;
-        if let Some(size) = size {
-            ctx.position_child(children[0], (self.left, self.top));
-            LayoutResult::Size(Size::new(size.width + hpad, size.height + vpad))
-        } else {
-            let min = Size::new(bc.min.width - hpad, bc.min.height - hpad);
-            let max = Size::new(bc.max.width - hpad, bc.max.height - hpad);
-            LayoutResult::RequestChild(children[0], BoxConstraints::new(min, max))
-        }
+        let min = Size::new(bc.min.width - hpad, bc.min.height - vpad);
+        let max = Size::new(bc.max.width - hpad, bc.max.height - vpad);
+        let child_bc = BoxConstraints::new(min, max);
+        let size = self.child.layout(layout_ctx, &child_bc, data, env);
+        let origin = Point::new(self.left, self.top);
+        self.child
+            .set_layout_rect(Rect::from_origin_size(origin, size));
+        Size::new(size.width + hpad, size.height + vpad)
+    }
+
+    fn event(
+        &mut self,
+        event: &Event,
+        ctx: &mut EventCtx,
+        data: &mut T,
+        env: &Env,
+    ) -> Option<Action> {
+        self.child.event(event, ctx, data, env)
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        self.child.update(ctx, data, env);
     }
 }
