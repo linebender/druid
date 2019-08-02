@@ -25,20 +25,22 @@ use std::cell::Cell;
 use std::ffi::OsString;
 use std::sync::{Arc, Mutex, Weak};
 
+use gdk::EventKey;
 use gdk::EventMask;
 use gtk::ApplicationWindow;
 use gtk::Inhibit;
 
-use piet::RenderContext;
-use piet_common::Piet;
+use piet_common::{Piet, RenderContext};
 
-use platform::dialog::{FileDialogOptions, FileDialogType};
-use platform::menu::Menu;
-use window::{self, Cursor, WinHandler};
-use Error;
+use crate::platform::dialog::{FileDialogOptions, FileDialogType};
+use crate::platform::menu::Menu;
+use crate::window::{self, Cursor, WinHandler, MouseButton};
+use crate::keyboard;
+use crate::Error;
 
 use util::assert_main_thread;
 use win_main::with_application;
+use crate::keyboard::{KeyModifiers, KeyCode, KeyEvent};
 
 #[derive(Clone, Default)]
 pub struct WindowHandle {
@@ -190,9 +192,10 @@ impl WindowBuilder {
                 handler.mouse(&window::MouseEvent {
                     x: position.0 as i32,
                     y: position.1 as i32,
+                    count: 1,
                     mods: gtk_modifiers_to_druid(button.get_state()),
-                    which: gtk_button_to_druid(button.get_button()),
-                    ty: window::MouseType::Down,
+                    button: gtk_button_to_druid(button.get_button()),
+                    //ty: window::MouseType::Down,
                 });
 
                 Inhibit(true)
@@ -208,8 +211,9 @@ impl WindowBuilder {
                     x: position.0 as i32,
                     y: position.1 as i32,
                     mods: gtk_modifiers_to_druid(button.get_state()),
-                    which: gtk_button_to_druid(button.get_button()),
-                    ty: window::MouseType::Up,
+                    count: 0,
+                    button: gtk_button_to_druid(button.get_button()),
+                    //ty: window::MouseType::Up,
                 });
 
                 Inhibit(true)
@@ -220,12 +224,15 @@ impl WindowBuilder {
             let handler = Arc::clone(&handler);
             drawing_area.connect_motion_notify_event(move |_widget, motion| {
                 let position = motion.get_position();
+                let mouse_event = window::MouseEvent {
+                    x: position.0 as i32,
+                    y: position.1 as i32,
+                    mods: gtk_modifiers_to_druid(motion.get_state()),
+                    count: 0,
+                    button: gtk_modifiers_to_mouse_button(motion.get_state())
+                };
 
-                handler.mouse_move(
-                    position.0 as i32,
-                    position.1 as i32,
-                    gtk_modifiers_to_druid(motion.get_state()),
-                );
+                handler.mouse_move(&mouse_event);
 
                 Inhibit(true)
             });
@@ -275,10 +282,8 @@ impl WindowBuilder {
         {
             let handler = Arc::clone(&handler);
             drawing_area.connect_key_press_event(move |_widget, key| {
-                handler.keydown(
-                    key.get_hardware_keycode() as i32,
-                    gtk_modifiers_to_druid(key.get_state()),
-                );
+                let key_event = gtk_event_key_to_key_event(key);
+                handler.key_down(key_event);
 
                 Inhibit(true)
             });
@@ -443,21 +448,46 @@ fn gtk_button_to_druid(button: u32) -> window::MouseButton {
 
 /// Map the GTK modifiers into Druid bits
 #[inline]
-fn gtk_modifiers_to_druid(modifiers: gdk::ModifierType) -> u32 {
+fn gtk_modifiers_to_druid(modifiers: gdk::ModifierType) -> keyboard::KeyModifiers {
     use gdk::ModifierType;
-    use keycodes;
+    use crate::keycodes;
 
-    let mut output = 0;
+    keyboard::KeyModifiers {
+        shift: modifiers.contains(ModifierType::SHIFT_MASK),
+        alt: modifiers.contains(ModifierType::MOD1_MASK),
+        ctrl: modifiers.contains(ModifierType::CONTROL_MASK),
+        meta: modifiers.contains(ModifierType::META_MASK)
+    }
+}
 
-    if modifiers.contains(ModifierType::MOD1_MASK) {
-        output |= keycodes::M_ALT;
+#[inline]
+fn gtk_modifiers_to_mouse_button(modifiers: gdk::ModifierType) -> window::MouseButton {
+    use gdk::ModifierType;
+    match modifiers {
+        modifiers if modifiers.contains(ModifierType::BUTTON1) => MouseButton::Left,
+        modifiers if modifiers.contains(ModifierType::BUTTON2) => MouseButton::Middle,
+        modifiers if modifiers.contains(ModifierType::BUTTON3) => MouseButton::Right,
+        modifiers if modifiers.contains(ModifierType::BUTTON4) => MouseButton::X1,
+        modifiers if modifiers.contains(ModifierType::BUTTON5) => MouseButton::X2,
+        _ => {
+            //FIXME: what about when no modifiers match?
+            MouseButton::Left
+        }
     }
-    if modifiers.contains(ModifierType::CONTROL_MASK) {
-        output |= keycodes::M_CTRL;
-    }
-    if modifiers.contains(ModifierType::SHIFT_MASK) {
-        output |= keycodes::M_SHIFT;
-    }
+}
 
-    output
+/// Map a GTK hardware_keycode into Druid keyboard::KeyCode
+fn gtk_hardware_keycode_to_druid(hardware_keycode: u16) -> keyboard::KeyCode {
+    // TODO Steven implement the mapping, see keyboard.rs, add a From<u16> impl!
+    keyboard::KeyCode::KeyA
+}
+
+fn gtk_event_key_to_key_event(key: &EventKey) -> keyboard::KeyEvent {
+    keyboard::KeyEvent::new(
+        key.get_hardware_keycode(),
+        false, // TODO Steven implement is_repeat
+        gtk_modifiers_to_druid(key.get_state()),
+        "s", // TODO Steven
+        "s" // TODO Steven
+    )
 }

@@ -530,6 +530,18 @@ impl From<i32> for KeyCode {
     }
 }
 
+#[cfg(any(test, target_os = "linux"))]
+impl From<u16> for KeyCode {
+    fn from(raw: u16) -> KeyCode {
+        match raw {
+            // TODO Steven needs a proper implementation
+            0x00 => KeyCode::KeyA,
+            0x01 => KeyCode::KeyS,
+            other => KeyCode::KeyA
+        }
+    }
+}
+
 /// Should realistically be (8 * N) - 1; we need one byte for the length.
 const TINY_STR_CAPACITY: usize = 15;
 

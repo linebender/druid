@@ -14,7 +14,7 @@
 
 //! GTK implementation of menus.
 
-use window;
+use crate::window;
 
 use std::sync::Arc;
 
