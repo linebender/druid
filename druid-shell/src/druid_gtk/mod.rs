@@ -40,7 +40,7 @@ use crate::Error;
 
 use util::assert_main_thread;
 use win_main::with_application;
-use crate::keyboard::{KeyModifiers, KeyCode, KeyEvent};
+use crate::keyboard::{KeyModifiers, KeyCode, KeyEvent, RawKeyCode, StrOrChar};
 
 #[derive(Clone, Default)]
 pub struct WindowHandle {
@@ -292,19 +292,9 @@ impl WindowBuilder {
         {
             let handler = Arc::clone(&handler);
             drawing_area.connect_key_release_event(move |_widget, key| {
-                let modifiers = gtk_modifiers_to_druid(key.get_state());
+                let key_event = gtk_event_key_to_key_event(key);
+                handler.key_up(key_event);
 
-                match gdk::keyval_to_unicode(key.get_keyval()) {
-                    Some(chr) => handler.char(chr as u32, modifiers),
-                    None => {
-                        use gdk::enums::key;
-
-                        match key.get_keyval() {
-                            key::KP_Enter => handler.char('\n' as u32, modifiers),
-                            v => eprintln!("Warning: Druid got bogus key value {:?}", v),
-                        }
-                    }
-                }
 
                 Inhibit(true)
             });
@@ -460,15 +450,14 @@ fn gtk_modifiers_to_druid(modifiers: gdk::ModifierType) -> keyboard::KeyModifier
     }
 }
 
-#[inline]
 fn gtk_modifiers_to_mouse_button(modifiers: gdk::ModifierType) -> window::MouseButton {
     use gdk::ModifierType;
     match modifiers {
-        modifiers if modifiers.contains(ModifierType::BUTTON1) => MouseButton::Left,
-        modifiers if modifiers.contains(ModifierType::BUTTON2) => MouseButton::Middle,
-        modifiers if modifiers.contains(ModifierType::BUTTON3) => MouseButton::Right,
-        modifiers if modifiers.contains(ModifierType::BUTTON4) => MouseButton::X1,
-        modifiers if modifiers.contains(ModifierType::BUTTON5) => MouseButton::X2,
+        modifiers if modifiers.contains(ModifierType::BUTTON1_MASK) => MouseButton::Left,
+        modifiers if modifiers.contains(ModifierType::BUTTON2_MASK) => MouseButton::Middle,
+        modifiers if modifiers.contains(ModifierType::BUTTON3_MASK) => MouseButton::Right,
+        modifiers if modifiers.contains(ModifierType::BUTTON4_MASK) => MouseButton::X1,
+        modifiers if modifiers.contains(ModifierType::BUTTON5_MASK) => MouseButton::X2,
         _ => {
             //FIXME: what about when no modifiers match?
             MouseButton::Left
@@ -476,18 +465,128 @@ fn gtk_modifiers_to_mouse_button(modifiers: gdk::ModifierType) -> window::MouseB
     }
 }
 
-/// Map a GTK hardware_keycode into Druid keyboard::KeyCode
-fn gtk_hardware_keycode_to_druid(hardware_keycode: u16) -> keyboard::KeyCode {
-    // TODO Steven implement the mapping, see keyboard.rs, add a From<u16> impl!
-    keyboard::KeyCode::KeyA
-}
+
+
 
 fn gtk_event_key_to_key_event(key: &EventKey) -> keyboard::KeyEvent {
+    let keyval = key.get_keyval();
+    let keycode = KeyCode::from(keyval);
+
+    // TODO how can we get the different versions from GDK?
+    let text: StrOrChar = gdk::keyval_to_unicode(keyval).into();
+    let unmodified_text: StrOrChar = gdk::keyval_to_unicode(keyval).into();
+
     keyboard::KeyEvent::new(
-        key.get_hardware_keycode(),
+        keyval,
         false, // TODO Steven implement is_repeat
         gtk_modifiers_to_druid(key.get_state()),
-        "s", // TODO Steven
-        "s" // TODO Steven
+        text,
+        unmodified_text
     )
+}
+
+impl From<u32> for KeyCode {
+    fn from(raw: u32) -> KeyCode {
+        use gdk::enums::key;
+        use gdk::enums::key::*;
+        match raw {
+            a | A => KeyCode::KeyA,
+            s | S => KeyCode::KeyS,
+            d | D => KeyCode::KeyD,
+            f | F => KeyCode::KeyF,
+            h | H => KeyCode::KeyH,
+            g | G => KeyCode::KeyG,
+            z | Z => KeyCode::KeyZ,
+            x | X => KeyCode::KeyX,
+            c | C => KeyCode::KeyC,
+            v | V => KeyCode::KeyV,
+            b | B => KeyCode::KeyB,
+            q | Q => KeyCode::KeyQ,
+            w | W => KeyCode::KeyW,
+            e | E => KeyCode::KeyE,
+            r | R => KeyCode::KeyR,
+            y | Y => KeyCode::KeyY,
+            t | T => KeyCode::KeyT,
+            _1 => KeyCode::Key1,
+            _2 => KeyCode::Key2,
+            _3 => KeyCode::Key3,
+            _4 => KeyCode::Key4,
+            _6 => KeyCode::Key6,
+            _5 => KeyCode::Key5,
+            equal => KeyCode::Equals,
+            _9 => KeyCode::Key9,
+            _7 => KeyCode::Key7,
+            minus => KeyCode::Minus,
+            _8 => KeyCode::Key8,
+            _0 => KeyCode::Key0,
+            bracketright => KeyCode::RightBracket,
+            o | O => KeyCode::KeyO,
+            u | U => KeyCode::KeyU,
+            bracketleft => KeyCode::LeftBracket,
+            i | I => KeyCode::KeyI,
+            p | P => KeyCode::KeyP,
+            Return => KeyCode::Return,
+            l | L => KeyCode::KeyL,
+            j | J => KeyCode::KeyJ,
+            grave => KeyCode::Backtick,
+            k | K => KeyCode::KeyK,
+            semicolon => KeyCode::Semicolon,
+            backslash => KeyCode::Backslash,
+            comma => KeyCode::Comma,
+            slash => KeyCode::Slash,
+            n | N => KeyCode::KeyN,
+            m | M => KeyCode::KeyM,
+            period => KeyCode::Period,
+            Tab => KeyCode::Tab,
+            space => KeyCode::Space,
+            BackSpace => KeyCode::Backspace,
+            Escape => KeyCode::Escape,
+            Caps_Lock => KeyCode::CapsLock,
+            KP_Decimal => KeyCode::NumpadDecimal,
+            KP_Multiply => KeyCode::NumpadMultiply,
+            KP_Add => KeyCode::NumpadAdd,
+            Num_Lock => KeyCode::NumLock,
+            KP_Divide => KeyCode::NumpadDivide,
+            KP_Enter => KeyCode::NumpadEnter,
+            KP_Subtract => KeyCode::NumpadSubtract,
+            KP_Equal => KeyCode::NumpadEquals,
+            KP_0 => KeyCode::Numpad0,
+            KP_1 => KeyCode::Numpad1,
+            KP_2 => KeyCode::Numpad2,
+            KP_3 => KeyCode::Numpad3,
+            KP_4 => KeyCode::Numpad4,
+            KP_5 => KeyCode::Numpad5,
+            KP_6 => KeyCode::Numpad6,
+            KP_7 => KeyCode::Numpad7,
+            KP_8 => KeyCode::Numpad8,
+            KP_9 => KeyCode::Numpad9,
+            F5 => KeyCode::F5,
+            F6 => KeyCode::F6,
+            F7 => KeyCode::F7,
+            F3 => KeyCode::F3,
+            F8=> KeyCode::F8,
+            F9=> KeyCode::F9,
+            F10 => KeyCode::F10,
+            F11 => KeyCode::F11,
+            F12 => KeyCode::F12,
+            Insert => KeyCode::Insert,
+            Home => KeyCode::Home,
+            Page_Up => KeyCode::PageUp,
+            Delete => KeyCode::Delete,
+            F4 => KeyCode::F4,
+            End => KeyCode::End,
+            F2 => KeyCode::F2,
+            Page_Down => KeyCode::PageDown,
+            F1 => KeyCode::F1,
+            leftarrow => KeyCode::ArrowLeft,
+            rightarrow => KeyCode::ArrowRight,
+            downarrow => KeyCode::ArrowDown,
+            uparrow => KeyCode::ArrowUp,
+
+            other => {
+                eprintln!("Warning: unknown keyval {}", raw);
+                KeyCode::Unknown(RawKeyCode::Linux(raw))
+            }
+        }
+    }
 }
