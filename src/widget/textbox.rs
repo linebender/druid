@@ -16,7 +16,7 @@
 
 use crate::{
     Action, BaseState, BoxConstraints, Env, Event, EventCtx, KeyCode, LayoutCtx, PaintCtx,
-    UpdateCtx, Widget,
+    UpdateCtx, Widget, Cursor
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
@@ -71,9 +71,9 @@ impl Widget<String> for TextBox {
         data: &String,
         _env: &Env,
     ) {
-        let is_active = base_state.is_active();
+        let has_focus = base_state.has_focus();
 
-        let border_color = if is_active {
+        let border_color = if has_focus {
             PRIMARY_LIGHT
         } else {
             BORDER_GREY
@@ -123,7 +123,7 @@ impl Widget<String> for TextBox {
                 rc.draw_text(&text_layout, text_pos, &brush);
 
                 // Paint the cursor if focused
-                if is_active {
+                if has_focus {
                     let brush = rc.solid_brush(CURSOR_COLOR);
 
                     let xy = text_pos + Vec2::new(text_layout.width() + 1., 2. - FONT_SIZE);
@@ -156,12 +156,11 @@ impl Widget<String> for TextBox {
     ) -> Option<Action> {
         match event {
             Event::MouseDown(_) => {
-                if ctx.is_hot() {
-                    ctx.set_active(true);
-                } else {
-                    ctx.set_active(false);
-                }
+                ctx.request_focus();
                 ctx.invalidate();
+            }
+            Event::MouseMoved(_) => {
+                ctx.set_cursor(&Cursor::IBeam);
             }
             Event::KeyDown(key_event) => {
                 match key_event {
