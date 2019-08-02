@@ -555,23 +555,6 @@ impl WindowHandle {
         }
     }
 
-    /// Set the current mouse cursor.
-    pub fn set_cursor(&self, cursor: &Cursor) {
-        unsafe {
-            let nscursor = class!(NSCursor);
-            let cursor: id = match cursor {
-                Cursor::Arrow => msg_send![nscursor, arrowCursor],
-                Cursor::IBeam => msg_send![nscursor, IBeamCursor],
-                Cursor::Crosshair => msg_send![nscursor, crosshairCursor],
-                Cursor::OpenHand => msg_send![nscursor, openHandCursor],
-                Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],
-                Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
-                Cursor::ResizeUpDown => msg_send![nscursor, ResizeUpDownCursor],
-            };
-            msg_send![cursor, set];
-        }
-    }
-
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
         // TODO: maybe try harder to return None if window has been dropped.
@@ -662,6 +645,22 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
 
     fn text_factory(&mut self) -> &mut Text<'a> {
         &mut self.text
+    }
+
+    fn set_cursor(&mut self, cursor: &Cursor) {
+        unsafe {
+            let nscursor = class!(NSCursor);
+            let cursor: id = match cursor {
+                Cursor::Arrow => msg_send![nscursor, arrowCursor],
+                Cursor::IBeam => msg_send![nscursor, IBeamCursor],
+                Cursor::Crosshair => msg_send![nscursor, crosshairCursor],
+                Cursor::OpenHand => msg_send![nscursor, openHandCursor],
+                Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],
+                Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
+                Cursor::ResizeUpDown => msg_send![nscursor, ResizeUpDownCursor],
+            };
+            msg_send![cursor, set];
+        }
     }
 }
 

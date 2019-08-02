@@ -74,7 +74,6 @@ pub struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     dwStyle: DWORD,
     title: String,
-    cursor: Cursor,
     menu: Option<Menu>,
     present_strategy: PresentStrategy,
 }
@@ -723,7 +722,6 @@ impl WindowBuilder {
             handler: None,
             dwStyle: WS_OVERLAPPEDWINDOW,
             title: String::new(),
-            cursor: Cursor::Arrow,
             menu: None,
             present_strategy: Default::default(),
         }
@@ -748,11 +746,6 @@ impl WindowBuilder {
         self.title = title.into();
     }
 
-    /// Set the default cursor for the window.
-    pub fn set_cursor(&mut self, cursor: Cursor) {
-        self.cursor = cursor;
-    }
-
     pub fn set_menu(&mut self, menu: Menu) {
         self.menu = Some(menu);
     }
@@ -769,7 +762,6 @@ impl WindowBuilder {
             // TODO: probably want configurable class name.
             let class_name = "Xi Editor".to_wide();
             let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
-            let cursor = LoadCursorW(0 as HINSTANCE, self.cursor.get_lpcwstr());
             let brush = CreateSolidBrush(0xffffff);
             let wnd = WNDCLASSW {
                 style: 0,
@@ -778,7 +770,7 @@ impl WindowBuilder {
                 cbWndExtra: 0,
                 hInstance: 0 as HINSTANCE,
                 hIcon: icon,
-                hCursor: cursor,
+                hCursor: 0 as HCURSOR,
                 hbrBackground: brush,
                 lpszMenuName: 0 as LPCWSTR,
                 lpszClassName: class_name.as_ptr(),
@@ -1086,14 +1078,6 @@ impl WindowHandle {
         }
     }
 
-    /// Set the current mouse cursor.
-    pub fn set_cursor(&self, cursor: &Cursor) {
-        unsafe {
-            let cursor = LoadCursorW(0 as HINSTANCE, cursor.get_lpcwstr());
-            SetCursor(cursor);
-        }
-    }
-
     /// Get the raw HWND handle, for uses that are not wrapped in
     /// druid_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
@@ -1198,6 +1182,14 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
     /// Get a reference to the text factory.
     fn text_factory(&mut self) -> &mut Text<'a> {
         &mut self.text
+    }
+
+    /// Set the cursor icon.
+    fn set_cursor(&mut self, cursor: &Cursor) {
+        unsafe {
+            let cursor = LoadCursorW(0 as HINSTANCE, cursor.get_lpcwstr());
+            SetCursor(cursor);
+        }
     }
 }
 

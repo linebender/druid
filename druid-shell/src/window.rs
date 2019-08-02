@@ -48,6 +48,9 @@ pub trait WinCtx<'a> {
 
     /// Get a reference to an object that can do text layout.
     fn text_factory(&mut self) -> &mut Text<'a>;
+
+    /// Set the cursor icon.
+    fn set_cursor(&mut self, cursor: &Cursor);
 }
 
 /// App behavior, supplied by the app.
@@ -165,6 +168,7 @@ pub enum MouseButton {
 //both Windows and macOS. We may want to provide polyfills for various additional cursors,
 //and we will also want to add some mechanism for adding custom cursors.
 /// Mouse cursors.
+#[derive(Clone)]
 pub enum Cursor {
     /// The default arrow cursor.
     Arrow,
