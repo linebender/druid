@@ -137,9 +137,9 @@ pub trait WinHandler {
 pub struct MouseEvent {
     /// The location of the mouse in the current window.
     ///
-    /// This is in px units, that is, adjusted for hDPI.
+    /// This is in px units, that is, adjusted for hi-dpi.
     pub pos: Point,
-    /// Modifiers, as in raw WM message
+    /// Keyboard modifiers at the time of the mouse event.
     pub mods: KeyModifiers,
     /// The number of mouse clicks associated with this event. This will always
     /// be `0` for a mouse-up event.

@@ -27,6 +27,7 @@ const KNOB_COLOR: Color = Color::rgb24(0xf0_f0_e5);
 const KNOB_HOVER_COLOR: Color = Color::rgb24(0xa0_a0_a5);
 const KNOB_PRESSED_COLOR: Color = Color::rgb24(0x75_75_75);
 
+/// A slider, allowing interactive update of a numeric value.
 #[derive(Debug, Clone, Default)]
 pub struct Slider {
     width: f64,

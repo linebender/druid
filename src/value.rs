@@ -22,7 +22,10 @@ use std::collections::HashMap;
 /// This is a placeholder for a proper error type.
 pub type Error = ();
 
-/// The basic data type manipulated by this library.
+/// An attempt at a dynamically typed value for immutable data.
+///
+/// Do not use this for new code; it is an exploration and is likely
+/// to be deleted in favor of a more strongly typed approach.
 ///
 /// This is similar to serde_json's `Value`, but with some important
 /// differences. The main one is that it's reference counted for
@@ -47,12 +50,18 @@ pub enum PathEl {
     Map(String),
 }
 
+/// A path from the root to a particular subtree of `Value`.
 // TODO: we probably want &[PathEl] for most read-only cases.
 // Actually there are a lot of tradeoffs, it could be ref-counted and even a linked list
 // to make lifetimes / cloning easier.
 // Should be a newtype so we can have methods like join?
 pub type KeyPath = Vec<PathEl>;
 
+/// A fragment of a path for traversing [`Value`](struct.Value.html) objects.
+///
+/// As with Value, don't use this for new code; a strongly typed approach is
+/// preferred, and then [`Lens`](struct.Lens.html) would perform the function
+/// of addressing parts of a larger data tree.
 pub trait PathFragment {
     fn len(&self) -> usize;
 
@@ -83,6 +92,12 @@ pub struct DeltaEl {
     pub new_value: Option<Value>,
 }
 
+/// A precise description of the difference between two `Value` objects.
+///
+/// Don't use this for new code. The main counterpart in the strongly
+/// typed approach is the [`Data`] trait, which can be queried recursively.
+///
+/// [`Data`]: trait.Data.html
 pub type Delta = Vec<DeltaEl>;
 
 impl Default for Value {

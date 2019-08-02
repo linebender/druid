@@ -21,21 +21,64 @@ use crate::{
     UpdateCtx, Widget,
 };
 
-/// A lens is a datatype that gives access to a field within a larger
+/// A lens is a datatype that gives access to a part of a larger
 /// data structure.
+///
+/// A simple example of a lens is a field of a struct; in this case,
+/// the lens itself is zero-sized. Another case is accessing an array
+/// element, in which case the lens contains the array index.
+///
+/// Many `Lens` implementations will be derived by macro, but custom
+/// implementations are practical as well.
+///
+/// The name "lens" is inspired by [Haskell lens] package, which has
+/// generally similar goals. It's likely we'll develop more
+/// sophistication, for example combinators to combine lenses.
+///
+/// [Haskell lens]: http://hackage.haskell.org/package/lens
 pub trait Lens<T, U> {
     /// Get non-mut access to the field.
+    ///
+    /// Discussion question: using a closure as in the [`with_mut`]
+    /// method may improve flexibility (for example, being able to
+    /// synthesize derived data on the fly). Is this flexibility worth
+    /// the increased complexity?
+    ///
+    /// If so, the signature of the `Lens` trait may change.
+    ///
+    /// [`with_mut`]: #tymethod.with_mut
     fn get<'a>(&self, data: &'a T) -> &'a U;
 
     /// Get mutable access to the field.
     ///
-    /// Discussion: I'm not 100% sure this needs to be laundered through
-    /// a closure (and that `get` doesn't).
+    /// This method is defined in terms of a closure, rather than simply
+    /// yielding a mutable reference, because it is intended to be used
+    /// with value-type data (also known as immutable data structures).
+    /// For example, a lens for an immutable list might be implemented by
+    /// cloning the list, giving the closure mutable access to the clone,
+    /// then updating the reference after the closure returns.
     fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> V;
 }
 
 // A case can be made this should be in the `widget` module.
 
+/// A wrapper for its widget subtree to have access to a part
+/// of its parent's data.
+///
+/// Every widget in druid is instantiated with access to data of some
+/// type; the root widget has access to the entire application data.
+/// Often, a part of the widget hiearchy is only concerned with a part
+/// of that data. The `LensWrap` widget is a way to "focus" the data
+/// reference down, for the subtree. One advantage is performance;
+/// data changes that don't intersect the scope of the lens aren't
+/// propagated.
+///
+/// Another advantage is generality and reuse. If a widget
+///
+/// This wrapper takes a [`Lens`] as an argument, which is a specification
+/// of a struct field, or some other way of narrowing the scope.
+///
+/// [`Lens`]: trait.Lens.html
 pub struct LensWrap<U, L, W> {
     inner: W,
     lens: L,
@@ -44,6 +87,10 @@ pub struct LensWrap<U, L, W> {
 }
 
 impl<U, L, W> LensWrap<U, L, W> {
+    /// Wrap a widget with a lens.
+    ///
+    /// When the lens has type `Lens<T, U>`, the inner widget has data
+    /// of type `U`, and the wrapped widget has data of type `T`.
     pub fn new(inner: W, lens: L) -> LensWrap<U, L, W> {
         LensWrap {
             inner,

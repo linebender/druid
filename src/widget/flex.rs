@@ -21,9 +21,22 @@ use crate::{
     Widget, WidgetPod,
 };
 
+/// A builder for a row widget that can contain flex children.
+///
+/// The actual widget is implemented by [`Flex`], but this builder
+/// is provided for convenience.
+///
+/// [`Flex`]: struct.Flex.html
 pub struct Row;
+/// A builder for a column widget that can contain flex children.
+///
+/// The actual widget is implemented by [`Flex`], but this builder
+/// is provided for convenience.
+///
+/// [`Flex`]: struct.Flex.html
 pub struct Column;
 
+/// A container with either horizontal or vertical layout.
 pub struct Flex<T: Data> {
     direction: Axis,
 
@@ -69,6 +82,9 @@ impl Axis {
 }
 
 impl Row {
+    /// Create a new row widget.
+    ///
+    /// The child widgets are laid out horizontally, from left to right.
     pub fn new<T: Data>() -> Flex<T> {
         Flex {
             direction: Axis::Horizontal,
@@ -79,6 +95,9 @@ impl Row {
 }
 
 impl Column {
+    /// Create a new row widget.
+    ///
+    /// The child widgets are laid out vertically, from top to bottom.
     pub fn new<T: Data>() -> Flex<T> {
         Flex {
             direction: Axis::Vertical,
@@ -90,6 +109,14 @@ impl Column {
 
 impl<T: Data> Flex<T> {
     /// Add a child widget.
+    ///
+    /// If `flex` is zero, then the child is non-flex. It is given the same
+    /// constraints on the "minor axis" as its parent, but unconstrained on the
+    /// "major axis".
+    ///
+    /// If `flex` is non-zero, then all the space left over after layout of
+    /// the non-flex children is divided up, in proportion to the `flex` value,
+    /// among the flex children.
     pub fn add_child(&mut self, child: impl Widget<T> + 'static, flex: f64) {
         let params = Params { flex };
         let child = ChildWidget {
@@ -148,12 +175,12 @@ impl<T: Data> Widget<T> for Flex<T> {
                 let major = remaining * child.params.flex / flex_sum;
                 let child_bc = match self.direction {
                     Axis::Horizontal => BoxConstraints::new(
-                        Size::new(major, bc.min.height),
-                        Size::new(major, bc.max.height),
+                        Size::new(major, bc.min().height),
+                        Size::new(major, bc.max().height),
                     ),
                     Axis::Vertical => BoxConstraints::new(
-                        Size::new(bc.min.width, major),
-                        Size::new(bc.max.width, major),
+                        Size::new(bc.min().width, major),
+                        Size::new(bc.max().width, major),
                     ),
                 };
                 let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);

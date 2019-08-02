@@ -48,11 +48,22 @@ pub use value::{Delta, KeyPath, PathEl, PathFragment, Value};
 
 const BACKGROUND_COLOR: Color = Color::rgb24(0x27_28_22);
 
-// We can probably get rid of the distinction between this and UiState.
+/// A struct representing the top-level root of the UI.
+///
+/// At the moment, there is no meaningful distinction between this struct
+/// and [`UiState`].
+///
+/// Discussion: when we start supporting multiple windows, we'll need
+/// to make finer distinctions between state for the entire application,
+/// and state for a single window. But for now it's the same.
 pub struct UiMain<T: Data> {
     state: UiState<T>,
 }
 
+/// The state of the top-level UI.
+///
+/// This struct holds the root widget of the UI, and is also responsible
+/// for coordinating interactions with the platform window.
 pub struct UiState<T: Data> {
     root: WidgetPod<T, Box<dyn Widget<T>>>,
     data: T,
@@ -63,6 +74,18 @@ pub struct UiState<T: Data> {
     size: Size,
 }
 
+/// A container for one widget in the hierarchy.
+///
+/// Generally, container widgets don't contain other widgets directly,
+/// but rather contain a `WidgetPod`, which has additional state needed
+/// for layout and for the widget to participate in event flow.
+///
+/// This struct also contains the previous data for a widget, which is
+/// essential for the [`update`] method, both to decide when the update
+/// needs to propagate, and to provide the previous data so that a
+/// widget can process a diff between the old value and the new.
+///
+/// [`update`]: trait.Widget.html#tymethod.update
 pub struct WidgetPod<T: Data, W: Widget<T>> {
     state: BaseState,
     old_data: Option<T>,
@@ -72,6 +95,21 @@ pub struct WidgetPod<T: Data, W: Widget<T>> {
 /// Convenience type for dynamic boxed widget.
 pub type BoxedWidget<T> = WidgetPod<T, Box<dyn Widget<T>>>;
 
+/// Generic state for all widgets in the hierarchy.
+///
+/// This struct contains the widget's layout rect, flags
+/// indicating when the widget is active or focused, and other
+/// state necessary for the widget to participate in event
+/// flow.
+///
+/// It is provided to [`paint`] calls as a non-mutable reference,
+/// largely so a widget can know its size, also because active
+/// and focus state can affect the widget's appearance. Other than
+/// that, widgets will generally not interact with it directly,
+/// but it is an important part of the [`WidgetPod`] struct.
+///
+/// [`paint`]: trait.Widget.html#tymethod.paint
+/// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Default)]
 pub struct BaseState {
     layout_rect: Rect,
@@ -98,11 +136,88 @@ pub struct BaseState {
     request_focus: bool,
 }
 
+/// The trait implemented by all widgets.
+///
+/// All appearance and behavior for a widget is encapsulated in an
+/// object that implements this trait.
+///
+/// The trait is parametrized by a type (`T`) for associated data.
+/// All trait methods are provided with access to this data, and
+/// in the case of `event` the reference is mutable, so that events
+/// can directly update the data.
+///
+/// Whenever the application data changes, the framework traverses
+/// the widget hierarchy with an [`update`] method. The framework
+/// needs to know whether the data has actually changed or not, which
+/// is why `T` has a [`Data`] bound.
+///
+/// All the trait methods are provided with a corresponding context.
+/// The widget can request things and cause actions by calling methods
+/// on that context.
+///
+/// In addition, all trait methods are provided with an environment
+/// ([`Env`](struct.Env.html)).
+///
+/// Container widgets will generally not call `Widget` methods directly
+/// on their child widgets, but rather will own their widget wrapped in
+/// a [`WidgetPod`], and call the corresponding method on that. The
+/// `WidgetPod` contains state and logic for these traversals. On the
+/// other hand, particularly light-weight containers might contain their
+/// child `Widget` directly (when no layout or event flow logic is
+/// needed), and in those cases will call these methods.
+///
+/// As a general pattern, container widgets will call the corresponding
+/// `WidgetPod` method on all their children. The `WidgetPod` applies
+/// logic to determine whether to recurse, as needed.
+///
+/// [`event`]: #tymethod.event
+/// [`update`]: #tymethod.update
+/// [`Data`]: trait.Data.html
+/// [`WidgetPod`]: struct.WidgetPod.html
 pub trait Widget<T> {
+    /// Paint the widget appearance.
+    ///
+    /// The widget calls methods on the `render_target` field of the
+    /// `paint_ctx` in order to paint its appearance.
+    ///
+    /// Container widgets can paint a background before recursing to their
+    /// children, or annotations (for example, scrollbars) by painting
+    /// afterwards. In addition, they can apply masks and transforms on
+    /// the render context, which is especially useful for scrolling.
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env);
 
+    /// Compute layout.
+    ///
+    /// A leaf widget should determine its size (subject to the provided
+    /// constraints) and return it.
+    ///
+    /// A container widget will recursively call [`WidgetPod::layout`] on its
+    /// child widgets, providing each of them an appropriate box constraint,
+    /// compute layout, then call [`set_layout_rect`] on each of its children.
+    /// Finally, it should return the size of the container. The container
+    /// can recurse in any order, which can be helpful to, for example, compute
+    /// the size of non-flex widgets first, to determine the amount of space
+    /// available for the flex widgets.
+    ///
+    /// For efficiency, a container should only invoke layout of a child widget
+    /// once, though there is nothing enforcing this.
+    ///
+    /// The layout strategy is strongly inspired by Flutter.
+    ///
+    /// [`WidgetPod::layout`]: struct.WidgetPod.html#method.layout
+    /// [`set_layout_rect`]: struct.LayoutCtx.html#method.set_layout_rect
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
+    /// Handle an event.
+    ///
+    /// A number of different events (in the [`Event`] enum) are handled in this
+    /// method call. A widget can handle these events in a number of ways:
+    /// requesting things from the [`EventCtx`], mutating the data, or returning
+    /// an [`Action`].
+    ///
+    /// [`Event`]: struct.Event.html
+    /// [`EventCtx`]: struct.EventCtx.html
+    /// [`Action`]: struct.Action.html
     fn event(
         &mut self,
         event: &Event,
@@ -111,7 +226,21 @@ pub trait Widget<T> {
         env: &Env,
     ) -> Option<Action>;
 
-    // Consider a no-op default impl.
+    /// Handle a change of data.
+    ///
+    /// This method is called whenever the data changes. When the appearance of
+    /// the widget depends on data, call [`invalidate`] so that it's scheduled
+    /// for repaint.
+    ///
+    /// The previous value of the data is provided in case the widget wants to
+    /// compute a fine-grained delta. Before any paint operation, this method
+    /// will be called with `None` for `old_data`. Thus, this method can also be
+    /// used to build resources that will be retained for painting.
+    ///
+    /// [`invalidate`]: struct.UpdateCtx.html#method.invalidate
+
+    // Consider a no-op default impl. One reason against is that containers might
+    // inadvertently forget to propagate.
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env);
 }
 
@@ -141,16 +270,39 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
     }
 }
 
+/// An environment passed down through all widget traversals.
+///
+/// All widget methods have access to an environment, and it is passed
+/// downwards during traversals.
+///
+/// At present, there is no real functionality here, but work is in
+/// progress to make theme data (colors, dimensions, etc) available
+/// through the environment, as well as pass custom data down to all
+/// descendants. An important example of the latter is setting a value
+/// for enabled/disabled status so that an entire subtree can be
+/// disabled ("grayed out") with one setting.
 #[derive(Clone, Default)]
 pub struct Env {
     value: Value,
     path: KeyPath,
 }
 
+/// A context passed to paint methods of widgets.
+///
+/// Widgets paint their appearance by calling methods on the
+/// `render_ctx`. This struct is expected to grow, for example to
+/// include the "damage region" indicating that only a subset of
+/// the entire widget hierarchy needs repainting.
 pub struct PaintCtx<'a, 'b: 'a> {
+    /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'b>,
 }
 
+/// A context provided to layout handling methods of widgets.
+///
+/// As of now, the main service provided is access to a factory for
+/// creating text layout objects, which are likely to be useful
+/// during widget layout.
 pub struct LayoutCtx<'a, 'b: 'a> {
     text: &'a mut Text<'b>,
 }
@@ -187,12 +339,41 @@ pub struct UpdateCtx<'a, 'b> {
     needs_inval: bool,
 }
 
+/// An action produced by a widget.
+///
+/// Widgets have several ways of producing an effect in response to
+/// events. Two of these are mutating their data, and requesting
+/// actions from [`EventCtx`]. When neither of those is suitable,
+/// and the action is generic (for example, a button press), then
+/// the event handler for a widget can return an `Action`, and it
+/// is passed up the calling hierarchy.
+///
+/// The details of the contents of this struct are still subject to
+/// change. It's also possible that the concept will go away; a
+/// reasonable replacement is to provide buttons with a closure that
+/// can perform the action more directly.
+///
+/// [`EventCtx`]: struct.EventCtx.html
 #[derive(Debug)]
 pub struct Action {
     // This is just a placeholder for debugging purposes.
     text: String,
 }
 
+/// Constraints for layout.
+///
+/// The layout strategy for druid is strongly inspired by Flutter,
+/// and this struct is similar to the [Flutter BoxConstraints] class.
+///
+/// At the moment, it represents simply a minimum and maximum size.
+/// A widget's [`layout`] method should choose an appropriate size that
+/// meets these constraints.
+///
+/// Further, a container widget should compute appropriate constraints
+/// for each of its child widgets, and pass those down when recursing.
+///
+/// [`layout`]: trait.Widget.html#tymethod.layout
+/// [Flutter BoxConstraints]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
 #[derive(Clone, Copy, Debug)]
 pub struct BoxConstraints {
     min: Size,
@@ -200,6 +381,11 @@ pub struct BoxConstraints {
 }
 
 impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
+    /// Create a new widget pod.
+    ///
+    /// In a widget hierarchy, each widget is wrapped in a `WidgetPod`
+    /// so it can participate in layout and event flow. The process of
+    /// adding a child widget to a container should call this method.
     pub fn new(inner: W) -> WidgetPod<T, W> {
         WidgetPod {
             state: Default::default(),
@@ -216,10 +402,23 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.state.layout_rect = layout_rect;
     }
 
+    /// Get the layout rectangle.
+    ///
+    /// This will be same value as set by `set_layout_rect`.
     pub fn get_layout_rect(&self) -> Rect {
         self.state.layout_rect
     }
 
+    /// Paint a child widget.
+    ///
+    /// Generally called by container widgets as part of their [`paint`]
+    /// method.
+    ///
+    /// Note that this method does not apply the offset of the layout rect.
+    /// If that is desired, use [`paint_with_offset`](#method.paint_with_offset)
+    /// instead.
+    ///
+    /// [`layout`]: trait.Widget.html#method.layout
     pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.inner.paint(paint_ctx, &self.state, data, &env);
     }
@@ -240,6 +439,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
     }
 
+    /// Compute layout of a widget.
+    ///
+    /// Generally called by container widgets as part of their [`layout`]
+    /// method.
+    ///
+    /// [`layout`]: trait.Widget.html#method.layout
     pub fn layout(
         &mut self,
         layout_ctx: &mut LayoutCtx,
@@ -251,6 +456,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 
     /// Propagate an event.
+    ///
+    /// Generally the [`event`] method of a container widget will call this
+    /// method on all its children. Here is where a great deal of the event
+    /// flow logic resides, particularly whether to continue propagating
+    /// the event.
+    ///
+    /// [`event`]: trait.Widget.html#method.event
     pub fn event(
         &mut self,
         event: &Event,
@@ -355,6 +567,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 
     /// Propagate a data update.
+    ///
+    /// Generally called by container widgets as part of their [`update`]
+    /// method.
+    ///
+    /// [`update`]: trait.Widget.html#method.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
         if let Some(old_data) = &self.old_data {
             if old_data.same(data) {
@@ -366,8 +583,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 }
 
-// Consider putting the `'static` bound on the main impl.
 impl<T: Data, W: Widget<T> + 'static> WidgetPod<T, W> {
+    /// Box the contained widget.
+    ///
+    /// Convert a `WidgetPod` containing a widget of a specific concrete type
+    /// into a dynamically boxed widget.
     pub fn boxed(self) -> BoxedWidget<T> {
         WidgetPod {
             state: self.state,
@@ -377,17 +597,11 @@ impl<T: Data, W: Widget<T> + 'static> WidgetPod<T, W> {
     }
 }
 
-// The following seems not to work because of the parametrization on T.
-/*
-// Convenience method for conversion to boxed widgets.
-impl<T: Data, W: Widget<T> + 'static> From<W> for BoxedWidget<T> {
-    fn from(w: W) -> BoxedWidget<T> {
-        WidgetPod::new(w).boxed()
-    }
-}
-*/
-
 impl<T: Data> UiState<T> {
+    /// Construct a new UI state.
+    ///
+    /// This constructor takes a root widget and an initial value for the
+    /// data.
     pub fn new(root: impl Widget<T> + 'static, data: T) -> UiState<T> {
         UiState {
             root: WidgetPod::new(root).boxed(),
@@ -490,8 +704,6 @@ impl<T: Data> UiState<T> {
         };
         let anim_frame_event = Event::AnimFrame(interval);
         let (_, request_anim) = self.do_event_inner(anim_frame_event, ctx);
-        // TODO: issue anim_frame_event. Needs a win_ctx for this, which needs to be
-        // plumbed.
         self.prev_paint_time = Some(this_paint_time);
         let bc = BoxConstraints::tight(self.size);
         let env = self.root_env();
@@ -510,6 +722,7 @@ impl<T: Data> UiState<T> {
 }
 
 impl<T: Data> UiMain<T> {
+    /// Construct a new UI state.
     pub fn new(state: UiState<T>) -> UiMain<T> {
         UiMain { state }
     }
@@ -565,28 +778,78 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
 }
 
 impl BaseState {
+    /// The "hot" (aka hover) status of a widget.
+    ///
+    /// A widget is "hot" when the mouse is hovered over it. Widgets will
+    /// often change their appearance as a visual indication that they
+    /// will respond to mouse interaction.
+    ///
+    /// The hot status is computed from the widget's layout rect. In a
+    /// container hierarchy, all widgets with layout rects containing the
+    /// mouse position have hot status.
+    ///
+    /// Discussion: there is currently some confusion about whether a
+    /// widget can be considered hot when some other widget is active (for
+    /// example, when clicking to one widget and dragging to the next).
+    /// The documentation should clearly state the resolution.
     pub fn is_hot(&self) -> bool {
         self.is_hot
     }
 
+    /// The active status of a widget.
+    ///
+    /// Active status generally corresponds to a mouse button down. Widgets
+    /// with behavior similar to a button will call [`set_active`] on mouse
+    /// down and then up.
+    ///
+    /// When a widget is active, it gets mouse events even when the mouse
+    /// is dragged away.
+    ///
+    /// [`set_active`]: struct.EventCtx.html#method.set_active
     pub fn is_active(&self) -> bool {
         self.is_active
     }
 
+    /// The focus status of a widget.
+    ///
+    /// A widget can request focus using the [`request_focus`] method.
+    /// This will generally result in a separate event propagation of
+    /// a `FocusChanged` method, including sending `false` to the previous
+    /// widget that held focus.
+    ///
+    /// Only one leaf widget at a time has focus. However, in a container
+    /// hierarchy, all ancestors of that leaf widget are also invoked with
+    /// `FocusChanged(true)`.
+    ///
+    /// Discussion question: is "is_focused" a better name?
+    /// [`request_focus`]: struct.EventCtx.html#method.request_focus
     pub fn has_focus(&self) -> bool {
         self.has_focus
     }
 
+    /// The layout size.
+    ///
+    /// This is the layout size as ultimately determined by the parent
+    /// container. Generally it will be the same as the size returned by
+    /// the child widget's [`layout`] method.
+    ///
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn size(&self) -> Size {
         self.layout_rect.size()
     }
 }
 
 impl BoxConstraints {
+    /// Create a new box constraints object.
+    ///
+    /// Create constraints based on minimum and maximum size.
     pub fn new(min: Size, max: Size) -> BoxConstraints {
         BoxConstraints { min, max }
     }
 
+    /// Create a "tight" box constraints object.
+    ///
+    /// A "tight" constraint can only be satisfied by a single size.
     pub fn tight(size: Size) -> BoxConstraints {
         BoxConstraints {
             min: size,
@@ -594,6 +857,7 @@ impl BoxConstraints {
         }
     }
 
+    /// Clamp a given size so that fits within the constraints.
     pub fn constrain(&self, size: impl Into<Size>) -> Size {
         size.into().clamp(self.min, self.max)
     }
@@ -653,17 +917,19 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     /// to its children, as a sequence of calls within an event propagation
     /// only has the effect of the last one (ie no need to worry about
     /// flashing).
+    ///
+    /// This method is expected to be called mostly from the [`MouseMoved`]
+    /// event handler, but can also be called in response to other events,
+    /// for example pressing a key to change the behavior of a widget.
+    ///
+    /// [`MouseMoved`]: enum.Event.html#variant.MouseDown
     pub fn set_cursor(&mut self, cursor: &Cursor) {
         *self.cursor = Some(cursor.clone());
     }
 
     /// Set the "active" state of the widget.
     ///
-    /// The active state basically captures a mouse press inside the widget.
-    /// Thus, a button should set this to true on mouse down and false on
-    /// mouse up.
-    ///
-    /// While a widget is active, all mouse events are routed to it.
+    /// See [`BaseState::is_active`](struct.BaseState.html#method.is_hot).
     pub fn set_active(&mut self, active: bool) {
         self.base_state.is_active = active;
         // TODO: plumb mouse grab through to platform (through druid-shell)
@@ -671,7 +937,7 @@ impl<'a, 'b> EventCtx<'a, 'b> {
 
     /// Query the "hot" state of the widget.
     ///
-    /// A widget is hot when the mouse is hovering.
+    /// See [`BaseState::is_hot`](struct.BaseState.html#method.is_hot).
     pub fn is_hot(&self) -> bool {
         self.base_state.is_hot
     }
@@ -710,6 +976,9 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.base_state.request_anim = true;
     }
 
+    /// Query the focus state of the widget.
+    ///
+    /// See [`BaseState::has_focus`](struct.BaseState.html#method.has_focus).
     pub fn has_focus(&self) -> bool {
         self.base_state.has_focus
     }

@@ -84,8 +84,10 @@ impl KeyEvent {
     }
 }
 
+/// Keyboard modifier state, provided for events.
 #[derive(Clone, Copy, Default, PartialEq)]
 pub struct KeyModifiers {
+    /// Shift.
     pub shift: bool,
     /// Option on macOS.
     pub alt: bool,

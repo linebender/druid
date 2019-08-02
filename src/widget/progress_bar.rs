@@ -23,6 +23,7 @@ use crate::{
 const BACKGROUND_COLOR: Color = Color::rgb24(0x55_55_55);
 const BAR_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 
+/// A progress bar, displaying a numeric progress value.
 #[derive(Debug, Clone, Default)]
 pub struct ProgressBar {}
 

@@ -20,7 +20,7 @@ use std::sync::Arc;
 ///
 /// These should be cheap to compare and cheap to clone.
 ///
-/// See https://sinusoid.es/lager/model.html#id2 for a well-written
+/// See <https://sinusoid.es/lager/model.html#id2> for a well-written
 /// explanation of value types (albeit within a C++ context).
 pub trait Data: Clone {
     /// Determine whether two values are the same.

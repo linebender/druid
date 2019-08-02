@@ -19,6 +19,7 @@ use crate::{
     Rect, Size, UpdateCtx, Widget, WidgetPod,
 };
 
+/// A widget that just adds padding around its child.
 pub struct Padding<T: Data> {
     left: f64,
     right: f64,
@@ -55,8 +56,8 @@ impl<T: Data> Widget<T> for Padding<T> {
     ) -> Size {
         let hpad = self.left + self.right;
         let vpad = self.top + self.bottom;
-        let min = Size::new(bc.min.width - hpad, bc.min.height - vpad);
-        let max = Size::new(bc.max.width - hpad, bc.max.height - vpad);
+        let min = Size::new(bc.min().width - hpad, bc.min().height - vpad);
+        let max = Size::new(bc.max().width - hpad, bc.max().height - vpad);
         let child_bc = BoxConstraints::new(min, max);
         let size = self.child.layout(layout_ctx, &child_bc, data, env);
         let origin = Point::new(self.left, self.top);

@@ -29,14 +29,20 @@ const BUTTON_HOVER_COLOR: Color = Color::rgba32(0x50_50_58_ff);
 const BUTTON_PRESSED_COLOR: Color = Color::rgba32(0x60_60_68_ff);
 const LABEL_TEXT_COLOR: Color = Color::rgba32(0xf0_f0_ea_ff);
 
+/// A label with static text.
 pub struct Label {
     text: String,
 }
 
+/// A button with a static label.
 pub struct Button {
     label: Label,
 }
 
+/// A label with dynamic text.
+///
+/// The provided closure is called on update, and its return
+/// value is used as the text for the label.
 pub struct DynLabel<T: Data, F: FnMut(&T, &Env) -> String> {
     label_closure: F,
     phantom: PhantomData<T>,
