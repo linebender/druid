@@ -14,10 +14,10 @@
 
 //! GTK implementation of runloop.
 
+use crate::util::assert_main_thread;
 use gio::ApplicationFlags;
 use gtk::{Application, ApplicationWindow};
 use std::cell::RefCell;
-use crate::util::assert_main_thread;
 
 /// XXX: The application needs to be global because WindowBuilder::build wants
 /// to construct an ApplicationWindow, which needs the application, but

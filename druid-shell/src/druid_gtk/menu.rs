@@ -23,6 +23,8 @@ use gtk::MenuBar as GtkMenuBar;
 use gtk::MenuItem as GtkMenuItem;
 use gtk::{MenuExt, MenuItemExt, MenuShellExt};
 
+use crate::keycodes::MenuKey;
+
 pub struct Menu {
     items: Vec<MenuItem>,
 }
@@ -69,7 +71,7 @@ impl Menu {
         self.items.push(MenuItem::SubMenu(text.into(), menu));
     }
 
-    pub fn add_item(&mut self, id: u32, text: &str) {
+    pub fn add_item(&mut self, id: u32, text: &str, key: impl Into<MenuKey>) {
         // TODO: handle accelerator shortcuts by parsing `text`
         self.items.push(MenuItem::Entry(text.into(), id));
     }

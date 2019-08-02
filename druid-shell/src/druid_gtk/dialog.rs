@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 //! File open/save dialogs, GTK implementation.
 
 /// Type of file dialog.

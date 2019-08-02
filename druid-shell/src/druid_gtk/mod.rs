@@ -32,15 +32,15 @@ use gtk::Inhibit;
 
 use piet_common::{Piet, RenderContext};
 
+use crate::keyboard;
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::platform::menu::Menu;
-use crate::window::{self, Cursor, WinHandler, MouseButton};
-use crate::keyboard;
+use crate::window::{self, Cursor, MouseButton, WinHandler};
 use crate::Error;
 
+use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers, RawKeyCode, StrOrChar};
 use util::assert_main_thread;
 use win_main::with_application;
-use crate::keyboard::{KeyModifiers, KeyCode, KeyEvent, RawKeyCode, StrOrChar};
 
 #[derive(Clone, Default)]
 pub struct WindowHandle {
@@ -229,7 +229,7 @@ impl WindowBuilder {
                     y: position.1 as i32,
                     mods: gtk_modifiers_to_druid(motion.get_state()),
                     count: 0,
-                    button: gtk_modifiers_to_mouse_button(motion.get_state())
+                    button: gtk_modifiers_to_mouse_button(motion.get_state()),
                 };
 
                 handler.mouse_move(&mouse_event);
@@ -294,7 +294,6 @@ impl WindowBuilder {
             drawing_area.connect_key_release_event(move |_widget, key| {
                 let key_event = gtk_event_key_to_key_event(key);
                 handler.key_up(key_event);
-
 
                 Inhibit(true)
             });
@@ -439,14 +438,14 @@ fn gtk_button_to_druid(button: u32) -> window::MouseButton {
 /// Map the GTK modifiers into Druid bits
 #[inline]
 fn gtk_modifiers_to_druid(modifiers: gdk::ModifierType) -> keyboard::KeyModifiers {
-    use gdk::ModifierType;
     use crate::keycodes;
+    use gdk::ModifierType;
 
     keyboard::KeyModifiers {
         shift: modifiers.contains(ModifierType::SHIFT_MASK),
         alt: modifiers.contains(ModifierType::MOD1_MASK),
         ctrl: modifiers.contains(ModifierType::CONTROL_MASK),
-        meta: modifiers.contains(ModifierType::META_MASK)
+        meta: modifiers.contains(ModifierType::META_MASK),
     }
 }
 
@@ -465,9 +464,6 @@ fn gtk_modifiers_to_mouse_button(modifiers: gdk::ModifierType) -> window::MouseB
     }
 }
 
-
-
-
 fn gtk_event_key_to_key_event(key: &EventKey) -> keyboard::KeyEvent {
     let keyval = key.get_keyval();
     let keycode = KeyCode::from(keyval);
@@ -481,7 +477,7 @@ fn gtk_event_key_to_key_event(key: &EventKey) -> keyboard::KeyEvent {
         false, // TODO Steven implement is_repeat
         gtk_modifiers_to_druid(key.get_state()),
         text,
-        unmodified_text
+        unmodified_text,
     )
 }
 
@@ -564,8 +560,8 @@ impl From<u32> for KeyCode {
             F6 => KeyCode::F6,
             F7 => KeyCode::F7,
             F3 => KeyCode::F3,
-            F8=> KeyCode::F8,
-            F9=> KeyCode::F9,
+            F8 => KeyCode::F8,
+            F9 => KeyCode::F9,
             F10 => KeyCode::F10,
             F11 => KeyCode::F11,
             F12 => KeyCode::F12,
