@@ -1,5 +1,3 @@
-pr: ["master"]
-
 jobs:
   - job:
     strategy:
@@ -18,6 +16,14 @@ jobs:
       - template: ci/install-rust.yml
         parameters:
           rust_version: stable
+
+      - template: ci/rustfmt.yml
+        parameters:
+          crate_path: 'druid-shell'
+
+      - template: ci/rustfmt.yml
+        parameters:
+          crate_path: '.'
 
       - template: ci/test.yml
         parameters:
