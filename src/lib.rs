@@ -177,7 +177,7 @@ pub struct BaseState {
 pub trait Widget<T> {
     /// Paint the widget appearance.
     ///
-    /// The widget calls methods on the `render_target` field of the
+    /// The widget calls methods on the `render_ctx` field of the
     /// `paint_ctx` in order to paint its appearance.
     ///
     /// Container widgets can paint a background before recursing to their
@@ -811,6 +811,8 @@ impl BaseState {
     }
 
     /// The focus status of a widget.
+    ///
+    /// Focus means that the widget receives keyboard events.
     ///
     /// A widget can request focus using the [`request_focus`] method.
     /// This will generally result in a separate event propagation of

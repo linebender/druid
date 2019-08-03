@@ -30,7 +30,7 @@ use druid_shell::window::MouseEvent;
 /// within the widget hierarchy, for example when a widget gains or loses
 /// focus or "hot" (also known as hover) status.
 ///
-/// Events are a key part of what is called "event flow", which is the
+/// Events are a key part of what is called "event flow", which is
 /// basically the propagation of an event through the widget hierarchy
 /// through the [`event`] widget method. A container widget will
 /// generally pass the event to its children, mediated through the

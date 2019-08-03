@@ -31,8 +31,8 @@ use crate::{
 /// Many `Lens` implementations will be derived by macro, but custom
 /// implementations are practical as well.
 ///
-/// The name "lens" is inspired by [Haskell lens] package, which has
-/// generally similar goals. It's likely we'll develop more
+/// The name "lens" is inspired by the [Haskell lens] package, which
+/// has generally similar goals. It's likely we'll develop more
 /// sophistication, for example combinators to combine lenses.
 ///
 /// [Haskell lens]: http://hackage.haskell.org/package/lens
@@ -73,7 +73,10 @@ pub trait Lens<T, U> {
 /// data changes that don't intersect the scope of the lens aren't
 /// propagated.
 ///
-/// Another advantage is generality and reuse. If a widget
+/// Another advantage is generality and reuse. If a widget (or tree of
+/// widgets) is designed to work with some chunk of data, then with a
+/// lens that same code can easily be reused across all occurrences of
+/// that chunk within the application state.
 ///
 /// This wrapper takes a [`Lens`] as an argument, which is a specification
 /// of a struct field, or some other way of narrowing the scope.
