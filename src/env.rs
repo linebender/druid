@@ -48,7 +48,7 @@ struct EnvImpl {
 }
 
 /// A value that can be stored in an environment.
-/// 
+///
 /// This is an enum with a variety of common types.
 #[derive(Clone)]
 pub enum EnvValue {

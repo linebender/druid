@@ -24,7 +24,6 @@ use crate::{
 use crate::piet::{FillRule, FontBuilder, Text, TextLayoutBuilder};
 use crate::{Piet, Point, RenderContext};
 
-
 /// A label with static text.
 pub struct Label {
     text: String,
