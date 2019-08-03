@@ -15,8 +15,8 @@
 //! A textbox widget.
 
 use crate::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, KeyCode, LayoutCtx, PaintCtx,
-    UpdateCtx, Widget, Cursor
+    Action, BaseState, BoxConstraints, Cursor, Env, Event, EventCtx, KeyCode, LayoutCtx, PaintCtx,
+    UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
