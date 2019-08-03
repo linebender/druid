@@ -33,11 +33,11 @@ core-graphics = "0.17.3"
 cairo-rs = { version = "0.7.1", default_features = false }
 
 [target.'cfg(target_os="linux")'.dependencies]
-cairo-rs = {  version = "0.5.0", default_features = false }
-gio = "0.5.0"
-gdk = "0.9.0"
-gtk = "0.5.0"
-glib = "0.6.1"
+cairo-rs = {  version = "0.7.1", default_features = false }
+gio = "0.7.0"
+gdk = "0.11.0"
+gtk = "0.7.0"
+glib = "0.8.1"
 
 [dev-dependencies]
 kurbo = "0.2.1"

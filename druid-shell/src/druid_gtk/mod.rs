@@ -95,7 +95,7 @@ impl WindowBuilder {
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
-        use gtk::{BoxExt, ContainerExt, GtkWindowExt, WidgetExt};
+        use gtk::{BoxExt, ContainerExt, GtkWindowExt, WidgetExt, WidgetExtManual};
         assert_main_thread();
 
         let handler = self
@@ -127,15 +127,14 @@ impl WindowBuilder {
         let drawing_area = gtk::DrawingArea::new();
 
         drawing_area.set_events(
-            (EventMask::EXPOSURE_MASK
+            EventMask::EXPOSURE_MASK
                 | EventMask::POINTER_MOTION_MASK
                 | EventMask::BUTTON_PRESS_MASK
                 | EventMask::BUTTON_RELEASE_MASK
                 | EventMask::KEY_PRESS_MASK
                 | EventMask::ENTER_NOTIFY_MASK
                 | EventMask::KEY_RELEASE_MASK
-                | EventMask::SCROLL_MASK)
-                .bits() as i32,
+                | EventMask::SCROLL_MASK
         );
 
         drawing_area.set_can_focus(true);

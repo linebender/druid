@@ -21,7 +21,7 @@ use std::sync::Arc;
 use gtk::Menu as GtkMenu;
 use gtk::MenuBar as GtkMenuBar;
 use gtk::MenuItem as GtkMenuItem;
-use gtk::{MenuExt, MenuItemExt, MenuShellExt};
+use gtk::{GtkMenuExt, GtkMenuItemExt, MenuShellExt};
 
 use crate::keycodes::MenuKey;
 
@@ -54,7 +54,7 @@ impl MenuItem {
             }
             MenuItem::SubMenu(name, submenu) => {
                 let item = GtkMenuItem::new_with_label(&name);
-                item.set_submenu(&submenu.into_gtk_menu(handler));
+                item.set_submenu(Some(&submenu.into_gtk_menu(handler)));
 
                 item
             }

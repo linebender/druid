@@ -32,20 +32,21 @@ pub struct RunLoop {}
 impl RunLoop {
     pub fn new() -> RunLoop {
         use gio::ApplicationExt;
+        use gio::Cancellable;
         use gtk::GtkApplicationExt;
 
         assert_main_thread();
 
         // TODO: we should give control over the application ID to the user
         let application =
-            Application::new("com.github.xi-editor.druid", ApplicationFlags::FLAGS_NONE)
+            Application::new(Some("com.github.xi-editor.druid"), ApplicationFlags::FLAGS_NONE)
                 .expect("Unable to create GTK application");
 
         application.connect_activate(|app| {
             eprintln!("Activated application");
         });
 
-        application.register(None);
+        application.register(None as Option<&Cancellable>);
         application.activate();
 
         GTK_APPLICATION.with(move |x| *x.borrow_mut() = Some(application));
