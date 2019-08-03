@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::any::Any;
-use std::cell::RefCell;
 
 use time::get_time;
 
@@ -26,45 +25,42 @@ use druid_shell::platform::PresentStrategy;
 use druid_shell::keyboard::KeyEvent;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::runloop;
-use druid_shell::window::{WinHandler, WindowHandle};
+use druid_shell::window::{WinCtx, WinHandler, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb24(0x27_28_22);
 const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 
-struct PerfTest(RefCell<PerfState>);
-
-struct PerfState {
+struct PerfTest {
     handle: WindowHandle,
     size: (f64, f64),
     last_time: f64,
 }
 
 impl WinHandler for PerfTest {
-    fn connect(&self, handle: &WindowHandle) {
-        self.0.borrow_mut().handle = handle.clone();
+    fn connect(&mut self, handle: &WindowHandle) {
+        self.handle = handle.clone();
     }
 
-    fn paint(&self, rc: &mut Piet) -> bool {
-        let mut state = self.0.borrow_mut();
-        let (width, height) = state.size;
-        let bg = rc.solid_brush(BG_COLOR);
-        let fg = rc.solid_brush(FG_COLOR);
+    fn paint(&mut self, piet: &mut Piet, _ctx: &mut dyn WinCtx) -> bool {
+        let (width, height) = self.size;
+        let bg = piet.solid_brush(BG_COLOR);
+        let fg = piet.solid_brush(FG_COLOR);
         let rect = Rect::new(0.0, 0.0, width, height);
-        rc.fill(rect, &bg, FillRule::NonZero);
+        piet.fill(rect, &bg, FillRule::NonZero);
 
-        rc.stroke(Line::new((0.0, height), (width, 0.0)), &fg, 1.0, None);
+        piet.stroke(Line::new((0.0, height), (width, 0.0)), &fg, 1.0, None);
 
         let th = ::std::f64::consts::PI * (get_time().nsec as f64) * 2e-9;
         let dx = 100.0 * th.sin();
         let dy = 100.0 * th.cos();
-        rc.stroke(
+        piet.stroke(
             Line::new((100.0, 100.0), (100.0 + dx, 100.0 - dy)),
             &fg,
             1.0,
             None,
         );
 
-        let font = rc
+        let font = piet
             .text()
             .new_font_by_name("Consolas", 15.0)
             .unwrap()
@@ -73,18 +69,18 @@ impl WinHandler for PerfTest {
 
         let now = get_time();
         let now = now.sec as f64 + 1e-9 * now.nsec as f64;
-        let msg = format!("{:3.1}ms", 1e3 * (now - state.last_time));
-        state.last_time = now;
-        let layout = rc
+        let msg = format!("{:3.1}ms", 1e3 * (now - self.last_time));
+        self.last_time = now;
+        let layout = piet
             .text()
             .new_text_layout(&font, &msg)
             .unwrap()
             .build()
             .unwrap();
-        rc.draw_text(&layout, (10.0, 210.0), &fg);
+        piet.draw_text(&layout, (10.0, 210.0), &fg);
 
         let msg = "Hello DWrite! This is a somewhat longer string of text intended to provoke slightly longer draw times.";
-        let layout = rc
+        let layout = piet
             .text()
             .new_text_layout(&font, &msg)
             .unwrap()
@@ -95,38 +91,37 @@ impl WinHandler for PerfTest {
         let y0 = 10.0;
         for i in 0..60 {
             let y = y0 + (i as f64) * dy;
-            rc.draw_text(&layout, (x0, y), &fg);
+            piet.draw_text(&layout, (x0, y), &fg);
         }
 
         true
     }
 
-    fn command(&self, id: u32) {
+    fn command(&mut self, id: u32, _ctx: &mut dyn WinCtx) {
         match id {
-            0x100 => self.0.borrow().handle.close(),
+            0x100 => self.handle.close(),
             _ => println!("unexpected id {}", id),
         }
     }
 
-    fn key_down(&self, event: KeyEvent) -> bool {
+    fn key_down(&mut self, event: KeyEvent, _ctx: &mut dyn WinCtx) -> bool {
         println!("keydown: {:?}", event);
         false
     }
 
-    fn size(&self, width: u32, height: u32) {
-        let mut state = self.0.borrow_mut();
-        let dpi = state.handle.get_dpi();
+    fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
+        let dpi = self.handle.get_dpi();
         let dpi_scale = dpi as f64 / 96.0;
         let width_f = (width as f64) / dpi_scale;
         let height_f = (height as f64) / dpi_scale;
-        state.size = (width_f, height_f);
+        self.size = (width_f, height_f);
     }
 
-    fn destroy(&self) {
+    fn destroy(&mut self, _ctx: &mut dyn WinCtx) {
         runloop::request_quit();
     }
 
-    fn as_any(&self) -> &dyn Any {
+    fn as_any(&mut self) -> &mut dyn Any {
         self
     }
 }
@@ -136,12 +131,12 @@ fn main() {
 
     let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
-    let perf_state = PerfState {
+    let perf_test = PerfTest {
         size: Default::default(),
         handle: Default::default(),
         last_time: 0.0,
     };
-    builder.set_handler(Box::new(PerfTest(RefCell::new(perf_state))));
+    builder.set_handler(Box::new(perf_test));
     builder.set_title("Performance tester");
 
     // Note: experiment with changing this

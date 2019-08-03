@@ -1,5 +1,3 @@
-pr: ["master"]
-
 jobs:
   - job:
     strategy:
@@ -19,20 +17,30 @@ jobs:
         parameters:
           rust_version: stable
 
-      - template: ci/test.yml
+      - template: ci/rustfmt.yml
         parameters:
-          toolchain: stable
           crate_path: 'druid-shell'
+
+      - template: ci/rustfmt.yml
+        parameters:
+          crate_path: '.'
 
       - template: ci/test.yml
         parameters:
-          toolchain: nightly
+          toolchain: stable
           crate_path: 'druid-shell'
 
       - template: ci/test.yml
         parameters:
           toolchain: stable
           crate_path: '.'
+
+      - template: ci/install-nightly.yml
+
+      - template: ci/test.yml
+        parameters:
+          toolchain: nightly
+          crate_path: 'druid-shell'
 
       - template: ci/test.yml
         parameters:

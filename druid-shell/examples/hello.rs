@@ -13,9 +13,8 @@
 // limitations under the License.
 
 use std::any::Any;
-use std::cell::RefCell;
 
-use piet_common::kurbo::{Line, Rect};
+use piet_common::kurbo::{Line, Rect, Vec2};
 use piet_common::{Color, FillRule, RenderContext};
 
 use druid_shell::dialog::{FileDialogOptions, FileDialogType};
@@ -24,82 +23,79 @@ use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::runloop;
-use druid_shell::window::{MouseEvent, WinHandler, WindowHandle};
+use druid_shell::window::{MouseEvent, WinCtx, WinHandler, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb24(0x27_28_22);
 const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
 
 #[derive(Default)]
 struct HelloState {
-    size: RefCell<(f64, f64)>,
-    handle: RefCell<WindowHandle>,
+    size: (f64, f64),
+    handle: WindowHandle,
 }
 
 impl WinHandler for HelloState {
-    fn connect(&self, handle: &WindowHandle) {
-        *self.handle.borrow_mut() = handle.clone();
+    fn connect(&mut self, handle: &WindowHandle) {
+        self.handle = handle.clone();
     }
 
-    fn paint(&self, rc: &mut piet_common::Piet) -> bool {
-        let bg = rc.solid_brush(BG_COLOR);
-        let fg = rc.solid_brush(FG_COLOR);
-        let (width, height) = *self.size.borrow();
+    fn paint(&mut self, piet: &mut piet_common::Piet, _ctx: &mut dyn WinCtx) -> bool {
+        let bg = piet.solid_brush(BG_COLOR);
+        let fg = piet.solid_brush(FG_COLOR);
+        let (width, height) = self.size;
         let rect = Rect::new(0.0, 0.0, width, height);
-        rc.fill(rect, &bg, FillRule::NonZero);
-        rc.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &fg, 1.0, None);
+        piet.fill(rect, &bg, FillRule::NonZero);
+        piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &fg, 1.0, None);
         false
     }
 
-    fn command(&self, id: u32) {
+    fn command(&mut self, id: u32, _ctx: &mut dyn WinCtx) {
         match id {
-            0x100 => self.handle.borrow().close(),
+            0x100 => self.handle.close(),
             0x101 => {
                 let mut options = FileDialogOptions::default();
                 options.set_show_hidden();
-                let filename = self
-                    .handle
-                    .borrow()
-                    .file_dialog(FileDialogType::Open, options);
+                let filename = self.handle.file_dialog(FileDialogType::Open, options);
                 println!("result: {:?}", filename);
             }
             _ => println!("unexpected id {}", id),
         }
     }
 
-    fn key_down(&self, event: KeyEvent) -> bool {
+    fn key_down(&mut self, event: KeyEvent, _ctx: &mut dyn WinCtx) -> bool {
         println!("keydown: {:?}", event);
         false
     }
 
-    fn mouse_wheel(&self, delta: i32, mods: KeyModifiers) {
-        println!("mouse_wheel {} {:?}", delta, mods);
+    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, _ctx: &mut dyn WinCtx) {
+        println!("mouse_wheel {:?} {:?}", delta, mods);
     }
 
-    fn mouse_hwheel(&self, delta: i32, mods: KeyModifiers) {
-        println!("mouse_hwheel {} {:?}", delta, mods);
-    }
-
-    fn mouse_move(&self, event: &MouseEvent) {
+    fn mouse_move(&mut self, event: &MouseEvent, _ctx: &mut dyn WinCtx) {
         println!("mouse_move {:?}", event);
     }
 
-    fn mouse(&self, event: &MouseEvent) {
-        println!("mouse {:?}", event);
+    fn mouse_down(&mut self, event: &MouseEvent, _ctx: &mut dyn WinCtx) {
+        println!("mouse_down {:?}", event);
     }
 
-    fn size(&self, width: u32, height: u32) {
-        let dpi = self.handle.borrow().get_dpi();
+    fn mouse_up(&mut self, event: &MouseEvent, _ctx: &mut dyn WinCtx) {
+        println!("mouse_up {:?}", event);
+    }
+
+    fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
+        let dpi = self.handle.get_dpi();
         let dpi_scale = dpi as f64 / 96.0;
         let width_f = (width as f64) / dpi_scale;
         let height_f = (height as f64) / dpi_scale;
-        *self.size.borrow_mut() = (width_f, height_f);
+        self.size = (width_f, height_f);
     }
 
-    fn destroy(&self) {
+    fn destroy(&mut self, _ctx: &mut dyn WinCtx) {
         runloop::request_quit();
     }
 
-    fn as_any(&self) -> &dyn Any {
+    fn as_any(&mut self) -> &mut dyn Any {
         self
     }
 }

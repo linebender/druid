@@ -40,12 +40,13 @@ use std::sync::{Arc, Mutex, Weak};
 
 use cairo::{Context, QuartzSurface};
 
+use crate::kurbo::{Point, Vec2};
 use piet_common::{Piet, RenderContext};
 
-use crate::keyboard::{KeyEvent, KeyModifiers};
+use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
-use crate::window::{MouseButton, MouseEvent, WinHandler};
+use crate::window::{Cursor, MouseButton, MouseEvent, Text, WinCtx, WinHandler};
 use crate::Error;
 
 use util::assert_main_thread;
@@ -87,8 +88,15 @@ impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
 }
 /// This is the state associated with our custom NSView.
 struct ViewState {
+    nsview: WeakPtr,
     handler: Box<dyn WinHandler>,
     idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    last_mods: KeyModifiers,
+}
+
+struct WinCtxImpl<'a> {
+    nsview: &'a WeakPtr,
+    text: Text<'static>,
 }
 
 impl WindowBuilder {
@@ -148,18 +156,22 @@ impl WindowBuilder {
                 _ => (),
             }
             content_view.addSubview_(view);
-            let handle = WindowHandle {
-                nsview: Some(WeakPtr::new(view)),
-                idle_queue,
-            };
             let view_state: *mut c_void = *(*view).get_ivar("viewState");
             let view_state = &mut *(view_state as *mut ViewState);
+            let handle = WindowHandle {
+                nsview: Some(view_state.nsview.clone()),
+                idle_queue,
+            };
             (*view_state).handler.connect(&crate::window::WindowHandle {
                 inner: handle.clone(),
             });
+            let mut ctx = WinCtxImpl {
+                nsview: handle.nsview.as_ref().unwrap(),
+                text: Text::new(),
+            };
             (*view_state)
                 .handler
-                .size(frame.size.width as u32, frame.size.height as u32);
+                .size(frame.size.width as u32, frame.size.height as u32, &mut ctx);
 
             Ok(handle)
         }
@@ -235,6 +247,10 @@ lazy_static! {
         );
         decl.add_method(sel!(keyUp:), key_up as extern "C" fn(&mut Object, Sel, id));
         decl.add_method(
+            sel!(flagsChanged:),
+            mods_changed as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
             sel!(drawRect:),
             draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
         );
@@ -247,13 +263,16 @@ lazy_static! {
 fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<Box<dyn IdleCallback>>>>) {
     let idle_queue = Arc::new(Mutex::new(Vec::new()));
     let queue_handle = Arc::downgrade(&idle_queue);
-    let state = ViewState {
-        handler,
-        idle_queue,
-    };
-    let state_ptr = Box::into_raw(Box::new(state));
     unsafe {
         let view: id = msg_send![VIEW_CLASS.0, new];
+        let nsview = WeakPtr::new(view);
+        let state = ViewState {
+            nsview,
+            handler,
+            idle_queue,
+            last_mods: KeyModifiers::default(),
+        };
+        let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
         let options: NSAutoresizingMaskOptions = NSViewWidthSizable | NSViewHeightSizable;
         view.setAutoresizingMask_(options);
@@ -266,9 +285,13 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
         (*view_state)
             .handler
-            .size(size.width as u32, size.height as u32);
+            .size(size.width as u32, size.height as u32, &mut ctx);
         let superclass = msg_send![this, superclass];
         let () = msg_send![super(this, superclass), setFrameSize: size];
     }
@@ -276,7 +299,7 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
 
 // NOTE: If we know the button (because of the origin call) we pass it through,
 // otherwise we get it from the event itself.
-fn mouse_event(nsevent: id, view: id, down: bool, button: Option<MouseButton>) -> MouseEvent {
+fn mouse_event(nsevent: id, view: id, button: Option<MouseButton>) -> MouseEvent {
     unsafe {
         let button = button.unwrap_or_else(|| {
             let button = NSEvent::pressedMouseButtons(nsevent);
@@ -284,12 +307,12 @@ fn mouse_event(nsevent: id, view: id, down: bool, button: Option<MouseButton>) -
         });
         let point = nsevent.locationInWindow();
         let view_point = view.convertPoint_fromView_(point, nil);
+        let pos = Point::new(view_point.x as f64, view_point.y as f64);
         let modifiers = nsevent.modifierFlags();
         let modifiers = make_modifiers(modifiers);
-        let count = if down { nsevent.clickCount() as u32 } else { 0 };
+        let count = nsevent.clickCount() as u32;
         MouseEvent {
-            x: view_point.x as i32,
-            y: view_point.y as i32,
+            pos,
             mods: modifiers,
             count,
             button,
@@ -325,8 +348,12 @@ fn mouse_down(this: &mut Object, nsevent: id, button: MouseButton) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, true, Some(button));
-        (*view_state).handler.mouse(&event);
+        let event = mouse_event(nsevent, this as id, Some(button));
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
+        (*view_state).handler.mouse_down(&event, &mut ctx);
     }
 }
 
@@ -342,8 +369,12 @@ fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, false, Some(button));
-        (*view_state).handler.mouse(&event);
+        let event = mouse_event(nsevent, this as id, Some(button));
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
+        (*view_state).handler.mouse_up(&event, &mut ctx);
     }
 }
 
@@ -351,8 +382,12 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, false, None);
-        (*view_state).handler.mouse_move(&event);
+        let event = mouse_event(nsevent, this as id, None);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
+        (*view_state).handler.mouse_move(&event, &mut ctx);
     }
 }
 
@@ -361,24 +396,23 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let (dx, dy) = {
-            let dx = nsevent.scrollingDeltaX() as i32;
-            let dy = -nsevent.scrollingDeltaY() as i32;
+            let dx = -nsevent.scrollingDeltaX() as f64;
+            let dy = -nsevent.scrollingDeltaY() as f64;
             if nsevent.hasPreciseScrollingDeltas() == cocoa::base::YES {
                 (dx, dy)
             } else {
-                (dx * 32, dy * 32)
+                (dx * 32.0, dy * 32.0)
             }
         };
         let mods = nsevent.modifierFlags();
         let mods = make_modifiers(mods);
 
-        if dx != 0 {
-            (*view_state).handler.mouse_hwheel(dx, mods);
-        }
-
-        if dy != 0 {
-            (*view_state).handler.mouse_wheel(dy, mods);
-        }
+        let delta = Vec2::new(dx, dy);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
+        (*view_state).handler.wheel(delta, mods, &mut ctx);
     }
 }
 
@@ -389,7 +423,12 @@ extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    (*view_state).handler.key_down(event);
+    let mut ctx = WinCtxImpl {
+        nsview: &(*view_state).nsview,
+        text: Text::new(),
+    };
+    (*view_state).handler.key_down(event, &mut ctx);
+    view_state.last_mods = event.mods;
 }
 
 extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
@@ -398,7 +437,30 @@ extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    (*view_state).handler.key_up(event);
+    let mut ctx = WinCtxImpl {
+        nsview: &(*view_state).nsview,
+        text: Text::new(),
+    };
+    (*view_state).handler.key_up(event, &mut ctx);
+    view_state.last_mods = event.mods;
+}
+
+extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
+    let view_state = unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        &mut *(view_state as *mut ViewState)
+    };
+    let (down, event) = mods_changed_key_event(view_state.last_mods, nsevent);
+    view_state.last_mods = event.mods;
+    let mut ctx = WinCtxImpl {
+        nsview: &(*view_state).nsview,
+        text: Text::new(),
+    };
+    if down {
+        (*view_state).handler.key_down(event, &mut ctx);
+    } else {
+        (*view_state).handler.key_down(event, &mut ctx);
+    }
 }
 
 extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
@@ -419,7 +481,11 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let mut piet_ctx = Piet::new(&mut cairo_ctx);
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let anim = (*view_state).handler.paint(&mut piet_ctx);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
+        let anim = (*view_state).handler.paint(&mut piet_ctx, &mut ctx);
         if let Err(e) = piet_ctx.finish() {
             eprintln!("Error: {}", e);
         }
@@ -570,6 +636,34 @@ impl IdleHandle {
     }
 }
 
+impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
+    fn invalidate(&mut self) {
+        unsafe {
+            let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
+        }
+    }
+
+    fn text_factory(&mut self) -> &mut Text<'a> {
+        &mut self.text
+    }
+
+    fn set_cursor(&mut self, cursor: &Cursor) {
+        unsafe {
+            let nscursor = class!(NSCursor);
+            let cursor: id = match cursor {
+                Cursor::Arrow => msg_send![nscursor, arrowCursor],
+                Cursor::IBeam => msg_send![nscursor, IBeamCursor],
+                Cursor::Crosshair => msg_send![nscursor, crosshairCursor],
+                Cursor::OpenHand => msg_send![nscursor, openHandCursor],
+                Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],
+                Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
+                Cursor::ResizeUpDown => msg_send![nscursor, ResizeUpDownCursor],
+            };
+            msg_send![cursor, set];
+        }
+    }
+}
+
 fn make_key_event(event: id) -> KeyEvent {
     unsafe {
         let chars = event.characters();
@@ -588,6 +682,25 @@ fn make_key_event(event: id) -> KeyEvent {
         let modifiers = event.modifierFlags();
         let modifiers = make_modifiers(modifiers);
         KeyEvent::new(virtual_key, is_repeat, modifiers, text, unmodified_text)
+    }
+}
+
+fn mods_changed_key_event(prev: KeyModifiers, event: id) -> (bool, KeyEvent) {
+    unsafe {
+        let key_code: KeyCode = event.keyCode().into();
+        let is_repeat = false;
+        let modifiers = event.modifierFlags();
+        let modifiers = make_modifiers(modifiers);
+
+        let down = match key_code {
+            KeyCode::LeftShift | KeyCode::RightShift if prev.shift => false,
+            KeyCode::LeftAlt | KeyCode::RightAlt if prev.alt => false,
+            KeyCode::LeftControl | KeyCode::RightControl if prev.ctrl => false,
+            KeyCode::LeftMeta | KeyCode::RightMeta if prev.meta => false,
+            _ => true,
+        };
+        let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
+        (down, event)
     }
 }
 

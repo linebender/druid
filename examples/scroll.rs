@@ -1,4 +1,4 @@
-// Copyright 2018 The xi-editor Authors.
+// Copyright 2019 The xi-editor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Example of sending external events to the UI.
-
-use std::{thread, time};
-
 use druid::shell::{runloop, WindowBuilder};
-use druid::widget::Label;
+use druid::widget::{Button, Column, Padding, Scroll};
 use druid::{UiMain, UiState};
 
 fn main() {
@@ -25,23 +21,16 @@ fn main() {
 
     let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
-    let mut state = UiState::new();
-    let label = Label::new("Initial state").ui(&mut state);
-    state.set_root(label);
+    let mut col = Column::new();
+    for i in 0..30 {
+        let button = Button::new(format!("Button {}", i));
+        col.add_child(Padding::uniform(3.0, button), 0.0);
+    }
+    let scroll = Scroll::new(col);
+    let state = UiState::new(scroll, 0u32);
+    builder.set_title("Scroll example");
     builder.set_handler(Box::new(UiMain::new(state)));
-    builder.set_title("Ext event example");
     let window = builder.build().unwrap();
-    let idle_handle = window.get_idle_handle().unwrap();
-
-    // This will be set from the idle handler, updated just after the window is shown.
-    UiMain::send_ext(&idle_handle, label, "New state".to_string());
-
-    // Illustration of injecting events from another thread.
-    thread::spawn(move || {
-        thread::sleep(time::Duration::from_millis(1000));
-        UiMain::send_ext(&idle_handle, label, "State updated from thread".to_string());
-    });
-
     window.show();
     run_loop.run();
 }

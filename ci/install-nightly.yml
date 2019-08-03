@@ -1,0 +1,4 @@
+steps:
+  - script: |
+        rustup install nightly
+    displayName: Install nightly
