@@ -16,12 +16,12 @@
 
 use crate::util::assert_main_thread;
 use gio::ApplicationFlags;
-use gtk::{Application, ApplicationWindow};
+use gtk::Application;
 use std::cell::RefCell;
 
-/// XXX: The application needs to be global because WindowBuilder::build wants
-/// to construct an ApplicationWindow, which needs the application, but
-/// WindowBuilder::build does not get the RunLoop
+// XXX: The application needs to be global because WindowBuilder::build wants
+// to construct an ApplicationWindow, which needs the application, but
+// WindowBuilder::build does not get the RunLoop
 thread_local!(
     static GTK_APPLICATION: RefCell<Option<Application>> = RefCell::new(None);
 );
@@ -33,20 +33,23 @@ impl RunLoop {
     pub fn new() -> RunLoop {
         use gio::ApplicationExt;
         use gio::Cancellable;
-        use gtk::GtkApplicationExt;
 
         assert_main_thread();
 
         // TODO: we should give control over the application ID to the user
-        let application =
-            Application::new(Some("com.github.xi-editor.druid"), ApplicationFlags::FLAGS_NONE)
-                .expect("Unable to create GTK application");
+        let application = Application::new(
+            Some("com.github.xi-editor.druid"),
+            ApplicationFlags::FLAGS_NONE,
+        )
+        .expect("Unable to create GTK application");
 
         application.connect_activate(|app| {
             eprintln!("Activated application");
         });
 
-        application.register(None as Option<&Cancellable>);
+        application
+            .register(None as Option<&Cancellable>)
+            .expect("Could not register GTK application");
         application.activate();
 
         GTK_APPLICATION.with(move |x| *x.borrow_mut() = Some(application));

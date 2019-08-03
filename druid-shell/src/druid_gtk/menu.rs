@@ -16,14 +16,20 @@
 
 use crate::window;
 
+use std::cell::RefCell;
 use std::sync::Arc;
 
 use gtk::Menu as GtkMenu;
 use gtk::MenuBar as GtkMenuBar;
 use gtk::MenuItem as GtkMenuItem;
-use gtk::{GtkMenuExt, GtkMenuItemExt, MenuShellExt};
+use gtk::{GtkMenuItemExt, MenuShellExt};
+
+use crate::platform::WindowHandle;
 
 use crate::keycodes::MenuKey;
+
+use crate::druid_gtk::WinCtxImpl;
+use crate::window::Text;
 
 pub struct Menu {
     items: Vec<MenuItem>,
@@ -42,19 +48,32 @@ impl MenuItem {
         }
     }
 
-    fn into_gtk_menu_item(self, handler: Arc<Box<window::WinHandler>>) -> GtkMenuItem {
+    fn into_gtk_menu_item(
+        self,
+        handler: Arc<RefCell<Box<dyn window::WinHandler>>>,
+        handle: &WindowHandle,
+    ) -> GtkMenuItem {
         match self {
             MenuItem::Entry(name, id) => {
+                let handle = handle.clone();
                 let item = GtkMenuItem::new_with_label(&name);
                 item.connect_activate(move |_| {
-                    handler.command(id);
+                    let mut ctx = WinCtxImpl {
+                        handle: &handle,
+                        window: None,
+                        text: Text::new(),
+                    };
+
+                    if let Ok(mut handler) = handler.try_borrow_mut() {
+                        handler.command(id, &mut ctx);
+                    }
                 });
 
                 item
             }
             MenuItem::SubMenu(name, submenu) => {
                 let item = GtkMenuItem::new_with_label(&name);
-                item.set_submenu(Some(&submenu.into_gtk_menu(handler)));
+                item.set_submenu(Some(&submenu.into_gtk_menu(handler, handle)));
 
                 item
             }
@@ -80,21 +99,29 @@ impl Menu {
         eprintln!("Warning: GTK separators are not yet implemented");
     }
 
-    pub(crate) fn into_gtk_menubar(self, handler: Arc<Box<window::WinHandler>>) -> GtkMenuBar {
+    pub(crate) fn into_gtk_menubar(
+        self,
+        handler: Arc<RefCell<Box<dyn window::WinHandler>>>,
+        handle: &WindowHandle,
+    ) -> GtkMenuBar {
         let menu = GtkMenuBar::new();
 
         for item in self.items {
-            menu.append(&item.into_gtk_menu_item(handler.clone()));
+            menu.append(&item.into_gtk_menu_item(handler.clone(), handle));
         }
 
         menu
     }
 
-    fn into_gtk_menu(self, handler: Arc<Box<window::WinHandler>>) -> GtkMenu {
+    fn into_gtk_menu(
+        self,
+        handler: Arc<RefCell<Box<dyn window::WinHandler>>>,
+        handle: &WindowHandle,
+    ) -> GtkMenu {
         let menu = GtkMenu::new();
 
         for item in self.items {
-            menu.append(&item.into_gtk_menu_item(handler.clone()));
+            menu.append(&item.into_gtk_menu_item(handler.clone(), handle));
         }
 
         menu

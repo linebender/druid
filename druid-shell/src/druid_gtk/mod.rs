@@ -21,9 +21,10 @@ pub mod util;
 pub mod win_main;
 
 use std::any::Any;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::ffi::OsString;
-use std::sync::{Arc, Mutex, Weak};
+use std::rc::Weak;
+use std::sync::{Arc, Mutex};
 
 use gdk::EventKey;
 use gdk::EventMask;
@@ -33,12 +34,13 @@ use gtk::Inhibit;
 use piet_common::{Piet, RenderContext};
 
 use crate::keyboard;
+use crate::kurbo::{Point, Vec2};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::platform::menu::Menu;
-use crate::window::{self, Cursor, MouseButton, WinHandler};
+use crate::window::{self, Cursor, MouseButton, Text, WinCtx, WinHandler};
 use crate::Error;
 
-use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers, RawKeyCode, StrOrChar};
+use crate::keyboard::{KeyCode, RawKeyCode, StrOrChar};
 use util::assert_main_thread;
 use win_main::with_application;
 
@@ -72,6 +74,12 @@ impl<F: FnOnce(&Any) + Send> IdleCallback for F {
     }
 }
 
+struct WinCtxImpl<'a> {
+    window: Option<&'a ApplicationWindow>,
+    handle: &'a WindowHandle,
+    text: Text<'static>,
+}
+
 impl WindowBuilder {
     pub fn new() -> WindowBuilder {
         WindowBuilder {
@@ -102,9 +110,9 @@ impl WindowBuilder {
             .handler
             .expect("Tried to build a window without setting the handler");
 
-        let handler = Arc::new(handler);
+        let handler = Arc::new(RefCell::new(handler));
 
-        let mut window = with_application(|app| ApplicationWindow::new(&app));
+        let window = with_application(|app| ApplicationWindow::new(&app));
 
         window.set_title(&self.title);
         // TODO(bobtwinkles): enable this when I figure out how to set the cursor on application windows
@@ -119,8 +127,14 @@ impl WindowBuilder {
         let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
         window.add(&vbox);
 
+        let window = window;
+
+        let handle = WindowHandle {
+            window: Some(window),
+        };
+
         if let Some(menu) = self.menu {
-            let menu = menu.into_gtk_menubar(handler.clone());
+            let menu = menu.into_gtk_menubar(handler.clone(), &handle);
             vbox.pack_start(&menu, false, false, 0);
         }
 
@@ -134,7 +148,7 @@ impl WindowBuilder {
                 | EventMask::KEY_PRESS_MASK
                 | EventMask::ENTER_NOTIFY_MASK
                 | EventMask::KEY_RELEASE_MASK
-                | EventMask::SCROLL_MASK
+                | EventMask::SCROLL_MASK,
         );
 
         drawing_area.set_can_focus(true);
@@ -147,36 +161,46 @@ impl WindowBuilder {
         });
 
         {
-            let mut last_size = Cell::new((0, 0));
+            let last_size = Cell::new((0, 0));
             let handler = Arc::clone(&handler);
+            let handle = handle.clone();
+
             drawing_area.connect_draw(move |widget, context| {
-                let extents = context.clip_extents();
-                let size = (
-                    (extents.2 - extents.0) as u32,
-                    (extents.3 - extents.1) as u32,
-                );
+                if let Ok(mut handler) = handler.try_borrow_mut() {
+                    let mut ctx = WinCtxImpl {
+                        handle: &handle,
+                        window: None,
+                        text: Text::new(),
+                    };
 
-                if last_size.get() != size {
-                    last_size.set(size);
-                    handler.size(size.0, size.1);
-                }
+                    let extents = context.clip_extents();
+                    let size = (
+                        (extents.2 - extents.0) as u32,
+                        (extents.3 - extents.1) as u32,
+                    );
 
-                context.set_source_rgb(0.0, 0.0, 0.0);
-                context.paint();
+                    if last_size.get() != size {
+                        last_size.set(size);
+                        handler.size(size.0, size.1, &mut ctx);
+                    }
 
-                context.set_source_rgb(1.0, 0.0, 0.0);
-                context.rectangle(0.0, 0.0, 100.0, 100.0);
+                    context.set_source_rgb(0.0, 0.0, 0.0);
+                    context.paint();
 
-                context.fill();
+                    context.set_source_rgb(1.0, 0.0, 0.0);
+                    context.rectangle(0.0, 0.0, 100.0, 100.0);
 
-                // For some reason piet needs a mutable context, so give it one I guess.
-                let mut context = context.clone();
-                let mut piet_context = Piet::new(&mut context);
-                let anim = handler.paint(&mut piet_context);
-                piet_context.finish();
+                    context.fill();
 
-                if anim {
-                    widget.queue_draw();
+                    // For some reason piet needs a mutable context, so give it one I guess.
+                    let mut context = context.clone();
+                    let mut piet_context = Piet::new(&mut context);
+                    let anim = handler.paint(&mut piet_context, &mut ctx);
+                    piet_context.finish();
+
+                    if anim {
+                        widget.queue_draw();
+                    }
                 }
 
                 Inhibit(false)
@@ -185,17 +209,27 @@ impl WindowBuilder {
 
         {
             let handler = Arc::clone(&handler);
+            let handle = handle.clone();
             drawing_area.connect_button_press_event(move |_widget, button| {
-                // XXX: what units is this in
-                let position = button.get_position();
-                handler.mouse(&window::MouseEvent {
-                    x: position.0 as i32,
-                    y: position.1 as i32,
-                    count: 1,
-                    mods: gtk_modifiers_to_druid(button.get_state()),
-                    button: gtk_button_to_druid(button.get_button()),
-                    //ty: window::MouseType::Down,
-                });
+                if let Ok(mut handler) = handler.try_borrow_mut() {
+                    let mut ctx = WinCtxImpl {
+                        window: None, // TODO Steven
+                        handle: &handle,
+                        text: Text::new(),
+                    };
+
+                    let pos = Point::from(button.get_position());
+                    handler.mouse_down(
+                        &window::MouseEvent {
+                            pos,
+                            count: 1,
+                            mods: gtk_modifiers_to_druid(button.get_state()),
+                            button: gtk_button_to_druid(button.get_button()),
+                            //ty: window::MouseType::Down,
+                        },
+                        &mut ctx,
+                    );
+                }
 
                 Inhibit(true)
             });
@@ -203,17 +237,27 @@ impl WindowBuilder {
 
         {
             let handler = Arc::clone(&handler);
+            let handle = handle.clone();
             drawing_area.connect_button_release_event(move |_widget, button| {
-                // XXX: what units is this in
-                let position = button.get_position();
-                handler.mouse(&window::MouseEvent {
-                    x: position.0 as i32,
-                    y: position.1 as i32,
-                    mods: gtk_modifiers_to_druid(button.get_state()),
-                    count: 0,
-                    button: gtk_button_to_druid(button.get_button()),
-                    //ty: window::MouseType::Up,
-                });
+                if let Ok(mut handler) = handler.try_borrow_mut() {
+                    let mut ctx = WinCtxImpl {
+                        window: None,
+                        handle: &handle,
+                        text: Text::new(),
+                    };
+
+                    let pos = Point::from(button.get_position());
+                    handler.mouse_up(
+                        &window::MouseEvent {
+                            pos,
+                            mods: gtk_modifiers_to_druid(button.get_state()),
+                            count: 0,
+                            button: gtk_button_to_druid(button.get_button()),
+                            //ty: window::MouseType::Up,
+                        },
+                        &mut ctx,
+                    );
+                }
 
                 Inhibit(true)
             });
@@ -221,17 +265,25 @@ impl WindowBuilder {
 
         {
             let handler = Arc::clone(&handler);
+            let handle = handle.clone();
             drawing_area.connect_motion_notify_event(move |_widget, motion| {
-                let position = motion.get_position();
-                let mouse_event = window::MouseEvent {
-                    x: position.0 as i32,
-                    y: position.1 as i32,
-                    mods: gtk_modifiers_to_druid(motion.get_state()),
-                    count: 0,
-                    button: gtk_modifiers_to_mouse_button(motion.get_state()),
-                };
+                if let Ok(mut handler) = handler.try_borrow_mut() {
+                    let mut ctx = WinCtxImpl {
+                        window: None,
+                        handle: &handle,
+                        text: Text::new(),
+                    };
 
-                handler.mouse_move(&mouse_event);
+                    let pos = Point::from(motion.get_position());
+                    let mouse_event = window::MouseEvent {
+                        pos,
+                        mods: gtk_modifiers_to_druid(motion.get_state()),
+                        count: 0,
+                        button: gtk_modifiers_to_mouse_button(motion.get_state()),
+                    };
+
+                    handler.mouse_move(&mouse_event, &mut ctx);
+                }
 
                 Inhibit(true)
             });
@@ -239,38 +291,50 @@ impl WindowBuilder {
 
         {
             let handler = Arc::clone(&handler);
+            let handle = handle.clone();
             drawing_area.connect_scroll_event(move |_widget, scroll| {
-                use gdk::ScrollDirection;
-                let deltas = scroll.get_scroll_deltas();
-                let modifiers = gtk_modifiers_to_druid(scroll.get_state());
+                if let Ok(mut handler) = handler.try_borrow_mut() {
+                    let mut ctx = WinCtxImpl {
+                        window: None,
+                        handle: &handle,
+                        text: Text::new(),
+                    };
 
-                // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
-                // They claim that one "tick" on a scroll wheel should be 120 units.
-                // GTK simply reports the direction
-                match scroll.get_direction() {
-                    ScrollDirection::Up => {
-                        handler.mouse_wheel(120, modifiers);
-                    }
-                    ScrollDirection::Down => {
-                        handler.mouse_wheel(-120, modifiers);
-                    }
-                    ScrollDirection::Left => {
-                        // Note: this direction is just a guess, I (bobtwinkles) don't
-                        // have a way to test horizontal scroll events under GTK.
-                        // If it's wrong, the right direction also needs to be changed
-                        handler.mouse_hwheel(120, modifiers);
-                    }
-                    ScrollDirection::Right => {
-                        handler.mouse_hwheel(-120, modifiers);
-                    }
-                    ScrollDirection::Smooth => {
-                        eprintln!("Warning: somehow the Druid widget got a smooth scroll event");
-                    }
-                    e => {
-                        eprintln!(
-                            "Warning: the Druid widget got some whacky scroll direction {:?}",
-                            e
-                        );
+                    use gdk::ScrollDirection;
+                    let deltas = scroll.get_scroll_deltas();
+                    // TODO use these deltas
+                    let modifiers = gtk_modifiers_to_druid(scroll.get_state());
+
+                    // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
+                    // They claim that one "tick" on a scroll wheel should be 120 units.
+                    // GTK simply reports the direction
+                    match scroll.get_direction() {
+                        ScrollDirection::Up => {
+                            handler.wheel(Vec2::from((0.0, -120.0)), modifiers, &mut ctx);
+                        }
+                        ScrollDirection::Down => {
+                            handler.wheel(Vec2::from((0.0, 120.0)), modifiers, &mut ctx);
+                        }
+                        ScrollDirection::Left => {
+                            // Note: this direction is just a guess, I (bobtwinkles) don't
+                            // have a way to test horizontal scroll events under GTK.
+                            // If it's wrong, the right direction also needs to be changed
+                            handler.wheel(Vec2::from((120.0, 0.0)), modifiers, &mut ctx);
+                        }
+                        ScrollDirection::Right => {
+                            handler.wheel(-Vec2::from((-120.0, 0.0)), modifiers, &mut ctx);
+                        }
+                        ScrollDirection::Smooth => {
+                            eprintln!(
+                                "Warning: somehow the Druid widget got a smooth scroll event"
+                            );
+                        }
+                        e => {
+                            eprintln!(
+                                "Warning: the Druid widget got some whacky scroll direction {:?}",
+                                e
+                            );
+                        }
                     }
                 }
 
@@ -280,9 +344,18 @@ impl WindowBuilder {
 
         {
             let handler = Arc::clone(&handler);
+            let handle = handle.clone();
             drawing_area.connect_key_press_event(move |_widget, key| {
-                let key_event = gtk_event_key_to_key_event(key);
-                handler.key_down(key_event);
+                if let Ok(mut handler) = handler.try_borrow_mut() {
+                    let mut ctx = WinCtxImpl {
+                        window: None,
+                        handle: &handle,
+                        text: Text::new(),
+                    };
+
+                    let key_event = gtk_event_key_to_key_event(key);
+                    handler.key_down(key_event, &mut ctx);
+                }
 
                 Inhibit(true)
             });
@@ -290,9 +363,18 @@ impl WindowBuilder {
 
         {
             let handler = Arc::clone(&handler);
+            let handle = handle.clone();
             drawing_area.connect_key_release_event(move |_widget, key| {
-                let key_event = gtk_event_key_to_key_event(key);
-                handler.key_up(key_event);
+                if let Ok(mut handler) = handler.try_borrow_mut() {
+                    let mut ctx = WinCtxImpl {
+                        window: None,
+                        handle: &handle,
+                        text: Text::new(),
+                    };
+
+                    let key_event = gtk_event_key_to_key_event(key);
+                    handler.key_up(key_event, &mut ctx);
+                }
 
                 Inhibit(true)
             });
@@ -300,20 +382,26 @@ impl WindowBuilder {
 
         {
             let handler = Arc::clone(&handler);
+            let handle = handle.clone();
             drawing_area.connect_destroy(move |widget| {
-                handler.destroy();
+                if let Ok(mut handler) = handler.try_borrow_mut() {
+                    let mut ctx = WinCtxImpl {
+                        window: None,
+                        handle: &handle,
+                        text: Text::new(),
+                    };
+                    handler.destroy(&mut ctx);
+                }
             });
         }
 
         vbox.pack_end(&drawing_area, true, true, 0);
 
-        let tr = WindowHandle {
-            window: Some(window),
-        };
+        handler.borrow_mut().connect(&window::WindowHandle {
+            inner: handle.clone(),
+        });
 
-        handler.connect(&window::WindowHandle { inner: tr.clone() });
-
-        Ok(tr)
+        Ok(handle)
     }
 }
 
@@ -322,7 +410,7 @@ impl WindowHandle {
         use gtk::WidgetExt;
         match self.window.as_ref() {
             Some(window) => window.show_all(),
-            None => return,
+            None => {}
         }
         // self.window.map(|window| window.show_all());
     }
@@ -421,10 +509,24 @@ impl IdleHandle {
     }
 }
 
+impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
+    fn invalidate(&mut self) {
+        self.handle.invalidate();
+    }
+
+    fn text_factory(&mut self) -> &mut Text<'a> {
+        &mut self.text
+    }
+
+    fn set_cursor(&mut self, cursor: &Cursor) {
+        // TODO Steven implement cursor
+        eprintln!("WinCtx::set_cursor called but not implemented");
+    }
+}
+
 /// Map a GTK mouse button to a Druid one
 #[inline]
 fn gtk_button_to_druid(button: u32) -> window::MouseButton {
-    use window::MouseButton;
     match button {
         1 => MouseButton::Left,
         2 => MouseButton::Middle,
@@ -437,7 +539,6 @@ fn gtk_button_to_druid(button: u32) -> window::MouseButton {
 /// Map the GTK modifiers into Druid bits
 #[inline]
 fn gtk_modifiers_to_druid(modifiers: gdk::ModifierType) -> keyboard::KeyModifiers {
-    use crate::keycodes;
     use gdk::ModifierType;
 
     keyboard::KeyModifiers {
@@ -465,7 +566,6 @@ fn gtk_modifiers_to_mouse_button(modifiers: gdk::ModifierType) -> window::MouseB
 
 fn gtk_event_key_to_key_event(key: &EventKey) -> keyboard::KeyEvent {
     let keyval = key.get_keyval();
-    let keycode = KeyCode::from(keyval);
 
     // TODO how can we get the different versions from GDK?
     let text: StrOrChar = gdk::keyval_to_unicode(keyval).into();
@@ -481,8 +581,8 @@ fn gtk_event_key_to_key_event(key: &EventKey) -> keyboard::KeyEvent {
 }
 
 impl From<u32> for KeyCode {
+    #[allow(non_upper_case_globals)]
     fn from(raw: u32) -> KeyCode {
-        use gdk::enums::key;
         use gdk::enums::key::*;
         match raw {
             a | A => KeyCode::KeyA,
