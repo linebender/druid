@@ -4,8 +4,8 @@
 
 Druid is a new Rust-native UI toolkit, still in early stages. Its main
 goal is performance, also aiming for small binary size and compile time,
-fast startup, and very easy build configuration (just `cargo run`). It
-is currently Windows and MacOS only, porting to GNU/Linux in plans.
+fast startup, and very easy build configuration (just `cargo run`). 
+It current supports Windows and macOS, with GNU/Linux support planned.
 
 Raph gave a talk at the July 2018 SF Rust Meetup ([video][jul-2018-video],
 [slides][jul-2018-slides]) about the design. Traditional object-oriented
