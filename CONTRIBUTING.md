@@ -3,12 +3,24 @@
 We'd love to accept your patches and contributions to this project. There are
 just a few small guidelines you need to follow.
 
-## How to build
-> Only windows and macos platforms are supported at the moment
+## Build
+Currently, druid only builds on Windows and macOS. 
+
+Other options may work, but not tested.
+
+#### Windows
 
 run `cargo build`
 
-For MacOS additionally: fulfill [gtk-rs dependencies] for cairo crate
+#### macOS
+
+On macOS, druid requires cairo; see [gtk-rs dependencies] for installation instructions.
+
+You may also need to set your `PKG_CONFIG_PATH`; assuming you have installed `cairo` through homebrew, you can build with,
+
+ ```shell
+$> PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig" cargo build
+ ```
 
 ## Code reviews
 
