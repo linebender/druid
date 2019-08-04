@@ -36,8 +36,10 @@ cairo-rs = { version = "0.7.1", default_features = false }
 cairo-rs = {  version = "0.7.1", default_features = false }
 gio = "0.7.0"
 gdk = "0.11.0"
+gdk-sys = "0.9.0"
 gtk = "0.7.0"
 glib = "0.8.1"
+glib-sys = "0.9.0"
 
 [dev-dependencies]
 kurbo = "0.2.1"

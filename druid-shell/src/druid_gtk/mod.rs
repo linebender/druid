@@ -520,7 +520,6 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
 
     fn set_cursor(&mut self, cursor: &Cursor) {
         // TODO Steven implement cursor
-        eprintln!("WinCtx::set_cursor called but not implemented");
     }
 }
 
@@ -564,15 +563,64 @@ fn gtk_modifiers_to_mouse_button(modifiers: gdk::ModifierType) -> window::MouseB
     }
 }
 
+/// Map a hardware keycode to a keyval by looking up the keycode in the keymap
+fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
+    unsafe {
+        let keymap = gdk_sys::gdk_keymap_get_default();
+
+        // TODO Steven use std::os::c_int etc instead of u32
+
+        let keys_ptr: *mut *mut gdk_sys::GdkKeymapKey = std::ptr::null_mut();
+
+        // create a pointer for the number of keys returned
+        let nkeys: Box<i32> = Box::new(0);
+        let nkeys_ptr: *mut i32 = Box::into_raw(nkeys);
+
+        // create a pointer to hold the actual returned keyvals
+        let keyvals = Box::new([0u32; 1]);
+        let keyvals_ptr: *mut *mut u32 = Box::into_raw(keyvals) as *mut *mut u32;
+
+        // call into gdk to retrieve the keyvals
+        let result = gdk_sys::gdk_keymap_get_entries_for_keycode(
+            keymap,
+            keycode as u32,
+            keys_ptr,
+            keyvals_ptr,
+            nkeys_ptr,
+        );
+
+        // get the values back out from the pointer
+        let nkeys: Box<i32> = Box::from_raw(nkeys_ptr);
+        let keyvals = std::slice::from_raw_parts(*keyvals_ptr, *nkeys as usize);
+
+        let return_value = if *nkeys > 0 {
+            // assume the first returned keyval is the correct key
+            Some(keyvals[0].clone())
+        } else {
+            None
+        };
+
+        // notify glib to free the allocated arrays
+        glib_sys::g_free(*keyvals_ptr as *mut std::ffi::c_void);
+
+        return_value
+    }
+}
+
 fn gtk_event_key_to_key_event(key: &EventKey) -> keyboard::KeyEvent {
+    // the logical key being pressed
     let keyval = key.get_keyval();
+
+    let hardware_keycode = key.get_hardware_keycode();
+    let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval);
 
     // TODO how can we get the different versions from GDK?
     let text: StrOrChar = gdk::keyval_to_unicode(keyval).into();
+    // TODO properly handle modifiers
     let unmodified_text: StrOrChar = gdk::keyval_to_unicode(keyval).into();
 
     keyboard::KeyEvent::new(
-        keyval,
+        keycode,
         false, // TODO Steven implement is_repeat
         gtk_modifiers_to_druid(key.get_state()),
         text,
@@ -673,12 +721,11 @@ impl From<u32> for KeyCode {
             F2 => KeyCode::F2,
             Page_Down => KeyCode::PageDown,
             F1 => KeyCode::F1,
-            leftarrow => KeyCode::ArrowLeft,
-            rightarrow => KeyCode::ArrowRight,
-            downarrow => KeyCode::ArrowDown,
-            uparrow => KeyCode::ArrowUp,
-
-            other => {
+            Left => KeyCode::ArrowLeft,
+            Right => KeyCode::ArrowRight,
+            Down=> KeyCode::ArrowDown,
+            Up => KeyCode::ArrowUp,
+            _ => {
                 eprintln!("Warning: unknown keyval {}", raw);
                 KeyCode::Unknown(RawKeyCode::Linux(raw))
             }
