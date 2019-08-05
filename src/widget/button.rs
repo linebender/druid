@@ -21,13 +21,9 @@ use crate::{
     UpdateCtx, Widget,
 };
 
-use crate::piet::{Color, FontBuilder, Text, TextLayoutBuilder};
+use crate::piet::{FontBuilder, Text, TextLayoutBuilder};
+use crate::theme;
 use crate::{Piet, Point, RenderContext};
-
-const BUTTON_BG_COLOR: Color = Color::rgb8(0x40, 0x40, 0x48);
-const BUTTON_HOVER_COLOR: Color = Color::rgb8(0x50, 0x50, 0x58);
-const BUTTON_PRESSED_COLOR: Color = Color::rgb8(0x60, 0x60, 0x68);
-const LABEL_TEXT_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 /// A label with static text.
 pub struct Label {
@@ -72,10 +68,10 @@ impl Label {
 }
 
 impl<T: Data> Widget<T> for Label {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, _env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, env: &Env) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx, font_size);
-        paint_ctx.draw_text(&text_layout, (0.0, font_size), &LABEL_TEXT_COLOR);
+        paint_ctx.draw_text(&text_layout, (0.0, font_size), &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
@@ -114,9 +110,9 @@ impl<T: Data> Widget<T> for Button {
         let is_active = base_state.is_active();
         let is_hot = base_state.is_hot();
         let bg_color = match (is_active, is_hot) {
-            (true, true) => BUTTON_PRESSED_COLOR,
-            (false, true) => BUTTON_HOVER_COLOR,
-            _ => BUTTON_BG_COLOR,
+            (true, true) => env.get(theme::PRESSED_COLOR),
+            (false, true) => env.get(theme::HOVER_COLOR),
+            _ => env.get(theme::BACKGROUND_COLOR),
         };
         let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
         paint_ctx.fill(rect, &bg_color);
@@ -202,7 +198,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx, font_size, data, env);
-        paint_ctx.draw_text(&text_layout, (0., font_size), &LABEL_TEXT_COLOR);
+        paint_ctx.draw_text(&text_layout, (0., font_size), &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
