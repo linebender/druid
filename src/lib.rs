@@ -24,8 +24,8 @@ mod lens;
 mod value;
 
 use std::any::Any;
-use std::ops::Deref;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
+
 use std::time::Instant;
 
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
