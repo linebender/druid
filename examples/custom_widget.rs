@@ -62,14 +62,12 @@ impl Widget<String> for CustomWidget {
         let rect = Rect::from_origin_size((10., 10.), (100., 100.));
         // Note the Color:rgba32 which includes an alpha channel (7F in this case)
         let brush = paint_ctx
-            .render_ctx
             .solid_brush(Color::rgba32(0x00_00_00_7F));
         // A fill uses a brush, just like stroke, but it needs FillRule to be set
         paint_ctx.fill(rect, &brush, FillRule::NonZero);
 
         // Text is easy, if you ignore all these unwraps. Just pick a font and a size.
         let font = paint_ctx
-            .render_ctx
             .text()
             .new_font_by_name("Segoe UI", 24.0)
             .unwrap()
@@ -77,7 +75,6 @@ impl Widget<String> for CustomWidget {
             .unwrap();
         // Here's where we actually use the UI state
         let layout = paint_ctx
-            .render_ctx
             .text()
             .new_text_layout(&font, data)
             .unwrap()
@@ -86,7 +83,6 @@ impl Widget<String> for CustomWidget {
 
         // Let's rotate our text slightly. First we save our current (default) context:
         paint_ctx
-            .render_ctx
             .with_save(|rc| {
                 // Now we can rotate the context (or set a clip path, for instance):
                 rc.transform(Affine::rotate(0.1));
@@ -99,7 +95,6 @@ impl Widget<String> for CustomWidget {
         // Let's burn some CPU to make a (partially transparent) image buffer
         let image_data = make_image_data(256, 256);
         let image = paint_ctx
-            .render_ctx
             .make_image(256, 256, &image_data, ImageFormat::RgbaSeparate)
             .unwrap();
         // The image is automatically scaled to fit the rect you pass to draw_image
