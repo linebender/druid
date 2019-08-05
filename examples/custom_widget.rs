@@ -43,7 +43,7 @@ impl Widget<String> for CustomWidget {
     ) {
         // Let's draw a picture with Piet!
         // Clear the whole context with the color of your choice
-        paint_ctx.render_ctx.clear(Color::WHITE);
+        paint_ctx.clear(Color::WHITE);
 
         // Create an arbitrary bezier path
         // (base_state.size() returns the size of the layout rect we're painting in)
@@ -54,9 +54,9 @@ impl Widget<String> for CustomWidget {
             (base_state.size().width, base_state.size().height),
         );
         // Create a solid brush
-        let brush = paint_ctx.render_ctx.solid_brush(Color::rgb24(0x00_80_00));
+        let brush = paint_ctx.solid_brush(Color::rgb24(0x00_80_00));
         // Stroke the path with the brush, with thickness 1.0
-        paint_ctx.render_ctx.stroke(path, &brush, 1.0, None);
+        paint_ctx.stroke(path, &brush, 1.0, None);
 
         // Rectangles: the path for practical people
         let rect = Rect::from_origin_size((10., 10.), (100., 100.));
@@ -65,7 +65,7 @@ impl Widget<String> for CustomWidget {
             .render_ctx
             .solid_brush(Color::rgba32(0x00_00_00_7F));
         // A fill uses a brush, just like stroke, but it needs FillRule to be set
-        paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
+        paint_ctx.fill(rect, &brush, FillRule::NonZero);
 
         // Text is easy, if you ignore all these unwraps. Just pick a font and a size.
         let font = paint_ctx
@@ -103,7 +103,7 @@ impl Widget<String> for CustomWidget {
             .make_image(256, 256, &image_data, ImageFormat::RgbaSeparate)
             .unwrap();
         // The image is automatically scaled to fit the rect you pass to draw_image
-        paint_ctx.render_ctx.draw_image(
+        paint_ctx.draw_image(
             &image,
             Rect::from_origin_size(Point::ORIGIN, base_state.size()),
             InterpolationMode::Bilinear,

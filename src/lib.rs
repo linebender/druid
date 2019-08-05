@@ -291,7 +291,7 @@ pub struct Env {
 
 /// A context passed to paint methods of widgets.
 ///
-/// Widgets paint their appearance by calling methods on the 
+/// Widgets paint their appearance by calling methods on the
 /// `render_ctx`, which PaintCtx derefs to for convenience.
 /// This struct is expected to grow, for example to include the
 /// "damage region" indicating that only a subset of the entire
@@ -314,7 +314,6 @@ impl<'a, 'b: 'a> DerefMut for PaintCtx<'a, 'b> {
         &mut self.render_ctx
     }
 }
-
 
 /// A context provided to layout handling methods of widgets.
 ///
