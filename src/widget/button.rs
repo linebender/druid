@@ -74,11 +74,9 @@ impl Label {
 impl<T: Data> Widget<T> for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, _env: &Env) {
         let font_size = 15.0;
-        let text_layout = self.get_layout(paint_ctx.render_ctx, font_size);
-        let brush = paint_ctx.render_ctx.solid_brush(LABEL_TEXT_COLOR);
-        paint_ctx
-            .render_ctx
-            .draw_text(&text_layout, (0.0, font_size), &brush);
+        let text_layout = self.get_layout(paint_ctx, font_size);
+        let brush = paint_ctx.solid_brush(LABEL_TEXT_COLOR);
+        paint_ctx.draw_text(&text_layout, (0.0, font_size), &brush);
     }
 
     fn layout(
@@ -121,9 +119,9 @@ impl<T: Data> Widget<T> for Button {
             (false, true) => BUTTON_HOVER_COLOR,
             _ => BUTTON_BG_COLOR,
         };
-        let brush = paint_ctx.render_ctx.solid_brush(bg_color);
+        let brush = paint_ctx.solid_brush(bg_color);
         let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
-        paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
+        paint_ctx.fill(rect, &brush, FillRule::NonZero);
 
         self.label.paint(paint_ctx, base_state, data, env);
     }
@@ -205,11 +203,9 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
 impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         let font_size = 15.0;
-        let text_layout = self.get_layout(paint_ctx.render_ctx, font_size, data, env);
-        let brush = paint_ctx.render_ctx.solid_brush(LABEL_TEXT_COLOR);
-        paint_ctx
-            .render_ctx
-            .draw_text(&text_layout, (0., font_size), &brush);
+        let text_layout = self.get_layout(paint_ctx, font_size, data, env);
+        let brush = paint_ctx.solid_brush(LABEL_TEXT_COLOR);
+        paint_ctx.draw_text(&text_layout, (0., font_size), &brush);
     }
 
     fn layout(
