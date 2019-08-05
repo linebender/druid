@@ -61,8 +61,7 @@ impl Widget<String> for CustomWidget {
         // Rectangles: the path for practical people
         let rect = Rect::from_origin_size((10., 10.), (100., 100.));
         // Note the Color:rgba32 which includes an alpha channel (7F in this case)
-        let brush = paint_ctx
-            .solid_brush(Color::rgba32(0x00_00_00_7F));
+        let brush = paint_ctx.solid_brush(Color::rgba32(0x00_00_00_7F));
         // A fill uses a brush, just like stroke, but it needs FillRule to be set
         paint_ctx.fill(rect, &brush, FillRule::NonZero);
 
