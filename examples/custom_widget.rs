@@ -31,7 +31,9 @@ use druid::{
 struct CustomWidget;
 
 impl Widget<String> for CustomWidget {
-    // The paint method. Called when TKTK
+    // The paint method gets called last, after an event flow.
+    // It goes event -> update -> layout -> paint, and each method can influence the next.
+    // Basically, anything that changes the appearance of a widget causes a paint.
     fn paint(
         &mut self,
         paint_ctx: &mut PaintCtx,
@@ -92,7 +94,7 @@ impl Widget<String> for CustomWidget {
                 Ok(())
             })
             .unwrap();
-        // Once we're out of with_save, the original context's rotation has been restored
+        // When we exit with_save, the original context's rotation is restored
 
         // Let's burn some CPU to make a (partially transparent) image buffer
         let image_data = make_image_data(256, 256);
@@ -115,9 +117,9 @@ impl Widget<String> for CustomWidget {
         _data: &String,
         _env: &Env,
     ) -> Size {
-        // If your widget is a concrete size, return that.
-        // Otherwise TKTK HELP why doesn't this clamp the size to above (100., 100.)?
-        bc.constrain((100.0, 100.0))
+        // You can return any Size.
+        // Flexible widgets are based on the BoxConstraints passed by their parent widget.
+        bc.max()
     }
 
     fn event(
