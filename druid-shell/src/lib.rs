@@ -34,7 +34,7 @@ extern crate gio;
 #[cfg(target_os = "linux")]
 extern crate glib;
 #[cfg(target_os = "linux")]
-extern crate gtk;
+extern crate gtk as gtkrs;
 
 #[macro_use]
 extern crate lazy_static;
@@ -57,9 +57,9 @@ pub mod mac;
 pub use mac as platform;
 
 #[cfg(target_os = "linux")]
-pub mod druid_gtk;
+pub mod gtk;
 #[cfg(target_os = "linux")]
-pub use druid_gtk as platform;
+pub use crate::gtk as platform;
 
 pub use error::Error;
 

@@ -16,7 +16,7 @@
 
 use std::ffi::OsString;
 
-use gtk::{
+use gtkrs::{
     DialogExt, FileChooserAction, FileChooserDialog, FileChooserExt, ResponseType, WidgetExt,
     Window,
 };

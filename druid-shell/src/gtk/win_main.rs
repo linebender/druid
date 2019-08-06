@@ -16,8 +16,8 @@
 
 use crate::util::assert_main_thread;
 use gio::ApplicationFlags;
-use gtk::Application;
-use gtk::GtkApplicationExt;
+use gtkrs::Application;
+use gtkrs::GtkApplicationExt;
 use std::cell::RefCell;
 
 // XXX: The application needs to be global because WindowBuilder::build wants

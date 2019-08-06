@@ -19,19 +19,19 @@ use crate::window;
 use std::cell::RefCell;
 use std::sync::Arc;
 
-use gtk::GtkMenuExt;
-use gtk::Menu as GtkMenu;
-use gtk::MenuBar as GtkMenuBar;
-use gtk::MenuItem as GtkMenuItem;
-use gtk::{AccelGroup, AccelGroupExt};
-use gtk::{GtkMenuItemExt, MenuShellExt, WidgetExt};
+use gtkrs::GtkMenuExt;
+use gtkrs::Menu as GtkMenu;
+use gtkrs::MenuBar as GtkMenuBar;
+use gtkrs::MenuItem as GtkMenuItem;
+use gtkrs::{AccelGroup, AccelGroupExt};
+use gtkrs::{GtkMenuItemExt, MenuShellExt, WidgetExt};
 
 use crate::platform::WindowHandle;
 
 use crate::keycodes::{KeySpec, MenuKey};
 use crate::keycodes::{Modifiers, M_ALT, M_CTRL, M_META, M_SHIFT};
 
-use crate::druid_gtk::WinCtxImpl;
+use crate::gtk::WinCtxImpl;
 use crate::window::Text;
 
 use std::borrow::Borrow;
