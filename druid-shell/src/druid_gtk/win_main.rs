@@ -51,7 +51,6 @@ impl RunLoop {
         application
             .register(None as Option<&Cancellable>)
             .expect("Could not register GTK application");
-        application.activate();
 
         GTK_APPLICATION.with(move |x| *x.borrow_mut() = Some(application));
 
