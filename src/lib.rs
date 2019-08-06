@@ -311,7 +311,7 @@ impl<'a, 'b: 'a> Deref for PaintCtx<'a, 'b> {
 
 impl<'a, 'b: 'a> DerefMut for PaintCtx<'a, 'b> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.render_ctx
+        self.render_ctx
     }
 }
 
