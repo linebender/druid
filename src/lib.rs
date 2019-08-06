@@ -302,10 +302,10 @@ pub struct PaintCtx<'a, 'b: 'a> {
 }
 
 impl<'a, 'b: 'a> Deref for PaintCtx<'a, 'b> {
-    type Target = &'a mut Piet<'b>;
+    type Target = Piet<'b>;
 
     fn deref(&self) -> &Self::Target {
-        &self.render_ctx
+        self.render_ctx
     }
 }
 
