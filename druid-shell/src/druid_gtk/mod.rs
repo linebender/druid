@@ -722,8 +722,9 @@ impl From<u32> for KeyCode {
             F1 => KeyCode::F1,
             Left => KeyCode::ArrowLeft,
             Right => KeyCode::ArrowRight,
-            Down=> KeyCode::ArrowDown,
+            Down => KeyCode::ArrowDown,
             Up => KeyCode::ArrowUp,
+            quoteright => KeyCode::Quote,
             _ => {
                 eprintln!("Warning: unknown keyval {}", raw);
                 KeyCode::Unknown(RawKeyCode::Linux(raw))
