@@ -19,24 +19,29 @@ use crate::window;
 use std::cell::RefCell;
 use std::sync::Arc;
 
+use gtk::GtkMenuExt;
 use gtk::Menu as GtkMenu;
 use gtk::MenuBar as GtkMenuBar;
 use gtk::MenuItem as GtkMenuItem;
-use gtk::{GtkMenuItemExt, MenuShellExt};
+use gtk::{AccelGroup, AccelGroupExt};
+use gtk::{GtkMenuItemExt, MenuShellExt, WidgetExt};
 
 use crate::platform::WindowHandle;
 
-use crate::keycodes::MenuKey;
+use crate::keycodes::{KeySpec, MenuKey};
+use crate::keycodes::{Modifiers, M_ALT, M_CTRL, M_META, M_SHIFT};
 
 use crate::druid_gtk::WinCtxImpl;
 use crate::window::Text;
+
+use std::borrow::Borrow;
 
 pub struct Menu {
     items: Vec<MenuItem>,
 }
 
 enum MenuItem {
-    Entry(String, u32),
+    Entry(String, u32, MenuKey),
     SubMenu(String, Menu),
 }
 
@@ -44,7 +49,7 @@ impl MenuItem {
     /// Get the name of this menu item
     fn name(&self) -> &str {
         match self {
-            MenuItem::Entry(name, _) | MenuItem::SubMenu(name, _) => name,
+            MenuItem::Entry(name, _, _) | MenuItem::SubMenu(name, _) => name,
         }
     }
 
@@ -52,11 +57,15 @@ impl MenuItem {
         self,
         handler: Arc<RefCell<Box<dyn window::WinHandler>>>,
         handle: &WindowHandle,
+        accel_group: &AccelGroup,
     ) -> GtkMenuItem {
         match self {
-            MenuItem::Entry(name, id) => {
-                let handle = handle.clone();
+            MenuItem::Entry(name, id, key) => {
                 let item = GtkMenuItem::new_with_label(&name);
+
+                register_accelerator(&item, accel_group, key);
+
+                let handle = handle.clone();
                 item.connect_activate(move |_| {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
@@ -72,7 +81,7 @@ impl MenuItem {
             }
             MenuItem::SubMenu(name, submenu) => {
                 let item = GtkMenuItem::new_with_label(&name);
-                item.set_submenu(Some(&submenu.into_gtk_menu(handler, handle)));
+                item.set_submenu(Some(&submenu.into_gtk_menu(handler, handle, accel_group)));
 
                 item
             }
@@ -86,12 +95,13 @@ impl Menu {
     }
 
     pub fn add_dropdown(&mut self, menu: Menu, text: &str) {
-        self.items.push(MenuItem::SubMenu(text.into(), menu));
+        self.items.push(MenuItem::SubMenu(strip_access_key(text), menu));
     }
 
     pub fn add_item(&mut self, id: u32, text: &str, key: impl Into<MenuKey>) {
         // TODO: handle accelerator shortcuts by parsing `text`
-        self.items.push(MenuItem::Entry(text.into(), id));
+        self.items
+            .push(MenuItem::Entry(strip_access_key(text), id, key.into()));
     }
 
     pub fn add_separator(&mut self) {
@@ -102,11 +112,12 @@ impl Menu {
         self,
         handler: Arc<RefCell<Box<dyn window::WinHandler>>>,
         handle: &WindowHandle,
+        accel_group: &AccelGroup,
     ) -> GtkMenuBar {
         let menu = GtkMenuBar::new();
 
         for item in self.items {
-            menu.append(&item.into_gtk_menu_item(handler.clone(), handle));
+            menu.append(&item.into_gtk_menu_item(handler.clone(), handle, accel_group));
         }
 
         menu
@@ -116,13 +127,70 @@ impl Menu {
         self,
         handler: Arc<RefCell<Box<dyn window::WinHandler>>>,
         handle: &WindowHandle,
+        accel_group: &AccelGroup,
     ) -> GtkMenu {
         let menu = GtkMenu::new();
+        menu.set_accel_group(Some(accel_group));
 
         for item in self.items {
-            menu.append(&item.into_gtk_menu_item(handler.clone(), handle));
+            menu.append(&item.into_gtk_menu_item(handler.clone(), handle, accel_group));
         }
 
         menu
     }
+}
+
+fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: MenuKey) {
+    if let KeySpec::Char(c) = menu_key.key {
+        item.add_accelerator(
+            "activate",
+            accel_group,
+            gdk::unicode_to_keyval(c as u32),
+            modifiers_to_gdk_modifier_type(menu_key.modifiers),
+            gtk::AccelFlags::VISIBLE,
+        );
+    }
+}
+
+fn modifiers_to_gdk_modifier_type(modifiers: Modifiers) -> gdk::ModifierType {
+    let mut result = gdk::ModifierType::empty();
+
+    if modifiers & M_ALT == M_ALT {
+        result.insert(gdk::ModifierType::MOD1_MASK);
+    }
+
+    if modifiers & M_CTRL == M_CTRL {
+        result.insert(gdk::ModifierType::CONTROL_MASK);
+    }
+
+    if modifiers & M_SHIFT == M_SHIFT {
+        result.insert(gdk::ModifierType::SHIFT_MASK);
+    }
+
+    if modifiers & M_META == M_META {
+        result.insert(gdk::ModifierType::META_MASK);
+    }
+
+    result
+}
+
+/// Strip the access keys from the menu strong.
+///
+/// Changes "E&xit" to "Exit". Actual ampersands are escaped as "&&".
+fn strip_access_key(raw_menu_text: &str) -> String {
+    // TODO this is copied from mac/menu.rs maybe this should be moved somewhere common?
+    let mut saw_ampersand = false;
+    let mut result = String::new();
+    for c in raw_menu_text.chars() {
+        if c == '&' {
+            if saw_ampersand {
+                result.push(c);
+            }
+            saw_ampersand = !saw_ampersand;
+        } else {
+            result.push(c);
+            saw_ampersand = false;
+        }
+    }
+    result
 }

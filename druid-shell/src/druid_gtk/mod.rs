@@ -28,7 +28,9 @@ use std::sync::{Arc, Mutex};
 
 use gdk::EventKey;
 use gdk::EventMask;
+use gtk::AccelGroup;
 use gtk::ApplicationWindow;
+use gtk::ApplicationWindowExt;
 use gtk::Inhibit;
 
 use piet_common::{Piet, RenderContext};
@@ -113,6 +115,9 @@ impl WindowBuilder {
 
         let window = with_application(|app| ApplicationWindow::new(&app));
 
+        let accel_group = AccelGroup::new();
+        window.add_accel_group(&accel_group);
+
         window.set_title(&self.title);
         // TODO(bobtwinkles): enable this when I figure out how to set the cursor on application windows
         // window.set_cursor(gdk::Cursor::new_from_nane(
@@ -133,7 +138,7 @@ impl WindowBuilder {
         };
 
         if let Some(menu) = self.menu {
-            let menu = menu.into_gtk_menubar(handler.clone(), &handle);
+            let menu = menu.into_gtk_menubar(handler.clone(), &handle, &accel_group);
             vbox.pack_start(&menu, false, false, 0);
         }
 
