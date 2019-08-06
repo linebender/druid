@@ -56,6 +56,12 @@ impl WinHandler for HelloState {
                 let filename = self.handle.file_dialog(FileDialogType::Open, options);
                 println!("result: {:?}", filename);
             }
+            0x102 => {
+                let mut options = FileDialogOptions::default();
+                options.set_show_hidden();
+                let filename = self.handle.file_dialog(FileDialogType::Save, options);
+                println!("result: {:?}", filename);
+            }
             _ => println!("unexpected id {}", id),
         }
     }
@@ -111,6 +117,7 @@ fn main() {
     let mut file_menu = Menu::new();
     file_menu.add_item(0x100, "E&xit", MenuKey::std_quit());
     file_menu.add_item(0x101, "O&pen", MenuKey::command('o'));
+    file_menu.add_item(0x102, "S&ave", MenuKey::command('s'));
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "&File");
 

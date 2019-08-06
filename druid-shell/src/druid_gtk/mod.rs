@@ -478,7 +478,12 @@ impl WindowHandle {
         ty: FileDialogType,
         options: FileDialogOptions,
     ) -> Result<OsString, Error> {
-        unimplemented!()
+        use gtk::Cast;
+        if let Some(window) = &self.window {
+            dialog::get_file_dialog_path(window.upcast_ref(), ty, options)
+        } else {
+            Err(Error::Null) // TODO proper error
+        }
     }
 }
 
