@@ -196,7 +196,9 @@ impl WindowBuilder {
                     let mut context = context.clone();
                     let mut piet_context = Piet::new(&mut context);
                     let anim = handler.paint(&mut piet_context, &mut ctx);
-                    piet_context.finish();
+                    if let Err(e) = piet_context.finish() {
+                        eprintln!("piet error on render: {:?}", e);
+                    }
 
                     if anim {
                         widget.queue_draw();
@@ -408,11 +410,9 @@ impl WindowBuilder {
 impl WindowHandle {
     pub fn show(&self) {
         use gtk::WidgetExt;
-        match self.window.as_ref() {
-            Some(window) => window.show_all(),
-            None => {}
+        if let Some(window) = self.window.as_ref() {
+            window.show_all();
         }
-        // self.window.map(|window| window.show_all());
     }
 
     /// Close the window.
@@ -431,9 +431,8 @@ impl WindowHandle {
     // Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
         use gtk::WidgetExt;
-        match self.window.as_ref() {
-            Some(window) => window.queue_draw(),
-            None => {}
+        if let Some(window) = self.window.as_ref() {
+            window.queue_draw();
         }
     }
 
