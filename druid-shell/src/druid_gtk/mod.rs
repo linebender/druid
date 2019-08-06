@@ -564,45 +564,46 @@ fn gtk_modifiers_to_mouse_button(modifiers: gdk::ModifierType) -> window::MouseB
 
 /// Map a hardware keycode to a keyval by looking up the keycode in the keymap
 fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
+    use std::ffi::c_void;
+    use std::os::raw::{c_int, c_uint};
+    use std::ptr;
+    use std::slice;
     unsafe {
         let keymap = gdk_sys::gdk_keymap_get_default();
 
-        // TODO Steven use std::os::c_int etc instead of u32
+        let mut nkeys = 0;
+        let mut keys: *mut gdk_sys::GdkKeymapKey = ptr::null_mut();
+        let mut keyvals: *mut c_uint = ptr::null_mut();
 
-        let keys_ptr: *mut *mut gdk_sys::GdkKeymapKey = std::ptr::null_mut();
-
-        // create a pointer for the number of keys returned
-        let nkeys: Box<i32> = Box::new(0);
-        let nkeys_ptr: *mut i32 = Box::into_raw(nkeys);
-
-        // create a pointer to hold the actual returned keyvals
-        let keyvals = Box::new([0u32; 1]);
-        let keyvals_ptr: *mut *mut u32 = Box::into_raw(keyvals) as *mut *mut u32;
-
-        // call into gdk to retrieve the keyvals
-        let result = gdk_sys::gdk_keymap_get_entries_for_keycode(
+        // call into gdk to retrieve the keyvals and keymap keys
+        gdk_sys::gdk_keymap_get_entries_for_keycode(
             keymap,
-            keycode as u32,
-            keys_ptr,
-            keyvals_ptr,
-            nkeys_ptr,
+            c_uint::from(keycode),
+            &mut keys as *mut *mut gdk_sys::GdkKeymapKey,
+            &mut keyvals as *mut *mut c_uint,
+            &mut nkeys as *mut c_int,
         );
 
-        // get the values back out from the pointer
-        let nkeys: Box<i32> = Box::from_raw(nkeys_ptr);
-        let keyvals = std::slice::from_raw_parts(*keyvals_ptr, *nkeys as usize);
+        if nkeys > 0 {
+            let keyvals_slice = slice::from_raw_parts(keyvals, nkeys as usize);
+            let keys_slice = slice::from_raw_parts(keys, nkeys as usize);
 
-        let return_value = if *nkeys > 0 {
-            // assume the first returned keyval is the correct key
-            Some(keyvals[0].clone())
+            let resolved_keyval = keys_slice.iter().enumerate().find_map(|(i, key)| {
+                if key.group == 0 && key.level == 0 {
+                    Some(keyvals_slice[i])
+                } else {
+                    None
+                }
+            });
+
+            // notify glib to free the allocated arrays
+            glib_sys::g_free(keyvals as *mut c_void);
+            glib_sys::g_free(keys as *mut c_void);
+
+            resolved_keyval
         } else {
             None
-        };
-
-        // notify glib to free the allocated arrays
-        glib_sys::g_free(*keyvals_ptr as *mut std::ffi::c_void);
-
-        return_value
+        }
     }
 }
 
