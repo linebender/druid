@@ -33,14 +33,14 @@ impl Widget<f64> for ProgressBar {
         let rect = Rect::from_origin_size(Point::ORIGIN, base_state.size());
 
         //Paint the background
-        let brush = paint_ctx.render_ctx.solid_brush(BACKGROUND_COLOR);
-        paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
+        let brush = paint_ctx.solid_brush(BACKGROUND_COLOR);
+        paint_ctx.fill(rect, &brush, FillRule::NonZero);
 
         //Paint the bar
-        let brush = paint_ctx.render_ctx.solid_brush(BAR_COLOR);
+        let brush = paint_ctx.solid_brush(BAR_COLOR);
         let calculated_bar_width = clamped * rect.width();
         let rect = rect.with_size(Size::new(calculated_bar_width, rect.height()));
-        paint_ctx.render_ctx.fill(rect, &brush, FillRule::NonZero);
+        paint_ctx.fill(rect, &brush, FillRule::NonZero);
     }
 
     fn layout(

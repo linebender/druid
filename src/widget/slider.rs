@@ -68,12 +68,10 @@ impl Widget<f64> for Slider {
             background_origin + Vec2::new(background_width, 0.),
         );
 
-        let brush = paint_ctx.render_ctx.solid_brush(BACKGROUND_COLOR);
+        let brush = paint_ctx.solid_brush(BACKGROUND_COLOR);
         let mut stroke = StrokeStyle::new();
         stroke.set_line_cap(LineCap::Round);
-        paint_ctx
-            .render_ctx
-            .stroke(background_line, &brush, BACKGROUND_THICKNESS, Some(&stroke));
+        paint_ctx.stroke(background_line, &brush, BACKGROUND_THICKNESS, Some(&stroke));
 
         //Paint the slider
         let is_active = base_state.is_active();
@@ -87,10 +85,8 @@ impl Widget<f64> for Slider {
         let knob_position = (self.width - KNOB_WIDTH) * clamped + KNOB_WIDTH / 2.;
         self.knob_pos = Point::new(knob_position, rect.height() / 2.);
         let knob_circle = Circle::new(self.knob_pos, KNOB_WIDTH / 2.);
-        let brush = paint_ctx.render_ctx.solid_brush(knob_color);
-        paint_ctx
-            .render_ctx
-            .fill(knob_circle, &brush, FillRule::NonZero);
+        let brush = paint_ctx.solid_brush(knob_color);
+        paint_ctx.fill(knob_circle, &brush, FillRule::NonZero);
     }
 
     fn layout(

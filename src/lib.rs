@@ -24,7 +24,8 @@ mod lens;
 mod value;
 
 use std::any::Any;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
+
 use std::time::Instant;
 
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
@@ -178,7 +179,8 @@ pub trait Widget<T> {
     /// Paint the widget appearance.
     ///
     /// The widget calls methods on the `render_ctx` field of the
-    /// `paint_ctx` in order to paint its appearance.
+    /// `paint_ctx` in order to paint its appearance. `paint_ctx` auto
+    /// derefs to `render_ctx` for convenience.
     ///
     /// Container widgets can paint a background before recursing to their
     /// children, or annotations (for example, scrollbars) by painting
@@ -290,12 +292,27 @@ pub struct Env {
 /// A context passed to paint methods of widgets.
 ///
 /// Widgets paint their appearance by calling methods on the
-/// `render_ctx`. This struct is expected to grow, for example to
-/// include the "damage region" indicating that only a subset of
-/// the entire widget hierarchy needs repainting.
+/// `render_ctx`, which PaintCtx derefs to for convenience.
+/// This struct is expected to grow, for example to include the
+/// "damage region" indicating that only a subset of the entire
+/// widget hierarchy needs repainting.
 pub struct PaintCtx<'a, 'b: 'a> {
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'b>,
+}
+
+impl<'a, 'b: 'a> Deref for PaintCtx<'a, 'b> {
+    type Target = Piet<'b>;
+
+    fn deref(&self) -> &Self::Target {
+        self.render_ctx
+    }
+}
+
+impl<'a, 'b: 'a> DerefMut for PaintCtx<'a, 'b> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.render_ctx
+    }
 }
 
 /// A context provided to layout handling methods of widgets.
@@ -426,15 +443,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Paint the widget, translating it by the origin of its layout rectangle.
     // Discussion: should this be `paint` and the other `paint_raw`?
     pub fn paint_with_offset(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        if let Err(e) = paint_ctx.render_ctx.save() {
+        if let Err(e) = paint_ctx.save() {
             eprintln!("error saving render context: {:?}", e);
             return;
         }
-        paint_ctx
-            .render_ctx
-            .transform(Affine::translate(self.state.layout_rect.origin().to_vec2()));
+        paint_ctx.transform(Affine::translate(self.state.layout_rect.origin().to_vec2()));
         self.paint(paint_ctx, data, env);
-        if let Err(e) = paint_ctx.render_ctx.restore() {
+        if let Err(e) = paint_ctx.restore() {
             eprintln!("error restoring render context: {:?}", e);
         }
     }

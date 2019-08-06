@@ -65,17 +65,15 @@ impl<T: Data> Scroll<T> {
 
 impl<T: Data> Widget<T> for Scroll<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
-        if let Err(e) = paint_ctx.render_ctx.save() {
+        if let Err(e) = paint_ctx.save() {
             eprintln!("error saving render context: {:?}", e);
             return;
         }
         let viewport = Rect::from_origin_size(Point::ORIGIN, base_state.size());
-        paint_ctx.render_ctx.clip(viewport, FillRule::NonZero);
-        paint_ctx
-            .render_ctx
-            .transform(Affine::translate(-self.scroll_offset));
+        paint_ctx.clip(viewport, FillRule::NonZero);
+        paint_ctx.transform(Affine::translate(-self.scroll_offset));
         self.child.paint(paint_ctx, data, env);
-        if let Err(e) = paint_ctx.render_ctx.restore() {
+        if let Err(e) = paint_ctx.restore() {
             eprintln!("error restoring render context: {:?}", e);
         }
     }

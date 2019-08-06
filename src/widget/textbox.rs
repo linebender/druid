@@ -80,8 +80,8 @@ impl Widget<String> for TextBox {
         };
 
         // Paint the border / background
-        let background_brush = paint_ctx.render_ctx.solid_brush(BACKGROUND_GREY_LIGHT);
-        let border_brush = paint_ctx.render_ctx.solid_brush(border_color);
+        let background_brush = paint_ctx.solid_brush(BACKGROUND_GREY_LIGHT);
+        let border_brush = paint_ctx.solid_brush(border_color);
 
         let clip_rect = RoundedRect::from_origin_size(
             Point::ORIGIN,
@@ -93,25 +93,20 @@ impl Widget<String> for TextBox {
             2.,
         );
 
-        paint_ctx
-            .render_ctx
-            .fill(clip_rect, &background_brush, FillRule::NonZero);
+        paint_ctx.fill(clip_rect, &background_brush, FillRule::NonZero);
 
-        paint_ctx
-            .render_ctx
-            .stroke(clip_rect, &border_brush, BORDER_WIDTH, None);
+        paint_ctx.stroke(clip_rect, &border_brush, BORDER_WIDTH, None);
 
         // Paint the text
-        let text = paint_ctx.render_ctx.text();
+        let text = paint_ctx.text();
         let text_layout = self.get_layout(text, FONT_SIZE, data);
-        let brush = paint_ctx.render_ctx.solid_brush(TEXT_COLOR);
+        let brush = paint_ctx.solid_brush(TEXT_COLOR);
 
         let text_height = FONT_SIZE * 0.8;
         let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
 
         // Render text and cursor inside a clip
         paint_ctx
-            .render_ctx
             .with_save(|rc| {
                 rc.clip(clip_rect, FillRule::NonZero);
 
