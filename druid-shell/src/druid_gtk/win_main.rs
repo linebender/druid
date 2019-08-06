@@ -17,6 +17,7 @@
 use crate::util::assert_main_thread;
 use gio::ApplicationFlags;
 use gtk::Application;
+use gtk::GtkApplicationExt;
 use std::cell::RefCell;
 
 // XXX: The application needs to be global because WindowBuilder::build wants
@@ -74,7 +75,17 @@ impl RunLoop {
 /// Request to quit the application, exiting the runloop.
 pub fn request_quit() {
     assert_main_thread();
-    gtk::main_quit();
+    with_application(|app| {
+        match app.get_active_window() {
+            None => {
+                // no application is running, main is not running
+            }
+            Some(_) => {
+                // we still have an active window, close the runLo
+                gtk::main_quit();
+            }
+        }
+    });
 }
 
 #[inline]

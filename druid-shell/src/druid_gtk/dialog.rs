@@ -17,8 +17,8 @@
 use std::ffi::OsString;
 
 use gtk::{
-    DialogExt, FileChooserAction, FileChooserDialog, FileChooserExt,
-    ResponseType, WidgetExt, Window,
+    DialogExt, FileChooserAction, FileChooserDialog, FileChooserExt, ResponseType, WidgetExt,
+    Window,
 };
 
 use crate::Error;
