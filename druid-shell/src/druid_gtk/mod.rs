@@ -418,13 +418,10 @@ impl WindowHandle {
     /// Close the window.
     pub fn close(&self) {
         use gtk::GtkApplicationExt;
-        match self.window.as_ref() {
-            Some(window) => {
-                with_application(|app| {
-                    app.remove_window(window);
-                });
-            }
-            None => return,
+        if let Some(window) = self.window.as_ref() {
+            with_application(|app| {
+                app.remove_window(window);
+            });
         }
     }
 
