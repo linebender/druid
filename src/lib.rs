@@ -21,10 +21,11 @@ pub mod widget;
 mod data;
 mod event;
 mod lens;
+mod paint;
 mod value;
 
 use std::any::Any;
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 
 use std::time::Instant;
 
@@ -45,6 +46,7 @@ pub use druid_shell::window::{Cursor, MouseButton, MouseEvent};
 pub use data::Data;
 pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
+pub use paint::{Brush, Gradient, GradientStops, PaintCtx, UnitPoint};
 pub use value::{Delta, KeyPath, PathEl, PathFragment, Value};
 
 const BACKGROUND_COLOR: Color = Color::rgb24(0x27_28_22);
@@ -287,32 +289,6 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 pub struct Env {
     value: Value,
     path: KeyPath,
-}
-
-/// A context passed to paint methods of widgets.
-///
-/// Widgets paint their appearance by calling methods on the
-/// `render_ctx`, which PaintCtx derefs to for convenience.
-/// This struct is expected to grow, for example to include the
-/// "damage region" indicating that only a subset of the entire
-/// widget hierarchy needs repainting.
-pub struct PaintCtx<'a, 'b: 'a> {
-    /// The render context for actually painting.
-    pub render_ctx: &'a mut Piet<'b>,
-}
-
-impl<'a, 'b: 'a> Deref for PaintCtx<'a, 'b> {
-    type Target = Piet<'b>;
-
-    fn deref(&self) -> &Self::Target {
-        self.render_ctx
-    }
-}
-
-impl<'a, 'b: 'a> DerefMut for PaintCtx<'a, 'b> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.render_ctx
-    }
 }
 
 /// A context provided to layout handling methods of widgets.

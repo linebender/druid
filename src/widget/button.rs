@@ -22,7 +22,7 @@ use crate::{
 };
 
 use crate::piet::{Color, FillRule, FontBuilder, Text, TextLayoutBuilder};
-use crate::{Piet, Point, RenderContext};
+use crate::{Gradient, Piet, Point, RenderContext, UnitPoint};
 
 const BUTTON_BG_COLOR: Color = Color::rgba32(0x40_40_48_ff);
 const BUTTON_HOVER_COLOR: Color = Color::rgba32(0x50_50_58_ff);
@@ -119,9 +119,11 @@ impl<T: Data> Widget<T> for Button {
             (false, true) => BUTTON_HOVER_COLOR,
             _ => BUTTON_BG_COLOR,
         };
-        let brush = paint_ctx.solid_brush(bg_color);
         let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
-        paint_ctx.fill(rect, &brush, FillRule::NonZero);
+        // TODO: pick nicer theme colors, this is for experimentation.
+        let bg_bot_color = Color::BLACK;
+        let gradient = Gradient::new(UnitPoint::TOP, UnitPoint::BOTTOM, (bg_color, bg_bot_color));
+        paint_ctx.fill(rect, &gradient, FillRule::NonZero);
 
         self.label.paint(paint_ctx, base_state, data, env);
     }
