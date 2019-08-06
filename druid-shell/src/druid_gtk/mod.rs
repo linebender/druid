@@ -75,7 +75,6 @@ impl<F: FnOnce(&Any) + Send> IdleCallback for F {
 }
 
 struct WinCtxImpl<'a> {
-    window: Option<&'a ApplicationWindow>,
     handle: &'a WindowHandle,
     text: Text<'static>,
 }
@@ -169,7 +168,6 @@ impl WindowBuilder {
                 if let Ok(mut handler) = handler.try_borrow_mut() {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
-                        window: None,
                         text: Text::new(),
                     };
 
@@ -215,7 +213,6 @@ impl WindowBuilder {
             drawing_area.connect_button_press_event(move |_widget, button| {
                 if let Ok(mut handler) = handler.try_borrow_mut() {
                     let mut ctx = WinCtxImpl {
-                        window: None, // TODO Steven
                         handle: &handle,
                         text: Text::new(),
                     };
@@ -243,7 +240,6 @@ impl WindowBuilder {
             drawing_area.connect_button_release_event(move |_widget, button| {
                 if let Ok(mut handler) = handler.try_borrow_mut() {
                     let mut ctx = WinCtxImpl {
-                        window: None,
                         handle: &handle,
                         text: Text::new(),
                     };
@@ -271,7 +267,6 @@ impl WindowBuilder {
             drawing_area.connect_motion_notify_event(move |_widget, motion| {
                 if let Ok(mut handler) = handler.try_borrow_mut() {
                     let mut ctx = WinCtxImpl {
-                        window: None,
                         handle: &handle,
                         text: Text::new(),
                     };
@@ -297,7 +292,6 @@ impl WindowBuilder {
             drawing_area.connect_scroll_event(move |_widget, scroll| {
                 if let Ok(mut handler) = handler.try_borrow_mut() {
                     let mut ctx = WinCtxImpl {
-                        window: None,
                         handle: &handle,
                         text: Text::new(),
                     };
@@ -350,7 +344,6 @@ impl WindowBuilder {
             drawing_area.connect_key_press_event(move |_widget, key| {
                 if let Ok(mut handler) = handler.try_borrow_mut() {
                     let mut ctx = WinCtxImpl {
-                        window: None,
                         handle: &handle,
                         text: Text::new(),
                     };
@@ -369,7 +362,6 @@ impl WindowBuilder {
             drawing_area.connect_key_release_event(move |_widget, key| {
                 if let Ok(mut handler) = handler.try_borrow_mut() {
                     let mut ctx = WinCtxImpl {
-                        window: None,
                         handle: &handle,
                         text: Text::new(),
                     };
@@ -388,7 +380,6 @@ impl WindowBuilder {
             drawing_area.connect_destroy(move |widget| {
                 if let Ok(mut handler) = handler.try_borrow_mut() {
                     let mut ctx = WinCtxImpl {
-                        window: None,
                         handle: &handle,
                         text: Text::new(),
                     };

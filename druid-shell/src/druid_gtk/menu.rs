@@ -60,7 +60,6 @@ impl MenuItem {
                 item.connect_activate(move |_| {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
-                        window: None,
                         text: Text::new(),
                     };
 
