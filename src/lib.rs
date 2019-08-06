@@ -92,6 +92,7 @@ pub struct UiState<T: Data> {
 pub struct WidgetPod<T: Data, W: Widget<T>> {
     state: BaseState,
     old_data: Option<T>,
+    env: Option<Env>,
     inner: W,
 }
 
@@ -398,6 +399,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         WidgetPod {
             state: Default::default(),
             old_data: None,
+            env: None,
             inner,
         }
     }
@@ -603,6 +605,7 @@ impl<T: Data, W: Widget<T> + 'static> WidgetPod<T, W> {
         WidgetPod {
             state: self.state,
             old_data: self.old_data,
+            env: self.env,
             inner: Box::new(self.inner),
         }
     }
