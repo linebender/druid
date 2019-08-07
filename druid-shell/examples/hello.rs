@@ -86,7 +86,7 @@ impl WinHandler for HelloState {
         println!("mouse_up {:?}", event);
     }
 
-    fn timer(&mut self, id: usize) {
+    fn timer(&mut self, id: usize, _ctx: &mut dyn WinCtx) {
         println!("timer fired: {}", id);
     }
 
