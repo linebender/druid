@@ -130,6 +130,12 @@ pub struct BaseState {
     /// Any descendant has requested an animation frame.
     request_anim: bool,
 
+    /// Any descendant has requested a timer.
+    ///
+    /// Note: we don't have any way of clearing this request, as it's
+    /// likely not worth the complexity.
+    request_timer: bool,
+
     /// This widget or a descendant has focus.
     has_focus: bool,
 
@@ -555,6 +561,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 child_ctx.base_state.request_anim = false;
                 Event::AnimFrame(*interval)
             }
+            Event::Timer(id) => {
+                recurse = child_ctx.base_state.request_timer;
+                Event::Timer(*id)
+            }
         };
         child_ctx.base_state.needs_inval = false;
         if let Some(is_hot) = hot_changed {
@@ -574,6 +584,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         };
         ctx.base_state.needs_inval |= child_ctx.base_state.needs_inval;
         ctx.base_state.request_anim |= child_ctx.base_state.request_anim;
+        ctx.base_state.request_timer |= child_ctx.base_state.request_timer;
         ctx.base_state.is_hot |= child_ctx.base_state.is_hot;
         ctx.base_state.has_active |= child_ctx.base_state.has_active;
         ctx.base_state.request_focus |= child_ctx.base_state.request_focus;
@@ -787,6 +798,10 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
         self.state.do_event(event, ctx);
     }
 
+    fn timer(&mut self, id: usize, ctx: &mut dyn WinCtx) {
+        self.state.do_event(Event::Timer(id), ctx);
+    }
+
     fn as_any(&mut self) -> &mut dyn Any {
         self
     }
@@ -988,11 +1003,6 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.is_handled
     }
 
-    /// Request an animation frame.
-    pub fn request_anim_frame(&mut self) {
-        self.base_state.request_anim = true;
-    }
-
     /// Query the focus state of the widget.
     ///
     /// See [`BaseState::has_focus`](struct.BaseState.html#method.has_focus).
@@ -1005,6 +1015,21 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     /// Discussion question: is method needed in contexts other than event?
     pub fn request_focus(&mut self) {
         self.base_state.request_focus = true;
+    }
+
+    /// Request an animation frame.
+    pub fn request_anim_frame(&mut self) {
+        self.base_state.request_anim = true;
+    }
+
+    /// Request a timer event.
+    ///
+    /// The return value is an id, which can be used to associate the
+    /// request with the event. The id is guaranteed not to be 0, and can
+    /// also be assumed to be a small integer.
+    pub fn request_timer(&mut self, deadline: Instant) -> usize {
+        self.base_state.request_timer = true;
+        self.win_ctx.request_timer(deadline)
     }
 }
 

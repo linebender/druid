@@ -51,6 +51,22 @@ pub trait WinCtx<'a> {
 
     /// Set the cursor icon.
     fn set_cursor(&mut self, cursor: &Cursor);
+
+    /// Schedule a timer.
+    ///
+    /// This causes a [`WinHandler::timer()`] call at the deadline. The
+    /// return value is an id that can be used to associate the request
+    /// with the handler call. It is guaranteed not to be 0, and is also
+    /// a small integer (so that using a `Vec` with this id as an index
+    /// is reasonable).
+    ///
+    /// Note that this is not a precise timer. On Windows, the typical
+    /// resolution is around 10ms. Therefore, it's best used for things
+    /// like blinking a cursor or triggering tooltips, not for anything
+    /// requiring precision.
+    ///
+    /// [`WinHandler::timer()`]: trait.WinHandler.html#tymethod.timer
+    fn request_timer(&mut self, deadline: std::time::Instant) -> usize;
 }
 
 /// App behavior, supplied by the app.
@@ -121,6 +137,16 @@ pub trait WinHandler {
     /// Called on mouse button up.
     #[allow(unused_variables)]
     fn mouse_up(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {}
+
+    /// Called on timer event.
+    ///
+    /// This is called at (approximately) the requested deadline by a
+    /// [`WinCtx::request_timer()`] call. The id argument here is the same
+    /// as the return value of that call.
+    ///
+    /// [`WinCtx::request_timer()`]: trait.WinCtx.html#tymethod.request_timer
+    #[allow(unused_variables)]
+    fn timer(&mut self, id: usize, ctx: &mut dyn WinCtx) {}
 
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is

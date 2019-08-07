@@ -92,6 +92,17 @@ pub enum Event {
     /// will be 0. (This logic is presently per-window but might change to
     /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
     AnimFrame(u64),
+    /// Called on a timer event.
+    ///
+    /// Request a timer event through [`EventCtx::request_timer()`]. That will
+    /// cause a timer event later.
+    ///
+    /// Note that timer events from other widgets may be delivered as well. Use
+    /// the id returned from the `request_timer()` call to filter events more
+    /// precisely.
+    ///
+    /// [`EventCtx::request_timer()`]: struct.EventCtx.html#method.request_timer
+    Timer(usize),
 }
 
 /// A mouse wheel event.
