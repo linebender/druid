@@ -37,6 +37,7 @@ impl TimerToken {
         TimerToken(id)
     }
 
+    #[cfg(target_os = "windows")]
     pub(crate) const fn get_raw(self) -> usize {
         self.0
     }

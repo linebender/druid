@@ -20,12 +20,13 @@ use druid::kurbo::{Line, Size};
 use druid::piet::{Color, RenderContext};
 use druid::shell::{runloop, WindowBuilder};
 use druid::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken,
+    UpdateCtx, Widget,
 };
 use druid::{UiMain, UiState};
 
 struct TimerWidget {
-    timer_id: usize,
+    timer_id: TimerToken,
     on: bool,
 }
 
@@ -89,7 +90,7 @@ fn main() {
     let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let root = TimerWidget {
-        timer_id: 0,
+        timer_id: TimerToken::INVALID,
         on: false,
     };
     let state = UiState::new(root, 0u32);
