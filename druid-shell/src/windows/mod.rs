@@ -701,11 +701,12 @@ impl WndProc for MyWndProc {
                 unsafe {
                     KillTimer(hwnd, id);
                 }
-                self.handle.borrow().free_timer_slot(id);
+                let token = TimerToken::new(id);
+                self.handle.borrow().free_timer_slot(token);
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.timer(id, &mut c.ctx());
+                    s.handler.timer(token, &mut c.ctx());
                 }
                 Some(1)
             }
@@ -1168,20 +1169,20 @@ impl WindowHandle {
     /// Allocate a timer slot.
     ///
     /// Returns an id and an elapsed time in ms
-    fn get_timer_slot(&self, deadline: std::time::Instant) -> (usize, u32) {
+    fn get_timer_slot(&self, deadline: std::time::Instant) -> (TimerToken, u32) {
         if let Some(w) = self.state.upgrade() {
             let mut timers = w.timers.lock().unwrap();
             let id = timers.alloc();
             let elapsed = timers.compute_elapsed(deadline);
             (id, elapsed)
         } else {
-            (0, 0)
+            (TimerToken::INVALID, 0)
         }
     }
 
-    fn free_timer_slot(&self, id: usize) {
+    fn free_timer_slot(&self, token: TimerToken) {
         if let Some(w) = self.state.upgrade() {
-            w.timers.lock().unwrap().free(id)
+            w.timers.lock().unwrap().free(token)
         }
     }
 }

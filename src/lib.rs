@@ -40,7 +40,7 @@ pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 #[allow(unused)]
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, Text, WinCtx, WinHandler, WindowHandle};
-pub use druid_shell::window::{Cursor, MouseButton, MouseEvent};
+pub use druid_shell::window::{Cursor, MouseButton, MouseEvent, TimerToken};
 
 pub use data::Data;
 pub use event::{Event, WheelEvent};
@@ -798,8 +798,8 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
         self.state.do_event(event, ctx);
     }
 
-    fn timer(&mut self, id: usize, ctx: &mut dyn WinCtx) {
-        self.state.do_event(Event::Timer(id), ctx);
+    fn timer(&mut self, token: TimerToken, ctx: &mut dyn WinCtx) {
+        self.state.do_event(Event::Timer(token), ctx);
     }
 
     fn as_any(&mut self) -> &mut dyn Any {
@@ -1024,10 +1024,9 @@ impl<'a, 'b> EventCtx<'a, 'b> {
 
     /// Request a timer event.
     ///
-    /// The return value is an id, which can be used to associate the
-    /// request with the event. The id is guaranteed not to be 0, and can
-    /// also be assumed to be a small integer.
-    pub fn request_timer(&mut self, deadline: Instant) -> usize {
+    /// The return value is a token, which can be used to associate the
+    /// request with the event.
+    pub fn request_timer(&mut self, deadline: Instant) -> TimerToken {
         self.base_state.request_timer = true;
         self.win_ctx.request_timer(deadline)
     }

@@ -17,7 +17,7 @@
 use crate::kurbo::{Rect, Shape, Vec2};
 
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
-use druid_shell::window::MouseEvent;
+use druid_shell::window::{MouseEvent, TimerToken};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -98,11 +98,11 @@ pub enum Event {
     /// cause a timer event later.
     ///
     /// Note that timer events from other widgets may be delivered as well. Use
-    /// the id returned from the `request_timer()` call to filter events more
+    /// the token returned from the `request_timer()` call to filter events more
     /// precisely.
     ///
     /// [`EventCtx::request_timer()`]: struct.EventCtx.html#method.request_timer
-    Timer(usize),
+    Timer(TimerToken),
 }
 
 /// A mouse wheel event.

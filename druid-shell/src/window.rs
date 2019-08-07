@@ -25,6 +25,23 @@ use crate::platform;
 // see https://github.com/linebender/piet/pull/37 for more discussion.
 pub type Text<'a> = <piet_common::Piet<'a> as piet_common::RenderContext>::Text;
 
+/// A token that uniquely identifies a running timer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
+pub struct TimerToken(usize);
+
+impl TimerToken {
+    /// A token that does not correspond to any timer.
+    pub const INVALID: TimerToken = TimerToken(0);
+
+    pub(crate) const fn new(id: usize) -> TimerToken {
+        TimerToken(id)
+    }
+
+    pub(crate) const fn get_raw(self) -> usize {
+        self.0
+    }
+}
+
 // Handle to Window Level Utilities
 #[derive(Clone, Default)]
 pub struct WindowHandle {
@@ -55,10 +72,8 @@ pub trait WinCtx<'a> {
     /// Schedule a timer.
     ///
     /// This causes a [`WinHandler::timer()`] call at the deadline. The
-    /// return value is an id that can be used to associate the request
-    /// with the handler call. It is guaranteed not to be 0, and is also
-    /// a small integer (so that using a `Vec` with this id as an index
-    /// is reasonable).
+    /// return value is a token that can be used to associate the request
+    /// with the handler call.
     ///
     /// Note that this is not a precise timer. On Windows, the typical
     /// resolution is around 10ms. Therefore, it's best used for things
@@ -66,7 +81,7 @@ pub trait WinCtx<'a> {
     /// requiring precision.
     ///
     /// [`WinHandler::timer()`]: trait.WinHandler.html#tymethod.timer
-    fn request_timer(&mut self, deadline: std::time::Instant) -> usize;
+    fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken;
 }
 
 /// App behavior, supplied by the app.
@@ -141,12 +156,12 @@ pub trait WinHandler {
     /// Called on timer event.
     ///
     /// This is called at (approximately) the requested deadline by a
-    /// [`WinCtx::request_timer()`] call. The id argument here is the same
+    /// [`WinCtx::request_timer()`] call. The token argument here is the same
     /// as the return value of that call.
     ///
     /// [`WinCtx::request_timer()`]: trait.WinCtx.html#tymethod.request_timer
     #[allow(unused_variables)]
-    fn timer(&mut self, id: usize, ctx: &mut dyn WinCtx) {}
+    fn timer(&mut self, token: TimerToken, ctx: &mut dyn WinCtx) {}
 
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is

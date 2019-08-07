@@ -14,13 +14,14 @@
 
 //! Timer state.
 
+use super::TimerToken;
 use std::collections::BTreeSet;
 use std::time::Instant;
 
 pub struct TimerSlots {
     // Note: we can remove this when checked_duration_since lands.
     beginning_of_time: Instant,
-    sbrk: usize,
+    next_fresh_id: usize,
     free_slots: BTreeSet<usize>,
 }
 
@@ -28,25 +29,26 @@ impl TimerSlots {
     pub fn new(starting_ix: usize) -> TimerSlots {
         TimerSlots {
             beginning_of_time: Instant::now(),
-            sbrk: starting_ix,
+            next_fresh_id: starting_ix,
             free_slots: Default::default(),
         }
     }
 
-    pub fn alloc(&mut self) -> usize {
+    pub fn alloc(&mut self) -> TimerToken {
         if let Some(first) = self.free_slots.iter().next().cloned() {
             self.free_slots.remove(&first);
             first
         } else {
-            let result = self.sbrk;
-            self.sbrk += 1;
-            result
+            let result = self.next_fresh_id;
+            self.next_fresh_id += 1;
+            TimerToken::new(result)
         }
     }
 
-    pub fn free(&mut self, id: usize) {
-        if self.sbrk == id + 1 {
-            self.sbrk -= 1;
+    pub fn free(&mut self, token: TimerToken) {
+        let id = token.get_raw();
+        if self.next_fresh_id == id + 1 {
+            self.next_fresh_id -= 1;
         } else {
             self.free_slots.insert(id);
         }
