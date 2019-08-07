@@ -15,7 +15,6 @@
 //! An environment which is passed downward into the widget tree.
 
 use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::ops::Deref;
@@ -46,7 +45,11 @@ struct EnvImpl {
 
 /// A typed key.
 ///
-/// This lets you retrieve values of a given type.
+/// This lets you retrieve values of a given type. The parameter
+/// implements [`ValueType`]. For "expensive" types, this is a reference,
+/// so the type for a string is `Key<&str>`.
+///
+/// [`ValueType`]: trait.ValueType.html
 pub struct Key<T> {
     key: &'static str,
     value_type: PhantomData<T>,
@@ -55,6 +58,7 @@ pub struct Key<T> {
 // we could do some serious deriving here: the set of types that can be stored
 // could be defined per-app
 // Also consider Box<Any> (though this would also impact debug).
+/// A dynamic type representing all values that can be stored in an environment.
 #[derive(Clone)]
 pub enum Value {
     Point(Point),
@@ -65,34 +69,72 @@ pub enum Value {
     String(String),
 }
 
+/// Values which can be stored in an environment.
+///
+/// Note that for "expensive" types this is the reference. For example,
+/// for strings, this trait is implemented on `&'a str`. The trait is
+/// parametrized on a lifetime so that it can be used for references in
+/// this way.
+pub trait ValueType<'a>: Sized {
+    /// The corresponding owned type.
+    type Owned;
+
+    /// Attempt to convert the generic `Value` into this type.
+    fn try_from_value(v: &'a Value) -> Result<Self, String>;
+}
+
 impl Env {
-    // TODO: want to change this to return `&V`.
-    pub fn get<V: TryFrom<Value, Error = String>>(&self, key: Key<V>) -> V {
+    /// Gets a value from the environment, expecting it to be present.
+    ///
+    /// Note that the return value is a reference for "expensive" types such
+    /// as strings, but an ordinary value for "cheap" types such as numbers
+    /// and colors.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the key is not found, or if it is present with the wrong type.
+    pub fn get<'a, V: ValueType<'a>>(&'a self, key: Key<V>) -> V {
         if let Some(value) = self.0.map.get(key.key) {
-            value.to_owned().into_inner_unchecked()
+            value.to_inner_unchecked()
         } else {
             panic!("key for {} not found", key.key)
         }
     }
 
-    // Also &V.
-    pub fn try_get<V: TryFrom<Value, Error = String>>(&self, key: Key<V>) -> Option<V> {
+    /// Gets a value from the environment.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the value for the key is found, but has the wrong type.
+    pub fn try_get<'a, V: ValueType<'a>>(&'a self, key: Key<V>) -> Option<V> {
         self.0
             .map
             .get(key.key)
-            .map(|value| value.to_owned().into_inner_unchecked())
+            .map(|value| value.to_inner_unchecked())
     }
 
     /// Adds a key/value, acting like a builder.
-    pub fn adding<K: Into<String>, V: Into<Value>>(mut self, key: K, value: V) -> Env {
+    pub fn adding<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) -> Env
+    where
+        V::Owned: Into<Value>,
+    {
         let env = Arc::make_mut(&mut self.0);
-        env.map.insert(key.into(), value.into());
+        env.map.insert(key.into(), value.into().into());
         self
     }
 
-    pub fn set<K: Into<String>, V: Into<Value>>(&mut self, key: K, value: V) {
+    /// Sets a value in an environment.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the environment already has a value for the key, but it is
+    /// of a different type.
+    pub fn set<'a, V: ValueType<'a>>(&mut self, key: Key<V>, value: impl Into<V::Owned>)
+    where
+        V::Owned: Into<Value>,
+    {
         let env = Arc::make_mut(&mut self.0);
-        let value = value.into();
+        let value = value.into().into();
         let key = key.into();
         // TODO: use of Entry might be more efficient
         if let Some(existing) = env.map.get(&key) {
@@ -130,9 +172,8 @@ impl<T> Key<T> {
 }
 
 impl Value {
-    /// Panics if `self` is not an instance of `V`.
-    pub fn into_inner_unchecked<V: TryFrom<Value, Error = String>>(self) -> V {
-        match self.try_into() {
+    pub fn to_inner_unchecked<'a, V: ValueType<'a>>(&'a self) -> V {
+        match ValueType::try_from_value(self) {
             Ok(v) => v,
             Err(s) => panic!("{}", s),
         }
@@ -199,15 +240,13 @@ impl<T> From<Key<T>> for String {
     }
 }
 
-// This came from a land where these things were copy. I think
-// we want do deal with both references and owned values.
-macro_rules! impl_try_from {
+macro_rules! impl_value_type_owned {
     ($ty:ty, $var:ident) => {
-        impl TryFrom<Value> for $ty {
-            type Error = String;
-            fn try_from(value: Value) -> Result<Self, Self::Error> {
+        impl<'a> ValueType<'a> for $ty {
+            type Owned = $ty;
+            fn try_from_value(value: &Value) -> Result<Self, String> {
                 match value {
-                    Value::$var(f) => Ok(f),
+                    Value::$var(f) => Ok(f.to_owned()),
                     other => Err(format!(
                         "incorrect Value type. Expected {}, found {:?}",
                         stringify!($var),
@@ -225,9 +264,33 @@ macro_rules! impl_try_from {
     };
 }
 
-impl_try_from!(f64, Float);
-impl_try_from!(Color, Color);
-impl_try_from!(Rect, Rect);
-impl_try_from!(Point, Point);
-impl_try_from!(Size, Size);
-impl_try_from!(String, String);
+macro_rules! impl_value_type_borrowed {
+    ($ty:ty, $owned:ty, $var:ident) => {
+        impl<'a> ValueType<'a> for &'a $ty {
+            type Owned = $owned;
+            fn try_from_value(value: &'a Value) -> Result<Self, String> {
+                match value {
+                    Value::$var(f) => Ok(f),
+                    other => Err(format!(
+                        "incorrect Value type. Expected {}, found {:?}",
+                        stringify!($var),
+                        other
+                    )),
+                }
+            }
+        }
+
+        impl Into<Value> for $owned {
+            fn into(self) -> Value {
+                Value::$var(self)
+            }
+        }
+    };
+}
+
+impl_value_type_owned!(f64, Float);
+impl_value_type_owned!(Color, Color);
+impl_value_type_owned!(Rect, Rect);
+impl_value_type_owned!(Point, Point);
+impl_value_type_owned!(Size, Size);
+impl_value_type_borrowed!(str, String, String);

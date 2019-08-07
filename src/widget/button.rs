@@ -51,11 +51,16 @@ impl Label {
         Label { text: text.into() }
     }
 
-    fn get_layout(&self, rt: &mut Piet, font_size: f64) -> <Piet as RenderContext>::TextLayout {
+    fn get_layout(
+        &self,
+        rt: &mut Piet,
+        font_name: &str,
+        font_size: f64,
+    ) -> <Piet as RenderContext>::TextLayout {
         // TODO: caching of both the format and the layout
         let font = rt
             .text()
-            .new_font_by_name("Segoe UI", font_size)
+            .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
@@ -69,8 +74,9 @@ impl Label {
 
 impl<T: Data> Widget<T> for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, env: &Env) {
+        let font_name = env.get(theme::FONT_NAME);
         let font_size = 15.0;
-        let text_layout = self.get_layout(paint_ctx, font_size);
+        let text_layout = self.get_layout(paint_ctx.render_ctx, font_name, font_size);
         paint_ctx.draw_text(&text_layout, (0.0, font_size), &env.get(theme::LABEL_COLOR));
     }
 
@@ -174,6 +180,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
     fn get_layout(
         &mut self,
         rt: &mut Piet,
+        font_name: &str,
         font_size: f64,
         data: &T,
         env: &Env,
@@ -182,7 +189,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
         // TODO: caching of both the format and the layout
         let font = rt
             .text()
-            .new_font_by_name("Segoe UI", font_size)
+            .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
@@ -196,8 +203,9 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
 
 impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
+        let font_name = env.get(theme::FONT_NAME);
         let font_size = 15.0;
-        let text_layout = self.get_layout(paint_ctx, font_size, data, env);
+        let text_layout = self.get_layout(paint_ctx, font_name, font_size, data, env);
         paint_ctx.draw_text(&text_layout, (0., font_size), &env.get(theme::LABEL_COLOR));
     }
 
