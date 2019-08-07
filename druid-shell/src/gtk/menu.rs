@@ -19,11 +19,11 @@ use crate::window;
 use std::cell::RefCell;
 use std::sync::Arc;
 
+use gtkrs::AccelGroup;
 use gtkrs::GtkMenuExt;
 use gtkrs::Menu as GtkMenu;
 use gtkrs::MenuBar as GtkMenuBar;
 use gtkrs::MenuItem as GtkMenuItem;
-use gtkrs::{AccelGroup, AccelGroupExt};
 use gtkrs::{GtkMenuItemExt, MenuShellExt, WidgetExt};
 
 use crate::platform::WindowHandle;
@@ -33,8 +33,6 @@ use crate::keycodes::{Modifiers, M_ALT, M_CTRL, M_META, M_SHIFT};
 
 use crate::gtk::WinCtxImpl;
 use crate::window::Text;
-
-use std::borrow::Borrow;
 
 pub struct Menu {
     items: Vec<MenuItem>,
@@ -95,7 +93,8 @@ impl Menu {
     }
 
     pub fn add_dropdown(&mut self, menu: Menu, text: &str) {
-        self.items.push(MenuItem::SubMenu(strip_access_key(text), menu));
+        self.items
+            .push(MenuItem::SubMenu(strip_access_key(text), menu));
     }
 
     pub fn add_item(&mut self, id: u32, text: &str, key: impl Into<MenuKey>) {

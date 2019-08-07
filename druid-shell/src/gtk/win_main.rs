@@ -44,7 +44,7 @@ impl RunLoop {
         )
         .expect("Unable to create GTK application");
 
-        application.connect_activate(|app| {
+        application.connect_activate(|_app| {
             eprintln!("Activated application");
         });
 

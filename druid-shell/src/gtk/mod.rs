@@ -30,7 +30,6 @@ use gdk::EventKey;
 use gdk::EventMask;
 use gtk::AccelGroup;
 use gtk::ApplicationWindow;
-use gtk::ApplicationWindowExt;
 use gtk::Inhibit;
 
 use piet_common::{Piet, RenderContext};
@@ -302,7 +301,7 @@ impl WindowBuilder {
                     };
 
                     use gdk::ScrollDirection;
-                    let deltas = scroll.get_scroll_deltas();
+                    let _deltas = scroll.get_scroll_deltas();
                     // TODO use these deltas
                     let modifiers = gtk_modifiers_to_druid(scroll.get_state());
 
@@ -382,7 +381,7 @@ impl WindowBuilder {
         {
             let handler = Arc::clone(&handler);
             let handle = handle.clone();
-            drawing_area.connect_destroy(move |widget| {
+            drawing_area.connect_destroy(move |_widget| {
                 if let Ok(mut handler) = handler.try_borrow_mut() {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
@@ -515,7 +514,7 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
         &mut self.text
     }
 
-    fn set_cursor(&mut self, cursor: &Cursor) {
+    fn set_cursor(&mut self, _cursor: &Cursor) {
         // TODO Steven implement cursor
     }
 }
