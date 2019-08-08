@@ -65,7 +65,7 @@ use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 use timers::TimerSlots;
 
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use crate::window::{self, Cursor, MouseButton, MouseEvent, Text, WinCtx, WinHandler};
+use crate::window::{self, Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
 
 extern "system" {
     pub fn DwmFlush();
@@ -1237,17 +1237,19 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
     /// Request a timer event.
     ///
     /// The return value is an identifier.
-    fn request_timer(&mut self, deadline: std::time::Instant) -> usize {
-        self.handle
+    fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken {
+        let id = self
+            .handle
             .get_hwnd()
             .map(|hwnd| {
                 let (id, elapse) = self.handle.get_timer_slot(deadline);
                 unsafe {
-                    let id = SetTimer(hwnd, id, elapse, None);
+                    let id = SetTimer(hwnd, id.get_raw(), elapse, None);
                     id as usize
                 }
             })
-            .unwrap_or(0)
+            .unwrap_or(0);
+        TimerToken::new(id)
     }
 }
 

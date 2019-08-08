@@ -14,13 +14,12 @@
 
 //! Timer state.
 
-use super::TimerToken;
+use crate::window::TimerToken;
 use std::collections::BTreeSet;
 use std::time::Instant;
 
 pub struct TimerSlots {
     // Note: we can remove this when checked_duration_since lands.
-    beginning_of_time: Instant,
     next_fresh_id: usize,
     free_slots: BTreeSet<usize>,
 }
@@ -28,7 +27,6 @@ pub struct TimerSlots {
 impl TimerSlots {
     pub fn new(starting_ix: usize) -> TimerSlots {
         TimerSlots {
-            beginning_of_time: Instant::now(),
             next_fresh_id: starting_ix,
             free_slots: Default::default(),
         }
@@ -37,7 +35,7 @@ impl TimerSlots {
     pub fn alloc(&mut self) -> TimerToken {
         if let Some(first) = self.free_slots.iter().next().cloned() {
             self.free_slots.remove(&first);
-            first
+            TimerToken::new(first)
         } else {
             let result = self.next_fresh_id;
             self.next_fresh_id += 1;
@@ -56,8 +54,11 @@ impl TimerSlots {
 
     /// Compute an elapsed value for SetTimer (in ms)
     pub fn compute_elapsed(&self, deadline: Instant) -> u32 {
-        let deadline = deadline.duration_since(self.beginning_of_time);
-        let now = self.beginning_of_time.elapsed();
-        (deadline.as_micros().saturating_sub(now.as_micros()) / 1000) as u32
+        let now = Instant::now();
+        if now >= deadline {
+            0
+        } else {
+            deadline.duration_since(now).as_millis() as u32
+        }
     }
 }
