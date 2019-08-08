@@ -23,7 +23,7 @@ use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::runloop;
-use druid_shell::window::{MouseEvent, WinCtx, WinHandler, WindowHandle};
+use druid_shell::window::{Cursor, MouseEvent, TimerToken, WinCtx, WinHandler, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb24(0x27_28_22);
 const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
@@ -62,8 +62,10 @@ impl WinHandler for HelloState {
         }
     }
 
-    fn key_down(&mut self, event: KeyEvent, _ctx: &mut dyn WinCtx) -> bool {
-        println!("keydown: {:?}", event);
+    fn key_down(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) -> bool {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
+        let id = ctx.request_timer(deadline);
+        println!("keydown: {:?}, timer id = {:?}", event, id);
         false
     }
 
@@ -71,7 +73,8 @@ impl WinHandler for HelloState {
         println!("mouse_wheel {:?} {:?}", delta, mods);
     }
 
-    fn mouse_move(&mut self, event: &MouseEvent, _ctx: &mut dyn WinCtx) {
+    fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
+        ctx.set_cursor(&Cursor::Arrow);
         println!("mouse_move {:?}", event);
     }
 
@@ -81,6 +84,10 @@ impl WinHandler for HelloState {
 
     fn mouse_up(&mut self, event: &MouseEvent, _ctx: &mut dyn WinCtx) {
         println!("mouse_up {:?}", event);
+    }
+
+    fn timer(&mut self, id: TimerToken, _ctx: &mut dyn WinCtx) {
+        println!("timer fired: {:?}", id);
     }
 
     fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {

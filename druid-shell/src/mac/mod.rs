@@ -37,6 +37,7 @@ use std::ffi::c_void;
 use std::ffi::OsString;
 use std::mem;
 use std::sync::{Arc, Mutex, Weak};
+use std::time::Instant;
 
 use cairo::{Context, QuartzSurface};
 
@@ -46,7 +47,7 @@ use piet_common::{Piet, RenderContext};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
-use crate::window::{Cursor, MouseButton, MouseEvent, Text, WinCtx, WinHandler};
+use crate::window::{Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
 use util::assert_main_thread;
@@ -256,6 +257,10 @@ lazy_static! {
         );
         decl.add_method(sel!(runIdle), run_idle as extern "C" fn(&mut Object, Sel));
         decl.add_method(sel!(redraw), redraw as extern "C" fn(&mut Object, Sel));
+        decl.add_method(
+            sel!(handleTimer:),
+            handle_timer as extern "C" fn(&mut Object, Sel, id),
+        );
         ViewClass(decl.register())
     };
 }
@@ -523,6 +528,25 @@ extern "C" fn redraw(this: &mut Object, _: Sel) {
     }
 }
 
+extern "C" fn handle_timer(this: &mut Object, _: Sel, timer: id) {
+    let view_state = unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        &mut *(view_state as *mut ViewState)
+    };
+    let mut ctx = WinCtxImpl {
+        nsview: &(*view_state).nsview,
+        text: Text::new(),
+    };
+    let token = unsafe {
+        let user_info: id = msg_send![timer, userInfo];
+        msg_send![user_info, unsignedIntValue]
+    };
+
+    (*view_state)
+        .handler
+        .timer(TimerToken::new(token), &mut ctx);
+}
+
 impl WindowHandle {
     pub fn show(&self) {
         unsafe {
@@ -662,6 +686,36 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             msg_send![cursor, set];
         }
     }
+
+    fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken {
+        let ti = time_interval_from_deadline(deadline);
+        let token = next_timer_id();
+        unsafe {
+            let nstimer = class!(NSTimer);
+            let nsnumber = class!(NSNumber);
+            let user_info: id = msg_send![nsnumber, numberWithUnsignedInteger: token];
+            let selector = sel!(handleTimer:);
+            let view = self.nsview.load();
+            msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
+        }
+        TimerToken::new(token)
+    }
+}
+
+/// Convert an `Instant` into an NSTimeInterval, i.e. a fractional number
+/// of seconds from now.
+///
+/// This may lose some precision for multi-month durations.
+fn time_interval_from_deadline(deadline: std::time::Instant) -> f64 {
+    let now = Instant::now();
+    if now >= deadline {
+        0.0
+    } else {
+        let t = deadline - now;
+        let secs = t.as_secs() as f64;
+        let subsecs = t.subsec_micros() as f64 * 0.000001;
+        secs + subsecs
+    }
 }
 
 fn make_key_event(event: id) -> KeyEvent {
@@ -711,4 +765,10 @@ fn make_modifiers(raw: NSEventModifierFlags) -> KeyModifiers {
         ctrl: raw.contains(NSEventModifierFlags::NSControlKeyMask),
         meta: raw.contains(NSEventModifierFlags::NSCommandKeyMask),
     }
+}
+
+fn next_timer_id() -> usize {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static TIMER_ID: AtomicUsize = AtomicUsize::new(1);
+    TIMER_ID.fetch_add(1, Ordering::Relaxed)
 }

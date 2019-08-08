@@ -21,6 +21,7 @@ pub mod dcomp;
 pub mod dialog;
 pub mod menu;
 pub mod paint;
+mod timers;
 pub mod util;
 pub mod win_main;
 
@@ -61,9 +62,10 @@ use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use crate::Error;
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
+use timers::TimerSlots;
 
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use crate::window::{self, Cursor, MouseButton, MouseEvent, Text, WinCtx, WinHandler};
+use crate::window::{self, Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
 
 extern "system" {
     pub fn DwmFlush();
@@ -139,6 +141,11 @@ struct WindowState {
     dpi: Cell<f32>,
     wndproc: Box<dyn WndProc>,
     idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
+
+    // This field doesn't really need to be shared; it could be plumbed
+    // as a mutable reference down through WinCtx, but that would require
+    // some refactoring.
+    timers: Arc<Mutex<TimerSlots>>,
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -689,6 +696,20 @@ impl WndProc for MyWndProc {
                 }
                 None
             }
+            WM_TIMER => {
+                let id = wparam;
+                unsafe {
+                    KillTimer(hwnd, id);
+                }
+                let token = TimerToken::new(id);
+                self.handle.borrow().free_timer_slot(token);
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    s.handler.timer(token, &mut c.ctx());
+                }
+                Some(1)
+            }
             XI_RUN_IDLE => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
@@ -794,6 +815,7 @@ impl WindowBuilder {
                 dpi: Cell::new(0.0),
                 wndproc: Box::new(wndproc),
                 idle_queue: Default::default(),
+                timers: Arc::new(Mutex::new(TimerSlots::new(1))),
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
@@ -1143,6 +1165,26 @@ impl WindowHandle {
         let scale = 96.0 / self.get_dpi();
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
+
+    /// Allocate a timer slot.
+    ///
+    /// Returns an id and an elapsed time in ms
+    fn get_timer_slot(&self, deadline: std::time::Instant) -> (TimerToken, u32) {
+        if let Some(w) = self.state.upgrade() {
+            let mut timers = w.timers.lock().unwrap();
+            let id = timers.alloc();
+            let elapsed = timers.compute_elapsed(deadline);
+            (id, elapsed)
+        } else {
+            (TimerToken::INVALID, 0)
+        }
+    }
+
+    fn free_timer_slot(&self, token: TimerToken) {
+        if let Some(w) = self.state.upgrade() {
+            w.timers.lock().unwrap().free(token)
+        }
+    }
 }
 
 // There is a tiny risk of things going wrong when hwnd is sent across threads.
@@ -1190,6 +1232,24 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             let cursor = LoadCursorW(0 as HINSTANCE, cursor.get_lpcwstr());
             SetCursor(cursor);
         }
+    }
+
+    /// Request a timer event.
+    ///
+    /// The return value is an identifier.
+    fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken {
+        let id = self
+            .handle
+            .get_hwnd()
+            .map(|hwnd| {
+                let (id, elapse) = self.handle.get_timer_slot(deadline);
+                unsafe {
+                    let id = SetTimer(hwnd, id.get_raw(), elapse, None);
+                    id as usize
+                }
+            })
+            .unwrap_or(0);
+        TimerToken::new(id)
     }
 }
 
