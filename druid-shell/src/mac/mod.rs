@@ -688,7 +688,7 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
     }
 
     fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken {
-        let ti = time_interval_to_deadline(deadline);
+        let ti = time_interval_from_deadline(deadline);
         let token = next_timer_id();
         unsafe {
             let nstimer = class!(NSTimer);
@@ -705,8 +705,8 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
 /// Convert an `Instant` into an NSTimeInterval, i.e. a fractional number
 /// of seconds from now.
 ///
-/// This may loose some precision for multi-month durations.
-fn time_interval_to_deadline(deadline: std::time::Instant) -> f64 {
+/// This may lose some precision for multi-month durations.
+fn time_interval_from_deadline(deadline: std::time::Instant) -> f64 {
     let now = Instant::now();
     if now >= deadline {
         0.0
