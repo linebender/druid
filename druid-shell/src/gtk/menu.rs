@@ -14,11 +14,6 @@
 
 //! GTK implementation of menus.
 
-use crate::window;
-
-use std::cell::RefCell;
-use std::sync::Arc;
-
 use gtkrs::AccelGroup;
 use gtkrs::GtkMenuExt;
 use gtkrs::Menu as GtkMenu;
@@ -34,6 +29,7 @@ use crate::keycodes::{Modifiers, M_ALT, M_CTRL, M_META, M_SHIFT};
 use crate::gtk::WinCtxImpl;
 use crate::window::Text;
 
+#[derive(Default)]
 pub struct Menu {
     items: Vec<MenuItem>,
 }
@@ -44,19 +40,7 @@ enum MenuItem {
 }
 
 impl MenuItem {
-    /// Get the name of this menu item
-    fn name(&self) -> &str {
-        match self {
-            MenuItem::Entry(name, _, _) | MenuItem::SubMenu(name, _) => name,
-        }
-    }
-
-    fn into_gtk_menu_item(
-        self,
-        handler: Arc<RefCell<Box<dyn window::WinHandler>>>,
-        handle: &WindowHandle,
-        accel_group: &AccelGroup,
-    ) -> GtkMenuItem {
+    fn into_gtk_menu_item(self, handle: &WindowHandle, accel_group: &AccelGroup) -> GtkMenuItem {
         match self {
             MenuItem::Entry(name, id, key) => {
                 let item = GtkMenuItem::new_with_label(&name);
@@ -70,8 +54,8 @@ impl MenuItem {
                         text: Text::new(),
                     };
 
-                    if let Ok(mut handler) = handler.try_borrow_mut() {
-                        handler.command(id, &mut ctx);
+                    if let Some(state) = handle.state.upgrade() {
+                        state.handler.borrow_mut().command(id, &mut ctx);
                     }
                 });
 
@@ -79,7 +63,7 @@ impl MenuItem {
             }
             MenuItem::SubMenu(name, submenu) => {
                 let item = GtkMenuItem::new_with_label(&name);
-                item.set_submenu(Some(&submenu.into_gtk_menu(handler, handle, accel_group)));
+                item.set_submenu(Some(&submenu.into_gtk_menu(handle, accel_group)));
 
                 item
             }
@@ -109,30 +93,24 @@ impl Menu {
 
     pub(crate) fn into_gtk_menubar(
         self,
-        handler: Arc<RefCell<Box<dyn window::WinHandler>>>,
         handle: &WindowHandle,
         accel_group: &AccelGroup,
     ) -> GtkMenuBar {
         let menu = GtkMenuBar::new();
 
         for item in self.items {
-            menu.append(&item.into_gtk_menu_item(handler.clone(), handle, accel_group));
+            menu.append(&item.into_gtk_menu_item(handle, accel_group));
         }
 
         menu
     }
 
-    fn into_gtk_menu(
-        self,
-        handler: Arc<RefCell<Box<dyn window::WinHandler>>>,
-        handle: &WindowHandle,
-        accel_group: &AccelGroup,
-    ) -> GtkMenu {
+    fn into_gtk_menu(self, handle: &WindowHandle, accel_group: &AccelGroup) -> GtkMenu {
         let menu = GtkMenu::new();
         menu.set_accel_group(Some(accel_group));
 
         for item in self.items {
-            menu.append(&item.into_gtk_menu_item(handler.clone(), handle, accel_group));
+            menu.append(&item.into_gtk_menu_item(handle, accel_group));
         }
 
         menu

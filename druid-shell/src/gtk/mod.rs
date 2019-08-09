@@ -23,8 +23,7 @@ pub mod win_main;
 use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::ffi::OsString;
-use std::rc::Weak;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 
 use gdk::EventKey;
 use gdk::EventMask;
@@ -47,7 +46,7 @@ use win_main::with_application;
 
 #[derive(Clone, Default)]
 pub struct WindowHandle {
-    window: Option<ApplicationWindow>,
+    state: Weak<WindowState>,
 }
 
 /// Builder abstraction for creating new windows
@@ -60,8 +59,8 @@ pub struct WindowBuilder {
 
 #[derive(Clone)]
 pub struct IdleHandle {
-    queue: Option<u32>, // TODO: implement this properly
-    idle_queue: Weak<Mutex<Vec<Box<IdleCallback>>>>,
+    idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    state: Weak<WindowState>,
 }
 
 // TODO: move this out of platform-dependent section.
@@ -73,6 +72,12 @@ impl<F: FnOnce(&Any) + Send> IdleCallback for F {
     fn call(self: Box<F>, a: &Any) {
         (*self)(a)
     }
+}
+
+struct WindowState {
+    window: ApplicationWindow,
+    handler: RefCell<Box<dyn WinHandler>>,
+    idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
 }
 
 struct WinCtxImpl<'a> {
@@ -110,8 +115,6 @@ impl WindowBuilder {
             .handler
             .expect("Tried to build a window without setting the handler");
 
-        let handler = Arc::new(RefCell::new(handler));
-
         let window = with_application(|app| ApplicationWindow::new(&app));
 
         let accel_group = AccelGroup::new();
@@ -130,14 +133,26 @@ impl WindowBuilder {
         let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
         window.add(&vbox);
 
-        let window = window;
+        let win_state = Arc::new(WindowState {
+            window,
+            handler: RefCell::new(handler),
+            idle_queue: Arc::new(Mutex::new(vec![])),
+        });
+
+        let state = win_state.clone();
+        win_state.window.connect_destroy(move |_| {
+            // this ties a clone of Arc<WindowState> to the ApplicationWindow to keep it alive
+            // when the ApplicationWindow is destroyed, the last Arc is dropped
+            // and any Weak<WindowState> will be None on upgrade()
+            let _ = &state;
+        });
 
         let handle = WindowHandle {
-            window: Some(window),
+            state: Arc::downgrade(&win_state),
         };
 
         if let Some(menu) = self.menu {
-            let menu = menu.into_gtk_menubar(handler.clone(), &handle, &accel_group);
+            let menu = menu.into_gtk_menubar(&handle, &accel_group);
             vbox.pack_start(&menu, false, false, 0);
         }
 
@@ -165,11 +180,10 @@ impl WindowBuilder {
 
         {
             let last_size = Cell::new((0, 0));
-            let handler = Arc::clone(&handler);
             let handle = handle.clone();
 
             drawing_area.connect_draw(move |widget, context| {
-                if let Ok(mut handler) = handler.try_borrow_mut() {
+                if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
                         text: Text::new(),
@@ -183,7 +197,7 @@ impl WindowBuilder {
 
                     if last_size.get() != size {
                         last_size.set(size);
-                        handler.size(size.0, size.1, &mut ctx);
+                        state.handler.borrow_mut().size(size.0, size.1, &mut ctx);
                     }
 
                     context.set_source_rgb(0.0, 0.0, 0.0);
@@ -197,7 +211,10 @@ impl WindowBuilder {
                     // For some reason piet needs a mutable context, so give it one I guess.
                     let mut context = context.clone();
                     let mut piet_context = Piet::new(&mut context);
-                    let anim = handler.paint(&mut piet_context, &mut ctx);
+                    let anim = state
+                        .handler
+                        .borrow_mut()
+                        .paint(&mut piet_context, &mut ctx);
                     if let Err(e) = piet_context.finish() {
                         eprintln!("piet error on render: {:?}", e);
                     }
@@ -212,17 +229,16 @@ impl WindowBuilder {
         }
 
         {
-            let handler = Arc::clone(&handler);
             let handle = handle.clone();
             drawing_area.connect_button_press_event(move |_widget, button| {
-                if let Ok(mut handler) = handler.try_borrow_mut() {
+                if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
                         text: Text::new(),
                     };
 
                     let pos = Point::from(button.get_position());
-                    handler.mouse_down(
+                    state.handler.borrow_mut().mouse_down(
                         &window::MouseEvent {
                             pos,
                             count: 1,
@@ -239,17 +255,16 @@ impl WindowBuilder {
         }
 
         {
-            let handler = Arc::clone(&handler);
             let handle = handle.clone();
             drawing_area.connect_button_release_event(move |_widget, button| {
-                if let Ok(mut handler) = handler.try_borrow_mut() {
+                if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
                         text: Text::new(),
                     };
 
                     let pos = Point::from(button.get_position());
-                    handler.mouse_up(
+                    state.handler.borrow_mut().mouse_up(
                         &window::MouseEvent {
                             pos,
                             mods: gtk_modifiers_to_druid(button.get_state()),
@@ -266,10 +281,9 @@ impl WindowBuilder {
         }
 
         {
-            let handler = Arc::clone(&handler);
             let handle = handle.clone();
             drawing_area.connect_motion_notify_event(move |_widget, motion| {
-                if let Ok(mut handler) = handler.try_borrow_mut() {
+                if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
                         text: Text::new(),
@@ -283,7 +297,10 @@ impl WindowBuilder {
                         button: gtk_modifiers_to_mouse_button(motion.get_state()),
                     };
 
-                    handler.mouse_move(&mouse_event, &mut ctx);
+                    state
+                        .handler
+                        .borrow_mut()
+                        .mouse_move(&mouse_event, &mut ctx);
                 }
 
                 Inhibit(true)
@@ -291,10 +308,9 @@ impl WindowBuilder {
         }
 
         {
-            let handler = Arc::clone(&handler);
             let handle = handle.clone();
             drawing_area.connect_scroll_event(move |_widget, scroll| {
-                if let Ok(mut handler) = handler.try_borrow_mut() {
+                if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
                         text: Text::new(),
@@ -308,6 +324,7 @@ impl WindowBuilder {
                     // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
                     // They claim that one "tick" on a scroll wheel should be 120 units.
                     // GTK simply reports the direction
+                    let mut handler = state.handler.borrow_mut();
                     match scroll.get_direction() {
                         ScrollDirection::Up => {
                             handler.wheel(Vec2::from((0.0, -120.0)), modifiers, &mut ctx);
@@ -343,17 +360,16 @@ impl WindowBuilder {
         }
 
         {
-            let handler = Arc::clone(&handler);
             let handle = handle.clone();
             drawing_area.connect_key_press_event(move |_widget, key| {
-                if let Ok(mut handler) = handler.try_borrow_mut() {
+                if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
                         text: Text::new(),
                     };
 
                     let key_event = gtk_event_key_to_key_event(key);
-                    handler.key_down(key_event, &mut ctx);
+                    state.handler.borrow_mut().key_down(key_event, &mut ctx);
                 }
 
                 Inhibit(true)
@@ -361,17 +377,16 @@ impl WindowBuilder {
         }
 
         {
-            let handler = Arc::clone(&handler);
             let handle = handle.clone();
             drawing_area.connect_key_release_event(move |_widget, key| {
-                if let Ok(mut handler) = handler.try_borrow_mut() {
+                if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
                         text: Text::new(),
                     };
 
                     let key_event = gtk_event_key_to_key_event(key);
-                    handler.key_up(key_event, &mut ctx);
+                    state.handler.borrow_mut().key_up(key_event, &mut ctx);
                 }
 
                 Inhibit(true)
@@ -379,24 +394,26 @@ impl WindowBuilder {
         }
 
         {
-            let handler = Arc::clone(&handler);
             let handle = handle.clone();
             drawing_area.connect_destroy(move |_widget| {
-                if let Ok(mut handler) = handler.try_borrow_mut() {
+                if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl {
                         handle: &handle,
                         text: Text::new(),
                     };
-                    handler.destroy(&mut ctx);
+                    state.handler.borrow_mut().destroy(&mut ctx);
                 }
             });
         }
 
         vbox.pack_end(&drawing_area, true, true, 0);
 
-        handler.borrow_mut().connect(&window::WindowHandle {
-            inner: handle.clone(),
-        });
+        win_state
+            .handler
+            .borrow_mut()
+            .connect(&window::WindowHandle {
+                inner: handle.clone(),
+            });
 
         Ok(handle)
     }
@@ -405,17 +422,17 @@ impl WindowBuilder {
 impl WindowHandle {
     pub fn show(&self) {
         use gtk::WidgetExt;
-        if let Some(window) = self.window.as_ref() {
-            window.show_all();
+        if let Some(state) = self.state.upgrade() {
+            state.window.show_all();
         }
     }
 
     /// Close the window.
     pub fn close(&self) {
         use gtk::GtkApplicationExt;
-        if let Some(window) = self.window.as_ref() {
+        if let Some(state) = self.state.upgrade() {
             with_application(|app| {
-                app.remove_window(window);
+                app.remove_window(&state.window);
             });
         }
     }
@@ -423,14 +440,16 @@ impl WindowHandle {
     // Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
         use gtk::WidgetExt;
-        if let Some(window) = self.window.as_ref() {
-            window.queue_draw();
+        if let Some(state) = self.state.upgrade() {
+            state.window.queue_draw();
         }
     }
-
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        unimplemented!("WindowHandle::get_idle_handle");
+        self.state.upgrade().map(|s| IdleHandle {
+            idle_queue: s.idle_queue.clone(),
+            state: Arc::downgrade(&s),
+        })
     }
 
     /// Get the dpi of the window.
@@ -474,15 +493,17 @@ impl WindowHandle {
         options: FileDialogOptions,
     ) -> Result<OsString, Error> {
         use gtk::Cast;
-        if let Some(window) = &self.window {
-            dialog::get_file_dialog_path(window.upcast_ref(), ty, options)
+        if let Some(state) = self.state.upgrade() {
+            dialog::get_file_dialog_path(state.window.upcast_ref(), ty, options)
         } else {
-            Err(Error::Null) // TODO proper error
+            Err(Error::Null)
         }
     }
 }
 
 unsafe impl Send for IdleHandle {}
+unsafe impl Send for WindowState {}
+unsafe impl Sync for WindowState {}
 
 impl IdleHandle {
     /// Add an idle handler, which is called (once) when the message loop
@@ -495,14 +516,29 @@ impl IdleHandle {
     where
         F: FnOnce(&Any) + Send + 'static,
     {
-        if let Some(queue) = self.idle_queue.upgrade() {
-            let mut queue = queue.lock().unwrap();
+        let mut queue = self.idle_queue.lock().unwrap();
+        if let Some(state) = self.state.upgrade() {
             if queue.is_empty() {
-                unimplemented!("Idle queue wait");
+                queue.push(Box::new(callback));
+                gdk::threads_add_idle(move || run_idle(&state));
+            } else {
+                queue.push(Box::new(callback));
             }
-            queue.push(Box::new(callback));
         }
     }
+}
+
+fn run_idle(state: &Arc<WindowState>) -> bool {
+    assert_main_thread();
+    let mut handler = state.handler.borrow_mut();
+    let handler_as_any = handler.as_any();
+
+    let queue: Vec<_> = std::mem::replace(&mut state.idle_queue.lock().unwrap(), Vec::new());
+
+    for callback in queue {
+        callback.call(handler_as_any);
+    }
+    false
 }
 
 impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
