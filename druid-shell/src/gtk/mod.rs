@@ -184,10 +184,7 @@ impl WindowBuilder {
 
             drawing_area.connect_draw(move |widget, context| {
                 if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl {
-                        handle: &handle,
-                        text: Text::new(),
-                    };
+                    let mut ctx = WinCtxImpl::from(&handle);
 
                     let extents = context.clip_extents();
                     let size = (
@@ -232,10 +229,7 @@ impl WindowBuilder {
             let handle = handle.clone();
             drawing_area.connect_button_press_event(move |_widget, button| {
                 if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl {
-                        handle: &handle,
-                        text: Text::new(),
-                    };
+                    let mut ctx = WinCtxImpl::from(&handle);
 
                     let pos = Point::from(button.get_position());
                     state.handler.borrow_mut().mouse_down(
@@ -258,10 +252,7 @@ impl WindowBuilder {
             let handle = handle.clone();
             drawing_area.connect_button_release_event(move |_widget, button| {
                 if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl {
-                        handle: &handle,
-                        text: Text::new(),
-                    };
+                    let mut ctx = WinCtxImpl::from(&handle);
 
                     let pos = Point::from(button.get_position());
                     state.handler.borrow_mut().mouse_up(
@@ -284,10 +275,7 @@ impl WindowBuilder {
             let handle = handle.clone();
             drawing_area.connect_motion_notify_event(move |_widget, motion| {
                 if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl {
-                        handle: &handle,
-                        text: Text::new(),
-                    };
+                    let mut ctx = WinCtxImpl::from(&handle);
 
                     let pos = Point::from(motion.get_position());
                     let mouse_event = window::MouseEvent {
@@ -311,10 +299,7 @@ impl WindowBuilder {
             let handle = handle.clone();
             drawing_area.connect_scroll_event(move |_widget, scroll| {
                 if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl {
-                        handle: &handle,
-                        text: Text::new(),
-                    };
+                    let mut ctx = WinCtxImpl::from(&handle);
 
                     use gdk::ScrollDirection;
                     let _deltas = scroll.get_scroll_deltas();
@@ -363,10 +348,7 @@ impl WindowBuilder {
             let handle = handle.clone();
             drawing_area.connect_key_press_event(move |_widget, key| {
                 if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl {
-                        handle: &handle,
-                        text: Text::new(),
-                    };
+                    let mut ctx = WinCtxImpl::from(&handle);
 
                     let key_event = gtk_event_key_to_key_event(key);
                     state.handler.borrow_mut().key_down(key_event, &mut ctx);
@@ -380,10 +362,7 @@ impl WindowBuilder {
             let handle = handle.clone();
             drawing_area.connect_key_release_event(move |_widget, key| {
                 if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl {
-                        handle: &handle,
-                        text: Text::new(),
-                    };
+                    let mut ctx = WinCtxImpl::from(&handle);
 
                     let key_event = gtk_event_key_to_key_event(key);
                     state.handler.borrow_mut().key_up(key_event, &mut ctx);
@@ -397,10 +376,7 @@ impl WindowBuilder {
             let handle = handle.clone();
             drawing_area.connect_destroy(move |_widget| {
                 if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl {
-                        handle: &handle,
-                        text: Text::new(),
-                    };
+                    let mut ctx = WinCtxImpl::from(&handle);
                     state.handler.borrow_mut().destroy(&mut ctx);
                 }
             });
@@ -561,12 +537,9 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
         let handle = self.handle.clone();
 
         gdk::threads_add_timeout(interval, move || {
-            println!("timeout triggered");
             if let Some(state) = handle.state.upgrade() {
-                let mut ctx = WinCtxImpl {
-                    handle: &handle,
-                    text: Text::new(),
-                };
+                let mut ctx = WinCtxImpl::from(&handle);
+
                 state
                     .handler
                     .borrow_mut()
@@ -576,6 +549,15 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
         });
 
         TimerToken::new(token)
+    }
+}
+
+impl<'a> From<&'a WindowHandle> for WinCtxImpl<'a> {
+    fn from(handle: &'a WindowHandle) -> Self {
+        WinCtxImpl {
+            handle,
+            text: Text::new(),
+        }
     }
 }
 

@@ -49,10 +49,7 @@ impl MenuItem {
 
                 let handle = handle.clone();
                 item.connect_activate(move |_| {
-                    let mut ctx = WinCtxImpl {
-                        handle: &handle,
-                        text: Text::new(),
-                    };
+                    let mut ctx = WinCtxImpl::from(&handle);
 
                     if let Some(state) = handle.state.upgrade() {
                         state.handler.borrow_mut().command(id, &mut ctx);
