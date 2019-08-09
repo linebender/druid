@@ -15,7 +15,7 @@
 use std::any::Any;
 
 use piet_common::kurbo::{Line, Rect, Vec2};
-use piet_common::{Color, FillRule, RenderContext};
+use piet_common::{Color, RenderContext};
 
 use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
@@ -25,8 +25,8 @@ use druid_shell::platform::WindowBuilder;
 use druid_shell::runloop;
 use druid_shell::window::{Cursor, MouseEvent, TimerToken, WinCtx, WinHandler, WindowHandle};
 
-const BG_COLOR: Color = Color::rgb24(0x27_28_22);
-const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
+const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
+const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 #[derive(Default)]
 struct HelloState {
@@ -40,12 +40,10 @@ impl WinHandler for HelloState {
     }
 
     fn paint(&mut self, piet: &mut piet_common::Piet, _ctx: &mut dyn WinCtx) -> bool {
-        let bg = piet.solid_brush(BG_COLOR);
-        let fg = piet.solid_brush(FG_COLOR);
         let (width, height) = self.size;
         let rect = Rect::new(0.0, 0.0, width, height);
-        piet.fill(rect, &bg, FillRule::NonZero);
-        piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &fg, 1.0, None);
+        piet.fill(rect, &BG_COLOR);
+        piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &FG_COLOR, 1.0);
         false
     }
 

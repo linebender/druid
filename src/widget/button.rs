@@ -21,13 +21,13 @@ use crate::{
     UpdateCtx, Widget,
 };
 
-use crate::piet::{Color, FillRule, FontBuilder, Text, TextLayoutBuilder};
+use crate::piet::{Color, FontBuilder, Text, TextLayoutBuilder};
 use crate::{Piet, Point, RenderContext};
 
-const BUTTON_BG_COLOR: Color = Color::rgba32(0x40_40_48_ff);
-const BUTTON_HOVER_COLOR: Color = Color::rgba32(0x50_50_58_ff);
-const BUTTON_PRESSED_COLOR: Color = Color::rgba32(0x60_60_68_ff);
-const LABEL_TEXT_COLOR: Color = Color::rgba32(0xf0_f0_ea_ff);
+const BUTTON_BG_COLOR: Color = Color::rgb8(0x40, 0x40, 0x48);
+const BUTTON_HOVER_COLOR: Color = Color::rgb8(0x50, 0x50, 0x58);
+const BUTTON_PRESSED_COLOR: Color = Color::rgb8(0x60, 0x60, 0x68);
+const LABEL_TEXT_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 /// A label with static text.
 pub struct Label {
@@ -75,8 +75,7 @@ impl<T: Data> Widget<T> for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, _env: &Env) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx, font_size);
-        let brush = paint_ctx.solid_brush(LABEL_TEXT_COLOR);
-        paint_ctx.draw_text(&text_layout, (0.0, font_size), &brush);
+        paint_ctx.draw_text(&text_layout, (0.0, font_size), &LABEL_TEXT_COLOR);
     }
 
     fn layout(
@@ -119,9 +118,8 @@ impl<T: Data> Widget<T> for Button {
             (false, true) => BUTTON_HOVER_COLOR,
             _ => BUTTON_BG_COLOR,
         };
-        let brush = paint_ctx.solid_brush(bg_color);
         let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
-        paint_ctx.fill(rect, &brush, FillRule::NonZero);
+        paint_ctx.fill(rect, &bg_color);
 
         self.label.paint(paint_ctx, base_state, data, env);
     }
@@ -204,8 +202,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         let font_size = 15.0;
         let text_layout = self.get_layout(paint_ctx, font_size, data, env);
-        let brush = paint_ctx.solid_brush(LABEL_TEXT_COLOR);
-        paint_ctx.draw_text(&text_layout, (0., font_size), &brush);
+        paint_ctx.draw_text(&text_layout, (0., font_size), &LABEL_TEXT_COLOR);
     }
 
     fn layout(

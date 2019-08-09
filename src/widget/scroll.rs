@@ -21,7 +21,7 @@ use crate::{
     Rect, Size, UpdateCtx, Vec2, Widget, WidgetPod,
 };
 
-use crate::piet::{FillRule, RenderContext};
+use crate::piet::RenderContext;
 
 use crate::kurbo::Affine;
 
@@ -70,7 +70,7 @@ impl<T: Data> Widget<T> for Scroll<T> {
             return;
         }
         let viewport = Rect::from_origin_size(Point::ORIGIN, base_state.size());
-        paint_ctx.clip(viewport, FillRule::NonZero);
+        paint_ctx.clip(viewport);
         paint_ctx.transform(Affine::translate(-self.scroll_offset));
         self.child.paint(paint_ctx, data, env);
         if let Err(e) = paint_ctx.restore() {

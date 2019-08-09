@@ -17,7 +17,7 @@ use std::any::Any;
 use time::get_time;
 
 use piet_common::kurbo::{Line, Rect};
-use piet_common::{Color, FillRule, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
+use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
 #[cfg(target_os = "windows")]
 use druid_shell::platform::PresentStrategy;
@@ -27,8 +27,8 @@ use druid_shell::platform::WindowBuilder;
 use druid_shell::runloop;
 use druid_shell::window::{WinCtx, WinHandler, WindowHandle};
 
-const BG_COLOR: Color = Color::rgb24(0x27_28_22);
-const FG_COLOR: Color = Color::rgb24(0xf0_f0_ea);
+const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
+const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 struct PerfTest {
     handle: WindowHandle,
@@ -43,21 +43,18 @@ impl WinHandler for PerfTest {
 
     fn paint(&mut self, piet: &mut Piet, _ctx: &mut dyn WinCtx) -> bool {
         let (width, height) = self.size;
-        let bg = piet.solid_brush(BG_COLOR);
-        let fg = piet.solid_brush(FG_COLOR);
         let rect = Rect::new(0.0, 0.0, width, height);
-        piet.fill(rect, &bg, FillRule::NonZero);
+        piet.fill(rect, &BG_COLOR);
 
-        piet.stroke(Line::new((0.0, height), (width, 0.0)), &fg, 1.0, None);
+        piet.stroke(Line::new((0.0, height), (width, 0.0)), &FG_COLOR, 1.0);
 
         let th = ::std::f64::consts::PI * (get_time().nsec as f64) * 2e-9;
         let dx = 100.0 * th.sin();
         let dy = 100.0 * th.cos();
         piet.stroke(
             Line::new((100.0, 100.0), (100.0 + dx, 100.0 - dy)),
-            &fg,
+            &FG_COLOR,
             1.0,
-            None,
         );
 
         let font = piet
@@ -77,7 +74,7 @@ impl WinHandler for PerfTest {
             .unwrap()
             .build()
             .unwrap();
-        piet.draw_text(&layout, (10.0, 210.0), &fg);
+        piet.draw_text(&layout, (10.0, 210.0), &FG_COLOR);
 
         let msg = "Hello DWrite! This is a somewhat longer string of text intended to provoke slightly longer draw times.";
         let layout = piet
@@ -91,7 +88,7 @@ impl WinHandler for PerfTest {
         let y0 = 10.0;
         for i in 0..60 {
             let y = y0 + (i as f64) * dy;
-            piet.draw_text(&layout, (x0, y), &fg);
+            piet.draw_text(&layout, (x0, y), &FG_COLOR);
         }
 
         true

@@ -17,8 +17,7 @@
 use druid::kurbo::{Affine, BezPath, Point, Rect, Size};
 
 use druid::piet::{
-    Color, FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text,
-    TextLayoutBuilder,
+    Color, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayoutBuilder,
 };
 
 use druid::shell::{runloop, WindowBuilder};
@@ -53,17 +52,16 @@ impl Widget<String> for CustomWidget {
             (80.0, 90.0),
             (base_state.size().width, base_state.size().height),
         );
-        // Create a solid brush
-        let brush = paint_ctx.solid_brush(Color::rgb24(0x00_80_00));
-        // Stroke the path with the brush, with thickness 1.0
-        paint_ctx.stroke(path, &brush, 1.0, None);
+        // Create a color
+        let stroke_color = Color::rgb8(0x00, 0x80, 0x00);
+        // Stroke the path with thickness 1.0
+        paint_ctx.stroke(path, &stroke_color, 1.0);
 
         // Rectangles: the path for practical people
         let rect = Rect::from_origin_size((10., 10.), (100., 100.));
-        // Note the Color:rgba32 which includes an alpha channel (7F in this case)
-        let brush = paint_ctx.solid_brush(Color::rgba32(0x00_00_00_7F));
-        // A fill uses a brush, just like stroke, but it needs FillRule to be set
-        paint_ctx.fill(rect, &brush, FillRule::NonZero);
+        // Note the Color:rgba8 which includes an alpha channel (7F in this case)
+        let fill_color = Color::rgba8(0x00, 0x00, 0x00, 0x7F);
+        paint_ctx.fill(rect, &fill_color);
 
         // Text is easy, if you ignore all these unwraps. Just pick a font and a size.
         let font = paint_ctx
@@ -85,7 +83,7 @@ impl Widget<String> for CustomWidget {
             .with_save(|rc| {
                 // Now we can rotate the context (or set a clip path, for instance):
                 rc.transform(Affine::rotate(0.1));
-                rc.draw_text(&layout, (80.0, 40.0), &brush);
+                rc.draw_text(&layout, (80.0, 40.0), &fill_color);
                 Ok(())
             })
             .unwrap();

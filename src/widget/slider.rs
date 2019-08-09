@@ -15,17 +15,17 @@
 //! A slider widget.
 
 use crate::kurbo::{Circle, Line, Point, Rect, Size, Vec2};
-use crate::piet::{Color, FillRule, LineCap, RenderContext, StrokeStyle};
+use crate::piet::{Color, LineCap, RenderContext, StrokeStyle};
 use crate::{
     Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 const KNOB_WIDTH: f64 = 24.;
 const BACKGROUND_THICKNESS: f64 = 4.;
-const BACKGROUND_COLOR: Color = Color::rgb24(0x55_55_55);
-const KNOB_COLOR: Color = Color::rgb24(0xf0_f0_e5);
-const KNOB_HOVER_COLOR: Color = Color::rgb24(0xa0_a0_a5);
-const KNOB_PRESSED_COLOR: Color = Color::rgb24(0x75_75_75);
+const BACKGROUND_COLOR: Color = Color::rgb8(0x55, 0x55, 0x55);
+const KNOB_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xe5);
+const KNOB_HOVER_COLOR: Color = Color::rgb8(0xa0, 0xa0, 0xa5);
+const KNOB_PRESSED_COLOR: Color = Color::rgb8(0x75, 0x75, 0x75);
 
 /// A slider, allowing interactive update of a numeric value.
 #[derive(Debug, Clone, Default)]
@@ -68,10 +68,14 @@ impl Widget<f64> for Slider {
             background_origin + Vec2::new(background_width, 0.),
         );
 
-        let brush = paint_ctx.solid_brush(BACKGROUND_COLOR);
         let mut stroke = StrokeStyle::new();
         stroke.set_line_cap(LineCap::Round);
-        paint_ctx.stroke(background_line, &brush, BACKGROUND_THICKNESS, Some(&stroke));
+        paint_ctx.stroke_styled(
+            background_line,
+            &BACKGROUND_COLOR,
+            BACKGROUND_THICKNESS,
+            &stroke,
+        );
 
         //Paint the slider
         let is_active = base_state.is_active();
@@ -85,8 +89,7 @@ impl Widget<f64> for Slider {
         let knob_position = (self.width - KNOB_WIDTH) * clamped + KNOB_WIDTH / 2.;
         self.knob_pos = Point::new(knob_position, rect.height() / 2.);
         let knob_circle = Circle::new(self.knob_pos, KNOB_WIDTH / 2.);
-        let brush = paint_ctx.solid_brush(knob_color);
-        paint_ctx.fill(knob_circle, &brush, FillRule::NonZero);
+        paint_ctx.fill(knob_circle, &knob_color);
     }
 
     fn layout(

@@ -20,15 +20,13 @@ use crate::{
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
-use crate::piet::{
-    Color, FillRule, FontBuilder, Piet, RenderContext, Text, TextLayout, TextLayoutBuilder,
-};
+use crate::piet::{Color, FontBuilder, Piet, RenderContext, Text, TextLayout, TextLayoutBuilder};
 
-const BACKGROUND_GREY_LIGHT: Color = Color::rgba32(0x3a_3a_3a_ff);
-const BORDER_GREY: Color = Color::rgba32(0x5a_5a_5a_ff);
-const PRIMARY_LIGHT: Color = Color::rgba32(0x5c_c4_ff_ff);
+const BACKGROUND_GREY_LIGHT: Color = Color::rgba8(0x3a, 0x3a, 0x3a, 0xff);
+const BORDER_GREY: Color = Color::rgba8(0x5a, 0x5a, 0x5a, 0xff);
+const PRIMARY_LIGHT: Color = Color::rgba8(0x5c, 0xc4, 0xff, 0xff);
 
-const TEXT_COLOR: Color = Color::rgb24(0xf0_f0_ea);
+const TEXT_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xEA);
 const CURSOR_COLOR: Color = Color::WHITE;
 
 const BOX_HEIGHT: f64 = 24.;
@@ -80,8 +78,6 @@ impl Widget<String> for TextBox {
         };
 
         // Paint the border / background
-        let background_brush = paint_ctx.solid_brush(BACKGROUND_GREY_LIGHT);
-        let border_brush = paint_ctx.solid_brush(border_color);
 
         let clip_rect = RoundedRect::from_origin_size(
             Point::ORIGIN,
@@ -93,14 +89,12 @@ impl Widget<String> for TextBox {
             2.,
         );
 
-        paint_ctx.fill(clip_rect, &background_brush, FillRule::NonZero);
-
-        paint_ctx.stroke(clip_rect, &border_brush, BORDER_WIDTH, None);
+        paint_ctx.fill(clip_rect, &BACKGROUND_GREY_LIGHT);
+        paint_ctx.stroke(clip_rect, &border_color, BORDER_WIDTH);
 
         // Paint the text
         let text = paint_ctx.text();
         let text_layout = self.get_layout(text, FONT_SIZE, data);
-        let brush = paint_ctx.solid_brush(TEXT_COLOR);
 
         let text_height = FONT_SIZE * 0.8;
         let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
@@ -108,24 +102,22 @@ impl Widget<String> for TextBox {
         // Render text and cursor inside a clip
         paint_ctx
             .with_save(|rc| {
-                rc.clip(clip_rect, FillRule::NonZero);
+                rc.clip(clip_rect);
 
                 // If overflowing, shift the text
                 if text_layout.width() + (PADDING_LEFT * 2.) > self.width {
                     let offset = text_layout.width() - self.width + (PADDING_LEFT * 2.) + 1.;
                     rc.transform(Affine::translate(Vec2::new(-offset, 0.)));
                 }
-                rc.draw_text(&text_layout, text_pos, &brush);
+                rc.draw_text(&text_layout, text_pos, &TEXT_COLOR);
 
                 // Paint the cursor if focused
                 if has_focus {
-                    let brush = rc.solid_brush(CURSOR_COLOR);
-
                     let xy = text_pos + Vec2::new(text_layout.width() + 1., 2. - FONT_SIZE);
                     let x2y2 = xy + Vec2::new(0., FONT_SIZE + 2.);
                     let line = Line::new(xy, x2y2);
 
-                    rc.stroke(line, &brush, 1., None);
+                    rc.stroke(line, &CURSOR_COLOR, 1.);
                 }
                 Ok(())
             })

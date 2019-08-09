@@ -15,13 +15,13 @@
 //! A progress bar widget.
 
 use crate::kurbo::{Point, Rect, Size};
-use crate::piet::{Color, FillRule, RenderContext};
+use crate::piet::{Color, RenderContext};
 use crate::{
     Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
-const BACKGROUND_COLOR: Color = Color::rgb24(0x55_55_55);
-const BAR_COLOR: Color = Color::rgb24(0xf0_f0_ea);
+const BACKGROUND_COLOR: Color = Color::rgb8(0x55, 0x55, 0x55);
+const BAR_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 /// A progress bar, displaying a numeric progress value.
 #[derive(Debug, Clone, Default)]
@@ -33,14 +33,12 @@ impl Widget<f64> for ProgressBar {
         let rect = Rect::from_origin_size(Point::ORIGIN, base_state.size());
 
         //Paint the background
-        let brush = paint_ctx.solid_brush(BACKGROUND_COLOR);
-        paint_ctx.fill(rect, &brush, FillRule::NonZero);
+        paint_ctx.fill(rect, &BACKGROUND_COLOR);
 
         //Paint the bar
-        let brush = paint_ctx.solid_brush(BAR_COLOR);
         let calculated_bar_width = clamped * rect.width();
         let rect = rect.with_size(Size::new(calculated_bar_width, rect.height()));
-        paint_ctx.fill(rect, &brush, FillRule::NonZero);
+        paint_ctx.fill(rect, &BAR_COLOR);
     }
 
     fn layout(
