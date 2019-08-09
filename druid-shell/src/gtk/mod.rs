@@ -37,7 +37,7 @@ use crate::keyboard;
 use crate::kurbo::{Point, Vec2};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::platform::menu::Menu;
-use crate::window::{self, Cursor, MouseButton, Text, WinCtx, WinHandler};
+use crate::window::{self, Cursor, MouseButton, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
 use crate::keyboard::{KeyCode, RawKeyCode, StrOrChar};
@@ -553,6 +553,39 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
     fn set_cursor(&mut self, _cursor: &Cursor) {
         // TODO Steven implement cursor
     }
+
+    fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken {
+        let interval = time_interval_from_deadline(deadline);
+        let token = next_timer_id();
+
+        let handle = self.handle.clone();
+
+        gdk::threads_add_timeout(interval, move || {
+            println!("timeout triggered");
+            if let Some(state) = handle.state.upgrade() {
+                let mut ctx = WinCtxImpl {
+                    handle: &handle,
+                    text: Text::new(),
+                };
+                state
+                    .handler
+                    .borrow_mut()
+                    .timer(TimerToken::new(token), &mut ctx);
+            }
+            false
+        });
+
+        TimerToken::new(token)
+    }
+}
+
+fn time_interval_from_deadline(deadline: std::time::Instant) -> u32 {
+    let now = std::time::Instant::now();
+    if now >= deadline {
+        0
+    } else {
+        (deadline - now).as_millis() as u32
+    }
 }
 
 /// Map a GTK mouse button to a Druid one
@@ -765,4 +798,10 @@ impl From<u32> for KeyCode {
             }
         }
     }
+}
+
+fn next_timer_id() -> usize {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static TIMER_ID: AtomicUsize = AtomicUsize::new(1);
+    TIMER_ID.fetch_add(1, Ordering::Relaxed)
 }
