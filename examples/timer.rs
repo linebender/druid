@@ -39,8 +39,7 @@ impl Widget<u32> for TimerWidget {
         _env: &Env,
     ) {
         if self.on {
-            let brush = paint_ctx.solid_brush(Color::WHITE);
-            paint_ctx.stroke(Line::new((10.0, 10.0), (10.0, 50.0)), &brush, 1.0, None);
+            paint_ctx.stroke(Line::new((10.0, 10.0), (10.0, 50.0)), &Color::WHITE, 1.0);
         }
     }
 

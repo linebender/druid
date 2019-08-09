@@ -38,8 +38,7 @@ impl Widget<u32> for AnimWidget {
     ) {
         let center = Point::new(50.0, 50.0);
         let ambit = center + 45.0 * Vec2::from_angle((0.75 + self.t) * 2.0 * PI);
-        let brush = paint_ctx.solid_brush(Color::WHITE);
-        paint_ctx.stroke(Line::new(center, ambit), &brush, 1.0, None);
+        paint_ctx.stroke(Line::new(center, ambit), &Color::WHITE, 1.0);
     }
 
     fn layout(

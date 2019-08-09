@@ -47,7 +47,7 @@ pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
 pub use value::{Delta, KeyPath, PathEl, PathFragment, Value};
 
-const BACKGROUND_COLOR: Color = Color::rgb24(0x27_28_22);
+const BACKGROUND_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
 /// A struct representing the top-level root of the UI.
 ///
