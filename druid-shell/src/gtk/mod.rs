@@ -53,7 +53,6 @@ pub struct WindowHandle {
 pub struct WindowBuilder {
     handler: Option<Box<WinHandler>>,
     title: String,
-    cursor: Cursor,
     menu: Option<menu::Menu>,
 }
 
@@ -90,7 +89,6 @@ impl WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),
-            cursor: Cursor::Arrow,
             menu: None,
         }
     }
@@ -119,16 +117,6 @@ impl WindowBuilder {
 
         let accel_group = AccelGroup::new();
         window.add_accel_group(&accel_group);
-
-        window.set_title(&self.title);
-        // TODO(bobtwinkles): enable this when I figure out how to set the cursor on application windows
-        // window.set_cursor(gdk::Cursor::new_from_nane(
-        //     &window.get_display(),
-        //     match self.cursor {
-        //         Arrow => "default",
-        //         IBeam => "text",
-        //     },
-        // ));
 
         let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
         window.add(&vbox);
@@ -526,8 +514,19 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
         &mut self.text
     }
 
-    fn set_cursor(&mut self, _cursor: &Cursor) {
-        // TODO Steven implement cursor
+    fn set_cursor(&mut self, cursor: &Cursor) {
+        use gdk::WindowExt;
+        use gtk::WidgetExt;
+
+        if let Some(gdk_window) = self
+            .handle
+            .state
+            .upgrade()
+            .and_then(|s| s.window.get_window())
+        {
+            let cursor = make_gdk_cursor(cursor, &gdk_window);
+            gdk_window.set_cursor(cursor.as_ref());
+        }
     }
 
     fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken {
@@ -568,6 +567,23 @@ fn time_interval_from_deadline(deadline: std::time::Instant) -> u32 {
     } else {
         (deadline - now).as_millis() as u32
     }
+}
+
+fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cursor> {
+    use gdk::WindowExt;
+    gdk::Cursor::new_from_name(
+        &gdk_window.get_display(),
+        match cursor {
+            // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
+            Cursor::Arrow => "default",
+            Cursor::IBeam => "text",
+            Cursor::Crosshair => "crosshair",
+            Cursor::OpenHand => "grab",
+            Cursor::NotAllowed => "not-allowed",
+            Cursor::ResizeLeftRight => "ew-resize",
+            Cursor::ResizeUpDown => "ns-resize",
+        },
+    )
 }
 
 /// Map a GTK mouse button to a Druid one
