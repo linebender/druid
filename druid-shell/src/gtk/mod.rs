@@ -77,6 +77,7 @@ struct WindowState {
     window: ApplicationWindow,
     handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    current_keyval: RefCell<Option<u32>>,
 }
 
 struct WinCtxImpl<'a> {
@@ -125,6 +126,7 @@ impl WindowBuilder {
             window,
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
+            current_keyval: RefCell::new(None),
         });
 
         let state = win_state.clone();
@@ -338,7 +340,12 @@ impl WindowBuilder {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
-                    let key_event = gtk_event_key_to_key_event(key);
+                    let mut current_keyval = state.current_keyval.borrow_mut();
+                    let repeat = *current_keyval == Some(key.get_keyval());
+
+                    *current_keyval = Some(key.get_keyval());
+
+                    let key_event = gtk_event_key_to_key_event(key, repeat);
                     state.handler.borrow_mut().key_down(key_event, &mut ctx);
                 }
 
@@ -352,7 +359,9 @@ impl WindowBuilder {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
-                    let key_event = gtk_event_key_to_key_event(key);
+                    *(state.current_keyval.borrow_mut()) = None;
+
+                    let key_event = gtk_event_key_to_key_event(key, false);
                     state.handler.borrow_mut().key_up(key_event, &mut ctx);
                 }
 
@@ -676,7 +685,7 @@ fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
     }
 }
 
-fn gtk_event_key_to_key_event(key: &EventKey) -> keyboard::KeyEvent {
+fn gtk_event_key_to_key_event(key: &EventKey, repeat: bool) -> keyboard::KeyEvent {
     // the logical key being pressed
     let keyval = key.get_keyval();
 
@@ -690,7 +699,7 @@ fn gtk_event_key_to_key_event(key: &EventKey) -> keyboard::KeyEvent {
 
     keyboard::KeyEvent::new(
         keycode,
-        false, // TODO Steven implement is_repeat
+        repeat,
         gtk_modifiers_to_druid(key.get_state()),
         text,
         unmodified_text,
