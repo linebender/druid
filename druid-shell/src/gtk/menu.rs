@@ -27,7 +27,6 @@ use crate::keycodes::{KeySpec, MenuKey};
 use crate::keycodes::{Modifiers, M_ALT, M_CTRL, M_META, M_SHIFT};
 
 use crate::gtk::WinCtxImpl;
-use crate::window::Text;
 
 #[derive(Default)]
 pub struct Menu {
