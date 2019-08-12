@@ -586,13 +586,23 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`update`]: trait.Widget.html#method.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
-        if let Some(old_data) = &self.old_data {
-            if old_data.same(data) {
-                return;
-            }
+        let data_same = if let Some(ref old_data) = self.old_data {
+            old_data.same(data)
+        } else {
+            false
+        };
+        let env_same = if let Some(ref old_env) = self.env {
+            old_env.same(env)
+        } else {
+            false
+        };
+
+        if data_same && env_same {
+            return;
         }
         self.inner.update(ctx, self.old_data.as_ref(), data, env);
         self.old_data = Some(data.clone());
+        self.env = Some(env.clone());
     }
 }
 
