@@ -126,23 +126,13 @@ fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: 
 }
 
 fn modifiers_to_gdk_modifier_type(modifiers: Modifiers) -> gdk::ModifierType {
-    let mut result = gdk::ModifierType::empty();
+    use gdk::ModifierType;
+    let mut result = ModifierType::empty();
 
-    if modifiers & M_ALT == M_ALT {
-        result.insert(gdk::ModifierType::MOD1_MASK);
-    }
-
-    if modifiers & M_CTRL == M_CTRL {
-        result.insert(gdk::ModifierType::CONTROL_MASK);
-    }
-
-    if modifiers & M_SHIFT == M_SHIFT {
-        result.insert(gdk::ModifierType::SHIFT_MASK);
-    }
-
-    if modifiers & M_META == M_META {
-        result.insert(gdk::ModifierType::META_MASK);
-    }
+    result.set(ModifierType::MOD1_MASK, modifiers & M_ALT == M_ALT);
+    result.set(ModifierType::CONTROL_MASK, modifiers & M_CTRL == M_CTRL);
+    result.set(ModifierType::SHIFT_MASK, modifiers & M_SHIFT == M_SHIFT);
+    result.set(ModifierType::META_MASK, modifiers & M_META == M_META);
 
     result
 }
