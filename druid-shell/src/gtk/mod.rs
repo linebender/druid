@@ -221,14 +221,20 @@ impl WindowBuilder {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
+                    let count = match button.get_event_type() {
+                        gdk::EventType::ButtonPress => 1,
+                        gdk::EventType::DoubleButtonPress => 2,
+                        gdk::EventType::TripleButtonPress => 3,
+                        _ => 0,
+                    };
+
                     let pos = Point::from(button.get_position());
                     state.handler.borrow_mut().mouse_down(
                         &window::MouseEvent {
                             pos,
-                            count: 1,
+                            count,
                             mods: gtk_modifiers_to_druid(button.get_state()),
                             button: gtk_button_to_druid(button.get_button()),
-                            //ty: window::MouseType::Down,
                         },
                         &mut ctx,
                     );
@@ -251,7 +257,6 @@ impl WindowBuilder {
                             mods: gtk_modifiers_to_druid(button.get_state()),
                             count: 0,
                             button: gtk_button_to_druid(button.get_button()),
-                            //ty: window::MouseType::Up,
                         },
                         &mut ctx,
                     );
