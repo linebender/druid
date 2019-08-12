@@ -16,6 +16,8 @@ piet-common = "0.0.6"
 
 lazy_static = "1.0"
 time = "0.1.39"
+unicode-segmentation = "1.3.0"
+clipboard = "0.5.0"
 
 [target.'cfg(target_os="windows")'.dependencies]
 directwrite = "0.1.2"
