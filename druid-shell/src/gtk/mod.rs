@@ -291,7 +291,7 @@ impl WindowBuilder {
 
                     use gdk::ScrollDirection;
                     let _deltas = scroll.get_scroll_deltas();
-                    // TODO use these deltas
+                    // TODO use these deltas (for smooth scrolling)
                     let modifiers = gtk_modifiers_to_druid(scroll.get_state());
 
                     // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
@@ -421,8 +421,13 @@ impl WindowHandle {
     /// TODO: we want to migrate this from dpi (with 96 as nominal) to a scale
     /// factor (with 1 as nominal).
     pub fn get_dpi(&self) -> f32 {
-        // TODO: get actual dpi
-        96.0
+        use gdk::WindowExt;
+        use gtk::WidgetExt;
+        self.state
+            .upgrade()
+            .and_then(|s| s.window.get_window())
+            .map(|w| w.get_display().get_default_screen().get_resolution() as f32)
+            .unwrap_or(96.0)
     }
 
     // TODO: the following methods are cut'n'paste code. A good way to DRY
