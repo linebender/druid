@@ -77,11 +77,20 @@ pub enum Value {
 /// this way.
 pub trait ValueType<'a>: Sized {
     /// The corresponding owned type.
-    type Owned;
+    type Owned: Into<Value>;
 
     /// Attempt to convert the generic `Value` into this type.
-    fn try_from_value(v: &'a Value) -> Result<Self, String>;
+    fn try_from_value(v: &'a Value) -> Result<Self, EnvError>;
 }
+
+/// The error type for environment access.
+///
+/// This error is expected to happen rarely, if ever, as it only
+/// happens when the string part of keys collide but the types
+/// mismatch.
+///
+/// TODO: replace with a less stringly-typed object.
+pub type EnvError = String;
 
 impl Env {
     /// Gets a value from the environment, expecting it to be present.
@@ -114,10 +123,7 @@ impl Env {
     }
 
     /// Adds a key/value, acting like a builder.
-    pub fn adding<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) -> Env
-    where
-        V::Owned: Into<Value>,
-    {
+    pub fn adding<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) -> Env {
         let env = Arc::make_mut(&mut self.0);
         env.map.insert(key.into(), value.into().into());
         self
@@ -129,10 +135,7 @@ impl Env {
     ///
     /// Panics if the environment already has a value for the key, but it is
     /// of a different type.
-    pub fn set<'a, V: ValueType<'a>>(&mut self, key: Key<V>, value: impl Into<V::Owned>)
-    where
-        V::Owned: Into<Value>,
-    {
+    pub fn set<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) {
         let env = Arc::make_mut(&mut self.0);
         let value = value.into().into();
         let key = key.into();
@@ -163,6 +166,18 @@ impl Debug for Value {
 }
 
 impl<T> Key<T> {
+    /// Create a new strongly typed `Key` with the given string value.
+    /// The type of the key will be inferred.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use druid::Key;
+    /// use druid::piet::Color;
+    ///
+    /// let float_key: Key<f64> = Key::new("a.very.good.float");
+    /// let color_key: Key<Color> = Key::new("a.very.nice.color");
+    /// ```
     pub const fn new(key: &'static str) -> Self {
         Key {
             key,
@@ -172,6 +187,11 @@ impl<T> Key<T> {
 }
 
 impl Value {
+    /// Get a reference to the inner object.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the value variant doesn't match the provided type.
     pub fn to_inner_unchecked<'a, V: ValueType<'a>>(&'a self) -> V {
         match ValueType::try_from_value(self) {
             Ok(v) => v,
@@ -218,19 +238,11 @@ impl Data for Env {
 
 impl Data for EnvImpl {
     fn same(&self, other: &EnvImpl) -> bool {
-        if self.map.len() != other.map.len() {
-            return false;
-        }
-        for (k, v1) in self.map.iter() {
-            if let Some(v2) = other.map.get(k) {
-                if !v1.same(v2) {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        }
-        true
+        self.map.len() == other.map.len()
+            && self
+                .map
+                .iter()
+                .all(|(k, v1)| other.map.get(k).map(|v2| v1.same(v2)).unwrap_or(false))
     }
 }
 
@@ -244,7 +256,7 @@ macro_rules! impl_value_type_owned {
     ($ty:ty, $var:ident) => {
         impl<'a> ValueType<'a> for $ty {
             type Owned = $ty;
-            fn try_from_value(value: &Value) -> Result<Self, String> {
+            fn try_from_value(value: &Value) -> Result<Self, EnvError> {
                 match value {
                     Value::$var(f) => Ok(f.to_owned()),
                     other => Err(format!(
@@ -268,7 +280,7 @@ macro_rules! impl_value_type_borrowed {
     ($ty:ty, $owned:ty, $var:ident) => {
         impl<'a> ValueType<'a> for &'a $ty {
             type Owned = $owned;
-            fn try_from_value(value: &'a Value) -> Result<Self, String> {
+            fn try_from_value(value: &'a Value) -> Result<Self, EnvError> {
                 match value {
                     Value::$var(f) => Ok(f),
                     other => Err(format!(

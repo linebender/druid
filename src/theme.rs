@@ -23,6 +23,7 @@ pub const HOVER_COLOR: Key<Color> = Key::new("hover_color");
 pub const PRESSED_COLOR: Key<Color> = Key::new("pressed_color");
 pub const LABEL_COLOR: Key<Color> = Key::new("label_color");
 pub const FONT_NAME: Key<&str> = Key::new("font_name");
+pub const TEXT_SIZE_NORMAL: Key<f64> = Key::new("text_size_normal");
 
 /// An initial theme.
 pub fn init() -> Env {
@@ -30,7 +31,8 @@ pub fn init() -> Env {
         .adding(BACKGROUND_COLOR, Color::rgb8(0x40, 0x40, 0x48))
         .adding(HOVER_COLOR, Color::rgb8(0x50, 0x50, 0x58))
         .adding(PRESSED_COLOR, Color::rgb8(0x60, 0x60, 0x68))
-        .adding(LABEL_COLOR, Color::rgb8(0xf0, 0xf0, 0xea));
+        .adding(LABEL_COLOR, Color::rgb8(0xf0, 0xf0, 0xea))
+        .adding(TEXT_SIZE_NORMAL, 15.0);
 
     #[cfg(target_os = "windows")]
     {

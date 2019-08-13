@@ -75,7 +75,7 @@ impl Label {
 impl<T: Data> Widget<T> for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, env: &Env) {
         let font_name = env.get(theme::FONT_NAME);
-        let font_size = 15.0;
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let text_layout = self.get_layout(paint_ctx.render_ctx, font_name, font_size);
         paint_ctx.draw_text(&text_layout, (0.0, font_size), &env.get(theme::LABEL_COLOR));
     }
@@ -204,7 +204,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
 impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         let font_name = env.get(theme::FONT_NAME);
-        let font_size = 15.0;
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let text_layout = self.get_layout(paint_ctx, font_name, font_size, data, env);
         paint_ctx.draw_text(&text_layout, (0., font_size), &env.get(theme::LABEL_COLOR));
     }
