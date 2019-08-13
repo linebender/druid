@@ -14,8 +14,8 @@
 
 use std::any::Any;
 
-use piet_common::kurbo::{Line, Rect, Vec2};
-use piet_common::{Color, RenderContext};
+use druid_shell::kurbo::{Line, Rect, Vec2};
+use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};

@@ -36,14 +36,18 @@ use winapi::um::shellscalingapi::*;
 use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winbase::*;
 use winapi::um::wincon::*;
+use winapi::um::wingdi::CreateSolidBrush;
 // This needs to be explicit, otherwise HRESULT will conflict
 use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
+use winapi::um::winuser::{LoadIconW, RegisterClassW, IDI_APPLICATION, WNDCLASSW};
 
 use direct2d::enums::DrawTextOptions;
 
 use log::error;
 
 use crate::Error;
+
+use crate::windows::win_proc_dispatch;
 
 pub fn as_result(hr: HRESULT) -> Result<(), Error> {
     if SUCCEEDED(hr) {
@@ -215,6 +219,8 @@ lazy_static! {
     pub static ref OPTIONAL_FUNCTIONS: OptionalFunctions = load_optional_functions();
 }
 
+pub(crate) const CLASS_NAME: &str = "druid";
+
 /// Initialize the app. At the moment, this is mostly needed for hi-dpi.
 pub fn init() {
     attach_console();
@@ -222,6 +228,28 @@ pub fn init() {
         // This function is only supported on windows 10
         unsafe {
             func(PROCESS_SYSTEM_DPI_AWARE); // TODO: per monitor (much harder)
+        }
+    }
+
+    unsafe {
+        let class_name = CLASS_NAME.to_wide();
+        let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
+        let brush = CreateSolidBrush(0xffffff);
+        let wnd = WNDCLASSW {
+            style: 0,
+            lpfnWndProc: Some(win_proc_dispatch),
+            cbClsExtra: 0,
+            cbWndExtra: 0,
+            hInstance: 0 as HINSTANCE,
+            hIcon: icon,
+            hCursor: 0 as HCURSOR,
+            hbrBackground: brush,
+            lpszMenuName: 0 as LPCWSTR,
+            lpszClassName: class_name.as_ptr(),
+        };
+        let class_atom = RegisterClassW(&wnd);
+        if class_atom == 0 {
+            panic!("Error registering class");
         }
     }
 }
