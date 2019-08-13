@@ -33,6 +33,8 @@ use std::time::Instant;
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
 use piet::{Color, Piet, RenderContext};
 
+pub use unicode_segmentation;
+
 // TODO: remove these unused annotations when we wire these up; they're
 // placeholders for functionality not yet implemented.
 #[allow(unused)]

@@ -17,8 +17,6 @@
 pub use piet_common as piet;
 pub use piet_common::kurbo;
 
-pub use unicode_segmentation;
-
 #[cfg(target_os = "windows")]
 #[macro_use]
 extern crate winapi;

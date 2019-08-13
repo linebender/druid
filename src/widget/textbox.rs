@@ -24,11 +24,11 @@ use crate::{
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
 use crate::piet::{
-    Color, FontBuilder, Piet, PietText, PietTextLayout, RenderContext, Text, TextLayout,
+    Color, FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout,
     TextLayoutBuilder,
 };
 
-use druid_shell::unicode_segmentation::GraphemeCursor;
+use crate::unicode_segmentation::GraphemeCursor;
 
 const BACKGROUND_GREY_LIGHT: Color = Color::rgba8(0x3a, 0x3a, 0x3a, 0xff);
 const BORDER_GREY: Color = Color::rgba8(0x5a, 0x5a, 0x5a, 0xff);
@@ -124,6 +124,28 @@ impl TextBox {
         self.selection.end
     }
 
+    /// Calculate a stateful scroll offset
+    fn update_hscroll(&mut self, rc_text: &mut PietText, data: &String) {
+        let cursor_x = self.substring_measurement_hack(rc_text, data, 0, self.cursor());
+
+        let padding = PADDING_LEFT * 2.;
+        if cursor_x > self.width + self.hscroll_offset - padding {
+            // If cursor goes past right side, bump the offset
+            //       ->
+            // **[****I]****
+            //   ^
+            self.hscroll_offset = cursor_x - self.width + padding;
+        } else if cursor_x < self.hscroll_offset {
+            // If cursor goes past left side, match the offset
+            //    <-
+            // **[I****]****
+            //   ^
+            self.hscroll_offset = cursor_x
+        }
+    }
+
+    // TODO: Grapheme isn't the correct unit for backspace, see:
+    // https://github.com/xi-editor/xi-editor/blob/master/rust/core-lib/src/backspace.rs
     fn backspace(&mut self, src: &mut String) {
         if self.selection.is_caret() {
             let cursor = self.cursor();
@@ -148,7 +170,7 @@ impl TextBox {
     // TODO: do hit testing instead of this substring hack!
     fn substring_measurement_hack(
         &self,
-        rc: &mut Piet,
+        piet_text: &mut PietText,
         text: &String,
         start: usize,
         end: usize,
@@ -157,7 +179,7 @@ impl TextBox {
 
         if let Some(substring) = text.get(start..end) {
             x = self
-                .get_layout(rc.text(), FONT_SIZE, &substring.to_owned())
+                .get_layout(piet_text, FONT_SIZE, &substring.to_owned())
                 .width();
         }
 
@@ -190,11 +212,7 @@ impl Widget<String> for TextBox {
         // Paint the background
         let clip_rect = RoundedRect::from_origin_size(
             Point::ORIGIN,
-            Size::new(
-                base_state.size().width - BORDER_WIDTH,
-                base_state.size().height,
-            )
-            .to_vec2(),
+            Size::new(self.width - BORDER_WIDTH, BOX_HEIGHT).to_vec2(),
             2.,
         );
 
@@ -205,41 +223,19 @@ impl Widget<String> for TextBox {
             .with_save(|rc| {
                 rc.clip(clip_rect);
 
-                // Layout and measure text
-                let text = rc.text();
-                let text_layout = self.get_layout(text, FONT_SIZE, data);
+                // Shift everything inside the clip by the hscroll_offset
+                rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
 
-                let text_height = FONT_SIZE * 0.8;
-                let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
-
-                let cursor_x = self.substring_measurement_hack(rc, data, 0, self.cursor());
-
-                // If overflowing, shift the text
-                let padding = PADDING_LEFT * 2.;
-                if cursor_x > self.width + self.hscroll_offset - padding {
-                    // If cursor goes past right side, bump the offset
-                    //       ->
-                    // **[****I]****
-                    //   ^
-                    self.hscroll_offset = cursor_x - self.width + padding;
-                } else if cursor_x < self.hscroll_offset {
-                    // If cursor goes past left side, match the offset
-                    //    <-
-                    // **[I****]****
-                    //   ^
-                    self.hscroll_offset = cursor_x
-                }
-
-                rc.transform(Affine::translate(Vec2::new(-self.hscroll_offset, 0.)));
-
-                // Draw selection rect, also shifted
+                // Draw selection rect
                 if !self.selection.is_caret() {
                     let (left, right) = (self.selection.min(), self.selection.max());
 
-                    let selection_width = self.substring_measurement_hack(rc, data, left, right);
+                    let selection_width =
+                        self.substring_measurement_hack(rc.text(), data, left, right);
 
                     let selection_pos = Point::new(
-                        self.substring_measurement_hack(rc, data, 0, left) + PADDING_LEFT - 1.,
+                        self.substring_measurement_hack(rc.text(), data, 0, left) + PADDING_LEFT
+                            - 1.,
                         PADDING_TOP - 2.,
                     );
                     let selection_rect = RoundedRect::from_origin_size(
@@ -250,11 +246,17 @@ impl Widget<String> for TextBox {
                     rc.fill(selection_rect, &SELECTION_COLOR);
                 }
 
-                // Finally draw the text!
+                // Layout, measure, and draw text
+                let text_layout = self.get_layout(rc.text(), FONT_SIZE, data);
+                let text_height = FONT_SIZE * 0.8;
+                let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
+
                 rc.draw_text(&text_layout, text_pos, &TEXT_COLOR);
 
                 // Paint the cursor if focused and there's no selection
                 if has_focus && self.cursor_on && self.selection.is_caret() {
+                    let cursor_x =
+                        self.substring_measurement_hack(rc.text(), data, 0, self.cursor());
                     let xy = text_pos + Vec2::new(cursor_x, 2. - FONT_SIZE);
                     let x2y2 = xy + Vec2::new(0., FONT_SIZE + 2.);
                     let line = Line::new(xy, x2y2);
@@ -272,11 +274,11 @@ impl Widget<String> for TextBox {
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
-        _bc: &BoxConstraints,
+        bc: &BoxConstraints,
         _data: &String,
         _env: &Env,
     ) -> Size {
-        Size::new(self.width, BOX_HEIGHT)
+        bc.constrain((self.width, BOX_HEIGHT))
     }
 
     fn event(
@@ -388,6 +390,7 @@ impl Widget<String> for TextBox {
                     }
                     _ => {}
                 }
+                self.update_hscroll(ctx.text(), data);
                 ctx.invalidate();
             }
             _ => (),
