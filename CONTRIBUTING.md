@@ -22,6 +22,12 @@ You may also need to set your `PKG_CONFIG_PATH`; assuming you have installed `ca
 $> PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig" cargo build
  ```
 
+#### Linux
+
+On Linux, druid requires gtk+3; see[gtk-rs dependencies] for installation instructions.
+
+run `cargo build`
+
 ## Code reviews
 
 All submissions, including submissions by project members, require review. We
