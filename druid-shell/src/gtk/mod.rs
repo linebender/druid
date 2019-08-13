@@ -14,35 +14,36 @@
 
 //! GTK-based platform support
 
-pub mod application;
-pub mod dialog;
-pub mod menu;
-pub mod util;
-pub mod win_main;
-
 use std::any::Any;
 use std::cell::{Cell, RefCell};
+use std::ffi::c_void;
 use std::ffi::OsString;
+use std::os::raw::{c_int, c_uint};
+use std::ptr;
+use std::slice;
 use std::sync::{Arc, Mutex, Weak};
 
-use gdk::EventKey;
-use gdk::EventMask;
-use gtk::AccelGroup;
-use gtk::ApplicationWindow;
-use gtk::Inhibit;
-
+use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt};
+use gtk::{
+    AccelGroup, ApplicationWindow, BoxExt, Cast, ContainerExt, GtkApplicationExt, GtkWindowExt,
+    Inhibit, WidgetExt, WidgetExtManual,
+};
 use piet_common::{Piet, RenderContext};
+use util::assert_main_thread;
+use win_main::with_application;
 
-use crate::keyboard;
+use crate::keyboard::{self, KeyCode, RawKeyCode, StrOrChar};
 use crate::kurbo::{Point, Vec2};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::platform::menu::Menu;
 use crate::window::{self, Cursor, MouseButton, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
-use crate::keyboard::{KeyCode, RawKeyCode, StrOrChar};
-use util::assert_main_thread;
-use win_main::with_application;
+pub mod application;
+pub mod dialog;
+pub mod menu;
+pub mod util;
+pub mod win_main;
 
 #[derive(Clone, Default)]
 pub struct WindowHandle {
@@ -107,7 +108,6 @@ impl WindowBuilder {
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
-        use gtk::{BoxExt, ContainerExt, GtkWindowExt, WidgetExt, WidgetExtManual};
         assert_main_thread();
 
         let handler = self
@@ -296,7 +296,6 @@ impl WindowBuilder {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
-                    use gdk::ScrollDirection;
                     let _deltas = scroll.get_scroll_deltas();
                     // TODO use these deltas (for smooth scrolling)
                     let modifiers = gtk_modifiers_to_druid(scroll.get_state());
@@ -399,7 +398,6 @@ impl WindowBuilder {
 
 impl WindowHandle {
     pub fn show(&self) {
-        use gtk::WidgetExt;
         if let Some(state) = self.state.upgrade() {
             state.window.show_all();
         }
@@ -407,7 +405,6 @@ impl WindowHandle {
 
     /// Close the window.
     pub fn close(&self) {
-        use gtk::GtkApplicationExt;
         if let Some(state) = self.state.upgrade() {
             with_application(|app| {
                 app.remove_window(&state.window);
@@ -417,7 +414,6 @@ impl WindowHandle {
 
     // Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
-        use gtk::WidgetExt;
         if let Some(state) = self.state.upgrade() {
             state.window.queue_draw();
         }
@@ -435,8 +431,6 @@ impl WindowHandle {
     /// TODO: we want to migrate this from dpi (with 96 as nominal) to a scale
     /// factor (with 1 as nominal).
     pub fn get_dpi(&self) -> f32 {
-        use gdk::WindowExt;
-        use gtk::WidgetExt;
         self.state
             .upgrade()
             .and_then(|s| s.window.get_window())
@@ -475,7 +469,6 @@ impl WindowHandle {
         ty: FileDialogType,
         options: FileDialogOptions,
     ) -> Result<OsString, Error> {
-        use gtk::Cast;
         if let Some(state) = self.state.upgrade() {
             dialog::get_file_dialog_path(state.window.upcast_ref(), ty, options)
         } else {
@@ -534,9 +527,6 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
     }
 
     fn set_cursor(&mut self, cursor: &Cursor) {
-        use gdk::WindowExt;
-        use gtk::WidgetExt;
-
         if let Some(gdk_window) = self
             .handle
             .state
@@ -589,7 +579,6 @@ fn time_interval_from_deadline(deadline: std::time::Instant) -> u32 {
 }
 
 fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cursor> {
-    use gdk::WindowExt;
     gdk::Cursor::new_from_name(
         &gdk_window.get_display(),
         match cursor {
@@ -620,8 +609,6 @@ fn gtk_button_to_druid(button: u32) -> window::MouseButton {
 /// Map the GTK modifiers into Druid bits
 #[inline]
 fn gtk_modifiers_to_druid(modifiers: gdk::ModifierType) -> keyboard::KeyModifiers {
-    use gdk::ModifierType;
-
     keyboard::KeyModifiers {
         shift: modifiers.contains(ModifierType::SHIFT_MASK),
         alt: modifiers.contains(ModifierType::MOD1_MASK),
@@ -631,7 +618,6 @@ fn gtk_modifiers_to_druid(modifiers: gdk::ModifierType) -> keyboard::KeyModifier
 }
 
 fn gtk_modifiers_to_mouse_button(modifiers: gdk::ModifierType) -> window::MouseButton {
-    use gdk::ModifierType;
     match modifiers {
         modifiers if modifiers.contains(ModifierType::BUTTON1_MASK) => MouseButton::Left,
         modifiers if modifiers.contains(ModifierType::BUTTON2_MASK) => MouseButton::Middle,
@@ -647,10 +633,6 @@ fn gtk_modifiers_to_mouse_button(modifiers: gdk::ModifierType) -> window::MouseB
 
 /// Map a hardware keycode to a keyval by looking up the keycode in the keymap
 fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
-    use std::ffi::c_void;
-    use std::os::raw::{c_int, c_uint};
-    use std::ptr;
-    use std::slice;
     unsafe {
         let keymap = gdk_sys::gdk_keymap_get_default();
 

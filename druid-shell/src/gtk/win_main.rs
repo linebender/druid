@@ -14,11 +14,12 @@
 
 //! GTK implementation of runloop.
 
-use crate::util::assert_main_thread;
-use gio::ApplicationFlags;
-use gtkrs::Application;
-use gtkrs::GtkApplicationExt;
 use std::cell::RefCell;
+
+use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags, Cancellable};
+use gtkrs::{Application, GtkApplicationExt};
+
+use crate::util::assert_main_thread;
 
 // XXX: The application needs to be global because WindowBuilder::build wants
 // to construct an ApplicationWindow, which needs the application, but
@@ -32,9 +33,6 @@ pub struct RunLoop {}
 
 impl RunLoop {
     pub fn new() -> RunLoop {
-        use gio::ApplicationExt;
-        use gio::Cancellable;
-
         assert_main_thread();
 
         // TODO: we should give control over the application ID to the user
@@ -58,7 +56,6 @@ impl RunLoop {
     }
 
     pub fn run(&mut self) {
-        use gio::ApplicationExtManual;
         assert_main_thread();
 
         // TODO: should we pass the command line arguments?

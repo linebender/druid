@@ -14,6 +14,7 @@
 
 //! GTK implementation of menus.
 
+use gdk::ModifierType;
 use gtkrs::AccelGroup;
 use gtkrs::GtkMenuExt;
 use gtkrs::Menu as GtkMenu;
@@ -21,12 +22,10 @@ use gtkrs::MenuBar as GtkMenuBar;
 use gtkrs::MenuItem as GtkMenuItem;
 use gtkrs::{GtkMenuItemExt, MenuShellExt, WidgetExt};
 
-use crate::platform::WindowHandle;
-
+use crate::gtk::WinCtxImpl;
 use crate::keycodes::{KeySpec, MenuKey};
 use crate::keycodes::{Modifiers, M_ALT, M_CTRL, M_META, M_SHIFT};
-
-use crate::gtk::WinCtxImpl;
+use crate::platform::WindowHandle;
 
 #[derive(Default)]
 pub struct Menu {
@@ -126,7 +125,6 @@ fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: 
 }
 
 fn modifiers_to_gdk_modifier_type(modifiers: Modifiers) -> gdk::ModifierType {
-    use gdk::ModifierType;
     let mut result = ModifierType::empty();
 
     result.set(ModifierType::MOD1_MASK, modifiers & M_ALT == M_ALT);
