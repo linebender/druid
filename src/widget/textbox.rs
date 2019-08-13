@@ -15,6 +15,7 @@
 //! A textbox widget.
 
 use std::cmp::{max, min};
+use std::ops::Range;
 use std::time::{Duration, Instant};
 
 use crate::{
@@ -55,10 +56,13 @@ pub struct Selection {
 }
 
 impl Selection {
+    /// Create a selection that begins at start and goes to end.
+    /// Like dragging a mouse from start to end.
     pub fn new(start: usize, end: usize) -> Self {
         Selection { start, end }
     }
 
+    /// Create a caret, which is just a selection with the same and start and end.
     pub fn caret(pos: usize) -> Self {
         Selection {
             start: pos,
@@ -66,16 +70,24 @@ impl Selection {
         }
     }
 
+    /// If start == end, it's a caret
+    pub fn is_caret(self) -> bool {
+        self.start == self.end
+    }
+
+    /// Return the smallest index (left, in left-to-right languages)
     pub fn min(self) -> usize {
         min(self.start, self.end)
     }
 
+    /// Return the largest index (right, in left-to-right languages)
     pub fn max(self) -> usize {
         max(self.start, self.end)
     }
 
-    pub fn is_caret(self) -> bool {
-        self.start == self.end
+    /// Return a range from smallest to largest index
+    pub fn range(self) -> Range<usize> {
+        self.min()..self.max()
     }
 }
 
@@ -89,11 +101,12 @@ pub struct TextBox {
 }
 
 impl TextBox {
+    /// Create a new TextBox widget with a width set in pixels
     pub fn new(width: f64) -> TextBox {
         TextBox {
             width,
             hscroll_offset: 0.,
-            selection: Selection::caret(3),
+            selection: Selection::caret(0),
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
         }
@@ -111,9 +124,8 @@ impl TextBox {
 
     fn insert(&mut self, src: &mut String, new: &str) {
         // TODO: handle incomplete graphemes
-        let (left, right) = (self.selection.min(), self.selection.max());
-        src.replace_range(left..right, new);
-        self.selection = Selection::caret(left + new.len());
+        src.replace_range(self.selection.range(), new);
+        self.selection = Selection::caret(self.selection.min() + new.len());
     }
 
     fn cursor_to(&mut self, to: usize) {
@@ -153,11 +165,12 @@ impl TextBox {
             src.replace_range(new_cursor..cursor, "");
             self.cursor_to(new_cursor);
         } else {
-            src.replace_range(self.selection.min()..self.selection.max(), "");
+            src.replace_range(self.selection.range(), "");
             self.cursor_to(self.selection.min());
         }
     }
 
+    // TODO: waiting on druid clipboard support for copy / paste.
     fn copy_text(&self, input: String) {
         eprintln!("COPY: {}", input);
     }
@@ -311,17 +324,16 @@ impl Widget<String> for TextBox {
                 match key_event {
                     // Copy (Ctrl+C || Cmd+C)
                     event
-                        if (event.mods.meta || event.mods.ctrl)
+                        if event.mods.contains_sys_command_modifier()
                             && (event.key_code == KeyCode::KeyC) =>
                     {
-                        let (left, right) = (self.selection.min(), self.selection.max());
-                        if let Some(text) = data.get(left..right) {
+                        if let Some(text) = data.get(self.selection.range()) {
                             self.copy_text(text.to_string());
                         }
                     }
                     // Paste (Ctrl+V || Cmd+V)
                     event
-                        if (event.mods.meta || event.mods.ctrl)
+                        if event.mods.contains_sys_command_modifier()
                             && (event.key_code == KeyCode::KeyV) =>
                     {
                         let paste_text = self.paste_text();
@@ -330,14 +342,14 @@ impl Widget<String> for TextBox {
                     }
                     // Select all (Ctrl+A || Cmd+A)
                     event
-                        if (event.mods.meta || event.mods.ctrl)
+                        if event.mods.contains_sys_command_modifier()
                             && (event.key_code == KeyCode::KeyA) =>
                     {
                         self.selection = Selection::new(0, data.len());
                     }
                     // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
                     event
-                        if (event.mods.meta || event.mods.ctrl)
+                        if event.mods.contains_sys_command_modifier()
                             && (event.key_code == KeyCode::ArrowLeft) =>
                     {
                         self.cursor_to(0);
@@ -345,7 +357,7 @@ impl Widget<String> for TextBox {
                     }
                     // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
                     event
-                        if (event.mods.meta || event.mods.ctrl)
+                        if event.mods.contains_sys_command_modifier()
                             && (event.key_code == KeyCode::ArrowRight) =>
                     {
                         self.cursor_to(data.len());
