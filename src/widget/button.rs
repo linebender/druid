@@ -118,7 +118,7 @@ impl<T: Data> Widget<T> for Label<T> {
         env: &Env,
     ) -> Size {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_layout = self.get_layout(layout_ctx.text, env);
+        let text_layout = self.get_layout(layout_ctx.text(), env);
         // This magical 1.2 constant helps center the text vertically in the rect it's given
         bc.constrain((text_layout.width(), font_size * 1.2))
     }
@@ -287,7 +287,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
         env: &Env,
     ) -> Size {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_layout = self.get_layout(layout_ctx.text, env, data);
+        let text_layout = self.get_layout(layout_ctx.text(), env, data);
         // This magical 1.2 constant helps center the text vertically in the rect it's given
         bc.constrain(Size::new(text_layout.width(), font_size * 1.2))
     }

@@ -14,7 +14,7 @@
 
 //! Events.
 
-use crate::kurbo::{Rect, Shape, Vec2};
+use crate::kurbo::{Rect, Shape, Size, Vec2};
 
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
 use druid_shell::window::{MouseEvent, TimerToken};
@@ -44,6 +44,17 @@ use druid_shell::window::{MouseEvent, TimerToken};
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Debug, Clone)]
 pub enum Event {
+    /// Called on the root widget when the window size changes.
+    ///
+    /// Discussion: it's not obvious this should be propagated to user
+    /// widgets. It *is* propagated through the RootWidget and handled
+    /// in the WindowPod, but after that it might be considered better
+    /// to just handle it in `layout`.
+    ///
+    /// The propagation logic of "just the root" requires a little bit
+    /// of complexity and state in EventCtx, so if it's not useful it
+    /// should be removed.
+    Size(Size),
     /// Called when a mouse button is pressed.
     MouseDown(MouseEvent),
     /// Called when a mouse button is released.

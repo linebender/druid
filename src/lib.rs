@@ -25,6 +25,8 @@ mod event;
 mod lens;
 pub mod localization;
 pub mod theme;
+mod win_handler;
+mod window;
 
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
@@ -46,8 +48,8 @@ pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 #[allow(unused)]
 use druid_shell::platform::IdleHandle;
-use druid_shell::window::{self, Text, WinCtx, WinHandler, WindowHandle};
 pub use druid_shell::window::{Cursor, MouseButton, MouseEvent, TimerToken};
+use druid_shell::window::{Text, WinCtx, WinHandler, WindowHandle};
 pub use shell::hotkey::{HotKey, RawMods, SysMods};
 
 pub use app::{AppLauncher, WindowDesc};
@@ -56,6 +58,11 @@ pub use env::{Env, Key, Value};
 pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
 pub use localization::LocalizedString;
+pub use win_handler::DruidHandler;
+pub use window::{
+    EventCtxRoot, LayoutCtxRoot, PaintCtxRoot, RootWidget, SharedWindow, UpdateCtxRoot, WindowId,
+    WindowSet,
+};
 
 /// A struct representing the top-level root of the UI.
 ///
@@ -298,6 +305,7 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 pub struct PaintCtx<'a, 'b: 'a> {
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'b>,
+    window_id: WindowId,
 }
 
 impl<'a, 'b: 'a> Deref for PaintCtx<'a, 'b> {
@@ -320,7 +328,8 @@ impl<'a, 'b: 'a> DerefMut for PaintCtx<'a, 'b> {
 /// creating text layout objects, which are likely to be useful
 /// during widget layout.
 pub struct LayoutCtx<'a, 'b: 'a> {
-    text: &'a mut Text<'b>,
+    text_factory: &'a mut Text<'b>,
+    window_id: WindowId,
 }
 
 /// A mutable context provided to event handling methods of widgets.
@@ -330,13 +339,17 @@ pub struct LayoutCtx<'a, 'b: 'a> {
 ///
 /// [`invalidate`]: #method.invalidate
 pub struct EventCtx<'a, 'b> {
+    // Note: there's a bunch of state that's just passed down, might
+    // want to group that into a single struct.
     win_ctx: &'a mut dyn WinCtx<'b>,
     cursor: &'a mut Option<Cursor>,
+    window_id: WindowId,
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     window: &'a WindowHandle,
     base_state: &'a mut BaseState,
     had_active: bool,
     is_handled: bool,
+    is_root: bool,
 }
 
 /// A mutable context provided to data update methods of widgets.
@@ -345,14 +358,15 @@ pub struct EventCtx<'a, 'b> {
 /// in the widget's appearance, to schedule a repaint.
 ///
 /// [`invalidate`]: #method.invalidate
-pub struct UpdateCtx<'a, 'b> {
-    win_ctx: &'a mut dyn WinCtx<'b>,
+pub struct UpdateCtx<'a, 'b: 'a> {
+    text_factory: &'a mut Text<'b>,
     window: &'a WindowHandle,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like
     // `EventCtx` (and possibly using the same structure). But for
     // now keep it super-simple.
     needs_inval: bool,
+    window_id: WindowId,
 }
 
 /// An action produced by a widget.
@@ -497,15 +511,21 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             win_ctx: ctx.win_ctx,
             cursor: ctx.cursor,
             window: &ctx.window,
+            window_id: ctx.window_id,
             base_state: &mut self.state,
             had_active,
             is_handled: false,
+            is_root: false,
         };
         let rect = child_ctx.base_state.layout_rect;
         // Note: could also represent this as `Option<Event>`.
         let mut recurse = true;
         let mut hot_changed = None;
         let child_event = match event {
+            Event::Size(size) => {
+                recurse = ctx.is_root;
+                Event::Size(*size)
+            }
             Event::MouseDown(mouse_event) => {
                 recurse = had_active || !ctx.had_active && rect.winding(mouse_event.pos) != 0;
                 let mut mouse_event = mouse_event.clone();
@@ -684,9 +704,11 @@ impl<T: Data> UiState<T> {
             win_ctx,
             cursor: &mut cursor,
             window: &self.handle,
+            window_id: Default::default(),
             base_state: &mut base_state,
             had_active: self.root.state.has_active,
             is_handled: false,
+            is_root: true,
         };
         let _action = self.root.event(&event, &mut ctx, &mut self.data, &self.env);
 
@@ -705,9 +727,10 @@ impl<T: Data> UiState<T> {
         }
 
         let mut update_ctx = UpdateCtx {
-            win_ctx,
+            text_factory: win_ctx.text_factory(),
             window: &self.handle,
             needs_inval: false,
+            window_id: Default::default(),
         };
         // Note: we probably want to aggregate updates so there's only one after
         // a burst of events.
@@ -733,14 +756,20 @@ impl<T: Data> UiState<T> {
         let (_, request_anim) = self.do_event_inner(anim_frame_event, ctx);
         self.prev_paint_time = Some(this_paint_time);
         let bc = BoxConstraints::tight(self.size);
-        let text = piet.text();
-        let mut layout_ctx = LayoutCtx { text };
+        let text_factory = piet.text();
+        let mut layout_ctx = LayoutCtx {
+            text_factory,
+            window_id: Default::default(),
+        };
         let size = self
             .root
             .layout(&mut layout_ctx, &bc, &self.data, &self.env);
         self.root.state.layout_rect = Rect::from_origin_size(Point::ORIGIN, size);
         piet.clear(self.env.get(theme::WINDOW_BACKGROUND_COLOR));
-        let mut paint_ctx = PaintCtx { render_ctx: piet };
+        let mut paint_ctx = PaintCtx {
+            render_ctx: piet,
+            window_id: Default::default(),
+        };
         self.root.paint(&mut paint_ctx, &self.data, &self.env);
         if !request_anim {
             self.prev_paint_time = None;
@@ -775,7 +804,7 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
         self.state.size = Size::new(width as f64 * scale, height as f64 * scale);
     }
 
-    fn mouse_down(&mut self, event: &window::MouseEvent, ctx: &mut dyn WinCtx) {
+    fn mouse_down(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
         // TODO: double-click detection
         let event = Event::MouseDown(event.clone());
         self.state.do_event(event, ctx);
@@ -1048,12 +1077,17 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.base_state.request_timer = true;
         self.win_ctx.request_timer(deadline)
     }
+
+    /// Get the window id.
+    pub fn window_id(&self) -> WindowId {
+        self.window_id
+    }
 }
 
 impl<'a, 'b> LayoutCtx<'a, 'b> {
     /// Get an object which can create text layouts.
     pub fn text(&mut self) -> &mut Text<'b> {
-        &mut self.text
+        &mut self.text_factory
     }
 }
 
@@ -1068,17 +1102,21 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
 
     /// Get an object which can create text layouts.
     pub fn text(&mut self) -> &mut Text<'b> {
-        self.win_ctx.text_factory()
+        self.text_factory
     }
 
     /// Returns a reference to the current `WindowHandle`.
     ///
-    /// Note: we're in the process of migrating towards providing functionality
-    /// provided by the window handle in mutable contexts instead. If you're
-    /// considering a new use of this method, try adding it to `WinCtx` and
-    /// plumbing it through instead.
+    /// Note: For the most part we're trying to migrate `WindowHandle`
+    /// functionality to `WinCtx`, but the update flow is the exception, as
+    /// it's shared across multiple windows.
     pub fn window(&self) -> &WindowHandle {
         &self.window
+    }
+
+    /// Get the window id.
+    pub fn window_id(&self) -> WindowId {
+        self.window_id
     }
 }
 
