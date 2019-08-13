@@ -21,7 +21,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use crate::kurbo::{Point, Rect, Size};
-use crate::piet::{Color, PaintBrush};
+use crate::piet::{Color, LinearGradient};
 
 use crate::Data;
 
@@ -65,7 +65,7 @@ pub enum Value {
     Size(Size),
     Rect(Rect),
     Color(Color),
-    PaintBrush(Arc<PaintBrush>),
+    LinearGradient(Arc<LinearGradient>),
     Float(f64),
     String(String),
 }
@@ -161,7 +161,7 @@ impl Debug for Value {
             Value::Rect(r) => write!(f, "Rect {:?}", r),
             Value::Color(c) => write!(f, "Color {:?}", c),
             // TODO: make PaintBrush impl debug?
-            Value::PaintBrush(_b) => write!(f, "PaintBrush(...)"),
+            Value::LinearGradient(g) => write!(f, "LinearGradient {:?}", g),
             Value::Float(x) => write!(f, "Float {}", x),
             Value::String(s) => write!(f, "String {:?}", s),
         }
@@ -209,7 +209,7 @@ impl Value {
             (Size(_), Size(_)) => true,
             (Rect(_), Rect(_)) => true,
             (Color(_), Color(_)) => true,
-            (PaintBrush(_), PaintBrush(_)) => true,
+            (LinearGradient(_), LinearGradient(_)) => true,
             (Float(_), Float(_)) => true,
             (String(_), String(_)) => true,
             _ => false,
@@ -227,7 +227,7 @@ impl Data for Value {
             }
             (Size(s1), Size(s2)) => s1.width.same(&s2.width) && s1.height.same(&s2.height),
             (Color(c1), Color(c2)) => c1.as_rgba_u32() == c2.as_rgba_u32(),
-            (PaintBrush(b1), PaintBrush(b2)) => Arc::ptr_eq(b1, b2),
+            (LinearGradient(g1), LinearGradient(g2)) => Arc::ptr_eq(g1, g2),
             (Float(f1), Float(f2)) => f1.same(&f2),
             (String(s1), String(s2)) => s1 == s2,
             _ => false,
@@ -346,4 +346,4 @@ impl_value_type_owned!(Rect, Rect);
 impl_value_type_owned!(Point, Point);
 impl_value_type_owned!(Size, Size);
 impl_value_type_borrowed!(str, String, String);
-impl_value_type_arc!(PaintBrush, PaintBrush);
+impl_value_type_arc!(LinearGradient, LinearGradient);
