@@ -311,7 +311,7 @@ impl Widget<String> for TextBox {
                 match key_event {
                     // Copy (Ctrl+C || Cmd+C)
                     event
-                        if (event.mods.meta || event.mods.ctrl)
+                        if (event.mods == druid_shell::keycodes::command_modifier())
                             && (event.key_code == KeyCode::KeyC) =>
                     {
                         let (left, right) = (self.selection.min(), self.selection.max());
@@ -321,7 +321,7 @@ impl Widget<String> for TextBox {
                     }
                     // Paste (Ctrl+V || Cmd+V)
                     event
-                        if (event.mods.meta || event.mods.ctrl)
+                        if (event.mods == druid_shell::keycodes::command_modifier())
                             && (event.key_code == KeyCode::KeyV) =>
                     {
                         let paste_text = self.paste_text();
@@ -330,14 +330,14 @@ impl Widget<String> for TextBox {
                     }
                     // Select all (Ctrl+A || Cmd+A)
                     event
-                        if (event.mods.meta || event.mods.ctrl)
+                        if (event.mods == druid_shell::keycodes::command_modifier())
                             && (event.key_code == KeyCode::KeyA) =>
                     {
                         self.selection = Selection::new(0, data.len());
                     }
                     // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
                     event
-                        if (event.mods.meta || event.mods.ctrl)
+                        if (event.mods == druid_shell::keycodes::command_modifier())
                             && (event.key_code == KeyCode::ArrowLeft) =>
                     {
                         self.cursor_to(0);
@@ -345,7 +345,7 @@ impl Widget<String> for TextBox {
                     }
                     // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
                     event
-                        if (event.mods.meta || event.mods.ctrl)
+                        if (event.mods == druid_shell::keycodes::command_modifier())
                             && (event.key_code == KeyCode::ArrowRight) =>
                     {
                         self.cursor_to(data.len());
