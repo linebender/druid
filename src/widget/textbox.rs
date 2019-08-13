@@ -25,7 +25,6 @@ use crate::{
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
 use crate::piet::{Color, FontBuilder, Piet, RenderContext, Text, TextLayout, TextLayoutBuilder};
 
-use druid_shell::clipboard::{ClipboardContext, ClipboardProvider};
 use druid_shell::unicode_segmentation::GraphemeCursor;
 
 const BACKGROUND_GREY_LIGHT: Color = Color::rgba8(0x3a, 0x3a, 0x3a, 0xff);
@@ -140,13 +139,12 @@ impl TextBox {
     }
 
     fn copy_text(&self, input: String) {
-        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-        ctx.set_contents(input).unwrap();
+        eprintln!("COPY: {}", input);
     }
 
     fn paste_text(&self) -> String {
-        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-        ctx.get_contents().unwrap_or("".to_string())
+        eprintln!("PASTE");
+        "PASTE".to_string()
     }
 
     // TODO: do hit testing instead of this substring hack!

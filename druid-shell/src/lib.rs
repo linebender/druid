@@ -14,11 +14,10 @@
 
 //! Platform abstraction for druid toolkit.
 
-pub use clipboard;
-pub use unicode_segmentation;
-
 pub use piet_common as piet;
 pub use piet_common::kurbo;
+
+pub use unicode_segmentation;
 
 #[cfg(target_os = "windows")]
 #[macro_use]
