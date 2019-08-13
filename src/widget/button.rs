@@ -21,9 +21,9 @@ use crate::{
     UpdateCtx, Widget,
 };
 
-use crate::piet::{FontBuilder, Text, TextLayoutBuilder};
+use crate::piet::{FontBuilder, PietText, PietTextLayout, Text, TextLayout, TextLayoutBuilder};
 use crate::theme;
-use crate::{Piet, Point, RenderContext};
+use crate::{Point, RenderContext};
 
 /// A label with static text.
 pub struct Label {
@@ -51,21 +51,14 @@ impl Label {
         Label { text: text.into() }
     }
 
-    fn get_layout(
-        &self,
-        rt: &mut Piet,
-        font_name: &str,
-        font_size: f64,
-    ) -> <Piet as RenderContext>::TextLayout {
+    fn get_layout(&self, t: &mut PietText, font_name: &str, font_size: f64) -> PietTextLayout {
         // TODO: caching of both the format and the layout
-        let font = rt
-            .text()
+        let font = t
             .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
-        rt.text()
-            .new_text_layout(&font, &self.text)
+        t.new_text_layout(&font, &self.text)
             .unwrap()
             .build()
             .unwrap()
@@ -76,18 +69,21 @@ impl<T: Data> Widget<T> for Label {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, env: &Env) {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_layout = self.get_layout(paint_ctx.render_ctx, font_name, font_size);
+        let text_layout = self.get_layout(paint_ctx.text(), font_name, font_size);
         paint_ctx.draw_text(&text_layout, (0.0, font_size), &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
         &mut self,
-        _layout_ctx: &mut LayoutCtx,
+        layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         _data: &T,
-        _env: &Env,
+        env: &Env,
     ) -> Size {
-        bc.constrain((100.0, 17.0))
+        let font_name = env.get(theme::FONT_NAME);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let text_layout = self.get_layout(layout_ctx.text, font_name, font_size);
+        bc.constrain((text_layout.width(), 17.0))
     }
 
     fn event(
@@ -179,25 +175,20 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
 
     fn get_layout(
         &mut self,
-        rt: &mut Piet,
+        rt: &mut PietText,
         font_name: &str,
         font_size: f64,
         data: &T,
         env: &Env,
-    ) -> <Piet as RenderContext>::TextLayout {
+    ) -> PietTextLayout {
         let text = (self.label_closure)(data, env);
         // TODO: caching of both the format and the layout
         let font = rt
-            .text()
             .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
-        rt.text()
-            .new_text_layout(&font, &text)
-            .unwrap()
-            .build()
-            .unwrap()
+        rt.new_text_layout(&font, &text).unwrap().build().unwrap()
     }
 }
 
@@ -205,18 +196,21 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_layout = self.get_layout(paint_ctx, font_name, font_size, data, env);
+        let text_layout = self.get_layout(paint_ctx.text(), font_name, font_size, data, env);
         paint_ctx.draw_text(&text_layout, (0., font_size), &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
         &mut self,
-        _layout_ctx: &mut LayoutCtx,
+        layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _data: &T,
-        _env: &Env,
+        data: &T,
+        env: &Env,
     ) -> Size {
-        bc.constrain(Size::new(100.0, 17.0))
+        let font_name = env.get(theme::FONT_NAME);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let text_layout = self.get_layout(layout_ctx.text, font_name, font_size, data, env);
+        bc.constrain((text_layout.width(), 17.0))
     }
 
     fn event(
