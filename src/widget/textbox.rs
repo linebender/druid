@@ -23,7 +23,10 @@ use crate::{
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
-use crate::piet::{Color, FontBuilder, Piet, RenderContext, Text, TextLayout, TextLayoutBuilder};
+use crate::piet::{
+    Color, FontBuilder, Piet, PietText, PietTextLayout, RenderContext, Text, TextLayout,
+    TextLayoutBuilder,
+};
 
 use druid_shell::unicode_segmentation::GraphemeCursor;
 
@@ -96,12 +99,7 @@ impl TextBox {
         }
     }
 
-    fn get_layout(
-        &self,
-        text: &mut <Piet as RenderContext>::Text,
-        font_size: f64,
-        data: &String,
-    ) -> <Piet as RenderContext>::TextLayout {
+    fn get_layout(&self, text: &mut PietText, font_size: f64, data: &String) -> PietTextLayout {
         // TODO: caching of both the format and the layout
         let font = text
             .new_font_by_name("Segoe UI", font_size)
