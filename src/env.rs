@@ -21,7 +21,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use crate::kurbo::{Point, Rect, Size};
-use crate::piet::Color;
+use crate::piet::{Color, PaintBrush};
 
 use crate::Data;
 
@@ -65,6 +65,7 @@ pub enum Value {
     Size(Size),
     Rect(Rect),
     Color(Color),
+    PaintBrush(Arc<PaintBrush>),
     Float(f64),
     String(String),
 }
@@ -159,6 +160,8 @@ impl Debug for Value {
             Value::Size(s) => write!(f, "Size {:?}", s),
             Value::Rect(r) => write!(f, "Rect {:?}", r),
             Value::Color(c) => write!(f, "Color {:?}", c),
+            // TODO: make PaintBrush impl debug?
+            Value::PaintBrush(_b) => write!(f, "PaintBrush(...)"),
             Value::Float(x) => write!(f, "Float {}", x),
             Value::String(s) => write!(f, "String {:?}", s),
         }
@@ -206,6 +209,7 @@ impl Value {
             (Size(_), Size(_)) => true,
             (Rect(_), Rect(_)) => true,
             (Color(_), Color(_)) => true,
+            (PaintBrush(_), PaintBrush(_)) => true,
             (Float(_), Float(_)) => true,
             (String(_), String(_)) => true,
             _ => false,
@@ -223,6 +227,7 @@ impl Data for Value {
             }
             (Size(s1), Size(s2)) => s1.width.same(&s2.width) && s1.height.same(&s2.height),
             (Color(c1), Color(c2)) => c1.as_rgba_u32() == c2.as_rgba_u32(),
+            (PaintBrush(b1), PaintBrush(b2)) => Arc::ptr_eq(b1, b2),
             (Float(f1), Float(f2)) => f1.same(&f2),
             (String(s1), String(s2)) => s1 == s2,
             _ => false,
@@ -252,6 +257,7 @@ impl<T> From<Key<T>> for String {
     }
 }
 
+/// Use this macro for types which are cheap to clone (ie all `Copy` types).
 macro_rules! impl_value_type_owned {
     ($ty:ty, $var:ident) => {
         impl<'a> ValueType<'a> for $ty {
@@ -276,6 +282,8 @@ macro_rules! impl_value_type_owned {
     };
 }
 
+/// Use this macro for types which require allocation but are not too
+/// expensive to clone.
 macro_rules! impl_value_type_borrowed {
     ($ty:ty, $owned:ty, $var:ident) => {
         impl<'a> ValueType<'a> for &'a $ty {
@@ -300,9 +308,42 @@ macro_rules! impl_value_type_borrowed {
     };
 }
 
+/// Use this macro for types that would be expensive to clone; they
+/// are stored as an `Arc<>`.
+macro_rules! impl_value_type_arc {
+    ($ty:ty, $var:ident) => {
+        impl<'a> ValueType<'a> for &'a $ty {
+            type Owned = $ty;
+            fn try_from_value(value: &'a Value) -> Result<Self, EnvError> {
+                match value {
+                    Value::$var(f) => Ok(f),
+                    other => Err(format!(
+                        "incorrect Value type. Expected {}, found {:?}",
+                        stringify!($var),
+                        other
+                    )),
+                }
+            }
+        }
+
+        impl Into<Value> for $ty {
+            fn into(self) -> Value {
+                Value::$var(Arc::new(self))
+            }
+        }
+
+        impl Into<Value> for Arc<$ty> {
+            fn into(self) -> Value {
+                Value::$var(self)
+            }
+        }
+    };
+}
+
 impl_value_type_owned!(f64, Float);
 impl_value_type_owned!(Color, Color);
 impl_value_type_owned!(Rect, Rect);
 impl_value_type_owned!(Point, Point);
 impl_value_type_owned!(Size, Size);
 impl_value_type_borrowed!(str, String, String);
+impl_value_type_arc!(PaintBrush, PaintBrush);
