@@ -19,9 +19,10 @@ pub use druid_shell::{self as shell, kurbo, piet};
 pub mod widget;
 
 mod data;
+mod env;
 mod event;
 mod lens;
-mod value;
+pub mod theme;
 
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
@@ -43,9 +44,9 @@ use druid_shell::window::{self, Text, WinCtx, WinHandler, WindowHandle};
 pub use druid_shell::window::{Cursor, MouseButton, MouseEvent, TimerToken};
 
 pub use data::Data;
+pub use env::{Env, Key, Value};
 pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
-pub use value::{Delta, KeyPath, PathEl, PathFragment, Value};
 
 const BACKGROUND_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
@@ -67,6 +68,7 @@ pub struct UiMain<T: Data> {
 /// for coordinating interactions with the platform window.
 pub struct UiState<T: Data> {
     root: WidgetPod<T, Box<dyn Widget<T>>>,
+    env: Env,
     data: T,
     prev_paint_time: Option<Instant>,
     // Following fields might move to a separate struct so there's access
@@ -90,6 +92,7 @@ pub struct UiState<T: Data> {
 pub struct WidgetPod<T: Data, W: Widget<T>> {
     state: BaseState,
     old_data: Option<T>,
+    env: Option<Env>,
     inner: W,
 }
 
@@ -278,23 +281,6 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
     }
 }
 
-/// An environment passed down through all widget traversals.
-///
-/// All widget methods have access to an environment, and it is passed
-/// downwards during traversals.
-///
-/// At present, there is no real functionality here, but work is in
-/// progress to make theme data (colors, dimensions, etc) available
-/// through the environment, as well as pass custom data down to all
-/// descendants. An important example of the latter is setting a value
-/// for enabled/disabled status so that an entire subtree can be
-/// disabled ("grayed out") with one setting.
-#[derive(Clone, Default)]
-pub struct Env {
-    value: Value,
-    path: KeyPath,
-}
-
 /// A context passed to paint methods of widgets.
 ///
 /// Widgets paint their appearance by calling methods on the
@@ -413,6 +399,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         WidgetPod {
             state: Default::default(),
             old_data: None,
+            env: None,
             inner,
         }
     }
@@ -599,13 +586,23 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`update`]: trait.Widget.html#method.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
-        if let Some(old_data) = &self.old_data {
-            if old_data.same(data) {
-                return;
-            }
+        let data_same = if let Some(ref old_data) = self.old_data {
+            old_data.same(data)
+        } else {
+            false
+        };
+        let env_same = if let Some(ref old_env) = self.env {
+            old_env.same(env)
+        } else {
+            false
+        };
+
+        if data_same && env_same {
+            return;
         }
         self.inner.update(ctx, self.old_data.as_ref(), data, env);
         self.old_data = Some(data.clone());
+        self.env = Some(env.clone());
     }
 }
 
@@ -618,6 +615,7 @@ impl<T: Data, W: Widget<T> + 'static> WidgetPod<T, W> {
         WidgetPod {
             state: self.state,
             old_data: self.old_data,
+            env: self.env,
             inner: Box::new(self.inner),
         }
     }
@@ -631,6 +629,7 @@ impl<T: Data> UiState<T> {
     pub fn new(root: impl Widget<T> + 'static, data: T) -> UiState<T> {
         UiState {
             root: WidgetPod::new(root).boxed(),
+            env: theme::init(),
             data,
             prev_paint_time: None,
             handle: Default::default(),
@@ -647,10 +646,6 @@ impl<T: Data> UiState<T> {
     #[deprecated]
     pub fn set_active(&mut self, active: bool) {
         self.root.state.is_active = active;
-    }
-
-    fn root_env(&self) -> Env {
-        Default::default()
     }
 
     /// Send an event to the widget hierarchy.
@@ -686,15 +681,14 @@ impl<T: Data> UiState<T> {
             had_active: self.root.state.has_active,
             is_handled: false,
         };
-        let env = self.root_env();
-        let _action = self.root.event(&event, &mut ctx, &mut self.data, &env);
+        let _action = self.root.event(&event, &mut ctx, &mut self.data, &self.env);
 
         if ctx.base_state.request_focus {
             let focus_event = Event::FocusChanged(true);
             // Focus changed events are not expected to return an action.
             let _ = self
                 .root
-                .event(&focus_event, &mut ctx, &mut self.data, &env);
+                .event(&focus_event, &mut ctx, &mut self.data, &self.env);
         }
         let needs_inval = ctx.base_state.needs_inval;
         let request_anim = ctx.base_state.request_anim;
@@ -710,7 +704,7 @@ impl<T: Data> UiState<T> {
         };
         // Note: we probably want to aggregate updates so there's only one after
         // a burst of events.
-        self.root.update(&mut update_ctx, &self.data, &env);
+        self.root.update(&mut update_ctx, &self.data, &self.env);
         // TODO: process actions
         let dirty = request_anim || needs_inval || update_ctx.needs_inval;
         (is_handled, dirty)
@@ -732,14 +726,15 @@ impl<T: Data> UiState<T> {
         let (_, request_anim) = self.do_event_inner(anim_frame_event, ctx);
         self.prev_paint_time = Some(this_paint_time);
         let bc = BoxConstraints::tight(self.size);
-        let env = self.root_env();
         let text = piet.text();
         let mut layout_ctx = LayoutCtx { text };
-        let size = self.root.layout(&mut layout_ctx, &bc, &self.data, &env);
+        let size = self
+            .root
+            .layout(&mut layout_ctx, &bc, &self.data, &self.env);
         self.root.state.layout_rect = Rect::from_origin_size(Point::ORIGIN, size);
         piet.clear(BACKGROUND_COLOR);
         let mut paint_ctx = PaintCtx { render_ctx: piet };
-        self.root.paint(&mut paint_ctx, &self.data, &env);
+        self.root.paint(&mut paint_ctx, &self.data, &self.env);
         if !request_anim {
             self.prev_paint_time = None;
         }
@@ -902,24 +897,6 @@ impl BoxConstraints {
     /// Returns the min size of these constraints.
     pub fn min(&self) -> Size {
         self.min
-    }
-}
-
-impl Env {
-    pub fn join(&self, fragment: impl PathFragment) -> Env {
-        let mut path = self.path.clone();
-        fragment.push_to_path(&mut path);
-        // TODO: better diagnostics on error
-        let value = self.value.access(fragment).expect("invalid path").clone();
-        Env { value, path }
-    }
-
-    pub fn get_data(&self) -> &Value {
-        &self.value
-    }
-
-    pub fn get_path(&self) -> &KeyPath {
-        &self.path
     }
 }
 

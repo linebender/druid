@@ -21,15 +21,9 @@ use crate::{
     UpdateCtx, Widget,
 };
 
-use crate::piet::{
-    Color, FontBuilder, PietText, PietTextLayout, Text, TextLayout, TextLayoutBuilder,
-};
+use crate::piet::{FontBuilder, PietText, PietTextLayout, Text, TextLayout, TextLayoutBuilder};
+use crate::theme;
 use crate::{Point, RenderContext};
-
-const BUTTON_BG_COLOR: Color = Color::rgb8(0x40, 0x40, 0x48);
-const BUTTON_HOVER_COLOR: Color = Color::rgb8(0x50, 0x50, 0x58);
-const BUTTON_PRESSED_COLOR: Color = Color::rgb8(0x60, 0x60, 0x68);
-const LABEL_TEXT_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 /// A label with static text.
 pub struct Label {
@@ -57,14 +51,14 @@ impl Label {
         Label { text: text.into() }
     }
 
-    fn get_layout(&self, rt: &mut PietText, font_size: f64) -> PietTextLayout {
+    fn get_layout(&self, t: &mut PietText, font_name: &str, font_size: f64) -> PietTextLayout {
         // TODO: caching of both the format and the layout
-        let font = rt
-            .new_font_by_name("Segoe UI", font_size)
+        let font = t
+            .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
-        rt.new_text_layout(&font, &self.text)
+        t.new_text_layout(&font, &self.text)
             .unwrap()
             .build()
             .unwrap()
@@ -72,10 +66,11 @@ impl Label {
 }
 
 impl<T: Data> Widget<T> for Label {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, _env: &Env) {
-        let font_size = 15.0;
-        let text_layout = self.get_layout(paint_ctx.text(), font_size);
-        paint_ctx.draw_text(&text_layout, (0.0, font_size), &LABEL_TEXT_COLOR);
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, env: &Env) {
+        let font_name = env.get(theme::FONT_NAME);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let text_layout = self.get_layout(paint_ctx.text(), font_name, font_size);
+        paint_ctx.draw_text(&text_layout, (0.0, font_size), &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
@@ -83,10 +78,11 @@ impl<T: Data> Widget<T> for Label {
         layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         _data: &T,
-        _env: &Env,
+        env: &Env,
     ) -> Size {
-        let font_size = 15.0;
-        let text_layout = self.get_layout(layout_ctx.text, font_size);
+        let font_name = env.get(theme::FONT_NAME);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let text_layout = self.get_layout(layout_ctx.text, font_name, font_size);
         bc.constrain((text_layout.width(), 17.0))
     }
 
@@ -116,9 +112,9 @@ impl<T: Data> Widget<T> for Button {
         let is_active = base_state.is_active();
         let is_hot = base_state.is_hot();
         let bg_color = match (is_active, is_hot) {
-            (true, true) => BUTTON_PRESSED_COLOR,
-            (false, true) => BUTTON_HOVER_COLOR,
-            _ => BUTTON_BG_COLOR,
+            (true, true) => env.get(theme::PRESSED_COLOR),
+            (false, true) => env.get(theme::HOVER_COLOR),
+            _ => env.get(theme::BACKGROUND_COLOR),
         };
         let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
         paint_ctx.fill(rect, &bg_color);
@@ -180,6 +176,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
     fn get_layout(
         &mut self,
         rt: &mut PietText,
+        font_name: &str,
         font_size: f64,
         data: &T,
         env: &Env,
@@ -187,7 +184,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
         let text = (self.label_closure)(data, env);
         // TODO: caching of both the format and the layout
         let font = rt
-            .new_font_by_name("Segoe UI", font_size)
+            .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
@@ -197,9 +194,10 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
 
 impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
-        let font_size = 15.0;
-        let text_layout = self.get_layout(paint_ctx.text(), font_size, data, env);
-        paint_ctx.draw_text(&text_layout, (0., font_size), &LABEL_TEXT_COLOR);
+        let font_name = env.get(theme::FONT_NAME);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let text_layout = self.get_layout(paint_ctx.text(), font_name, font_size, data, env);
+        paint_ctx.draw_text(&text_layout, (0., font_size), &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
@@ -209,8 +207,9 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
         data: &T,
         env: &Env,
     ) -> Size {
-        let font_size = 15.0;
-        let text_layout = self.get_layout(layout_ctx.text, font_size, data, env);
+        let font_name = env.get(theme::FONT_NAME);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let text_layout = self.get_layout(layout_ctx.text, font_name, font_size, data, env);
         bc.constrain((text_layout.width(), 17.0))
     }
 
