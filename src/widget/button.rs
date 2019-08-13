@@ -87,7 +87,7 @@ impl<T: Data> Widget<T> for Label<T> {
         _data: &T,
         env: &Env,
     ) -> Size {
-        let text_layout = self.get_layout(layout_ctx.text, env);
+        let text_layout = self.get_layout(layout_ctx.text(), env);
         bc.constrain((text_layout.width(), 17.0))
     }
 
@@ -220,7 +220,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
     ) -> Size {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_layout = self.get_layout(layout_ctx.text, font_name, font_size, data, env);
+        let text_layout = self.get_layout(layout_ctx.text(), font_name, font_size, data, env);
         bc.constrain((text_layout.width(), 17.0))
     }
 
