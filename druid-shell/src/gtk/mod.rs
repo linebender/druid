@@ -32,7 +32,7 @@ use piet_common::{Piet, RenderContext};
 use util::assert_main_thread;
 use win_main::with_application;
 
-use crate::keyboard::{self, KeyCode, RawKeyCode, StrOrChar};
+use crate::keyboard;
 use crate::kurbo::{Point, Vec2};
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::platform::menu::Menu;
@@ -221,20 +221,12 @@ impl WindowBuilder {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
-                    let count = match button.get_event_type() {
-                        gdk::EventType::ButtonPress => 1,
-                        gdk::EventType::DoubleButtonPress => 2,
-                        gdk::EventType::TripleButtonPress => 3,
-                        _ => 0,
-                    };
-
-                    let pos = Point::from(button.get_position());
                     state.handler.borrow_mut().mouse_down(
                         &window::MouseEvent {
-                            pos,
-                            count,
-                            mods: gtk_modifiers_to_druid(button.get_state()),
-                            button: gtk_button_to_druid(button.get_button()),
+                            pos: Point::from(button.get_position()),
+                            count: get_mouse_click_count(button.get_event_type()),
+                            mods: get_modifiers(button.get_state()),
+                            button: get_mouse_button(button.get_button()),
                         },
                         &mut ctx,
                     );
@@ -250,13 +242,12 @@ impl WindowBuilder {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
-                    let pos = Point::from(button.get_position());
                     state.handler.borrow_mut().mouse_up(
                         &window::MouseEvent {
-                            pos,
-                            mods: gtk_modifiers_to_druid(button.get_state()),
+                            pos: Point::from(button.get_position()),
+                            mods: get_modifiers(button.get_state()),
                             count: 0,
-                            button: gtk_button_to_druid(button.get_button()),
+                            button: get_mouse_button(button.get_button()),
                         },
                         &mut ctx,
                     );
@@ -275,9 +266,9 @@ impl WindowBuilder {
                     let pos = Point::from(motion.get_position());
                     let mouse_event = window::MouseEvent {
                         pos,
-                        mods: gtk_modifiers_to_druid(motion.get_state()),
+                        mods: get_modifiers(motion.get_state()),
                         count: 0,
-                        button: gtk_modifiers_to_mouse_button(motion.get_state()),
+                        button: get_mouse_button_from_modifiers(motion.get_state()),
                     };
 
                     state
@@ -298,7 +289,7 @@ impl WindowBuilder {
 
                     let _deltas = scroll.get_scroll_deltas();
                     // TODO use these deltas (for smooth scrolling)
-                    let modifiers = gtk_modifiers_to_druid(scroll.get_state());
+                    let modifiers = get_modifiers(scroll.get_state());
 
                     // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
                     // They claim that one "tick" on a scroll wheel should be 120 units.
@@ -349,7 +340,7 @@ impl WindowBuilder {
 
                     *current_keyval = Some(key.get_keyval());
 
-                    let key_event = gtk_event_key_to_key_event(key, repeat);
+                    let key_event = make_key_event(key, repeat);
                     state.handler.borrow_mut().key_down(key_event, &mut ctx);
                 }
 
@@ -365,7 +356,7 @@ impl WindowBuilder {
 
                     *(state.current_keyval.borrow_mut()) = None;
 
-                    let key_event = gtk_event_key_to_key_event(key, false);
+                    let key_event = make_key_event(key, false);
                     state.handler.borrow_mut().key_up(key_event, &mut ctx);
                 }
 
@@ -478,6 +469,7 @@ impl WindowHandle {
 }
 
 unsafe impl Send for IdleHandle {}
+// WindowState needs to be Send + Sync so it can be passed into glib closures
 unsafe impl Send for WindowState {}
 unsafe impl Sync for WindowState {}
 
@@ -578,6 +570,12 @@ fn time_interval_from_deadline(deadline: std::time::Instant) -> u32 {
     }
 }
 
+fn next_timer_id() -> usize {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static TIMER_ID: AtomicUsize = AtomicUsize::new(1);
+    TIMER_ID.fetch_add(1, Ordering::Relaxed)
+}
+
 fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cursor> {
     gdk::Cursor::new_from_name(
         &gdk_window.get_display(),
@@ -594,30 +592,18 @@ fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cur
     )
 }
 
-/// Map a GTK mouse button to a Druid one
-#[inline]
-fn gtk_button_to_druid(button: u32) -> window::MouseButton {
+fn get_mouse_button(button: u32) -> window::MouseButton {
     match button {
         1 => MouseButton::Left,
         2 => MouseButton::Middle,
         3 => MouseButton::Right,
         4 => MouseButton::X1,
-        _ => MouseButton::X2,
+        5 => MouseButton::X2,
+        _ => MouseButton::Left,
     }
 }
 
-/// Map the GTK modifiers into Druid bits
-#[inline]
-fn gtk_modifiers_to_druid(modifiers: gdk::ModifierType) -> keyboard::KeyModifiers {
-    keyboard::KeyModifiers {
-        shift: modifiers.contains(ModifierType::SHIFT_MASK),
-        alt: modifiers.contains(ModifierType::MOD1_MASK),
-        ctrl: modifiers.contains(ModifierType::CONTROL_MASK),
-        meta: modifiers.contains(ModifierType::META_MASK),
-    }
-}
-
-fn gtk_modifiers_to_mouse_button(modifiers: gdk::ModifierType) -> window::MouseButton {
+fn get_mouse_button_from_modifiers(modifiers: gdk::ModifierType) -> window::MouseButton {
     match modifiers {
         modifiers if modifiers.contains(ModifierType::BUTTON1_MASK) => MouseButton::Left,
         modifiers if modifiers.contains(ModifierType::BUTTON2_MASK) => MouseButton::Middle,
@@ -631,7 +617,37 @@ fn gtk_modifiers_to_mouse_button(modifiers: gdk::ModifierType) -> window::MouseB
     }
 }
 
-/// Map a hardware keycode to a keyval by looking up the keycode in the keymap
+fn get_mouse_click_count(event_type: gdk::EventType) -> u32 {
+    match event_type {
+        gdk::EventType::ButtonPress => 1,
+        gdk::EventType::DoubleButtonPress => 2,
+        gdk::EventType::TripleButtonPress => 3,
+        _ => 0,
+    }
+}
+
+fn get_modifiers(modifiers: gdk::ModifierType) -> keyboard::KeyModifiers {
+    keyboard::KeyModifiers {
+        shift: modifiers.contains(ModifierType::SHIFT_MASK),
+        alt: modifiers.contains(ModifierType::MOD1_MASK),
+        ctrl: modifiers.contains(ModifierType::CONTROL_MASK),
+        meta: modifiers.contains(ModifierType::META_MASK),
+    }
+}
+
+fn make_key_event(key: &EventKey, repeat: bool) -> keyboard::KeyEvent {
+    let keyval = key.get_keyval();
+    let hardware_keycode = key.get_hardware_keycode();
+
+    let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval);
+
+    let text = gdk::keyval_to_unicode(keyval);
+
+    keyboard::KeyEvent::new(keycode, repeat, get_modifiers(key.get_state()), text, text)
+}
+
+/// Map a hardware keycode to a keyval by performing a lookup in the keymap and finding the
+/// keyval with the lowest group and level
 fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
     unsafe {
         let keymap = gdk_sys::gdk_keymap_get_default();
@@ -670,137 +686,4 @@ fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
             None
         }
     }
-}
-
-fn gtk_event_key_to_key_event(key: &EventKey, repeat: bool) -> keyboard::KeyEvent {
-    // the logical key being pressed
-    let keyval = key.get_keyval();
-
-    let hardware_keycode = key.get_hardware_keycode();
-    let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval);
-
-    // TODO how can we get the different versions from GDK?
-    let text: StrOrChar = gdk::keyval_to_unicode(keyval).into();
-    // TODO properly handle modifiers
-    let unmodified_text: StrOrChar = gdk::keyval_to_unicode(keyval).into();
-
-    keyboard::KeyEvent::new(
-        keycode,
-        repeat,
-        gtk_modifiers_to_druid(key.get_state()),
-        text,
-        unmodified_text,
-    )
-}
-
-impl From<u32> for KeyCode {
-    #[allow(non_upper_case_globals)]
-    fn from(raw: u32) -> KeyCode {
-        use gdk::enums::key::*;
-        match raw {
-            a | A => KeyCode::KeyA,
-            s | S => KeyCode::KeyS,
-            d | D => KeyCode::KeyD,
-            f | F => KeyCode::KeyF,
-            h | H => KeyCode::KeyH,
-            g | G => KeyCode::KeyG,
-            z | Z => KeyCode::KeyZ,
-            x | X => KeyCode::KeyX,
-            c | C => KeyCode::KeyC,
-            v | V => KeyCode::KeyV,
-            b | B => KeyCode::KeyB,
-            q | Q => KeyCode::KeyQ,
-            w | W => KeyCode::KeyW,
-            e | E => KeyCode::KeyE,
-            r | R => KeyCode::KeyR,
-            y | Y => KeyCode::KeyY,
-            t | T => KeyCode::KeyT,
-            _1 => KeyCode::Key1,
-            _2 => KeyCode::Key2,
-            _3 => KeyCode::Key3,
-            _4 => KeyCode::Key4,
-            _6 => KeyCode::Key6,
-            _5 => KeyCode::Key5,
-            equal => KeyCode::Equals,
-            _9 => KeyCode::Key9,
-            _7 => KeyCode::Key7,
-            minus => KeyCode::Minus,
-            _8 => KeyCode::Key8,
-            _0 => KeyCode::Key0,
-            bracketright => KeyCode::RightBracket,
-            o | O => KeyCode::KeyO,
-            u | U => KeyCode::KeyU,
-            bracketleft => KeyCode::LeftBracket,
-            i | I => KeyCode::KeyI,
-            p | P => KeyCode::KeyP,
-            Return => KeyCode::Return,
-            l | L => KeyCode::KeyL,
-            j | J => KeyCode::KeyJ,
-            grave => KeyCode::Backtick,
-            k | K => KeyCode::KeyK,
-            semicolon => KeyCode::Semicolon,
-            backslash => KeyCode::Backslash,
-            comma => KeyCode::Comma,
-            slash => KeyCode::Slash,
-            n | N => KeyCode::KeyN,
-            m | M => KeyCode::KeyM,
-            period => KeyCode::Period,
-            Tab => KeyCode::Tab,
-            space => KeyCode::Space,
-            BackSpace => KeyCode::Backspace,
-            Escape => KeyCode::Escape,
-            Caps_Lock => KeyCode::CapsLock,
-            KP_Decimal => KeyCode::NumpadDecimal,
-            KP_Multiply => KeyCode::NumpadMultiply,
-            KP_Add => KeyCode::NumpadAdd,
-            Num_Lock => KeyCode::NumLock,
-            KP_Divide => KeyCode::NumpadDivide,
-            KP_Enter => KeyCode::NumpadEnter,
-            KP_Subtract => KeyCode::NumpadSubtract,
-            KP_Equal => KeyCode::NumpadEquals,
-            KP_0 => KeyCode::Numpad0,
-            KP_1 => KeyCode::Numpad1,
-            KP_2 => KeyCode::Numpad2,
-            KP_3 => KeyCode::Numpad3,
-            KP_4 => KeyCode::Numpad4,
-            KP_5 => KeyCode::Numpad5,
-            KP_6 => KeyCode::Numpad6,
-            KP_7 => KeyCode::Numpad7,
-            KP_8 => KeyCode::Numpad8,
-            KP_9 => KeyCode::Numpad9,
-            F5 => KeyCode::F5,
-            F6 => KeyCode::F6,
-            F7 => KeyCode::F7,
-            F3 => KeyCode::F3,
-            F8 => KeyCode::F8,
-            F9 => KeyCode::F9,
-            F10 => KeyCode::F10,
-            F11 => KeyCode::F11,
-            F12 => KeyCode::F12,
-            Insert => KeyCode::Insert,
-            Home => KeyCode::Home,
-            Page_Up => KeyCode::PageUp,
-            Delete => KeyCode::Delete,
-            F4 => KeyCode::F4,
-            End => KeyCode::End,
-            F2 => KeyCode::F2,
-            Page_Down => KeyCode::PageDown,
-            F1 => KeyCode::F1,
-            Left => KeyCode::ArrowLeft,
-            Right => KeyCode::ArrowRight,
-            Down => KeyCode::ArrowDown,
-            Up => KeyCode::ArrowUp,
-            quoteright => KeyCode::Quote,
-            _ => {
-                eprintln!("Warning: unknown keyval {}", raw);
-                KeyCode::Unknown(RawKeyCode::Linux(raw))
-            }
-        }
-    }
-}
-
-fn next_timer_id() -> usize {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    static TIMER_ID: AtomicUsize = AtomicUsize::new(1);
-    TIMER_ID.fetch_add(1, Ordering::Relaxed)
 }
