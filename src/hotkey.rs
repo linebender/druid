@@ -23,16 +23,32 @@ use crate::{KeyCode, KeyEvent, KeyModifiers};
 ///
 /// # Examples
 ///
+/// [`SysMods`] matches the Command key on macOS and Ctrl elsewhere:
+///
 /// ```
 /// use druid::{HotKey, KeyEvent, RawMods, SysMods, KeyCode};
+///
 /// let hotkey = HotKey::new(SysMods::Cmd, "a");
+///
 /// #[cfg(target_os = "macos")]
 /// assert!(hotkey == KeyEvent::for_test(RawMods::Meta, "a", KeyCode::KeyA));
 ///
 /// #[cfg(target_os = "windows")]
 /// assert!(hotkey == KeyEvent::for_test(RawMods::Ctrl, "a", KeyCode::KeyA));
+/// ```
+///
+/// `None` matches only the key withuot modifiers:
 ///
 /// ```
+/// use druid::{HotKey, KeyEvent, RawMods, SysMods, KeyCode};
+///
+/// let hotkey = HotKey::new(None, KeyCode::ArrowLeft);
+///
+/// assert!(hotkey == KeyEvent::for_test(RawMods::None, "", KeyCode::ArrowLeft));
+/// assert!(hotkey != KeyEvent::for_test(RawMods::Ctrl, "", KeyCode::ArrowLeft));
+/// ```
+///
+/// [`SysMods`]: enum.SysMods.html
 #[derive(Debug, Clone)]
 pub struct HotKey {
     mods: RawMods,
@@ -49,8 +65,8 @@ pub enum KeyCompare {
 impl HotKey {
     /// Create a new hotkey.
     ///
-    /// The first argument describes the keyboard modifiers. This can be an
-    /// instance of either `SysMods`, or `RawMods`. `SysMods` unify the
+    /// The first argument describes the keyboard modifiers. This can be `None`,
+    /// or an instance of either [`SysMods`], or [`RawMods`]. [`SysMods`] unify the
     /// 'Command' key on macOS with the 'Ctrl' key on other platforms.
     ///
     /// The second argument describes the non-modifier key. This can be either
@@ -61,14 +77,41 @@ impl HotKey {
     /// In general, [`KeyCode`] should be preferred for non-printing keys, like
     /// the arrows or backspace.
     ///
+    /// # Examples
+    /// ```
+    /// use druid::{HotKey, KeyEvent, RawMods, SysMods, KeyCode};
+    ///
+    /// let select_all = HotKey::new(SysMods::Cmd, "a");
+    /// let esc = HotKey::new(None, KeyCode::Escape);
+    /// let macos_fullscreen = HotKey::new(RawMods::CtrlMeta, "f");
+    /// ```
+    ///
     /// [`KeyCode`]: enum.KeyCode.html
+    /// [`SysMods`]: enum.SysMods.html
+    /// [`RawMods`]: enum.RawMods.html
     /// [`unmodified text`]: struct.KeyEvent.html#method.unmod_text
-    pub fn new(mods: impl Into<RawMods>, key: impl Into<KeyCompare>) -> Self {
-        //TODO: warn about uppercase letters & shift
+    pub fn new(mods: impl Into<Option<RawMods>>, key: impl Into<KeyCompare>) -> Self {
         HotKey {
-            mods: mods.into(),
+            mods: mods.into().unwrap_or(RawMods::None),
             key: key.into(),
         }
+        .warn_if_needed()
+    }
+
+    //TODO: figure out if we need to be normalizing case or something? This requires
+    //correctly documenting the expected behaviour of `unmod_text`.
+    fn warn_if_needed(self) -> Self {
+        if let KeyCompare::Text(s) = self.key {
+            let km: KeyModifiers = self.mods.into();
+            if km.shift && s.chars().any(|c| c.is_uppercase()) {
+                eprintln!(
+                    "warning: HotKey {:?} includes shift, but text is lowercase. \
+                     Text is matched literally; this may cause problems.",
+                    &self
+                );
+            }
+        }
+        self
     }
 }
 
@@ -132,13 +175,27 @@ impl std::cmp::PartialEq<HotKey> for KeyEvent {
 impl std::cmp::PartialEq<KeyModifiers> for RawMods {
     fn eq(&self, other: &KeyModifiers) -> bool {
         let mods: KeyModifiers = (*self).into();
-        &mods == other
+        mods == *other
     }
 }
 
 impl std::cmp::PartialEq<RawMods> for KeyModifiers {
     fn eq(&self, other: &RawMods) -> bool {
         other == self
+    }
+}
+
+impl std::cmp::PartialEq<KeyModifiers> for SysMods {
+    fn eq(&self, other: &KeyModifiers) -> bool {
+        let mods: RawMods = (*self).into();
+        mods == *other
+    }
+}
+
+impl std::cmp::PartialEq<SysMods> for KeyModifiers {
+    fn eq(&self, other: &SysMods) -> bool {
+        let other: RawMods = (*other).into();
+        &other == self
     }
 }
 
@@ -168,6 +225,13 @@ impl From<RawMods> for KeyModifiers {
             meta,
             shift,
         }
+    }
+}
+
+// we do this so that HotKey::new can accept `None` as an initial argument.
+impl From<SysMods> for Option<RawMods> {
+    fn from(src: SysMods) -> Option<RawMods> {
+        Some(src.into())
     }
 }
 
