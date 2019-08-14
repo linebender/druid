@@ -82,6 +82,12 @@ impl KeyEvent {
             Some(self.unmodified_text.as_str())
         }
     }
+
+    /// For creating `KeyEvent`s during testing.
+    #[doc(hidden)]
+    pub fn for_test(mods: impl Into<KeyModifiers>, text: &'static str, code: KeyCode) -> Self {
+        KeyEvent::new(code, false, mods.into(), text, text)
+    }
 }
 
 /// Keyboard modifier state, provided for events.
