@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
 
-use crate::kurbo::Vec2;
+use crate::kurbo::{Size, Vec2};
 
 use crate::piet::{Color, Piet, RenderContext};
 
@@ -70,7 +70,7 @@ impl<T: Data + 'static, R: RootWidget<T> + 'static> WinHandler for DruidHandler<
         self.app_state.borrow_mut().paint(self.window_id, piet, ctx)
     }
 
-    fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
+    fn size(&mut self, width: u32, height: u32, ctx: &mut dyn WinCtx) {
         let dpi = self
             .app_state
             .borrow()
@@ -80,8 +80,8 @@ impl<T: Data + 'static, R: RootWidget<T> + 'static> WinHandler for DruidHandler<
             .handle
             .get_dpi() as f64;
         let scale = 96.0 / dpi;
-        // TODO: this probably needs to be sent as an event
-        //self.state.size = Size::new(width as f64 * scale, height as f64 * scale);
+        let event = Event::Size(Size::new(width as f64 * scale, height as f64 * scale));
+        self.do_event(event, ctx);
     }
 
     fn mouse_down(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {

@@ -131,6 +131,10 @@ impl<T: Data> WindowSet<T> {
 
 impl<T: Data> WindowPod<T> {
     pub fn event(&mut self, event: &Event, root_ctx: &mut EventCtxRoot, data: &mut T, env: &Env) {
+        match event {
+            Event::Size(size) => self.size = *size,
+            _ => (),
+        }
         let mut base_state = Default::default();
         let mut ctx = EventCtx {
             win_ctx: root_ctx.win_ctx,
@@ -139,6 +143,7 @@ impl<T: Data> WindowPod<T> {
             base_state: &mut base_state,
             had_active: self.root.state.has_active,
             is_handled: false,
+            is_root: true,
         };
         let _action = self.root.event(event, &mut ctx, data, env);
         root_ctx.is_handled = ctx.is_handled;

@@ -342,6 +342,7 @@ pub struct EventCtx<'a, 'b> {
     base_state: &'a mut BaseState,
     had_active: bool,
     is_handled: bool,
+    is_root: bool,
 }
 
 /// A mutable context provided to data update methods of widgets.
@@ -506,12 +507,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             base_state: &mut self.state,
             had_active,
             is_handled: false,
+            is_root: false,
         };
         let rect = child_ctx.base_state.layout_rect;
         // Note: could also represent this as `Option<Event>`.
         let mut recurse = true;
         let mut hot_changed = None;
         let child_event = match event {
+            Event::Size(size) => {
+                recurse = ctx.is_root;
+                Event::Size(*size)
+            }
             Event::MouseDown(mouse_event) => {
                 recurse = had_active || !ctx.had_active && rect.winding(mouse_event.pos) != 0;
                 let mut mouse_event = mouse_event.clone();
@@ -693,6 +699,7 @@ impl<T: Data> UiState<T> {
             base_state: &mut base_state,
             had_active: self.root.state.has_active,
             is_handled: false,
+            is_root: true,
         };
         let _action = self.root.event(&event, &mut ctx, &mut self.data, &self.env);
 
