@@ -350,8 +350,8 @@ pub struct EventCtx<'a, 'b> {
 /// in the widget's appearance, to schedule a repaint.
 ///
 /// [`invalidate`]: #method.invalidate
-pub struct UpdateCtx<'a, 'b> {
-    text_factory: &'b mut Text<'b>,
+pub struct UpdateCtx<'a, 'b: 'a> {
+    text_factory: &'a mut Text<'b>,
     window: &'a WindowHandle,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like

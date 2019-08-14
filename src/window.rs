@@ -81,9 +81,9 @@ pub struct EventCtxRoot<'a, 'b> {
     // TODO: mutable access to the handle map, so we can add windows
 }
 
-pub struct UpdateCtxRoot<'a> {
+pub struct UpdateCtxRoot<'a, 'b: 'a> {
     pub(crate) window_state: &'a HashMap<WindowId, WindowState>,
-    pub(crate) text_factory: &'a mut Text<'a>,
+    pub(crate) text_factory: &'a mut Text<'b>,
     pub(crate) originating_window: WindowId,
     pub(crate) needs_inval: bool,
 }
