@@ -25,6 +25,7 @@ mod env;
 mod event;
 mod lens;
 pub mod localization;
+pub mod menu;
 pub mod theme;
 mod win_handler;
 mod window;

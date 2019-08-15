@@ -14,6 +14,9 @@
 
 //! Events.
 
+use std::any::Any;
+use std::sync::Arc;
+
 use crate::kurbo::{Rect, Shape, Size, Vec2};
 
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
