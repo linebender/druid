@@ -103,21 +103,6 @@ pub struct KeyModifiers {
     pub meta: bool,
 }
 
-/// Returns true if KeyModifiers includes the platform's command modifier.
-/// (Meta on Mac, Ctrl on Windows and other platforms)
-impl KeyModifiers {
-    pub fn contains_sys_command_modifier(self) -> bool {
-        #[cfg(target_os = "macos")]
-        {
-            self.meta == true
-        }
-        #[cfg(not(target_os = "macos"))]
-        {
-            self.ctrl == true
-        }
-    }
-}
-
 //NOTE: This was mostly taken from makepad, which I'm sure took it from somewhere else.
 // I've written this out at least once before, for some xi-thing. The best resource
 // I know of for this is probably the MDN keyboard event docs:
