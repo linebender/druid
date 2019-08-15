@@ -19,8 +19,8 @@ use std::ops::Range;
 use std::time::{Duration, Instant};
 
 use crate::{
-    Action, BaseState, BoxConstraints, Cursor, Env, Event, EventCtx, KeyCode, LayoutCtx, PaintCtx,
-    TimerToken, UpdateCtx, Widget,
+    Action, BaseState, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
+    PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
@@ -139,9 +139,16 @@ impl TextBox {
     /// Calculate a stateful scroll offset
     fn update_hscroll(&mut self, rc_text: &mut PietText, data: &String) {
         let cursor_x = self.substring_measurement_hack(rc_text, data, 0, self.cursor());
+        let overall_text_width = self.substring_measurement_hack(rc_text, data, 0, data.len());
 
         let padding = PADDING_LEFT * 2.;
-        if cursor_x > self.width + self.hscroll_offset - padding {
+        if overall_text_width < self.width {
+            // There's no offset if text is smaller than text box
+            //
+            // [***I*  ]
+            // ^
+            self.hscroll_offset = 0.;
+        } else if cursor_x > self.width + self.hscroll_offset - padding {
             // If cursor goes past right side, bump the offset
             //       ->
             // **[****I]****
@@ -323,56 +330,41 @@ impl Widget<String> for TextBox {
             Event::KeyDown(key_event) => {
                 match key_event {
                     // Copy (Ctrl+C || Cmd+C)
-                    event
-                        if event.mods.contains_sys_command_modifier()
-                            && (event.key_code == KeyCode::KeyC) =>
-                    {
+                    k_e if (HotKey::new(SysMods::Cmd, "c")).matches(k_e) => {
                         if let Some(text) = data.get(self.selection.range()) {
                             self.copy_text(text.to_string());
                         }
                     }
                     // Paste (Ctrl+V || Cmd+V)
-                    event
-                        if event.mods.contains_sys_command_modifier()
-                            && (event.key_code == KeyCode::KeyV) =>
-                    {
+                    k_e if (HotKey::new(SysMods::Cmd, "v")).matches(k_e) => {
                         let paste_text = self.paste_text();
                         self.insert(data, &paste_text);
                         self.reset_cursor_blink(ctx);
                     }
                     // Select all (Ctrl+A || Cmd+A)
-                    event
-                        if event.mods.contains_sys_command_modifier()
-                            && (event.key_code == KeyCode::KeyA) =>
-                    {
+                    k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => {
                         self.selection = Selection::new(0, data.len());
                     }
                     // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
-                    event
-                        if event.mods.contains_sys_command_modifier()
-                            && (event.key_code == KeyCode::ArrowLeft) =>
-                    {
+                    k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft)).matches(k_e) => {
                         self.cursor_to(0);
                         self.reset_cursor_blink(ctx);
                     }
                     // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
-                    event
-                        if event.mods.contains_sys_command_modifier()
-                            && (event.key_code == KeyCode::ArrowRight) =>
-                    {
+                    k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowRight)).matches(k_e) => {
                         self.cursor_to(data.len());
                         self.reset_cursor_blink(ctx);
                     }
                     // Select left (Shift+ArrowLeft)
-                    event if event.mods.shift && (event.key_code == KeyCode::ArrowLeft) => {
+                    k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowLeft)).matches(k_e) => {
                         self.selection.end = prev_grapheme(data, self.cursor());
                     }
                     // Select right (Shift+ArrowRight)
-                    event if event.mods.shift && (event.key_code == KeyCode::ArrowRight) => {
+                    k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowRight)).matches(k_e) => {
                         self.selection.end = next_grapheme(data, self.cursor());
                     }
                     // Move left (ArrowLeft)
-                    event if event.key_code == KeyCode::ArrowLeft => {
+                    k_e if (HotKey::new(None, KeyCode::ArrowLeft)).matches(k_e) => {
                         if self.selection.is_caret() {
                             self.cursor_to(prev_grapheme(data, self.cursor()));
                         } else {
@@ -381,7 +373,7 @@ impl Widget<String> for TextBox {
                         self.reset_cursor_blink(ctx);
                     }
                     // Move right (ArrowRight)
-                    event if event.key_code == KeyCode::ArrowRight => {
+                    k_e if (HotKey::new(None, KeyCode::ArrowRight)).matches(k_e) => {
                         if self.selection.is_caret() {
                             self.cursor_to(next_grapheme(data, self.cursor()));
                         } else {
@@ -390,13 +382,13 @@ impl Widget<String> for TextBox {
                         self.reset_cursor_blink(ctx);
                     }
                     // Backspace
-                    event if event.key_code == KeyCode::Backspace => {
+                    k_e if (HotKey::new(None, KeyCode::Backspace)).matches(k_e) => {
                         self.backspace(data);
                         self.reset_cursor_blink(ctx);
                     }
                     // Actual typing
-                    event if event.key_code.is_printable() => {
-                        let incoming_text = event.text().unwrap_or("");
+                    k_e if k_e.key_code.is_printable() => {
+                        let incoming_text = k_e.text().unwrap_or("");
                         self.insert(data, incoming_text);
                         self.reset_cursor_blink(ctx);
                     }
