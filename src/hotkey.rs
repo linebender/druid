@@ -18,8 +18,8 @@ use crate::{KeyCode, KeyEvent, KeyModifiers};
 
 /// A description of a keyboard shortcut.
 ///
-/// This type implements `PartialEq<KeyEvent>`, and it is only intended to
-/// be used to describe shortcuts, and recognize them when they arrive.
+/// This type is only intended to be used to describe shortcuts,
+/// and recognize them when they arrive.
 ///
 /// # Examples
 ///
@@ -31,21 +31,21 @@ use crate::{KeyCode, KeyEvent, KeyModifiers};
 /// let hotkey = HotKey::new(SysMods::Cmd, "a");
 ///
 /// #[cfg(target_os = "macos")]
-/// assert!(hotkey == KeyEvent::for_test(RawMods::Meta, "a", KeyCode::KeyA));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Meta, "a", KeyCode::KeyA)));
 ///
 /// #[cfg(target_os = "windows")]
-/// assert!(hotkey == KeyEvent::for_test(RawMods::Ctrl, "a", KeyCode::KeyA));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "a", KeyCode::KeyA)));
 /// ```
 ///
-/// `None` matches only the key withuot modifiers:
+/// `None` matches only the key without modifiers:
 ///
 /// ```
 /// use druid::{HotKey, KeyEvent, RawMods, SysMods, KeyCode};
 ///
 /// let hotkey = HotKey::new(None, KeyCode::ArrowLeft);
 ///
-/// assert!(hotkey == KeyEvent::for_test(RawMods::None, "", KeyCode::ArrowLeft));
-/// assert!(hotkey != KeyEvent::for_test(RawMods::Ctrl, "", KeyCode::ArrowLeft));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::None, "", KeyCode::ArrowLeft)));
+/// assert!(!hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "", KeyCode::ArrowLeft)));
 /// ```
 ///
 /// [`SysMods`]: enum.SysMods.html
@@ -113,7 +113,21 @@ impl HotKey {
         }
         self
     }
+
+    /// Returns `true` if this [`KeyEvent`] matches this `HotKey`.
+    ///
+    /// [`KeyEvent`]: struct.KeyEvent.html
+    pub fn matches(&self, event: impl Borrow<KeyEvent>) -> bool {
+        let event = event.borrow();
+        self.mods == event.mods
+            && match self.key {
+                KeyCompare::Code(code) => code == event.key_code,
+                KeyCompare::Text(text) => Some(text) == event.text(),
+            }
+    }
 }
+
+use std::borrow::Borrow;
 
 /// A platform-agnostic representation of keyboard modifiers, for command handling.
 ///
@@ -154,22 +168,6 @@ pub enum RawMods {
     AltMetaShift,
     CtrlMetaShift,
     AltCtrlMetaShift,
-}
-
-impl std::cmp::PartialEq<KeyEvent> for HotKey {
-    fn eq(&self, other: &KeyEvent) -> bool {
-        self.mods == other.mods
-            && match self.key {
-                KeyCompare::Code(code) => code == other.key_code,
-                KeyCompare::Text(text) => Some(text) == other.text(),
-            }
-    }
-}
-
-impl std::cmp::PartialEq<HotKey> for KeyEvent {
-    fn eq(&self, other: &HotKey) -> bool {
-        other == self
-    }
 }
 
 impl std::cmp::PartialEq<KeyModifiers> for RawMods {
