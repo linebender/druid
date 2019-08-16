@@ -158,6 +158,7 @@ name = "druid"
 version = "0.3.0"
 dependencies = [
  "druid-shell 0.3.0",
+ "unicode-segmentation 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
