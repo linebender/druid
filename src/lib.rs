@@ -21,7 +21,6 @@ pub mod widget;
 mod data;
 mod env;
 mod event;
-mod hotkey;
 mod lens;
 pub mod theme;
 
@@ -45,11 +44,11 @@ pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use druid_shell::platform::IdleHandle;
 use druid_shell::window::{self, Text, WinCtx, WinHandler, WindowHandle};
 pub use druid_shell::window::{Cursor, MouseButton, MouseEvent, TimerToken};
+pub use shell::hotkey::{HotKey, RawMods, SysMods};
 
 pub use data::Data;
 pub use env::{Env, Key, Value};
 pub use event::{Event, WheelEvent};
-pub use hotkey::{HotKey, RawMods, SysMods};
 pub use lens::{Lens, LensWrap};
 
 const BACKGROUND_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);

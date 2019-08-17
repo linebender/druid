@@ -29,6 +29,7 @@ extern crate objc;
 extern crate lazy_static;
 
 pub mod error;
+pub mod hotkey;
 pub mod keyboard;
 pub mod keycodes;
 pub mod window;
