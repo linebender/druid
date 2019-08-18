@@ -531,7 +531,7 @@ impl From<i32> for KeyCode {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", feature = "use_gtk"))]
 impl From<u32> for KeyCode {
     #[allow(non_upper_case_globals)]
     fn from(raw: u32) -> KeyCode {

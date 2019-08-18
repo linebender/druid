@@ -12,6 +12,9 @@ edition = "2018"
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"
 
+[features]
+use_gtk = ["druid-shell/use_gtk"]
+
 [badges]
 travis-ci = { repository = "xi-editor/druid" }
 
