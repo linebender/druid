@@ -21,7 +21,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use fluent::{FluentArgs, FluentBundle, FluentResource};
-use unic_langid::langid;
+use unic_langid::{langid, LanguageIdentifier};
 
 use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Color, LinearGradient};
@@ -286,7 +286,11 @@ impl std::default::Default for Env {
         let resource =
             FluentResource::try_new(en_strings.to_owned()).expect("Could not parse en-US/builtin.ftl");
         let langid_en = langid!("en");
-        let mut bundle = FluentBundle::new(&[langid_en]);
+        let locale: LanguageIdentifier = crate::shell::get_locale()
+            .parse()
+            .unwrap_or_else(|_| langid_en.clone());
+        eprintln!("using locale {:?}", locale);
+        let mut bundle = FluentBundle::new(&[locale, langid_en]);
         bundle
             .add_resource(resource)
             .expect("Failed to add FTL resources to the bundle.");
