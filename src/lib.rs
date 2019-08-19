@@ -888,6 +888,16 @@ impl BoxConstraints {
         }
     }
 
+    /// Create a "loose" version of the constraints.
+    ///
+    /// Make a version with zero minimum size, but the same maximum size.
+    pub fn loosen(&self) -> BoxConstraints {
+        BoxConstraints {
+            min: Size::ZERO,
+            max: self.max,
+        }
+    }
+
     /// Clamp a given size so that fits within the constraints.
     pub fn constrain(&self, size: impl Into<Size>) -> Size {
         size.into().clamp(self.min, self.max)

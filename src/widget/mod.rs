@@ -17,6 +17,9 @@
 mod action_wrapper;
 pub use crate::widget::action_wrapper::ActionWrapper;
 
+mod align;
+pub use crate::widget::align::Align;
+
 mod button;
 pub use crate::widget::button::{Button, DynLabel, Label};
 
