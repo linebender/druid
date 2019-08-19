@@ -108,17 +108,17 @@ impl WinHandler for HelloState {
 fn main() {
     druid_shell::init();
 
-    let mut file_menu = Menu::new();
-    file_menu.add_item(0x100, "E&xit", MenuKey::std_quit());
-    file_menu.add_item(0x101, "O&pen", MenuKey::command('o'));
-    let mut menubar = Menu::new();
-    menubar.add_dropdown(file_menu, "&File");
+    //let mut file_menu = Menu::new();
+    //file_menu.add_item(0x100, "E&xit", MenuKey::std_quit());
+    //file_menu.add_item(0x101, "O&pen", MenuKey::command('o'));
+    //let mut menubar = Menu::new();
+    //menubar.add_dropdown(file_menu, "&File");
 
     let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");
-    builder.set_menu(menubar);
+    //builder.set_menu(menubar);
     let window = builder.build().unwrap();
     window.show();
     run_loop.run();

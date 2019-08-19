@@ -120,7 +120,7 @@ impl<T: Data> Menu<T> {
             match item {
                 MenuEntry::Item(ref mut item) => {
                     item.title.resolve(data, env);
-                    menu.add_item(*id, item.title.localized_str(), ());
+                    menu.add_item(*id, item.title.localized_str(), item.hotkey.as_ref());
                 }
                 MenuEntry::Separator => menu.add_separator(),
                 MenuEntry::SubMenu(ref mut submenu) => {
