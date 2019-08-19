@@ -54,4 +54,4 @@ pub use platform::menu;
 pub use platform::util;
 pub use platform::win_main as runloop; // TODO: rename to "runloop"
 pub use platform::WindowBuilder;
-pub use util::init;
+pub use util::{get_locale, init};

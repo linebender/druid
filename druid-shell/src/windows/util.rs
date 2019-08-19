@@ -280,3 +280,13 @@ fn attach_console() {
         }
     }
 }
+
+/// Returns the current locale string.
+///
+/// This should a [Unicode language identifier].
+///
+/// [Unicode language identifier]: https://unicode.org/reports/tr35/#Unicode_language_identifier
+pub fn get_locale() -> String {
+    //TODO ahem
+    "en_US".into()
+}
