@@ -60,10 +60,11 @@ impl<T: Data> Widget<T> for Align<T> {
     ) -> Size {
         let size = self.child.layout(layout_ctx, &bc.loosen(), data, env);
         let my_size = bc.constrain(size);
-        let extra_size = (my_size.to_vec2() - size.to_vec2()).to_size();
+        let extra_width = (my_size.width - size.width).max(0.);
+        let extra_height = (my_size.height - size.height).max(0.);
         let origin = self
             .align
-            .resolve(Rect::from_origin_size(Point::ORIGIN, extra_size));
+            .resolve(Rect::new(0., 0., extra_width, extra_height));
         self.child
             .set_layout_rect(Rect::from_origin_size(origin, size));
         my_size
