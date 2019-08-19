@@ -20,10 +20,17 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::Arc;
 
+use fluent::{FluentArgs, FluentBundle, FluentResource};
+use unic_langid::langid;
+
 use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Color, LinearGradient};
 
 use crate::Data;
+
+type I18nBundle = Arc<FluentBundle<FluentResource>>;
+
+pub const APP_NAME: Key<&str> = Key::new("druid.app-name");
 
 /// An environment passed down through all widget traversals.
 ///
@@ -35,8 +42,11 @@ use crate::Data;
 /// example of the latter is setting a value for enabled/disabled status
 /// so that an entire subtree can be disabled ("grayed out") with one
 /// setting.
-#[derive(Clone, Default)]
-pub struct Env(Arc<EnvImpl>);
+#[derive(Clone)]
+pub struct Env {
+    items: Arc<EnvImpl>,
+    builtin_i18n: I18nBundle,
+}
 
 #[derive(Clone, Default)]
 struct EnvImpl {
@@ -104,7 +114,7 @@ impl Env {
     ///
     /// Panics if the key is not found, or if it is present with the wrong type.
     pub fn get<'a, V: ValueType<'a>>(&'a self, key: Key<V>) -> V {
-        if let Some(value) = self.0.map.get(key.key) {
+        if let Some(value) = self.items.map.get(key.key) {
             value.to_inner_unchecked()
         } else {
             panic!("key for {} not found", key.key)
@@ -117,7 +127,7 @@ impl Env {
     ///
     /// Panics if the value for the key is found, but has the wrong type.
     pub fn try_get<'a, V: ValueType<'a>>(&'a self, key: Key<V>) -> Option<V> {
-        self.0
+        self.items
             .map
             .get(key.key)
             .map(|value| value.to_inner_unchecked())
@@ -125,7 +135,7 @@ impl Env {
 
     /// Adds a key/value, acting like a builder.
     pub fn adding<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) -> Env {
-        let env = Arc::make_mut(&mut self.0);
+        let env = Arc::make_mut(&mut self.items);
         env.map.insert(key.into(), value.into().into());
         self
     }
@@ -137,7 +147,7 @@ impl Env {
     /// Panics if the environment already has a value for the key, but it is
     /// of a different type.
     pub fn set<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) {
-        let env = Arc::make_mut(&mut self.0);
+        let env = Arc::make_mut(&mut self.items);
         let value = value.into().into();
         let key = key.into();
         // TODO: use of Entry might be more efficient
@@ -150,6 +160,25 @@ impl Env {
             }
         }
         env.map.insert(key, value);
+    }
+
+    /// Fetch a localized string from the current bundle by key.
+    pub fn localize<'args>(
+        &'args self,
+        key: &str,
+        args: impl Into<Option<&'args FluentArgs<'args>>>,
+    ) -> Option<String> {
+        let args = args.into();
+        let value = match self.builtin_i18n.get_message(key).and_then(|msg| msg.value) {
+            Some(v) => v,
+            None => return None,
+        };
+        let mut errs = Vec::new();
+        let result = self.builtin_i18n.format_pattern(value, args, &mut errs);
+        for err in errs {
+            eprintln!("localization error {:?}", err);
+        }
+        Some(result.to_string())
     }
 }
 
@@ -237,7 +266,7 @@ impl Data for Value {
 
 impl Data for Env {
     fn same(&self, other: &Env) -> bool {
-        Arc::ptr_eq(&self.0, &other.0) || self.0.deref().same(other.0.deref())
+        Arc::ptr_eq(&self.items, &other.items) || self.items.deref().same(other.items.deref())
     }
 }
 
@@ -248,6 +277,26 @@ impl Data for EnvImpl {
                 .map
                 .iter()
                 .all(|(k, v1)| other.map.get(k).map(|v2| v1.same(v2)).unwrap_or(false))
+    }
+}
+
+impl std::default::Default for Env {
+    fn default() -> Self {
+        let en_strings = include_str!("../resources/i18n/en-US/builtin.ftl");
+        let resource =
+            FluentResource::try_new(en_strings.to_owned()).expect("Could not parse en-US/builtin.ftl");
+        let langid_en = langid!("en");
+        let mut bundle = FluentBundle::new(&[langid_en]);
+        bundle
+            .add_resource(resource)
+            .expect("Failed to add FTL resources to the bundle.");
+
+        let builtin_i18n = Arc::new(bundle);
+        Env {
+            builtin_i18n,
+            items: Arc::default(),
+        }
+        .adding(APP_NAME, "My Druid App")
     }
 }
 
