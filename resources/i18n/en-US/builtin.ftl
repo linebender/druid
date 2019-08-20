@@ -1,9 +1,3 @@
 app-name = Druid
-macos-menu-about-app = About { $app_name }
-macos-menu-preferences = Preferables...
-macos-menu-hide-app = Hide { $app_name }
-macos-menu-hide-others = Hide Others
-macos-menu-show-all = Show All
-macos-menu-services = Services
-macos-menu-application-menu = { $app_name }
-macos-menu-quit = Quit { $app_name }
+
+hello-counter = Current value is { $count }
