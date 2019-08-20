@@ -15,6 +15,7 @@
 //! Management of multiple windows.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::kurbo::{Point, Rect, Size};
 
@@ -31,6 +32,8 @@ use crate::{
 // TODO: Remove Default when we get it fully wired up
 #[derive(Default)]
 pub struct WindowId(u32);
+
+const WINDOW_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
 
 /// A container for a set of windows.
 pub struct WindowSet<T: Data> {
@@ -93,9 +96,18 @@ pub struct LayoutCtxRoot<'a, 'b>(pub(crate) LayoutCtx<'a, 'b>);
 pub struct PaintCtxRoot<'a, 'b>(pub(crate) PaintCtx<'a, 'b>);
 
 impl<T: Data> WindowSet<T> {
+    /// Create a new `WindowSet` populated with one window.
+    pub fn new(root: impl Widget<T> + 'static, id: WindowId) -> WindowSet<T> {
+        let pod = WindowPod::new(root);
+        let mut map = HashMap::new();
+        map.insert(id, pod);
+        WindowSet { map }
+    }
+
     pub fn event(&mut self, event: &Event, event_ctx: &mut EventCtxRoot, data: &mut T, env: &Env) {
-        if let Some(root) = self.map.get_mut(&event_ctx.window_id) {
-            root.event(event, event_ctx, data, env);
+        let window_id = event_ctx.window_id;
+        if let Some(root) = self.map.get_mut(&window_id) {
+            root.event(event, event_ctx, data, env, window_id);
         }
     }
 
@@ -130,7 +142,21 @@ impl<T: Data> WindowSet<T> {
 }
 
 impl<T: Data> WindowPod<T> {
-    pub fn event(&mut self, event: &Event, root_ctx: &mut EventCtxRoot, data: &mut T, env: &Env) {
+    fn new(root: impl Widget<T> + 'static) -> WindowPod<T> {
+        WindowPod {
+            root: WidgetPod::new(Box::new(root)),
+            size: Size::ZERO,
+        }
+    }
+
+    pub fn event(
+        &mut self,
+        event: &Event,
+        root_ctx: &mut EventCtxRoot,
+        data: &mut T,
+        env: &Env,
+        window_id: WindowId,
+    ) {
         match event {
             Event::Size(size) => self.size = *size,
             _ => (),
@@ -140,6 +166,7 @@ impl<T: Data> WindowPod<T> {
             win_ctx: root_ctx.win_ctx,
             cursor: root_ctx.cursor,
             window: root_ctx.window,
+            window_id,
             base_state: &mut base_state,
             had_active: self.root.state.has_active,
             is_handled: false,
@@ -174,6 +201,14 @@ pub struct SharedWindow<T: Data> {
     windows: WindowSet<T>,
 }
 
+impl<T: Data> SharedWindow<T> {
+    pub fn new(root: impl Widget<T> + 'static, id: WindowId) -> SharedWindow<T> {
+        SharedWindow {
+            windows: WindowSet::new(root, id),
+        }
+    }
+}
+
 impl<T: Data> RootWidget<T> for SharedWindow<T> {
     fn event(&mut self, event: &Event, ctx: &mut EventCtxRoot, data: &mut T, env: &Env) {
         self.windows.event(event, ctx, data, env);
@@ -194,5 +229,15 @@ impl<T: Data> RootWidget<T> for SharedWindow<T> {
     /// Paint a child window's appearance.
     fn paint(&mut self, paint_ctx: &mut PaintCtxRoot, data: &T, env: &Env) {
         self.windows.paint(paint_ctx, data, env);
+    }
+}
+
+impl WindowId {
+    /// Allocate a new, unique window id.
+    ///
+    /// Do note that if we create 4 billion windows there may be a collision.
+    pub fn new() -> WindowId {
+        let id = WINDOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
+        WindowId(id)
     }
 }

@@ -14,12 +14,13 @@
 
 use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{ActionWrapper, Align, Button, Column, Label, Padding};
-use druid::{LocalizedString, UiMain, UiState};
+use druid::{LocalizedString, DruidHandler, SharedWindow, WindowId};
 
 fn main() {
     druid::shell::init();
 
     let mut run_loop = runloop::RunLoop::new();
+    let id = WindowId::new();
     let mut builder = WindowBuilder::new();
     let mut col = Column::new();
     let text =
@@ -29,9 +30,10 @@ fn main() {
     col.add_child(Align::centered(Padding::uniform(5.0, label)), 1.0);
     col.add_child(Padding::uniform(5.0, button), 1.0);
     let root = ActionWrapper::new(col, |data: &mut u32, _env| *data += 1);
-    let state = UiState::new(root, 0u32);
+    let shared = SharedWindow::new(root, id);
+    let handler = DruidHandler::new(shared, 0u32, id);
     builder.set_title("Hello example");
-    builder.set_handler(Box::new(UiMain::new(state)));
+    builder.set_handler(Box::new(handler));
     let window = builder.build().unwrap();
     window.show();
     run_loop.run();

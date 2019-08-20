@@ -54,6 +54,7 @@ pub use env::{Env, Key, Value};
 pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
 pub use localization::LocalizedString;
+pub use win_handler::DruidHandler;
 pub use window::{
     EventCtxRoot, LayoutCtxRoot, PaintCtxRoot, RootWidget, SharedWindow, UpdateCtxRoot, WindowId,
     WindowSet,
@@ -338,6 +339,7 @@ pub struct LayoutCtx<'a, 'b: 'a> {
 pub struct EventCtx<'a, 'b> {
     win_ctx: &'a mut dyn WinCtx<'b>,
     cursor: &'a mut Option<Cursor>,
+    window_id: WindowId,
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     window: &'a WindowHandle,
     base_state: &'a mut BaseState,
@@ -505,6 +507,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             win_ctx: ctx.win_ctx,
             cursor: ctx.cursor,
             window: &ctx.window,
+            window_id: ctx.window_id,
             base_state: &mut self.state,
             had_active,
             is_handled: false,
@@ -697,6 +700,7 @@ impl<T: Data> UiState<T> {
             win_ctx,
             cursor: &mut cursor,
             window: &self.handle,
+            window_id: Default::default(),
             base_state: &mut base_state,
             had_active: self.root.state.has_active,
             is_handled: false,
@@ -1055,6 +1059,11 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.base_state.request_timer = true;
         self.win_ctx.request_timer(deadline)
     }
+
+    /// Get the window id.
+    pub fn window_id(&self) -> WindowId {
+        self.window_id
+    }
 }
 
 impl<'a, 'b> LayoutCtx<'a, 'b> {
@@ -1085,6 +1094,11 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     /// it's shared across multiple windows.
     pub fn window(&self) -> &WindowHandle {
         &self.window
+    }
+
+    /// Get the window id.
+    pub fn window_id(&self) -> WindowId {
+        self.window_id
     }
 }
 

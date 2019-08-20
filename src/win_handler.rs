@@ -31,11 +31,16 @@ use crate::{
     PaintCtx, PaintCtxRoot, RootWidget, TimerToken, UpdateCtxRoot, WheelEvent, WindowId,
 };
 
+use crate::theme;
+
 // TODO: this should come from the theme.
 const BACKGROUND_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
-/// The struct implements the druid-shell `WinHandler` trait
-struct DruidHandler<T: Data, R: RootWidget<T>> {
+/// The struct implements the druid-shell `WinHandler` trait.
+///
+/// This is something of an internal detail and possibly we don't want to surface
+/// it publicly.
+pub struct DruidHandler<T: Data, R: RootWidget<T>> {
     app_state: Rc<RefCell<AppState<T, R>>>,
     window_id: WindowId,
 }
@@ -123,6 +128,20 @@ impl<T: Data + 'static, R: RootWidget<T> + 'static> WinHandler for DruidHandler<
 }
 
 impl<T: Data, R: RootWidget<T>> DruidHandler<T, R> {
+    /// Create a new handler for the first window in the app.
+    pub fn new(root: R, data: T, window_id: WindowId) -> DruidHandler<T, R> {
+        let app_state = AppState {
+            root,
+            env: theme::init(),
+            data,
+            window_state: HashMap::new(),
+        };
+        DruidHandler {
+            app_state: Rc::new(RefCell::new(app_state)),
+            window_id,
+        }
+    }
+
     /// Send an event to the widget hierarchy.
     ///
     /// Returns `true` if the event produced an action.
