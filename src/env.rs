@@ -20,17 +20,11 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use fluent::{FluentArgs, FluentBundle, FluentResource};
-use unic_langid::{langid, LanguageIdentifier};
-
 use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Color, LinearGradient};
 
+use crate::localization::L10nManager;
 use crate::Data;
-
-type I18nBundle = Arc<FluentBundle<FluentResource>>;
-
-pub const APP_NAME: Key<&str> = Key::new("druid.app-name");
 
 /// An environment passed down through all widget traversals.
 ///
@@ -45,7 +39,7 @@ pub const APP_NAME: Key<&str> = Key::new("druid.app-name");
 #[derive(Clone)]
 pub struct Env {
     items: Arc<EnvImpl>,
-    builtin_i18n: I18nBundle,
+    l10n: Arc<L10nManager>,
 }
 
 #[derive(Clone, Default)]
@@ -162,23 +156,12 @@ impl Env {
         env.map.insert(key, value);
     }
 
-    /// Fetch a localized string from the current bundle by key.
-    pub fn localize<'args>(
-        &'args self,
-        key: &str,
-        args: impl Into<Option<&'args FluentArgs<'args>>>,
-    ) -> Option<String> {
-        let args = args.into();
-        let value = match self.builtin_i18n.get_message(key).and_then(|msg| msg.value) {
-            Some(v) => v,
-            None => return None,
-        };
-        let mut errs = Vec::new();
-        let result = self.builtin_i18n.format_pattern(value, args, &mut errs);
-        for err in errs {
-            eprintln!("localization error {:?}", err);
-        }
-        Some(result.to_string())
+    /// Returns a reference to the [`L10nManager`], which handles localization
+    /// resources.
+    ///
+    /// [`L10nManager`]: struct.L10nManager.html
+    pub fn localization_manager(&self) -> &L10nManager {
+        &self.l10n
     }
 }
 
@@ -282,25 +265,11 @@ impl Data for EnvImpl {
 
 impl std::default::Default for Env {
     fn default() -> Self {
-        let en_strings = include_str!("../resources/i18n/en-US/builtin.ftl");
-        let resource =
-            FluentResource::try_new(en_strings.to_owned()).expect("Could not parse en-US/builtin.ftl");
-        let langid_en = langid!("en");
-        let locale: LanguageIdentifier = crate::shell::get_locale()
-            .parse()
-            .unwrap_or_else(|_| langid_en.clone());
-        eprintln!("using locale {:?}", locale);
-        let mut bundle = FluentBundle::new(&[locale, langid_en]);
-        bundle
-            .add_resource(resource)
-            .expect("Failed to add FTL resources to the bundle.");
-
-        let builtin_i18n = Arc::new(bundle);
+        let l10n = L10nManager::new(vec!["builtin.ftl".into()], "./resources/i18n/");
         Env {
-            builtin_i18n,
+            l10n: Arc::new(l10n),
             items: Arc::default(),
         }
-        .adding(APP_NAME, "My Druid App")
     }
 }
 

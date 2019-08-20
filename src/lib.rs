@@ -22,7 +22,7 @@ mod data;
 mod env;
 mod event;
 mod lens;
-mod localization;
+pub mod localization;
 pub mod theme;
 
 use std::any::Any;

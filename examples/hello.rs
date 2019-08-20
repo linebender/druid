@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use druid::shell::{runloop, WindowBuilder};
-use druid::widget::{ActionWrapper, Align, Button, Column, DynLabel, Padding};
-use druid::{UiMain, UiState};
+use druid::widget::{ActionWrapper, Align, Button, Column, Label, Padding};
+use druid::{LocalizedString, UiMain, UiState};
 
 fn main() {
     druid::shell::init();
@@ -22,7 +22,9 @@ fn main() {
     let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     let mut col = Column::new();
-    let label = DynLabel::new(|data: &u32, _env| format!("value: {}", data));
+    let text =
+        LocalizedString::new("hello-counter").with_arg("count", |_env, data: &u32| (*data).into());
+    let label = Label::new(text);
     let button = Button::new("increment");
     col.add_child(Align::centered(Padding::uniform(5.0, label)), 1.0);
     col.add_child(Padding::uniform(5.0, button), 1.0);
