@@ -55,7 +55,8 @@ pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
 pub use localization::LocalizedString;
 pub use window::{
-    EventCtxRoot, LayoutCtxRoot, PaintCtxRoot, RootWidget, UpdateCtxRoot, WindowId, WindowSet,
+    EventCtxRoot, LayoutCtxRoot, PaintCtxRoot, RootWidget, SharedWindow, UpdateCtxRoot, WindowId,
+    WindowSet,
 };
 
 const BACKGROUND_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);

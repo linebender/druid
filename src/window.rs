@@ -99,7 +99,7 @@ impl<T: Data> WindowSet<T> {
         }
     }
 
-    pub fn update(&mut self, root_ctx: &mut UpdateCtxRoot, data: &mut T, env: &Env) {
+    pub fn update(&mut self, root_ctx: &mut UpdateCtxRoot, data: &T, env: &Env) {
         for (window_id, root) in &mut self.map {
             let mut update_ctx = UpdateCtx {
                 text_factory: root_ctx.text_factory,
@@ -153,7 +153,7 @@ impl<T: Data> WindowPod<T> {
         }
     }
 
-    pub fn update(&mut self, update_ctx: &mut UpdateCtx, data: &mut T, env: &Env) {
+    pub fn update(&mut self, update_ctx: &mut UpdateCtx, data: &T, env: &Env) {
         self.root.update(update_ctx, data, env);
     }
 
@@ -166,5 +166,33 @@ impl<T: Data> WindowPod<T> {
 
     pub fn paint(&mut self, paint_ctx: &mut PaintCtxRoot, data: &T, env: &Env) {
         self.root.paint(&mut paint_ctx.0, data, env);
+    }
+}
+
+/// A very simple window root that shares state with all windows
+pub struct SharedWindow<T: Data> {
+    windows: WindowSet<T>,
+}
+
+impl<T: Data> RootWidget<T> for SharedWindow<T> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtxRoot, data: &mut T, env: &Env) {
+        self.windows.event(event, ctx, data, env);
+    }
+
+    /// Propagate a data update to all windows.
+    fn update(&mut self, ctx: &mut UpdateCtxRoot, data: &T, env: &Env) {
+        self.windows.update(ctx, data, env);
+    }
+
+    /// Propagate layout to a child window.
+    ///
+    /// The case for this method is weak; it could be subsumed into the `paint` method.
+    fn layout(&mut self, ctx: &mut LayoutCtxRoot, data: &T, env: &Env) {
+        self.windows.layout(ctx, data, env);
+    }
+
+    /// Paint a child window's appearance.
+    fn paint(&mut self, paint_ctx: &mut PaintCtxRoot, data: &T, env: &Env) {
+        self.windows.paint(paint_ctx, data, env);
     }
 }
