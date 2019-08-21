@@ -45,7 +45,6 @@ use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
 use winapi::um::d2d1::*;
 use winapi::um::unknwnbase::*;
-use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
 use winapi::Interface;
@@ -780,27 +779,7 @@ impl WindowBuilder {
             // Maybe separate registration in build api? Probably only need to
             // register once even for multiple window creation.
 
-            // TODO: probably want configurable class name.
-            let class_name = "Xi Editor".to_wide();
-            let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
-            let brush = CreateSolidBrush(0xffffff);
-            let wnd = WNDCLASSW {
-                style: 0,
-                lpfnWndProc: Some(win_proc_dispatch),
-                cbClsExtra: 0,
-                cbWndExtra: 0,
-                hInstance: 0 as HINSTANCE,
-                hIcon: icon,
-                hCursor: 0 as HCURSOR,
-                hbrBackground: brush,
-                lpszMenuName: 0 as LPCWSTR,
-                lpszClassName: class_name.as_ptr(),
-            };
-            let class_atom = RegisterClassW(&wnd);
-            if class_atom == 0 {
-                return Err(Error::Null);
-            }
-
+            let class_name = crate::util::CLASS_NAME.to_wide();
             let dwrite_factory = directwrite::Factory::new().unwrap();
             let dw_clone = clone_dwrite(&dwrite_factory);
             let wndproc = MyWndProc {

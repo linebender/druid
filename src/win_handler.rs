@@ -25,6 +25,7 @@ use crate::kurbo::{Size, Vec2};
 use crate::piet::{Color, Piet, RenderContext};
 
 use druid_shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
+use druid_shell::WindowBuilder;
 
 use crate::{
     Data, Env, Event, EventCtxRoot, KeyEvent, KeyModifiers, LayoutCtx, LayoutCtxRoot, MouseEvent,
@@ -40,17 +41,17 @@ const BACKGROUND_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 ///
 /// This is something of an internal detail and possibly we don't want to surface
 /// it publicly.
-pub struct DruidHandler<T: Data, R: RootWidget<T>> {
-    app_state: Rc<RefCell<AppState<T, R>>>,
+pub struct DruidHandler<T: Data> {
+    app_state: Rc<RefCell<AppState<T>>>,
     window_id: WindowId,
 }
 
 /// State shared by all windows in the UI.
-struct AppState<T: Data, R: RootWidget<T>> {
+pub(crate) struct AppState<T: Data> {
     window_state: HashMap<WindowId, WindowState>,
     env: Env,
     data: T,
-    root: R,
+    root: Box<dyn RootWidget<T>>,
 }
 
 /// Per-window state not owned by user code.
@@ -59,7 +60,7 @@ pub(crate) struct WindowState {
     prev_paint_time: Option<Instant>,
 }
 
-impl<T: Data + 'static, R: RootWidget<T> + 'static> WinHandler for DruidHandler<T, R> {
+impl<T: Data + 'static> WinHandler for DruidHandler<T> {
     fn connect(&mut self, handle: &WindowHandle) {
         let state = WindowState {
             handle: handle.clone(),
@@ -127,17 +128,33 @@ impl<T: Data + 'static, R: RootWidget<T> + 'static> WinHandler for DruidHandler<
     }
 }
 
-impl<T: Data, R: RootWidget<T>> DruidHandler<T, R> {
+impl<T: Data + 'static> DruidHandler<T> {
     /// Create a new handler for the first window in the app.
-    pub fn new(root: R, data: T, window_id: WindowId) -> DruidHandler<T, R> {
+    pub fn new(
+        root: impl RootWidget<T> + 'static,
+        data: T,
+        window_id: WindowId,
+    ) -> DruidHandler<T> {
         let app_state = AppState {
-            root,
+            root: Box::new(root),
             env: theme::init(),
             data,
             window_state: HashMap::new(),
         };
         DruidHandler {
             app_state: Rc::new(RefCell::new(app_state)),
+            window_id,
+        }
+    }
+
+    /// Note: the root widget doesn't go in here, because it gets added to the
+    /// app state.
+    pub(crate) fn new_shared(
+        app_state: Rc<RefCell<AppState<T>>>,
+        window_id: WindowId,
+    ) -> DruidHandler<T> {
+        DruidHandler {
+            app_state,
             window_id,
         }
     }
@@ -149,16 +166,50 @@ impl<T: Data, R: RootWidget<T>> DruidHandler<T, R> {
     /// This is principally because in certain cases (such as keydown on Windows)
     /// the OS needs to know if an event was handled.
     fn do_event(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
-        let mut state = self.app_state.borrow_mut();
-        let (is_handled, dirty, anim) = state.do_event_inner(self.window_id, event, win_ctx);
+        let mut new_window_queue = Vec::new();
+        let (is_handled, dirty, anim) = self.app_state.borrow_mut().do_event_inner(
+            self.window_id,
+            event,
+            win_ctx,
+            &mut new_window_queue,
+        );
+        self.create_new_windows(new_window_queue);
         if dirty || anim {
             win_ctx.invalidate();
         }
         is_handled
     }
+
+    fn create_new_windows(&mut self, queue: Vec<(WindowId, WindowBuilder)>) {
+        for (window_id, mut builder) in queue {
+            // TODO: if we set the handler closer to build time, we can probably get
+            // rid of the `app_state` field.
+            let handler = DruidHandler::new_shared(self.app_state.clone(), window_id);
+            builder.set_handler(Box::new(handler));
+            let result = builder.build();
+            match result {
+                Ok(handle) => {
+                    handle.show();
+                    // TODO: this newtype wrapping should be elsewhere.
+                    let handle = druid_shell::window::WindowHandle { inner: handle };
+                    let window_state = WindowState {
+                        handle,
+                        prev_paint_time: None,
+                    };
+                    self.app_state
+                        .borrow_mut()
+                        .window_state
+                        .insert(window_id, window_state);
+                }
+                Err(e) => println!("Error building window: {:?}", e),
+            }
+        }
+    }
 }
 
-impl<T: Data, R: RootWidget<T>> AppState<T, R> {
+// Note: we could minimize cloning of the self_ref by making these methods on
+// `DruidHandler` instead, but I'm not sure that refactor is worth it.
+impl<T: Data> AppState<T> {
     fn paint(&mut self, window_id: WindowId, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
         // TODO: this calculation uses wall-clock time of the paint call, which
         // potentially has jitter.
@@ -173,7 +224,13 @@ impl<T: Data, R: RootWidget<T>> AppState<T, R> {
             0
         };
         let anim_frame_event = Event::AnimFrame(interval);
-        let (_, _, request_anim) = self.do_event_inner(window_id, anim_frame_event, ctx);
+        let mut new_window_queue = Vec::new();
+        let (_, _, request_anim) =
+            self.do_event_inner(window_id, anim_frame_event, ctx, &mut new_window_queue);
+        debug_assert!(
+            new_window_queue.is_empty(),
+            "Adding windows from AnimFrame event not supported"
+        );
         let prev = if request_anim {
             Some(this_paint_time)
         } else {
@@ -197,9 +254,7 @@ impl<T: Data, R: RootWidget<T>> AppState<T, R> {
         self.root.paint(&mut paint_ctx, &self.data, &self.env);
         request_anim
     }
-}
 
-impl<T: Data, R: RootWidget<T>> AppState<T, R> {
     /// Send an event to the widget hierarchy.
     ///
     /// Returns three flags. The first is true if the event was handled. The
@@ -210,6 +265,7 @@ impl<T: Data, R: RootWidget<T>> AppState<T, R> {
         window_id: WindowId,
         event: Event,
         win_ctx: &mut dyn WinCtx,
+        new_window_queue: &mut Vec<(WindowId, WindowBuilder)>,
     ) -> (bool, bool, bool) {
         // should there be a root base state persisting in the ui state instead?
         let mut cursor = match event {
@@ -219,7 +275,8 @@ impl<T: Data, R: RootWidget<T>> AppState<T, R> {
         let mut ctx = EventCtxRoot {
             win_ctx,
             cursor: &mut cursor,
-            window: &self.window_state.get(&window_id).unwrap().handle,
+            window_state: &mut self.window_state,
+            new_window_queue,
             base_state: Default::default(),
             is_handled: false,
             window_id,

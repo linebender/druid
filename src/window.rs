@@ -19,7 +19,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::kurbo::{Point, Rect, Size};
 
-use druid_shell::window::{Cursor, Text, WinCtx, WindowHandle};
+use druid_shell::window::{Cursor, Text, WinCtx};
+use druid_shell::WindowBuilder;
 
 use crate::win_handler::WindowState;
 use crate::{
@@ -33,16 +34,15 @@ use crate::{
 #[derive(Default)]
 pub struct WindowId(u32);
 
-const WINDOW_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
+static WINDOW_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
 
 /// A container for a set of windows.
 pub struct WindowSet<T: Data> {
     map: HashMap<WindowId, WindowPod<T>>,
 }
 
-// The state for a single window. Right now, access from user code is only through
-// `WindowSet`, but this struct is split out in case more flexibility is needed.
-struct WindowPod<T: Data> {
+/// The state for a single window.
+pub struct WindowPod<T: Data> {
     root: WidgetPod<T, Box<dyn Widget<T>>>,
     size: Size,
 }
@@ -55,7 +55,7 @@ struct WindowPod<T: Data> {
 /// All event flow is passed through this object, which then delegates it down
 /// the hierarchy.
 // TODO: consider rename?
-pub trait RootWidget<T> {
+pub trait RootWidget<T: Data> {
     /// Propagate an event to a child window.
     // Note: this signature is different from the widget trait in that it doesn't return an
     // `Action`. We still have to think about this.
@@ -77,7 +77,8 @@ pub struct EventCtxRoot<'a, 'b> {
     pub(crate) win_ctx: &'a mut dyn WinCtx<'b>,
     pub(crate) cursor: &'a mut Option<Cursor>,
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
-    pub(crate) window: &'a WindowHandle,
+    pub(crate) window_state: &'a mut HashMap<WindowId, WindowState>,
+    pub(crate) new_window_queue: &'a mut Vec<(WindowId, WindowBuilder)>,
     pub(crate) base_state: BaseState,
     pub(crate) is_handled: bool,
     pub(crate) window_id: WindowId,
@@ -104,6 +105,10 @@ impl<T: Data> WindowSet<T> {
         WindowSet { map }
     }
 
+    pub fn add_window(&mut self, window_id: WindowId, window_pod: WindowPod<T>) {
+        self.map.insert(window_id, window_pod);
+    }
+
     pub fn event(&mut self, event: &Event, event_ctx: &mut EventCtxRoot, data: &mut T, env: &Env) {
         let window_id = event_ctx.window_id;
         if let Some(root) = self.map.get_mut(&window_id) {
@@ -113,17 +118,19 @@ impl<T: Data> WindowSet<T> {
 
     pub fn update(&mut self, root_ctx: &mut UpdateCtxRoot, data: &T, env: &Env) {
         for (window_id, root) in &mut self.map {
-            let mut update_ctx = UpdateCtx {
-                text_factory: root_ctx.text_factory,
-                window: &root_ctx.window_state.get(window_id).unwrap().handle,
-                needs_inval: false,
-                window_id: *window_id,
-            };
-            root.update(&mut update_ctx, data, env);
-            if *window_id == root_ctx.originating_window {
-                root_ctx.needs_inval = update_ctx.needs_inval;
-            } else {
-                update_ctx.window.invalidate();
+            if let Some(window_state) = root_ctx.window_state.get(window_id) {
+                let mut update_ctx = UpdateCtx {
+                    text_factory: root_ctx.text_factory,
+                    window: &window_state.handle,
+                    needs_inval: false,
+                    window_id: *window_id,
+                };
+                root.update(&mut update_ctx, data, env);
+                if *window_id == root_ctx.originating_window {
+                    root_ctx.needs_inval = update_ctx.needs_inval;
+                } else {
+                    update_ctx.window.invalidate();
+                }
             }
         }
     }
@@ -162,10 +169,11 @@ impl<T: Data> WindowPod<T> {
             _ => (),
         }
         let mut base_state = Default::default();
+        let window = &root_ctx.window_state.get(&window_id).unwrap().handle;
         let mut ctx = EventCtx {
             win_ctx: root_ctx.win_ctx,
             cursor: root_ctx.cursor,
-            window: root_ctx.window,
+            window,
             window_id,
             base_state: &mut base_state,
             had_active: self.root.state.has_active,
@@ -239,5 +247,22 @@ impl WindowId {
     pub fn new() -> WindowId {
         let id = WINDOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
         WindowId(id)
+    }
+}
+
+impl<'a, 'b> EventCtxRoot<'a, 'b> {
+    /// Request creation of a new window.
+    ///
+    /// Note that the actual window creation doesn't happen until later, to
+    /// satisfy interior mutability of app state.
+    pub fn new_win<T: Data>(
+        &mut self,
+        builder: WindowBuilder,
+        root: impl Widget<T> + 'static,
+    ) -> (WindowId, WindowPod<T>) {
+        let window_id = WindowId::new();
+        let window_pod = WindowPod::new(root);
+        self.new_window_queue.push((window_id, builder));
+        (window_id, window_pod)
     }
 }

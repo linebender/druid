@@ -337,6 +337,8 @@ pub struct LayoutCtx<'a, 'b: 'a> {
 ///
 /// [`invalidate`]: #method.invalidate
 pub struct EventCtx<'a, 'b> {
+    // Note: there's a bunch of state that's just passed down, might
+    // want to group that into a single struct.
     win_ctx: &'a mut dyn WinCtx<'b>,
     cursor: &'a mut Option<Cursor>,
     window_id: WindowId,

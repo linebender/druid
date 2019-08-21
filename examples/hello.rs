@@ -14,7 +14,7 @@
 
 use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{ActionWrapper, Align, Button, Column, Label, Padding};
-use druid::{LocalizedString, DruidHandler, SharedWindow, WindowId};
+use druid::{DruidHandler, LocalizedString, SharedWindow, WindowId};
 
 fn main() {
     druid::shell::init();
