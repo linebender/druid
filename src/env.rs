@@ -37,14 +37,12 @@ use crate::Data;
 /// so that an entire subtree can be disabled ("grayed out") with one
 /// setting.
 #[derive(Clone)]
-pub struct Env {
-    items: Arc<EnvImpl>,
-    l10n: Arc<L10nManager>,
-}
+pub struct Env(Arc<EnvImpl>);
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct EnvImpl {
     map: HashMap<String, Value>,
+    l10n: Arc<L10nManager>,
 }
 
 /// A typed key.
@@ -108,7 +106,7 @@ impl Env {
     ///
     /// Panics if the key is not found, or if it is present with the wrong type.
     pub fn get<'a, V: ValueType<'a>>(&'a self, key: Key<V>) -> V {
-        if let Some(value) = self.items.map.get(key.key) {
+        if let Some(value) = self.0.map.get(key.key) {
             value.to_inner_unchecked()
         } else {
             panic!("key for {} not found", key.key)
@@ -121,7 +119,7 @@ impl Env {
     ///
     /// Panics if the value for the key is found, but has the wrong type.
     pub fn try_get<'a, V: ValueType<'a>>(&'a self, key: Key<V>) -> Option<V> {
-        self.items
+        self.0
             .map
             .get(key.key)
             .map(|value| value.to_inner_unchecked())
@@ -129,7 +127,7 @@ impl Env {
 
     /// Adds a key/value, acting like a builder.
     pub fn adding<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) -> Env {
-        let env = Arc::make_mut(&mut self.items);
+        let env = Arc::make_mut(&mut self.0);
         env.map.insert(key.into(), value.into().into());
         self
     }
@@ -141,7 +139,7 @@ impl Env {
     /// Panics if the environment already has a value for the key, but it is
     /// of a different type.
     pub fn set<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) {
-        let env = Arc::make_mut(&mut self.items);
+        let env = Arc::make_mut(&mut self.0);
         let value = value.into().into();
         let key = key.into();
         // TODO: use of Entry might be more efficient
@@ -161,7 +159,7 @@ impl Env {
     ///
     /// [`L10nManager`]: struct.L10nManager.html
     pub fn localization_manager(&self) -> &L10nManager {
-        &self.l10n
+        &self.0.l10n
     }
 }
 
@@ -249,7 +247,7 @@ impl Data for Value {
 
 impl Data for Env {
     fn same(&self, other: &Env) -> bool {
-        Arc::ptr_eq(&self.items, &other.items) || self.items.deref().same(other.items.deref())
+        Arc::ptr_eq(&self.0, &other.0) || self.0.deref().same(other.0.deref())
     }
 }
 
@@ -266,10 +264,11 @@ impl Data for EnvImpl {
 impl std::default::Default for Env {
     fn default() -> Self {
         let l10n = L10nManager::new(vec!["builtin.ftl".into()], "./resources/i18n/");
-        Env {
+        let inner = EnvImpl {
             l10n: Arc::new(l10n),
-            items: Arc::default(),
-        }
+            map: HashMap::new(),
+        };
+        Env(Arc::new(inner))
     }
 }
 

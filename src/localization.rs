@@ -42,8 +42,11 @@ use crate::data::Data;
 use crate::env::Env;
 use crate::shell::get_locale;
 
-use fluent_bundle::{FluentArgs, FluentBundle, FluentResource, FluentValue};
+use fluent_bundle::{
+    FluentArgs, FluentBundle, FluentError, FluentMessage, FluentResource, FluentValue,
+};
 use fluent_locale::{negotiate_languages, NegotiationStrategy};
+use fluent_syntax::ast::Pattern as FluentPattern;
 use unic_langid::LanguageIdentifier;
 
 // Localization looks for string files in druid/resources, but this path is hardcoded;
@@ -56,7 +59,7 @@ static FALLBACK_STRINGS: &str = include_str!("../resources/i18n/en-US/builtin.ft
 #[allow(dead_code)]
 pub struct L10nManager {
     res_mgr: ResourceManager,
-    current_bundle: FluentBundle<Arc<FluentResource>>,
+    current_bundle: BundleStack,
     resources: Vec<String>,
     current_locale: LanguageIdentifier,
 }
@@ -80,15 +83,39 @@ struct ArgSource<T>(ArgClosure<T>);
 
 /// A string that can be localized based on the current locale.
 ///
-/// At it's simplest, a `LocalizedString` is a key that can be resolved
+/// At its simplest, a `LocalizedString` is a key that can be resolved
 /// against a map of localized strings for a given locale.
 #[derive(Debug, Clone)]
 pub struct LocalizedString<T> {
     key: &'static str,
     placeholder: Option<&'static str>,
-    args: Option<HashMap<&'static str, ArgSource<T>>>,
+    args: Option<Vec<(&'static str, ArgSource<T>)>>,
     resolved: Option<String>,
     resolved_lang: Option<LanguageIdentifier>,
+}
+
+/// A stack of localization resources, used for fallback.
+pub struct BundleStack(Vec<FluentBundle<Arc<FluentResource>>>);
+
+impl BundleStack {
+    fn get_message(&self, id: &str) -> Option<FluentMessage> {
+        self.0.iter().flat_map(|b| b.get_message(id)).next()
+    }
+
+    fn format_pattern(
+        &self,
+        id: &str,
+        pattern: &FluentPattern,
+        args: Option<&FluentArgs>,
+        errors: &mut Vec<FluentError>,
+    ) -> String {
+        for bundle in self.0.iter() {
+            if bundle.has_message(id) {
+                return bundle.format_pattern(pattern, args, errors).to_string();
+            }
+        }
+        format!("localization failed for key '{}'", id)
+    }
 }
 
 //NOTE: much of this is adapted from https://github.com/projectfluent/fluent-rs/blob/master/fluent-resmgr/src/resource_manager.rs
@@ -102,7 +129,14 @@ impl ResourceManager {
         if let Some(res) = self.resources.get(&path) {
             res.clone()
         } else {
-            let string = fs::read_to_string(&path).unwrap_or_else(|_| FALLBACK_STRINGS.to_string());
+            let string = fs::read_to_string(&path).unwrap_or_else(|_| {
+                if (res_id, locale) == ("builtin.ftl", "en-US") {
+                    FALLBACK_STRINGS.to_string()
+                } else {
+                    eprintln!("missing resouce {}/{}", locale, res_id);
+                    String::new()
+                }
+            });
             let res = match FluentResource::try_new(string) {
                 Ok(res) => Arc::new(res),
                 Err((res, _err)) => Arc::new(res),
@@ -113,33 +147,32 @@ impl ResourceManager {
     }
 
     /// Return the best localization bundle for the provided `LanguageIdentifier`.
-    fn get_bundle(
-        &mut self,
-        locale: &LanguageIdentifier,
-        resource_ids: &[String],
-    ) -> FluentBundle<Arc<FluentResource>> {
-        let resolved_locales = self.resolve_locales(locale);
+    fn get_bundle(&mut self, locale: &LanguageIdentifier, resource_ids: &[String]) -> BundleStack {
+        let resolved_locales = self.resolve_locales(locale.clone());
         eprintln!("resolved: {}", PrintLocales(resolved_locales.as_slice()));
-        let locale = resolved_locales[0].to_string();
-        let mut bundle = FluentBundle::new(resolved_locales);
-        for res_id in resource_ids {
-            let res = self.get_resource(&res_id, &locale);
-            bundle.add_resource(res).unwrap();
+        let mut stack = Vec::new();
+        for locale in &resolved_locales {
+            let mut bundle = FluentBundle::new(resolved_locales.iter());
+            for res_id in resource_ids {
+                let res = self.get_resource(&res_id, &locale.to_string());
+                bundle.add_resource(res).unwrap();
+            }
+            stack.push(bundle);
         }
-        bundle
+        BundleStack(stack)
     }
 
     /// Given a locale, returns the best set of available locales.
-    pub(crate) fn resolve_locales<'a>(
-        &'a self,
-        locale: &'a LanguageIdentifier,
-    ) -> Vec<&'a LanguageIdentifier> {
+    pub(crate) fn resolve_locales(&self, locale: LanguageIdentifier) -> Vec<LanguageIdentifier> {
         negotiate_languages(
-            std::iter::once(locale),
+            &[locale],
             &self.locales,
             Some(&self.default_locale),
             NegotiationStrategy::Filtering,
         )
+        .into_iter()
+        .map(|l| l.to_owned())
+        .collect()
     }
 }
 
@@ -171,7 +204,7 @@ impl L10nManager {
                     }
                 }
             }
-            return Ok(locales);
+            Ok(locales)
         }
 
         let default_locale: LanguageIdentifier =
@@ -187,7 +220,6 @@ impl L10nManager {
         );
         let mut path_scheme = base_dir.to_string();
         path_scheme.push_str("/{locale}/{res_id}");
-        let resources: Vec<_> = resources.iter().map(|s| s.to_string()).collect();
 
         let mut res_mgr = ResourceManager {
             resources: HashMap::new(),
@@ -229,7 +261,9 @@ impl L10nManager {
             None => return None,
         };
         let mut errs = Vec::new();
-        let result = self.current_bundle.format_pattern(value, args, &mut errs);
+        let result = self
+            .current_bundle
+            .format_pattern(key, value, args, &mut errs);
         for err in errs {
             eprintln!("localization error {:?}", err);
         }
@@ -260,7 +294,7 @@ impl<T> LocalizedString<T> {
 
     /// Return the localized value for this string, or the placeholder, if
     /// the localization is missing, or the key if there is no placeholder.
-    fn current_value(&self) -> &str {
+    pub fn localized_str(&self) -> &str {
         self.resolved
             .as_ref()
             .map(|s| s.as_str())
@@ -270,7 +304,7 @@ impl<T> LocalizedString<T> {
 }
 
 impl<T: Data> LocalizedString<T> {
-    /// Add a named argument and a cooresponding [`ArgClosure`]. This closure
+    /// Add a named argument and a corresponding [`ArgClosure`]. This closure
     /// is a function that will return a value for the given key from the current
     /// environment and data.
     ///
@@ -281,14 +315,16 @@ impl<T: Data> LocalizedString<T> {
         f: impl Fn(&Env, &T) -> FluentValue<'static> + 'static,
     ) -> Self {
         self.args
-            .get_or_insert(HashMap::new())
-            .insert(key, ArgSource(Arc::new(f)));
+            .get_or_insert(Vec::new())
+            .push((key, ArgSource(Arc::new(f))));
         self
     }
 
     /// Lazily compute the localized value for this string based on the provided
     /// environment and data.
-    pub fn resolve<'a>(&'a mut self, env: &Env, data: &T) -> &'a str {
+    ///
+    /// Returns `true` if the current value of the string has changed.
+    pub fn resolve<'a>(&'a mut self, env: &Env, data: &T) -> bool {
         //TODO: this recomputes the string if either the language has changed,
         //or *anytime* we have arguments. Ideally we would be using a lens
         //to only recompute when our actual data has changed.
@@ -300,10 +336,14 @@ impl<T: Data> LocalizedString<T> {
                 .as_ref()
                 .map(|a| a.iter().map(|(k, v)| (*k, (v.0)(env, data))).collect());
 
-            self.resolved = env.localization_manager().localize(self.key, args.as_ref());
             self.resolved_lang = Some(env.localization_manager().current_locale.clone());
+            let next = env.localization_manager().localize(self.key, args.as_ref());
+            let result = next != self.resolved;
+            self.resolved = next;
+            result
+        } else {
+            false
         }
-        self.current_value()
     }
 }
 
@@ -353,9 +393,23 @@ mod tests {
         let cn_hk: LanguageIdentifier = "cn-HK".parse().unwrap();
         let fr_ca: LanguageIdentifier = "fr-CA".parse().unwrap();
 
-        assert_eq!(resmgr.resolve_locales(&en_za), vec![&en_gb, &en_us, &en_ca]);
-        assert_eq!(resmgr.resolve_locales(&fr_ca), vec![&fr_fr, &en_us]);
-        assert_eq!(resmgr.resolve_locales(&cn_hk), vec![&en_us]);
-        assert_eq!(resmgr.resolve_locales(&pt_pt), vec![&en_us]);
+        assert_eq!(
+            resmgr.resolve_locales(en_ca.clone()),
+            vec![en_ca.clone(), en_us.clone(), en_gb.clone()]
+        );
+        assert_eq!(
+            resmgr.resolve_locales(en_za.clone()),
+            vec![en_gb.clone(), en_us.clone(), en_ca.clone()]
+        );
+        assert_eq!(
+            resmgr.resolve_locales(fr_ca.clone()),
+            vec![fr_fr.clone(), en_us.clone()]
+        );
+        assert_eq!(
+            resmgr.resolve_locales(fr_fr.clone()),
+            vec![fr_fr.clone(), en_us.clone()]
+        );
+        assert_eq!(resmgr.resolve_locales(cn_hk), vec![en_us.clone()]);
+        assert_eq!(resmgr.resolve_locales(pt_pt), vec![en_us.clone()]);
     }
 }

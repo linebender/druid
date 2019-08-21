@@ -288,5 +288,5 @@ fn attach_console() {
 /// [Unicode language identifier]: https://unicode.org/reports/tr35/#Unicode_language_identifier
 pub fn get_locale() -> String {
     //TODO ahem
-    "en_US".into()
+    "en-US".into()
 }
