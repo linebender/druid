@@ -30,15 +30,15 @@ use crate::{Point, RenderContext};
 /// The text for the label; either a localized or a specific string.
 pub enum LabelText<T> {
     Localized(LocalizedString<T>),
-    Literal(String),
+    Specific(String),
 }
 
-/// A label with static text.
+/// A label that displays some text.
 pub struct Label<T> {
     text: LabelText<T>,
 }
 
-/// A button with a static label.
+/// A button with a text label.
 pub struct Button<T> {
     label: Label<T>,
 }
@@ -59,10 +59,10 @@ impl<T: Data> Label<T> {
         Label { text: text.into() }
     }
 
-    fn get_layout(&mut self, t: &mut PietText, data: &T, env: &Env) -> PietTextLayout {
+    fn get_layout(&self, t: &mut PietText, env: &Env) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text = self.text.display_text(data, env);
+        let text = self.text.display_text();
         // TODO: caching of both the format and the layout
         let font = t
             .new_font_by_name(font_name, font_size)
@@ -74,9 +74,9 @@ impl<T: Data> Label<T> {
 }
 
 impl<T: Data> Widget<T> for Label<T> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, env: &Env) {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_layout = self.get_layout(paint_ctx.text(), data, env);
+        let text_layout = self.get_layout(paint_ctx.text(), env);
         paint_ctx.draw_text(&text_layout, (0.0, font_size), &env.get(theme::LABEL_COLOR));
     }
 
@@ -84,10 +84,10 @@ impl<T: Data> Widget<T> for Label<T> {
         &mut self,
         layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        data: &T,
+        _data: &T,
         env: &Env,
     ) -> Size {
-        let text_layout = self.get_layout(layout_ctx.text, data, env);
+        let text_layout = self.get_layout(layout_ctx.text, env);
         bc.constrain((text_layout.width(), 17.0))
     }
 
@@ -101,8 +101,10 @@ impl<T: Data> Widget<T> for Label<T> {
         None
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
-        self.text.display_text(data, env);
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        if self.text.resolve(data, env) {
+            ctx.invalidate();
+        }
     }
 }
 
@@ -240,9 +242,19 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
 impl<T: Data> LabelText<T> {
     /// The text that should be displayed. This ensures that localized
     /// strings are up to date.
-    pub fn display_text(&mut self, data: &T, env: &Env) -> &str {
+    pub fn display_text(&self) -> &str {
         match self {
-            LabelText::Literal(s) => s.as_str(),
+            LabelText::Specific(s) => s.as_str(),
+            LabelText::Localized(s) => s.localized_str(),
+        }
+    }
+
+    /// Update the localization, if necesasry.
+    ///
+    /// Returns `true` if the string has changed.
+    pub fn resolve(&mut self, data: &T, env: &Env) -> bool {
+        match self {
+            LabelText::Specific(_) => false,
             LabelText::Localized(s) => s.resolve(env, data),
         }
     }
@@ -250,13 +262,13 @@ impl<T: Data> LabelText<T> {
 
 impl<T> From<String> for LabelText<T> {
     fn from(src: String) -> LabelText<T> {
-        LabelText::Literal(src)
+        LabelText::Specific(src)
     }
 }
 
 impl<T> From<&str> for LabelText<T> {
     fn from(src: &str) -> LabelText<T> {
-        LabelText::Literal(src.to_string())
+        LabelText::Specific(src.to_string())
     }
 }
 
