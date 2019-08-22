@@ -15,8 +15,8 @@
 //! A widget that aligns its child (for example, centering it).
 
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    Rect, Size, UpdateCtx, Widget, WidgetPod,
+    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Rect, Size,
+    UpdateCtx, Widget, WidgetPod,
 };
 
 use crate::piet::UnitPoint;
@@ -59,7 +59,14 @@ impl<T: Data> Widget<T> for Align<T> {
         env: &Env,
     ) -> Size {
         let size = self.child.layout(layout_ctx, &bc.loosen(), data, env);
-        let my_size = bc.constrain(size);
+        let mut my_size = size;
+        if bc.is_width_bounded() {
+            my_size.width = bc.max().width;
+        }
+        if bc.is_height_bounded() {
+            my_size.height = bc.max().height;
+        }
+        my_size = bc.constrain(my_size);
         let extra_width = (my_size.width - size.width).max(0.);
         let extra_height = (my_size.height - size.height).max(0.);
         let origin = self

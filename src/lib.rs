@@ -912,6 +912,16 @@ impl BoxConstraints {
     pub fn min(&self) -> Size {
         self.min
     }
+
+    /// Whether there is an upper bound on the width.
+    pub fn is_width_bounded(&self) -> bool {
+        self.max.width.is_finite()
+    }
+
+    /// Whether there is an upper bound on the height.
+    pub fn is_height_bounded(&self) -> bool {
+        self.max.height.is_finite()
+    }
 }
 
 impl<'a, 'b> EventCtx<'a, 'b> {
