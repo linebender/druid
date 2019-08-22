@@ -887,6 +887,16 @@ impl BoxConstraints {
         }
     }
 
+    /// Create a "loose" version of the constraints.
+    ///
+    /// Make a version with zero minimum size, but the same maximum size.
+    pub fn loosen(&self) -> BoxConstraints {
+        BoxConstraints {
+            min: Size::ZERO,
+            max: self.max,
+        }
+    }
+
     /// Clamp a given size so that fits within the constraints.
     pub fn constrain(&self, size: impl Into<Size>) -> Size {
         size.into().clamp(self.min, self.max)
@@ -900,6 +910,16 @@ impl BoxConstraints {
     /// Returns the min size of these constraints.
     pub fn min(&self) -> Size {
         self.min
+    }
+
+    /// Whether there is an upper bound on the width.
+    pub fn is_width_bounded(&self) -> bool {
+        self.max.width.is_finite()
+    }
+
+    /// Whether there is an upper bound on the height.
+    pub fn is_height_bounded(&self) -> bool {
+        self.max.height.is_finite()
     }
 }
 
