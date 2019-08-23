@@ -404,7 +404,9 @@ impl Widget<String> for TextBox {
                         self.reset_cursor_blink(ctx);
                     }
                     // Actual typing (when Ctrl or Alt or Meta is not held down)
-                    k_e if k_e.key_code.is_printable() && !(k_e.mods.alt || k_e.mods.ctrl || k_e.mods.meta) => {
+                    k_e if k_e.key_code.is_printable()
+                        && !(k_e.mods.alt || k_e.mods.ctrl || k_e.mods.meta) =>
+                    {
                         let incoming_text = k_e.text().unwrap_or("");
                         self.insert(data, incoming_text);
                         self.reset_cursor_blink(ctx);

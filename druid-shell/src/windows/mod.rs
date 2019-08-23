@@ -153,7 +153,7 @@ trait WndProc {
     fn connect(&self, handle: &WindowHandle, state: WndState);
 
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
-                   -> Option<LRESULT>;
+        -> Option<LRESULT>;
 }
 
 // State and logic for the winapi window procedure entry point. Note that this level
@@ -298,8 +298,8 @@ impl<'a> WinCtxOwner<'a> {
     }
 
     fn ctx<'b>(&'b mut self) -> WinCtxImpl<'b>
-        where
-            'a: 'b,
+    where
+        'a: 'b,
     {
         let text = Text::new(&self.dwrite);
         WinCtxImpl {
@@ -555,7 +555,13 @@ impl WndProc for MyWndProc {
                     // bits 0-15 of iparam are the repeat count:
                     // https://docs.microsoft.com/en-ca/windows/desktop/inputdev/wm-keydown
                     let is_repeat = (lparam & 0xFFFF) > 0;
-                    let event = KeyEvent::new(key_code, is_repeat, modifiers, key_code.to_char(), key_code.to_char());
+                    let event = KeyEvent::new(
+                        key_code,
+                        is_repeat,
+                        modifiers,
+                        key_code.to_char(),
+                        key_code.to_char(),
+                    );
 
                     let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
                     if s.handler.key_down(event, &mut c.ctx()) {
@@ -1204,8 +1210,8 @@ impl IdleHandle {
     /// is empty. The idle handler will be run from the window's wndproc,
     /// which means it won't be scheduled if the window is closed.
     pub fn add_idle<F>(&self, callback: F)
-        where
-            F: FnOnce(&mut dyn Any) + Send + 'static,
+    where
+        F: FnOnce(&mut dyn Any) + Send + 'static,
     {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {
