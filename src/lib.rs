@@ -763,6 +763,10 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
         self.state.paint(piet, ctx)
     }
 
+    fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {
+        eprintln!("got command {}", id);
+    }
+
     fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
         let dpi = self.state.handle.get_dpi() as f64;
         let scale = 96.0 / dpi;

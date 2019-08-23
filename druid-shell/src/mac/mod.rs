@@ -261,6 +261,10 @@ lazy_static! {
             sel!(handleTimer:),
             handle_timer as extern "C" fn(&mut Object, Sel, id),
         );
+        decl.add_method(
+            sel!(handleMenuItem:),
+            handle_menu_item as extern "C" fn(&mut Object, Sel, id),
+        );
         ViewClass(decl.register())
     };
 }
@@ -545,6 +549,19 @@ extern "C" fn handle_timer(this: &mut Object, _: Sel, timer: id) {
     (*view_state)
         .handler
         .timer(TimerToken::new(token), &mut ctx);
+}
+
+extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
+    unsafe {
+        let tag: isize = msg_send![item, tag];
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
+        (*view_state).handler.command(tag as u32, &mut ctx);
+    }
 }
 
 impl WindowHandle {
