@@ -177,6 +177,18 @@ impl TextBox {
         }
     }
 
+    fn delete(&mut self, src: &mut String) {
+        if self.selection.is_caret() {
+            let cursor = self.cursor();
+            let new_cursor = next_grapheme(&src, cursor);
+            src.replace_range(cursor..new_cursor, "");
+            self.cursor_to(cursor);
+        } else {
+            src.replace_range(self.selection.range(), "");
+            self.cursor_to(self.selection.min());
+        }
+    }
+
     // TODO: waiting on druid clipboard support for copy / paste.
     fn copy_text(&self, input: String) {
         eprintln!("COPY: {}", input);
@@ -386,8 +398,13 @@ impl Widget<String> for TextBox {
                         self.backspace(data);
                         self.reset_cursor_blink(ctx);
                     }
-                    // Actual typing
-                    k_e if k_e.key_code.is_printable() => {
+                    // Delete
+                    k_e if (HotKey::new(None, KeyCode::Delete)).matches(k_e) => {
+                        self.delete(data);
+                        self.reset_cursor_blink(ctx);
+                    }
+                    // Actual typing (when Ctrl or Alt or Meta is not held down)
+                    k_e if k_e.key_code.is_printable() && !(k_e.mods.alt || k_e.mods.ctrl || k_e.mods.meta) => {
                         let incoming_text = k_e.text().unwrap_or("");
                         self.insert(data, incoming_text);
                         self.reset_cursor_blink(ctx);

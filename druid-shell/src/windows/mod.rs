@@ -153,7 +153,7 @@ trait WndProc {
     fn connect(&self, handle: &WindowHandle, state: WndState);
 
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
-        -> Option<LRESULT>;
+                   -> Option<LRESULT>;
 }
 
 // State and logic for the winapi window procedure entry point. Note that this level
@@ -298,8 +298,8 @@ impl<'a> WinCtxOwner<'a> {
     }
 
     fn ctx<'b>(&'b mut self) -> WinCtxImpl<'b>
-    where
-        'a: 'b,
+        where
+            'a: 'b,
     {
         let text = Text::new(&self.dwrite);
         WinCtxImpl {
@@ -508,16 +508,24 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     //FIXME: this can receive lone surrogate pairs?
                     let key_code = s.stashed_key_code;
+                    if !key_code.is_printable() {
+                        // Avoid double calls on some non-printable keys (e.g. Backspace)
+                        return None;
+                    }
+
                     s.stashed_char = std::char::from_u32(wparam as u32);
+
+                    let modifiers = get_mod_state();
+
                     let text = match s.stashed_char {
-                        Some(c) => c,
+                        Some(_) if modifiers.ctrl || modifiers.alt => key_code.to_char(),
+                        Some(c) => Some(c),
                         None => {
                             eprintln!("failed to convert WM_CHAR to char: {:#X}", wparam);
                             return None;
                         }
                     };
 
-                    let modifiers = get_mod_state();
                     let is_repeat = (lparam & 0xFFFF) > 0;
                     let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
 
@@ -537,16 +545,17 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     let key_code: KeyCode = (wparam as i32).into();
                     s.stashed_key_code = key_code;
-                    if key_code.is_printable() {
-                        //FIXME: this will fail to propogate key combinations such as alt+s
+
+                    let modifiers = get_mod_state();
+
+                    if key_code.is_printable() && !modifiers.alt {
                         return None;
                     }
 
-                    let modifiers = get_mod_state();
                     // bits 0-15 of iparam are the repeat count:
                     // https://docs.microsoft.com/en-ca/windows/desktop/inputdev/wm-keydown
                     let is_repeat = (lparam & 0xFFFF) > 0;
-                    let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
+                    let event = KeyEvent::new(key_code, is_repeat, modifiers, key_code.to_char(), key_code.to_char());
 
                     let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
                     if s.handler.key_down(event, &mut c.ctx()) {
@@ -1195,8 +1204,8 @@ impl IdleHandle {
     /// is empty. The idle handler will be run from the window's wndproc,
     /// which means it won't be scheduled if the window is closed.
     pub fn add_idle<F>(&self, callback: F)
-    where
-        F: FnOnce(&mut dyn Any) + Send + 'static,
+        where
+            F: FnOnce(&mut dyn Any) + Send + 'static,
     {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {
