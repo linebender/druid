@@ -13,36 +13,11 @@
 // limitations under the License.
 
 //! macOS implementation of menus.
-use cocoa::appkit::{NSMenu, NSMenuItem};
-use cocoa::base::{id, nil};
-use cocoa::foundation::NSAutoreleasePool;
-use lazy_static::lazy_static;
-use objc::declare::ClassDecl;
-use objc::runtime::{Class, Object, Sel};
-
 use crate::keycodes::{KeySpec, MenuKey};
 use crate::util::make_nsstring;
-
-struct MenuItemProxyClass(*const Class);
-unsafe impl Sync for MenuItemProxyClass {}
-
-lazy_static! {
-    static ref MENU_ITEM_PROXY_CLASS: MenuItemProxyClass = {
-        unsafe {
-            let mut decl =
-                ClassDecl::new("DruidMenuItemProxy", class!(NSObject)).expect("Menu class defined");
-            decl.add_ivar::<u32>("menu_id");
-            decl.add_method(sel!(trigger), trigger as extern "C" fn(&Object, Sel));
-            extern "C" fn trigger(this: &Object, _: Sel) {
-                unsafe {
-                    let menu_id: u32 = *this.get_ivar("menu_id");
-                    println!("triggered menu item with id {}", menu_id);
-                }
-            }
-            MenuItemProxyClass(decl.register())
-        }
-    };
-}
+use cocoa::appkit::{NSMenu, NSMenuItem};
+use cocoa::base::{id, nil, NO};
+use cocoa::foundation::NSAutoreleasePool;
 
 pub struct Menu {
     pub menu: id,
@@ -79,43 +54,28 @@ fn strip_access_key(raw_menu_text: &str) -> String {
     result
 }
 
-fn make_basic_menu_item(_id: u32, text: &str, key: impl Into<MenuKey>) -> id {
+fn make_menu_item(id: u32, text: &str, key: impl Into<MenuKey>) -> id {
     let key_equivalent = make_key_equivalent(key);
     let stripped_text = strip_access_key(text);
     unsafe {
-        NSMenuItem::alloc(nil)
+        let item = NSMenuItem::alloc(nil)
             .initWithTitle_action_keyEquivalent_(
                 make_nsstring(&stripped_text),
-                sel!(trigger),
+                sel!(handleMenuItem:),
                 make_nsstring(&key_equivalent),
             )
-            .autorelease()
+            .autorelease();
+        msg_send![item, setTag: id as isize];
+        item
     }
-}
-
-fn make_proxy(id: u32) -> id {
-    unsafe {
-        let target: id = msg_send![MENU_ITEM_PROXY_CLASS.0, alloc];
-        (*target).set_ivar("menu_id", id);
-        target.autorelease()
-    }
-}
-
-fn make_menu_item(id: u32, text: &str, key: impl Into<MenuKey>) -> id {
-    let target = make_proxy(id);
-    let menu_item = make_basic_menu_item(id, text, key);
-    unsafe {
-        msg_send![menu_item, setTarget: target];
-    }
-    menu_item
 }
 
 impl Menu {
     pub fn new() -> Menu {
         unsafe {
-            Menu {
-                menu: NSMenu::alloc(nil),
-            }
+            let menu = NSMenu::alloc(nil);
+            msg_send![menu, setAutoenablesItems: NO];
+            Menu { menu }
         }
     }
 
