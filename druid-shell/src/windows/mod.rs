@@ -508,6 +508,12 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     //FIXME: this can receive lone surrogate pairs?
                     let key_code = s.stashed_key_code;
+
+                    if !key_code.is_printable() {
+                        // Avoid double calls on some non-printable keys (e.g. Backspace)
+                        return None;
+                    }
+
                     s.stashed_char = std::char::from_u32(wparam as u32);
                     let text = match s.stashed_char {
                         Some(c) => c,
