@@ -87,18 +87,20 @@ impl<T: Data> Widget<T> for SizedBox<T> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         match self.inner {
             Some(ref mut inner) => {
-                let (min_width, max_width) = if let Some(width) = self.width {
-                    let w = width.max(bc.min().width).min(bc.max().width);
-                    (w, w)
-                } else {
-                    (bc.min().width, bc.max().width)
+                let (min_width, max_width) = match self.width {
+                    Some(width) => {
+                        let w = width.max(bc.min().width).min(bc.max().width);
+                        (w, w)
+                    }
+                    None => (bc.min().width, bc.max().width),
                 };
 
-                let (min_height, max_height) = if let Some(height) = self.height {
-                    let h = height.max(bc.min().height).min(bc.max().height);
-                    (h, h)
-                } else {
-                    (bc.min().height, bc.max().height)
+                let (min_height, max_height) = match self.height {
+                    Some(height) => {
+                        let h = height.max(bc.min().height).min(bc.max().height);
+                        (h, h)
+                    }
+                    None => (bc.min().height, bc.max().height),
                 };
 
                 let child_bc = BoxConstraints::new(
