@@ -33,6 +33,10 @@ enum ScrollDirection {
 }
 
 impl ScrollDirection {
+    /// Return the maximum size the container can be given
+    /// its scroll direction and box constraints.
+    /// In practice vertical scrolling will be width limited to
+    /// box constraints and horizontal will be height limited.
     pub fn max_size(&self, bc: &BoxConstraints) -> Size {
         match self {
             ScrollDirection::Horizontal => Size::new(INFINITY, bc.max().height),
@@ -86,14 +90,14 @@ impl<T: Data> Scroll<T> {
     }
 
     /// Limit scroll behavior to allow only vertical scrolling (Y-axis).
-    /// The child is laid out with width constrained layout bounds.
+    /// The child is laid out with constrained width and infinite height.
     pub fn vertical(mut self) -> Self {
         self.direction = ScrollDirection::Vertical;
         self
     }
 
     /// Limit scroll behavior to allow only horizontal scrolling (X-axis).
-    /// The child is laid out with height constrained layout bounds.
+    /// The child is laid out with constrained height and infinite width.
     pub fn horizontal(mut self) -> Self {
         self.direction = ScrollDirection::Horizontal;
         self
