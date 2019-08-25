@@ -89,8 +89,17 @@ impl Selection {
     pub fn range(self) -> Range<usize> {
         self.min()..self.max()
     }
+
+    /// Constrain selection to be not greater than input string
+    pub fn constrain_to(mut self, s: &str) -> Self {
+        let s_len = s.chars().count();
+        self.start = min(self.start, s_len);
+        self.end = min(self.end, s_len);
+        self
+    }
 }
 
+/// A widget that allows user text input.
 #[derive(Debug, Clone)]
 pub struct TextBox {
     width: f64,
@@ -124,8 +133,13 @@ impl TextBox {
 
     fn insert(&mut self, src: &mut String, new: &str) {
         // TODO: handle incomplete graphemes
-        src.replace_range(self.selection.range(), new);
-        self.selection = Selection::caret(self.selection.min() + new.len());
+
+        // replace_range will panic if selection is greater than src length hence we try to constrain it.
+        // This is especially needed when data was modified externally.
+        let selection = self.selection.constrain_to(src);
+
+        src.replace_range(selection.range(), new);
+        self.selection = Selection::caret(selection.min() + new.len());
     }
 
     fn cursor_to(&mut self, to: usize) {
