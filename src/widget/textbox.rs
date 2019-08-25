@@ -446,3 +446,32 @@ fn prev_grapheme(src: &str, from: usize) -> usize {
         0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Test that when data is mutated externally widget
+    /// can still be used to insert characters.
+    #[test]
+    fn data_can_be_changed_externally() {
+        let mut widget = TextBox::new(100.);
+        let mut data = "".to_string();
+
+        // First insert some chars
+        widget.insert(&mut data, "o");
+        widget.insert(&mut data, "n");
+        widget.insert(&mut data, "e");
+
+        assert_eq!("one", data);
+        assert_eq!(3, widget.selection.start);
+        assert_eq!(3, widget.selection.end);
+
+        // Modify data externally (e.g data was changed in the parent widget)
+        data = "".to_string();
+
+        // Insert again
+        widget.insert(&mut data, "a");
+    }
+
+}
