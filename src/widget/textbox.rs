@@ -92,7 +92,7 @@ impl Selection {
 
     /// Constrain selection to be not greater than input string
     pub fn constrain_to(mut self, s: &str) -> Self {
-        let s_len = s.chars().count();
+        let s_len = s.len();
         self.start = min(self.start, s_len);
         self.end = min(self.end, s_len);
         self
