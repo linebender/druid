@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! This example shows how to construct a basic layout.
+
 use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{Button, Column, Label, Padding, Row, SizedBox};
 use druid::{UiMain, UiState, Widget};
