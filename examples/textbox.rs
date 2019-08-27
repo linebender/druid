@@ -23,8 +23,8 @@ fn main() {
     let mut builder = WindowBuilder::new();
     let mut col = Column::new();
 
-    let textbox = TextBox::new(200.);
-    let textbox_2 = TextBox::new(200.);
+    let textbox = TextBox::new();
+    let textbox_2 = TextBox::new();
     let label = DynLabel::new(|data: &String, _env| format!("value: {}", data));
 
     col.add_child(Padding::uniform(5.0, textbox), 1.0);
