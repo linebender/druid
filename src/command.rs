@@ -35,6 +35,13 @@ impl Selector {
     /// A selector that does nothing.
     pub const NOOP: Selector = Selector::new("");
 
+    /// The selector for a command to create a new window.
+    pub const NEW_WINDOW: Selector = Selector::new("druid-builtin.new-window");
+
+    /// The selector for a command to close a window. The command's argument
+    /// should be the id of the window to close.
+    pub const CLOSE_WINDOW: Selector = Selector::new("druid-builtin.close-window");
+
     /// Create a new `Selector` with the given string.
     pub const fn new(s: &'static str) -> Selector {
         Selector(s)
