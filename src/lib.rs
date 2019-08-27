@@ -54,16 +54,14 @@ use druid_shell::window::{Text, WinCtx, WinHandler, WindowHandle};
 pub use shell::hotkey::{HotKey, RawMods, SysMods};
 
 pub use app::{AppLauncher, WindowDesc};
+pub use command::{Command, Selector};
 pub use data::Data;
 pub use env::{Env, Key, Value};
 pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
 pub use localization::LocalizedString;
 pub use win_handler::DruidHandler;
-pub use window::{
-    EventCtxRoot, LayoutCtxRoot, PaintCtxRoot, RootWidget, SharedWindow, UpdateCtxRoot, WindowId,
-    WindowSet,
-};
+pub use window::{Window, WindowId};
 
 /// A struct representing the top-level root of the UI.
 ///
@@ -344,6 +342,8 @@ pub struct EventCtx<'a, 'b> {
     // want to group that into a single struct.
     win_ctx: &'a mut dyn WinCtx<'b>,
     cursor: &'a mut Option<Cursor>,
+    /// Commands submitted to be run after this event.
+    command_queue: &'a mut Vec<Command>,
     window_id: WindowId,
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     window: &'a WindowHandle,
@@ -511,6 +511,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut child_ctx = EventCtx {
             win_ctx: ctx.win_ctx,
             cursor: ctx.cursor,
+            command_queue: ctx.command_queue,
             window: &ctx.window,
             window_id: ctx.window_id,
             base_state: &mut self.state,
@@ -701,9 +702,12 @@ impl<T: Data> UiState<T> {
             Event::MouseMoved(..) => Some(Cursor::Arrow),
             _ => None,
         };
+        let mut command_queue = Vec::new();
+
         let mut ctx = EventCtx {
             win_ctx,
             cursor: &mut cursor,
+            command_queue: &mut command_queue,
             window: &self.handle,
             window_id: Default::default(),
             base_state: &mut base_state,

@@ -18,7 +18,9 @@ use std::sync::Arc;
 //use std::rc::Arc;
 
 use crate::shell::{init, runloop, Error as PlatformError, WindowBuilder};
-use crate::{Data, LocalizedString, UiMain, UiState, Widget};
+use crate::win_handler::AppState;
+use crate::window::{Window, WindowId};
+use crate::{theme, Data, DruidHandler, LocalizedString, Widget};
 
 /// Handles initial setup of an application, and starts the runloop.
 pub struct AppLauncher<T> {
@@ -50,29 +52,29 @@ impl<T: Data + 'static> AppLauncher<T> {
     ///
     /// Returns an error if a window cannot be instantiated. This is usually
     /// a fatal error.
-    pub fn launch(mut self, data: T) -> Result<(), PlatformError> {
+    pub fn launch(self, data: T) -> Result<(), PlatformError> {
         init();
-
-        //TODO: launch all windows, when multi-win lands
-        let window = self.windows.pop().expect("launch called with no window");
-        let WindowDesc {
-            root_builder,
-            title,
-            ..
-        } = window;
-
-        //TODO: use title when multi-win lands
-        let title = title.unwrap_or(LocalizedString::new("app-name-exclaim"));
-        let root = root_builder();
-        let state = UiState::new(root, data);
-
-        let mut builder = WindowBuilder::new();
-        builder.set_handler(Box::new(UiMain::new(state)));
-        builder.set_title(title.localized_str());
-        let window = builder.build()?;
-
         let mut main_loop = runloop::RunLoop::new();
-        window.show();
+
+        let state = AppState::new(data, theme::init());
+        for window in self.windows {
+            let WindowDesc {
+                root_builder,
+                title,
+                ..
+            } = window;
+
+            let id = WindowId::new();
+            let handler = DruidHandler::new_shared(state.clone(), id);
+            let title = title.unwrap_or(LocalizedString::new("app-name"));
+            let root = root_builder();
+            state.borrow_mut().add_window(id, Window::new(root, title));
+
+            let mut builder = WindowBuilder::new();
+            builder.set_handler(Box::new(handler));
+            let window = builder.build()?;
+            window.show();
+        }
 
         main_loop.run();
         Ok(())
