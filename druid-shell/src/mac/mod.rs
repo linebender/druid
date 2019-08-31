@@ -39,6 +39,8 @@ use std::mem;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
+use log::{error, info};
+
 use cairo::{Context, QuartzSurface};
 
 use crate::kurbo::{Point, Vec2};
@@ -204,7 +206,7 @@ lazy_static! {
         }
         decl.add_method(sel!(dealloc), dealloc as extern "C" fn(&Object, Sel));
         extern "C" fn dealloc(this: &Object, _sel: Sel) {
-            eprintln!("view is dealloc'ed");
+            error!("view is dealloc'ed");
             unsafe {
                 let view_state: *mut c_void = *this.get_ivar("viewState");
                 Box::from_raw(view_state as *mut ViewState);
@@ -290,7 +292,7 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<Box<dyn IdleCa
 }
 
 extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
-    println!("size: {}x{}", size.width, size.height);
+    info!("size: {}x{}", size.width, size.height);
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
@@ -496,9 +498,8 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         };
         let anim = (*view_state).handler.paint(&mut piet_ctx, &mut ctx);
         if let Err(e) = piet_ctx.finish() {
-            eprintln!("Error: {}", e);
+            error!("{}", e)
         }
-        // TODO: log errors
 
         if anim {
             // TODO: synchronize with screen refresh rate using CVDisplayLink instead.

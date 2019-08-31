@@ -14,6 +14,8 @@
 
 //! A textbox widget.
 
+use log::error;
+
 use std::cmp::{max, min};
 use std::ops::Range;
 use std::time::{Duration, Instant};
@@ -193,11 +195,11 @@ impl TextBox {
 
     // TODO: waiting on druid clipboard support for copy / paste.
     fn copy_text(&self, input: String) {
-        eprintln!("COPY: {}", input);
+        error!("COPY: {}", input);
     }
 
     fn paste_text(&self) -> String {
-        eprintln!("PASTE");
+        error!("PASTE");
         "PASTE".to_string()
     }
 
