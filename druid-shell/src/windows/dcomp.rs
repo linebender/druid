@@ -41,6 +41,8 @@ use wio::com::ComPtr;
 use direct2d::math::Matrix3x2F;
 use direct2d::{self, RenderTarget};
 
+use log::error;
+
 use crate::util::OPTIONAL_FUNCTIONS;
 
 unsafe fn wrap<T, U, F>(hr: HRESULT, ptr: *mut T, f: F) -> Result<U, HRESULT>
@@ -94,7 +96,7 @@ impl D3D11Device {
                 null_mut(),
             );
             if !SUCCEEDED(hr) {
-                println!("Error on D3D11CreateDevice: 0x{:x}", hr);
+                error!("D3D11CreateDevice: 0x{:x}", hr);
             }
             wrap(hr, d3d11_device, D3D11Device)
         }

@@ -22,6 +22,8 @@
 use std::mem;
 use std::ptr::null_mut;
 
+use log::error;
+
 use winapi::ctypes::c_void;
 use winapi::shared::dxgi::*;
 use winapi::shared::dxgi1_2::*;
@@ -61,7 +63,7 @@ pub(crate) unsafe fn create_render_target(
         .with_pixel_size(width, height)
         .build();
     if let Err(ref e) = res {
-        println!("Error creating hwnd render target: {:?}", e);
+        error!("Error creating hwnd render target: {:?}", e);
     }
     res.map_err(|_| Error::D2Error)
 }

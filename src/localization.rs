@@ -38,6 +38,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::{fs, io};
 
+use log::{error, info};
+
 use crate::data::Data;
 use crate::env::Env;
 use crate::shell::get_locale;
@@ -133,7 +135,7 @@ impl ResourceManager {
                 if (res_id, locale) == ("builtin.ftl", "en-US") {
                     FALLBACK_STRINGS.to_string()
                 } else {
-                    eprintln!("missing resouce {}/{}", locale, res_id);
+                    error!("missing resouce {}/{}", locale, res_id);
                     String::new()
                 }
             });
@@ -149,7 +151,7 @@ impl ResourceManager {
     /// Return the best localization bundle for the provided `LanguageIdentifier`.
     fn get_bundle(&mut self, locale: &LanguageIdentifier, resource_ids: &[String]) -> BundleStack {
         let resolved_locales = self.resolve_locales(locale.clone());
-        eprintln!("resolved: {}", PrintLocales(resolved_locales.as_slice()));
+        info!("resolved: {}", PrintLocales(resolved_locales.as_slice()));
         let mut stack = Vec::new();
         for locale in &resolved_locales {
             let mut bundle = FluentBundle::new(resolved_locales.iter());
@@ -213,7 +215,7 @@ impl L10nManager {
             .parse()
             .unwrap_or_else(|_| default_locale.clone());
         let locales = get_available_locales(base_dir).unwrap_or_default();
-        eprintln!(
+        info!(
             "current locale {}\navailable locales {}",
             current_locale,
             PrintLocales(&locales)
@@ -265,7 +267,7 @@ impl L10nManager {
             .current_bundle
             .format_pattern(key, value, args, &mut errs);
         for err in errs {
-            eprintln!("localization error {:?}", err);
+            error!("localization error {:?}", err);
         }
         Some(result.to_string())
     }

@@ -16,6 +16,8 @@
 
 use std::borrow::Borrow;
 
+use log::warn;
+
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 
 /// A description of a keyboard shortcut.
@@ -109,7 +111,7 @@ impl HotKey {
         if let KeyCompare::Text(s) = self.key {
             let km: KeyModifiers = self.mods.into();
             if km.shift && s.chars().any(|c| c.is_uppercase()) {
-                eprintln!(
+                warn!(
                     "warning: HotKey {:?} includes shift, but text is lowercase. \
                      Text is matched literally; this may cause problems.",
                     &self

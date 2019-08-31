@@ -16,6 +16,8 @@
 
 use std::f64::INFINITY;
 
+use log::error;
+
 use crate::{
     Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
     Rect, Size, UpdateCtx, Vec2, Widget, WidgetPod,
@@ -107,7 +109,7 @@ impl<T: Data> Scroll<T> {
 impl<T: Data> Widget<T> for Scroll<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         if let Err(e) = paint_ctx.save() {
-            eprintln!("error saving render context: {:?}", e);
+            error!("error saving render context: {:?}", e);
             return;
         }
         let viewport = Rect::from_origin_size(Point::ORIGIN, base_state.size());
@@ -115,7 +117,7 @@ impl<T: Data> Widget<T> for Scroll<T> {
         paint_ctx.transform(Affine::translate(-self.scroll_offset));
         self.child.paint(paint_ctx, data, env);
         if let Err(e) = paint_ctx.restore() {
-            eprintln!("error restoring render context: {:?}", e);
+            error!("error restoring render context: {:?}", e);
         }
     }
 
