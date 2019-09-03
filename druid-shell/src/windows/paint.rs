@@ -63,7 +63,7 @@ pub(crate) unsafe fn create_render_target(
         .with_pixel_size(width, height)
         .build();
     if let Err(ref e) = res {
-        error!("Error creating hwnd render target: {:?}", e);
+        error!("Creating hwnd render target failed: {:?}", e);
     }
     res.map_err(|_| Error::D2Error)
 }

@@ -38,7 +38,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::{fs, io};
 
-use log::{error, info};
+use log::{error, info, warn};
 
 use crate::data::Data;
 use crate::env::Env;
@@ -267,7 +267,7 @@ impl L10nManager {
             .current_bundle
             .format_pattern(key, value, args, &mut errs);
         for err in errs {
-            error!("localization error {:?}", err);
+            warn!("localization error {:?}", err);
         }
         Some(result.to_string())
     }
