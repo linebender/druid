@@ -38,7 +38,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::{fs, io};
 
-use log::{error, info, warn};
+use log::{debug, error, warn};
 
 use crate::data::Data;
 use crate::env::Env;
@@ -151,7 +151,7 @@ impl ResourceManager {
     /// Return the best localization bundle for the provided `LanguageIdentifier`.
     fn get_bundle(&mut self, locale: &LanguageIdentifier, resource_ids: &[String]) -> BundleStack {
         let resolved_locales = self.resolve_locales(locale.clone());
-        info!("resolved: {}", PrintLocales(resolved_locales.as_slice()));
+        debug!("resolved: {}", PrintLocales(resolved_locales.as_slice()));
         let mut stack = Vec::new();
         for locale in &resolved_locales {
             let mut bundle = FluentBundle::new(resolved_locales.iter());
@@ -215,7 +215,7 @@ impl L10nManager {
             .parse()
             .unwrap_or_else(|_| default_locale.clone());
         let locales = get_available_locales(base_dir).unwrap_or_default();
-        info!(
+        debug!(
             "current locale {}\navailable locales {}",
             current_locale,
             PrintLocales(&locales)
