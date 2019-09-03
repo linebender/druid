@@ -17,6 +17,7 @@ use druid::widget::{ActionWrapper, Align, Button, Column, Label, Padding};
 use druid::{LocalizedString, UiMain, UiState};
 
 fn main() {
+    simple_logger::init().unwrap();
     druid::shell::init();
 
     let mut run_loop = runloop::RunLoop::new();
