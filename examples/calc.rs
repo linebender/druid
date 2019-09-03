@@ -236,6 +236,7 @@ fn build_calc() -> impl Widget<CalcState> {
 }
 
 fn main() {
+    simple_logger::init().unwrap();
     druid_shell::init();
 
     let mut run_loop = runloop::RunLoop::new();

@@ -135,6 +135,7 @@ impl Widget<String> for CustomWidget {
 }
 
 fn main() {
+    simple_logger::init().unwrap();
     druid::shell::init();
 
     let mut run_loop = runloop::RunLoop::new();
