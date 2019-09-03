@@ -30,7 +30,7 @@ use std::ops::{Deref, DerefMut};
 
 use std::time::Instant;
 
-use log::error;
+use log::{debug, error};
 
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
 use piet::{Color, Piet, RenderContext};
@@ -444,13 +444,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     // Discussion: should this be `paint` and the other `paint_raw`?
     pub fn paint_with_offset(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Err(e) = paint_ctx.save() {
-            error!("error saving render context: {:?}", e);
+            error!("saving render context failed: {:?}", e);
             return;
         }
         paint_ctx.transform(Affine::translate(self.state.layout_rect.origin().to_vec2()));
         self.paint(paint_ctx, data, env);
         if let Err(e) = paint_ctx.restore() {
-            error!("error restoring render context: {:?}", e);
+            error!("restoring render context failed: {:?}", e);
         }
     }
 
@@ -766,7 +766,7 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
     }
 
     fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {
-        error!("got command {}", id);
+        debug!("got command {}", id);
     }
 
     fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {

@@ -34,7 +34,7 @@ use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 
-use log::{error, info, warn};
+use log::{debug, error, warn};
 
 use winapi::ctypes::{c_int, c_void};
 use winapi::shared::basetsd::*;
@@ -260,7 +260,6 @@ impl WndState {
             let mut piet_ctx = Piet::new(d2d, dw, rt);
             anim = self.handler.paint(&mut piet_ctx, &mut c.ctx());
             if let Err(e) = piet_ctx.finish() {
-                // TODO: use proper log infrastructure
                 error!("piet error on render: {:?}", e);
             }
         }
@@ -515,7 +514,7 @@ impl WndProc for MyWndProc {
                     let text = match s.stashed_char {
                         Some(c) => c,
                         None => {
-                            error!("failed to convert WM_CHAR to char: {:#X}", wparam);
+                            warn!("failed to convert WM_CHAR to char: {:#X}", wparam);
                             return None;
                         }
                     };
@@ -867,7 +866,7 @@ impl WindowBuilder {
             }
 
             let dcomp_state = create_dcomp_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
-                error!("Error creating swapchain, falling back to hwnd: {:?}", e);
+                warn!("Creating swapchain failed, falling back to hwnd: {:?}", e);
                 None
             });
 
@@ -907,7 +906,7 @@ unsafe fn choose_adapter(factory: *mut IDXGIFactory2) -> *mut IDXGIAdapter {
             best_vram = vram;
             best_adapter = adapter;
         }
-        info!(
+        debug!(
             "{:?}: desc = {:?}, vram = {}",
             adapter,
             (&mut desc.Description[0] as LPWSTR).from_wide(),
@@ -932,9 +931,9 @@ unsafe fn create_dcomp_state(
             &IID_IDXGIFactory2,
             &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void,
         ))?;
-        info!("dxgi factory pointer = {:?}", factory);
+        debug!("dxgi factory pointer = {:?}", factory);
         let adapter = choose_adapter(factory);
-        info!("adapter = {:?}", adapter);
+        debug!("adapter = {:?}", adapter);
 
         let mut d3d11_device = D3D11Device::new_simple()?;
         let mut d2d1_device = d3d11_device.create_d2d1_device()?;
@@ -971,7 +970,7 @@ unsafe fn create_dcomp_state(
             null_mut(),
             &mut swap_chain,
         );
-        info!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
+        debug!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
 
         let mut swapchain_visual = dcomp_device.create_visual()?;
         swapchain_visual.set_content_raw(swap_chain as *mut IUnknown)?;

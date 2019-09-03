@@ -206,7 +206,7 @@ lazy_static! {
         }
         decl.add_method(sel!(dealloc), dealloc as extern "C" fn(&Object, Sel));
         extern "C" fn dealloc(this: &Object, _sel: Sel) {
-            error!("view is dealloc'ed");
+            info!("view is dealloc'ed");
             unsafe {
                 let view_state: *mut c_void = *this.get_ivar("viewState");
                 Box::from_raw(view_state as *mut ViewState);

@@ -24,7 +24,7 @@ pub struct NullWidget;
 
 impl Widget for NullWidget {
     fn poke(&mut self, _payload: &mut dyn Any, _ctx: &mut HandlerCtx) -> bool {
-        error!("Poke to null widget: probable use-after-free");
+        warn!("Poke to null widget: probable use-after-free");
         true
     }
 }

@@ -15,9 +15,10 @@
 use druid::shell::{runloop, WindowBuilder};
 use druid::widget::Column;
 use druid::{UiMain, UiState};
+use simple_logger;
 
 fn main() {
-    init().ok(); // We init the simple logger here
+    simple_logger::init().unwrap();
     druid::shell::init();
 
     let mut run_loop = runloop::RunLoop::new();
@@ -29,33 +30,4 @@ fn main() {
     let window = builder.build().unwrap();
     window.show();
     run_loop.run();
-}
-
-// Typically the user would use a crate for logging
-// Here we implement the Log trait for a struct and print everything to STDOUT
-// See https://docs.rs/log/ for more info
-use log::{Level, Metadata, Record};
-
-struct SimpleLogger;
-
-impl log::Log for SimpleLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Info
-    }
-
-    fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            println!("{} - {}", record.level(), record.args());
-        }
-    }
-
-    fn flush(&self) {}
-}
-
-use log::{LevelFilter, SetLoggerError};
-
-static LOGGER: SimpleLogger = SimpleLogger;
-
-pub fn init() -> Result<(), SetLoggerError> {
-    log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Info))
 }
