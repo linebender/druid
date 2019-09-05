@@ -28,7 +28,7 @@ pub struct ProgressBar;
 
 impl ProgressBar {
     pub fn new() -> impl Widget<f64> {
-        Align::vertical(UnitPoint::LEFT, ProgressBarRaw::default())
+        Align::new(UnitPoint::LEFT, ProgressBarRaw::default())
     }
 }
 
@@ -43,7 +43,7 @@ impl Widget<f64> for ProgressBarRaw {
             Point::ORIGIN,
             (Size {
                 width: base_state.size().width,
-                height: env.get(theme::HOW_TALL_THINGS_ARE),
+                height: env.get(theme::BASIC_WIDGET_HEIGHT),
             })
             .to_vec2(),
             4.,
@@ -69,7 +69,7 @@ impl Widget<f64> for ProgressBarRaw {
             Point::ORIGIN,
             (Size {
                 width: calculated_bar_width,
-                height: env.get(theme::HOW_TALL_THINGS_ARE),
+                height: env.get(theme::BASIC_WIDGET_HEIGHT),
             })
             .to_vec2(),
             4.,
@@ -95,12 +95,12 @@ impl Widget<f64> for ProgressBarRaw {
         if bc.is_width_bounded() {
             bc.constrain(Size::new(
                 bc.max().width,
-                env.get(theme::HOW_TALL_THINGS_ARE),
+                env.get(theme::BASIC_WIDGET_HEIGHT),
             ))
         } else {
             bc.constrain(Size::new(
                 default_width,
-                env.get(theme::HOW_TALL_THINGS_ARE),
+                env.get(theme::BASIC_WIDGET_HEIGHT),
             ))
         }
     }

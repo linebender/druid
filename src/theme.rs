@@ -38,8 +38,8 @@ pub const CURSOR_COLOR: Key<Color> = Key::new("cursor_color");
 pub const FONT_NAME: Key<&str> = Key::new("font_name");
 pub const TEXT_SIZE_NORMAL: Key<f64> = Key::new("text_size_normal");
 //TODO: what's a better name for these?
-pub const HOW_TALL_THINGS_ARE: Key<f64> = Key::new("how_tall_things_are");
-pub const TALLER_THINGS: Key<f64> = Key::new("taller_things");
+pub const BASIC_WIDGET_HEIGHT: Key<f64> = Key::new("basic_widget_height");
+pub const BORDERED_WIDGET_HEIGHT: Key<f64> = Key::new("bordered_widget_height");
 
 /// An initial theme.
 pub fn init() -> Env {
@@ -59,8 +59,8 @@ pub fn init() -> Env {
         .adding(SELECTION_COLOR, Color::rgb8(0xf3, 0x00, 0x21))
         .adding(CURSOR_COLOR, Color::WHITE)
         .adding(TEXT_SIZE_NORMAL, 15.0)
-        .adding(HOW_TALL_THINGS_ARE, 18.0)
-        .adding(TALLER_THINGS, 24.0);
+        .adding(BASIC_WIDGET_HEIGHT, 18.0)
+        .adding(BORDERED_WIDGET_HEIGHT, 24.0);
 
     #[cfg(target_os = "windows")]
     {
@@ -70,7 +70,7 @@ pub fn init() -> Env {
     {
         // Ideally this would be a reference to San Francisco, but Cairo's
         // "toy text" API doesn't seem to be able to access it easily.
-        env = env.adding(FONT_NAME, "SF Pro Display Regular");
+        env = env.adding(FONT_NAME, "Arial");
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {

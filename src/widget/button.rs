@@ -148,7 +148,7 @@ impl<T: Data + 'static> Button<T> {
     }
 
     pub fn sized(text: impl Into<LabelText<T>>, width: f64, height: f64) -> impl Widget<T> {
-        Align::vertical(
+        Align::new(
             UnitPoint::LEFT,
             SizedBox::new(Button {
                 label: Label::aligned(text, UnitPoint::CENTER),

@@ -166,25 +166,20 @@ impl<T: Data> Widget<T> for Flex<T> {
         }
 
         let total_major = self.direction.major(bc.max);
-        let remaining = (total_major - total_non_flex).max(0.0);
+        let remaining = total_major - total_non_flex;
         let flex_sum: f64 = self.children.iter().map(|child| child.params.flex).sum();
 
         // Measure flex children.
         for child in &mut self.children {
             if child.params.flex != 0.0 {
                 let major = remaining * child.params.flex / flex_sum;
-                let min_major = if major == std::f64::INFINITY {
-                    0.0
-                } else {
-                    major
-                };
                 let child_bc = match self.direction {
                     Axis::Horizontal => BoxConstraints::new(
-                        Size::new(min_major, bc.min().height),
+                        Size::new(major, bc.min().height),
                         Size::new(major, bc.max().height),
                     ),
                     Axis::Vertical => BoxConstraints::new(
-                        Size::new(bc.min().width, min_major),
+                        Size::new(bc.min().width, major),
                         Size::new(bc.max().width, major),
                     ),
                 };
@@ -205,7 +200,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             child.widget.set_layout_rect(rect.with_origin(pos));
             major += self.direction.major(rect.size());
         }
-        if flex_sum > 0.0 && total_major != std::f64::INFINITY {
+        if flex_sum > 0.0 {
             major = total_major;
         }
         // TODO: should be able to make this `into`

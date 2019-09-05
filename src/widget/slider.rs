@@ -28,7 +28,7 @@ pub struct Slider;
 
 impl Slider {
     pub fn new() -> impl Widget<f64> {
-        Align::vertical(UnitPoint::LEFT, SliderRaw::default())
+        Align::new(UnitPoint::LEFT, SliderRaw::default())
     }
 }
 
@@ -60,7 +60,7 @@ impl Widget<f64> for SliderRaw {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, env: &Env) {
         let clamped = data.max(0.0).min(1.0);
         let rect = Rect::from_origin_size(Point::ORIGIN, base_state.size());
-        let knob_size = env.get(theme::HOW_TALL_THINGS_ARE);
+        let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let track_thickness = 4.;
 
         //Store the width so we can calulate slider position from mouse events
@@ -143,12 +143,12 @@ impl Widget<f64> for SliderRaw {
         if bc.is_width_bounded() {
             bc.constrain(Size::new(
                 bc.max().width,
-                env.get(theme::HOW_TALL_THINGS_ARE),
+                env.get(theme::BASIC_WIDGET_HEIGHT),
             ))
         } else {
             bc.constrain(Size::new(
                 default_width,
-                env.get(theme::HOW_TALL_THINGS_ARE),
+                env.get(theme::BASIC_WIDGET_HEIGHT),
             ))
         }
     }
@@ -160,7 +160,7 @@ impl Widget<f64> for SliderRaw {
         data: &mut f64,
         env: &Env,
     ) -> Option<Action> {
-        let knob_size = env.get(theme::HOW_TALL_THINGS_ARE);
+        let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
 
         match event {
             Event::MouseDown(mouse) => {

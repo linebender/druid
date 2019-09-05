@@ -99,7 +99,7 @@ pub struct TextBox;
 
 impl TextBox {
     pub fn new() -> impl Widget<String> {
-        Align::vertical(UnitPoint::LEFT, TextBoxRaw::new())
+        Align::new(UnitPoint::LEFT, TextBoxRaw::new())
     }
 }
 
@@ -243,7 +243,7 @@ impl Widget<String> for TextBoxRaw {
         env: &Env,
     ) {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let height = env.get(theme::TALLER_THINGS);
+        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let selection_color = env.get(theme::SELECTION_COLOR);
         let text_color = env.get(theme::LABEL_COLOR);
@@ -336,7 +336,7 @@ impl Widget<String> for TextBoxRaw {
             self.width = default_width;
         }
 
-        bc.constrain((self.width, env.get(theme::TALLER_THINGS)))
+        bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 
     fn event(
