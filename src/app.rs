@@ -15,6 +15,7 @@
 //! Window building and app lifecycle.
 
 use std::sync::Arc;
+//use std::rc::Arc;
 
 use crate::shell::{init, runloop, Error as PlatformError, WindowBuilder};
 use crate::{Data, LocalizedString, UiMain, UiState, Widget};
@@ -25,10 +26,7 @@ pub struct AppLauncher<T> {
 }
 
 /// A function that can create a widget.
-///
-/// This type signature is a bit hairy because this has to work with `Command`,
-/// which requires things to be sync + send.
-type WidgetBuilderFn<T> = dyn Fn() -> Box<dyn Widget<T>> + Send + Sync + 'static;
+type WidgetBuilderFn<T> = dyn Fn() -> Box<dyn Widget<T>> + 'static;
 
 /// A description of a window to be instantiated.
 ///
@@ -91,7 +89,7 @@ impl<T: Data + 'static> WindowDesc<T> {
     pub fn new<W, F>(root: F) -> WindowDesc<T>
     where
         W: Widget<T> + 'static,
-        F: Fn() -> W + 'static + Send + Sync,
+        F: Fn() -> W + 'static,
     {
         // wrap this closure in another closure that dyns the result
         // this just makes our API slightly cleaner; callers don't need to explicitly box.
