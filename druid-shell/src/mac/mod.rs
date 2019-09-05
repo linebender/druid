@@ -597,6 +597,17 @@ impl WindowHandle {
         }
     }
 
+    /// Set the title for this menu.
+    pub fn set_title(&self, title: &str) {
+        if let Some(ref nsview) = self.nsview {
+            unsafe {
+                let window: id = msg_send![*nsview.load(), window];
+                let title = make_nsstring(title);
+                window.setTitle_(title);
+            }
+        }
+    }
+
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
         // TODO: maybe try harder to return None if window has been dropped.
