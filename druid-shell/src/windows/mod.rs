@@ -1103,6 +1103,18 @@ impl WindowHandle {
         }
     }
 
+    /// Set the title for this menu.
+    pub fn set_title(&self, title: &str) {
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                if SetWindowTextW(hwnd, title.to_wide().as_ptr()) == FALSE {
+                    warn!("failed to set window title '{}'", title);
+                }
+            }
+        }
+    }
+
     /// Get the raw HWND handle, for uses that are not wrapped in
     /// druid_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
