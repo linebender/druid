@@ -216,9 +216,9 @@ impl L10nManager {
             .unwrap_or_else(|_| default_locale.clone());
         let locales = get_available_locales(base_dir).unwrap_or_default();
         debug!(
-            "current locale {}\navailable locales {}",
+            "available locales {}, current {}",
+            PrintLocales(&locales),
             current_locale,
-            PrintLocales(&locales)
         );
         let mut path_scheme = base_dir.to_string();
         path_scheme.push_str("/{locale}/{res_id}");
