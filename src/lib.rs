@@ -765,7 +765,7 @@ impl<T: Data + 'static> WinHandler for UiMain<T> {
         self.state.paint(piet, ctx)
     }
 
-    fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {
+    fn command(&mut self, id: u32, _ctx: &mut dyn WinCtx) {
         debug!("got command {}", id);
     }
 
