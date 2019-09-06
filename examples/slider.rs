@@ -25,12 +25,13 @@ fn main() {
     let mut col = Column::new();
     let label_1 = DynLabel::new(|data: &f64, _env| format!("actual value: {0:.2}", data));
     let label_2 = DynLabel::new(|data: &f64, _env| format!("2x the value: {0:.2}", data * 2.0));
-    let bar = ProgressBar::default();
-    let slider = Slider::default();
+    let bar = ProgressBar::new();
+    let slider = Slider::new();
 
-    let button_1 = ActionWrapper::new(Button::new("increment "), move |data: &mut f64, _env| {
-        *data += 0.1
-    });
+    let button_1 = ActionWrapper::new(
+        Button::sized("increment ", 200.0, 100.0),
+        move |data: &mut f64, _env| *data += 0.1,
+    );
     let button_2 = ActionWrapper::new(Button::new("decrement "), move |data: &mut f64, _env| {
         *data -= 0.1
     });
@@ -39,7 +40,7 @@ fn main() {
     col.add_child(Padding::uniform(5.0, slider), 1.0);
     col.add_child(Padding::uniform(5.0, label_1), 1.0);
     col.add_child(Padding::uniform(5.0, label_2), 1.0);
-    col.add_child(Padding::uniform(5.0, button_1), 1.0);
+    col.add_child(Padding::uniform(5.0, button_1), 0.0);
     col.add_child(Padding::uniform(5.0, button_2), 1.0);
 
     let state = UiState::new(col, 0.7f64);

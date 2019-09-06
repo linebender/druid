@@ -27,22 +27,14 @@ use crate::{
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
 use crate::piet::{
-    Color, FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout,
-    TextLayoutBuilder,
+    FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
+    UnitPoint,
 };
+use crate::theme;
+use crate::widget::Align;
 
 use crate::unicode_segmentation::GraphemeCursor;
 
-const BACKGROUND_GREY_LIGHT: Color = Color::rgba8(0x3a, 0x3a, 0x3a, 0xff);
-const BORDER_GREY: Color = Color::rgba8(0x5a, 0x5a, 0x5a, 0xff);
-const PRIMARY_LIGHT: Color = Color::rgba8(0x5c, 0xc4, 0xff, 0xff);
-
-const SELECTION_COLOR: Color = Color::rgb8(0xf3, 0x00, 0x21);
-const TEXT_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xEA);
-const CURSOR_COLOR: Color = Color::WHITE;
-
-const BOX_HEIGHT: f64 = 24.;
-const FONT_SIZE: f64 = 14.0;
 const BORDER_WIDTH: f64 = 1.;
 const PADDING_TOP: f64 = 5.;
 const PADDING_LEFT: f64 = 4.;
@@ -103,7 +95,17 @@ impl Selection {
 
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
-pub struct TextBox {
+pub struct TextBox;
+
+impl TextBox {
+    pub fn new() -> impl Widget<String> {
+        Align::new(UnitPoint::LEFT, TextBoxRaw::new())
+    }
+}
+
+/// A widget that allows user text input.
+#[derive(Debug, Clone)]
+pub struct TextBoxRaw {
     width: f64,
     hscroll_offset: f64,
     selection: Selection,
@@ -111,11 +113,11 @@ pub struct TextBox {
     cursor_on: bool,
 }
 
-impl TextBox {
+impl TextBoxRaw {
     /// Create a new TextBox widget with a width set in pixels
-    pub fn new(width: f64) -> TextBox {
-        TextBox {
-            width,
+    pub fn new() -> TextBoxRaw {
+        TextBoxRaw {
+            width: 0.0,
             hscroll_offset: 0.,
             selection: Selection::caret(0),
             cursor_timer: TimerToken::INVALID,
@@ -123,14 +125,16 @@ impl TextBox {
         }
     }
 
-    fn get_layout(&self, text: &mut PietText, font_size: f64, data: &String) -> PietTextLayout {
+    fn get_layout(&self, t: &mut PietText, env: &Env, data: &String) -> PietTextLayout {
+        let font_name = env.get(theme::FONT_NAME);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         // TODO: caching of both the format and the layout
-        let font = text
-            .new_font_by_name("Segoe UI", font_size)
+        let font = t
+            .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
-        text.new_text_layout(&font, data).unwrap().build().unwrap()
+        t.new_text_layout(&font, data).unwrap().build().unwrap()
     }
 
     fn insert(&mut self, src: &mut String, new: &str) {
@@ -153,9 +157,9 @@ impl TextBox {
     }
 
     /// Calculate a stateful scroll offset
-    fn update_hscroll(&mut self, rc_text: &mut PietText, data: &String) {
-        let cursor_x = self.substring_measurement_hack(rc_text, data, 0, self.cursor());
-        let overall_text_width = self.substring_measurement_hack(rc_text, data, 0, data.len());
+    fn update_hscroll(&mut self, rc_text: &mut PietText, env: &Env, data: &String) {
+        let cursor_x = self.substring_measurement_hack(rc_text, data, 0, self.cursor(), env);
+        let overall_text_width = self.substring_measurement_hack(rc_text, data, 0, data.len(), env);
 
         let padding = PADDING_LEFT * 2.;
         if overall_text_width < self.width {
@@ -210,12 +214,13 @@ impl TextBox {
         text: &String,
         start: usize,
         end: usize,
+        env: &Env,
     ) -> f64 {
         let mut x: f64 = 0.;
 
         if let Some(substring) = text.get(start..end) {
             x = self
-                .get_layout(piet_text, FONT_SIZE, &substring.to_owned())
+                .get_layout(piet_text, env, &substring.to_owned())
                 .width();
         }
 
@@ -229,30 +234,37 @@ impl TextBox {
     }
 }
 
-impl Widget<String> for TextBox {
+impl Widget<String> for TextBoxRaw {
     fn paint(
         &mut self,
         paint_ctx: &mut PaintCtx,
         base_state: &BaseState,
         data: &String,
-        _env: &Env,
+        env: &Env,
     ) {
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let background_color = env.get(theme::BACKGROUND_LIGHT);
+        let selection_color = env.get(theme::SELECTION_COLOR);
+        let text_color = env.get(theme::LABEL_COLOR);
+        let cursor_color = env.get(theme::CURSOR_COLOR);
+
         let has_focus = base_state.has_focus();
 
         let border_color = if has_focus {
-            PRIMARY_LIGHT
+            env.get(theme::PRIMARY_LIGHT)
         } else {
-            BORDER_GREY
+            env.get(theme::BORDER)
         };
 
         // Paint the background
         let clip_rect = RoundedRect::from_origin_size(
             Point::ORIGIN,
-            Size::new(self.width - BORDER_WIDTH, BOX_HEIGHT).to_vec2(),
+            Size::new(self.width - BORDER_WIDTH, height).to_vec2(),
             2.,
         );
 
-        paint_ctx.fill(clip_rect, &BACKGROUND_GREY_LIGHT);
+        paint_ctx.fill(clip_rect, &background_color);
 
         // Render text, selection, and cursor inside a clip
         paint_ctx
@@ -267,37 +279,38 @@ impl Widget<String> for TextBox {
                     let (left, right) = (self.selection.min(), self.selection.max());
 
                     let selection_width =
-                        self.substring_measurement_hack(rc.text(), data, left, right);
+                        self.substring_measurement_hack(rc.text(), data, left, right, env);
 
                     let selection_pos = Point::new(
-                        self.substring_measurement_hack(rc.text(), data, 0, left) + PADDING_LEFT
+                        self.substring_measurement_hack(rc.text(), data, 0, left, env)
+                            + PADDING_LEFT
                             - 1.,
                         PADDING_TOP - 2.,
                     );
                     let selection_rect = RoundedRect::from_origin_size(
                         selection_pos,
-                        Size::new(selection_width + 2., FONT_SIZE + 4.).to_vec2(),
+                        Size::new(selection_width + 2., font_size + 4.).to_vec2(),
                         1.,
                     );
-                    rc.fill(selection_rect, &SELECTION_COLOR);
+                    rc.fill(selection_rect, &selection_color);
                 }
 
                 // Layout, measure, and draw text
-                let text_layout = self.get_layout(rc.text(), FONT_SIZE, data);
-                let text_height = FONT_SIZE * 0.8;
+                let text_layout = self.get_layout(rc.text(), env, data);
+                let text_height = font_size * 0.8;
                 let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
 
-                rc.draw_text(&text_layout, text_pos, &TEXT_COLOR);
+                rc.draw_text(&text_layout, text_pos, &text_color);
 
                 // Paint the cursor if focused and there's no selection
                 if has_focus && self.cursor_on && self.selection.is_caret() {
                     let cursor_x =
-                        self.substring_measurement_hack(rc.text(), data, 0, self.cursor());
-                    let xy = text_pos + Vec2::new(cursor_x, 2. - FONT_SIZE);
-                    let x2y2 = xy + Vec2::new(0., FONT_SIZE + 2.);
+                        self.substring_measurement_hack(rc.text(), data, 0, self.cursor(), env);
+                    let xy = text_pos + Vec2::new(cursor_x, 2. - font_size);
+                    let x2y2 = xy + Vec2::new(0., font_size + 2.);
                     let line = Line::new(xy, x2y2);
 
-                    rc.stroke(line, &CURSOR_COLOR, 1.);
+                    rc.stroke(line, &cursor_color, 1.);
                 }
                 Ok(())
             })
@@ -312,9 +325,17 @@ impl Widget<String> for TextBox {
         _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         _data: &String,
-        _env: &Env,
+        env: &Env,
     ) -> Size {
-        bc.constrain((self.width, BOX_HEIGHT))
+        let default_width = 100.0;
+
+        if bc.is_width_bounded() {
+            self.width = bc.max().width;
+        } else {
+            self.width = default_width;
+        }
+
+        bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 
     fn event(
@@ -322,7 +343,7 @@ impl Widget<String> for TextBox {
         event: &Event,
         ctx: &mut EventCtx,
         data: &mut String,
-        _env: &Env,
+        env: &Env,
     ) -> Option<Action> {
         match event {
             Event::MouseDown(_) => {
@@ -410,7 +431,7 @@ impl Widget<String> for TextBox {
                     }
                     _ => {}
                 }
-                self.update_hscroll(ctx.text(), data);
+                self.update_hscroll(ctx.text(), env, data);
                 ctx.invalidate();
             }
             _ => (),
@@ -457,7 +478,7 @@ mod tests {
     /// can still be used to insert characters.
     #[test]
     fn data_can_be_changed_externally() {
-        let mut widget = TextBox::new(100.);
+        let mut widget = TextBoxRaw::new();
         let mut data = "".to_string();
 
         // First insert some chars

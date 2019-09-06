@@ -21,10 +21,15 @@ use crate::{
     UpdateCtx, Widget,
 };
 
-use crate::piet::{FontBuilder, PietText, PietTextLayout, Text, TextLayout, TextLayoutBuilder};
+use crate::kurbo::{Rect, RoundedRect};
+use crate::piet::{
+    FontBuilder, LinearGradient, PietText, PietTextLayout, Text, TextLayout, TextLayoutBuilder,
+    UnitPoint,
+};
 
 use crate::localization::LocalizedString;
 use crate::theme;
+use crate::widget::{Align, SizedBox};
 use crate::{Point, RenderContext};
 
 /// The text for the label; either a localized or a specific string.
@@ -36,6 +41,7 @@ pub enum LabelText<T> {
 /// A label that displays some text.
 pub struct Label<T> {
     text: LabelText<T>,
+    align: UnitPoint,
 }
 
 /// A button with a text label.
@@ -56,7 +62,17 @@ impl<T: Data> Label<T> {
     /// Discussion question: should this return Label or a wrapped
     /// widget (with WidgetPod)?
     pub fn new(text: impl Into<LabelText<T>>) -> Self {
-        Label { text: text.into() }
+        Label {
+            text: text.into(),
+            align: UnitPoint::LEFT,
+        }
+    }
+
+    pub fn aligned(text: impl Into<LabelText<T>>, align: UnitPoint) -> Self {
+        Label {
+            text: text.into(),
+            align,
+        }
     }
 
     fn get_layout(&self, t: &mut PietText, env: &Env) -> PietTextLayout {
@@ -74,10 +90,24 @@ impl<T: Data> Label<T> {
 }
 
 impl<T: Data> Widget<T> for Label<T> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _data: &T, env: &Env) {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+
         let text_layout = self.get_layout(paint_ctx.text(), env);
-        paint_ctx.draw_text(&text_layout, (0.0, font_size), &env.get(theme::LABEL_COLOR));
+
+        // Find the origin for the text
+        let mut origin = self.align.resolve(Rect::from_origin_size(
+            Point::ORIGIN,
+            Size::new(
+                (base_state.size().width - text_layout.width()).max(0.0),
+                base_state.size().height + (font_size * 1.2) / 2.,
+            ),
+        ));
+
+        //Make sure we don't draw the text too low
+        origin.y = origin.y.min(base_state.size().height);
+
+        paint_ctx.draw_text(&text_layout, origin, &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
@@ -87,8 +117,10 @@ impl<T: Data> Widget<T> for Label<T> {
         _data: &T,
         env: &Env,
     ) -> Size {
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let text_layout = self.get_layout(layout_ctx.text, env);
-        bc.constrain((text_layout.width(), 17.0))
+        // This magical 1.2 constant helps center the text vertically in the rect it's given
+        bc.constrain((text_layout.width(), font_size * 1.2))
     }
 
     fn event(
@@ -108,11 +140,22 @@ impl<T: Data> Widget<T> for Label<T> {
     }
 }
 
-impl<T: Data> Button<T> {
+impl<T: Data + 'static> Button<T> {
     pub fn new(text: impl Into<LabelText<T>>) -> Button<T> {
         Button {
-            label: Label::new(text),
+            label: Label::aligned(text, UnitPoint::CENTER),
         }
+    }
+
+    pub fn sized(text: impl Into<LabelText<T>>, width: f64, height: f64) -> impl Widget<T> {
+        Align::new(
+            UnitPoint::LEFT,
+            SizedBox::new(Button {
+                label: Label::aligned(text, UnitPoint::CENTER),
+            })
+            .width(width)
+            .height(height),
+        )
     }
 }
 
@@ -120,13 +163,32 @@ impl<T: Data> Widget<T> for Button<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let is_active = base_state.is_active();
         let is_hot = base_state.is_hot();
-        let bg_color = match (is_active, is_hot) {
-            (true, true) => env.get(theme::PRESSED_COLOR),
-            (false, true) => env.get(theme::HOVER_COLOR),
-            _ => env.get(theme::BACKGROUND_COLOR),
+
+        let rounded_rect =
+            RoundedRect::from_origin_size(Point::ORIGIN, base_state.size().to_vec2(), 4.);
+        let bg_gradient = if is_active {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (env.get(theme::BUTTON_LIGHT), env.get(theme::BUTTON_DARK)),
+            )
+        } else {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (env.get(theme::BUTTON_DARK), env.get(theme::BUTTON_LIGHT)),
+            )
         };
-        let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
-        paint_ctx.fill(rect, &bg_color);
+
+        let border_color = if is_hot {
+            env.get(theme::BORDER_LIGHT)
+        } else {
+            env.get(theme::BORDER)
+        };
+
+        paint_ctx.stroke(rounded_rect, &border_color, 2.0);
+
+        paint_ctx.fill(rounded_rect, &bg_gradient);
 
         self.label.paint(paint_ctx, base_state, data, env);
     }
@@ -184,31 +246,37 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
         }
     }
 
-    fn get_layout(
-        &mut self,
-        rt: &mut PietText,
-        font_name: &str,
-        font_size: f64,
-        data: &T,
-        env: &Env,
-    ) -> PietTextLayout {
+    fn get_layout(&mut self, t: &mut PietText, env: &Env, data: &T) -> PietTextLayout {
         let text = (self.label_closure)(data, env);
+
+        let font_name = env.get(theme::FONT_NAME);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+
         // TODO: caching of both the format and the layout
-        let font = rt
+        let font = t
             .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
-        rt.new_text_layout(&font, &text).unwrap().build().unwrap()
+        t.new_text_layout(&font, &text).unwrap().build().unwrap()
     }
 }
 
 impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
-        let font_name = env.get(theme::FONT_NAME);
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_layout = self.get_layout(paint_ctx.text(), font_name, font_size, data, env);
-        paint_ctx.draw_text(&text_layout, (0., font_size), &env.get(theme::LABEL_COLOR));
+
+        let align = UnitPoint::LEFT;
+        let origin = align.resolve(Rect::from_origin_size(
+            Point::ORIGIN,
+            Size::new(
+                base_state.size().width,
+                base_state.size().height + (font_size * 1.2) / 2.,
+            ),
+        ));
+
+        let text_layout = self.get_layout(paint_ctx.text(), env, data);
+        paint_ctx.draw_text(&text_layout, origin, &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
@@ -218,10 +286,10 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
         data: &T,
         env: &Env,
     ) -> Size {
-        let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_layout = self.get_layout(layout_ctx.text, font_name, font_size, data, env);
-        bc.constrain((text_layout.width(), 17.0))
+        let text_layout = self.get_layout(layout_ctx.text, env, data);
+        // This magical 1.2 constant helps center the text vertically in the rect it's given
+        bc.constrain(Size::new(text_layout.width(), font_size * 1.2))
     }
 
     fn event(
