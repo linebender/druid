@@ -25,6 +25,14 @@ jobs:
         parameters:
           crate_path: '.'
 
+      - template: ci/build.yml
+        parameters:
+          crate_path: 'druid-shell'
+      
+      - template: ci/build.yml
+        parameters:
+          crate_path: '.'
+
       - template: ci/test.yml
         parameters:
           toolchain: stable

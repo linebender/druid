@@ -1,0 +1,5 @@
+steps:
+  - script: |
+        cargo rustc -- -D warnings
+    workingDirectory: '$(Build.SourcesDirectory)/${{parameters.crate_path}}'
+    displayName: Run cargo rustc, deny warnings
