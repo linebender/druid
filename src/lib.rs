@@ -30,7 +30,7 @@ use std::ops::{Deref, DerefMut};
 
 use std::time::Instant;
 
-use log::{debug, error};
+use log::{debug, error, warn};
 
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
 use piet::{Piet, RenderContext};
@@ -930,15 +930,11 @@ impl BoxConstraints {
 
     /// Check to see if these constraints are legit.
     pub fn check(&self, name: &str) {
-        if !(0.0 <= self.min.width
-            && self.min.width <= self.max.width
-            && self.max.width <= std::f64::INFINITY)
-            || !(0.0 <= self.min.height
-                && self.min.height <= self.max.height
-                && self.max.height <= std::f64::INFINITY)
+        if !(0.0 <= self.min.width && self.min.width <= self.max.width)
+            || !(0.0 <= self.min.height && self.min.height <= self.max.height)
         {
-            eprintln!("Bad BoxConstraints passed to {}:", name);
-            eprintln!("{:?}", self);
+            warn!("Bad BoxConstraints passed to {}:", name);
+            warn!("{:?}", self);
         }
     }
 }
