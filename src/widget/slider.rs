@@ -137,7 +137,6 @@ impl Widget<f64> for SliderRaw {
         _data: &f64,
         env: &Env,
     ) -> Size {
-        // QUESTION: is this the right place to put this default width?
         let default_width = 100.0;
 
         if bc.is_width_bounded() {

@@ -37,7 +37,6 @@ pub const CURSOR_COLOR: Key<Color> = Key::new("cursor_color");
 
 pub const FONT_NAME: Key<&str> = Key::new("font_name");
 pub const TEXT_SIZE_NORMAL: Key<f64> = Key::new("text_size_normal");
-//TODO: what's a better name for these?
 pub const BASIC_WIDGET_HEIGHT: Key<f64> = Key::new("basic_widget_height");
 pub const BORDERED_WIDGET_HEIGHT: Key<f64> = Key::new("bordered_widget_height");
 

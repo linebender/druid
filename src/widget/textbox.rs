@@ -327,7 +327,6 @@ impl Widget<String> for TextBoxRaw {
         _data: &String,
         env: &Env,
     ) -> Size {
-        // QUESTION: is this the right place to put this default width?
         let default_width = 100.0;
 
         if bc.is_width_bounded() {
