@@ -28,7 +28,7 @@ pub struct Slider;
 
 impl Slider {
     pub fn new() -> impl Widget<f64> {
-        Align::new(UnitPoint::LEFT, SliderRaw::default())
+        Align::vertical(UnitPoint::CENTER, SliderRaw::default())
     }
 }
 
