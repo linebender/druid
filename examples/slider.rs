@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use druid::shell::{runloop, WindowBuilder};
-use druid::widget::{ActionWrapper, Button, Column, DynLabel, Padding, ProgressBar, Slider};
+use druid::widget::{ActionWrapper, Align, Button, Column, DynLabel, Padding, ProgressBar, Slider};
 use druid::{UiMain, UiState};
 
 fn main() {
@@ -40,7 +40,7 @@ fn main() {
     col.add_child(Padding::uniform(5.0, slider), 1.0);
     col.add_child(Padding::uniform(5.0, label_1), 1.0);
     col.add_child(Padding::uniform(5.0, label_2), 1.0);
-    col.add_child(Padding::uniform(5.0, button_1), 0.0);
+    col.add_child(Padding::uniform(5.0, Align::right(button_1)), 0.0);
     col.add_child(Padding::uniform(5.0, button_2), 1.0);
 
     let state = UiState::new(col, 0.7f64);

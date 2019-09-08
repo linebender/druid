@@ -99,7 +99,7 @@ pub struct TextBox;
 
 impl TextBox {
     pub fn new() -> impl Widget<String> {
-        Align::new(UnitPoint::LEFT, TextBoxRaw::new())
+        Align::vertical(UnitPoint::CENTER, TextBoxRaw::new())
     }
 }
 

@@ -25,6 +25,8 @@ use crate::piet::UnitPoint;
 pub struct Align<T: Data> {
     align: UnitPoint,
     child: WidgetPod<T, Box<dyn Widget<T>>>,
+    width_factor: Option<f64>,
+    height_factor: Option<f64>,
 }
 
 impl<T: Data> Align<T> {
@@ -37,12 +39,44 @@ impl<T: Data> Align<T> {
         Align {
             align,
             child: WidgetPod::new(child).boxed(),
+            width_factor: None,
+            height_factor: None,
         }
     }
 
     /// Create centered widget.
     pub fn centered(child: impl Widget<T> + 'static) -> Align<T> {
         Align::new(UnitPoint::CENTER, child)
+    }
+
+    /// Create right-aligned widget.
+    pub fn right(child: impl Widget<T> + 'static) -> Align<T> {
+        Align::new(UnitPoint::RIGHT, child)
+    }
+
+    /// Create left-aligned widget.
+    pub fn left(child: impl Widget<T> + 'static) -> Align<T> {
+        Align::new(UnitPoint::LEFT, child)
+    }
+
+    /// Align only in the horizontal axis, keeping the child's size in the vertical.
+    pub fn horizontal(align: UnitPoint, child: impl Widget<T> + 'static) -> Align<T> {
+        Align {
+            align,
+            child: WidgetPod::new(child).boxed(),
+            width_factor: None,
+            height_factor: Some(1.0),
+        }
+    }
+
+    /// Align only in the vertical axis, keeping the child's size in the horizontal.
+    pub fn vertical(align: UnitPoint, child: impl Widget<T> + 'static) -> Align<T> {
+        Align {
+            align,
+            child: WidgetPod::new(child).boxed(),
+            width_factor: Some(1.0),
+            height_factor: None,
+        }
     }
 }
 
@@ -66,6 +100,14 @@ impl<T: Data> Widget<T> for Align<T> {
         if bc.is_height_bounded() {
             my_size.height = bc.max().height;
         }
+
+        if let Some(width) = self.width_factor {
+            my_size.width = size.width * width;
+        }
+        if let Some(height) = self.height_factor {
+            my_size.height = size.height * height;
+        }
+
         my_size = bc.constrain(my_size);
         let extra_width = (my_size.width - size.width).max(0.);
         let extra_height = (my_size.height - size.height).max(0.);

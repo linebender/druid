@@ -28,7 +28,7 @@ pub struct ProgressBar;
 
 impl ProgressBar {
     pub fn new() -> impl Widget<f64> {
-        Align::new(UnitPoint::LEFT, ProgressBarRaw::default())
+        Align::vertical(UnitPoint::CENTER, ProgressBarRaw::default())
     }
 }
 
