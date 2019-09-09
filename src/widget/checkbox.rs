@@ -22,7 +22,7 @@ use crate::{
     Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
-/// A checkbox that toogles a boolean
+/// A checkbox that toggles a boolean
 #[derive(Debug, Clone)]
 pub struct Checkbox;
 
