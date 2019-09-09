@@ -240,10 +240,11 @@ impl<T: Data> Widget<T> for Scroll<T> {
         };
 
         match event {
-            Event::AnimFrame(_) => {
+            // The scroll bars will fade immediately if there's some other widget requesting animation.
+            // Guard by the timer id being invalid.
+            Event::AnimFrame(interval) if self.scroll_bars.timer_id == TimerToken::INVALID => {
                 // Animate scroll bars opacity
-                let opacity = self.scroll_bars.opacity.abs();
-                let diff = 0.004 / opacity;
+                let diff = 2.0 * (*interval as f64) * 1e-9;
                 self.scroll_bars.opacity -= diff;
                 if self.scroll_bars.opacity > 0.0 {
                     ctx.request_anim_frame();
