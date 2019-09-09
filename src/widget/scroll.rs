@@ -24,14 +24,13 @@ use crate::{
     Rect, Size, TimerToken, UpdateCtx, Vec2, Widget, WidgetPod,
 };
 
-use crate::piet::{Color, RenderContext};
+use crate::piet::RenderContext;
+use crate::theme;
 
 use crate::kurbo::{Affine, RoundedRect};
 
 const SCROLL_BAR_WIDTH: f64 = 8.;
 const SCROLL_BAR_PAD: f64 = 2.;
-const SCROLL_BAR_BG: Color = Color::rgb8(255, 255, 255);
-const SCROLL_BAR_BORDER: Color = Color::rgba8(0, 0, 0, 76);
 
 #[derive(Debug, Clone)]
 enum ScrollDirection {
@@ -62,7 +61,7 @@ struct ScrollBarsState {
 impl Default for ScrollBarsState {
     fn default() -> Self {
         Self {
-            opacity: 0.7,
+            opacity: 0.0,
             timer_id: TimerToken::INVALID,
         }
     }
@@ -128,15 +127,19 @@ impl<T: Data> Scroll<T> {
     }
 
     /// Draw scroll bars.
-    fn draw_bars(&self, paint_ctx: &mut PaintCtx, viewport: &Rect) {
+    fn draw_bars(&self, paint_ctx: &mut PaintCtx, viewport: &Rect, env: &Env) {
         if self.scroll_bars.opacity <= 0.0 {
             return;
         }
 
-        let brush = paint_ctx
-            .render_ctx
-            .solid_brush(SCROLL_BAR_BG.with_alpha(self.scroll_bars.opacity));
-        let border_brush = paint_ctx.render_ctx.solid_brush(SCROLL_BAR_BORDER);
+        let brush = paint_ctx.render_ctx.solid_brush(
+            env.get(theme::SCROLL_BAR_COLOR)
+                .with_alpha(self.scroll_bars.opacity),
+        );
+        let border_brush = paint_ctx.render_ctx.solid_brush(
+            env.get(theme::SCROLL_BAR_BORDER_COLOR)
+                .with_alpha(self.scroll_bars.opacity),
+        );
         let bar_thickness = SCROLL_BAR_WIDTH;
 
         // Scroll bar max bounds
@@ -202,7 +205,7 @@ impl<T: Data> Widget<T> for Scroll<T> {
         paint_ctx.transform(Affine::translate(-self.scroll_offset));
         self.child.paint(paint_ctx, data, env);
 
-        self.draw_bars(paint_ctx, &viewport);
+        self.draw_bars(paint_ctx, &viewport, env);
 
         if let Err(e) = paint_ctx.restore() {
             error!("restoring render context failed: {:?}", e);
