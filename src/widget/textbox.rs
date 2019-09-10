@@ -427,7 +427,7 @@ impl Widget<String> for TextBoxRaw {
                     k_e if (HotKey::new(None, KeyCode::Delete)).matches(k_e) => {
                         if self.selection.is_caret() {
                             // Never touch the characters before the cursor.
-                            if next_grapheme_exsists(data, self.cursor()) {
+                            if next_grapheme_exists(data, self.cursor()) {
                                 self.cursor_to(next_grapheme(data, self.cursor()));
                                 self.backspace(data);
                             }
@@ -475,7 +475,7 @@ fn next_grapheme(src: &str, from: usize) -> usize {
 }
 
 /// Checks if there is a next character from the given index.
-fn next_grapheme_exsists(src: &str, from: usize) -> bool {
+fn next_grapheme_exists(src: &str, from: usize) -> bool {
     let mut c = GraphemeCursor::new(from, src.len(), true);
     let next_boundary = c.next_boundary(src, 0).unwrap();
     if let Some(_next) = next_boundary {
