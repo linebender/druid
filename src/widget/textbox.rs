@@ -423,6 +423,19 @@ impl Widget<String> for TextBoxRaw {
                         self.backspace(data);
                         self.reset_cursor_blink(ctx);
                     }
+                    // Delete
+                    k_e if (HotKey::new(None, KeyCode::Delete)).matches(k_e) => {
+                        if self.selection.is_caret() {
+                            // Never touch the characters before the cursor.
+                            if next_grapheme_exists(data, self.cursor()) {
+                                self.cursor_to(next_grapheme(data, self.cursor()));
+                                self.backspace(data);
+                            }
+                        } else {
+                            self.backspace(data);
+                        }
+                        self.reset_cursor_blink(ctx);
+                    }
                     // Actual typing
                     k_e if k_e.key_code.is_printable() => {
                         let incoming_text = k_e.text().unwrap_or("");
@@ -450,6 +463,7 @@ impl Widget<String> for TextBoxRaw {
     }
 }
 
+/// Gets the next character from the given index.
 fn next_grapheme(src: &str, from: usize) -> usize {
     let mut c = GraphemeCursor::new(from, src.len(), true);
     let next_boundary = c.next_boundary(src, 0).unwrap();
@@ -460,6 +474,18 @@ fn next_grapheme(src: &str, from: usize) -> usize {
     }
 }
 
+/// Checks if there is a next character from the given index.
+fn next_grapheme_exists(src: &str, from: usize) -> bool {
+    let mut c = GraphemeCursor::new(from, src.len(), true);
+    let next_boundary = c.next_boundary(src, 0).unwrap();
+    if let Some(_next) = next_boundary {
+        true
+    } else {
+        false
+    }
+}
+
+/// Gets the previous character from the given index.
 fn prev_grapheme(src: &str, from: usize) -> usize {
     let mut c = GraphemeCursor::new(from, src.len(), true);
     let prev_boundary = c.prev_boundary(src, 0).unwrap();
