@@ -14,8 +14,7 @@
 
 //! Simple calculator.
 
-use druid::shell::{runloop, WindowBuilder};
-use druid::{Data, LensWrap, UiMain, UiState, Widget};
+use druid::{AppLauncher, Data, LensWrap, Widget, WindowDesc};
 
 use druid::widget::{ActionWrapper, Button, Column, DynLabel, Padding, Row};
 
@@ -237,21 +236,14 @@ fn build_calc() -> impl Widget<CalcState> {
 
 fn main() {
     simple_logger::init().unwrap();
-    druid_shell::init();
-
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-    let root = build_calc();
+    let window = WindowDesc::new(build_calc);
     let calc_state = CalcState {
         value: "0".to_string(),
         operand: 0.0,
         operator: 'C',
         in_num: false,
     };
-    let state = UiState::new(root, calc_state);
-    builder.set_title("Calculator");
-    builder.set_handler(Box::new(UiMain::new(state)));
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    AppLauncher::with_window(window)
+        .launch(calc_state)
+        .expect("launch failed");
 }

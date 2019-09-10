@@ -14,9 +14,8 @@
 
 //! This example shows how to construct a basic layout.
 
-use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{Button, Column, Label, Padding, Row, SizedBox};
-use druid::{UiMain, UiState, Widget};
+use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     // Begin construction of vertical layout
@@ -43,19 +42,8 @@ fn build_app() -> impl Widget<u32> {
 }
 
 fn main() {
-    druid::shell::init();
-
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-
-    // Build app layout
-    let root = build_app();
-    // Set up initial app state
-    let state = UiState::new(root, 0u32);
-    builder.set_title("Layout example");
-    builder.set_handler(Box::new(UiMain::new(state)));
-
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    let window = WindowDesc::new(build_app);
+    AppLauncher::with_window(window)
+        .launch(0u32)
+        .expect("launch failed");
 }
