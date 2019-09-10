@@ -12,28 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{ActionWrapper, Align, Button, Column, Label, Padding};
-use druid::{LocalizedString, UiMain, UiState};
+use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn main() {
     simple_logger::init().unwrap();
-    druid::shell::init();
+    let main_window = WindowDesc::new(ui_builder);
+    let data = 0_u32;
+    AppLauncher::with_window(main_window)
+        .launch(data)
+        .expect("launch failed");
+}
 
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-    let mut col = Column::new();
+fn ui_builder() -> impl Widget<u32> {
     let text =
         LocalizedString::new("hello-counter").with_arg("count", |_env, data: &u32| (*data).into());
     let label = Label::new(text);
     let button = Button::new("increment");
+
+    let mut col = Column::new();
     col.add_child(Align::centered(Padding::uniform(5.0, label)), 1.0);
     col.add_child(Padding::uniform(5.0, button), 1.0);
-    let root = ActionWrapper::new(col, |data: &mut u32, _env| *data += 1);
-    let state = UiState::new(root, 0u32);
-    builder.set_title("Hello example");
-    builder.set_handler(Box::new(UiMain::new(state)));
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    ActionWrapper::new(col, |data: &mut u32, _env| *data += 1)
 }

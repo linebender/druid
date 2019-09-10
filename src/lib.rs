@@ -18,6 +18,7 @@ pub use druid_shell::{self as shell, kurbo, piet};
 
 pub mod widget;
 
+mod app;
 mod data;
 mod env;
 mod event;
@@ -49,6 +50,7 @@ use druid_shell::window::{self, Text, WinCtx, WinHandler, WindowHandle};
 pub use druid_shell::window::{Cursor, MouseButton, MouseEvent, TimerToken};
 pub use shell::hotkey::{HotKey, RawMods, SysMods};
 
+pub use app::{AppLauncher, WindowDesc};
 pub use data::Data;
 pub use env::{Env, Key, Value};
 pub use event::{Event, WheelEvent};

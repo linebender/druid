@@ -18,12 +18,10 @@ use std::time::{Duration, Instant};
 
 use druid::kurbo::{Line, Size};
 use druid::piet::{Color, RenderContext};
-use druid::shell::{runloop, WindowBuilder};
 use druid::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken,
-    UpdateCtx, Widget,
+    Action, AppLauncher, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx,
+    TimerToken, UpdateCtx, Widget, WindowDesc,
 };
-use druid::{UiMain, UiState};
 
 struct TimerWidget {
     timer_id: TimerToken,
@@ -84,18 +82,12 @@ impl Widget<u32> for TimerWidget {
 }
 
 fn main() {
-    druid::shell::init();
-
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-    let root = TimerWidget {
+    let window = WindowDesc::new(|| TimerWidget {
         timer_id: TimerToken::INVALID,
         on: false,
-    };
-    let state = UiState::new(root, 0u32);
-    builder.set_title("Timer example");
-    builder.set_handler(Box::new(UiMain::new(state)));
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    });
+
+    AppLauncher::with_window(window)
+        .launch(0u32)
+        .expect("launch failed");
 }

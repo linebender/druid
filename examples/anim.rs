@@ -18,11 +18,10 @@ use std::f64::consts::PI;
 
 use druid::kurbo::{Line, Point, Size, Vec2};
 use druid::piet::{Color, RenderContext};
-use druid::shell::{runloop, WindowBuilder};
 use druid::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    Action, AppLauncher, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx,
+    UpdateCtx, Widget, WindowDesc,
 };
-use druid::{UiMain, UiState};
 
 struct AnimWidget {
     t: f64,
@@ -81,15 +80,8 @@ impl Widget<u32> for AnimWidget {
 }
 
 fn main() {
-    druid::shell::init();
-
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-    let root = AnimWidget { t: 0.0 };
-    let state = UiState::new(root, 0u32);
-    builder.set_title("Animation example");
-    builder.set_handler(Box::new(UiMain::new(state)));
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    let window = WindowDesc::new(|| AnimWidget { t: 0.0 });
+    AppLauncher::with_window(window)
+        .launch(0)
+        .expect("launch failed");
 }
