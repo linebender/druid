@@ -478,7 +478,7 @@ fn next_grapheme(src: &str, from: usize) -> usize {
 fn next_grapheme_exsists(src: &str, from: usize) -> bool {
     let mut c = GraphemeCursor::new(from, src.len(), true);
     let next_boundary = c.next_boundary(src, 0).unwrap();
-    if let Some(next) = next_boundary {
+    if let Some(_next) = next_boundary {
         true
     } else {
         false
