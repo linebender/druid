@@ -16,22 +16,22 @@
 
 use std::any::Any;
 use std::cell::RefCell;
-use std::collections::HashMap;
-use std::rc::{Rc, Weak};
+use std::collections::{HashMap, VecDeque};
+use std::rc::Rc;
 use std::time::Instant;
 
-use log::warn;
+use log::{error, warn};
 
 use crate::kurbo::{Size, Vec2};
-
 use crate::piet::{Color, Piet, RenderContext};
-
-use druid_shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
+use crate::shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
+use crate::shell::WindowBuilder;
 
 use crate::window::Window;
 use crate::{
-    BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, MouseEvent,
-    PaintCtx, TimerToken, UpdateCtx, WheelEvent, WindowId,
+    BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx,
+    LocalizedString, MouseEvent, PaintCtx, Selector, TimerToken, UpdateCtx, WheelEvent, WindowDesc,
+    WindowId,
 };
 
 // TODO: this should come from the theme.
@@ -52,8 +52,7 @@ pub struct DruidHandler<T: Data> {
 
 /// State shared by all windows in the UI.
 pub(crate) struct AppState<T: Data> {
-    self_ref: Weak<RefCell<AppState<T>>>,
-    command_queue: Vec<Command>,
+    command_queue: VecDeque<(WindowId, Command)>,
     windows: Windows<T>,
     pub(crate) env: Env,
     pub(crate) data: T,
@@ -76,7 +75,7 @@ struct WindowCtx<'a, T: Data> {
     window_id: WindowId,
     window: &'a mut Window<T>,
     state: &'a mut WindowState,
-    command_queue: &'a mut Vec<Command>,
+    command_queue: &'a mut VecDeque<(WindowId, Command)>,
     data: &'a mut T,
     env: &'a Env,
 }
@@ -94,10 +93,16 @@ impl<T: Data> Windows<T> {
         self.windows.insert(id, window);
     }
 
+    fn remove(&mut self, id: WindowId) -> Option<WindowHandle> {
+        self.windows.remove(&id);
+        self.state.remove(&id).map(|state| state.handle)
+    }
+
+    //TODO: rename me?
     fn get<'a>(
         &'a mut self,
         window_id: WindowId,
-        command_queue: &'a mut Vec<Command>,
+        command_queue: &'a mut VecDeque<(WindowId, Command)>,
         data: &'a mut T,
         env: &'a Env,
     ) -> Option<WindowCtx<'a, T>> {
@@ -228,27 +233,36 @@ impl<'a, T: Data> WindowCtx<'a, T> {
     }
 }
 
-// Note: we could minimize cloning of the self_ref by making these methods on
-// `DruidHandler` instead, but I'm not sure that refactor is worth it.
-impl<T: Data> AppState<T> {
+impl<T: Data + 'static> AppState<T> {
     pub(crate) fn new(data: T, env: Env) -> Rc<RefCell<Self>> {
-        let slf = Rc::new(RefCell::new(AppState {
-            self_ref: Weak::new(),
-            command_queue: Vec::new(),
+        Rc::new(RefCell::new(AppState {
+            command_queue: VecDeque::new(),
             data,
             env,
             windows: Windows::default(),
-        }));
+        }))
+    }
 
-        let self_ref = Rc::downgrade(&slf);
-        slf.borrow_mut().self_ref = self_ref;
-        slf
+    fn connect(&mut self, id: WindowId, handle: WindowHandle) {
+        self.windows.connect(id, handle);
+        //TODO: we need to set the window title on creation; this should happen
+        //in a 'new window' event we send after connect.
+        if let Some(ctx) = self.window_ctx(id) {
+            ctx.window
+                .update_title(&ctx.state.handle, ctx.data, ctx.env);
+            ctx.state.handle.set_title(ctx.window.title.localized_str());
+        }
     }
 
     pub(crate) fn add_window(&mut self, id: WindowId, window: Window<T>) {
         self.windows.add(id, window);
     }
 
+    fn remove_window(&mut self, id: WindowId) -> Option<WindowHandle> {
+        self.windows.remove(id)
+    }
+
+    //TODO: rename me
     fn window_ctx<'a>(&'a mut self, window_id: WindowId) -> Option<WindowCtx<'a, T>> {
         let AppState {
             ref mut command_queue,
@@ -299,43 +313,89 @@ impl<T: Data + 'static> DruidHandler<T> {
     /// This is principally because in certain cases (such as keydown on Windows)
     /// the OS needs to know if an event was handled.
     fn do_event(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
-        self.app_state
+        let result = self
+            .app_state
             .borrow_mut()
-            .do_event(self.window_id, event, win_ctx)
+            .do_event(self.window_id, event, win_ctx);
+        loop {
+            let next_cmd = self.app_state.borrow_mut().command_queue.pop_front();
+            match next_cmd {
+                Some((id, cmd)) => self.handle_cmd(id, cmd, win_ctx),
+                None => break,
+            }
+        }
+        result
     }
 
-    //fn create_new_windows(&mut self, queue: Vec<(WindowId, WindowBuilder)>) {
-    //for (window_id, mut builder) in queue {
-    //// TODO: if we set the handler closer to build time, we can probably get
-    //// rid of the `app_state` field.
-    //let handler = DruidHandler::new_shared(self.app_state.clone(), window_id);
-    //builder.set_handler(Box::new(handler));
-    //let result = builder.build();
-    //match result {
-    //Ok(handle) => {
-    //handle.show();
-    //// TODO: this newtype wrapping should be elsewhere.
-    //let handle = druid_shell::window::WindowHandle { inner: handle };
-    //let window_state = WindowState {
-    //handle,
-    //prev_paint_time: None,
-    //};
-    //self.app_state
-    //.borrow_mut()
-    //.window_state
-    //.insert(window_id, window_state);
-    //}
-    //Err(e) => println!("Error building window: {:?}", e),
-    //}
-    //}
-    //}
+    /// Handle a command. Top level commands (e.g. for creating and destroying windows)
+    /// have their logic here; other commands are passed to the window.
+    fn handle_cmd(&mut self, window_id: WindowId, cmd: Command, win_ctx: &mut dyn WinCtx) {
+        //FIXME: we need some way of getting the correct `WinCtx` for this window.
+        match &cmd.selector {
+            &Selector::NEW_WINDOW => self.new_window(cmd),
+            &Selector::CLOSE_WINDOW => self.close_window(cmd),
+            _ => {
+                let event = Event::Command(cmd);
+                self.app_state
+                    .borrow_mut()
+                    .do_event(window_id, event, win_ctx);
+            }
+        }
+    }
+
+    fn new_window(&mut self, cmd: Command) {
+        let WindowDesc {
+            root_builder,
+            title,
+            ..
+        } = match cmd.get_object::<WindowDesc<T>>() {
+            Some(wd) => wd,
+            None => {
+                warn!("new_window command is missing window description");
+                return;
+            }
+        };
+
+        let id = WindowId::new();
+        let handler = DruidHandler::new_shared(self.app_state.clone(), id);
+        let title = title
+            .to_owned()
+            .unwrap_or(LocalizedString::new("app-name-exclaim"));
+        let root = root_builder();
+        self.app_state
+            .borrow_mut()
+            .add_window(id, Window::new(root, title));
+        let mut builder = WindowBuilder::new();
+        builder.set_handler(Box::new(handler));
+        let window = match builder.build() {
+            Ok(w) => w,
+            Err(e) => {
+                error!("window creation failed: {:?}", e);
+                return;
+            }
+        };
+        window.show();
+    }
+
+    fn close_window(&mut self, cmd: Command) {
+        let id = match cmd.get_object::<WindowId>() {
+            Some(wd) => wd,
+            None => {
+                warn!("close_window command is missing window id");
+                return;
+            }
+        };
+        let handle = self.app_state.borrow_mut().remove_window(*id);
+        if let Some(handle) = handle {
+            handle.close();
+        }
+    }
 }
 
 impl<T: Data + 'static> WinHandler for DruidHandler<T> {
     fn connect(&mut self, handle: &WindowHandle) {
         self.app_state
             .borrow_mut()
-            .windows
             .connect(self.window_id, handle.clone());
     }
 

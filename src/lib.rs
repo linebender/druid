@@ -30,6 +30,7 @@ mod win_handler;
 mod window;
 
 use std::any::Any;
+use std::collections::VecDeque;
 use std::ops::{Deref, DerefMut};
 
 use std::time::Instant;
@@ -343,7 +344,7 @@ pub struct EventCtx<'a, 'b> {
     win_ctx: &'a mut dyn WinCtx<'b>,
     cursor: &'a mut Option<Cursor>,
     /// Commands submitted to be run after this event.
-    command_queue: &'a mut Vec<Command>,
+    command_queue: &'a mut VecDeque<(WindowId, Command)>,
     window_id: WindowId,
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     window: &'a WindowHandle,
@@ -581,6 +582,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 recurse = child_ctx.base_state.request_timer;
                 Event::Timer(*id)
             }
+            Event::Command(cmd) => Event::Command(cmd.clone()),
         };
         child_ctx.base_state.needs_inval = false;
         if let Some(is_hot) = hot_changed {
@@ -702,7 +704,7 @@ impl<T: Data> UiState<T> {
             Event::MouseMoved(..) => Some(Cursor::Arrow),
             _ => None,
         };
-        let mut command_queue = Vec::new();
+        let mut command_queue = VecDeque::new();
 
         let mut ctx = EventCtx {
             win_ctx,
@@ -1081,6 +1083,11 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     pub fn request_timer(&mut self, deadline: Instant) -> TimerToken {
         self.base_state.request_timer = true;
         self.win_ctx.request_timer(deadline)
+    }
+
+    pub fn submit_command(&mut self, command: Command, window_id: impl Into<Option<WindowId>>) {
+        let window_id = window_id.into().unwrap_or(self.window_id);
+        self.command_queue.push_back((window_id, command))
     }
 
     /// Get the window id.
