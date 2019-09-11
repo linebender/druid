@@ -14,8 +14,9 @@
 
 //! This example shows how to construct a basic layout.
 
+use druid::shell::piet::Color;
 use druid::shell::{runloop, WindowBuilder};
-use druid::widget::{Button, Column, Label, Padding, Row, SizedBox};
+use druid::widget::{Button, Column, Container, Label, Padding, Row, SizedBox};
 use druid::{UiMain, UiState, Widget};
 
 fn build_app() -> impl Widget<u32> {
@@ -24,13 +25,22 @@ fn build_app() -> impl Widget<u32> {
 
     // Construct a horizontal layout.
     let mut header = Row::new();
-    header.add_child(SizedBox::new(Label::new("One")).width(60.0), 0.0);
+    header.add_child(
+        Container::new(SizedBox::new(Label::new("One")).width(60.0))
+            .border(Color::WHITE, 3.0)
+            .color(Color::rgb8(0x77, 0x77, 0))
+            .padding(5.0),
+        0.0,
+    );
     // Spacing element that will fill all available space in between label
     // and a button. Notice that weight is non-zero.
     header.add_child(SizedBox::empty().expand(), 1.0);
     header.add_child(Padding::uniform(20.0, Button::new("Two")), 0.0);
 
-    col.add_child(SizedBox::new(header).height(100.0), 0.0);
+    col.add_child(
+        Container::new(SizedBox::new(header).height(100.0)).color(Color::rgb8(0, 0x77, 0x88)),
+        0.0,
+    );
 
     for i in 0..5 {
         // Give a larger weight to one of the buttons for it to

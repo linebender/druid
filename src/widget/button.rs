@@ -200,6 +200,7 @@ impl<T: Data> Widget<T> for Button<T> {
         data: &T,
         env: &Env,
     ) -> Size {
+        // TODO: 1px of border is outside of this widget's constraints
         self.label.layout(layout_ctx, bc, data, env)
     }
 

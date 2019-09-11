@@ -12,42 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This example allows to play with scroll bars over different color tones.
+//! Example to play around with container and border.
 
-use druid::shell::piet::{Color};
+use druid::shell::piet::Color;
 use druid::shell::{runloop, WindowBuilder};
-use druid::widget::{Column, Container, Row, Scroll, SizedBox};
-use druid::{
-    UiMain,
-    UiState, Widget,
-};
+use druid::widget::{Button, Column, Container, Label, Padding, Row, SizedBox};
+use druid::{UiMain, UiState, Widget};
 
 fn build_app() -> impl Widget<u32> {
+    let mut row = Row::new();
+    row.add_child(
+        Container::new(SizedBox::empty().expand()).color(Color::rgb8(0, 0x77, 0x77)),
+        1.0,
+    );
+
     let mut col = Column::new();
-    let rows = 30;
-    let cols = 30;
+    col.add_child(
+        Container::new(SizedBox::empty().expand()).color(Color::rgb8(0x77, 0, 0x77)),
+        1.0,
+    );
+    col.add_child(
+        Container::new(
+            SizedBox::new(
+                Container::new(Label::new("Hello world")).color(Color::rgb8(0x77, 0x77, 0)),
+            )
+            .expand(),
+        )
+        .border(Color::WHITE, 20.0),
+        1.0,
+    );
 
-    for i in 0..cols {
-        let mut row = Row::new();
-        let col_progress = i as f64 / cols as f64;
+    row.add_child(col, 1.0);
 
-        for j in 0..rows {
-            let row_progress = j as f64 / rows as f64;
+    let root = Container::new(Padding::uniform(30.0, row)).color(Color::BLACK);
 
-            row.add_child(
-                Container::new(SizedBox::empty().width(50.0).height(50.0)).color(Color::rgb(
-                    1.0 * col_progress,
-                    1.0 * row_progress,
-                    1.0,
-                )),
-                0.0,
-            );
-        }
-
-        col.add_child(row, 0.0);
-    }
-
-    Scroll::new(col)
+    root
 }
 
 fn main() {
@@ -56,9 +55,11 @@ fn main() {
     let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
 
+    // Build app layout
     let root = build_app();
+    // Set up initial app state
     let state = UiState::new(root, 0u32);
-    builder.set_title("Scroll colors example");
+    builder.set_title("Border example");
     builder.set_handler(Box::new(UiMain::new(state)));
 
     let window = builder.build().unwrap();
