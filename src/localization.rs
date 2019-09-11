@@ -330,7 +330,8 @@ impl<T: Data> LocalizedString<T> {
         //TODO: this recomputes the string if either the language has changed,
         //or *anytime* we have arguments. Ideally we would be using a lens
         //to only recompute when our actual data has changed.
-        if self.args.is_some()
+        if self.resolved.is_none()
+            || self.args.is_some()
             || self.resolved_lang.as_ref() != Some(&env.localization_manager().current_locale)
         {
             let args: Option<FluentArgs> = self
@@ -340,6 +341,7 @@ impl<T: Data> LocalizedString<T> {
 
             self.resolved_lang = Some(env.localization_manager().current_locale.clone());
             let next = env.localization_manager().localize(self.key, args.as_ref());
+            //dbg!(&next);
             let result = next != self.resolved;
             self.resolved = next;
             result

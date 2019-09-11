@@ -18,6 +18,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::kurbo::{Point, Rect, Size};
 
+use crate::shell::window::WindowHandle;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, PaintCtx, UpdateCtx,
     Widget, WidgetPod,
@@ -34,7 +35,7 @@ static WINDOW_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
 /// Per-window state not owned by user code.
 pub struct Window<T: Data> {
     pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
-    title: LocalizedString<T>,
+    pub(crate) title: LocalizedString<T>,
     size: Size,
     // menu
     // delegate?
@@ -68,9 +69,7 @@ impl<T: Data> Window<T> {
     }
 
     pub fn update(&mut self, update_ctx: &mut UpdateCtx, data: &T, env: &Env) {
-        if self.title.resolve(env, data) {
-            update_ctx.window.set_title(self.title.localized_str());
-        }
+        self.update_title(&update_ctx.window, data, env);
         self.root.update(update_ctx, data, env);
     }
 
@@ -83,6 +82,12 @@ impl<T: Data> Window<T> {
 
     pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.root.paint(paint_ctx, data, env);
+    }
+
+    pub(crate) fn update_title(&mut self, win_handle: &WindowHandle, data: &T, env: &Env) {
+        if self.title.resolve(data, env) {
+            win_handle.set_title(self.title.localized_str());
+        }
     }
 }
 
