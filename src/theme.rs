@@ -40,6 +40,9 @@ pub const TEXT_SIZE_NORMAL: Key<f64> = Key::new("text_size_normal");
 pub const BASIC_WIDGET_HEIGHT: Key<f64> = Key::new("basic_widget_height");
 pub const BORDERED_WIDGET_HEIGHT: Key<f64> = Key::new("bordered_widget_height");
 
+pub const SCROLL_BAR_COLOR: Key<Color> = Key::new("scroll_bar_color");
+pub const SCROLL_BAR_BORDER_COLOR: Key<Color> = Key::new("scroll_bar_border_color");
+
 /// An initial theme.
 pub fn init() -> Env {
     let mut env = Env::default()
@@ -59,7 +62,9 @@ pub fn init() -> Env {
         .adding(CURSOR_COLOR, Color::WHITE)
         .adding(TEXT_SIZE_NORMAL, 15.0)
         .adding(BASIC_WIDGET_HEIGHT, 18.0)
-        .adding(BORDERED_WIDGET_HEIGHT, 24.0);
+        .adding(BORDERED_WIDGET_HEIGHT, 24.0)
+        .adding(SCROLL_BAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))
+        .adding(SCROLL_BAR_BORDER_COLOR, Color::rgb8(0x77, 0x77, 0x77));
 
     #[cfg(target_os = "windows")]
     {

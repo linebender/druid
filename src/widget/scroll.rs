@@ -15,17 +15,22 @@
 //! A container that scrolls its contents.
 
 use std::f64::INFINITY;
+use std::time::{Duration, Instant};
 
 use log::error;
 
 use crate::{
     Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    Rect, Size, UpdateCtx, Vec2, Widget, WidgetPod,
+    Rect, Size, TimerToken, UpdateCtx, Vec2, Widget, WidgetPod,
 };
 
 use crate::piet::RenderContext;
+use crate::theme;
 
-use crate::kurbo::Affine;
+use crate::kurbo::{Affine, RoundedRect};
+
+const SCROLL_BAR_WIDTH: f64 = 8.;
+const SCROLL_BAR_PAD: f64 = 2.;
 
 #[derive(Debug, Clone)]
 enum ScrollDirection {
@@ -48,6 +53,20 @@ impl ScrollDirection {
     }
 }
 
+struct ScrollBarsState {
+    opacity: f64,
+    timer_id: TimerToken,
+}
+
+impl Default for ScrollBarsState {
+    fn default() -> Self {
+        Self {
+            opacity: 0.0,
+            timer_id: TimerToken::INVALID,
+        }
+    }
+}
+
 /// A container that scrolls its contents.
 ///
 /// This container holds a single child, and uses the wheel to scroll it
@@ -59,6 +78,7 @@ pub struct Scroll<T: Data> {
     child_size: Size,
     scroll_offset: Vec2,
     direction: ScrollDirection,
+    scroll_bars: ScrollBarsState,
 }
 
 impl<T: Data> Scroll<T> {
@@ -73,6 +93,7 @@ impl<T: Data> Scroll<T> {
             child_size: Default::default(),
             scroll_offset: Vec2::new(0.0, 0.0),
             direction: ScrollDirection::All,
+            scroll_bars: ScrollBarsState::default(),
         }
     }
 
@@ -104,6 +125,73 @@ impl<T: Data> Scroll<T> {
         self.direction = ScrollDirection::Horizontal;
         self
     }
+
+    /// Draw scroll bars.
+    fn draw_bars(&self, paint_ctx: &mut PaintCtx, viewport: &Rect, env: &Env) {
+        if self.scroll_bars.opacity <= 0.0 {
+            return;
+        }
+
+        let brush = paint_ctx.render_ctx.solid_brush(
+            env.get(theme::SCROLL_BAR_COLOR)
+                .with_alpha(self.scroll_bars.opacity),
+        );
+        let border_brush = paint_ctx.render_ctx.solid_brush(
+            env.get(theme::SCROLL_BAR_BORDER_COLOR)
+                .with_alpha(self.scroll_bars.opacity),
+        );
+        let bar_thickness = SCROLL_BAR_WIDTH;
+
+        // Scroll bar max bounds
+        let scroll_bar_bounds = Rect::new(
+            self.scroll_offset.x + SCROLL_BAR_PAD,
+            self.scroll_offset.y + SCROLL_BAR_PAD,
+            self.scroll_offset.x - SCROLL_BAR_PAD + viewport.width(),
+            self.scroll_offset.y - SCROLL_BAR_PAD + viewport.height(),
+        );
+
+        let content_size = Size::new(
+            viewport.width() - 2.0 * SCROLL_BAR_PAD,
+            viewport.height() - 2.0 * SCROLL_BAR_PAD,
+        );
+
+        let scale = Vec2::new(
+            content_size.width / self.child_size.width,
+            content_size.height / self.child_size.height,
+        );
+
+        // Vertical bar
+        if viewport.height() < self.child_size.height {
+            let h = (scale.y * content_size.height).ceil();
+            let dh = (scale.y * self.scroll_offset.y).ceil();
+
+            let x0 = scroll_bar_bounds.x1;
+            let y0 = scroll_bar_bounds.y0 + dh;
+
+            let x1 = x0 - bar_thickness;
+            let y1 = (y0 + h).min(scroll_bar_bounds.y1);
+
+            let rect = RoundedRect::new(x0, y0, x1, y1, 5.0);
+            paint_ctx.render_ctx.fill(rect, &brush);
+            paint_ctx.render_ctx.stroke(rect, &border_brush, 1.0);
+        }
+
+        // Horizontal bar
+        if viewport.width() < self.child_size.width {
+            let w = (scale.x * content_size.width).ceil();
+            let dw = (scale.x * self.scroll_offset.x).ceil();
+
+            let x0 = scroll_bar_bounds.x0 + dw;
+            let y0 = scroll_bar_bounds.y1;
+
+            let x1 = (x0 + w).min(scroll_bar_bounds.x1);
+            let y1 = y0 - bar_thickness;
+
+            let rect = RoundedRect::new(x0, y0, x1, y1, 5.0);
+            paint_ctx.render_ctx.fill(rect, &brush);
+            paint_ctx.render_ctx.stroke(rect, &border_brush, 1.0);
+        }
+    }
 }
 
 impl<T: Data> Widget<T> for Scroll<T> {
@@ -116,6 +204,9 @@ impl<T: Data> Widget<T> for Scroll<T> {
         paint_ctx.clip(viewport);
         paint_ctx.transform(Affine::translate(-self.scroll_offset));
         self.child.paint(paint_ctx, data, env);
+
+        self.draw_bars(paint_ctx, &viewport, env);
+
         if let Err(e) = paint_ctx.restore() {
             error!("restoring render context failed: {:?}", e);
         }
@@ -147,11 +238,36 @@ impl<T: Data> Widget<T> for Scroll<T> {
         } else {
             None
         };
+
+        match event {
+            // The scroll bars will fade immediately if there's some other widget requesting animation.
+            // Guard by the timer id being invalid.
+            Event::AnimFrame(interval) if self.scroll_bars.timer_id == TimerToken::INVALID => {
+                // Animate scroll bars opacity
+                let diff = 2.0 * (*interval as f64) * 1e-9;
+                self.scroll_bars.opacity -= diff;
+                if self.scroll_bars.opacity > 0.0 {
+                    ctx.request_anim_frame();
+                }
+            }
+            Event::Timer(id) if *id == self.scroll_bars.timer_id => {
+                // Schedule scroll bars animation
+                ctx.request_anim_frame();
+                self.scroll_bars.timer_id = TimerToken::INVALID;
+            }
+            _ => {}
+        }
+
         if !ctx.is_handled() {
             if let Event::Wheel(wheel) = event {
                 if self.scroll(wheel.delta, size) {
                     ctx.invalidate();
                     ctx.set_handled();
+
+                    // Display scroll bars and schedule their disappearance
+                    self.scroll_bars.opacity = 0.7;
+                    let deadline = Instant::now() + Duration::from_millis(1500);
+                    self.scroll_bars.timer_id = ctx.request_timer(deadline);
                 }
             }
         }
