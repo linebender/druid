@@ -217,19 +217,7 @@ impl<'a, T: Data> WindowCtx<'a, T> {
             win_ctx.set_cursor(&cursor);
         }
 
-        let mut update_ctx = UpdateCtx {
-            text_factory: win_ctx.text_factory(),
-            window: &self.state.handle,
-            window_id: self.window_id,
-            needs_inval: false,
-        };
-        // Note: we probably want to aggregate updates so there's only one after
-        // a burst of events.
-        self.window.update(&mut update_ctx, self.data, self.env);
-        // TODO: process actions (maybe?)
-
-        let dirty = needs_inval || update_ctx.needs_inval;
-        (is_handled, dirty, request_anim)
+        (is_handled, needs_inval, request_anim)
     }
 }
 
@@ -280,16 +268,39 @@ impl<T: Data + 'static> AppState<T> {
             .unwrap_or(false)
     }
 
-    fn do_event(&mut self, id: WindowId, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
-        self.window_ctx(id)
+    fn do_event(&mut self, source_id: WindowId, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
+        let (is_handled, dirty, anim) = self.window_ctx(source_id)
             .map(|mut win| {
-                let (is_handled, dirty, anim) = win.do_event_inner(event, win_ctx);
-                if dirty || anim {
-                    win_ctx.invalidate();
-                }
-                is_handled
+                win.do_event_inner(event, win_ctx)
             })
-            .unwrap_or(false)
+            .unwrap_or(( false, false, false ));
+
+        let AppState {
+            ref mut windows,
+            ref data,
+            ref env,
+            ..
+        } = self;
+        let Windows { state, windows } = windows;
+
+        // we send `update` to all windows, not just the active one:
+        for (id, window) in windows {
+            if let Some(state) = state.get(id) {
+                let mut update_ctx = UpdateCtx {
+                    text_factory: win_ctx.text_factory(),
+                    window: &state.handle,
+                    needs_inval: false,
+                    window_id: *id,
+                };
+                window.update(&mut update_ctx, data, env);
+                if *id == source_id && (anim || dirty || update_ctx.needs_inval) {
+                    update_ctx.window.invalidate();
+                } else if update_ctx.needs_inval {
+                    update_ctx.window.invalidate();
+                }
+            }
+        }
+        is_handled
     }
 }
 
