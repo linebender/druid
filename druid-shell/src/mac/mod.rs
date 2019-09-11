@@ -581,7 +581,13 @@ impl WindowHandle {
     pub fn close(&self) {
         if let Some(ref nsview) = self.nsview {
             unsafe {
-                let window: id = msg_send![*nsview.load(), window];
+                let view = nsview.load();
+                let window: id = msg_send![*view, window];
+                //FIXME: It's possible that we're leaking windows here,
+                //but if we don't set this we segfault after close. Maybe we should
+                //have an appdelegate that handles the windowShouldClose notification?
+                //See https://developer.apple.com/documentation/appkit/nswindow/1419062-releasedwhenclosed?language=objc
+                msg_send![window, setReleasedWhenClosed: NO];
                 window.close();
             }
         }
