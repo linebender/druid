@@ -522,5 +522,4 @@ mod tests {
         // Insert again
         widget.insert(&mut data, "a");
     }
-
 }
