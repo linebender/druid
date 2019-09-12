@@ -71,7 +71,7 @@ pub(crate) struct WindowState {
 }
 
 /// Everything required for a window to handle an event.
-struct WindowCtx<'a, T: Data> {
+struct SingleWindowState<'a, T: Data> {
     window_id: WindowId,
     window: &'a mut Window<T>,
     state: &'a mut WindowState,
@@ -105,13 +105,13 @@ impl<T: Data> Windows<T> {
         command_queue: &'a mut VecDeque<(WindowId, Command)>,
         data: &'a mut T,
         env: &'a Env,
-    ) -> Option<WindowCtx<'a, T>> {
+    ) -> Option<SingleWindowState<'a, T>> {
         let state = self.state.get_mut(&window_id);
         let window = self.windows.get_mut(&window_id);
 
         match (state, window) {
             (Some(state), Some(window)) => {
-                return Some(WindowCtx {
+                return Some(SingleWindowState {
                     window_id,
                     window,
                     state,
@@ -128,7 +128,7 @@ impl<T: Data> Windows<T> {
     }
 }
 
-impl<'a, T: Data> WindowCtx<'a, T> {
+impl<'a, T: Data> SingleWindowState<'a, T> {
     fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
         let request_anim = self.send_anim_frame(ctx);
         self.send_layout(piet);
@@ -189,13 +189,20 @@ impl<'a, T: Data> WindowCtx<'a, T> {
             _ => None,
         };
 
+        let event = match event {
+            Event::Size(size) => {
+                let dpi = self.state.handle.get_dpi() as f64;
+                let scale = 96.0 / dpi;
+                Event::Size(Size::new(size.width * scale, size.height * scale))
+            }
+            other => other,
+        };
+
         let mut base_state = BaseState::default();
         let mut ctx = EventCtx {
             win_ctx,
             cursor: &mut cursor,
             command_queue: self.command_queue,
-            //window_state: &mut self.window_state,
-            //new_window_queue,
             base_state: &mut base_state,
             is_handled: false,
             is_root: true,
@@ -235,7 +242,7 @@ impl<T: Data + 'static> AppState<T> {
         self.windows.connect(id, handle);
         //TODO: we need to set the window title on creation; this should happen
         //in a 'new window' event we send after connect.
-        if let Some(ctx) = self.window_ctx(id) {
+        if let Some(ctx) = self.assemble_window_state(id) {
             ctx.window
                 .update_title(&ctx.state.handle, ctx.data, ctx.env);
             ctx.state.handle.set_title(ctx.window.title.localized_str());
@@ -250,8 +257,10 @@ impl<T: Data + 'static> AppState<T> {
         self.windows.remove(id)
     }
 
-    //TODO: rename me
-    fn window_ctx<'a>(&'a mut self, window_id: WindowId) -> Option<WindowCtx<'a, T>> {
+    fn assemble_window_state<'a>(
+        &'a mut self,
+        window_id: WindowId,
+    ) -> Option<SingleWindowState<'a, T>> {
         let AppState {
             ref mut command_queue,
             ref mut windows,
@@ -263,17 +272,16 @@ impl<T: Data + 'static> AppState<T> {
     }
 
     fn paint(&mut self, window_id: WindowId, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
-        self.window_ctx(window_id)
+        self.assemble_window_state(window_id)
             .map(|mut win| win.paint(piet, ctx))
             .unwrap_or(false)
     }
 
     fn do_event(&mut self, source_id: WindowId, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
-        let (is_handled, dirty, anim) = self.window_ctx(source_id)
-            .map(|mut win| {
-                win.do_event_inner(event, win_ctx)
-            })
-            .unwrap_or(( false, false, false ));
+        let (is_handled, dirty, anim) = self
+            .assemble_window_state(source_id)
+            .map(|mut win| win.do_event_inner(event, win_ctx))
+            .unwrap_or((false, false, false));
 
         let AppState {
             ref mut windows,
@@ -417,18 +425,6 @@ impl<T: Data + 'static> WinHandler for DruidHandler<T> {
     fn size(&mut self, width: u32, height: u32, ctx: &mut dyn WinCtx) {
         let event = Event::Size(Size::new(width as f64, height as f64));
         self.do_event(event, ctx);
-        //FIXME: the window needs to adjust the size based on DPI.
-        //let dpi = self
-        //.app_state
-        //.borrow()
-        //.window_state
-        //.get(&self.window_id)
-        //.unwrap()
-        //.handle
-        //.get_dpi() as f64;
-        //let scale = 96.0 / dpi;
-        //let event = Event::Size(Size::new(width as f64 * scale, height as f64 * scale));
-        //self.do_event(event, ctx);
     }
 
     fn mouse_down(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {

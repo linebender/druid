@@ -106,8 +106,7 @@ impl<T: Data> Widget<T> for EventInterceptor<T> {
             ctx.request_focus();
         }
         let event = event.clone();
-        let event = (self.f)(event, ctx, data, env);
-        match event {
+        match (self.f)(event, ctx, data, env) {
             Some(event) => self.inner.event(&event, ctx, data, env),
             None => None,
         }

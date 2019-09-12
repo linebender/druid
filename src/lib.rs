@@ -305,7 +305,7 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 pub struct PaintCtx<'a, 'b: 'a> {
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'b>,
-    window_id: WindowId,
+    pub window_id: WindowId,
 }
 
 impl<'a, 'b: 'a> Deref for PaintCtx<'a, 'b> {
@@ -1085,6 +1085,14 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.win_ctx.request_timer(deadline)
     }
 
+    /// Submit a [`Command`] to be run after this event is handled.
+    ///
+    /// Commands are run in the order they are submitted; all commands
+    /// submitted during the handling of an event are executed before that
+    /// the [`update()`] method is called.
+    ///
+    /// [`Command`]: struct.Command.html
+    /// [`update()`]: trait.Widget.html#tymethod.update
     pub fn submit_command(&mut self, command: Command, window_id: impl Into<Option<WindowId>>) {
         let window_id = window_id.into().unwrap_or(self.window_id);
         self.command_queue.push_back((window_id, command))
@@ -1100,6 +1108,11 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
     /// Get an object which can create text layouts.
     pub fn text(&mut self) -> &mut Text<'b> {
         &mut self.text_factory
+    }
+
+    /// Get the window id.
+    pub fn window_id(&self) -> WindowId {
+        self.window_id
     }
 }
 
