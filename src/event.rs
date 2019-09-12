@@ -116,6 +116,16 @@ pub enum Event {
     ///
     /// [`EventCtx::request_timer()`]: struct.EventCtx.html#method.request_timer
     Timer(TimerToken),
+    /// Called with an arbitrary [`Command`], submitted from elsewhere in
+    /// the application.
+    ///
+    /// Commands can be issued when the user triggers a menu item or an
+    /// application-level hotkey, or they can be created dynamically by
+    /// [`Widget`]s, at runtime, with [`EventCtx::submit_command`].
+    ///
+    /// [`Command`]: struct.Command.html
+    /// [`Widget`]: trait.Widget.html
+    /// [`EventCtx::submit_command`]: struct.EventCtx.html#method.submit_command
     Command(Command),
 }
 

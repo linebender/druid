@@ -24,7 +24,18 @@ pub struct Selector(&'static str);
 /// An arbitrary command.
 ///
 /// A `Command` consists of a `Selector`, that indicates what the command is,
-/// and an arbitrary argument, that can be used to pass arbitrary data.
+/// and an optional argument, that can be used to pass arbitrary data.
+///
+/// # Examples
+/// ```
+/// use druid::{Command, Selector};
+///
+/// let selector = Selector::new("process_rows");
+/// let rows = vec![1, 3, 10, 12];
+/// let command = Command::new(selector, rows);
+///
+/// assert_eq!(command.get_object(), Some(&vec![1, 3, 10, 12]));
+/// ```
 #[derive(Debug, Clone)]
 pub struct Command {
     pub selector: Selector,
