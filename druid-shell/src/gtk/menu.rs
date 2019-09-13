@@ -135,7 +135,7 @@ fn modifiers_to_gdk_modifier_type(modifiers: Modifiers) -> gdk::ModifierType {
     result
 }
 
-/// Strip the access keys from the menu strong.
+/// Strip the access keys from the menu string.
 ///
 /// Changes "E&xit" to "Exit". Actual ampersands are escaped as "&&".
 fn strip_access_key(raw_menu_text: &str) -> String {
