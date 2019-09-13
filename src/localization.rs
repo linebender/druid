@@ -89,7 +89,7 @@ struct ArgSource<T>(ArgClosure<T>);
 /// against a map of localized strings for a given locale.
 #[derive(Debug, Clone)]
 pub struct LocalizedString<T> {
-    key: &'static str,
+    pub(crate) key: &'static str,
     placeholder: Option<&'static str>,
     args: Option<Vec<(&'static str, ArgSource<T>)>>,
     resolved: Option<String>,

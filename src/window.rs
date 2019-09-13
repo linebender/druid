@@ -20,8 +20,8 @@ use crate::kurbo::{Point, Rect, Size};
 
 use crate::shell::window::WindowHandle;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, PaintCtx, UpdateCtx,
-    Widget, WidgetPod,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, Menu,
+    PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A unique identifier for a window.
@@ -35,14 +35,21 @@ pub struct Window<T: Data> {
     pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
     pub(crate) title: LocalizedString<T>,
     size: Size,
+    pub(crate) menu: Option<Menu<T>>,
+    // delegate?
 }
 
 impl<T: Data> Window<T> {
-    pub fn new(root: impl Widget<T> + 'static, title: LocalizedString<T>) -> Window<T> {
+    pub fn new(
+        root: impl Widget<T> + 'static,
+        title: LocalizedString<T>,
+        menu: Option<Menu<T>>,
+    ) -> Window<T> {
         Window {
             root: WidgetPod::new(Box::new(root)),
             size: Size::ZERO,
             title,
+            menu,
         }
     }
 
@@ -77,6 +84,10 @@ impl<T: Data> Window<T> {
         if self.title.resolve(data, env) {
             win_handle.set_title(self.title.localized_str());
         }
+    }
+
+    pub(crate) fn get_menu_cmd(&self, cmd_id: u32) -> Option<Command> {
+        self.menu.as_ref().and_then(|m| m.command_for_id(cmd_id))
     }
 }
 

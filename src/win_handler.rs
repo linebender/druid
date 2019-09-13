@@ -20,7 +20,7 @@ use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 use std::time::Instant;
 
-use log::{error, warn};
+use log::{error, info, warn};
 
 use crate::kurbo::{Size, Vec2};
 use crate::piet::{Color, Piet, RenderContext};
@@ -28,8 +28,8 @@ use crate::shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
 
 use crate::window::Window;
 use crate::{
-    BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, MouseEvent,
-    PaintCtx, Selector, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
+    BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, Menu,
+    MouseEvent, PaintCtx, Selector, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
 };
 
 // TODO: this should come from the theme.
@@ -126,7 +126,7 @@ impl<T: Data> Windows<T> {
     }
 }
 
-impl<'a, T: Data> SingleWindowState<'a, T> {
+impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
     fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
         let request_anim = self.do_anim_frame(ctx);
         self.do_layout(piet);
@@ -224,6 +224,20 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
 
         (is_handled, needs_inval, request_anim)
     }
+
+    fn set_menu(&mut self, cmd: &Command) {
+        let mut menu = match cmd.get_object::<Menu<T>>() {
+            Some(menu) => menu.to_owned(),
+            None => {
+                warn!("set-menu command is missing menu object");
+                return;
+            }
+        };
+
+        let platform_menu = menu.build_native(&self.data, &self.env);
+        self.state.handle.set_menu(platform_menu);
+        self.window.menu = Some(menu.to_owned());
+    }
 }
 
 impl<T: Data + 'static> AppState<T> {
@@ -234,6 +248,13 @@ impl<T: Data + 'static> AppState<T> {
             env,
             windows: Windows::default(),
         }))
+    }
+
+    fn get_menu_cmd(&self, window_id: WindowId, cmd_id: u32) -> Option<Command> {
+        self.windows
+            .windows
+            .get(&window_id)
+            .and_then(|w| w.get_menu_cmd(cmd_id))
     }
 
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
@@ -269,6 +290,18 @@ impl<T: Data + 'static> AppState<T> {
     }
 
     fn do_event(&mut self, source_id: WindowId, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
+        // handle system window-level commands
+        if let Event::Command(ref cmd) = &event {
+            match &cmd.selector {
+                &Selector::SET_MENU => {
+                    self.assemble_window_state(source_id)
+                        .map(|mut win| win.set_menu(cmd));
+                    return true;
+                }
+                _ => (),
+            }
+        }
+
         let (is_handled, dirty, anim) = self
             .assemble_window_state(source_id)
             .map(|mut win| win.do_event_inner(event, win_ctx))
@@ -337,6 +370,14 @@ impl<T: Data + 'static> DruidHandler<T> {
         result
     }
 
+    fn handle_menu_cmd(&mut self, cmd_id: u32, win_ctx: &mut dyn WinCtx) {
+        let cmd = self.app_state.borrow().get_menu_cmd(self.window_id, cmd_id);
+        match cmd {
+            Some(cmd) => self.handle_cmd(self.window_id, cmd, win_ctx),
+            None => warn!("No command for menu id {}", cmd_id),
+        }
+    }
+
     /// Handle a command. Top level commands (e.g. for creating and destroying windows)
     /// have their logic here; other commands are passed to the window.
     fn handle_cmd(&mut self, window_id: WindowId, cmd: Command, win_ctx: &mut dyn WinCtx) {
@@ -344,7 +385,8 @@ impl<T: Data + 'static> DruidHandler<T> {
         match &cmd.selector {
             &Selector::NEW_WINDOW => self.new_window(cmd),
             &Selector::CLOSE_WINDOW => self.close_window(cmd),
-            _ => {
+            sel => {
+                info!("handle_cmd {}", sel);
                 let event = Event::Command(cmd);
                 self.app_state
                     .borrow_mut()
@@ -401,6 +443,10 @@ impl<T: Data + 'static> WinHandler for DruidHandler<T> {
     fn size(&mut self, width: u32, height: u32, ctx: &mut dyn WinCtx) {
         let event = Event::Size(Size::new(width as f64, height as f64));
         self.do_event(event, ctx);
+    }
+
+    fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {
+        self.handle_menu_cmd(id, ctx);
     }
 
     fn mouse_down(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {

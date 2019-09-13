@@ -56,7 +56,7 @@ fn strip_access_key(raw_menu_text: &str) -> String {
     result
 }
 
-fn make_menu_item(_id: u32, text: &str, key: Option<&HotKey>) -> id {
+fn make_menu_item(id: u32, text: &str, key: Option<&HotKey>, enabled: bool, selected: bool) -> id {
     let key_equivalent = key.map(HotKey::key_equivalent).unwrap_or("");
     let stripped_text = strip_access_key(text);
     unsafe {
@@ -67,8 +67,18 @@ fn make_menu_item(_id: u32, text: &str, key: Option<&HotKey>) -> id {
                 make_nsstring(&key_equivalent),
             )
             .autorelease();
+
+        msg_send![item, setTag: id as isize];
         if let Some(mask) = key.map(HotKey::key_modifier_mask) {
             msg_send![item, setKeyEquivalentModifierMask: mask];
+        }
+
+        if !enabled {
+            msg_send![item, setEnabled: NO];
+        }
+
+        if selected {
+            msg_send![item, setState: 1_isize];
         }
         item
     }
@@ -83,21 +93,30 @@ impl Menu {
         }
     }
 
-    // TODO: how do we use the text here?
-    pub fn add_dropdown(&mut self, menu: Menu, text: &str) {
+    pub fn add_dropdown(&mut self, menu: Menu, text: &str, enabled: bool) {
         unsafe {
             let menu_item = NSMenuItem::alloc(nil);
             let title = make_nsstring(text);
-            msg_send![menu_item, setTitle: title];
+            //msg_send![menu_item, setTitle: title];
             msg_send![menu.menu, setTitle: title];
+            if !enabled {
+                msg_send![menu_item, setEnabled: NO];
+            }
             menu_item.setSubmenu_(menu.menu);
             self.menu.addItem_(menu_item);
         }
     }
 
-    pub fn add_item(&mut self, id: u32, text: &str, key: Option<&HotKey>) {
+    pub fn add_item(
+        &mut self,
+        id: u32,
+        text: &str,
+        key: Option<&HotKey>,
+        enabled: bool,
+        selected: bool,
+    ) {
         eprintln!("{}: {}", id, text);
-        let menu_item = make_menu_item(id, text, key);
+        let menu_item = make_menu_item(id, text, key, enabled, selected);
         unsafe {
             self.menu.addItem_(menu_item);
         }
@@ -118,7 +137,7 @@ impl Default for Menu {
         // this one is our actual menu
         let mut submenu = Menu::new();
         //submenu.add_item(1, "Quit", 'q');
-        menu.add_dropdown(submenu, "Application");
+        menu.add_dropdown(submenu, "Application", true);
         menu
     }
 }
