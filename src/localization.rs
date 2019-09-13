@@ -77,7 +77,7 @@ struct ResourceManager {
 //NOTE: instead of a closure, at some point we can use something like a lens for this.
 //TODO: this is an Arc so that it can be clone, which is a bound on things like `Menu`.
 /// A closure that generates a localization value.
-type ArgClosure<T> = Arc<dyn Fn(&Env, &T) -> FluentValue<'static> + 'static>;
+type ArgClosure<T> = Arc<dyn Fn(&T, &Env) -> FluentValue<'static> + 'static>;
 
 /// Wraps a closure that generates an argument for localization.
 #[derive(Clone)]
@@ -314,7 +314,7 @@ impl<T: Data> LocalizedString<T> {
     pub fn with_arg(
         mut self,
         key: &'static str,
-        f: impl Fn(&Env, &T) -> FluentValue<'static> + 'static,
+        f: impl Fn(&T, &Env) -> FluentValue<'static> + 'static,
     ) -> Self {
         self.args
             .get_or_insert(Vec::new())
@@ -326,7 +326,7 @@ impl<T: Data> LocalizedString<T> {
     /// environment and data.
     ///
     /// Returns `true` if the current value of the string has changed.
-    pub fn resolve<'a>(&'a mut self, env: &Env, data: &T) -> bool {
+    pub fn resolve<'a>(&'a mut self, data: &T, env: &Env) -> bool {
         //TODO: this recomputes the string if either the language has changed,
         //or *anytime* we have arguments. Ideally we would be using a lens
         //to only recompute when our actual data has changed.
@@ -336,7 +336,7 @@ impl<T: Data> LocalizedString<T> {
             let args: Option<FluentArgs> = self
                 .args
                 .as_ref()
-                .map(|a| a.iter().map(|(k, v)| (*k, (v.0)(env, data))).collect());
+                .map(|a| a.iter().map(|(k, v)| (*k, (v.0)(data, env))).collect());
 
             self.resolved_lang = Some(env.localization_manager().current_locale.clone());
             let next = env.localization_manager().localize(self.key, args.as_ref());
