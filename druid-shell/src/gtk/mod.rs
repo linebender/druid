@@ -52,7 +52,7 @@ pub struct WindowHandle {
 
 /// Builder abstraction for creating new windows
 pub struct WindowBuilder {
-    handler: Option<Box<WinHandler>>,
+    handler: Option<Box<dyn WinHandler>>,
     title: String,
     menu: Option<menu::Menu>,
 }
@@ -65,11 +65,11 @@ pub struct IdleHandle {
 
 // TODO: move this out of platform-dependent section.
 trait IdleCallback: Send {
-    fn call(self: Box<Self>, a: &Any);
+    fn call(self: Box<Self>, a: &dyn Any);
 }
 
-impl<F: FnOnce(&Any) + Send> IdleCallback for F {
-    fn call(self: Box<F>, a: &Any) {
+impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
+    fn call(self: Box<F>, a: &dyn Any) {
         (*self)(a)
     }
 }
@@ -95,7 +95,7 @@ impl WindowBuilder {
         }
     }
 
-    pub fn set_handler(&mut self, handler: Box<WinHandler>) {
+    pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
         self.handler = Some(handler);
     }
 
@@ -482,7 +482,7 @@ impl IdleHandle {
     /// priority than other UI events, but that's not necessarily the case.
     pub fn add_idle<F>(&self, callback: F)
     where
-        F: FnOnce(&Any) + Send + 'static,
+        F: FnOnce(&dyn Any) + Send + 'static,
     {
         let mut queue = self.idle_queue.lock().unwrap();
         if let Some(state) = self.state.upgrade() {
