@@ -16,32 +16,37 @@
 //! The types here are a generalized 'menu description'; concrete menus
 //! are part of `druid-shell`.
 
-use crate::{Data, Env, Command, LocalizedString, Selector};
+use std::num::NonZeroU32;
+
 use crate::shell::hotkey::{HotKey, KeyCompare, RawMods};
+use crate::{Command, Data, Env, LocalizedString, Selector};
 
 use crate::shell::menu::Menu as PlatformMenu;
 
 #[derive(Debug, Clone)]
-struct MenuItem<T> {
+pub struct MenuItem<T> {
     title: LocalizedString<T>,
     command: Command,
     hotkey: Option<HotKey>,
     tool_tip: Option<LocalizedString<T>>,
     //highlighted: bool,
-    checked: bool,
+    selected: bool,
     enabled: bool, // (or state is stored elsewhere)
+    /// Identifies the platform object corresponding to this item.
+    platform_id: MenuItemId,
 }
 
 #[derive(Debug, Clone)]
-enum MenuEntry<T> {
+pub enum MenuEntry<T> {
     Item(MenuItem<T>),
     SubMenu(Menu<T>),
     Separator,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Menu<T> {
     item: MenuItem<T>,
+    //TODO: make me an RC if we're cloning regularly?
     items: Vec<MenuEntry<T>>,
 }
 
@@ -52,8 +57,9 @@ impl<T> MenuItem<T> {
             command: command.into(),
             hotkey: None,
             tool_tip: None,
-            checked: false,
+            selected: false,
             enabled: true,
+            platform_id: MenuItemId::PLACEHOLDER,
         }
     }
 
@@ -74,21 +80,25 @@ impl<T> MenuItem<T> {
         self
     }
 
-    pub fn checked(mut self) -> Self {
-        self.checked = true;
+    pub fn selected(mut self) -> Self {
+        self.selected = true;
         self
     }
 
-    pub fn checked_if(mut self, mut p: impl FnMut() -> bool) -> Self {
+    pub fn selected_if(mut self, mut p: impl FnMut() -> bool) -> Self {
         if p() {
-            self.checked = true;
+            self.selected = true;
         }
         self
     }
 }
 
 impl<T: Data> Menu<T> {
-    fn new(title: LocalizedString<T>) -> Self {
+    pub fn empty() -> Self {
+        Self::new(LocalizedString::new(""))
+    }
+
+    pub fn new(title: LocalizedString<T>) -> Self {
         let item = MenuItem::new(title, Selector::NOOP);
         Menu {
             item,
@@ -96,7 +106,14 @@ impl<T: Data> Menu<T> {
         }
     }
 
-    fn append(mut self, item: impl Into<MenuEntry<T>>) -> Self {
+    pub fn append_iter<I: Iterator<Item = MenuItem<T>>>(mut self, f: impl FnOnce() -> I) -> Self {
+        for item in f() {
+            self.items.push(item.into());
+        }
+        self
+    }
+
+    pub fn append(mut self, item: impl Into<MenuEntry<T>>) -> Self {
         self.items.push(item.into());
         self
     }
@@ -108,30 +125,84 @@ impl<T: Data> Menu<T> {
         self
     }
 
-    fn append_separator(mut self) -> Self {
+    pub fn append_separator(mut self) -> Self {
         self.items.push(MenuEntry::Separator);
         self
     }
 
-    pub fn build(&mut self, mut id: &mut u32, env: &Env, data: &T) -> PlatformMenu {
+    pub fn build_native(&mut self, data: &T, env: &Env) -> PlatformMenu {
+        eprintln!("building {:p} {}", self, self.items.len());
         let mut menu = PlatformMenu::new();
         for item in &mut self.items {
-            *id += 1;
             match item {
                 MenuEntry::Item(ref mut item) => {
                     item.title.resolve(data, env);
-                    menu.add_item(*id, item.title.localized_str(), item.hotkey.as_ref());
+                    item.platform_id = MenuItemId::next();
+                    menu.add_item(
+                        item.platform_id.as_u32(),
+                        item.title.localized_str(),
+                        item.hotkey.as_ref(),
+                        item.enabled,
+                        item.selected,
+                    );
                 }
                 MenuEntry::Separator => menu.add_separator(),
                 MenuEntry::SubMenu(ref mut submenu) => {
-                    let sub = submenu.build(&mut id, env, data);
+                    let sub = submenu.build_native(data, env);
                     submenu.item.title.resolve(data, env);
-                    menu.add_dropdown(sub, &submenu.item.title.localized_str());
+                    menu.add_dropdown(
+                        sub,
+                        &submenu.item.title.localized_str(),
+                        submenu.item.enabled,
+                    );
                 }
             }
         }
         menu
     }
+
+    pub(crate) fn command_for_id(&self, id: u32) -> Option<Command> {
+        for item in &self.items {
+            match item {
+                MenuEntry::Item(item) if item.platform_id.as_u32() == id => {
+                    return Some(item.command.clone())
+                }
+                MenuEntry::SubMenu(menu) => {
+                    if let Some(cmd) = menu.command_for_id(id) {
+                        return Some(cmd);
+                    }
+                }
+                _ => (),
+            }
+        }
+        None
+    }
+}
+
+impl<T> std::fmt::Debug for Menu<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        menu_debug_impl(self, f, 0)
+    }
+}
+
+fn menu_debug_impl<T>(
+    menu: &Menu<T>,
+    f: &mut std::fmt::Formatter,
+    level: usize,
+) -> std::fmt::Result {
+    static TABS: &str =
+        "                                                                              ";
+    let indent = &TABS[..level * 2];
+    let child_indent = &TABS[..(level + 1) * 2];
+    write!(f, "{}{}\n", indent, menu.item.title.key)?;
+    for item in &menu.items {
+        match item {
+            MenuEntry::Item(item) => write!(f, "{}{}\n", child_indent, item.title.key)?,
+            MenuEntry::Separator => write!(f, "{} --------- \n", child_indent)?,
+            MenuEntry::SubMenu(ref menu) => menu_debug_impl(menu, f, level + 1)?,
+        }
+    }
+    Ok(())
 }
 
 /// Selectors sent by default menu items.
@@ -272,5 +343,34 @@ impl<T> From<MenuItem<T>> for MenuEntry<T> {
 impl<T> From<Menu<T>> for MenuEntry<T> {
     fn from(src: Menu<T>) -> MenuEntry<T> {
         MenuEntry::SubMenu(src)
+    }
+}
+
+/// Uniquely identifies a menu item.
+///
+/// On the druid-shell side, the id is represented as a u32.
+/// We reserve '0' as a placeholder value; on the Rust side
+/// we represent this as an `Option<NonZerou32>`, which better
+/// represents the semantics of our program.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct MenuItemId(Option<NonZeroU32>);
+
+impl MenuItemId {
+    /// The value for a menu item that has not been instantiated by
+    /// the platform.
+    const PLACEHOLDER: MenuItemId = MenuItemId(None);
+
+    fn next() -> Self {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        static MENU_ID: AtomicU32 = AtomicU32::new(1);
+        let raw = unsafe { NonZeroU32::new_unchecked(MENU_ID.fetch_add(2, Ordering::Relaxed)) };
+        MenuItemId(Some(raw))
+    }
+
+    fn as_u32(self) -> u32 {
+        match self.0 {
+            Some(val) => val.get(),
+            None => 0,
+        }
     }
 }

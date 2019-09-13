@@ -614,6 +614,12 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_menu(&self, menu: Menu) {
+        unsafe {
+            NSApp().setMainMenu_(menu.menu);
+        }
+    }
+
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
         // TODO: maybe try harder to return None if window has been dropped.

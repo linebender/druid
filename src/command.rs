@@ -53,6 +53,12 @@ impl Selector {
     /// should be the id of the window to close.
     pub const CLOSE_WINDOW: Selector = Selector::new("druid-builtin.close-window");
 
+    /// The selector for a command to set the window's menu. The argument should
+    /// be a [`Menu`] object.
+    ///
+    /// [`Menu`]: struct.Menu.html
+    pub const SET_MENU: Selector = Selector::new("druid-builtin.set-menu");
+
     /// Create a new `Selector` with the given string.
     pub const fn new(s: &'static str) -> Selector {
         Selector(s)
