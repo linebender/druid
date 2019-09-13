@@ -21,7 +21,7 @@ pub use piet_common::kurbo;
 #[macro_use]
 extern crate winapi;
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
 #[macro_use]
 extern crate objc;
 
@@ -36,7 +36,6 @@ extern crate glib;
 #[cfg(any(feature = "use_gtk", target_os = "linux"))]
 extern crate gtk as gtkrs;
 
-#[macro_use]
 extern crate lazy_static;
 
 pub mod error;
