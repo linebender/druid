@@ -25,13 +25,11 @@ use log::{error, warn};
 use crate::kurbo::{Size, Vec2};
 use crate::piet::{Color, Piet, RenderContext};
 use crate::shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
-use crate::shell::WindowBuilder;
 
 use crate::window::Window;
 use crate::{
-    BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx,
-    LocalizedString, MouseEvent, PaintCtx, Selector, TimerToken, UpdateCtx, WheelEvent, WindowDesc,
-    WindowId,
+    BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, MouseEvent,
+    PaintCtx, Selector, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
 };
 
 // TODO: this should come from the theme.
@@ -363,11 +361,7 @@ impl<T: Data + 'static> DruidHandler<T> {
     }
 
     fn new_window(&mut self, cmd: Command) {
-        let WindowDesc {
-            root_builder,
-            title,
-            ..
-        } = match cmd.get_object::<WindowDesc<T>>() {
+        let desc = match cmd.get_object::<WindowDesc<T>>() {
             Some(wd) => wd,
             None => {
                 warn!("new_window command is missing window description");
@@ -375,21 +369,10 @@ impl<T: Data + 'static> DruidHandler<T> {
             }
         };
 
-        let id = WindowId::new();
-        let handler = DruidHandler::new_shared(self.app_state.clone(), id);
-        let title = title
-            .to_owned()
-            .unwrap_or(LocalizedString::new("app-name-exclaim"));
-        let root = root_builder();
-        self.app_state
-            .borrow_mut()
-            .add_window(id, Window::new(root, title));
-        let mut builder = WindowBuilder::new();
-        builder.set_handler(Box::new(handler));
-        let window = match builder.build() {
-            Ok(w) => w,
+        let window = match desc.build_native(&self.app_state) {
+            Ok(win) => win,
             Err(e) => {
-                error!("window creation failed: {:?}", e);
+                error!("failed to create window: '{:?}'", e);
                 return;
             }
         };
