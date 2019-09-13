@@ -26,7 +26,7 @@ fn main() {
 
 fn ui_builder() -> impl Widget<u32> {
     let text =
-        LocalizedString::new("hello-counter").with_arg("count", |_env, data: &u32| (*data).into());
+        LocalizedString::new("hello-counter").with_arg("count", |data: &u32, _env| (*data).into());
     let label = Label::new(text);
     let button = Button::new("increment");
 

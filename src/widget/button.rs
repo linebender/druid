@@ -323,7 +323,7 @@ impl<T: Data> LabelText<T> {
     pub fn resolve(&mut self, data: &T, env: &Env) -> bool {
         match self {
             LabelText::Specific(_) => false,
-            LabelText::Localized(s) => s.resolve(env, data),
+            LabelText::Localized(s) => s.resolve(data, env),
         }
     }
 }
