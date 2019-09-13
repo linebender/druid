@@ -29,13 +29,12 @@ pub mod theme;
 mod win_handler;
 mod window;
 
-use std::any::Any;
 use std::collections::VecDeque;
 use std::ops::{Deref, DerefMut};
 
 use std::time::Instant;
 
-use log::{debug, error, warn};
+use log::{error, warn};
 
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
 use piet::{Piet, RenderContext};
@@ -51,7 +50,7 @@ pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 #[allow(unused)]
 use druid_shell::platform::IdleHandle;
 pub use druid_shell::window::{Cursor, MouseButton, MouseEvent, TimerToken};
-use druid_shell::window::{Text, WinCtx, WinHandler, WindowHandle};
+use druid_shell::window::{Text, WinCtx, WindowHandle};
 pub use shell::hotkey::{HotKey, RawMods, SysMods};
 
 pub use app::{AppLauncher, WindowDesc};
@@ -63,33 +62,6 @@ pub use lens::{Lens, LensWrap};
 pub use localization::LocalizedString;
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
-
-/// A struct representing the top-level root of the UI.
-///
-/// At the moment, there is no meaningful distinction between this struct
-/// and [`UiState`].
-///
-/// Discussion: when we start supporting multiple windows, we'll need
-/// to make finer distinctions between state for the entire application,
-/// and state for a single window. But for now it's the same.
-pub struct UiMain<T: Data> {
-    state: UiState<T>,
-}
-
-/// The state of the top-level UI.
-///
-/// This struct holds the root widget of the UI, and is also responsible
-/// for coordinating interactions with the platform window.
-pub struct UiState<T: Data> {
-    root: WidgetPod<T, Box<dyn Widget<T>>>,
-    env: Env,
-    data: T,
-    prev_paint_time: Option<Instant>,
-    // Following fields might move to a separate struct so there's access
-    // from contexts.
-    handle: WindowHandle,
-    size: Size,
-}
 
 /// A container for one widget in the hierarchy.
 ///
@@ -649,203 +621,6 @@ impl<T: Data, W: Widget<T> + 'static> WidgetPod<T, W> {
             env: self.env,
             inner: Box::new(self.inner),
         }
-    }
-}
-
-impl<T: Data> UiState<T> {
-    /// Construct a new UI state.
-    ///
-    /// This constructor takes a root widget and an initial value for the
-    /// data.
-    pub fn new(root: impl Widget<T> + 'static, data: T) -> UiState<T> {
-        UiState {
-            root: WidgetPod::new(root).boxed(),
-            env: theme::init(),
-            data,
-            prev_paint_time: None,
-            handle: Default::default(),
-            size: Default::default(),
-        }
-    }
-
-    /// Set the root widget as active.
-    ///
-    /// Warning: this is set as deprecated because it's not really meaningful.
-    /// It's likely that the intent was to set a default focus, but focus is
-    /// not yet implemented and there probably needs to be some other way to
-    /// identify the widget which should receive focus on startup.
-    #[deprecated]
-    pub fn set_active(&mut self, active: bool) {
-        self.root.state.is_active = active;
-    }
-
-    /// Send an event to the widget hierarchy.
-    ///
-    /// Returns `true` if the event produced an action.
-    ///
-    /// This is principally because in certain cases (such as keydown on Windows)
-    /// the OS needs to know if an event was handled.
-    fn do_event(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
-        let (is_handled, dirty) = self.do_event_inner(event, win_ctx);
-        if dirty {
-            win_ctx.invalidate();
-        }
-        is_handled
-    }
-
-    /// Send an event to the widget hierarchy.
-    ///
-    /// Returns two flags. The first is true if the event was handled. The
-    /// second is true if an animation frame or invalidation is requested.
-    fn do_event_inner(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> (bool, bool) {
-        // should there be a root base state persisting in the ui state instead?
-        let mut base_state = Default::default();
-        let mut cursor = match event {
-            Event::MouseMoved(..) => Some(Cursor::Arrow),
-            _ => None,
-        };
-        let mut command_queue = VecDeque::new();
-
-        let mut ctx = EventCtx {
-            win_ctx,
-            cursor: &mut cursor,
-            command_queue: &mut command_queue,
-            window: &self.handle,
-            window_id: Default::default(),
-            base_state: &mut base_state,
-            had_active: self.root.state.has_active,
-            is_handled: false,
-            is_root: true,
-        };
-        let _action = self.root.event(&event, &mut ctx, &mut self.data, &self.env);
-
-        if ctx.base_state.request_focus {
-            let focus_event = Event::FocusChanged(true);
-            // Focus changed events are not expected to return an action.
-            let _ = self
-                .root
-                .event(&focus_event, &mut ctx, &mut self.data, &self.env);
-        }
-        let needs_inval = ctx.base_state.needs_inval;
-        let request_anim = ctx.base_state.request_anim;
-        let is_handled = ctx.is_handled();
-        if let Some(cursor) = cursor {
-            win_ctx.set_cursor(&cursor);
-        }
-
-        let mut update_ctx = UpdateCtx {
-            text_factory: win_ctx.text_factory(),
-            window: &self.handle,
-            needs_inval: false,
-            window_id: Default::default(),
-        };
-        // Note: we probably want to aggregate updates so there's only one after
-        // a burst of events.
-        self.root.update(&mut update_ctx, &self.data, &self.env);
-        // TODO: process actions
-        let dirty = request_anim || needs_inval || update_ctx.needs_inval;
-        (is_handled, dirty)
-    }
-
-    fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
-        // TODO: this calculation uses wall-clock time of the paint call, which
-        // potentially has jitter.
-        //
-        // See https://github.com/xi-editor/druid/issues/85 for discussion.
-        let this_paint_time = Instant::now();
-        let interval = if let Some(last) = self.prev_paint_time {
-            let duration = this_paint_time.duration_since(last);
-            1_000_000_000 * duration.as_secs() + (duration.subsec_nanos() as u64)
-        } else {
-            0
-        };
-        let anim_frame_event = Event::AnimFrame(interval);
-        let (_, request_anim) = self.do_event_inner(anim_frame_event, ctx);
-        self.prev_paint_time = Some(this_paint_time);
-        let bc = BoxConstraints::tight(self.size);
-        let text_factory = piet.text();
-        let mut layout_ctx = LayoutCtx {
-            text_factory,
-            window_id: Default::default(),
-        };
-        let size = self
-            .root
-            .layout(&mut layout_ctx, &bc, &self.data, &self.env);
-        self.root.state.layout_rect = Rect::from_origin_size(Point::ORIGIN, size);
-        piet.clear(self.env.get(theme::WINDOW_BACKGROUND_COLOR));
-        let mut paint_ctx = PaintCtx {
-            render_ctx: piet,
-            window_id: Default::default(),
-        };
-        self.root.paint(&mut paint_ctx, &self.data, &self.env);
-        if !request_anim {
-            self.prev_paint_time = None;
-        }
-        request_anim
-    }
-}
-
-impl<T: Data> UiMain<T> {
-    /// Construct a new UI state.
-    pub fn new(state: UiState<T>) -> UiMain<T> {
-        UiMain { state }
-    }
-}
-
-impl<T: Data + 'static> WinHandler for UiMain<T> {
-    fn connect(&mut self, handle: &WindowHandle) {
-        self.state.handle = handle.clone();
-    }
-
-    fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
-        self.state.paint(piet, ctx)
-    }
-
-    fn command(&mut self, id: u32, _ctx: &mut dyn WinCtx) {
-        debug!("got command {}", id);
-    }
-
-    fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
-        let dpi = self.state.handle.get_dpi() as f64;
-        let scale = 96.0 / dpi;
-        self.state.size = Size::new(width as f64 * scale, height as f64 * scale);
-    }
-
-    fn mouse_down(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
-        // TODO: double-click detection
-        let event = Event::MouseDown(event.clone());
-        self.state.do_event(event, ctx);
-    }
-
-    fn mouse_up(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
-        let event = Event::MouseUp(event.clone());
-        self.state.do_event(event, ctx);
-    }
-
-    fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
-        let event = Event::MouseMoved(event.clone());
-        self.state.do_event(event, ctx);
-    }
-
-    fn key_down(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) -> bool {
-        self.state.do_event(Event::KeyDown(event), ctx)
-    }
-
-    fn key_up(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) {
-        self.state.do_event(Event::KeyUp(event), ctx);
-    }
-
-    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, ctx: &mut dyn WinCtx) {
-        let event = Event::Wheel(WheelEvent { delta, mods });
-        self.state.do_event(event, ctx);
-    }
-
-    fn timer(&mut self, token: TimerToken, ctx: &mut dyn WinCtx) {
-        self.state.do_event(Event::Timer(token), ctx);
-    }
-
-    fn as_any(&mut self) -> &mut dyn Any {
-        self
     }
 }
 

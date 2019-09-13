@@ -26,8 +26,6 @@ use crate::{
 
 /// A unique identifier for a window.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-// TODO: Remove Default when we get it fully wired up
-#[derive(Default)]
 pub struct WindowId(u32);
 
 static WINDOW_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
