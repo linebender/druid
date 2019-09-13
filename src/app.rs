@@ -14,9 +14,11 @@
 
 //! Window building and app lifecycle.
 
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
-//use std::rc::Arc;
 
+use crate::shell::window::WindowHandle;
 use crate::shell::{init, runloop, Error as PlatformError, WindowBuilder};
 use crate::win_handler::AppState;
 use crate::window::{Window, WindowId};
@@ -55,24 +57,11 @@ impl<T: Data + 'static> AppLauncher<T> {
     pub fn launch(self, data: T) -> Result<(), PlatformError> {
         init();
         let mut main_loop = runloop::RunLoop::new();
+        let env = theme::init();
+        let state = AppState::new(data, env);
 
-        let state = AppState::new(data, theme::init());
-        for window in self.windows {
-            let WindowDesc {
-                root_builder,
-                title,
-                ..
-            } = window;
-
-            let id = WindowId::new();
-            let handler = DruidHandler::new_shared(state.clone(), id);
-            let title = title.unwrap_or(LocalizedString::new("app-name"));
-            let root = root_builder();
-            state.borrow_mut().add_window(id, Window::new(root, title));
-
-            let mut builder = WindowBuilder::new();
-            builder.set_handler(Box::new(handler));
-            let window = builder.build()?;
+        for desc in self.windows {
+            let window = desc.build_native(&state)?;
             window.show();
         }
 
@@ -109,5 +98,30 @@ impl<T: Data + 'static> WindowDesc<T> {
     pub fn title(mut self, title: LocalizedString<T>) -> Self {
         self.title = Some(title);
         self
+    }
+
+    /// Attempt to create a platform window from this `WindowDesc`.
+    pub(crate) fn build_native(
+        &self,
+        state: &Rc<RefCell<AppState<T>>>,
+    ) -> Result<WindowHandle, PlatformError> {
+        let mut title = self
+            .title
+            .clone()
+            .unwrap_or(LocalizedString::new("app-name"));
+        title.resolve(&state.borrow().data, &state.borrow().env);
+
+        let id = WindowId::new();
+        let handler = DruidHandler::new_shared(state.clone(), id);
+
+        let mut builder = WindowBuilder::new();
+        builder.set_handler(Box::new(handler));
+        builder.set_title(title.localized_str());
+        let root = (self.root_builder)();
+        state.borrow_mut().add_window(id, Window::new(root, title));
+
+        Ok(WindowHandle {
+            inner: builder.build()?,
+        })
     }
 }
