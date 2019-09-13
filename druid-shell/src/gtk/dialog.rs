@@ -60,10 +60,7 @@ pub(crate) fn get_file_dialog_path(
             Some(path) => Ok(path.into_os_string()),
             None => Err(Error::Null),
         },
-        ResponseType::DeleteEvent => {
-            // dialog was closed
-            Err(Error::Null)
-        }
+        ResponseType::DeleteEvent => Err(Error::Null),
         _ => {
             eprintln!("Unhandled dialog result: {:?}", result);
             Err(Error::Null)
