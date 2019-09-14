@@ -62,7 +62,6 @@ macro_rules! clone {
     );
 }
 
-
 #[derive(Clone, Default)]
 pub struct WindowHandle {
     state: Weak<WindowState>,
@@ -147,12 +146,14 @@ impl WindowBuilder {
             current_keyval: RefCell::new(None),
         });
 
-        win_state.window.connect_destroy(clone!(win_state => move |_| {
-            // this ties a clone of Arc<WindowState> to the ApplicationWindow to keep it alive
-            // when the ApplicationWindow is destroyed, the last Arc is dropped
-            // and any Weak<WindowState> will be None on upgrade()
-            let _ = &win_state;
-        }));
+        win_state
+            .window
+            .connect_destroy(clone!(win_state => move |_| {
+                // this ties a clone of Arc<WindowState> to the ApplicationWindow to keep it alive
+                // when the ApplicationWindow is destroyed, the last Arc is dropped
+                // and any Weak<WindowState> will be None on upgrade()
+                let _ = &win_state;
+            }));
 
         let handle = WindowHandle {
             state: Arc::downgrade(&win_state),
@@ -698,5 +699,3 @@ fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
         }
     }
 }
-
-
