@@ -54,6 +54,8 @@ use crate::Error;
 
 use util::assert_main_thread;
 
+const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
+
 #[derive(Clone, Default)]
 pub struct WindowHandle {
     /// This is an NSView, as our concept of "window" is more the top-level container holding
@@ -212,6 +214,11 @@ lazy_static! {
                 Box::from_raw(view_state as *mut ViewState);
             }
         }
+
+        decl.add_method(
+            sel!(windowDidBecomeKey:),
+            window_did_become_key as extern "C" fn(&mut Object, Sel, id),
+        );
         decl.add_method(
             sel!(setFrameSize:),
             set_frame_size as extern "C" fn(&mut Object, Sel, NSSize),
@@ -565,6 +572,19 @@ extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
     }
 }
 
+extern "C" fn window_did_become_key(this: &mut Object, _: Sel, _notification: id) {
+    eprintln!("window did become key{:?}", _notification);
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
+        (*view_state).handler.got_focus(&mut ctx);
+    }
+}
+
 impl WindowHandle {
     pub fn show(&self) {
         unsafe {
@@ -572,6 +592,11 @@ impl WindowHandle {
             current_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps);
             if let Some(ref nsview) = self.nsview {
                 let window: id = msg_send![*nsview.load(), window];
+                // register our view class to be alerted when it becomes the key view.
+                let notif_center_class = class!(NSNotificationCenter);
+                let notif_string = NSString::alloc(nil).init_str(NSWindowDidBecomeKeyNotification);
+                let notif_center: id = msg_send![notif_center_class, defaultCenter];
+                msg_send![notif_center, addObserver:*nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
                 window.makeKeyAndOrderFront_(nil)
             }
         }
