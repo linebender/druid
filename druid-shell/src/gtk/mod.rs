@@ -463,7 +463,7 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             dialog::get_file_dialog_path(state.window.upcast_ref(), ty, options)
         } else {
-            Err(Error::Null)
+            Err(Error::Other("Cannot upgrade state from weak pointer to arc"))
         }
     }
 }
