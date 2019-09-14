@@ -15,7 +15,7 @@
 //! macOS implementation of features at the application scope.
 
 use cocoa::appkit::NSApp;
-use cocoa::base::nil;
+use cocoa::base::{id, nil};
 
 pub struct Application;
 
@@ -25,4 +25,21 @@ impl Application {
             let () = msg_send![NSApp(), terminate: nil];
         }
     }
+
+    /// Hide the application this window belongs to. (cmd+H)
+    pub fn hide() {
+        unsafe {
+            msg_send![NSApp(), hide: nil];
+        }
+    }
+
+    /// Hide all other applications. (cmd+opt+H)
+    pub fn hide_others() {
+        unsafe {
+            let workspace = class!(NSWorkspace);
+            let shared: id = msg_send![workspace, sharedWorkspace];
+            msg_send![shared, hideOtherApplications];
+        }
+    }
+
 }

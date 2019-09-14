@@ -46,6 +46,15 @@ impl Selector {
     /// A selector that does nothing.
     pub const NOOP: Selector = Selector::new("");
 
+    /// Quit the running application. This command is handled by the druid library.
+    pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
+
+    /// Hide the application. (mac only?)
+    pub const HIDE_APPLICATION: Selector = Selector::new("druid-builtin.menu-hide-application");
+
+    /// Hide all other applications. (mac only?)
+    pub const HIDE_OTHERS: Selector = Selector::new("druid-builtin.menu-hide-others");
+
     /// The selector for a command to create a new window.
     pub const NEW_WINDOW: Selector = Selector::new("druid-builtin.new-window");
 

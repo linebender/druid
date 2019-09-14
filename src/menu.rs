@@ -131,7 +131,7 @@ impl<T: Data> Menu<T> {
     }
 
     pub fn build_native(&mut self, data: &T, env: &Env) -> PlatformMenu {
-        eprintln!("building {:p} {}", self, self.items.len());
+        //eprintln!("building {:p} {}", self, self.items.len());
         let mut menu = PlatformMenu::new();
         for item in &mut self.items {
             match item {
@@ -211,13 +211,13 @@ pub mod selectors {
 
     pub const SHOW_PREFERENCES: Selector = Selector::new("druid-builtin.menu-show-preferences");
     pub const SHOW_ABOUT: Selector = Selector::new("druid-builtin.menu-show-about");
-    pub const HIDE_APPLICATION: Selector = Selector::new("druid-builtin.menu-hide-application");
-    pub const HIDE_OTHERS: Selector = Selector::new("druid-builtin.menu-hide-others");
+    pub const HIDE_APPLICATION: Selector = Selector::HIDE_APPLICATION;
+    pub const HIDE_OTHERS: Selector = Selector::HIDE_OTHERS;
     pub const SHOW_ALL: Selector = Selector::new("druid-builtin.menu-show-all");
-    pub const QUIT_APP: Selector = Selector::new("druid-builtin.menu-quit-app");
+    pub const QUIT_APP: Selector = Selector::QUIT_APP;
     pub const NEW_FILE: Selector = Selector::new("druid-builtin.menu-file-new");
     pub const OPEN_FILE: Selector = Selector::new("druid-builtin.menu-file-open");
-    pub const CLOSE_WINDOW: Selector = Selector::new("druid-builtin.menu-file-close");
+    pub const CLOSE_WINDOW: Selector = Selector::CLOSE_WINDOW;
     pub const SAVE_FILE: Selector = Selector::new("druid-builtin.menu-file-save");
     pub const SAVE_FILE_AS: Selector = Selector::new("druid-builtin.menu-file-save-as");
     pub const PRINT_SETUP: Selector = Selector::new("druid-builtin.menu-file-print-setup");
@@ -242,7 +242,8 @@ fn macos_application_menu<T: Data>() -> Menu<T> {
                 LocalizedString::new("macos-menu-preferences"),
                 selectors::SHOW_PREFERENCES,
             )
-            .hotkey(RawMods::Meta, ","),
+            .hotkey(RawMods::Meta, ",")
+            .disabled(),
         )
         .append_separator()
         .append(Menu::new(LocalizedString::new("macos-menu-services")))
@@ -291,7 +292,8 @@ fn macos_file_menu<T: Data>() -> Menu<T> {
                 LocalizedString::new("macos-menu-file-open"),
                 selectors::OPEN_FILE,
             )
-            .hotkey(RawMods::Meta, "o"),
+            .hotkey(RawMods::Meta, "o")
+            .disabled(),
         )
         // open recent?
         .append_separator()
@@ -307,14 +309,16 @@ fn macos_file_menu<T: Data>() -> Menu<T> {
                 LocalizedString::new("macos-menu-file-save"),
                 selectors::SAVE_FILE,
             )
-            .hotkey(RawMods::Meta, "s"),
+            .hotkey(RawMods::Meta, "s")
+            .disabled(),
         )
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-file-save-as"),
                 selectors::SAVE_FILE_AS,
             )
-            .hotkey(RawMods::MetaShift, "s"),
+            .hotkey(RawMods::MetaShift, "s")
+            .disabled(),
         )
         // revert to saved?
         .append_separator()
@@ -323,14 +327,16 @@ fn macos_file_menu<T: Data>() -> Menu<T> {
                 LocalizedString::new("macos-menu-file-page-setup"),
                 selectors::PRINT_SETUP,
             )
-            .hotkey(RawMods::MetaShift, "p"),
+            .hotkey(RawMods::MetaShift, "p")
+            .disabled(),
         )
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-file-print"),
                 selectors::PRINT,
             )
-            .hotkey(RawMods::Meta, "p"),
+            .hotkey(RawMods::Meta, "p")
+            .disabled(),
         )
 }
 
