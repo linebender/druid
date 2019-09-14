@@ -16,10 +16,7 @@
 
 use std::ffi::OsString;
 
-use gtkrs::{
-    DialogExt, FileChooserAction, FileChooserDialog, FileChooserExt, ResponseType, WidgetExt,
-    Window,
-};
+use gtkrs::{FileChooserAction, FileChooserExt, NativeDialogExt, Window};
 
 use crate::Error;
 
@@ -48,19 +45,28 @@ pub(crate) fn get_file_dialog_path(
     ty: FileDialogType,
     options: FileDialogOptions,
 ) -> Result<OsString, Error> {
-    let dialog = match ty {
-        FileDialogType::Open => build_open_dialog(window, options),
-        FileDialogType::Save => build_save_dialog(window, options),
+    let (title, action) = match ty {
+        FileDialogType::Open => ("Open File", FileChooserAction::Open),
+        FileDialogType::Save => ("Save File", FileChooserAction::Save),
     };
+
+    let dialog = gtkrs::FileChooserNativeBuilder::new()
+        .transient_for(window)
+        .title(title)
+        .build();
+
+    dialog.set_action(action);
+
+    dialog.set_show_hidden(options.show_hidden);
 
     let result = dialog.run();
 
     let result = match result {
-        ResponseType::Accept => match dialog.get_filename() {
+        gtk_sys::GTK_RESPONSE_ACCEPT => match dialog.get_filename() {
             Some(path) => Ok(path.into_os_string()),
             None => Err(Error::Other("No path received for filename")),
         },
-        ResponseType::DeleteEvent => Err(Error::Other("Dialog was deleted")),
+        gtk_sys::GTK_RESPONSE_CANCEL => Err(Error::Other("Dialog was deleted")),
         _ => {
             eprintln!("Unhandled dialog result: {:?}", result);
             Err(Error::Other("Unhandled dialog result"))
@@ -72,37 +78,4 @@ pub(crate) fn get_file_dialog_path(
     dialog.destroy();
 
     result
-}
-
-// TODO DRY this up
-fn build_open_dialog(window: &Window, options: FileDialogOptions) -> FileChooserDialog {
-    let dialog = gtk::FileChooserDialogBuilder::new()
-        .transient_for(window)
-        .title("Open File")
-        .build();
-
-    dialog.set_action(FileChooserAction::Open);
-
-    dialog.add_button("Open", ResponseType::Accept);
-    dialog.add_button("Cancel", ResponseType::Cancel);
-
-    dialog.set_show_hidden(options.show_hidden);
-
-    dialog
-}
-
-fn build_save_dialog(window: &Window, options: FileDialogOptions) -> FileChooserDialog {
-    let dialog = gtk::FileChooserDialogBuilder::new()
-        .transient_for(window)
-        .title("Save File")
-        .build();
-
-    dialog.set_action(FileChooserAction::Save);
-
-    dialog.add_button("Save", ResponseType::Accept);
-    dialog.add_button("Cancel", ResponseType::Cancel);
-
-    dialog.set_show_hidden(options.show_hidden);
-
-    dialog
 }
