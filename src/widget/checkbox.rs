@@ -114,7 +114,7 @@ impl Widget<bool> for CheckboxRaw {
                     ctx.invalidate();
                 }
             }
-            Event::MouseMoved(_) => {
+            Event::HotChanged(_) => {
                 ctx.invalidate();
             }
             _ => (),
