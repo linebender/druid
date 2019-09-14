@@ -24,6 +24,7 @@ use log::{error, info, warn};
 
 use crate::kurbo::{Size, Vec2};
 use crate::piet::{Color, Piet, RenderContext};
+use crate::shell::application::Application;
 use crate::shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
 
 use crate::window::Window;
@@ -244,9 +245,9 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
         self.macos_update_app_menu()
     }
 
-    #[cfg(target_os = "macos")]
     /// On macos we need to update the global application menu to be the menu
     /// for the current window.
+    #[cfg(target_os = "macos")]
     fn macos_update_app_menu(&mut self) {
         let SingleWindowState {
             window,
@@ -388,6 +389,11 @@ impl<T: Data + 'static> DruidHandler<T> {
             .app_state
             .borrow_mut()
             .do_event(self.window_id, event, win_ctx);
+        self.process_commands(win_ctx);
+        result
+    }
+
+    fn process_commands(&mut self, win_ctx: &mut dyn WinCtx) {
         loop {
             let next_cmd = self.app_state.borrow_mut().command_queue.pop_front();
             match next_cmd {
@@ -395,15 +401,19 @@ impl<T: Data + 'static> DruidHandler<T> {
                 None => break,
             }
         }
-        result
     }
 
-    fn handle_menu_cmd(&mut self, cmd_id: u32, win_ctx: &mut dyn WinCtx) {
+    fn handle_system_cmd(&mut self, cmd_id: u32, win_ctx: &mut dyn WinCtx) {
         let cmd = self.app_state.borrow().get_menu_cmd(self.window_id, cmd_id);
         match cmd {
-            Some(cmd) => self.handle_cmd(self.window_id, cmd, win_ctx),
+            Some(cmd) => self
+                .app_state
+                .borrow_mut()
+                .command_queue
+                .push_back((self.window_id, cmd)),
             None => warn!("No command for menu id {}", cmd_id),
         }
+        self.process_commands(win_ctx)
     }
 
     /// Handle a command. Top level commands (e.g. for creating and destroying windows)
@@ -412,7 +422,10 @@ impl<T: Data + 'static> DruidHandler<T> {
         //FIXME: we need some way of getting the correct `WinCtx` for this window.
         match &cmd.selector {
             &Selector::NEW_WINDOW => self.new_window(cmd),
-            &Selector::CLOSE_WINDOW => self.close_window(cmd),
+            &Selector::CLOSE_WINDOW => self.close_window(cmd, window_id),
+            &Selector::QUIT_APP => self.quit(),
+            &Selector::HIDE_APPLICATION => self.hide_app(),
+            &Selector::HIDE_OTHERS => self.hide_others(),
             sel => {
                 info!("handle_cmd {}", sel);
                 let event = Event::Command(cmd);
@@ -442,18 +455,26 @@ impl<T: Data + 'static> DruidHandler<T> {
         window.show();
     }
 
-    fn close_window(&mut self, cmd: Command) {
-        let id = match cmd.get_object::<WindowId>() {
-            Some(wd) => wd,
-            None => {
-                warn!("close_window command is missing window id");
-                return;
-            }
-        };
+    fn close_window(&mut self, cmd: Command, window_id: WindowId) {
+        let id = cmd.get_object().unwrap_or(&window_id);
         let handle = self.app_state.borrow_mut().remove_window(*id);
         if let Some(handle) = handle {
             handle.close();
         }
+    }
+
+    fn quit(&self) {
+        Application::quit()
+    }
+
+    fn hide_app(&self) {
+        #[cfg(target_os = "macos")]
+        Application::hide()
+    }
+
+    fn hide_others(&mut self) {
+        #[cfg(target_os = "macos")]
+        Application::hide_others()
     }
 }
 
@@ -474,7 +495,7 @@ impl<T: Data + 'static> WinHandler for DruidHandler<T> {
     }
 
     fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {
-        self.handle_menu_cmd(id, ctx);
+        self.handle_system_cmd(id, ctx);
     }
 
     fn mouse_down(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {

@@ -72,17 +72,11 @@ fn ui_builder() -> impl Widget<u32> {
                 eprintln!("count {}", state.menu_count);
                 None
             }
-            Event::KeyUp(key) if HotKey::new(SysMods::Cmd, "n").matches(key) => {
-                eprintln!("cmd-N");
-                let new_win = WindowDesc::new(ui_builder);
+            Event::Command(ref cmd) if &cmd.selector == &druid::menu::selectors::NEW_FILE => {
+                let state2 = state.to_owned();
+                let new_win =
+                    WindowDesc::new(ui_builder).menu(move |_, _| make_menu(state2.clone()));
                 let command = Command::new(Selector::NEW_WINDOW, new_win);
-                ctx.submit_command(command, None);
-                None
-            }
-            Event::KeyUp(key) if HotKey::new(SysMods::Cmd, "w").matches(key) => {
-                eprintln!("cmd-W");
-                let id = ctx.window_id();
-                let command = Command::new(Selector::CLOSE_WINDOW, id);
                 ctx.submit_command(command, None);
                 None
             }
