@@ -238,6 +238,28 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
         self.state.handle.set_menu(platform_menu);
         self.window.menu = Some(menu.to_owned());
     }
+
+    fn window_got_focus(&mut self) {
+        #[cfg(target_os = "macos")]
+        self.macos_update_app_menu()
+    }
+
+    #[cfg(target_os = "macos")]
+    /// On macos we need to update the global application menu to be the menu
+    /// for the current window.
+    fn macos_update_app_menu(&mut self) {
+        let SingleWindowState {
+            window,
+            state,
+            data,
+            env,
+            ..
+        } = self;
+        let platform_menu = window.menu.as_mut().map(|m| m.build_native(&data, &env));
+        if let Some(platform_menu) = platform_menu {
+            state.handle.set_menu(platform_menu);
+        }
+    }
 }
 
 impl<T: Data + 'static> AppState<T> {
@@ -333,6 +355,12 @@ impl<T: Data + 'static> AppState<T> {
             }
         }
         is_handled
+    }
+
+    fn window_got_focus(&mut self, window_id: WindowId, _ctx: &mut dyn WinCtx) {
+        self.assemble_window_state(window_id)
+            .as_mut()
+            .map(SingleWindowState::window_got_focus);
     }
 }
 
@@ -476,6 +504,12 @@ impl<T: Data + 'static> WinHandler for DruidHandler<T> {
     fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, ctx: &mut dyn WinCtx) {
         let event = Event::Wheel(WheelEvent { delta, mods });
         self.do_event(event, ctx);
+    }
+
+    fn got_focus(&mut self, ctx: &mut dyn WinCtx) {
+        self.app_state
+            .borrow_mut()
+            .window_got_focus(self.window_id, ctx);
     }
 
     fn timer(&mut self, token: TimerToken, ctx: &mut dyn WinCtx) {

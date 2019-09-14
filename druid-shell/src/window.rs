@@ -164,6 +164,10 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn timer(&mut self, token: TimerToken, ctx: &mut dyn WinCtx) {}
 
+    /// Called when this window becomes the focused window.
+    #[allow(unused_variables)]
+    fn got_focus(&mut self, ctx: &mut dyn WinCtx) {}
+
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is
     /// WM_NCDESTROY).
