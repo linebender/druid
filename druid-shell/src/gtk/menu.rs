@@ -20,7 +20,7 @@ use gtkrs::GtkMenuExt;
 use gtkrs::Menu as GtkMenu;
 use gtkrs::MenuBar as GtkMenuBar;
 use gtkrs::MenuItem as GtkMenuItem;
-use gtkrs::{GtkMenuItemExt, MenuShellExt, WidgetExt};
+use gtkrs::{GtkMenuItemExt, MenuShellExt, SeparatorMenuItemBuilder, WidgetExt};
 
 use crate::gtk::WinCtxImpl;
 use crate::keycodes::{KeySpec, MenuKey};
@@ -35,35 +35,7 @@ pub struct Menu {
 enum MenuItem {
     Entry(String, u32, MenuKey),
     SubMenu(String, Menu),
-}
-
-impl MenuItem {
-    fn into_gtk_menu_item(self, handle: &WindowHandle, accel_group: &AccelGroup) -> GtkMenuItem {
-        match self {
-            MenuItem::Entry(name, id, key) => {
-                let item = GtkMenuItem::new_with_label(&name);
-
-                register_accelerator(&item, accel_group, key);
-
-                let handle = handle.clone();
-                item.connect_activate(move |_| {
-                    let mut ctx = WinCtxImpl::from(&handle);
-
-                    if let Some(state) = handle.state.upgrade() {
-                        state.handler.borrow_mut().command(id, &mut ctx);
-                    }
-                });
-
-                item
-            }
-            MenuItem::SubMenu(name, submenu) => {
-                let item = GtkMenuItem::new_with_label(&name);
-                item.set_submenu(Some(&submenu.into_gtk_menu(handle, accel_group)));
-
-                item
-            }
-        }
-    }
+    Separator,
 }
 
 impl Menu {
@@ -83,7 +55,42 @@ impl Menu {
     }
 
     pub fn add_separator(&mut self) {
-        eprintln!("Warning: GTK separators are not yet implemented");
+        self.items.push(MenuItem::Separator)
+    }
+
+    fn append_items_to_menu<M: gtkrs::prelude::IsA<gtkrs::MenuShell>>(
+        self,
+        menu: &mut M,
+        handle: &WindowHandle,
+        accel_group: &AccelGroup,
+    ) {
+        for item in self.items {
+            match item {
+                MenuItem::Entry(name, id, key) => {
+                    let item = GtkMenuItem::new_with_label(&name);
+
+                    register_accelerator(&item, accel_group, key);
+
+                    let handle = handle.clone();
+                    item.connect_activate(move |_| {
+                        let mut ctx = WinCtxImpl::from(&handle);
+
+                        if let Some(state) = handle.state.upgrade() {
+                            state.handler.borrow_mut().command(id, &mut ctx);
+                        }
+                    });
+
+                    menu.append(&item);
+                }
+                MenuItem::SubMenu(name, submenu) => {
+                    let item = GtkMenuItem::new_with_label(&name);
+                    item.set_submenu(Some(&submenu.into_gtk_menu(handle, accel_group)));
+
+                    menu.append(&item);
+                }
+                MenuItem::Separator => menu.append(&SeparatorMenuItemBuilder::new().build()),
+            }
+        }
     }
 
     pub(crate) fn into_gtk_menubar(
@@ -91,22 +98,18 @@ impl Menu {
         handle: &WindowHandle,
         accel_group: &AccelGroup,
     ) -> GtkMenuBar {
-        let menu = GtkMenuBar::new();
+        let mut menu = GtkMenuBar::new();
 
-        for item in self.items {
-            menu.append(&item.into_gtk_menu_item(handle, accel_group));
-        }
+        self.append_items_to_menu(&mut menu, handle, accel_group);
 
         menu
     }
 
     fn into_gtk_menu(self, handle: &WindowHandle, accel_group: &AccelGroup) -> GtkMenu {
-        let menu = GtkMenu::new();
+        let mut menu = GtkMenu::new();
         menu.set_accel_group(Some(accel_group));
 
-        for item in self.items {
-            menu.append(&item.into_gtk_menu_item(handle, accel_group));
-        }
+        self.append_items_to_menu(&mut menu, handle, accel_group);
 
         menu
     }

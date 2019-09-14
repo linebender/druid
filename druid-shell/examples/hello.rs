@@ -116,6 +116,7 @@ fn main() {
 
     let mut file_menu = Menu::new();
     file_menu.add_item(0x100, "E&xit", MenuKey::std_quit());
+    file_menu.add_separator();
     file_menu.add_item(0x101, "O&pen", MenuKey::command('o'));
     file_menu.add_item(0x102, "S&ave", MenuKey::command('s'));
     let mut menubar = Menu::new();
