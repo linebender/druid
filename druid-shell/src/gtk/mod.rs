@@ -204,14 +204,6 @@ impl WindowBuilder {
                         state.handler.borrow_mut().size(size.0, size.1, &mut ctx);
                     }
 
-                    context.set_source_rgb(0.0, 0.0, 0.0);
-                    context.paint();
-
-                    context.set_source_rgb(1.0, 0.0, 0.0);
-                    context.rectangle(0.0, 0.0, 100.0, 100.0);
-
-                    context.fill();
-
                     // For some reason piet needs a mutable context, so give it one I guess.
                     let mut context = context.clone();
                     let mut piet_context = Piet::new(&mut context);
