@@ -45,6 +45,24 @@ pub mod menu;
 pub mod util;
 pub mod win_main;
 
+macro_rules! clone {
+    (@param _) => ( _ );
+    (@param $x:ident) => ( $x );
+    ($($n:ident),+ => move || $body:expr) => (
+        {
+            $( let $n = $n.clone(); )+
+            move || $body
+        }
+    );
+    ($($n:ident),+ => move |$($p:tt),+| $body:expr) => (
+        {
+            $( let $n = $n.clone(); )+
+            move |$(clone!(@param $p),)+| $body
+        }
+    );
+}
+
+
 #[derive(Clone, Default)]
 pub struct WindowHandle {
     state: Weak<WindowState>,
@@ -129,13 +147,12 @@ impl WindowBuilder {
             current_keyval: RefCell::new(None),
         });
 
-        let state = win_state.clone();
-        win_state.window.connect_destroy(move |_| {
+        win_state.window.connect_destroy(clone!(win_state => move |_| {
             // this ties a clone of Arc<WindowState> to the ApplicationWindow to keep it alive
             // when the ApplicationWindow is destroyed, the last Arc is dropped
             // and any Weak<WindowState> will be None on upgrade()
-            let _ = &state;
-        });
+            let _ = &win_state;
+        }));
 
         let handle = WindowHandle {
             state: Arc::downgrade(&win_state),
@@ -170,9 +187,8 @@ impl WindowBuilder {
 
         {
             let last_size = Cell::new((0, 0));
-            let handle = handle.clone();
 
-            drawing_area.connect_draw(move |widget, context| {
+            drawing_area.connect_draw(clone!(handle => move |widget, context| {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
@@ -212,12 +228,11 @@ impl WindowBuilder {
                 }
 
                 Inhibit(false)
-            });
+            }));
         }
 
         {
-            let handle = handle.clone();
-            drawing_area.connect_button_press_event(move |_widget, button| {
+            drawing_area.connect_button_press_event(clone!(handle => move |_widget, button| {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
@@ -233,12 +248,11 @@ impl WindowBuilder {
                 }
 
                 Inhibit(true)
-            });
+            }));
         }
 
         {
-            let handle = handle.clone();
-            drawing_area.connect_button_release_event(move |_widget, button| {
+            drawing_area.connect_button_release_event(clone!(handle => move |_widget, button| {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
@@ -254,12 +268,11 @@ impl WindowBuilder {
                 }
 
                 Inhibit(true)
-            });
+            }));
         }
 
         {
-            let handle = handle.clone();
-            drawing_area.connect_motion_notify_event(move |_widget, motion| {
+            drawing_area.connect_motion_notify_event(clone!(handle=>move |_widget, motion| {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
@@ -278,12 +291,11 @@ impl WindowBuilder {
                 }
 
                 Inhibit(true)
-            });
+            }));
         }
 
         {
-            let handle = handle.clone();
-            drawing_area.connect_scroll_event(move |_widget, scroll| {
+            drawing_area.connect_scroll_event(clone!(handle => move |_widget, scroll| {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
@@ -326,12 +338,11 @@ impl WindowBuilder {
                 }
 
                 Inhibit(true)
-            });
+            }));
         }
 
         {
-            let handle = handle.clone();
-            drawing_area.connect_key_press_event(move |_widget, key| {
+            drawing_area.connect_key_press_event(clone!(handle => move |_widget, key| {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
@@ -345,12 +356,11 @@ impl WindowBuilder {
                 }
 
                 Inhibit(true)
-            });
+            }));
         }
 
         {
-            let handle = handle.clone();
-            drawing_area.connect_key_release_event(move |_widget, key| {
+            drawing_area.connect_key_release_event(clone!(handle => move |_widget, key| {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
 
@@ -361,17 +371,16 @@ impl WindowBuilder {
                 }
 
                 Inhibit(true)
-            });
+            }));
         }
 
         {
-            let handle = handle.clone();
-            drawing_area.connect_destroy(move |_widget| {
+            drawing_area.connect_destroy(clone!(handle => move |_widget| {
                 if let Some(state) = handle.state.upgrade() {
                     let mut ctx = WinCtxImpl::from(&handle);
                     state.handler.borrow_mut().destroy(&mut ctx);
                 }
-            });
+            }));
         }
 
         vbox.pack_end(&drawing_area, true, true, 0);
@@ -689,3 +698,5 @@ fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
         }
     }
 }
+
+
