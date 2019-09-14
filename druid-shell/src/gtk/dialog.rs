@@ -58,12 +58,12 @@ pub(crate) fn get_file_dialog_path(
     let result = match result {
         ResponseType::Accept => match dialog.get_filename() {
             Some(path) => Ok(path.into_os_string()),
-            None => Err(Error::Null),
+            None => Err(Error::Other("No path received for filename")),
         },
-        ResponseType::DeleteEvent => Err(Error::Null),
+        ResponseType::DeleteEvent => Err(Error::Other("Dialog was deleted")),
         _ => {
             eprintln!("Unhandled dialog result: {:?}", result);
-            Err(Error::Null)
+            Err(Error::Other("Unhandled dialog result"))
         }
     };
 
