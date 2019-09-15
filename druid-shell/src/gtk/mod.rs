@@ -24,6 +24,7 @@ use std::slice;
 use std::sync::{Arc, Mutex, Weak};
 
 use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt};
+use gio::ApplicationExt;
 use gtk::{
     AccelGroup, ApplicationWindow, BoxExt, Cast, ContainerExt, GtkApplicationExt, GtkWindowExt,
     Inhibit, WidgetExt, WidgetExtManual,
@@ -146,14 +147,14 @@ impl WindowBuilder {
             current_keyval: RefCell::new(None),
         });
 
-        win_state
-            .window
-            .connect_destroy(clone!(win_state => move |_| {
+        with_application(|app| {
+            app.connect_shutdown(clone!(win_state => move |_| {
                 // this ties a clone of Arc<WindowState> to the ApplicationWindow to keep it alive
                 // when the ApplicationWindow is destroyed, the last Arc is dropped
                 // and any Weak<WindowState> will be None on upgrade()
                 let _ = &win_state;
-            }));
+            }))
+        });
 
         let handle = WindowHandle {
             state: Arc::downgrade(&win_state),
