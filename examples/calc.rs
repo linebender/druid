@@ -235,7 +235,6 @@ fn build_calc() -> impl Widget<CalcState> {
 }
 
 fn main() {
-    simple_logger::init().unwrap();
     let window = WindowDesc::new(build_calc);
     let calc_state = CalcState {
         value: "0".to_string(),
@@ -244,6 +243,7 @@ fn main() {
         in_num: false,
     };
     AppLauncher::with_window(window)
+        .use_logger()
         .launch(calc_state)
         .expect("launch failed");
 }

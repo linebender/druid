@@ -50,6 +50,11 @@ impl<T: Data + 'static> AppLauncher<T> {
         }
     }
 
+    pub fn use_logger(self) -> Self {
+        simple_logger::init().ok();
+        self
+    }
+
     /// Build the windows and start the runloop.
     ///
     /// Returns an error if a window cannot be instantiated. This is usually

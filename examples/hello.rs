@@ -16,10 +16,10 @@ use druid::widget::{Align, Button, Column, Label, Padding};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn main() {
-    simple_logger::init().unwrap();
     let main_window = WindowDesc::new(ui_builder);
     let data = 0_u32;
     AppLauncher::with_window(main_window)
+        .use_logger()
         .launch(data)
         .expect("launch failed");
 }
