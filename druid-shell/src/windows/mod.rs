@@ -1094,6 +1094,21 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_menu(&self, menu: Menu) {
+        let hmenu = menu.into_hmenu();
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                let old_menu = GetMenu(hwnd);
+                if SetMenu(hwnd, hmenu) == FALSE {
+                    warn!("failed to set window menu");
+                } else {
+                    DestroyMenu(old_menu);
+                }
+            }
+        }
+    }
+
     /// Get the raw HWND handle, for uses that are not wrapped in
     /// druid_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
