@@ -39,7 +39,7 @@ pub struct Selector(&'static str);
 #[derive(Debug, Clone)]
 pub struct Command {
     pub selector: Selector,
-    pub object: Option<Arc<dyn Any>>,
+    object: Option<Arc<dyn Any>>,
 }
 
 impl Selector {
@@ -84,18 +84,6 @@ impl From<Selector> for Command {
             selector,
             object: None,
         }
-    }
-}
-
-impl PartialEq<Selector> for Command {
-    fn eq(&self, other: &Selector) -> bool {
-        self.selector == *other
-    }
-}
-
-impl PartialEq<Command> for Selector {
-    fn eq(&self, other: &Command) -> bool {
-        *self == other.selector
     }
 }
 

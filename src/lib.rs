@@ -863,7 +863,7 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     /// Submit a [`Command`] to be run after this event is handled.
     ///
     /// Commands are run in the order they are submitted; all commands
-    /// submitted during the handling of an event are executed before that
+    /// submitted during the handling of an event are executed before
     /// the [`update()`] method is called.
     ///
     /// [`Command`]: struct.Command.html
