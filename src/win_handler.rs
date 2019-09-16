@@ -30,8 +30,10 @@ use crate::shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
 use crate::window::Window;
 use crate::{
     BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, MenuDesc,
-    MouseEvent, PaintCtx, Selector, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
+    MouseEvent, PaintCtx, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
 };
+
+use crate::command::sys as sys_cmd;
 
 // TODO: this should come from the theme.
 const BACKGROUND_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
@@ -316,7 +318,7 @@ impl<T: Data + 'static> AppState<T> {
         // handle system window-level commands
         if let Event::Command(ref cmd) = &event {
             match &cmd.selector {
-                &Selector::SET_MENU => {
+                &sys_cmd::SET_MENU => {
                     self.assemble_window_state(source_id)
                         .map(|mut win| win.set_menu(cmd));
                     return true;
@@ -421,11 +423,11 @@ impl<T: Data + 'static> DruidHandler<T> {
     fn handle_cmd(&mut self, window_id: WindowId, cmd: Command, win_ctx: &mut dyn WinCtx) {
         //FIXME: we need some way of getting the correct `WinCtx` for this window.
         match &cmd.selector {
-            &Selector::NEW_WINDOW => self.new_window(cmd),
-            &Selector::CLOSE_WINDOW => self.close_window(cmd, window_id),
-            &Selector::QUIT_APP => self.quit(),
-            &Selector::HIDE_APPLICATION => self.hide_app(),
-            &Selector::HIDE_OTHERS => self.hide_others(),
+            &sys_cmd::NEW_WINDOW => self.new_window(cmd),
+            &sys_cmd::CLOSE_WINDOW => self.close_window(cmd, window_id),
+            &sys_cmd::QUIT_APP => self.quit(),
+            &sys_cmd::HIDE_APPLICATION => self.hide_app(),
+            &sys_cmd::HIDE_OTHERS => self.hide_others(),
             sel => {
                 info!("handle_cmd {}", sel);
                 let event = Event::Command(cmd);

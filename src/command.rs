@@ -42,9 +42,9 @@ pub struct Command {
     object: Option<Arc<dyn Any>>,
 }
 
-impl Selector {
-    /// A selector that does nothing.
-    pub const NOOP: Selector = Selector::new("");
+/// Commands with special meaning.
+pub mod sys {
+    use super::Selector;
 
     /// Quit the running application. This command is handled by the druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
@@ -67,6 +67,38 @@ impl Selector {
     ///
     /// [`Menu`]: struct.Menu.html
     pub const SET_MENU: Selector = Selector::new("druid-builtin.set-menu");
+
+    /// Show the application preferences.
+    pub const SHOW_PREFERENCES: Selector = Selector::new("druid-builtin.menu-show-preferences");
+
+    /// Show the application about window.
+    pub const SHOW_ABOUT: Selector = Selector::new("druid-builtin.menu-show-about");
+
+    /// Show all applications.
+    pub const SHOW_ALL: Selector = Selector::new("druid-builtin.menu-show-all");
+
+    /// Show the new file dialog.
+    pub const NEW_FILE: Selector = Selector::new("druid-builtin.menu-file-new");
+
+    /// Show the open dialog.
+    pub const OPEN_FILE: Selector = Selector::new("druid-builtin.menu-file-open");
+
+    /// Save the current file.
+    pub const SAVE_FILE: Selector = Selector::new("druid-builtin.menu-file-save");
+
+    /// Show the 'save as' dialog.
+    pub const SAVE_FILE_AS: Selector = Selector::new("druid-builtin.menu-file-save-as");
+
+    /// Show the print-setup window.
+    pub const PRINT_SETUP: Selector = Selector::new("druid-builtin.menu-file-print-setup");
+
+    /// Show the print dialog.
+    pub const PRINT: Selector = Selector::new("druid-builtin.menu-file-print");
+}
+
+impl Selector {
+    /// A selector that does nothing.
+    pub const NOOP: Selector = Selector::new("");
 
     /// Create a new `Selector` with the given string.
     pub const fn new(s: &'static str) -> Selector {

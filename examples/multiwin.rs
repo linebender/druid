@@ -50,12 +50,12 @@ fn ui_builder() -> impl Widget<State> {
     let label = Label::new(text);
     let inc_button = Button::<State>::new("Add menu item", |ctx, data, _env| {
         data.menu_count += 1;
-        let cmd = Command::new(Selector::SET_MENU, make_menu::<State>(data));
+        let cmd = Command::new(druid::command::sys::SET_MENU, make_menu::<State>(data));
         ctx.submit_command(cmd, None);
     });
     let dec_button = Button::<State>::new("Remove menu item", |ctx, data, _env| {
         data.menu_count = data.menu_count.saturating_sub(1);
-        let cmd = Command::new(Selector::SET_MENU, make_menu::<State>(data));
+        let cmd = Command::new(druid::command::sys::SET_MENU, make_menu::<State>(data));
         ctx.submit_command(cmd, None);
     });
 
@@ -67,16 +67,16 @@ fn ui_builder() -> impl Widget<State> {
     col.add_child(row, 1.0);
 
     EventInterceptor::new(col, |event, ctx, data, _env| match event {
-        Event::Command(ref cmd) if cmd.selector == druid::menu::selectors::NEW_FILE => {
+        Event::Command(ref cmd) if cmd.selector == druid::command::sys::NEW_FILE => {
             let new_win = WindowDesc::new(ui_builder).menu(make_menu(data));
-            let command = Command::new(Selector::NEW_WINDOW, new_win);
+            let command = Command::new(druid::command::sys::NEW_WINDOW, new_win);
             ctx.submit_command(command, None);
             None
         }
         Event::Command(ref cmd) if cmd.selector == MENU_COUNT_ACTION => {
             data.selected = *cmd.get_object().unwrap();
             ctx.submit_command(
-                Command::new(Selector::SET_MENU, make_menu::<State>(data)),
+                Command::new(druid::command::sys::SET_MENU, make_menu::<State>(data)),
                 None,
             );
             None
