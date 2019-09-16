@@ -35,8 +35,6 @@ pub struct Window<T: Data> {
     pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
     pub(crate) title: LocalizedString<T>,
     size: Size,
-    // menu
-    // delegate?
 }
 
 impl<T: Data> Window<T> {
@@ -48,14 +46,7 @@ impl<T: Data> Window<T> {
         }
     }
 
-    pub fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-        //window_id: WindowId,
-    ) {
+    pub fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         if let Event::Size(size) = event {
             self.size = *size;
         }
