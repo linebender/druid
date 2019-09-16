@@ -48,19 +48,20 @@
 //!
 //! ```
 //! use druid::{Data, LocalizedString, RawMods};
-//! use druid::menu::{MenuDesc, MenuItem, selectors};
+//! use druid::command;
+//! use druid::menu::{MenuDesc, MenuItem};
 //!
 //! fn macos_application_menu<T: Data>() -> MenuDesc<T> {
 //!     MenuDesc::new(LocalizedString::new("macos-menu-application-menu"))
 //!         .append(MenuItem::new(
 //!             LocalizedString::new("macos-menu-about-app"),
-//!             selectors::SHOW_ABOUT,
+//!             command::sys::SHOW_ABOUT,
 //!         ))
 //!         .append_separator()
 //!         .append(
 //!             MenuItem::new(
 //!                 LocalizedString::new("macos-menu-preferences"),
-//!                 selectors::SHOW_PREFERENCES,
+//!                 command::sys::SHOW_PREFERENCES,
 //!             )
 //!             .hotkey(RawMods::Meta, ",")
 //!             .disabled(),
@@ -70,21 +71,21 @@
 //!         .append(
 //!             MenuItem::new(
 //!                 LocalizedString::new("macos-menu-hide-app"),
-//!                 selectors::HIDE_APPLICATION,
+//!                 command::sys::HIDE_APPLICATION,
 //!             )
 //!             .hotkey(RawMods::Meta, "h"),
 //!         )
 //!         .append(
 //!             MenuItem::new(
 //!                 LocalizedString::new("macos-menu-hide-others"),
-//!                 selectors::HIDE_OTHERS,
+//!                 command::sys::HIDE_OTHERS,
 //!             )
 //!             .hotkey(RawMods::AltMeta, "h"),
 //!         )
 //!         .append(
 //!             MenuItem::new(
 //!                 LocalizedString::new("macos-menu-show-all"),
-//!                 selectors::SHOW_ALL,
+//!                 command::sys::SHOW_ALL,
 //!             )
 //!             .disabled(),
 //!         )
@@ -92,7 +93,7 @@
 //!         .append(
 //!             MenuItem::new(
 //!                 LocalizedString::new("macos-menu-quit-app"),
-//!                 selectors::QUIT_APP,
+//!                 command::sys::QUIT_APP,
 //!             )
 //!             .hotkey(RawMods::Meta, "q"),
 //!         )
@@ -108,7 +109,7 @@
 use std::num::NonZeroU32;
 
 use crate::shell::hotkey::{HotKey, KeyCompare, RawMods};
-use crate::{Command, Data, Env, LocalizedString, Selector};
+use crate::{command, Command, Data, Env, LocalizedString, Selector};
 
 use crate::shell::menu::Menu as PlatformMenu;
 
@@ -406,25 +407,6 @@ impl<T> From<MenuDesc<T>> for MenuEntry<T> {
     }
 }
 
-/// Selectors sent by default menu items.
-pub mod selectors {
-    use crate::Selector;
-
-    pub const SHOW_PREFERENCES: Selector = Selector::new("druid-builtin.menu-show-preferences");
-    pub const SHOW_ABOUT: Selector = Selector::new("druid-builtin.menu-show-about");
-    pub const HIDE_APPLICATION: Selector = Selector::HIDE_APPLICATION;
-    pub const HIDE_OTHERS: Selector = Selector::HIDE_OTHERS;
-    pub const SHOW_ALL: Selector = Selector::new("druid-builtin.menu-show-all");
-    pub const QUIT_APP: Selector = Selector::QUIT_APP;
-    pub const NEW_FILE: Selector = Selector::new("druid-builtin.menu-file-new");
-    pub const OPEN_FILE: Selector = Selector::new("druid-builtin.menu-file-open");
-    pub const CLOSE_WINDOW: Selector = Selector::CLOSE_WINDOW;
-    pub const SAVE_FILE: Selector = Selector::new("druid-builtin.menu-file-save");
-    pub const SAVE_FILE_AS: Selector = Selector::new("druid-builtin.menu-file-save-as");
-    pub const PRINT_SETUP: Selector = Selector::new("druid-builtin.menu-file-print-setup");
-    pub const PRINT: Selector = Selector::new("druid-builtin.menu-file-print");
-}
-
 //TODO: unclear where platform stuff like this should live.
 pub fn macos_menu_bar<T: Data>() -> MenuDesc<T> {
     MenuDesc::new(LocalizedString::new(""))
@@ -436,13 +418,13 @@ fn macos_application_menu<T: Data>() -> MenuDesc<T> {
     MenuDesc::new(LocalizedString::new("macos-menu-application-menu"))
         .append(MenuItem::new(
             LocalizedString::new("macos-menu-about-app"),
-            selectors::SHOW_ABOUT,
+            command::sys::SHOW_ABOUT,
         ))
         .append_separator()
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-preferences"),
-                selectors::SHOW_PREFERENCES,
+                command::sys::SHOW_PREFERENCES,
             )
             .hotkey(RawMods::Meta, ",")
             .disabled(),
@@ -452,21 +434,21 @@ fn macos_application_menu<T: Data>() -> MenuDesc<T> {
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-hide-app"),
-                selectors::HIDE_APPLICATION,
+                command::sys::HIDE_APPLICATION,
             )
             .hotkey(RawMods::Meta, "h"),
         )
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-hide-others"),
-                selectors::HIDE_OTHERS,
+                command::sys::HIDE_OTHERS,
             )
             .hotkey(RawMods::AltMeta, "h"),
         )
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-show-all"),
-                selectors::SHOW_ALL,
+                command::sys::SHOW_ALL,
             )
             .disabled(),
         )
@@ -474,7 +456,7 @@ fn macos_application_menu<T: Data>() -> MenuDesc<T> {
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-quit-app"),
-                selectors::QUIT_APP,
+                command::sys::QUIT_APP,
             )
             .hotkey(RawMods::Meta, "q"),
         )
@@ -485,14 +467,14 @@ fn macos_file_menu<T: Data>() -> MenuDesc<T> {
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-file-new"),
-                selectors::NEW_FILE,
+                command::sys::NEW_FILE,
             )
             .hotkey(RawMods::Meta, "n"),
         )
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-file-open"),
-                selectors::OPEN_FILE,
+                command::sys::OPEN_FILE,
             )
             .hotkey(RawMods::Meta, "o")
             .disabled(),
@@ -502,14 +484,14 @@ fn macos_file_menu<T: Data>() -> MenuDesc<T> {
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-file-close"),
-                selectors::CLOSE_WINDOW,
+                command::sys::CLOSE_WINDOW,
             )
             .hotkey(RawMods::Meta, "w"),
         )
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-file-save"),
-                selectors::SAVE_FILE,
+                command::sys::SAVE_FILE,
             )
             .hotkey(RawMods::Meta, "s")
             .disabled(),
@@ -517,7 +499,7 @@ fn macos_file_menu<T: Data>() -> MenuDesc<T> {
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-file-save-as"),
-                selectors::SAVE_FILE_AS,
+                command::sys::SAVE_FILE_AS,
             )
             .hotkey(RawMods::MetaShift, "s")
             .disabled(),
@@ -527,7 +509,7 @@ fn macos_file_menu<T: Data>() -> MenuDesc<T> {
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-file-page-setup"),
-                selectors::PRINT_SETUP,
+                command::sys::PRINT_SETUP,
             )
             .hotkey(RawMods::MetaShift, "p")
             .disabled(),
@@ -535,7 +517,7 @@ fn macos_file_menu<T: Data>() -> MenuDesc<T> {
         .append(
             MenuItem::new(
                 LocalizedString::new("macos-menu-file-print"),
-                selectors::PRINT,
+                command::sys::PRINT,
             )
             .hotkey(RawMods::Meta, "p")
             .disabled(),
