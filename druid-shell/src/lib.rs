@@ -71,3 +71,5 @@ pub use platform::util;
 pub use platform::win_main as runloop; // TODO: rename to "runloop"
 pub use platform::WindowBuilder;
 pub use util::init;
+
+mod common_util;

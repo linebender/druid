@@ -26,6 +26,7 @@ use crate::gtk::WinCtxImpl;
 use crate::keycodes::{KeySpec, MenuKey};
 use crate::keycodes::{Modifiers, M_ALT, M_CTRL, M_META, M_SHIFT};
 use crate::platform::WindowHandle;
+use crate::common_util::{strip_access_key};
 
 #[derive(Default)]
 pub struct Menu {
@@ -138,23 +139,3 @@ fn modifiers_to_gdk_modifier_type(modifiers: Modifiers) -> gdk::ModifierType {
     result
 }
 
-/// Strip the access keys from the menu string.
-///
-/// Changes "E&xit" to "Exit". Actual ampersands are escaped as "&&".
-fn strip_access_key(raw_menu_text: &str) -> String {
-    // TODO this is copied from mac/menu.rs maybe this should be moved somewhere common?
-    let mut saw_ampersand = false;
-    let mut result = String::new();
-    for c in raw_menu_text.chars() {
-        if c == '&' {
-            if saw_ampersand {
-                result.push(c);
-            }
-            saw_ampersand = !saw_ampersand;
-        } else {
-            result.push(c);
-            saw_ampersand = false;
-        }
-    }
-    result
-}
