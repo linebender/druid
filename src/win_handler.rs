@@ -29,7 +29,7 @@ use crate::shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
 
 use crate::window::Window;
 use crate::{
-    BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, Menu,
+    BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, MenuDesc,
     MouseEvent, PaintCtx, Selector, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
 };
 
@@ -227,7 +227,7 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
     }
 
     fn set_menu(&mut self, cmd: &Command) {
-        let mut menu = match cmd.get_object::<Menu<T>>() {
+        let mut menu = match cmd.get_object::<MenuDesc<T>>() {
             Some(menu) => menu.to_owned(),
             None => {
                 warn!("set-menu command is missing menu object");

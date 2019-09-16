@@ -18,8 +18,8 @@ use druid_shell::kurbo::{Line, Rect, Vec2};
 use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::dialog::{FileDialogOptions, FileDialogType};
+use druid_shell::hotkey::{HotKey, SysMods};
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
-use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::runloop;
@@ -108,17 +108,29 @@ impl WinHandler for HelloState {
 fn main() {
     druid_shell::init();
 
-    //let mut file_menu = Menu::new();
-    //file_menu.add_item(0x100, "E&xit", MenuKey::std_quit());
-    //file_menu.add_item(0x101, "O&pen", MenuKey::command('o'));
-    //let mut menubar = Menu::new();
-    //menubar.add_dropdown(file_menu, "&File");
+    let mut file_menu = Menu::new();
+    file_menu.add_item(
+        0x100,
+        "E&xit",
+        Some(&HotKey::new(SysMods::Cmd, "q")),
+        true,
+        false,
+    );
+    file_menu.add_item(
+        0x101,
+        "O&pen",
+        Some(&HotKey::new(SysMods::Cmd, "o")),
+        true,
+        false,
+    );
+    let mut menubar = Menu::new();
+    menubar.add_dropdown(file_menu, "&File", true);
 
     let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");
-    //builder.set_menu(menubar);
+    builder.set_menu(menubar);
     let window = builder.build().unwrap();
     window.show();
     run_loop.run();

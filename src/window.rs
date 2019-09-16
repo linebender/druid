@@ -20,7 +20,7 @@ use crate::kurbo::{Point, Rect, Size};
 
 use crate::shell::window::WindowHandle;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, Menu,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, MenuDesc,
     PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
@@ -35,7 +35,7 @@ pub struct Window<T: Data> {
     pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
     pub(crate) title: LocalizedString<T>,
     size: Size,
-    pub(crate) menu: Option<Menu<T>>,
+    pub(crate) menu: Option<MenuDesc<T>>,
     // delegate?
 }
 
@@ -43,7 +43,7 @@ impl<T: Data> Window<T> {
     pub fn new(
         root: impl Widget<T> + 'static,
         title: LocalizedString<T>,
-        menu: Option<Menu<T>>,
+        menu: Option<MenuDesc<T>>,
     ) -> Window<T> {
         Window {
             root: WidgetPod::new(Box::new(root)),
