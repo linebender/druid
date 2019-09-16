@@ -23,7 +23,7 @@ use objc::runtime::{Class, Object, Sel};
 use crate::keycodes::{KeySpec, MenuKey};
 use crate::util::make_nsstring;
 
-use crate::common_util::{strip_access_key};
+use crate::common_util::strip_access_key;
 
 struct MenuItemProxyClass(*const Class);
 unsafe impl Sync for MenuItemProxyClass {}
