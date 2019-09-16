@@ -22,7 +22,7 @@ use crate::shell::window::WindowHandle;
 use crate::shell::{init, runloop, Error as PlatformError, WindowBuilder};
 use crate::win_handler::AppState;
 use crate::window::{Window, WindowId};
-use crate::{theme, Data, DruidHandler, Env, LocalizedString, Menu, Widget};
+use crate::{theme, Data, DruidHandler, LocalizedString, MenuDesc, Widget};
 
 /// Handles initial setup of an application, and starts the runloop.
 pub struct AppLauncher<T> {
@@ -32,9 +32,6 @@ pub struct AppLauncher<T> {
 /// A function that can create a widget.
 type WidgetBuilderFn<T> = dyn Fn() -> Box<dyn Widget<T>> + 'static;
 
-/// A function that can build a menu.
-type MenuBuilderFn<T> = dyn Fn(&T, &Env) -> Menu<T> + 'static;
-
 /// A description of a window to be instantiated.
 ///
 /// This includes a function that can build the root widget, as well as other
@@ -42,7 +39,7 @@ type MenuBuilderFn<T> = dyn Fn(&T, &Env) -> Menu<T> + 'static;
 pub struct WindowDesc<T> {
     pub(crate) root_builder: Arc<WidgetBuilderFn<T>>,
     pub(crate) title: Option<LocalizedString<T>>,
-    pub(crate) menu_builder: Option<Arc<MenuBuilderFn<T>>>,
+    pub(crate) menu: Option<MenuDesc<T>>,
     //TODO: more things you can configure on a window, like size?
 }
 
@@ -100,7 +97,7 @@ impl<T: Data + 'static> WindowDesc<T> {
         WindowDesc {
             root_builder,
             title: None,
-            menu_builder: None,
+            menu: None,
         }
     }
 
@@ -123,10 +120,7 @@ impl<T: Data + 'static> WindowDesc<T> {
             .clone()
             .unwrap_or(LocalizedString::new("app-name"));
         title.resolve(&state.borrow().data, &state.borrow().env);
-        let mut menu = self
-            .menu_builder
-            .as_ref()
-            .map(|m| m(&state.borrow().data, &state.borrow().env));
+        let mut menu = self.menu.to_owned();
         let platform_menu = menu
             .as_mut()
             .map(|m| m.build_native(&state.borrow().data, &state.borrow().env));
@@ -152,8 +146,8 @@ impl<T: Data + 'static> WindowDesc<T> {
     }
 
     /// Set the menu for this window.
-    pub fn menu(mut self, f: impl Fn(&T, &Env) -> Menu<T> + 'static) -> Self {
-        self.menu_builder = Some(Arc::new(f));
+    pub fn menu(mut self, menu: MenuDesc<T>) -> Self {
+        self.menu = Some(menu);
         self
     }
 }

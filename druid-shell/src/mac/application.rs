@@ -41,5 +41,4 @@ impl Application {
             msg_send![shared, hideOtherApplications];
         }
     }
-
 }

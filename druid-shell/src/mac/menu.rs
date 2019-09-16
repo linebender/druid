@@ -19,22 +19,12 @@ use cocoa::appkit::{NSEventModifierFlags, NSMenu, NSMenuItem};
 use cocoa::base::{id, nil, NO};
 use cocoa::foundation::NSAutoreleasePool;
 
-use crate::hotkey::{HotKey, KeyCompare};
+use crate::hotkey::{HotKey, KeyCompare, SysMods};
 use crate::keyboard::{KeyCode, KeyModifiers};
 
 pub struct Menu {
     pub menu: id,
 }
-
-/// Make a string in the syntax expected as the keyEquivalent argument to
-/// NSMenuItem initWithTitle:action:keyEquivalent:
-//fn make_key_equivalent(key: &HotKey) -> String {
-//// TODO: handle modifiers and other fun things
-//match key.key {
-//KeySpec::Char(c) => c.to_string(),
-//KeySpec::None => "".to_string(),
-//}
-//}
 
 /// Strip the access keys from the menu strong.
 ///
@@ -115,7 +105,6 @@ impl Menu {
         enabled: bool,
         selected: bool,
     ) {
-        eprintln!("{}: {}", id, text);
         let menu_item = make_menu_item(id, text, key, enabled, selected);
         unsafe {
             self.menu.addItem_(menu_item);
@@ -136,7 +125,13 @@ impl Default for Menu {
         let mut menu = Menu::new();
         // this one is our actual menu
         let mut submenu = Menu::new();
-        //submenu.add_item(1, "Quit", 'q');
+        submenu.add_item(
+            1,
+            "Quit",
+            Some(&HotKey::new(SysMods::Cmd, "q")),
+            true,
+            false,
+        );
         menu.add_dropdown(submenu, "Application", true);
         menu
     }

@@ -54,6 +54,7 @@ use crate::Error;
 
 use util::assert_main_thread;
 
+#[allow(non_upper_case_globals)]
 const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
 
 #[derive(Clone, Default)]

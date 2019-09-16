@@ -61,7 +61,7 @@ pub use env::{Env, Key, Value};
 pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
 pub use localization::LocalizedString;
-pub use menu::Menu;
+pub use menu::MenuDesc;
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
 

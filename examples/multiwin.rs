@@ -15,11 +15,11 @@
 //! Manually opening and closing windows.
 
 use druid::kurbo::Size;
-use druid::menu::{Menu, MenuItem};
-use druid::widget::{Align, Button, Column, Label, Padding};
+use druid::menu::{MenuDesc, MenuItem};
+use druid::widget::{Align, Button, Column, Label, Padding, Row};
 use druid::{
-    AppLauncher, BaseState, BoxConstraints, Command, Data, Env, Event, EventCtx, HotKey, KeyCode,
-    LayoutCtx, LocalizedString, PaintCtx, Selector, SysMods, UpdateCtx, Widget, WindowDesc,
+    AppLauncher, BaseState, BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx,
+    LocalizedString, PaintCtx, Selector, UpdateCtx, Widget, WindowDesc,
 };
 
 const MENU_COUNT_ACTION: Selector = Selector::new("menu-count-action");
@@ -30,68 +30,59 @@ struct State {
     selected: usize,
 }
 
+impl Data for State {
+    fn same(&self, other: &Self) -> bool {
+        self.menu_count == other.menu_count && self.selected == other.selected
+    }
+}
+
 fn main() {
     simple_logger::init().unwrap();
-    let main_window = WindowDesc::new(ui_builder).menu(|_, _| make_menu(State::default()));
-    let data = 0_u32;
+    let main_window = WindowDesc::new(ui_builder).menu(make_menu(&State::default()));
     AppLauncher::with_window(main_window)
-        .launch(data)
+        .launch(State::default())
         .expect("launch failed");
 }
 
-fn ui_builder() -> impl Widget<u32> {
-    let text =
-        LocalizedString::new("hello-counter").with_arg("count", |data: &u32, _env| (*data).into());
+fn ui_builder() -> impl Widget<State> {
+    let text = LocalizedString::new("hello-counter")
+        .with_arg("count", |data: &State, _env| data.menu_count.into());
     let label = Label::new(text);
-    let button = Button::new("increment", |_ctx, data: &mut u32, _env| *data += 1);
+    let inc_button = Button::<State>::new("Add menu item", |ctx, data, _env| {
+        data.menu_count += 1;
+        let cmd = Command::new(Selector::SET_MENU, make_menu::<State>(data));
+        ctx.submit_command(cmd, None);
+    });
+    let dec_button = Button::<State>::new("Remove menu item", |ctx, data, _env| {
+        data.menu_count = data.menu_count.saturating_sub(1);
+        let cmd = Command::new(Selector::SET_MENU, make_menu::<State>(data));
+        ctx.submit_command(cmd, None);
+    });
 
     let mut col = Column::new();
     col.add_child(Align::centered(Padding::uniform(5.0, label)), 1.0);
-    col.add_child(Padding::uniform(5.0, button), 1.0);
+    let mut row = Row::new();
+    row.add_child(Padding::uniform(5.0, inc_button), 1.0);
+    row.add_child(Padding::uniform(5.0, dec_button), 1.0);
+    col.add_child(row, 1.0);
 
-    EventInterceptor::new(
-        State::default(),
-        col,
-        |event, ctx, state, _data, _env| match event {
-            Event::KeyUp(key) if HotKey::new(None, KeyCode::ArrowUp).matches(key) => {
-                eprintln!("{:?}", key);
-                state.menu_count += 1;
-                ctx.submit_command(
-                    Command::new(Selector::SET_MENU, make_menu::<u32>(state.clone())),
-                    None,
-                );
-                eprintln!("count {}", state.menu_count);
-                None
-            }
-            Event::KeyUp(key) if HotKey::new(None, KeyCode::ArrowDown).matches(key) => {
-                state.menu_count = state.menu_count.saturating_sub(1);
-                ctx.submit_command(
-                    Command::new(Selector::SET_MENU, make_menu::<u32>(state.clone())),
-                    None,
-                );
-                eprintln!("count {}", state.menu_count);
-                None
-            }
-            Event::Command(ref cmd) if &cmd.selector == &druid::menu::selectors::NEW_FILE => {
-                let state2 = state.to_owned();
-                let new_win =
-                    WindowDesc::new(ui_builder).menu(move |_, _| make_menu(state2.clone()));
-                let command = Command::new(Selector::NEW_WINDOW, new_win);
-                ctx.submit_command(command, None);
-                None
-            }
-            Event::Command(ref cmd) if &cmd.selector == &MENU_COUNT_ACTION => {
-                state.selected = *cmd.get_object().unwrap();
-                eprintln!("{}", state.selected);
-                ctx.submit_command(
-                    Command::new(Selector::SET_MENU, make_menu::<u32>(state.clone())),
-                    None,
-                );
-                None
-            }
-            other => Some(other),
-        },
-    )
+    EventInterceptor::new(col, |event, ctx, data, _env| match event {
+        Event::Command(ref cmd) if cmd.selector == druid::menu::selectors::NEW_FILE => {
+            let new_win = WindowDesc::new(ui_builder).menu(make_menu(data));
+            let command = Command::new(Selector::NEW_WINDOW, new_win);
+            ctx.submit_command(command, None);
+            None
+        }
+        Event::Command(ref cmd) if cmd.selector == MENU_COUNT_ACTION => {
+            data.selected = *cmd.get_object().unwrap();
+            ctx.submit_command(
+                Command::new(Selector::SET_MENU, make_menu::<State>(data)),
+                None,
+            );
+            None
+        }
+        other => Some(other),
+    })
 }
 
 // should something like this be in druid proper? I'm just experimenting here...
@@ -100,28 +91,26 @@ fn ui_builder() -> impl Widget<u32> {
 /// This is instantiated with a closure that has the same signature as `event`,
 /// and which can either consume events itself or return them to have them
 /// be passed to the inner widget.
-struct EventInterceptor<T, S> {
+struct EventInterceptor<T> {
     /// Custom widget-level state
-    state: S,
     inner: Box<dyn Widget<T> + 'static>,
-    f: Box<dyn Fn(Event, &mut EventCtx, &mut S, &mut T, &Env) -> Option<Event>>,
+    f: Box<dyn Fn(Event, &mut EventCtx, &mut T, &Env) -> Option<Event>>,
 }
 
-impl<T: Data + 'static, S> EventInterceptor<T, S> {
-    fn new<W, F>(state: S, inner: W, f: F) -> Self
+impl<T: Data + 'static> EventInterceptor<T> {
+    fn new<W, F>(inner: W, f: F) -> Self
     where
         W: Widget<T> + 'static,
-        F: Fn(Event, &mut EventCtx, &mut S, &mut T, &Env) -> Option<Event> + 'static,
+        F: Fn(Event, &mut EventCtx, &mut T, &Env) -> Option<Event> + 'static,
     {
         EventInterceptor {
-            state,
             inner: Box::new(inner),
             f: Box::new(f),
         }
     }
 }
 
-impl<T: Data, S> Widget<T> for EventInterceptor<T, S> {
+impl<T: Data> Widget<T> for EventInterceptor<T> {
     fn paint(&mut self, ctx: &mut PaintCtx, state: &BaseState, d: &T, env: &Env) {
         self.inner.paint(ctx, state, d, env)
     }
@@ -135,8 +124,8 @@ impl<T: Data, S> Widget<T> for EventInterceptor<T, S> {
             ctx.request_focus();
         }
         let event = event.clone();
-        let EventInterceptor { state, inner, f } = self;
-        if let Some(event) = (f)(event, ctx, state, data, env) {
+        let EventInterceptor { inner, f } = self;
+        if let Some(event) = (f)(event, ctx, data, env) {
             inner.event(&event, ctx, data, env);
         }
     }
@@ -146,17 +135,22 @@ impl<T: Data, S> Widget<T> for EventInterceptor<T, S> {
     }
 }
 
-fn make_menu<T: Data>(state: State) -> Menu<T> {
-    druid::menu::macos_menu_bar().append(Menu::new(LocalizedString::new("custom")).append_iter(
-        || {
-            (0..state.menu_count).map(|i| {
-                MenuItem::new(
-                    LocalizedString::new("hello-counter").with_arg("count", move |_, _| i.into()),
-                    Command::new(MENU_COUNT_ACTION, i),
-                )
-                .disabled_if(|| i % 3 == 0)
-                .selected_if(|| i == state.selected)
-            })
-        },
-    ))
+fn make_menu<T: Data>(state: &State) -> MenuDesc<T> {
+    let mut base = druid::menu::macos_menu_bar();
+    if state.menu_count != 0 {
+        base = base.append(
+            MenuDesc::new(LocalizedString::new("Custom")).append_iter(|| {
+                (0..state.menu_count).map(|i| {
+                    MenuItem::new(
+                        LocalizedString::new("hello-counter")
+                            .with_arg("count", move |_, _| i.into()),
+                        Command::new(MENU_COUNT_ACTION, i),
+                    )
+                    .disabled_if(|| i % 3 == 0)
+                    .selected_if(|| i == state.selected)
+                })
+            }),
+        );
+    }
+    base
 }
