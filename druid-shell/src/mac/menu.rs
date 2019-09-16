@@ -23,6 +23,8 @@ use objc::runtime::{Class, Object, Sel};
 use crate::keycodes::{KeySpec, MenuKey};
 use crate::util::make_nsstring;
 
+use crate::common_util::{strip_access_key};
+
 struct MenuItemProxyClass(*const Class);
 unsafe impl Sync for MenuItemProxyClass {}
 
@@ -57,26 +59,6 @@ fn make_key_equivalent(key: impl Into<MenuKey>) -> String {
         KeySpec::Char(c) => c.to_string(),
         KeySpec::None => "".to_string(),
     }
-}
-
-/// Strip the access keys from the menu strong.
-///
-/// Changes "E&xit" to "Exit". Actual ampersands are escaped as "&&".
-fn strip_access_key(raw_menu_text: &str) -> String {
-    let mut saw_ampersand = false;
-    let mut result = String::new();
-    for c in raw_menu_text.chars() {
-        if c == '&' {
-            if saw_ampersand {
-                result.push(c);
-            }
-            saw_ampersand = !saw_ampersand;
-        } else {
-            result.push(c);
-            saw_ampersand = false;
-        }
-    }
-    result
 }
 
 fn make_basic_menu_item(_id: u32, text: &str, key: impl Into<MenuKey>) -> id {
