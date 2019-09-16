@@ -22,11 +22,11 @@ use gtkrs::MenuBar as GtkMenuBar;
 use gtkrs::MenuItem as GtkMenuItem;
 use gtkrs::{GtkMenuItemExt, MenuShellExt, SeparatorMenuItemBuilder, WidgetExt};
 
+use crate::common_util::strip_access_key;
 use crate::gtk::WinCtxImpl;
 use crate::keycodes::{KeySpec, MenuKey};
 use crate::keycodes::{Modifiers, M_ALT, M_CTRL, M_META, M_SHIFT};
 use crate::platform::WindowHandle;
-use crate::common_util::{strip_access_key};
 
 #[derive(Default)]
 pub struct Menu {
@@ -138,4 +138,3 @@ fn modifiers_to_gdk_modifier_type(modifiers: Modifiers) -> gdk::ModifierType {
 
     result
 }
-
