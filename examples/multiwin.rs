@@ -92,7 +92,6 @@ fn ui_builder() -> impl Widget<State> {
 /// and which can either consume events itself or return them to have them
 /// be passed to the inner widget.
 struct EventInterceptor<T> {
-    /// Custom widget-level state
     inner: Box<dyn Widget<T> + 'static>,
     f: Box<dyn Fn(Event, &mut EventCtx, &mut T, &Env) -> Option<Event>>,
 }
