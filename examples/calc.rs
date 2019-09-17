@@ -243,7 +243,7 @@ fn main() {
         in_num: false,
     };
     AppLauncher::with_window(window)
-        .use_logger()
+        .use_simple_logger()
         .launch(calc_state)
         .expect("launch failed");
 }

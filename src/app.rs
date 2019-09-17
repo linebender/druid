@@ -50,7 +50,10 @@ impl<T: Data + 'static> AppLauncher<T> {
         }
     }
 
-    pub fn use_logger(self) -> Self {
+    /// Initialize a minimal logger for printing logs out to stderr.
+    ///
+    /// Meant for use during development only.
+    pub fn use_simple_logger(self) -> Self {
         simple_logger::init().ok();
         self
     }

@@ -127,7 +127,7 @@ impl Widget<String> for CustomWidget {
 fn main() {
     let window = WindowDesc::new(|| CustomWidget {});
     AppLauncher::with_window(window)
-        .use_logger()
+        .use_simple_logger()
         .launch("Druid + Piet".to_string())
         .expect("launch failed");
 }

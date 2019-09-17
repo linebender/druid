@@ -19,7 +19,7 @@ fn main() {
     let main_window = WindowDesc::new(ui_builder);
     let data = 0_u32;
     AppLauncher::with_window(main_window)
-        .use_logger()
+        .use_simple_logger()
         .launch(data)
         .expect("launch failed");
 }
