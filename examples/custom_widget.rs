@@ -21,8 +21,8 @@ use druid::piet::{
 };
 
 use druid::{
-    Action, AppLauncher, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx,
-    UpdateCtx, Widget, WindowDesc,
+    AppLauncher, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
+    Widget, WindowDesc,
 };
 
 struct CustomWidget;
@@ -112,15 +112,7 @@ impl Widget<String> for CustomWidget {
         bc.max()
     }
 
-    fn event(
-        &mut self,
-        _event: &Event,
-        _ctx: &mut EventCtx,
-        _data: &mut String,
-        _env: &Env,
-    ) -> Option<Action> {
-        None
-    }
+    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut String, _env: &Env) {}
 
     fn update(
         &mut self,

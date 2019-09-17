@@ -17,8 +17,8 @@
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
-    Widget, WidgetPod,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    WidgetPod,
 };
 
 /// A builder for a row widget that can contain flex children.
@@ -208,18 +208,10 @@ impl<T: Data> Widget<T> for Flex<T> {
         Size::new(width, height)
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action> {
-        let mut action = None;
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         for child in &mut self.children {
-            action = Action::merge(action, child.widget.event(event, ctx, data, env));
+            child.widget.event(event, ctx, data, env);
         }
-        action
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {

@@ -209,19 +209,13 @@ pub trait Widget<T> {
     ///
     /// A number of different events (in the [`Event`] enum) are handled in this
     /// method call. A widget can handle these events in a number of ways:
-    /// requesting things from the [`EventCtx`], mutating the data, or returning
-    /// an [`Action`].
+    /// requesting things from the [`EventCtx`], mutating the data, or submitting
+    /// a [`Command`].
     ///
     /// [`Event`]: struct.Event.html
     /// [`EventCtx`]: struct.EventCtx.html
-    /// [`Action`]: struct.Action.html
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action>;
+    /// [`Command`]: struct.Command.html
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env);
 
     /// Handle a change of data.
     ///
@@ -252,13 +246,7 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
         self.deref_mut().layout(ctx, bc, data, env)
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         self.deref_mut().event(event, ctx, data, env)
     }
 
@@ -341,27 +329,6 @@ pub struct UpdateCtx<'a, 'b: 'a> {
     // now keep it super-simple.
     needs_inval: bool,
     window_id: WindowId,
-}
-
-/// An action produced by a widget.
-///
-/// Widgets have several ways of producing an effect in response to
-/// events. Two of these are mutating their data, and requesting
-/// actions from [`EventCtx`]. When neither of those is suitable,
-/// and the action is generic (for example, a button press), then
-/// the event handler for a widget can return an `Action`, and it
-/// is passed up the calling hierarchy.
-///
-/// The details of the contents of this struct are still subject to
-/// change. It's also possible that the concept will go away; a
-/// reasonable replacement is to provide buttons with a closure that
-/// can perform the action more directly.
-///
-/// [`EventCtx`]: struct.EventCtx.html
-#[derive(Debug)]
-pub struct Action {
-    // This is just a placeholder for debugging purposes.
-    text: String,
 }
 
 /// Constraints for layout.
@@ -466,19 +433,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// the event.
     ///
     /// [`event`]: trait.Widget.html#method.event
-    pub fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action> {
+    pub fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         // TODO: factor as much logic as possible into monomorphic functions.
         if ctx.is_handled || !event.recurse() {
             // This function is called by containers to propagate an event from
             // containers to children. Non-recurse events will be invoked directly
             // from other points in the library.
-            return None;
+            return;
         }
         let had_active = self.state.has_active;
         let mut child_ctx = EventCtx {
@@ -559,18 +520,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         child_ctx.base_state.needs_inval = false;
         if let Some(is_hot) = hot_changed {
             let hot_changed_event = Event::HotChanged(is_hot);
-            // Hot changed events are not expected to return an action.
-            let _action = self
-                .inner
+            self.inner
                 .event(&hot_changed_event, &mut child_ctx, data, &env);
         }
-        let action = if recurse {
+        if recurse {
             child_ctx.base_state.has_active = false;
-            let action = self.inner.event(&child_event, &mut child_ctx, data, &env);
+            self.inner.event(&child_event, &mut child_ctx, data, &env);
             child_ctx.base_state.has_active |= child_ctx.base_state.is_active;
-            action
-        } else {
-            None
         };
         ctx.base_state.needs_inval |= child_ctx.base_state.needs_inval;
         ctx.base_state.request_anim |= child_ctx.base_state.request_anim;
@@ -579,7 +535,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.base_state.has_active |= child_ctx.base_state.has_active;
         ctx.base_state.request_focus |= child_ctx.base_state.request_focus;
         ctx.is_handled |= child_ctx.is_handled;
-        action
     }
 
     /// Propagate a data update.
@@ -917,32 +872,5 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     /// Get the window id.
     pub fn window_id(&self) -> WindowId {
         self.window_id
-    }
-}
-
-impl Action {
-    /// Make an action from a string.
-    ///
-    /// Note: this is something of a placeholder and will change.
-    pub fn from_str(s: impl Into<String>) -> Action {
-        Action { text: s.into() }
-    }
-
-    /// Provides access to the action's string representation.
-    pub fn as_str(&self) -> &str {
-        self.text.as_str()
-    }
-
-    /// Merge two optional actions.
-    ///
-    /// Note: right now we're not dealing with the case where the event propagation
-    /// results in more than one action. We need to rethink this.
-    pub fn merge(this: Option<Action>, other: Option<Action>) -> Option<Action> {
-        if this.is_some() {
-            assert!(other.is_none(), "can't merge two actions");
-            this
-        } else {
-            other
-        }
     }
 }

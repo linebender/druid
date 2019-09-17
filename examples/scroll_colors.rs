@@ -18,8 +18,8 @@ use druid::shell::kurbo::{Rect, Size};
 use druid::shell::piet::{Color, RenderContext};
 use druid::widget::{Column, Row, Scroll};
 use druid::{
-    Action, AppLauncher, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx,
-    PaintCtx, UpdateCtx, Widget, WindowDesc,
+    AppLauncher, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx,
+    UpdateCtx, Widget, WindowDesc,
 };
 
 struct FixedSize {
@@ -55,20 +55,13 @@ impl<T: Data> Widget<T> for FixedSize {
         self.size.clone()
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        _data: &mut T,
-        _env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, _data: &mut T, _env: &Env) {
         match event {
             Event::HotChanged(_) => {
                 ctx.invalidate();
             }
             _ => (),
         }
-        None
     }
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}

@@ -19,7 +19,7 @@ use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::theme;
 use crate::widget::Align;
 use crate::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 /// A progress bar, displaying a numeric progress value.
@@ -104,15 +104,7 @@ impl Widget<f64> for ProgressBarRaw {
         }
     }
 
-    fn event(
-        &mut self,
-        _event: &Event,
-        _ctx: &mut EventCtx,
-        _data: &mut f64,
-        _env: &Env,
-    ) -> Option<Action> {
-        None
-    }
+    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut f64, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {
         ctx.invalidate();

@@ -21,8 +21,8 @@ use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::theme;
 use crate::widget::{Align, Column, Label, LabelText, Padding};
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
-    Widget, WidgetPod,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    WidgetPod,
 };
 
 /// A group of radio buttons
@@ -125,13 +125,7 @@ impl<T: Data + PartialEq> Widget<T> for RadioRaw<T> {
         ))
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        _env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
@@ -151,7 +145,6 @@ impl<T: Data + PartialEq> Widget<T> for RadioRaw<T> {
             }
             _ => (),
         }
-        None
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {
