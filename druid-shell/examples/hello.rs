@@ -124,6 +124,7 @@ fn main() {
         false,
     );
     let mut menubar = Menu::new();
+    menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
     let mut run_loop = runloop::RunLoop::new();

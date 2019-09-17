@@ -86,8 +86,7 @@ impl Menu {
     pub fn add_dropdown(&mut self, menu: Menu, text: &str, enabled: bool) {
         unsafe {
             let menu_item = NSMenuItem::alloc(nil);
-            let title = make_nsstring(text);
-            //msg_send![menu_item, setTitle: title];
+            let title = make_nsstring(&strip_access_key(text));
             msg_send![menu.menu, setTitle: title];
             if !enabled {
                 msg_send![menu_item, setEnabled: NO];
@@ -136,6 +135,7 @@ impl Default for Menu {
         menu
     }
 }
+
 impl HotKey {
     /// Return the string value of this hotkey, for use with Cocoa `NSResponder`
     /// objects.
@@ -204,5 +204,17 @@ impl HotKey {
             flags.insert(NSEventModifierFlags::NSControlKeyMask);
         }
         flags
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn strip_access() {
+        assert_eq!(strip_access_key("&Exit").as_str(), "Exit");
+        assert_eq!(strip_access_key("&&Exit").as_str(), "&Exit");
+        assert_eq!(strip_access_key("E&&xit").as_str(), "E&xit");
+        assert_eq!(strip_access_key("E&xit").as_str(), "Exit");
     }
 }
