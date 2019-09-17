@@ -21,8 +21,8 @@ use std::ops::Range;
 use std::time::{Duration, Instant};
 
 use crate::{
-    Action, BaseState, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
-    PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
+    BaseState, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx, PaintCtx,
+    RawMods, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
@@ -338,13 +338,7 @@ impl Widget<String> for TextBoxRaw {
         bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut String,
-        env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut String, env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.request_focus();
@@ -449,7 +443,6 @@ impl Widget<String> for TextBoxRaw {
             }
             _ => (),
         }
-        None
     }
 
     fn update(

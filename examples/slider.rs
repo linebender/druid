@@ -13,8 +13,7 @@
 // limitations under the License.
 
 use druid::widget::{
-    ActionWrapper, Align, Button, Checkbox, Column, DynLabel, Label, Padding, ProgressBar, Row,
-    Slider,
+    Align, Button, Checkbox, Column, DynLabel, Label, Padding, ProgressBar, Row, Slider,
 };
 use druid::{AppLauncher, Data, LensWrap, Widget, WindowDesc};
 
@@ -77,14 +76,15 @@ fn build_widget() -> impl Widget<DemoState> {
     let bar = LensWrap::new(ProgressBar::new(), lenses::demo_state::Value);
     let slider = LensWrap::new(Slider::new(), lenses::demo_state::Value);
 
-    let button_1 = ActionWrapper::new(
-        Button::sized("increment ", 200.0, 100.0),
-        move |data: &mut DemoState, _env| data.value += 0.1,
+    let button_1 = Button::sized(
+        "increment ",
+        |_ctx, data: &mut DemoState, _env| data.value += 0.1,
+        200.0,
+        100.0,
     );
-    let button_2 = ActionWrapper::new(
-        Button::new("decrement "),
-        move |data: &mut DemoState, _env| data.value -= 0.1,
-    );
+    let button_2 = Button::new("decrement ", |_ctx, data: &mut DemoState, _env| {
+        data.value -= 0.1
+    });
 
     col.add_child(Padding::uniform(5.0, bar), 1.0);
     col.add_child(Padding::uniform(5.0, slider), 1.0);

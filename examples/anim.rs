@@ -19,8 +19,8 @@ use std::f64::consts::PI;
 use druid::kurbo::{Line, Point, Size, Vec2};
 use druid::piet::{Color, RenderContext};
 use druid::{
-    Action, AppLauncher, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx,
-    UpdateCtx, Widget, WindowDesc,
+    AppLauncher, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
+    Widget, WindowDesc,
 };
 
 struct AnimWidget {
@@ -50,13 +50,7 @@ impl Widget<u32> for AnimWidget {
         bc.constrain((100.0, 100.0))
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        _data: &mut u32,
-        _env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, _data: &mut u32, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 self.t = 0.0;
@@ -73,7 +67,6 @@ impl Widget<u32> for AnimWidget {
             }
             _ => (),
         }
-        None
     }
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&u32>, _data: &u32, _env: &Env) {}

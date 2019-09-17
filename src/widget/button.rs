@@ -17,8 +17,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size,
-    UpdateCtx, Widget,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx,
+    Widget,
 };
 
 use crate::kurbo::{Rect, RoundedRect};
@@ -47,6 +47,8 @@ pub struct Label<T> {
 /// A button with a text label.
 pub struct Button<T> {
     label: Label<T>,
+    /// A closure that will be invoked when the button is clicked.
+    action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
 }
 
 /// A label with dynamic text.
@@ -123,15 +125,7 @@ impl<T: Data> Widget<T> for Label<T> {
         bc.constrain((text_layout.width(), font_size * 1.2))
     }
 
-    fn event(
-        &mut self,
-        _event: &Event,
-        _ctx: &mut EventCtx,
-        _data: &mut T,
-        _env: &Env,
-    ) -> Option<Action> {
-        None
-    }
+    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut T, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
         if self.text.resolve(data, env) {
@@ -141,22 +135,46 @@ impl<T: Data> Widget<T> for Label<T> {
 }
 
 impl<T: Data + 'static> Button<T> {
-    pub fn new(text: impl Into<LabelText<T>>) -> Button<T> {
+    /// Create a new button. The closure provided will be called when the button
+    /// is clicked.
+    pub fn new(
+        text: impl Into<LabelText<T>>,
+        action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
+    ) -> Button<T> {
         Button {
             label: Label::aligned(text, UnitPoint::CENTER),
+            action: Box::new(action),
         }
     }
 
-    pub fn sized(text: impl Into<LabelText<T>>, width: f64, height: f64) -> impl Widget<T> {
+    /// Create a new button with a fixed size.
+    pub fn sized(
+        text: impl Into<LabelText<T>>,
+        action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
+        width: f64,
+        height: f64,
+    ) -> impl Widget<T> {
         Align::vertical(
             UnitPoint::CENTER,
             SizedBox::new(Button {
                 label: Label::aligned(text, UnitPoint::CENTER),
+                action: Box::new(action),
             })
             .width(width)
             .height(height),
         )
     }
+
+    /// A function that can be passed to `Button::new`, for buttons with no action.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use druid::widget::Button;
+    ///
+    /// let button = Button::<u32>::new("hello", Button::noop);
+    /// ```
+    pub fn noop(_: &mut EventCtx, _: &mut T, _: &Env) {}
 }
 
 impl<T: Data> Widget<T> for Button<T> {
@@ -203,14 +221,7 @@ impl<T: Data> Widget<T> for Button<T> {
         self.label.layout(layout_ctx, bc, data, env)
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        _data: &mut T,
-        _env: &Env,
-    ) -> Option<Action> {
-        let mut result = None;
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
@@ -221,7 +232,7 @@ impl<T: Data> Widget<T> for Button<T> {
                     ctx.set_active(false);
                     ctx.invalidate();
                     if ctx.is_hot() {
-                        result = Some(Action::from_str("hit"));
+                        (self.action)(ctx, data, env);
                     }
                 }
             }
@@ -230,7 +241,6 @@ impl<T: Data> Widget<T> for Button<T> {
             }
             _ => (),
         }
-        result
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
@@ -292,15 +302,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
         bc.constrain(Size::new(text_layout.width(), font_size * 1.2))
     }
 
-    fn event(
-        &mut self,
-        _event: &Event,
-        _ctx: &mut EventCtx,
-        _data: &mut T,
-        _env: &Env,
-    ) -> Option<Action> {
-        None
-    }
+    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut T, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {
         ctx.invalidate();

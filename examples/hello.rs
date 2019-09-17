@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{ActionWrapper, Align, Button, Column, Label, Padding};
+use druid::widget::{Align, Button, Column, Label, Padding};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn main() {
@@ -28,10 +28,10 @@ fn ui_builder() -> impl Widget<u32> {
     let text =
         LocalizedString::new("hello-counter").with_arg("count", |data: &u32, _env| (*data).into());
     let label = Label::new(text);
-    let button = Button::new("increment");
+    let button = Button::new("increment", |_ctx, data, _env| *data += 1);
 
     let mut col = Column::new();
     col.add_child(Align::centered(Padding::uniform(5.0, label)), 1.0);
     col.add_child(Padding::uniform(5.0, button), 1.0);
-    ActionWrapper::new(col, |data: &mut u32, _env| *data += 1)
+    col
 }

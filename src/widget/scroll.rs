@@ -20,8 +20,8 @@ use std::time::{Duration, Instant};
 use log::error;
 
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    Rect, Size, TimerToken, UpdateCtx, Vec2, Widget, WidgetPod,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect, Size,
+    TimerToken, UpdateCtx, Vec2, Widget, WidgetPod,
 };
 
 use crate::piet::RenderContext;
@@ -223,20 +223,12 @@ impl<T: Data> Widget<T> for Scroll<T> {
         self_size
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         let size = ctx.base_state.size();
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
         let child_event = event.transform_scroll(self.scroll_offset, viewport);
-        let action = if let Some(child_event) = child_event {
+        if let Some(child_event) = child_event {
             self.child.event(&child_event, ctx, data, env)
-        } else {
-            None
         };
 
         match event {
@@ -255,7 +247,7 @@ impl<T: Data> Widget<T> for Scroll<T> {
                 ctx.request_anim_frame();
                 self.scroll_bars.timer_id = TimerToken::INVALID;
             }
-            _ => {}
+            _ => (),
         }
 
         if !ctx.is_handled() {
@@ -271,7 +263,6 @@ impl<T: Data> Widget<T> for Scroll<T> {
                 }
             }
         }
-        action
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {

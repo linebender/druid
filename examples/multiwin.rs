@@ -15,10 +15,10 @@
 //! Manually opening and closing windows.
 
 use druid::kurbo::Size;
-use druid::widget::{ActionWrapper, Align, Button, Column, Label, Padding};
+use druid::widget::{Align, Button, Column, Label, Padding};
 use druid::{
-    Action, AppLauncher, BaseState, BoxConstraints, Command, Data, Env, Event, EventCtx, HotKey,
-    LayoutCtx, LocalizedString, PaintCtx, Selector, SysMods, UpdateCtx, Widget, WindowDesc,
+    AppLauncher, BaseState, BoxConstraints, Command, Data, Env, Event, EventCtx, HotKey, LayoutCtx,
+    LocalizedString, PaintCtx, Selector, SysMods, UpdateCtx, Widget, WindowDesc,
 };
 
 fn main() {
@@ -34,14 +34,13 @@ fn ui_builder() -> impl Widget<u32> {
     let text =
         LocalizedString::new("hello-counter").with_arg("count", |data: &u32, _env| (*data).into());
     let label = Label::new(text);
-    let button = Button::new("increment");
+    let button = Button::new("increment", |_ctx, data: &mut u32, _env| *data += 1);
 
     let mut col = Column::new();
     col.add_child(Align::centered(Padding::uniform(5.0, label)), 1.0);
     col.add_child(Padding::uniform(5.0, button), 1.0);
-    let wrapper = ActionWrapper::new(col, |data: &mut u32, _env| *data += 1);
 
-    EventInterceptor::new(wrapper, |event, ctx, _data, _env| {
+    EventInterceptor::new(col, |event, ctx, _data, _env| {
         if let Event::KeyDown(e) = event {
             if HotKey::new(SysMods::Cmd, "n").matches(e) {
                 eprintln!("cmd-N");
@@ -95,20 +94,13 @@ impl<T: Data> Widget<T> for EventInterceptor<T> {
         self.inner.layout(ctx, bc, d, env)
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         if !ctx.has_focus() {
             ctx.request_focus();
         }
         let event = event.clone();
-        match (self.f)(event, ctx, data, env) {
-            Some(event) => self.inner.event(&event, ctx, data, env),
-            None => None,
+        if let Some(event) = (self.f)(event, ctx, data, env) {
+            self.inner.event(&event, ctx, data, env);
         }
     }
 
