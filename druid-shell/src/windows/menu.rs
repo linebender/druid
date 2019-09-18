@@ -60,7 +60,7 @@ impl Menu {
         unsafe {
             let mut flags = MF_POPUP;
             if !enabled {
-                flags &= MF_GRAYED;
+                flags |= MF_GRAYED;
             }
             AppendMenuW(
                 self.hmenu,
@@ -84,10 +84,10 @@ impl Menu {
         unsafe {
             let mut flags = MF_STRING;
             if !enabled {
-                flags &= MF_GRAYED;
+                flags |= MF_GRAYED;
             }
-            if !selected {
-                flags &= MF_CHECKED;
+            if selected {
+                flags |= MF_CHECKED;
             }
             AppendMenuW(self.hmenu, flags, id as UINT_PTR, text.to_wide().as_ptr());
         }
