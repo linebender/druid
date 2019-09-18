@@ -98,6 +98,7 @@ fn build_widget() -> impl Widget<DemoState> {
 fn main() {
     let window = WindowDesc::new(build_widget);
     AppLauncher::with_window(window)
+        .use_simple_logger()
         .launch(DemoState {
             value: 0.7f64,
             double: false,

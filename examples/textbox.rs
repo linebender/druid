@@ -18,6 +18,7 @@ use druid::{AppLauncher, Widget, WindowDesc};
 fn main() {
     let window = WindowDesc::new(build_widget);
     AppLauncher::with_window(window)
+        .use_simple_logger()
         .launch("typing is fun!".to_string())
         .expect("launch failed");
 }

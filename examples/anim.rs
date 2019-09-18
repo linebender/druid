@@ -75,6 +75,7 @@ impl Widget<u32> for AnimWidget {
 fn main() {
     let window = WindowDesc::new(|| AnimWidget { t: 0.0 });
     AppLauncher::with_window(window)
+        .use_simple_logger()
         .launch(0)
         .expect("launch failed");
 }
