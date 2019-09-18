@@ -52,7 +52,7 @@ pub(crate) unsafe fn create_render_target(
     d2d_factory: &direct2d::Factory,
     hwnd: HWND,
 ) -> Result<HwndRenderTarget, Error> {
-    let mut rect: RECT = mem::uninitialized();
+    let mut rect = mem::MaybeUninit::<RECT>::zeroed().assume_init();
     GetClientRect(hwnd, &mut rect);
     let width = (rect.right - rect.left) as u32;
     let height = (rect.bottom - rect.top) as u32;

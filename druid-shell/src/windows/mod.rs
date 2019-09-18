@@ -390,7 +390,7 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
-                        let mut rect: RECT = mem::uninitialized();
+                        let mut rect = mem::MaybeUninit::<RECT>::zeroed().assume_init();
                         GetClientRect(hwnd, &mut rect);
                         let width = (rect.right - rect.left) as u32;
                         let height = (rect.bottom - rect.top) as u32;
@@ -878,7 +878,7 @@ unsafe fn choose_adapter(factory: *mut IDXGIFactory2) -> *mut IDXGIAdapter {
         if !SUCCEEDED((*factory).EnumAdapters(i, &mut adapter)) {
             break;
         }
-        let mut desc: DXGI_ADAPTER_DESC = mem::uninitialized();
+        let mut desc = mem::MaybeUninit::<DXGI_ADAPTER_DESC>::zeroed().assume_init(); // TODO: Confirm that this works correctly
         (*adapter).GetDesc(&mut desc);
         let vram = desc.DedicatedVideoMemory;
         if i == 0 || vram > best_vram {

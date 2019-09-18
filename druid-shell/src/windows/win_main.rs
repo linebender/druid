@@ -84,7 +84,7 @@ impl RunLoop {
 
                 // Handle windows messages
                 loop {
-                    let mut msg = mem::uninitialized();
+                    let mut msg = mem::MaybeUninit::<MSG>::zeroed().assume_init();
                     // Note: we could use PM_REMOVE here and avoid the GetMessage below
                     let res = PeekMessageW(&mut msg, null_mut(), 0, 0, PM_NOREMOVE);
                     if res == 0 {
