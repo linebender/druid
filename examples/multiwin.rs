@@ -134,8 +134,13 @@ impl<T: Data> Widget<T> for EventInterceptor<T> {
     }
 }
 
+#[allow(unused_assignments)]
 fn make_menu<T: Data>(state: &State) -> MenuDesc<T> {
-    let mut base = druid::menu::macos_menu_bar();
+    let mut base = MenuDesc::empty();
+    #[cfg(target_os = "macos")]
+    {
+        base = druid::menu::sys::mac::menu_bar();
+    }
     if state.menu_count != 0 {
         base = base.append(
             MenuDesc::new(LocalizedString::new("Custom")).append_iter(|| {
