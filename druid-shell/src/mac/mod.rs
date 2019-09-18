@@ -147,7 +147,6 @@ impl WindowBuilder {
                 NO,
             );
 
-            window.autorelease();
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
             // TODO: this should probably be a tracking area instead
@@ -595,7 +594,9 @@ impl WindowHandle {
                 let window: id = msg_send![*nsview.load(), window];
                 // register our view class to be alerted when it becomes the key view.
                 let notif_center_class = class!(NSNotificationCenter);
-                let notif_string = NSString::alloc(nil).init_str(NSWindowDidBecomeKeyNotification);
+                let notif_string = NSString::alloc(nil)
+                    .init_str(NSWindowDidBecomeKeyNotification)
+                    .autorelease();
                 let notif_center: id = msg_send![notif_center_class, defaultCenter];
                 msg_send![notif_center, addObserver:*nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
                 window.makeKeyAndOrderFront_(nil)
@@ -609,11 +610,6 @@ impl WindowHandle {
             unsafe {
                 let view = nsview.load();
                 let window: id = msg_send![*view, window];
-                //FIXME: It's possible that we're leaking windows here,
-                //but if we don't set this we segfault after close. Maybe we should
-                //have an appdelegate that handles the windowShouldClose notification?
-                //See https://developer.apple.com/documentation/appkit/nswindow/1419062-releasedwhenclosed?language=objc
-                msg_send![window, setReleasedWhenClosed: NO];
                 window.close();
             }
         }
