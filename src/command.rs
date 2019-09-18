@@ -94,6 +94,25 @@ pub mod sys {
 
     /// Show the print dialog.
     pub const PRINT: Selector = Selector::new("druid-builtin.menu-file-print");
+
+    /// Show the print preview.
+    pub const PRINT_PREVIEW: Selector = Selector::new("druid-builtin.menu-file-print");
+
+    /// Cut the current selection.
+    pub const CUT: Selector = Selector::new("druid-builtin.menu-cut");
+
+    /// Copy the current selection.
+    pub const COPY: Selector = Selector::new("druid-builtin.menu-copy");
+
+    /// Paste.
+    pub const PASTE: Selector = Selector::new("druid-builtin.menu-paste");
+
+    /// Undo.
+    pub const UNDO: Selector = Selector::new("druid-builtin.menu-undo");
+
+    /// Redo.
+    pub const REDO: Selector = Selector::new("druid-builtin.menu-redo");
+
 }
 
 impl Selector {
