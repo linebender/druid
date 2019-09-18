@@ -66,6 +66,7 @@ fn build_widget() -> impl Widget<Choice> {
 fn main() {
     let window = WindowDesc::new(build_widget);
     AppLauncher::with_window(window)
+        .use_simple_logger()
         .launch(Choice::A)
         .expect("launch failed");
 }

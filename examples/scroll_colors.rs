@@ -97,10 +97,10 @@ fn build_app() -> impl Widget<u32> {
 }
 
 fn main() {
-    simple_logger::init().unwrap();
     let main_window = WindowDesc::new(build_app);
     let data = 0_u32;
     AppLauncher::with_window(main_window)
+        .use_simple_logger()
         .launch(data)
         .expect("launch failed");
 }

@@ -81,6 +81,7 @@ fn main() {
     });
 
     AppLauncher::with_window(window)
+        .use_simple_logger()
         .launch(0u32)
         .expect("launch failed");
 }

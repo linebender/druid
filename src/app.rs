@@ -50,6 +50,14 @@ impl<T: Data + 'static> AppLauncher<T> {
         }
     }
 
+    /// Initialize a minimal logger for printing logs out to stderr.
+    ///
+    /// Meant for use during development only.
+    pub fn use_simple_logger(self) -> Self {
+        simple_logger::init().ok();
+        self
+    }
+
     /// Build the windows and start the runloop.
     ///
     /// Returns an error if a window cannot be instantiated. This is usually
