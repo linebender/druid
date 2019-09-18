@@ -77,7 +77,7 @@ fn make_menu_item(id: u32, text: &str, key: Option<&HotKey>, enabled: bool, sele
 impl Menu {
     pub fn new() -> Menu {
         unsafe {
-            let menu = NSMenu::alloc(nil);
+            let menu = NSMenu::alloc(nil).autorelease();
             msg_send![menu, setAutoenablesItems: NO];
             Menu { menu }
         }
@@ -85,7 +85,7 @@ impl Menu {
 
     pub fn add_dropdown(&mut self, menu: Menu, text: &str, enabled: bool) {
         unsafe {
-            let menu_item = NSMenuItem::alloc(nil);
+            let menu_item = NSMenuItem::alloc(nil).autorelease();
             let title = make_nsstring(&strip_access_key(text));
             msg_send![menu.menu, setTitle: title];
             if !enabled {
