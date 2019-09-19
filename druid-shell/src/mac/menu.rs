@@ -83,6 +83,11 @@ impl Menu {
         }
     }
 
+    pub fn new_for_popup() -> Menu {
+        // mac doesn't distinguish between application and context menu types.
+        Menu::new()
+    }
+
     pub fn add_dropdown(&mut self, menu: Menu, text: &str, enabled: bool) {
         unsafe {
             let menu_item = NSMenuItem::alloc(nil);

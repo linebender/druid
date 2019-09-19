@@ -36,6 +36,7 @@ pub struct Window<T: Data> {
     pub(crate) title: LocalizedString<T>,
     size: Size,
     pub(crate) menu: Option<MenuDesc<T>>,
+    pub(crate) context_menu: Option<MenuDesc<T>>,
     // delegate?
 }
 
@@ -50,6 +51,7 @@ impl<T: Data> Window<T> {
             size: Size::ZERO,
             title,
             menu,
+            context_menu: None,
         }
     }
 
@@ -87,7 +89,10 @@ impl<T: Data> Window<T> {
     }
 
     pub(crate) fn get_menu_cmd(&self, cmd_id: u32) -> Option<Command> {
-        self.menu.as_ref().and_then(|m| m.command_for_id(cmd_id))
+        self.context_menu
+            .as_ref()
+            .and_then(|m| m.command_for_id(cmd_id))
+            .or(self.menu.as_ref().and_then(|m| m.command_for_id(cmd_id)))
     }
 }
 

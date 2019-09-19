@@ -108,10 +108,10 @@
 
 use std::num::NonZeroU32;
 
+use crate::kurbo::Point;
 use crate::shell::hotkey::{HotKey, KeyCompare, RawMods, SysMods};
-use crate::{command, Command, Data, Env, KeyCode, LocalizedString, Selector};
-
 use crate::shell::menu::Menu as PlatformMenu;
+use crate::{command, Command, Data, Env, KeyCode, LocalizedString, Selector};
 
 /// A platform-agnostic description of an application, window, or context
 /// menu.
@@ -151,6 +151,12 @@ pub struct MenuItem<T> {
     enabled: bool, // (or state is stored elsewhere)
     /// Identifies the platform object corresponding to this item.
     platform_id: MenuItemId,
+}
+
+#[derive(Debug, Clone)]
+pub struct ContextMenu<T> {
+    pub(crate) menu: MenuDesc<T>,
+    pub(crate) location: Point,
 }
 
 /// Uniquely identifies a menu item.
@@ -295,12 +301,27 @@ impl<T: Data> MenuDesc<T> {
         self.items.len()
     }
 
-    /// Create a platform menu from this `MenuDesc`.
+    /// Build an application or window menu for the current platform.
     ///
     /// This takes self as &mut because it resolves localization.
-    pub(crate) fn build_native(&mut self, data: &T, env: &Env) -> PlatformMenu {
-        //eprintln!("building {:p} {}", self, self.items.len());
-        let mut menu = PlatformMenu::new();
+    pub(crate) fn build_window_menu(&mut self, data: &T, env: &Env) -> PlatformMenu {
+        self.build_native_menu(data, env, false)
+    }
+
+    /// Build a popup menu for the current platform.
+    ///
+    /// This takes self as &mut because it resolves localization.
+    pub(crate) fn build_popup_menu(&mut self, data: &T, env: &Env) -> PlatformMenu {
+        self.build_native_menu(data, env, true)
+    }
+
+    /// impl shared for window & context menus
+    fn build_native_menu(&mut self, data: &T, env: &Env, for_popup: bool) -> PlatformMenu {
+        let mut menu = if for_popup {
+            PlatformMenu::new_for_popup()
+        } else {
+            PlatformMenu::new()
+        };
         for item in &mut self.items {
             match item {
                 MenuEntry::Item(ref mut item) => {
@@ -316,7 +337,7 @@ impl<T: Data> MenuDesc<T> {
                 }
                 MenuEntry::Separator => menu.add_separator(),
                 MenuEntry::SubMenu(ref mut submenu) => {
-                    let sub = submenu.build_native(data, env);
+                    let sub = submenu.build_native_menu(data, env, false);
                     submenu.item.title.resolve(data, env);
                     menu.add_dropdown(
                         sub,
@@ -346,6 +367,12 @@ impl<T: Data> MenuDesc<T> {
             }
         }
         None
+    }
+}
+
+impl<T> ContextMenu<T> {
+    pub fn new(menu: MenuDesc<T>, location: Point) -> Self {
+        ContextMenu { menu, location }
     }
 }
 

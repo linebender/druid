@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Manually opening and closing windows.
+//! Opening and closing windows and using window and context menus.
 
 use druid::kurbo::Size;
-use druid::menu::{MenuDesc, MenuItem};
+use druid::menu::{ContextMenu, MenuDesc, MenuItem};
 use druid::widget::{Align, Button, Column, Label, Padding, Row};
 use druid::{
     AppLauncher, BaseState, BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx,
@@ -23,6 +23,8 @@ use druid::{
 };
 
 const MENU_COUNT_ACTION: Selector = Selector::new("menu-count-action");
+const MENU_INCREMENT_ACTION: Selector = Selector::new("menu-increment-action");
+const MENU_DECREMENT_ACTION: Selector = Selector::new("menu-decrement-action");
 
 #[derive(Debug, Clone, Default)]
 struct State {
@@ -44,19 +46,29 @@ fn main() {
         .expect("launch failed");
 }
 
+// this is just an experiment for how we might reduce boilerplate.
+trait EventCtxExt {
+    fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>);
+}
+
+impl EventCtxExt for EventCtx<'_, '_> {
+    fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>) {
+        let cmd = Command::new(druid::command::sys::SET_MENU, menu);
+        self.submit_command(cmd, None);
+    }
+}
+
 fn ui_builder() -> impl Widget<State> {
     let text = LocalizedString::new("hello-counter")
         .with_arg("count", |data: &State, _env| data.menu_count.into());
     let label = Label::new(text);
     let inc_button = Button::<State>::new("Add menu item", |ctx, data, _env| {
         data.menu_count += 1;
-        let cmd = Command::new(druid::command::sys::SET_MENU, make_menu::<State>(data));
-        ctx.submit_command(cmd, None);
+        ctx.set_menu(make_menu::<State>(data));
     });
     let dec_button = Button::<State>::new("Remove menu item", |ctx, data, _env| {
         data.menu_count = data.menu_count.saturating_sub(1);
-        let cmd = Command::new(druid::command::sys::SET_MENU, make_menu::<State>(data));
-        ctx.submit_command(cmd, None);
+        ctx.set_menu(make_menu::<State>(data));
     });
 
     let mut col = Column::new();
@@ -75,10 +87,25 @@ fn ui_builder() -> impl Widget<State> {
         }
         Event::Command(ref cmd) if cmd.selector == MENU_COUNT_ACTION => {
             data.selected = *cmd.get_object().unwrap();
-            ctx.submit_command(
-                Command::new(druid::command::sys::SET_MENU, make_menu::<State>(data)),
-                None,
-            );
+            ctx.set_menu(make_menu::<State>(data));
+            None
+        }
+        // wouldn't it be nice if a menu (like a button) could just mutate state
+        // directly if desired?
+        Event::Command(ref cmd) if cmd.selector == MENU_INCREMENT_ACTION => {
+            data.menu_count += 1;
+            ctx.set_menu(make_menu::<State>(data));
+            None
+        }
+        Event::Command(ref cmd) if cmd.selector == MENU_DECREMENT_ACTION => {
+            data.menu_count = data.menu_count.saturating_sub(1);
+            ctx.set_menu(make_menu::<State>(data));
+            None
+        }
+        Event::MouseDown(ref mouse) if mouse.button.is_right() => {
+            let menu = ContextMenu::new(make_context_menu::<State>(), mouse.pos);
+            let cmd = Command::new(druid::command::sys::SHOW_CONTEXT_MENU, menu);
+            ctx.submit_command(cmd, None);
             None
         }
         other => Some(other),
@@ -157,4 +184,16 @@ fn make_menu<T: Data>(state: &State) -> MenuDesc<T> {
         );
     }
     base
+}
+
+fn make_context_menu<T: Data>() -> MenuDesc<T> {
+    MenuDesc::empty()
+        .append(MenuItem::new(
+            LocalizedString::new("Increment"),
+            MENU_INCREMENT_ACTION,
+        ))
+        .append(MenuItem::new(
+            LocalizedString::new("Decrement"),
+            MENU_DECREMENT_ACTION,
+        ))
 }
