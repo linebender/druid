@@ -84,16 +84,17 @@ impl RunLoop {
 
                 // Handle windows messages
                 loop {
-                    let mut msg = mem::MaybeUninit::<MSG>::zeroed().assume_init();
+                    let mut msg = mem::MaybeUninit::uninit();
                     // Note: we could use PM_REMOVE here and avoid the GetMessage below
-                    let res = PeekMessageW(&mut msg, null_mut(), 0, 0, PM_NOREMOVE);
+                    let res = PeekMessageW(msg.as_mut_ptr(), null_mut(), 0, 0, PM_NOREMOVE);
                     if res == 0 {
                         break;
                     }
-                    let res = GetMessageW(&mut msg, null_mut(), 0, 0);
+                    let res = GetMessageW(msg.as_mut_ptr(), null_mut(), 0, 0);
                     if res <= 0 {
                         return;
                     }
+                    let mut msg: MSG = msg.assume_init();
                     if self.accel.is_null()
                         || TranslateAcceleratorW(msg.hwnd, self.accel, &mut msg) == 0
                     {

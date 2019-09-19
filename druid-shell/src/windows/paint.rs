@@ -22,7 +22,7 @@
 use std::mem;
 use std::ptr::null_mut;
 
-use log::error;
+use log::{error, warn};
 
 use winapi::ctypes::c_void;
 use winapi::shared::dxgi::*;
@@ -52,20 +52,24 @@ pub(crate) unsafe fn create_render_target(
     d2d_factory: &direct2d::Factory,
     hwnd: HWND,
 ) -> Result<HwndRenderTarget, Error> {
-    let mut rect = mem::MaybeUninit::<RECT>::zeroed().assume_init();
-    GetClientRect(hwnd, &mut rect);
-    let width = (rect.right - rect.left) as u32;
-    let height = (rect.bottom - rect.top) as u32;
-    let res = HwndRenderTarget::create(d2d_factory)
-        .with_hwnd(hwnd)
-        .with_target_type(RenderTargetType::Default)
-        .with_alpha_mode(AlphaMode::Unknown)
-        .with_pixel_size(width, height)
-        .build();
-    if let Err(ref e) = res {
-        error!("Creating hwnd render target failed: {:?}", e);
+    let mut rect: RECT = mem::zeroed();
+    if GetClientRect(hwnd, &mut rect) == 0 {
+        warn!("GetClientRect failed.");
+        Err(Error::D2Error)
+    } else {
+        let width = (rect.right - rect.left) as u32;
+        let height = (rect.bottom - rect.top) as u32;
+        let res = HwndRenderTarget::create(d2d_factory)
+            .with_hwnd(hwnd)
+            .with_target_type(RenderTargetType::Default)
+            .with_alpha_mode(AlphaMode::Unknown)
+            .with_pixel_size(width, height)
+            .build();
+        if let Err(ref e) = res {
+            error!("Creating hwnd render target failed: {:?}", e);
+        }
+        res.map_err(|_| Error::D2Error)
     }
-    res.map_err(|_| Error::D2Error)
 }
 
 /// Create a render target from a DXGI swapchain.
