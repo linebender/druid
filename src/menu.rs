@@ -246,6 +246,20 @@ impl<T: Data> MenuDesc<T> {
         }
     }
 
+    /// If this platform always expects windows to have a menu by default,
+    /// returns a menu. Otherwise returns `None`.
+    #[allow(unreachable_code)]
+    pub fn platform_default() -> Option<MenuDesc<T>> {
+        #[cfg(target_os = "macos")]
+        return Some(MenuDesc::empty().append(sys::mac::application::default()));
+        #[cfg(target_os = "windows")]
+        return None;
+
+        // we want to explicitly handle all platforms; log if a platform is missing.
+        log::warn!("MenuDesc::platform_default is not implemented for this platform.");
+        None
+    }
+
     /// Given a function that produces an iterator, appends that iterator's
     /// items to this menu.
     ///

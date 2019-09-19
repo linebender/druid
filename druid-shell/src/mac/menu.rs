@@ -19,7 +19,7 @@ use cocoa::appkit::{NSEventModifierFlags, NSMenu, NSMenuItem};
 use cocoa::base::{id, nil, NO};
 use cocoa::foundation::NSAutoreleasePool;
 
-use crate::hotkey::{HotKey, KeyCompare, SysMods};
+use crate::hotkey::{HotKey, KeyCompare};
 use crate::keyboard::{KeyCode, KeyModifiers};
 
 pub struct Menu {
@@ -120,24 +120,6 @@ impl Menu {
             let sep = id::separatorItem(self.menu);
             self.menu.addItem_(sep);
         }
-    }
-}
-
-impl Default for Menu {
-    fn default() -> Menu {
-        // The top level menu is just to contain the menus
-        let mut menu = Menu::new();
-        // this one is our actual menu
-        let mut submenu = Menu::new();
-        submenu.add_item(
-            1,
-            "Quit",
-            Some(&HotKey::new(SysMods::Cmd, "q")),
-            true,
-            false,
-        );
-        menu.add_dropdown(submenu, "Application", true);
-        menu
     }
 }
 
