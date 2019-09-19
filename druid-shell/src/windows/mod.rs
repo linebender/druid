@@ -390,8 +390,11 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
-                        let mut rect: RECT = mem::uninitialized();
-                        GetClientRect(hwnd, &mut rect);
+                        let mut rect: RECT = mem::zeroed();
+                        if GetClientRect(hwnd, &mut rect) == 0 {
+                            warn!("GetClientRect failed.");
+                            return None;
+                        }
                         let width = (rect.right - rect.left) as u32;
                         let height = (rect.bottom - rect.top) as u32;
                         let res = (*s.dcomp_state.as_mut().unwrap().swap_chain).ResizeBuffers(
@@ -878,8 +881,13 @@ unsafe fn choose_adapter(factory: *mut IDXGIFactory2) -> *mut IDXGIAdapter {
         if !SUCCEEDED((*factory).EnumAdapters(i, &mut adapter)) {
             break;
         }
-        let mut desc: DXGI_ADAPTER_DESC = mem::uninitialized();
-        (*adapter).GetDesc(&mut desc);
+        let mut desc = mem::MaybeUninit::uninit();
+        let hr = (*adapter).GetDesc(desc.as_mut_ptr());
+        if !SUCCEEDED(hr) {
+            error!("Failed to get adapter description: {:?}", Error::Hr(hr));
+            break;
+        }
+        let mut desc: DXGI_ADAPTER_DESC = desc.assume_init();
         let vram = desc.DedicatedVideoMemory;
         if i == 0 || vram > best_vram {
             best_vram = vram;
