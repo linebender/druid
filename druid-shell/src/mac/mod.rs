@@ -111,7 +111,7 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             enable_mouse_move_events: true,
-            menu: Some(Menu::default()),
+            menu: None,
         }
     }
 
@@ -125,8 +125,8 @@ impl WindowBuilder {
 
     pub fn set_menu(&mut self, menu: Menu) {
         self.menu = Some(menu);
-        // TODO
     }
+
     pub fn set_enable_mouse_move_events(&mut self, to: bool) {
         self.enable_mouse_move_events = to;
     }
@@ -587,7 +587,6 @@ extern "C" fn dispatch_menu_item(this: &mut Object, _: Sel, item: id) {
 }
 
 extern "C" fn window_did_become_key(this: &mut Object, _: Sel, _notification: id) {
-    eprintln!("window did become key{:?}", _notification);
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);

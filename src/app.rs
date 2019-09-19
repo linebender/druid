@@ -97,7 +97,7 @@ impl<T: Data + 'static> WindowDesc<T> {
         WindowDesc {
             root_builder,
             title: None,
-            menu: None,
+            menu: MenuDesc::platform_default(),
         }
     }
 
