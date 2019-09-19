@@ -41,6 +41,25 @@ The biggest single obstacle to porting is 2d graphics, as druid currently
 uses Direct2D (and DirectWrite for text). One way forward is to create a
 [2d graphics] abstraction.
 
+## Build
+Currently, druid only builds on Windows and macOS. 
+
+Other options may work, but not tested.
+
+#### Windows
+
+run `cargo build`
+
+#### macOS
+
+On macOS, druid requires cairo; see [gtk-rs dependencies] for installation instructions.
+
+You may also need to set your `PKG_CONFIG_PATH`; assuming you have installed `cairo` through homebrew, you can build with,
+
+ ```shell
+$> PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig" cargo build
+ ```
+
 ## Alternatives
 
 In addition to wrappers for mature UI toolkits (mostly C++), [conrod]
