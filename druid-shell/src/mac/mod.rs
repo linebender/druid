@@ -274,6 +274,10 @@ lazy_static! {
             sel!(handleMenuItem:),
             handle_menu_item as extern "C" fn(&mut Object, Sel, id),
         );
+        decl.add_method(
+            sel!(dispatchMenuItem:),
+            dispatch_menu_item as extern "C" fn(&mut Object, Sel, id),
+        );
         ViewClass(decl.register())
     };
 }
@@ -561,6 +565,16 @@ extern "C" fn handle_timer(this: &mut Object, _: Sel, timer: id) {
 
 extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
     unsafe {
+        // in the case of right-click menus, to avoid reentring rust while
+        // holding a RefMut, we need to delay calling back until the next pass
+        // of the runloop.
+        let () = msg_send![this as *const _, performSelectorOnMainThread: sel!(dispatchMenuItem:)
+            withObject: item waitUntilDone: NO];
+    }
+}
+
+extern "C" fn dispatch_menu_item(this: &mut Object, _: Sel, item: id) {
+    unsafe {
         let tag: isize = msg_send![item, tag];
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
@@ -639,6 +653,15 @@ impl WindowHandle {
     pub fn set_menu(&self, menu: Menu) {
         unsafe {
             NSApp().setMainMenu_(menu.menu);
+        }
+    }
+
+    pub fn show_context_menu(&self, menu: Menu, x: f64, y: f64) {
+        if let Some(ref nsview) = self.nsview {
+            unsafe {
+                let location = NSPoint::new(x, y);
+                msg_send![menu.menu, popUpMenuPositioningItem: nil atLocation: location inView: *nsview.load()];
+            }
         }
     }
 

@@ -27,6 +27,7 @@ use crate::piet::{Color, Piet, RenderContext};
 use crate::shell::application::Application;
 use crate::shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
 
+use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
     BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, MenuDesc,
@@ -237,9 +238,24 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
             }
         };
 
-        let platform_menu = menu.build_native(&self.data, &self.env);
+        let platform_menu = menu.build_window_menu(&self.data, &self.env);
         self.state.handle.set_menu(platform_menu);
         self.window.menu = Some(menu.to_owned());
+    }
+
+    fn show_context_menu(&mut self, cmd: &Command) {
+        let (mut menu, point) = match cmd.get_object::<ContextMenu<T>>() {
+            Some(ContextMenu { menu, location }) => (menu.to_owned(), *location),
+            None => {
+                warn!("show-context-menu command is missing menu object.");
+                return;
+            }
+        };
+        let platform_menu = menu.build_popup_menu(&self.data, &self.env);
+        self.state
+            .handle
+            .show_context_menu(platform_menu, point.x, point.y);
+        self.window.context_menu = Some(menu);
     }
 
     fn window_got_focus(&mut self) {
@@ -258,7 +274,10 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
             env,
             ..
         } = self;
-        let platform_menu = window.menu.as_mut().map(|m| m.build_native(&data, &env));
+        let platform_menu = window
+            .menu
+            .as_mut()
+            .map(|m| m.build_window_menu(&data, &env));
         if let Some(platform_menu) = platform_menu {
             state.handle.set_menu(platform_menu);
         }
@@ -321,6 +340,11 @@ impl<T: Data + 'static> AppState<T> {
                 &sys_cmd::SET_MENU => {
                     self.assemble_window_state(source_id)
                         .map(|mut win| win.set_menu(cmd));
+                    return true;
+                }
+                &sys_cmd::SHOW_CONTEXT_MENU => {
+                    self.assemble_window_state(source_id)
+                        .map(|mut win| win.show_context_menu(cmd));
                     return true;
                 }
                 _ => (),

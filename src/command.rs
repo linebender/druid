@@ -62,10 +62,14 @@ pub mod sys {
     /// should be the id of the window to close.
     pub const CLOSE_WINDOW: Selector = Selector::new("druid-builtin.close-window");
 
+    /// Display a context (right-click) menu. The argument should be a...
+    //TODO
+    pub const SHOW_CONTEXT_MENU: Selector = Selector::new("druid-builtin.show-context-menu");
+
     /// The selector for a command to set the window's menu. The argument should
-    /// be a [`Menu`] object.
+    /// be a [`MenuDesc`] object.
     ///
-    /// [`Menu`]: struct.Menu.html
+    /// [`MenuDesc`]: ../struct.MenuDesc.html
     pub const SET_MENU: Selector = Selector::new("druid-builtin.set-menu");
 
     /// Show the application preferences.

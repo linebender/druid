@@ -123,7 +123,7 @@ impl<T: Data + 'static> WindowDesc<T> {
         let mut menu = self.menu.to_owned();
         let platform_menu = menu
             .as_mut()
-            .map(|m| m.build_native(&state.borrow().data, &state.borrow().env));
+            .map(|m| m.build_window_menu(&state.borrow().data, &state.borrow().env));
 
         let id = WindowId::new();
         let handler = DruidHandler::new_shared(state.clone(), id);

@@ -1117,6 +1117,22 @@ impl WindowHandle {
         }
     }
 
+    pub fn show_context_menu(&self, menu: Menu, x: f64, y: f64) {
+        let hmenu = menu.into_hmenu();
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            let (x, y) = self.px_to_pixels_xy(x as f32, y as f32);
+            unsafe {
+                let mut point = POINT { x, y };
+                ClientToScreen(hwnd, &mut point);
+                if TrackPopupMenu(hmenu, TPM_LEFTALIGN, point.x, point.y, 0, hwnd, null()) == FALSE
+                {
+                    warn!("failed to track popup menu");
+                }
+            }
+        }
+    }
+
     /// Get the raw HWND handle, for uses that are not wrapped in
     /// druid_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
