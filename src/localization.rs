@@ -269,7 +269,22 @@ impl L10nManager {
         for err in errs {
             warn!("localization error {:?}", err);
         }
-        Some(result.to_string())
+
+        // fluent inserts bidi controls when interpolating, and they can
+        // cause rendering issues; for now we just strip them.
+        // https://www.w3.org/International/questions/qa-bidi-unicode-controls#basedirection
+        const START_ISOLATE: char = '\u{2068}';
+        const END_ISOLATE: char = '\u{2069}';
+        if args.is_some() && result.chars().any(|c| c == START_ISOLATE) {
+            Some(
+                result
+                    .chars()
+                    .filter(|c| c != &START_ISOLATE && c != &END_ISOLATE)
+                    .collect(),
+            )
+        } else {
+            Some(result)
+        }
     }
     //TODO: handle locale change
 }
