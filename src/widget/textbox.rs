@@ -431,12 +431,13 @@ impl Widget<String> for TextBoxRaw {
                         self.reset_cursor_blink(ctx);
                     }
                     // Actual typing
-                    k_e if k_e.key_code.is_printable() => {
+                    k_e => {
                         let incoming_text = k_e.text().unwrap_or("");
-                        self.insert(data, incoming_text);
-                        self.reset_cursor_blink(ctx);
+                        if !incoming_text.is_empty() {
+                            self.insert(data, incoming_text);
+                            self.reset_cursor_blink(ctx);
+                        }
                     }
-                    _ => {}
                 }
                 self.update_hscroll(ctx.text(), env, data);
                 ctx.invalidate();
