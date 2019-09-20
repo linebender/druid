@@ -28,6 +28,7 @@ extern crate objc;
 #[macro_use]
 extern crate lazy_static;
 
+pub mod clipboard;
 pub mod error;
 pub mod hotkey;
 pub mod keyboard;

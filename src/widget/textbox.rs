@@ -21,8 +21,8 @@ use std::ops::Range;
 use std::time::{Duration, Instant};
 
 use crate::{
-    BaseState, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx, PaintCtx,
-    RawMods, SysMods, TimerToken, UpdateCtx, Widget,
+    BaseState, BoxConstraints, ClipboardItem, Cursor, Env, Event, EventCtx, HotKey, KeyCode,
+    LayoutCtx, PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
@@ -202,11 +202,6 @@ impl TextBoxRaw {
         warn!("COPY called, but not implemented. COPY: {}", input);
     }
 
-    fn paste_text(&self) -> String {
-        warn!("PASTE called, but not implemented.");
-        "PASTE".to_string()
-    }
-
     // TODO: do hit testing instead of this substring hack!
     fn substring_measurement_hack(
         &self,
@@ -358,20 +353,25 @@ impl Widget<String> for TextBoxRaw {
                     self.cursor_timer = ctx.request_timer(deadline);
                 }
             }
+            Event::Command(ref cmd) if cmd.selector == crate::command::sys::COPY => {
+                if let Some(text) = data.get(self.selection.range()) {
+                    self.copy_text(text.to_string());
+                }
+            }
+            Event::Paste(ref item) => {
+                if let ClipboardItem::Text(string) = item {
+                    self.insert(data, string);
+                    self.reset_cursor_blink(ctx);
+                }
+            }
             Event::KeyDown(key_event) => {
                 match key_event {
                     // Copy (Ctrl+C || Cmd+C)
-                    k_e if (HotKey::new(SysMods::Cmd, "c")).matches(k_e) => {
-                        if let Some(text) = data.get(self.selection.range()) {
-                            self.copy_text(text.to_string());
-                        }
-                    }
-                    // Paste (Ctrl+V || Cmd+V)
-                    k_e if (HotKey::new(SysMods::Cmd, "v")).matches(k_e) => {
-                        let paste_text = self.paste_text();
-                        self.insert(data, &paste_text);
-                        self.reset_cursor_blink(ctx);
-                    }
+                    //k_e if (HotKey::new(SysMods::Cmd, "c")).matches(k_e) => {
+                    //if let Some(text) = data.get(self.selection.range()) {
+                    //self.copy_text(text.to_string());
+                    //}
+                    //}
                     // Select all (Ctrl+A || Cmd+A)
                     k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => {
                         self.selection = Selection::new(0, data.len());

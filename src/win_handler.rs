@@ -452,6 +452,7 @@ impl<T: Data + 'static> DruidHandler<T> {
             &sys_cmd::QUIT_APP => self.quit(),
             &sys_cmd::HIDE_APPLICATION => self.hide_app(),
             &sys_cmd::HIDE_OTHERS => self.hide_others(),
+            &sys_cmd::PASTE => self.do_paste(window_id, win_ctx),
             sel => {
                 info!("handle_cmd {}", sel);
                 let event = Event::Command(cmd);
@@ -486,6 +487,13 @@ impl<T: Data + 'static> DruidHandler<T> {
         let handle = self.app_state.borrow_mut().remove_window(*id);
         if let Some(handle) = handle {
             handle.close();
+        }
+    }
+
+    fn do_paste(&mut self, window_id: WindowId, ctx: &mut dyn WinCtx) {
+        if let Some(clip_item) = Application::get_clipboard_contents() {
+            let event = Event::Paste(clip_item);
+            self.app_state.borrow_mut().do_event(window_id, event, ctx);
         }
     }
 

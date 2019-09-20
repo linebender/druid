@@ -14,8 +14,10 @@
 
 //! macOS implementation of features at the application scope.
 
-use cocoa::appkit::NSApp;
-use cocoa::base::{id, nil};
+use super::util;
+use crate::clipboard::ClipboardItem;
+use cocoa::appkit::{NSApp, NSPasteboardTypeString};
+use cocoa::base::{id, nil, BOOL, YES};
 
 pub struct Application;
 
@@ -39,6 +41,30 @@ impl Application {
             let workspace = class!(NSWorkspace);
             let shared: id = msg_send![workspace, sharedWorkspace];
             msg_send![shared, hideOtherApplications];
+        }
+    }
+
+    /// Returns the contents of the clipboard, if any.
+    pub fn get_clipboard_contents() -> Option<ClipboardItem> {
+        unsafe {
+            let nspasteboard = class!(NSPasteboard);
+            let pasteboard: id = msg_send![nspasteboard, generalPasteboard];
+            let data_types: id = msg_send![pasteboard, types];
+            let count: usize = msg_send![data_types, count];
+
+            for i in 0..=count {
+                let dtype: id = msg_send![data_types, objectAtIndex: i];
+                let is_string: BOOL = msg_send![dtype, isEqualToString: NSPasteboardTypeString];
+                if is_string == YES {
+                    let contents: id = msg_send![pasteboard, stringForType: dtype];
+                    let contents = util::from_nsstring(contents);
+                    return Some(contents.into());
+                } else {
+                    log::info!("unhandled pasteboard type {}", util::from_nsstring(dtype));
+                }
+                //TODO: handle other data types
+            }
+            None
         }
     }
 }

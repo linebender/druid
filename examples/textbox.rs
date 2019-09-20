@@ -13,10 +13,10 @@
 // limitations under the License.
 
 use druid::widget::{Column, DynLabel, Padding, TextBox};
-use druid::{AppLauncher, Widget, WindowDesc};
+use druid::{AppLauncher, Data, LocalizedString, MenuDesc, Widget, WindowDesc};
 
 fn main() {
-    let window = WindowDesc::new(build_widget);
+    let window = WindowDesc::new(build_widget).menu(make_main_menu());
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch("typing is fun!".to_string())
@@ -34,4 +34,15 @@ fn build_widget() -> impl Widget<String> {
     col.add_child(Padding::uniform(5.0, textbox_2), 1.0);
     col.add_child(Padding::uniform(5.0, label), 1.0);
     col
+}
+
+fn make_main_menu<T: Data>() -> MenuDesc<T> {
+    let edit_menu = MenuDesc::new(LocalizedString::new("common-menu-edit-menu"))
+        .append(druid::menu::sys::common::cut())
+        .append(druid::menu::sys::common::copy())
+        .append(druid::menu::sys::common::paste());
+
+    MenuDesc::platform_default()
+        .unwrap_or(MenuDesc::empty())
+        .append(edit_menu)
 }

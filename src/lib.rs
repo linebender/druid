@@ -46,6 +46,7 @@ pub use unicode_segmentation;
 // placeholders for functionality not yet implemented.
 #[allow(unused)]
 use druid_shell::application::Application;
+pub use druid_shell::clipboard::ClipboardItem;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 #[allow(unused)]
@@ -494,6 +495,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::KeyUp(e) => {
                 recurse = child_ctx.base_state.has_focus;
                 Event::KeyUp(*e)
+            }
+            Event::Paste(e) => {
+                log::info!("pasting {:?}", e);
+                recurse = child_ctx.base_state.has_focus;
+                Event::Paste(e.clone())
             }
             Event::Wheel(wheel_event) => {
                 recurse = had_active || child_ctx.base_state.is_hot;
