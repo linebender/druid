@@ -32,6 +32,8 @@ common-menu-file-print = Imprimer...
 win-menu-file-exit = Quitter
 
 # common 'Edit' menu items.
+common-menu-edit-menu = Édition
+
 common-menu-cut = Couper
 common-menu-copy = Copier
 common-menu-paste = Coller
