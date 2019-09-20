@@ -178,7 +178,10 @@ struct WndState {
     /// The `char` of the last `WM_CHAR` event, if there has not already been
     /// a `WM_KEYUP` event.
     stashed_char: Option<char>,
-    //TODO: track surrogate orphan
+    /// Windows sends astral plane characters through as two WM_CHAR events,
+    /// using surrogate pairs (two UTF-16 code units). We stash the high so we
+    /// can reassemble it with the low when it comes.
+    stashed_high_surrogate: Option<u32>,
 }
 
 /// A structure that owns resources for the `WinCtx` (so it lasts long enough).
@@ -509,10 +512,33 @@ impl WndProc for MyWndProc {
             WM_CHAR => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    //FIXME: this can receive lone surrogate pairs?
                     let key_code = s.stashed_key_code;
+                    // WM_CHAR wparam is a UTF-16 code unit. Astral plane
+                    // characters are sent as surrogate pairs in two events;
+                    // so high surrogates we stash until the next WM_CHAR
+                    // message comes through with the low surrogate, then we
+                    // decode it at that time. Because Rust's char type
+                    // represents Unicode scalar values, we can't represent
+                    // lone surrogates; mismatched surrogates would indicate
+                    // a buggy user IME, and there's really nothing we can do
+                    // about it, so we discard such things, silently for now.
+                    let code_unit = wparam as u32;
+                    let scalar = if 0xD800 <= code_unit && code_unit <= 0xDC00 {
+                        s.stashed_high_surrogate = Some(code_unit);
+                        return None;
+                    } else if 0xDC00 <= code_unit && code_unit <= 0xDFFF {
+                        if let Some(high_surrogate) = s.stashed_high_surrogate.take() {
+                            // std::char::decode_utf16 could do this too, but this is lighter.
+                            0x10000 + ((high_surrogate - 0xD800) << 10) + (code_unit - 0xDC00)
+                        } else {
+                            return None;
+                        }
+                    } else {
+                        s.stashed_high_surrogate.take();
+                        code_unit
+                    };
 
-                    s.stashed_char = std::char::from_u32(wparam as u32);
+                    s.stashed_char = std::char::from_u32(scalar);
                     let text = match s.stashed_char {
                         Some(c) => c,
                         None => {
@@ -860,6 +886,7 @@ impl WindowBuilder {
                 dpi,
                 stashed_key_code: KeyCode::Unknown(0.into()),
                 stashed_char: None,
+                stashed_high_surrogate: None,
             };
             win.wndproc.connect(&handle, state);
             mem::drop(win);
