@@ -46,7 +46,9 @@ use cairo::{Context, QuartzSurface};
 use crate::kurbo::{Point, Vec2};
 use piet_common::{Piet, RenderContext};
 
+use crate::clipboard::ClipboardItem;
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+use crate::platform::application::Application;
 use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
 use crate::window::{Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
@@ -784,6 +786,10 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
         }
         TimerToken::new(token)
+    }
+
+    fn set_clipboard_contents(&mut self, contents: ClipboardItem) {
+        Application::set_clipboard_contents(contents);
     }
 }
 

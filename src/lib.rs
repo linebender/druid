@@ -497,7 +497,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Event::KeyUp(*e)
             }
             Event::Paste(e) => {
-                log::info!("pasting {:?}", e);
                 recurse = child_ctx.base_state.has_focus;
                 Event::Paste(e.clone())
             }
