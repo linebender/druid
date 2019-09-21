@@ -57,16 +57,18 @@ use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarge
 
 use piet_common::{Piet, RenderContext};
 
+use crate::application::Application;
+use crate::clipboard::ClipboardItem;
+use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Vec2};
 use crate::menu::Menu;
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
+use crate::window::{self, Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
+
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
 use timers::TimerSlots;
-
-use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use crate::window::{self, Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
 
 extern "system" {
     pub fn DwmFlush();
@@ -1283,6 +1285,11 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             })
             .unwrap_or(0);
         TimerToken::new(id)
+    }
+
+    fn set_clipboard_contents(&mut self, contents: ClipboardItem) {
+        log::info!("set_clipboard_contents item: {:?}", &contents);
+        Application::set_clipboard_contents(contents);
     }
 }
 
