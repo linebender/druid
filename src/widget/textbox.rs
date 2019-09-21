@@ -14,8 +14,6 @@
 
 //! A textbox widget.
 
-use log::warn;
-
 use std::cmp::{max, min};
 use std::ops::Range;
 use std::time::{Duration, Instant};
@@ -197,11 +195,6 @@ impl TextBoxRaw {
         }
     }
 
-    // TODO: waiting on druid clipboard support for copy / paste.
-    fn copy_text(&self, input: String) {
-        warn!("COPY called, but not implemented. COPY: {}", input);
-    }
-
     // TODO: do hit testing instead of this substring hack!
     fn substring_measurement_hack(
         &self,
@@ -353,10 +346,18 @@ impl Widget<String> for TextBoxRaw {
                     self.cursor_timer = ctx.request_timer(deadline);
                 }
             }
-            Event::Command(ref cmd) if cmd.selector == crate::command::sys::COPY => {
+            Event::Command(ref cmd)
+                if ctx.has_focus()
+                    && (cmd.selector == crate::command::sys::COPY
+                        || cmd.selector == crate::command::sys::CUT) =>
+            {
                 if let Some(text) = data.get(self.selection.range()) {
-                    self.copy_text(text.to_string());
+                    ctx.win_ctx.set_clipboard_contents(text.into());
                 }
+                if !self.selection.is_caret() && cmd.selector == crate::command::sys::CUT {
+                    self.backspace(data);
+                }
+                ctx.set_handled();
             }
             Event::Paste(ref item) => {
                 if let ClipboardItem::Text(string) = item {
@@ -366,12 +367,6 @@ impl Widget<String> for TextBoxRaw {
             }
             Event::KeyDown(key_event) => {
                 match key_event {
-                    // Copy (Ctrl+C || Cmd+C)
-                    //k_e if (HotKey::new(SysMods::Cmd, "c")).matches(k_e) => {
-                    //if let Some(text) = data.get(self.selection.range()) {
-                    //self.copy_text(text.to_string());
-                    //}
-                    //}
                     // Select all (Ctrl+A || Cmd+A)
                     k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => {
                         self.selection = Selection::new(0, data.len());

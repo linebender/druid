@@ -67,4 +67,20 @@ impl Application {
             None
         }
     }
+
+    /// Sets th contents of the system clipboard.
+    pub fn set_clipboard_contents(item: ClipboardItem) {
+        unsafe {
+            let nspasteboard = class!(NSPasteboard);
+            let pasteboard: id = msg_send![nspasteboard, generalPasteboard];
+            match item {
+                ClipboardItem::Text(string) => {
+                    let nsstring = util::make_nsstring(&string);
+                    msg_send![pasteboard, clearContents];
+                    msg_send![pasteboard, setString: nsstring forType: NSPasteboardTypeString];
+                }
+                other => log::warn!("unhandled clipboard data {:?}", other),
+            }
+        }
+    }
 }

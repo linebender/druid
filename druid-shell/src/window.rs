@@ -17,6 +17,8 @@
 use std::any::Any;
 use std::ops::Deref;
 
+use crate::clipboard::ClipboardItem;
+//TODO: why is this pub?
 pub use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Vec2};
 use crate::platform;
@@ -83,6 +85,8 @@ pub trait WinCtx<'a> {
     ///
     /// [`WinHandler::timer()`]: trait.WinHandler.html#tymethod.timer
     fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken;
+
+    fn set_clipboard_contents(&mut self, contents: ClipboardItem);
 }
 
 /// App behavior, supplied by the app.
