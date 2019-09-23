@@ -1288,7 +1288,6 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
     }
 
     fn set_clipboard_contents(&mut self, contents: ClipboardItem) {
-        log::info!("set_clipboard_contents item: {:?}", &contents);
         Application::set_clipboard_contents(contents);
     }
 }
