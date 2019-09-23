@@ -52,7 +52,7 @@ impl Application {
             let data_types: id = msg_send![pasteboard, types];
             let count: usize = msg_send![data_types, count];
 
-            for i in 0..=count {
+            for i in 0..count {
                 let dtype: id = msg_send![data_types, objectAtIndex: i];
                 let is_string: BOOL = msg_send![dtype, isEqualToString: NSPasteboardTypeString];
                 if is_string == YES {
@@ -68,7 +68,7 @@ impl Application {
         }
     }
 
-    /// Sets th contents of the system clipboard.
+    /// Sets the contents of the system clipboard.
     pub fn set_clipboard_contents(item: ClipboardItem) {
         unsafe {
             let nspasteboard = class!(NSPasteboard);

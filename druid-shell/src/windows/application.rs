@@ -20,7 +20,7 @@ use winapi::shared::minwindef::FALSE;
 use winapi::shared::minwindef::UINT;
 use winapi::shared::ntdef::{LPWSTR, WCHAR};
 use winapi::shared::winerror::ERROR_SUCCESS;
-use winapi::um::errhandlingapi::*;
+use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::winbase::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE};
 use winapi::um::winuser::*;
 
