@@ -51,8 +51,7 @@ impl WinHandler for HelloState {
         match id {
             0x100 => self.handle.close(),
             0x101 => {
-                let mut options = FileDialogOptions::default();
-                options.set_show_hidden();
+                let options = FileDialogOptions::new().show_hidden();
                 let filename = self.handle.file_dialog(FileDialogType::Open, options);
                 println!("result: {:?}", filename);
             }

@@ -59,6 +59,7 @@ use piet_common::{Piet, RenderContext};
 
 use crate::application::Application;
 use crate::clipboard::ClipboardItem;
+use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Vec2};
 use crate::menu::Menu;
@@ -67,7 +68,7 @@ use crate::window::{self, Cursor, MouseButton, MouseEvent, Text, TimerToken, Win
 use crate::Error;
 
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
-use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
+use dialog::get_file_dialog_path;
 use timers::TimerSlots;
 
 extern "system" {

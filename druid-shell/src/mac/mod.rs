@@ -47,9 +47,9 @@ use crate::kurbo::{Point, Vec2};
 use piet_common::{Piet, RenderContext};
 
 use crate::clipboard::ClipboardItem;
+use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::platform::application::Application;
-use crate::platform::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::make_nsstring;
 use crate::window::{Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;

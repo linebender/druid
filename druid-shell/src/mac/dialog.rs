@@ -13,23 +13,3 @@
 // limitations under the License.
 
 //! File open/save dialogs, macOS implementation.
-
-// TODO: maybe these types should be platform-independent?
-
-/// Type of file dialog.
-pub enum FileDialogType {
-    /// File open dialog.
-    Open,
-    /// File save dialog.
-    Save,
-}
-
-/// Options for file dialog.
-#[derive(Default)]
-pub struct FileDialogOptions;
-
-impl FileDialogOptions {
-    pub fn set_show_hidden(&mut self) {
-        // TODO
-    }
-}

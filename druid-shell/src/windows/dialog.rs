@@ -26,36 +26,24 @@ use winapi::um::shobjidl_core::*;
 use winapi::Interface;
 use wio::com::ComPtr;
 
+use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::util::{as_result, FromWide};
 use crate::Error;
 use std::ffi::OsString;
 use std::ptr::null_mut;
 
-/// Type of file dialog.
-pub enum FileDialogType {
-    /// File open dialog.
-    Open,
-    /// File save dialog.
-    Save,
-}
-
-/// Options for file dialog.
+/// Set the options for this dialog.
 ///
 /// See documentation for
 /// [_FILEOPENDIALOGOPTIONS](https://docs.microsoft.com/en-us/windows/desktop/api/shobjidl_core/ne-shobjidl_core-_fileopendialogoptions)
 /// for more information on the winapi implementation.
-#[derive(Default)]
-pub struct FileDialogOptions(DWORD);
-
-impl FileDialogOptions {
-    /// Include system and hidden items.
-    ///
-    /// Maps to `FOS_FORCESHOWHIDDEN` in winapi.
-    pub fn set_show_hidden(&mut self) {
-        self.0 |= FOS_FORCESHOWHIDDEN;
+fn set_options(dialog: &IFileDialog, options: &FileDialogOptions) -> Result<(), Error> {
+    let mut flags: DWORD = 0;
+    if options.show_hidden {
+        flags |= FOS_FORCESHOWHIDDEN;
     }
 
-    // TODO: more options as needed
+    unsafe { as_result(dialog.SetOptions(flags)) }
 }
 
 // TODO: remove these when they get added to winapi
@@ -82,7 +70,7 @@ pub(crate) unsafe fn get_file_dialog_path(
         &mut pfd as *mut *mut IFileDialog as *mut LPVOID,
     ))?;
     let file_dialog = ComPtr::from_raw(pfd);
-    as_result(file_dialog.SetOptions(options.0))?;
+    set_options(&file_dialog, &options)?;
     as_result(file_dialog.Show(hwnd_owner))?;
     let mut result_ptr: *mut IShellItem = null_mut();
     as_result(file_dialog.GetResult(&mut result_ptr))?;

@@ -31,6 +31,7 @@ extern crate objc;
 extern crate lazy_static;
 
 pub mod clipboard;
+pub mod dialog;
 pub mod error;
 pub mod hotkey;
 pub mod keyboard;
@@ -52,7 +53,6 @@ pub use mac as platform;
 pub use error::Error;
 
 pub use platform::application;
-pub use platform::dialog;
 pub use platform::menu;
 pub use platform::util;
 pub use platform::win_main as runloop; // TODO: rename to "runloop"
