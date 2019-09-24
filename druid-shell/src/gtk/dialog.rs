@@ -45,6 +45,7 @@ pub(crate) fn get_file_dialog_path(
     ty: FileDialogType,
     options: FileDialogOptions,
 ) -> Result<OsString, Error> {
+    // TODO: support message localization
     let (title, action) = match ty {
         FileDialogType::Open => ("Open File", FileChooserAction::Open),
         FileDialogType::Save => ("Save File", FileChooserAction::Save),
