@@ -46,6 +46,19 @@ pub mod menu;
 pub mod util;
 pub mod win_main;
 
+/// Taken from https://gtk-rs.org/docs-src/tutorial/closures
+/// It is used to reduce the boilerplate of setting up gtk callbacks
+/// Example:
+/// ```
+/// button.connect_clicked(clone!(handle => move |_| { ... }))
+/// ```
+/// is equivalent to:
+/// ```
+/// {
+///     let handle = handle.clone();
+///     button.connect_clicked(move |_| { ... })
+/// }
+/// ```
 macro_rules! clone {
     (@param _) => ( _ );
     (@param $x:ident) => ( $x );
