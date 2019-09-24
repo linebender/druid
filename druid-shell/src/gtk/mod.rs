@@ -297,13 +297,10 @@ impl WindowBuilder {
             if let Some(state) = handle.state.upgrade() {
                 let mut ctx = WinCtxImpl::from(&handle);
 
-                let _deltas = scroll.get_scroll_deltas();
-                // TODO use these deltas (for smooth scrolling)
                 let modifiers = get_modifiers(scroll.get_state());
 
                 // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
                 // They claim that one "tick" on a scroll wheel should be 120 units.
-                // GTK simply reports the direction
                 let mut handler = state.handler.borrow_mut();
                 match scroll.get_direction() {
                     ScrollDirection::Up => {
@@ -322,6 +319,7 @@ impl WindowBuilder {
                         handler.wheel(-Vec2::from((-120.0, 0.0)), modifiers, &mut ctx);
                     }
                     ScrollDirection::Smooth => {
+                        // TODO: support smooth scrolling via scroll.get_delta and get_is_stop
                         eprintln!(
                             "Warning: somehow the Druid widget got a smooth scroll event"
                         );
