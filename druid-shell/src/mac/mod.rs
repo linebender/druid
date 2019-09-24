@@ -51,7 +51,9 @@ use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::platform::application::Application;
 use crate::util::make_nsstring;
-use crate::window::{Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{
+    Cursor, FileInfo, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler,
+};
 use crate::Error;
 
 use util::assert_main_thread;
@@ -712,10 +714,15 @@ impl WindowHandle {
 
     pub fn file_dialog(
         &self,
-        _ty: FileDialogType,
-        _options: FileDialogOptions,
+        ty: FileDialogType,
+        options: FileDialogOptions,
     ) -> Result<OsString, Error> {
-        unimplemented!()
+        match ty {
+            FileDialogType::Open => unsafe {
+                dialog::show_open_file_dialog_sync(options).ok_or(Error::Null)
+            },
+            _ => Err(Error::Null),
+        }
     }
 }
 
@@ -786,6 +793,13 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
         }
         TimerToken::new(token)
+    }
+
+    fn open_file_sync(&mut self) -> Option<FileInfo> {
+        unsafe {
+            dialog::show_open_file_dialog_sync(Default::default())
+                .map(|s| FileInfo { path: s.into() })
+        }
     }
 
     fn set_clipboard_contents(&mut self, contents: ClipboardItem) {

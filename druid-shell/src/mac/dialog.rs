@@ -13,3 +13,32 @@
 // limitations under the License.
 
 //! File open/save dialogs, macOS implementation.
+
+#![allow(non_upper_case_globals)]
+
+use std::ffi::OsString;
+
+use cocoa::base::id;
+use cocoa::foundation::NSInteger;
+
+use crate::dialog::FileDialogOptions;
+use crate::util::from_nsstring;
+
+const NSModalResponseOK: NSInteger = 1;
+const NSModalResponseCancel: NSInteger = 0;
+
+pub(crate) unsafe fn show_open_file_dialog_sync(_options: FileDialogOptions) -> Option<OsString> {
+    let nsopenpanel = class!(NSOpenPanel);
+    let panel: id = msg_send![nsopenpanel, openPanel];
+    let result: NSInteger = msg_send![panel, runModal];
+    match result {
+        NSModalResponseOK => {
+            let url: id = msg_send![panel, URL];
+            let path: id = msg_send![url, path];
+            let path: OsString = from_nsstring(path).into();
+            Some(path)
+        }
+        NSModalResponseCancel => None,
+        _ => unreachable!(),
+    }
+}
