@@ -14,6 +14,8 @@
 
 //! Simple data-oriented GUI.
 
+#![deny(intra_doc_link_resolution_failure)]
+
 pub use druid_shell::{self as shell, kurbo, piet};
 
 pub mod widget;
@@ -390,10 +392,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// method.
     ///
     /// Note that this method does not apply the offset of the layout rect.
-    /// If that is desired, use [`paint_with_offset`](#method.paint_with_offset)
-    /// instead.
+    /// If that is desired, use [`paint_with_offset`] instead.
     ///
     /// [`layout`]: trait.Widget.html#method.layout
+    /// [`paint`]: trait.Widget.html#method.paint
+    /// [`paint_with_offset`]: #method.paint_with_offset
     pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.inner.paint(paint_ctx, &self.state, data, &env);
     }
@@ -633,6 +636,7 @@ impl BaseState {
     /// `FocusChanged(true)`.
     ///
     /// Discussion question: is "is_focused" a better name?
+    ///
     /// [`request_focus`]: struct.EventCtx.html#method.request_focus
     pub fn has_focus(&self) -> bool {
         self.has_focus
