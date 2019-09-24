@@ -517,7 +517,7 @@ pub mod sys {
             pub fn default<T: Data>() -> MenuDesc<T> {
                 MenuDesc::new(LocalizedString::new("common-menu-file-menu"))
                     .append(new())
-                    .append(open().disabled())
+                    .append(open())
                     .append(close())
                     .append(save().disabled())
                     .append(save_as().disabled())

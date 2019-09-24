@@ -712,6 +712,7 @@ impl WindowHandle {
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
 
+    #[deprecated(since = "0.3", note = "use methods on WinCtx instead")]
     pub fn file_dialog(
         &self,
         ty: FileDialogType,
@@ -795,11 +796,8 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
         TimerToken::new(token)
     }
 
-    fn open_file_sync(&mut self) -> Option<FileInfo> {
-        unsafe {
-            dialog::show_open_file_dialog_sync(Default::default())
-                .map(|s| FileInfo { path: s.into() })
-        }
+    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        unsafe { dialog::show_open_file_dialog_sync(options).map(|s| FileInfo { path: s.into() }) }
     }
 
     fn set_clipboard_contents(&mut self, contents: ClipboardItem) {
