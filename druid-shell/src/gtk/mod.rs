@@ -187,195 +187,179 @@ impl WindowBuilder {
             Inhibit(true)
         });
 
-        {
-            let last_size = Cell::new((0, 0));
+        let last_size = Cell::new((0, 0));
 
-            drawing_area.connect_draw(clone!(handle => move |widget, context| {
-                if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl::from(&handle);
+        drawing_area.connect_draw(clone!(handle => move |widget, context| {
+            if let Some(state) = handle.state.upgrade() {
+                let mut ctx = WinCtxImpl::from(&handle);
 
-                    let extents = context.clip_extents();
-                    let size = (
-                        (extents.2 - extents.0) as u32,
-                        (extents.3 - extents.1) as u32,
-                    );
+                let extents = context.clip_extents();
+                let size = (
+                    (extents.2 - extents.0) as u32,
+                    (extents.3 - extents.1) as u32,
+                );
 
-                    if last_size.get() != size {
-                        last_size.set(size);
-                        state.handler.borrow_mut().size(size.0, size.1, &mut ctx);
-                    }
-
-                    // For some reason piet needs a mutable context, so give it one I guess.
-                    let mut context = context.clone();
-                    let mut piet_context = Piet::new(&mut context);
-                    let anim = state
-                        .handler
-                        .borrow_mut()
-                        .paint(&mut piet_context, &mut ctx);
-                    if let Err(e) = piet_context.finish() {
-                        eprintln!("piet error on render: {:?}", e);
-                    }
-
-                    if anim {
-                        widget.queue_draw();
-                    }
+                if last_size.get() != size {
+                    last_size.set(size);
+                    state.handler.borrow_mut().size(size.0, size.1, &mut ctx);
                 }
 
-                Inhibit(false)
-            }));
-        }
-
-        {
-            drawing_area.connect_button_press_event(clone!(handle => move |_widget, button| {
-                if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl::from(&handle);
-
-                    state.handler.borrow_mut().mouse_down(
-                        &window::MouseEvent {
-                            pos: Point::from(button.get_position()),
-                            count: get_mouse_click_count(button.get_event_type()),
-                            mods: get_modifiers(button.get_state()),
-                            button: get_mouse_button(button.get_button()),
-                        },
-                        &mut ctx,
-                    );
+                // For some reason piet needs a mutable context, so give it one I guess.
+                let mut context = context.clone();
+                let mut piet_context = Piet::new(&mut context);
+                let anim = state
+                    .handler
+                    .borrow_mut()
+                    .paint(&mut piet_context, &mut ctx);
+                if let Err(e) = piet_context.finish() {
+                    eprintln!("piet error on render: {:?}", e);
                 }
 
-                Inhibit(true)
-            }));
-        }
-
-        {
-            drawing_area.connect_button_release_event(clone!(handle => move |_widget, button| {
-                if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl::from(&handle);
-
-                    state.handler.borrow_mut().mouse_up(
-                        &window::MouseEvent {
-                            pos: Point::from(button.get_position()),
-                            mods: get_modifiers(button.get_state()),
-                            count: 0,
-                            button: get_mouse_button(button.get_button()),
-                        },
-                        &mut ctx,
-                    );
+                if anim {
+                    widget.queue_draw();
                 }
+            }
 
-                Inhibit(true)
-            }));
-        }
+            Inhibit(false)
+        }));
 
-        {
-            drawing_area.connect_motion_notify_event(clone!(handle=>move |_widget, motion| {
-                if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl::from(&handle);
+        drawing_area.connect_button_press_event(clone!(handle => move |_widget, button| {
+            if let Some(state) = handle.state.upgrade() {
+                let mut ctx = WinCtxImpl::from(&handle);
 
-                    let pos = Point::from(motion.get_position());
-                    let mouse_event = window::MouseEvent {
-                        pos,
-                        mods: get_modifiers(motion.get_state()),
+                state.handler.borrow_mut().mouse_down(
+                    &window::MouseEvent {
+                        pos: Point::from(button.get_position()),
+                        count: get_mouse_click_count(button.get_event_type()),
+                        mods: get_modifiers(button.get_state()),
+                        button: get_mouse_button(button.get_button()),
+                    },
+                    &mut ctx,
+                );
+            }
+
+            Inhibit(true)
+        }));
+
+        drawing_area.connect_button_release_event(clone!(handle => move |_widget, button| {
+            if let Some(state) = handle.state.upgrade() {
+                let mut ctx = WinCtxImpl::from(&handle);
+
+                state.handler.borrow_mut().mouse_up(
+                    &window::MouseEvent {
+                        pos: Point::from(button.get_position()),
+                        mods: get_modifiers(button.get_state()),
                         count: 0,
-                        button: get_mouse_button_from_modifiers(motion.get_state()),
-                    };
+                        button: get_mouse_button(button.get_button()),
+                    },
+                    &mut ctx,
+                );
+            }
 
-                    state
-                        .handler
-                        .borrow_mut()
-                        .mouse_move(&mouse_event, &mut ctx);
-                }
+            Inhibit(true)
+        }));
 
-                Inhibit(true)
-            }));
-        }
+        drawing_area.connect_motion_notify_event(clone!(handle=>move |_widget, motion| {
+            if let Some(state) = handle.state.upgrade() {
+                let mut ctx = WinCtxImpl::from(&handle);
 
-        {
-            drawing_area.connect_scroll_event(clone!(handle => move |_widget, scroll| {
-                if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl::from(&handle);
+                let pos = Point::from(motion.get_position());
+                let mouse_event = window::MouseEvent {
+                    pos,
+                    mods: get_modifiers(motion.get_state()),
+                    count: 0,
+                    button: get_mouse_button_from_modifiers(motion.get_state()),
+                };
 
-                    let _deltas = scroll.get_scroll_deltas();
-                    // TODO use these deltas (for smooth scrolling)
-                    let modifiers = get_modifiers(scroll.get_state());
+                state
+                    .handler
+                    .borrow_mut()
+                    .mouse_move(&mouse_event, &mut ctx);
+            }
 
-                    // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
-                    // They claim that one "tick" on a scroll wheel should be 120 units.
-                    // GTK simply reports the direction
-                    let mut handler = state.handler.borrow_mut();
-                    match scroll.get_direction() {
-                        ScrollDirection::Up => {
-                            handler.wheel(Vec2::from((0.0, -120.0)), modifiers, &mut ctx);
-                        }
-                        ScrollDirection::Down => {
-                            handler.wheel(Vec2::from((0.0, 120.0)), modifiers, &mut ctx);
-                        }
-                        ScrollDirection::Left => {
-                            // Note: this direction is just a guess, I (bobtwinkles) don't
-                            // have a way to test horizontal scroll events under GTK.
-                            // If it's wrong, the right direction also needs to be changed
-                            handler.wheel(Vec2::from((120.0, 0.0)), modifiers, &mut ctx);
-                        }
-                        ScrollDirection::Right => {
-                            handler.wheel(-Vec2::from((-120.0, 0.0)), modifiers, &mut ctx);
-                        }
-                        ScrollDirection::Smooth => {
-                            eprintln!(
-                                "Warning: somehow the Druid widget got a smooth scroll event"
-                            );
-                        }
-                        e => {
-                            eprintln!(
-                                "Warning: the Druid widget got some whacky scroll direction {:?}",
-                                e
-                            );
-                        }
+            Inhibit(true)
+        }));
+
+        drawing_area.connect_scroll_event(clone!(handle => move |_widget, scroll| {
+            if let Some(state) = handle.state.upgrade() {
+                let mut ctx = WinCtxImpl::from(&handle);
+
+                let _deltas = scroll.get_scroll_deltas();
+                // TODO use these deltas (for smooth scrolling)
+                let modifiers = get_modifiers(scroll.get_state());
+
+                // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
+                // They claim that one "tick" on a scroll wheel should be 120 units.
+                // GTK simply reports the direction
+                let mut handler = state.handler.borrow_mut();
+                match scroll.get_direction() {
+                    ScrollDirection::Up => {
+                        handler.wheel(Vec2::from((0.0, -120.0)), modifiers, &mut ctx);
+                    }
+                    ScrollDirection::Down => {
+                        handler.wheel(Vec2::from((0.0, 120.0)), modifiers, &mut ctx);
+                    }
+                    ScrollDirection::Left => {
+                        // Note: this direction is just a guess, I (bobtwinkles) don't
+                        // have a way to test horizontal scroll events under GTK.
+                        // If it's wrong, the right direction also needs to be changed
+                        handler.wheel(Vec2::from((120.0, 0.0)), modifiers, &mut ctx);
+                    }
+                    ScrollDirection::Right => {
+                        handler.wheel(-Vec2::from((-120.0, 0.0)), modifiers, &mut ctx);
+                    }
+                    ScrollDirection::Smooth => {
+                        eprintln!(
+                            "Warning: somehow the Druid widget got a smooth scroll event"
+                        );
+                    }
+                    e => {
+                        eprintln!(
+                            "Warning: the Druid widget got some whacky scroll direction {:?}",
+                            e
+                        );
                     }
                 }
+            }
 
-                Inhibit(true)
-            }));
-        }
+            Inhibit(true)
+        }));
 
-        {
-            drawing_area.connect_key_press_event(clone!(handle => move |_widget, key| {
-                if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl::from(&handle);
+        drawing_area.connect_key_press_event(clone!(handle => move |_widget, key| {
+            if let Some(state) = handle.state.upgrade() {
+                let mut ctx = WinCtxImpl::from(&handle);
 
-                    let mut current_keyval = state.current_keyval.borrow_mut();
-                    let repeat = *current_keyval == Some(key.get_keyval());
+                let mut current_keyval = state.current_keyval.borrow_mut();
+                let repeat = *current_keyval == Some(key.get_keyval());
 
-                    *current_keyval = Some(key.get_keyval());
+                *current_keyval = Some(key.get_keyval());
 
-                    let key_event = make_key_event(key, repeat);
-                    state.handler.borrow_mut().key_down(key_event, &mut ctx);
-                }
+                let key_event = make_key_event(key, repeat);
+                state.handler.borrow_mut().key_down(key_event, &mut ctx);
+            }
 
-                Inhibit(true)
-            }));
-        }
+            Inhibit(true)
+        }));
 
-        {
-            drawing_area.connect_key_release_event(clone!(handle => move |_widget, key| {
-                if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl::from(&handle);
+        drawing_area.connect_key_release_event(clone!(handle => move |_widget, key| {
+            if let Some(state) = handle.state.upgrade() {
+                let mut ctx = WinCtxImpl::from(&handle);
 
-                    *(state.current_keyval.borrow_mut()) = None;
+                *(state.current_keyval.borrow_mut()) = None;
 
-                    let key_event = make_key_event(key, false);
-                    state.handler.borrow_mut().key_up(key_event, &mut ctx);
-                }
+                let key_event = make_key_event(key, false);
+                state.handler.borrow_mut().key_up(key_event, &mut ctx);
+            }
 
-                Inhibit(true)
-            }));
-        }
+            Inhibit(true)
+        }));
 
-        {
-            drawing_area.connect_destroy(clone!(handle => move |_widget| {
-                if let Some(state) = handle.state.upgrade() {
-                    let mut ctx = WinCtxImpl::from(&handle);
-                    state.handler.borrow_mut().destroy(&mut ctx);
-                }
-            }));
-        }
+        drawing_area.connect_destroy(clone!(handle => move |_widget| {
+            if let Some(state) = handle.state.upgrade() {
+                let mut ctx = WinCtxImpl::from(&handle);
+                state.handler.borrow_mut().destroy(&mut ctx);
+            }
+        }));
 
         vbox.pack_end(&drawing_area, true, true, 0);
 
