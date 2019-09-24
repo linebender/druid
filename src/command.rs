@@ -84,7 +84,8 @@ pub mod sys {
     /// Show the new file dialog.
     pub const NEW_FILE: Selector = Selector::new("druid-builtin.menu-file-new");
 
-    /// Show the open dialog.
+    /// System command. A file picker dialog will be shown to the user, and an
+    /// Open Event will be sent if a file is chosen.
     pub const OPEN_FILE: Selector = Selector::new("druid-builtin.menu-file-open");
 
     /// Save the current file.

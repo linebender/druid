@@ -18,7 +18,7 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 
 use druid_shell::clipboard::ClipboardItem;
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
-use druid_shell::window::{MouseEvent, TimerToken};
+use druid_shell::window::{FileInfo, MouseEvent, TimerToken};
 
 use crate::Command;
 
@@ -47,6 +47,11 @@ use crate::Command;
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Debug, Clone)]
 pub enum Event {
+    /// Called when the system has a file the application should open.
+    ///
+    /// Most commonly this is in response to a request to show the file
+    /// picker.
+    OpenFile(FileInfo),
     /// Called on the root widget when the window size changes.
     ///
     /// Discussion: it's not obvious this should be propagated to user
