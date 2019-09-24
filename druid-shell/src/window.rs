@@ -87,6 +87,11 @@ pub trait WinCtx<'a> {
     /// [`WinHandler::timer()`]: trait.WinHandler.html#tymethod.timer
     fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken;
 
+    /// Prompt the user to chose a file to open.
+    ///
+    /// Blocks while the user picks the file.
+    fn open_file_sync(&mut self) -> Option<FileInfo>;
+
     fn set_clipboard_contents(&mut self, contents: ClipboardItem);
 }
 

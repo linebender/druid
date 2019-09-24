@@ -712,7 +712,7 @@ pub mod sys {
             pub fn default<T: Data>() -> MenuDesc<T> {
                 MenuDesc::new(LocalizedString::new("common-menu-file-menu"))
                     .append(new_file())
-                    .append(open_file().disabled())
+                    .append(open_file())
                     // open recent?
                     .append_separator()
                     .append(close())
