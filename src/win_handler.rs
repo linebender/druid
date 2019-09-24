@@ -25,6 +25,7 @@ use log::{error, info, warn};
 use crate::kurbo::{Size, Vec2};
 use crate::piet::{Color, Piet, RenderContext};
 use crate::shell::application::Application;
+use crate::shell::dialog::FileDialogOptions;
 use crate::shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
 
 use crate::menu::ContextMenu;
@@ -447,7 +448,7 @@ impl<T: Data + 'static> DruidHandler<T> {
     fn handle_cmd(&mut self, window_id: WindowId, cmd: Command, win_ctx: &mut dyn WinCtx) {
         //FIXME: we need some way of getting the correct `WinCtx` for this window.
         match &cmd.selector {
-            &sys_cmd::OPEN_FILE => self.open_file(window_id, win_ctx),
+            &sys_cmd::OPEN_FILE => self.open_file(cmd, window_id, win_ctx),
             &sys_cmd::NEW_WINDOW => self.new_window(cmd),
             &sys_cmd::CLOSE_WINDOW => self.close_window(cmd, window_id),
             &sys_cmd::QUIT_APP => self.quit(),
@@ -464,8 +465,12 @@ impl<T: Data + 'static> DruidHandler<T> {
         }
     }
 
-    fn open_file(&mut self, window_id: WindowId, win_ctx: &mut dyn WinCtx) {
-        let result = win_ctx.open_file_sync();
+    fn open_file(&mut self, cmd: Command, window_id: WindowId, win_ctx: &mut dyn WinCtx) {
+        let options = cmd
+            .get_object::<FileDialogOptions>()
+            .map(|opts| opts.to_owned())
+            .unwrap_or_default();
+        let result = win_ctx.open_file_sync(options);
         if let Some(info) = result {
             let event = Event::OpenFile(info);
             self.app_state

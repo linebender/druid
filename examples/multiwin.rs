@@ -168,6 +168,10 @@ fn make_menu<T: Data>(state: &State) -> MenuDesc<T> {
     {
         base = druid::menu::sys::mac::menu_bar();
     }
+    #[cfg(target_os = "windows")]
+    {
+        base = base.append(druid::menu::sys::win::file::default());
+    }
     if state.menu_count != 0 {
         base = base.append(
             MenuDesc::new(LocalizedString::new("Custom")).append_iter(|| {

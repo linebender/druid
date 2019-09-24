@@ -20,6 +20,7 @@ use std::path::PathBuf;
 
 use crate::clipboard::ClipboardItem;
 //TODO: why is this pub?
+use crate::dialog::FileDialogOptions;
 pub use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Vec2};
 use crate::platform;
@@ -90,7 +91,7 @@ pub trait WinCtx<'a> {
     /// Prompt the user to chose a file to open.
     ///
     /// Blocks while the user picks the file.
-    fn open_file_sync(&mut self) -> Option<FileInfo>;
+    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo>;
 
     fn set_clipboard_contents(&mut self, contents: ClipboardItem);
 }

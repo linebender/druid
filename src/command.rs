@@ -86,6 +86,8 @@ pub mod sys {
 
     /// System command. A file picker dialog will be shown to the user, and an
     /// Open Event will be sent if a file is chosen.
+    ///
+    /// The argument should be a `FileDialogOptions` struct.
     pub const OPEN_FILE: Selector = Selector::new("druid-builtin.menu-file-open");
 
     /// Save the current file.

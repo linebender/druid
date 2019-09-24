@@ -64,7 +64,9 @@ use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Vec2};
 use crate::menu::Menu;
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
-use crate::window::{self, Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{
+    self, Cursor, FileInfo, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler,
+};
 use crate::Error;
 
 use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
@@ -1146,6 +1148,7 @@ impl WindowHandle {
     ///
     /// Note: this method will be reworked to avoid reentrancy problems.
     /// Currently, calling it may result in important messages being dropped.
+    #[deprecated(since = "0.3", note = "use methods on WinCtx instead")]
     pub fn file_dialog(
         &self,
         ty: FileDialogType,
@@ -1286,6 +1289,20 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             })
             .unwrap_or(0);
         TimerToken::new(id)
+    }
+
+    /// Prompt the user to chose a file to open.
+    ///
+    /// Blocks while the user picks the file.
+    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        let hwnd = self.handle.get_hwnd()?;
+        unsafe {
+            get_file_dialog_path(hwnd, FileDialogType::Open, options)
+                .ok()
+                .map(|os_str| FileInfo {
+                    path: os_str.into(),
+                })
+        }
     }
 
     fn set_clipboard_contents(&mut self, contents: ClipboardItem) {

@@ -17,7 +17,7 @@ use std::any::Any;
 use druid_shell::kurbo::{Line, Rect, Vec2};
 use druid_shell::piet::{Color, RenderContext};
 
-use druid_shell::dialog::{FileDialogOptions, FileDialogType};
+use druid_shell::dialog::FileDialogOptions;
 use druid_shell::hotkey::{HotKey, SysMods};
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
 use druid_shell::menu::Menu;
@@ -47,12 +47,12 @@ impl WinHandler for HelloState {
         false
     }
 
-    fn command(&mut self, id: u32, _ctx: &mut dyn WinCtx) {
+    fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {
         match id {
             0x100 => self.handle.close(),
             0x101 => {
                 let options = FileDialogOptions::new().show_hidden();
-                let filename = self.handle.file_dialog(FileDialogType::Open, options);
+                let filename = ctx.open_file_sync(options);
                 println!("result: {:?}", filename);
             }
             _ => println!("unexpected id {}", id),
