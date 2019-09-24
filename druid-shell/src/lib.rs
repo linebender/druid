@@ -14,6 +14,8 @@
 
 //! Platform abstraction for druid toolkit.
 
+#![deny(intra_doc_link_resolution_failure)]
+
 pub use piet_common as piet;
 pub use piet_common::kurbo;
 
