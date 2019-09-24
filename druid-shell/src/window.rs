@@ -16,6 +16,7 @@
 
 use std::any::Any;
 use std::ops::Deref;
+use std::path::PathBuf;
 
 use crate::clipboard::ClipboardItem;
 //TODO: why is this pub?
@@ -243,4 +244,10 @@ pub enum Cursor {
     NotAllowed,
     ResizeLeftRight,
     ResizeUpDown,
+}
+
+/// Information about a file to be opened or saved.
+#[derive(Debug, Clone)]
+pub struct FileInfo {
+    pub path: PathBuf,
 }
