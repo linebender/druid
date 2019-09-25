@@ -17,6 +17,7 @@ use std::any::Any;
 use druid_shell::kurbo::{Line, Rect, Vec2};
 use druid_shell::piet::{Color, RenderContext};
 
+use druid_shell::application::Application;
 use druid_shell::dialog::{FileDialogOptions, FileSpec};
 use druid_shell::hotkey::{HotKey, SysMods};
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
@@ -49,7 +50,10 @@ impl WinHandler for HelloState {
 
     fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {
         match id {
-            0x100 => self.handle.close(),
+            0x100 => {
+                self.handle.close();
+                Application::quit();
+            }
             0x101 => {
                 let options = FileDialogOptions::new().show_hidden().allowed_types(vec![
                     FileSpec::new("Rust Files", &["rs", "toml"]),
