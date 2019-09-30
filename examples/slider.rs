@@ -17,7 +17,7 @@ use druid::widget::{
 };
 use druid::{AppLauncher, Data, LensWrap, Widget, WindowDesc};
 
-#[derive(Clone)]
+#[derive(Clone, Data)]
 struct DemoState {
     value: f64,
     double: bool,
@@ -49,12 +49,6 @@ mod lenses {
                 f(&mut data.double)
             }
         }
-    }
-}
-
-impl Data for DemoState {
-    fn same(&self, other: &Self) -> bool {
-        self.value.same(&other.value) && self.double.same(&other.double)
     }
 }
 

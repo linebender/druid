@@ -18,7 +18,7 @@ use druid::{AppLauncher, Data, LensWrap, Widget, WindowDesc};
 
 use druid::widget::{Button, Column, DynLabel, Padding, Row};
 
-#[derive(Clone)]
+#[derive(Clone, Data)]
 struct CalcState {
     /// The number displayed. Generally a valid float.
     value: String,
@@ -45,16 +45,6 @@ mod lenses {
                 f(&mut data.value)
             }
         }
-    }
-}
-
-// It should be able to get this from a derive macro.
-impl Data for CalcState {
-    fn same(&self, other: &Self) -> bool {
-        self.value.same(&other.value)
-            && self.operand.same(&other.operand)
-            && self.operator.same(&other.operator)
-            && self.in_num.same(&other.in_num)
     }
 }
 

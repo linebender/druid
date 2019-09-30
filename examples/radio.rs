@@ -15,18 +15,12 @@
 use druid::widget::{Column, Padding, Radio, RadioGroup, SizedBox};
 use druid::{AppLauncher, Data, Widget, WindowDesc};
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Data)]
 enum Choice {
     A,
     B,
     C,
     D,
-}
-
-impl Data for Choice {
-    fn same(&self, other: &Self) -> bool {
-        self == other
-    }
 }
 
 fn build_widget() -> impl Widget<Choice> {
