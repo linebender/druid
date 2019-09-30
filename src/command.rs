@@ -119,7 +119,6 @@ pub mod sys {
 
     /// Redo.
     pub const REDO: Selector = Selector::new("druid-builtin.menu-redo");
-
 }
 
 impl Selector {
