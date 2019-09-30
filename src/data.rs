@@ -16,6 +16,8 @@
 
 use std::sync::Arc;
 
+pub use druid_derive_data::Data;
+
 /// A trait used to represent value types.
 ///
 /// These should be cheap to compare and cheap to clone.

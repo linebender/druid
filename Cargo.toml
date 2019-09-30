@@ -30,3 +30,7 @@ default-features = false
 [dependencies.druid-shell]
 path = "druid-shell"
 version = "0.3.0"
+
+[dependencies.druid-derive-data]
+path = "druid-derive-data"
+version = "0.1.0"

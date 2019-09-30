@@ -26,16 +26,10 @@ const MENU_COUNT_ACTION: Selector = Selector::new("menu-count-action");
 const MENU_INCREMENT_ACTION: Selector = Selector::new("menu-increment-action");
 const MENU_DECREMENT_ACTION: Selector = Selector::new("menu-decrement-action");
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Data)]
 struct State {
     menu_count: usize,
     selected: usize,
-}
-
-impl Data for State {
-    fn same(&self, other: &Self) -> bool {
-        self.menu_count == other.menu_count && self.selected == other.selected
-    }
 }
 
 fn main() {
