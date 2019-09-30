@@ -14,6 +14,7 @@
 
 //! Traits for handling value types.
 
+use std::rc::Rc;
 use std::sync::Arc;
 
 pub use druid_derive_data::Data;
@@ -81,6 +82,12 @@ impl Data for f64 {
 impl<T> Data for Arc<T> {
     fn same(&self, other: &Self) -> bool {
         Arc::ptr_eq(self, other)
+    }
+}
+
+impl<T> Data for Rc<T> {
+    fn same(&self, other: &Self) -> bool {
+        Rc::ptr_eq(self, other)
     }
 }
 
