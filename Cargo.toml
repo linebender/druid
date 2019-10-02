@@ -17,9 +17,9 @@ travis-ci = { repository = "xi-editor/druid" }
 
 [dependencies]
 fluent-bundle = "0.7"
-fluent-locale = "0.7"
+fluent-locale = "0.9"
 fluent-syntax = "0.9"
-unic-langid = "0.4.1"
+unic-langid = "0.5.2"
 unicode-segmentation = "1.3.0"
 log = "0.4.8"
 
