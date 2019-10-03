@@ -1,0 +1,58 @@
+on:
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  check_comment:
+    runs-on: ubuntu-latest
+    name: Compare bloat when asked nicely
+    if: startsWith(github.event.comment.body, '/bloat')
+    steps:
+      - name: mkdir
+        run: mkdir '.bloatcmp'
+      - uses: actions/checkout@v1
+        with:
+            ref: master
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build --release --examples
+     - name: Dump file sizes
+       run: |
+           ls -l target/release/examples | awk '{print $9 "\t" $5}' | grep --invert-match "[\.-]" > ".bloatcmp/old.txt"
+       shell: bash
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build --release --examples
+     - name: Dump file sizes
+       run: |
+           ls -l target/release/examples | awk '{print $9 "\t" $5}' | grep --invert-match "[\.-]" > ".bloatcmp/new.txt"
+       shell: bash
+
+      #- name: Checkout
+        #uses: actions/checkout@v1
+      #- name: Write file one
+        #run: echo 'hello 123456' > '.bloatcmp/old.txt'
+        #shell: bash
+      #- name: Write file two
+        #run: echo 'hello 125456' > '.bloatcmp/new.txt'
+        #shell: bash
+      - name: compare
+        uses: cmyr/bloat-cmp/compare@mater
+        id: bloatcmp
+      - name: comment
+        uses: cmyr/bloat-cmp/reply-to-pr-comment
+        with:
+          bloat_stats: ${{ steps.bloatcmp.outputs.bloat_stats }}
+          myToken: ${{ secrets.GITHUB_TOKEN }}
+
+
+       #ls -l target/debug/examples | awk '{print $9 "\t" $5}' | rg --invert-match "[\.-]" | sort
