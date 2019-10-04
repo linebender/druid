@@ -15,54 +15,51 @@
 //! Example to play around with container and border.
 
 use druid::shell::piet::Color;
-use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{Button, Column, Container, Label, Padding, Row, SizedBox};
-use druid::{UiMain, UiState, Widget};
+use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     let mut row = Row::new();
     row.add_child(
-        Container::new(SizedBox::empty().expand()).color(Color::rgb8(0, 0x77, 0x77)),
+        Container::new()
+            .color(Color::rgb8(0, 0x77, 0x77))
+            .child(SizedBox::empty().expand()),
         1.0,
     );
 
     let mut col = Column::new();
     col.add_child(
-        Container::new(SizedBox::empty().expand()).color(Color::rgb8(0x77, 0, 0x77)),
+        Container::new()
+            .color(Color::rgb8(0x77, 0, 0x77))
+            .child(SizedBox::empty().expand()),
         1.0,
     );
     col.add_child(
-        Container::new(
+        Container::new().border(Color::WHITE, 20.0).child(
             SizedBox::new(
-                Container::new(Label::new("Hello world")).color(Color::rgb8(0x77, 0x77, 0)),
+                Container::new()
+                    .color(Color::rgb8(0x77, 0x77, 0))
+                    .child(Label::new("Hello world")),
             )
             .expand(),
-        )
-        .border(Color::WHITE, 20.0),
+        ),
         1.0,
     );
 
     row.add_child(col, 1.0);
 
-    let root = Container::new(Padding::uniform(30.0, row)).color(Color::BLACK);
+    let root = Container::new()
+        .color(Color::BLACK)
+        .padding(30.0)
+        .child(row);
 
     root
 }
 
 fn main() {
-    druid::shell::init();
-
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-
-    // Build app layout
-    let root = build_app();
-    // Set up initial app state
-    let state = UiState::new(root, 0u32);
-    builder.set_title("Border example");
-    builder.set_handler(Box::new(UiMain::new(state)));
-
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    let window = WindowDesc::new(build_app);
+    AppLauncher::with_window(window)
+        .use_simple_logger()
+        .launch(0u32)
+        .expect("launch failed");
 }

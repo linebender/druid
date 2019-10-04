@@ -15,50 +15,58 @@
 // TODO: update description
 //! A convenience widget that combines common painting, positioning, and sizing widgets.
 
-use crate::shell::kurbo::{Affine, Point, Rect, Size};
-use crate::shell::piet::{Color, PaintBrush, RenderContext, StrokeStyle};
-use crate::widget::{Padding, SizedBox};
+use crate::shell::kurbo::{Point, Rect, Size};
+use crate::shell::piet::{PaintBrush, RenderContext, StrokeStyle};
+use crate::widget::Padding;
 use crate::{
     BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
+use std::marker::PhantomData;
+
 struct BorderState {
     width: f64,
     brush: PaintBrush,
-    // TODO: do we need this?
     style: StrokeStyle,
+}
+
+#[derive(Default)]
+struct ContainerStyle {
+    color: Option<PaintBrush>,
+    border: Option<BorderState>,
 }
 
 // TODO: add description
 pub struct Container<T: Data> {
-    inner: Option<Box<dyn Widget<T>>>,
-    color: Option<PaintBrush>,
-    // TODO: add border state for each side
-    border: Option<BorderState>,
+    padding: f64,
+    style: ContainerStyle,
+    phantom: PhantomData<T>,
 }
 
 impl<T: Data + 'static> Container<T> {
-    pub fn new(inner: impl Widget<T> + 'static) -> Self {
-        let mut container = Self::empty();
-        container.inner = Some(Box::new(inner));
-        container
-    }
-
-    pub fn empty() -> Self {
+    pub fn new() -> Self {
         Self {
-            inner: None,
-            color: None,
-            border: None,
+            padding: 0.0,
+            style: ContainerStyle::default(),
+            phantom: PhantomData::default(),
         }
     }
 
+    pub fn child(self, inner: impl Widget<T> + 'static) -> impl Widget<T> {
+        Padding::uniform(self.raw_padding(), ContainerRaw::new(self.style, inner))
+    }
+
+    pub fn empty(self) -> impl Widget<T> {
+        Padding::uniform(self.raw_padding(), ContainerRaw::empty(self.style))
+    }
+
     pub fn color(mut self, brush: impl Into<PaintBrush>) -> Self {
-        self.color = Some(brush.into());
+        self.style.color = Some(brush.into());
         self
     }
 
     pub fn border(mut self, brush: impl Into<PaintBrush>, width: f64) -> Self {
-        self.border = Some(BorderState {
+        self.style.border = Some(BorderState {
             width,
             brush: brush.into(),
             style: StrokeStyle::new(),
@@ -67,44 +75,52 @@ impl<T: Data + 'static> Container<T> {
     }
 
     pub fn padding(mut self, padding: f64) -> Self {
-        match self.inner {
-            Some(inner) => {
-                self.inner = Some(Box::new(Padding::uniform(padding, inner)));
-            }
-            None => {
-                self.inner = Some(Box::new(Padding::uniform(padding, SizedBox::empty())));
-            }
-        }
+        self.padding = padding;
         self
+    }
+
+    fn raw_padding(&self) -> f64 {
+        let border_padding = match self.style.border {
+            Some(ref border) => border.width / 2.0,
+            None => 0.0,
+        };
+
+        self.padding + border_padding
     }
 }
 
-impl<T: Data> Widget<T> for Container<T> {
+struct ContainerRaw<T: Data> {
+    style: ContainerStyle,
+    inner: Option<Box<dyn Widget<T>>>,
+}
+
+impl<T: Data + 'static> ContainerRaw<T> {
+    fn new(style: ContainerStyle, inner: impl Widget<T> + 'static) -> Self {
+        Self {
+            style,
+            inner: Some(Box::new(inner)),
+        }
+    }
+
+    fn empty(style: ContainerStyle) -> Self {
+        Self { style, inner: None }
+    }
+}
+
+impl<T: Data> Widget<T> for ContainerRaw<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         // Paint background color
-        if let Some(ref brush) = self.color {
+        if let Some(ref brush) = self.style.color {
             let rect = Rect::from_origin_size(Point::ZERO, base_state.size());
             paint_ctx.render_ctx.fill(rect, brush);
         }
 
         // Paint border
-        if let Some(ref border) = self.border {
-            // Shift border rect by half of the border width. This is needed so that border
-            // doesn't paint outside of the given constraints.
-            let origin = (border.width / 2.0, border.width / 2.0);
-            let mut size = base_state.size();
-            let rect = Rect::from_origin_size(origin, size);
+        if let Some(ref border) = self.style.border {
+            let rect = Rect::from_origin_size((0.0, 0.0), base_state.size());
             paint_ctx
                 .render_ctx
                 .stroke_styled(rect, &border.brush, border.width, &border.style);
-
-            dbg!("border", rect);
-            dbg!(base_state.size());
-
-            // Move child to be inside the border.
-            paint_ctx
-                .render_ctx
-                .transform(Affine::translate((border.width / 2.0, border.width / 2.0)));
         }
 
         // Paint child
@@ -115,22 +131,7 @@ impl<T: Data> Widget<T> for Container<T> {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         if let Some(ref mut inner) = self.inner {
-            let mut child_bc = bc.clone();
-            if let Some(ref border) = self.border {
-                // If container is with border then we need to decrease the space available
-                // for the child.
-
-                // TODO: is there a better way to write this?
-                child_bc.max.width -= border.width;
-                child_bc.max.height -= border.width;
-                child_bc.min.width = child_bc.min.width.min(child_bc.max.width);
-                child_bc.min.height = child_bc.min.height.min(child_bc.max.height);
-                println!("decrease bc");
-                dbg!(bc);
-                dbg!(child_bc);
-            }
-
-            inner.layout(ctx, &child_bc, data, env)
+            inner.layout(ctx, bc, data, env)
         } else {
             Size::ZERO
         }
