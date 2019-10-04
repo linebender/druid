@@ -15,7 +15,7 @@
 //! A widget that aligns its child (for example, centering it).
 
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Rect, Size,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Rect, Size,
     UpdateCtx, Widget, WidgetPod,
 };
 
@@ -119,13 +119,7 @@ impl<T: Data> Widget<T> for Align<T> {
         my_size
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         self.child.event(event, ctx, data, env)
     }
 

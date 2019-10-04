@@ -77,7 +77,7 @@ struct ResourceManager {
 //NOTE: instead of a closure, at some point we can use something like a lens for this.
 //TODO: this is an Arc so that it can be clone, which is a bound on things like `Menu`.
 /// A closure that generates a localization value.
-type ArgClosure<T> = Arc<dyn Fn(&Env, &T) -> FluentValue<'static> + 'static>;
+type ArgClosure<T> = Arc<dyn Fn(&T, &Env) -> FluentValue<'static> + 'static>;
 
 /// Wraps a closure that generates an argument for localization.
 #[derive(Clone)]
@@ -89,7 +89,7 @@ struct ArgSource<T>(ArgClosure<T>);
 /// against a map of localized strings for a given locale.
 #[derive(Debug, Clone)]
 pub struct LocalizedString<T> {
-    key: &'static str,
+    pub(crate) key: &'static str,
     placeholder: Option<&'static str>,
     args: Option<Vec<(&'static str, ArgSource<T>)>>,
     resolved: Option<String>,
@@ -154,7 +154,7 @@ impl ResourceManager {
         debug!("resolved: {}", PrintLocales(resolved_locales.as_slice()));
         let mut stack = Vec::new();
         for locale in &resolved_locales {
-            let mut bundle = FluentBundle::new(resolved_locales.iter());
+            let mut bundle = FluentBundle::new(&resolved_locales);
             for res_id in resource_ids {
                 let res = self.get_resource(&res_id, &locale.to_string());
                 bundle.add_resource(res).unwrap();
@@ -269,7 +269,22 @@ impl L10nManager {
         for err in errs {
             warn!("localization error {:?}", err);
         }
-        Some(result.to_string())
+
+        // fluent inserts bidi controls when interpolating, and they can
+        // cause rendering issues; for now we just strip them.
+        // https://www.w3.org/International/questions/qa-bidi-unicode-controls#basedirection
+        const START_ISOLATE: char = '\u{2068}';
+        const END_ISOLATE: char = '\u{2069}';
+        if args.is_some() && result.chars().any(|c| c == START_ISOLATE) {
+            Some(
+                result
+                    .chars()
+                    .filter(|c| c != &START_ISOLATE && c != &END_ISOLATE)
+                    .collect(),
+            )
+        } else {
+            Some(result)
+        }
     }
     //TODO: handle locale change
 }
@@ -314,7 +329,7 @@ impl<T: Data> LocalizedString<T> {
     pub fn with_arg(
         mut self,
         key: &'static str,
-        f: impl Fn(&Env, &T) -> FluentValue<'static> + 'static,
+        f: impl Fn(&T, &Env) -> FluentValue<'static> + 'static,
     ) -> Self {
         self.args
             .get_or_insert(Vec::new())
@@ -326,7 +341,7 @@ impl<T: Data> LocalizedString<T> {
     /// environment and data.
     ///
     /// Returns `true` if the current value of the string has changed.
-    pub fn resolve<'a>(&'a mut self, env: &Env, data: &T) -> bool {
+    pub fn resolve<'a>(&'a mut self, data: &T, env: &Env) -> bool {
         //TODO: this recomputes the string if either the language has changed,
         //or *anytime* we have arguments. Ideally we would be using a lens
         //to only recompute when our actual data has changed.
@@ -336,7 +351,7 @@ impl<T: Data> LocalizedString<T> {
             let args: Option<FluentArgs> = self
                 .args
                 .as_ref()
-                .map(|a| a.iter().map(|(k, v)| (*k, (v.0)(env, data))).collect());
+                .map(|a| a.iter().map(|(k, v)| (*k, (v.0)(data, env))).collect());
 
             self.resolved_lang = Some(env.localization_manager().current_locale.clone());
             let next = env.localization_manager().localize(self.key, args.as_ref());

@@ -12,25 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{Button, Column, Padding, Scroll};
-use druid::{UiMain, UiState};
+use druid::{AppLauncher, Widget, WindowDesc};
 
 fn main() {
-    druid::shell::init();
+    let window = WindowDesc::new(build_widget);
+    AppLauncher::with_window(window)
+        .use_simple_logger()
+        .launch(0u32)
+        .expect("launch failed");
+}
 
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
+fn build_widget() -> impl Widget<u32> {
     let mut col = Column::new();
     for i in 0..30 {
-        let button = Button::new(format!("Button {}", i));
+        let button = Button::new(format!("Button {}", i), Button::noop);
         col.add_child(Padding::uniform(3.0, button), 0.0);
     }
-    let scroll = Scroll::new(col);
-    let state = UiState::new(scroll, 0u32);
-    builder.set_title("Scroll example");
-    builder.set_handler(Box::new(UiMain::new(state)));
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    Scroll::new(col)
 }

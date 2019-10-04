@@ -14,10 +14,13 @@
 
 //! Events.
 
-use crate::kurbo::{Rect, Shape, Vec2};
+use crate::kurbo::{Rect, Shape, Size, Vec2};
 
+use druid_shell::clipboard::ClipboardItem;
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
-use druid_shell::window::{MouseEvent, TimerToken};
+use druid_shell::window::{FileInfo, MouseEvent, TimerToken};
+
+use crate::Command;
 
 /// An event, propagated downwards during event flow.
 ///
@@ -44,6 +47,22 @@ use druid_shell::window::{MouseEvent, TimerToken};
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Debug, Clone)]
 pub enum Event {
+    /// Called when the system has a file the application should open.
+    ///
+    /// Most commonly this is in response to a request to show the file
+    /// picker.
+    OpenFile(FileInfo),
+    /// Called on the root widget when the window size changes.
+    ///
+    /// Discussion: it's not obvious this should be propagated to user
+    /// widgets. It *is* propagated through the RootWidget and handled
+    /// in the WindowPod, but after that it might be considered better
+    /// to just handle it in `layout`.
+    ///
+    /// The propagation logic of "just the root" requires a little bit
+    /// of complexity and state in EventCtx, so if it's not useful it
+    /// should be removed.
+    Size(Size),
     /// Called when a mouse button is pressed.
     MouseDown(MouseEvent),
     /// Called when a mouse button is released.
@@ -74,6 +93,8 @@ pub enum Event {
     /// Because of repeat, there may be a number `KeyDown` events before
     /// a corresponding `KeyUp` is sent.
     KeyUp(KeyEvent),
+    /// Called when a paste command is received.
+    Paste(ClipboardItem),
     /// Called when the mouse wheel or trackpad is scrolled.
     Wheel(WheelEvent),
     /// Called when the "hot" status changes.
@@ -103,6 +124,17 @@ pub enum Event {
     ///
     /// [`EventCtx::request_timer()`]: struct.EventCtx.html#method.request_timer
     Timer(TimerToken),
+    /// Called with an arbitrary [`Command`], submitted from elsewhere in
+    /// the application.
+    ///
+    /// Commands can be issued when the user triggers a menu item or an
+    /// application-level hotkey, or they can be created dynamically by
+    /// [`Widget`]s, at runtime, with [`EventCtx::submit_command`].
+    ///
+    /// [`Command`]: struct.Command.html
+    /// [`Widget`]: trait.Widget.html
+    /// [`EventCtx::submit_command`]: struct.EventCtx.html#method.submit_command
+    Command(Command),
 }
 
 /// A mouse wheel event.

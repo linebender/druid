@@ -15,7 +15,7 @@
 //! Utilities, macOS specific.
 
 use cocoa::base::{id, nil, BOOL, YES};
-use cocoa::foundation::NSString;
+use cocoa::foundation::{NSAutoreleasePool, NSString};
 
 pub fn init() {}
 
@@ -31,8 +31,9 @@ pub fn assert_main_thread() {
     }
 }
 
+/// Create a new NSString from a &str.
 pub(crate) fn make_nsstring(s: &str) -> id {
-    unsafe { NSString::alloc(nil).init_str(s) }
+    unsafe { NSString::alloc(nil).init_str(s).autorelease() }
 }
 
 pub(crate) fn from_nsstring(s: id) -> String {

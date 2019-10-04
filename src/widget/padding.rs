@@ -15,8 +15,8 @@
 //! A widget that just adds padding during layout.
 
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    Rect, Size, UpdateCtx, Widget, WidgetPod,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect, Size,
+    UpdateCtx, Widget, WidgetPod,
 };
 
 /// A widget that just adds padding around its child.
@@ -66,13 +66,7 @@ impl<T: Data> Widget<T> for Padding<T> {
         Size::new(size.width + hpad, size.height + vpad)
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         self.child.event(event, ctx, data, env)
     }
 

@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{
-    ActionWrapper, Align, Button, Checkbox, Column, DynLabel, Label, Padding, ProgressBar, Row,
-    Slider,
+    Align, Button, Checkbox, Column, DynLabel, Label, Padding, ProgressBar, Row, Slider,
 };
-use druid::{Data, LensWrap, UiMain, UiState};
+use druid::{AppLauncher, Data, LensWrap, Widget, WindowDesc};
 
-#[derive(Clone)]
+#[derive(Clone, Data)]
 struct DemoState {
     value: f64,
     double: bool,
@@ -54,18 +52,7 @@ mod lenses {
     }
 }
 
-impl Data for DemoState {
-    fn same(&self, other: &Self) -> bool {
-        self.value.same(&other.value) && self.double.same(&other.double)
-    }
-}
-
-fn main() {
-    druid_shell::init();
-
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-
+fn build_widget() -> impl Widget<DemoState> {
     let mut col = Column::new();
     let label = DynLabel::new(|data: &DemoState, _env| {
         if data.double {
@@ -83,14 +70,15 @@ fn main() {
     let bar = LensWrap::new(ProgressBar::new(), lenses::demo_state::Value);
     let slider = LensWrap::new(Slider::new(), lenses::demo_state::Value);
 
-    let button_1 = ActionWrapper::new(
-        Button::sized("increment ", 200.0, 100.0),
-        move |data: &mut DemoState, _env| data.value += 0.1,
+    let button_1 = Button::sized(
+        "increment ",
+        |_ctx, data: &mut DemoState, _env| data.value += 0.1,
+        200.0,
+        100.0,
     );
-    let button_2 = ActionWrapper::new(
-        Button::new("decrement "),
-        move |data: &mut DemoState, _env| data.value -= 0.1,
-    );
+    let button_2 = Button::new("decrement ", |_ctx, data: &mut DemoState, _env| {
+        data.value -= 0.1
+    });
 
     col.add_child(Padding::uniform(5.0, bar), 1.0);
     col.add_child(Padding::uniform(5.0, slider), 1.0);
@@ -98,17 +86,16 @@ fn main() {
     col.add_child(Padding::uniform(5.0, row), 1.0);
     col.add_child(Padding::uniform(5.0, Align::right(button_1)), 0.0);
     col.add_child(Padding::uniform(5.0, button_2), 1.0);
+    col
+}
 
-    let state = UiState::new(
-        col,
-        DemoState {
+fn main() {
+    let window = WindowDesc::new(build_widget);
+    AppLauncher::with_window(window)
+        .use_simple_logger()
+        .launch(DemoState {
             value: 0.7f64,
             double: false,
-        },
-    );
-    builder.set_title("Widget demo");
-    builder.set_handler(Box::new(UiMain::new(state)));
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+        })
+        .expect("launch failed");
 }

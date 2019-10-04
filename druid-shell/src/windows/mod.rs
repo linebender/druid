@@ -47,7 +47,6 @@ use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
 use winapi::um::d2d1::*;
 use winapi::um::unknwnbase::*;
-use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
 use winapi::Interface;
@@ -58,16 +57,21 @@ use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarge
 
 use piet_common::{Piet, RenderContext};
 
+use crate::application::Application;
+use crate::clipboard::ClipboardItem;
+use crate::dialog::{FileDialogOptions, FileDialogType};
+use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Vec2};
 use crate::menu::Menu;
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
+use crate::window::{
+    self, Cursor, FileInfo, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler,
+};
 use crate::Error;
-use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
-use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
-use timers::TimerSlots;
 
-use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use crate::window::{self, Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
+use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
+use dialog::get_file_dialog_path;
+use timers::TimerSlots;
 
 extern "system" {
     pub fn DwmFlush();
@@ -391,8 +395,11 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
-                        let mut rect: RECT = mem::uninitialized();
-                        GetClientRect(hwnd, &mut rect);
+                        let mut rect: RECT = mem::zeroed();
+                        if GetClientRect(hwnd, &mut rect) == 0 {
+                            warn!("GetClientRect failed.");
+                            return None;
+                        }
                         let width = (rect.right - rect.left) as u32;
                         let height = (rect.bottom - rect.top) as u32;
                         let res = (*s.dcomp_state.as_mut().unwrap().swap_chain).ResizeBuffers(
@@ -783,27 +790,7 @@ impl WindowBuilder {
             // Maybe separate registration in build api? Probably only need to
             // register once even for multiple window creation.
 
-            // TODO: probably want configurable class name.
-            let class_name = "Xi Editor".to_wide();
-            let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
-            let brush = CreateSolidBrush(0xffffff);
-            let wnd = WNDCLASSW {
-                style: 0,
-                lpfnWndProc: Some(win_proc_dispatch),
-                cbClsExtra: 0,
-                cbWndExtra: 0,
-                hInstance: 0 as HINSTANCE,
-                hIcon: icon,
-                hCursor: 0 as HCURSOR,
-                hbrBackground: brush,
-                lpszMenuName: 0 as LPCWSTR,
-                lpszClassName: class_name.as_ptr(),
-            };
-            let class_atom = RegisterClassW(&wnd);
-            if class_atom == 0 {
-                return Err(Error::Null);
-            }
-
+            let class_name = crate::util::CLASS_NAME.to_wide();
             let dwrite_factory = directwrite::Factory::new().unwrap();
             let dw_clone = clone_dwrite(&dwrite_factory);
             let wndproc = MyWndProc {
@@ -899,8 +886,13 @@ unsafe fn choose_adapter(factory: *mut IDXGIFactory2) -> *mut IDXGIAdapter {
         if !SUCCEEDED((*factory).EnumAdapters(i, &mut adapter)) {
             break;
         }
-        let mut desc: DXGI_ADAPTER_DESC = mem::uninitialized();
-        (*adapter).GetDesc(&mut desc);
+        let mut desc = mem::MaybeUninit::uninit();
+        let hr = (*adapter).GetDesc(desc.as_mut_ptr());
+        if !SUCCEEDED(hr) {
+            error!("Failed to get adapter description: {:?}", Error::Hr(hr));
+            break;
+        }
+        let mut desc: DXGI_ADAPTER_DESC = desc.assume_init();
         let vram = desc.DedicatedVideoMemory;
         if i == 0 || vram > best_vram {
             best_vram = vram;
@@ -1115,6 +1107,37 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_menu(&self, menu: Menu) {
+        let hmenu = menu.into_hmenu();
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                let old_menu = GetMenu(hwnd);
+                if SetMenu(hwnd, hmenu) == FALSE {
+                    warn!("failed to set window menu");
+                } else {
+                    DestroyMenu(old_menu);
+                }
+            }
+        }
+    }
+
+    pub fn show_context_menu(&self, menu: Menu, x: f64, y: f64) {
+        let hmenu = menu.into_hmenu();
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            let (x, y) = self.px_to_pixels_xy(x as f32, y as f32);
+            unsafe {
+                let mut point = POINT { x, y };
+                ClientToScreen(hwnd, &mut point);
+                if TrackPopupMenu(hmenu, TPM_LEFTALIGN, point.x, point.y, 0, hwnd, null()) == FALSE
+                {
+                    warn!("failed to track popup menu");
+                }
+            }
+        }
+    }
+
     /// Get the raw HWND handle, for uses that are not wrapped in
     /// druid_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
@@ -1125,6 +1148,7 @@ impl WindowHandle {
     ///
     /// Note: this method will be reworked to avoid reentrancy problems.
     /// Currently, calling it may result in important messages being dropped.
+    #[deprecated(since = "0.3", note = "use methods on WinCtx instead")]
     pub fn file_dialog(
         &self,
         ty: FileDialogType,
@@ -1265,6 +1289,24 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             })
             .unwrap_or(0);
         TimerToken::new(id)
+    }
+
+    /// Prompt the user to chose a file to open.
+    ///
+    /// Blocks while the user picks the file.
+    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        let hwnd = self.handle.get_hwnd()?;
+        unsafe {
+            get_file_dialog_path(hwnd, FileDialogType::Open, options)
+                .ok()
+                .map(|os_str| FileInfo {
+                    path: os_str.into(),
+                })
+        }
+    }
+
+    fn set_clipboard_contents(&mut self, contents: ClipboardItem) {
+        Application::set_clipboard_contents(contents);
     }
 }
 

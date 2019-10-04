@@ -15,12 +15,11 @@
 // TODO: update description
 //! A convenience widget that combines common painting, positioning, and sizing widgets.
 
-use crate::shell::kurbo::{Point, Rect, Size, Affine};
+use crate::shell::kurbo::{Affine, Point, Rect, Size};
 use crate::shell::piet::{Color, PaintBrush, RenderContext, StrokeStyle};
 use crate::widget::{Padding, SizedBox};
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
-    Widget,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 struct BorderState {
@@ -92,7 +91,7 @@ impl<T: Data> Widget<T> for Container<T> {
         if let Some(ref border) = self.border {
             // Shift border rect by half of the border width. This is needed so that border
             // doesn't paint outside of the given constraints.
-            let origin = (border.width/2.0, border.width/2.0);
+            let origin = (border.width / 2.0, border.width / 2.0);
             let mut size = base_state.size();
             let rect = Rect::from_origin_size(origin, size);
             paint_ctx
@@ -103,7 +102,9 @@ impl<T: Data> Widget<T> for Container<T> {
             dbg!(base_state.size());
 
             // Move child to be inside the border.
-            paint_ctx.render_ctx.transform(Affine::translate((border.width/2.0, border.width/2.0)));
+            paint_ctx
+                .render_ctx
+                .transform(Affine::translate((border.width / 2.0, border.width / 2.0)));
         }
 
         // Paint child
@@ -135,17 +136,9 @@ impl<T: Data> Widget<T> for Container<T> {
         }
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
-            inner.event(event, ctx, data, env)
-        } else {
-            None
+            inner.event(event, ctx, data, env);
         }
     }
 

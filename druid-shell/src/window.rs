@@ -16,7 +16,11 @@
 
 use std::any::Any;
 use std::ops::Deref;
+use std::path::PathBuf;
 
+use crate::clipboard::ClipboardItem;
+//TODO: why is this pub?
+use crate::dialog::FileDialogOptions;
 pub use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Vec2};
 use crate::platform;
@@ -83,6 +87,13 @@ pub trait WinCtx<'a> {
     ///
     /// [`WinHandler::timer()`]: trait.WinHandler.html#tymethod.timer
     fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken;
+
+    /// Prompt the user to chose a file to open.
+    ///
+    /// Blocks while the user picks the file.
+    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo>;
+
+    fn set_clipboard_contents(&mut self, contents: ClipboardItem);
 }
 
 /// App behavior, supplied by the app.
@@ -164,6 +175,10 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn timer(&mut self, token: TimerToken, ctx: &mut dyn WinCtx) {}
 
+    /// Called when this window becomes the focused window.
+    #[allow(unused_variables)]
+    fn got_focus(&mut self, ctx: &mut dyn WinCtx) {}
+
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is
     /// WM_NCDESTROY).
@@ -206,6 +221,20 @@ pub enum MouseButton {
     X2,
 }
 
+impl MouseButton {
+    /// Returns `true` if this is the left mouse button.
+    #[inline(always)]
+    pub fn is_left(self) -> bool {
+        self == MouseButton::Left
+    }
+
+    /// Returns `true` if this is the right mouse button.
+    #[inline(always)]
+    pub fn is_right(self) -> bool {
+        self == MouseButton::Right
+    }
+}
+
 //NOTE: this currently only contains cursors that are included by default on
 //both Windows and macOS. We may want to provide polyfills for various additional cursors,
 //and we will also want to add some mechanism for adding custom cursors.
@@ -221,4 +250,10 @@ pub enum Cursor {
     NotAllowed,
     ResizeLeftRight,
     ResizeUpDown,
+}
+
+/// Information about a file to be opened or saved.
+#[derive(Debug, Clone)]
+pub struct FileInfo {
+    pub path: PathBuf,
 }

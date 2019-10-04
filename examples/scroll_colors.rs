@@ -14,13 +14,9 @@
 
 //! This example allows to play with scroll bars over different color tones.
 
-use druid::shell::piet::{Color};
-use druid::shell::{runloop, WindowBuilder};
+use druid::shell::piet::Color;
 use druid::widget::{Column, Container, Row, Scroll, SizedBox};
-use druid::{
-    UiMain,
-    UiState, Widget,
-};
+use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     let mut col = Column::new();
@@ -51,17 +47,10 @@ fn build_app() -> impl Widget<u32> {
 }
 
 fn main() {
-    druid::shell::init();
-
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-
-    let root = build_app();
-    let state = UiState::new(root, 0u32);
-    builder.set_title("Scroll colors example");
-    builder.set_handler(Box::new(UiMain::new(state)));
-
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    let main_window = WindowDesc::new(build_app);
+    let data = 0_u32;
+    AppLauncher::with_window(main_window)
+        .use_simple_logger()
+        .launch(data)
+        .expect("launch failed");
 }

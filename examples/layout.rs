@@ -15,9 +15,8 @@
 //! This example shows how to construct a basic layout.
 
 use druid::shell::piet::Color;
-use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{Button, Column, Container, Label, Padding, Row, SizedBox};
-use druid::{UiMain, UiState, Widget};
+use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     // Begin construction of vertical layout
@@ -35,7 +34,10 @@ fn build_app() -> impl Widget<u32> {
     // Spacing element that will fill all available space in between label
     // and a button. Notice that weight is non-zero.
     header.add_child(SizedBox::empty().expand(), 1.0);
-    header.add_child(Padding::uniform(20.0, Button::new("Two")), 0.0);
+    header.add_child(
+        Padding::uniform(20.0, Button::new("Two", Button::noop)),
+        0.0,
+    );
 
     col.add_child(
         Container::new(SizedBox::new(header).height(100.0)).color(Color::rgb8(0, 0x77, 0x88)),
@@ -46,26 +48,16 @@ fn build_app() -> impl Widget<u32> {
         // Give a larger weight to one of the buttons for it to
         // occupy more space.
         let weight = if i == 2 { 3.0 } else { 1.0 };
-        col.add_child(Button::new(format!("Button #{}", i)), weight);
+        col.add_child(Button::new(format!("Button #{}", i), Button::noop), weight);
     }
 
     col
 }
 
 fn main() {
-    druid::shell::init();
-
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-
-    // Build app layout
-    let root = build_app();
-    // Set up initial app state
-    let state = UiState::new(root, 0u32);
-    builder.set_title("Layout example");
-    builder.set_handler(Box::new(UiMain::new(state)));
-
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    let window = WindowDesc::new(build_app);
+    AppLauncher::with_window(window)
+        .use_simple_logger()
+        .launch(0u32)
+        .expect("launch failed");
 }

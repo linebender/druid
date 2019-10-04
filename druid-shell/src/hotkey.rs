@@ -57,8 +57,8 @@ use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 /// [`SysMods`]: enum.SysMods.html
 #[derive(Debug, Clone)]
 pub struct HotKey {
-    mods: RawMods,
-    key: KeyCompare,
+    pub(crate) mods: RawMods,
+    pub(crate) key: KeyCompare,
 }
 
 /// Something that can be compared with a keyboard key.

@@ -21,7 +21,7 @@ use winapi::shared::basetsd::*;
 use winapi::shared::windef::*;
 use winapi::um::winuser::*;
 
-use crate::keycodes::MenuKey;
+use crate::hotkey::HotKey;
 use crate::util::ToWide;
 
 /// A menu object, which can be either a top-level menubar or a
@@ -39,9 +39,18 @@ impl Drop for Menu {
 }
 
 impl Menu {
+    /// Create a new menu for a window.
     pub fn new() -> Menu {
         unsafe {
             let hmenu = CreateMenu();
+            Menu { hmenu }
+        }
+    }
+
+    /// Create a new popup (context / right-click) menu.
+    pub fn new_for_popup() -> Menu {
+        unsafe {
+            let hmenu = CreatePopupMenu();
             Menu { hmenu }
         }
     }
@@ -56,11 +65,15 @@ impl Menu {
     /// probably want to change that so we can manipulate it later.
     ///
     /// The `text` field has all the fun behavior of winapi CreateMenu.
-    pub fn add_dropdown(&mut self, menu: Menu, text: &str) {
+    pub fn add_dropdown(&mut self, menu: Menu, text: &str, enabled: bool) {
         unsafe {
+            let mut flags = MF_POPUP;
+            if !enabled {
+                flags |= MF_GRAYED;
+            }
             AppendMenuW(
                 self.hmenu,
-                MF_POPUP,
+                flags,
                 menu.into_hmenu() as UINT_PTR,
                 text.to_wide().as_ptr(),
             );
@@ -68,15 +81,24 @@ impl Menu {
     }
 
     /// Add an item to the menu.
-    pub fn add_item(&mut self, id: u32, text: &str, _key: impl Into<MenuKey>) {
+    pub fn add_item(
+        &mut self,
+        id: u32,
+        text: &str,
+        _key: Option<&HotKey>,
+        enabled: bool,
+        selected: bool,
+    ) {
         // TODO: actually wire up accelerators for key.
         unsafe {
-            AppendMenuW(
-                self.hmenu,
-                MF_STRING,
-                id as UINT_PTR,
-                text.to_wide().as_ptr(),
-            );
+            let mut flags = MF_STRING;
+            if !enabled {
+                flags |= MF_GRAYED;
+            }
+            if selected {
+                flags |= MF_CHECKED;
+            }
+            AppendMenuW(self.hmenu, flags, id as UINT_PTR, text.to_wide().as_ptr());
         }
     }
 

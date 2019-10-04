@@ -14,12 +14,11 @@
 
 //! Simple calculator.
 
-use druid::shell::{runloop, WindowBuilder};
-use druid::{Data, LensWrap, UiMain, UiState, Widget};
+use druid::{AppLauncher, Data, LensWrap, Widget, WindowDesc};
 
-use druid::widget::{ActionWrapper, Button, Column, DynLabel, Padding, Row};
+use druid::widget::{Button, Column, DynLabel, Padding, Row};
 
-#[derive(Clone)]
+#[derive(Clone, Data)]
 struct CalcState {
     /// The number displayed. Generally a valid float.
     value: String,
@@ -46,16 +45,6 @@ mod lenses {
                 f(&mut data.value)
             }
         }
-    }
-}
-
-// It should be able to get this from a derive macro.
-impl Data for CalcState {
-    fn same(&self, other: &Self) -> bool {
-        self.value.same(&other.value)
-            && self.operand.same(&other.operand)
-            && self.operator.same(&other.operator)
-            && self.in_num.same(&other.in_num)
     }
 }
 
@@ -149,9 +138,9 @@ fn pad<T: Data>(inner: impl Widget<T> + 'static) -> impl Widget<T> {
 }
 
 fn op_button_label(op: char, label: String) -> impl Widget<CalcState> {
-    pad(ActionWrapper::new(
-        Button::new(label),
-        move |data: &mut CalcState, _env| data.op(op),
+    pad(Button::new(
+        label,
+        move |_ctx, data: &mut CalcState, _env| data.op(op),
     ))
 }
 
@@ -160,9 +149,9 @@ fn op_button(op: char) -> impl Widget<CalcState> {
 }
 
 fn digit_button(digit: u8) -> impl Widget<CalcState> {
-    pad(ActionWrapper::new(
-        Button::new(format!("{}", digit)),
-        move |data: &mut CalcState, _env| data.digit(digit),
+    pad(Button::new(
+        format!("{}", digit),
+        move |_ctx, data: &mut CalcState, _env| data.digit(digit),
     ))
 }
 
@@ -236,22 +225,15 @@ fn build_calc() -> impl Widget<CalcState> {
 }
 
 fn main() {
-    simple_logger::init().unwrap();
-    druid_shell::init();
-
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-    let root = build_calc();
+    let window = WindowDesc::new(build_calc);
     let calc_state = CalcState {
         value: "0".to_string(),
         operand: 0.0,
         operator: 'C',
         in_num: false,
     };
-    let state = UiState::new(root, calc_state);
-    builder.set_title("Calculator");
-    builder.set_handler(Box::new(UiMain::new(state)));
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    AppLauncher::with_window(window)
+        .use_simple_logger()
+        .launch(calc_state)
+        .expect("launch failed");
 }

@@ -12,15 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::shell::{runloop, WindowBuilder};
 use druid::widget::{Column, DynLabel, Padding, TextBox};
-use druid::{UiMain, UiState};
+use druid::{AppLauncher, Data, LocalizedString, MenuDesc, Widget, WindowDesc};
 
 fn main() {
-    druid::shell::init();
+    let window = WindowDesc::new(build_widget).menu(make_main_menu());
+    AppLauncher::with_window(window)
+        .use_simple_logger()
+        .launch("typing is fun!".to_string())
+        .expect("launch failed");
+}
 
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
+fn build_widget() -> impl Widget<String> {
     let mut col = Column::new();
 
     let textbox = TextBox::new();
@@ -30,11 +33,16 @@ fn main() {
     col.add_child(Padding::uniform(5.0, textbox), 1.0);
     col.add_child(Padding::uniform(5.0, textbox_2), 1.0);
     col.add_child(Padding::uniform(5.0, label), 1.0);
+    col
+}
 
-    let state = UiState::new(col, "typing is fun!".to_string());
-    builder.set_title("TextBox example");
-    builder.set_handler(Box::new(UiMain::new(state)));
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+fn make_main_menu<T: Data>() -> MenuDesc<T> {
+    let edit_menu = MenuDesc::new(LocalizedString::new("common-menu-edit-menu"))
+        .append(druid::menu::sys::common::cut())
+        .append(druid::menu::sys::common::copy())
+        .append(druid::menu::sys::common::paste());
+
+    MenuDesc::platform_default()
+        .unwrap_or(MenuDesc::empty())
+        .append(edit_menu)
 }

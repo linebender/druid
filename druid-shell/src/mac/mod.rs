@@ -46,13 +46,20 @@ use cairo::{Context, QuartzSurface};
 use crate::kurbo::{Point, Vec2};
 use piet_common::{Piet, RenderContext};
 
+use crate::clipboard::ClipboardItem;
+use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use crate::platform::dialog::{FileDialogOptions, FileDialogType};
+use crate::platform::application::Application;
 use crate::util::make_nsstring;
-use crate::window::{Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{
+    Cursor, FileInfo, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler,
+};
 use crate::Error;
 
 use util::assert_main_thread;
+
+#[allow(non_upper_case_globals)]
+const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
 
 #[derive(Clone, Default)]
 pub struct WindowHandle {
@@ -108,7 +115,7 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             enable_mouse_move_events: true,
-            menu: Some(Menu::default()),
+            menu: None,
         }
     }
 
@@ -122,8 +129,8 @@ impl WindowBuilder {
 
     pub fn set_menu(&mut self, menu: Menu) {
         self.menu = Some(menu);
-        // TODO
     }
+
     pub fn set_enable_mouse_move_events(&mut self, to: bool) {
         self.enable_mouse_move_events = to;
     }
@@ -144,7 +151,6 @@ impl WindowBuilder {
                 NO,
             );
 
-            window.autorelease();
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
             // TODO: this should probably be a tracking area instead
@@ -212,6 +218,11 @@ lazy_static! {
                 Box::from_raw(view_state as *mut ViewState);
             }
         }
+
+        decl.add_method(
+            sel!(windowDidBecomeKey:),
+            window_did_become_key as extern "C" fn(&mut Object, Sel, id),
+        );
         decl.add_method(
             sel!(setFrameSize:),
             set_frame_size as extern "C" fn(&mut Object, Sel, NSSize),
@@ -266,6 +277,10 @@ lazy_static! {
         decl.add_method(
             sel!(handleMenuItem:),
             handle_menu_item as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
+            sel!(dispatchMenuItem:),
+            dispatch_menu_item as extern "C" fn(&mut Object, Sel, id),
         );
         ViewClass(decl.register())
     };
@@ -554,6 +569,16 @@ extern "C" fn handle_timer(this: &mut Object, _: Sel, timer: id) {
 
 extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
     unsafe {
+        // in the case of right-click menus, to avoid reentring rust while
+        // holding a RefMut, we need to delay calling back until the next pass
+        // of the runloop.
+        let () = msg_send![this as *const _, performSelectorOnMainThread: sel!(dispatchMenuItem:)
+            withObject: item waitUntilDone: NO];
+    }
+}
+
+extern "C" fn dispatch_menu_item(this: &mut Object, _: Sel, item: id) {
+    unsafe {
         let tag: isize = msg_send![item, tag];
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
@@ -565,6 +590,18 @@ extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
     }
 }
 
+extern "C" fn window_did_become_key(this: &mut Object, _: Sel, _notification: id) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
+        (*view_state).handler.got_focus(&mut ctx);
+    }
+}
+
 impl WindowHandle {
     pub fn show(&self) {
         unsafe {
@@ -572,6 +609,13 @@ impl WindowHandle {
             current_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps);
             if let Some(ref nsview) = self.nsview {
                 let window: id = msg_send![*nsview.load(), window];
+                // register our view class to be alerted when it becomes the key view.
+                let notif_center_class = class!(NSNotificationCenter);
+                let notif_string = NSString::alloc(nil)
+                    .init_str(NSWindowDidBecomeKeyNotification)
+                    .autorelease();
+                let notif_center: id = msg_send![notif_center_class, defaultCenter];
+                msg_send![notif_center, addObserver:*nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
                 window.makeKeyAndOrderFront_(nil)
             }
         }
@@ -581,7 +625,8 @@ impl WindowHandle {
     pub fn close(&self) {
         if let Some(ref nsview) = self.nsview {
             unsafe {
-                let window: id = msg_send![*nsview.load(), window];
+                let view = nsview.load();
+                let window: id = msg_send![*view, window];
                 window.close();
             }
         }
@@ -604,6 +649,21 @@ impl WindowHandle {
                 let window: id = msg_send![*nsview.load(), window];
                 let title = make_nsstring(title);
                 window.setTitle_(title);
+            }
+        }
+    }
+
+    pub fn set_menu(&self, menu: Menu) {
+        unsafe {
+            NSApp().setMainMenu_(menu.menu);
+        }
+    }
+
+    pub fn show_context_menu(&self, menu: Menu, x: f64, y: f64) {
+        if let Some(ref nsview) = self.nsview {
+            unsafe {
+                let location = NSPoint::new(x, y);
+                msg_send![menu.menu, popUpMenuPositioningItem: nil atLocation: location inView: *nsview.load()];
             }
         }
     }
@@ -652,12 +712,18 @@ impl WindowHandle {
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
 
+    #[deprecated(since = "0.3", note = "use methods on WinCtx instead")]
     pub fn file_dialog(
         &self,
-        _ty: FileDialogType,
-        _options: FileDialogOptions,
+        ty: FileDialogType,
+        options: FileDialogOptions,
     ) -> Result<OsString, Error> {
-        unimplemented!()
+        match ty {
+            FileDialogType::Open => unsafe {
+                dialog::show_open_file_dialog_sync(options).ok_or(Error::Null)
+            },
+            _ => Err(Error::Null),
+        }
     }
 }
 
@@ -728,6 +794,14 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
         }
         TimerToken::new(token)
+    }
+
+    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        unsafe { dialog::show_open_file_dialog_sync(options).map(|s| FileInfo { path: s.into() }) }
+    }
+
+    fn set_clipboard_contents(&mut self, contents: ClipboardItem) {
+        Application::set_clipboard_contents(contents);
     }
 }
 

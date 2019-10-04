@@ -19,7 +19,7 @@ use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle,
 use crate::theme;
 use crate::widget::Align;
 use crate::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 /// A checkbox that toggles a boolean
@@ -89,13 +89,7 @@ impl Widget<bool> for CheckboxRaw {
         ))
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut bool,
-        _env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut bool, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
@@ -114,12 +108,11 @@ impl Widget<bool> for CheckboxRaw {
                     ctx.invalidate();
                 }
             }
-            Event::MouseMoved(_) => {
+            Event::HotChanged(_) => {
                 ctx.invalidate();
             }
             _ => (),
         }
-        None
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&bool>, _data: &bool, _env: &Env) {

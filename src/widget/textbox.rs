@@ -14,15 +14,13 @@
 
 //! A textbox widget.
 
-use log::warn;
-
 use std::cmp::{max, min};
 use std::ops::Range;
 use std::time::{Duration, Instant};
 
 use crate::{
-    Action, BaseState, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
-    PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
+    BaseState, BoxConstraints, ClipboardItem, Cursor, Env, Event, EventCtx, HotKey, KeyCode,
+    LayoutCtx, PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
@@ -197,16 +195,6 @@ impl TextBoxRaw {
         }
     }
 
-    // TODO: waiting on druid clipboard support for copy / paste.
-    fn copy_text(&self, input: String) {
-        warn!("COPY called, but not implemented. COPY: {}", input);
-    }
-
-    fn paste_text(&self) -> String {
-        warn!("PASTE called, but not implemented.");
-        "PASTE".to_string()
-    }
-
     // TODO: do hit testing instead of this substring hack!
     fn substring_measurement_hack(
         &self,
@@ -338,13 +326,7 @@ impl Widget<String> for TextBoxRaw {
         bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut String,
-        env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut String, env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.request_focus();
@@ -364,20 +346,27 @@ impl Widget<String> for TextBoxRaw {
                     self.cursor_timer = ctx.request_timer(deadline);
                 }
             }
+            Event::Command(ref cmd)
+                if ctx.has_focus()
+                    && (cmd.selector == crate::command::sys::COPY
+                        || cmd.selector == crate::command::sys::CUT) =>
+            {
+                if let Some(text) = data.get(self.selection.range()) {
+                    ctx.win_ctx.set_clipboard_contents(text.into());
+                }
+                if !self.selection.is_caret() && cmd.selector == crate::command::sys::CUT {
+                    self.backspace(data);
+                }
+                ctx.set_handled();
+            }
+            Event::Paste(ref item) => {
+                if let ClipboardItem::Text(string) = item {
+                    self.insert(data, string);
+                    self.reset_cursor_blink(ctx);
+                }
+            }
             Event::KeyDown(key_event) => {
                 match key_event {
-                    // Copy (Ctrl+C || Cmd+C)
-                    k_e if (HotKey::new(SysMods::Cmd, "c")).matches(k_e) => {
-                        if let Some(text) = data.get(self.selection.range()) {
-                            self.copy_text(text.to_string());
-                        }
-                    }
-                    // Paste (Ctrl+V || Cmd+V)
-                    k_e if (HotKey::new(SysMods::Cmd, "v")).matches(k_e) => {
-                        let paste_text = self.paste_text();
-                        self.insert(data, &paste_text);
-                        self.reset_cursor_blink(ctx);
-                    }
                     // Select all (Ctrl+A || Cmd+A)
                     k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => {
                         self.selection = Selection::new(0, data.len());
@@ -449,7 +438,6 @@ impl Widget<String> for TextBoxRaw {
             }
             _ => (),
         }
-        None
     }
 
     fn update(
@@ -522,5 +510,4 @@ mod tests {
         // Insert again
         widget.insert(&mut data, "a");
     }
-
 }
