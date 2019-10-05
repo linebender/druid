@@ -1,7 +1,0 @@
-steps:
-  - bash: |
-      export RUST_BACKTRACE=1
-      cargo fmt --all -- --check || exit
-    workingDirectory: '$(Build.SourcesDirectory)/${{parameters.crate_path}}'
-    displayName: Run rustfmt --check ${{parameters.crate_path}}
-
