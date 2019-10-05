@@ -220,17 +220,19 @@ impl WindowBuilder {
                 // For some reason piet needs a mutable context, so give it one I guess.
                 let mut context = context.clone();
                 let mut piet_context = Piet::new(&mut context);
-                let anim = state
-                    .handler
-                    .borrow_mut()
-                    .paint(&mut piet_context, &mut ctx);
-                if let Err(e) = piet_context.finish() {
-                    eprintln!("piet error on render: {:?}", e);
+
+                if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
+                    let anim = handler_borrow
+                        .paint(&mut piet_context, &mut ctx);
+                    if let Err(e) = piet_context.finish() {
+                        eprintln!("piet error on render: {:?}", e);
+                    }
+
+                    if anim {
+                        widget.queue_draw();
+                    }
                 }
 
-                if anim {
-                    widget.queue_draw();
-                }
             }
 
             Inhibit(false)
@@ -538,14 +540,13 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
 
         gdk::threads_add_timeout(interval, move || {
             if let Some(state) = handle.state.upgrade() {
-                let mut ctx = WinCtxImpl::from(&handle);
-
-                state
-                    .handler
-                    .borrow_mut()
-                    .timer(TimerToken::new(token), &mut ctx);
+                if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
+                    let mut ctx = WinCtxImpl::from(&handle);
+                    handler_borrow.timer(TimerToken::new(token), &mut ctx);
+                    return false;
+                }
             }
-            false
+            true
         });
 
         TimerToken::new(token)
