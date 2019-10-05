@@ -1,0 +1,151 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  check-stable:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-10.14, windows-2019]
+    name: cargo check stable
+    steps:
+      - uses: actions/checkout@v1
+      - name: install cairo
+        run: brew install cairo
+        if: contains(matrix.os, 'mac')
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run cargo check in druid/
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --all --examples
+
+      - name: Run rustc -D warnings in druid/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: -- -D warnings
+
+      - name: cd druid-shell
+        run: cd druid-shell
+
+      - name: Run cargo check in druid/druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --all --examples
+
+      - name: Run rustc -d warnings in druid/druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: -- -D warnings
+
+  rustfmt:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-10.14, windows-2019]
+    name: rustfmt
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: install rustfmt
+        run: rustup component add rustfmt
+
+      - name: Run cargo fmt in druid
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - name: cd druid-shell
+        run: cd druid-shell
+
+      - name: Run cargo fmt in druid/druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  test-stable:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-10.14, windows-2019]
+    name: cargo test stable
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install cairo
+        run: brew install cairo
+        if: contains(matrix.os, 'mac')
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run cargo test in druid/
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
+
+      - name: cd druid-shell
+        run: cd druid-shell
+      - name: Run cargo check in druid/druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
+
+  test-nightly:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-10.14, windows-2019]
+    name: cargo test nightly
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install cairo
+        run: brew install cairo
+        if: contains(matrix.os, 'mac')
+
+      - name: install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Run cargo test in druid/
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
+
+      - name: cd druid-shell
+        run: cd druid-shell
+
+      - name: Run cargo test in druid/druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
+
