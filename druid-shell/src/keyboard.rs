@@ -174,7 +174,6 @@ pub enum KeyCode {
     LeftMeta,
     RightMeta,
 
-    //FIXME: support lshift/rshift etc?
     Space,
     CapsLock,
     F1,
@@ -552,6 +551,7 @@ impl From<u32> for KeyCode {
             minus => KeyCode::Minus,
             equal => KeyCode::Equals,
             BackSpace => KeyCode::Backspace,
+
             Tab => KeyCode::Tab,
             q | Q => KeyCode::KeyQ,
             w | W => KeyCode::KeyW,
@@ -566,6 +566,7 @@ impl From<u32> for KeyCode {
             bracketleft => KeyCode::LeftBracket,
             bracketright => KeyCode::RightBracket,
             Return => KeyCode::Return,
+
             a | A => KeyCode::KeyA,
             s | S => KeyCode::KeyS,
             d | D => KeyCode::KeyD,
@@ -578,6 +579,7 @@ impl From<u32> for KeyCode {
             semicolon => KeyCode::Semicolon,
             quoteright => KeyCode::Quote,
             backslash => KeyCode::Backslash,
+
             z | Z => KeyCode::KeyZ,
             x | X => KeyCode::KeyX,
             c | C => KeyCode::KeyC,
@@ -588,6 +590,16 @@ impl From<u32> for KeyCode {
             comma => KeyCode::Comma,
             period => KeyCode::Period,
             slash => KeyCode::Slash,
+
+            Control_L => KeyCode::LeftControl,
+            Control_R => KeyCode::RightControl,
+            Alt_L => KeyCode::LeftAlt,
+            Alt_R => KeyCode::RightAlt,
+            Shift_L => KeyCode::LeftShift,
+            Shift_R => KeyCode::RightShift,
+            Meta_L => KeyCode::LeftMeta,
+            Meta_R => KeyCode::RightMeta,
+
             space => KeyCode::Space,
             Caps_Lock => KeyCode::CapsLock,
             F1 => KeyCode::F1,
@@ -602,12 +614,19 @@ impl From<u32> for KeyCode {
             F10 => KeyCode::F10,
             F11 => KeyCode::F11,
             F12 => KeyCode::F12,
+
+            Print => KeyCode::PrintScreen,
+            Scroll_Lock => KeyCode::ScrollLock,
+            // Pause/Break not audio.
+            Pause => KeyCode::Pause,
+
             Insert => KeyCode::Insert,
             Delete => KeyCode::Delete,
             Home => KeyCode::Home,
             End => KeyCode::End,
             Page_Up => KeyCode::PageUp,
             Page_Down => KeyCode::PageDown,
+
             KP_0 => KeyCode::Numpad0,
             KP_1 => KeyCode::Numpad1,
             KP_2 => KeyCode::Numpad2,
@@ -618,6 +637,7 @@ impl From<u32> for KeyCode {
             KP_7 => KeyCode::Numpad7,
             KP_8 => KeyCode::Numpad8,
             KP_9 => KeyCode::Numpad9,
+
             KP_Equal => KeyCode::NumpadEquals,
             KP_Subtract => KeyCode::NumpadSubtract,
             KP_Add => KeyCode::NumpadAdd,
@@ -626,10 +646,11 @@ impl From<u32> for KeyCode {
             KP_Divide => KeyCode::NumpadDivide,
             Num_Lock => KeyCode::NumLock,
             KP_Enter => KeyCode::NumpadEnter,
+
+            Up => KeyCode::ArrowUp,
+            Down => KeyCode::ArrowDown,
             Left => KeyCode::ArrowLeft,
             Right => KeyCode::ArrowRight,
-            Down => KeyCode::ArrowDown,
-            Up => KeyCode::ArrowUp,
             _ => {
                 eprintln!("Warning: unknown keyval {}", raw);
                 KeyCode::Unknown(RawKeyCode::Linux(raw))
