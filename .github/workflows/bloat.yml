@@ -1,7 +1,6 @@
 on:
   issue_comment:
     types: [created, edited]
-  # this could also run on pushes to master, or on pull-requests
 name: bloat check
 
 jobs:
@@ -11,21 +10,45 @@ jobs:
     # if it isn't an issue comment run every time, otherwise only run if the comment starts with '/bloat'
     if: (!startsWith(github.eventName, 'issue_comment') || startsWith(github.event.comment.body, '/bloat'))
     steps:
-      - run: brew install cairo
-      - uses: actions-rs/toolchain@v1
+      - name: install cairo (macOS)
+        run: brew install cairo
+
+      - name: checkout
+        uses: actions/checkout@v1
+
+      - name: get revisions
+        id: get_revs
+        uses: cmyr/bloat-cmp/get-revs@v2
+        with:
+          command: /bloat
+          myToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: fetch refs
+        run: git fetch origin ${{ steps.get_revs.outputs.fetch }}
+        if: steps.get_revs.outputs.fetch != ''
+
+      - name: checkout base
+        uses: actions/checkout@v1
+        with:
+          ref: ${{ steps.get_revs.outputs.base }}
+
+      - name: setup stable toolchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-      - uses: actions/checkout@v1
-        with:
-            ref: master
-      - uses: actions-rs/cargo@v1
+
+      - name: build base
+        if: steps.get_revs.outputs.base != steps.get_revs.outputs.head
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --examples
+
       - name: get old sizes
+        if: steps.get_revs.outputs.base != steps.get_revs.outputs.head
         id: old
-        uses: cmyr/bloat-cmp/get-sizes@v1
+        uses: cmyr/bloat-cmp/get-sizes@v2
         with:
           paths: >
             target/release/examples/calc
@@ -33,15 +56,24 @@ jobs:
             target/release/examples/multiwin
             target/release/examples/textbox
             target/release/examples/custom_widget
-      - run: rm -rf target/release/examples
-      - uses: actions/checkout@v1
-      - uses: actions-rs/cargo@v1
+
+      - name: checkout head
+        uses: actions/checkout@v1
+        with:
+          clean: false # avoid rebuilding artifacts unnecessarily
+          ref: ${{ steps.get_revs.outputs.head }}
+
+      - name: build head
+        if: steps.get_revs.outputs.base != steps.get_revs.outputs.head
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --examples
+
       - name: get new sizes
+        if: steps.get_revs.outputs.base != steps.get_revs.outputs.head
         id: new
-        uses: cmyr/bloat-cmp/get-sizes@v1
+        uses: cmyr/bloat-cmp/get-sizes@v2
         with:
           paths: >
             target/release/examples/calc
@@ -49,14 +81,18 @@ jobs:
             target/release/examples/multiwin
             target/release/examples/textbox
             target/release/examples/custom_widget
+
       - name: compare
+        if: steps.get_revs.outputs.base != steps.get_revs.outputs.head
         id: bloatcmp
-        uses: cmyr/bloat-cmp/compare@v1
+        uses: cmyr/bloat-cmp/compare@v2
         with:
             old: ${{ steps.old.outputs.rawSizes }}
             new: ${{ steps.new.outputs.rawSizes }}
+
       - name: comment
-        uses: cmyr/bloat-cmp/post-comment@v1
+        if: steps.get_revs.outputs.base != steps.get_revs.outputs.head
+        uses: cmyr/bloat-cmp/post-comment@v2
         with:
           stats: ${{ steps.bloatcmp.outputs.stats }}
           myToken: ${{ secrets.GITHUB_TOKEN }}
