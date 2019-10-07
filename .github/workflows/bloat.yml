@@ -1,0 +1,62 @@
+on:
+  issue_comment:
+    types: [created, edited]
+  # this could also run on pushes to master, or on pull-requests
+name: bloat check
+
+jobs:
+  bloat_check:
+    runs-on: macOS-10.14
+    name: post binary size change info
+    # if it isn't an issue comment run every time, otherwise only run if the comment starts with '/bloat'
+    if: (!startsWith(github.eventName, 'issue_comment') || startsWith(github.event.comment.body, '/bloat'))
+    steps:
+      - run: brew install cairo
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions/checkout@v1
+        with:
+            ref: master
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --examples
+      - name: get old sizes
+        id: old
+        uses: cmyr/bloat-cmp/get-sizes@v1
+        with:
+          paths: >
+            target/release/examples/calc
+            target/release/examples/scroll_colors
+            target/release/examples/multiwin
+            target/release/examples/textbox
+            target/release/examples/custom_widget
+      - run: rm -rf target/release/examples
+      - uses: actions/checkout@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --examples
+      - name: get new sizes
+        id: new
+        uses: cmyr/bloat-cmp/get-sizes@v1
+        with:
+          paths: >
+            target/release/examples/calc
+            target/release/examples/scroll_colors
+            target/release/examples/multiwin
+            target/release/examples/textbox
+            target/release/examples/custom_widget
+      - name: compare
+        id: bloatcmp
+        uses: cmyr/bloat-cmp/compare@v1
+        with:
+            old: ${{ steps.old.outputs.rawSizes }}
+            new: ${{ steps.new.outputs.rawSizes }}
+      - name: comment
+        uses: cmyr/bloat-cmp/post-comment@v1
+        with:
+          stats: ${{ steps.bloatcmp.outputs.stats }}
+          myToken: ${{ secrets.GITHUB_TOKEN }}

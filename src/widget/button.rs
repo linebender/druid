@@ -17,28 +17,38 @@
 use std::marker::PhantomData;
 
 use crate::{
-    Action, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size,
-    UpdateCtx, Widget,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx,
+    Widget,
 };
 
+use crate::kurbo::{Rect, RoundedRect};
 use crate::piet::{
-    Color, FontBuilder, PietText, PietTextLayout, Text, TextLayout, TextLayoutBuilder,
+    FontBuilder, LinearGradient, PietText, PietTextLayout, Text, TextLayout, TextLayoutBuilder,
+    UnitPoint,
 };
+
+use crate::localization::LocalizedString;
+use crate::theme;
+use crate::widget::{Align, SizedBox};
 use crate::{Point, RenderContext};
 
-const BUTTON_BG_COLOR: Color = Color::rgb8(0x40, 0x40, 0x48);
-const BUTTON_HOVER_COLOR: Color = Color::rgb8(0x50, 0x50, 0x58);
-const BUTTON_PRESSED_COLOR: Color = Color::rgb8(0x60, 0x60, 0x68);
-const LABEL_TEXT_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
-
-/// A label with static text.
-pub struct Label {
-    text: String,
+/// The text for the label; either a localized or a specific string.
+pub enum LabelText<T> {
+    Localized(LocalizedString<T>),
+    Specific(String),
 }
 
-/// A button with a static label.
-pub struct Button {
-    label: Label,
+/// A label that displays some text.
+pub struct Label<T> {
+    text: LabelText<T>,
+    align: UnitPoint,
+}
+
+/// A button with a text label.
+pub struct Button<T> {
+    label: Label<T>,
+    /// A closure that will be invoked when the button is clicked.
+    action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
 }
 
 /// A label with dynamic text.
@@ -50,32 +60,56 @@ pub struct DynLabel<T: Data, F: FnMut(&T, &Env) -> String> {
     phantom: PhantomData<T>,
 }
 
-impl Label {
+impl<T: Data> Label<T> {
     /// Discussion question: should this return Label or a wrapped
     /// widget (with WidgetPod)?
-    pub fn new(text: impl Into<String>) -> Label {
-        Label { text: text.into() }
+    pub fn new(text: impl Into<LabelText<T>>) -> Self {
+        Label {
+            text: text.into(),
+            align: UnitPoint::LEFT,
+        }
     }
 
-    fn get_layout(&self, rt: &mut PietText, font_size: f64) -> PietTextLayout {
+    pub fn aligned(text: impl Into<LabelText<T>>, align: UnitPoint) -> Self {
+        Label {
+            text: text.into(),
+            align,
+        }
+    }
+
+    fn get_layout(&self, t: &mut PietText, env: &Env) -> PietTextLayout {
+        let font_name = env.get(theme::FONT_NAME);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let text = self.text.display_text();
         // TODO: caching of both the format and the layout
-        let font = rt
-            .new_font_by_name("Segoe UI", font_size)
+        let font = t
+            .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
-        rt.new_text_layout(&font, &self.text)
-            .unwrap()
-            .build()
-            .unwrap()
+        t.new_text_layout(&font, text).unwrap().build().unwrap()
     }
 }
 
-impl<T: Data> Widget<T> for Label {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, _env: &Env) {
-        let font_size = 15.0;
-        let text_layout = self.get_layout(paint_ctx.text(), font_size);
-        paint_ctx.draw_text(&text_layout, (0.0, font_size), &LABEL_TEXT_COLOR);
+impl<T: Data> Widget<T> for Label<T> {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _data: &T, env: &Env) {
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+
+        let text_layout = self.get_layout(paint_ctx.text(), env);
+
+        // Find the origin for the text
+        let mut origin = self.align.resolve(Rect::from_origin_size(
+            Point::ORIGIN,
+            Size::new(
+                (base_state.size().width - text_layout.width()).max(0.0),
+                base_state.size().height + (font_size * 1.2) / 2.,
+            ),
+        ));
+
+        //Make sure we don't draw the text too low
+        origin.y = origin.y.min(base_state.size().height);
+
+        paint_ctx.draw_text(&text_layout, origin, &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
@@ -83,45 +117,96 @@ impl<T: Data> Widget<T> for Label {
         layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         _data: &T,
-        _env: &Env,
+        env: &Env,
     ) -> Size {
-        let font_size = 15.0;
-        let text_layout = self.get_layout(layout_ctx.text, font_size);
-        bc.constrain((text_layout.width(), 17.0))
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let text_layout = self.get_layout(layout_ctx.text(), env);
+        // This magical 1.2 constant helps center the text vertically in the rect it's given
+        bc.constrain((text_layout.width(), font_size * 1.2))
     }
 
-    fn event(
-        &mut self,
-        _event: &Event,
-        _ctx: &mut EventCtx,
-        _data: &mut T,
-        _env: &Env,
-    ) -> Option<Action> {
-        None
-    }
+    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut T, _env: &Env) {}
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}
-}
-
-impl Button {
-    pub fn new(text: impl Into<String>) -> Button {
-        Button {
-            label: Label::new(text),
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        if self.text.resolve(data, env) {
+            ctx.invalidate();
         }
     }
 }
 
-impl<T: Data> Widget<T> for Button {
+impl<T: Data + 'static> Button<T> {
+    /// Create a new button. The closure provided will be called when the button
+    /// is clicked.
+    pub fn new(
+        text: impl Into<LabelText<T>>,
+        action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
+    ) -> Button<T> {
+        Button {
+            label: Label::aligned(text, UnitPoint::CENTER),
+            action: Box::new(action),
+        }
+    }
+
+    /// Create a new button with a fixed size.
+    pub fn sized(
+        text: impl Into<LabelText<T>>,
+        action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
+        width: f64,
+        height: f64,
+    ) -> impl Widget<T> {
+        Align::vertical(
+            UnitPoint::CENTER,
+            SizedBox::new(Button {
+                label: Label::aligned(text, UnitPoint::CENTER),
+                action: Box::new(action),
+            })
+            .width(width)
+            .height(height),
+        )
+    }
+
+    /// A function that can be passed to `Button::new`, for buttons with no action.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use druid::widget::Button;
+    ///
+    /// let button = Button::<u32>::new("hello", Button::noop);
+    /// ```
+    pub fn noop(_: &mut EventCtx, _: &mut T, _: &Env) {}
+}
+
+impl<T: Data> Widget<T> for Button<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let is_active = base_state.is_active();
         let is_hot = base_state.is_hot();
-        let bg_color = match (is_active, is_hot) {
-            (true, true) => BUTTON_PRESSED_COLOR,
-            (false, true) => BUTTON_HOVER_COLOR,
-            _ => BUTTON_BG_COLOR,
+
+        let rounded_rect =
+            RoundedRect::from_origin_size(Point::ORIGIN, base_state.size().to_vec2(), 4.);
+        let bg_gradient = if is_active {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (env.get(theme::BUTTON_LIGHT), env.get(theme::BUTTON_DARK)),
+            )
+        } else {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (env.get(theme::BUTTON_DARK), env.get(theme::BUTTON_LIGHT)),
+            )
         };
-        let rect = base_state.layout_rect.with_origin(Point::ORIGIN);
-        paint_ctx.fill(rect, &bg_color);
+
+        let border_color = if is_hot {
+            env.get(theme::BORDER_LIGHT)
+        } else {
+            env.get(theme::BORDER)
+        };
+
+        paint_ctx.stroke(rounded_rect, &border_color, 2.0);
+
+        paint_ctx.fill(rounded_rect, &bg_gradient);
 
         self.label.paint(paint_ctx, base_state, data, env);
     }
@@ -136,14 +221,7 @@ impl<T: Data> Widget<T> for Button {
         self.label.layout(layout_ctx, bc, data, env)
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        _data: &mut T,
-        _env: &Env,
-    ) -> Option<Action> {
-        let mut result = None;
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
@@ -154,7 +232,7 @@ impl<T: Data> Widget<T> for Button {
                     ctx.set_active(false);
                     ctx.invalidate();
                     if ctx.is_hot() {
-                        result = Some(Action::from_str("hit"));
+                        (self.action)(ctx, data, env);
                     }
                 }
             }
@@ -163,10 +241,11 @@ impl<T: Data> Widget<T> for Button {
             }
             _ => (),
         }
-        result
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+        self.label.update(ctx, old_data, data, env)
+    }
 }
 
 impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
@@ -177,29 +256,37 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
         }
     }
 
-    fn get_layout(
-        &mut self,
-        rt: &mut PietText,
-        font_size: f64,
-        data: &T,
-        env: &Env,
-    ) -> PietTextLayout {
+    fn get_layout(&mut self, t: &mut PietText, env: &Env, data: &T) -> PietTextLayout {
         let text = (self.label_closure)(data, env);
+
+        let font_name = env.get(theme::FONT_NAME);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+
         // TODO: caching of both the format and the layout
-        let font = rt
-            .new_font_by_name("Segoe UI", font_size)
+        let font = t
+            .new_font_by_name(font_name, font_size)
             .unwrap()
             .build()
             .unwrap();
-        rt.new_text_layout(&font, &text).unwrap().build().unwrap()
+        t.new_text_layout(&font, &text).unwrap().build().unwrap()
     }
 }
 
 impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
-        let font_size = 15.0;
-        let text_layout = self.get_layout(paint_ctx.text(), font_size, data, env);
-        paint_ctx.draw_text(&text_layout, (0., font_size), &LABEL_TEXT_COLOR);
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+
+        let align = UnitPoint::LEFT;
+        let origin = align.resolve(Rect::from_origin_size(
+            Point::ORIGIN,
+            Size::new(
+                base_state.size().width,
+                base_state.size().height + (font_size * 1.2) / 2.,
+            ),
+        ));
+
+        let text_layout = self.get_layout(paint_ctx.text(), env, data);
+        paint_ctx.draw_text(&text_layout, origin, &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
@@ -209,22 +296,54 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
         data: &T,
         env: &Env,
     ) -> Size {
-        let font_size = 15.0;
-        let text_layout = self.get_layout(layout_ctx.text, font_size, data, env);
-        bc.constrain((text_layout.width(), 17.0))
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let text_layout = self.get_layout(layout_ctx.text(), env, data);
+        // This magical 1.2 constant helps center the text vertically in the rect it's given
+        bc.constrain(Size::new(text_layout.width(), font_size * 1.2))
     }
 
-    fn event(
-        &mut self,
-        _event: &Event,
-        _ctx: &mut EventCtx,
-        _data: &mut T,
-        _env: &Env,
-    ) -> Option<Action> {
-        None
-    }
+    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut T, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {
         ctx.invalidate();
+    }
+}
+
+impl<T: Data> LabelText<T> {
+    /// The text that should be displayed. This ensures that localized
+    /// strings are up to date.
+    pub fn display_text(&self) -> &str {
+        match self {
+            LabelText::Specific(s) => s.as_str(),
+            LabelText::Localized(s) => s.localized_str(),
+        }
+    }
+
+    /// Update the localization, if necesasry.
+    ///
+    /// Returns `true` if the string has changed.
+    pub fn resolve(&mut self, data: &T, env: &Env) -> bool {
+        match self {
+            LabelText::Specific(_) => false,
+            LabelText::Localized(s) => s.resolve(data, env),
+        }
+    }
+}
+
+impl<T> From<String> for LabelText<T> {
+    fn from(src: String) -> LabelText<T> {
+        LabelText::Specific(src)
+    }
+}
+
+impl<T> From<&str> for LabelText<T> {
+    fn from(src: &str) -> LabelText<T> {
+        LabelText::Specific(src.to_string())
+    }
+}
+
+impl<T> From<LocalizedString<T>> for LabelText<T> {
+    fn from(src: LocalizedString<T>) -> LabelText<T> {
+        LabelText::Localized(src)
     }
 }

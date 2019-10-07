@@ -14,7 +14,10 @@
 
 //! Traits for handling value types.
 
+use std::rc::Rc;
 use std::sync::Arc;
+
+pub use druid_derive_data::Data;
 
 /// A trait used to represent value types.
 ///
@@ -79,6 +82,86 @@ impl Data for f64 {
 impl<T> Data for Arc<T> {
     fn same(&self, other: &Self) -> bool {
         Arc::ptr_eq(self, other)
+    }
+}
+
+impl<T> Data for Rc<T> {
+    fn same(&self, other: &Self) -> bool {
+        Rc::ptr_eq(self, other)
+    }
+}
+
+impl<T: Data> Data for Option<T> {
+    fn same(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Some(a), Some(b)) => a.same(b),
+            (None, None) => true,
+            _ => false,
+        }
+    }
+}
+
+impl<T: Data, U: Data> Data for Result<T, U> {
+    fn same(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Ok(a), Ok(b)) => a.same(b),
+            (Err(a), Err(b)) => a.same(b),
+            _ => false,
+        }
+    }
+}
+
+impl Data for () {
+    fn same(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl<T0: Data> Data for (T0,) {
+    fn same(&self, other: &Self) -> bool {
+        self.0.same(&other.0)
+    }
+}
+
+impl<T0: Data, T1: Data> Data for (T0, T1) {
+    fn same(&self, other: &Self) -> bool {
+        self.0.same(&other.0) && self.1.same(&other.1)
+    }
+}
+
+impl<T0: Data, T1: Data, T2: Data> Data for (T0, T1, T2) {
+    fn same(&self, other: &Self) -> bool {
+        self.0.same(&other.0) && self.1.same(&other.1) && self.2.same(&other.2)
+    }
+}
+
+impl<T0: Data, T1: Data, T2: Data, T3: Data> Data for (T0, T1, T2, T3) {
+    fn same(&self, other: &Self) -> bool {
+        self.0.same(&other.0)
+            && self.1.same(&other.1)
+            && self.2.same(&other.2)
+            && self.3.same(&other.3)
+    }
+}
+
+impl<T0: Data, T1: Data, T2: Data, T3: Data, T4: Data> Data for (T0, T1, T2, T3, T4) {
+    fn same(&self, other: &Self) -> bool {
+        self.0.same(&other.0)
+            && self.1.same(&other.1)
+            && self.2.same(&other.2)
+            && self.3.same(&other.3)
+            && self.4.same(&other.4)
+    }
+}
+
+impl<T0: Data, T1: Data, T2: Data, T3: Data, T4: Data, T5: Data> Data for (T0, T1, T2, T3, T4, T5) {
+    fn same(&self, other: &Self) -> bool {
+        self.0.same(&other.0)
+            && self.1.same(&other.1)
+            && self.2.same(&other.2)
+            && self.3.same(&other.3)
+            && self.4.same(&other.4)
+            && self.5.same(&other.5)
     }
 }
 

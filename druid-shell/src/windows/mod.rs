@@ -34,6 +34,8 @@ use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 
+use log::{debug, error, warn};
+
 use winapi::ctypes::{c_int, c_void};
 use winapi::shared::basetsd::*;
 use winapi::shared::dxgi::*;
@@ -45,7 +47,6 @@ use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
 use winapi::um::d2d1::*;
 use winapi::um::unknwnbase::*;
-use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
 use winapi::Interface;
@@ -56,16 +57,21 @@ use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarge
 
 use piet_common::{Piet, RenderContext};
 
+use crate::application::Application;
+use crate::clipboard::ClipboardItem;
+use crate::dialog::{FileDialogOptions, FileDialogType};
+use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Vec2};
 use crate::menu::Menu;
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
+use crate::window::{
+    self, Cursor, FileInfo, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler,
+};
 use crate::Error;
-use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
-use dialog::{get_file_dialog_path, FileDialogOptions, FileDialogType};
-use timers::TimerSlots;
 
-use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use crate::window::{self, Cursor, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler};
+use dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
+use dialog::get_file_dialog_path;
+use timers::TimerSlots;
 
 extern "system" {
     pub fn DwmFlush();
@@ -258,14 +264,13 @@ impl WndState {
             let mut piet_ctx = Piet::new(d2d, dw, rt);
             anim = self.handler.paint(&mut piet_ctx, &mut c.ctx());
             if let Err(e) = piet_ctx.finish() {
-                // TODO: use proper log infrastructure
-                eprintln!("piet error on render: {:?}", e);
+                error!("piet error on render: {:?}", e);
             }
         }
         // Maybe should deal with lost device here...
         let res = rt.end_draw();
         if let Err(e) = res {
-            println!("EndDraw error: {:?}", e);
+            error!("EndDraw error: {:?}", e);
         }
         if anim {
             let handle = handle.borrow().get_idle_handle().unwrap();
@@ -282,7 +287,7 @@ impl MyWndProc {
     /// In the future, we choose to do something else other than logging and dropping,
     /// such as queuing and replaying after the nested call returns.
     fn log_dropped_msg(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM) {
-        eprintln!(
+        error!(
             "dropped message 0x{:x}, hwnd={:?}, wparam=0x{:x}, lparam=0x{:x}",
             msg, hwnd, wparam, lparam
         );
@@ -390,8 +395,11 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
-                        let mut rect: RECT = mem::uninitialized();
-                        GetClientRect(hwnd, &mut rect);
+                        let mut rect: RECT = mem::zeroed();
+                        if GetClientRect(hwnd, &mut rect) == 0 {
+                            warn!("GetClientRect failed.");
+                            return None;
+                        }
                         let width = (rect.right - rect.left) as u32;
                         let height = (rect.bottom - rect.top) as u32;
                         let res = (*s.dcomp_state.as_mut().unwrap().swap_chain).ResizeBuffers(
@@ -416,7 +424,7 @@ impl WndProc for MyWndProc {
                             );
                             (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
                         } else {
-                            println!("ResizeBuffers failed: 0x{:x}", res);
+                            error!("ResizeBuffers failed: 0x{:x}", res);
                         }
 
                         // Flush to present flicker artifact (old swapchain composited)
@@ -484,7 +492,7 @@ impl WndProc for MyWndProc {
                             }
                             ValidateRect(hwnd, null_mut());
                         } else {
-                            println!("ResizeBuffers failed: 0x{:x}", res);
+                            error!("ResizeBuffers failed: 0x{:x}", res);
                         }
                     }
                 } else {
@@ -508,11 +516,12 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     //FIXME: this can receive lone surrogate pairs?
                     let key_code = s.stashed_key_code;
+
                     s.stashed_char = std::char::from_u32(wparam as u32);
                     let text = match s.stashed_char {
                         Some(c) => c,
                         None => {
-                            eprintln!("failed to convert WM_CHAR to char: {:#X}", wparam);
+                            warn!("failed to convert WM_CHAR to char: {:#X}", wparam);
                             return None;
                         }
                     };
@@ -537,7 +546,8 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     let key_code: KeyCode = (wparam as i32).into();
                     s.stashed_key_code = key_code;
-                    if key_code.is_printable() {
+
+                    if key_code.is_printable() || key_code == KeyCode::Backspace {
                         //FIXME: this will fail to propogate key combinations such as alt+s
                         return None;
                     }
@@ -650,7 +660,7 @@ impl WndProc for MyWndProc {
                                 1 => MouseButton::X1,
                                 2 => MouseButton::X2,
                                 _ => {
-                                    println!("unexpected X button event");
+                                    warn!("unexpected X button event");
                                     return None;
                                 }
                             }
@@ -780,27 +790,7 @@ impl WindowBuilder {
             // Maybe separate registration in build api? Probably only need to
             // register once even for multiple window creation.
 
-            // TODO: probably want configurable class name.
-            let class_name = "Xi Editor".to_wide();
-            let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
-            let brush = CreateSolidBrush(0xffffff);
-            let wnd = WNDCLASSW {
-                style: 0,
-                lpfnWndProc: Some(win_proc_dispatch),
-                cbClsExtra: 0,
-                cbWndExtra: 0,
-                hInstance: 0 as HINSTANCE,
-                hIcon: icon,
-                hCursor: 0 as HCURSOR,
-                hbrBackground: brush,
-                lpszMenuName: 0 as LPCWSTR,
-                lpszClassName: class_name.as_ptr(),
-            };
-            let class_atom = RegisterClassW(&wnd);
-            if class_atom == 0 {
-                return Err(Error::Other("class_atom == 0"));
-            }
-
+            let class_name = crate::util::CLASS_NAME.to_wide();
             let dwrite_factory = directwrite::Factory::new().unwrap();
             let dw_clone = clone_dwrite(&dwrite_factory);
             let wndproc = MyWndProc {
@@ -863,7 +853,7 @@ impl WindowBuilder {
             }
 
             let dcomp_state = create_dcomp_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
-                println!("Error creating swapchain, falling back to hwnd: {:?}", e);
+                warn!("Creating swapchain failed, falling back to hwnd: {:?}", e);
                 None
             });
 
@@ -896,14 +886,19 @@ unsafe fn choose_adapter(factory: *mut IDXGIFactory2) -> *mut IDXGIAdapter {
         if !SUCCEEDED((*factory).EnumAdapters(i, &mut adapter)) {
             break;
         }
-        let mut desc: DXGI_ADAPTER_DESC = mem::uninitialized();
-        (*adapter).GetDesc(&mut desc);
+        let mut desc = mem::MaybeUninit::uninit();
+        let hr = (*adapter).GetDesc(desc.as_mut_ptr());
+        if !SUCCEEDED(hr) {
+            error!("Failed to get adapter description: {:?}", Error::Hr(hr));
+            break;
+        }
+        let mut desc: DXGI_ADAPTER_DESC = desc.assume_init();
         let vram = desc.DedicatedVideoMemory;
         if i == 0 || vram > best_vram {
             best_vram = vram;
             best_adapter = adapter;
         }
-        println!(
+        debug!(
             "{:?}: desc = {:?}, vram = {}",
             adapter,
             (&mut desc.Description[0] as LPWSTR).from_wide(),
@@ -928,9 +923,9 @@ unsafe fn create_dcomp_state(
             &IID_IDXGIFactory2,
             &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void,
         ))?;
-        println!("dxgi factory pointer = {:?}", factory);
+        debug!("dxgi factory pointer = {:?}", factory);
         let adapter = choose_adapter(factory);
-        println!("adapter = {:?}", adapter);
+        debug!("adapter = {:?}", adapter);
 
         let mut d3d11_device = D3D11Device::new_simple()?;
         let mut d2d1_device = d3d11_device.create_d2d1_device()?;
@@ -967,7 +962,7 @@ unsafe fn create_dcomp_state(
             null_mut(),
             &mut swap_chain,
         );
-        println!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
+        debug!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
 
         let mut swapchain_visual = dcomp_device.create_visual()?;
         swapchain_visual.set_content_raw(swap_chain as *mut IUnknown)?;
@@ -1100,6 +1095,49 @@ impl WindowHandle {
         }
     }
 
+    /// Set the title for this menu.
+    pub fn set_title(&self, title: &str) {
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                if SetWindowTextW(hwnd, title.to_wide().as_ptr()) == FALSE {
+                    warn!("failed to set window title '{}'", title);
+                }
+            }
+        }
+    }
+
+    pub fn set_menu(&self, menu: Menu) {
+        let hmenu = menu.into_hmenu();
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                let old_menu = GetMenu(hwnd);
+                if SetMenu(hwnd, hmenu) == FALSE {
+                    warn!("failed to set window menu");
+                } else {
+                    DestroyMenu(old_menu);
+                }
+            }
+        }
+    }
+
+    pub fn show_context_menu(&self, menu: Menu, x: f64, y: f64) {
+        let hmenu = menu.into_hmenu();
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            let (x, y) = self.px_to_pixels_xy(x as f32, y as f32);
+            unsafe {
+                let mut point = POINT { x, y };
+                ClientToScreen(hwnd, &mut point);
+                if TrackPopupMenu(hmenu, TPM_LEFTALIGN, point.x, point.y, 0, hwnd, null()) == FALSE
+                {
+                    warn!("failed to track popup menu");
+                }
+            }
+        }
+    }
+
     /// Get the raw HWND handle, for uses that are not wrapped in
     /// druid_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
@@ -1110,6 +1148,7 @@ impl WindowHandle {
     ///
     /// Note: this method will be reworked to avoid reentrancy problems.
     /// Currently, calling it may result in important messages being dropped.
+    #[deprecated(since = "0.3", note = "use methods on WinCtx instead")]
     pub fn file_dialog(
         &self,
         ty: FileDialogType,
@@ -1250,6 +1289,24 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             })
             .unwrap_or(0);
         TimerToken::new(id)
+    }
+
+    /// Prompt the user to chose a file to open.
+    ///
+    /// Blocks while the user picks the file.
+    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        let hwnd = self.handle.get_hwnd()?;
+        unsafe {
+            get_file_dialog_path(hwnd, FileDialogType::Open, options)
+                .ok()
+                .map(|os_str| FileInfo {
+                    path: os_str.into(),
+                })
+        }
+    }
+
+    fn set_clipboard_contents(&mut self, contents: ClipboardItem) {
+        Application::set_clipboard_contents(contents);
     }
 }
 

@@ -14,31 +14,72 @@
 
 //! A progress bar widget.
 
-use crate::kurbo::{Point, Rect, Size};
-use crate::piet::{Color, RenderContext};
+use crate::kurbo::{Point, RoundedRect, Size};
+use crate::piet::{LinearGradient, RenderContext, UnitPoint};
+use crate::theme;
+use crate::widget::Align;
 use crate::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
-const BACKGROUND_COLOR: Color = Color::rgb8(0x55, 0x55, 0x55);
-const BAR_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
-
 /// A progress bar, displaying a numeric progress value.
-#[derive(Debug, Clone, Default)]
-pub struct ProgressBar {}
+#[derive(Debug, Clone)]
+pub struct ProgressBar;
 
-impl Widget<f64> for ProgressBar {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, _env: &Env) {
+impl ProgressBar {
+    pub fn new() -> impl Widget<f64> {
+        Align::vertical(UnitPoint::CENTER, ProgressBarRaw::default())
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ProgressBarRaw {}
+
+impl Widget<f64> for ProgressBarRaw {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, env: &Env) {
         let clamped = data.max(0.0).min(1.0);
-        let rect = Rect::from_origin_size(Point::ORIGIN, base_state.size());
+
+        let rounded_rect = RoundedRect::from_origin_size(
+            Point::ORIGIN,
+            (Size {
+                width: base_state.size().width,
+                height: env.get(theme::BASIC_WIDGET_HEIGHT),
+            })
+            .to_vec2(),
+            4.,
+        );
+
+        //Paint the border
+        paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER), 2.0);
 
         //Paint the background
-        paint_ctx.fill(rect, &BACKGROUND_COLOR);
+        let background_gradient = LinearGradient::new(
+            UnitPoint::TOP,
+            UnitPoint::BOTTOM,
+            (
+                env.get(theme::BACKGROUND_LIGHT),
+                env.get(theme::BACKGROUND_DARK),
+            ),
+        );
+        paint_ctx.fill(rounded_rect, &background_gradient);
 
         //Paint the bar
-        let calculated_bar_width = clamped * rect.width();
-        let rect = rect.with_size(Size::new(calculated_bar_width, rect.height()));
-        paint_ctx.fill(rect, &BAR_COLOR);
+        let calculated_bar_width = clamped * rounded_rect.width();
+        let rounded_rect = RoundedRect::from_origin_size(
+            Point::ORIGIN,
+            (Size {
+                width: calculated_bar_width,
+                height: env.get(theme::BASIC_WIDGET_HEIGHT),
+            })
+            .to_vec2(),
+            4.,
+        );
+        let bar_gradient = LinearGradient::new(
+            UnitPoint::TOP,
+            UnitPoint::BOTTOM,
+            (env.get(theme::PRIMARY_LIGHT), env.get(theme::PRIMARY_DARK)),
+        );
+        paint_ctx.fill(rounded_rect, &bar_gradient);
     }
 
     fn layout(
@@ -46,20 +87,24 @@ impl Widget<f64> for ProgressBar {
         _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         _data: &f64,
-        _env: &Env,
+        env: &Env,
     ) -> Size {
-        bc.constrain(bc.max())
+        let default_width = 100.0;
+
+        if bc.is_width_bounded() {
+            bc.constrain(Size::new(
+                bc.max().width,
+                env.get(theme::BASIC_WIDGET_HEIGHT),
+            ))
+        } else {
+            bc.constrain(Size::new(
+                default_width,
+                env.get(theme::BASIC_WIDGET_HEIGHT),
+            ))
+        }
     }
 
-    fn event(
-        &mut self,
-        _event: &Event,
-        _ctx: &mut EventCtx,
-        _data: &mut f64,
-        _env: &Env,
-    ) -> Option<Action> {
-        None
-    }
+    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut f64, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {
         ctx.invalidate();

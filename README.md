@@ -41,6 +41,27 @@ The biggest single obstacle to porting is 2d graphics, as druid currently
 uses Direct2D (and DirectWrite for text). One way forward is to create a
 [2d graphics] abstraction.
 
+## Build
+
+#### Windows
+
+run `cargo build`
+
+#### macOS
+
+On macOS, druid requires cairo; see [gtk-rs dependencies] for installation instructions.
+
+You may also need to set your `PKG_CONFIG_PATH`; assuming you have installed `cairo` through homebrew, you can build with,
+
+ ```shell
+$> PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig" cargo build
+ ```
+#### Linux
+
+On Linux, druid requires gtk+3; see[gtk-rs dependencies] for installation instructions.
+
+run `cargo build`
+
 ## Alternatives
 
 In addition to wrappers for mature UI toolkits (mostly C++), [conrod]
@@ -70,3 +91,4 @@ The main author is Raph Levien.
 [ggez]: https://github.com/ggez/ggez
 [CONTRIBUTING.md]: CONTRIBUTING.md
 [Zulip chat instance]: https://xi.zulipchat.com
+[gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html

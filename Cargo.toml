@@ -18,6 +18,22 @@ use_gtk = ["druid-shell/use_gtk"]
 [badges]
 travis-ci = { repository = "xi-editor/druid" }
 
+[dependencies]
+fluent-bundle = "0.8.0"
+fluent-locale = "0.10.0"
+fluent-syntax = "0.9"
+unic-langid = "0.6.1"
+unicode-segmentation = "1.3.0"
+log = "0.4.8"
+
+[dependencies.simple_logger]
+version = "1.3.0"
+default-features = false
+
 [dependencies.druid-shell]
 path = "druid-shell"
 version = "0.3.0"
+
+[dependencies.druid-derive-data]
+path = "druid-derive-data"
+version = "0.1.0"

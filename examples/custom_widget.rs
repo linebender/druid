@@ -20,11 +20,9 @@ use druid::piet::{
     Color, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayoutBuilder,
 };
 
-use druid::shell::{runloop, WindowBuilder};
-
 use druid::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UiMain, UiState,
-    UpdateCtx, Widget,
+    AppLauncher, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
+    Widget, WindowDesc,
 };
 
 struct CustomWidget;
@@ -114,15 +112,7 @@ impl Widget<String> for CustomWidget {
         bc.max()
     }
 
-    fn event(
-        &mut self,
-        _event: &Event,
-        _ctx: &mut EventCtx,
-        _data: &mut String,
-        _env: &Env,
-    ) -> Option<Action> {
-        None
-    }
+    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut String, _env: &Env) {}
 
     fn update(
         &mut self,
@@ -135,19 +125,11 @@ impl Widget<String> for CustomWidget {
 }
 
 fn main() {
-    druid::shell::init();
-
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-    let root = CustomWidget {};
-
-    let state = UiState::new(root, "Druid + Piet".to_string());
-
-    builder.set_title("Custom widget example");
-    builder.set_handler(Box::new(UiMain::new(state)));
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    let window = WindowDesc::new(|| CustomWidget {});
+    AppLauncher::with_window(window)
+        .use_simple_logger()
+        .launch("Druid + Piet".to_string())
+        .expect("launch failed");
 }
 
 fn make_image_data(width: usize, height: usize) -> Vec<u8> {

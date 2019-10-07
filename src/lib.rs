@@ -14,66 +14,59 @@
 
 //! Simple data-oriented GUI.
 
+#![deny(intra_doc_link_resolution_failure)]
+
 pub use druid_shell::{self as shell, kurbo, piet};
 
 pub mod widget;
 
+mod app;
+pub mod command;
 mod data;
+mod env;
 mod event;
 mod lens;
-mod value;
+pub mod localization;
+pub mod menu;
+pub mod theme;
+mod win_handler;
+mod window;
 
-use std::any::Any;
+use std::collections::VecDeque;
 use std::ops::{Deref, DerefMut};
 
 use std::time::Instant;
 
+use log::{error, warn};
+
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
-use piet::{Color, Piet, RenderContext};
+use piet::{Piet, RenderContext};
+
+pub use unicode_segmentation;
 
 // TODO: remove these unused annotations when we wire these up; they're
 // placeholders for functionality not yet implemented.
 #[allow(unused)]
 use druid_shell::application::Application;
+pub use druid_shell::clipboard::ClipboardItem;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 #[allow(unused)]
 use druid_shell::platform::IdleHandle;
-use druid_shell::window::{self, Text, WinCtx, WinHandler, WindowHandle};
 pub use druid_shell::window::{Cursor, MouseButton, MouseEvent, TimerToken};
+use druid_shell::window::{Text, WinCtx, WindowHandle};
+pub use shell::hotkey::{HotKey, RawMods, SysMods};
 
+pub use app::{AppLauncher, WindowDesc};
+pub use command::{Command, Selector};
 pub use data::Data;
+pub use env::{Env, Key, Value};
 pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
-pub use value::{Delta, KeyPath, PathEl, PathFragment, Value};
-
-const BACKGROUND_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
-
-/// A struct representing the top-level root of the UI.
-///
-/// At the moment, there is no meaningful distinction between this struct
-/// and [`UiState`].
-///
-/// Discussion: when we start supporting multiple windows, we'll need
-/// to make finer distinctions between state for the entire application,
-/// and state for a single window. But for now it's the same.
-pub struct UiMain<T: Data> {
-    state: UiState<T>,
-}
-
-/// The state of the top-level UI.
-///
-/// This struct holds the root widget of the UI, and is also responsible
-/// for coordinating interactions with the platform window.
-pub struct UiState<T: Data> {
-    root: WidgetPod<T, Box<dyn Widget<T>>>,
-    data: T,
-    prev_paint_time: Option<Instant>,
-    // Following fields might move to a separate struct so there's access
-    // from contexts.
-    handle: WindowHandle,
-    size: Size,
-}
+pub use localization::LocalizedString;
+pub use menu::MenuDesc;
+pub use win_handler::DruidHandler;
+pub use window::{Window, WindowId};
 
 /// A container for one widget in the hierarchy.
 ///
@@ -90,6 +83,7 @@ pub struct UiState<T: Data> {
 pub struct WidgetPod<T: Data, W: Widget<T>> {
     state: BaseState,
     old_data: Option<T>,
+    env: Option<Env>,
     inner: W,
 }
 
@@ -220,19 +214,13 @@ pub trait Widget<T> {
     ///
     /// A number of different events (in the [`Event`] enum) are handled in this
     /// method call. A widget can handle these events in a number of ways:
-    /// requesting things from the [`EventCtx`], mutating the data, or returning
-    /// an [`Action`].
+    /// requesting things from the [`EventCtx`], mutating the data, or submitting
+    /// a [`Command`].
     ///
     /// [`Event`]: struct.Event.html
     /// [`EventCtx`]: struct.EventCtx.html
-    /// [`Action`]: struct.Action.html
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action>;
+    /// [`Command`]: struct.Command.html
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env);
 
     /// Handle a change of data.
     ///
@@ -263,36 +251,13 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
         self.deref_mut().layout(ctx, bc, data, env)
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         self.deref_mut().event(event, ctx, data, env)
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
         self.deref_mut().update(ctx, old_data, data, env);
     }
-}
-
-/// An environment passed down through all widget traversals.
-///
-/// All widget methods have access to an environment, and it is passed
-/// downwards during traversals.
-///
-/// At present, there is no real functionality here, but work is in
-/// progress to make theme data (colors, dimensions, etc) available
-/// through the environment, as well as pass custom data down to all
-/// descendants. An important example of the latter is setting a value
-/// for enabled/disabled status so that an entire subtree can be
-/// disabled ("grayed out") with one setting.
-#[derive(Clone, Default)]
-pub struct Env {
-    value: Value,
-    path: KeyPath,
 }
 
 /// A context passed to paint methods of widgets.
@@ -305,6 +270,7 @@ pub struct Env {
 pub struct PaintCtx<'a, 'b: 'a> {
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'b>,
+    pub window_id: WindowId,
 }
 
 impl<'a, 'b: 'a> Deref for PaintCtx<'a, 'b> {
@@ -327,7 +293,8 @@ impl<'a, 'b: 'a> DerefMut for PaintCtx<'a, 'b> {
 /// creating text layout objects, which are likely to be useful
 /// during widget layout.
 pub struct LayoutCtx<'a, 'b: 'a> {
-    text: &'a mut Text<'b>,
+    text_factory: &'a mut Text<'b>,
+    window_id: WindowId,
 }
 
 /// A mutable context provided to event handling methods of widgets.
@@ -337,13 +304,19 @@ pub struct LayoutCtx<'a, 'b: 'a> {
 ///
 /// [`invalidate`]: #method.invalidate
 pub struct EventCtx<'a, 'b> {
+    // Note: there's a bunch of state that's just passed down, might
+    // want to group that into a single struct.
     win_ctx: &'a mut dyn WinCtx<'b>,
     cursor: &'a mut Option<Cursor>,
+    /// Commands submitted to be run after this event.
+    command_queue: &'a mut VecDeque<(WindowId, Command)>,
+    window_id: WindowId,
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     window: &'a WindowHandle,
     base_state: &'a mut BaseState,
     had_active: bool,
     is_handled: bool,
+    is_root: bool,
 }
 
 /// A mutable context provided to data update methods of widgets.
@@ -352,35 +325,15 @@ pub struct EventCtx<'a, 'b> {
 /// in the widget's appearance, to schedule a repaint.
 ///
 /// [`invalidate`]: #method.invalidate
-pub struct UpdateCtx<'a, 'b> {
-    win_ctx: &'a mut dyn WinCtx<'b>,
+pub struct UpdateCtx<'a, 'b: 'a> {
+    text_factory: &'a mut Text<'b>,
     window: &'a WindowHandle,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like
     // `EventCtx` (and possibly using the same structure). But for
     // now keep it super-simple.
     needs_inval: bool,
-}
-
-/// An action produced by a widget.
-///
-/// Widgets have several ways of producing an effect in response to
-/// events. Two of these are mutating their data, and requesting
-/// actions from [`EventCtx`]. When neither of those is suitable,
-/// and the action is generic (for example, a button press), then
-/// the event handler for a widget can return an `Action`, and it
-/// is passed up the calling hierarchy.
-///
-/// The details of the contents of this struct are still subject to
-/// change. It's also possible that the concept will go away; a
-/// reasonable replacement is to provide buttons with a closure that
-/// can perform the action more directly.
-///
-/// [`EventCtx`]: struct.EventCtx.html
-#[derive(Debug)]
-pub struct Action {
-    // This is just a placeholder for debugging purposes.
-    text: String,
+    window_id: WindowId,
 }
 
 /// Constraints for layout.
@@ -413,6 +366,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         WidgetPod {
             state: Default::default(),
             old_data: None,
+            env: None,
             inner,
         }
     }
@@ -438,10 +392,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// method.
     ///
     /// Note that this method does not apply the offset of the layout rect.
-    /// If that is desired, use [`paint_with_offset`](#method.paint_with_offset)
-    /// instead.
+    /// If that is desired, use [`paint_with_offset`] instead.
     ///
     /// [`layout`]: trait.Widget.html#method.layout
+    /// [`paint`]: trait.Widget.html#method.paint
+    /// [`paint_with_offset`]: #method.paint_with_offset
     pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.inner.paint(paint_ctx, &self.state, data, &env);
     }
@@ -450,13 +405,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     // Discussion: should this be `paint` and the other `paint_raw`?
     pub fn paint_with_offset(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Err(e) = paint_ctx.save() {
-            eprintln!("error saving render context: {:?}", e);
+            error!("saving render context failed: {:?}", e);
             return;
         }
         paint_ctx.transform(Affine::translate(self.state.layout_rect.origin().to_vec2()));
         self.paint(paint_ctx, data, env);
         if let Err(e) = paint_ctx.restore() {
-            eprintln!("error restoring render context: {:?}", e);
+            error!("restoring render context failed: {:?}", e);
         }
     }
 
@@ -484,34 +439,39 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// the event.
     ///
     /// [`event`]: trait.Widget.html#method.event
-    pub fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut T,
-        env: &Env,
-    ) -> Option<Action> {
+    pub fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         // TODO: factor as much logic as possible into monomorphic functions.
         if ctx.is_handled || !event.recurse() {
             // This function is called by containers to propagate an event from
             // containers to children. Non-recurse events will be invoked directly
             // from other points in the library.
-            return None;
+            return;
         }
         let had_active = self.state.has_active;
         let mut child_ctx = EventCtx {
             win_ctx: ctx.win_ctx,
             cursor: ctx.cursor,
+            command_queue: ctx.command_queue,
             window: &ctx.window,
+            window_id: ctx.window_id,
             base_state: &mut self.state,
             had_active,
             is_handled: false,
+            is_root: false,
         };
         let rect = child_ctx.base_state.layout_rect;
         // Note: could also represent this as `Option<Event>`.
         let mut recurse = true;
         let mut hot_changed = None;
         let child_event = match event {
+            Event::OpenFile(file) => {
+                recurse = ctx.is_root;
+                Event::OpenFile(file.clone())
+            }
+            Event::Size(size) => {
+                recurse = ctx.is_root;
+                Event::Size(*size)
+            }
             Event::MouseDown(mouse_event) => {
                 recurse = had_active || !ctx.had_active && rect.winding(mouse_event.pos) != 0;
                 let mut mouse_event = mouse_event.clone();
@@ -543,6 +503,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 recurse = child_ctx.base_state.has_focus;
                 Event::KeyUp(*e)
             }
+            Event::Paste(e) => {
+                recurse = child_ctx.base_state.has_focus;
+                Event::Paste(e.clone())
+            }
             Event::Wheel(wheel_event) => {
                 recurse = had_active || child_ctx.base_state.is_hot;
                 Event::Wheel(wheel_event.clone())
@@ -565,22 +529,18 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 recurse = child_ctx.base_state.request_timer;
                 Event::Timer(*id)
             }
+            Event::Command(cmd) => Event::Command(cmd.clone()),
         };
         child_ctx.base_state.needs_inval = false;
         if let Some(is_hot) = hot_changed {
             let hot_changed_event = Event::HotChanged(is_hot);
-            // Hot changed events are not expected to return an action.
-            let _action = self
-                .inner
+            self.inner
                 .event(&hot_changed_event, &mut child_ctx, data, &env);
         }
-        let action = if recurse {
+        if recurse {
             child_ctx.base_state.has_active = false;
-            let action = self.inner.event(&child_event, &mut child_ctx, data, &env);
+            self.inner.event(&child_event, &mut child_ctx, data, &env);
             child_ctx.base_state.has_active |= child_ctx.base_state.is_active;
-            action
-        } else {
-            None
         };
         ctx.base_state.needs_inval |= child_ctx.base_state.needs_inval;
         ctx.base_state.request_anim |= child_ctx.base_state.request_anim;
@@ -589,7 +549,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.base_state.has_active |= child_ctx.base_state.has_active;
         ctx.base_state.request_focus |= child_ctx.base_state.request_focus;
         ctx.is_handled |= child_ctx.is_handled;
-        action
     }
 
     /// Propagate a data update.
@@ -599,13 +558,23 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`update`]: trait.Widget.html#method.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
-        if let Some(old_data) = &self.old_data {
-            if old_data.same(data) {
-                return;
-            }
+        let data_same = if let Some(ref old_data) = self.old_data {
+            old_data.same(data)
+        } else {
+            false
+        };
+        let env_same = if let Some(ref old_env) = self.env {
+            old_env.same(env)
+        } else {
+            false
+        };
+
+        if data_same && env_same {
+            return;
         }
         self.inner.update(ctx, self.old_data.as_ref(), data, env);
         self.old_data = Some(data.clone());
+        self.env = Some(env.clone());
     }
 }
 
@@ -618,192 +587,9 @@ impl<T: Data, W: Widget<T> + 'static> WidgetPod<T, W> {
         WidgetPod {
             state: self.state,
             old_data: self.old_data,
+            env: self.env,
             inner: Box::new(self.inner),
         }
-    }
-}
-
-impl<T: Data> UiState<T> {
-    /// Construct a new UI state.
-    ///
-    /// This constructor takes a root widget and an initial value for the
-    /// data.
-    pub fn new(root: impl Widget<T> + 'static, data: T) -> UiState<T> {
-        UiState {
-            root: WidgetPod::new(root).boxed(),
-            data,
-            prev_paint_time: None,
-            handle: Default::default(),
-            size: Default::default(),
-        }
-    }
-
-    /// Set the root widget as active.
-    ///
-    /// Warning: this is set as deprecated because it's not really meaningful.
-    /// It's likely that the intent was to set a default focus, but focus is
-    /// not yet implemented and there probably needs to be some other way to
-    /// identify the widget which should receive focus on startup.
-    #[deprecated]
-    pub fn set_active(&mut self, active: bool) {
-        self.root.state.is_active = active;
-    }
-
-    fn root_env(&self) -> Env {
-        Default::default()
-    }
-
-    /// Send an event to the widget hierarchy.
-    ///
-    /// Returns `true` if the event produced an action.
-    ///
-    /// This is principally because in certain cases (such as keydown on Windows)
-    /// the OS needs to know if an event was handled.
-    fn do_event(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
-        let (is_handled, dirty) = self.do_event_inner(event, win_ctx);
-        if dirty {
-            win_ctx.invalidate();
-        }
-        is_handled
-    }
-
-    /// Send an event to the widget hierarchy.
-    ///
-    /// Returns two flags. The first is true if the event was handled. The
-    /// second is true if an animation frame or invalidation is requested.
-    fn do_event_inner(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> (bool, bool) {
-        // should there be a root base state persisting in the ui state instead?
-        let mut base_state = Default::default();
-        let mut cursor = match event {
-            Event::MouseMoved(..) => Some(Cursor::Arrow),
-            _ => None,
-        };
-        let mut ctx = EventCtx {
-            win_ctx,
-            cursor: &mut cursor,
-            window: &self.handle,
-            base_state: &mut base_state,
-            had_active: self.root.state.has_active,
-            is_handled: false,
-        };
-        let env = self.root_env();
-        let _action = self.root.event(&event, &mut ctx, &mut self.data, &env);
-
-        if ctx.base_state.request_focus {
-            let focus_event = Event::FocusChanged(true);
-            // Focus changed events are not expected to return an action.
-            let _ = self
-                .root
-                .event(&focus_event, &mut ctx, &mut self.data, &env);
-        }
-        let needs_inval = ctx.base_state.needs_inval;
-        let request_anim = ctx.base_state.request_anim;
-        let is_handled = ctx.is_handled();
-        if let Some(cursor) = cursor {
-            win_ctx.set_cursor(&cursor);
-        }
-
-        let mut update_ctx = UpdateCtx {
-            win_ctx,
-            window: &self.handle,
-            needs_inval: false,
-        };
-        // Note: we probably want to aggregate updates so there's only one after
-        // a burst of events.
-        self.root.update(&mut update_ctx, &self.data, &env);
-        // TODO: process actions
-        let dirty = request_anim || needs_inval || update_ctx.needs_inval;
-        (is_handled, dirty)
-    }
-
-    fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
-        // TODO: this calculation uses wall-clock time of the paint call, which
-        // potentially has jitter.
-        //
-        // See https://github.com/xi-editor/druid/issues/85 for discussion.
-        let this_paint_time = Instant::now();
-        let interval = if let Some(last) = self.prev_paint_time {
-            let duration = this_paint_time.duration_since(last);
-            1_000_000_000 * duration.as_secs() + (duration.subsec_nanos() as u64)
-        } else {
-            0
-        };
-        let anim_frame_event = Event::AnimFrame(interval);
-        let (_, request_anim) = self.do_event_inner(anim_frame_event, ctx);
-        self.prev_paint_time = Some(this_paint_time);
-        let bc = BoxConstraints::tight(self.size);
-        let env = self.root_env();
-        let text = piet.text();
-        let mut layout_ctx = LayoutCtx { text };
-        let size = self.root.layout(&mut layout_ctx, &bc, &self.data, &env);
-        self.root.state.layout_rect = Rect::from_origin_size(Point::ORIGIN, size);
-        piet.clear(BACKGROUND_COLOR);
-        let mut paint_ctx = PaintCtx { render_ctx: piet };
-        self.root.paint(&mut paint_ctx, &self.data, &env);
-        if !request_anim {
-            self.prev_paint_time = None;
-        }
-        request_anim
-    }
-}
-
-impl<T: Data> UiMain<T> {
-    /// Construct a new UI state.
-    pub fn new(state: UiState<T>) -> UiMain<T> {
-        UiMain { state }
-    }
-}
-
-impl<T: Data + 'static> WinHandler for UiMain<T> {
-    fn connect(&mut self, handle: &WindowHandle) {
-        self.state.handle = handle.clone();
-    }
-
-    fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
-        self.state.paint(piet, ctx)
-    }
-
-    fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
-        let dpi = self.state.handle.get_dpi() as f64;
-        let scale = 96.0 / dpi;
-        self.state.size = Size::new(width as f64 * scale, height as f64 * scale);
-    }
-
-    fn mouse_down(&mut self, event: &window::MouseEvent, ctx: &mut dyn WinCtx) {
-        // TODO: double-click detection
-        let event = Event::MouseDown(event.clone());
-        self.state.do_event(event, ctx);
-    }
-
-    fn mouse_up(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
-        let event = Event::MouseUp(event.clone());
-        self.state.do_event(event, ctx);
-    }
-
-    fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
-        let event = Event::MouseMoved(event.clone());
-        self.state.do_event(event, ctx);
-    }
-
-    fn key_down(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) -> bool {
-        self.state.do_event(Event::KeyDown(event), ctx)
-    }
-
-    fn key_up(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) {
-        self.state.do_event(Event::KeyUp(event), ctx);
-    }
-
-    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, ctx: &mut dyn WinCtx) {
-        let event = Event::Wheel(WheelEvent { delta, mods });
-        self.state.do_event(event, ctx);
-    }
-
-    fn timer(&mut self, token: TimerToken, ctx: &mut dyn WinCtx) {
-        self.state.do_event(Event::Timer(token), ctx);
-    }
-
-    fn as_any(&mut self) -> &mut dyn Any {
-        self
     }
 }
 
@@ -854,6 +640,7 @@ impl BaseState {
     /// `FocusChanged(true)`.
     ///
     /// Discussion question: is "is_focused" a better name?
+    ///
     /// [`request_focus`]: struct.EventCtx.html#method.request_focus
     pub fn has_focus(&self) -> bool {
         self.has_focus
@@ -889,6 +676,16 @@ impl BoxConstraints {
         }
     }
 
+    /// Create a "loose" version of the constraints.
+    ///
+    /// Make a version with zero minimum size, but the same maximum size.
+    pub fn loosen(&self) -> BoxConstraints {
+        BoxConstraints {
+            min: Size::ZERO,
+            max: self.max,
+        }
+    }
+
     /// Clamp a given size so that fits within the constraints.
     pub fn constrain(&self, size: impl Into<Size>) -> Size {
         size.into().clamp(self.min, self.max)
@@ -903,23 +700,25 @@ impl BoxConstraints {
     pub fn min(&self) -> Size {
         self.min
     }
-}
 
-impl Env {
-    pub fn join(&self, fragment: impl PathFragment) -> Env {
-        let mut path = self.path.clone();
-        fragment.push_to_path(&mut path);
-        // TODO: better diagnostics on error
-        let value = self.value.access(fragment).expect("invalid path").clone();
-        Env { value, path }
+    /// Whether there is an upper bound on the width.
+    pub fn is_width_bounded(&self) -> bool {
+        self.max.width.is_finite()
     }
 
-    pub fn get_data(&self) -> &Value {
-        &self.value
+    /// Whether there is an upper bound on the height.
+    pub fn is_height_bounded(&self) -> bool {
+        self.max.height.is_finite()
     }
 
-    pub fn get_path(&self) -> &KeyPath {
-        &self.path
+    /// Check to see if these constraints are legit.
+    pub fn check(&self, name: &str) {
+        if !(0.0 <= self.min.width && self.min.width <= self.max.width)
+            || !(0.0 <= self.min.height && self.min.height <= self.max.height)
+        {
+            warn!("Bad BoxConstraints passed to {}:", name);
+            warn!("{:?}", self);
+        }
     }
 }
 
@@ -1030,12 +829,35 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.base_state.request_timer = true;
         self.win_ctx.request_timer(deadline)
     }
+
+    /// Submit a [`Command`] to be run after this event is handled.
+    ///
+    /// Commands are run in the order they are submitted; all commands
+    /// submitted during the handling of an event are executed before
+    /// the [`update()`] method is called.
+    ///
+    /// [`Command`]: struct.Command.html
+    /// [`update()`]: trait.Widget.html#tymethod.update
+    pub fn submit_command(&mut self, command: Command, window_id: impl Into<Option<WindowId>>) {
+        let window_id = window_id.into().unwrap_or(self.window_id);
+        self.command_queue.push_back((window_id, command))
+    }
+
+    /// Get the window id.
+    pub fn window_id(&self) -> WindowId {
+        self.window_id
+    }
 }
 
 impl<'a, 'b> LayoutCtx<'a, 'b> {
     /// Get an object which can create text layouts.
     pub fn text(&mut self) -> &mut Text<'b> {
-        &mut self.text
+        &mut self.text_factory
+    }
+
+    /// Get the window id.
+    pub fn window_id(&self) -> WindowId {
+        self.window_id
     }
 }
 
@@ -1050,43 +872,20 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
 
     /// Get an object which can create text layouts.
     pub fn text(&mut self) -> &mut Text<'b> {
-        self.win_ctx.text_factory()
+        self.text_factory
     }
 
     /// Returns a reference to the current `WindowHandle`.
     ///
-    /// Note: we're in the process of migrating towards providing functionality
-    /// provided by the window handle in mutable contexts instead. If you're
-    /// considering a new use of this method, try adding it to `WinCtx` and
-    /// plumbing it through instead.
+    /// Note: For the most part we're trying to migrate `WindowHandle`
+    /// functionality to `WinCtx`, but the update flow is the exception, as
+    /// it's shared across multiple windows.
     pub fn window(&self) -> &WindowHandle {
         &self.window
     }
-}
 
-impl Action {
-    /// Make an action from a string.
-    ///
-    /// Note: this is something of a placeholder and will change.
-    pub fn from_str(s: impl Into<String>) -> Action {
-        Action { text: s.into() }
-    }
-
-    /// Provides access to the action's string representation.
-    pub fn as_str(&self) -> &str {
-        self.text.as_str()
-    }
-
-    /// Merge two optional actions.
-    ///
-    /// Note: right now we're not dealing with the case where the event propagation
-    /// results in more than one action. We need to rethink this.
-    pub fn merge(this: Option<Action>, other: Option<Action>) -> Option<Action> {
-        if this.is_some() {
-            assert!(other.is_none(), "can't merge two actions");
-            this
-        } else {
-            other
-        }
+    /// Get the window id.
+    pub fn window_id(&self) -> WindowId {
+        self.window_id
     }
 }

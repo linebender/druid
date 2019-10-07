@@ -14,12 +14,13 @@
 
 use std::any::Any;
 
-use piet_common::kurbo::{Line, Rect, Vec2};
-use piet_common::{Color, RenderContext};
+use druid_shell::kurbo::{Line, Rect, Vec2};
+use druid_shell::piet::{Color, RenderContext};
 
-use druid_shell::dialog::{FileDialogOptions, FileDialogType};
+use druid_shell::application::Application;
+use druid_shell::dialog::{FileDialogOptions, FileSpec};
+use druid_shell::hotkey::{HotKey, SysMods};
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
-use druid_shell::keycodes::MenuKey;
 use druid_shell::menu::Menu;
 use druid_shell::platform::WindowBuilder;
 use druid_shell::runloop;
@@ -47,19 +48,19 @@ impl WinHandler for HelloState {
         false
     }
 
-    fn command(&mut self, id: u32, _ctx: &mut dyn WinCtx) {
+    fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {
         match id {
-            0x100 => self.handle.close(),
-            0x101 => {
-                let mut options = FileDialogOptions::default();
-                options.set_show_hidden();
-                let filename = self.handle.file_dialog(FileDialogType::Open, options);
-                println!("result: {:?}", filename);
+            0x100 => {
+                self.handle.close();
+                Application::quit();
             }
-            0x102 => {
-                let mut options = FileDialogOptions::default();
-                options.set_show_hidden();
-                let filename = self.handle.file_dialog(FileDialogType::Save, options);
+            0x101 => {
+                let options = FileDialogOptions::new().show_hidden().allowed_types(vec![
+                    FileSpec::new("Rust Files", &["rs", "toml"]),
+                    FileSpec::TEXT,
+                    FileSpec::JPG,
+                ]);
+                let filename = ctx.open_file_sync(options);
                 println!("result: {:?}", filename);
             }
             _ => println!("unexpected id {}", id),
@@ -115,12 +116,23 @@ fn main() {
     druid_shell::init();
 
     let mut file_menu = Menu::new();
-    file_menu.add_item(0x100, "E&xit", MenuKey::std_quit());
-    file_menu.add_separator();
-    file_menu.add_item(0x101, "O&pen", MenuKey::command('o'));
-    file_menu.add_item(0x102, "S&ave", MenuKey::command('s'));
+    file_menu.add_item(
+        0x100,
+        "E&xit",
+        Some(&HotKey::new(SysMods::Cmd, "q")),
+        true,
+        false,
+    );
+    file_menu.add_item(
+        0x101,
+        "O&pen",
+        Some(&HotKey::new(SysMods::Cmd, "o")),
+        true,
+        false,
+    );
     let mut menubar = Menu::new();
-    menubar.add_dropdown(file_menu, "&File");
+    menubar.add_dropdown(Menu::new(), "Application", true);
+    menubar.add_dropdown(file_menu, "&File", true);
 
     let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();

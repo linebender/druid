@@ -18,12 +18,10 @@ use std::time::{Duration, Instant};
 
 use druid::kurbo::{Line, Size};
 use druid::piet::{Color, RenderContext};
-use druid::shell::{runloop, WindowBuilder};
 use druid::{
-    Action, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken,
-    UpdateCtx, Widget,
+    AppLauncher, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken,
+    UpdateCtx, Widget, WindowDesc,
 };
-use druid::{UiMain, UiState};
 
 struct TimerWidget {
     timer_id: TimerToken,
@@ -53,13 +51,7 @@ impl Widget<u32> for TimerWidget {
         bc.constrain((100.0, 100.0))
     }
 
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        _data: &mut u32,
-        _env: &Env,
-    ) -> Option<Action> {
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, _data: &mut u32, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 self.on = !self.on;
@@ -77,25 +69,19 @@ impl Widget<u32> for TimerWidget {
             }
             _ => (),
         }
-        None
     }
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&u32>, _data: &u32, _env: &Env) {}
 }
 
 fn main() {
-    druid::shell::init();
-
-    let mut run_loop = runloop::RunLoop::new();
-    let mut builder = WindowBuilder::new();
-    let root = TimerWidget {
+    let window = WindowDesc::new(|| TimerWidget {
         timer_id: TimerToken::INVALID,
         on: false,
-    };
-    let state = UiState::new(root, 0u32);
-    builder.set_title("Timer example");
-    builder.set_handler(Box::new(UiMain::new(state)));
-    let window = builder.build().unwrap();
-    window.show();
-    run_loop.run();
+    });
+
+    AppLauncher::with_window(window)
+        .use_simple_logger()
+        .launch(0u32)
+        .expect("launch failed");
 }

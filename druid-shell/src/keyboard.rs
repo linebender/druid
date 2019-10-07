@@ -82,6 +82,12 @@ impl KeyEvent {
             Some(self.unmodified_text.as_str())
         }
     }
+
+    /// For creating `KeyEvent`s during testing.
+    #[doc(hidden)]
+    pub fn for_test(mods: impl Into<KeyModifiers>, text: &'static str, code: KeyCode) -> Self {
+        KeyEvent::new(code, false, mods.into(), text, text)
+    }
 }
 
 /// Keyboard modifier state, provided for events.
@@ -413,19 +419,21 @@ impl From<i32> for KeyCode {
 
         match src {
             VK_LSHIFT => KeyCode::LeftShift,
+            VK_SHIFT => KeyCode::LeftShift,
             VK_RSHIFT => KeyCode::RightShift,
             VK_LCONTROL => KeyCode::LeftControl,
+            VK_CONTROL => KeyCode::LeftControl,
             VK_RCONTROL => KeyCode::RightControl,
             VK_LMENU => KeyCode::LeftAlt,
+            VK_MENU => KeyCode::LeftAlt,
             VK_RMENU => KeyCode::RightAlt,
-            //VK_OEM_PLUS => KeyCode::Add,
+            VK_OEM_PLUS => KeyCode::Equals,
             VK_OEM_COMMA => KeyCode::Comma,
             VK_OEM_MINUS => KeyCode::Minus,
             VK_OEM_PERIOD => KeyCode::Period,
             VK_OEM_1 => KeyCode::Semicolon,
             VK_OEM_2 => KeyCode::Slash,
-            //TODO: does this map to backtick?
-            //VK_OEM_3 => KeyCode::Tilde,
+            VK_OEM_3 => KeyCode::Backtick,
             VK_OEM_4 => KeyCode::LeftBracket,
             VK_OEM_5 => KeyCode::Backslash,
             VK_OEM_6 => KeyCode::RightBracket,
