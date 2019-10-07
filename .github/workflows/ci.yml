@@ -9,7 +9,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-10.14, windows-2019]
+        os: [macOS-10.14, windows-2019, ubuntu-latest]
     name: cargo check stable
     steps:
       - uses: actions/checkout@v1
@@ -54,7 +54,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-10.14, windows-2019]
+        os: [macOS-10.14, windows-2019, ubuntu-latest]
     name: rustfmt
     steps:
       - uses: actions/checkout@v1
@@ -86,7 +86,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-10.14, windows-2019]
+        os: [macOS-10.14, windows-2019, ubuntu-latest]
     name: cargo test stable
     steps:
       - uses: actions/checkout@v1
@@ -119,7 +119,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-10.14, windows-2019]
+        os: [macOS-10.14, windows-2019, ubuntu-latest]
     name: cargo test nightly
     steps:
       - uses: actions/checkout@v1
