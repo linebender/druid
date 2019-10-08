@@ -47,9 +47,9 @@ const BACKGROUND_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 /// This is something of an internal detail and possibly we don't want to surface
 /// it publicly.
 pub struct DruidHandler<T: Data> {
-    /// The shared app state
+    /// The shared app state.
     app_state: Rc<RefCell<AppState<T>>>,
-    /// The id for the currenet window.
+    /// The id for the current window.
     window_id: WindowId,
 }
 
