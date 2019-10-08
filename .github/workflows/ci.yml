@@ -48,10 +48,7 @@ jobs:
           args: --manifest-path=druid-shell/Cargo.toml -- -D warnings
 
   rustfmt:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macOS-10.14, windows-2019]
+    runs-on: ubuntu-latest
     name: rustfmt
     steps:
       - uses: actions/checkout@v1
