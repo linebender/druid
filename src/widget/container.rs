@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO: update description
-//! A convenience widget that combines common painting, positioning, and sizing widgets.
+//! A convenience widget that combines common styling and positioning widgets.
 
 use crate::shell::kurbo::{Point, Rect, Size};
 use crate::shell::piet::{PaintBrush, RenderContext, StrokeStyle};
 use crate::widget::Padding;
+use crate::widget::SizedBox;
 use crate::{
     BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
@@ -36,7 +36,7 @@ struct ContainerStyle {
     border: Option<BorderState>,
 }
 
-// TODO: add description
+/// A convenience widget that combines common styling and positioning widgets.
 pub struct Container<T: Data> {
     padding: f64,
     style: ContainerStyle,
@@ -53,11 +53,14 @@ impl<T: Data + 'static> Container<T> {
     }
 
     pub fn child(self, inner: impl Widget<T> + 'static) -> impl Widget<T> {
-        Padding::uniform(self.raw_padding(), ContainerRaw::new(self.style, inner))
+        Padding::uniform(
+            self.border_padding(),
+            ContainerRaw::new(self.style, Padding::uniform(self.padding, inner)),
+        )
     }
 
     pub fn empty(self) -> impl Widget<T> {
-        Padding::uniform(self.raw_padding(), ContainerRaw::empty(self.style))
+        self.child(SizedBox::empty())
     }
 
     pub fn color(mut self, brush: impl Into<PaintBrush>) -> Self {
@@ -79,31 +82,25 @@ impl<T: Data + 'static> Container<T> {
         self
     }
 
-    fn raw_padding(&self) -> f64 {
-        let border_padding = match self.style.border {
+    fn border_padding(&self) -> f64 {
+        match self.style.border {
             Some(ref border) => border.width / 2.0,
             None => 0.0,
-        };
-
-        self.padding + border_padding
+        }
     }
 }
 
 struct ContainerRaw<T: Data> {
     style: ContainerStyle,
-    inner: Option<Box<dyn Widget<T>>>,
+    inner: Box<dyn Widget<T>>,
 }
 
 impl<T: Data + 'static> ContainerRaw<T> {
     fn new(style: ContainerStyle, inner: impl Widget<T> + 'static) -> Self {
         Self {
             style,
-            inner: Some(Box::new(inner)),
+            inner: Box::new(inner),
         }
-    }
-
-    fn empty(style: ContainerStyle) -> Self {
-        Self { style, inner: None }
     }
 }
 
@@ -124,28 +121,18 @@ impl<T: Data> Widget<T> for ContainerRaw<T> {
         }
 
         // Paint child
-        if let Some(ref mut inner) = self.inner {
-            inner.paint(paint_ctx, base_state, data, env);
-        }
+        self.inner.paint(paint_ctx, base_state, data, env);
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        if let Some(ref mut inner) = self.inner {
-            inner.layout(ctx, bc, data, env)
-        } else {
-            Size::ZERO
-        }
+        self.inner.layout(ctx, bc, data, env)
     }
 
     fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
-        if let Some(ref mut inner) = self.inner {
-            inner.event(event, ctx, data, env);
-        }
+        self.inner.event(event, ctx, data, env);
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
-        if let Some(ref mut inner) = self.inner {
-            inner.update(ctx, old_data, data, env);
-        }
+        self.inner.update(ctx, old_data, data, env);
     }
 }
