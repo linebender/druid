@@ -16,6 +16,7 @@
 
 use std::ffi::OsString;
 
+use crate::dialog::FileDialogOptions;
 use gtkrs::{FileChooserAction, FileChooserExt, NativeDialogExt, Window};
 
 use crate::Error;
@@ -28,19 +29,7 @@ pub enum FileDialogType {
     Save,
 }
 
-/// Options for file dialog.
-#[derive(Default)]
-pub struct FileDialogOptions {
-    show_hidden: bool,
-}
-
-impl FileDialogOptions {
-    pub fn set_show_hidden(&mut self) {
-        self.show_hidden = true
-    }
-}
-
-pub(crate) fn get_file_dialog_path(
+pub(crate) fn open_file_sync(
     window: &Window,
     ty: FileDialogType,
     options: FileDialogOptions,
