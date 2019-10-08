@@ -33,11 +33,13 @@ use piet_common::{Piet, RenderContext};
 use util::assert_main_thread;
 use win_main::with_application;
 
+use crate::clipboard::ClipboardItem;
+use crate::dialog::FileDialogOptions;
 use crate::keyboard;
 use crate::kurbo::{Point, Vec2};
-use crate::platform::dialog::{FileDialogOptions, FileDialogType};
+use crate::platform::dialog::FileDialogType;
 use crate::platform::menu::Menu;
-use crate::window::{self, Cursor, MouseButton, Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{self, Cursor, FileInfo, MouseButton, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
 pub mod application;
@@ -455,13 +457,25 @@ impl WindowHandle {
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
 
+    pub fn set_menu(&self, _menu: Menu) {
+        unimplemented!();
+    }
+
+    pub fn show_context_menu(&self, _menu: Menu, _x: f64, _y: f64) {
+        unimplemented!();
+    }
+
+    pub fn set_title(&self, _title: impl Into<String>) {
+        unimplemented!();
+    }
+
     pub fn file_dialog(
         &self,
         ty: FileDialogType,
         options: FileDialogOptions,
     ) -> Result<OsString, Error> {
         if let Some(state) = self.state.upgrade() {
-            dialog::get_file_dialog_path(state.window.upcast_ref(), ty, options)
+            dialog::open_file_sync(state.window.upcast_ref(), ty, options)
         } else {
             Err(Error::Other(
                 "Cannot upgrade state from weak pointer to arc",
@@ -529,6 +543,27 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
         {
             let cursor = make_gdk_cursor(cursor, &gdk_window);
             gdk_window.set_cursor(cursor.as_ref());
+        }
+    }
+
+    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        if let Some(state) = self.handle.state.upgrade() {
+            dialog::open_file_sync(state.window.upcast_ref(), FileDialogType::Open, options)
+                .ok()
+                .map(|s| FileInfo { path: s.into() })
+        } else {
+            None
+        }
+    }
+    fn set_clipboard_contents(&mut self, item: ClipboardItem) {
+        let display = gdk::Display::get_default().unwrap();
+        let clipboard = gtk::Clipboard::get_default(&display).unwrap();
+
+        match item {
+            ClipboardItem::Text(text) => {
+                clipboard.set_text(&text);
+            }
+            other => log::warn!("unhandled clipboard data {:?}", other),
         }
     }
 
