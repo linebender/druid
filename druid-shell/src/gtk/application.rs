@@ -14,10 +14,24 @@
 
 //! GTK implementation of features at the application scope.
 
+use crate::clipboard::ClipboardItem;
+
 pub struct Application;
 
 impl Application {
     pub fn quit() {
         // Nothing to do: if this is called, we're already shutting down and GTK will pick it up (I hope?)
+    }
+
+    pub fn get_clipboard_contents() -> Option<ClipboardItem> {
+        let display = gdk::Display::get_default().unwrap();
+        let clipboard = gtk::Clipboard::get_default(&display).unwrap();
+
+        if let Some(gstring) = clipboard.wait_for_text() {
+            // TODO: does gstring need to be freed?
+            Some(ClipboardItem::Text(gstring.to_string()))
+        } else {
+            None
+        }
     }
 }
