@@ -22,7 +22,7 @@ use crate::shell::window::WindowHandle;
 use crate::shell::{init, runloop, Error as PlatformError, WindowBuilder};
 use crate::win_handler::AppState;
 use crate::window::{Window, WindowId};
-use crate::{theme, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
+use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
 
 /// A function that modifies the initial environment.
 type EnvSetupFn = dyn FnOnce(&mut Env);
@@ -31,6 +31,7 @@ type EnvSetupFn = dyn FnOnce(&mut Env);
 pub struct AppLauncher<T> {
     windows: Vec<WindowDesc<T>>,
     env_setup: Option<Box<EnvSetupFn>>,
+    delegate: Option<AppDelegate<T>>,
 }
 
 /// A function that can create a widget.
@@ -53,6 +54,7 @@ impl<T: Data + 'static> AppLauncher<T> {
         AppLauncher {
             windows: vec![window],
             env_setup: None,
+            delegate: None,
         }
     }
 
@@ -62,6 +64,14 @@ impl<T: Data + 'static> AppLauncher<T> {
     /// This can be used to set or override theme values.
     pub fn configure_env(mut self, f: impl Fn(&mut Env) + 'static) -> Self {
         self.env_setup = Some(Box::new(f));
+        self
+    }
+
+    /// Set the [`AppDelegate`].
+    ///
+    /// [`AppDelegate`]: struct.AppDelegate.html
+    pub fn delegate(mut self, delegate: AppDelegate<T>) -> Self {
+        self.delegate = Some(delegate);
         self
     }
 
@@ -85,7 +95,7 @@ impl<T: Data + 'static> AppLauncher<T> {
             f(&mut env);
         }
 
-        let state = AppState::new(data, env);
+        let state = AppState::new(data, env, self.delegate.take());
 
         for desc in self.windows {
             let window = desc.build_native(&state)?;
