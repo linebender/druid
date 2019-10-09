@@ -135,3 +135,33 @@ jobs:
           command: test
           args: --all --manifest-path=druid-shell/Cargo.toml
 
+  check-docs:
+    name: Docs
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-10.14, windows-2019]
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install cairo
+        run: brew install cairo
+        if: contains(matrix.os, 'mac')
+
+      - name: install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: check docs in druid/
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --document-private-items
+
+      - name: check docs in druid/druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=druid-shell/Cargo.toml --document-private-items
