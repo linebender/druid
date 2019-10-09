@@ -28,6 +28,7 @@ use crate::shell::application::Application;
 use crate::shell::dialog::FileDialogOptions;
 use crate::shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
 
+use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::menu::ContextMenu;
 use crate::theme;
 use crate::window::Window;
@@ -53,6 +54,7 @@ pub struct DruidHandler<T: Data> {
 
 /// State shared by all windows in the UI.
 pub(crate) struct AppState<T: Data> {
+    delegate: Option<AppDelegate<T>>,
     command_queue: VecDeque<(WindowId, Command)>,
     windows: Windows<T>,
     pub(crate) env: Env,
@@ -284,8 +286,9 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
 }
 
 impl<T: Data + 'static> AppState<T> {
-    pub(crate) fn new(data: T, env: Env) -> Rc<RefCell<Self>> {
+    pub(crate) fn new(data: T, env: Env, delegate: Option<AppDelegate<T>>) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(AppState {
+            delegate,
             command_queue: VecDeque::new(),
             data,
             env,
@@ -333,27 +336,33 @@ impl<T: Data + 'static> AppState<T> {
     }
 
     fn do_event(&mut self, source_id: WindowId, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
-        // handle system window-level commands
-        if let Event::Command(ref cmd) = &event {
-            match &cmd.selector {
-                &sys_cmd::SET_MENU => {
-                    self.assemble_window_state(source_id)
-                        .map(|mut win| win.set_menu(cmd));
-                    return true;
-                }
-                &sys_cmd::SHOW_CONTEXT_MENU => {
-                    self.assemble_window_state(source_id)
-                        .map(|mut win| win.show_context_menu(cmd));
-                    return true;
-                }
-                _ => (),
-            }
-        }
+        let event = self.delegate_event(source_id, event, win_ctx);
 
-        let (is_handled, dirty, anim) = self
-            .assemble_window_state(source_id)
-            .map(|mut win| win.do_event_inner(event, win_ctx))
-            .unwrap_or((false, false, false));
+        let (is_handled, dirty, anim) = if let Some(event) = event {
+            // handle system window-level commands
+            if let Event::Command(ref cmd) = &event {
+                match &cmd.selector {
+                    &sys_cmd::SET_MENU => {
+                        self.assemble_window_state(source_id)
+                            .map(|mut win| win.set_menu(cmd));
+                        return true;
+                    }
+                    &sys_cmd::SHOW_CONTEXT_MENU => {
+                        self.assemble_window_state(source_id)
+                            .map(|mut win| win.show_context_menu(cmd));
+                        return true;
+                    }
+                    _ => (),
+                }
+            }
+
+            self.assemble_window_state(source_id)
+                .map(|mut win| win.do_event_inner(event, win_ctx))
+                .unwrap_or((false, false, false))
+        } else {
+            // if the event was swallowed by the delegate we consider it handled?
+            (true, false, false)
+        };
 
         let AppState {
             ref mut windows,
@@ -381,6 +390,34 @@ impl<T: Data + 'static> AppState<T> {
             }
         }
         is_handled
+    }
+
+    /// Give the top-level app delegate an opportunity to handle this event.
+    fn delegate_event(
+        &mut self,
+        source_id: WindowId,
+        event: Event,
+        win_ctx: &mut dyn WinCtx,
+    ) -> Option<Event> {
+        let AppState {
+            ref mut delegate,
+            ref mut command_queue,
+            ref mut data,
+            ref env,
+            ..
+        } = self;
+
+        match delegate {
+            Some(delegate) => {
+                let mut ctx = DelegateCtx {
+                    source_id,
+                    command_queue,
+                    win_ctx,
+                };
+                delegate.event(event, data, env, &mut ctx)
+            }
+            None => Some(event),
+        }
     }
 
     fn window_got_focus(&mut self, window_id: WindowId, _ctx: &mut dyn WinCtx) {
