@@ -25,6 +25,27 @@ pub use druid_derive_data::Data;
 ///
 /// See <https://sinusoid.es/lager/model.html#id2> for a well-written
 /// explanation of value types (albeit within a C++ context).
+///
+/// ## Derive macro
+///
+/// For simple types where each field implements `Data`, one should
+/// use the `derive(Data)` attribute on the type in question instead of
+/// writing the implementation by hand.
+///
+/// ```
+/// # use std::sync::Arc;
+/// # use druid::Data;
+/// #[derive(Clone, Data)]
+/// enum Foo {
+///     Case1(i32, f32),
+///     Case2 { a: String, b: Arc<i32> }
+/// }
+/// ```
+///
+/// Note that in the case of a union that only contains tags without
+/// fields, the implementation that is generated checks for
+/// equality. Therefore, such types must also implement the [`Eq`]
+/// trait.
 pub trait Data: Clone {
     /// Determine whether two values are the same.
     ///
