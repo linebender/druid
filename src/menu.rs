@@ -398,8 +398,8 @@ impl MenuItemId {
     fn next() -> Self {
         use std::sync::atomic::{AtomicU32, Ordering};
         static MENU_ID: AtomicU32 = AtomicU32::new(1);
-        let raw = unsafe { NonZeroU32::new_unchecked(MENU_ID.fetch_add(2, Ordering::Relaxed)) };
-        MenuItemId(Some(raw))
+        let raw = NonZeroU32::new(MENU_ID.fetch_add(2, Ordering::Relaxed));
+        MenuItemId(raw)
     }
 
     fn as_u32(self) -> u32 {
