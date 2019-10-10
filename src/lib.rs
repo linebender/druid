@@ -14,7 +14,7 @@
 
 //! Simple data-oriented GUI.
 
-#![deny(intra_doc_link_resolution_failure)]
+#![deny(intra_doc_link_resolution_failure, unsafe_code)]
 
 pub use druid_shell::{self as shell, kurbo, piet};
 
