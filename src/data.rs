@@ -122,6 +122,12 @@ impl<T: Data> Data for Option<T> {
     }
 }
 
+impl<T: Data> Data for &T {
+    fn same(&self, other: &Self) -> bool {
+        Data::same(*self, *other)
+    }
+}
+
 impl<T: Data, U: Data> Data for Result<T, U> {
     fn same(&self, other: &Self) -> bool {
         match (self, other) {
@@ -185,5 +191,3 @@ impl<T0: Data, T1: Data, T2: Data, T3: Data, T4: Data, T5: Data> Data for (T0, T
             && self.5.same(&other.5)
     }
 }
-
-// TODO: derive macro
