@@ -32,7 +32,7 @@ fn build_app() -> impl Widget<u32> {
 
             row.add_child(
                 Container::new()
-                    .color(Color::rgb(1.0 * col_progress, 1.0 * row_progress, 1.0))
+                    .background(Color::rgb(1.0 * col_progress, 1.0 * row_progress, 1.0))
                     .child(SizedBox::empty().width(50.0).height(50.0)),
                 0.0,
             );

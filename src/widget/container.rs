@@ -31,7 +31,7 @@ struct BorderState {
 
 #[derive(Default)]
 struct ContainerStyle {
-    color: Option<PaintBrush>,
+    background: Option<PaintBrush>,
     border: Option<BorderState>,
 }
 
@@ -62,8 +62,9 @@ impl<T: Data + 'static> Container<T> {
         self.child(SizedBox::empty())
     }
 
-    pub fn color(mut self, brush: impl Into<PaintBrush>) -> Self {
-        self.style.color = Some(brush.into());
+    /// Paint background with a color or a gradient.
+    pub fn background(mut self, brush: impl Into<PaintBrush>) -> Self {
+        self.style.background = Some(brush.into());
         self
     }
 
@@ -106,7 +107,7 @@ impl<T: Data + 'static> ContainerRaw<T> {
 impl<T: Data> Widget<T> for ContainerRaw<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         // Paint background color
-        if let Some(ref brush) = self.style.color {
+        if let Some(ref brush) = self.style.background {
             let rect = Rect::from_origin_size(Point::ZERO, base_state.size());
             paint_ctx.render_ctx.fill(rect, brush);
         }
