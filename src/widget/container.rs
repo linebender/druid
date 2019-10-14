@@ -17,7 +17,7 @@
 use std::marker::PhantomData;
 
 use crate::shell::kurbo::{Point, Rect, Size};
-use crate::shell::piet::{PaintBrush, RenderContext, StrokeStyle};
+use crate::shell::piet::{PaintBrush, RenderContext};
 use crate::widget::Padding;
 use crate::widget::SizedBox;
 use crate::{
@@ -27,7 +27,6 @@ use crate::{
 struct BorderState {
     width: f64,
     brush: PaintBrush,
-    style: StrokeStyle,
 }
 
 #[derive(Default)]
@@ -68,11 +67,11 @@ impl<T: Data + 'static> Container<T> {
         self
     }
 
+    /// Paint a border around the widget with a color or a gradient.
     pub fn border(mut self, brush: impl Into<PaintBrush>, width: f64) -> Self {
         self.style.border = Some(BorderState {
             width,
             brush: brush.into(),
-            style: StrokeStyle::new(),
         });
         self
     }
@@ -117,7 +116,7 @@ impl<T: Data> Widget<T> for ContainerRaw<T> {
             let rect = Rect::from_origin_size((0.0, 0.0), base_state.size());
             paint_ctx
                 .render_ctx
-                .stroke_styled(rect, &border.brush, border.width, &border.style);
+                .stroke(rect, &border.brush, border.width);
         }
 
         // Paint child
