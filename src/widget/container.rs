@@ -14,6 +14,8 @@
 
 //! A convenience widget that combines common styling and positioning widgets.
 
+use std::marker::PhantomData;
+
 use crate::shell::kurbo::{Point, Rect, Size};
 use crate::shell::piet::{PaintBrush, RenderContext, StrokeStyle};
 use crate::widget::Padding;
@@ -21,8 +23,6 @@ use crate::widget::SizedBox;
 use crate::{
     BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
-
-use std::marker::PhantomData;
 
 struct BorderState {
     width: f64,
