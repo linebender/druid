@@ -23,6 +23,9 @@ pub use crate::widget::button::Button;
 mod label;
 pub use crate::widget::label::{DynLabel, Label, LabelText};
 
+mod either;
+pub use crate::widget::either::Either;
+
 mod flex;
 pub use crate::widget::flex::{Column, Flex, Row};
 
