@@ -23,12 +23,13 @@ use std::time::Instant;
 use log::{error, info, warn};
 
 use crate::kurbo::{Size, Vec2};
-use crate::piet::{Color, Piet, RenderContext};
+use crate::piet::{Piet, RenderContext};
 use crate::shell::application::Application;
 use crate::shell::dialog::FileDialogOptions;
 use crate::shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
 
 use crate::menu::ContextMenu;
+use crate::theme;
 use crate::window::Window;
 use crate::{
     BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, MenuDesc,
@@ -36,9 +37,6 @@ use crate::{
 };
 
 use crate::command::sys as sys_cmd;
-
-// TODO: this should come from the theme.
-const BACKGROUND_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
 /// The struct implements the druid-shell `WinHandler` trait.
 ///
@@ -135,7 +133,7 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
     fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
         let request_anim = self.do_anim_frame(ctx);
         self.do_layout(piet);
-        piet.clear(BACKGROUND_COLOR);
+        piet.clear(self.env.get(theme::WINDOW_BACKGROUND_COLOR));
         self.do_paint(piet);
         request_anim
     }
