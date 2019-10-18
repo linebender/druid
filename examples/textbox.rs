@@ -12,12 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Demos the textbox widget, as well as menu creation and overriding theme settings.
+
+use druid::piet::Color;
 use druid::widget::{Column, DynLabel, Padding, TextBox};
-use druid::{AppLauncher, Data, LocalizedString, MenuDesc, Widget, WindowDesc};
+use druid::{theme, AppLauncher, Data, LocalizedString, MenuDesc, Widget, WindowDesc};
 
 fn main() {
     let window = WindowDesc::new(build_widget).menu(make_main_menu());
     AppLauncher::with_window(window)
+        .configure_env(|env| {
+            env.set(theme::SELECTION_COLOR, Color::rgb8(0xA6, 0xCC, 0xFF));
+            env.set(theme::WINDOW_BACKGROUND_COLOR, Color::WHITE);
+            env.set(theme::LABEL_COLOR, Color::BLACK);
+            env.set(theme::CURSOR_COLOR, Color::BLACK);
+            env.set(theme::BACKGROUND_LIGHT, Color::rgb8(230, 230, 230));
+        })
         .use_simple_logger()
         .launch("typing is fun!".to_string())
         .expect("launch failed");
