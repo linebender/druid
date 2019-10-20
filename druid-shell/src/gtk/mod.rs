@@ -27,8 +27,9 @@ use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt};
 use gio::ApplicationExt;
 use gtk::{
     AccelGroup, ApplicationWindow, BoxExt, Cast, ContainerExt, GtkApplicationExt, GtkWindowExt,
-    Inhibit, WidgetExt, WidgetExtManual,
+    Inhibit, ObjectExt, WidgetExt, WidgetExtManual,
 };
+
 use piet_common::{Piet, RenderContext};
 use util::assert_main_thread;
 use win_main::with_application;
@@ -457,16 +458,46 @@ impl WindowHandle {
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
 
-    pub fn set_menu(&self, _menu: Menu) {
-        unimplemented!();
+    pub fn set_menu(&self, menu: Menu) {
+        if let Some(state) = self.state.upgrade() {
+            let window = &state.window;
+
+            let accel_group = AccelGroup::new();
+            window.add_accel_group(&accel_group);
+
+            let vbox = window.get_children()[0]
+                .clone()
+                .downcast::<gtkrs::Box>()
+                .unwrap();
+
+            let first_child = &vbox.get_children()[0];
+            if first_child.is::<gtkrs::MenuBar>() {
+                vbox.remove(first_child);
+            }
+            let menubar = menu.into_gtk_menubar(&self, &accel_group);
+            vbox.pack_start(&menubar, false, false, 0);
+            menubar.show_all();
+        }
     }
 
-    pub fn show_context_menu(&self, _menu: Menu, _x: f64, _y: f64) {
-        unimplemented!();
+    pub fn show_context_menu(&self, menu: Menu, _x: f64, _y: f64) {
+        if let Some(state) = self.state.upgrade() {
+            let window = &state.window;
+
+            let accel_group = AccelGroup::new();
+            window.add_accel_group(&accel_group);
+
+            let menu = menu.into_gtk_menu(&self, &accel_group);
+            menu.show_all();
+            use crate::gtkrs::GtkMenuExtManual;
+            menu.popup_easy(3, gtkrs::get_current_event_time());
+        }
     }
 
-    pub fn set_title(&self, _title: impl Into<String>) {
-        unimplemented!();
+    pub fn set_title(&self, title: impl Into<String>) {
+        if let Some(state) = self.state.upgrade() {
+            state.window.set_title(&(title.into()));
+        }
     }
 
     pub fn file_dialog(
