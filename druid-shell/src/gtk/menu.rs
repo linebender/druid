@@ -24,17 +24,18 @@ use gtkrs::{GtkMenuItemExt, MenuShellExt, SeparatorMenuItemBuilder, WidgetExt};
 
 use crate::common_util::strip_access_key;
 use crate::gtk::WinCtxImpl;
-use crate::keycodes::{KeySpec, MenuKey};
-use crate::keycodes::{Modifiers, M_ALT, M_CTRL, M_META, M_SHIFT};
+use crate::hotkey::{HotKey, KeyCompare, RawMods};
+use crate::keyboard::KeyModifiers;
 use crate::platform::WindowHandle;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Menu {
     items: Vec<MenuItem>,
 }
 
+#[derive(Debug)]
 enum MenuItem {
-    Entry(String, u32, MenuKey),
+    Entry(String, u32, Option<HotKey>),
     SubMenu(String, Menu),
     Separator,
 }
@@ -44,15 +45,30 @@ impl Menu {
         Menu { items: Vec::new() }
     }
 
-    pub fn add_dropdown(&mut self, menu: Menu, text: &str) {
+    pub fn new_for_popup() -> Menu {
+        Menu { items: Vec::new() }
+    }
+
+    pub fn add_dropdown(&mut self, menu: Menu, text: &str, _enabled: bool) {
+        // TODO: use enabled
         self.items
             .push(MenuItem::SubMenu(strip_access_key(text), menu));
     }
 
-    pub fn add_item(&mut self, id: u32, text: &str, key: impl Into<MenuKey>) {
+    pub fn add_item(
+        &mut self,
+        id: u32,
+        text: &str,
+        key: Option<&HotKey>,
+        _enabled: bool,
+        _selected: bool,
+    ) {
         // TODO: handle accelerator shortcuts by parsing `text`
-        self.items
-            .push(MenuItem::Entry(strip_access_key(text), id, key.into()));
+        self.items.push(MenuItem::Entry(
+            strip_access_key(text),
+            id,
+            key.map(|k| k.clone()),
+        ));
     }
 
     pub fn add_separator(&mut self) {
@@ -70,7 +86,9 @@ impl Menu {
                 MenuItem::Entry(name, id, key) => {
                     let item = GtkMenuItem::new_with_label(&name);
 
-                    register_accelerator(&item, accel_group, key);
+                    if let Some(k) = key {
+                        register_accelerator(&item, accel_group, k);
+                    }
 
                     let handle = handle.clone();
                     item.connect_activate(move |_| {
@@ -106,7 +124,7 @@ impl Menu {
         menu
     }
 
-    fn into_gtk_menu(self, handle: &WindowHandle, accel_group: &AccelGroup) -> GtkMenu {
+    pub fn into_gtk_menu(self, handle: &WindowHandle, accel_group: &AccelGroup) -> GtkMenu {
         let mut menu = GtkMenu::new();
         menu.set_accel_group(Some(accel_group));
 
@@ -116,25 +134,30 @@ impl Menu {
     }
 }
 
-fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: MenuKey) {
-    if let KeySpec::Char(c) = menu_key.key {
-        item.add_accelerator(
-            "activate",
-            accel_group,
-            gdk::unicode_to_keyval(c as u32),
-            modifiers_to_gdk_modifier_type(menu_key.modifiers),
-            gtk::AccelFlags::VISIBLE,
-        );
-    }
+fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: HotKey) {
+    let wc = match menu_key.key {
+        KeyCompare::Code(key_code) => key_code.into(),
+        KeyCompare::Text(text) => text.chars().next().unwrap() as u32,
+    };
+
+    item.add_accelerator(
+        "activate",
+        accel_group,
+        gdk::unicode_to_keyval(wc),
+        modifiers_to_gdk_modifier_type(menu_key.mods),
+        gtk::AccelFlags::VISIBLE,
+    );
 }
 
-fn modifiers_to_gdk_modifier_type(modifiers: Modifiers) -> gdk::ModifierType {
+fn modifiers_to_gdk_modifier_type(raw_modifiers: RawMods) -> gdk::ModifierType {
     let mut result = ModifierType::empty();
 
-    result.set(ModifierType::MOD1_MASK, modifiers & M_ALT == M_ALT);
-    result.set(ModifierType::CONTROL_MASK, modifiers & M_CTRL == M_CTRL);
-    result.set(ModifierType::SHIFT_MASK, modifiers & M_SHIFT == M_SHIFT);
-    result.set(ModifierType::META_MASK, modifiers & M_META == M_META);
+    let modifiers: KeyModifiers = raw_modifiers.into();
+
+    result.set(ModifierType::MOD1_MASK, modifiers.alt);
+    result.set(ModifierType::CONTROL_MASK, modifiers.ctrl);
+    result.set(ModifierType::SHIFT_MASK, modifiers.shift);
+    result.set(ModifierType::META_MASK, modifiers.meta);
 
     result
 }
