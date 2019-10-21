@@ -15,8 +15,8 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::{quote, quote_spanned};
-use syn::{parse_macro_input, spanned::Spanned, Data, DataEnum, DataStruct, Fields};
+use quote::quote;
+use syn::{parse_macro_input, spanned::Spanned, Data};
 
 #[proc_macro_derive(Lens)]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -29,7 +29,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
 fn derive_inner(input: syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn::Error> {
     match &input.data {
-        Data::Struct(s) => derive_struct(&input),
+        Data::Struct(_) => derive_struct(&input),
         Data::Enum(e) => Err(syn::Error::new(
             e.enum_token.span(),
             "Lens implementations cannot be derived from enums",
