@@ -17,6 +17,12 @@ jobs:
         run: brew install cairo
         if: contains(matrix.os, 'mac')
 
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
+
       - name: install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -95,6 +101,12 @@ jobs:
         run: brew install cairo
         if: contains(matrix.os, 'mac')
 
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
+
       - name: install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -127,6 +139,12 @@ jobs:
       - name: install cairo
         run: brew install cairo
         if: contains(matrix.os, 'mac')
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
 
       - name: install nightly toolchain
         uses: actions-rs/toolchain@v1
