@@ -90,7 +90,7 @@ struct ArgSource<T>(ArgClosure<T>);
 #[derive(Debug, Clone)]
 pub struct LocalizedString<T> {
     pub(crate) key: &'static str,
-    placeholder: Option<&'static str>,
+    placeholder: Option<String>,
     args: Option<Vec<(&'static str, ArgSource<T>)>>,
     resolved: Option<String>,
     resolved_lang: Option<LanguageIdentifier>,
@@ -304,7 +304,7 @@ impl<T> LocalizedString<T> {
     /// Add a placeholder value. This will be used if localization fails.
     ///
     /// This is intended for use during prototyping.
-    pub const fn with_placeholder(mut self, placeholder: &'static str) -> Self {
+    pub fn with_placeholder(mut self, placeholder: String) -> Self {
         self.placeholder = Some(placeholder);
         self
     }
@@ -315,7 +315,7 @@ impl<T> LocalizedString<T> {
         self.resolved
             .as_ref()
             .map(|s| s.as_str())
-            .or(self.placeholder)
+            .or(self.placeholder.as_ref().map(String::as_ref))
             .unwrap_or(self.key)
     }
 }

@@ -41,26 +41,20 @@ jobs:
           command: rustc
           args: -- -D warnings
 
-      - name: cd druid-shell
-        run: cd druid-shell
-
       - name: Run cargo check in druid/druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --all --examples
+          args: --all --examples --manifest-path=druid-shell/Cargo.toml
 
       - name: Run rustc -d warnings in druid/druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: rustc
-          args: -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml -- -D warnings
 
   rustfmt:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macOS-10.14, windows-2019, ubuntu-latest]
+    runs-on: ubuntu-latest
     name: rustfmt
     steps:
       - uses: actions/checkout@v1
@@ -79,14 +73,11 @@ jobs:
           command: fmt
           args: --all -- --check
 
-      - name: cd druid-shell
-        run: cd druid-shell
-
       - name: Run cargo fmt in druid/druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all -- --check
+          args: --all --manifest-path=druid-shell/Cargo.toml -- --check
 
   test-stable:
     runs-on: ${{ matrix.os }}
@@ -119,13 +110,11 @@ jobs:
           command: test
           args: --all
 
-      - name: cd druid-shell
-        run: cd druid-shell
       - name: Run cargo check in druid/druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all
+          args: --all --manifest-path=druid-shell/Cargo.toml
 
   test-nightly:
     runs-on: ${{ matrix.os }}
@@ -158,12 +147,39 @@ jobs:
           command: test
           args: --all
 
-      - name: cd druid-shell
-        run: cd druid-shell
-
       - name: Run cargo test in druid/druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all
+          args: --all --manifest-path=druid-shell/Cargo.toml
 
+  check-docs:
+    name: Docs
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-10.14, windows-2019]
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install cairo
+        run: brew install cairo
+        if: contains(matrix.os, 'mac')
+
+      - name: install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: check docs in druid/
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --document-private-items
+
+      - name: check docs in druid/druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=druid-shell/Cargo.toml --document-private-items

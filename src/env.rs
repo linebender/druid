@@ -138,7 +138,7 @@ impl Env {
     ///
     /// Panics if the environment already has a value for the key, but it is
     /// of a different type.
-    pub fn set<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) {
+    pub fn set<'a, V: ValueType<'a>>(&'a mut self, key: Key<V>, value: impl Into<V::Owned>) {
         let env = Arc::make_mut(&mut self.0);
         let value = value.into().into();
         let key = key.into();

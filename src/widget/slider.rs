@@ -63,7 +63,7 @@ impl Widget<f64> for SliderRaw {
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let track_thickness = 4.;
 
-        //Store the width so we can calulate slider position from mouse events
+        //Store the width so we can calculate slider position from mouse events
         self.width = rect.width();
 
         //Paint the background

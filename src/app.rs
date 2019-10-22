@@ -22,11 +22,16 @@ use crate::shell::window::WindowHandle;
 use crate::shell::{init, runloop, Error as PlatformError, WindowBuilder};
 use crate::win_handler::AppState;
 use crate::window::{Window, WindowId};
-use crate::{theme, Data, DruidHandler, LocalizedString, MenuDesc, Widget};
+use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
+
+/// A function that modifies the initial environment.
+type EnvSetupFn = dyn FnOnce(&mut Env);
 
 /// Handles initial setup of an application, and starts the runloop.
 pub struct AppLauncher<T> {
     windows: Vec<WindowDesc<T>>,
+    env_setup: Option<Box<EnvSetupFn>>,
+    delegate: Option<AppDelegate<T>>,
 }
 
 /// A function that can create a widget.
@@ -48,7 +53,26 @@ impl<T: Data + 'static> AppLauncher<T> {
     pub fn with_window(window: WindowDesc<T>) -> Self {
         AppLauncher {
             windows: vec![window],
+            env_setup: None,
+            delegate: None,
         }
+    }
+
+    /// Provide an optional closure that will be given mutable access to
+    /// the environment before launch.
+    ///
+    /// This can be used to set or override theme values.
+    pub fn configure_env(mut self, f: impl Fn(&mut Env) + 'static) -> Self {
+        self.env_setup = Some(Box::new(f));
+        self
+    }
+
+    /// Set the [`AppDelegate`].
+    ///
+    /// [`AppDelegate`]: struct.AppDelegate.html
+    pub fn delegate(mut self, delegate: AppDelegate<T>) -> Self {
+        self.delegate = Some(delegate);
+        self
     }
 
     /// Initialize a minimal logger for printing logs out to stderr.
@@ -63,11 +87,15 @@ impl<T: Data + 'static> AppLauncher<T> {
     ///
     /// Returns an error if a window cannot be instantiated. This is usually
     /// a fatal error.
-    pub fn launch(self, data: T) -> Result<(), PlatformError> {
+    pub fn launch(mut self, data: T) -> Result<(), PlatformError> {
         init();
         let mut main_loop = runloop::RunLoop::new();
-        let env = theme::init();
-        let state = AppState::new(data, env);
+        let mut env = theme::init();
+        if let Some(f) = self.env_setup.take() {
+            f(&mut env);
+        }
+
+        let state = AppState::new(data, env, self.delegate.take());
 
         for desc in self.windows {
             let window = desc.build_native(&state)?;

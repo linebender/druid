@@ -14,38 +14,17 @@
 
 //! Simple calculator.
 
-use druid::{AppLauncher, Data, LensWrap, Widget, WindowDesc};
+use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 
 use druid::widget::{Button, Column, DynLabel, Padding, Row};
 
-#[derive(Clone, Data)]
+#[derive(Clone, Data, Lens)]
 struct CalcState {
     /// The number displayed. Generally a valid float.
     value: String,
     operand: f64,
     operator: char,
     in_num: bool,
-}
-
-// All this should be produced by a derive macro.
-mod lenses {
-    // Discussion: if the inner type were listed first, then
-    // the capitalization wouldn't have to be twizzled.
-    pub mod calc_state {
-        use super::super::CalcState;
-        use druid::Lens;
-        pub struct Value;
-
-        impl Lens<CalcState, String> for Value {
-            fn get<'a>(&self, data: &'a CalcState) -> &'a String {
-                &data.value
-            }
-
-            fn with_mut<V, F: FnOnce(&mut String) -> V>(&self, data: &mut CalcState, f: F) -> V {
-                f(&mut data.value)
-            }
-        }
-    }
 }
 
 impl CalcState {
@@ -173,7 +152,7 @@ fn build_calc() -> impl Widget<CalcState> {
     let mut column = Column::new();
     let display = LensWrap::new(
         DynLabel::new(|data: &String, _env| data.clone()),
-        lenses::calc_state::Value,
+        lenses::calc_state::value,
     );
     column.add_child(pad(display), 0.0);
     column.add_child(

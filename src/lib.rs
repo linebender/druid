@@ -14,13 +14,12 @@
 
 //! Simple data-oriented GUI.
 
-#![deny(intra_doc_link_resolution_failure)]
+#![deny(intra_doc_link_resolution_failure, unsafe_code)]
 
 pub use druid_shell::{self as shell, kurbo, piet};
 
-pub mod widget;
-
 mod app;
+mod app_delegate;
 pub mod command;
 mod data;
 mod env;
@@ -29,6 +28,7 @@ mod lens;
 pub mod localization;
 pub mod menu;
 pub mod theme;
+pub mod widget;
 mod win_handler;
 mod window;
 
@@ -58,6 +58,7 @@ use druid_shell::window::{Text, WinCtx, WindowHandle};
 pub use shell::hotkey::{HotKey, RawMods, SysMods};
 
 pub use app::{AppLauncher, WindowDesc};
+pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use command::{Command, Selector};
 pub use data::Data;
 pub use env::{Env, Key, Value};

@@ -25,6 +25,27 @@ pub use druid_derive_data::Data;
 ///
 /// See <https://sinusoid.es/lager/model.html#id2> for a well-written
 /// explanation of value types (albeit within a C++ context).
+///
+/// ## Derive macro
+///
+/// For simple types where each field implements `Data`, one should
+/// use the `derive(Data)` attribute on the type in question instead of
+/// writing the implementation by hand.
+///
+/// ```
+/// # use std::sync::Arc;
+/// # use druid::Data;
+/// #[derive(Clone, Data)]
+/// enum Foo {
+///     Case1(i32, f32),
+///     Case2 { a: String, b: Arc<i32> }
+/// }
+/// ```
+///
+/// Note that in the case of a union that only contains tags without
+/// fields, the implementation that is generated checks for
+/// equality. Therefore, such types must also implement the [`Eq`]
+/// trait.
 pub trait Data: Clone {
     /// Determine whether two values are the same.
     ///
@@ -79,13 +100,13 @@ impl Data for f64 {
     }
 }
 
-impl<T> Data for Arc<T> {
+impl<T: ?Sized> Data for Arc<T> {
     fn same(&self, other: &Self) -> bool {
         Arc::ptr_eq(self, other)
     }
 }
 
-impl<T> Data for Rc<T> {
+impl<T: ?Sized> Data for Rc<T> {
     fn same(&self, other: &Self) -> bool {
         Rc::ptr_eq(self, other)
     }
@@ -98,6 +119,12 @@ impl<T: Data> Data for Option<T> {
             (None, None) => true,
             _ => false,
         }
+    }
+}
+
+impl<T: Data> Data for &T {
+    fn same(&self, other: &Self) -> bool {
+        Data::same(*self, *other)
     }
 }
 
@@ -164,5 +191,3 @@ impl<T0: Data, T1: Data, T2: Data, T3: Data, T4: Data, T5: Data> Data for (T0, T
             && self.5.same(&other.5)
     }
 }
-
-// TODO: derive macro

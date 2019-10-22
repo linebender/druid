@@ -21,14 +21,19 @@ use syn::{parse_macro_input, spanned::Spanned, Data, DataEnum, DataStruct, Field
 #[proc_macro_derive(Data)]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
-    derive_inner(input).unwrap_or_else(|err| err.to_compile_error().into())
+    derive_inner(input)
+        .unwrap_or_else(|err| err.to_compile_error().into())
+        .into()
 }
 
-fn derive_inner(input: syn::DeriveInput) -> Result<TokenStream, syn::Error> {
+fn derive_inner(input: syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn::Error> {
     match &input.data {
         Data::Struct(s) => derive_struct(&input, s),
         Data::Enum(e) => derive_enum(&input, e),
-        Data::Union(_u) => unimplemented!(),
+        Data::Union(u) => Err(syn::Error::new(
+            u.union_token.span(),
+            "Data implementations cannot be derived from unions",
+        )),
     }
 }
 
@@ -38,8 +43,12 @@ fn number_to_tokenstream(i: usize) -> proc_macro2::TokenStream {
     lit.into()
 }
 
-// returns true for named and false for unnamed
-fn extract_fields(fs: &syn::Fields) -> (bool, Vec<proc_macro2::TokenStream>) {
+enum EnumKind {
+    Named,
+    Unnamed,
+}
+
+fn extract_fields(fs: &syn::Fields) -> (EnumKind, Vec<proc_macro2::TokenStream>) {
     match fs {
         Fields::Named(fs) => {
             let idents = fs
@@ -50,7 +59,7 @@ fn extract_fields(fs: &syn::Fields) -> (bool, Vec<proc_macro2::TokenStream>) {
                     quote_spanned!(ident.span()=> #ident)
                 })
                 .collect();
-            (true, idents)
+            (EnumKind::Named, idents)
         }
         Fields::Unnamed(fs) => {
             let idents = fs
@@ -59,13 +68,16 @@ fn extract_fields(fs: &syn::Fields) -> (bool, Vec<proc_macro2::TokenStream>) {
                 .enumerate()
                 .map(|(i, _)| number_to_tokenstream(i))
                 .collect();
-            (false, idents)
+            (EnumKind::Unnamed, idents)
         }
-        Fields::Unit => (false, Vec::default()),
+        Fields::Unit => (EnumKind::Unnamed, Vec::default()),
     }
 }
 
-fn derive_struct(input: &syn::DeriveInput, s: &DataStruct) -> Result<TokenStream, syn::Error> {
+fn derive_struct(
+    input: &syn::DeriveInput,
+    s: &DataStruct,
+) -> Result<proc_macro2::TokenStream, syn::Error> {
     let generics_bounds = generics_bounds(&input.generics);
     let generics = &input.generics;
 
@@ -87,8 +99,34 @@ fn ident_from_str(s: &str) -> proc_macro2::Ident {
     proc_macro2::Ident::new(s, proc_macro2::Span::call_site())
 }
 
-fn derive_enum(input: &syn::DeriveInput, s: &DataEnum) -> Result<TokenStream, syn::Error> {
+fn is_c_style_enum(s: &DataEnum) -> bool {
+    s.variants.iter().all(|variant| {
+        use Fields::*;
+        match &variant.fields {
+            Named(fs) => fs.named.is_empty(),
+            Unnamed(fs) => fs.unnamed.is_empty(),
+            Unit => true,
+        }
+    })
+}
+
+fn derive_enum(
+    input: &syn::DeriveInput,
+    s: &DataEnum,
+) -> Result<proc_macro2::TokenStream, syn::Error> {
     let ty = &input.ident;
+
+    if is_c_style_enum(&s) {
+        let generics_bounds = generics_bounds(&input.generics);
+        let generics = &input.generics;
+
+        let res = quote! {
+            impl<#generics_bounds> ::druid::Data for #ty #generics {
+                fn same(&self, other: &Self) -> bool { self == other }
+            }
+        };
+        return Ok(res);
+    }
 
     let cases: Vec<_> = s
         .variants
@@ -107,8 +145,7 @@ fn derive_enum(input: &syn::DeriveInput, s: &DataEnum) -> Result<TokenStream, sy
                 })
                 .collect();
 
-            if kind {
-                // named
+            if let EnumKind::Named = kind {
                 let lefts: Vec<_> = idents
                     .iter()
                     .enumerate()
@@ -132,7 +169,6 @@ fn derive_enum(input: &syn::DeriveInput, s: &DataEnum) -> Result<TokenStream, sy
                     }
                 }
             } else {
-                // unamed
                 let vars_left: Vec<_> = idents
                     .iter()
                     .enumerate()
@@ -173,7 +209,7 @@ fn derive_enum(input: &syn::DeriveInput, s: &DataEnum) -> Result<TokenStream, sy
         }
     };
 
-    Ok(res.into())
+    Ok(res)
 }
 
 fn generics_bounds(generics: &syn::Generics) -> proc_macro2::TokenStream {

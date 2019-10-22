@@ -16,6 +16,8 @@
 
 use std::marker::PhantomData;
 
+pub use druid_derive_lens::Lens;
+
 use crate::{
     BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx,
     Widget,
@@ -67,7 +69,7 @@ pub trait Lens<T, U> {
 ///
 /// Every widget in druid is instantiated with access to data of some
 /// type; the root widget has access to the entire application data.
-/// Often, a part of the widget hiearchy is only concerned with a part
+/// Often, a part of the widget hierarchy is only concerned with a part
 /// of that data. The `LensWrap` widget is a way to "focus" the data
 /// reference down, for the subtree. One advantage is performance;
 /// data changes that don't intersect the scope of the lens aren't
