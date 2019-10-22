@@ -38,8 +38,8 @@ extern crate glib;
 #[cfg(any(feature = "use_gtk", target_os = "linux"))]
 extern crate gtk as gtkrs;
 
-#[cfg(all(not(feature = "use_gtk")))]
-#[macro_use]
+#[cfg_attr(not(any(feature = "use_gtk", target_os = "linux")), macro_use)]
+#[cfg(not(any(feature = "use_gtk", target_os = "linux")))]
 extern crate lazy_static;
 
 pub mod clipboard;
