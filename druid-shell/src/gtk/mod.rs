@@ -25,10 +25,8 @@ use std::sync::{Arc, Mutex, Weak};
 
 use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt};
 use gio::ApplicationExt;
-use gtk::{
-    AccelGroup, ApplicationWindow, BoxExt, Cast, ContainerExt, GtkApplicationExt, GtkWindowExt,
-    Inhibit, ObjectExt, WidgetExt, WidgetExtManual,
-};
+use gtk::prelude::*;
+use gtk::{AccelGroup, ApplicationWindow};
 
 use piet_common::{Piet, RenderContext};
 use util::assert_main_thread;
@@ -489,7 +487,6 @@ impl WindowHandle {
 
             let menu = menu.into_gtk_menu(&self, &accel_group);
             menu.show_all();
-            use crate::gtkrs::GtkMenuExtManual;
             menu.popup_easy(3, gtkrs::get_current_event_time());
         }
     }
