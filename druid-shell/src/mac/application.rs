@@ -18,6 +18,7 @@ use super::util;
 use crate::clipboard::ClipboardItem;
 use cocoa::appkit::{NSApp, NSPasteboardTypeString};
 use cocoa::base::{id, nil, BOOL, YES};
+use cocoa::foundation::NSInteger;
 
 pub struct Application;
 
@@ -31,7 +32,7 @@ impl Application {
     /// Hide the application this window belongs to. (cmd+H)
     pub fn hide() {
         unsafe {
-            msg_send![NSApp(), hide: nil];
+            let () = msg_send![NSApp(), hide: nil];
         }
     }
 
@@ -40,7 +41,7 @@ impl Application {
         unsafe {
             let workspace = class!(NSWorkspace);
             let shared: id = msg_send![workspace, sharedWorkspace];
-            msg_send![shared, hideOtherApplications];
+            let () = msg_send![shared, hideOtherApplications];
         }
     }
 
@@ -76,8 +77,9 @@ impl Application {
             match item {
                 ClipboardItem::Text(string) => {
                     let nsstring = util::make_nsstring(&string);
-                    msg_send![pasteboard, clearContents];
-                    msg_send![pasteboard, setString: nsstring forType: NSPasteboardTypeString];
+                    let _: NSInteger = msg_send![pasteboard, clearContents];
+                    let _: BOOL =
+                        msg_send![pasteboard, setString: nsstring forType: NSPasteboardTypeString];
                 }
                 other => log::warn!("unhandled clipboard data {:?}", other),
             }

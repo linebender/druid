@@ -615,7 +615,7 @@ impl WindowHandle {
                     .init_str(NSWindowDidBecomeKeyNotification)
                     .autorelease();
                 let notif_center: id = msg_send![notif_center_class, defaultCenter];
-                msg_send![notif_center, addObserver:*nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
+                let () = msg_send![notif_center, addObserver:*nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
                 window.makeKeyAndOrderFront_(nil)
             }
         }
@@ -663,7 +663,7 @@ impl WindowHandle {
         if let Some(ref nsview) = self.nsview {
             unsafe {
                 let location = NSPoint::new(x, y);
-                msg_send![menu.menu, popUpMenuPositioningItem: nil atLocation: location inView: *nsview.load()];
+                let () = msg_send![menu.menu, popUpMenuPositioningItem: nil atLocation: location inView: *nsview.load()];
             }
         }
     }
@@ -779,7 +779,7 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
                 Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
                 Cursor::ResizeUpDown => msg_send![nscursor, ResizeUpDownCursor],
             };
-            msg_send![cursor, set];
+            let () = msg_send![cursor, set];
         }
     }
 
@@ -792,7 +792,7 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             let user_info: id = msg_send![nsnumber, numberWithUnsignedInteger: token];
             let selector = sel!(handleTimer:);
             let view = self.nsview.load();
-            msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
+            let _: id = msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
         }
         TimerToken::new(token)
     }
