@@ -15,41 +15,12 @@
 use druid::widget::{
     Align, Button, Checkbox, Column, DynLabel, Label, Padding, ProgressBar, Row, Slider,
 };
-use druid::{AppLauncher, Data, LensWrap, Widget, WindowDesc};
+use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 
-#[derive(Clone, Data)]
+#[derive(Clone, Data, Lens)]
 struct DemoState {
     value: f64,
     double: bool,
-}
-
-mod lenses {
-    pub mod demo_state {
-        use super::super::DemoState;
-        use druid::Lens;
-        pub struct Value;
-        pub struct Double;
-
-        impl Lens<DemoState, f64> for Value {
-            fn get<'a>(&self, data: &'a DemoState) -> &'a f64 {
-                &data.value
-            }
-
-            fn with_mut<V, F: FnOnce(&mut f64) -> V>(&self, data: &mut DemoState, f: F) -> V {
-                f(&mut data.value)
-            }
-        }
-
-        impl Lens<DemoState, bool> for Double {
-            fn get<'a>(&self, data: &'a DemoState) -> &'a bool {
-                &data.double
-            }
-
-            fn with_mut<V, F: FnOnce(&mut bool) -> V>(&self, data: &mut DemoState, f: F) -> V {
-                f(&mut data.double)
-            }
-        }
-    }
 }
 
 fn build_widget() -> impl Widget<DemoState> {
@@ -62,13 +33,13 @@ fn build_widget() -> impl Widget<DemoState> {
         }
     });
     let mut row = Row::new();
-    let checkbox = LensWrap::new(Checkbox::new(), lenses::demo_state::Double);
+    let checkbox = LensWrap::new(Checkbox::new(), lenses::demo_state::double);
     let checkbox_label = Label::new("double the value");
     row.add_child(checkbox, 0.0);
     row.add_child(Padding::uniform(5.0, checkbox_label), 1.0);
 
-    let bar = LensWrap::new(ProgressBar::new(), lenses::demo_state::Value);
-    let slider = LensWrap::new(Slider::new(), lenses::demo_state::Value);
+    let bar = LensWrap::new(ProgressBar::new(), lenses::demo_state::value);
+    let slider = LensWrap::new(Slider::new(), lenses::demo_state::value);
 
     let button_1 = Button::sized(
         "increment ",
