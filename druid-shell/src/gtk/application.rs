@@ -28,7 +28,6 @@ impl Application {
         let clipboard = gtk::Clipboard::get_default(&display).unwrap();
 
         if let Some(gstring) = clipboard.wait_for_text() {
-            // TODO: does gstring need to be freed?
             Some(ClipboardItem::Text(gstring.to_string()))
         } else {
             None
