@@ -18,7 +18,10 @@ mod align;
 pub use crate::widget::align::Align;
 
 mod button;
-pub use crate::widget::button::{Button, DynLabel, Label, LabelText};
+pub use crate::widget::button::{Button};
+
+mod label ;
+pub use crate::widget::label::{DynLabel, Label, LabelText};
 
 mod flex;
 pub use crate::widget::flex::{Column, Flex, Row};
