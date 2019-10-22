@@ -19,13 +19,11 @@ use crate::{
     Widget,
 };
 
-use crate::kurbo::{RoundedRect};
-use crate::piet::{
-    LinearGradient, UnitPoint,
-};
+use crate::kurbo::RoundedRect;
+use crate::piet::{LinearGradient, UnitPoint};
 
 use crate::theme;
-use crate::widget::{Align, SizedBox, Label, LabelText};
+use crate::widget::{Align, Label, LabelText, SizedBox};
 use crate::{Point, RenderContext};
 
 /// A button with a text label.

@@ -21,7 +21,7 @@ use crate::{
     Widget,
 };
 
-use crate::kurbo::{Rect};
+use crate::kurbo::Rect;
 use crate::piet::{
     FontBuilder, PietText, PietTextLayout, Text, TextLayout, TextLayoutBuilder, UnitPoint,
 };
@@ -124,8 +124,6 @@ impl<T: Data> Widget<T> for Label<T> {
         }
     }
 }
-
-
 
 impl<T: Data> LabelText<T> {
     /// The text that should be displayed. This ensures that localized
