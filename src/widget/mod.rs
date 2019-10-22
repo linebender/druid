@@ -18,9 +18,9 @@ mod align;
 pub use crate::widget::align::Align;
 
 mod button;
-pub use crate::widget::button::{Button};
+pub use crate::widget::button::Button;
 
-mod label ;
+mod label;
 pub use crate::widget::label::{DynLabel, Label, LabelText};
 
 mod flex;
