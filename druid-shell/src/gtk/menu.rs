@@ -50,7 +50,7 @@ impl Menu {
     }
 
     pub fn add_dropdown(&mut self, menu: Menu, text: &str, _enabled: bool) {
-        // TODO: use enabled
+        // TODO: implement enabled dropdown
         self.items
             .push(MenuItem::SubMenu(strip_access_key(text), menu));
     }
@@ -63,7 +63,7 @@ impl Menu {
         _enabled: bool,
         _selected: bool,
     ) {
-        // TODO: handle accelerator shortcuts by parsing `text`
+        // TODO: implement enabled, selected item
         self.items.push(MenuItem::Entry(
             strip_access_key(text),
             id,
