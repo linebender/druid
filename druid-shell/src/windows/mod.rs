@@ -849,7 +849,7 @@ impl WindowBuilder {
                 win.clone(),
             );
             if hwnd.is_null() {
-                return Err(Error::Null);
+                return Err(Error::Other("hwnd.is_null() == true"));
             }
 
             let dcomp_state = create_dcomp_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
@@ -1154,7 +1154,7 @@ impl WindowHandle {
         ty: FileDialogType,
         options: FileDialogOptions,
     ) -> Result<OsString, Error> {
-        let hwnd = self.get_hwnd().ok_or(Error::Null)?;
+        let hwnd = self.get_hwnd().ok_or(Error::Other("get_hwnd() is None"))?;
         unsafe { get_file_dialog_path(hwnd, ty, options) }
     }
 

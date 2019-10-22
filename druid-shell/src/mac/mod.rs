@@ -720,9 +720,10 @@ impl WindowHandle {
     ) -> Result<OsString, Error> {
         match ty {
             FileDialogType::Open => unsafe {
-                dialog::show_open_file_dialog_sync(options).ok_or(Error::Null)
+                dialog::show_open_file_dialog_sync(options)
+                    .ok_or(Error::Other("failed to open file dialog"))
             },
-            _ => Err(Error::Null),
+            _ => Err(Error::Other("unhandled FileDialogType")),
         }
     }
 }

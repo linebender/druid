@@ -180,7 +180,6 @@ pub enum KeyCode {
     LeftMeta,
     RightMeta,
 
-    //FIXME: support lshift/rshift etc?
     Space,
     CapsLock,
     F1,
@@ -239,6 +238,7 @@ pub enum KeyCode {
 pub enum RawKeyCode {
     Windows(i32),
     Mac(u16),
+    Linux(u32),
 }
 
 impl KeyCode {
@@ -534,6 +534,264 @@ impl From<i32> for KeyCode {
             //VK_F23 => KeyCode::F23,
             //VK_F24 => KeyCode::F24,
             other => KeyCode::Unknown(other.into()),
+        }
+    }
+}
+
+#[cfg(any(target_os = "linux", feature = "use_gtk"))]
+impl From<u32> for KeyCode {
+    #[allow(non_upper_case_globals)]
+    fn from(raw: u32) -> KeyCode {
+        use gdk::enums::key::*;
+        match raw {
+            Escape => KeyCode::Escape,
+            grave => KeyCode::Backtick,
+            _0 => KeyCode::Key0,
+            _1 => KeyCode::Key1,
+            _2 => KeyCode::Key2,
+            _3 => KeyCode::Key3,
+            _4 => KeyCode::Key4,
+            _5 => KeyCode::Key5,
+            _6 => KeyCode::Key6,
+            _7 => KeyCode::Key7,
+            _8 => KeyCode::Key8,
+            _9 => KeyCode::Key9,
+            minus => KeyCode::Minus,
+            equal => KeyCode::Equals,
+            BackSpace => KeyCode::Backspace,
+
+            Tab => KeyCode::Tab,
+            q | Q => KeyCode::KeyQ,
+            w | W => KeyCode::KeyW,
+            e | E => KeyCode::KeyE,
+            r | R => KeyCode::KeyR,
+            t | T => KeyCode::KeyT,
+            y | Y => KeyCode::KeyY,
+            u | U => KeyCode::KeyU,
+            i | I => KeyCode::KeyI,
+            o | O => KeyCode::KeyO,
+            p | P => KeyCode::KeyP,
+            bracketleft => KeyCode::LeftBracket,
+            bracketright => KeyCode::RightBracket,
+            Return => KeyCode::Return,
+
+            a | A => KeyCode::KeyA,
+            s | S => KeyCode::KeyS,
+            d | D => KeyCode::KeyD,
+            f | F => KeyCode::KeyF,
+            g | G => KeyCode::KeyG,
+            h | H => KeyCode::KeyH,
+            j | J => KeyCode::KeyJ,
+            k | K => KeyCode::KeyK,
+            l | L => KeyCode::KeyL,
+            semicolon => KeyCode::Semicolon,
+            quoteright => KeyCode::Quote,
+            backslash => KeyCode::Backslash,
+
+            z | Z => KeyCode::KeyZ,
+            x | X => KeyCode::KeyX,
+            c | C => KeyCode::KeyC,
+            v | V => KeyCode::KeyV,
+            b | B => KeyCode::KeyB,
+            n | N => KeyCode::KeyN,
+            m | M => KeyCode::KeyM,
+            comma => KeyCode::Comma,
+            period => KeyCode::Period,
+            slash => KeyCode::Slash,
+
+            Control_L => KeyCode::LeftControl,
+            Control_R => KeyCode::RightControl,
+            Alt_L => KeyCode::LeftAlt,
+            Alt_R => KeyCode::RightAlt,
+            Shift_L => KeyCode::LeftShift,
+            Shift_R => KeyCode::RightShift,
+            Meta_L => KeyCode::LeftMeta,
+            Meta_R => KeyCode::RightMeta,
+
+            space => KeyCode::Space,
+            Caps_Lock => KeyCode::CapsLock,
+            F1 => KeyCode::F1,
+            F2 => KeyCode::F2,
+            F3 => KeyCode::F3,
+            F4 => KeyCode::F4,
+            F5 => KeyCode::F5,
+            F6 => KeyCode::F6,
+            F7 => KeyCode::F7,
+            F8 => KeyCode::F8,
+            F9 => KeyCode::F9,
+            F10 => KeyCode::F10,
+            F11 => KeyCode::F11,
+            F12 => KeyCode::F12,
+
+            Print => KeyCode::PrintScreen,
+            Scroll_Lock => KeyCode::ScrollLock,
+            // Pause/Break not audio.
+            Pause => KeyCode::Pause,
+
+            Insert => KeyCode::Insert,
+            Delete => KeyCode::Delete,
+            Home => KeyCode::Home,
+            End => KeyCode::End,
+            Page_Up => KeyCode::PageUp,
+            Page_Down => KeyCode::PageDown,
+
+            KP_0 => KeyCode::Numpad0,
+            KP_1 => KeyCode::Numpad1,
+            KP_2 => KeyCode::Numpad2,
+            KP_3 => KeyCode::Numpad3,
+            KP_4 => KeyCode::Numpad4,
+            KP_5 => KeyCode::Numpad5,
+            KP_6 => KeyCode::Numpad6,
+            KP_7 => KeyCode::Numpad7,
+            KP_8 => KeyCode::Numpad8,
+            KP_9 => KeyCode::Numpad9,
+
+            KP_Equal => KeyCode::NumpadEquals,
+            KP_Subtract => KeyCode::NumpadSubtract,
+            KP_Add => KeyCode::NumpadAdd,
+            KP_Decimal => KeyCode::NumpadDecimal,
+            KP_Multiply => KeyCode::NumpadMultiply,
+            KP_Divide => KeyCode::NumpadDivide,
+            Num_Lock => KeyCode::NumLock,
+            KP_Enter => KeyCode::NumpadEnter,
+
+            Up => KeyCode::ArrowUp,
+            Down => KeyCode::ArrowDown,
+            Left => KeyCode::ArrowLeft,
+            Right => KeyCode::ArrowRight,
+            _ => {
+                eprintln!("Warning: unknown keyval {}", raw);
+                KeyCode::Unknown(RawKeyCode::Linux(raw))
+            }
+        }
+    }
+}
+
+#[cfg(any(target_os = "linux", feature = "use_gtk"))]
+impl Into<u32> for KeyCode {
+    #[allow(non_upper_case_globals)]
+    fn into(self) -> u32 {
+        use gdk::enums::key::*;
+        match self {
+            KeyCode::Escape => Escape,
+            KeyCode::Backtick => grave,
+            KeyCode::Key0 => _0,
+            KeyCode::Key1 => _1,
+            KeyCode::Key2 => _2,
+            KeyCode::Key3 => _3,
+            KeyCode::Key4 => _4,
+            KeyCode::Key5 => _5,
+            KeyCode::Key6 => _6,
+            KeyCode::Key7 => _7,
+            KeyCode::Key8 => _8,
+            KeyCode::Key9 => _9,
+            KeyCode::Minus => minus,
+            KeyCode::Equals => equal,
+            KeyCode::Backspace => BackSpace,
+
+            KeyCode::Tab => Tab,
+            KeyCode::KeyQ => q | Q,
+            KeyCode::KeyW => w | W,
+            KeyCode::KeyE => e | E,
+            KeyCode::KeyR => r | R,
+            KeyCode::KeyT => t | T,
+            KeyCode::KeyY => y | Y,
+            KeyCode::KeyU => u | U,
+            KeyCode::KeyI => i | I,
+            KeyCode::KeyO => o | O,
+            KeyCode::KeyP => p | P,
+            KeyCode::LeftBracket => bracketleft,
+            KeyCode::RightBracket => bracketright,
+            KeyCode::Return => Return,
+
+            KeyCode::KeyA => a | A,
+            KeyCode::KeyS => s | S,
+            KeyCode::KeyD => d | D,
+            KeyCode::KeyF => f | F,
+            KeyCode::KeyG => g | G,
+            KeyCode::KeyH => h | H,
+            KeyCode::KeyJ => j | J,
+            KeyCode::KeyK => k | K,
+            KeyCode::KeyL => l | L,
+            KeyCode::Semicolon => semicolon,
+            KeyCode::Quote => quoteright,
+            KeyCode::Backslash => backslash,
+
+            KeyCode::KeyZ => z | Z,
+            KeyCode::KeyX => x | X,
+            KeyCode::KeyC => c | C,
+            KeyCode::KeyV => v | V,
+            KeyCode::KeyB => b | B,
+            KeyCode::KeyN => n | N,
+            KeyCode::KeyM => m | M,
+            KeyCode::Comma => comma,
+            KeyCode::Period => period,
+            KeyCode::Slash => slash,
+
+            KeyCode::LeftControl => Control_L,
+            KeyCode::RightControl => Control_R,
+            KeyCode::LeftAlt => Alt_L,
+            KeyCode::RightAlt => Alt_R,
+            KeyCode::LeftShift => Shift_L,
+            KeyCode::RightShift => Shift_R,
+            KeyCode::LeftMeta => Meta_L,
+            KeyCode::RightMeta => Meta_R,
+
+            KeyCode::Space => space,
+            KeyCode::CapsLock => Caps_Lock,
+            KeyCode::F1 => F1,
+            KeyCode::F2 => F2,
+            KeyCode::F3 => F3,
+            KeyCode::F4 => F4,
+            KeyCode::F5 => F5,
+            KeyCode::F6 => F6,
+            KeyCode::F7 => F7,
+            KeyCode::F8 => F8,
+            KeyCode::F9 => F9,
+            KeyCode::F10 => F10,
+            KeyCode::F11 => F11,
+            KeyCode::F12 => F12,
+
+            KeyCode::PrintScreen => Print,
+            KeyCode::ScrollLock => Scroll_Lock,
+            // Pause/Break not audio.
+            KeyCode::Pause => Pause,
+
+            KeyCode::Insert => Insert,
+            KeyCode::Delete => Delete,
+            KeyCode::Home => Home,
+            KeyCode::End => End,
+            KeyCode::PageUp => Page_Up,
+            KeyCode::PageDown => Page_Down,
+
+            KeyCode::Numpad0 => KP_0,
+            KeyCode::Numpad1 => KP_1,
+            KeyCode::Numpad2 => KP_2,
+            KeyCode::Numpad3 => KP_3,
+            KeyCode::Numpad4 => KP_4,
+            KeyCode::Numpad5 => KP_5,
+            KeyCode::Numpad6 => KP_6,
+            KeyCode::Numpad7 => KP_7,
+            KeyCode::Numpad8 => KP_8,
+            KeyCode::Numpad9 => KP_9,
+
+            KeyCode::NumpadEquals => KP_Equal,
+            KeyCode::NumpadSubtract => KP_Subtract,
+            KeyCode::NumpadAdd => KP_Add,
+            KeyCode::NumpadDecimal => KP_Decimal,
+            KeyCode::NumpadMultiply => KP_Multiply,
+            KeyCode::NumpadDivide => KP_Divide,
+            KeyCode::NumLock => Num_Lock,
+            KeyCode::NumpadEnter => KP_Enter,
+
+            KeyCode::ArrowUp => Up,
+            KeyCode::ArrowDown => Down,
+            KeyCode::ArrowLeft => Left,
+            KeyCode::ArrowRight => Right,
+            KeyCode::Unknown(_) => unreachable!(
+                "Unreachable: converting unknown KeyCode {:?} to a keyval",
+                self
+            ),
         }
     }
 }

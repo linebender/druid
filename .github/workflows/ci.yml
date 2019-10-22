@@ -9,13 +9,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-10.14, windows-2019]
+        os: [macOS-10.14, windows-2019, ubuntu-latest]
     name: cargo check stable
     steps:
       - uses: actions/checkout@v1
       - name: install cairo
         run: brew install cairo
         if: contains(matrix.os, 'mac')
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
 
       - name: install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -77,7 +83,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-10.14, windows-2019]
+        os: [macOS-10.14, windows-2019, ubuntu-latest]
     name: cargo test stable
     steps:
       - uses: actions/checkout@v1
@@ -85,6 +91,12 @@ jobs:
       - name: install cairo
         run: brew install cairo
         if: contains(matrix.os, 'mac')
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
 
       - name: install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -108,7 +120,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-10.14, windows-2019]
+        os: [macOS-10.14, windows-2019, ubuntu-latest]
     name: cargo test nightly
     steps:
       - uses: actions/checkout@v1
@@ -116,6 +128,12 @@ jobs:
       - name: install cairo
         run: brew install cairo
         if: contains(matrix.os, 'mac')
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
 
       - name: install nightly toolchain
         uses: actions-rs/toolchain@v1
@@ -140,13 +158,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-10.14, windows-2019]
+        os: [macOS-10.14, windows-2019, ubuntu-latest]
     steps:
       - uses: actions/checkout@v1
 
       - name: install cairo
         run: brew install cairo
         if: contains(matrix.os, 'mac')
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
 
       - name: install nightly toolchain
         uses: actions-rs/toolchain@v1

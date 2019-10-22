@@ -14,36 +14,17 @@
 
 //! macOS implementation of menus.
 
-use crate::util::make_nsstring;
 use cocoa::appkit::{NSEventModifierFlags, NSMenu, NSMenuItem};
 use cocoa::base::{id, nil, NO};
 use cocoa::foundation::NSAutoreleasePool;
 
+use crate::common_util::strip_access_key;
 use crate::hotkey::{HotKey, KeyCompare};
 use crate::keyboard::{KeyCode, KeyModifiers};
+use crate::util::make_nsstring;
 
 pub struct Menu {
     pub menu: id,
-}
-
-/// Strip the access keys from the menu strong.
-///
-/// Changes "E&xit" to "Exit". Actual ampersands are escaped as "&&".
-fn strip_access_key(raw_menu_text: &str) -> String {
-    let mut saw_ampersand = false;
-    let mut result = String::new();
-    for c in raw_menu_text.chars() {
-        if c == '&' {
-            if saw_ampersand {
-                result.push(c);
-            }
-            saw_ampersand = !saw_ampersand;
-        } else {
-            result.push(c);
-            saw_ampersand = false;
-        }
-    }
-    result
 }
 
 fn make_menu_item(id: u32, text: &str, key: Option<&HotKey>, enabled: bool, selected: bool) -> id {

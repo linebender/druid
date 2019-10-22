@@ -140,6 +140,7 @@ fn main() {
     builder.set_title("Hello example");
     builder.set_menu(menubar);
     let window = builder.build().unwrap();
+
     window.show();
     run_loop.run();
 }
