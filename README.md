@@ -41,6 +41,14 @@ The biggest single obstacle to porting is 2d graphics, as druid currently
 uses Direct2D (and DirectWrite for text). One way forward is to create a
 [2d graphics] abstraction.
 
+## Screenshots
+
+#### Linux
+![](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/calc.png)
+![](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/custom_widget.png)
+![](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/hello.png)
+![](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/slider.png)
+
 ## Build
 
 #### Windows
@@ -58,7 +66,7 @@ $> PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig" cargo build
  ```
 #### Linux
 
-On Linux, druid requires gtk+3; see[gtk-rs dependencies] for installation instructions.
+On Linux, druid requires gtk+3 ; see[gtk-rs dependencies] for installation instructions.
 
 run `cargo build`
 
