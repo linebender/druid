@@ -272,6 +272,31 @@ pub struct PaintCtx<'a, 'b: 'a> {
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'b>,
     pub window_id: WindowId,
+    /// The currently visible region.
+    pub(crate) region: Region,
+}
+
+/// A region of a widget, generally used to describe what needs to be drawn.
+#[derive(Debug, Clone)]
+pub struct Region(Rect);
+
+impl Region {
+    /// Returns the smallest `Rect` that encloses the entire region.
+    pub fn to_rect(&self) -> Rect {
+        self.0
+    }
+
+    /// Returns `true` if `self` intersects with `other`.
+    #[inline]
+    pub fn intersects(&self, other: Rect) -> bool {
+        self.0.intersect(other).area() > 0.
+    }
+}
+
+impl From<Rect> for Region {
+    fn from(src: Rect) -> Region {
+        Region(src)
+    }
 }
 
 impl<'a, 'b: 'a> Deref for PaintCtx<'a, 'b> {
@@ -285,6 +310,35 @@ impl<'a, 'b: 'a> Deref for PaintCtx<'a, 'b> {
 impl<'a, 'b: 'a> DerefMut for PaintCtx<'a, 'b> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.render_ctx
+    }
+}
+
+impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
+    /// Returns the currently visible [`Region`].
+    ///
+    /// [`Region`]: struct.Region.html
+    #[inline]
+    pub fn region(&self) -> &Region {
+        &self.region
+    }
+
+    /// Creates a temporary `PaintCtx` with a new visible region, and calls
+    /// the provided function with that `PaintCtx`.
+    ///
+    /// This is used by containers to ensure that their children have the correct
+    /// visible region given their layout.
+    pub fn with_child_ctx(&mut self, region: impl Into<Region>, f: impl FnOnce(&mut PaintCtx)) {
+        let PaintCtx {
+            render_ctx,
+            window_id,
+            ..
+        } = self;
+        let mut child_ctx = PaintCtx {
+            render_ctx,
+            window_id: *window_id,
+            region: region.into(),
+        };
+        f(&mut child_ctx)
     }
 }
 
@@ -409,8 +463,19 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             error!("saving render context failed: {:?}", e);
             return;
         }
-        paint_ctx.transform(Affine::translate(self.state.layout_rect.origin().to_vec2()));
-        self.paint(paint_ctx, data, env);
+        let layout_origin = self.state.layout_rect.origin().to_vec2();
+        paint_ctx.transform(Affine::translate(layout_origin));
+
+        let visible = paint_ctx
+            .region()
+            .to_rect()
+            .intersect(self.state.layout_rect)
+            - layout_origin;
+
+        paint_ctx.with_child_ctx(visible, |ctx| {
+            self.inner.paint(ctx, &self.state, data, &env)
+        });
+
         if let Err(e) = paint_ctx.restore() {
             error!("restoring render context failed: {:?}", e);
         }

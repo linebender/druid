@@ -79,7 +79,8 @@ impl<T: Data> Window<T> {
     }
 
     pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.root.paint(paint_ctx, data, env);
+        let visible = Rect::from_origin_size(Point::ZERO, self.size);
+        paint_ctx.with_child_ctx(visible, |ctx| self.root.paint(ctx, data, env));
     }
 
     pub(crate) fn update_title(&mut self, win_handle: &WindowHandle, data: &T, env: &Env) {

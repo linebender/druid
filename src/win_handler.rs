@@ -22,7 +22,7 @@ use std::time::Instant;
 
 use log::{error, info, warn};
 
-use crate::kurbo::{Size, Vec2};
+use crate::kurbo::{Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 use crate::shell::application::Application;
 use crate::shell::dialog::FileDialogOptions;
@@ -176,6 +176,7 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
         let mut paint_ctx = PaintCtx {
             render_ctx: piet,
             window_id: self.window_id,
+            region: Rect::ZERO.into(),
         };
         self.window.paint(&mut paint_ctx, self.data, self.env);
     }
