@@ -130,7 +130,12 @@ impl<T: Data> Flex<T> {
 impl<T: Data> Widget<T> for Flex<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         for child in &mut self.children {
-            child.widget.paint_with_offset(paint_ctx, data, env);
+            if paint_ctx
+                .region()
+                .intersects(child.widget.get_layout_rect())
+            {
+                child.widget.paint_with_offset(paint_ctx, data, env);
+            }
         }
     }
 

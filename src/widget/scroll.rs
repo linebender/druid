@@ -216,7 +216,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         let viewport = Rect::from_origin_size(Point::ORIGIN, base_state.size());
         paint_ctx.clip(viewport);
         paint_ctx.transform(Affine::translate(-self.scroll_offset));
-        self.child.paint(paint_ctx, data, env);
+
+        let visible = viewport.with_origin(self.scroll_offset.to_point());
+        paint_ctx.with_child_ctx(visible, |ctx| self.child.paint(ctx, data, env));
 
         self.draw_bars(paint_ctx, &viewport, env);
 
