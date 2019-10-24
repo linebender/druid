@@ -8,7 +8,7 @@ jobs:
     runs-on: macOS-10.14
     name: post binary size change info
     # if it isn't an issue comment run every time, otherwise only run if the comment starts with '/bloat'
-    if: (!startsWith(github.eventName, 'issue_comment') || startsWith(github.event.comment.body, '/bloat'))
+    if: (!startsWith(github.event_name, 'issue_comment') || startsWith(github.event.comment.body, '/bloat'))
     steps:
       - name: install cairo (macOS)
         run: brew install cairo
