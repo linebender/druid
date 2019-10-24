@@ -97,6 +97,26 @@ impl<T: Data> Scroll<T> {
         }
     }
 
+    /// Limit scroll behavior to allow only vertical scrolling (Y-axis).
+    /// The child is laid out with constrained width and infinite height.
+    pub fn vertical(mut self) -> Self {
+        self.direction = ScrollDirection::Vertical;
+        self
+    }
+
+    /// Limit scroll behavior to allow only horizontal scrolling (X-axis).
+    /// The child is laid out with constrained height and infinite width.
+    pub fn horizontal(mut self) -> Self {
+        self.direction = ScrollDirection::Horizontal;
+        self
+    }
+
+    /// A builder method that sets the initial scroll position.
+    pub fn with_initial_offset(mut self, scroll_offset: Vec2) -> Self {
+        self.scroll_offset = scroll_offset;
+        self
+    }
+
     /// Update the scroll.
     ///
     /// Returns `true` if the scroll has been updated.
@@ -110,20 +130,6 @@ impl<T: Data> Scroll<T> {
         } else {
             false
         }
-    }
-
-    /// Limit scroll behavior to allow only vertical scrolling (Y-axis).
-    /// The child is laid out with constrained width and infinite height.
-    pub fn vertical(mut self) -> Self {
-        self.direction = ScrollDirection::Vertical;
-        self
-    }
-
-    /// Limit scroll behavior to allow only horizontal scrolling (X-axis).
-    /// The child is laid out with constrained height and infinite width.
-    pub fn horizontal(mut self) -> Self {
-        self.direction = ScrollDirection::Horizontal;
-        self
     }
 
     /// Draw scroll bars.
