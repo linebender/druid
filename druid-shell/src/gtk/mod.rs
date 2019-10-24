@@ -313,13 +313,10 @@ impl WindowBuilder {
                         handler.wheel(Vec2::from((0.0, 120.0)), modifiers, &mut ctx);
                     }
                     ScrollDirection::Left => {
-                        // Note: this direction is just a guess, I (bobtwinkles) don't
-                        // have a way to test horizontal scroll events under GTK.
-                        // If it's wrong, the right direction also needs to be changed
-                        handler.wheel(Vec2::from((120.0, 0.0)), modifiers, &mut ctx);
+                        handler.wheel(Vec2::from((-120.0, 0.0)), modifiers, &mut ctx);
                     }
                     ScrollDirection::Right => {
-                        handler.wheel(-Vec2::from((-120.0, 0.0)), modifiers, &mut ctx);
+                        handler.wheel(Vec2::from((120.0, 0.0)), modifiers, &mut ctx);
                     }
                     ScrollDirection::Smooth => {
                         // TODO: support smooth scrolling via scroll.get_delta and get_is_stop
