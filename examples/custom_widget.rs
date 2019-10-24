@@ -107,8 +107,12 @@ impl Widget<String> for CustomWidget {
         _data: &String,
         _env: &Env,
     ) -> Size {
-        // You can return any Size.
-        // Flexible widgets are based on the BoxConstraints passed by their parent widget.
+        // BoxConstraints are passed by the parent widget.
+        // This method can return any Size within those constraints:
+        // bc.constrain(my_size)
+        //
+        // To check if a dimension is infinite or not (e.g. scrolling):
+        // bc.is_width_bounded() / bc.is_height_bounded()
         bc.max()
     }
 
