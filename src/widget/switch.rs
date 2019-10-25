@@ -21,6 +21,9 @@ use crate::widget::Align;
 use crate::{
     BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
+use crate::piet::{
+    FontBuilder, PietText, PietTextLayout, Text, TextLayout, TextLayoutBuilder,
+};
 
 #[derive(Debug, Clone)]
 pub struct Switch;
@@ -50,9 +53,11 @@ impl Widget<bool> for SwitchRaw {
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let switch_thickness = 8. + knob_size;
+        let font_name = env.get(theme::FONT_NAME);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
 
         let background_rect =
-            RoundedRect::from_origin_size(Point::ORIGIN, Size::new(switch_thickness * 2., switch_thickness).to_vec2(), switch_thickness / 2.);
+            RoundedRect::from_origin_size(Point::ORIGIN, Size::new(switch_thickness * 2.5, switch_thickness).to_vec2(), switch_thickness / 2.);
 
         let background_gradient = if *data {
             LinearGradient::new(
@@ -74,17 +79,49 @@ impl Widget<bool> for SwitchRaw {
             )
         };
 
-
-
         paint_ctx.stroke(background_rect, &env.get(theme::BORDER), 2.0);
 
         paint_ctx.fill(background_rect, &background_gradient);
+
+        let label = if *data {
+            "ON"
+        } else {
+            "OFF"
+        };
+
+        let font = paint_ctx.text()
+            .new_font_by_name(font_name, font_size)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        let text_layout = paint_ctx.text().new_text_layout(&font, label).unwrap().build().unwrap();
+
+        let mut origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
+            Point::ORIGIN,
+            Size::new(
+                (base_state.size().width - text_layout.width()).max(0.0),
+                base_state.size().height + (font_size * 1.2) / 2.,
+            ),
+        ));
+
+        //Make sure we don't draw the text too low
+        origin.y = origin.y.min(base_state.size().height) + 4.;
+
+        if *data {
+            origin.x = 8.
+        } else {
+            origin.x = switch_thickness * 2.5 - text_layout.width() - 8.
+        }
+
+        paint_ctx.draw_text(&text_layout, origin, &env.get(theme::LABEL_COLOR));
+
 
         let is_active = base_state.is_active();
         let is_hovered = self.knob_hovered;
 
         let knob_position = if *data {
-            switch_thickness * 2. - knob_size / 2. - 4.
+            switch_thickness * 2.5 - knob_size / 2. - 4.
         } else {
             knob_size / 2. + 4.
         };
@@ -134,7 +171,7 @@ impl Widget<bool> for SwitchRaw {
         _data: &bool,
         env: &Env,
     ) -> Size {
-        let width = (8. + env.get(theme::BASIC_WIDGET_HEIGHT)) * 2.;
+        let width = (8. + env.get(theme::BASIC_WIDGET_HEIGHT)) * 2.5;
         bc.constrain(Size::new(
             width,
             env.get(theme::BASIC_WIDGET_HEIGHT),
