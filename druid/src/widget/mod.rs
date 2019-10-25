@@ -49,3 +49,6 @@ pub use crate::widget::checkbox::Checkbox;
 
 mod radio;
 pub use crate::widget::radio::{Radio, RadioGroup};
+
+mod switch;
+pub use crate::widget::switch::Switch;
