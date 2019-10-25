@@ -12,27 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{
-    Align, Button, Checkbox, Column, DynLabel, Label, Padding, ProgressBar, Row, Switch,
-};
+use druid::widget::{Column, Label, Padding, Row, Switch};
 use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct DemoState {
-    value: bool
+    value: bool,
 }
 
 fn build_widget() -> impl Widget<DemoState> {
     let mut col = Column::new();
-    let label = DynLabel::new(|data: &DemoState, _env| {
-        format!("value: {}", data.value)
-    });
     let mut row = Row::new();
     let switch = LensWrap::new(Switch::new(), lenses::demo_state::value);
-    let switch_label = Label::new("Enable");
+    let switch_label = Label::new("Setting label");
 
     row.add_child(Padding::uniform(5.0, switch_label), 0.0);
-    row.add_child(Padding::uniform(5.0, switch), 1.0);
+    row.add_child(Padding::uniform(5.0, switch), 0.0);
 
     col.add_child(Padding::uniform(5.0, row), 1.0);
     col
@@ -42,8 +37,6 @@ fn main() {
     let window = WindowDesc::new(build_widget);
     AppLauncher::with_window(window)
         .use_simple_logger()
-        .launch(DemoState {
-            value: true
-        })
+        .launch(DemoState { value: true })
         .expect("launch failed");
 }
