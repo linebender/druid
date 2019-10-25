@@ -831,6 +831,11 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.win_ctx.request_timer(deadline)
     }
 
+    /// Returns the layout size of the current widget.
+    pub fn size(&self) -> Size {
+        self.base_state.size()
+    }
+
     /// Submit a [`Command`] to be run after this event is handled.
     ///
     /// Commands are run in the order they are submitted; all commands
