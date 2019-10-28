@@ -149,6 +149,59 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         self.scroll_offset
     }
 
+    fn calc_scollbar_bounds(&self, viewport: &Rect) -> Rect {
+        return Rect::new(
+            self.scroll_offset.x + SCROLL_BAR_PAD,
+            self.scroll_offset.y + SCROLL_BAR_PAD,
+            self.scroll_offset.x - SCROLL_BAR_PAD + viewport.width(),
+            self.scroll_offset.y - SCROLL_BAR_PAD + viewport.height(),
+        );
+    }
+
+    fn calc_vertical_bar_bounds(&self, viewport: &Rect) -> Rect {
+        let scrollbar_bounds = self.calc_scollbar_bounds(viewport);
+
+        let content_size = Size::new(
+            viewport.width() - 2.0 * SCROLL_BAR_PAD,
+            viewport.height() - 2.0 * SCROLL_BAR_PAD,
+        );
+
+        let scale_y = content_size.height / self.child_size.height;
+
+        let h = (scale_y * content_size.height).ceil();
+        let dh = (scale_y * self.scroll_offset.y).ceil();
+
+        let x0 = scrollbar_bounds.x1;
+        let y0 = scrollbar_bounds.y0 + dh;
+
+        let x1 = x0 - SCROLL_BAR_WIDTH;
+        let y1 = (y0 + h).min(scrollbar_bounds.y1);
+
+        return Rect::new(x0, y0, x1, y1);
+    }
+
+    fn calc_horizontal_bar_bounds(&self, viewport: &Rect) -> Rect {
+        let scrollbar_bounds = self.calc_scollbar_bounds(viewport);
+
+        let content_size = Size::new(
+            viewport.width() - 2.0 * SCROLL_BAR_PAD,
+            viewport.height() - 2.0 * SCROLL_BAR_PAD,
+        );
+
+        let scale_x = content_size.width / self.child_size.width;
+
+        let w = (scale_x * content_size.width).ceil();
+        let dw = (scale_x * self.scroll_offset.x).ceil();
+
+        let x0 = scrollbar_bounds.x0 + dw;
+        let y0 = scrollbar_bounds.y1;
+
+        let x1 = (x0 + w).min(scrollbar_bounds.x1);
+        let y1 = y0 - SCROLL_BAR_WIDTH;
+
+        return Rect::new(x0, y0, x1, y1);
+    }
+
     /// Draw scroll bars.
     fn draw_bars(&self, paint_ctx: &mut PaintCtx, viewport: &Rect, env: &Env) {
         if self.scroll_bars.opacity <= 0.0 {
@@ -163,54 +216,17 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
             env.get(theme::SCROLL_BAR_BORDER_COLOR)
                 .with_alpha(self.scroll_bars.opacity),
         );
-        let bar_thickness = SCROLL_BAR_WIDTH;
-
-        // Scroll bar max bounds
-        let scroll_bar_bounds = Rect::new(
-            self.scroll_offset.x + SCROLL_BAR_PAD,
-            self.scroll_offset.y + SCROLL_BAR_PAD,
-            self.scroll_offset.x - SCROLL_BAR_PAD + viewport.width(),
-            self.scroll_offset.y - SCROLL_BAR_PAD + viewport.height(),
-        );
-
-        let content_size = Size::new(
-            viewport.width() - 2.0 * SCROLL_BAR_PAD,
-            viewport.height() - 2.0 * SCROLL_BAR_PAD,
-        );
-
-        let scale = Vec2::new(
-            content_size.width / self.child_size.width,
-            content_size.height / self.child_size.height,
-        );
 
         // Vertical bar
         if viewport.height() < self.child_size.height {
-            let h = (scale.y * content_size.height).ceil();
-            let dh = (scale.y * self.scroll_offset.y).ceil();
-
-            let x0 = scroll_bar_bounds.x1;
-            let y0 = scroll_bar_bounds.y0 + dh;
-
-            let x1 = x0 - bar_thickness;
-            let y1 = (y0 + h).min(scroll_bar_bounds.y1);
-
-            let rect = RoundedRect::new(x0, y0, x1, y1, 5.0);
+            let rect = RoundedRect::from_rect(self.calc_vertical_bar_bounds(viewport), 5.0);
             paint_ctx.render_ctx.fill(rect, &brush);
             paint_ctx.render_ctx.stroke(rect, &border_brush, 1.0);
         }
 
         // Horizontal bar
         if viewport.width() < self.child_size.width {
-            let w = (scale.x * content_size.width).ceil();
-            let dw = (scale.x * self.scroll_offset.x).ceil();
-
-            let x0 = scroll_bar_bounds.x0 + dw;
-            let y0 = scroll_bar_bounds.y1;
-
-            let x1 = (x0 + w).min(scroll_bar_bounds.x1);
-            let y1 = y0 - bar_thickness;
-
-            let rect = RoundedRect::new(x0, y0, x1, y1, 5.0);
+            let rect = RoundedRect::from_rect(self.calc_horizontal_bar_bounds(viewport), 5.0);
             paint_ctx.render_ctx.fill(rect, &brush);
             paint_ctx.render_ctx.stroke(rect, &border_brush, 1.0);
         }
