@@ -16,8 +16,8 @@
 
 #![deny(intra_doc_link_resolution_failure)]
 
+pub use kurbo;
 pub use piet_common as piet;
-pub use piet_common::kurbo;
 
 #[cfg(target_os = "windows")]
 #[macro_use]
