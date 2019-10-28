@@ -92,6 +92,10 @@ impl<T: Data> Widget<T> for Align<T> {
         data: &T,
         env: &Env,
     ) -> Size {
+        if log::log_enabled!(log::Level::Warn) {
+            bc.check("Align");
+        }
+
         let size = self.child.layout(layout_ctx, &bc.loosen(), data, env);
         let mut my_size = size;
         if bc.is_width_bounded() {

@@ -137,6 +137,10 @@ impl Widget<f64> for SliderRaw {
         _data: &f64,
         env: &Env,
     ) -> Size {
+        if log::log_enabled!(log::Level::Warn) {
+            bc.check("Slider");
+        }
+
         let default_width = 100.0;
 
         if bc.is_width_bounded() {

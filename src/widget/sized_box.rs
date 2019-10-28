@@ -84,6 +84,10 @@ impl<T: Data> Widget<T> for SizedBox<T> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+        if log::log_enabled!(log::Level::Warn) {
+            bc.check("SizedBox");
+        }
+
         match self.inner {
             Some(ref mut inner) => {
                 let (min_width, max_width) = match self.width {
