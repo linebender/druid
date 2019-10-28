@@ -14,6 +14,7 @@
 
 //! A widget that just adds padding during layout.
 
+use crate::kurbo::Insets;
 use crate::{
     BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect, Size,
     UpdateCtx, Widget, WidgetPod,
@@ -31,12 +32,53 @@ pub struct Padding<T: Data> {
 
 impl<T: Data> Padding<T> {
     /// Create widget with uniform padding.
+    #[deprecated(since = "0.3.0", note = "Use Padding::new() instead")]
     pub fn uniform(padding: f64, child: impl Widget<T> + 'static) -> Padding<T> {
         Padding {
             left: padding,
             right: padding,
             top: padding,
             bottom: padding,
+            child: WidgetPod::new(child).boxed(),
+        }
+    }
+
+    /// Create a new widget with the specified padding. This can either be an instance
+    /// of [`kurbo::Insets`], a f64 for uniform padding, a 2-tuple for axis-uniform padding
+    /// or 4-tuple with (left, top, right, bottom) values.
+    ///
+    /// # Examples
+    ///
+    /// Uniform padding:
+    ///
+    /// ```
+    /// use druid::widget::{Label, Padding};
+    /// use druid::kurbo::Insets;
+    ///
+    /// let _: Padding<()> = Padding::new(10.0, Label::new("uniform!"));
+    /// let _: Padding<()> = Padding::new(Insets::uniform(10.0), Label::new("uniform!"));
+    /// ```
+    ///
+    /// Uniform padding across each axis:
+    ///
+    /// ```
+    /// use druid::widget::{Label, Padding};
+    /// use druid::kurbo::Insets;
+    ///
+    /// let child: Label<()> = Label::new("I need my space!");
+    /// let _: Padding<()> = Padding::new((10.0, 20.0), Label::new("more y than x!"));
+    /// // equivalent:
+    /// let _: Padding<()> = Padding::new(Insets::uniform_xy(10.0, 20.0), Label::new("ditto :)"));
+    /// ```
+    ///
+    /// [`kurbo::Insets`]: https://docs.rs/kurbo/0.5.3/kurbo/struct.Insets.html
+    pub fn new(insets: impl Into<Insets>, child: impl Widget<T> + 'static) -> Padding<T> {
+        let insets = insets.into();
+        Padding {
+            left: insets.x0,
+            right: insets.x1,
+            top: insets.y0,
+            bottom: insets.y1,
             child: WidgetPod::new(child).boxed(),
         }
     }

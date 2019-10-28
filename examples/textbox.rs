@@ -40,9 +40,9 @@ fn build_widget() -> impl Widget<String> {
     let textbox_2 = TextBox::new();
     let label = DynLabel::new(|data: &String, _env| format!("value: {}", data));
 
-    col.add_child(Padding::uniform(5.0, textbox), 1.0);
-    col.add_child(Padding::uniform(5.0, textbox_2), 1.0);
-    col.add_child(Padding::uniform(5.0, label), 1.0);
+    col.add_child(Padding::new(5.0, textbox), 1.0);
+    col.add_child(Padding::new(5.0, textbox_2), 1.0);
+    col.add_child(Padding::new(5.0, label), 1.0);
     col
 }
 

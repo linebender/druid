@@ -36,7 +36,7 @@ fn build_widget() -> impl Widget<DemoState> {
     let checkbox = LensWrap::new(Checkbox::new(), lenses::demo_state::double);
     let checkbox_label = Label::new("double the value");
     row.add_child(checkbox, 0.0);
-    row.add_child(Padding::uniform(5.0, checkbox_label), 1.0);
+    row.add_child(Padding::new(5.0, checkbox_label), 1.0);
 
     let bar = LensWrap::new(ProgressBar::new(), lenses::demo_state::value);
     let slider = LensWrap::new(Slider::new(), lenses::demo_state::value);
@@ -51,12 +51,12 @@ fn build_widget() -> impl Widget<DemoState> {
         data.value -= 0.1
     });
 
-    col.add_child(Padding::uniform(5.0, bar), 1.0);
-    col.add_child(Padding::uniform(5.0, slider), 1.0);
-    col.add_child(Padding::uniform(5.0, label), 1.0);
-    col.add_child(Padding::uniform(5.0, row), 1.0);
-    col.add_child(Padding::uniform(5.0, Align::right(button_1)), 0.0);
-    col.add_child(Padding::uniform(5.0, button_2), 1.0);
+    col.add_child(Padding::new(5.0, bar), 1.0);
+    col.add_child(Padding::new(5.0, slider), 1.0);
+    col.add_child(Padding::new(5.0, label), 1.0);
+    col.add_child(Padding::new(5.0, row), 1.0);
+    col.add_child(Padding::new(5.0, Align::right(button_1)), 0.0);
+    col.add_child(Padding::new(5.0, button_2), 1.0);
     col
 }
 

@@ -27,10 +27,7 @@ fn build_app() -> impl Widget<u32> {
     // Spacing element that will fill all available space in between label
     // and a button. Notice that weight is non-zero.
     header.add_child(SizedBox::empty().expand(), 1.0);
-    header.add_child(
-        Padding::uniform(20.0, Button::new("Two", Button::noop)),
-        0.0,
-    );
+    header.add_child(Padding::new(20.0, Button::new("Two", Button::noop)), 0.0);
 
     col.add_child(SizedBox::new(header).height(100.0), 0.0);
 
