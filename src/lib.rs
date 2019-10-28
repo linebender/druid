@@ -457,20 +457,41 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 
     /// Paint the widget, translating it by the origin of its layout rectangle.
+    ///
+    /// This will recursively paint widgets, stopping if a widget's layout
+    /// rect is outside of the currently visible region.
     // Discussion: should this be `paint` and the other `paint_raw`?
     pub fn paint_with_offset(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.paint_with_offset_impl(paint_ctx, data, env, false)
+    }
+
+    /// Paint the widget, even if its layout rect is outside of the currently
+    /// visible region.
+    pub fn paint_with_offset_always(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.paint_with_offset_impl(paint_ctx, data, env, true)
+    }
+
+    /// Shared implementation that can skip drawing non-visible content.
+    fn paint_with_offset_impl(
+        &mut self,
+        paint_ctx: &mut PaintCtx,
+        data: &T,
+        env: &Env,
+        paint_if_not_visible: bool,
+    ) {
+        if !paint_if_not_visible && !paint_ctx.region().intersects(self.state.layout_rect) {
+            return;
+        }
+
         if let Err(e) = paint_ctx.save() {
             error!("saving render context failed: {:?}", e);
             return;
         }
+
         let layout_origin = self.state.layout_rect.origin().to_vec2();
         paint_ctx.transform(Affine::translate(layout_origin));
 
-        let visible = paint_ctx
-            .region()
-            .to_rect()
-            .intersect(self.state.layout_rect)
-            - layout_origin;
+        let visible = paint_ctx.region().to_rect() - layout_origin;
 
         paint_ctx.with_child_ctx(visible, |ctx| {
             self.inner.paint(ctx, &self.state, data, &env)
