@@ -56,6 +56,7 @@ impl ScrollDirection {
 struct ScrollBarsState {
     opacity: f64,
     timer_id: TimerToken,
+    hovered: bool,
 }
 
 impl Default for ScrollBarsState {
@@ -63,6 +64,7 @@ impl Default for ScrollBarsState {
         Self {
             opacity: 0.0,
             timer_id: TimerToken::INVALID,
+            hovered: false,
         }
     }
 }
@@ -295,7 +297,15 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             }
             _ => false,
         } {
-            println!("Mouse interaction with scrollbar detected");
+            match event {
+                Event::MouseMoved(_) => {
+                    self.scroll_bars.hovered = true;
+                    self.scroll_bars.opacity = 0.7;
+                    self.scroll_bars.timer_id = TimerToken::INVALID; // Cancel any fade out in progress
+                    ctx.invalidate();
+                }
+                _ => (),
+            }
         } else {
             let child_event = event.transform_scroll(self.scroll_offset, viewport);
             if let Some(child_event) = child_event {
@@ -303,6 +313,17 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             };
 
             match event {
+                Event::MouseMoved(event) => {
+                    let mut transformed_event = event.clone();
+                    transformed_event.pos += self.scroll_offset;
+                    let currently_hovered = self
+                        .mouse_over_vertical_bar(viewport, transformed_event.pos)
+                        || self.mouse_over_horizontal_bar(viewport, transformed_event.pos);
+                    if self.scroll_bars.hovered && !currently_hovered {
+                        self.scroll_bars.hovered = false;
+                        self.reset_scrollbar_fade(ctx);
+                    }
+                }
                 // Show the scrollbars any time our size changes
                 Event::Size(_) => self.reset_scrollbar_fade(ctx),
                 // The scroll bars will fade immediately if there's some other widget requesting animation.
