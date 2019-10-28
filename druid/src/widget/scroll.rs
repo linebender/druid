@@ -171,10 +171,10 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         let h = (scale_y * content_size.height).ceil();
         let dh = (scale_y * self.scroll_offset.y).ceil();
 
-        let x0 = scrollbar_bounds.x1;
+        let x0 = scrollbar_bounds.x1 - SCROLL_BAR_WIDTH;
         let y0 = scrollbar_bounds.y0 + dh;
 
-        let x1 = x0 - SCROLL_BAR_WIDTH;
+        let x1 = scrollbar_bounds.x1;
         let y1 = (y0 + h).min(scrollbar_bounds.y1);
 
         return Rect::new(x0, y0, x1, y1);
@@ -194,10 +194,10 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         let dw = (scale_x * self.scroll_offset.x).ceil();
 
         let x0 = scrollbar_bounds.x0 + dw;
-        let y0 = scrollbar_bounds.y1;
+        let y0 = scrollbar_bounds.y1 - SCROLL_BAR_WIDTH;
 
         let x1 = (x0 + w).min(scrollbar_bounds.x1);
-        let y1 = y0 - SCROLL_BAR_WIDTH;
+        let y1 = scrollbar_bounds.y1;
 
         return Rect::new(x0, y0, x1, y1);
     }
@@ -230,6 +230,22 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
             paint_ctx.render_ctx.fill(rect, &brush);
             paint_ctx.render_ctx.stroke(rect, &border_brush, 1.0);
         }
+    }
+
+    fn mouse_over_vertical_bar(&self, viewport: Rect, pos: Point) -> bool {
+        if viewport.height() < self.child_size.height {
+            return self.calc_vertical_bar_bounds(&viewport).contains(pos);
+        }
+
+        return false;
+    }
+
+    fn mouse_over_horizontal_bar(&self, viewport: Rect, pos: Point) -> bool {
+        if viewport.width() < self.child_size.width {
+            return self.calc_horizontal_bar_bounds(&viewport).contains(pos);
+        }
+
+        return false;
     }
 }
 
@@ -269,30 +285,43 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
         let size = ctx.base_state.size();
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
-        let child_event = event.transform_scroll(self.scroll_offset, viewport);
-        if let Some(child_event) = child_event {
-            self.child.event(&child_event, ctx, data, env)
-        };
 
-        match event {
-            // Show the scrollbars any time our size changes
-            Event::Size(_) => self.reset_scrollbar_fade(ctx),
-            // The scroll bars will fade immediately if there's some other widget requesting animation.
-            // Guard by the timer id being invalid.
-            Event::AnimFrame(interval) if self.scroll_bars.timer_id == TimerToken::INVALID => {
-                // Animate scroll bars opacity
-                let diff = 2.0 * (*interval as f64) * 1e-9;
-                self.scroll_bars.opacity -= diff;
-                if self.scroll_bars.opacity > 0.0 {
-                    ctx.request_anim_frame();
+        if match event {
+            Event::MouseMoved(event) | Event::MouseDown(event) => {
+                let mut transformed_event = event.clone();
+                transformed_event.pos += self.scroll_offset;
+                self.mouse_over_vertical_bar(viewport, transformed_event.pos)
+                    || self.mouse_over_horizontal_bar(viewport, transformed_event.pos)
+            }
+            _ => false,
+        } {
+            println!("Mouse interaction with scrollbar detected");
+        } else {
+            let child_event = event.transform_scroll(self.scroll_offset, viewport);
+            if let Some(child_event) = child_event {
+                self.child.event(&child_event, ctx, data, env)
+            };
+
+            match event {
+                // Show the scrollbars any time our size changes
+                Event::Size(_) => self.reset_scrollbar_fade(ctx),
+                // The scroll bars will fade immediately if there's some other widget requesting animation.
+                // Guard by the timer id being invalid.
+                Event::AnimFrame(interval) if self.scroll_bars.timer_id == TimerToken::INVALID => {
+                    // Animate scroll bars opacity
+                    let diff = 2.0 * (*interval as f64) * 1e-9;
+                    self.scroll_bars.opacity -= diff;
+                    if self.scroll_bars.opacity > 0.0 {
+                        ctx.request_anim_frame();
+                    }
                 }
+                Event::Timer(id) if *id == self.scroll_bars.timer_id => {
+                    // Schedule scroll bars animation
+                    ctx.request_anim_frame();
+                    self.scroll_bars.timer_id = TimerToken::INVALID;
+                }
+                _ => (),
             }
-            Event::Timer(id) if *id == self.scroll_bars.timer_id => {
-                // Schedule scroll bars animation
-                ctx.request_anim_frame();
-                self.scroll_bars.timer_id = TimerToken::INVALID;
-            }
-            _ => (),
         }
 
         if !ctx.is_handled() {
