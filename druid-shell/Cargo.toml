@@ -16,8 +16,8 @@ default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
 piet-common = "0.0.6"
+kurbo = "0.5.3"
 log = "0.4.8"
-
 lazy_static = "1.0"
 time = "0.1.39"
 
@@ -58,6 +58,3 @@ gtk-sys = "0.9.0"
 [target.'cfg(target_os="linux")'.dependencies.gtk]
 version = "0.7.0"
 features = ["v3_20"]
-
-[dev-dependencies]
-kurbo = "0.2.1"
