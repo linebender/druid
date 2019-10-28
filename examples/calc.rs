@@ -113,7 +113,7 @@ impl CalcState {
 }
 
 fn pad<T: Data>(inner: impl Widget<T> + 'static) -> impl Widget<T> {
-    Padding::uniform(5.0, inner)
+    Padding::new(5.0, inner)
 }
 
 fn op_button_label(op: char, label: String) -> impl Widget<CalcState> {

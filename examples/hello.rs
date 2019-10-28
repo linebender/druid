@@ -31,7 +31,7 @@ fn ui_builder() -> impl Widget<u32> {
     let button = Button::new("increment", |_ctx, data, _env| *data += 1);
 
     let mut col = Column::new();
-    col.add_child(Align::centered(Padding::uniform(5.0, label)), 1.0);
-    col.add_child(Padding::uniform(5.0, button), 1.0);
+    col.add_child(Align::centered(Padding::new(5.0, label)), 1.0);
+    col.add_child(Padding::new(5.0, button), 1.0);
     col
 }

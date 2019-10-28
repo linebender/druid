@@ -27,7 +27,7 @@ fn build_widget() -> impl Widget<u32> {
     let mut col = Column::new();
     for i in 0..30 {
         let button = Button::new(format!("Button {}", i), Button::noop);
-        col.add_child(Padding::uniform(3.0, button), 0.0);
+        col.add_child(Padding::new(3.0, button), 0.0);
     }
     Scroll::new(col)
 }

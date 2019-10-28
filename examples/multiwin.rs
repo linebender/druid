@@ -73,10 +73,10 @@ fn ui_builder() -> impl Widget<State> {
     });
 
     let mut col = Column::new();
-    col.add_child(Align::centered(Padding::uniform(5.0, label)), 1.0);
+    col.add_child(Align::centered(Padding::new(5.0, label)), 1.0);
     let mut row = Row::new();
-    row.add_child(Padding::uniform(5.0, inc_button), 1.0);
-    row.add_child(Padding::uniform(5.0, dec_button), 1.0);
+    row.add_child(Padding::new(5.0, inc_button), 1.0);
+    row.add_child(Padding::new(5.0, dec_button), 1.0);
     col.add_child(row, 1.0);
     col
 }
