@@ -157,7 +157,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         self.scroll_offset
     }
 
-    fn calc_scollbar_bounds(&self, viewport: &Rect) -> Rect {
+    fn calc_scrollbar_screen_edges(&self, viewport: &Rect) -> Rect {
         return Rect::new(
             self.scroll_offset.x + SCROLL_BAR_PAD,
             self.scroll_offset.y + SCROLL_BAR_PAD,
@@ -167,7 +167,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     }
 
     fn calc_vertical_bar_bounds(&self, viewport: &Rect) -> Rect {
-        let scrollbar_bounds = self.calc_scollbar_bounds(viewport);
+        let scrollbar_bounds = self.calc_scrollbar_screen_edges(viewport);
 
         let scale_y = viewport.height() / self.child_size.height;
 
@@ -184,7 +184,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     }
 
     fn calc_horizontal_bar_bounds(&self, viewport: &Rect) -> Rect {
-        let scrollbar_bounds = self.calc_scollbar_bounds(viewport);
+        let scrollbar_bounds = self.calc_scrollbar_screen_edges(viewport);
 
         let scale_x = viewport.width() / self.child_size.width;
 
