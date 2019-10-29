@@ -299,19 +299,13 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                         let bounds = self.calc_vertical_bar_bounds(&viewport);
                         let mouse_y = event.pos.y + self.scroll_offset.y;
                         let delta = mouse_y - bounds.y0 - self.scroll_bars.held_offset;
-                        self.scroll(
-                            Vec2::new(0f64, (delta / scale_y).ceil()),
-                            size,
-                        );
+                        self.scroll(Vec2::new(0f64, (delta / scale_y).ceil()), size);
                     } else if self.scroll_bars.horizontal_held {
                         let scale_x = viewport.width() / self.child_size.width;
                         let bounds = self.calc_horizontal_bar_bounds(&viewport);
                         let mouse_x = event.pos.x + self.scroll_offset.x;
                         let delta = mouse_x - bounds.x0 - self.scroll_bars.held_offset;
-                        self.scroll(
-                            Vec2::new((delta / scale_x).ceil(), 0f64),
-                            size,
-                        );
+                        self.scroll(Vec2::new((delta / scale_x).ceil(), 0f64), size);
                     }
                     ctx.invalidate();
                 }
