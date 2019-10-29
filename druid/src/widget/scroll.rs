@@ -57,6 +57,9 @@ struct ScrollBarsState {
     opacity: f64,
     timer_id: TimerToken,
     hovered: bool,
+    vertical_held: bool,
+    horizontal_held: bool,
+    held_offset: f64,
 }
 
 impl Default for ScrollBarsState {
@@ -65,6 +68,9 @@ impl Default for ScrollBarsState {
             opacity: 0.0,
             timer_id: TimerToken::INVALID,
             hovered: false,
+            vertical_held: false,
+            horizontal_held: false,
+            held_offset: 0f64,
         }
     }
 }
@@ -289,6 +295,37 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
 
         if match event {
+            Event::MouseMoved(_) | Event::MouseUp(_) => {
+                self.scroll_bars.vertical_held || self.scroll_bars.horizontal_held
+            }
+            _ => false,
+        } {
+            match event {
+                Event::MouseMoved(event) => {
+                    if self.scroll_bars.vertical_held {
+                        let bounds = self.calc_vertical_bar_bounds(&viewport);
+                        let mouse_y = event.pos.y + self.scroll_offset.y;
+                        self.scroll(
+                            Vec2::new(0f64, mouse_y - bounds.y0 - self.scroll_bars.held_offset),
+                            size,
+                        );
+                    } else if self.scroll_bars.horizontal_held {
+                        let bounds = self.calc_horizontal_bar_bounds(&viewport);
+                        let mouse_x = event.pos.x + self.scroll_offset.x;
+                        self.scroll(
+                            Vec2::new(mouse_x - bounds.x0 - self.scroll_bars.held_offset, 0f64),
+                            size,
+                        );
+                    }
+                    ctx.invalidate();
+                }
+                Event::MouseUp(_) => {
+                    self.scroll_bars.vertical_held = false;
+                    self.scroll_bars.horizontal_held = false;
+                }
+                _ => (),
+            }
+        } else if match event {
             Event::MouseMoved(event) | Event::MouseDown(event) => {
                 let mut transformed_event = event.clone();
                 transformed_event.pos += self.scroll_offset;
@@ -303,6 +340,19 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     self.scroll_bars.opacity = 0.7;
                     self.scroll_bars.timer_id = TimerToken::INVALID; // Cancel any fade out in progress
                     ctx.invalidate();
+                }
+                Event::MouseDown(event) => {
+                    let pos = event.pos + self.scroll_offset;
+
+                    if self.mouse_over_vertical_bar(viewport, pos) {
+                        self.scroll_bars.vertical_held = true;
+                        self.scroll_bars.held_offset =
+                            pos.y - self.calc_vertical_bar_bounds(&viewport).y0;
+                    } else if self.mouse_over_horizontal_bar(viewport, pos) {
+                        self.scroll_bars.horizontal_held = true;
+                        self.scroll_bars.held_offset =
+                            pos.x - self.calc_horizontal_bar_bounds(&viewport).x0;
+                    }
                 }
                 _ => (),
             }
