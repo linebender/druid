@@ -333,6 +333,16 @@ impl WndProc for MyWndProc {
         //println!("wndproc msg: {}", msg);
         match msg {
             WM_ERASEBKGND => Some(0),
+            WM_SETFOCUS => {
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    s.handler.got_focus(&mut c.ctx());
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
+                Some(0)
+            }
             WM_PAINT => unsafe {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
