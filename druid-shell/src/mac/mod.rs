@@ -307,7 +307,6 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<Box<dyn IdleCa
 }
 
 extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
-    info!("size: {}x{}", size.width, size.height);
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
