@@ -117,9 +117,7 @@ impl<T: Data> Widget<T> for Button<T> {
         data: &T,
         env: &Env,
     ) -> Size {
-        if log::log_enabled!(log::Level::Warn) {
-            bc.check("Button");
-        }
+        bc.debug_check("Button");
 
         self.label.layout(layout_ctx, bc, data, env)
     }

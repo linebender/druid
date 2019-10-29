@@ -713,7 +713,9 @@ impl BoxConstraints {
     }
 
     /// Check to see if these constraints are legit.
-    pub fn check(&self, name: &str) {
+    ///
+    /// Logs a warning if BoxConstraints are invalid.
+    pub fn debug_check(&self, name: &str) {
         if !(0.0 <= self.min.width && self.min.width <= self.max.width)
             || !(0.0 <= self.min.height && self.min.height <= self.max.height)
         {

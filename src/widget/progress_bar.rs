@@ -89,9 +89,7 @@ impl Widget<f64> for ProgressBarRaw {
         _data: &f64,
         env: &Env,
     ) -> Size {
-        if log::log_enabled!(log::Level::Warn) {
-            bc.check("ProgressBar");
-        }
+        bc.debug_check("ProgressBar");
 
         let default_width = 100.0;
 

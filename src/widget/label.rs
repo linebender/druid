@@ -110,9 +110,8 @@ impl<T: Data> Widget<T> for Label<T> {
         _data: &T,
         env: &Env,
     ) -> Size {
-        if log::log_enabled!(log::Level::Warn) {
-            bc.check("Label");
-        }
+        bc.debug_check("Label");
+
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let text_layout = self.get_layout(layout_ctx.text(), env);
         // This magical 1.2 constant helps center the text vertically in the rect it's given
@@ -197,9 +196,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
         data: &T,
         env: &Env,
     ) -> Size {
-        if log::log_enabled!(log::Level::Warn) {
-            bc.check("Label");
-        }
+        bc.debug_check("DynLabel");
 
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let text_layout = self.get_layout(layout_ctx.text(), env, data);

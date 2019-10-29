@@ -54,9 +54,7 @@ impl<T: Data> Widget<T> for Padding<T> {
         data: &T,
         env: &Env,
     ) -> Size {
-        if log::log_enabled!(log::Level::Warn) {
-            bc.check("Padding");
-        }
+        bc.debug_check("Padding");
 
         let hpad = self.left + self.right;
         let vpad = self.top + self.bottom;

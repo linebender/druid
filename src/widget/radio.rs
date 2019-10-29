@@ -111,9 +111,7 @@ impl<T: Data + PartialEq> Widget<T> for RadioRaw<T> {
         data: &T,
         env: &Env,
     ) -> Size {
-        if log::log_enabled!(log::Level::Warn) {
-            bc.check("Radio");
-        }
+        bc.debug_check("Radio");
 
         let label_size = self.child_label.layout(layout_ctx, &bc, data, env);
         let padding = 5.0;

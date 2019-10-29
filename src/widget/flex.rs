@@ -141,9 +141,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         data: &T,
         env: &Env,
     ) -> Size {
-        if log::log_enabled!(log::Level::Warn) {
-            bc.check("Flex");
-        }
+        bc.debug_check("Flex");
 
         // Measure non-flex children.
         let mut total_non_flex = 0.0;
@@ -178,11 +176,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             if child.params.flex != 0.0 {
                 let major = remaining * child.params.flex / flex_sum;
 
-                let min_major = if major == std::f64::INFINITY {
-                    0.0
-                } else {
-                    major
-                };
+                let min_major = if major.is_infinite() { 0.0 } else { major };
 
                 let child_bc = match self.direction {
                     Axis::Horizontal => BoxConstraints::new(
@@ -212,10 +206,8 @@ impl<T: Data> Widget<T> for Flex<T> {
             major += self.direction.major(rect.size());
         }
 
-        if log::log_enabled!(log::Level::Warn) {
-            if flex_sum > 0.0 && total_major == std::f64::INFINITY {
-                log::warn!("A child of Flex is flex, but Flex is unbounded.")
-            }
+        if flex_sum > 0.0 && total_major.is_infinite() {
+            log::warn!("A child of Flex is flex, but Flex is unbounded.")
         }
 
         if flex_sum > 0.0 {
