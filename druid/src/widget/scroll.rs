@@ -169,14 +169,9 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     fn calc_vertical_bar_bounds(&self, viewport: &Rect) -> Rect {
         let scrollbar_bounds = self.calc_scollbar_bounds(viewport);
 
-        let content_size = Size::new(
-            viewport.width() - 2.0 * SCROLL_BAR_PAD,
-            viewport.height() - 2.0 * SCROLL_BAR_PAD,
-        );
+        let scale_y = viewport.height() / self.child_size.height;
 
-        let scale_y = content_size.height / self.child_size.height;
-
-        let h = (scale_y * content_size.height).ceil();
+        let h = (scale_y * viewport.height()).ceil();
         let dh = (scale_y * self.scroll_offset.y).ceil();
 
         let x0 = scrollbar_bounds.x1 - SCROLL_BAR_WIDTH;
@@ -191,14 +186,9 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     fn calc_horizontal_bar_bounds(&self, viewport: &Rect) -> Rect {
         let scrollbar_bounds = self.calc_scollbar_bounds(viewport);
 
-        let content_size = Size::new(
-            viewport.width() - 2.0 * SCROLL_BAR_PAD,
-            viewport.height() - 2.0 * SCROLL_BAR_PAD,
-        );
+        let scale_x = viewport.width() / self.child_size.width;
 
-        let scale_x = content_size.width / self.child_size.width;
-
-        let w = (scale_x * content_size.width).ceil();
+        let w = (scale_x * viewport.width()).ceil();
         let dw = (scale_x * self.scroll_offset.x).ceil();
 
         let x0 = scrollbar_bounds.x0 + dw;
