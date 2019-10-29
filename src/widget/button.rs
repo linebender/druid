@@ -117,6 +117,8 @@ impl<T: Data> Widget<T> for Button<T> {
         data: &T,
         env: &Env,
     ) -> Size {
+        bc.debug_check("Button");
+
         self.label.layout(layout_ctx, bc, data, env)
     }
 

@@ -137,6 +137,8 @@ impl Widget<f64> for SliderRaw {
         _data: &f64,
         env: &Env,
     ) -> Size {
+        bc.debug_check("Slider");
+
         let default_width = 100.0;
 
         if bc.is_width_bounded() {

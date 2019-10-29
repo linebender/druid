@@ -83,6 +83,8 @@ impl Widget<bool> for CheckboxRaw {
         _data: &bool,
         env: &Env,
     ) -> Size {
+        bc.debug_check("Checkbox");
+
         bc.constrain(Size::new(
             env.get(theme::BASIC_WIDGET_HEIGHT),
             env.get(theme::BASIC_WIDGET_HEIGHT),
