@@ -242,7 +242,8 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
 
     fn mouse_over_vertical_bar(&self, viewport: Rect, pos: Point) -> bool {
         if viewport.height() < self.child_size.height {
-            return self.calc_vertical_bar_bounds(&viewport).contains(pos);
+            let bounds = self.calc_vertical_bar_bounds(&viewport);
+            return pos.y > bounds.y0 && pos.y < bounds.y1 && pos.x > bounds.x0;
         }
 
         return false;
@@ -250,7 +251,8 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
 
     fn mouse_over_horizontal_bar(&self, viewport: Rect, pos: Point) -> bool {
         if viewport.width() < self.child_size.width {
-            return self.calc_horizontal_bar_bounds(&viewport).contains(pos);
+            let bounds = self.calc_horizontal_bar_bounds(&viewport);
+            return pos.x > bounds.x0 && pos.x < bounds.x1 && pos.y > bounds.y0;
         }
 
         return false;
