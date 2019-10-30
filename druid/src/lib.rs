@@ -342,6 +342,22 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
         };
         f(&mut child_ctx)
     }
+
+    /// Creates a temporary `PaintCtx` with the given transform applied,
+    /// and called the closure with it.
+    pub fn with_transform_ctx(&mut self, transform: Affine, f: impl FnOnce(&mut PaintCtx)) {
+        if let Err(e) = self.render_ctx.save() {
+            log::error!("saving render context failed: {:?}", e);
+            return;
+        }
+
+        self.render_ctx.transform(transform);
+        f(self);
+
+        if let Err(e) = self.render_ctx.restore() {
+            error!("restoring render context failed: {:?}", e);
+        }
+    }
 }
 
 /// A context provided to layout handling methods of widgets.
