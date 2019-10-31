@@ -28,9 +28,7 @@ pub use druid_derive_data::Data;
 ///
 /// ## Derive macro
 ///
-/// For simple types where each field implements `Data`, one should
-/// use the `derive(Data)` attribute on the type in question instead of
-/// writing the implementation by hand.
+/// In general, you can use `derive` to generate a `Data` impl for your types.
 ///
 /// ```
 /// # use std::sync::Arc;
@@ -42,10 +40,53 @@ pub use druid_derive_data::Data;
 /// }
 /// ```
 ///
-/// Note that in the case of a union that only contains tags without
-/// fields, the implementation that is generated checks for
-/// equality. Therefore, such types must also implement the [`Eq`]
-/// trait.
+/// ### Derive macro attributes
+///
+/// There are a number of field attributes available for use with `derive(Data)`.
+///
+/// - **`#[druid(ignore)]`**
+///
+/// Skip this field when computing `same`ness.
+///
+/// If the type you are implementing `Data` on contains some fields that are
+/// not relevant to the `Data` impl, you can ignore them with this attribute.
+///
+/// - **`#[druid(same_fn = "path")]`**
+///
+/// Use a specific function to compute `same`ness.
+///
+/// By default, derived implementations of `Data` just call [`Data::same`]
+/// recursively on each field. With this attribute, you can specify a
+/// custom function that will be used instead.
+///
+/// This function must have a signature in the form, `fn<T>(&T, &T) -> bool`,
+/// where `T` is the type of the field.
+///
+/// ### Example:
+///
+/// ```
+/// # use std::path::PathBuf;
+/// # use std::time::Instant;
+/// # use druid::Data;
+/// #[derive(Clone, Data)]
+/// struct PathEntry {
+///     // There's no Data impl for PathBuf, but no problem
+///     #[druid(same_fn = "PartialEq::eq")]
+///     path: PathBuf,
+///     priority: usize,
+///     // This field is not part of our data model.
+///     #[druid(ignore)]
+///     last_read: Instant,
+/// }
+/// ```
+///
+/// ## C-style enums
+///
+/// In the case of a "c-style" enum (one that only contains unit variants,
+/// that is where no variant has fields), the implementation that is generated
+/// checks for equality. Therefore, such types must also implement `PartialEq`.
+///
+/// [`Data::same`]: trait.Data.html#tymethod.same
 pub trait Data: Clone {
     /// Determine whether two values are the same.
     ///
