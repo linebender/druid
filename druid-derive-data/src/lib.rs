@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! The implementation for #[derive(Data)]
+
 extern crate proc_macro;
+
+mod attr;
+use attr::{Field, FieldKind, Fields};
 
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
-use syn::{parse_macro_input, spanned::Spanned, Data, DataEnum, DataStruct, Fields};
+use syn::{parse_macro_input, spanned::Spanned, Data, DataEnum, DataStruct};
 
 #[proc_macro_derive(Data, attributes(druid))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -37,84 +42,6 @@ fn derive_inner(input: syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
     }
 }
 
-fn number_to_tokenstream(i: usize) -> proc_macro2::TokenStream {
-    let lit = proc_macro2::Literal::usize_unsuffixed(i);
-    let lit: proc_macro2::TokenTree = lit.into();
-    lit.into()
-}
-
-enum EnumKind {
-    Named,
-    Unnamed,
-}
-
-fn extract_fields(
-    fs: &syn::Fields,
-) -> Result<(EnumKind, Vec<proc_macro2::TokenStream>), syn::Error> {
-    match fs {
-        Fields::Named(fs) => {
-            let idents = fs
-                .named
-                .iter()
-                .filter_map(|field| match should_ignore_field(field) {
-                    Ok(true) => None,
-                    Ok(false) => {
-                        let ident = field.ident.as_ref().expect("expected named field");
-                        Some(Ok(quote_spanned!(ident.span()=> #ident)))
-                    }
-                    Err(e) => Some(Err(e)),
-                })
-                .collect::<Result<_, _>>()?;
-            Ok((EnumKind::Named, idents))
-        }
-        Fields::Unnamed(fs) => {
-            let idents = fs
-                .unnamed
-                .iter()
-                .enumerate()
-                .filter_map(|(i, field)| match should_ignore_field(field) {
-                    Ok(true) => None,
-                    Ok(false) => Some(Ok(number_to_tokenstream(i))),
-                    Err(e) => Some(Err(e)),
-                })
-                .collect::<Result<_, _>>()?;
-            Ok((EnumKind::Unnamed, idents))
-        }
-        Fields::Unit => Ok((EnumKind::Unnamed, Vec::default())),
-    }
-}
-
-/// Looks for an attribute of the format `druid(ignore)`.
-///
-/// Returns an error if there are confusing or unexpected attributes.
-//TODO: if we ever get additional attributes we need to be more systematic;
-//we should have an Attrs struct that we parse for all the attributes we know,
-//and then pass that along.
-fn should_ignore_field(field: &syn::Field) -> Result<bool, syn::Error> {
-    for attr in field.attrs.iter() {
-        if !attr.path.is_ident("druid") {
-            continue;
-        }
-        match attr.parse_meta()? {
-            syn::Meta::List(meta) => {
-                for nested in meta.nested.iter() {
-                    if let syn::NestedMeta::Meta(syn::Meta::Path(path)) = nested {
-                        if path.is_ident("ignore") {
-                            return Ok(true);
-                        } else {
-                            return Err(syn::Error::new(path.span(), "Unknown attribute"));
-                        }
-                    } else {
-                        return Err(syn::Error::new(nested.span(), "Unknown attribute"));
-                    }
-                }
-            }
-            other => return Err(syn::Error::new(other.span(), "Unknown attribute")),
-        }
-    }
-    Ok(false)
-}
-
 fn derive_struct(
     input: &syn::DeriveInput,
     s: &DataStruct,
@@ -123,7 +50,8 @@ fn derive_struct(
     let generics = &input.generics;
 
     let ty = &input.ident;
-    let fields = extract_fields(&s.fields)?.1;
+    let fields = Fields::parse_ast(&s.fields)?;
+    let fields = fields.iter().filter(|f| !f.ignore).map(Field::ident_tokens);
 
     let res = quote! {
         impl<#generics_bounds> druid::Data for #ty #generics {
@@ -141,13 +69,10 @@ fn ident_from_str(s: &str) -> proc_macro2::Ident {
 }
 
 fn is_c_style_enum(s: &DataEnum) -> bool {
-    s.variants.iter().all(|variant| {
-        use Fields::*;
-        match &variant.fields {
-            Named(fs) => fs.named.is_empty(),
-            Unnamed(fs) => fs.unnamed.is_empty(),
-            Unit => true,
-        }
+    s.variants.iter().all(|variant| match &variant.fields {
+        syn::Fields::Named(fs) => fs.named.is_empty(),
+        syn::Fields::Unnamed(fs) => fs.unnamed.is_empty(),
+        syn::Fields::Unit => true,
     })
 }
 
@@ -173,63 +98,62 @@ fn derive_enum(
         .variants
         .iter()
         .map(|variant| {
-            let ident = &variant.ident;
-            let (kind, idents) = extract_fields(&variant.fields)?;
+            let fields = Fields::parse_ast(&variant.fields)?;
+            let variant = &variant.ident;
 
-            let tests: Vec<_> = idents
+            // the various inner `same()` calls, to the right of the match arm.
+            let tests: Vec<_> = fields
                 .iter()
-                .enumerate()
-                .map(|(i, _)| {
-                    let var_left = ident_from_str(&format!("left{}", i));
-                    let var_right = ident_from_str(&format!("right{}", i));
+                .filter(|field| !field.ignore)
+                .map(|field| {
+                    let var_left = ident_from_str(&format!("__self_{}", field.ident_string()));
+                    let var_right = ident_from_str(&format!("__other_{}", field.ident_string()));
                     quote!( #var_left.same(#var_right) )
                 })
                 .collect();
 
-            if let EnumKind::Named = kind {
-                let lefts: Vec<_> = idents
+            if let FieldKind::Named = fields.kind {
+                let lefts: Vec<_> = fields
                     .iter()
-                    .enumerate()
-                    .map(|(i, ident)| {
-                        let var = ident_from_str(&format!("left{}", i));
+                    .map(|field| {
+                        let ident = field.ident_tokens();
+                        let var = ident_from_str(&format!("__self_{}", field.ident_string()));
                         quote!( #ident: #var )
                     })
                     .collect();
-                let rights: Vec<_> = idents
+                let rights: Vec<_> = fields
                     .iter()
-                    .enumerate()
-                    .map(|(i, ident)| {
-                        let var = ident_from_str(&format!("right{}", i));
+                    .map(|field| {
+                        let ident = field.ident_tokens();
+                        let var = ident_from_str(&format!("__other_{}", field.ident_string()));
                         quote!( #ident: #var )
                     })
                     .collect();
 
                 Ok(quote! {
-                    (#ty :: #ident { #( #lefts ),* }, #ty :: #ident { #( #rights ),* }) => {
+                    (#ty :: #variant { #( #lefts ),* }, #ty :: #variant { #( #rights ),* }) => {
                         #( #tests )&&*
                     }
                 })
             } else {
-                let vars_left: Vec<_> = idents
+                let vars_left: Vec<_> = fields
                     .iter()
-                    .enumerate()
-                    .map(|(i, _)| ident_from_str(&format!("left{}", i)))
+                    .map(|field| ident_from_str(&format!("__self_{}", field.ident_string())))
                     .collect();
-                let vars_right: Vec<_> = idents
+                let vars_right: Vec<_> = fields
                     .iter()
-                    .enumerate()
-                    .map(|(i, _)| ident_from_str(&format!("right{}", i)))
+                    .map(|field| ident_from_str(&format!("__other_{}", field.ident_string())))
                     .collect();
 
-                if idents.len() > 0 {
+                if fields.iter().filter(|field| !field.ignore).count() > 0 {
                     Ok(quote! {
-                        ( #ty :: #ident( #(#vars_left),* ),  #ty :: #ident( #(#vars_right),* )) => {
+                        ( #ty :: #variant( #(#vars_left),* ),  #ty :: #variant( #(#vars_right),* )) => {
                             #( #tests )&&*
                         }
                     })
                 } else {
                     Ok(quote! {
-                       ( #ty :: #ident ,  #ty :: #ident ) => { true }
+                       ( #ty :: #variant ,  #ty :: #variant ) => { true }
                     })
                 }
             }
