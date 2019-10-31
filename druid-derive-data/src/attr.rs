@@ -14,12 +14,14 @@
 
 //! parsing #[druid(attributes)]
 
-use proc_macro2::{Ident, Literal, Span, TokenTree};
+use proc_macro2::{Ident, Literal, Span, TokenStream, TokenTree};
+use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
-use syn::{Error, Meta, NestedMeta};
+use syn::{Error, ExprPath, Meta, NestedMeta};
 
 const BASE_ATTR_PATH: &str = "druid";
 const IGNORE_ATTR_PATH: &str = "ignore";
+const SAME_FN_ATTR_PATH: &str = "same_fn";
 
 /// The fields for a struct or an enum variant.
 #[derive(Debug)]
@@ -47,6 +49,7 @@ pub struct Field {
     pub ident: FieldIdent,
     /// `true` if this field should be ignored.
     pub ignore: bool,
+    pub same_fn: Option<ExprPath>,
     //TODO: more attrs here
 }
 
@@ -79,6 +82,7 @@ impl Field {
         };
 
         let mut ignore = false;
+        let mut same_fn = None;
 
         for attr in field
             .attrs
@@ -97,6 +101,16 @@ impl Field {
                                 }
                                 ignore = true;
                             }
+                            NestedMeta::Meta(Meta::NameValue(meta))
+                                if meta.path.is_ident(SAME_FN_ATTR_PATH) =>
+                            {
+                                if same_fn.is_some() {
+                                    return Err(Error::new(meta.span(), "Duplicate attribute"));
+                                }
+
+                                let path = parse_lit_into_expr_path(&meta.lit)?;
+                                same_fn = Some(path);
+                            }
                             other => return Err(Error::new(other.span(), "Unknown attribute")),
                         }
                     }
@@ -109,7 +123,11 @@ impl Field {
                 }
             }
         }
-        Ok(Field { ident, ignore })
+        Ok(Field {
+            ident,
+            ignore,
+            same_fn,
+        })
     }
 
     pub fn ident_tokens(&self) -> TokenTree {
@@ -125,4 +143,29 @@ impl Field {
             FieldIdent::Unnamed(num) => num.to_string(),
         }
     }
+
+    /// The tokens to be used as the function for 'same'.
+    pub fn same_fn_path_tokens(&self) -> TokenStream {
+        match self.same_fn {
+            Some(ref f) => quote!(#f),
+            None => {
+                let span = Span::call_site();
+                quote_spanned!(span=> druid::Data::same)
+            }
+        }
+    }
+}
+
+fn parse_lit_into_expr_path(lit: &syn::Lit) -> Result<ExprPath, Error> {
+    let string = if let syn::Lit::Str(lit) = lit {
+        lit
+    } else {
+        return Err(Error::new(
+            lit.span(),
+            "expected str, found... something else",
+        ));
+    };
+
+    let tokens = syn::parse_str(&string.value())?;
+    syn::parse2(tokens)
 }
