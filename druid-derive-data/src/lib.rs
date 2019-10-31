@@ -18,7 +18,7 @@ use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::{parse_macro_input, spanned::Spanned, Data, DataEnum, DataStruct, Fields};
 
-#[proc_macro_derive(Data)]
+#[proc_macro_derive(Data, attributes(druid))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
     derive_inner(input)
@@ -48,30 +48,71 @@ enum EnumKind {
     Unnamed,
 }
 
-fn extract_fields(fs: &syn::Fields) -> (EnumKind, Vec<proc_macro2::TokenStream>) {
+fn extract_fields(
+    fs: &syn::Fields,
+) -> Result<(EnumKind, Vec<proc_macro2::TokenStream>), syn::Error> {
     match fs {
         Fields::Named(fs) => {
             let idents = fs
                 .named
                 .iter()
-                .map(|f| {
-                    let ident = f.ident.as_ref().expect("expected named field");
-                    quote_spanned!(ident.span()=> #ident)
+                .filter_map(|field| match should_ignore_field(field) {
+                    Ok(true) => None,
+                    Ok(false) => {
+                        let ident = field.ident.as_ref().expect("expected named field");
+                        Some(Ok(quote_spanned!(ident.span()=> #ident)))
+                    }
+                    Err(e) => Some(Err(e)),
                 })
-                .collect();
-            (EnumKind::Named, idents)
+                .collect::<Result<_, _>>()?;
+            Ok((EnumKind::Named, idents))
         }
         Fields::Unnamed(fs) => {
             let idents = fs
                 .unnamed
                 .iter()
                 .enumerate()
-                .map(|(i, _)| number_to_tokenstream(i))
-                .collect();
-            (EnumKind::Unnamed, idents)
+                .filter_map(|(i, field)| match should_ignore_field(field) {
+                    Ok(true) => None,
+                    Ok(false) => Some(Ok(number_to_tokenstream(i))),
+                    Err(e) => Some(Err(e)),
+                })
+                .collect::<Result<_, _>>()?;
+            Ok((EnumKind::Unnamed, idents))
         }
-        Fields::Unit => (EnumKind::Unnamed, Vec::default()),
+        Fields::Unit => Ok((EnumKind::Unnamed, Vec::default())),
     }
+}
+
+/// Looks for an attribute of the format `druid(ignore)`.
+///
+/// Returns an error if there are confusing or unexpected attributes.
+//TODO: if we ever get additional attributes we need to be more systematic;
+//we should have an Attrs struct that we parse for all the attributes we know,
+//and then pass that along.
+fn should_ignore_field(field: &syn::Field) -> Result<bool, syn::Error> {
+    for attr in field.attrs.iter() {
+        if !attr.path.is_ident("druid") {
+            continue;
+        }
+        match attr.parse_meta()? {
+            syn::Meta::List(meta) => {
+                for nested in meta.nested.iter() {
+                    if let syn::NestedMeta::Meta(syn::Meta::Path(path)) = nested {
+                        if path.is_ident("ignore") {
+                            return Ok(true);
+                        } else {
+                            return Err(syn::Error::new(path.span(), "Unknown attribute"));
+                        }
+                    } else {
+                        return Err(syn::Error::new(nested.span(), "Unknown attribute"));
+                    }
+                }
+            }
+            other => return Err(syn::Error::new(other.span(), "Unknown attribute")),
+        }
+    }
+    Ok(false)
 }
 
 fn derive_struct(
@@ -82,7 +123,7 @@ fn derive_struct(
     let generics = &input.generics;
 
     let ty = &input.ident;
-    let fields = extract_fields(&s.fields).1;
+    let fields = extract_fields(&s.fields)?.1;
 
     let res = quote! {
         impl<#generics_bounds> druid::Data for #ty #generics {
@@ -128,12 +169,12 @@ fn derive_enum(
         return Ok(res);
     }
 
-    let cases: Vec<_> = s
+    let cases: Vec<proc_macro2::TokenStream> = s
         .variants
         .iter()
         .map(|variant| {
             let ident = &variant.ident;
-            let (kind, idents) = extract_fields(&variant.fields);
+            let (kind, idents) = extract_fields(&variant.fields)?;
 
             let tests: Vec<_> = idents
                 .iter()
@@ -163,11 +204,11 @@ fn derive_enum(
                     })
                     .collect();
 
-                quote! {
+                Ok(quote! {
                     (#ty :: #ident { #( #lefts ),* }, #ty :: #ident { #( #rights ),* }) => {
                         #( #tests )&&*
                     }
-                }
+                })
             } else {
                 let vars_left: Vec<_> = idents
                     .iter()
@@ -181,19 +222,19 @@ fn derive_enum(
                     .collect();
 
                 if idents.len() > 0 {
-                    quote! {
+                    Ok(quote! {
                         ( #ty :: #ident( #(#vars_left),* ),  #ty :: #ident( #(#vars_right),* )) => {
                             #( #tests )&&*
                         }
-                    }
+                    })
                 } else {
-                    quote! {
+                    Ok(quote! {
                        ( #ty :: #ident ,  #ty :: #ident ) => { true }
-                    }
+                    })
                 }
             }
         })
-        .collect();
+        .collect::<Result<Vec<proc_macro2::TokenStream>, syn::Error>>()?;
 
     let generics_bounds = generics_bounds(&input.generics);
     let generics = &input.generics;
