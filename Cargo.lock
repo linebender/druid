@@ -196,7 +196,7 @@ dependencies = [
 name = "druid"
 version = "0.3.0"
 dependencies = [
- "druid-derive-data 0.1.0",
+ "druid-derive-data 0.1.1",
  "druid-derive-lens 0.1.0",
  "druid-shell 0.3.0",
  "fluent-bundle 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -210,7 +210,7 @@ dependencies = [
 
 [[package]]
 name = "druid-derive-data"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proc-macro2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",

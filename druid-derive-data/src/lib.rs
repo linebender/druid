@@ -51,12 +51,16 @@ fn derive_struct(
 
     let ty = &input.ident;
     let fields = Fields::parse_ast(&s.fields)?;
+    let same_fns = fields
+        .iter()
+        .filter(|f| !f.ignore)
+        .map(Field::same_fn_path_tokens);
     let fields = fields.iter().filter(|f| !f.ignore).map(Field::ident_tokens);
 
     let res = quote! {
         impl<#generics_bounds> druid::Data for #ty #generics {
             fn same(&self, other: &Self) -> bool {
-                #( self.#fields.same(&other.#fields) )&&*
+                #( #same_fns(&self.#fields, &other.#fields) )&&*
             }
         }
     };
@@ -106,9 +110,10 @@ fn derive_enum(
                 .iter()
                 .filter(|field| !field.ignore)
                 .map(|field| {
+                    let same_fn = field.same_fn_path_tokens();
                     let var_left = ident_from_str(&format!("__self_{}", field.ident_string()));
                     let var_right = ident_from_str(&format!("__other_{}", field.ident_string()));
-                    quote!( #var_left.same(#var_right) )
+                    quote!( #same_fn(#var_left, #var_right) )
                 })
                 .collect();
 
