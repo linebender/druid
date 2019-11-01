@@ -65,14 +65,12 @@ impl Widget<String> for CustomWidget {
         let font = paint_ctx
             .text()
             .new_font_by_name("Segoe UI", 24.0)
-            .unwrap()
             .build()
             .unwrap();
         // Here's where we actually use the UI state
         let layout = paint_ctx
             .text()
             .new_text_layout(&font, data)
-            .unwrap()
             .build()
             .unwrap();
 

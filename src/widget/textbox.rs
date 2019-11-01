@@ -127,12 +127,8 @@ impl TextBoxRaw {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         // TODO: caching of both the format and the layout
-        let font = t
-            .new_font_by_name(font_name, font_size)
-            .unwrap()
-            .build()
-            .unwrap();
-        t.new_text_layout(&font, data).unwrap().build().unwrap()
+        let font = t.new_font_by_name(font_name, font_size).build().unwrap();
+        t.new_text_layout(&font, data).build().unwrap()
     }
 
     fn insert(&mut self, src: &mut String, new: &str) {

@@ -73,12 +73,8 @@ impl<T: Data> Label<T> {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let text = self.text.display_text();
         // TODO: caching of both the format and the layout
-        let font = t
-            .new_font_by_name(font_name, font_size)
-            .unwrap()
-            .build()
-            .unwrap();
-        t.new_text_layout(&font, text).unwrap().build().unwrap()
+        let font = t.new_font_by_name(font_name, font_size).build().unwrap();
+        t.new_text_layout(&font, text).build().unwrap()
     }
 }
 
@@ -163,12 +159,8 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
 
         // TODO: caching of both the format and the layout
-        let font = t
-            .new_font_by_name(font_name, font_size)
-            .unwrap()
-            .build()
-            .unwrap();
-        t.new_text_layout(&font, &text).unwrap().build().unwrap()
+        let font = t.new_font_by_name(font_name, font_size).build().unwrap();
+        t.new_text_layout(&font, &text).build().unwrap()
     }
 }
 

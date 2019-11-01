@@ -36,7 +36,7 @@ version = "0.3.0"
 
 [dependencies.druid-derive-data]
 path = "druid-derive-data"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies.druid-derive-lens]
 path = "druid-derive-lens"

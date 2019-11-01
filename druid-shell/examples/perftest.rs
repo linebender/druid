@@ -60,7 +60,6 @@ impl WinHandler for PerfTest {
         let font = piet
             .text()
             .new_font_by_name("Consolas", 15.0)
-            .unwrap()
             .build()
             .unwrap();
 
@@ -68,21 +67,11 @@ impl WinHandler for PerfTest {
         let now = now.sec as f64 + 1e-9 * now.nsec as f64;
         let msg = format!("{:3.1}ms", 1e3 * (now - self.last_time));
         self.last_time = now;
-        let layout = piet
-            .text()
-            .new_text_layout(&font, &msg)
-            .unwrap()
-            .build()
-            .unwrap();
+        let layout = piet.text().new_text_layout(&font, &msg).build().unwrap();
         piet.draw_text(&layout, (10.0, 210.0), &FG_COLOR);
 
         let msg = "Hello DWrite! This is a somewhat longer string of text intended to provoke slightly longer draw times.";
-        let layout = piet
-            .text()
-            .new_text_layout(&font, &msg)
-            .unwrap()
-            .build()
-            .unwrap();
+        let layout = piet.text().new_text_layout(&font, &msg).build().unwrap();
         let dy = 15.0;
         let x0 = 210.0;
         let y0 = 10.0;
