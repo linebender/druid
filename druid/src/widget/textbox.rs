@@ -324,6 +324,7 @@ impl Widget<String> for TextBox {
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
+                ctx.set_active(true);
                 let cursor_off = self.offset_for_point(mouse.pos, &text_layout);
                 if mouse.mods.shift {
                     self.selection.end = cursor_off;
@@ -333,8 +334,18 @@ impl Widget<String> for TextBox {
                 ctx.invalidate();
                 self.reset_cursor_blink(ctx);
             }
-            Event::MouseMoved(_) => {
+            Event::MouseMoved(mouse) => {
                 ctx.set_cursor(&Cursor::IBeam);
+                if ctx.is_active() {
+                    self.selection.end = self.offset_for_point(mouse.pos, &text_layout);
+                    ctx.invalidate();
+                }
+            }
+            Event::MouseUp(_) => {
+                if ctx.is_active() {
+                    ctx.set_active(false);
+                    ctx.invalidate();
+                }
             }
             Event::Timer(id) => {
                 if *id == self.cursor_timer {
