@@ -17,7 +17,7 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-pub use druid_derive_data::Data;
+pub use druid_derive::Data;
 
 /// A trait used to represent value types.
 ///

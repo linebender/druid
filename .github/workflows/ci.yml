@@ -53,29 +53,17 @@ jobs:
           command: rustc
           args: --manifest-path=druid-shell/Cargo.toml -- -D warnings
 
-      - name: Run cargo check in druid/druid-derive-data
+      - name: Run cargo check in druid/druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: check
           args: --all --examples --manifest-path=druid-shell/Cargo.toml
 
-      - name: Run rustc -d warnings in druid/druid-derive-data
+      - name: Run rustc -d warnings in druid/druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: rustc
-          args: --manifest-path=druid-derive-data/Cargo.toml -- -D warnings
-
-      - name: Run cargo check in druid/druid-derive-lens
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all --examples --manifest-path=druid-shell/Cargo.toml
-
-      - name: Run rustc -d warnings in druid/druid-derive-lens
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=druid-derive-lens/Cargo.toml -- -D warnings
+          args: --manifest-path=druid-derive/Cargo.toml -- -D warnings
 
   rustfmt:
     runs-on: ubuntu-latest
@@ -103,17 +91,11 @@ jobs:
           command: fmt
           args: --all --manifest-path=druid-shell/Cargo.toml -- --check
 
-      - name: Run cargo fmt in druid/druid-derive-data
+      - name: Run cargo fmt in druid/druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all --manifest-path=druid-derive-data/Cargo.toml -- --check
-
-      - name: Run cargo fmt in druid/druid-derive-lens
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all --manifest-path=druid-derive-lens/Cargo.toml -- --check
+          args: --all --manifest-path=druid-derive/Cargo.toml -- --check
 
   test-stable:
     runs-on: ${{ matrix.os }}
@@ -152,17 +134,11 @@ jobs:
           command: test
           args: --all --manifest-path=druid-shell/Cargo.toml
 
-      - name: Run cargo test in druid/druid-derive-data
+      - name: Run cargo test in druid/druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all --manifest-path=druid-derive-data/Cargo.toml
-
-      - name: Run cargo test in druid/druid-derive-lens
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --manifest-path=druid-derive-lens/Cargo.toml
+          args: --all --manifest-path=druid-derive/Cargo.toml
 
   test-nightly:
     runs-on: ${{ matrix.os }}
@@ -201,17 +177,11 @@ jobs:
           command: test
           args: --all --manifest-path=druid-shell/Cargo.toml
 
-      - name: Run cargo test in druid/druid-derive-data
+      - name: Run cargo test in druid/druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all --manifest-path=druid-derive-data/Cargo.toml
-
-      - name: Run cargo test in druid/druid-derive-lens
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --manifest-path=druid-derive-lens/Cargo.toml
+          args: --all --manifest-path=druid-derive/Cargo.toml
 
   check-docs:
     name: Docs
@@ -250,14 +220,8 @@ jobs:
           command: doc
           args: --manifest-path=druid-shell/Cargo.toml --document-private-items
 
-      - name: check docs in druid/druid-derive-data
+      - name: check docs in druid/druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid-derive-data/Cargo.toml --document-private-items
-
-      - name: check docs in druid/druid-derive-lens
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=druid-derive-lens/Cargo.toml --document-private-items
+          args: --manifest-path=druid-derive/Cargo.toml --document-private-items

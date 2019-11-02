@@ -34,10 +34,6 @@ default-features = false
 path = "druid-shell"
 version = "0.3.0"
 
-[dependencies.druid-derive-data]
-path = "druid-derive-data"
+[dependencies.druid-derive]
+path = "druid-derive"
 version = "0.1.1"
-
-[dependencies.druid-derive-lens]
-path = "druid-derive-lens"
-version = "0.1.0"

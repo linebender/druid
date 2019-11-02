@@ -16,7 +16,7 @@
 
 use std::marker::PhantomData;
 
-pub use druid_derive_lens::Lens;
+pub use druid_derive::Lens;
 
 use crate::{
     BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx,
