@@ -14,24 +14,14 @@
 
 //! The implementation for #[derive(Data)]
 
-extern crate proc_macro;
+use crate::attr::{Field, FieldKind, Fields};
 
-mod attr;
-use attr::{Field, FieldKind, Fields};
-
-use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
-use syn::{parse_macro_input, spanned::Spanned, Data, DataEnum, DataStruct};
+use syn::{spanned::Spanned, Data, DataEnum, DataStruct};
 
-#[proc_macro_derive(Data, attributes(druid))]
-pub fn derive(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as syn::DeriveInput);
-    derive_inner(input)
-        .unwrap_or_else(|err| err.to_compile_error().into())
-        .into()
-}
-
-fn derive_inner(input: syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn::Error> {
+pub(crate) fn derive_data_impl(
+    input: syn::DeriveInput,
+) -> Result<proc_macro2::TokenStream, syn::Error> {
     match &input.data {
         Data::Struct(s) => derive_struct(&input, s),
         Data::Enum(e) => derive_enum(&input, e),

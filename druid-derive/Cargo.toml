@@ -1,7 +1,10 @@
 [package]
-name = "druid-derive-data"
+name = "druid-derive"
 version = "0.1.1"
+license = "Apache-2.0"
 authors = ["Druid authors"]
+description = "derive impls for druid, a Rust UI toolkit."
+repository = "https://github.com/xi-editor/druid"
 edition = "2018"
 
 [lib]

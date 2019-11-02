@@ -12,22 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate proc_macro;
-
-use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, spanned::Spanned, Data};
+use syn::{spanned::Spanned, Data};
 
-#[proc_macro_derive(Lens)]
-pub fn derive(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as syn::DeriveInput);
-
-    derive_inner(input)
-        .unwrap_or_else(|err| err.to_compile_error().into())
-        .into()
-}
-
-fn derive_inner(input: syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn::Error> {
+pub(crate) fn derive_lens_impl(
+    input: syn::DeriveInput,
+) -> Result<proc_macro2::TokenStream, syn::Error> {
     match &input.data {
         Data::Struct(_) => derive_struct(&input),
         Data::Enum(e) => Err(syn::Error::new(
