@@ -150,6 +150,21 @@ impl TextBoxRaw {
         self.selection.end
     }
 
+    /// For a given point, returns the corresponding offset (in bytes) of
+    /// the grapheme cluster closest to that point.
+    fn offset_for_point(
+        &self,
+        point: Point,
+        piet_text: &mut PietText,
+        data: &String,
+        env: &Env,
+    ) -> usize {
+        let layout = self.get_layout(piet_text, env, data);
+        let hscrolled_point = Point::new(point.x + self.hscroll_offset, point.y);
+        let hit_test = layout.hit_test_point(hscrolled_point);
+        hit_test.metrics.text_position
+    }
+
     /// Calculate a stateful scroll offset
     fn update_hscroll(&mut self, rc_text: &mut PietText, env: &Env, data: &String) {
         let cursor_x = self.substring_measurement_hack(rc_text, data, 0, self.cursor(), env);
@@ -324,10 +339,14 @@ impl Widget<String> for TextBoxRaw {
 
     fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut String, env: &Env) {
         match event {
-            Event::MouseDown(_) => {
+            Event::MouseDown(mouse) => {
                 ctx.request_focus();
-                // TODO: hit test and do this for real
-                self.cursor_to(self.selection.end);
+                let cursor_off = self.offset_for_point(mouse.pos, ctx.text(), data, env);
+                if mouse.mods.shift {
+                    self.selection.end = cursor_off;
+                } else {
+                    self.cursor_to(cursor_off);
+                }
                 ctx.invalidate();
                 self.reset_cursor_blink(ctx);
             }
