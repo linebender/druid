@@ -118,12 +118,16 @@ impl TextBox {
         }
     }
 
-    fn get_layout(&self, t: &mut PietText, env: &Env, data: &String) -> PietTextLayout {
+    fn get_layout(&self, piet_text: &mut PietText, data: &String, env: &Env) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         // TODO: caching of both the format and the layout
-        let font = t.new_font_by_name(font_name, font_size).build().unwrap();
-        t.new_text_layout(&font, data).build().unwrap()
+        let font = piet_text
+            .new_font_by_name(font_name, font_size)
+            .build()
+            .unwrap();
+
+        piet_text.new_text_layout(&font, data).build().unwrap()
     }
 
     fn insert(&mut self, src: &mut String, new: &str) {
@@ -147,23 +151,27 @@ impl TextBox {
 
     /// For a given point, returns the corresponding offset (in bytes) of
     /// the grapheme cluster closest to that point.
-    fn offset_for_point(
-        &self,
-        point: Point,
-        piet_text: &mut PietText,
-        data: &String,
-        env: &Env,
-    ) -> usize {
-        let layout = self.get_layout(piet_text, env, data);
+    fn offset_for_point(&self, point: Point, layout: &PietTextLayout) -> usize {
         let hscrolled_point = Point::new(point.x + self.hscroll_offset, point.y);
         let hit_test = layout.hit_test_point(hscrolled_point);
         hit_test.metrics.text_position
     }
 
+    /// Given an offset (in bytes) of a valid grapheme cluster, return
+    /// the corresponding x coordinate of that grapheme on the screen.
+    fn x_for_offset(&self, layout: &PietTextLayout, offset: usize) -> f64 {
+        if let Some(position) = layout.hit_test_text_position(offset) {
+            return position.point.x;
+        } else {
+            //TODO: what is the correct fallback here?
+            0.0
+        }
+    }
+
     /// Calculate a stateful scroll offset
-    fn update_hscroll(&mut self, rc_text: &mut PietText, env: &Env, data: &String) {
-        let cursor_x = self.substring_measurement_hack(rc_text, data, 0, self.cursor(), env);
-        let overall_text_width = self.substring_measurement_hack(rc_text, data, 0, data.len(), env);
+    fn update_hscroll(&mut self, layout: &PietTextLayout) {
+        let cursor_x = self.x_for_offset(layout, self.cursor());
+        let overall_text_width = layout.width();
 
         let padding = PADDING_LEFT * 2.;
         if overall_text_width < self.width {
@@ -199,26 +207,6 @@ impl TextBox {
             src.replace_range(self.selection.range(), "");
             self.cursor_to(self.selection.min());
         }
-    }
-
-    // TODO: do hit testing instead of this substring hack!
-    fn substring_measurement_hack(
-        &self,
-        piet_text: &mut PietText,
-        text: &String,
-        start: usize,
-        end: usize,
-        env: &Env,
-    ) -> f64 {
-        let mut x: f64 = 0.;
-
-        if let Some(substring) = text.get(start..end) {
-            x = self
-                .get_layout(piet_text, env, &substring.to_owned())
-                .width();
-        }
-
-        x
     }
 
     fn reset_cursor_blink(&mut self, ctx: &mut EventCtx) {
@@ -265,6 +253,9 @@ impl Widget<String> for TextBox {
             .with_save(|rc| {
                 rc.clip(clip_rect);
 
+                // Calculate layout
+                let text_layout = self.get_layout(rc.text(), data, env);
+
                 // Shift everything inside the clip by the hscroll_offset
                 rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
 
@@ -272,13 +263,11 @@ impl Widget<String> for TextBox {
                 if !self.selection.is_caret() {
                     let (left, right) = (self.selection.min(), self.selection.max());
 
-                    let selection_width =
-                        self.substring_measurement_hack(rc.text(), data, left, right, env);
+                    let selection_width = self.x_for_offset(&text_layout, right)
+                        - self.x_for_offset(&text_layout, left);
 
                     let selection_pos = Point::new(
-                        self.substring_measurement_hack(rc.text(), data, 0, left, env)
-                            + PADDING_LEFT
-                            - 1.,
+                        self.x_for_offset(&text_layout, left) + PADDING_LEFT - 1.,
                         PADDING_TOP - 2.,
                     );
                     let selection_rect = RoundedRect::from_origin_size(
@@ -290,7 +279,6 @@ impl Widget<String> for TextBox {
                 }
 
                 // Layout, measure, and draw text
-                let text_layout = self.get_layout(rc.text(), env, data);
                 let text_height = font_size * 0.8;
                 let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
 
@@ -298,8 +286,7 @@ impl Widget<String> for TextBox {
 
                 // Paint the cursor if focused and there's no selection
                 if has_focus && self.cursor_on && self.selection.is_caret() {
-                    let cursor_x =
-                        self.substring_measurement_hack(rc.text(), data, 0, self.cursor(), env);
+                    let cursor_x = self.x_for_offset(&text_layout, self.cursor());
                     let xy = text_pos + Vec2::new(cursor_x, 2. - font_size);
                     let x2y2 = xy + Vec2::new(0., font_size + 2.);
                     let line = Line::new(xy, x2y2);
@@ -333,10 +320,11 @@ impl Widget<String> for TextBox {
     }
 
     fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut String, env: &Env) {
+        let text_layout = self.get_layout(ctx.text(), data, env);
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
-                let cursor_off = self.offset_for_point(mouse.pos, ctx.text(), data, env);
+                let cursor_off = self.offset_for_point(mouse.pos, &text_layout);
                 if mouse.mods.shift {
                     self.selection.end = cursor_off;
                 } else {
@@ -443,7 +431,7 @@ impl Widget<String> for TextBox {
                     }
                     _ => {}
                 }
-                self.update_hscroll(ctx.text(), env, data);
+                self.update_hscroll(&text_layout);
                 ctx.invalidate();
             }
             _ => (),
