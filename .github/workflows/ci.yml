@@ -5,66 +5,6 @@ on:
   pull_request:
 
 jobs:
-  check-stable:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macOS-10.14, windows-2019, ubuntu-latest]
-    name: cargo check stable
-    steps:
-      - uses: actions/checkout@v1
-      - name: install cairo
-        run: brew install cairo
-        if: contains(matrix.os, 'mac')
-
-      - name: install libgtk-dev
-        run: |
-          sudo apt update
-          sudo apt install libgtk-3-dev
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-
-      - name: Run cargo check in druid/
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all --examples
-
-      - name: Run rustc -D warnings in druid/
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: -- -D warnings
-
-      - name: Run cargo check in druid/druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all --examples --manifest-path=druid-shell/Cargo.toml
-
-      - name: Run rustc -d warnings in druid/druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=druid-shell/Cargo.toml -- -D warnings
-
-      - name: Run cargo check in druid/druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all --examples --manifest-path=druid-shell/Cargo.toml
-
-      - name: Run rustc -d warnings in druid/druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=druid-derive/Cargo.toml -- -D warnings
-
   rustfmt:
     runs-on: ubuntu-latest
     name: rustfmt
@@ -139,6 +79,24 @@ jobs:
         with:
           command: test
           args: --all --manifest-path=druid-derive/Cargo.toml
+
+      - name: Run rustc -D warnings in druid/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: -- -D warnings
+
+      - name: Run rustc -d warnings in druid/druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=druid-shell/Cargo.toml -- -D warnings
+
+      - name: Run rustc -d warnings in druid/druid-derive
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=druid-derive/Cargo.toml -- -D warnings
 
   test-nightly:
     runs-on: ${{ matrix.os }}
