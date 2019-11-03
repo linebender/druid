@@ -19,23 +19,11 @@ jobs:
       - name: install rustfmt
         run: rustup component add rustfmt
 
-      - name: Run cargo fmt in druid
+      - name: cargo fmt
         uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
-
-      - name: Run cargo fmt in druid/druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all --manifest-path=druid-shell/Cargo.toml -- --check
-
-      - name: Run cargo fmt in druid/druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all --manifest-path=druid-derive/Cargo.toml -- --check
 
   test-stable:
     runs-on: ${{ matrix.os }}
@@ -62,29 +50,17 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Run cargo test in druid/
+      - name: cargo test --all
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all
 
-      - name: Run cargo test in druid/druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --manifest-path=druid-shell/Cargo.toml
-
-      - name: Run cargo test in druid/druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --manifest-path=druid-derive/Cargo.toml
-
       - name: Run rustc -D warnings in druid/
         uses: actions-rs/cargo@v1
         with:
           command: rustc
-          args: -- -D warnings
+          args: --manifest-path=druid/Cargo.toml -- -D warnings
 
       - name: Run rustc -d warnings in druid/druid-shell
         uses: actions-rs/cargo@v1
@@ -123,23 +99,11 @@ jobs:
           toolchain: nightly
           override: true
 
-      - name: Run cargo test in druid/
+      - name: cargo test --all
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all
-
-      - name: Run cargo test in druid/druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --manifest-path=druid-shell/Cargo.toml
-
-      - name: Run cargo test in druid/druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --manifest-path=druid-derive/Cargo.toml
 
   check-docs:
     name: Docs
@@ -171,15 +135,3 @@ jobs:
         with:
           command: doc
           args: --document-private-items
-
-      - name: check docs in druid/druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --document-private-items
-
-      - name: check docs in druid/druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=druid-derive/Cargo.toml --document-private-items
