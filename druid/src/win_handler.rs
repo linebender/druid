@@ -26,7 +26,7 @@ use crate::kurbo::{Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 use crate::shell::application::Application;
 use crate::shell::dialog::FileDialogOptions;
-use crate::shell::window::{Cursor, WinCtx, WinHandler, WindowHandle};
+use crate::shell::window::{Cursor, MouseEvent, WinCtx, WinHandler, WindowHandle};
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::menu::ContextMenu;
@@ -34,7 +34,7 @@ use crate::theme;
 use crate::window::Window;
 use crate::{
     BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, MenuDesc,
-    MouseEvent, PaintCtx, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
+    PaintCtx, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
 };
 
 use crate::command::sys as sys_cmd;
@@ -586,17 +586,17 @@ impl<T: Data + 'static> WinHandler for DruidHandler<T> {
 
     fn mouse_down(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
         // TODO: double-click detection (or is this done in druid-shell?)
-        let event = Event::MouseDown(event.clone());
+        let event = Event::MouseDown(event.clone().into());
         self.do_event(event, ctx);
     }
 
     fn mouse_up(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
-        let event = Event::MouseUp(event.clone());
+        let event = Event::MouseUp(event.clone().into());
         self.do_event(event, ctx);
     }
 
     fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
-        let event = Event::MouseMoved(event.clone());
+        let event = Event::MouseMoved(event.clone().into());
         self.do_event(event, ctx);
     }
 
