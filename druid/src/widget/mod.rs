@@ -56,6 +56,9 @@ pub use crate::widget::radio::{Radio, RadioGroup};
 mod container;
 pub use crate::widget::container::Container;
 
+mod split;
+pub use crate::widget::split::Split;
+
 mod switch;
 pub use crate::widget::switch::Switch;
 
