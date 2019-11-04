@@ -27,6 +27,7 @@ mod event;
 mod lens;
 pub mod localization;
 pub mod menu;
+mod mouse;
 pub mod theme;
 pub mod widget;
 mod win_handler;
@@ -53,7 +54,7 @@ pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 #[allow(unused)]
 use druid_shell::platform::IdleHandle;
-pub use druid_shell::window::{Cursor, MouseButton, MouseEvent, TimerToken};
+pub use druid_shell::window::{Cursor, MouseButton, TimerToken};
 use druid_shell::window::{Text, WinCtx, WindowHandle};
 pub use shell::hotkey::{HotKey, RawMods, SysMods};
 
@@ -66,6 +67,7 @@ pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::MenuDesc;
+pub use mouse::MouseEvent;
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
 

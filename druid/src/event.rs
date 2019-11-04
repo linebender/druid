@@ -18,8 +18,9 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 
 use druid_shell::clipboard::ClipboardItem;
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
-use druid_shell::window::{FileInfo, MouseEvent, TimerToken};
+use druid_shell::window::{FileInfo, TimerToken};
 
+use crate::mouse::MouseEvent;
 use crate::Command;
 
 /// An event, propagated downwards during event flow.
