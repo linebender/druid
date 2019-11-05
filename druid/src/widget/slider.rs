@@ -14,7 +14,7 @@
 
 //! A slider widget.
 
-use crate::kurbo::{Circle, Point, Rect, RoundedRect, Size};
+use crate::kurbo::{Circle, Point, Rect, RoundedRect, Shape, Size};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::theme;
 use crate::widget::Align;
@@ -23,48 +23,38 @@ use crate::{
 };
 
 /// A slider, allowing interactive update of a numeric value.
-#[derive(Debug, Clone)]
-pub struct Slider;
-
-impl Slider {
-    pub fn new() -> impl Widget<f64> {
-        Align::vertical(UnitPoint::CENTER, SliderRaw::default())
-    }
-}
-
 #[derive(Debug, Clone, Default)]
-pub struct SliderRaw {
-    width: f64,
+pub struct Slider {
     knob_pos: Point,
     knob_hovered: bool,
     x_offset: f64,
 }
 
-impl SliderRaw {
+impl Slider {
+    pub fn new() -> impl Widget<f64> {
+        Align::vertical(UnitPoint::CENTER, Self::default())
+    }
+}
+
+impl Slider {
     fn knob_hit_test(&self, knob_width: f64, mouse_pos: Point) -> bool {
         let knob_circle = Circle::new(self.knob_pos, knob_width / 2.);
-        if mouse_pos.distance(knob_circle.center) < knob_circle.radius {
-            return true;
-        }
-        false
+        knob_circle.winding(mouse_pos) > 0
     }
 
-    fn calculate_value(&self, mouse_x: f64, knob_width: f64) -> f64 {
-        ((mouse_x + self.x_offset - knob_width / 2.) / (self.width - knob_width))
+    fn calculate_value(&self, mouse_x: f64, knob_width: f64, slider_width: f64) -> f64 {
+        ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
             .max(0.0)
             .min(1.0)
     }
 }
 
-impl Widget<f64> for SliderRaw {
+impl Widget<f64> for Slider {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, env: &Env) {
         let clamped = data.max(0.0).min(1.0);
         let rect = Rect::from_origin_size(Point::ORIGIN, base_state.size());
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let track_thickness = 4.;
-
-        //Store the width so we can calculate slider position from mouse events
-        self.width = rect.width();
 
         //Paint the background
         let background_width = rect.width() - knob_size;
@@ -90,7 +80,7 @@ impl Widget<f64> for SliderRaw {
         let is_active = base_state.is_active();
         let is_hovered = self.knob_hovered;
 
-        let knob_position = (self.width - knob_size) * clamped + knob_size / 2.;
+        let knob_position = (rect.width() - knob_size) * clamped + knob_size / 2.;
         self.knob_pos = Point::new(knob_position, knob_size / 2.);
         let knob_circle = Circle::new(self.knob_pos, knob_size / 2.);
 
@@ -156,6 +146,7 @@ impl Widget<f64> for SliderRaw {
 
     fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut f64, env: &Env) {
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let slider_width = ctx.base_state.size().width;
 
         match event {
             Event::MouseDown(mouse) => {
@@ -164,20 +155,20 @@ impl Widget<f64> for SliderRaw {
                     self.x_offset = self.knob_pos.x - mouse.pos.x
                 } else {
                     self.x_offset = 0.;
-                    *data = self.calculate_value(mouse.pos.x, knob_size);
+                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                 }
                 ctx.invalidate();
             }
             Event::MouseUp(mouse) => {
                 if ctx.is_active() {
                     ctx.set_active(false);
-                    *data = self.calculate_value(mouse.pos.x, knob_size);
+                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                     ctx.invalidate();
                 }
             }
             Event::MouseMoved(mouse) => {
                 if ctx.is_active() {
-                    *data = self.calculate_value(mouse.pos.x, knob_size);
+                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                 }
                 if ctx.is_hot() {
                     if self.knob_hit_test(knob_size, mouse.pos) {

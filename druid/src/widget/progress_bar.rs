@@ -23,19 +23,16 @@ use crate::{
 };
 
 /// A progress bar, displaying a numeric progress value.
-#[derive(Debug, Clone)]
-pub struct ProgressBar;
+#[derive(Debug, Clone, Default)]
+pub struct ProgressBar {}
 
 impl ProgressBar {
     pub fn new() -> impl Widget<f64> {
-        Align::vertical(UnitPoint::CENTER, ProgressBarRaw::default())
+        Align::vertical(UnitPoint::CENTER, Self::default())
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct ProgressBarRaw {}
-
-impl Widget<f64> for ProgressBarRaw {
+impl Widget<f64> for ProgressBar {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, env: &Env) {
         let clamped = data.max(0.0).min(1.0);
 

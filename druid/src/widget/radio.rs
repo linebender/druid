@@ -46,15 +46,15 @@ impl<T: Data + PartialEq + 'static> RadioGroup<T> {
 }
 
 /// A single radio button
-#[derive(Debug, Clone)]
-pub struct Radio<T: Data + PartialEq + 'static> {
-    phantom: PhantomData<T>,
+pub struct Radio<T: Data + PartialEq> {
+    variant: T,
+    child_label: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
 impl<T: Data + PartialEq + 'static> Radio<T> {
     /// Create a lone Radio button from label text and an enum variant
     pub fn new(label: impl Into<LabelText<T>>, variant: T) -> impl Widget<T> {
-        let radio = RadioRaw {
+        let radio = Self {
             variant,
             child_label: WidgetPod::new(Label::new(label)).boxed(),
         };
@@ -62,12 +62,7 @@ impl<T: Data + PartialEq + 'static> Radio<T> {
     }
 }
 
-pub struct RadioRaw<T: Data + PartialEq> {
-    variant: T,
-    child_label: WidgetPod<T, Box<dyn Widget<T>>>,
-}
-
-impl<T: Data + PartialEq> Widget<T> for RadioRaw<T> {
+impl<T: Data + PartialEq> Widget<T> for Radio<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
 

@@ -23,19 +23,16 @@ use crate::{
 };
 
 /// A checkbox that toggles a boolean
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Checkbox;
 
 impl Checkbox {
     pub fn new() -> impl Widget<bool> {
-        Align::vertical(UnitPoint::CENTER, CheckboxRaw::default())
+        Align::vertical(UnitPoint::CENTER, Self::default())
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct CheckboxRaw;
-
-impl Widget<bool> for CheckboxRaw {
+impl Widget<bool> for Checkbox {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &bool, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
 
