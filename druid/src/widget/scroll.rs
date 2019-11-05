@@ -157,7 +157,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         self.scroll_offset
     }
 
-    fn calc_scrollbar_screen_edges(&self, viewport: &Rect) -> Rect {
+    fn calc_scrollbar_screen_edges(&self, viewport: Rect) -> Rect {
         return Rect::new(
             self.scroll_offset.x + SCROLL_BAR_PAD,
             self.scroll_offset.y + SCROLL_BAR_PAD,
@@ -167,7 +167,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     }
 
     fn calc_vertical_bar_bounds(&self, viewport: &Rect) -> Rect {
-        let scrollbar_bounds = self.calc_scrollbar_screen_edges(viewport);
+        let scrollbar_bounds = self.calc_scrollbar_screen_edges(*viewport);
 
         let scale_y = viewport.height() / self.child_size.height;
 
@@ -184,7 +184,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     }
 
     fn calc_horizontal_bar_bounds(&self, viewport: &Rect) -> Rect {
-        let scrollbar_bounds = self.calc_scrollbar_screen_edges(viewport);
+        let scrollbar_bounds = self.calc_scrollbar_screen_edges(*viewport);
 
         let scale_x = viewport.width() / self.child_size.width;
 
@@ -230,22 +230,22 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         }
     }
 
-    fn mouse_over_vertical_bar(&self, viewport: Rect, pos: Point) -> bool {
+    fn point_hits_vertical_bar(&self, viewport: Rect, pos: Point) -> bool {
         if viewport.height() < self.child_size.height {
             let bounds = self.calc_vertical_bar_bounds(&viewport);
             return pos.y > bounds.y0 && pos.y < bounds.y1 && pos.x > bounds.x0;
         }
 
-        return false;
+        false
     }
 
-    fn mouse_over_horizontal_bar(&self, viewport: Rect, pos: Point) -> bool {
+    fn point_hits_horizontal_bar(&self, viewport: Rect, pos: Point) -> bool {
         if viewport.width() < self.child_size.width {
             let bounds = self.calc_horizontal_bar_bounds(&viewport);
             return pos.x > bounds.x0 && pos.x < bounds.x1 && pos.y > bounds.y0;
         }
 
-        return false;
+        false
     }
 }
 
@@ -319,8 +319,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             Event::MouseMoved(event) | Event::MouseDown(event) => {
                 let mut transformed_event = event.clone();
                 transformed_event.pos += self.scroll_offset;
-                self.mouse_over_vertical_bar(viewport, transformed_event.pos)
-                    || self.mouse_over_horizontal_bar(viewport, transformed_event.pos)
+                self.point_hits_vertical_bar(viewport, transformed_event.pos)
+                    || self.point_hits_horizontal_bar(viewport, transformed_event.pos)
             }
             _ => false,
         } {
@@ -334,11 +334,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 Event::MouseDown(event) => {
                     let pos = event.pos + self.scroll_offset;
 
-                    if self.mouse_over_vertical_bar(viewport, pos) {
+                    if self.point_hits_vertical_bar(viewport, pos) {
                         self.scroll_bars.vertical_held = true;
                         self.scroll_bars.held_offset =
                             pos.y - self.calc_vertical_bar_bounds(&viewport).y0;
-                    } else if self.mouse_over_horizontal_bar(viewport, pos) {
+                    } else if self.point_hits_horizontal_bar(viewport, pos) {
                         self.scroll_bars.horizontal_held = true;
                         self.scroll_bars.held_offset =
                             pos.x - self.calc_horizontal_bar_bounds(&viewport).x0;
@@ -357,8 +357,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     let mut transformed_event = event.clone();
                     transformed_event.pos += self.scroll_offset;
                     let currently_hovered = self
-                        .mouse_over_vertical_bar(viewport, transformed_event.pos)
-                        || self.mouse_over_horizontal_bar(viewport, transformed_event.pos);
+                        .point_hits_vertical_bar(viewport, transformed_event.pos)
+                        || self.point_hits_horizontal_bar(viewport, transformed_event.pos);
                     if self.scroll_bars.hovered && !currently_hovered {
                         self.scroll_bars.hovered = false;
                         self.reset_scrollbar_fade(ctx);
