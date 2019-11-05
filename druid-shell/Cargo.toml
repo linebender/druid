@@ -1,6 +1,6 @@
 [package]
 name = "druid-shell"
-version = "0.3.0"
+version = "0.3.1"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Platform abstracting application shell used for druid toolkit."
