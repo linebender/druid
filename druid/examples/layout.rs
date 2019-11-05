@@ -15,7 +15,7 @@
 //! This example shows how to construct a basic layout.
 
 use druid::shell::piet::Color;
-use druid::widget::{Button, Column, Container, Label, Padding, Row, SizedBox};
+use druid::widget::{Align, Button, Column, Container, Label, Padding, Row, SizedBox};
 use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
@@ -27,7 +27,7 @@ fn build_app() -> impl Widget<u32> {
     header.add_child(
         Container::new(Padding::new(
             5.0,
-            SizedBox::new(Label::new("One")).width(60.0),
+            SizedBox::new(Align::centered(Label::new("One"))).width(60.0),
         ))
         .border(Color::WHITE, 3.0)
         .background(Color::rgb8(0x77, 0x77, 0)),
