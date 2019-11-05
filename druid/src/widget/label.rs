@@ -133,7 +133,7 @@ impl<T: Data> LabelText<T> {
         }
     }
 
-    /// Update the localization, if necesasry.
+    /// Update the localization, if necessary.
     ///
     /// Returns `true` if the string has changed.
     pub fn resolve(&mut self, data: &T, env: &Env) -> bool {

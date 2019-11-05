@@ -14,37 +14,32 @@
 
 //! A toggle switch widget.
 
-use crate::kurbo::{Circle, Point, Rect, RoundedRect, Size};
-use crate::piet::{FontBuilder, Text, TextLayout, TextLayoutBuilder};
-use crate::piet::{LinearGradient, RenderContext, UnitPoint};
+use crate::kurbo::{Circle, Point, Rect, RoundedRect, Shape, Size};
+use crate::piet::{
+    FontBuilder, LinearGradient, RenderContext, Text, TextLayout, TextLayoutBuilder, UnitPoint,
+};
 use crate::theme;
 use crate::widget::Align;
 use crate::{
-    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, LocalizedString, PaintCtx,
+    UpdateCtx, Widget,
 };
 
-#[derive(Debug, Clone)]
-pub struct Switch;
-
-impl Switch {
-    pub fn new() -> impl Widget<bool> {
-        Align::vertical(UnitPoint::CENTER, SwitchRaw::default())
-    }
-}
-
+/// A switch that toggles a boolean.
 #[derive(Debug, Clone, Default)]
-pub struct SwitchRaw {
+pub struct Switch {
     knob_pos: Point,
     knob_hovered: bool,
 }
 
-impl SwitchRaw {
+impl Switch {
+    pub fn new() -> impl Widget<bool> {
+        Align::vertical(UnitPoint::CENTER, Self::default())
+    }
+
     fn knob_hit_test(&self, knob_width: f64, mouse_pos: Point) -> bool {
         let knob_circle = Circle::new(self.knob_pos, knob_width / 2.);
-        if mouse_pos.distance(knob_circle.center) < knob_circle.radius {
-            return true;
-        }
-        false
+        knob_circle.winding(mouse_pos) > 0
     }
 
     fn paint_label(
@@ -58,20 +53,24 @@ impl SwitchRaw {
     ) {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
-        let label = if *data { "ON" } else { "OFF" };
+        let label: LocalizedString<&str> = if *data {
+            LocalizedString::new("On")
+        } else {
+            LocalizedString::new("Off")
+        };
+        let localized_label = label.localized_str().to_uppercase();
 
         let font = paint_ctx
             .text()
             .new_font_by_name(font_name, font_size)
-            .unwrap()
             .build()
             .unwrap();
 
         let text_layout = paint_ctx
             .text()
-            .new_text_layout(&font, label)
-            .unwrap()
+            .new_text_layout(&font, &localized_label)
             .build()
             .unwrap();
 
@@ -79,12 +78,12 @@ impl SwitchRaw {
             Point::ORIGIN,
             Size::new(
                 (base_state.size().width - text_layout.width()).max(0.0),
-                base_state.size().height + (font_size * 1.2) / 2.,
+                switch_height + (font_size * 1.2) / 2.,
             ),
         ));
 
         // adjust label position
-        origin.y = origin.y.min(base_state.size().height);
+        origin.y = origin.y.min(switch_height);
 
         if *data {
             origin.x = switch_padding * 2.
@@ -96,7 +95,7 @@ impl SwitchRaw {
     }
 }
 
-impl Widget<bool> for SwitchRaw {
+impl Widget<bool> for Switch {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &bool, env: &Env) {
         let switch_padding = 3.;
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
@@ -110,6 +109,7 @@ impl Widget<bool> for SwitchRaw {
         );
 
         // paint different background for on and off state
+        // todo: make color configurable
         let background_gradient = if *data {
             LinearGradient::new(
                 UnitPoint::TOP,
@@ -210,11 +210,7 @@ impl Widget<bool> for SwitchRaw {
                 if ctx.is_active() {
                     ctx.set_active(false);
                     if ctx.is_hot() {
-                        if *data {
-                            *data = false;
-                        } else {
-                            *data = true;
-                        }
+                        *data = !*data
                     }
                     ctx.invalidate();
                 }
@@ -224,11 +220,7 @@ impl Widget<bool> for SwitchRaw {
                     // todo: animate dragging of knob
                 }
                 if ctx.is_hot() {
-                    if self.knob_hit_test(knob_size, mouse.pos) {
-                        self.knob_hovered = true
-                    } else {
-                        self.knob_hovered = false
-                    }
+                    self.knob_hovered = self.knob_hit_test(knob_size, mouse.pos)
                 }
                 ctx.invalidate();
             }
