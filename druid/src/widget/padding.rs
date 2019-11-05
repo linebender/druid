@@ -100,16 +100,8 @@ impl<T: Data> Widget<T> for Padding<T> {
 
         let hpad = self.left + self.right;
         let vpad = self.top + self.bottom;
-        let min = Size::new(
-            (bc.min().width - hpad).max(0.),
-            (bc.min().height - vpad).max(0.),
-        );
-        let max = Size::new(
-            (bc.max().width - hpad).max(0.),
-            (bc.max().height - vpad).max(0.),
-        );
 
-        let child_bc = BoxConstraints::new(min, max);
+        let child_bc = bc.shrink((hpad, vpad));
         let size = self.child.layout(layout_ctx, &child_bc, data, env);
         let origin = Point::new(self.left, self.top);
         self.child

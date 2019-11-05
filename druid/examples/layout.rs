@@ -25,11 +25,12 @@ fn build_app() -> impl Widget<u32> {
     // Construct a horizontal layout.
     let mut header = Row::new();
     header.add_child(
-        Container::new()
-            .border(Color::WHITE, 3.0)
-            .background(Color::rgb8(0x77, 0x77, 0))
-            .padding(5.0)
-            .child(SizedBox::new(Label::new("One")).width(60.0)),
+        Container::new(Padding::new(
+            5.0,
+            SizedBox::new(Label::new("One")).width(60.0),
+        ))
+        .border(Color::WHITE, 3.0)
+        .background(Color::rgb8(0x77, 0x77, 0)),
         0.0,
     );
     // Spacing element that will fill all available space in between label
@@ -38,9 +39,7 @@ fn build_app() -> impl Widget<u32> {
     header.add_child(Padding::new(20.0, Button::new("Two", Button::noop)), 0.0);
 
     col.add_child(
-        Container::new()
-            .background(Color::rgb8(0, 0x77, 0x88))
-            .child(SizedBox::new(header).height(100.0)),
+        Container::new(SizedBox::new(header).height(100.0)).background(Color::rgb8(0, 0x77, 0x88)),
         0.0,
     );
 

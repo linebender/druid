@@ -14,12 +14,8 @@
 
 //! A convenience widget that combines common styling and positioning widgets.
 
-use std::marker::PhantomData;
-
-use crate::shell::kurbo::{Point, Rect, Size};
+use crate::shell::kurbo::{Affine, Point, Rect, Size};
 use crate::shell::piet::{PaintBrush, RenderContext};
-use crate::widget::Padding;
-use crate::widget::SizedBox;
 use crate::{
     BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
@@ -37,29 +33,17 @@ struct ContainerStyle {
 
 /// A convenience widget that combines common styling and positioning widgets.
 pub struct Container<T: Data> {
-    padding: f64,
     style: ContainerStyle,
-    phantom: PhantomData<T>,
+    inner: Box<dyn Widget<T>>,
 }
 
 impl<T: Data + 'static> Container<T> {
-    pub fn new() -> Self {
+    /// Create Container with a child
+    pub fn new(inner: impl Widget<T> + 'static) -> Self {
         Self {
-            padding: 0.0,
             style: ContainerStyle::default(),
-            phantom: PhantomData::default(),
+            inner: Box::new(inner),
         }
-    }
-
-    pub fn child(self, inner: impl Widget<T> + 'static) -> impl Widget<T> {
-        Padding::uniform(
-            self.border_padding(),
-            ContainerRaw::new(self.style, Padding::uniform(self.padding, inner)),
-        )
-    }
-
-    pub fn empty(self) -> impl Widget<T> {
-        self.child(SizedBox::empty())
     }
 
     /// Paint background with a color or a gradient.
@@ -76,36 +60,16 @@ impl<T: Data + 'static> Container<T> {
         });
         self
     }
-
-    pub fn padding(mut self, padding: f64) -> Self {
-        self.padding = padding;
-        self
-    }
-
-    fn border_padding(&self) -> f64 {
-        match self.style.border {
-            Some(ref border) => border.width / 2.0,
-            None => 0.0,
-        }
-    }
 }
 
-struct ContainerRaw<T: Data> {
-    style: ContainerStyle,
-    inner: Box<dyn Widget<T>>,
-}
-
-impl<T: Data + 'static> ContainerRaw<T> {
-    fn new(style: ContainerStyle, inner: impl Widget<T> + 'static) -> Self {
-        Self {
-            style,
-            inner: Box::new(inner),
-        }
-    }
-}
-
-impl<T: Data> Widget<T> for ContainerRaw<T> {
+impl<T: Data + 'static> Widget<T> for Container<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+        // Add border offset
+        if let Some(ref border) = self.style.border {
+            let offset = border.width / 2.0;
+            paint_ctx.transform(Affine::translate((offset, offset)));
+        }
+
         // Paint background color
         if let Some(ref brush) = self.style.background {
             let rect = Rect::from_origin_size(Point::ZERO, base_state.size());
@@ -125,7 +89,13 @@ impl<T: Data> Widget<T> for ContainerRaw<T> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        self.inner.layout(ctx, bc, data, env)
+        // Shrink constraints by border offset
+        let border_width = match self.style.border {
+            Some(ref border) => border.width,
+            None => 0.0,
+        };
+        let child_bc = bc.shrink((border_width, border_width));
+        self.inner.layout(ctx, &child_bc, data, env)
     }
 
     fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
