@@ -26,10 +26,10 @@ fn build_widget() -> impl Widget<DemoState> {
     let switch = LensWrap::new(Switch::new(), lenses::demo_state::value);
     let switch_label = Label::new("Setting label");
 
-    row.add_child(Padding::uniform(5.0, switch_label), 0.0);
-    row.add_child(Padding::uniform(5.0, switch), 0.0);
+    row.add_child(Padding::new(5.0, switch_label), 0.0);
+    row.add_child(Padding::new(5.0, switch), 0.0);
 
-    col.add_child(Padding::uniform(5.0, row), 1.0);
+    col.add_child(Padding::new(5.0, row), 1.0);
     col
 }
 
