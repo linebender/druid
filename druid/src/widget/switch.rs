@@ -21,8 +21,7 @@ use crate::piet::{
 use crate::theme;
 use crate::widget::Align;
 use crate::{
-    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, LocalizedString, PaintCtx,
-    UpdateCtx, Widget,
+    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 /// A switch that toggles a boolean.
@@ -55,12 +54,8 @@ impl Switch {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
-        let label: LocalizedString<&str> = if *data {
-            LocalizedString::new("On")
-        } else {
-            LocalizedString::new("Off")
-        };
-        let localized_label = label.localized_str().to_uppercase();
+        // TODO: use LocalizedString
+        let label = if *data { "ON" } else { "OFF" };
 
         let font = paint_ctx
             .text()
@@ -70,7 +65,7 @@ impl Switch {
 
         let text_layout = paint_ctx
             .text()
-            .new_text_layout(&font, &localized_label)
+            .new_text_layout(&font, label)
             .build()
             .unwrap();
 
