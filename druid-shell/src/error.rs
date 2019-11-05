@@ -22,7 +22,7 @@ use winapi::shared::winerror::HRESULT;
 /// Error codes. At the moment, this is little more than HRESULT, but that
 /// might change.
 pub enum Error {
-    Null,
+    Other(&'static str),
     #[cfg(target_os = "windows")]
     Hr(HRESULT),
     // Maybe include the full error from the direct2d crate.
@@ -36,7 +36,7 @@ pub enum Error {
 impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
-            Error::Null => write!(f, "Null error"),
+            Error::Other(s) => write!(f, "{}", s),
             #[cfg(target_os = "windows")]
             Error::Hr(hr) => write!(f, "HRESULT 0x{:x}", hr),
             #[cfg(target_os = "windows")]

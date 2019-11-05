@@ -1,0 +1,137 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+    name: rustfmt
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: install rustfmt
+        run: rustup component add rustfmt
+
+      - name: cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  test-stable:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-10.14, windows-2019, ubuntu-latest]
+    name: cargo test stable
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install cairo
+        run: brew install cairo
+        if: contains(matrix.os, 'mac')
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: cargo test --all
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
+
+      - name: Run rustc -D warnings in druid/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=druid/Cargo.toml -- -D warnings
+
+      - name: Run rustc -d warnings in druid/druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=druid-shell/Cargo.toml -- -D warnings
+
+      - name: Run rustc -d warnings in druid/druid-derive
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=druid-derive/Cargo.toml -- -D warnings
+
+  test-nightly:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-10.14, windows-2019, ubuntu-latest]
+    name: cargo test nightly
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install cairo
+        run: brew install cairo
+        if: contains(matrix.os, 'mac')
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: cargo test --all
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
+
+  check-docs:
+    name: Docs
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-10.14, windows-2019, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install cairo
+        run: brew install cairo
+        if: contains(matrix.os, 'mac')
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: check docs in druid/
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --document-private-items

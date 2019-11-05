@@ -12,6 +12,5 @@ information on using pull requests.
 If your name does not already appear in the [AUTHORS] file, please feel free to
 add it as part of your patch.
 
-[gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html
 [GitHub Help]: https://help.github.com/articles/about-pull-requests/
 [AUTHORS]: AUTHORS

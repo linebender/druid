@@ -34,7 +34,7 @@ pub(crate) unsafe fn show_open_file_dialog_sync(options: FileDialogOptions) -> O
     // set options
 
     if options.show_hidden {
-        msg_send![panel, setShowsHiddenFiles: YES];
+        let () = msg_send![panel, setShowsHiddenFiles: YES];
     }
 
     // A vector of NSStrings. this must outlive `nsarray_allowed_types`.
@@ -49,7 +49,7 @@ pub(crate) unsafe fn show_open_file_dialog_sync(options: FileDialogOptions) -> O
         .as_ref()
         .map(|types| NSArray::arrayWithObjects(nil, types.as_slice()));
     if let Some(nsarray) = nsarray_allowed_types {
-        msg_send![panel, setAllowedFileTypes: nsarray];
+        let () = msg_send![panel, setAllowedFileTypes: nsarray];
     }
 
     let result: NSInteger = msg_send![panel, runModal];

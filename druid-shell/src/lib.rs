@@ -23,14 +23,27 @@ pub use piet_common::kurbo;
 #[macro_use]
 extern crate winapi;
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
 #[macro_use]
 extern crate objc;
 
-#[macro_use]
+#[cfg(any(feature = "use_gtk", target_os = "linux"))]
+extern crate cairo;
+#[cfg(any(feature = "use_gtk", target_os = "linux"))]
+extern crate gdk;
+#[cfg(any(feature = "use_gtk", target_os = "linux"))]
+extern crate gio;
+#[cfg(any(feature = "use_gtk", target_os = "linux"))]
+extern crate glib;
+#[cfg(any(feature = "use_gtk", target_os = "linux"))]
+extern crate gtk as gtkrs;
+
+#[cfg_attr(not(any(feature = "use_gtk", target_os = "linux")), macro_use)]
+#[cfg(not(any(feature = "use_gtk", target_os = "linux")))]
 extern crate lazy_static;
 
 pub mod clipboard;
+mod common_util;
 pub mod dialog;
 pub mod error;
 pub mod hotkey;
@@ -38,17 +51,22 @@ pub mod keyboard;
 pub mod keycodes;
 pub mod window;
 
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", not(feature = "use_gtk")))]
 pub mod windows;
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", not(feature = "use_gtk")))]
 pub use windows as platform;
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", not(feature = "use_gtk")))]
 pub use windows::paint;
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
 pub mod mac;
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
 pub use mac as platform;
+
+#[cfg(any(feature = "use_gtk", target_os = "linux"))]
+pub mod gtk;
+#[cfg(any(feature = "use_gtk", target_os = "linux"))]
+pub use crate::gtk as platform;
 
 pub use error::Error;
 

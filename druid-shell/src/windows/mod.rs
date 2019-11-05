@@ -333,6 +333,16 @@ impl WndProc for MyWndProc {
         //println!("wndproc msg: {}", msg);
         match msg {
             WM_ERASEBKGND => Some(0),
+            WM_SETFOCUS => {
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                    s.handler.got_focus(&mut c.ctx());
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
+                Some(0)
+            }
             WM_PAINT => unsafe {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
@@ -849,7 +859,7 @@ impl WindowBuilder {
                 win.clone(),
             );
             if hwnd.is_null() {
-                return Err(Error::Null);
+                return Err(Error::Other("hwnd.is_null() == true"));
             }
 
             let dcomp_state = create_dcomp_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
@@ -1154,7 +1164,7 @@ impl WindowHandle {
         ty: FileDialogType,
         options: FileDialogOptions,
     ) -> Result<OsString, Error> {
-        let hwnd = self.get_hwnd().ok_or(Error::Null)?;
+        let hwnd = self.get_hwnd().ok_or(Error::Other("get_hwnd() is None"))?;
         unsafe { get_file_dialog_path(hwnd, ty, options) }
     }
 

@@ -307,7 +307,6 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<Box<dyn IdleCa
 }
 
 extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
-    info!("size: {}x{}", size.width, size.height);
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
@@ -615,7 +614,7 @@ impl WindowHandle {
                     .init_str(NSWindowDidBecomeKeyNotification)
                     .autorelease();
                 let notif_center: id = msg_send![notif_center_class, defaultCenter];
-                msg_send![notif_center, addObserver:*nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
+                let () = msg_send![notif_center, addObserver:*nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
                 window.makeKeyAndOrderFront_(nil)
             }
         }
@@ -663,7 +662,7 @@ impl WindowHandle {
         if let Some(ref nsview) = self.nsview {
             unsafe {
                 let location = NSPoint::new(x, y);
-                msg_send![menu.menu, popUpMenuPositioningItem: nil atLocation: location inView: *nsview.load()];
+                let () = msg_send![menu.menu, popUpMenuPositioningItem: nil atLocation: location inView: *nsview.load()];
             }
         }
     }
@@ -720,9 +719,10 @@ impl WindowHandle {
     ) -> Result<OsString, Error> {
         match ty {
             FileDialogType::Open => unsafe {
-                dialog::show_open_file_dialog_sync(options).ok_or(Error::Null)
+                dialog::show_open_file_dialog_sync(options)
+                    .ok_or(Error::Other("failed to open file dialog"))
             },
-            _ => Err(Error::Null),
+            _ => Err(Error::Other("unhandled FileDialogType")),
         }
     }
 }
@@ -778,7 +778,7 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
                 Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
                 Cursor::ResizeUpDown => msg_send![nscursor, ResizeUpDownCursor],
             };
-            msg_send![cursor, set];
+            let () = msg_send![cursor, set];
         }
     }
 
@@ -791,7 +791,7 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             let user_info: id = msg_send![nsnumber, numberWithUnsignedInteger: token];
             let selector = sel!(handleTimer:);
             let view = self.nsview.load();
-            msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
+            let _: id = msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
         }
         TimerToken::new(token)
     }

@@ -1,0 +1,39 @@
+[package]
+name = "druid"
+version = "0.3.1"
+license = "Apache-2.0"
+authors = ["Raph Levien <raph.levien@gmail.com>"]
+description = "Data-oriented Rust UI design toolkit."
+repository = "https://github.com/xi-editor/druid"
+categories = ["gui"]
+keywords = ["gui", "ui", "toolkit"]
+edition = "2018"
+
+[package.metadata.docs.rs]
+default-target = "x86_64-pc-windows-msvc"
+
+[features]
+use_gtk = ["druid-shell/use_gtk"]
+
+[badges]
+travis-ci = { repository = "xi-editor/druid" }
+
+[dependencies]
+fluent-bundle = "0.8.0"
+fluent-locale = "0.10.0"
+fluent-syntax = "0.9"
+unic-langid = "0.6.1"
+unicode-segmentation = "1.3.0"
+log = "0.4.8"
+
+[dependencies.simple_logger]
+version = "1.3.0"
+default-features = false
+
+[dependencies.druid-shell]
+path = "../druid-shell"
+version = "0.3.0"
+
+[dependencies.druid-derive]
+path = "../druid-derive"
+version = "0.1.1"
