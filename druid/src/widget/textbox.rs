@@ -93,17 +93,7 @@ impl Selection {
 
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
-pub struct TextBox;
-
-impl TextBox {
-    pub fn new() -> impl Widget<String> {
-        Align::vertical(UnitPoint::CENTER, TextBoxRaw::new())
-    }
-}
-
-/// A widget that allows user text input.
-#[derive(Debug, Clone)]
-pub struct TextBoxRaw {
+pub struct TextBox {
     width: f64,
     hscroll_offset: f64,
     selection: Selection,
@@ -111,10 +101,15 @@ pub struct TextBoxRaw {
     cursor_on: bool,
 }
 
-impl TextBoxRaw {
-    /// Create a new TextBox widget with a width set in pixels
-    pub fn new() -> TextBoxRaw {
-        TextBoxRaw {
+impl TextBox {
+    /// Create a new TextBox widget
+    pub fn new() -> impl Widget<String> {
+        Align::vertical(UnitPoint::CENTER, Self::raw())
+    }
+
+    /// Create a new TextBox widget with no Align wrapper
+    pub fn raw() -> TextBox {
+        Self {
             width: 0.0,
             hscroll_offset: 0.,
             selection: Selection::caret(0),
@@ -233,7 +228,7 @@ impl TextBoxRaw {
     }
 }
 
-impl Widget<String> for TextBoxRaw {
+impl Widget<String> for TextBox {
     fn paint(
         &mut self,
         paint_ctx: &mut PaintCtx,
@@ -507,7 +502,7 @@ mod tests {
     /// can still be used to insert characters.
     #[test]
     fn data_can_be_changed_externally() {
-        let mut widget = TextBoxRaw::new();
+        let mut widget = TextBox::raw();
         let mut data = "".to_string();
 
         // First insert some chars
