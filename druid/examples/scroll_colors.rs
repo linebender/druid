@@ -14,58 +14,9 @@
 
 //! This example allows to play with scroll bars over different color tones.
 
-use druid::shell::kurbo::{Rect, Size};
-use druid::shell::piet::{Color, RenderContext};
-use druid::widget::{Column, Row, Scroll};
-use druid::{
-    AppLauncher, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx,
-    UpdateCtx, Widget, WindowDesc,
-};
-
-struct FixedSize {
-    size: Size,
-    color: Color,
-}
-
-impl FixedSize {
-    pub fn new(size: Size, color: Color) -> Self {
-        Self { size, color }
-    }
-}
-
-impl<T: Data> Widget<T> for FixedSize {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _data: &T, _env: &Env) {
-        let color = if base_state.is_hot() {
-            Color::BLACK
-        } else {
-            self.color.clone()
-        };
-        let brush = paint_ctx.render_ctx.solid_brush(color);
-        let rect = Rect::from_origin_size((0.0, 0.0), base_state.size());
-        paint_ctx.render_ctx.fill(rect, &brush);
-    }
-
-    fn layout(
-        &mut self,
-        _ctx: &mut LayoutCtx,
-        _bc: &BoxConstraints,
-        _data: &T,
-        _env: &Env,
-    ) -> Size {
-        self.size.clone()
-    }
-
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, _data: &mut T, _env: &Env) {
-        match event {
-            Event::HotChanged(_) => {
-                ctx.invalidate();
-            }
-            _ => (),
-        }
-    }
-
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}
-}
+use druid::shell::piet::Color;
+use druid::widget::{Column, Container, Row, Scroll, SizedBox};
+use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     let mut col = Column::new();
@@ -80,12 +31,11 @@ fn build_app() -> impl Widget<u32> {
             let row_progress = j as f64 / rows as f64;
 
             row.add_child(
-                // There is a SizedBox widget but it's not currently possible
-                // to set a background on it.
-                FixedSize::new(
-                    Size::new(50.0, 50.0),
-                    Color::rgb(1.0 * col_progress, 1.0 * row_progress, 1.0),
-                ),
+                Container::new(SizedBox::empty().width(50.0).height(50.0)).background(Color::rgb(
+                    1.0 * col_progress,
+                    1.0 * row_progress,
+                    1.0,
+                )),
                 0.0,
             );
         }

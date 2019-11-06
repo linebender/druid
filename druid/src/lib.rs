@@ -811,6 +811,21 @@ impl BoxConstraints {
             warn!("{:?}", self);
         }
     }
+
+    /// Shrink min and max constraints by size
+    pub fn shrink(&self, diff: impl Into<Size>) -> BoxConstraints {
+        let diff = diff.into();
+        let min = Size::new(
+            (self.min().width - diff.width).max(0.),
+            (self.min().height - diff.height).max(0.),
+        );
+        let max = Size::new(
+            (self.max().width - diff.width).max(0.),
+            (self.max().height - diff.height).max(0.),
+        );
+
+        BoxConstraints::new(min, max)
+    }
 }
 
 impl<'a, 'b> EventCtx<'a, 'b> {
