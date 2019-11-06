@@ -135,7 +135,7 @@ pub enum MenuEntry<T> {
 /// A `MenuItem` always has a title (a [`LocalizedString`]) as well a [`Command`],
 /// that is sent to the application when the item is selected.
 ///
-/// In additon, other properties can be set during construction, such as whether
+/// In addition, other properties can be set during construction, such as whether
 /// the item is selected (checked), or enabled, or if it has a hotkey.
 ///
 /// [`LocalizedString`]: ../struct.LocalizedString.html

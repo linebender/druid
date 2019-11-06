@@ -194,10 +194,10 @@ dependencies = [
 
 [[package]]
 name = "druid"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "druid-derive 0.1.1",
- "druid-shell 0.3.0",
+ "druid-shell 0.3.1",
  "fluent-bundle 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-locale 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-syntax 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -211,7 +211,7 @@ dependencies = [
 name = "druid-derive"
 version = "0.1.1"
 dependencies = [
- "druid 0.3.1",
+ "druid 0.3.2",
  "proc-macro2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -219,7 +219,7 @@ dependencies = [
 
 [[package]]
 name = "druid-shell"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "cairo-rs 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cocoa 0.19.1 (registry+https://github.com/rust-lang/crates.io-index)",

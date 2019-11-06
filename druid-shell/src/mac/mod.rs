@@ -279,8 +279,8 @@ lazy_static! {
             handle_menu_item as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
-            sel!(dispatchMenuItem:),
-            dispatch_menu_item as extern "C" fn(&mut Object, Sel, id),
+            sel!(showContextMenu:),
+            show_context_menu as extern "C" fn(&mut Object, Sel, id),
         );
         ViewClass(decl.register())
     };
@@ -568,16 +568,6 @@ extern "C" fn handle_timer(this: &mut Object, _: Sel, timer: id) {
 
 extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
     unsafe {
-        // in the case of right-click menus, to avoid reentring rust while
-        // holding a RefMut, we need to delay calling back until the next pass
-        // of the runloop.
-        let () = msg_send![this as *const _, performSelectorOnMainThread: sel!(dispatchMenuItem:)
-            withObject: item waitUntilDone: NO];
-    }
-}
-
-extern "C" fn dispatch_menu_item(this: &mut Object, _: Sel, item: id) {
-    unsafe {
         let tag: isize = msg_send![item, tag];
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
@@ -586,6 +576,16 @@ extern "C" fn dispatch_menu_item(this: &mut Object, _: Sel, item: id) {
             text: Text::new(),
         };
         (*view_state).handler.command(tag as u32, &mut ctx);
+    }
+}
+
+extern "C" fn show_context_menu(this: &mut Object, _: Sel, item: id) {
+    unsafe {
+        let window: id = msg_send![this as *const _, window];
+        let mut location: NSPoint = msg_send![window, mouseLocationOutsideOfEventStream];
+        let bounds: NSRect = msg_send![this as *const _, bounds];
+        location.y = bounds.size.height - location.y;
+        let _: BOOL = msg_send![item, popUpMenuPositioningItem: nil atLocation: location inView: this as *const _];
     }
 }
 
@@ -658,11 +658,13 @@ impl WindowHandle {
         }
     }
 
-    pub fn show_context_menu(&self, menu: Menu, x: f64, y: f64) {
+    //FIXME: we should be using the x, y values passed by the caller, but then
+    //we have to figure out some way to pass them along with this performSelector:
+    //call. This isn't super hard, I'm just not up for it right now.
+    pub fn show_context_menu(&self, menu: Menu, _x: f64, _y: f64) {
         if let Some(ref nsview) = self.nsview {
             unsafe {
-                let location = NSPoint::new(x, y);
-                let () = msg_send![menu.menu, popUpMenuPositioningItem: nil atLocation: location inView: *nsview.load()];
+                let () = msg_send![*nsview.load(), performSelectorOnMainThread: sel!(showContextMenu:) withObject: menu.menu waitUntilDone: NO];
             }
         }
     }
