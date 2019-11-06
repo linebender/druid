@@ -428,6 +428,16 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
     }
 
+    /// Return a reference to the inner widget.
+    pub fn widget(&self) -> &W {
+        &self.inner
+    }
+
+    /// Return a mutable reference to the inner widget.
+    pub fn widget_mut(&mut self) -> &mut W {
+        &mut self.inner
+    }
+
     /// Set layout rectangle.
     ///
     /// Intended to be called on child widget in container's `layout`

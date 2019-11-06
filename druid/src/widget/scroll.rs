@@ -111,6 +111,16 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         self
     }
 
+    /// Returns a reference to the child widget.
+    pub fn child(&self) -> &W {
+        self.child.widget()
+    }
+
+    /// Returns a mutable reference to the child widget.
+    pub fn child_mut(&mut self) -> &mut W {
+        self.child.widget_mut()
+    }
+
     /// Update the scroll.
     ///
     /// Returns `true` if the scroll has been updated.
