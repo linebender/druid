@@ -13,41 +13,12 @@
 // limitations under the License.
 
 use druid::widget::{Checkbox, Column, Either, Label, Padding, Slider};
-use druid::{AppLauncher, Data, LensWrap, Widget, WindowDesc};
+use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 
-#[derive(Clone, Default, Data)]
+#[derive(Clone, Default, Data, Lens)]
 struct AppState {
     which: bool,
     value: f64,
-}
-
-mod lenses {
-    pub mod app_state {
-        use super::super::AppState;
-        use druid::Lens;
-        pub struct Value;
-        pub struct Which;
-
-        impl Lens<AppState, bool> for Which {
-            fn get<'a>(&self, data: &'a AppState) -> &'a bool {
-                &data.which
-            }
-
-            fn with_mut<V, F: FnOnce(&mut bool) -> V>(&self, data: &mut AppState, f: F) -> V {
-                f(&mut data.which)
-            }
-        }
-
-        impl Lens<AppState, f64> for Value {
-            fn get<'a>(&self, data: &'a AppState) -> &'a f64 {
-                &data.value
-            }
-
-            fn with_mut<V, F: FnOnce(&mut f64) -> V>(&self, data: &mut AppState, f: F) -> V {
-                f(&mut data.value)
-            }
-        }
-    }
 }
 
 fn main() {
@@ -64,16 +35,16 @@ fn ui_builder() -> impl Widget<AppState> {
 
     let mut col = Column::new();
     col.add_child(
-        Padding::uniform(
+        Padding::new(
             5.0,
-            LensWrap::new(Checkbox::new(), lenses::app_state::Which),
+            LensWrap::new(Checkbox::new(), lenses::app_state::which),
         ),
         0.0,
     );
     let either = Either::new(
         |data, _env| data.which,
-        Padding::uniform(5.0, LensWrap::new(Slider::new(), lenses::app_state::Value)),
-        Padding::uniform(5.0, label),
+        Padding::new(5.0, LensWrap::new(Slider::new(), lenses::app_state::value)),
+        Padding::new(5.0, label),
     );
     col.add_child(either, 0.0);
     col
