@@ -39,8 +39,8 @@ impl<T: Data, F: Fn(&T, &Env) -> bool> Either<T, F> {
     ) -> Either<T, F> {
         Either {
             closure,
-            false_branch: WidgetPod::new(false_branch).boxed(),
             true_branch: WidgetPod::new(true_branch).boxed(),
+            false_branch: WidgetPod::new(false_branch).boxed(),
             current: false,
         }
     }
@@ -63,13 +63,13 @@ impl<T: Data, F: Fn(&T, &Env) -> bool> Widget<T> for Either<T, F> {
         env: &Env,
     ) -> Size {
         if self.current {
-            let size = self.false_branch.layout(layout_ctx, bc, data, env);
-            self.false_branch
+            let size = self.true_branch.layout(layout_ctx, bc, data, env);
+            self.true_branch
                 .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
             size
         } else {
-            let size = self.true_branch.layout(layout_ctx, bc, data, env);
-            self.true_branch
+            let size = self.false_branch.layout(layout_ctx, bc, data, env);
+            self.false_branch
                 .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
             size
         }
