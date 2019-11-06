@@ -52,7 +52,7 @@ impl EventCtxExt for EventCtx<'_, '_> {
     }
 }
 
-impl EventCtxExt for DelegateCtx<'_, '_> {
+impl EventCtxExt for DelegateCtx<'_> {
     fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>) {
         let cmd = Command::new(druid::command::sys::SET_MENU, menu);
         self.submit_command(cmd, None);
@@ -82,40 +82,47 @@ fn ui_builder() -> impl Widget<State> {
 }
 
 fn make_delegate() -> AppDelegate<State> {
-    AppDelegate::new().event_handler(|event, data, _env, ctx| {
-        match event {
-            Event::Command(ref cmd) if cmd.selector == druid::command::sys::NEW_FILE => {
-                let new_win = WindowDesc::new(ui_builder).menu(make_menu(data));
-                let command = Command::new(druid::command::sys::NEW_WINDOW, new_win);
-                ctx.submit_command(command, None);
-                None
+    AppDelegate::new()
+        .event_handler(|event, data, _env, delegate_ctx, _| {
+            match event {
+                Event::Command(ref cmd) if cmd.selector == druid::command::sys::NEW_FILE => {
+                    let new_win = WindowDesc::new(ui_builder).menu(make_menu(data));
+                    let command = Command::new(druid::command::sys::NEW_WINDOW, new_win);
+                    delegate_ctx.submit_command(command, None);
+                    None
+                }
+                Event::Command(ref cmd) if cmd.selector == MENU_COUNT_ACTION => {
+                    data.selected = *cmd.get_object().unwrap();
+                    delegate_ctx.set_menu(make_menu::<State>(data));
+                    None
+                }
+                // wouldn't it be nice if a menu (like a button) could just mutate state
+                // directly if desired?
+                Event::Command(ref cmd) if cmd.selector == MENU_INCREMENT_ACTION => {
+                    data.menu_count += 1;
+                    delegate_ctx.set_menu(make_menu::<State>(data));
+                    None
+                }
+                Event::Command(ref cmd) if cmd.selector == MENU_DECREMENT_ACTION => {
+                    data.menu_count = data.menu_count.saturating_sub(1);
+                    delegate_ctx.set_menu(make_menu::<State>(data));
+                    None
+                }
+                Event::MouseDown(ref mouse) if mouse.button.is_right() => {
+                    let menu = ContextMenu::new(make_context_menu::<State>(), mouse.pos);
+                    let cmd = Command::new(druid::command::sys::SHOW_CONTEXT_MENU, menu);
+                    delegate_ctx.submit_command(cmd, None);
+                    None
+                }
+                other => Some(other),
             }
-            Event::Command(ref cmd) if cmd.selector == MENU_COUNT_ACTION => {
-                data.selected = *cmd.get_object().unwrap();
-                ctx.set_menu(make_menu::<State>(data));
-                None
-            }
-            // wouldn't it be nice if a menu (like a button) could just mutate state
-            // directly if desired?
-            Event::Command(ref cmd) if cmd.selector == MENU_INCREMENT_ACTION => {
-                data.menu_count += 1;
-                ctx.set_menu(make_menu::<State>(data));
-                None
-            }
-            Event::Command(ref cmd) if cmd.selector == MENU_DECREMENT_ACTION => {
-                data.menu_count = data.menu_count.saturating_sub(1);
-                ctx.set_menu(make_menu::<State>(data));
-                None
-            }
-            Event::MouseDown(ref mouse) if mouse.button.is_right() => {
-                let menu = ContextMenu::new(make_context_menu::<State>(), mouse.pos);
-                let cmd = Command::new(druid::command::sys::SHOW_CONTEXT_MENU, menu);
-                ctx.submit_command(cmd, None);
-                None
-            }
-            other => Some(other),
-        }
-    })
+        })
+        .window_added_handler(|id, _data, _env, _ctx| {
+            println!("Window added with ID: {:?}", id);
+        })
+        .window_removed_handler(|id, _data, _env, _ctx| {
+            println!("Window removed with ID: {:?}", id);
+        })
 }
 
 #[allow(unused_assignments)]

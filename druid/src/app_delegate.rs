@@ -19,20 +19,12 @@ use std::collections::VecDeque;
 use crate::{Command, Data, Env, Event, WinCtx, WindowId};
 
 /// A context passed in to [`AppDelegate`] functions.
-pub struct DelegateCtx<'a, 'b> {
+pub struct DelegateCtx<'a> {
     pub(crate) source_id: WindowId,
     pub(crate) command_queue: &'a mut VecDeque<(WindowId, Command)>,
-    pub(crate) win_ctx: &'a mut dyn WinCtx<'b>,
 }
 
-impl<'a, 'b> DelegateCtx<'a, 'b> {
-    /// Get the [`WinCtx`].
-    ///
-    /// [`WinCtx`] trait.WinCtx.html
-    pub fn win_ctx(&self) -> &dyn WinCtx<'b> {
-        self.win_ctx
-    }
-
+impl<'a> DelegateCtx<'a> {
     /// Submit a [`Command`] to be run after this event is handled.
     ///
     /// Commands are run in the order they are submitted; all commands
@@ -56,13 +48,24 @@ impl<'a, 'b> DelegateCtx<'a, 'b> {
 ///
 /// You customize the `AppDelegate` by passing closures during creation.
 pub struct AppDelegate<T> {
-    event_fn: Option<Box<dyn Fn(Event, &mut T, &Env, &mut DelegateCtx) -> Option<Event> + 'static>>,
+    event_fn: Option<
+        Box<
+            dyn Fn(Event, &mut T, &Env, &mut DelegateCtx, &mut dyn WinCtx) -> Option<Event>
+                + 'static,
+        >,
+    >,
+    window_added_fn: Option<Box<dyn Fn(WindowId, &mut T, &Env, &mut DelegateCtx)>>,
+    window_removed_fn: Option<Box<dyn Fn(WindowId, &mut T, &Env, &mut DelegateCtx)>>,
 }
 
 impl<T: Data> AppDelegate<T> {
     /// Create a new `AppDelegate`.
     pub fn new() -> Self {
-        AppDelegate { event_fn: None }
+        AppDelegate {
+            event_fn: None,
+            window_added_fn: None,
+            window_removed_fn: None,
+        }
     }
 
     /// Set the `AppDelegate`'s event handler. This function receives all events,
@@ -73,9 +76,25 @@ impl<T: Data> AppDelegate<T> {
     /// the `update` method will be called as usual.
     pub fn event_handler<F>(mut self, f: F) -> Self
     where
-        F: Fn(Event, &mut T, &Env, &mut DelegateCtx) -> Option<Event> + 'static,
+        F: Fn(Event, &mut T, &Env, &mut DelegateCtx, &mut dyn WinCtx) -> Option<Event> + 'static,
     {
         self.event_fn = Some(Box::new(f));
+        self
+    }
+
+    pub fn window_added_handler<F>(mut self, f: F) -> Self
+    where
+        F: Fn(WindowId, &mut T, &Env, &mut DelegateCtx) + 'static,
+    {
+        self.window_added_fn = Some(Box::new(f));
+        self
+    }
+
+    pub fn window_removed_handler<F>(mut self, f: F) -> Self
+    where
+        F: Fn(WindowId, &mut T, &Env, &mut DelegateCtx) + 'static,
+    {
+        self.window_removed_fn = Some(Box::new(f));
         self
     }
 
@@ -84,11 +103,36 @@ impl<T: Data> AppDelegate<T> {
         event: Event,
         data: &mut T,
         env: &Env,
-        ctx: &mut DelegateCtx,
+        delegate_ctx: &mut DelegateCtx,
+        win_ctx: &mut dyn WinCtx,
     ) -> Option<Event> {
         match self.event_fn.as_ref() {
-            Some(f) => (f)(event, data, env, ctx),
+            Some(f) => (f)(event, data, env, delegate_ctx, win_ctx),
             None => Some(event),
+        }
+    }
+
+    pub(crate) fn window_added(
+        &mut self,
+        window_id: WindowId,
+        data: &mut T,
+        env: &Env,
+        ctx: &mut DelegateCtx,
+    ) {
+        if let Some(f) = self.window_added_fn.as_ref() {
+            f(window_id, data, env, ctx);
+        }
+    }
+
+    pub(crate) fn window_removed(
+        &mut self,
+        window_id: WindowId,
+        data: &mut T,
+        env: &Env,
+        ctx: &mut DelegateCtx,
+    ) {
+        if let Some(f) = self.window_removed_fn.as_ref() {
+            f(window_id, data, env, ctx);
         }
     }
 }

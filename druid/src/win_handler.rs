@@ -306,6 +306,19 @@ impl<T: Data + 'static> AppState<T> {
 
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
         self.windows.connect(id, handle);
+        if let Some(delegate) = &mut self.delegate {
+            let AppState {
+                ref mut command_queue,
+                ref mut data,
+                ref env,
+                ..
+            } = self;
+            let mut ctx = DelegateCtx {
+                source_id: id,
+                command_queue,
+            };
+            delegate.window_added(id, data, env, &mut ctx)
+        }
     }
 
     pub(crate) fn add_window(&mut self, id: WindowId, window: Window<T>) {
@@ -313,7 +326,21 @@ impl<T: Data + 'static> AppState<T> {
     }
 
     fn remove_window(&mut self, id: WindowId) -> Option<WindowHandle> {
-        self.windows.remove(id)
+        let res = self.windows.remove(id);
+        if let Some(delegate) = &mut self.delegate {
+            let AppState {
+                ref mut command_queue,
+                ref mut data,
+                ref env,
+                ..
+            } = self;
+            let mut ctx = DelegateCtx {
+                source_id: id,
+                command_queue,
+            };
+            delegate.window_removed(id, data, env, &mut ctx)
+        }
+        res
     }
 
     fn assemble_window_state<'a>(
@@ -413,9 +440,8 @@ impl<T: Data + 'static> AppState<T> {
                 let mut ctx = DelegateCtx {
                     source_id,
                     command_queue,
-                    win_ctx,
                 };
-                delegate.event(event, data, env, &mut ctx)
+                delegate.event(event, data, env, &mut ctx, win_ctx)
             }
             None => Some(event),
         }
