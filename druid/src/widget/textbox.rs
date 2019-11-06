@@ -262,14 +262,13 @@ impl Widget<String> for TextBox {
                 // Draw selection rect
                 if !self.selection.is_caret() {
                     let (left, right) = (self.selection.min(), self.selection.max());
+                    let left_offset = self.x_for_offset(&text_layout, left);
+                    let right_offset = self.x_for_offset(&text_layout, right);
 
-                    let selection_width = self.x_for_offset(&text_layout, right)
-                        - self.x_for_offset(&text_layout, left);
+                    let selection_width = right_offset - left_offset;
 
-                    let selection_pos = Point::new(
-                        self.x_for_offset(&text_layout, left) + PADDING_LEFT - 1.,
-                        PADDING_TOP - 2.,
-                    );
+                    let selection_pos =
+                        Point::new(left_offset + PADDING_LEFT - 1., PADDING_TOP - 2.);
                     let selection_rect = RoundedRect::from_origin_size(
                         selection_pos,
                         Size::new(selection_width + 2., font_size + 4.).to_vec2(),
