@@ -178,45 +178,32 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         self.scroll_offset
     }
 
-    fn calc_scrollbar_screen_edges(&self, viewport: Rect) -> Rect {
-        Rect::new(
-            self.scroll_offset.x + SCROLL_BAR_PAD,
-            self.scroll_offset.y + SCROLL_BAR_PAD,
-            self.scroll_offset.x - SCROLL_BAR_PAD + viewport.width(),
-            self.scroll_offset.y - SCROLL_BAR_PAD + viewport.height(),
-        )
-    }
-
     fn calc_vertical_bar_bounds(&self, viewport: Rect) -> Rect {
-        let scrollbar_bounds = self.calc_scrollbar_screen_edges(viewport);
-
         let scale_y = viewport.height() / self.child_size.height;
 
-        let h = (scale_y * viewport.height()).ceil();
-        let dh = (scale_y * self.scroll_offset.y).ceil();
+        let top_y_offset = (scale_y * self.scroll_offset.y).ceil();
+        let bottom_y_offset = (scale_y * viewport.height()).ceil() + top_y_offset;
 
-        let x0 = scrollbar_bounds.x1 - SCROLL_BAR_WIDTH;
-        let y0 = scrollbar_bounds.y0 + dh;
+        let x0 = self.scroll_offset.x + viewport.width() - SCROLL_BAR_WIDTH - SCROLL_BAR_PAD;
+        let y0 = self.scroll_offset.y + top_y_offset + SCROLL_BAR_PAD;
 
-        let x1 = scrollbar_bounds.x1;
-        let y1 = (y0 + h).min(scrollbar_bounds.y1);
+        let x1 = self.scroll_offset.x + viewport.width() - SCROLL_BAR_PAD;
+        let y1 = self.scroll_offset.y + bottom_y_offset - (SCROLL_BAR_PAD * 2.) - SCROLL_BAR_WIDTH;
 
         Rect::new(x0, y0, x1, y1)
     }
 
     fn calc_horizontal_bar_bounds(&self, viewport: Rect) -> Rect {
-        let scrollbar_bounds = self.calc_scrollbar_screen_edges(viewport);
-
         let scale_x = viewport.width() / self.child_size.width;
 
-        let w = (scale_x * viewport.width()).ceil();
-        let dw = (scale_x * self.scroll_offset.x).ceil();
+        let left_x_offset = (scale_x * self.scroll_offset.x).ceil();
+        let right_x_offset = (scale_x * viewport.width()).ceil() + left_x_offset;
 
-        let x0 = scrollbar_bounds.x0 + dw;
-        let y0 = scrollbar_bounds.y1 - SCROLL_BAR_WIDTH;
+        let x0 = self.scroll_offset.x + left_x_offset + SCROLL_BAR_PAD;
+        let y0 = self.scroll_offset.y + viewport.height() - SCROLL_BAR_WIDTH - SCROLL_BAR_PAD;
 
-        let x1 = (x0 + w).min(scrollbar_bounds.x1);
-        let y1 = scrollbar_bounds.y1;
+        let x1 = self.scroll_offset.x + right_x_offset - (SCROLL_BAR_PAD * 2.) - SCROLL_BAR_WIDTH;
+        let y1 = self.scroll_offset.y + viewport.height() - SCROLL_BAR_PAD;
 
         Rect::new(x0, y0, x1, y1)
     }
