@@ -65,6 +65,9 @@ impl RunLoop {
         }
     }
 
+    // WAIT_OBJECT_0 is defined as 0, so >= is technically meaningless
+    // but communicates intent
+    #[allow(clippy::absurd_extreme_comparisons)]
     pub fn run(&mut self) {
         unsafe {
             loop {
@@ -98,8 +101,8 @@ impl RunLoop {
                     if self.accel.is_null()
                         || TranslateAcceleratorW(msg.hwnd, self.accel, &mut msg) == 0
                     {
-                        TranslateMessage(&mut msg);
-                        DispatchMessageW(&mut msg);
+                        TranslateMessage(&msg);
+                        DispatchMessageW(&msg);
                     }
                 }
             }
@@ -126,5 +129,11 @@ impl RunLoopHandle {
             callback: Box::new(callback),
         };
         self.0.lock().unwrap().listeners.push(listener);
+    }
+}
+
+impl Default for RunLoop {
+    fn default() -> Self {
+        RunLoop::new()
     }
 }

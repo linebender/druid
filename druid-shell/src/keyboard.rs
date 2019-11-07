@@ -392,7 +392,7 @@ impl From<u16> for KeyCode {
             0x7e => KeyCode::ArrowUp,
             //0x7f =>  unkown,
             //0xa => KeyCode::Caret,
-            other => KeyCode::Unknown(RawKeyCode::Mac(other.into())),
+            other => KeyCode::Unknown(RawKeyCode::Mac(other)),
         }
     }
 }
@@ -540,7 +540,7 @@ impl From<i32> for KeyCode {
 
 #[cfg(any(target_os = "linux", feature = "use_gtk"))]
 impl From<u32> for KeyCode {
-    #[allow(non_upper_case_globals)]
+    #[allow(clippy::just_underscores_and_digits, non_upper_case_globals)]
     fn from(raw: u32) -> KeyCode {
         use gdk::enums::key::*;
         match raw {
@@ -905,12 +905,13 @@ impl fmt::Debug for TinyStr {
     }
 }
 
-impl std::default::Default for TinyStr {
+impl Default for TinyStr {
     fn default() -> Self {
         TinyStr::new("")
     }
 }
 
+#[allow(clippy::useless_let_if_seq)]
 impl fmt::Debug for KeyModifiers {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Mods(")?;

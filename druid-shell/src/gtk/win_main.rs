@@ -98,3 +98,9 @@ where
         f(app)
     })
 }
+
+impl Default for RunLoop {
+    fn default() -> Self {
+        RunLoop::new()
+    }
+}

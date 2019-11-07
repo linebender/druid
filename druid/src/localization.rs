@@ -315,7 +315,7 @@ impl<T> LocalizedString<T> {
         self.resolved
             .as_ref()
             .map(|s| s.as_str())
-            .or(self.placeholder.as_ref().map(String::as_ref))
+            .or_else(|| self.placeholder.as_ref().map(String::as_ref))
             .unwrap_or(self.key)
     }
 }

@@ -104,6 +104,12 @@ impl Menu {
     }
 }
 
+impl Default for Menu {
+    fn default() -> Self {
+        Menu::new()
+    }
+}
+
 impl HotKey {
     /// Return the string value of this hotkey, for use with Cocoa `NSResponder`
     /// objects.

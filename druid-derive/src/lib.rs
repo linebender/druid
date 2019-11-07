@@ -27,7 +27,7 @@ use syn::parse_macro_input;
 pub fn derive_data(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
     data::derive_data_impl(input)
-        .unwrap_or_else(|err| err.to_compile_error().into())
+        .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }
 
@@ -35,6 +35,6 @@ pub fn derive_data(input: TokenStream) -> TokenStream {
 pub fn derive_lens(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
     lens::derive_lens_impl(input)
-        .unwrap_or_else(|err| err.to_compile_error().into())
+        .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }

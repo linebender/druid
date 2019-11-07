@@ -45,7 +45,7 @@ impl Switch {
         &mut self,
         paint_ctx: &mut PaintCtx,
         base_state: &BaseState,
-        data: &bool,
+        data: bool,
         env: &Env,
         switch_width: f64,
         switch_padding: f64,
@@ -55,7 +55,7 @@ impl Switch {
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
         // TODO: use LocalizedString
-        let label = if *data { "ON" } else { "OFF" };
+        let label = if data { "ON" } else { "OFF" };
 
         let font = paint_ctx
             .text()
@@ -80,7 +80,7 @@ impl Switch {
         // adjust label position
         origin.y = origin.y.min(switch_height);
 
-        if *data {
+        if data {
             origin.x = switch_padding * 2.
         } else {
             origin.x = switch_width - text_layout.width() - switch_padding * 2.
@@ -175,7 +175,7 @@ impl Widget<bool> for Switch {
         self.paint_label(
             paint_ctx,
             base_state,
-            data,
+            *data,
             env,
             switch_width,
             switch_padding,

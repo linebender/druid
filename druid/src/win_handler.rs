@@ -149,7 +149,7 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
         let prev_paint_time = self.state.prev_paint_time;
         let interval = if let Some(last) = prev_paint_time {
             let duration = this_paint_time.duration_since(last);
-            1_000_000_000 * duration.as_secs() + (duration.subsec_nanos() as u64)
+            1_000_000_000 * duration.as_secs() + u64::from(duration.subsec_nanos())
         } else {
             0
         };
@@ -195,7 +195,7 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
 
         let event = match event {
             Event::Size(size) => {
-                let dpi = self.state.handle.get_dpi() as f64;
+                let dpi = f64::from(self.state.handle.get_dpi());
                 let scale = 96.0 / dpi;
                 Event::Size(Size::new(size.width * scale, size.height * scale))
             }
@@ -316,10 +316,7 @@ impl<T: Data + 'static> AppState<T> {
         self.windows.remove(id)
     }
 
-    fn assemble_window_state<'a>(
-        &'a mut self,
-        window_id: WindowId,
-    ) -> Option<SingleWindowState<'a, T>> {
+    fn assemble_window_state(&mut self, window_id: WindowId) -> Option<SingleWindowState<'_, T>> {
         let AppState {
             ref mut command_queue,
             ref mut windows,
@@ -341,16 +338,18 @@ impl<T: Data + 'static> AppState<T> {
 
         let (is_handled, dirty, anim) = if let Some(event) = event {
             // handle system window-level commands
-            if let Event::Command(ref cmd) = &event {
-                match &cmd.selector {
-                    &sys_cmd::SET_MENU => {
-                        self.assemble_window_state(source_id)
-                            .map(|mut win| win.set_menu(cmd));
+            if let Event::Command(ref cmd) = event {
+                match cmd.selector {
+                    sys_cmd::SET_MENU => {
+                        if let Some(mut win) = self.assemble_window_state(source_id) {
+                            win.set_menu(cmd);
+                        }
                         return true;
                     }
-                    &sys_cmd::SHOW_CONTEXT_MENU => {
-                        self.assemble_window_state(source_id)
-                            .map(|mut win| win.show_context_menu(cmd));
+                    sys_cmd::SHOW_CONTEXT_MENU => {
+                        if let Some(mut win) = self.assemble_window_state(source_id) {
+                            win.show_context_menu(cmd);
+                        }
                         return true;
                     }
                     _ => (),
@@ -383,9 +382,7 @@ impl<T: Data + 'static> AppState<T> {
                     window_id: *id,
                 };
                 window.update(&mut update_ctx, data, env);
-                if *id == source_id && (anim || dirty || update_ctx.needs_inval) {
-                    update_ctx.window.invalidate();
-                } else if update_ctx.needs_inval {
+                if update_ctx.needs_inval || (*id == source_id && (anim || dirty)) {
                     update_ctx.window.invalidate();
                 }
             }
@@ -576,7 +573,7 @@ impl<T: Data + 'static> WinHandler for DruidHandler<T> {
     }
 
     fn size(&mut self, width: u32, height: u32, ctx: &mut dyn WinCtx) {
-        let event = Event::Size(Size::new(width as f64, height as f64));
+        let event = Event::Size(Size::new(f64::from(width), f64::from(height)));
         self.do_event(event, ctx);
     }
 
@@ -628,7 +625,7 @@ impl<T: Data + 'static> WinHandler for DruidHandler<T> {
     }
 }
 
-impl<T: Data> std::default::Default for Windows<T> {
+impl<T: Data> Default for Windows<T> {
     fn default() -> Self {
         Windows {
             windows: HashMap::new(),

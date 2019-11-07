@@ -118,7 +118,7 @@ impl TextBox {
         }
     }
 
-    fn get_layout(&self, piet_text: &mut PietText, data: &String, env: &Env) -> PietTextLayout {
+    fn get_layout(&self, piet_text: &mut PietText, data: &str, env: &Env) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         // TODO: caching of both the format and the layout
@@ -163,7 +163,7 @@ impl TextBox {
     /// the corresponding x coordinate of that grapheme on the screen.
     fn x_for_offset(&self, layout: &PietTextLayout, offset: usize) -> f64 {
         if let Some(position) = layout.hit_test_text_position(offset) {
-            return position.point.x;
+            position.point.x
         } else {
             //TODO: what is the correct fallback here?
             0.0

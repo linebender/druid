@@ -48,7 +48,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     };
 
     let twizzled_name = if is_camel_case(&ty.to_string()) {
-        let temp_name = to_snake_case(&mut ty.to_string());
+        let temp_name = to_snake_case(&ty.to_string());
         proc_macro2::Ident::new(&temp_name, proc_macro2::Span::call_site())
     } else {
         return Err(syn::Error::new(
@@ -99,7 +99,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         }
     };
 
-    Ok(expanded.into())
+    Ok(expanded)
 }
 
 //I stole these from rustc!

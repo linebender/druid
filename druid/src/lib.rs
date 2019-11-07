@@ -15,6 +15,7 @@
 //! Simple data-oriented GUI.
 
 #![deny(intra_doc_link_resolution_failure, unsafe_code)]
+#![allow(clippy::new_ret_no_self)]
 
 pub use druid_shell::{self as shell, kurbo, piet};
 
@@ -45,15 +46,9 @@ use piet::{Piet, RenderContext};
 
 pub use unicode_segmentation;
 
-// TODO: remove these unused annotations when we wire these up; they're
-// placeholders for functionality not yet implemented.
-#[allow(unused)]
-use druid_shell::application::Application;
 pub use druid_shell::clipboard::ClipboardItem;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
 pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-#[allow(unused)]
-use druid_shell::platform::IdleHandle;
 pub use druid_shell::window::{Cursor, MouseButton, TimerToken};
 use druid_shell::window::{Text, WinCtx, WindowHandle};
 pub use shell::hotkey::{HotKey, RawMods, SysMods};
@@ -814,8 +809,10 @@ impl BoxConstraints {
     ///
     /// Logs a warning if BoxConstraints are invalid.
     pub fn debug_check(&self, name: &str) {
-        if !(0.0 <= self.min.width && self.min.width <= self.max.width)
-            || !(0.0 <= self.min.height && self.min.height <= self.max.height)
+        if !(0.0 <= self.min.width
+            && self.min.width <= self.max.width
+            && 0.0 <= self.min.height
+            && self.min.height <= self.max.height)
         {
             warn!("Bad BoxConstraints passed to {}:", name);
             warn!("{:?}", self);

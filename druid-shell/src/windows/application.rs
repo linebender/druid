@@ -70,6 +70,7 @@ impl Application {
     }
 }
 
+#[allow(clippy::single_match)] // we will support more types 'soon'
 unsafe fn get_clipboard_impl() -> Option<ClipboardItem> {
     for format in iter_clipboard_types() {
         match format {
@@ -82,7 +83,7 @@ unsafe fn get_clipboard_impl() -> Option<ClipboardItem> {
 
 unsafe fn get_unicode_text() -> Option<ClipboardItem> {
     let handle = GetClipboardData(CF_UNICODETEXT);
-    let result = if handle != ptr::null_mut() {
+    let result = if handle.is_null() {
         let unic_str = GlobalLock(handle) as LPWSTR;
         let result = unic_str.from_wide();
         GlobalUnlock(handle);

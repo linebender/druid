@@ -179,12 +179,12 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     }
 
     fn calc_scrollbar_screen_edges(&self, viewport: Rect) -> Rect {
-        return Rect::new(
+        Rect::new(
             self.scroll_offset.x + SCROLL_BAR_PAD,
             self.scroll_offset.y + SCROLL_BAR_PAD,
             self.scroll_offset.x - SCROLL_BAR_PAD + viewport.width(),
             self.scroll_offset.y - SCROLL_BAR_PAD + viewport.height(),
-        );
+        )
     }
 
     fn calc_vertical_bar_bounds(&self, viewport: Rect) -> Rect {
@@ -201,7 +201,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         let x1 = scrollbar_bounds.x1;
         let y1 = (y0 + h).min(scrollbar_bounds.y1);
 
-        return Rect::new(x0, y0, x1, y1);
+        Rect::new(x0, y0, x1, y1)
     }
 
     fn calc_horizontal_bar_bounds(&self, viewport: Rect) -> Rect {
@@ -218,7 +218,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         let x1 = (x0 + w).min(scrollbar_bounds.x1);
         let y1 = scrollbar_bounds.y1;
 
-        return Rect::new(x0, y0, x1, y1);
+        Rect::new(x0, y0, x1, y1)
     }
 
     /// Draw scroll bars.

@@ -261,7 +261,7 @@ impl Data for EnvImpl {
     }
 }
 
-impl std::default::Default for Env {
+impl Default for Env {
     fn default() -> Self {
         let l10n = L10nManager::new(vec!["builtin.ftl".into()], "./resources/i18n/");
         let inner = EnvImpl {

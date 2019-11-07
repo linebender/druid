@@ -47,6 +47,8 @@ impl<'a, 'b> DelegateCtx<'a, 'b> {
     }
 }
 
+type EventFn<T> = dyn Fn(Event, &mut T, &Env, &mut DelegateCtx) -> Option<Event> + 'static;
+
 /// A type that provides hooks for handling and modifying top-level events.
 ///
 /// The `AppDelegate` is a struct that is allowed to handle and modify
@@ -56,7 +58,7 @@ impl<'a, 'b> DelegateCtx<'a, 'b> {
 ///
 /// You customize the `AppDelegate` by passing closures during creation.
 pub struct AppDelegate<T> {
-    event_fn: Option<Box<dyn Fn(Event, &mut T, &Env, &mut DelegateCtx) -> Option<Event> + 'static>>,
+    event_fn: Option<Box<EventFn<T>>>,
 }
 
 impl<T: Data> AppDelegate<T> {
@@ -90,5 +92,11 @@ impl<T: Data> AppDelegate<T> {
             Some(f) => (f)(event, data, env, ctx),
             None => Some(event),
         }
+    }
+}
+
+impl<T: Data> Default for AppDelegate<T> {
+    fn default() -> Self {
+        AppDelegate::new()
     }
 }

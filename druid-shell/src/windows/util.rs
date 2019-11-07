@@ -170,8 +170,7 @@ fn load_optional_functions() -> OptionalFunctions {
             return library;
         }
 
-        let library = unsafe { LoadLibraryW(encoded_name.as_ptr()) };
-        return library;
+        unsafe { LoadLibraryW(encoded_name.as_ptr()) }
     }
 
     let shcore = load_library("shcore.dll");
@@ -234,7 +233,7 @@ pub fn init() {
     unsafe {
         let class_name = CLASS_NAME.to_wide();
         let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
-        let brush = CreateSolidBrush(0xffffff);
+        let brush = CreateSolidBrush(0xff_ff_ff);
         let wnd = WNDCLASSW {
             style: 0,
             lpfnWndProc: Some(win_proc_dispatch),
@@ -290,8 +289,9 @@ fn attach_console() {
         }
 
         if AttachConsole(ATTACH_PARENT_PROCESS) > 0 {
+            let name = CString::new("CONOUT$").unwrap();
             let chnd = CreateFileA(
-                CString::new("CONOUT$").unwrap().as_ptr(),
+                name.as_ptr(),
                 GENERIC_READ | GENERIC_WRITE,
                 FILE_SHARE_WRITE,
                 ptr::null_mut(),
