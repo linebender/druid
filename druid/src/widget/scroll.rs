@@ -187,8 +187,8 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         );
     }
 
-    fn calc_vertical_bar_bounds(&self, viewport: &Rect) -> Rect {
-        let scrollbar_bounds = self.calc_scrollbar_screen_edges(*viewport);
+    fn calc_vertical_bar_bounds(&self, viewport: Rect) -> Rect {
+        let scrollbar_bounds = self.calc_scrollbar_screen_edges(viewport);
 
         let scale_y = viewport.height() / self.child_size.height;
 
@@ -204,8 +204,8 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         return Rect::new(x0, y0, x1, y1);
     }
 
-    fn calc_horizontal_bar_bounds(&self, viewport: &Rect) -> Rect {
-        let scrollbar_bounds = self.calc_scrollbar_screen_edges(*viewport);
+    fn calc_horizontal_bar_bounds(&self, viewport: Rect) -> Rect {
+        let scrollbar_bounds = self.calc_scrollbar_screen_edges(viewport);
 
         let scale_x = viewport.width() / self.child_size.width;
 
@@ -222,7 +222,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     }
 
     /// Draw scroll bars.
-    fn draw_bars(&self, paint_ctx: &mut PaintCtx, viewport: &Rect, env: &Env) {
+    fn draw_bars(&self, paint_ctx: &mut PaintCtx, viewport: Rect, env: &Env) {
         if self.scroll_bars.opacity <= 0.0 {
             return;
         }
@@ -253,7 +253,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
 
     fn point_hits_vertical_bar(&self, viewport: Rect, pos: Point) -> bool {
         if viewport.height() < self.child_size.height {
-            let bounds = self.calc_vertical_bar_bounds(&viewport);
+            let bounds = self.calc_vertical_bar_bounds(viewport);
             return pos.y > bounds.y0 && pos.y < bounds.y1 && pos.x > bounds.x0;
         }
 
@@ -262,7 +262,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
 
     fn point_hits_horizontal_bar(&self, viewport: Rect, pos: Point) -> bool {
         if viewport.width() < self.child_size.width {
-            let bounds = self.calc_horizontal_bar_bounds(&viewport);
+            let bounds = self.calc_horizontal_bar_bounds(viewport);
             return pos.x > bounds.x0 && pos.x < bounds.x1 && pos.y > bounds.y0;
         }
 
@@ -283,7 +283,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         let visible = viewport.with_origin(self.scroll_offset.to_point());
         paint_ctx.with_child_ctx(visible, |ctx| self.child.paint(ctx, data, env));
 
-        self.draw_bars(paint_ctx, &viewport, env);
+        self.draw_bars(paint_ctx, viewport, env);
 
         if let Err(e) = paint_ctx.restore() {
             error!("restoring render context failed: {:?}", e);
@@ -319,14 +319,14 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     match self.scroll_bars.held {
                         BarHeldState::VerticalHeld(offset) => {
                             let scale_y = viewport.height() / self.child_size.height;
-                            let bounds = self.calc_vertical_bar_bounds(&viewport);
+                            let bounds = self.calc_vertical_bar_bounds(viewport);
                             let mouse_y = event.pos.y + self.scroll_offset.y;
                             let delta = mouse_y - bounds.y0 - offset;
                             self.scroll(Vec2::new(0f64, (delta / scale_y).ceil()), size);
                         }
                         BarHeldState::HorizontalHeld(offset) => {
                             let scale_x = viewport.width() / self.child_size.width;
-                            let bounds = self.calc_horizontal_bar_bounds(&viewport);
+                            let bounds = self.calc_horizontal_bar_bounds(viewport);
                             let mouse_x = event.pos.x + self.scroll_offset.x;
                             let delta = mouse_x - bounds.x0 - offset;
                             self.scroll(Vec2::new((delta / scale_x).ceil(), 0f64), size);
@@ -368,11 +368,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
                     if self.point_hits_vertical_bar(viewport, pos) {
                         self.scroll_bars.held = BarHeldState::VerticalHeld(
-                            pos.y - self.calc_vertical_bar_bounds(&viewport).y0,
+                            pos.y - self.calc_vertical_bar_bounds(viewport).y0,
                         );
                     } else if self.point_hits_horizontal_bar(viewport, pos) {
                         self.scroll_bars.held = BarHeldState::HorizontalHeld(
-                            pos.x - self.calc_horizontal_bar_bounds(&viewport).x0,
+                            pos.x - self.calc_horizontal_bar_bounds(viewport).x0,
                         );
                     }
                 }
