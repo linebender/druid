@@ -152,8 +152,10 @@ impl TextBox {
     /// For a given point, returns the corresponding offset (in bytes) of
     /// the grapheme cluster closest to that point.
     fn offset_for_point(&self, point: Point, layout: &PietTextLayout) -> usize {
-        let hscrolled_point = Point::new(point.x + self.hscroll_offset, point.y);
-        let hit_test = layout.hit_test_point(hscrolled_point);
+        // Translating from screenspace to Piet's text layout representation.
+        // We need to account for hscroll_offset state and TextBox's padding.
+        let translated_point = Point::new(point.x + self.hscroll_offset - PADDING_LEFT, point.y);
+        let hit_test = layout.hit_test_point(translated_point);
         hit_test.metrics.text_position
     }
 
