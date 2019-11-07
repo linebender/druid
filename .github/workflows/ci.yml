@@ -15,7 +15,10 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          profile: minimal
+          components: rustfmt
           override: true
+
       - name: install rustfmt
         run: rustup component add rustfmt
 
@@ -48,7 +51,15 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          components: clippy
+          profile: minimal
           override: true
+
+      - name: cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
 
       - name: cargo test --all
         uses: actions-rs/cargo@v1
@@ -97,6 +108,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          profile: minimal
           override: true
 
       - name: cargo test --all
@@ -128,6 +140,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          profile: minimal
           override: true
 
       - name: check docs in druid/
