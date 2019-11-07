@@ -64,11 +64,8 @@ impl Menu {
         _selected: bool,
     ) {
         // TODO: implement enabled, selected item
-        self.items.push(MenuItem::Entry(
-            strip_access_key(text),
-            id,
-            key.map(|k| k.clone()),
-        ));
+        self.items
+            .push(MenuItem::Entry(strip_access_key(text), id, key.cloned()));
     }
 
     pub fn add_separator(&mut self) {

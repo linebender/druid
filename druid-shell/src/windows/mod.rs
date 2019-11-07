@@ -14,7 +14,10 @@
 
 //! Creation and management of windows.
 
-#![allow(non_snake_case)]
+#![allow(
+    non_snake_case,
+    clippy::cast_lossless,
+    )]
 
 pub mod application;
 pub mod dcomp;
@@ -323,6 +326,7 @@ impl WndProc for MyWndProc {
         *self.state.borrow_mut() = Some(state);
     }
 
+    #[allow(clippy::cognitive_complexity)]
     fn window_proc(
         &self,
         hwnd: HWND,
@@ -883,6 +887,12 @@ impl WindowBuilder {
     }
 }
 
+impl Default for WindowBuilder {
+    fn default() -> Self {
+        WindowBuilder::new()
+    }
+}
+
 /// Choose an adapter. Here the heuristic is to choose the adapter with the
 /// largest video memory, which will generally be the discrete adapter. It's
 /// possible that on some systems the integrated adapter might be a better
@@ -1008,12 +1018,12 @@ unsafe extern "system" fn win_proc_dispatch(
             (*window_ptr).wndproc.window_proc(hwnd, msg, wparam, lparam)
         }
     };
-    if msg == WM_NCDESTROY {
-        if !window_ptr.is_null() {
-            SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
-            mem::drop(Rc::from_raw(window_ptr));
-        }
+
+    if msg == WM_NCDESTROY && !window_ptr.is_null() {
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+        mem::drop(Rc::from_raw(window_ptr));
     }
+
     match result {
         Some(lresult) => lresult,
         None => DefWindowProcW(hwnd, msg, wparam, lparam),
@@ -1021,6 +1031,7 @@ unsafe extern "system" fn win_proc_dispatch(
 }
 
 /// Create a window (same parameters as CreateWindowExW) with associated WndProc.
+#[allow(clippy::too_many_arguments)]
 unsafe fn create_window(
     dwExStyle: DWORD,
     lpClassName: LPCWSTR,
@@ -1158,7 +1169,7 @@ impl WindowHandle {
     ///
     /// Note: this method will be reworked to avoid reentrancy problems.
     /// Currently, calling it may result in important messages being dropped.
-    #[deprecated(since = "0.3", note = "use methods on WinCtx instead")]
+    #[deprecated(since = "0.3.0", note = "use methods on WinCtx instead")]
     pub fn file_dialog(
         &self,
         ty: FileDialogType,

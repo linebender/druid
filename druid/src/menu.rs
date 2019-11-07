@@ -124,6 +124,7 @@ pub struct MenuDesc<T> {
 
 /// An item in a menu, which may be a normal item, a submenu, or a separator.
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum MenuEntry<T> {
     Item(MenuItem<T>),
     SubMenu(MenuDesc<T>),
@@ -172,7 +173,7 @@ impl<T> MenuItem<T> {
     /// Create a new `MenuItem`.
     pub fn new(title: LocalizedString<T>, command: impl Into<Command>) -> Self {
         MenuItem {
-            title: title.into(),
+            title,
             command: command.into(),
             hotkey: None,
             tool_tip: None,
@@ -315,6 +316,11 @@ impl<T: Data> MenuDesc<T> {
         self.items.len()
     }
 
+    /// Returns `true` if the menu contains no items.
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
     /// Build an application or window menu for the current platform.
     ///
     /// This takes self as &mut because it resolves localization.
@@ -421,11 +427,11 @@ impl<T> std::fmt::Debug for MenuDesc<T> {
                 "                                                                              ";
             let indent = &TABS[..level * 2];
             let child_indent = &TABS[..(level + 1) * 2];
-            write!(f, "{}{}\n", indent, menu.item.title.key)?;
+            writeln!(f, "{}{}", indent, menu.item.title.key)?;
             for item in &menu.items {
                 match item {
-                    MenuEntry::Item(item) => write!(f, "{}{}\n", child_indent, item.title.key)?,
-                    MenuEntry::Separator => write!(f, "{} --------- \n", child_indent)?,
+                    MenuEntry::Item(item) => writeln!(f, "{}{}", child_indent, item.title.key)?,
+                    MenuEntry::Separator => writeln!(f, "{} --------- ", child_indent)?,
                     MenuEntry::SubMenu(ref menu) => menu_debug_impl(menu, f, level + 1)?,
                 }
             }

@@ -13,7 +13,11 @@
 // limitations under the License.
 
 //! macOS implementation of window creation.
-#![allow(non_snake_case)]
+
+#![allow(
+    non_snake_case,
+    clippy::let_unit_value,
+    )]
 
 pub mod application;
 pub mod dialog;
@@ -160,10 +164,11 @@ impl WindowBuilder {
             let content_view = window.contentView();
             let frame = NSView::frame(content_view);
             view.initWithFrame_(frame);
-            match self.menu {
-                Some(menu) => NSApp().setMainMenu_(menu.menu),
-                _ => (),
+
+            if let Some(menu) = self.menu {
+                NSApp().setMainMenu_(menu.menu);
             }
+
             content_view.addSubview_(view);
             let view_state: *mut c_void = *(*view).get_ivar("viewState");
             let view_state = &mut *(view_state as *mut ViewState);
@@ -184,6 +189,12 @@ impl WindowBuilder {
 
             Ok(handle)
         }
+    }
+}
+
+impl Default for WindowBuilder {
+    fn default() -> Self {
+        WindowBuilder::new()
     }
 }
 
@@ -286,7 +297,9 @@ lazy_static! {
     };
 }
 
-fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<Box<dyn IdleCallback>>>>) {
+type BoxedCallback = Box<dyn IdleCallback>;
+
+fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<BoxedCallback>>>) {
     let idle_queue = Arc::new(Mutex::new(Vec::new()));
     let queue_handle = Arc::downgrade(&idle_queue);
     unsafe {
@@ -484,7 +497,7 @@ extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
     if down {
         (*view_state).handler.key_down(event, &mut ctx);
     } else {
-        (*view_state).handler.key_down(event, &mut ctx);
+        (*view_state).handler.key_up(event, &mut ctx);
     }
 }
 
@@ -713,7 +726,7 @@ impl WindowHandle {
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
 
-    #[deprecated(since = "0.3", note = "use methods on WinCtx instead")]
+    #[deprecated(since = "0.3.0", note = "use methods on WinCtx instead")]
     pub fn file_dialog(
         &self,
         ty: FileDialogType,
@@ -818,7 +831,7 @@ fn time_interval_from_deadline(deadline: std::time::Instant) -> f64 {
     } else {
         let t = deadline - now;
         let secs = t.as_secs() as f64;
-        let subsecs = t.subsec_micros() as f64 * 0.000001;
+        let subsecs = f64::from(t.subsec_micros()) * 0.000_001;
         secs + subsecs
     }
 }

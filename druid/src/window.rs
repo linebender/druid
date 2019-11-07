@@ -59,7 +59,7 @@ impl<T: Data> Window<T> {
         if let Event::Size(size) = event {
             self.size = *size;
         }
-        let _action = self.root.event(event, ctx, data, env);
+        self.root.event(event, ctx, data, env);
 
         if let Some(cursor) = ctx.cursor {
             ctx.win_ctx.set_cursor(&cursor);
@@ -93,7 +93,7 @@ impl<T: Data> Window<T> {
         self.context_menu
             .as_ref()
             .and_then(|m| m.command_for_id(cmd_id))
-            .or(self.menu.as_ref().and_then(|m| m.command_for_id(cmd_id)))
+            .or_else(|| self.menu.as_ref().and_then(|m| m.command_for_id(cmd_id)))
     }
 }
 
@@ -101,7 +101,7 @@ impl WindowId {
     /// Allocate a new, unique window id.
     ///
     /// Do note that if we create 4 billion windows there may be a collision.
-    pub fn new() -> WindowId {
+    pub fn next() -> WindowId {
         let id = WINDOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
         WindowId(id)
     }

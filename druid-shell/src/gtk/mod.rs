@@ -748,3 +748,9 @@ fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
         }
     }
 }
+
+impl Default for WindowBuilder {
+    fn default() -> Self {
+        WindowBuilder::new()
+    }
+}

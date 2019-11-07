@@ -55,7 +55,7 @@ fn derive_struct(
         }
     };
 
-    Ok(res.into())
+    Ok(res)
 }
 
 fn ident_from_str(s: &str) -> proc_macro2::Ident {

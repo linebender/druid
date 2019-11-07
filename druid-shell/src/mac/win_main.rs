@@ -50,3 +50,9 @@ pub fn request_quit() {
         let () = msg_send![NSApp(), terminate: nil];
     }
 }
+
+impl Default for RunLoop {
+    fn default() -> Self {
+        RunLoop::new()
+    }
+}

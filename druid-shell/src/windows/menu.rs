@@ -109,3 +109,9 @@ impl Menu {
         }
     }
 }
+
+impl Default for Menu {
+    fn default() -> Self {
+        Menu::new()
+    }
+}

@@ -146,14 +146,14 @@ impl<T: Data + 'static> WindowDesc<T> {
         let mut title = self
             .title
             .clone()
-            .unwrap_or(LocalizedString::new("app-name"));
+            .unwrap_or_else(|| LocalizedString::new("app-name"));
         title.resolve(&state.borrow().data, &state.borrow().env);
         let mut menu = self.menu.to_owned();
         let platform_menu = menu
             .as_mut()
             .map(|m| m.build_window_menu(&state.borrow().data, &state.borrow().env));
 
-        let id = WindowId::new();
+        let id = WindowId::next();
         let handler = DruidHandler::new_shared(state.clone(), id);
 
         let mut builder = WindowBuilder::new();
