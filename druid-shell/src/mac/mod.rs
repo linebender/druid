@@ -82,6 +82,8 @@ pub struct WindowBuilder {
     title: String,
     enable_mouse_move_events: bool,
     menu: Option<Menu>,
+    width: f32,
+    height: f32,
 }
 
 #[derive(Clone)]
@@ -120,11 +122,18 @@ impl WindowBuilder {
             title: String::new(),
             enable_mouse_move_events: true,
             menu: None,
+            width: 500.0,
+            height: 500.0,
         }
     }
 
     pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
         self.handler = Some(handler);
+    }
+
+    pub fn set_size(&mut self, width: f64, height: f64) {
+        self.width = width;
+        self.height = height;
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -146,7 +155,7 @@ impl WindowBuilder {
                 | NSWindowStyleMask::NSClosableWindowMask
                 | NSWindowStyleMask::NSMiniaturizableWindowMask
                 | NSWindowStyleMask::NSResizableWindowMask;
-            let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(500., 400.));
+            let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(self.width, self.height));
 
             let window = NSWindow::alloc(nil).initWithContentRect_styleMask_backing_defer_(
                 rect,

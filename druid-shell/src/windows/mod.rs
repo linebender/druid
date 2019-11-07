@@ -87,6 +87,8 @@ pub struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     present_strategy: PresentStrategy,
+    width: f32,
+    height: f32,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -769,6 +771,8 @@ impl WindowBuilder {
             title: String::new(),
             menu: None,
             present_strategy: Default::default(),
+            width: 500.0,
+            height: 400.0,
         }
     }
 
@@ -785,6 +789,11 @@ impl WindowBuilder {
         if vscroll {
             self.dwStyle |= WS_VSCROLL;
         }
+    }
+
+    pub fn set_size(&mut self, width: f32, height: f32) {
+        self.width = width;
+        self.height = height;
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -837,8 +846,8 @@ impl WindowBuilder {
                 96.0
             };
             win.dpi.set(dpi);
-            let width = (500.0 * (dpi / 96.0)) as i32;
-            let height = (400.0 * (dpi / 96.0)) as i32;
+            let width = (self.width * (dpi / 96.0)) as i32;
+            let height = (self.height * (dpi / 96.0)) as i32;
 
             let hmenu = match self.menu {
                 Some(menu) => menu.into_hmenu(),

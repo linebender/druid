@@ -87,6 +87,8 @@ pub struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     menu: Option<menu::Menu>,
+    width: f32,
+    height: f32,
 }
 
 #[derive(Clone)]
@@ -124,11 +126,18 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             menu: None,
+            width: 500.0,
+            height: 400.0,
         }
     }
 
     pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
         self.handler = Some(handler);
+    }
+
+    pub fn set_size(&mut self, width: f32, height: f32) {
+        self.width = width;
+        self.height = height;
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -147,6 +156,11 @@ impl WindowBuilder {
             .expect("Tried to build a window without setting the handler");
 
         let window = with_application(|app| ApplicationWindow::new(&app));
+
+        // TODO: I'm not convinced this actually works
+        let dpi_scale = window.get_display().get_default_screen().get_resolution() / 96.0;
+
+        window.set_default_size((self.width * dpi_scale) as i32, (self.height * dpi_scale) as i32);
 
         let accel_group = AccelGroup::new();
         window.add_accel_group(&accel_group);
