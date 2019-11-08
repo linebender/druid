@@ -58,3 +58,6 @@ pub use crate::widget::container::Container;
 
 mod switch;
 pub use crate::widget::switch::Switch;
+
+mod list;
+pub use crate::widget::list::List;
