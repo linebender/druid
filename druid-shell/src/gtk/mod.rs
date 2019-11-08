@@ -35,6 +35,7 @@ use win_main::with_application;
 use crate::clipboard::ClipboardItem;
 use crate::dialog::FileDialogOptions;
 use crate::keyboard;
+use crate::kurbo::Size;
 use crate::kurbo::{Point, Vec2};
 use crate::platform::dialog::FileDialogType;
 use crate::platform::menu::Menu;
@@ -87,8 +88,7 @@ pub struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     menu: Option<menu::Menu>,
-    width: f32,
-    height: f32,
+    size: Size,
 }
 
 #[derive(Clone)]
@@ -126,8 +126,7 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             menu: None,
-            width: 500.0,
-            height: 400.0,
+            size: Size::new(500.0, 400.0),
         }
     }
 
@@ -135,9 +134,8 @@ impl WindowBuilder {
         self.handler = Some(handler);
     }
 
-    pub fn set_size(&mut self, width: f32, height: f32) {
-        self.width = width;
-        self.height = height;
+    pub fn set_size(&mut self, size: Size) {
+        self.size = size;
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -159,13 +157,13 @@ impl WindowBuilder {
 
         let dpi_scale = window
             .get_display()
-            .map(|c| c.get_default_screen().get_resolution() as f32)
+            .map(|c| c.get_default_screen().get_resolution() as f64)
             .unwrap_or(96.0)
             / 96.0;
 
         window.set_default_size(
-            (self.width * dpi_scale) as i32,
-            (self.height * dpi_scale) as i32,
+            (self.size.width * dpi_scale) as i32,
+            (self.size.height * dpi_scale) as i32,
         );
 
         let accel_group = AccelGroup::new();

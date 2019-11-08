@@ -18,6 +18,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use crate::kurbo::Size;
 use crate::shell::window::WindowHandle;
 use crate::shell::{init, runloop, Error as PlatformError, WindowBuilder};
 use crate::win_handler::AppState;
@@ -44,7 +45,7 @@ type WidgetBuilderFn<T> = dyn Fn() -> Box<dyn Widget<T>> + 'static;
 pub struct WindowDesc<T> {
     pub(crate) root_builder: Arc<WidgetBuilderFn<T>>,
     pub(crate) title: Option<LocalizedString<T>>,
-    pub(crate) size: Option<(f32, f32)>,
+    pub(crate) size: Option<Size>,
     pub(crate) menu: Option<MenuDesc<T>>,
     //TODO: more things you can configure on a window, like size?
 }
@@ -141,8 +142,8 @@ impl<T: Data + 'static> WindowDesc<T> {
     }
 
     /// Set the window size at creation
-    pub fn window_size(mut self, width: f32, height: f32) -> Self {
-        self.size = Some((width, height));
+    pub fn window_size(mut self, width: f64, height: f64) -> Self {
+        self.size = Some(Size::new(width, height));
         self
     }
 
@@ -166,8 +167,8 @@ impl<T: Data + 'static> WindowDesc<T> {
 
         let mut builder = WindowBuilder::new();
         builder.set_handler(Box::new(handler));
-        if let Some((width, height)) = self.size {
-            builder.set_size(width, height);
+        if let Some(size) = self.size {
+            builder.set_size(size);
         }
         builder.set_title(title.localized_str());
         if let Some(menu) = platform_menu {
