@@ -321,7 +321,7 @@ impl Widget<String> for TextBox {
     }
 
     fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut String, env: &Env) {
-        let text_layout = self.get_layout(ctx.text(), data, env);
+        let mut text_layout = self.get_layout(ctx.text(), data, env);
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
@@ -443,6 +443,7 @@ impl Widget<String> for TextBox {
                     }
                     _ => {}
                 }
+                text_layout = self.get_layout(ctx.text(), data, env);
                 self.update_hscroll(&text_layout);
                 ctx.invalidate();
             }
