@@ -135,7 +135,7 @@ fn make_menu<T: Data>(state: &State) -> MenuDesc<T> {
     {
         base = druid::menu::sys::mac::menu_bar();
     }
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
     {
         base = base.append(druid::menu::sys::win::file::default());
     }
