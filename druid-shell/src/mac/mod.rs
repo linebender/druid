@@ -155,7 +155,10 @@ impl WindowBuilder {
                 | NSWindowStyleMask::NSClosableWindowMask
                 | NSWindowStyleMask::NSMiniaturizableWindowMask
                 | NSWindowStyleMask::NSResizableWindowMask;
-            let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(self.width as f64, self.height as f64));
+            let rect = NSRect::new(
+                NSPoint::new(0., 0.),
+                NSSize::new(self.width as f64, self.height as f64),
+            );
 
             let window = NSWindow::alloc(nil).initWithContentRect_styleMask_backing_defer_(
                 rect,
