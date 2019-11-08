@@ -53,6 +53,7 @@ use piet_common::{Piet, RenderContext};
 use crate::clipboard::ClipboardItem;
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+use crate::kurbo::Size;
 use crate::platform::application::Application;
 use crate::util::make_nsstring;
 use crate::window::{
@@ -82,8 +83,7 @@ pub struct WindowBuilder {
     title: String,
     enable_mouse_move_events: bool,
     menu: Option<Menu>,
-    width: f32,
-    height: f32,
+    size: Size,
 }
 
 #[derive(Clone)]
@@ -122,8 +122,7 @@ impl WindowBuilder {
             title: String::new(),
             enable_mouse_move_events: true,
             menu: None,
-            width: 500.0,
-            height: 400.0,
+            size: Size::new(500.0, 400.0),
         }
     }
 
@@ -131,9 +130,8 @@ impl WindowBuilder {
         self.handler = Some(handler);
     }
 
-    pub fn set_size(&mut self, width: f32, height: f32) {
-        self.width = width;
-        self.height = height;
+    pub fn set_size(&mut self, size: Size) {
+        self.size = size;
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -157,7 +155,7 @@ impl WindowBuilder {
                 | NSWindowStyleMask::NSResizableWindowMask;
             let rect = NSRect::new(
                 NSPoint::new(0., 0.),
-                NSSize::new(self.width as f64, self.height as f64),
+                NSSize::new(self.size.width, self.size.height),
             );
 
             let window = NSWindow::alloc(nil).initWithContentRect_styleMask_backing_defer_(

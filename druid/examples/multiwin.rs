@@ -85,7 +85,8 @@ fn make_delegate() -> AppDelegate<State> {
     AppDelegate::new().event_handler(|event, data, _env, ctx| {
         match event {
             Event::Command(ref cmd) if cmd.selector == druid::command::sys::NEW_FILE => {
-                let new_win = WindowDesc::new(ui_builder).menu(make_menu(data))
+                let new_win = WindowDesc::new(ui_builder)
+                    .menu(make_menu(data))
                     .window_size(data.selected as f64 * 100.0 + 300.0, 500.0);
                 let command = Command::new(druid::command::sys::NEW_WINDOW, new_win);
                 ctx.submit_command(command, None);
