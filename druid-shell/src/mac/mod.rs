@@ -47,7 +47,7 @@ use log::{error, info};
 
 use cairo::{Context, QuartzSurface};
 
-use crate::kurbo::{Point, Vec2, Size};
+use crate::kurbo::{Point, Size, Vec2};
 use piet_common::{Piet, RenderContext};
 
 use crate::clipboard::ClipboardItem;
