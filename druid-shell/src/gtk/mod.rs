@@ -157,8 +157,7 @@ impl WindowBuilder {
 
         let window = with_application(|app| ApplicationWindow::new(&app));
 
-        // TODO: I'm not convinced this actually works
-        let dpi_scale = window.get_display().get_default_screen().get_resolution() / 96.0;
+        let dpi_scale = window.get_display().map(|c| c.get_default_screen().get_resolution() as f32).unwrap_or(96.0) / 96.0;
 
         window.set_default_size((self.width * dpi_scale) as i32, (self.height * dpi_scale) as i32);
 
