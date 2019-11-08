@@ -64,7 +64,7 @@ use crate::application::Application;
 use crate::clipboard::ClipboardItem;
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use crate::kurbo::{Point, Vec2, Size};
+use crate::kurbo::{Point, Size, Vec2};
 use crate::menu::Menu;
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use crate::window::{
