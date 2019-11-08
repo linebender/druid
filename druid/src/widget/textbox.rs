@@ -362,7 +362,7 @@ impl Widget<String> for TextBox {
                         || cmd.selector == crate::command::sys::CUT) =>
             {
                 if let Some(text) = data.get(self.selection.range()) {
-                    ctx.win_ctx.set_clipboard_contents(text.into());
+                    ctx.set_clipboard_contents(text);
                 }
                 if !self.selection.is_caret() && cmd.selector == crate::command::sys::CUT {
                     self.backspace(data);
