@@ -956,9 +956,13 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     ///
     /// [`Command`]: struct.Command.html
     /// [`update()`]: trait.Widget.html#tymethod.update
-    pub fn submit_command(&mut self, command: Command, window_id: impl Into<Option<WindowId>>) {
+    pub fn submit_command(
+        &mut self,
+        command: impl Into<Command>,
+        window_id: impl Into<Option<WindowId>>,
+    ) {
         let window_id = window_id.into().unwrap_or(self.window_id);
-        self.command_queue.push_back((window_id, command))
+        self.command_queue.push_back((window_id, command.into()))
     }
 
     /// Get the window id.
