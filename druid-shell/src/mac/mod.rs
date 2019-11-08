@@ -131,7 +131,7 @@ impl WindowBuilder {
         self.handler = Some(handler);
     }
 
-    pub fn set_size(&mut self, width: f64, height: f64) {
+    pub fn set_size(&mut self, width: f32, height: f32) {
         self.width = width;
         self.height = height;
     }
