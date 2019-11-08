@@ -47,13 +47,12 @@ use log::{error, info};
 
 use cairo::{Context, QuartzSurface};
 
-use crate::kurbo::{Point, Vec2};
+use crate::kurbo::{Point, Vec2, Size};
 use piet_common::{Piet, RenderContext};
 
 use crate::clipboard::ClipboardItem;
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use crate::kurbo::Size;
 use crate::platform::application::Application;
 use crate::util::make_nsstring;
 use crate::window::{
