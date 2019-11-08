@@ -123,7 +123,7 @@ impl WindowBuilder {
             enable_mouse_move_events: true,
             menu: None,
             width: 500.0,
-            height: 500.0,
+            height: 400.0,
         }
     }
 
