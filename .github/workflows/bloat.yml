@@ -5,7 +5,7 @@ name: bloat check
 
 jobs:
   bloat_check:
-    runs-on: macOS-10.14
+    runs-on: macOS-latest
     name: post binary size change info
     # if it isn't an issue comment run every time, otherwise only run if the comment starts with '/bloat'
     if: (!startsWith(github.event_name, 'issue_comment') || startsWith(github.event.comment.body, '/bloat'))
