@@ -142,8 +142,13 @@ impl<T: Data + 'static> WindowDesc<T> {
     }
 
     /// Set the window size at creation
-    pub fn window_size(mut self, width: f64, height: f64) -> Self {
-        self.size = Some(Size::new(width, height));
+    ///
+    /// You can pass in a tuple `(width, height)` or `kurbo::Size` e.g. to create a window 1000px wide and 500px high
+    /// ```ignore
+    /// window.window_size((1000.0, 500.0));
+    /// ```
+    pub fn window_size(mut self, size: impl Into<Size>) -> Self {
+        self.size = Some(size.into());
         self
     }
 
