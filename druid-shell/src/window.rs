@@ -93,6 +93,7 @@ pub trait WinCtx<'a> {
     /// Blocks while the user picks the file.
     fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo>;
 
+    /// Set clipboard contents.
     fn set_clipboard_contents(&mut self, contents: ClipboardItem);
 }
 

@@ -965,6 +965,11 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     pub fn window_id(&self) -> WindowId {
         self.window_id
     }
+
+    /// Set clipboard contents.
+    pub fn set_clipboard_contents(&mut self, contents: impl Into<ClipboardItem>) {
+        self.win_ctx.set_clipboard_contents(contents.into());
+    }
 }
 
 impl<'a, 'b> LayoutCtx<'a, 'b> {
