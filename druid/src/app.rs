@@ -70,8 +70,8 @@ impl<T: Data + 'static> AppLauncher<T> {
     /// Set the [`AppDelegate`].
     ///
     /// [`AppDelegate`]: struct.AppDelegate.html
-    pub fn delegate(mut self, delegate: Box<dyn AppDelegate<T>>) -> Self {
-        self.delegate = Some(delegate);
+    pub fn delegate(mut self, delegate: impl AppDelegate<T> + 'static) -> Self {
+        self.delegate = Some(Box::new(delegate));
         self
     }
 

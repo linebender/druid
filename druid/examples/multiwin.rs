@@ -34,9 +34,8 @@ struct State {
 fn main() {
     simple_logger::init().unwrap();
     let main_window = WindowDesc::new(ui_builder).menu(make_menu(&State::default()));
-    let delegate = Box::new(MultiwinDelegate {});
     AppLauncher::with_window(main_window)
-        .delegate(delegate)
+        .delegate(Delegate)
         .launch(State::default())
         .expect("launch failed");
 }
@@ -82,9 +81,9 @@ fn ui_builder() -> impl Widget<State> {
     col
 }
 
-struct MultiwinDelegate {}
+struct Delegate;
 
-impl AppDelegate<State> for MultiwinDelegate {
+impl AppDelegate<State> for Delegate {
     fn event(
         &mut self,
         event: Event,

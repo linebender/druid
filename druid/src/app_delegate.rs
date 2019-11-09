@@ -62,11 +62,14 @@ pub trait AppDelegate<T: Data> {
     /// The return value of this function will be passed down the tree. This can
     /// be the even that was passed in, a different event, or no event. In all cases,
     /// the `update` method will be called as usual.
+    #[allow(unused)]
     fn event(
         &mut self,
         event: Event,
         data: &mut T,
         env: &Env,
         ctx: &mut DelegateCtx,
-    ) -> Option<Event>;
+    ) -> Option<Event> {
+        Some(event)
+    }
 }
