@@ -17,7 +17,7 @@
 use druid::menu::{ContextMenu, MenuDesc, MenuItem};
 use druid::widget::{Align, Button, Column, Label, Padding, Row};
 use druid::{
-    AppDelegate, AppLauncher, Command, Data, DelegateCtx, Event, EventCtx, LocalizedString,
+    AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, Event, EventCtx, LocalizedString,
     Selector, Widget, WindowDesc,
 };
 
@@ -34,8 +34,9 @@ struct State {
 fn main() {
     simple_logger::init().unwrap();
     let main_window = WindowDesc::new(ui_builder).menu(make_menu(&State::default()));
+    let delegate = Box::new(MultiwinDelegate {});
     AppLauncher::with_window(main_window)
-        .delegate(make_delegate())
+        .delegate(delegate)
         .launch(State::default())
         .expect("launch failed");
 }
@@ -81,8 +82,16 @@ fn ui_builder() -> impl Widget<State> {
     col
 }
 
-fn make_delegate() -> AppDelegate<State> {
-    AppDelegate::new().event_handler(|event, data, _env, ctx| {
+struct MultiwinDelegate {}
+
+impl AppDelegate<State> for MultiwinDelegate {
+    fn event(
+        &mut self,
+        event: Event,
+        data: &mut State,
+        _env: &Env,
+        ctx: &mut DelegateCtx,
+    ) -> Option<Event> {
         match event {
             Event::Command(ref cmd) if cmd.selector == druid::command::sys::NEW_FILE => {
                 let new_win = WindowDesc::new(ui_builder).menu(make_menu(data));
@@ -115,7 +124,7 @@ fn make_delegate() -> AppDelegate<State> {
             }
             other => Some(other),
         }
-    })
+    }
 }
 
 #[allow(unused_assignments)]

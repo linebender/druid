@@ -47,8 +47,6 @@ impl<'a, 'b> DelegateCtx<'a, 'b> {
     }
 }
 
-type EventFn<T> = dyn Fn(Event, &mut T, &Env, &mut DelegateCtx) -> Option<Event> + 'static;
-
 /// A type that provides hooks for handling and modifying top-level events.
 ///
 /// The `AppDelegate` is a struct that is allowed to handle and modify
@@ -57,46 +55,18 @@ type EventFn<T> = dyn Fn(Event, &mut T, &Env, &mut DelegateCtx) -> Option<Event>
 /// It is a natural place for things like window and menu management.
 ///
 /// You customize the `AppDelegate` by passing closures during creation.
-pub struct AppDelegate<T> {
-    event_fn: Option<Box<EventFn<T>>>,
-}
-
-impl<T: Data> AppDelegate<T> {
-    /// Create a new `AppDelegate`.
-    pub fn new() -> Self {
-        AppDelegate { event_fn: None }
-    }
-
-    /// Set the `AppDelegate`'s event handler. This function receives all events,
+pub trait AppDelegate<T: Data> {
+    /// The `AppDelegate`'s event handler. This function receives all events,
     /// before they are passed down the tree.
     ///
     /// The return value of this function will be passed down the tree. This can
     /// be the even that was passed in, a different event, or no event. In all cases,
     /// the `update` method will be called as usual.
-    pub fn event_handler<F>(mut self, f: F) -> Self
-    where
-        F: Fn(Event, &mut T, &Env, &mut DelegateCtx) -> Option<Event> + 'static,
-    {
-        self.event_fn = Some(Box::new(f));
-        self
-    }
-
-    pub(crate) fn event(
+    fn event(
         &mut self,
         event: Event,
         data: &mut T,
         env: &Env,
         ctx: &mut DelegateCtx,
-    ) -> Option<Event> {
-        match self.event_fn.as_ref() {
-            Some(f) => (f)(event, data, env, ctx),
-            None => Some(event),
-        }
-    }
-}
-
-impl<T: Data> Default for AppDelegate<T> {
-    fn default() -> Self {
-        AppDelegate::new()
-    }
+    ) -> Option<Event>;
 }
