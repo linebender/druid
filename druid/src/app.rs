@@ -32,7 +32,7 @@ type EnvSetupFn = dyn FnOnce(&mut Env);
 pub struct AppLauncher<T> {
     windows: Vec<WindowDesc<T>>,
     env_setup: Option<Box<EnvSetupFn>>,
-    delegate: Option<AppDelegate<T>>,
+    delegate: Option<Box<dyn AppDelegate<T>>>,
 }
 
 /// A function that can create a widget.
@@ -72,8 +72,8 @@ impl<T: Data + 'static> AppLauncher<T> {
     /// Set the [`AppDelegate`].
     ///
     /// [`AppDelegate`]: struct.AppDelegate.html
-    pub fn delegate(mut self, delegate: AppDelegate<T>) -> Self {
-        self.delegate = Some(delegate);
+    pub fn delegate(mut self, delegate: impl AppDelegate<T> + 'static) -> Self {
+        self.delegate = Some(Box::new(delegate));
         self
     }
 

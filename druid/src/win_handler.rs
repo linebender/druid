@@ -54,7 +54,7 @@ pub struct DruidHandler<T: Data> {
 
 /// State shared by all windows in the UI.
 pub(crate) struct AppState<T: Data> {
-    delegate: Option<AppDelegate<T>>,
+    delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: VecDeque<(WindowId, Command)>,
     windows: Windows<T>,
     pub(crate) env: Env,
@@ -287,7 +287,11 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
 }
 
 impl<T: Data + 'static> AppState<T> {
-    pub(crate) fn new(data: T, env: Env, delegate: Option<AppDelegate<T>>) -> Rc<RefCell<Self>> {
+    pub(crate) fn new(
+        data: T,
+        env: Env,
+        delegate: Option<Box<dyn AppDelegate<T>>>,
+    ) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(AppState {
             delegate,
             command_queue: VecDeque::new(),
