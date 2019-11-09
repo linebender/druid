@@ -19,20 +19,13 @@ use std::collections::VecDeque;
 use crate::{Command, Data, Env, Event, WinCtx, WindowId};
 
 /// A context passed in to [`AppDelegate`] functions.
-pub struct DelegateCtx<'a, 'b> {
+pub struct DelegateCtx<'a> {
     pub(crate) source_id: WindowId,
     pub(crate) command_queue: &'a mut VecDeque<(WindowId, Command)>,
-    pub(crate) win_ctx: &'a mut dyn WinCtx<'b>,
+    // pub(crate) win_ctx: &'a mut dyn WinCtx<'b>,
 }
 
-impl<'a, 'b> DelegateCtx<'a, 'b> {
-    /// Get the [`WinCtx`].
-    ///
-    /// [`WinCtx`] trait.WinCtx.html
-    pub fn win_ctx(&self) -> &dyn WinCtx<'b> {
-        self.win_ctx
-    }
-
+impl<'a> DelegateCtx<'a> {
     /// Submit a [`Command`] to be run after this event is handled.
     ///
     /// Commands are run in the order they are submitted; all commands
@@ -49,12 +42,13 @@ impl<'a, 'b> DelegateCtx<'a, 'b> {
 
 /// A type that provides hooks for handling and modifying top-level events.
 ///
-/// The `AppDelegate` is a struct that is allowed to handle and modify
+/// The `AppDelegate` is a trait that is allowed to handle and modify
 /// events before they are passed down the widget tree.
 ///
 /// It is a natural place for things like window and menu management.
 ///
-/// You customize the `AppDelegate` by passing closures during creation.
+/// You customize the `AppDelegate` by implementing its methods on your own type.
+#[allow(unused)]
 pub trait AppDelegate<T: Data> {
     /// The `AppDelegate`'s event handler. This function receives all events,
     /// before they are passed down the tree.
@@ -62,14 +56,23 @@ pub trait AppDelegate<T: Data> {
     /// The return value of this function will be passed down the tree. This can
     /// be the even that was passed in, a different event, or no event. In all cases,
     /// the `update` method will be called as usual.
-    #[allow(unused)]
     fn event(
         &mut self,
         event: Event,
         data: &mut T,
         env: &Env,
         ctx: &mut DelegateCtx,
+        win_ctx: &mut dyn WinCtx,
     ) -> Option<Event> {
         Some(event)
     }
+
+    /// The handler for window creation events.
+    /// This function is called after a window has been added,
+    /// allowing you to customize the window creation behavior of your app.
+    fn window_added(&mut self, id: WindowId, data: &mut T, env: &Env, ctx: &mut DelegateCtx) {}
+
+    /// The handler for window deletion events.
+    /// This function is called after a window has been removed.
+    fn window_removed(&mut self, id: WindowId, data: &mut T, env: &Env, ctx: &mut DelegateCtx) {}
 }

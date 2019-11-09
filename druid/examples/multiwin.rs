@@ -18,8 +18,11 @@ use druid::menu::{ContextMenu, MenuDesc, MenuItem};
 use druid::widget::{Align, Button, Column, Label, Padding, Row};
 use druid::{
     AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, Event, EventCtx, LocalizedString,
-    Selector, Widget, WindowDesc,
+    Selector, Widget, WindowDesc, WindowId,
 };
+use druid_shell::window::WinCtx;
+
+use log::info;
 
 const MENU_COUNT_ACTION: Selector = Selector::new("menu-count-action");
 const MENU_INCREMENT_ACTION: Selector = Selector::new("menu-increment-action");
@@ -52,7 +55,7 @@ impl EventCtxExt for EventCtx<'_, '_> {
     }
 }
 
-impl EventCtxExt for DelegateCtx<'_, '_> {
+impl EventCtxExt for DelegateCtx<'_> {
     fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>) {
         let cmd = Command::new(druid::command::sys::SET_MENU, menu);
         self.submit_command(cmd, None);
@@ -90,6 +93,7 @@ impl AppDelegate<State> for Delegate {
         data: &mut State,
         _env: &Env,
         ctx: &mut DelegateCtx,
+        _win_ctx: &mut dyn WinCtx,
     ) -> Option<Event> {
         match event {
             Event::Command(ref cmd) if cmd.selector == druid::command::sys::NEW_FILE => {
@@ -125,6 +129,24 @@ impl AppDelegate<State> for Delegate {
             }
             other => Some(other),
         }
+    }
+    fn window_added(
+        &mut self,
+        id: WindowId,
+        _data: &mut State,
+        _env: &Env,
+        _ctx: &mut DelegateCtx,
+    ) {
+        info!("Window added, id: {:?}", id);
+    }
+    fn window_removed(
+        &mut self,
+        id: WindowId,
+        _data: &mut State,
+        _env: &Env,
+        _ctx: &mut DelegateCtx,
+    ) {
+        info!("Window removed, id: {:?}", id);
     }
 }
 
