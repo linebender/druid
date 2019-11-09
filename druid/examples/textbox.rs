@@ -15,7 +15,7 @@
 //! Demos the textbox widget, as well as menu creation and overriding theme settings.
 
 use druid::piet::Color;
-use druid::widget::{Column, DynLabel, Padding, StyleChild, TextBox};
+use druid::widget::{Column, DynLabel, EnvScope, Padding, TextBox};
 use druid::{theme, AppLauncher, Data, LocalizedString, MenuDesc, Widget, WindowDesc};
 
 fn main() {
@@ -37,7 +37,7 @@ fn build_widget() -> impl Widget<String> {
     let mut col = Column::new();
 
     let textbox = TextBox::new();
-    let textbox_2 = StyleChild::new(
+    let textbox_2 = EnvScope::new(
         |env| {
             env.set(theme::BACKGROUND_LIGHT, Color::rgb8(50, 50, 50));
             env.set(theme::LABEL_COLOR, Color::WHITE);

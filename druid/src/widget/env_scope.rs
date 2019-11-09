@@ -15,28 +15,30 @@
 //! A widget that themes its child.
 
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx,
-    Widget,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect, Size,
+    UpdateCtx, Widget, WidgetPod,
 };
 
 /// A widget that accepts a closure to update the theme for its child.
-pub struct StyleChild<T: Data, F: Fn(&mut Env) + 'static> {
+pub struct EnvScope<T: Data, W: Widget<T>, F: Fn(&mut Env) + 'static> {
     f: F,
-    child: Box<dyn Widget<T>>,
+    child: WidgetPod<T, W>,
 }
 
-impl<T: Data, F: Fn(&mut Env) + 'static> StyleChild<T, F> {
+impl<T: Data, W: Widget<T>, F: Fn(&mut Env) + 'static> EnvScope<T, W, F> {
     /// Create a widget that themes its child.
     ///
-    /// Accepts a closure that sets theme values:
+    /// Accepts a closure that sets theme values.
+    ///
+    /// # Examples
     /// ```
     /// # use druid::{theme, Widget};
     /// # use druid::piet::{Color};
-    /// # use druid::widget::{Label, StyleChild};
+    /// # use druid::widget::{Label, EnvScope};
     ///
-    /// # fn build_width() -> impl Widget<String> {
+    /// # fn build_widget() -> impl Widget<String> {
     ///
-    /// StyleChild::new(
+    /// EnvScope::new(
     ///     |env| {
     ///         env.set(theme::LABEL_COLOR, Color::WHITE);
     ///     },
@@ -44,23 +46,21 @@ impl<T: Data, F: Fn(&mut Env) + 'static> StyleChild<T, F> {
     /// )
     ///
     /// # }
-    ///
-
     /// ```
-    pub fn new(f: F, child: impl Widget<T> + 'static) -> StyleChild<T, F> {
-        StyleChild {
+    pub fn new(f: F, child: W) -> EnvScope<T, W, F> {
+        EnvScope {
             f,
-            child: Box::new(child),
+            child: WidgetPod::new(child),
         }
     }
 }
 
-impl<T: Data, F: Fn(&mut Env) + 'static> Widget<T> for StyleChild<T, F> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+impl<T: Data, W: Widget<T>, F: Fn(&mut Env) + 'static> Widget<T> for EnvScope<T, W, F> {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env);
 
-        self.child.paint(paint_ctx, base_state, data, &new_env);
+        self.child.paint(paint_ctx, data, &new_env);
     }
 
     fn layout(
@@ -70,12 +70,16 @@ impl<T: Data, F: Fn(&mut Env) + 'static> Widget<T> for StyleChild<T, F> {
         data: &T,
         env: &Env,
     ) -> Size {
-        bc.debug_check("StyleChild");
+        bc.debug_check("EnvScope");
 
         let mut new_env = env.clone();
         (self.f)(&mut new_env);
 
-        self.child.layout(layout_ctx, &bc, data, &new_env)
+        let size = self.child.layout(layout_ctx, &bc, data, &new_env);
+        self.child
+            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+
+        size
     }
 
     fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
@@ -85,10 +89,10 @@ impl<T: Data, F: Fn(&mut Env) + 'static> Widget<T> for StyleChild<T, F> {
         self.child.event(event, ctx, data, &new_env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env);
 
-        self.child.update(ctx, old_data, data, &new_env);
+        self.child.update(ctx, data, &new_env);
     }
 }

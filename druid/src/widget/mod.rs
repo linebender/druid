@@ -59,5 +59,5 @@ pub use crate::widget::container::Container;
 mod switch;
 pub use crate::widget::switch::Switch;
 
-mod style_child;
-pub use crate::widget::style_child::StyleChild;
+mod env_scope;
+pub use crate::widget::env_scope::EnvScope;
