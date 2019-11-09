@@ -69,6 +69,7 @@ pub enum Value {
     Color(Color),
     LinearGradient(Arc<LinearGradient>),
     Float(f64),
+    UnsignedInt(u64),
     String(String),
 }
 
@@ -173,6 +174,7 @@ impl Debug for Value {
             // TODO: make PaintBrush impl debug?
             Value::LinearGradient(g) => write!(f, "LinearGradient {:?}", g),
             Value::Float(x) => write!(f, "Float {}", x),
+            Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
             Value::String(s) => write!(f, "String {:?}", s),
         }
     }
@@ -221,6 +223,7 @@ impl Value {
             (Color(_), Color(_)) => true,
             (LinearGradient(_), LinearGradient(_)) => true,
             (Float(_), Float(_)) => true,
+            (UnsignedInt(_), UnsignedInt(_)) => true,
             (String(_), String(_)) => true,
             _ => false,
         }
@@ -239,6 +242,7 @@ impl Data for Value {
             (Color(c1), Color(c2)) => c1.as_rgba_u32() == c2.as_rgba_u32(),
             (LinearGradient(g1), LinearGradient(g2)) => Arc::ptr_eq(g1, g2),
             (Float(f1), Float(f2)) => f1.same(&f2),
+            (UnsignedInt(f1), UnsignedInt(f2)) => f1.same(&f2),
             (String(s1), String(s2)) => s1 == s2,
             _ => false,
         }
@@ -362,6 +366,7 @@ macro_rules! impl_value_type_arc {
 }
 
 impl_value_type_owned!(f64, Float);
+impl_value_type_owned!(u64, UnsignedInt);
 impl_value_type_owned!(Color, Color);
 impl_value_type_owned!(Rect, Rect);
 impl_value_type_owned!(Point, Point);

@@ -163,10 +163,11 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     }
 
     /// Makes the scrollbars visible, and resets the fade timer.
-    pub fn reset_scrollbar_fade(&mut self, ctx: &mut EventCtx) {
+    pub fn reset_scrollbar_fade(&mut self, ctx: &mut EventCtx, env: &Env) {
         // Display scroll bars and schedule their disappearance
-        self.scroll_bars.opacity = 0.7;
-        let deadline = Instant::now() + Duration::from_millis(1500);
+        self.scroll_bars.opacity = env.get(theme::SCROLL_BAR_MAX_OPACITY);
+        let fade_delay = env.get(theme::SCROLL_BAR_FADE_DELAY);
+        let deadline = Instant::now() + Duration::from_millis(fade_delay);
         self.scroll_bars.timer_id = ctx.request_timer(deadline);
     }
 
@@ -226,18 +227,23 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
                 .with_alpha(self.scroll_bars.opacity),
         );
 
+        let radius = env.get(theme::SCROLL_BAR_RADIUS);
+        let edge_width = env.get(theme::SCROLL_BAR_EDGE_WIDTH);
+
         // Vertical bar
         if viewport.height() < self.child_size.height {
-            let rect = RoundedRect::from_rect(self.calc_vertical_bar_bounds(viewport, &env), 5.0);
+            let bounds = self.calc_vertical_bar_bounds(viewport, &env);
+            let rect = RoundedRect::from_rect(bounds, radius);
             paint_ctx.render_ctx.fill(rect, &brush);
-            paint_ctx.render_ctx.stroke(rect, &border_brush, 1.0);
+            paint_ctx.render_ctx.stroke(rect, &border_brush, edge_width);
         }
 
         // Horizontal bar
         if viewport.width() < self.child_size.width {
-            let rect = RoundedRect::from_rect(self.calc_horizontal_bar_bounds(viewport, &env), 5.0);
+            let bounds = self.calc_horizontal_bar_bounds(viewport, &env);
+            let rect = RoundedRect::from_rect(bounds, radius);
             paint_ctx.render_ctx.fill(rect, &brush);
-            paint_ctx.render_ctx.stroke(rect, &border_brush, 1.0);
+            paint_ctx.render_ctx.stroke(rect, &border_brush, edge_width);
         }
     }
 
@@ -349,7 +355,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                         self.scroll_bars.hovered = BarHoveredState::Horizontal;
                     }
 
-                    self.scroll_bars.opacity = 0.7;
+                    self.scroll_bars.opacity = env.get(theme::SCROLL_BAR_MAX_OPACITY);
                     self.scroll_bars.timer_id = TimerToken::INVALID; // Cancel any fade out in progress
                     ctx.invalidate();
                 }
@@ -378,16 +384,17 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 Event::MouseMoved(event) => {
                     let mut transformed_event = event.clone();
                     transformed_event.pos += self.scroll_offset;
-                    let currently_hovered = self
-                        .point_hits_vertical_bar(viewport, transformed_event.pos, &env)
-                        || self.point_hits_horizontal_bar(viewport, transformed_event.pos, &env);
+                    let pos = transformed_event.pos;
+                    let hits_vertical = self.point_hits_vertical_bar(viewport, pos, &env);
+                    let hits_horizontal = self.point_hits_horizontal_bar(viewport, pos, &env);
+                    let currently_hovered = hits_vertical || hits_horizontal;
                     if self.scroll_bars.hovered.is_hovered() && !currently_hovered {
                         self.scroll_bars.hovered = BarHoveredState::None;
-                        self.reset_scrollbar_fade(ctx);
+                        self.reset_scrollbar_fade(ctx, &env);
                     }
                 }
                 // Show the scrollbars any time our size changes
-                Event::Size(_) => self.reset_scrollbar_fade(ctx),
+                Event::Size(_) => self.reset_scrollbar_fade(ctx, &env),
                 // The scroll bars will fade immediately if there's some other widget requesting animation.
                 // Guard by the timer id being invalid.
                 Event::AnimFrame(interval) if self.scroll_bars.timer_id == TimerToken::INVALID => {
@@ -412,7 +419,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 if self.scroll(wheel.delta, size) {
                     ctx.invalidate();
                     ctx.set_handled();
-                    self.reset_scrollbar_fade(ctx);
+                    self.reset_scrollbar_fade(ctx, &env);
                 }
             }
         }
