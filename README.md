@@ -4,8 +4,8 @@
 
 Druid is a new Rust-native UI toolkit, still in early stages. Its main
 goal is performance, also aiming for small binary size and compile time,
-fast startup, and very easy build configuration (just `cargo run`). 
-It currently supports Windows and macOS, with GNU/Linux support planned.
+fast startup, and very easy build configuration (just `cargo run`).
+It currently supports Windows, macOS, and GNU/Linux.
 
 Raph gave a talk at the July 2018 SF Rust Meetup ([video][jul-2018-video],
 [slides][jul-2018-slides]) about the design. Traditional object-oriented
@@ -66,7 +66,7 @@ $> PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig" cargo build
  ```
 #### Linux
 
-On Linux, druid requires gtk+3 ; see[gtk-rs dependencies] for installation instructions.
+On Linux, druid requires gtk+3; see [gtk-rs dependencies] for installation instructions.
 
 run `cargo build`
 
