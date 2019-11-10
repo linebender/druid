@@ -343,7 +343,7 @@ impl<T: Data + 'static> AppState<T> {
     fn remove_window(&mut self, id: WindowId) -> Option<WindowHandle> {
         let res = self.windows.remove(id);
         self.with_delegate(id, |del, data, env, ctx| {
-            del.window_added(id, data, env, ctx)
+            del.window_removed(id, data, env, ctx)
         });
         res
     }
