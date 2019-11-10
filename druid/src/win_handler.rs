@@ -308,8 +308,32 @@ impl<T: Data + 'static> AppState<T> {
             .and_then(|w| w.get_menu_cmd(cmd_id))
     }
 
+    fn with_delegate(
+        &mut self,
+        id: WindowId,
+        f: impl Fn(&mut Box<dyn AppDelegate<T>>, &mut T, &Env, &mut DelegateCtx),
+    ) {
+        let AppState {
+            ref mut delegate,
+            ref mut command_queue,
+            ref mut data,
+            ref env,
+            ..
+        } = self;
+        let mut ctx = DelegateCtx {
+            source_id: id,
+            command_queue,
+        };
+        if let Some(delegate) = delegate {
+            f(delegate, data, env, &mut ctx);
+        }
+    }
+
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
         self.windows.connect(id, handle);
+        self.with_delegate(id, |del, data, env, ctx| {
+            del.window_added(id, data, env, ctx)
+        });
     }
 
     pub(crate) fn add_window(&mut self, id: WindowId, window: Window<T>) {
@@ -317,7 +341,11 @@ impl<T: Data + 'static> AppState<T> {
     }
 
     fn remove_window(&mut self, id: WindowId) -> Option<WindowHandle> {
-        self.windows.remove(id)
+        let res = self.windows.remove(id);
+        self.with_delegate(id, |del, data, env, ctx| {
+            del.window_added(id, data, env, ctx)
+        });
+        res
     }
 
     fn assemble_window_state(&mut self, window_id: WindowId) -> Option<SingleWindowState<'_, T>> {
@@ -414,9 +442,8 @@ impl<T: Data + 'static> AppState<T> {
                 let mut ctx = DelegateCtx {
                     source_id,
                     command_queue,
-                    win_ctx,
                 };
-                delegate.event(event, data, env, &mut ctx)
+                delegate.event(event, data, env, &mut ctx, win_ctx)
             }
             None => Some(event),
         }
