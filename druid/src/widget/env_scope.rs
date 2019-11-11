@@ -1,4 +1,4 @@
-// Copyright 2018 The xi-editor Authors.
+// Copyright 2019 The xi-editor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A widget that themes its child.
+//! A widget that accepts a closure to update the environment for its child.
+
+use std::marker::PhantomData;
 
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect, Size,
-    UpdateCtx, Widget, WidgetPod,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx,
+    Widget,
 };
 
-/// A widget that accepts a closure to update the theme for its child.
-pub struct EnvScope<T: Data, W: Widget<T>, F: Fn(&mut Env) + 'static> {
-    f: F,
-    child: WidgetPod<T, W>,
+/// A widget that accepts a closure to update the environment for its child.
+pub struct EnvScope<T: Data, W: Widget<T>> {
+    f: Box<dyn Fn(&mut Env)>,
+    child: W,
+    phantom: PhantomData<T>,
 }
 
-impl<T: Data, W: Widget<T>, F: Fn(&mut Env) + 'static> EnvScope<T, W, F> {
-    /// Create a widget that themes its child.
+impl<T: Data, W: Widget<T>> EnvScope<T, W> {
+    /// Create a widget that updates the environment for its child.
     ///
-    /// Accepts a closure that sets theme values.
+    /// Accepts a closure that sets Env values.
     ///
     /// # Examples
     /// ```
@@ -47,20 +50,21 @@ impl<T: Data, W: Widget<T>, F: Fn(&mut Env) + 'static> EnvScope<T, W, F> {
     ///
     /// # }
     /// ```
-    pub fn new(f: F, child: W) -> EnvScope<T, W, F> {
+    pub fn new(f: impl Fn(&mut Env) + 'static, child: W) -> EnvScope<T, W> {
         EnvScope {
-            f,
-            child: WidgetPod::new(child),
+            f: Box::new(f),
+            child,
+            phantom: Default::default(),
         }
     }
 }
 
-impl<T: Data, W: Widget<T>, F: Fn(&mut Env) + 'static> Widget<T> for EnvScope<T, W, F> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
+impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env);
 
-        self.child.paint(paint_ctx, data, &new_env);
+        self.child.paint(paint_ctx, base_state, data, &new_env);
     }
 
     fn layout(
@@ -75,11 +79,7 @@ impl<T: Data, W: Widget<T>, F: Fn(&mut Env) + 'static> Widget<T> for EnvScope<T,
         let mut new_env = env.clone();
         (self.f)(&mut new_env);
 
-        let size = self.child.layout(layout_ctx, &bc, data, &new_env);
-        self.child
-            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
-
-        size
+        self.child.layout(layout_ctx, &bc, data, &new_env)
     }
 
     fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
@@ -89,10 +89,10 @@ impl<T: Data, W: Widget<T>, F: Fn(&mut Env) + 'static> Widget<T> for EnvScope<T,
         self.child.event(event, ctx, data, &new_env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env);
 
-        self.child.update(ctx, data, &new_env);
+        self.child.update(ctx, old_data, data, &new_env);
     }
 }
