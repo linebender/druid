@@ -32,7 +32,7 @@ default-features = false
 
 [dependencies.druid-shell]
 path = "../druid-shell"
-version = "0.3.1"
+version = "0.3.2"
 
 [dependencies.druid-derive]
 path = "../druid-derive"
