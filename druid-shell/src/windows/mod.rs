@@ -1113,6 +1113,12 @@ impl WindowHandle {
         }
     }
 
+    /// Bring this window to the front of the window stack and give it focus.
+    pub fn bring_to_front_and_focus(&self) {
+        //FIXME: implementation goes here
+        log::warn!("bring_to_front_and_focus not yet implemented on windows");
+    }
+
     pub fn invalidate(&self) {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();

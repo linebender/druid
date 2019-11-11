@@ -14,10 +14,7 @@
 
 //! macOS implementation of window creation.
 
-#![allow(
-    non_snake_case,
-    clippy::let_unit_value,
-    )]
+#![allow(non_snake_case, clippy::let_unit_value)]
 
 pub mod application;
 pub mod dialog;
@@ -649,6 +646,16 @@ impl WindowHandle {
                 let view = nsview.load();
                 let window: id = msg_send![*view, window];
                 window.close();
+            }
+        }
+    }
+
+    /// Bring this window to the front of the window stack and give it focus.
+    pub fn bring_to_front_and_focus(&self) {
+        if let Some(ref nsview) = self.nsview {
+            unsafe {
+                let window: id = msg_send![*nsview.load(), window];
+                let () = msg_send![window, performSelectorOnMainThread: sel!(makeKeyAndOrderFront:) withObject: nil waitUntilDone: NO];
             }
         }
     }
