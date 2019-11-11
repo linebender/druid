@@ -32,6 +32,10 @@ use crate::piet::{
 use crate::theme;
 use crate::widget::Align;
 
+use crate::unicode_segmentation::GraphemeCursor;
+
+use crate::widget::textbox::EditableText;
+
 const BORDER_WIDTH: f64 = 1.;
 const PADDING_TOP: f64 = 5.;
 const PADDING_LEFT: f64 = 4.;
@@ -312,7 +316,9 @@ impl Widget<String> for TextBox {
                     }
                     // Select right (Shift+ArrowRight)
                     k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowRight)).matches(k_e) => {
-                        self.selection.end = next_grapheme(data, self.cursor());
+                        if let Some(end) = data.next_grapheme_offset(self.cursor()) {
+                            self.selection.end = end;
+                        }
                     }
                     // Move left (ArrowLeft)
                     k_e if (HotKey::new(None, KeyCode::ArrowLeft)).matches(k_e) => {
@@ -326,7 +332,11 @@ impl Widget<String> for TextBox {
                     // Move right (ArrowRight)
                     k_e if (HotKey::new(None, KeyCode::ArrowRight)).matches(k_e) => {
                         if self.selection.is_caret() {
-                            self.cursor_to(next_grapheme(data, self.cursor()));
+                            if let Some(next) = data.next_grapheme_offset(self.cursor()) {
+                                self.cursor_to(next);
+                            } else {
+                                self.cursor_to(data.len());
+                            }
                         } else {
                             self.cursor_to(self.selection.max());
                         }
@@ -497,9 +507,8 @@ impl Widget<String> for TextBox {
 }
 
 /// Gets the next character from the given index.
-fn next_grapheme(src: &str, from: usize) -> usize {
-    let mut c = GraphemeCursor::new(from, src.len(), true);
-    let next_boundary = c.next_boundary(src, 0).unwrap();
+fn next_grapheme(src: &String, from: usize) -> usize {
+    let next_boundary = src.next_grapheme_offset(from);
     if let Some(next) = next_boundary {
         next
     } else {
