@@ -348,6 +348,12 @@ impl<T: Data + 'static> AppState<T> {
         res
     }
 
+    fn show_window(&mut self, id: WindowId) {
+        if let Some(state) = self.windows.state.get(&id) {
+            state.handle.bring_to_front_and_focus();
+        }
+    }
+
     fn assemble_window_state(&mut self, window_id: WindowId) -> Option<SingleWindowState<'_, T>> {
         let AppState {
             ref mut command_queue,
@@ -515,6 +521,7 @@ impl<T: Data + 'static> DruidHandler<T> {
             &sys_cmd::OPEN_FILE => self.open_file(cmd, window_id, win_ctx),
             &sys_cmd::NEW_WINDOW => self.new_window(cmd),
             &sys_cmd::CLOSE_WINDOW => self.close_window(cmd, window_id),
+            &sys_cmd::SHOW_WINDOW => self.show_window(cmd),
             &sys_cmd::QUIT_APP => self.quit(),
             &sys_cmd::HIDE_APPLICATION => self.hide_app(),
             &sys_cmd::HIDE_OTHERS => self.hide_others(),
@@ -568,6 +575,13 @@ impl<T: Data + 'static> DruidHandler<T> {
         if let Some(handle) = handle {
             handle.close();
         }
+    }
+
+    fn show_window(&mut self, cmd: Command) {
+        let id: WindowId = *cmd
+            .get_object()
+            .expect("show window selector missing window id");
+        self.app_state.borrow_mut().show_window(id);
     }
 
     fn do_paste(&mut self, window_id: WindowId, ctx: &mut dyn WinCtx) {
