@@ -16,13 +16,12 @@
 
 use std::collections::VecDeque;
 
-use crate::{Command, Data, Env, Event, WinCtx, WindowId};
+use crate::{Command, Data, Env, Event, WindowId};
 
 /// A context passed in to [`AppDelegate`] functions.
 pub struct DelegateCtx<'a> {
     pub(crate) source_id: WindowId,
     pub(crate) command_queue: &'a mut VecDeque<(WindowId, Command)>,
-    // pub(crate) win_ctx: &'a mut dyn WinCtx<'b>,
 }
 
 impl<'a> DelegateCtx<'a> {
@@ -62,7 +61,6 @@ pub trait AppDelegate<T: Data> {
         data: &mut T,
         env: &Env,
         ctx: &mut DelegateCtx,
-        win_ctx: &mut dyn WinCtx,
     ) -> Option<Event> {
         Some(event)
     }

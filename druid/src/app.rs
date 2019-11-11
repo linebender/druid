@@ -47,7 +47,11 @@ pub struct WindowDesc<T> {
     pub(crate) title: Option<LocalizedString<T>>,
     pub(crate) size: Option<Size>,
     pub(crate) menu: Option<MenuDesc<T>>,
-    //TODO: more things you can configure on a window, like size?
+    /// The `WindowId` that will be assigned to this window.
+    ///
+    /// This can be used to track a window from when it is launched and when
+    /// it actually connects.
+    pub id: WindowId,
 }
 
 impl<T: Data + 'static> AppLauncher<T> {
@@ -129,6 +133,7 @@ impl<T: Data + 'static> WindowDesc<T> {
             title: None,
             size: None,
             menu: MenuDesc::platform_default(),
+            id: WindowId::next(),
         }
     }
 
@@ -167,8 +172,7 @@ impl<T: Data + 'static> WindowDesc<T> {
             .as_mut()
             .map(|m| m.build_window_menu(&state.borrow().data, &state.borrow().env));
 
-        let id = WindowId::next();
-        let handler = DruidHandler::new_shared(state.clone(), id);
+        let handler = DruidHandler::new_shared(state.clone(), self.id);
 
         let mut builder = WindowBuilder::new();
         builder.set_handler(Box::new(handler));
@@ -183,7 +187,7 @@ impl<T: Data + 'static> WindowDesc<T> {
         let root = (self.root_builder)();
         state
             .borrow_mut()
-            .add_window(id, Window::new(root, title, menu));
+            .add_window(self.id, Window::new(root, title, menu));
 
         Ok(WindowHandle {
             inner: builder.build()?,

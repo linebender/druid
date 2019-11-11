@@ -199,7 +199,7 @@ dependencies = [
 
 [[package]]
 name = "druid"
-version = "0.3.3"
+version = "0.4.0"
 dependencies = [
  "druid-derive 0.1.1",
  "druid-shell 0.3.2",
@@ -216,7 +216,7 @@ dependencies = [
 name = "druid-derive"
 version = "0.1.1"
 dependencies = [
- "druid 0.3.3",
+ "druid 0.4.0",
  "proc-macro2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
