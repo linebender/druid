@@ -16,4 +16,4 @@ quote = "1.0.2"
 proc-macro2 = "1.0.4"
 
 [dev-dependencies]
-druid = { path = "../druid", version = "0.3.1" }
+druid = { path = "../druid", version = "0.4.0" }

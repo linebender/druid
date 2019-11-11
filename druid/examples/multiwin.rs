@@ -20,7 +20,6 @@ use druid::{
     AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, Event, EventCtx, LocalizedString,
     Selector, Widget, WindowDesc, WindowId,
 };
-use druid_shell::window::WinCtx;
 
 use log::info;
 
@@ -93,7 +92,6 @@ impl AppDelegate<State> for Delegate {
         data: &mut State,
         _env: &Env,
         ctx: &mut DelegateCtx,
-        _win_ctx: &mut dyn WinCtx,
     ) -> Option<Event> {
         match event {
             Event::Command(ref cmd) if cmd.selector == druid::command::sys::NEW_FILE => {

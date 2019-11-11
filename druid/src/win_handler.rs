@@ -308,11 +308,13 @@ impl<T: Data + 'static> AppState<T> {
             .and_then(|w| w.get_menu_cmd(cmd_id))
     }
 
-    fn with_delegate(
-        &mut self,
-        id: WindowId,
-        f: impl Fn(&mut Box<dyn AppDelegate<T>>, &mut T, &Env, &mut DelegateCtx),
-    ) {
+    /// A helper fn for setting up the `DelegateCtx`. Takes a closure with
+    /// an arbitrary return type `R`, and returns `Some(R)` if an `AppDelegate`
+    /// is configured.
+    fn with_delegate<R, F>(&mut self, id: WindowId, f: F) -> Option<R>
+    where
+        F: FnOnce(&mut Box<dyn AppDelegate<T>>, &mut T, &Env, &mut DelegateCtx) -> R,
+    {
         let AppState {
             ref mut delegate,
             ref mut command_queue,
@@ -325,7 +327,16 @@ impl<T: Data + 'static> AppState<T> {
             command_queue,
         };
         if let Some(delegate) = delegate {
-            f(delegate, data, env, &mut ctx);
+            Some(f(delegate, data, env, &mut ctx))
+        } else {
+            None
+        }
+    }
+
+    fn delegate_event(&mut self, id: WindowId, event: Event) -> Option<Event> {
+        match self.with_delegate(id, |del, data, env, ctx| del.event(event, data, env, ctx)) {
+            Some(Some(event)) => Some(event),
+            _ => None,
         }
     }
 
@@ -372,7 +383,7 @@ impl<T: Data + 'static> AppState<T> {
     }
 
     fn do_event(&mut self, source_id: WindowId, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
-        let event = self.delegate_event(source_id, event, win_ctx);
+        let event = self.delegate_event(source_id, event);
 
         let (is_handled, dirty, anim) = if let Some(event) = event {
             // handle system window-level commands
@@ -426,33 +437,6 @@ impl<T: Data + 'static> AppState<T> {
             }
         }
         is_handled
-    }
-
-    /// Give the top-level app delegate an opportunity to handle this event.
-    fn delegate_event(
-        &mut self,
-        source_id: WindowId,
-        event: Event,
-        win_ctx: &mut dyn WinCtx,
-    ) -> Option<Event> {
-        let AppState {
-            ref mut delegate,
-            ref mut command_queue,
-            ref mut data,
-            ref env,
-            ..
-        } = self;
-
-        match delegate {
-            Some(delegate) => {
-                let mut ctx = DelegateCtx {
-                    source_id,
-                    command_queue,
-                };
-                delegate.event(event, data, env, &mut ctx, win_ctx)
-            }
-            None => Some(event),
-        }
     }
 
     fn window_got_focus(&mut self, window_id: WindowId, _ctx: &mut dyn WinCtx) {
