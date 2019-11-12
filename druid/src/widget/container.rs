@@ -38,7 +38,7 @@ pub struct Container<T: Data> {
     inner: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T: Data + 'static> Container<T> {
+impl<T: Data> Container<T> {
     /// Create Container with a child
     pub fn new(inner: impl Widget<T> + 'static) -> Self {
         Self {

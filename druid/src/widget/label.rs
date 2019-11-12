@@ -46,8 +46,8 @@ pub struct Label<T> {
 ///
 /// The provided closure is called on update, and its return
 /// value is used as the text for the label.
-pub struct DynLabel<T: Data, F: FnMut(&T, &Env) -> String> {
-    label_closure: F,
+pub struct DynLabel<T: Data> {
+    label_closure: Box<dyn FnMut(&T, &Env) -> String>,
     phantom: PhantomData<T>,
 }
 
@@ -144,10 +144,10 @@ impl<T: Data> LabelText<T> {
     }
 }
 
-impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
-    pub fn new(label_closure: F) -> DynLabel<T, F> {
+impl<T: Data> DynLabel<T> {
+    pub fn new(label_closure: impl FnMut(&T, &Env) -> String + 'static) -> DynLabel<T> {
         DynLabel {
-            label_closure,
+            label_closure: Box::new(label_closure),
             phantom: Default::default(),
         }
     }
@@ -164,7 +164,7 @@ impl<T: Data, F: FnMut(&T, &Env) -> String> DynLabel<T, F> {
     }
 }
 
-impl<T: Data, F: FnMut(&T, &Env) -> String> Widget<T> for DynLabel<T, F> {
+impl<T: Data> Widget<T> for DynLabel<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
 

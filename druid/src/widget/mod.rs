@@ -64,3 +64,6 @@ pub use crate::widget::switch::Switch;
 
 mod env_scope;
 pub use crate::widget::env_scope::EnvScope;
+
+mod widget_ext;
+pub use widget_ext::WidgetExt;

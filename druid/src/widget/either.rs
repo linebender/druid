@@ -20,25 +20,25 @@ use crate::{
 };
 
 /// A widget that switches between two possible child views.
-pub struct Either<T: Data, F: Fn(&T, &Env) -> bool> {
-    closure: F,
+pub struct Either<T: Data> {
+    closure: Box<dyn Fn(&T, &Env) -> bool>,
     true_branch: WidgetPod<T, Box<dyn Widget<T>>>,
     false_branch: WidgetPod<T, Box<dyn Widget<T>>>,
     current: bool,
 }
 
-impl<T: Data, F: Fn(&T, &Env) -> bool> Either<T, F> {
+impl<T: Data> Either<T> {
     /// Create a new widget that switches between two views.
     ///
     /// The given closure is evaluated on data change. If its value is `true`, then
     /// the `true_branch` widget is shown, otherwise `false_branch`.
     pub fn new(
-        closure: F,
+        closure: impl Fn(&T, &Env) -> bool + 'static,
         true_branch: impl Widget<T> + 'static,
         false_branch: impl Widget<T> + 'static,
-    ) -> Either<T, F> {
+    ) -> Either<T> {
         Either {
-            closure,
+            closure: Box::new(closure),
             true_branch: WidgetPod::new(true_branch).boxed(),
             false_branch: WidgetPod::new(false_branch).boxed(),
             current: false,
@@ -46,7 +46,7 @@ impl<T: Data, F: Fn(&T, &Env) -> bool> Either<T, F> {
     }
 }
 
-impl<T: Data, F: Fn(&T, &Env) -> bool> Widget<T> for Either<T, F> {
+impl<T: Data> Widget<T> for Either<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         if self.current {
             self.true_branch.paint(paint_ctx, data, env);
