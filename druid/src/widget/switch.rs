@@ -121,41 +121,14 @@ impl Widget<bool> for Switch {
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let switch_width = switch_height * SWITCH_WIDTH_RATIO;
         let knob_size = switch_height - 2. * SWITCH_PADDING;
+        let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
+        let off_pos = knob_size / 2. + SWITCH_PADDING;
 
         let background_rect = RoundedRect::from_origin_size(
             Point::ORIGIN,
             Size::new(switch_width, switch_height).to_vec2(),
             switch_height / 2.,
         );
-
-        // paint different background for on and off state
-        // todo: make color configurable
-        let background_gradient = if *data {
-            LinearGradient::new(
-                UnitPoint::TOP,
-                UnitPoint::BOTTOM,
-                (env.get(theme::PRIMARY_LIGHT), env.get(theme::PRIMARY_DARK)),
-            )
-        } else {
-            LinearGradient::new(
-                UnitPoint::TOP,
-                UnitPoint::BOTTOM,
-                (
-                    env.get(theme::BACKGROUND_LIGHT),
-                    env.get(theme::BACKGROUND_DARK),
-                ),
-            )
-        };
-
-        paint_ctx.stroke(background_rect, &env.get(theme::BORDER), 2.0);
-        paint_ctx.fill(background_rect, &background_gradient);
-        paint_ctx.clip(background_rect);
-
-        // paint the knob
-        let is_active = base_state.is_active();
-        let is_hovered = self.knob_hovered;
-        let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
-        let off_pos = knob_size / 2. + SWITCH_PADDING;
 
         let knob_position = if self.is_animated || self.is_dragging {
             self.knob_x_offset
@@ -168,6 +141,36 @@ impl Widget<bool> for Switch {
                 off_pos
             }
         };
+
+        let opacity = (self.knob_x_offset - off_pos) / (on_pos - off_pos);
+
+        // paint different background for on and off state
+        // todo: make color configurable
+        let background_gradient_on = LinearGradient::new(
+            UnitPoint::TOP,
+            UnitPoint::BOTTOM,
+            (
+                env.get(theme::PRIMARY_LIGHT).with_alpha(opacity),
+                env.get(theme::PRIMARY_DARK).with_alpha(opacity),
+            ),
+        );
+        let background_gradient_off = LinearGradient::new(
+            UnitPoint::TOP,
+            UnitPoint::BOTTOM,
+            (
+                env.get(theme::BACKGROUND_LIGHT).with_alpha(1. - opacity),
+                env.get(theme::BACKGROUND_DARK).with_alpha(1. - opacity),
+            ),
+        );
+
+        paint_ctx.stroke(background_rect, &env.get(theme::BORDER), 2.0);
+        paint_ctx.fill(background_rect, &background_gradient_on);
+        paint_ctx.fill(background_rect, &background_gradient_off);
+        paint_ctx.clip(background_rect);
+
+        // paint the knob
+        let is_active = base_state.is_active();
+        let is_hovered = self.knob_hovered;
 
         self.knob_pos = Point::new(knob_position, knob_size / 2. + SWITCH_PADDING);
         let knob_circle = Circle::new(self.knob_pos, knob_size / 2.);
