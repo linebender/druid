@@ -334,9 +334,11 @@ impl<T: Data + 'static> AppState<T> {
     }
 
     fn delegate_event(&mut self, id: WindowId, event: Event) -> Option<Event> {
-        match self.with_delegate(id, |del, data, env, ctx| del.event(event, data, env, ctx)) {
-            Some(Some(event)) => Some(event),
-            _ => None,
+        if self.delegate.is_some() {
+            self.with_delegate(id, |del, data, env, ctx| del.event(event, data, env, ctx))
+                .unwrap()
+        } else {
+            Some(event)
         }
     }
 
