@@ -41,16 +41,22 @@ fn derive_struct(
 
     let ty = &input.ident;
     let fields = Fields::parse_ast(&s.fields)?;
-    let same_fns = fields
-        .iter()
-        .filter(|f| !f.ignore)
-        .map(Field::same_fn_path_tokens);
-    let fields = fields.iter().filter(|f| !f.ignore).map(Field::ident_tokens);
+
+    let diff = if fields.len() > 0 {
+        let same_fns = fields
+            .iter()
+            .filter(|f| !f.ignore)
+            .map(Field::same_fn_path_tokens);
+        let fields = fields.iter().filter(|f| !f.ignore).map(Field::ident_tokens);
+        quote!( #( #same_fns(&self.#fields, &other.#fields) )&&* )
+    } else {
+        quote!(true)
+    };
 
     let res = quote! {
         impl<#generics_bounds> druid::Data for #ty #generics {
             fn same(&self, other: &Self) -> bool {
-                #( #same_fns(&self.#fields, &other.#fields) )&&*
+                #diff
             }
         }
     };
