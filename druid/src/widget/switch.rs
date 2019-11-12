@@ -58,9 +58,14 @@ impl Switch {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let switch_width = switch_height * SWITCH_WIDTH_RATIO;
+        let knob_size = switch_height - 2. * SWITCH_PADDING;
+        let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
+        let off_pos = knob_size / 2. + SWITCH_PADDING;
 
         // TODO: use LocalizedString
-        let label = if data { "ON" } else { "OFF" };
+        let on_label = "ON";
+        let off_label = "OFF";
 
         let font = paint_ctx
             .text()
@@ -68,30 +73,46 @@ impl Switch {
             .build()
             .unwrap();
 
-        let text_layout = paint_ctx
+        let on_text_layout = paint_ctx
             .text()
-            .new_text_layout(&font, label)
+            .new_text_layout(&font, on_label)
             .build()
             .unwrap();
 
-        let mut origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
+        let off_text_layout = paint_ctx
+            .text()
+            .new_text_layout(&font, off_label)
+            .build()
+            .unwrap();
+
+        let mut on_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
             Point::ORIGIN,
             Size::new(
-                (base_state.size().width - text_layout.width()).max(0.0),
+                (base_state.size().width - on_text_layout.width()).max(0.0),
+                switch_height + (font_size * 1.2) / 2.,
+            ),
+        ));
+
+        let mut off_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
+            Point::ORIGIN,
+            Size::new(
+                (base_state.size().width - off_text_layout.width()).max(0.0),
                 switch_height + (font_size * 1.2) / 2.,
             ),
         ));
 
         // adjust label position
-        origin.y = origin.y.min(switch_height);
+        on_origin.y = on_origin.y.min(switch_height);
+        off_origin.y = off_origin.y.min(switch_height);
 
-        if data {
-            origin.x = SWITCH_PADDING * 2.
-        } else {
-            origin.x = switch_width - text_layout.width() - SWITCH_PADDING * 2.
-        }
+        on_origin.x = self.knob_x_offset - switch_width + knob_size;
+        off_origin.x = switch_width - off_text_layout.width() - SWITCH_PADDING * 2.
+            + self.knob_x_offset
+            - knob_size / 2.
+            - SWITCH_PADDING;
 
-        paint_ctx.draw_text(&text_layout, origin, &env.get(theme::LABEL_COLOR));
+        paint_ctx.draw_text(&on_text_layout, on_origin, &env.get(theme::LABEL_COLOR));
+        paint_ctx.draw_text(&off_text_layout, off_origin, &env.get(theme::LABEL_COLOR));
     }
 }
 
@@ -128,6 +149,7 @@ impl Widget<bool> for Switch {
 
         paint_ctx.stroke(background_rect, &env.get(theme::BORDER), 2.0);
         paint_ctx.fill(background_rect, &background_gradient);
+        paint_ctx.clip(background_rect);
 
         // paint the knob
         let is_active = base_state.is_active();
