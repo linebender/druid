@@ -24,11 +24,17 @@ use crate::{
     BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
+const SWITCH_PADDING: f64 = 3.;
+const SWITCH_WIDTH_RATIO: f64 = 2.75;
+
 /// A switch that toggles a boolean.
 #[derive(Debug, Clone, Default)]
 pub struct Switch {
     knob_pos: Point,
     knob_hovered: bool,
+    knob_x_offset: f64,
+    is_dragging: bool,
+    is_animated: bool,
 }
 
 impl Switch {
@@ -48,7 +54,6 @@ impl Switch {
         data: bool,
         env: &Env,
         switch_width: f64,
-        switch_padding: f64,
     ) {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
@@ -81,9 +86,9 @@ impl Switch {
         origin.y = origin.y.min(switch_height);
 
         if data {
-            origin.x = switch_padding * 2.
+            origin.x = SWITCH_PADDING * 2.
         } else {
-            origin.x = switch_width - text_layout.width() - switch_padding * 2.
+            origin.x = switch_width - text_layout.width() - SWITCH_PADDING * 2.
         }
 
         paint_ctx.draw_text(&text_layout, origin, &env.get(theme::LABEL_COLOR));
@@ -92,10 +97,9 @@ impl Switch {
 
 impl Widget<bool> for Switch {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &bool, env: &Env) {
-        let switch_padding = 3.;
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
-        let switch_width = switch_height * 2.75;
-        let knob_size = switch_height - 2. * switch_padding;
+        let switch_width = switch_height * SWITCH_WIDTH_RATIO;
+        let knob_size = switch_height - 2. * SWITCH_PADDING;
 
         let background_rect = RoundedRect::from_origin_size(
             Point::ORIGIN,
@@ -128,14 +132,22 @@ impl Widget<bool> for Switch {
         // paint the knob
         let is_active = base_state.is_active();
         let is_hovered = self.knob_hovered;
+        let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
+        let off_pos = knob_size / 2. + SWITCH_PADDING;
 
-        let knob_position = if *data {
-            switch_width - knob_size / 2. - switch_padding
+        let knob_position = if self.is_animated || self.is_dragging {
+            self.knob_x_offset
         } else {
-            knob_size / 2. + 4.
+            if *data {
+                self.knob_x_offset = on_pos;
+                on_pos
+            } else {
+                self.knob_x_offset = off_pos;
+                off_pos
+            }
         };
 
-        self.knob_pos = Point::new(knob_position, knob_size / 2. + switch_padding);
+        self.knob_pos = Point::new(knob_position, knob_size / 2. + SWITCH_PADDING);
         let knob_circle = Circle::new(self.knob_pos, knob_size / 2.);
 
         let normal_knob_gradient = LinearGradient::new(
@@ -172,14 +184,7 @@ impl Widget<bool> for Switch {
         paint_ctx.fill(knob_circle, &knob_gradient);
 
         // paint on/off label
-        self.paint_label(
-            paint_ctx,
-            base_state,
-            *data,
-            env,
-            switch_width,
-            switch_padding,
-        );
+        self.paint_label(paint_ctx, base_state, *data, env, switch_width);
     }
 
     fn layout(
@@ -189,12 +194,17 @@ impl Widget<bool> for Switch {
         _data: &bool,
         env: &Env,
     ) -> Size {
-        let width = (6. + env.get(theme::BORDERED_WIDGET_HEIGHT)) * 2.75;
+        let width =
+            (2. * SWITCH_PADDING + env.get(theme::BORDERED_WIDGET_HEIGHT)) * SWITCH_WIDTH_RATIO;
         bc.constrain(Size::new(width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 
     fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut bool, env: &Env) {
-        let knob_size = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let switch_width = switch_height * SWITCH_WIDTH_RATIO;
+        let knob_size = switch_height - 2. * SWITCH_PADDING;
+        let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
+        let off_pos = knob_size / 2. + SWITCH_PADDING;
 
         match event {
             Event::MouseDown(_) => {
@@ -202,22 +212,40 @@ impl Widget<bool> for Switch {
                 ctx.invalidate();
             }
             Event::MouseUp(_) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
-                    if ctx.is_hot() {
-                        *data = !*data
-                    }
-                    ctx.invalidate();
+                ctx.set_active(false);
+
+                if self.is_dragging {
+                    *data = self.knob_x_offset > switch_width / 2.;
+                } else {
+                    *data = !*data;
                 }
+
+                ctx.invalidate();
+                self.is_dragging = false;
+                self.is_animated = true;
+                ctx.request_anim_frame();
             }
             Event::MouseMoved(mouse) => {
                 if ctx.is_active() {
-                    // todo: animate dragging of knob
+                    self.knob_x_offset = mouse.pos.x.min(on_pos).max(off_pos);
+                    self.is_dragging = true;
                 }
                 if ctx.is_hot() {
                     self.knob_hovered = self.knob_hit_test(knob_size, mouse.pos)
                 }
                 ctx.invalidate();
+            }
+            Event::AnimFrame(_) => {
+                if self.is_animated {
+                    let delta = if *data { 2. } else { -2. };
+                    self.knob_x_offset = self.knob_x_offset + delta;
+
+                    if self.knob_x_offset > off_pos && self.knob_x_offset < on_pos {
+                        ctx.request_anim_frame();
+                    } else {
+                        self.is_animated = false;
+                    }
+                }
             }
             _ => (),
         }
