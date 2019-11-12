@@ -23,21 +23,21 @@ use crate::{
     WidgetPod,
 };
 
-pub struct List<T: Data, F: FnMut() -> Box<dyn Widget<T>>> {
-    closure: F,
+pub struct List<T: Data> {
+    closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
 }
 
-impl<T: Data, F: FnMut() -> Box<dyn Widget<T>>> List<T, F> {
-    pub fn new(closure: F) -> Self {
+impl<T: Data> List<T> {
+    pub fn new(closure: impl Fn() -> Box<dyn Widget<T>> + 'static) -> Self {
         List {
-            closure,
+            closure: Box::new(closure),
             children: Vec::new(),
         }
     }
 }
 
-impl<T: Data, F: FnMut() -> Box<dyn Widget<T>>> Widget<Arc<Vec<T>>> for List<T, F> {
+impl<T: Data> Widget<Arc<Vec<T>>> for List<T> {
     fn paint(
         &mut self,
         paint_ctx: &mut PaintCtx,
@@ -115,9 +115,7 @@ impl<T: Data, F: FnMut() -> Box<dyn Widget<T>>> Widget<Arc<Vec<T>>> for List<T, 
 // This is cut'n'paste for now to support both plain lists and lists paired with
 // shared data, but it should migrate to a list-iteration trait.
 
-impl<T1: Data, T: Data, F: FnMut() -> Box<dyn Widget<(T1, T)>>> Widget<(T1, Arc<Vec<T>>)>
-    for List<(T1, T), F>
-{
+impl<T1: Data, T: Data> Widget<(T1, Arc<Vec<T>>)> for List<(T1, T)> {
     fn paint(
         &mut self,
         paint_ctx: &mut PaintCtx,
