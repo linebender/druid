@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::ops::Deref;
 use std::sync::Arc;
 
 use druid::piet::Color;
 
-use druid::widget::{Container, Label, List, Padding, Scroll, SizedBox};
+use druid::widget::{Button, Column, Container, DynLabel, List, Padding, Scroll, SizedBox};
 use druid::{AppLauncher, Widget, WindowDesc};
 
 type AppData = Arc<Vec<u32>>;
@@ -31,15 +32,35 @@ fn main() {
 }
 
 fn ui_builder() -> impl Widget<AppData> {
-    Scroll::new(List::new(|| {
-        Box::new(
-            SizedBox::new(
-                Container::new(Padding::new(10.0, Label::new("Hello world")))
+    let mut root = Column::new();
+
+    root.add_child(
+        SizedBox::new(Button::new("Add", |_, data: &mut AppData, _| {
+            let mut d = (*data).deref().to_owned();
+            d.push((d.len() + 1) as u32);
+            *data = d.into();
+        }))
+        .height(30.0),
+        0.0,
+    );
+
+    root.add_child(
+        Scroll::new(List::new(|| {
+            Box::new(
+                SizedBox::new(
+                    Container::new(Padding::new(
+                        10.0,
+                        DynLabel::new(|d, _| format!("Hello world #{}", d)),
+                    ))
                     .background(Color::rgb(0.5, 0.5, 0.5)),
+                )
+                .expand()
+                .height(50.0),
             )
-            .expand()
-            .height(50.0),
-        )
-    }))
-    .vertical()
+        }))
+        .vertical(),
+        1.0,
+    );
+
+    root
 }
