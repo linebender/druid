@@ -32,9 +32,8 @@ const SWITCH_WIDTH_RATIO: f64 = 2.75;
 pub struct Switch {
     knob_pos: Point,
     knob_hovered: bool,
-    knob_x_offset: f64,
-    is_dragging: bool,
-    is_animated: bool,
+    knob_dragged: bool,
+    animation_in_progress: bool,
 }
 
 impl Switch {
@@ -47,25 +46,17 @@ impl Switch {
         knob_circle.winding(mouse_pos) > 0
     }
 
-    fn paint_label(
+    fn paint_labels(
         &mut self,
         paint_ctx: &mut PaintCtx,
         base_state: &BaseState,
-        data: bool,
         env: &Env,
         switch_width: f64,
     ) {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
-        let switch_width = switch_height * SWITCH_WIDTH_RATIO;
         let knob_size = switch_height - 2. * SWITCH_PADDING;
-        let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
-        let off_pos = knob_size / 2. + SWITCH_PADDING;
-
-        // TODO: use LocalizedString
-        let on_label = "ON";
-        let off_label = "OFF";
 
         let font = paint_ctx
             .text()
@@ -73,46 +64,57 @@ impl Switch {
             .build()
             .unwrap();
 
-        let on_text_layout = paint_ctx
+        // off/on labels
+        // TODO: use LocalizedString
+        let on_label_layout = paint_ctx
             .text()
-            .new_text_layout(&font, on_label)
+            .new_text_layout(&font, "ON")
             .build()
             .unwrap();
 
-        let off_text_layout = paint_ctx
+        let off_label_layout = paint_ctx
             .text()
-            .new_text_layout(&font, off_label)
+            .new_text_layout(&font, "OFF")
             .build()
             .unwrap();
 
-        let mut on_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
+        // position off/on labels
+        let mut on_label_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
             Point::ORIGIN,
             Size::new(
-                (base_state.size().width - on_text_layout.width()).max(0.0),
+                (base_state.size().width - on_label_layout.width()).max(0.0),
                 switch_height + (font_size * 1.2) / 2.,
             ),
         ));
 
-        let mut off_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
+        let mut off_label_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
             Point::ORIGIN,
             Size::new(
-                (base_state.size().width - off_text_layout.width()).max(0.0),
+                (base_state.size().width - off_label_layout.width()).max(0.0),
                 switch_height + (font_size * 1.2) / 2.,
             ),
         ));
 
         // adjust label position
-        on_origin.y = on_origin.y.min(switch_height);
-        off_origin.y = off_origin.y.min(switch_height);
+        on_label_origin.y = on_label_origin.y.min(switch_height);
+        off_label_origin.y = off_label_origin.y.min(switch_height);
 
-        on_origin.x = self.knob_x_offset - switch_width + knob_size;
-        off_origin.x = switch_width - off_text_layout.width() - SWITCH_PADDING * 2.
-            + self.knob_x_offset
+        on_label_origin.x = self.knob_pos.x - switch_width + knob_size;
+        off_label_origin.x = switch_width - off_label_layout.width() - SWITCH_PADDING * 2.
+            + self.knob_pos.x
             - knob_size / 2.
             - SWITCH_PADDING;
 
-        paint_ctx.draw_text(&on_text_layout, on_origin, &env.get(theme::LABEL_COLOR));
-        paint_ctx.draw_text(&off_text_layout, off_origin, &env.get(theme::LABEL_COLOR));
+        paint_ctx.draw_text(
+            &on_label_layout,
+            on_label_origin,
+            &env.get(theme::LABEL_COLOR),
+        );
+        paint_ctx.draw_text(
+            &off_label_layout,
+            off_label_origin,
+            &env.get(theme::LABEL_COLOR),
+        );
     }
 }
 
@@ -130,23 +132,24 @@ impl Widget<bool> for Switch {
             switch_height / 2.,
         );
 
-        let knob_position = if self.is_animated || self.is_dragging {
-            self.knob_x_offset
-        } else {
+        // position knob
+        if !self.animation_in_progress && !self.knob_dragged {
             if *data {
-                self.knob_x_offset = on_pos;
-                on_pos
+                self.knob_pos.x = on_pos;
             } else {
-                self.knob_x_offset = off_pos;
-                off_pos
+                self.knob_pos.x = off_pos;
             }
         };
 
-        let opacity = (self.knob_x_offset - off_pos) / (on_pos - off_pos);
+        self.knob_pos = Point::new(self.knob_pos.x, knob_size / 2. + SWITCH_PADDING);
+        let knob_circle = Circle::new(self.knob_pos, knob_size / 2.);
 
         // paint different background for on and off state
+        // opacity of background color depends on knob position
         // todo: make color configurable
-        let background_gradient_on = LinearGradient::new(
+        let opacity = (self.knob_pos.x - off_pos) / (on_pos - off_pos);
+
+        let background_gradient_on_state = LinearGradient::new(
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
             (
@@ -154,7 +157,7 @@ impl Widget<bool> for Switch {
                 env.get(theme::PRIMARY_DARK).with_alpha(opacity),
             ),
         );
-        let background_gradient_off = LinearGradient::new(
+        let background_gradient_off_state = LinearGradient::new(
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
             (
@@ -164,16 +167,13 @@ impl Widget<bool> for Switch {
         );
 
         paint_ctx.stroke(background_rect, &env.get(theme::BORDER), 2.0);
-        paint_ctx.fill(background_rect, &background_gradient_on);
-        paint_ctx.fill(background_rect, &background_gradient_off);
+        paint_ctx.fill(background_rect, &background_gradient_on_state);
+        paint_ctx.fill(background_rect, &background_gradient_off_state);
         paint_ctx.clip(background_rect);
 
         // paint the knob
         let is_active = base_state.is_active();
         let is_hovered = self.knob_hovered;
-
-        self.knob_pos = Point::new(knob_position, knob_size / 2. + SWITCH_PADDING);
-        let knob_circle = Circle::new(self.knob_pos, knob_size / 2.);
 
         let normal_knob_gradient = LinearGradient::new(
             UnitPoint::TOP,
@@ -209,7 +209,7 @@ impl Widget<bool> for Switch {
         paint_ctx.fill(knob_circle, &knob_gradient);
 
         // paint on/off label
-        self.paint_label(paint_ctx, base_state, *data, env, switch_width);
+        self.paint_labels(paint_ctx, base_state, env, switch_width);
     }
 
     fn layout(
@@ -239,21 +239,23 @@ impl Widget<bool> for Switch {
             Event::MouseUp(_) => {
                 ctx.set_active(false);
 
-                if self.is_dragging {
-                    *data = self.knob_x_offset > switch_width / 2.;
+                if self.knob_dragged {
+                    // toggle value when dragging if knob has been moved far enough
+                    *data = self.knob_pos.x > switch_width / 2.;
                 } else {
+                    // toggle value on click
                     *data = !*data;
                 }
 
                 ctx.invalidate();
-                self.is_dragging = false;
-                self.is_animated = true;
+                self.knob_dragged = false;
+                self.animation_in_progress = true;
                 ctx.request_anim_frame();
             }
             Event::MouseMoved(mouse) => {
                 if ctx.is_active() {
-                    self.knob_x_offset = mouse.pos.x.min(on_pos).max(off_pos);
-                    self.is_dragging = true;
+                    self.knob_pos.x = mouse.pos.x.min(on_pos).max(off_pos);
+                    self.knob_dragged = true;
                 }
                 if ctx.is_hot() {
                     self.knob_hovered = self.knob_hit_test(knob_size, mouse.pos)
@@ -261,14 +263,15 @@ impl Widget<bool> for Switch {
                 ctx.invalidate();
             }
             Event::AnimFrame(_) => {
-                if self.is_animated {
+                // move knob to right position depending on the value
+                if self.animation_in_progress {
                     let delta = if *data { 2. } else { -2. };
-                    self.knob_x_offset = self.knob_x_offset + delta;
+                    self.knob_pos.x = self.knob_pos.x + delta;
 
-                    if self.knob_x_offset > off_pos && self.knob_x_offset < on_pos {
+                    if self.knob_pos.x > off_pos && self.knob_pos.x < on_pos {
                         ctx.request_anim_frame();
                     } else {
-                        self.is_animated = false;
+                        self.animation_in_progress = false;
                     }
                 }
             }
