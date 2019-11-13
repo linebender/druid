@@ -807,7 +807,7 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
                 Cursor::OpenHand => msg_send![nscursor, openHandCursor],
                 Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],
                 Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
-                Cursor::ResizeUpDown => msg_send![nscursor, ResizeUpDownCursor],
+                Cursor::ResizeUpDown => msg_send![nscursor, resizeUpDownCursor],
             };
             let () = msg_send![cursor, set];
         }
