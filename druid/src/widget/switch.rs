@@ -266,7 +266,7 @@ impl Widget<bool> for Switch {
                 // move knob to right position depending on the value
                 if self.animation_in_progress {
                     let delta = if *data { 2. } else { -2. };
-                    self.knob_pos.x = self.knob_pos.x + delta;
+                    self.knob_pos.x += delta;
 
                     if self.knob_pos.x > off_pos && self.knob_pos.x < on_pos {
                         ctx.request_anim_frame();
