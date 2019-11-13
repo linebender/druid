@@ -1,17 +1,21 @@
 # druid
 
-## A data first Rust-native UI toolkit.
+## A data-first Rust-native UI toolkit.
 
 [![crates.io](https://meritbadge.herokuapp.com/druid)](https://crates.io/crates/druid)
 [![docs.rs](https://docs.rs/druid/badge.svg)](https://docs.rs/druid/)
 [![license](https://img.shields.io/crates/l/druid)](./LICENSE)
 
-Druid is an experimental Rust-native UI toolkit. Its main goal is to demonstrate
-the potential of Rust as an application programming language, while letting
-users write fast, small, and generally efficient programs with minimal hassle.
+Druid is an experimental Rust-native UI toolkit. Its main goal is to
+demonstrate the potential of Rust as an application programming language, while
+letting users write fast, small, and generally efficient programs with minimal
+hassle.
 
 Druid's current development is largely driven by its use in [Runebender], a new
 font editor.
+
+We have been doing periodic releases of druid on crates.io, but it is under
+active development and its API might change.
 
 ## Example
 
@@ -71,11 +75,10 @@ couple [non-druid examples].
 
 ### piet
 
-Druid relies on the [piet 2D graphics abstraction] for drawing. Piet, in turn,
-has multiple backends. Currently: "piet-direct2d", "piet-cairo", and "piet-web".
-Currently the macOS and Linux versions of Druid use the piet-cairo backend,
-while Windows uses piet-direct2d. A GPU backend is planned. Here's a simple
-drawing example from the [custom_widget] example.
+Druid relies on the [piet library] for drawing and text layout. Piet is a 2D
+graphics abstraction with multiple backends: `piet-direct2d`, `piet-cairo`, and
+`piet-web` are currently available, and a GPU backend is planned. In terms of
+OS support, macOS and Linux use `piet-cairo`, and Windows uses `piet-direct2d`.
 
 ```rust
 // Create an arbitrary bezier path
@@ -100,10 +103,11 @@ paint_ctx.fill(rect, &fill_color);
 
 ### widgets
 
-Widgets in druid are objects which implement the `Widget` trait. The trait is
-parametrized by a type (`T`) for associated data. All trait methods are provided
-with access to this data, and in the case of `event` the reference is mutable,
-so that events can directly update the data.
+Widgets in druid (text boxes, buttons, layout components, etc.) are objects
+which implement the [Widget trait]. The trait is parametrized by a type (`T`)
+for associated data. All trait methods (`paint`, `layout`, `event`, and
+`update`) are provided with access to this data, and in the case of `event` the
+reference is mutable, so that events can directly update the data.
 
 Whenever the application data changes, the framework traverses the widget
 hierarchy with an `update` method. 
@@ -154,14 +158,14 @@ fn build_widget() -> impl Widget<u32> {
 
 ### layout
 
-Druid's layout protocol is [strongly inspired by Flutter]. In their `layout`
-method, widgets are passed a `BoxConstraint` that provides them a minimum and
+Druid's layout protocol is strongly inspired by [Flutter's box layout model].
+In druid, widgets are passed a `BoxConstraint` that provides them a minimum and
 maximum size for layout. Widgets are also responsible for computing appropriate
 constraints for their children if applicable.
 
 ### data
 
-Druid uses a `Data` trait to represent [value types]. These should be cheap to
+Druid uses a [Data trait] to represent [value types]. These should be cheap to
 compare and cheap to clone.
 
 In general, you can use `derive` to generate a `Data` impl for your types.
@@ -176,7 +180,7 @@ struct AppState {
 
 ### lens
 
-The `Lens` datatype gives access to a part of a larger data structure. Like
+The [Lens datatype] gives access to a part of a larger data structure. Like
 `Data`, This can be derived.
 
 ```rust
@@ -251,10 +255,10 @@ active and friendly community.
 
 [Runebender]: https://github.com/linebender/runebender
 [the examples folder]: ./druid/examples
-[piet 2D graphics abstraction]: https://github.com/linebender/piet
+[piet library]: https://github.com/linebender/piet
 [custom_widget]: ./druid/examples/custom_widget.rs
 [basic utility and layout widgets]: ./druid/src/widget
-[strongly inspired by Flutter]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
+[Flutter's box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
 [value types]: https://sinusoid.es/lager/model.html#id2
 [cairo]: https://www.cairographics.org
 [gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html
@@ -262,8 +266,11 @@ active and friendly community.
 [CONTRIBUTING.md]: ./CONTRIBUTING.md
 [Zulip chat instance]: https://xi.zulipchat.com
 [non-druid examples]: ./druid-shell/examples/shello.rs
+[crates.io]: https://crates.io/crates/druid
 [EventCtx]: https://docs.rs/druid/0.3.3/druid/struct.EventCtx.html
 [LayoutCtx]: https://docs.rs/druid/0.3.3/druid/struct.LayoutCtx.html
 [PaintCtx]: https://docs.rs/druid/0.3.3/druid/struct.PaintCtx.html
 [UpdateCtx]: https://docs.rs/druid/0.3.3/druid/struct.UpdateCtx.html
-[crates.io]: https://crates.io/crates/druid
+[Widget trait]: https://docs.rs/druid/0.3.3/druid/trait.Widget.html
+[Data trait]: https://docs.rs/druid/0.3.3/druid/trait.Data.html
+[Lens datatype]: https://docs.rs/druid/0.3.3/druid/trait.Lens.html
