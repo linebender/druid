@@ -56,8 +56,6 @@ use super::paint;
 use super::timers::TimerSlots;
 use super::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 
-use crate::application::Application;
-use crate::clipboard::ClipboardItem;
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyEvent, KeyModifiers};
@@ -1307,10 +1305,6 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
                     path: os_str.into(),
                 })
         }
-    }
-
-    fn set_clipboard_contents(&mut self, contents: ClipboardItem) {
-        Application::set_clipboard_contents(contents);
     }
 }
 

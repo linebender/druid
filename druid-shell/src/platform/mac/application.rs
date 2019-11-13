@@ -14,11 +14,12 @@
 
 //! macOS implementation of features at the application scope.
 
+#![allow(non_upper_case_globals)]
+
+use super::clipboard::Clipboard;
 use super::util;
-use crate::clipboard::ClipboardItem;
-use cocoa::appkit::{NSApp, NSPasteboardTypeString};
-use cocoa::base::{id, nil, BOOL, YES};
-use cocoa::foundation::NSInteger;
+use cocoa::appkit::NSApp;
+use cocoa::base::{id, nil};
 
 pub struct Application;
 
@@ -47,45 +48,8 @@ impl Application {
         }
     }
 
-    /// Returns the contents of the clipboard, if any.
-    pub fn get_clipboard_contents() -> Option<ClipboardItem> {
-        unsafe {
-            let nspasteboard = class!(NSPasteboard);
-            let pasteboard: id = msg_send![nspasteboard, generalPasteboard];
-            let data_types: id = msg_send![pasteboard, types];
-            let count: usize = msg_send![data_types, count];
-
-            for i in 0..count {
-                let dtype: id = msg_send![data_types, objectAtIndex: i];
-                let is_string: BOOL = msg_send![dtype, isEqualToString: NSPasteboardTypeString];
-                if is_string == YES {
-                    let contents: id = msg_send![pasteboard, stringForType: dtype];
-                    let contents = util::from_nsstring(contents);
-                    return Some(contents.into());
-                } else {
-                    log::info!("unhandled pasteboard type {}", util::from_nsstring(dtype));
-                }
-                //TODO: handle other data types
-            }
-            None
-        }
-    }
-
-    /// Sets the contents of the system clipboard.
-    pub fn set_clipboard_contents(item: ClipboardItem) {
-        unsafe {
-            let nspasteboard = class!(NSPasteboard);
-            let pasteboard: id = msg_send![nspasteboard, generalPasteboard];
-            match item {
-                ClipboardItem::Text(string) => {
-                    let nsstring = util::make_nsstring(&string);
-                    let _: NSInteger = msg_send![pasteboard, clearContents];
-                    let _: BOOL =
-                        msg_send![pasteboard, setString: nsstring forType: NSPasteboardTypeString];
-                }
-                other => log::warn!("unhandled clipboard data {:?}", other),
-            }
-        }
+    pub fn clipboard() -> Clipboard {
+        Clipboard
     }
 
     pub fn get_locale() -> String {

@@ -14,25 +14,16 @@
 
 //! Windows implementation of features at the application scope.
 
-use std::ptr;
-
-use winapi::shared::minwindef::{FALSE, HINSTANCE, UINT};
-use winapi::shared::ntdef::{LPCWSTR, LPWSTR, WCHAR};
+use winapi::shared::minwindef::HINSTANCE;
+use winapi::shared::ntdef::LPCWSTR;
 use winapi::shared::windef::HCURSOR;
-use winapi::shared::winerror::ERROR_SUCCESS;
-use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellscalingapi::PROCESS_SYSTEM_DPI_AWARE;
-use winapi::um::winbase::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE};
 use winapi::um::wingdi::CreateSolidBrush;
-use winapi::um::winuser::{
-    CloseClipboard, EmptyClipboard, EnumClipboardFormats, GetClipboardData, LoadIconW,
-    OpenClipboard, PostQuitMessage, RegisterClassW, SetClipboardData, CF_UNICODETEXT,
-    IDI_APPLICATION, WNDCLASSW,
-};
+use winapi::um::winuser::{LoadIconW, PostQuitMessage, RegisterClassW, IDI_APPLICATION, WNDCLASSW};
 
-use super::util::{self, FromWide, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
+use super::clipboard::Clipboard;
+use super::util::{self, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
 use super::window::win_proc_dispatch;
-use crate::clipboard::ClipboardItem;
 
 pub struct Application;
 
@@ -76,107 +67,12 @@ impl Application {
         }
     }
 
-    /// Returns the contents of the clipboard, if any.
-    pub fn get_clipboard_contents() -> Option<ClipboardItem> {
-        unsafe {
-            if OpenClipboard(ptr::null_mut()) == FALSE {
-                return None;
-            }
-
-            let result = get_clipboard_impl();
-            CloseClipboard();
-            result
-        }
-    }
-
-    pub fn set_clipboard_contents(item: ClipboardItem) {
-        unsafe {
-            if OpenClipboard(ptr::null_mut()) == FALSE {
-                return;
-            }
-            EmptyClipboard();
-            match item {
-                ClipboardItem::Text(string) => {
-                    let wstr = string.to_wide();
-                    let wstr_copy =
-                        GlobalAlloc(GMEM_MOVEABLE, wstr.len() * std::mem::size_of::<WCHAR>());
-                    let locked = GlobalLock(wstr_copy) as LPWSTR;
-                    ptr::copy_nonoverlapping(wstr.as_ptr(), locked, wstr.len());
-                    GlobalUnlock(wstr_copy);
-                    SetClipboardData(CF_UNICODETEXT, wstr_copy);
-                }
-                other => log::warn!("unhandled clipboard data {:?}", other),
-            }
-            CloseClipboard();
-        }
+    pub fn clipboard() -> Clipboard {
+        Clipboard
     }
 
     pub fn get_locale() -> String {
         //TODO ahem
         "en-US".into()
-    }
-}
-
-#[allow(clippy::single_match)] // we will support more types 'soon'
-unsafe fn get_clipboard_impl() -> Option<ClipboardItem> {
-    for format in iter_clipboard_types() {
-        match format {
-            CF_UNICODETEXT => return get_unicode_text(),
-            _ => (),
-        }
-    }
-    None
-}
-
-unsafe fn get_unicode_text() -> Option<ClipboardItem> {
-    let handle = GetClipboardData(CF_UNICODETEXT);
-    let result = if handle.is_null() {
-        let unic_str = GlobalLock(handle) as LPWSTR;
-        let result = unic_str.from_wide();
-        GlobalUnlock(handle);
-        result
-    } else {
-        None
-    };
-    result.map(Into::into)
-}
-
-pub(crate) fn iter_clipboard_types() -> impl Iterator<Item = UINT> {
-    struct ClipboardTypeIter {
-        last: UINT,
-        done: bool,
-    }
-
-    impl Iterator for ClipboardTypeIter {
-        type Item = UINT;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            if self.done {
-                return None;
-            }
-            unsafe {
-                let nxt = EnumClipboardFormats(self.last);
-                match nxt {
-                    0 => {
-                        self.done = true;
-                        match GetLastError() {
-                            ERROR_SUCCESS => (),
-                            other => {
-                                log::error!("iterating clipboard formats failed, error={}", other)
-                            }
-                        }
-                        None
-                    }
-                    nxt => {
-                        self.last = nxt;
-                        Some(nxt)
-                    }
-                }
-            }
-        }
-    }
-    ClipboardTypeIter {
-        last: 0,
-        done: false,
     }
 }

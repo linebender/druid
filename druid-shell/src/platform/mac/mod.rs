@@ -17,6 +17,7 @@
 #![allow(clippy::let_unit_value)]
 
 pub mod application;
+pub mod clipboard;
 pub mod dialog;
 pub mod error;
 pub mod keycodes;

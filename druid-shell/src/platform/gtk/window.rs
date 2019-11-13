@@ -36,7 +36,6 @@ use super::menu::Menu;
 use super::runloop::with_application;
 use super::util::assert_main_thread;
 
-use crate::clipboard::ClipboardItem;
 use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
 use crate::keyboard;
@@ -585,17 +584,6 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
                 .map(|s| FileInfo { path: s.into() })
         } else {
             None
-        }
-    }
-    fn set_clipboard_contents(&mut self, item: ClipboardItem) {
-        let display = gdk::Display::get_default().unwrap();
-        let clipboard = gtk::Clipboard::get_default(&display).unwrap();
-
-        match item {
-            ClipboardItem::Text(text) => {
-                clipboard.set_text(&text);
-            }
-            other => log::warn!("unhandled clipboard data {:?}", other),
         }
     }
 

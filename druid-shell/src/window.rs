@@ -19,7 +19,6 @@
 use std::any::Any;
 use std::path::PathBuf;
 
-use crate::clipboard::ClipboardItem;
 use crate::dialog::FileDialogOptions;
 use crate::error::Error;
 use crate::keyboard::{KeyEvent, KeyModifiers};
@@ -206,9 +205,6 @@ pub trait WinCtx<'a> {
     ///
     /// Blocks while the user picks the file.
     fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo>;
-
-    /// Set clipboard contents.
-    fn set_clipboard_contents(&mut self, contents: ClipboardItem);
 }
 
 /// App behavior, supplied by the app.
