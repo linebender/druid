@@ -16,9 +16,9 @@
 
 use gtk::GtkApplicationExt;
 
+use super::clipboard::Clipboard;
 use super::runloop;
 use super::util;
-use crate::clipboard::ClipboardItem;
 
 pub struct Application;
 
@@ -42,19 +42,8 @@ impl Application {
         });
     }
 
-    pub fn get_clipboard_contents() -> Option<ClipboardItem> {
-        let display = gdk::Display::get_default().unwrap();
-        let clipboard = gtk::Clipboard::get_default(&display).unwrap();
-
-        if let Some(gstring) = clipboard.wait_for_text() {
-            Some(ClipboardItem::Text(gstring.to_string()))
-        } else {
-            None
-        }
-    }
-
-    pub fn set_clipboard_contents(_item: ClipboardItem) {
-        log::warn!("set_clipboard_contents is unimplemented on GTK");
+    pub fn clipboard() -> Clipboard {
+        Clipboard
     }
 
     pub fn get_locale() -> String {

@@ -42,13 +42,11 @@ use crate::piet::{Piet, RenderContext};
 use super::dialog;
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
-use crate::clipboard::ClipboardItem;
 use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::platform::application::Application;
 use crate::window::{FileInfo, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
@@ -754,10 +752,6 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
 
     fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
         unsafe { dialog::show_open_file_dialog_sync(options).map(|s| FileInfo { path: s.into() }) }
-    }
-
-    fn set_clipboard_contents(&mut self, contents: ClipboardItem) {
-        Application::set_clipboard_contents(contents);
     }
 }
 

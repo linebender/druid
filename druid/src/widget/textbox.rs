@@ -19,9 +19,11 @@ use std::ops::Range;
 use std::time::{Duration, Instant};
 
 use crate::{
-    BaseState, BoxConstraints, ClipboardItem, Cursor, Env, Event, EventCtx, HotKey, KeyCode,
-    LayoutCtx, PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
+    BaseState, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx, PaintCtx,
+    RawMods, SysMods, TimerToken, UpdateCtx, Widget,
 };
+
+use crate::shell::Application;
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
 use crate::piet::{
@@ -362,7 +364,7 @@ impl Widget<String> for TextBox {
                         || cmd.selector == crate::command::sys::CUT) =>
             {
                 if let Some(text) = data.get(self.selection.range()) {
-                    ctx.set_clipboard_contents(text);
+                    Application::clipboard().put_string(text);
                 }
                 if !self.selection.is_caret() && cmd.selector == crate::command::sys::CUT {
                     self.backspace(data);
@@ -370,8 +372,8 @@ impl Widget<String> for TextBox {
                 ctx.set_handled();
             }
             Event::Paste(ref item) => {
-                if let ClipboardItem::Text(string) = item {
-                    self.insert(data, string);
+                if let Some(string) = item.get_string() {
+                    self.insert(data, &string);
                     self.reset_cursor_blink(ctx);
                 }
             }

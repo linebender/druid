@@ -16,7 +16,7 @@
 
 use crate::kurbo::{Rect, Shape, Size, Vec2};
 
-use druid_shell::{ClipboardItem, FileInfo, KeyEvent, KeyModifiers, TimerToken};
+use druid_shell::{Clipboard, FileInfo, KeyEvent, KeyModifiers, TimerToken};
 
 use crate::mouse::MouseEvent;
 use crate::Command;
@@ -93,7 +93,7 @@ pub enum Event {
     /// a corresponding `KeyUp` is sent.
     KeyUp(KeyEvent),
     /// Called when a paste command is received.
-    Paste(ClipboardItem),
+    Paste(Clipboard),
     /// Called when the mouse wheel or trackpad is scrolled.
     Wheel(WheelEvent),
     /// Called when the "hot" status changes.

@@ -47,8 +47,8 @@ use piet::{Piet, RenderContext};
 pub use unicode_segmentation;
 
 pub use shell::{
-    ClipboardItem, Cursor, FileDialogOptions, FileDialogType, HotKey, KeyCode, KeyEvent,
-    KeyModifiers, MouseButton, RawMods, SysMods, Text, TimerToken, WinCtx, WindowHandle,
+    Clipboard, Cursor, FileDialogOptions, FileDialogType, HotKey, KeyCode, KeyEvent, KeyModifiers,
+    MouseButton, RawMods, SysMods, Text, TimerToken, WinCtx, WindowHandle,
 };
 
 pub use app::{AppLauncher, WindowDesc};
@@ -966,11 +966,6 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     /// Get the window id.
     pub fn window_id(&self) -> WindowId {
         self.window_id
-    }
-
-    /// Set clipboard contents.
-    pub fn set_clipboard_contents(&mut self, contents: impl Into<ClipboardItem>) {
-        self.win_ctx.set_clipboard_contents(contents.into());
     }
 }
 

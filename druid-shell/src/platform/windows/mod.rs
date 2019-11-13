@@ -15,6 +15,7 @@
 //! Windows implementation of druid-shell.
 
 pub mod application;
+pub mod clipboard;
 pub mod dcomp;
 pub mod dialog;
 pub mod error;
