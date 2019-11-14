@@ -18,6 +18,7 @@ use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 #[derive(Clone, Data, Lens)]
 struct DemoState {
     value: bool,
+    stepper_value: f64,
 }
 
 fn build_widget() -> impl Widget<DemoState> {
@@ -29,6 +30,12 @@ fn build_widget() -> impl Widget<DemoState> {
     row.add_child(Padding::new(5.0, switch_label), 0.0);
     row.add_child(Padding::new(5.0, switch), 0.0);
 
+    let stepper = LensWrap::new(
+        Stepper::new(0.0, 10.0, 1.0, |_ctx, _data, _env| eprintln!("---")),
+        lenses::demo_state::stepper_value,
+    );
+    row.add_child(Padding::new(5.0, stepper), 0.0);
+
     col.add_child(Padding::new(5.0, row), 1.0);
     col
 }
@@ -37,6 +44,9 @@ fn main() {
     let window = WindowDesc::new(build_widget);
     AppLauncher::with_window(window)
         .use_simple_logger()
-        .launch(DemoState { value: true })
+        .launch(DemoState {
+            value: true,
+            stepper_value: 1.0,
+        })
         .expect("launch failed");
 }
