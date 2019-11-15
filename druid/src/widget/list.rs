@@ -29,6 +29,7 @@ pub struct List<T: Data> {
 }
 
 impl<T: Data> List<T> {
+    // TODO: docs
     pub fn new(closure: impl Fn() -> Box<dyn Widget<T>> + 'static) -> Self {
         List {
             closure: Box::new(closure),
@@ -37,29 +38,117 @@ impl<T: Data> List<T> {
     }
 }
 
-impl<T: Data> Widget<Arc<Vec<T>>> for List<T> {
-    fn paint(
-        &mut self,
-        paint_ctx: &mut PaintCtx,
-        _base_state: &BaseState,
-        data: &Arc<Vec<T>>,
-        env: &Env,
-    ) {
-        for (child, child_data) in self.children.iter_mut().zip(data.iter()) {
-            child.paint_with_offset(paint_ctx, child_data, env);
+// TODO: docs and export
+pub trait ListIter<C: Data>: Data {
+    fn for_each(&self, cb: impl FnMut(&C, usize));
+    fn for_each_track(&mut self, cb: impl FnMut(&mut C, usize));
+    fn data_len(&self) -> usize;
+}
+
+impl<C: Data> ListIter<C> for Arc<Vec<C>> {
+    fn for_each(&self, mut cb: impl FnMut(&C, usize)) {
+        for (i, item) in self.iter().enumerate() {
+            cb(item, i);
         }
+    }
+
+    fn for_each_track(&mut self, mut cb: impl FnMut(&mut C, usize)) {
+        let mut new_data = Vec::with_capacity(self.data_len());
+        let mut any_changed = false;
+
+        for (i, item) in self.iter().enumerate() {
+            let mut d = item.to_owned();
+            cb(&mut d, i);
+
+            if !any_changed && !item.same(&d) {
+                any_changed = true;
+            }
+            new_data.push(d);
+        }
+
+        if any_changed {
+            *self = Arc::new(new_data);
+        }
+    }
+
+    fn data_len(&self) -> usize {
+        self.len()
+    }
+}
+
+impl<T1: Data, C: Data> ListIter<(T1, C)> for (T1, Arc<Vec<C>>) {
+    fn for_each(&self, mut cb: impl FnMut(&(T1, C), usize)) {
+        for (i, item) in self.1.iter().enumerate() {
+            let d = (self.0.clone(), item.to_owned());
+            cb(&d, i);
+        }
+    }
+
+    fn for_each_track(&mut self, mut cb: impl FnMut(&mut (T1, C), usize)) {
+        let mut new_shared = self.0.to_owned();
+        let mut new_data = Vec::with_capacity(self.1.len());
+        let mut any_shared_changed = false;
+        let mut any_el_changed = false;
+
+        for (i, item) in self.1.iter().enumerate() {
+            let mut d = (self.0.clone(), item.to_owned());
+            cb(&mut d, i);
+
+            if !any_shared_changed && !new_shared.same(&d.0) {
+                any_shared_changed = true;
+            }
+            if any_shared_changed {
+                new_shared = d.0;
+            }
+            if !any_el_changed && !item.same(&d.1) {
+                any_el_changed = true;
+            }
+            new_data.push(d.1);
+        }
+
+        // It's not clear we need to track this; it's possible it would
+        // be slightly more efficient to just update data.0 in place.
+        if any_shared_changed {
+            self.0 = new_shared;
+        }
+        if any_el_changed {
+            self.1 = Arc::new(new_data);
+        }
+    }
+
+    fn data_len(&self) -> usize {
+        self.1.len()
+    }
+}
+
+impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
+        let mut children = self.children.iter_mut();
+        data.for_each(|child_data, _| {
+            if let Some(child) = children.next() {
+                child.paint_with_offset(paint_ctx, child_data, env);
+            }
+        });
     }
 
     fn layout(
         &mut self,
         layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        data: &Arc<Vec<T>>,
+        data: &T,
         env: &Env,
     ) -> Size {
         let mut width = bc.min().width;
         let mut y = 0.0;
-        for (child, child_data) in self.children.iter_mut().zip(data.iter()) {
+
+        let mut children = self.children.iter_mut();
+        data.for_each(|child_data, _| {
+            let child = match children.next() {
+                Some(child) => child,
+                None => {
+                    return;
+                }
+            };
             let child_bc = BoxConstraints::new(
                 Size::new(bc.min().width, 0.0),
                 Size::new(bc.max().width, std::f64::INFINITY),
@@ -69,146 +158,41 @@ impl<T: Data> Widget<Arc<Vec<T>>> for List<T> {
             child.set_layout_rect(rect);
             width = width.max(child_size.width);
             y += child_size.height;
-        }
+        });
+
         bc.constrain(Size::new(width, y))
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut Arc<Vec<T>>, env: &Env) {
-        let mut new_data = Vec::with_capacity(data.len());
-        let mut any_changed = false;
-        for (child, child_data) in self.children.iter_mut().zip(data.iter()) {
-            let mut d = child_data.to_owned();
-            child.event(event, ctx, &mut d, env);
-            if !any_changed && !child_data.same(&d) {
-                any_changed = true;
+    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+        let mut children = self.children.iter_mut();
+        data.for_each_track(|child_data, _| {
+            if let Some(child) = children.next() {
+                child.event(event, ctx, child_data, env);
             }
-            new_data.push(d);
-        }
-        if any_changed {
-            *data = Arc::new(new_data);
-        }
+        });
     }
 
-    fn update(
-        &mut self,
-        ctx: &mut UpdateCtx,
-        _old_data: Option<&Arc<Vec<T>>>,
-        data: &Arc<Vec<T>>,
-        env: &Env,
-    ) {
-        for (child, child_data) in self.children.iter_mut().zip(data.iter()) {
-            child.update(ctx, child_data, env);
-        }
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        let mut children = self.children.iter_mut();
+        data.for_each(|child_data, _| {
+            if let Some(child) = children.next() {
+                child.update(ctx, child_data, env);
+            }
+        });
+
         let len = self.children.len();
-        if len > data.len() {
-            self.children.truncate(data.len())
-        } else if len < data.len() {
-            for child_data in &data[len..] {
+        if len > data.data_len() {
+            self.children.truncate(data.data_len())
+        } else if len < data.data_len() {
+            data.for_each(|child_data, i| {
+                if i < len {
+                    return;
+                }
+
                 let mut child = WidgetPod::new((self.closure)());
                 child.update(ctx, child_data, env);
                 self.children.push(child);
-            }
-        }
-    }
-}
-
-// This is cut'n'paste for now to support both plain lists and lists paired with
-// shared data, but it should migrate to a list-iteration trait.
-
-impl<T1: Data, T: Data> Widget<(T1, Arc<Vec<T>>)> for List<(T1, T)> {
-    fn paint(
-        &mut self,
-        paint_ctx: &mut PaintCtx,
-        _base_state: &BaseState,
-        data: &(T1, Arc<Vec<T>>),
-        env: &Env,
-    ) {
-        for (child, child_data) in self.children.iter_mut().zip(data.1.iter()) {
-            let d = (data.0.clone(), child_data.to_owned());
-            child.paint_with_offset(paint_ctx, &d, env);
-        }
-    }
-
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &(T1, Arc<Vec<T>>),
-        env: &Env,
-    ) -> Size {
-        let mut width = bc.min().width;
-        let mut y = 0.0;
-        for (child, child_data) in self.children.iter_mut().zip(data.1.iter()) {
-            let d = (data.0.clone(), child_data.to_owned());
-            let child_bc = BoxConstraints::new(
-                Size::new(bc.min().width, 0.0),
-                Size::new(bc.max().width, std::f64::INFINITY),
-            );
-            let child_size = child.layout(layout_ctx, &child_bc, &d, env);
-            let rect = Rect::from_origin_size(Point::new(0.0, y), child_size);
-            child.set_layout_rect(rect);
-            width = width.max(child_size.width);
-            y += child_size.height;
-        }
-        bc.constrain(Size::new(width, y))
-    }
-
-    fn event(
-        &mut self,
-        event: &Event,
-        ctx: &mut EventCtx,
-        data: &mut (T1, Arc<Vec<T>>),
-        env: &Env,
-    ) {
-        let mut new_shared = data.0.to_owned();
-        let mut new_data = Vec::with_capacity(data.1.len());
-        let mut any_shared_changed = false;
-        let mut any_el_changed = false;
-        for (child, child_data) in self.children.iter_mut().zip(data.1.iter()) {
-            let mut d = (new_shared.clone(), child_data.to_owned());
-            child.event(event, ctx, &mut d, env);
-            if !any_shared_changed && !new_shared.same(&d.0) {
-                any_shared_changed = true;
-            }
-            if any_shared_changed {
-                new_shared = d.0;
-            }
-            if !any_el_changed && !child_data.same(&d.1) {
-                any_el_changed = true;
-            }
-            new_data.push(d.1);
-        }
-        // It's not clear we need to track this; it's possible it would
-        // be slightly more efficient to just update data.0 in place.
-        if any_shared_changed {
-            data.0 = new_shared;
-        }
-        if any_el_changed {
-            data.1 = Arc::new(new_data);
-        }
-    }
-
-    fn update(
-        &mut self,
-        ctx: &mut UpdateCtx,
-        _old_data: Option<&(T1, Arc<Vec<T>>)>,
-        data: &(T1, Arc<Vec<T>>),
-        env: &Env,
-    ) {
-        for (child, child_data) in self.children.iter_mut().zip(data.1.iter()) {
-            let d = (data.0.clone(), child_data.to_owned());
-            child.update(ctx, &d, env);
-        }
-        let len = self.children.len();
-        if len > data.1.len() {
-            self.children.truncate(data.1.len())
-        } else if len < data.1.len() {
-            for child_data in &data.1[len..] {
-                let mut child = WidgetPod::new((self.closure)());
-                let d = (data.0.clone(), child_data.to_owned());
-                child.update(ctx, &d, env);
-                self.children.push(child);
-            }
+            });
         }
     }
 }
