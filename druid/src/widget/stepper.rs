@@ -15,9 +15,10 @@
 //! A stepper widget.
 
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx,
-    Widget,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, TimerToken,
+    UpdateCtx, Widget,
 };
+use std::time::{Duration, Instant};
 
 use crate::kurbo::{BezPath, Rect, RoundedRect};
 use crate::piet::{
@@ -28,8 +29,6 @@ use crate::theme;
 use crate::widget::{Align, Label, LabelText, SizedBox};
 use crate::Point;
 
-const STEPPER_WIDTH: f64 = 15.;
-
 /// A stepper.
 pub struct Stepper {
     max: f64,
@@ -38,8 +37,10 @@ pub struct Stepper {
     wrap: bool,
     /// A closure that will be invoked when the value changed.
     value_changed: Box<dyn Fn(&mut EventCtx, &mut f64, &Env)>,
+    /// Keeps track of which button is currently triggered.
     increase_active: bool,
     decrease_active: bool,
+    timer_id: TimerToken,
 }
 
 impl Stepper {
@@ -47,6 +48,7 @@ impl Stepper {
         max: f64,
         min: f64,
         step: f64,
+        wrap: bool,
         value_changed: impl Fn(&mut EventCtx, &mut f64, &Env) + 'static,
     ) -> impl Widget<f64> {
         Align::vertical(
@@ -55,27 +57,38 @@ impl Stepper {
                 max,
                 min,
                 step,
-                wrap: false,
+                wrap,
                 value_changed: Box::new(value_changed),
                 increase_active: false,
                 decrease_active: false,
+                timer_id: TimerToken::INVALID,
             },
         )
     }
 
-    pub fn min(mut self, min: f64) -> Self {
-        self.min = min;
-        self
-    }
+    fn change_value(&mut self, ctx: &mut EventCtx, data: &mut f64, env: &Env) {
+        let delta = if self.increase_active {
+            self.step
+        } else if self.decrease_active {
+            -1. * self.step
+        } else {
+            0.0
+        };
 
-    pub fn max(mut self, max: f64) -> Self {
-        self.max = max;
-        self
-    }
+        let old_data = *data;
+        *data = (*data + delta).min(self.min).max(self.max);
 
-    pub fn wrap(mut self, wrap: bool) -> Self {
-        self.wrap = wrap;
-        self
+        if old_data != *data {
+            (self.value_changed)(ctx, data, env);
+        } else {
+            if self.wrap {
+                if *data == self.min {
+                    *data = self.max
+                } else {
+                    *data = self.min
+                }
+            }
+        }
     }
 }
 
@@ -85,8 +98,13 @@ impl Widget<f64> for Stepper {
             RoundedRect::from_origin_size(Point::ORIGIN, base_state.size().to_vec2(), 4.);
 
         let height = base_state.size().height;
-        let button_size = Size::new(STEPPER_WIDTH, height / 2.);
+        let width = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let button_size = Size::new(width, height / 2.);
 
+        paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER), 2.0);
+        paint_ctx.clip(rounded_rect);
+
+        // draw buttons for increase/decrease
         let mut increase_button_origin = Point::ORIGIN;
         let mut decrease_button_origin = Point::ORIGIN;
         decrease_button_origin.y += height / 2.;
@@ -106,9 +124,7 @@ impl Widget<f64> for Stepper {
             (env.get(theme::BUTTON_DARK), env.get(theme::BUTTON_LIGHT)),
         );
 
-        paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER), 2.0);
-        paint_ctx.clip(rounded_rect);
-
+        // draw buttons that are currently triggered as active
         if self.increase_active {
             paint_ctx.fill(increase_rect, &active_gradient);
         } else {
@@ -121,17 +137,18 @@ impl Widget<f64> for Stepper {
             paint_ctx.fill(decrease_rect, &inactive_gradient);
         };
 
+        // draw up and down triangles
         let mut increase_arrow = BezPath::new();
         increase_arrow.move_to(Point::new(4., height / 2. - 4.));
-        increase_arrow.line_to(Point::new(STEPPER_WIDTH - 4., height / 2. - 4.));
-        increase_arrow.line_to(Point::new(STEPPER_WIDTH / 2., 4.));
+        increase_arrow.line_to(Point::new(width - 4., height / 2. - 4.));
+        increase_arrow.line_to(Point::new(width / 2., 4.));
         increase_arrow.close_path();
         paint_ctx.fill(increase_arrow, &env.get(theme::LABEL_COLOR));
 
         let mut decrease_arrow = BezPath::new();
         decrease_arrow.move_to(Point::new(4., height / 2. + 4.));
-        decrease_arrow.line_to(Point::new(STEPPER_WIDTH - 4., height / 2. + 4.));
-        decrease_arrow.line_to(Point::new(STEPPER_WIDTH / 2., height - 4.));
+        decrease_arrow.line_to(Point::new(width - 4., height / 2. + 4.));
+        decrease_arrow.line_to(Point::new(width / 2., height - 4.));
         decrease_arrow.close_path();
         paint_ctx.fill(decrease_arrow, &env.get(theme::LABEL_COLOR));
     }
@@ -144,7 +161,7 @@ impl Widget<f64> for Stepper {
         env: &Env,
     ) -> Size {
         bc.constrain(Size::new(
-            STEPPER_WIDTH,
+            env.get(theme::BASIC_WIDGET_HEIGHT),
             env.get(theme::BORDERED_WIDGET_HEIGHT),
         ))
     }
@@ -162,7 +179,10 @@ impl Widget<f64> for Stepper {
                     self.increase_active = true;
                 }
 
-                // todo: increase/decrease value
+                self.change_value(ctx, data, env);
+
+                let delay = Instant::now() + Duration::from_millis(500);
+                self.timer_id = ctx.request_timer(delay);
 
                 ctx.invalidate();
             }
@@ -171,8 +191,14 @@ impl Widget<f64> for Stepper {
 
                 self.decrease_active = false;
                 self.increase_active = false;
+                self.timer_id = TimerToken::INVALID;
 
                 ctx.invalidate();
+            }
+            Event::Timer(id) if *id == self.timer_id => {
+                self.change_value(ctx, data, env);
+                let delay = Instant::now() + Duration::from_millis(200);
+                self.timer_id = ctx.request_timer(delay);
             }
             _ => (),
         }
