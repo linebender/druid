@@ -30,16 +30,15 @@ fn build_widget() -> impl Widget<DemoState> {
     row.add_child(Padding::new(5.0, switch_label), 0.0);
     row.add_child(Padding::new(5.0, switch), 0.0);
 
-
     let label_stepper = LensWrap::new(
-        Stepper::new(0.0, 10.0, 1.0, true, |_ctx, _data, _env| {}),
+        Stepper::new(0.0, 10.0, 0.25, true, |_ctx, _data, _env| {}),
         lenses::demo_state::stepper_value,
     );
 
     let mut stepper_row = Row::new();
 
     let label = DynLabel::new(|data: &DemoState, _env| {
-        format!("Stepper value: {0:.0}", data.stepper_value)
+        format!("Stepper value: {0:.2}", data.stepper_value)
     });
 
     stepper_row.add_child(Padding::new(5.0, label), 0.0);
