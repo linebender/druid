@@ -485,11 +485,11 @@ impl WindowHandle {
 
             let vbox = window.get_children()[0]
                 .clone()
-                .downcast::<gtkrs::Box>()
+                .downcast::<gtk::Box>()
                 .unwrap();
 
             let first_child = &vbox.get_children()[0];
-            if first_child.is::<gtkrs::MenuBar>() {
+            if first_child.is::<gtk::MenuBar>() {
                 vbox.remove(first_child);
             }
             let menubar = menu.into_gtk_menubar(&self, &accel_group);
@@ -507,7 +507,7 @@ impl WindowHandle {
 
             let menu = menu.into_gtk_menu(&self, &accel_group);
             menu.show_all();
-            menu.popup_easy(3, gtkrs::get_current_event_time());
+            menu.popup_easy(3, gtk::get_current_event_time());
         }
     }
 

@@ -17,7 +17,7 @@
 use std::cell::RefCell;
 
 use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags, Cancellable};
-use gtkrs::{Application, GtkApplicationExt};
+use gtk::{Application, GtkApplicationExt};
 
 use crate::util::assert_main_thread;
 

@@ -51,13 +51,12 @@ use crate::clipboard::ClipboardItem;
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::platform::application::Application;
-use crate::util::make_nsstring;
 use crate::window::{
     Cursor, FileInfo, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler,
 };
 use crate::Error;
 
-use util::assert_main_thread;
+use util::{assert_main_thread, make_nsstring};
 
 #[allow(non_upper_case_globals)]
 const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
