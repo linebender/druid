@@ -15,21 +15,19 @@
 //! A stepper widget.
 
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, TimerToken,
+    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, TimerToken,
     UpdateCtx, Widget,
 };
 use std::time::{Duration, Instant};
 
 use crate::kurbo::{BezPath, Rect, RoundedRect};
-use crate::piet::{
-    FontBuilder, LinearGradient, RenderContext, Text, TextLayout, TextLayoutBuilder, UnitPoint,
-};
+use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 
 use crate::theme;
-use crate::widget::{Align, Label, LabelText, SizedBox};
+use crate::widget::Align;
 use crate::Point;
 
-/// A stepper.
+/// A stepper widget for step-wise increasing and decreasing a value.
 pub struct Stepper {
     max: f64,
     min: f64,
@@ -67,6 +65,7 @@ impl Stepper {
     }
 
     fn change_value(&mut self, ctx: &mut EventCtx, data: &mut f64, env: &Env) {
+        // increase/decrease value depending on which button is currently active
         let delta = if self.increase_active {
             self.step
         } else if self.decrease_active {
@@ -79,21 +78,20 @@ impl Stepper {
         *data = (*data + delta).min(self.min).max(self.max);
 
         if old_data != *data {
+            // callback
             (self.value_changed)(ctx, data, env);
-        } else {
-            if self.wrap {
-                if *data == self.min {
-                    *data = self.max
-                } else {
-                    *data = self.min
-                }
+        } else if self.wrap {
+            if *data == self.min {
+                *data = self.max
+            } else {
+                *data = self.min
             }
         }
     }
 }
 
 impl Widget<f64> for Stepper {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _data: &f64, env: &Env) {
         let rounded_rect =
             RoundedRect::from_origin_size(Point::ORIGIN, base_state.size().to_vec2(), 4.);
 
@@ -105,12 +103,12 @@ impl Widget<f64> for Stepper {
         paint_ctx.clip(rounded_rect);
 
         // draw buttons for increase/decrease
-        let mut increase_button_origin = Point::ORIGIN;
+        let increase_button_origin = Point::ORIGIN;
         let mut decrease_button_origin = Point::ORIGIN;
         decrease_button_origin.y += height / 2.;
 
-        let increase_rect = Rect::from_origin_size(increase_button_origin, button_size);
-        let decrease_rect = Rect::from_origin_size(decrease_button_origin, button_size);
+        let increase_button_rect = Rect::from_origin_size(increase_button_origin, button_size);
+        let decrease_button_rect = Rect::from_origin_size(decrease_button_origin, button_size);
 
         let active_gradient = LinearGradient::new(
             UnitPoint::TOP,
@@ -126,31 +124,31 @@ impl Widget<f64> for Stepper {
 
         // draw buttons that are currently triggered as active
         if self.increase_active {
-            paint_ctx.fill(increase_rect, &active_gradient);
+            paint_ctx.fill(increase_button_rect, &active_gradient);
         } else {
-            paint_ctx.fill(increase_rect, &inactive_gradient);
+            paint_ctx.fill(increase_button_rect, &inactive_gradient);
         };
 
         if self.decrease_active {
-            paint_ctx.fill(decrease_rect, &active_gradient);
+            paint_ctx.fill(decrease_button_rect, &active_gradient);
         } else {
-            paint_ctx.fill(decrease_rect, &inactive_gradient);
+            paint_ctx.fill(decrease_button_rect, &inactive_gradient);
         };
 
         // draw up and down triangles
-        let mut increase_arrow = BezPath::new();
-        increase_arrow.move_to(Point::new(4., height / 2. - 4.));
-        increase_arrow.line_to(Point::new(width - 4., height / 2. - 4.));
-        increase_arrow.line_to(Point::new(width / 2., 4.));
-        increase_arrow.close_path();
-        paint_ctx.fill(increase_arrow, &env.get(theme::LABEL_COLOR));
+        let mut increase_button_arrow = BezPath::new();
+        increase_button_arrow.move_to(Point::new(4., height / 2. - 4.));
+        increase_button_arrow.line_to(Point::new(width - 4., height / 2. - 4.));
+        increase_button_arrow.line_to(Point::new(width / 2., 4.));
+        increase_button_arrow.close_path();
+        paint_ctx.fill(increase_button_arrow, &env.get(theme::LABEL_COLOR));
 
-        let mut decrease_arrow = BezPath::new();
-        decrease_arrow.move_to(Point::new(4., height / 2. + 4.));
-        decrease_arrow.line_to(Point::new(width - 4., height / 2. + 4.));
-        decrease_arrow.line_to(Point::new(width / 2., height - 4.));
-        decrease_arrow.close_path();
-        paint_ctx.fill(decrease_arrow, &env.get(theme::LABEL_COLOR));
+        let mut decrease_button_arrow = BezPath::new();
+        decrease_button_arrow.move_to(Point::new(4., height / 2. + 4.));
+        decrease_button_arrow.line_to(Point::new(width - 4., height / 2. + 4.));
+        decrease_button_arrow.line_to(Point::new(width / 2., height - 4.));
+        decrease_button_arrow.close_path();
+        paint_ctx.fill(decrease_button_arrow, &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
