@@ -279,12 +279,10 @@ impl<T: Data> Widget<T> for Split<T> {
                 }
                 Event::MouseMoved(mouse) => {
                     if ctx.is_active() {
-                        if !ctx.is_hot() {
-                            ctx.set_active(false);
-                        }
                         self.update_splitter(ctx.base_state.size(), mouse.pos);
                         ctx.invalidate();
                     }
+
                     if ctx.is_hot() && self.splitter_hit_test(ctx.base_state.size(), mouse.pos) {
                         match self.split_direction {
                             Axis::Vertical => ctx.set_cursor(&Cursor::ResizeUpDown),
