@@ -582,12 +582,12 @@ impl<T: Data + 'static> DruidHandler<T> {
     }
 
     fn hide_app(&self) {
-        #[cfg(target_os = "macos")]
+        #[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
         Application::hide()
     }
 
     fn hide_others(&mut self) {
-        #[cfg(target_os = "macos")]
+        #[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
         Application::hide_others()
     }
 }

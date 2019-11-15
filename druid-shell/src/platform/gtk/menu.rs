@@ -15,15 +15,15 @@
 //! GTK implementation of menus.
 
 use gdk::ModifierType;
-use gtkrs::AccelGroup;
-use gtkrs::GtkMenuExt;
-use gtkrs::Menu as GtkMenu;
-use gtkrs::MenuBar as GtkMenuBar;
-use gtkrs::MenuItem as GtkMenuItem;
-use gtkrs::{GtkMenuItemExt, MenuShellExt, SeparatorMenuItemBuilder, WidgetExt};
+use gtk::AccelGroup;
+use gtk::GtkMenuExt;
+use gtk::Menu as GtkMenu;
+use gtk::MenuBar as GtkMenuBar;
+use gtk::MenuItem as GtkMenuItem;
+use gtk::{GtkMenuItemExt, MenuShellExt, SeparatorMenuItemBuilder, WidgetExt};
 
+use super::WinCtxImpl;
 use crate::common_util::strip_access_key;
-use crate::gtk::WinCtxImpl;
 use crate::hotkey::{HotKey, KeyCompare, RawMods};
 use crate::keyboard::KeyModifiers;
 use crate::platform::WindowHandle;
@@ -72,7 +72,7 @@ impl Menu {
         self.items.push(MenuItem::Separator)
     }
 
-    fn append_items_to_menu<M: gtkrs::prelude::IsA<gtkrs::MenuShell>>(
+    fn append_items_to_menu<M: gtk::prelude::IsA<gtk::MenuShell>>(
         self,
         menu: &mut M,
         handle: &WindowHandle,

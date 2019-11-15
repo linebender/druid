@@ -21,8 +21,8 @@ use std::ffi::OsString;
 use cocoa::base::{id, nil, YES};
 use cocoa::foundation::{NSArray, NSInteger};
 
+use super::util::{from_nsstring, make_nsstring};
 use crate::dialog::FileDialogOptions;
-use crate::util::{from_nsstring, make_nsstring};
 
 const NSModalResponseOK: NSInteger = 1;
 const NSModalResponseCancel: NSInteger = 0;

@@ -47,7 +47,7 @@ use log::error;
 
 use crate::Error;
 
-use crate::windows::win_proc_dispatch;
+use super::win_proc_dispatch;
 
 pub fn as_result(hr: HRESULT) -> Result<(), Error> {
     if SUCCEEDED(hr) {

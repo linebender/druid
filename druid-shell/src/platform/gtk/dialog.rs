@@ -17,7 +17,7 @@
 use std::ffi::OsString;
 
 use crate::dialog::FileDialogOptions;
-use gtkrs::{FileChooserAction, FileChooserExt, NativeDialogExt, Window};
+use gtk::{FileChooserAction, FileChooserExt, NativeDialogExt, Window};
 
 use crate::Error;
 
@@ -40,7 +40,7 @@ pub(crate) fn open_file_sync(
         FileDialogType::Save => ("Save File", FileChooserAction::Save),
     };
 
-    let dialog = gtkrs::FileChooserNativeBuilder::new()
+    let dialog = gtk::FileChooserNativeBuilder::new()
         .transient_for(window)
         .title(title)
         .build();

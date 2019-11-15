@@ -9,7 +9,7 @@ categories = ["os::macos-apis", "os::windows-apis", "gui"]
 edition = "2018"
 
 [features]
-use_gtk = ["gtk", "gio", "gdk", "gdk-sys", "glib", "glib-sys", "cairo-rs"]
+use_gtk = ["gtk", "gtk-sys", "gio", "gdk", "gdk-sys", "glib", "glib-sys", "cairo-rs"]
 
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"

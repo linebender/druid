@@ -18,10 +18,10 @@ use cocoa::appkit::{NSEventModifierFlags, NSMenu, NSMenuItem};
 use cocoa::base::{id, nil, NO};
 use cocoa::foundation::NSAutoreleasePool;
 
+use super::util::make_nsstring;
 use crate::common_util::strip_access_key;
 use crate::hotkey::{HotKey, KeyCompare};
 use crate::keyboard::{KeyCode, KeyModifiers};
-use crate::util::make_nsstring;
 
 pub struct Menu {
     pub menu: id,
