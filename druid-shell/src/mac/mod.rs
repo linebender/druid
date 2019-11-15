@@ -161,6 +161,7 @@ impl WindowBuilder {
                 NO,
             );
 
+            window.setLevel_(4);
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
             // TODO: this should probably be a tracking area instead
