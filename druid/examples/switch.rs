@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Flex, Label, Padding, Switch};
+use druid::widget::{Flex, Switch, DynLabel, Label, Padding, Row, Stepper, Switch};
 use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -30,13 +30,23 @@ fn build_widget() -> impl Widget<DemoState> {
     row.add_child(Padding::new(5.0, switch_label), 0.0);
     row.add_child(Padding::new(5.0, switch), 0.0);
 
-    let stepper = LensWrap::new(
-        Stepper::new(0.0, 10.0, 1.0, |_ctx, _data, _env| eprintln!("---")),
+
+    let label_stepper = LensWrap::new(
+        Stepper::new(0.0, 10.0, 1.0, true, |_ctx, _data, _env| {}),
         lenses::demo_state::stepper_value,
     );
-    row.add_child(Padding::new(5.0, stepper), 0.0);
+
+    let mut stepper_row = Row::new();
+
+    let label = DynLabel::new(|data: &DemoState, _env| {
+        format!("Stepper value: {0:.0}", data.stepper_value)
+    });
+
+    stepper_row.add_child(Padding::new(5.0, label), 0.0);
+    stepper_row.add_child(Padding::new(5.0, label_stepper), 0.0);
 
     col.add_child(Padding::new(5.0, row), 1.0);
+    col.add_child(Padding::new(5.0, stepper_row), 1.0);
     col
 }
 
