@@ -283,7 +283,9 @@ impl<T: Data> Widget<T> for Split<T> {
                         ctx.invalidate();
                     }
 
-                    if ctx.is_hot() && self.splitter_hit_test(ctx.base_state.size(), mouse.pos) {
+                    if ctx.is_hot() && self.splitter_hit_test(ctx.base_state.size(), mouse.pos)
+                        || ctx.is_active()
+                    {
                         match self.split_direction {
                             Axis::Vertical => ctx.set_cursor(&Cursor::ResizeUpDown),
                             Axis::Horizontal => ctx.set_cursor(&Cursor::ResizeLeftRight),
