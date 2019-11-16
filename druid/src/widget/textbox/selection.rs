@@ -17,6 +17,8 @@
 use std::cmp::{max, min};
 use std::ops::Range;
 
+use crate::widget::textbox::EditableText;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Selection {
     /// The inactive edge of a selection, as a byte offset. When
@@ -34,7 +36,7 @@ impl Selection {
         Selection { start, end }
     }
 
-    pub fn all(&mut self, text: &str) {
+    pub fn all(&mut self, text: impl EditableText) {
         self.start = 0;
         self.end = text.len();
     }
@@ -68,7 +70,7 @@ impl Selection {
     }
 
     /// Constrain selection to be not greater than input string
-    pub fn constrain_to(mut self, s: &str) -> Self {
+    pub fn constrain_to<E: EditableText>(mut self, s: &E) -> Self {
         let s_len = s.len();
         self.start = min(self.start, s_len);
         self.end = min(self.end, s_len);

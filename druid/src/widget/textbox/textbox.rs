@@ -17,7 +17,7 @@
 use std::time::{Duration, Instant};
 
 use crate::{
-    Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
+    Application, BoxConstraints, Cursor, Data, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
     LifeCycle, LifeCycleCtx, PaintCtx, RawMods, Selector, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
@@ -42,29 +42,30 @@ const RESET_BLINK: Selector = Selector::new("druid-builtin.reset-textbox-blink")
 
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
-pub struct TextBox {
+pub struct TextBox<E: EditableText> {
     placeholder: String,
     width: f64,
     hscroll_offset: f64,
     selection: Selection,
     cursor_timer: TimerToken,
     cursor_on: bool,
+    phantom: std::marker::PhantomData<E>,
 }
 
-impl TextBox {
+impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
     /// Create a new TextBox widget
-    pub fn new() -> impl Widget<String> {
+    pub fn new() -> impl Widget<E> {
         Align::vertical(UnitPoint::CENTER, Self::raw())
     }
     /// Create a new TextBox widget with placeholder
-    pub fn with_placeholder<T: Into<String>>(placeholder: T) -> impl Widget<String> {
+    pub fn with_placeholder<T: Into<String>>(placeholder: T) -> impl Widget<E> {
         let mut textbox = Self::raw();
         textbox.placeholder = placeholder.into();
         Align::vertical(UnitPoint::CENTER, textbox)
     }
 
     /// Create a new TextBox widget with no Align wrapper
-    pub fn raw() -> TextBox {
+    pub fn raw() -> TextBox<E> {
         Self {
             width: 0.0,
             hscroll_offset: 0.,
@@ -72,10 +73,11 @@ impl TextBox {
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
             placeholder: String::new(),
+            phantom: Default::default(),
         }
     }
 
-    fn get_layout(&self, piet_text: &mut PietText, data: &str, env: &Env) -> PietTextLayout {
+    fn get_layout(&self, piet_text: &mut PietText, text: &String, env: &Env) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         // TODO: caching of both the format and the layout
@@ -84,17 +86,20 @@ impl TextBox {
             .build()
             .unwrap();
 
-        piet_text.new_text_layout(&font, data).build().unwrap()
+        piet_text
+            .new_text_layout(&font, &text.to_string())
+            .build()
+            .unwrap()
     }
 
-    fn insert(&mut self, src: &mut String, new: &str) {
+    fn insert(&mut self, src: &mut E, new: &str) {
         // TODO: handle incomplete graphemes
 
         // replace_range will panic if selection is greater than src length hence we try to constrain it.
         // This is especially needed when data was modified externally.
         let selection = self.selection.constrain_to(src);
 
-        src.replace_range(selection.range(), new);
+        src.edit(selection.range(), new);
         self.selection = Selection::caret(selection.min() + new.len());
     }
 
@@ -106,14 +111,15 @@ impl TextBox {
         self.selection.end
     }
 
-    fn move_selection(&mut self, mvmnt: Movement, text: String, modify: bool) {
+    fn move_selection(&mut self, mvmnt: Movement, text: impl EditableText, modify: bool) {
         self.selection = movement(mvmnt, self.selection, text, modify);
     }
 
-    fn delete_backward(&mut self, text: &mut String) {
+    fn delete_backward(&mut self, text: &mut E) {
         if self.selection.is_caret() {
             let cursor = self.cursor();
-            let new_cursor = offset_for_delete_backwards(&self.selection, text.to_string());
+            // TODO: I did this clone because E doesn't impl for &mut String
+            let new_cursor = offset_for_delete_backwards(&self.selection, text.clone());
             text.edit(new_cursor..cursor, "");
             self.cursor_to(new_cursor);
         } else {
@@ -177,13 +183,13 @@ impl TextBox {
     }
 }
 
-impl Widget<String> for TextBox {
+impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for TextBox<E> {
     #[allow(clippy::cognitive_complexity)]
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut E, env: &Env) {
         // Guard against external changes in data
         self.selection = self.selection.constrain_to(data);
 
-        let mut text_layout = self.get_layout(ctx.text(), data, env);
+        let mut text_layout = self.get_layout(ctx.text(), &data.to_string(), env);
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
@@ -223,7 +229,7 @@ impl Widget<String> for TextBox {
                     && (cmd.selector == crate::commands::COPY
                         || cmd.selector == crate::commands::CUT) =>
             {
-                if let Some(text) = data.get(self.selection.range()) {
+                if let Some(text) = data.slice(self.selection.range()) {
                     Application::clipboard().put_string(text);
                 }
                 if !self.selection.is_caret() && cmd.selector == crate::command::sys::CUT {
@@ -243,38 +249,39 @@ impl Widget<String> for TextBox {
                 match key_event {
                     // Select all (Ctrl+A || Cmd+A)
                     k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => {
-                        self.selection.all(data);
+                        self.selection.all(data.clone());
                     }
                     // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
                     k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft)).matches(k_e)
                         || HotKey::new(None, KeyCode::Home).matches(k_e) =>
                     {
-                        self.move_selection(Movement::LeftOfLine, data.to_string(), false);
+                        // TODO: all these clones are because I don't know how to hanlde mutable text
+                        self.move_selection(Movement::LeftOfLine, data.clone(), false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
                     k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowRight)).matches(k_e)
                         || HotKey::new(None, KeyCode::End).matches(k_e) =>
                     {
-                        self.move_selection(Movement::RightOfLine, data.to_string(), false);
+                        self.move_selection(Movement::RightOfLine, data.clone(), false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Select left (Shift+ArrowLeft)
                     k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowLeft)).matches(k_e) => {
-                        self.move_selection(Movement::Left, data.to_string(), true);
+                        self.move_selection(Movement::Left, data.clone(), true);
                     }
                     // Select right (Shift+ArrowRight)
                     k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowRight)).matches(k_e) => {
-                        self.move_selection(Movement::Right, data.to_string(), true);
+                        self.move_selection(Movement::Right, data.clone(), true);
                     }
                     // Move left (ArrowLeft)
                     k_e if (HotKey::new(None, KeyCode::ArrowLeft)).matches(k_e) => {
-                        self.move_selection(Movement::Left, data.to_string(), false);
+                        self.move_selection(Movement::Left, data.clone(), false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Move right (ArrowRight)
                     k_e if (HotKey::new(None, KeyCode::ArrowRight)).matches(k_e) => {
-                        self.move_selection(Movement::Right, data.to_string(), false);
+                        self.move_selection(Movement::Right, data.clone(), false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Backspace
@@ -287,7 +294,7 @@ impl Widget<String> for TextBox {
                         if self.selection.is_caret() {
                             // Never touch the characters before the cursor.
                             if let Some(_) = data.next_grapheme_offset(self.cursor()) {
-                                self.move_selection(Movement::Right, data.to_string(), false);
+                                self.move_selection(Movement::Right, data.clone(), false);
                                 self.delete_backward(data);
                             }
                         } else {
@@ -308,7 +315,7 @@ impl Widget<String> for TextBox {
                     }
                     _ => {}
                 }
-                text_layout = self.get_layout(ctx.text(), data, env);
+                text_layout = self.get_layout(ctx.text(), &data.to_string(), env);
                 self.update_hscroll(&text_layout);
                 ctx.invalidate();
             }
@@ -316,7 +323,7 @@ impl Widget<String> for TextBox {
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &String, _env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &E, _env: &Env) {
         match event {
             LifeCycle::WidgetAdded => ctx.invalidate(),
             LifeCycle::Register => ctx.register_for_focus(),
@@ -326,7 +333,7 @@ impl Widget<String> for TextBox {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &String, _data: &String, _env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &E, _data: &E, _env: &Env) {
         ctx.invalidate();
     }
 
@@ -334,7 +341,7 @@ impl Widget<String> for TextBox {
         &mut self,
         _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _data: &String,
+        _data: &E,
         env: &Env,
     ) -> Size {
         let default_width = 100.0;
@@ -348,15 +355,15 @@ impl Widget<String> for TextBox {
         bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &String, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &E, env: &Env) {
         // Guard against changes in data following `event`
         let content = if data.is_empty() {
-            &self.placeholder
+            self.placeholder.clone()
         } else {
-            data
+            data.to_string()
         };
 
-        self.selection = self.selection.constrain_to(content);
+        self.selection = self.selection.constrain_to(&content);
 
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
@@ -389,7 +396,7 @@ impl Widget<String> for TextBox {
                 rc.clip(clip_rect);
 
                 // Calculate layout
-                let text_layout = self.get_layout(rc.text(), content, env);
+                let text_layout = self.get_layout(rc.text(), &content.to_string(), env);
 
                 // Shift everything inside the clip by the hscroll_offset
                 rc.transform(Affine::translate((-self.hscroll_offset, 0.)));

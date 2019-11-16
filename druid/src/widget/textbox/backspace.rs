@@ -19,7 +19,7 @@ use crate::widget::textbox::{EditableText, EditableTextCursor};
 
 use xi_unicode::*;
 
-fn backspace_offset(text: String, start: usize) -> usize {
+fn backspace_offset(text: impl EditableText, start: usize) -> usize {
     #[derive(PartialEq)]
     enum State {
         Start,
@@ -190,7 +190,7 @@ fn backspace_offset(text: String, start: usize) -> usize {
     cursor.pos()
 }
 
-pub fn offset_for_delete_backwards(region: &Selection, text: String) -> usize {
+pub fn offset_for_delete_backwards(region: &Selection, text: impl EditableText) -> usize {
     if !region.is_caret() {
         region.min()
     } else {

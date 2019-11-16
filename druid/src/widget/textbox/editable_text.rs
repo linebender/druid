@@ -27,6 +27,8 @@ pub trait EditableText: Sized {
 
     fn slice(&self, iv: Range<usize>) -> Option<&str>;
 
+    fn len(&self) -> usize;
+
     // pub fn is_codepoint_boundary(&self, offset: usize) -> bool;
 
     // fn prev_codepoint_offset(&self, offset: usize) -> Option<usize>;
@@ -40,6 +42,8 @@ pub trait EditableText: Sized {
     fn prev_grapheme_offset(&self, offset: usize) -> Option<usize>;
 
     fn next_grapheme_offset(&self, offset: usize) -> Option<usize>;
+
+    fn is_empty(&self) -> bool;
 }
 
 impl EditableText for String {
@@ -51,6 +55,10 @@ impl EditableText for String {
 
     fn slice(&self, iv: Range<usize>) -> Option<&str> {
         self.get(iv)
+    }
+
+    fn len(&self) -> usize {
+        self.len()
     }
 
     fn cursor(&self, position: usize) -> StringCursor {
@@ -69,6 +77,10 @@ impl EditableText for String {
     fn prev_grapheme_offset(&self, from: usize) -> Option<usize> {
         let mut c = GraphemeCursor::new(from, self.len(), true);
         c.prev_boundary(self, 0).unwrap()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.is_empty()
     }
 }
 
