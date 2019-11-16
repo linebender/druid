@@ -15,6 +15,7 @@
 //! Platform abstraction for druid toolkit.
 
 #![deny(intra_doc_link_resolution_failure)]
+#![allow(clippy::new_without_default)]
 
 pub use piet_common as piet;
 pub use piet_common::kurbo;
@@ -31,6 +32,7 @@ extern crate objc;
 #[macro_use]
 extern crate lazy_static;
 
+pub mod application;
 pub mod clipboard;
 mod common_util;
 pub mod dialog;
@@ -38,13 +40,14 @@ pub mod error;
 pub mod hotkey;
 pub mod keyboard;
 pub mod keycodes;
+pub mod menu;
+//TODO: don't expose this directly? currently making this private causes
+//a bunch of compiler warnings, so let's revisit that later.
 pub mod platform;
+pub mod runloop;
 pub mod window;
 
 pub use error::Error;
-pub use platform::application;
-pub use platform::menu;
-pub use platform::util;
-pub use platform::win_main as runloop; // TODO: rename to "runloop"
-pub use platform::WindowBuilder;
-pub use util::{get_locale, init};
+pub use window::WindowBuilder;
+//TODO: move these to Application?
+pub use platform::util::{self, get_locale, init};

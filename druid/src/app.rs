@@ -189,9 +189,7 @@ impl<T: Data + 'static> WindowDesc<T> {
             .borrow_mut()
             .add_window(self.id, Window::new(root, title, menu));
 
-        Ok(WindowHandle {
-            inner: builder.build()?,
-        })
+        builder.build()
     }
 
     /// Set the menu for this window.

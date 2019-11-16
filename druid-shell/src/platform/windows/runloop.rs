@@ -131,9 +131,3 @@ impl RunLoopHandle {
         self.0.lock().unwrap().listeners.push(listener);
     }
 }
-
-impl Default for RunLoop {
-    fn default() -> Self {
-        RunLoop::new()
-    }
-}

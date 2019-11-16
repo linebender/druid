@@ -15,14 +15,15 @@
 //! Platform independent window types.
 
 use std::any::Any;
-use std::ops::Deref;
 use std::path::PathBuf;
 
 use crate::clipboard::ClipboardItem;
 //TODO: why is this pub?
 use crate::dialog::FileDialogOptions;
+use crate::error::Error;
 pub use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::kurbo::{Point, Vec2};
+use crate::kurbo::{Point, Size, Vec2};
+use crate::menu::Menu;
 use crate::platform;
 
 // It's possible we'll want to make this type alias at a lower level,
@@ -47,17 +48,122 @@ impl TimerToken {
     }
 }
 
-// Handle to Window Level Utilities
-#[derive(Clone, Default)]
-pub struct WindowHandle {
-    pub inner: platform::WindowHandle,
+//NOTE: this has a From<platform::Handle> impl for construction
+/// A handle that can enqueue tasks on the window loop.
+#[derive(Clone)]
+pub struct IdleHandle(platform::IdleHandle);
+
+impl IdleHandle {
+    /// Add an idle handler, which is called (once) when the message loop
+    /// is empty. The idle handler will be run from the main UI thread, and
+    /// won't be scheduled if the associated view has been dropped.
+    ///
+    /// Note: the name "idle" suggests that it will be scheduled with a lower
+    /// priority than other UI events, but that's not necessarily the case.
+    pub fn add_idle<F>(&self, callback: F)
+    where
+        F: FnOnce(&dyn Any) + Send + 'static,
+    {
+        self.0.add_idle(callback)
+    }
 }
 
-impl Deref for WindowHandle {
-    type Target = platform::WindowHandle;
+/// A handle to a platform window object.
+#[derive(Clone, Default)]
+pub struct WindowHandle(platform::WindowHandle);
 
-    fn deref(&self) -> &Self::Target {
-        &self.inner
+impl WindowHandle {
+    /// Make this window visible.
+    ///
+    /// This is part of the initialization process; it should only be called
+    /// once, when a window is first created.
+    pub fn show(&self) {
+        self.0.show()
+    }
+
+    /// Close the window.
+    pub fn close(&self) {
+        self.0.close()
+    }
+
+    /// Bring this window to the front of the window stack and give it focus.
+    pub fn bring_to_front_and_focus(&self) {
+        self.0.bring_to_front_and_focus()
+    }
+
+    /// Request invalidation of the entire window contents.
+    pub fn invalidate(&self) {
+        self.0.invalidate()
+    }
+
+    /// Set the title for this menu.
+    pub fn set_title(&self, title: &str) {
+        self.0.set_title(title)
+    }
+
+    /// Set the top-level menu for this window.
+    pub fn set_menu(&self, menu: Menu) {
+        self.0.set_menu(menu.into_inner())
+    }
+
+    /// Display a pop-up menu at the given position.
+    ///
+    /// `Point` is in the coordinate space of the window.
+    pub fn show_context_menu(&self, menu: Menu, pos: Point) {
+        self.0.show_context_menu(menu.into_inner(), pos)
+    }
+
+    /// Get a handle that can be used to schedule an idle task.
+    pub fn get_idle_handle(&self) -> Option<IdleHandle> {
+        self.0.get_idle_handle().map(IdleHandle)
+    }
+
+    /// Get the dpi of the window.
+    ///
+    /// TODO: we want to migrate this from dpi (with 96 as nominal) to a scale
+    /// factor (with 1 as nominal).
+    pub fn get_dpi(&self) -> f32 {
+        self.0.get_dpi()
+    }
+}
+
+/// A builder type for creating new windows.
+pub struct WindowBuilder(platform::WindowBuilder);
+
+impl WindowBuilder {
+    /// Create a new `WindowBuilder`
+    pub fn new() -> WindowBuilder {
+        WindowBuilder(platform::WindowBuilder::new())
+    }
+
+    /// Set the [`WinHandler`]. This is the object that will receive
+    /// callbacks from this window.
+    ///
+    /// [`WinHandler`]: trait.WinHandler.html
+    pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
+        self.0.set_handler(handler)
+    }
+
+    /// Set the window's initial size.
+    pub fn set_size(&mut self, size: Size) {
+        self.0.set_size(size)
+    }
+
+    /// Set the window's initial title.
+    pub fn set_title(&mut self, title: impl Into<String>) {
+        self.0.set_title(title)
+    }
+
+    /// Set the window's menu.
+    pub fn set_menu(&mut self, menu: Menu) {
+        self.0.set_menu(menu.into_inner())
+    }
+
+    /// Attempt to construct the platform window.
+    ///
+    /// If this fails, your application should exit.
+    pub fn build(self) -> Result<WindowHandle, Error> {
+        self.0.build().map(WindowHandle)
     }
 }
 
@@ -257,4 +363,10 @@ pub enum Cursor {
 #[derive(Debug, Clone)]
 pub struct FileInfo {
     pub path: PathBuf,
+}
+
+impl From<platform::WindowHandle> for WindowHandle {
+    fn from(src: platform::WindowHandle) -> WindowHandle {
+        WindowHandle(src)
+    }
 }
