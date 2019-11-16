@@ -19,8 +19,8 @@
 pub mod application;
 pub mod dialog;
 pub mod menu;
+pub mod runloop;
 pub mod util;
-pub mod win_main;
 
 use cocoa::appkit::{
     NSApp, NSApplication, NSApplicationActivateIgnoringOtherApps, NSAutoresizingMaskOptions,
@@ -29,13 +29,11 @@ use cocoa::appkit::{
 };
 use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSRect, NSSize, NSString};
-pub use menu::Menu;
 use objc::declare::ClassDecl;
 use objc::rc::WeakPtr;
 use objc::runtime::{Class, Object, Sel};
 use std::any::Any;
 use std::ffi::c_void;
-use std::ffi::OsString;
 use std::mem;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
@@ -48,13 +46,14 @@ use crate::kurbo::{Point, Size, Vec2};
 use piet_common::{Piet, RenderContext};
 
 use crate::clipboard::ClipboardItem;
-use crate::dialog::{FileDialogOptions, FileDialogType};
+use crate::dialog::FileDialogOptions;
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::platform::application::Application;
 use crate::window::{
     Cursor, FileInfo, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler,
 };
 use crate::Error;
+use menu::Menu;
 
 use util::{assert_main_thread, make_nsstring};
 
@@ -62,7 +61,7 @@ use util::{assert_main_thread, make_nsstring};
 const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
 
 #[derive(Clone, Default)]
-pub struct WindowHandle {
+pub(crate) struct WindowHandle {
     /// This is an NSView, as our concept of "window" is more the top-level container holding
     /// a view. Also, this is better for hosted applications such as VST.
     ///
@@ -73,16 +72,15 @@ pub struct WindowHandle {
 }
 
 /// Builder abstraction for creating new windows.
-pub struct WindowBuilder {
+pub(crate) struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     title: String,
-    enable_mouse_move_events: bool,
     menu: Option<Menu>,
     size: Size,
 }
 
 #[derive(Clone)]
-pub struct IdleHandle {
+pub(crate) struct IdleHandle {
     nsview: WeakPtr,
     idle_queue: Weak<Mutex<Vec<Box<dyn IdleCallback>>>>,
 }
@@ -115,7 +113,6 @@ impl WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),
-            enable_mouse_move_events: true,
             menu: None,
             size: Size::new(500.0, 400.0),
         }
@@ -135,10 +132,6 @@ impl WindowBuilder {
 
     pub fn set_menu(&mut self, menu: Menu) {
         self.menu = Some(menu);
-    }
-
-    pub fn set_enable_mouse_move_events(&mut self, to: bool) {
-        self.enable_mouse_move_events = to;
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
@@ -182,9 +175,7 @@ impl WindowBuilder {
                 nsview: Some(view_state.nsview.clone()),
                 idle_queue,
             };
-            (*view_state).handler.connect(&crate::window::WindowHandle {
-                inner: handle.clone(),
-            });
+            (*view_state).handler.connect(&handle.clone().into());
             let mut ctx = WinCtxImpl {
                 nsview: handle.nsview.as_ref().unwrap(),
                 text: Text::new(),
@@ -195,12 +186,6 @@ impl WindowBuilder {
 
             Ok(handle)
         }
-    }
-}
-
-impl Default for WindowBuilder {
-    fn default() -> Self {
-        WindowBuilder::new()
     }
 }
 
@@ -690,7 +675,7 @@ impl WindowHandle {
     //FIXME: we should be using the x, y values passed by the caller, but then
     //we have to figure out some way to pass them along with this performSelector:
     //call. This isn't super hard, I'm just not up for it right now.
-    pub fn show_context_menu(&self, menu: Menu, _x: f64, _y: f64) {
+    pub fn show_context_menu(&self, menu: Menu, _pos: Point) {
         if let Some(ref nsview) = self.nsview {
             unsafe {
                 let () = msg_send![*nsview.load(), performSelectorOnMainThread: sel!(showContextMenu:) withObject: menu.menu waitUntilDone: NO];
@@ -714,47 +699,6 @@ impl WindowHandle {
     pub fn get_dpi(&self) -> f32 {
         // TODO: get actual dpi
         96.0
-    }
-
-    // TODO: the following methods are cut'n'paste code. A good way to DRY
-    // would be to have a platform-independent trait with these as methods with
-    // default implementations.
-
-    /// Convert a dimension in px units to physical pixels (rounding).
-    pub fn px_to_pixels(&self, x: f32) -> i32 {
-        (x * self.get_dpi() * (1.0 / 96.0)).round() as i32
-    }
-
-    /// Convert a point in px units to physical pixels (rounding).
-    pub fn px_to_pixels_xy(&self, x: f32, y: f32) -> (i32, i32) {
-        let scale = self.get_dpi() * (1.0 / 96.0);
-        ((x * scale).round() as i32, (y * scale).round() as i32)
-    }
-
-    /// Convert a dimension in physical pixels to px units.
-    pub fn pixels_to_px<T: Into<f64>>(&self, x: T) -> f32 {
-        (x.into() as f32) * 96.0 / self.get_dpi()
-    }
-
-    /// Convert a point in physical pixels to px units.
-    pub fn pixels_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f32, f32) {
-        let scale = 96.0 / self.get_dpi();
-        ((x.into() as f32) * scale, (y.into() as f32) * scale)
-    }
-
-    #[deprecated(since = "0.3.0", note = "use methods on WinCtx instead")]
-    pub fn file_dialog(
-        &self,
-        ty: FileDialogType,
-        options: FileDialogOptions,
-    ) -> Result<OsString, Error> {
-        match ty {
-            FileDialogType::Open => unsafe {
-                dialog::show_open_file_dialog_sync(options)
-                    .ok_or(Error::Other("failed to open file dialog"))
-            },
-            _ => Err(Error::Other("unhandled FileDialogType")),
-        }
     }
 }
 

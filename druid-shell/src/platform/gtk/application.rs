@@ -33,4 +33,8 @@ impl Application {
             None
         }
     }
+
+    pub fn set_clipboard_contents(_item: ClipboardItem) {
+        log::warn!("set_clipboard_contents is unimplemented on GTK");
+    }
 }

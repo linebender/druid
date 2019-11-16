@@ -19,13 +19,9 @@ use time::get_time;
 use piet_common::kurbo::{Line, Rect};
 use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
-#[cfg(target_os = "windows")]
-use druid_shell::platform::PresentStrategy;
-
 use druid_shell::keyboard::KeyEvent;
-use druid_shell::platform::WindowBuilder;
 use druid_shell::runloop;
-use druid_shell::window::{WinCtx, WinHandler, WindowHandle};
+use druid_shell::window::{WinCtx, WinHandler, WindowBuilder, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
@@ -124,10 +120,6 @@ fn main() {
     };
     builder.set_handler(Box::new(perf_test));
     builder.set_title("Performance tester");
-
-    // Note: experiment with changing this
-    #[cfg(target_os = "windows")]
-    builder.set_present_strategy(PresentStrategy::FlipRedirect);
 
     let window = builder.build().unwrap();
     window.show();

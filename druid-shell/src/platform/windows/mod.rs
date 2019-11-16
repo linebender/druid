@@ -24,9 +24,9 @@ pub mod dcomp;
 pub mod dialog;
 pub mod menu;
 pub mod paint;
+pub mod runloop;
 mod timers;
 pub mod util;
-pub mod win_main;
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
@@ -60,15 +60,15 @@ use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarge
 
 use piet_common::{Piet, RenderContext};
 
+use super::menu::Menu;
 use crate::application::Application;
 use crate::clipboard::ClipboardItem;
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Size, Vec2};
-use crate::menu::Menu;
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use crate::window::{
-    self, Cursor, FileInfo, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler,
+    Cursor, FileInfo, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler,
 };
 use crate::Error;
 
@@ -135,11 +135,11 @@ pub struct IdleHandle {
 }
 
 trait IdleCallback: Send {
-    fn call(self: Box<Self>, a: &mut dyn Any);
+    fn call(self: Box<Self>, a: &dyn Any);
 }
 
-impl<F: FnOnce(&mut dyn Any) + Send> IdleCallback for F {
-    fn call(self: Box<F>, a: &mut dyn Any) {
+impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
+    fn call(self: Box<F>, a: &dyn Any) {
         (*self)(a)
     }
 }
@@ -321,9 +321,7 @@ impl<'a> WinCtxOwner<'a> {
 impl WndProc for MyWndProc {
     fn connect(&self, handle: &WindowHandle, mut state: WndState) {
         *self.handle.borrow_mut() = handle.clone();
-        state.handler.connect(&window::WindowHandle {
-            inner: handle.clone(),
-        });
+        state.handler.connect(&handle.clone().into());
         *self.state.borrow_mut() = Some(state);
     }
 
@@ -893,12 +891,6 @@ impl WindowBuilder {
     }
 }
 
-impl Default for WindowBuilder {
-    fn default() -> Self {
-        WindowBuilder::new()
-    }
-}
-
 /// Choose an adapter. Here the heuristic is to choose the adapter with the
 /// largest video memory, which will generally be the discrete adapter. It's
 /// possible that on some systems the integrated adapter might be a better
@@ -1155,11 +1147,11 @@ impl WindowHandle {
         }
     }
 
-    pub fn show_context_menu(&self, menu: Menu, x: f64, y: f64) {
+    pub fn show_context_menu(&self, menu: Menu, pos: Point) {
         let hmenu = menu.into_hmenu();
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
-            let (x, y) = self.px_to_pixels_xy(x as f32, y as f32);
+            let (x, y) = self.px_to_pixels_xy(pos.x as f32, pos.y as f32);
             unsafe {
                 let mut point = POINT { x, y };
                 ClientToScreen(hwnd, &mut point);
@@ -1268,7 +1260,7 @@ impl IdleHandle {
     /// which means it won't be scheduled if the window is closed.
     pub fn add_idle<F>(&self, callback: F)
     where
-        F: FnOnce(&mut dyn Any) + Send + 'static,
+        F: FnOnce(&dyn Any) + Send + 'static,
     {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {

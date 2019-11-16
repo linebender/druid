@@ -29,8 +29,8 @@ use gtk::prelude::*;
 use gtk::{AccelGroup, ApplicationWindow};
 
 use piet_common::{Piet, RenderContext};
+use runloop::with_application;
 use util::assert_main_thread;
-use win_main::with_application;
 
 use crate::clipboard::ClipboardItem;
 use crate::dialog::FileDialogOptions;
@@ -44,8 +44,8 @@ use crate::Error;
 pub mod application;
 pub mod dialog;
 pub mod menu;
+pub mod runloop;
 pub mod util;
-pub mod win_main;
 
 /// Taken from https://gtk-rs.org/docs-src/tutorial/closures
 /// It is used to reduce the boilerplate of setting up gtk callbacks
@@ -394,9 +394,7 @@ impl WindowBuilder {
         win_state
             .handler
             .borrow_mut()
-            .connect(&window::WindowHandle {
-                inner: handle.clone(),
-            });
+            .connect(&handle.clone().into());
 
         Ok(handle)
     }
@@ -498,7 +496,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn show_context_menu(&self, menu: Menu, _x: f64, _y: f64) {
+    pub fn show_context_menu(&self, menu: Menu, _pos: Point) {
         if let Some(state) = self.state.upgrade() {
             let window = &state.window;
 
@@ -769,11 +767,5 @@ fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
         } else {
             None
         }
-    }
-}
-
-impl Default for WindowBuilder {
-    fn default() -> Self {
-        WindowBuilder::new()
     }
 }

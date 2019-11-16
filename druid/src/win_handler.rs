@@ -254,9 +254,7 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
             }
         };
         let platform_menu = menu.build_popup_menu(&self.data, &self.env);
-        self.state
-            .handle
-            .show_context_menu(platform_menu, point.x, point.y);
+        self.state.handle.show_context_menu(platform_menu, point);
         self.window.context_menu = Some(menu);
     }
 
