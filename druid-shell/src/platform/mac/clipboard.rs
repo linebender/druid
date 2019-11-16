@@ -34,6 +34,7 @@ impl Clipboard {
             unsafe {
                 let nsstring = util::make_nsstring(s);
                 let pasteboard: id = msg_send![class!(NSPasteboard), generalPasteboard];
+                let _: NSInteger = msg_send![pasteboard, clearContents];
                 let result: BOOL =
                     msg_send![pasteboard, setString: nsstring forType: NSPasteboardTypeString];
                 if result != YES {

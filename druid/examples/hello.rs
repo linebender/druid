@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, Button, Column, Label, Padding};
+use druid::widget::{Align, Button, Flex, Label, Padding};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn main() {
@@ -30,7 +30,7 @@ fn ui_builder() -> impl Widget<u32> {
     let label = Label::new(text);
     let button = Button::new("increment", |_ctx, data, _env| *data += 1);
 
-    let mut col = Column::new();
+    let mut col = Flex::column();
     col.add_child(Align::centered(Padding::new(5.0, label)), 1.0);
     col.add_child(Padding::new(5.0, button), 1.0);
     col

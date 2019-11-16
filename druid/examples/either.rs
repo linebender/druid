@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Checkbox, Column, Either, Label, Padding, Slider};
+use druid::widget::{Checkbox, Either, Flex, Label, Padding, Slider};
 use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 
 #[derive(Clone, Default, Data, Lens)]
@@ -33,7 +33,7 @@ fn main() {
 fn ui_builder() -> impl Widget<AppState> {
     let label = Label::new("Click to reveal slider");
 
-    let mut col = Column::new();
+    let mut col = Flex::column();
     col.add_child(
         Padding::new(
             5.0,

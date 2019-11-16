@@ -16,7 +16,7 @@
 
 use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 
-use druid::widget::{Button, Column, DynLabel, Padding, Row};
+use druid::widget::{Button, DynLabel, Flex, Padding};
 
 #[derive(Clone, Data, Lens)]
 struct CalcState {
@@ -140,7 +140,7 @@ fn flex_row<T: Data>(
     w3: impl Widget<T> + 'static,
     w4: impl Widget<T> + 'static,
 ) -> impl Widget<T> {
-    let mut row = Row::new();
+    let mut row = Flex::row();
     row.add_child(w1, 1.0);
     row.add_child(w2, 1.0);
     row.add_child(w3, 1.0);
@@ -149,7 +149,7 @@ fn flex_row<T: Data>(
 }
 
 fn build_calc() -> impl Widget<CalcState> {
-    let mut column = Column::new();
+    let mut column = Flex::column();
     let display = LensWrap::new(
         DynLabel::new(|data: &String, _env| data.clone()),
         lenses::calc_state::value,

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Button, Column, Padding, Scroll};
+use druid::widget::{Button, Flex, Padding, Scroll};
 use druid::{AppLauncher, Widget, WindowDesc};
 
 fn main() {
@@ -24,7 +24,7 @@ fn main() {
 }
 
 fn build_widget() -> impl Widget<u32> {
-    let mut col = Column::new();
+    let mut col = Flex::column();
     for i in 0..30 {
         let button = Button::new(format!("Button {}", i), Button::noop);
         col.add_child(Padding::new(3.0, button), 0.0);

@@ -14,7 +14,7 @@
 
 //! Opening and closing windows and using window and context menus.
 
-use druid::widget::{Align, Button, Column, Label, Padding, Row};
+use druid::widget::{Align, Button, Flex, Label, Padding};
 use druid::{
     AppDelegate, AppLauncher, Command, ContextMenu, Data, DelegateCtx, Env, Event, EventCtx,
     LocalizedString, MenuDesc, MenuItem, Selector, Widget, WindowDesc, WindowId,
@@ -73,9 +73,9 @@ fn ui_builder() -> impl Widget<State> {
         ctx.set_menu(make_menu::<State>(data));
     });
 
-    let mut col = Column::new();
+    let mut col = Flex::column();
     col.add_child(Align::centered(Padding::new(5.0, label)), 1.0);
-    let mut row = Row::new();
+    let mut row = Flex::row();
     row.add_child(Padding::new(5.0, inc_button), 1.0);
     row.add_child(Padding::new(5.0, dec_button), 1.0);
     col.add_child(row, 1.0);

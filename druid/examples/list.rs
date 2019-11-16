@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use druid::piet::Color;
 
-use druid::widget::{Button, Column, Container, DynLabel, List, Padding, Scroll, SizedBox};
+use druid::widget::{Button, Container, DynLabel, Flex, List, Padding, Scroll, SizedBox};
 use druid::{AppLauncher, Widget, WindowDesc};
 
 type AppData = Arc<Vec<u32>>;
@@ -32,7 +32,7 @@ fn main() {
 }
 
 fn ui_builder() -> impl Widget<AppData> {
-    let mut root = Column::new();
+    let mut root = Flex::column();
 
     root.add_child(
         SizedBox::new(Button::new("Add", |_, data: &mut AppData, _| {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Column, Padding, Radio, RadioGroup, SizedBox};
+use druid::widget::{Flex, Padding, Radio, RadioGroup, SizedBox};
 use druid::{AppLauncher, Data, Widget, WindowDesc};
 
 #[derive(Clone, PartialEq, Data)]
@@ -24,7 +24,7 @@ enum Choice {
 }
 
 fn build_widget() -> impl Widget<Choice> {
-    let mut col = Column::new();
+    let mut col = Flex::column();
 
     col.add_child(
         Padding::new(5.0, Radio::new("First choice", Choice::A)),

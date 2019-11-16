@@ -19,7 +19,7 @@ use std::marker::PhantomData;
 use crate::kurbo::{Circle, Point, Rect, Size};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::theme;
-use crate::widget::{Align, Column, Label, LabelText, Padding};
+use crate::widget::{Align, Flex, Label, LabelText, Padding};
 use crate::{
     BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
     WidgetPod,
@@ -36,7 +36,7 @@ impl<T: Data + PartialEq + 'static> RadioGroup<T> {
     pub fn new(
         variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T)>,
     ) -> impl Widget<T> {
-        let mut col = Column::new();
+        let mut col = Flex::column();
         for (label, variant) in variants.into_iter() {
             let radio = Radio::new(label, variant);
             col.add_child(Padding::new(5.0, radio), 0.0);
