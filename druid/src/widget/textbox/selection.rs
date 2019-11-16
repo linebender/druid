@@ -36,7 +36,7 @@ impl Selection {
         Selection { start, end }
     }
 
-    pub fn all(&mut self, text: impl EditableText) {
+    pub fn all(&mut self, text: &impl EditableText) {
         self.start = 0;
         self.end = text.len();
     }

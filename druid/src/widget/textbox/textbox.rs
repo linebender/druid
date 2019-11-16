@@ -111,7 +111,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
         self.selection.end
     }
 
-    fn move_selection(&mut self, mvmnt: Movement, text: impl EditableText, modify: bool) {
+    fn move_selection(&mut self, mvmnt: Movement, text: &E, modify: bool) {
         self.selection = movement(mvmnt, self.selection, text, modify);
     }
 
@@ -249,39 +249,39 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
                 match key_event {
                     // Select all (Ctrl+A || Cmd+A)
                     k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => {
-                        self.selection.all(data.clone());
+                        self.selection.all(data);
                     }
                     // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
                     k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft)).matches(k_e)
                         || HotKey::new(None, KeyCode::Home).matches(k_e) =>
                     {
                         // TODO: all these clones are because I don't know how to hanlde mutable text
-                        self.move_selection(Movement::LeftOfLine, data.clone(), false);
+                        self.move_selection(Movement::LeftOfLine, data, false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
                     k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowRight)).matches(k_e)
                         || HotKey::new(None, KeyCode::End).matches(k_e) =>
                     {
-                        self.move_selection(Movement::RightOfLine, data.clone(), false);
+                        self.move_selection(Movement::RightOfLine, data, false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Select left (Shift+ArrowLeft)
                     k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowLeft)).matches(k_e) => {
-                        self.move_selection(Movement::Left, data.clone(), true);
+                        self.move_selection(Movement::Left, data, true);
                     }
                     // Select right (Shift+ArrowRight)
                     k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowRight)).matches(k_e) => {
-                        self.move_selection(Movement::Right, data.clone(), true);
+                        self.move_selection(Movement::Right, data, true);
                     }
                     // Move left (ArrowLeft)
                     k_e if (HotKey::new(None, KeyCode::ArrowLeft)).matches(k_e) => {
-                        self.move_selection(Movement::Left, data.clone(), false);
+                        self.move_selection(Movement::Left, data, false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Move right (ArrowRight)
                     k_e if (HotKey::new(None, KeyCode::ArrowRight)).matches(k_e) => {
-                        self.move_selection(Movement::Right, data.clone(), false);
+                        self.move_selection(Movement::Right, data, false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Backspace
@@ -294,7 +294,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
                         if self.selection.is_caret() {
                             // Never touch the characters before the cursor.
                             if let Some(_) = data.next_grapheme_offset(self.cursor()) {
-                                self.move_selection(Movement::Right, data.clone(), false);
+                                self.move_selection(Movement::Right, data, false);
                                 self.delete_backward(data);
                             }
                         } else {
