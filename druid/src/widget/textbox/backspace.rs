@@ -15,11 +15,11 @@
 //! Calc start of a backspace delete interval
 
 use crate::widget::textbox::Selection;
-use crate::widget::textbox::{EditableTextCursor, StringCursor};
+use crate::widget::textbox::{EditableText, EditableTextCursor};
 
 use xi_unicode::*;
 
-fn backspace_offset(text: &str, start: usize) -> usize {
+fn backspace_offset(text: String, start: usize) -> usize {
     #[derive(PartialEq)]
     enum State {
         Start,
@@ -41,7 +41,7 @@ fn backspace_offset(text: &str, start: usize) -> usize {
 
     let mut delete_code_point_count = 0;
     let mut last_seen_vs_code_point_count = 0;
-    let mut cursor = StringCursor::new(text, start);
+    let mut cursor = text.cursor(start);
 
     while state != State::Finished && cursor.pos() > 0 {
         let code_point = cursor.prev_codepoint().unwrap_or('0');
@@ -190,7 +190,7 @@ fn backspace_offset(text: &str, start: usize) -> usize {
     cursor.pos()
 }
 
-pub fn offset_for_delete_backwards(region: &Selection, text: &str) -> usize {
+pub fn offset_for_delete_backwards(region: &Selection, text: String) -> usize {
     if !region.is_caret() {
         region.min()
     } else {

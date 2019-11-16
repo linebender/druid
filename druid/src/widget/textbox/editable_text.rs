@@ -14,12 +14,18 @@
 
 //! Traits for text editing and a basic String implementation.
 
+use std::ops::Range;
 use unicode_segmentation::GraphemeCursor;
 
-pub trait EditableText {
-    // pub fn edit<T: IntervalBounds>(&mut self, iv: T, new: String);
+pub trait EditableText: Sized {
+    type Cursor: EditableTextCursor<Self>;
 
-    // pub fn slice<T IV>(&self, iv: T) -> String;
+    fn cursor(&self, position: usize) -> Self::Cursor;
+
+    //TODO: this can panic so maybe we should do a result??
+    fn edit(&mut self, iv: Range<usize>, new: impl Into<String>);
+
+    fn slice(&self, iv: Range<usize>) -> Option<&str>;
 
     // pub fn is_codepoint_boundary(&self, offset: usize) -> bool;
 
@@ -36,7 +42,23 @@ pub trait EditableText {
     fn next_grapheme_offset(&self, offset: usize) -> Option<usize>;
 }
 
-impl EditableText for &str {
+impl EditableText for String {
+    type Cursor = StringCursor;
+
+    fn edit(&mut self, iv: Range<usize>, new: impl Into<String>) {
+        self.replace_range(iv, &new.into());
+    }
+
+    fn slice(&self, iv: Range<usize>) -> Option<&str> {
+        self.get(iv)
+    }
+
+    fn cursor(&self, position: usize) -> StringCursor {
+        StringCursor {
+            text: self.to_string(),
+            position,
+        }
+    }
     /// Gets the next grapheme from the given index.
     fn next_grapheme_offset(&self, from: usize) -> Option<usize> {
         let mut c = GraphemeCursor::new(from, self.len(), true);
@@ -50,40 +72,12 @@ impl EditableText for &str {
     }
 }
 
-impl EditableText for &mut String {
-    /// Gets the next grapheme from the given index.
-    fn next_grapheme_offset(&self, from: usize) -> Option<usize> {
-        let mut c = GraphemeCursor::new(from, self.len(), true);
-        c.next_boundary(self, 0).unwrap()
-    }
+pub trait EditableTextCursor<EditableText> {
+    // fn new(s: EditableText, position: usize) -> Self;
 
-    /// Gets the previous grapheme from the given index.
-    fn prev_grapheme_offset(&self, from: usize) -> Option<usize> {
-        let mut c = GraphemeCursor::new(from, self.len(), true);
-        c.prev_boundary(self, 0).unwrap()
-    }
-}
+    // fn total_len(&self) -> usize;
 
-impl EditableText for &String {
-    /// Gets the next grapheme from the given index.
-    fn next_grapheme_offset(&self, from: usize) -> Option<usize> {
-        let mut c = GraphemeCursor::new(from, self.len(), true);
-        c.next_boundary(self, 0).unwrap()
-    }
-
-    /// Gets the previous grapheme from the given index.
-    fn prev_grapheme_offset(&self, from: usize) -> Option<usize> {
-        let mut c = GraphemeCursor::new(from, self.len(), true);
-        c.prev_boundary(self, 0).unwrap()
-    }
-}
-
-pub trait EditableTextCursor<'a> {
-    fn new(s: &'a str, position: usize) -> Self;
-
-    fn total_len(&self) -> usize;
-
-    fn text(&self) -> &str;
+    // fn text(&self) -> &str;
 
     // set cursor position
     fn set(&mut self, position: usize);
@@ -95,9 +89,9 @@ pub trait EditableTextCursor<'a> {
 
     // moves cursor to previous boundary if exists
     // else becomes invalid cursor
-    fn prev(&mut self) -> Option<(usize)>;
+    fn prev(&mut self) -> Option<usize>;
 
-    fn next(&mut self) -> Option<(usize)>;
+    fn next(&mut self) -> Option<usize>;
 
     fn prev_codepoint(&mut self) -> Option<char>;
     fn next_codepoint(&mut self) -> Option<char>;
@@ -110,23 +104,23 @@ pub trait EditableTextCursor<'a> {
     // pub fn iter(&mut self) -> CursorIter???
 }
 
-pub struct StringCursor<'a> {
-    text: &'a str,
+pub struct StringCursor {
+    text: String,
     position: usize,
 }
 
-impl<'a> EditableTextCursor<'a> for StringCursor<'a> {
-    fn new(text: &'a str, position: usize) -> StringCursor<'a> {
-        StringCursor { text, position }
-    }
+impl EditableTextCursor<String> for StringCursor {
+    // fn new(text: &'a str, position: usize) -> StringCursor<'a> {
+    //     StringCursor { text, position }
+    // }
 
-    fn total_len(&self) -> usize {
-        self.text.len()
-    }
+    // fn total_len(&self) -> usize {
+    //     self.text.len()
+    // }
 
-    fn text(&self) -> &str {
-        self.text
-    }
+    // fn text(&self) -> &str {
+    //     self.text
+    // }
 
     // set cursor position
     fn set(&mut self, position: usize) {
@@ -144,7 +138,7 @@ impl<'a> EditableTextCursor<'a> for StringCursor<'a> {
 
     // moves cursor to previous boundary if exists
     // else becomes invalid cursor
-    fn prev(&mut self) -> Option<(usize)> {
+    fn prev(&mut self) -> Option<usize> {
         let current_index = self.pos();
         if current_index == 0 {
             return None;
@@ -162,9 +156,9 @@ impl<'a> EditableTextCursor<'a> for StringCursor<'a> {
         Some(self.pos())
     }
 
-    fn next(&mut self) -> Option<(usize)> {
+    fn next(&mut self) -> Option<usize> {
         let current_index = self.pos();
-        if current_index == self.text().len() {
+        if current_index == self.text.len() {
             return None;
         }
 

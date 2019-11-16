@@ -15,7 +15,6 @@
 //! A textbox widget.
 
 use std::time::{Duration, Instant};
-use unicode_segmentation::GraphemeCursor;
 
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
@@ -91,8 +90,12 @@ impl TextBox {
     fn insert(&mut self, src: &mut String, new: &str) {
         // TODO: handle incomplete graphemes
 
-        src.replace_range(self.selection.range(), new);
-        self.selection = Selection::caret(self.selection.min() + new.len());
+        // replace_range will panic if selection is greater than src length hence we try to constrain it.
+        // This is especially needed when data was modified externally.
+        let selection = self.selection.constrain_to(src);
+
+        src.replace_range(selection.range(), new);
+        self.selection = Selection::caret(selection.min() + new.len());
     }
 
     fn cursor_to(&mut self, to: usize) {
@@ -103,18 +106,18 @@ impl TextBox {
         self.selection.end
     }
 
-    fn move_selection(&mut self, mvmnt: Movement, text: &String, modify: bool) {
+    fn move_selection(&mut self, mvmnt: Movement, text: String, modify: bool) {
         self.selection = movement(mvmnt, self.selection, text, modify);
     }
 
     fn delete_backward(&mut self, text: &mut String) {
         if self.selection.is_caret() {
             let cursor = self.cursor();
-            let new_cursor = offset_for_delete_backwards(&self.selection, text);
-            text.replace_range(new_cursor..cursor, "");
+            let new_cursor = offset_for_delete_backwards(&self.selection, text.to_string());
+            text.edit(new_cursor..cursor, "");
             self.cursor_to(new_cursor);
         } else {
-            text.replace_range(self.selection.range(), "");
+            text.edit(self.selection.range(), "");
             self.cursor_to(self.selection.min());
         }
     }
@@ -246,32 +249,32 @@ impl Widget<String> for TextBox {
                     k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft)).matches(k_e)
                         || HotKey::new(None, KeyCode::Home).matches(k_e) =>
                     {
-                        self.move_selection(Movement::LeftOfLine, data, false);
+                        self.move_selection(Movement::LeftOfLine, data.to_string(), false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
                     k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowRight)).matches(k_e)
                         || HotKey::new(None, KeyCode::End).matches(k_e) =>
                     {
-                        self.move_selection(Movement::RightOfLine, data, false);
+                        self.move_selection(Movement::RightOfLine, data.to_string(), false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Select left (Shift+ArrowLeft)
                     k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowLeft)).matches(k_e) => {
-                        self.move_selection(Movement::Left, data, true);
+                        self.move_selection(Movement::Left, data.to_string(), true);
                     }
                     // Select right (Shift+ArrowRight)
                     k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowRight)).matches(k_e) => {
-                        self.move_selection(Movement::Right, data, true);
+                        self.move_selection(Movement::Right, data.to_string(), true);
                     }
                     // Move left (ArrowLeft)
                     k_e if (HotKey::new(None, KeyCode::ArrowLeft)).matches(k_e) => {
-                        self.move_selection(Movement::Left, data, false);
+                        self.move_selection(Movement::Left, data.to_string(), false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Move right (ArrowRight)
                     k_e if (HotKey::new(None, KeyCode::ArrowRight)).matches(k_e) => {
-                        self.move_selection(Movement::Right, data, false);
+                        self.move_selection(Movement::Right, data.to_string(), false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Backspace
@@ -284,7 +287,7 @@ impl Widget<String> for TextBox {
                         if self.selection.is_caret() {
                             // Never touch the characters before the cursor.
                             if let Some(_) = data.next_grapheme_offset(self.cursor()) {
-                                self.move_selection(Movement::Right, data, false);
+                                self.move_selection(Movement::Right, data.to_string(), false);
                                 self.delete_backward(data);
                             }
                         } else {
