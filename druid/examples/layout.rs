@@ -15,15 +15,15 @@
 //! This example shows how to construct a basic layout.
 
 use druid::piet::Color;
-use druid::widget::{Button, Column, Label, Row, SizedBox, WidgetExt};
+use druid::widget::{Button, Flex, Label, SizedBox, WidgetExt};
 use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     // Begin construction of vertical layout
-    let mut col = Column::new();
+    let mut col = Flex::column();
 
     // Construct a horizontal layout.
-    let mut header = Row::new();
+    let mut header = Flex::row();
     header.add_child(
         Label::new("One")
             .center()

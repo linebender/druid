@@ -39,7 +39,6 @@ pub struct Column;
 /// A container with either horizontal or vertical layout.
 pub struct Flex<T: Data> {
     direction: Axis,
-
     children: Vec<ChildWidget<T>>,
 }
 
@@ -85,12 +84,9 @@ impl Row {
     /// Create a new row widget.
     ///
     /// The child widgets are laid out horizontally, from left to right.
+    #[deprecated(since = "0.4.0", note = "Use Flex::row() instead")]
     pub fn new<T: Data>() -> Flex<T> {
-        Flex {
-            direction: Axis::Horizontal,
-
-            children: Vec::new(),
-        }
+        Flex::row()
     }
 }
 
@@ -98,16 +94,33 @@ impl Column {
     /// Create a new row widget.
     ///
     /// The child widgets are laid out vertically, from top to bottom.
+    #[deprecated(since = "0.4.0", note = "Use Flex::column() instead")]
     pub fn new<T: Data>() -> Flex<T> {
-        Flex {
-            direction: Axis::Vertical,
-
-            children: Vec::new(),
-        }
+        Flex::column()
     }
 }
 
 impl<T: Data> Flex<T> {
+    /// Create a new horizontal stack.
+    ///
+    /// The child widgets are laid out horizontally, from left to right.
+    pub fn row() -> Self {
+        Flex {
+            direction: Axis::Horizontal,
+            children: Vec::new(),
+        }
+    }
+
+    /// Create a new vertical stack.
+    ///
+    /// The child widgets are laid out vertically, from top to bottom.
+    pub fn column() -> Self {
+        Flex {
+            direction: Axis::Vertical,
+            children: Vec::new(),
+        }
+    }
+
     /// Add a child widget.
     ///
     /// If `flex` is zero, then the child is non-flex. It is given the same

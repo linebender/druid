@@ -15,16 +15,16 @@
 //! This example allows to play with scroll bars over different color tones.
 
 use druid::piet::Color;
-use druid::widget::{Column, Container, Row, Scroll, SizedBox};
+use druid::widget::{Container, Flex, Scroll, SizedBox};
 use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
-    let mut col = Column::new();
+    let mut col = Flex::column();
     let rows = 30;
     let cols = 30;
 
     for i in 0..cols {
-        let mut row = Row::new();
+        let mut row = Flex::row();
         let col_progress = i as f64 / cols as f64;
 
         for j in 0..rows {

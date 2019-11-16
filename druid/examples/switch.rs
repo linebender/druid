@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Column, Label, Padding, Row, Switch};
+use druid::widget::{Flex, Label, Padding, Switch};
 use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -21,8 +21,8 @@ struct DemoState {
 }
 
 fn build_widget() -> impl Widget<DemoState> {
-    let mut col = Column::new();
-    let mut row = Row::new();
+    let mut col = Flex::column();
+    let mut row = Flex::row();
     let switch = LensWrap::new(Switch::new(), lenses::demo_state::value);
     let switch_label = Label::new("Setting label");
 
