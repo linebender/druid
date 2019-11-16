@@ -35,7 +35,7 @@ fn main() {
 }
 
 fn ui_builder() -> impl Widget<u32> {
-    // The label text will be computed based dynamically based on the current locale and count
+    // The label text will be computed dynamically based on the current locale and count
     let text =
         LocalizedString::new("hello-counter").with_arg("count", |data: &u32, _env| (*data).into());
     let label = Label::new(text);
