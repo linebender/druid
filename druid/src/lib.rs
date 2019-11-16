@@ -565,7 +565,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Event::Size(*size)
             }
             Event::MouseDown(mouse_event) => {
-                recurse = had_active || !ctx.had_active && rect.winding(mouse_event.pos) != 0;
+                let had_hot = child_ctx.base_state.is_hot;
+                let now_hot = rect.winding(mouse_event.pos) != 0;
+                if (!had_hot) && now_hot {
+                    child_ctx.base_state.is_hot = true;
+                    hot_changed = Some(true);
+                }
+                recurse = had_active || !ctx.had_active && now_hot;
                 let mut mouse_event = mouse_event.clone();
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseDown(mouse_event)
