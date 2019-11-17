@@ -224,7 +224,7 @@ impl Widget<bool> for Switch {
         bc.constrain(Size::new(width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut bool, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut bool, env: &Env) {
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let switch_width = switch_height * SWITCH_WIDTH_RATIO;
         let knob_size = switch_height - 2. * SWITCH_PADDING;

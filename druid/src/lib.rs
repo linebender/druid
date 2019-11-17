@@ -218,7 +218,7 @@ pub trait Widget<T> {
     /// [`Event`]: struct.Event.html
     /// [`EventCtx`]: struct.EventCtx.html
     /// [`Command`]: struct.Command.html
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env);
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env);
 
     /// Handle a change of data.
     ///
@@ -249,8 +249,8 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
         self.deref_mut().layout(ctx, bc, data, env)
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
-        self.deref_mut().event(event, ctx, data, env)
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        self.deref_mut().event(ctx, event, data, env)
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
@@ -533,7 +533,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// the event.
     ///
     /// [`event`]: trait.Widget.html#method.event
-    pub fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         // TODO: factor as much logic as possible into monomorphic functions.
         if ctx.is_handled || !event.recurse() {
             // This function is called by containers to propagate an event from
@@ -629,11 +629,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         if let Some(is_hot) = hot_changed {
             let hot_changed_event = Event::HotChanged(is_hot);
             self.inner
-                .event(&hot_changed_event, &mut child_ctx, data, &env);
+                .event(&mut child_ctx, &hot_changed_event, data, &env);
         }
         if recurse {
             child_ctx.base_state.has_active = false;
-            self.inner.event(&child_event, &mut child_ctx, data, &env);
+            self.inner.event(&mut child_ctx, &child_event, data, &env);
             child_ctx.base_state.has_active |= child_ctx.base_state.is_active;
         };
         ctx.base_state.needs_inval |= child_ctx.base_state.needs_inval;

@@ -122,7 +122,7 @@ impl<T: Data> Widget<T> for Button<T> {
         self.label.layout(layout_ctx, bc, data, env)
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);

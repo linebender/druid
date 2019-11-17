@@ -299,7 +299,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         self_size
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let size = ctx.base_state.size();
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
 
@@ -377,7 +377,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         } else {
             let child_event = event.transform_scroll(self.scroll_offset, viewport);
             if let Some(child_event) = child_event {
-                self.child.event(&child_event, ctx, data, env)
+                self.child.event(ctx, &child_event, data, env)
             };
 
             match event {
