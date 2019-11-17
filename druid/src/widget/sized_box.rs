@@ -115,9 +115,9 @@ impl<T: Data> Widget<T> for SizedBox<T> {
         }
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
-            inner.event(event, ctx, data, env);
+            inner.event(ctx, event, data, env);
         }
     }
 

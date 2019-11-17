@@ -75,11 +75,11 @@ impl<T: Data> Widget<T> for Either<T> {
         }
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.current {
-            self.true_branch.event(event, ctx, data, env)
+            self.true_branch.event(ctx, event, data, env)
         } else {
-            self.false_branch.event(event, ctx, data, env)
+            self.false_branch.event(ctx, event, data, env)
         }
     }
 

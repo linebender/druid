@@ -219,9 +219,9 @@ impl<T: Data> Widget<T> for Flex<T> {
         Size::new(width, height)
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         for child in &mut self.children {
-            child.widget.event(event, ctx, data, env);
+            child.widget.event(ctx, event, data, env);
         }
     }
 

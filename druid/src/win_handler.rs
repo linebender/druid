@@ -214,13 +214,13 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
             window: &self.state.handle,
             window_id: self.window_id,
         };
-        self.window.event(&event, &mut ctx, self.data, self.env);
+        self.window.event(&mut ctx, &event, self.data, self.env);
 
         let is_handled = ctx.is_handled;
         if ctx.base_state.request_focus {
             let focus_event = Event::FocusChanged(true);
             self.window
-                .event(&focus_event, &mut ctx, self.data, self.env);
+                .event(&mut ctx, &focus_event, self.data, self.env);
         }
         let needs_inval = ctx.base_state.needs_inval;
         let request_anim = ctx.base_state.request_anim;

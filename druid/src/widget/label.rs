@@ -114,7 +114,7 @@ impl<T: Data> Widget<T> for Label<T> {
         bc.constrain((text_layout.width(), font_size * 1.2))
     }
 
-    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut T, _env: &Env) {}
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
         if self.text.resolve(data, env) {
@@ -196,7 +196,7 @@ impl<T: Data> Widget<T> for DynLabel<T> {
         bc.constrain(Size::new(text_layout.width(), font_size * 1.2))
     }
 
-    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut T, _env: &Env) {}
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {
         ctx.invalidate();

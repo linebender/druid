@@ -320,7 +320,7 @@ impl Widget<String> for TextBox {
         bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut String, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
         let mut text_layout = self.get_layout(ctx.text(), data, env);
         match event {
             Event::MouseDown(mouse) => {

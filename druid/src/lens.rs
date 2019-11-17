@@ -121,10 +121,10 @@ where
         self.inner.layout(ctx, bc, self.lens.get(data), env)
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let inner = &mut self.inner;
         self.lens
-            .with_mut(data, |data| inner.event(event, ctx, data, env))
+            .with_mut(data, |data| inner.event(ctx, event, data, env))
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {

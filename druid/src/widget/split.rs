@@ -247,15 +247,15 @@ impl<T: Data> Widget<T> for Split<T> {
         my_size
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.child1.state.is_active() {
-            self.child1.event(event, ctx, data, env);
+            self.child1.event(ctx, event, data, env);
             if ctx.is_handled() {
                 return;
             }
         }
         if self.child2.state.is_active() {
-            self.child2.event(event, ctx, data, env);
+            self.child2.event(ctx, event, data, env);
             if ctx.is_handled() {
                 return;
             }
@@ -296,10 +296,10 @@ impl<T: Data> Widget<T> for Split<T> {
             }
         }
         if !self.child1.state.is_active() {
-            self.child1.event(event, ctx, data, env);
+            self.child1.event(ctx, event, data, env);
         }
         if !self.child2.state.is_active() {
-            self.child2.event(event, ctx, data, env);
+            self.child2.event(ctx, event, data, env);
         }
     }
 

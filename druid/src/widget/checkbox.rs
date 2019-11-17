@@ -88,7 +88,7 @@ impl Widget<bool> for Checkbox {
         ))
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut bool, _env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut bool, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
