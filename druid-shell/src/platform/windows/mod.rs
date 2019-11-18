@@ -17,6 +17,7 @@
 pub mod application;
 pub mod dcomp;
 pub mod dialog;
+pub mod error;
 pub mod keycodes;
 pub mod menu;
 pub mod paint;

@@ -173,7 +173,7 @@ impl WindowBuilder {
     ///
     /// If this fails, your application should exit.
     pub fn build(self) -> Result<WindowHandle, Error> {
-        self.0.build().map(WindowHandle)
+        self.0.build().map(WindowHandle).map_err(Into::into)
     }
 }
 
