@@ -17,9 +17,11 @@
 use druid::menu::{ContextMenu, MenuDesc, MenuItem};
 use druid::widget::{Align, Button, Column, Label, Padding, Row};
 use druid::{
-    AppDelegate, AppLauncher, Command, Data, DelegateCtx, Event, EventCtx, LocalizedString,
-    Selector, Widget, WindowDesc,
+    AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, Event, EventCtx, LocalizedString,
+    Selector, Widget, WindowDesc, WindowId,
 };
+
+use log::info;
 
 const MENU_COUNT_ACTION: Selector = Selector::new("menu-count-action");
 const MENU_INCREMENT_ACTION: Selector = Selector::new("menu-increment-action");
@@ -35,7 +37,7 @@ fn main() {
     simple_logger::init().unwrap();
     let main_window = WindowDesc::new(ui_builder).menu(make_menu(&State::default()));
     AppLauncher::with_window(main_window)
-        .delegate(make_delegate())
+        .delegate(Delegate)
         .launch(State::default())
         .expect("launch failed");
 }
@@ -52,7 +54,7 @@ impl EventCtxExt for EventCtx<'_, '_> {
     }
 }
 
-impl EventCtxExt for DelegateCtx<'_, '_> {
+impl EventCtxExt for DelegateCtx<'_> {
     fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>) {
         let cmd = Command::new(druid::command::sys::SET_MENU, menu);
         self.submit_command(cmd, None);
@@ -81,11 +83,21 @@ fn ui_builder() -> impl Widget<State> {
     col
 }
 
-fn make_delegate() -> AppDelegate<State> {
-    AppDelegate::new().event_handler(|event, data, _env, ctx| {
+struct Delegate;
+
+impl AppDelegate<State> for Delegate {
+    fn event(
+        &mut self,
+        event: Event,
+        data: &mut State,
+        _env: &Env,
+        ctx: &mut DelegateCtx,
+    ) -> Option<Event> {
         match event {
             Event::Command(ref cmd) if cmd.selector == druid::command::sys::NEW_FILE => {
-                let new_win = WindowDesc::new(ui_builder).menu(make_menu(data));
+                let new_win = WindowDesc::new(ui_builder)
+                    .menu(make_menu(data))
+                    .window_size((data.selected as f64 * 100.0 + 300.0, 500.0));
                 let command = Command::new(druid::command::sys::NEW_WINDOW, new_win);
                 ctx.submit_command(command, None);
                 None
@@ -115,7 +127,25 @@ fn make_delegate() -> AppDelegate<State> {
             }
             other => Some(other),
         }
-    })
+    }
+    fn window_added(
+        &mut self,
+        id: WindowId,
+        _data: &mut State,
+        _env: &Env,
+        _ctx: &mut DelegateCtx,
+    ) {
+        info!("Window added, id: {:?}", id);
+    }
+    fn window_removed(
+        &mut self,
+        id: WindowId,
+        _data: &mut State,
+        _env: &Env,
+        _ctx: &mut DelegateCtx,
+    ) {
+        info!("Window removed, id: {:?}", id);
+    }
 }
 
 #[allow(unused_assignments)]
@@ -125,7 +155,7 @@ fn make_menu<T: Data>(state: &State) -> MenuDesc<T> {
     {
         base = druid::menu::sys::mac::menu_bar();
     }
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
     {
         base = base.append(druid::menu::sys::win::file::default());
     }

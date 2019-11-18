@@ -14,10 +14,7 @@
 
 //! macOS implementation of window creation.
 
-#![allow(
-    non_snake_case,
-    clippy::let_unit_value,
-    )]
+#![allow(non_snake_case, clippy::let_unit_value)]
 
 pub mod application;
 pub mod dialog;
@@ -47,7 +44,7 @@ use log::{error, info};
 
 use cairo::{Context, QuartzSurface};
 
-use crate::kurbo::{Point, Vec2};
+use crate::kurbo::{Point, Size, Vec2};
 use piet_common::{Piet, RenderContext};
 
 use crate::clipboard::ClipboardItem;
@@ -82,6 +79,7 @@ pub struct WindowBuilder {
     title: String,
     enable_mouse_move_events: bool,
     menu: Option<Menu>,
+    size: Size,
 }
 
 #[derive(Clone)]
@@ -120,11 +118,16 @@ impl WindowBuilder {
             title: String::new(),
             enable_mouse_move_events: true,
             menu: None,
+            size: Size::new(500.0, 400.0),
         }
     }
 
     pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
         self.handler = Some(handler);
+    }
+
+    pub fn set_size(&mut self, size: Size) {
+        self.size = size;
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -146,7 +149,10 @@ impl WindowBuilder {
                 | NSWindowStyleMask::NSClosableWindowMask
                 | NSWindowStyleMask::NSMiniaturizableWindowMask
                 | NSWindowStyleMask::NSResizableWindowMask;
-            let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(500., 400.));
+            let rect = NSRect::new(
+                NSPoint::new(0., 0.),
+                NSSize::new(self.size.width, self.size.height),
+            );
 
             let window = NSWindow::alloc(nil).initWithContentRect_styleMask_backing_defer_(
                 rect,
@@ -155,6 +161,7 @@ impl WindowBuilder {
                 NO,
             );
 
+            window.setLevel_(4);
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
             // TODO: this should probably be a tracking area instead
@@ -644,6 +651,16 @@ impl WindowHandle {
         }
     }
 
+    /// Bring this window to the front of the window stack and give it focus.
+    pub fn bring_to_front_and_focus(&self) {
+        if let Some(ref nsview) = self.nsview {
+            unsafe {
+                let window: id = msg_send![*nsview.load(), window];
+                let () = msg_send![window, performSelectorOnMainThread: sel!(makeKeyAndOrderFront:) withObject: nil waitUntilDone: NO];
+            }
+        }
+    }
+
     // Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
         if let Some(ref nsview) = self.nsview {
@@ -791,7 +808,7 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
                 Cursor::OpenHand => msg_send![nscursor, openHandCursor],
                 Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],
                 Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
-                Cursor::ResizeUpDown => msg_send![nscursor, ResizeUpDownCursor],
+                Cursor::ResizeUpDown => msg_send![nscursor, resizeUpDownCursor],
             };
             let () = msg_send![cursor, set];
         }

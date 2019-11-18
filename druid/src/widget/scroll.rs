@@ -29,9 +29,6 @@ use crate::theme;
 
 use crate::kurbo::{Affine, RoundedRect};
 
-const SCROLL_BAR_WIDTH: f64 = 8.;
-const SCROLL_BAR_PAD: f64 = 2.;
-
 #[derive(Debug, Clone)]
 enum ScrollDirection {
     Horizontal,
@@ -166,10 +163,11 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     }
 
     /// Makes the scrollbars visible, and resets the fade timer.
-    pub fn reset_scrollbar_fade(&mut self, ctx: &mut EventCtx) {
+    pub fn reset_scrollbar_fade(&mut self, ctx: &mut EventCtx, env: &Env) {
         // Display scroll bars and schedule their disappearance
-        self.scroll_bars.opacity = 0.7;
-        let deadline = Instant::now() + Duration::from_millis(1500);
+        self.scroll_bars.opacity = env.get(theme::SCROLL_BAR_MAX_OPACITY);
+        let fade_delay = env.get(theme::SCROLL_BAR_FADE_DELAY);
+        let deadline = Instant::now() + Duration::from_millis(fade_delay);
         self.scroll_bars.timer_id = ctx.request_timer(deadline);
     }
 
@@ -178,45 +176,38 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
         self.scroll_offset
     }
 
-    fn calc_scrollbar_screen_edges(&self, viewport: Rect) -> Rect {
-        Rect::new(
-            self.scroll_offset.x + SCROLL_BAR_PAD,
-            self.scroll_offset.y + SCROLL_BAR_PAD,
-            self.scroll_offset.x - SCROLL_BAR_PAD + viewport.width(),
-            self.scroll_offset.y - SCROLL_BAR_PAD + viewport.height(),
-        )
-    }
-
-    fn calc_vertical_bar_bounds(&self, viewport: Rect) -> Rect {
-        let scrollbar_bounds = self.calc_scrollbar_screen_edges(viewport);
+    fn calc_vertical_bar_bounds(&self, viewport: Rect, env: &Env) -> Rect {
+        let bar_width = env.get(theme::SCROLL_BAR_WIDTH);
+        let bar_pad = env.get(theme::SCROLL_BAR_PAD);
 
         let scale_y = viewport.height() / self.child_size.height;
 
-        let h = (scale_y * viewport.height()).ceil();
-        let dh = (scale_y * self.scroll_offset.y).ceil();
+        let top_y_offset = (scale_y * self.scroll_offset.y).ceil();
+        let bottom_y_offset = (scale_y * viewport.height()).ceil() + top_y_offset;
 
-        let x0 = scrollbar_bounds.x1 - SCROLL_BAR_WIDTH;
-        let y0 = scrollbar_bounds.y0 + dh;
+        let x0 = self.scroll_offset.x + viewport.width() - bar_width - bar_pad;
+        let y0 = self.scroll_offset.y + top_y_offset + bar_pad;
 
-        let x1 = scrollbar_bounds.x1;
-        let y1 = (y0 + h).min(scrollbar_bounds.y1);
+        let x1 = self.scroll_offset.x + viewport.width() - bar_pad;
+        let y1 = self.scroll_offset.y + bottom_y_offset - (bar_pad * 2.) - bar_width;
 
         Rect::new(x0, y0, x1, y1)
     }
 
-    fn calc_horizontal_bar_bounds(&self, viewport: Rect) -> Rect {
-        let scrollbar_bounds = self.calc_scrollbar_screen_edges(viewport);
+    fn calc_horizontal_bar_bounds(&self, viewport: Rect, env: &Env) -> Rect {
+        let bar_width = env.get(theme::SCROLL_BAR_WIDTH);
+        let bar_pad = env.get(theme::SCROLL_BAR_PAD);
 
         let scale_x = viewport.width() / self.child_size.width;
 
-        let w = (scale_x * viewport.width()).ceil();
-        let dw = (scale_x * self.scroll_offset.x).ceil();
+        let left_x_offset = (scale_x * self.scroll_offset.x).ceil();
+        let right_x_offset = (scale_x * viewport.width()).ceil() + left_x_offset;
 
-        let x0 = scrollbar_bounds.x0 + dw;
-        let y0 = scrollbar_bounds.y1 - SCROLL_BAR_WIDTH;
+        let x0 = self.scroll_offset.x + left_x_offset + bar_pad;
+        let y0 = self.scroll_offset.y + viewport.height() - bar_width - bar_pad;
 
-        let x1 = (x0 + w).min(scrollbar_bounds.x1);
-        let y1 = scrollbar_bounds.y1;
+        let x1 = self.scroll_offset.x + right_x_offset - (bar_pad * 2.) - bar_width;
+        let y1 = self.scroll_offset.y + viewport.height() - bar_pad;
 
         Rect::new(x0, y0, x1, y1)
     }
@@ -236,33 +227,38 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
                 .with_alpha(self.scroll_bars.opacity),
         );
 
+        let radius = env.get(theme::SCROLL_BAR_RADIUS);
+        let edge_width = env.get(theme::SCROLL_BAR_EDGE_WIDTH);
+
         // Vertical bar
         if viewport.height() < self.child_size.height {
-            let rect = RoundedRect::from_rect(self.calc_vertical_bar_bounds(viewport), 5.0);
+            let bounds = self.calc_vertical_bar_bounds(viewport, &env);
+            let rect = RoundedRect::from_rect(bounds, radius);
             paint_ctx.render_ctx.fill(rect, &brush);
-            paint_ctx.render_ctx.stroke(rect, &border_brush, 1.0);
+            paint_ctx.render_ctx.stroke(rect, &border_brush, edge_width);
         }
 
         // Horizontal bar
         if viewport.width() < self.child_size.width {
-            let rect = RoundedRect::from_rect(self.calc_horizontal_bar_bounds(viewport), 5.0);
+            let bounds = self.calc_horizontal_bar_bounds(viewport, &env);
+            let rect = RoundedRect::from_rect(bounds, radius);
             paint_ctx.render_ctx.fill(rect, &brush);
-            paint_ctx.render_ctx.stroke(rect, &border_brush, 1.0);
+            paint_ctx.render_ctx.stroke(rect, &border_brush, edge_width);
         }
     }
 
-    fn point_hits_vertical_bar(&self, viewport: Rect, pos: Point) -> bool {
+    fn point_hits_vertical_bar(&self, viewport: Rect, pos: Point, env: &Env) -> bool {
         if viewport.height() < self.child_size.height {
-            let bounds = self.calc_vertical_bar_bounds(viewport);
+            let bounds = self.calc_vertical_bar_bounds(viewport, &env);
             return pos.y > bounds.y0 && pos.y < bounds.y1 && pos.x > bounds.x0;
         }
 
         false
     }
 
-    fn point_hits_horizontal_bar(&self, viewport: Rect, pos: Point) -> bool {
+    fn point_hits_horizontal_bar(&self, viewport: Rect, pos: Point, env: &Env) -> bool {
         if viewport.width() < self.child_size.width {
-            let bounds = self.calc_horizontal_bar_bounds(viewport);
+            let bounds = self.calc_horizontal_bar_bounds(viewport, &env);
             return pos.x > bounds.x0 && pos.x < bounds.x1 && pos.y > bounds.y0;
         }
 
@@ -303,7 +299,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         self_size
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let size = ctx.base_state.size();
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
 
@@ -319,14 +315,14 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     match self.scroll_bars.held {
                         BarHeldState::Vertical(offset) => {
                             let scale_y = viewport.height() / self.child_size.height;
-                            let bounds = self.calc_vertical_bar_bounds(viewport);
+                            let bounds = self.calc_vertical_bar_bounds(viewport, &env);
                             let mouse_y = event.pos.y + self.scroll_offset.y;
                             let delta = mouse_y - bounds.y0 - offset;
                             self.scroll(Vec2::new(0f64, (delta / scale_y).ceil()), size);
                         }
                         BarHeldState::Horizontal(offset) => {
                             let scale_x = viewport.width() / self.child_size.width;
-                            let bounds = self.calc_horizontal_bar_bounds(viewport);
+                            let bounds = self.calc_horizontal_bar_bounds(viewport, &env);
                             let mouse_x = event.pos.x + self.scroll_offset.x;
                             let delta = mouse_x - bounds.x0 - offset;
                             self.scroll(Vec2::new((delta / scale_x).ceil(), 0f64), size);
@@ -344,8 +340,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             Event::MouseMoved(event) | Event::MouseDown(event) => {
                 let mut transformed_event = event.clone();
                 transformed_event.pos += self.scroll_offset;
-                self.point_hits_vertical_bar(viewport, transformed_event.pos)
-                    || self.point_hits_horizontal_bar(viewport, transformed_event.pos)
+                self.point_hits_vertical_bar(viewport, transformed_event.pos, &env)
+                    || self.point_hits_horizontal_bar(viewport, transformed_event.pos, &env)
             }
             _ => false,
         } {
@@ -353,26 +349,26 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 Event::MouseMoved(event) => {
                     let mut transformed_event = event.clone();
                     transformed_event.pos += self.scroll_offset;
-                    if self.point_hits_vertical_bar(viewport, transformed_event.pos) {
+                    if self.point_hits_vertical_bar(viewport, transformed_event.pos, &env) {
                         self.scroll_bars.hovered = BarHoveredState::Vertical;
                     } else {
                         self.scroll_bars.hovered = BarHoveredState::Horizontal;
                     }
 
-                    self.scroll_bars.opacity = 0.7;
+                    self.scroll_bars.opacity = env.get(theme::SCROLL_BAR_MAX_OPACITY);
                     self.scroll_bars.timer_id = TimerToken::INVALID; // Cancel any fade out in progress
                     ctx.invalidate();
                 }
                 Event::MouseDown(event) => {
                     let pos = event.pos + self.scroll_offset;
 
-                    if self.point_hits_vertical_bar(viewport, pos) {
+                    if self.point_hits_vertical_bar(viewport, pos, &env) {
                         self.scroll_bars.held = BarHeldState::Vertical(
-                            pos.y - self.calc_vertical_bar_bounds(viewport).y0,
+                            pos.y - self.calc_vertical_bar_bounds(viewport, &env).y0,
                         );
-                    } else if self.point_hits_horizontal_bar(viewport, pos) {
+                    } else if self.point_hits_horizontal_bar(viewport, pos, &env) {
                         self.scroll_bars.held = BarHeldState::Horizontal(
-                            pos.x - self.calc_horizontal_bar_bounds(viewport).x0,
+                            pos.x - self.calc_horizontal_bar_bounds(viewport, &env).x0,
                         );
                     }
                 }
@@ -381,23 +377,24 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         } else {
             let child_event = event.transform_scroll(self.scroll_offset, viewport);
             if let Some(child_event) = child_event {
-                self.child.event(&child_event, ctx, data, env)
+                self.child.event(ctx, &child_event, data, env)
             };
 
             match event {
                 Event::MouseMoved(event) => {
                     let mut transformed_event = event.clone();
                     transformed_event.pos += self.scroll_offset;
-                    let currently_hovered = self
-                        .point_hits_vertical_bar(viewport, transformed_event.pos)
-                        || self.point_hits_horizontal_bar(viewport, transformed_event.pos);
+                    let pos = transformed_event.pos;
+                    let hits_vertical = self.point_hits_vertical_bar(viewport, pos, &env);
+                    let hits_horizontal = self.point_hits_horizontal_bar(viewport, pos, &env);
+                    let currently_hovered = hits_vertical || hits_horizontal;
                     if self.scroll_bars.hovered.is_hovered() && !currently_hovered {
                         self.scroll_bars.hovered = BarHoveredState::None;
-                        self.reset_scrollbar_fade(ctx);
+                        self.reset_scrollbar_fade(ctx, &env);
                     }
                 }
                 // Show the scrollbars any time our size changes
-                Event::Size(_) => self.reset_scrollbar_fade(ctx),
+                Event::Size(_) => self.reset_scrollbar_fade(ctx, &env),
                 // The scroll bars will fade immediately if there's some other widget requesting animation.
                 // Guard by the timer id being invalid.
                 Event::AnimFrame(interval) if self.scroll_bars.timer_id == TimerToken::INVALID => {
@@ -422,7 +419,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 if self.scroll(wheel.delta, size) {
                     ctx.invalidate();
                     ctx.set_handled();
-                    self.reset_scrollbar_fade(ctx);
+                    self.reset_scrollbar_fade(ctx, &env);
                 }
             }
         }

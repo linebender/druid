@@ -121,8 +121,8 @@ impl<T: Data> Widget<T> for Align<T> {
         my_size
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
-        self.child.event(event, ctx, data, env)
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        self.child.event(ctx, event, data, env)
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {

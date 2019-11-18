@@ -51,7 +51,7 @@ impl Widget<u32> for TimerWidget {
         bc.constrain((100.0, 100.0))
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, _data: &mut u32, _env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut u32, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 self.on = !self.on;

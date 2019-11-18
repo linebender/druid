@@ -114,7 +114,7 @@ impl Widget<String> for CustomWidget {
         bc.max()
     }
 
-    fn event(&mut self, _event: &Event, _ctx: &mut EventCtx, _data: &mut String, _env: &Env) {}
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut String, _env: &Env) {}
 
     fn update(
         &mut self,

@@ -69,6 +69,10 @@ impl Fields {
         Ok(Fields { kind, fields })
     }
 
+    pub fn len(&self) -> usize {
+        self.fields.len()
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &Field> {
         self.fields.iter()
     }

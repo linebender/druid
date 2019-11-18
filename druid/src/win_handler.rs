@@ -54,7 +54,7 @@ pub struct DruidHandler<T: Data> {
 
 /// State shared by all windows in the UI.
 pub(crate) struct AppState<T: Data> {
-    delegate: Option<AppDelegate<T>>,
+    delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: VecDeque<(WindowId, Command)>,
     windows: Windows<T>,
     pub(crate) env: Env,
@@ -214,13 +214,13 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
             window: &self.state.handle,
             window_id: self.window_id,
         };
-        self.window.event(&event, &mut ctx, self.data, self.env);
+        self.window.event(&mut ctx, &event, self.data, self.env);
 
         let is_handled = ctx.is_handled;
         if ctx.base_state.request_focus {
             let focus_event = Event::FocusChanged(true);
             self.window
-                .event(&focus_event, &mut ctx, self.data, self.env);
+                .event(&mut ctx, &focus_event, self.data, self.env);
         }
         let needs_inval = ctx.base_state.needs_inval;
         let request_anim = ctx.base_state.request_anim;
@@ -287,7 +287,11 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
 }
 
 impl<T: Data + 'static> AppState<T> {
-    pub(crate) fn new(data: T, env: Env, delegate: Option<AppDelegate<T>>) -> Rc<RefCell<Self>> {
+    pub(crate) fn new(
+        data: T,
+        env: Env,
+        delegate: Option<Box<dyn AppDelegate<T>>>,
+    ) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(AppState {
             delegate,
             command_queue: VecDeque::new(),
@@ -304,8 +308,45 @@ impl<T: Data + 'static> AppState<T> {
             .and_then(|w| w.get_menu_cmd(cmd_id))
     }
 
+    /// A helper fn for setting up the `DelegateCtx`. Takes a closure with
+    /// an arbitrary return type `R`, and returns `Some(R)` if an `AppDelegate`
+    /// is configured.
+    fn with_delegate<R, F>(&mut self, id: WindowId, f: F) -> Option<R>
+    where
+        F: FnOnce(&mut Box<dyn AppDelegate<T>>, &mut T, &Env, &mut DelegateCtx) -> R,
+    {
+        let AppState {
+            ref mut delegate,
+            ref mut command_queue,
+            ref mut data,
+            ref env,
+            ..
+        } = self;
+        let mut ctx = DelegateCtx {
+            source_id: id,
+            command_queue,
+        };
+        if let Some(delegate) = delegate {
+            Some(f(delegate, data, env, &mut ctx))
+        } else {
+            None
+        }
+    }
+
+    fn delegate_event(&mut self, id: WindowId, event: Event) -> Option<Event> {
+        if self.delegate.is_some() {
+            self.with_delegate(id, |del, data, env, ctx| del.event(event, data, env, ctx))
+                .unwrap()
+        } else {
+            Some(event)
+        }
+    }
+
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
         self.windows.connect(id, handle);
+        self.with_delegate(id, |del, data, env, ctx| {
+            del.window_added(id, data, env, ctx)
+        });
     }
 
     pub(crate) fn add_window(&mut self, id: WindowId, window: Window<T>) {
@@ -313,7 +354,17 @@ impl<T: Data + 'static> AppState<T> {
     }
 
     fn remove_window(&mut self, id: WindowId) -> Option<WindowHandle> {
-        self.windows.remove(id)
+        let res = self.windows.remove(id);
+        self.with_delegate(id, |del, data, env, ctx| {
+            del.window_removed(id, data, env, ctx)
+        });
+        res
+    }
+
+    fn show_window(&mut self, id: WindowId) {
+        if let Some(state) = self.windows.state.get(&id) {
+            state.handle.bring_to_front_and_focus();
+        }
     }
 
     fn assemble_window_state(&mut self, window_id: WindowId) -> Option<SingleWindowState<'_, T>> {
@@ -334,7 +385,7 @@ impl<T: Data + 'static> AppState<T> {
     }
 
     fn do_event(&mut self, source_id: WindowId, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
-        let event = self.delegate_event(source_id, event, win_ctx);
+        let event = self.delegate_event(source_id, event);
 
         let (is_handled, dirty, anim) = if let Some(event) = event {
             // handle system window-level commands
@@ -388,34 +439,6 @@ impl<T: Data + 'static> AppState<T> {
             }
         }
         is_handled
-    }
-
-    /// Give the top-level app delegate an opportunity to handle this event.
-    fn delegate_event(
-        &mut self,
-        source_id: WindowId,
-        event: Event,
-        win_ctx: &mut dyn WinCtx,
-    ) -> Option<Event> {
-        let AppState {
-            ref mut delegate,
-            ref mut command_queue,
-            ref mut data,
-            ref env,
-            ..
-        } = self;
-
-        match delegate {
-            Some(delegate) => {
-                let mut ctx = DelegateCtx {
-                    source_id,
-                    command_queue,
-                    win_ctx,
-                };
-                delegate.event(event, data, env, &mut ctx)
-            }
-            None => Some(event),
-        }
     }
 
     fn window_got_focus(&mut self, window_id: WindowId, _ctx: &mut dyn WinCtx) {
@@ -484,6 +507,7 @@ impl<T: Data + 'static> DruidHandler<T> {
             &sys_cmd::OPEN_FILE => self.open_file(cmd, window_id, win_ctx),
             &sys_cmd::NEW_WINDOW => self.new_window(cmd),
             &sys_cmd::CLOSE_WINDOW => self.close_window(cmd, window_id),
+            &sys_cmd::SHOW_WINDOW => self.show_window(cmd),
             &sys_cmd::QUIT_APP => self.quit(),
             &sys_cmd::HIDE_APPLICATION => self.hide_app(),
             &sys_cmd::HIDE_OTHERS => self.hide_others(),
@@ -537,6 +561,13 @@ impl<T: Data + 'static> DruidHandler<T> {
         if let Some(handle) = handle {
             handle.close();
         }
+    }
+
+    fn show_window(&mut self, cmd: Command) {
+        let id: WindowId = *cmd
+            .get_object()
+            .expect("show window selector missing window id");
+        self.app_state.borrow_mut().show_window(id);
     }
 
     fn do_paste(&mut self, window_id: WindowId, ctx: &mut dyn WinCtx) {

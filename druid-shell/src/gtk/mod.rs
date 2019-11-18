@@ -35,7 +35,7 @@ use win_main::with_application;
 use crate::clipboard::ClipboardItem;
 use crate::dialog::FileDialogOptions;
 use crate::keyboard;
-use crate::kurbo::{Point, Vec2};
+use crate::kurbo::{Point, Size, Vec2};
 use crate::platform::dialog::FileDialogType;
 use crate::platform::menu::Menu;
 use crate::window::{self, Cursor, FileInfo, MouseButton, Text, TimerToken, WinCtx, WinHandler};
@@ -87,6 +87,7 @@ pub struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     menu: Option<menu::Menu>,
+    size: Size,
 }
 
 #[derive(Clone)]
@@ -124,11 +125,16 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             menu: None,
+            size: Size::new(500.0, 400.0),
         }
     }
 
     pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
         self.handler = Some(handler);
+    }
+
+    pub fn set_size(&mut self, size: Size) {
+        self.size = size;
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -147,6 +153,17 @@ impl WindowBuilder {
             .expect("Tried to build a window without setting the handler");
 
         let window = with_application(|app| ApplicationWindow::new(&app));
+
+        let dpi_scale = window
+            .get_display()
+            .map(|c| c.get_default_screen().get_resolution() as f64)
+            .unwrap_or(96.0)
+            / 96.0;
+
+        window.set_default_size(
+            (self.size.width * dpi_scale) as i32,
+            (self.size.height * dpi_scale) as i32,
+        );
 
         let accel_group = AccelGroup::new();
         window.add_accel_group(&accel_group);
@@ -399,6 +416,12 @@ impl WindowHandle {
                 app.remove_window(&state.window);
             });
         }
+    }
+
+    /// Bring this window to the front of the window stack and give it focus.
+    pub fn bring_to_front_and_focus(&self) {
+        //FIXME: implementation goes here
+        log::warn!("bring_to_front_and_focus not yet implemented for gtk");
     }
 
     // Request invalidation of the entire window contents.

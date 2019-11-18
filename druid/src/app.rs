@@ -18,6 +18,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use crate::kurbo::Size;
 use crate::shell::window::WindowHandle;
 use crate::shell::{init, runloop, Error as PlatformError, WindowBuilder};
 use crate::win_handler::AppState;
@@ -31,7 +32,7 @@ type EnvSetupFn = dyn FnOnce(&mut Env);
 pub struct AppLauncher<T> {
     windows: Vec<WindowDesc<T>>,
     env_setup: Option<Box<EnvSetupFn>>,
-    delegate: Option<AppDelegate<T>>,
+    delegate: Option<Box<dyn AppDelegate<T>>>,
 }
 
 /// A function that can create a widget.
@@ -44,8 +45,13 @@ type WidgetBuilderFn<T> = dyn Fn() -> Box<dyn Widget<T>> + 'static;
 pub struct WindowDesc<T> {
     pub(crate) root_builder: Arc<WidgetBuilderFn<T>>,
     pub(crate) title: Option<LocalizedString<T>>,
+    pub(crate) size: Option<Size>,
     pub(crate) menu: Option<MenuDesc<T>>,
-    //TODO: more things you can configure on a window, like size?
+    /// The `WindowId` that will be assigned to this window.
+    ///
+    /// This can be used to track a window from when it is launched and when
+    /// it actually connects.
+    pub id: WindowId,
 }
 
 impl<T: Data + 'static> AppLauncher<T> {
@@ -70,8 +76,8 @@ impl<T: Data + 'static> AppLauncher<T> {
     /// Set the [`AppDelegate`].
     ///
     /// [`AppDelegate`]: struct.AppDelegate.html
-    pub fn delegate(mut self, delegate: AppDelegate<T>) -> Self {
-        self.delegate = Some(delegate);
+    pub fn delegate(mut self, delegate: impl AppDelegate<T> + 'static) -> Self {
+        self.delegate = Some(Box::new(delegate));
         self
     }
 
@@ -125,7 +131,9 @@ impl<T: Data + 'static> WindowDesc<T> {
         WindowDesc {
             root_builder,
             title: None,
+            size: None,
             menu: MenuDesc::platform_default(),
+            id: WindowId::next(),
         }
     }
 
@@ -135,6 +143,17 @@ impl<T: Data + 'static> WindowDesc<T> {
     /// [`LocalizedString`]: struct.LocalizedString.html
     pub fn title(mut self, title: LocalizedString<T>) -> Self {
         self.title = Some(title);
+        self
+    }
+
+    /// Set the window size at creation
+    ///
+    /// You can pass in a tuple `(width, height)` or `kurbo::Size` e.g. to create a window 1000px wide and 500px high
+    /// ```ignore
+    /// window.window_size((1000.0, 500.0));
+    /// ```
+    pub fn window_size(mut self, size: impl Into<Size>) -> Self {
+        self.size = Some(size.into());
         self
     }
 
@@ -153,11 +172,13 @@ impl<T: Data + 'static> WindowDesc<T> {
             .as_mut()
             .map(|m| m.build_window_menu(&state.borrow().data, &state.borrow().env));
 
-        let id = WindowId::next();
-        let handler = DruidHandler::new_shared(state.clone(), id);
+        let handler = DruidHandler::new_shared(state.clone(), self.id);
 
         let mut builder = WindowBuilder::new();
         builder.set_handler(Box::new(handler));
+        if let Some(size) = self.size {
+            builder.set_size(size);
+        }
         builder.set_title(title.localized_str());
         if let Some(menu) = platform_menu {
             builder.set_menu(menu);
@@ -166,7 +187,7 @@ impl<T: Data + 'static> WindowDesc<T> {
         let root = (self.root_builder)();
         state
             .borrow_mut()
-            .add_window(id, Window::new(root, title, menu));
+            .add_window(self.id, Window::new(root, title, menu));
 
         Ok(WindowHandle {
             inner: builder.build()?,

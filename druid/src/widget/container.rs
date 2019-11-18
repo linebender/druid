@@ -38,7 +38,7 @@ pub struct Container<T: Data> {
     inner: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T: Data + 'static> Container<T> {
+impl<T: Data> Container<T> {
     /// Create Container with a child
     pub fn new(inner: impl Widget<T> + 'static) -> Self {
         Self {
@@ -108,8 +108,8 @@ impl<T: Data + 'static> Widget<T> for Container<T> {
         )
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
-        self.inner.event(event, ctx, data, env);
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        self.inner.event(ctx, event, data, env);
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {

@@ -122,7 +122,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         ))
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, _env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);

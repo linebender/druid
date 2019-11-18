@@ -64,7 +64,7 @@ use crate::application::Application;
 use crate::clipboard::ClipboardItem;
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
-use crate::kurbo::{Point, Vec2};
+use crate::kurbo::{Point, Size, Vec2};
 use crate::menu::Menu;
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use crate::window::{
@@ -87,6 +87,7 @@ pub struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     present_strategy: PresentStrategy,
+    size: Size,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -769,6 +770,7 @@ impl WindowBuilder {
             title: String::new(),
             menu: None,
             present_strategy: Default::default(),
+            size: Size::new(500.0, 400.0),
         }
     }
 
@@ -785,6 +787,10 @@ impl WindowBuilder {
         if vscroll {
             self.dwStyle |= WS_VSCROLL;
         }
+    }
+
+    pub fn set_size(&mut self, size: Size) {
+        self.size = size;
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -837,8 +843,8 @@ impl WindowBuilder {
                 96.0
             };
             win.dpi.set(dpi);
-            let width = (500.0 * (dpi / 96.0)) as i32;
-            let height = (400.0 * (dpi / 96.0)) as i32;
+            let width = (self.size.width * (f64::from(dpi) / 96.0)) as i32;
+            let height = (self.size.height * (f64::from(dpi) / 96.0)) as i32;
 
             let hmenu = match self.menu {
                 Some(menu) => menu.into_hmenu(),
@@ -1105,6 +1111,12 @@ impl WindowHandle {
                 DestroyWindow(hwnd);
             }
         }
+    }
+
+    /// Bring this window to the front of the window stack and give it focus.
+    pub fn bring_to_front_and_focus(&self) {
+        //FIXME: implementation goes here
+        log::warn!("bring_to_front_and_focus not yet implemented on windows");
     }
 
     pub fn invalidate(&self) {

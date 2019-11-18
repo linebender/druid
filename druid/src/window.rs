@@ -55,11 +55,11 @@ impl<T: Data> Window<T> {
         }
     }
 
-    pub fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Event::Size(size) = event {
             self.size = *size;
         }
-        self.root.event(event, ctx, data, env);
+        self.root.event(ctx, event, data, env);
 
         if let Some(cursor) = ctx.cursor {
             ctx.win_ctx.set_cursor(&cursor);

@@ -56,8 +56,17 @@ pub use crate::widget::radio::{Radio, RadioGroup};
 mod container;
 pub use crate::widget::container::Container;
 
+mod split;
+pub use crate::widget::split::Split;
+
 mod switch;
 pub use crate::widget::switch::Switch;
+
+mod env_scope;
+pub use crate::widget::env_scope::EnvScope;
+
+mod widget_ext;
+pub use widget_ext::WidgetExt;
 
 mod list;
 pub use crate::widget::list::{List, ListIter};
