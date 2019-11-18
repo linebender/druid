@@ -22,11 +22,10 @@ use gtk::MenuBar as GtkMenuBar;
 use gtk::MenuItem as GtkMenuItem;
 use gtk::{GtkMenuItemExt, MenuShellExt, SeparatorMenuItemBuilder, WidgetExt};
 
-use super::WinCtxImpl;
+use super::window::{WinCtxImpl, WindowHandle};
 use crate::common_util::strip_access_key;
 use crate::hotkey::{HotKey, KeyCompare, RawMods};
 use crate::keyboard::KeyModifiers;
-use crate::platform::WindowHandle;
 
 #[derive(Default, Debug)]
 pub struct Menu {

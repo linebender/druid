@@ -24,7 +24,7 @@ use crate::error::Error;
 pub use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Size, Vec2};
 use crate::menu::Menu;
-use crate::platform;
+use crate::platform::window as platform;
 
 // It's possible we'll want to make this type alias at a lower level,
 // see https://github.com/linebender/piet/pull/37 for more discussion.
