@@ -14,6 +14,8 @@
 
 //! Common functions used by the backends
 
+use std::any::Any;
+
 /// Strip the access keys from the menu string.
 ///
 /// Changes "E&xit" to "Exit". Actual ampersands are escaped as "&&".
@@ -34,4 +36,15 @@ pub fn strip_access_key(raw_menu_text: &str) -> String {
         }
     }
     result
+}
+
+/// A trait for implementing the boxed callback hack.
+pub(crate) trait IdleCallback: Send {
+    fn call(self: Box<Self>, a: &dyn Any);
+}
+
+impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
+    fn call(self: Box<F>, a: &dyn Any) {
+        (*self)(a)
+    }
 }

@@ -37,6 +37,7 @@ use super::runloop::with_application;
 use super::util::assert_main_thread;
 
 use crate::clipboard::ClipboardItem;
+use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
 use crate::keyboard;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
@@ -72,8 +73,8 @@ macro_rules! clone {
         }
     );
 }
-#[derive(Clone, Default)]
 
+#[derive(Clone, Default)]
 pub struct WindowHandle {
     pub(crate) state: Weak<WindowState>,
 }
@@ -90,17 +91,6 @@ pub struct WindowBuilder {
 pub struct IdleHandle {
     idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
     state: Weak<WindowState>,
-}
-
-// TODO: move this out of platform-dependent section.
-trait IdleCallback: Send {
-    fn call(self: Box<Self>, a: &dyn Any);
-}
-
-impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
-    fn call(self: Box<F>, a: &dyn Any) {
-        (*self)(a)
-    }
 }
 
 pub(crate) struct WindowState {

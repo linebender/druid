@@ -43,6 +43,7 @@ use super::dialog;
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
 use crate::clipboard::ClipboardItem;
+use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
@@ -84,16 +85,6 @@ pub(crate) struct IdleHandle {
     idle_queue: Weak<Mutex<Vec<Box<dyn IdleCallback>>>>,
 }
 
-// TODO: move this out of platform-dependent section.
-trait IdleCallback: Send {
-    fn call(self: Box<Self>, a: &dyn Any);
-}
-
-impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
-    fn call(self: Box<F>, a: &dyn Any) {
-        (*self)(a)
-    }
-}
 /// This is the state associated with our custom NSView.
 struct ViewState {
     nsview: WeakPtr,
