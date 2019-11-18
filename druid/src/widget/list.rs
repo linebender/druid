@@ -29,7 +29,8 @@ pub struct List<T: Data> {
 }
 
 impl<T: Data> List<T> {
-    // TODO: docs
+    /// Create a new list widget. Closure will be called every time when a new child
+    /// needs to be constructed.
     pub fn new(closure: impl Fn() -> Box<dyn Widget<T>> + 'static) -> Self {
         List {
             closure: Box::new(closure),
@@ -38,21 +39,26 @@ impl<T: Data> List<T> {
     }
 }
 
-// TODO: docs and export
-pub trait ListIter<C: Data>: Data {
-    fn for_each(&self, cb: impl FnMut(&C, usize));
-    fn for_each_track(&mut self, cb: impl FnMut(&mut C, usize));
+/// This iterator enables writing List widget for any `Data`.
+pub trait ListIter<T: Data>: Data {
+    /// Iterate over each data child.
+    fn for_each(&self, cb: impl FnMut(&T, usize));
+
+    /// Iterate over each data child. Keep track of changed data and update self.
+    fn for_each_track(&mut self, cb: impl FnMut(&mut T, usize));
+
+    /// Return data length.
     fn data_len(&self) -> usize;
 }
 
-impl<C: Data> ListIter<C> for Arc<Vec<C>> {
-    fn for_each(&self, mut cb: impl FnMut(&C, usize)) {
+impl<T: Data> ListIter<T> for Arc<Vec<T>> {
+    fn for_each(&self, mut cb: impl FnMut(&T, usize)) {
         for (i, item) in self.iter().enumerate() {
             cb(item, i);
         }
     }
 
-    fn for_each_track(&mut self, mut cb: impl FnMut(&mut C, usize)) {
+    fn for_each_track(&mut self, mut cb: impl FnMut(&mut T, usize)) {
         let mut new_data = Vec::with_capacity(self.data_len());
         let mut any_changed = false;
 
@@ -76,15 +82,15 @@ impl<C: Data> ListIter<C> for Arc<Vec<C>> {
     }
 }
 
-impl<T1: Data, C: Data> ListIter<(T1, C)> for (T1, Arc<Vec<C>>) {
-    fn for_each(&self, mut cb: impl FnMut(&(T1, C), usize)) {
+impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Arc<Vec<T>>) {
+    fn for_each(&self, mut cb: impl FnMut(&(T1, T), usize)) {
         for (i, item) in self.1.iter().enumerate() {
             let d = (self.0.clone(), item.to_owned());
             cb(&d, i);
         }
     }
 
-    fn for_each_track(&mut self, mut cb: impl FnMut(&mut (T1, C), usize)) {
+    fn for_each_track(&mut self, mut cb: impl FnMut(&mut (T1, T), usize)) {
         let mut new_shared = self.0.to_owned();
         let mut new_data = Vec::with_capacity(self.1.len());
         let mut any_shared_changed = false;
