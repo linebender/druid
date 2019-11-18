@@ -14,10 +14,7 @@
 
 //! Creation and management of windows.
 
-#![allow(
-    non_snake_case,
-    clippy::cast_lossless,
-    )]
+#![allow(non_snake_case, clippy::cast_lossless)]
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
@@ -59,6 +56,7 @@ use super::timers::TimerSlots;
 
 use crate::application::Application;
 use crate::clipboard::ClipboardItem;
+use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
@@ -123,16 +121,6 @@ pub struct WindowHandle {
 pub struct IdleHandle {
     pub(crate) hwnd: HWND,
     queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
-}
-
-trait IdleCallback: Send {
-    fn call(self: Box<Self>, a: &dyn Any);
-}
-
-impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
-    fn call(self: Box<F>, a: &dyn Any) {
-        (*self)(a)
-    }
 }
 
 /// This is the low level window state. All mutable contents are protected
