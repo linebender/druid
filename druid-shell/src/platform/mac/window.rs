@@ -54,15 +54,21 @@ use crate::Error;
 #[allow(non_upper_case_globals)]
 const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub(crate) struct WindowHandle {
     /// This is an NSView, as our concept of "window" is more the top-level container holding
     /// a view. Also, this is better for hosted applications such as VST.
-    ///
-    /// TODO: remove option (issue has been filed against objc, or we could manually impl default with nil)
-    /// https://github.com/SSheldon/rust-objc/issues/77
-    nsview: Option<WeakPtr>,
+    nsview: WeakPtr,
     idle_queue: Weak<Mutex<Vec<Box<dyn IdleCallback>>>>,
+}
+
+impl Default for WindowHandle {
+    fn default() -> Self {
+        WindowHandle {
+            nsview: unsafe { WeakPtr::new(nil) },
+            idle_queue: Default::default(),
+        }
+    }
 }
 
 /// Builder abstraction for creating new windows.
@@ -166,12 +172,12 @@ impl WindowBuilder {
             let view_state: *mut c_void = *(*view).get_ivar("viewState");
             let view_state = &mut *(view_state as *mut ViewState);
             let handle = WindowHandle {
-                nsview: Some(view_state.nsview.clone()),
+                nsview: view_state.nsview.clone(),
                 idle_queue,
             };
             (*view_state).handler.connect(&handle.clone().into());
             let mut ctx = WinCtxImpl {
-                nsview: handle.nsview.as_ref().unwrap(),
+                nsview: &handle.nsview,
                 text: Text::new(),
             };
             (*view_state)
@@ -604,59 +610,48 @@ impl WindowHandle {
         unsafe {
             let current_app = NSRunningApplication::currentApplication(nil);
             current_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps);
-            if let Some(ref nsview) = self.nsview {
-                let window: id = msg_send![*nsview.load(), window];
-                // register our view class to be alerted when it becomes the key view.
-                let notif_center_class = class!(NSNotificationCenter);
-                let notif_string = NSString::alloc(nil)
-                    .init_str(NSWindowDidBecomeKeyNotification)
-                    .autorelease();
-                let notif_center: id = msg_send![notif_center_class, defaultCenter];
-                let () = msg_send![notif_center, addObserver:*nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
-                window.makeKeyAndOrderFront_(nil)
-            }
+            let window: id = msg_send![*self.nsview.load(), window];
+            // register our view class to be alerted when it becomes the key view.
+            let notif_center_class = class!(NSNotificationCenter);
+            let notif_string = NSString::alloc(nil)
+                .init_str(NSWindowDidBecomeKeyNotification)
+                .autorelease();
+            let notif_center: id = msg_send![notif_center_class, defaultCenter];
+            let () = msg_send![notif_center, addObserver:*self.nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
+            window.makeKeyAndOrderFront_(nil)
         }
     }
 
     /// Close the window.
     pub fn close(&self) {
-        if let Some(ref nsview) = self.nsview {
-            unsafe {
-                let view = nsview.load();
-                let window: id = msg_send![*view, window];
-                window.close();
-            }
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            window.close();
         }
     }
 
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
-        if let Some(ref nsview) = self.nsview {
-            unsafe {
-                let window: id = msg_send![*nsview.load(), window];
-                let () = msg_send![window, performSelectorOnMainThread: sel!(makeKeyAndOrderFront:) withObject: nil waitUntilDone: NO];
-            }
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let () = msg_send![window, performSelectorOnMainThread: sel!(makeKeyAndOrderFront:) withObject: nil waitUntilDone: NO];
         }
     }
 
     // Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
-        if let Some(ref nsview) = self.nsview {
-            unsafe {
-                // We could share impl with redraw, but we'd need to deal with nil.
-                let () = msg_send![*nsview.load(), setNeedsDisplay: YES];
-            }
+        unsafe {
+            // We could share impl with redraw, but we'd need to deal with nil.
+            let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
         }
     }
 
     /// Set the title for this menu.
     pub fn set_title(&self, title: &str) {
-        if let Some(ref nsview) = self.nsview {
-            unsafe {
-                let window: id = msg_send![*nsview.load(), window];
-                let title = make_nsstring(title);
-                window.setTitle_(title);
-            }
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let title = make_nsstring(title);
+            window.setTitle_(title);
         }
     }
 
@@ -670,20 +665,21 @@ impl WindowHandle {
     //we have to figure out some way to pass them along with this performSelector:
     //call. This isn't super hard, I'm just not up for it right now.
     pub fn show_context_menu(&self, menu: Menu, _pos: Point) {
-        if let Some(ref nsview) = self.nsview {
-            unsafe {
-                let () = msg_send![*nsview.load(), performSelectorOnMainThread: sel!(showContextMenu:) withObject: menu.menu waitUntilDone: NO];
-            }
+        unsafe {
+            let () = msg_send![*self.nsview.load(), performSelectorOnMainThread: sel!(showContextMenu:) withObject: menu.menu waitUntilDone: NO];
         }
     }
 
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        // TODO: maybe try harder to return None if window has been dropped.
-        self.nsview.as_ref().map(|nsview| IdleHandle {
-            nsview: nsview.clone(),
-            idle_queue: self.idle_queue.clone(),
-        })
+        if self.nsview.load().is_null() {
+            None
+        } else {
+            Some(IdleHandle {
+                nsview: self.nsview.clone(),
+                idle_queue: self.idle_queue.clone(),
+            })
+        }
     }
 
     /// Get the dpi of the window.
