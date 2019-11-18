@@ -23,6 +23,7 @@ use crate::{
     WidgetPod,
 };
 
+/// A list widget for a variable-size collection of items.
 pub struct List<T: Data> {
     closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
@@ -45,7 +46,7 @@ pub trait ListIter<T: Data>: Data {
     fn for_each(&self, cb: impl FnMut(&T, usize));
 
     /// Iterate over each data child. Keep track of changed data and update self.
-    fn for_each_track(&mut self, cb: impl FnMut(&mut T, usize));
+    fn for_each_mut(&mut self, cb: impl FnMut(&mut T, usize));
 
     /// Return data length.
     fn data_len(&self) -> usize;
@@ -58,7 +59,7 @@ impl<T: Data> ListIter<T> for Arc<Vec<T>> {
         }
     }
 
-    fn for_each_track(&mut self, mut cb: impl FnMut(&mut T, usize)) {
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut T, usize)) {
         let mut new_data = Vec::with_capacity(self.data_len());
         let mut any_changed = false;
 
@@ -90,7 +91,7 @@ impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Arc<Vec<T>>) {
         }
     }
 
-    fn for_each_track(&mut self, mut cb: impl FnMut(&mut (T1, T), usize)) {
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (T1, T), usize)) {
         let mut new_shared = self.0.to_owned();
         let mut new_data = Vec::with_capacity(self.1.len());
         let mut any_shared_changed = false;
@@ -171,7 +172,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
 
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut children = self.children.iter_mut();
-        data.for_each_track(|child_data, _| {
+        data.for_each_mut(|child_data, _| {
             if let Some(child) = children.next() {
                 child.event(ctx, event, child_data, env);
             }
