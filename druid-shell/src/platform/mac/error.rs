@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! macOS druid-shell backend.
+//! macOS platform errors.
 
-#![allow(clippy::let_unit_value)]
+//TODO: add a platform error for macOS, based on NSError
 
-pub mod application;
-pub mod dialog;
-pub mod error;
-pub mod keycodes;
-pub mod menu;
-pub mod runloop;
-pub mod util;
-pub mod window;
+#[derive(Debug, Clone)]
+pub struct Error;
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "NSError")
+    }
+}
+
+impl std::error::Error for Error {}

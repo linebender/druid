@@ -16,29 +16,30 @@
 
 use std::fmt;
 
-use crate::platform::error as platform;
+use winapi::shared::winerror::HRESULT;
 
 /// Error codes. At the moment, this is little more than HRESULT, but that
 /// might change.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Error {
-    Other(&'static str),
-    Platform(platform::Error),
+    Hr(HRESULT),
+    // Maybe include the full error from the direct2d crate.
+    D2Error,
+    /// A function is available on newer version of windows.
+    OldWindows,
+    /// The `hwnd` pointer was null.
+    NullHwnd,
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match self {
-            Error::Other(s) => write!(f, "{}", s),
-            Error::Platform(p) => fmt::Display::fmt(&p, f),
+        match *self {
+            Error::Hr(hr) => write!(f, "HRESULT 0x{:x}", hr),
+            Error::D2Error => write!(f, "Direct2D error"),
+            Error::OldWindows => write!(f, "Attempted newer API on older Windows"),
+            Error::NullHwnd => write!(f, "Window handle is Null"),
         }
     }
 }
 
 impl std::error::Error for Error {}
-
-impl From<platform::Error> for Error {
-    fn from(src: platform::Error) -> Error {
-        Error::Platform(src)
-    }
-}
