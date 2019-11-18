@@ -169,11 +169,11 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         bc.constrain(Size::new(width, y))
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut children = self.children.iter_mut();
         data.for_each_track(|child_data, _| {
             if let Some(child) = children.next() {
-                child.event(event, ctx, child_data, env);
+                child.event(ctx, event, child_data, env);
             }
         });
     }
