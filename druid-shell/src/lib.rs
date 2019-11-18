@@ -41,6 +41,7 @@ pub mod hotkey;
 pub mod keyboard;
 pub mod keycodes;
 pub mod menu;
+pub mod mouse;
 //TODO: don't expose this directly? currently making this private causes
 //a bunch of compiler warnings, so let's revisit that later.
 pub mod platform;

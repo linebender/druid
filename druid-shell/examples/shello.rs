@@ -22,10 +22,9 @@ use druid_shell::dialog::{FileDialogOptions, FileSpec};
 use druid_shell::hotkey::{HotKey, SysMods};
 use druid_shell::keyboard::{KeyEvent, KeyModifiers};
 use druid_shell::menu::Menu;
+use druid_shell::mouse::{Cursor, MouseEvent};
 use druid_shell::runloop;
-use druid_shell::window::{
-    Cursor, MouseEvent, TimerToken, WinCtx, WinHandler, WindowBuilder, WindowHandle,
-};
+use druid_shell::window::{TimerToken, WinCtx, WinHandler, WindowBuilder, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);

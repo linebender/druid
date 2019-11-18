@@ -14,10 +14,7 @@
 
 //! Creation and management of windows.
 
-#![allow(
-    non_snake_case,
-    clippy::cast_lossless,
-    )]
+#![allow(non_snake_case, clippy::cast_lossless)]
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
@@ -61,10 +58,9 @@ use crate::application::Application;
 use crate::clipboard::ClipboardItem;
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+use crate::mouse::{Cursor, MouseButton, MouseEvent};
 use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
-use crate::window::{
-    Cursor, FileInfo, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler,
-};
+use crate::window::{FileInfo, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
 extern "system" {
