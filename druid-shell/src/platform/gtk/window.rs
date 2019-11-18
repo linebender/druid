@@ -39,7 +39,8 @@ use super::util::assert_main_thread;
 use crate::clipboard::ClipboardItem;
 use crate::dialog::FileDialogOptions;
 use crate::keyboard;
-use crate::window::{self, Cursor, FileInfo, MouseButton, Text, TimerToken, WinCtx, WinHandler};
+use crate::mouse::{Cursor, MouseButton, MouseEvent};
+use crate::window::{FileInfo, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
 /// Taken from https://gtk-rs.org/docs-src/tutorial/closures
@@ -256,7 +257,7 @@ impl WindowBuilder {
                 let mut ctx = WinCtxImpl::from(&handle);
 
                 state.handler.borrow_mut().mouse_down(
-                    &window::MouseEvent {
+                    &MouseEvent {
                         pos: Point::from(button.get_position()),
                         count: get_mouse_click_count(button.get_event_type()),
                         mods: get_modifiers(button.get_state()),
@@ -274,7 +275,7 @@ impl WindowBuilder {
                 let mut ctx = WinCtxImpl::from(&handle);
 
                 state.handler.borrow_mut().mouse_up(
-                    &window::MouseEvent {
+                    &MouseEvent {
                         pos: Point::from(button.get_position()),
                         mods: get_modifiers(button.get_state()),
                         count: 0,
@@ -292,7 +293,7 @@ impl WindowBuilder {
                 let mut ctx = WinCtxImpl::from(&handle);
 
                 let pos = Point::from(motion.get_position());
-                let mouse_event = window::MouseEvent {
+                let mouse_event = MouseEvent {
                     pos,
                     mods: get_modifiers(motion.get_state()),
                     count: 0,
@@ -669,7 +670,7 @@ fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cur
     )
 }
 
-fn get_mouse_button(button: u32) -> window::MouseButton {
+fn get_mouse_button(button: u32) -> MouseButton {
     match button {
         1 => MouseButton::Left,
         2 => MouseButton::Middle,
@@ -680,7 +681,7 @@ fn get_mouse_button(button: u32) -> window::MouseButton {
     }
 }
 
-fn get_mouse_button_from_modifiers(modifiers: gdk::ModifierType) -> window::MouseButton {
+fn get_mouse_button_from_modifiers(modifiers: gdk::ModifierType) -> MouseButton {
     match modifiers {
         modifiers if modifiers.contains(ModifierType::BUTTON1_MASK) => MouseButton::Left,
         modifiers if modifiers.contains(ModifierType::BUTTON2_MASK) => MouseButton::Middle,

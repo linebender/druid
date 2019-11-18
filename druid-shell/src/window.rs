@@ -14,17 +14,27 @@
 
 //! Platform independent window types.
 
+#![allow(deprecated)] // for the three items that have moved
+
 use std::any::Any;
 use std::path::PathBuf;
 
 use crate::clipboard::ClipboardItem;
-//TODO: why is this pub?
 use crate::dialog::FileDialogOptions;
 use crate::error::Error;
-pub use crate::keyboard::{KeyEvent, KeyModifiers};
+use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Size, Vec2};
 use crate::menu::Menu;
 use crate::platform::window as platform;
+
+#[deprecated(since = "0.4.0", note = "Moved to druid_shell::mouse::MouseEvent")]
+pub type MouseEvent = crate::mouse::MouseEvent;
+
+#[deprecated(since = "0.4.0", note = "Moved to druid_shell::mouse::Cursor")]
+pub type Cursor = crate::mouse::Cursor;
+
+#[deprecated(since = "0.4.0", note = "Use druid_shell::mouse::MouseButton")]
+pub type MouseButton = crate::mouse::MouseButton;
 
 // It's possible we'll want to make this type alias at a lower level,
 // see https://github.com/linebender/piet/pull/37 for more discussion.
@@ -294,69 +304,6 @@ pub trait WinHandler {
 
     /// Get a reference to the handler state. Used mostly by idle handlers.
     fn as_any(&mut self) -> &mut dyn Any;
-}
-
-/// The state of the mouse for a click, mouse-up, or move event.
-#[derive(Debug, Clone, PartialEq)]
-pub struct MouseEvent {
-    /// The location of the mouse in the current window.
-    ///
-    /// This is in px units, that is, adjusted for hi-dpi.
-    pub pos: Point,
-    /// Keyboard modifiers at the time of the mouse event.
-    pub mods: KeyModifiers,
-    /// The number of mouse clicks associated with this event. This will always
-    /// be `0` for a mouse-up event.
-    pub count: u32,
-    /// The currently pressed button in the case of a move or click event,
-    /// or the released button in the case of a mouse-up event.
-    pub button: MouseButton,
-}
-
-/// An indicator of which mouse button was pressed.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum MouseButton {
-    /// Left mouse button.
-    Left,
-    /// Middle mouse button.
-    Middle,
-    /// Right mouse button.
-    Right,
-    /// First X button.
-    X1,
-    /// Second X button.
-    X2,
-}
-
-impl MouseButton {
-    /// Returns `true` if this is the left mouse button.
-    #[inline(always)]
-    pub fn is_left(self) -> bool {
-        self == MouseButton::Left
-    }
-
-    /// Returns `true` if this is the right mouse button.
-    #[inline(always)]
-    pub fn is_right(self) -> bool {
-        self == MouseButton::Right
-    }
-}
-
-//NOTE: this currently only contains cursors that are included by default on
-//both Windows and macOS. We may want to provide polyfills for various additional cursors,
-//and we will also want to add some mechanism for adding custom cursors.
-/// Mouse cursors.
-#[derive(Clone)]
-pub enum Cursor {
-    /// The default arrow cursor.
-    Arrow,
-    /// A vertical I-beam, for indicating insertion points in text.
-    IBeam,
-    Crosshair,
-    OpenHand,
-    NotAllowed,
-    ResizeLeftRight,
-    ResizeUpDown,
 }
 
 /// Information about a file to be opened or saved.

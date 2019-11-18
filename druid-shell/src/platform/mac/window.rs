@@ -45,10 +45,9 @@ use super::util::{assert_main_thread, make_nsstring};
 use crate::clipboard::ClipboardItem;
 use crate::dialog::FileDialogOptions;
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+use crate::mouse::{Cursor, MouseButton, MouseEvent};
 use crate::platform::application::Application;
-use crate::window::{
-    Cursor, FileInfo, MouseButton, MouseEvent, Text, TimerToken, WinCtx, WinHandler,
-};
+use crate::window::{FileInfo, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
 #[allow(non_upper_case_globals)]
