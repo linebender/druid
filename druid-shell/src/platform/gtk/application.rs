@@ -19,6 +19,10 @@ use crate::clipboard::ClipboardItem;
 pub struct Application;
 
 impl Application {
+    pub fn init() {
+        gtk::init().expect("GTK initialization failed");
+    }
+
     pub fn quit() {
         // Nothing to do: if this is called, we're already shutting down and GTK will pick it up (I hope?)
     }
@@ -36,5 +40,10 @@ impl Application {
 
     pub fn set_clipboard_contents(_item: ClipboardItem) {
         log::warn!("set_clipboard_contents is unimplemented on GTK");
+    }
+
+    pub fn get_locale() -> String {
+        //TODO ahem
+        "en-US".into()
     }
 }

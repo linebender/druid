@@ -19,6 +19,7 @@ use time::get_time;
 use piet_common::kurbo::{Line, Rect};
 use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
+use druid_shell::application::Application;
 use druid_shell::keyboard::KeyEvent;
 use druid_shell::runloop;
 use druid_shell::window::{WinCtx, WinHandler, WindowBuilder, WindowHandle};
@@ -109,7 +110,7 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
-    druid_shell::init();
+    Application::init();
 
     let mut run_loop = runloop::RunLoop::new();
     let mut builder = WindowBuilder::new();

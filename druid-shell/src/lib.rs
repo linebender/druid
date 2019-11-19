@@ -50,5 +50,3 @@ pub mod window;
 
 pub use error::Error;
 pub use window::WindowBuilder;
-//TODO: move these to Application?
-pub use platform::util::{self, get_locale, init};

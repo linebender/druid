@@ -42,7 +42,7 @@ use log::{debug, error, warn};
 
 use crate::data::Data;
 use crate::env::Env;
-use crate::shell::get_locale;
+use crate::shell::application::Application;
 
 use fluent_bundle::{
     FluentArgs, FluentBundle, FluentError, FluentMessage, FluentResource, FluentValue,
@@ -211,7 +211,7 @@ impl L10nManager {
 
         let default_locale: LanguageIdentifier =
             "en-US".parse().expect("failed to parse default locale");
-        let current_locale = get_locale()
+        let current_locale = Application::get_locale()
             .parse()
             .unwrap_or_else(|_| default_locale.clone());
         let locales = get_available_locales(base_dir).unwrap_or_default();

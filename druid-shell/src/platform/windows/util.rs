@@ -24,30 +24,25 @@ use std::ptr;
 use std::slice;
 use winapi::ctypes::c_void;
 use winapi::shared::guiddef::REFIID;
-use winapi::shared::minwindef::*;
-use winapi::shared::ntdef::*;
-use winapi::shared::windef::*;
+use winapi::shared::minwindef::{HMODULE, UINT};
+use winapi::shared::ntdef::{HRESULT, LPWSTR};
+use winapi::shared::windef::HMONITOR;
 use winapi::shared::winerror::SUCCEEDED;
-use winapi::um::fileapi::*;
-use winapi::um::handleapi::*;
-use winapi::um::libloaderapi::*;
-use winapi::um::processenv::*;
-use winapi::um::shellscalingapi::*;
+use winapi::um::fileapi::{CreateFileA, GetFileType, OPEN_EXISTING};
+use winapi::um::handleapi::INVALID_HANDLE_VALUE;
+use winapi::um::libloaderapi::{GetModuleHandleW, GetProcAddress, LoadLibraryW};
+use winapi::um::processenv::{GetStdHandle, SetStdHandle};
+use winapi::um::shellscalingapi::{MONITOR_DPI_TYPE, PROCESS_DPI_AWARENESS};
 use winapi::um::unknwnbase::IUnknown;
-use winapi::um::winbase::*;
-use winapi::um::wincon::*;
-use winapi::um::wingdi::CreateSolidBrush;
-// This needs to be explicit, otherwise HRESULT will conflict
+use winapi::um::winbase::{FILE_TYPE_UNKNOWN, STD_ERROR_HANDLE, STD_OUTPUT_HANDLE};
+use winapi::um::wincon::{AttachConsole, ATTACH_PARENT_PROCESS};
 use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
-use winapi::um::winuser::{LoadIconW, RegisterClassW, IDI_APPLICATION, WNDCLASSW};
 
 use direct2d::enums::DrawTextOptions;
 
 use log::error;
 
 use crate::Error;
-
-use super::window::win_proc_dispatch;
 
 pub fn as_result(hr: HRESULT) -> Result<(), Error> {
     if SUCCEEDED(hr) {
@@ -220,39 +215,6 @@ lazy_static! {
 
 pub(crate) const CLASS_NAME: &str = "druid";
 
-/// Initialize the app. At the moment, this is mostly needed for hi-dpi.
-pub fn init() {
-    attach_console();
-    if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
-        // This function is only supported on windows 10
-        unsafe {
-            func(PROCESS_SYSTEM_DPI_AWARE); // TODO: per monitor (much harder)
-        }
-    }
-
-    unsafe {
-        let class_name = CLASS_NAME.to_wide();
-        let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
-        let brush = CreateSolidBrush(0xff_ff_ff);
-        let wnd = WNDCLASSW {
-            style: 0,
-            lpfnWndProc: Some(win_proc_dispatch),
-            cbClsExtra: 0,
-            cbWndExtra: 0,
-            hInstance: 0 as HINSTANCE,
-            hIcon: icon,
-            hCursor: 0 as HCURSOR,
-            hbrBackground: brush,
-            lpszMenuName: 0 as LPCWSTR,
-            lpszClassName: class_name.as_ptr(),
-        };
-        let class_atom = RegisterClassW(&wnd);
-        if class_atom == 0 {
-            panic!("Error registering class");
-        }
-    }
-}
-
 /// Determine a suitable default set of text options. Enables color fonts
 /// on systems that are capable of them (8.1 and above).
 pub fn default_text_options() -> DrawTextOptions {
@@ -279,7 +241,7 @@ macro_rules! accel {
 /// Attach the process to the console of the parent process. This allows xi-win to
 /// correctly print to a console when run from powershell or cmd.
 /// If no console is available, allocate a new console.
-fn attach_console() {
+pub(crate) fn attach_console() {
     unsafe {
         let stdout = GetStdHandle(STD_OUTPUT_HANDLE);
         if stdout != INVALID_HANDLE_VALUE && GetFileType(stdout) != FILE_TYPE_UNKNOWN {
@@ -309,14 +271,4 @@ fn attach_console() {
             SetStdHandle(STD_ERROR_HANDLE, chnd);
         }
     }
-}
-
-/// Returns the current locale string.
-///
-/// This should a [Unicode language identifier].
-///
-/// [Unicode language identifier]: https://unicode.org/reports/tr35/#Unicode_language_identifier
-pub fn get_locale() -> String {
-    //TODO ahem
-    "en-US".into()
 }
