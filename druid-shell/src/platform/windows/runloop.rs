@@ -110,13 +110,6 @@ impl RunLoop {
     }
 }
 
-/// Request to quit the application, exiting the runloop.
-pub fn request_quit() {
-    unsafe {
-        PostQuitMessage(0);
-    }
-}
-
 impl RunLoopHandle {
     /// Add a listener for a Windows handle. Considered unsafe because the
     /// handle must be valid. Also unsafe because it is not thread safe.

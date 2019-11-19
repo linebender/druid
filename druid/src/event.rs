@@ -16,9 +16,7 @@
 
 use crate::kurbo::{Rect, Shape, Size, Vec2};
 
-use druid_shell::clipboard::ClipboardItem;
-use druid_shell::keyboard::{KeyEvent, KeyModifiers};
-use druid_shell::window::{FileInfo, TimerToken};
+use druid_shell::{ClipboardItem, FileInfo, KeyEvent, KeyModifiers, TimerToken};
 
 use crate::mouse::MouseEvent;
 use crate::Command;

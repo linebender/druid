@@ -17,7 +17,7 @@
 use std::cell::RefCell;
 
 use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags, Cancellable};
-use gtk::{Application, GtkApplicationExt};
+use gtk::Application;
 
 use super::util::assert_main_thread;
 
@@ -66,22 +66,6 @@ impl RunLoop {
                 .run(&[])
         });
     }
-}
-
-/// Request to quit the application, exiting the runloop.
-pub fn request_quit() {
-    assert_main_thread();
-    with_application(|app| {
-        match app.get_active_window() {
-            None => {
-                // no application is running, main is not running
-            }
-            Some(_) => {
-                // we still have an active window, close the runLo
-                gtk::main_quit();
-            }
-        }
-    });
 }
 
 #[inline]

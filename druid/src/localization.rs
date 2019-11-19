@@ -42,7 +42,7 @@ use log::{debug, error, warn};
 
 use crate::data::Data;
 use crate::env::Env;
-use crate::shell::application::Application;
+use crate::shell::Application;
 
 use fluent_bundle::{
     FluentArgs, FluentBundle, FluentError, FluentMessage, FluentResource, FluentValue,

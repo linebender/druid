@@ -36,9 +36,3 @@ impl RunLoop {
         self.0.run()
     }
 }
-
-//TODO: deprecate this in favor of methods on `Application`? This functionality is duplicated
-/// Request to quit the application, exiting the runloop.
-pub fn request_quit() {
-    platform::request_quit()
-}

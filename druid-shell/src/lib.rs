@@ -13,6 +13,10 @@
 // limitations under the License.
 
 //! Platform abstraction for druid toolkit.
+//!
+//! `druid-shell` is an abstraction around a given platform UI & application
+//! framework. It provides common types, which then defer to a platform-defined
+//! implementation.
 
 #![deny(intra_doc_link_resolution_failure)]
 #![allow(clippy::new_without_default)]
@@ -32,21 +36,30 @@ extern crate objc;
 #[macro_use]
 extern crate lazy_static;
 
-pub mod application;
-pub mod clipboard;
+mod application;
+mod clipboard;
 mod common_util;
-pub mod dialog;
-pub mod error;
-pub mod hotkey;
-pub mod keyboard;
-pub mod keycodes;
-pub mod menu;
-pub mod mouse;
+mod dialog;
+mod error;
+mod hotkey;
+mod keyboard;
+mod keycodes;
+mod menu;
+mod mouse;
 //TODO: don't expose this directly? currently making this private causes
 //a bunch of compiler warnings, so let's revisit that later.
 pub mod platform;
-pub mod runloop;
-pub mod window;
+mod runloop;
+mod window;
 
+pub use application::Application;
+pub use clipboard::ClipboardItem;
+pub use dialog::{FileDialogOptions, FileDialogType, FileSpec};
 pub use error::Error;
-pub use window::WindowBuilder;
+pub use hotkey::{HotKey, KeyCompare, RawMods, SysMods};
+pub use keyboard::{KeyEvent, KeyModifiers};
+pub use keycodes::KeyCode;
+pub use menu::Menu;
+pub use mouse::{Cursor, MouseButton, MouseEvent};
+pub use runloop::RunLoop;
+pub use window::{FileInfo, Text, TimerToken, WinCtx, WinHandler, WindowBuilder, WindowHandle};
