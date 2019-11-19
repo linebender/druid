@@ -37,9 +37,9 @@ pub struct MouseEvent {
     pub button: MouseButton,
 }
 
-impl From<druid_shell::mouse::MouseEvent> for MouseEvent {
-    fn from(src: druid_shell::mouse::MouseEvent) -> MouseEvent {
-        let druid_shell::mouse::MouseEvent {
+impl From<druid_shell::MouseEvent> for MouseEvent {
+    fn from(src: druid_shell::MouseEvent) -> MouseEvent {
+        let druid_shell::MouseEvent {
             pos,
             mods,
             count,

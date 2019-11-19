@@ -17,14 +17,10 @@ use std::any::Any;
 use druid_shell::kurbo::{Line, Rect, Vec2};
 use druid_shell::piet::{Color, RenderContext};
 
-use druid_shell::application::Application;
-use druid_shell::dialog::{FileDialogOptions, FileSpec};
-use druid_shell::hotkey::{HotKey, SysMods};
-use druid_shell::keyboard::{KeyEvent, KeyModifiers};
-use druid_shell::menu::Menu;
-use druid_shell::mouse::{Cursor, MouseEvent};
-use druid_shell::runloop;
-use druid_shell::window::{TimerToken, WinCtx, WinHandler, WindowBuilder, WindowHandle};
+use druid_shell::{
+    Application, Cursor, FileDialogOptions, FileSpec, HotKey, KeyEvent, KeyModifiers, Menu,
+    MouseEvent, RunLoop, SysMods, TimerToken, WinCtx, WinHandler, WindowBuilder, WindowHandle,
+};
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
@@ -104,7 +100,7 @@ impl WinHandler for HelloState {
     }
 
     fn destroy(&mut self, _ctx: &mut dyn WinCtx) {
-        runloop::request_quit();
+        Application::quit()
     }
 
     fn as_any(&mut self) -> &mut dyn Any {
@@ -134,7 +130,7 @@ fn main() {
     menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
-    let mut run_loop = runloop::RunLoop::new();
+    let mut run_loop = RunLoop::new();
     let mut builder = WindowBuilder::new();
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");

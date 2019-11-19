@@ -109,8 +109,7 @@
 use std::num::NonZeroU32;
 
 use crate::kurbo::Point;
-use crate::shell::hotkey::{HotKey, KeyCompare, RawMods, SysMods};
-use crate::shell::menu::Menu as PlatformMenu;
+use crate::shell::{HotKey, KeyCompare, Menu as PlatformMenu, RawMods, SysMods};
 use crate::{command, Command, Data, Env, KeyCode, LocalizedString, Selector};
 
 /// A platform-agnostic description of an application, window, or context

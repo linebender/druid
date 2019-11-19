@@ -46,14 +46,10 @@ use piet::{Piet, RenderContext};
 
 pub use unicode_segmentation;
 
-pub use druid_shell::clipboard::ClipboardItem;
-pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
-pub use druid_shell::keyboard::{KeyEvent, KeyModifiers};
-pub use druid_shell::keycodes::KeyCode;
-pub use druid_shell::mouse::{Cursor, MouseButton};
-pub use druid_shell::window::TimerToken;
-use druid_shell::window::{Text, WinCtx, WindowHandle};
-pub use shell::hotkey::{HotKey, RawMods, SysMods};
+pub use shell::{
+    ClipboardItem, Cursor, FileDialogOptions, FileDialogType, HotKey, KeyCode, KeyEvent,
+    KeyModifiers, MouseButton, RawMods, SysMods, Text, TimerToken, WinCtx, WindowHandle,
+};
 
 pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};

@@ -26,7 +26,8 @@ use winapi::um::winbase::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE};
 use winapi::um::wingdi::CreateSolidBrush;
 use winapi::um::winuser::{
     CloseClipboard, EmptyClipboard, EnumClipboardFormats, GetClipboardData, LoadIconW,
-    OpenClipboard, RegisterClassW, SetClipboardData, CF_UNICODETEXT, IDI_APPLICATION, WNDCLASSW,
+    OpenClipboard, PostQuitMessage, RegisterClassW, SetClipboardData, CF_UNICODETEXT,
+    IDI_APPLICATION, WNDCLASSW,
 };
 
 use super::util::{self, FromWide, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
@@ -70,7 +71,9 @@ impl Application {
     }
 
     pub fn quit() {
-        crate::runloop::request_quit();
+        unsafe {
+            PostQuitMessage(0);
+        }
     }
 
     /// Returns the contents of the clipboard, if any.

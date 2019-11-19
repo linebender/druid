@@ -33,11 +33,9 @@ pub type MouseEvent = crate::mouse::MouseEvent;
 #[deprecated(since = "0.4.0", note = "Moved to druid_shell::mouse::Cursor")]
 pub type Cursor = crate::mouse::Cursor;
 
-#[deprecated(since = "0.4.0", note = "Use druid_shell::mouse::MouseButton")]
-pub type MouseButton = crate::mouse::MouseButton;
-
 // It's possible we'll want to make this type alias at a lower level,
 // see https://github.com/linebender/piet/pull/37 for more discussion.
+/// The platform text factory, reexported from piet.
 pub type Text<'a> = <piet_common::Piet<'a> as piet_common::RenderContext>::Text;
 
 /// A token that uniquely identifies a running timer.

@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::kurbo::{Point, Rect, Size};
 
-use crate::shell::window::WindowHandle;
+use crate::shell::WindowHandle;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, MenuDesc,
     PaintCtx, UpdateCtx, Widget, WidgetPod,

@@ -24,10 +24,9 @@ use log::{error, info, warn};
 
 use crate::kurbo::{Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
-use crate::shell::application::Application;
-use crate::shell::dialog::FileDialogOptions;
-use crate::shell::mouse::{Cursor, MouseEvent};
-use crate::shell::window::{WinCtx, WinHandler, WindowHandle};
+use crate::shell::{
+    Application, Cursor, FileDialogOptions, MouseEvent, WinCtx, WinHandler, WindowHandle,
+};
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::menu::ContextMenu;

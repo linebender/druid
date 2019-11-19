@@ -19,9 +19,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::kurbo::Size;
-use crate::shell::application::Application;
-use crate::shell::window::WindowHandle;
-use crate::shell::{runloop, Error as PlatformError, WindowBuilder};
+use crate::shell::{Application, Error as PlatformError, RunLoop, WindowBuilder, WindowHandle};
 use crate::win_handler::AppState;
 use crate::window::{Window, WindowId};
 use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
@@ -96,7 +94,7 @@ impl<T: Data + 'static> AppLauncher<T> {
     /// a fatal error.
     pub fn launch(mut self, data: T) -> Result<(), PlatformError> {
         Application::init();
-        let mut main_loop = runloop::RunLoop::new();
+        let mut main_loop = RunLoop::new();
         let mut env = theme::init();
         if let Some(f) = self.env_setup.take() {
             f(&mut env);

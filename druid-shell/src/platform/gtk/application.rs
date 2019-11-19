@@ -14,6 +14,10 @@
 
 //! GTK implementation of features at the application scope.
 
+use gtk::GtkApplicationExt;
+
+use super::runloop;
+use super::util;
 use crate::clipboard::ClipboardItem;
 
 pub struct Application;
@@ -24,7 +28,18 @@ impl Application {
     }
 
     pub fn quit() {
-        // Nothing to do: if this is called, we're already shutting down and GTK will pick it up (I hope?)
+        util::assert_main_thread();
+        runloop::with_application(|app| {
+            match app.get_active_window() {
+                None => {
+                    // no application is running, main is not running
+                }
+                Some(_) => {
+                    // we still have an active window, close the runLo
+                    gtk::main_quit();
+                }
+            }
+        });
     }
 
     pub fn get_clipboard_contents() -> Option<ClipboardItem> {
