@@ -295,7 +295,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
                     k_e if (HotKey::new(None, KeyCode::Delete)).matches(k_e) => {
                         if self.selection.is_caret() {
                             // Never touch the characters before the cursor.
-                            if let Some(_) = data.next_grapheme_offset(self.cursor()) {
+                            if data.next_grapheme_offset(self.cursor()).is_some() {
                                 self.move_selection(Movement::Right, data, false);
                                 self.delete_backward(data);
                             }

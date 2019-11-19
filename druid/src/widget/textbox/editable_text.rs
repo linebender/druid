@@ -86,10 +86,10 @@ impl EditableText for String {
 
     fn next_codepoint_offset(&self, from: usize) -> Option<usize> {
         let mut c = self.cursor(from);
-        if let Some(_) = c.next() {
-            return Some(c.pos());
+        if c.next().is_some() {
+            Some(c.pos())
         } else {
-            return None;
+            None
         }
     }
 
@@ -201,7 +201,7 @@ impl EditableTextCursor<String> for StringCursor {
 
     fn next_codepoint(&mut self) -> Option<char> {
         let current_index = self.pos();
-        if let Some(_) = self.next() {
+        if self.next().is_some() {
             self.text[current_index..].chars().next()
         } else {
             None

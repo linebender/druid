@@ -19,6 +19,7 @@ use crate::widget::textbox::{EditableText, EditableTextCursor};
 
 use xi_unicode::*;
 
+#[allow(clippy::cognitive_complexity)]
 fn backspace_offset(text: &impl EditableText, start: usize) -> usize {
     #[derive(PartialEq)]
     enum State {

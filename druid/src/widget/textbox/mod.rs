@@ -14,8 +14,8 @@
 
 //! A text editing widget and its utilities.
 
-mod textbox;
-pub use self::textbox::TextBox;
+mod textbox_widget;
+pub use self::textbox_widget::TextBox;
 
 mod editable_text;
 pub use self::editable_text::{EditableText, EditableTextCursor, StringCursor};
