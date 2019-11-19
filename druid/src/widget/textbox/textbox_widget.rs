@@ -189,7 +189,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
 impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for TextBox<E> {
     #[allow(clippy::cognitive_complexity)]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut E, env: &Env) {
-        // Guard against external changes in data
+        // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);
 
         let mut text_layout = self.get_layout(ctx.text(), &data.to_string(), env);
