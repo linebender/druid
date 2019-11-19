@@ -16,6 +16,7 @@
 
 pub mod application;
 pub mod dialog;
+pub mod keycodes;
 pub mod menu;
 pub mod runloop;
 pub mod util;

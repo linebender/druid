@@ -21,7 +21,8 @@ use cocoa::foundation::NSAutoreleasePool;
 use super::util::make_nsstring;
 use crate::common_util::strip_access_key;
 use crate::hotkey::{HotKey, KeyCompare};
-use crate::keyboard::{KeyCode, KeyModifiers};
+use crate::keyboard::KeyModifiers;
+use crate::keycodes::KeyCode;
 
 pub struct Menu {
     pub menu: id,

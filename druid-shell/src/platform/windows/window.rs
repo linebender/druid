@@ -59,7 +59,8 @@ use crate::application::Application;
 use crate::clipboard::ClipboardItem;
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType};
-use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+use crate::keyboard::{KeyEvent, KeyModifiers};
+use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
 use crate::window::{FileInfo, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
@@ -859,7 +860,7 @@ impl WindowBuilder {
                 render_target: None,
                 dcomp_state,
                 dpi,
-                stashed_key_code: KeyCode::Unknown(0.into()),
+                stashed_key_code: KeyCode::Unknown(0),
                 stashed_char: None,
             };
             win.wndproc.connect(&handle, state);
