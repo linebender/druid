@@ -48,7 +48,8 @@ pub use unicode_segmentation;
 
 pub use druid_shell::clipboard::ClipboardItem;
 pub use druid_shell::dialog::{FileDialogOptions, FileDialogType};
-pub use druid_shell::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+pub use druid_shell::keyboard::{KeyEvent, KeyModifiers};
+pub use druid_shell::keycodes::KeyCode;
 pub use druid_shell::mouse::{Cursor, MouseButton};
 pub use druid_shell::window::TimerToken;
 use druid_shell::window::{Text, WinCtx, WindowHandle};

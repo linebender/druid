@@ -12,49 +12,156 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Keycode constants.
+//! Platform-independent key codes.
 
-//TODO: move all keycodes stuff from keyboard.rs into here?
+use crate::platform::keycodes as platform;
 
-// Most keys on Windows have VK_ values defined in use winapi::um::winuser,
-// but ASCII digits and letters are the exception. Fill those in here
-// (following https://github.com/Eljay/directx) so all keys have constants,
-// even though these are not official names for virtual-key codes.
-pub mod win_vks {
-    pub const VK_0: i32 = 0x30;
-    pub const VK_1: i32 = 0x31;
-    pub const VK_2: i32 = 0x32;
-    pub const VK_3: i32 = 0x33;
-    pub const VK_4: i32 = 0x34;
-    pub const VK_5: i32 = 0x35;
-    pub const VK_6: i32 = 0x36;
-    pub const VK_7: i32 = 0x37;
-    pub const VK_8: i32 = 0x38;
-    pub const VK_9: i32 = 0x39;
-    pub const VK_A: i32 = 0x41;
-    pub const VK_B: i32 = 0x42;
-    pub const VK_C: i32 = 0x43;
-    pub const VK_D: i32 = 0x44;
-    pub const VK_E: i32 = 0x45;
-    pub const VK_F: i32 = 0x46;
-    pub const VK_G: i32 = 0x47;
-    pub const VK_H: i32 = 0x48;
-    pub const VK_I: i32 = 0x49;
-    pub const VK_J: i32 = 0x4A;
-    pub const VK_K: i32 = 0x4B;
-    pub const VK_L: i32 = 0x4C;
-    pub const VK_M: i32 = 0x4D;
-    pub const VK_N: i32 = 0x4E;
-    pub const VK_O: i32 = 0x4F;
-    pub const VK_P: i32 = 0x50;
-    pub const VK_Q: i32 = 0x51;
-    pub const VK_R: i32 = 0x52;
-    pub const VK_S: i32 = 0x53;
-    pub const VK_T: i32 = 0x54;
-    pub const VK_U: i32 = 0x55;
-    pub const VK_V: i32 = 0x56;
-    pub const VK_W: i32 = 0x57;
-    pub const VK_X: i32 = 0x58;
-    pub const VK_Y: i32 = 0x59;
-    pub const VK_Z: i32 = 0x5A;
+//NOTE: This was mostly taken from makepad, which I'm sure took it from somewhere else.
+// I've written this out at least once before, for some xi-thing. The best resource
+// I know of for this is probably the MDN keyboard event docs:
+// https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
+
+/// A platform-independent key identifier.
+///
+/// This ignores things like the user's keyboard layout.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum KeyCode {
+    Escape,
+
+    Backtick,
+    /// The numeral 0 in the top row.
+    Key0,
+    Key1,
+    Key2,
+    Key3,
+    Key4,
+    Key5,
+    Key6,
+    Key7,
+    Key8,
+    Key9,
+    Minus,
+    Equals,
+
+    Backspace,
+    Tab,
+
+    KeyQ,
+    KeyW,
+    KeyE,
+    KeyR,
+    KeyT,
+    KeyY,
+    KeyU,
+    KeyI,
+    KeyO,
+    KeyP,
+    /// '['
+    LeftBracket,
+    RightBracket,
+    Return,
+
+    KeyA,
+    KeyS,
+    KeyD,
+    KeyF,
+    KeyG,
+    KeyH,
+    KeyJ,
+    KeyK,
+    KeyL,
+    Semicolon,
+    Quote,
+    Backslash,
+
+    KeyZ,
+    KeyX,
+    KeyC,
+    KeyV,
+    KeyB,
+    KeyN,
+    KeyM,
+    Comma,
+    Period,
+    Slash,
+
+    LeftControl,
+    RightControl,
+    LeftAlt,
+    RightAlt,
+    LeftShift,
+    RightShift,
+    /// command / windows / meta
+    LeftMeta,
+    RightMeta,
+
+    Space,
+    CapsLock,
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
+
+    PrintScreen,
+    ScrollLock,
+    Pause,
+
+    Insert,
+    Delete,
+    Home,
+    End,
+    PageUp,
+    PageDown,
+
+    Numpad0,
+    Numpad1,
+    Numpad2,
+    Numpad3,
+    Numpad4,
+    Numpad5,
+    Numpad6,
+    Numpad7,
+    Numpad8,
+    Numpad9,
+
+    NumpadEquals,
+    NumpadSubtract,
+    NumpadAdd,
+    NumpadDecimal,
+    NumpadMultiply,
+    NumpadDivide,
+    NumLock,
+    NumpadEnter,
+
+    ArrowUp,
+    ArrowDown,
+    ArrowLeft,
+    ArrowRight,
+
+    Unknown(platform::RawKeyCode),
+}
+
+impl KeyCode {
+    pub fn is_printable(self) -> bool {
+        use KeyCode::*;
+        match self {
+            Backtick | Key0 | Key1 | Key2 | Key3 | Key4 | Key5 | Key6 | Key7 | Key8 | Key9
+            | Minus | Equals | Tab | KeyQ | KeyW | KeyE | KeyR | KeyT | KeyY | KeyU | KeyI
+            | KeyO | KeyP | LeftBracket | RightBracket | Return | KeyA | KeyS | KeyD | KeyF
+            | KeyG | KeyH | KeyJ | KeyK | KeyL | Semicolon | Quote | Backslash | KeyZ | KeyX
+            | KeyC | KeyV | KeyB | KeyN | KeyM | Comma | Period | Slash | Space | Numpad0
+            | Numpad1 | Numpad2 | Numpad3 | Numpad4 | Numpad5 | Numpad6 | Numpad7 | Numpad8
+            | Numpad9 | NumpadEquals | NumpadSubtract | NumpadAdd | NumpadDecimal
+            | NumpadMultiply | NumpadDivide | NumpadEnter => true,
+            _ => false,
+        }
+    }
 }

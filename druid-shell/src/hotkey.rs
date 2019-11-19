@@ -18,7 +18,8 @@ use std::borrow::Borrow;
 
 use log::warn;
 
-use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
+use crate::keyboard::{KeyEvent, KeyModifiers};
+use crate::keycodes::KeyCode;
 
 /// A description of a keyboard shortcut.
 ///
@@ -31,7 +32,8 @@ use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 ///
 /// ```
 /// use druid_shell::hotkey::{HotKey, RawMods, SysMods};
-/// use druid_shell::keyboard::{KeyEvent, KeyCode};
+/// use druid_shell::keyboard::KeyEvent;
+/// use druid_shell::keycodes::KeyCode;
 ///
 /// let hotkey = HotKey::new(SysMods::Cmd, "a");
 ///
@@ -46,7 +48,8 @@ use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 ///
 /// ```
 /// use druid_shell::hotkey::{HotKey, RawMods, SysMods};
-/// use druid_shell::keyboard::{KeyEvent, KeyCode};
+/// use druid_shell::keyboard::KeyEvent;
+/// use druid_shell::keycodes::KeyCode;
 ///
 /// let hotkey = HotKey::new(None, KeyCode::ArrowLeft);
 ///
@@ -86,7 +89,8 @@ impl HotKey {
     /// # Examples
     /// ```
     /// use druid_shell::hotkey::{HotKey, RawMods, SysMods};
-    /// use druid_shell::keyboard::{KeyEvent, KeyCode};
+    /// use druid_shell::keyboard::KeyEvent;
+    /// use druid_shell::keycodes::KeyCode;
     ///
     /// let select_all = HotKey::new(SysMods::Cmd, "a");
     /// let esc = HotKey::new(None, KeyCode::Escape);
