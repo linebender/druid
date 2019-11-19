@@ -104,6 +104,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
     }
 
     fn cursor_to(&mut self, to: usize) {
+        // TODO: should we do some codepoint or grapheme checking here?
         self.selection = Selection::caret(to);
     }
 
@@ -112,14 +113,16 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
     }
 
     fn move_selection(&mut self, mvmnt: Movement, text: &E, modify: bool) {
+        // TODO: should we do some codepoint or grapheme checking here?
         self.selection = movement(mvmnt, self.selection, text, modify);
     }
 
+    /// If it's not a selection, delete to previous grapheme.
+    /// If it is a selection, just delete everything inside the selection.
     fn delete_backward(&mut self, text: &mut E) {
         if self.selection.is_caret() {
             let cursor = self.cursor();
-            // TODO: I did this clone because E doesn't impl for &mut String
-            let new_cursor = offset_for_delete_backwards(&self.selection, text.clone());
+            let new_cursor = offset_for_delete_backwards(&self.selection, text);
             text.edit(new_cursor..cursor, "");
             self.cursor_to(new_cursor);
         } else {
@@ -255,7 +258,6 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
                     k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft)).matches(k_e)
                         || HotKey::new(None, KeyCode::Home).matches(k_e) =>
                     {
-                        // TODO: all these clones are because I don't know how to hanlde mutable text
                         self.move_selection(Movement::LeftOfLine, data, false);
                         self.reset_cursor_blink(ctx);
                     }
@@ -473,5 +475,40 @@ mod tests {
 
         // Insert again
         widget.insert(&mut data, "a");
+    }
+
+    /// Test backspace on the combo character o̷
+    #[test]
+    fn backspace_combining() {
+        let mut widget = TextBox::raw();
+        let mut data = "".to_string();
+
+        widget.insert(&mut data, "\u{0073}\u{006F}\u{0337}\u{0073}");
+
+        widget.delete_backward(&mut data);
+        widget.delete_backward(&mut data);
+
+        assert_eq!(data, String::from("\u{0073}\u{006F}"))
+    }
+
+    /// Devanagari codepoints are 3 utf-8 code units each.
+    #[test]
+    fn backspace_devanagari() {
+        let mut widget = TextBox::raw();
+        let mut data = "".to_string();
+
+        widget.insert(&mut data, "हिन्दी");
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from("हिन्द"));
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from("हिन्"));
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from("हिन"));
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from("हि"));
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from("ह"));
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from(""));
     }
 }

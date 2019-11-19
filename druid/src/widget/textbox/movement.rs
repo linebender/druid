@@ -17,16 +17,13 @@
 use crate::widget::textbox::EditableText;
 use crate::widget::textbox::Selection;
 
+/// The specification of a movement.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Movement {
     /// Move to the left by one grapheme cluster.
     Left,
     /// Move to the right by one grapheme cluster.
     Right,
-    // /// Move to the left by one word.
-    // LeftWord,
-    // /// Move to the right by one word.
-    // RightWord,
     /// Move to left end of visible line.
     LeftOfLine,
     /// Move to right end of visible line.
@@ -59,16 +56,6 @@ pub fn movement(m: Movement, s: Selection, text: &impl EditableText, modify: boo
             }
         }
 
-        // Movement::LeftWord => {
-        //     let mut word_cursor = WordCursor::new(text, r.end);
-        //     let offset = word_cursor.prev_boundary().unwrap_or(0);
-        //     (offset, None)
-        // }
-        // Movement::RightWord => {
-        //     let mut word_cursor = WordCursor::new(text, r.end);
-        //     let offset = word_cursor.next_boundary().unwrap_or_else(|| text.len());
-        //     (offset, None)
-        // }
         Movement::LeftOfLine => 0,
         Movement::RightOfLine => text.len(),
     };

@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A Selection struct for text editing.
+//! A Selection type for text editing.
 
 use std::cmp::{max, min};
 use std::ops::Range;
 
 use crate::widget::textbox::EditableText;
 
+/// A Selection type for EditableText.
 #[derive(Debug, Clone, Copy)]
 pub struct Selection {
     /// The inactive edge of a selection, as a byte offset. When
@@ -36,6 +37,8 @@ impl Selection {
         Selection { start, end }
     }
 
+    /// Create a selection that starts at the beginning and ends at text length.
+    /// TODO: can text length be at a non-codepoint or a non-grapheme?
     pub fn all(&mut self, text: &impl EditableText) {
         self.start = 0;
         self.end = text.len();
@@ -70,7 +73,7 @@ impl Selection {
     }
 
     /// Constrain selection to be not greater than input string
-    pub fn constrain_to<E: EditableText>(mut self, s: &E) -> Self {
+    pub fn constrain_to(mut self, s: &impl EditableText) -> Self {
         let s_len = s.len();
         self.start = min(self.start, s_len);
         self.end = min(self.end, s_len);
