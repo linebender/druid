@@ -14,15 +14,6 @@
 
 //! Utilities, GTK specific.
 
-pub fn init() {
-    gtk::init().expect("GTK initialization failed");
-}
-
-pub fn assert_main_thread() {
+pub(crate) fn assert_main_thread() {
     assert!(gtk::is_initialized_main_thread());
-}
-
-pub fn get_locale() -> String {
-    //TODO ahem
-    "en-US".into()
 }

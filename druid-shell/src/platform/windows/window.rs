@@ -53,6 +53,7 @@ use super::dialog::get_file_dialog_path;
 use super::menu::Menu;
 use super::paint;
 use super::timers::TimerSlots;
+use super::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 
 use crate::application::Application;
 use crate::clipboard::ClipboardItem;
@@ -60,7 +61,6 @@ use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard::{KeyCode, KeyEvent, KeyModifiers};
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use crate::window::{FileInfo, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
@@ -786,7 +786,7 @@ impl WindowBuilder {
             // Maybe separate registration in build api? Probably only need to
             // register once even for multiple window creation.
 
-            let class_name = crate::util::CLASS_NAME.to_wide();
+            let class_name = super::util::CLASS_NAME.to_wide();
             let dwrite_factory = directwrite::Factory::new().unwrap();
             let dw_clone = clone_dwrite(&dwrite_factory);
             let wndproc = MyWndProc {

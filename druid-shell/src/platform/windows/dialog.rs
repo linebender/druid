@@ -33,8 +33,8 @@ use winapi::um::shtypes::COMDLG_FILTERSPEC;
 use winapi::Interface;
 use wio::com::ComPtr;
 
+use super::util::{as_result, FromWide, ToWide};
 use crate::dialog::{FileDialogOptions, FileDialogType, FileSpec};
-use crate::util::{as_result, FromWide, ToWide};
 use crate::Error;
 use std::ffi::OsString;
 use std::ptr::null_mut;

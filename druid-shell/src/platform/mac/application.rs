@@ -23,6 +23,8 @@ use cocoa::foundation::NSInteger;
 pub struct Application;
 
 impl Application {
+    pub fn init() {}
+
     pub fn quit() {
         unsafe {
             let () = msg_send![NSApp(), terminate: nil];
@@ -83,6 +85,19 @@ impl Application {
                 }
                 other => log::warn!("unhandled clipboard data {:?}", other),
             }
+        }
+    }
+
+    pub fn get_locale() -> String {
+        unsafe {
+            let nslocale_class = class!(NSLocale);
+            let locale: id = msg_send![nslocale_class, currentLocale];
+            let ident: id = msg_send![locale, localeIdentifier];
+            let mut locale = util::from_nsstring(ident);
+            if let Some(idx) = locale.chars().position(|c| c == '@') {
+                locale.truncate(idx);
+            }
+            locale
         }
     }
 }

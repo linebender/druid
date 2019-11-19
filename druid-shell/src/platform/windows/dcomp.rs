@@ -43,7 +43,7 @@ use direct2d::{self, RenderTarget};
 
 use log::error;
 
-use crate::util::OPTIONAL_FUNCTIONS;
+use super::util::OPTIONAL_FUNCTIONS;
 
 unsafe fn wrap<T, U, F>(hr: HRESULT, ptr: *mut T, f: F) -> Result<U, HRESULT>
 where

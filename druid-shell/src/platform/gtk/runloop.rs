@@ -19,7 +19,7 @@ use std::cell::RefCell;
 use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags, Cancellable};
 use gtk::{Application, GtkApplicationExt};
 
-use crate::util::assert_main_thread;
+use super::util::assert_main_thread;
 
 // XXX: The application needs to be global because WindowBuilder::build wants
 // to construct an ApplicationWindow, which needs the application, but

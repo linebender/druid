@@ -16,20 +16,59 @@
 
 use std::ptr;
 
-use winapi::shared::minwindef::FALSE;
-use winapi::shared::minwindef::UINT;
-use winapi::shared::ntdef::{LPWSTR, WCHAR};
+use winapi::shared::minwindef::{FALSE, HINSTANCE, UINT};
+use winapi::shared::ntdef::{LPCWSTR, LPWSTR, WCHAR};
+use winapi::shared::windef::HCURSOR;
 use winapi::shared::winerror::ERROR_SUCCESS;
 use winapi::um::errhandlingapi::GetLastError;
+use winapi::um::shellscalingapi::PROCESS_SYSTEM_DPI_AWARE;
 use winapi::um::winbase::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE};
-use winapi::um::winuser::*;
+use winapi::um::wingdi::CreateSolidBrush;
+use winapi::um::winuser::{
+    CloseClipboard, EmptyClipboard, EnumClipboardFormats, GetClipboardData, LoadIconW,
+    OpenClipboard, RegisterClassW, SetClipboardData, CF_UNICODETEXT, IDI_APPLICATION, WNDCLASSW,
+};
 
+use super::util::{self, FromWide, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
+use super::window::win_proc_dispatch;
 use crate::clipboard::ClipboardItem;
-use crate::util::{FromWide, ToWide};
 
 pub struct Application;
 
 impl Application {
+    /// Initialize the app. At the moment, this is mostly needed for hi-dpi.
+    pub fn init() {
+        util::attach_console();
+        if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
+            // This function is only supported on windows 10
+            unsafe {
+                func(PROCESS_SYSTEM_DPI_AWARE); // TODO: per monitor (much harder)
+            }
+        }
+
+        unsafe {
+            let class_name = CLASS_NAME.to_wide();
+            let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
+            let brush = CreateSolidBrush(0xff_ff_ff);
+            let wnd = WNDCLASSW {
+                style: 0,
+                lpfnWndProc: Some(win_proc_dispatch),
+                cbClsExtra: 0,
+                cbWndExtra: 0,
+                hInstance: 0 as HINSTANCE,
+                hIcon: icon,
+                hCursor: 0 as HCURSOR,
+                hbrBackground: brush,
+                lpszMenuName: 0 as LPCWSTR,
+                lpszClassName: class_name.as_ptr(),
+            };
+            let class_atom = RegisterClassW(&wnd);
+            if class_atom == 0 {
+                panic!("Error registering class");
+            }
+        }
+    }
+
     pub fn quit() {
         crate::runloop::request_quit();
     }
@@ -67,6 +106,11 @@ impl Application {
             }
             CloseClipboard();
         }
+    }
+
+    pub fn get_locale() -> String {
+        //TODO ahem
+        "en-US".into()
     }
 }
 

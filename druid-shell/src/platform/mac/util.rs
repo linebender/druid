@@ -17,14 +17,12 @@
 use cocoa::base::{id, nil, BOOL, YES};
 use cocoa::foundation::{NSAutoreleasePool, NSString};
 
-pub fn init() {}
-
 /// Panic if not on the main thread.assert_main_thread()
 ///
 /// Many Cocoa operations are only valid on the main thread, and (I think)
 /// undefined behavior is possible if invoked from other threads. If so,
 /// failing on non main thread is necessary for safety.
-pub fn assert_main_thread() {
+pub(crate) fn assert_main_thread() {
     unsafe {
         let is_main_thread: BOOL = msg_send!(class!(NSThread), isMainThread);
         assert_eq!(is_main_thread, YES);
@@ -41,23 +39,5 @@ pub(crate) fn from_nsstring(s: id) -> String {
         let slice = std::slice::from_raw_parts(s.UTF8String() as *const _, s.len());
         let result = std::str::from_utf8_unchecked(slice);
         result.into()
-    }
-}
-
-/// Returns the current locale string.
-///
-/// This should a [Unicode language identifier].
-///
-/// [Unicode language identifier]: https://unicode.org/reports/tr35/#Unicode_language_identifier
-pub fn get_locale() -> String {
-    unsafe {
-        let nslocale_class = class!(NSLocale);
-        let locale: id = msg_send![nslocale_class, currentLocale];
-        let ident: id = msg_send![locale, localeIdentifier];
-        let mut locale = from_nsstring(ident);
-        if let Some(idx) = locale.chars().position(|c| c == '@') {
-            locale.truncate(idx);
-        }
-        locale
     }
 }

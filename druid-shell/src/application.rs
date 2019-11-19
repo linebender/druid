@@ -23,6 +23,11 @@ use crate::platform::application as platform;
 pub struct Application;
 
 impl Application {
+    /// Initialize the app. At the moment, this is mostly needed for hi-dpi.
+    pub fn init() {
+        platform::Application::init()
+    }
+
     /// Terminate the application.
     pub fn quit() {
         platform::Application::quit()
@@ -49,5 +54,14 @@ impl Application {
     /// Sets the contents of the system clipboard.
     pub fn set_clipboard_contents(item: ClipboardItem) {
         platform::Application::set_clipboard_contents(item)
+    }
+
+    /// Returns the current locale string.
+    ///
+    /// This should a [Unicode language identifier].
+    ///
+    /// [Unicode language identifier]: https://unicode.org/reports/tr35/#Unicode_language_identifier
+    pub fn get_locale() -> String {
+        platform::Application::get_locale()
     }
 }

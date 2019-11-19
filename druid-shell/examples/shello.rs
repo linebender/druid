@@ -113,7 +113,7 @@ impl WinHandler for HelloState {
 }
 
 fn main() {
-    druid_shell::init();
+    Application::init();
 
     let mut file_menu = Menu::new();
     file_menu.add_item(
