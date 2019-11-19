@@ -177,73 +177,118 @@ impl<T: Data> Widget<T> for Split<T> {
         bc.debug_check("Split");
 
         let mut my_size = bc.max();
-        let reduced_width = bc.max.width - self.splitter_size;
-        let reduced_height = bc.max.height - self.splitter_size;
-        let (child1_bc, child2_bc) = match self.split_direction {
+
+        match self.split_direction {
             Axis::Horizontal => {
                 if !bc.is_width_bounded() {
                     log::warn!("A Split widget was given an unbounded width to split.")
                 }
+                let reduced_width = bc.max.width - self.splitter_size;
+
                 let child1_width = (reduced_width * self.split_point).max(0.0);
-                let child2_width = (reduced_width - child1_width).max(0.0);
-                (
-                    BoxConstraints::new(
-                        Size::new(child1_width, bc.min.height),
-                        Size::new(child1_width, bc.max.height),
-                    ),
-                    BoxConstraints::new(
+                let mut child1_bc = BoxConstraints::new(
+                    Size::new(child1_width, bc.min.height),
+                    Size::new(child1_width, bc.max.height),
+                );
+
+                let mut looped = false;
+
+                let (child1_size, child2_size) = loop {
+                    let child1_size = self.child1.layout(ctx, &child1_bc, &data, env);
+
+                    let child2_width = (reduced_width - child1_size.width).max(0.0);
+                    let child2_bc = BoxConstraints::new(
                         Size::new(child2_width, bc.min.height),
                         Size::new(child2_width, bc.max.height),
-                    ),
-                )
+                    );
+
+                    let child2_size = self.child2.layout(ctx, &child2_bc, &data, env);
+
+                    if child2_size.width > child2_bc.max.width && !looped {
+                        child1_bc.max.width = f64::max(
+                            child1_bc.max.width - (child2_size.width - child2_bc.max.width),
+                            0.0,
+                        );
+
+                        child1_bc.min.width = child1_bc.min.width.min(child1_bc.max.width);
+
+                        looped = true;
+                        continue;
+                    }
+
+                    self.split_point = child1_size.width / (child1_size.width + child2_size.width);
+
+                    break (child1_size, child2_size);
+                };
+
+                // Top-left align for both children, out of laziness.
+                // Reduce our unsplit direction to the larger of the two widgets
+                my_size.height = child1_size.height.max(child2_size.height);
+                let child1_rect = Rect::from_origin_size(Point::ORIGIN, child1_size);
+                let child2_rect = Rect::from_origin_size(
+                    Point::new(child1_size.width + self.splitter_size, 0.0),
+                    child2_size,
+                );
+
+                self.child1.set_layout_rect(child1_rect);
+                self.child2.set_layout_rect(child2_rect);
             }
             Axis::Vertical => {
-                if !bc.is_width_bounded() {
+                if !bc.is_height_bounded() {
                     log::warn!("A Split widget was given an unbounded height to split.")
                 }
+
+                let reduced_height = bc.max.height - self.splitter_size;
+
                 let child1_height = (reduced_height * self.split_point).max(0.0);
-                let child2_height = (reduced_height - child1_height).max(0.0);
-                (
-                    BoxConstraints::new(
-                        Size::new(bc.min.width, child1_height),
-                        Size::new(bc.max.width, child1_height),
-                    ),
-                    BoxConstraints::new(
+                let mut child1_bc = BoxConstraints::new(
+                    Size::new(bc.min.width, child1_height),
+                    Size::new(bc.max.width, child1_height),
+                );
+
+                let mut looped = false;
+
+                let (child1_size, child2_size) = loop {
+                    let child1_size = self.child1.layout(ctx, &child1_bc, &data, env);
+                    let child2_height = (reduced_height - child1_size.height).max(0.0);
+
+                    let child2_bc = BoxConstraints::new(
                         Size::new(bc.min.width, child2_height),
                         Size::new(bc.max.width, child2_height),
-                    ),
-                )
-            }
-        };
-        let child1_size = self.child1.layout(ctx, &child1_bc, &data, env);
-        let child2_size = self.child2.layout(ctx, &child2_bc, &data, env);
+                    );
 
-        //Top-left align for both children, out of laziness.
-        //Reduce our unsplit direction to the larger of the two widgets
-        let (child1_rect, child2_rect) = match self.split_direction {
-            Axis::Horizontal => {
-                my_size.height = child1_size.height.max(child2_size.height);
-                (
-                    Rect::from_origin_size(Point::ORIGIN, child1_size),
-                    Rect::from_origin_size(
-                        Point::new(child1_size.width + self.splitter_size, 0.0),
-                        child2_size,
-                    ),
-                )
-            }
-            Axis::Vertical => {
+                    let child2_size = self.child2.layout(ctx, &child2_bc, &data, env);
+
+                    if child2_size.height > child2_bc.max.height && !looped {
+                        child1_bc.max.height = f64::max(
+                            child1_bc.max.height - (child2_size.height - child2_bc.max.height),
+                            0.0,
+                        );
+
+                        child1_bc.min.height = child1_bc.min.height.min(child1_bc.max.height);
+
+                        looped = true;
+                        continue;
+                    }
+
+                    self.split_point =
+                        child1_size.height / (child1_size.height + child2_size.height);
+
+                    break (child1_size, child2_size);
+                };
+
                 my_size.width = child1_size.width.max(child2_size.width);
-                (
-                    Rect::from_origin_size(Point::ORIGIN, child1_size),
-                    Rect::from_origin_size(
-                        Point::new(0.0, child1_size.height + self.splitter_size),
-                        child2_size,
-                    ),
-                )
+                let child1_rect = Rect::from_origin_size(Point::ORIGIN, child1_size);
+                let child2_rect = Rect::from_origin_size(
+                    Point::new(0.0, child1_size.height + self.splitter_size),
+                    child2_size,
+                );
+
+                self.child1.set_layout_rect(child1_rect);
+                self.child2.set_layout_rect(child2_rect);
             }
-        };
-        self.child1.set_layout_rect(child1_rect);
-        self.child2.set_layout_rect(child2_rect);
+        }
+
         my_size
     }
 
@@ -279,13 +324,12 @@ impl<T: Data> Widget<T> for Split<T> {
                 }
                 Event::MouseMoved(mouse) => {
                     if ctx.is_active() {
-                        if !ctx.is_hot() {
-                            ctx.set_active(false);
-                        }
                         self.update_splitter(ctx.base_state.size(), mouse.pos);
                         ctx.invalidate();
                     }
-                    if ctx.is_hot() && self.splitter_hit_test(ctx.base_state.size(), mouse.pos) {
+                    if ctx.is_active()
+                        || ctx.is_hot() && self.splitter_hit_test(ctx.base_state.size(), mouse.pos)
+                    {
                         match self.split_direction {
                             Axis::Vertical => ctx.set_cursor(&Cursor::ResizeUpDown),
                             Axis::Horizontal => ctx.set_cursor(&Cursor::ResizeLeftRight),
