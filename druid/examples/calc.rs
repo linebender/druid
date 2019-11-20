@@ -14,9 +14,12 @@
 
 //! Simple calculator.
 
+use druid::widget::{Button, Column, DynLabel, Flex, Padding, Row};
 use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
-
-use druid::widget::{Button, Column, DynLabel, Padding, Row};
+use druid::{BaseState, BoxConstraints, Env, EventCtx, LayoutCtx, PaintCtx, UpdateCtx};
+use druid::{Event, KeyCode, KeyEvent, KeyModifiers};
+use druid_shell::kurbo::Size;
+use std::collections::HashMap;
 
 #[derive(Clone, Data, Lens)]
 struct CalcState {
@@ -112,95 +115,239 @@ impl CalcState {
     }
 }
 
-fn pad<T: Data>(inner: impl Widget<T> + 'static) -> impl Widget<T> {
+#[derive(Debug)]
+struct ButtonInfo {
+    row_id: usize,
+    col_id: usize,
+}
+
+#[derive(PartialEq, Eq, Hash, Debug)]
+enum ButtonId {
+    Op(char),
+    Digit(u8),
+}
+
+struct KeyMap {
+    // Note we rely on the fact that the key_map has row and column ids
+    // into the Flex, so the flex here cannot be dynamically changing.
+    key_map: HashMap<ButtonId, ButtonInfo>,
+    flex: Flex<CalcState>,
+}
+
+impl KeyMap {
+    fn new(flex: Flex<CalcState>, key_map: HashMap<ButtonId, ButtonInfo>) -> KeyMap {
+        KeyMap { key_map, flex }
+    }
+}
+
+fn key_event_to_button_id(event: &KeyEvent) -> Option<ButtonId> {
+    use crate::ButtonId::*;
+    match event.mods {
+        KeyModifiers {
+            shift: true,
+            alt: false,
+            meta: false,
+            ctrl: false,
+        } => match event.key_code {
+            KeyCode::Key8 => Some(Op('×')),
+            KeyCode::Equals => Some(Op('+')),
+            KeyCode::KeyC => Some(Op('C')),
+            KeyCode::Backtick => Some(Op('±')),
+            _ => None,
+        },
+        KeyModifiers {
+            shift: false,
+            alt: false,
+            meta: false,
+            ctrl: false,
+        } => match event.key_code {
+            KeyCode::Numpad0 | KeyCode::Key0 => Some(Digit(0)),
+            KeyCode::Numpad1 | KeyCode::Key1 => Some(Digit(1)),
+            KeyCode::Numpad2 | KeyCode::Key2 => Some(Digit(2)),
+            KeyCode::Numpad3 | KeyCode::Key3 => Some(Digit(3)),
+            KeyCode::Numpad4 | KeyCode::Key4 => Some(Digit(4)),
+            KeyCode::Numpad5 | KeyCode::Key5 => Some(Digit(5)),
+            KeyCode::Numpad6 | KeyCode::Key6 => Some(Digit(6)),
+            KeyCode::Numpad7 | KeyCode::Key7 => Some(Digit(7)),
+            KeyCode::Numpad8 | KeyCode::Key8 => Some(Digit(8)),
+            KeyCode::Numpad9 | KeyCode::Key9 => Some(Digit(9)),
+            KeyCode::NumpadSubtract | KeyCode::Minus => Some(Op('−')),
+            KeyCode::NumpadAdd => Some(Op('+')),
+            KeyCode::NumpadMultiply => Some(Op('×')),
+            KeyCode::NumpadEnter | KeyCode::NumpadEquals | KeyCode::Equals | KeyCode::Return => {
+                Some(Op('='))
+            }
+            KeyCode::Slash | KeyCode::NumpadDivide => Some(Op('÷')),
+            KeyCode::KeyC => Some(Op('c')),
+            KeyCode::Backspace => Some(Op('⌫')),
+            KeyCode::NumpadDecimal | KeyCode::Period => Some(Op('.')),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+impl Widget<CalcState> for KeyMap {
+    fn paint(
+        &mut self,
+        paint_ctx: &mut PaintCtx,
+        base_state: &BaseState,
+        data: &CalcState,
+        env: &Env,
+    ) {
+        self.flex.paint(paint_ctx, base_state, data, env)
+    }
+
+    fn layout(
+        &mut self,
+        layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &CalcState,
+        env: &Env,
+    ) -> Size {
+        self.flex.layout(layout_ctx, bc, data, env)
+    }
+
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut CalcState, env: &Env) {
+        use crate::ButtonId::*;
+        match event {
+            Event::KeyDown(key_event) => {
+                if key_event.is_repeat {
+                    return;
+                };
+
+                let kc = key_event_to_button_id(key_event);
+                // Current we can just perform the action on the CalcState,
+                // However we don't get the pretty button animation this way.
+                match kc {
+                    None => self.flex.event(ctx, event, data, env),
+                    Some(Op(c)) => data.op(c),
+                    Some(Digit(d)) => data.digit(d),
+                }
+                match kc {
+                    None => (),
+                    Some(button_id) => {
+                        let ButtonInfo {
+                            row_id: _row_id,
+                            col_id: _col_id,
+                        } = self.key_map.get(&button_id).unwrap();
+                        // In theory if there was a mechanism to get random access into
+                        // self.flex.children we could remove the above match,
+                        // and do something fancy with the buttons here instead.
+                        ()
+                    }
+                }
+            }
+            Event::Size(_) => ctx.request_focus(),
+            _ => self.flex.event(ctx, event, data, env),
+        }
+    }
+    fn update(
+        &mut self,
+        ctx: &mut UpdateCtx,
+        old_data: Option<&CalcState>,
+        data: &CalcState,
+        env: &Env,
+    ) {
+        self.flex.update(ctx, old_data, data, env)
+    }
+}
+
+fn pad<T: Data>(inner: impl Widget<T> + 'static) -> Padding<T> {
     Padding::new(5.0, inner)
 }
 
-fn op_button_label(op: char, label: String) -> impl Widget<CalcState> {
+fn op_button_label(op: char, label: String) -> Padding<CalcState> {
     pad(Button::new(
         label,
         move |_ctx, data: &mut CalcState, _env| data.op(op),
     ))
 }
 
-fn op_button(op: char) -> impl Widget<CalcState> {
+fn op_button(op: char) -> Padding<CalcState> {
     op_button_label(op, op.to_string())
 }
 
-fn digit_button(digit: u8) -> impl Widget<CalcState> {
+fn digit_button(digit: u8) -> Padding<CalcState> {
     pad(Button::new(
         format!("{}", digit),
         move |_ctx, data: &mut CalcState, _env| data.digit(digit),
     ))
 }
 
-fn flex_row<T: Data>(
-    w1: impl Widget<T> + 'static,
-    w2: impl Widget<T> + 'static,
-    w3: impl Widget<T> + 'static,
-    w4: impl Widget<T> + 'static,
-) -> impl Widget<T> {
-    let mut row = Row::new();
-    row.add_child(w1, 1.0);
-    row.add_child(w2, 1.0);
-    row.add_child(w3, 1.0);
-    row.add_child(w4, 1.0);
-    row
-}
+struct ButtonLabel(ButtonId, Option<&'static str>);
 
 fn build_calc() -> impl Widget<CalcState> {
+    use crate::ButtonId::*;
+
     let mut column = Column::new();
     let display = LensWrap::new(
         DynLabel::new(|data: &String, _env| data.clone()),
         lenses::calc_state::value,
     );
+
+    let button_rows = [
+        [
+            ButtonLabel(Op('c'), Some("CE")),
+            ButtonLabel(Op('C'), None),
+            ButtonLabel(Op('⌫'), None),
+            ButtonLabel(Op('÷'), None),
+        ],
+        [
+            ButtonLabel(Digit(7), None),
+            ButtonLabel(Digit(8), None),
+            ButtonLabel(Digit(9), None),
+            ButtonLabel(Op('×'), None),
+        ],
+        [
+            ButtonLabel(Digit(4), None),
+            ButtonLabel(Digit(5), None),
+            ButtonLabel(Digit(6), None),
+            ButtonLabel(Op('−'), None),
+        ],
+        [
+            ButtonLabel(Digit(1), None),
+            ButtonLabel(Digit(2), None),
+            ButtonLabel(Digit(3), None),
+            ButtonLabel(Op('+'), None),
+        ],
+        [
+            ButtonLabel(Digit(0), None),
+            ButtonLabel(Op('±'), None),
+            ButtonLabel(Op('.'), None),
+            ButtonLabel(Op('='), None),
+        ],
+    ];
+
     column.add_child(pad(display), 0.0);
-    column.add_child(
-        flex_row(
-            op_button_label('c', "CE".to_string()),
-            op_button('C'),
-            op_button('⌫'),
-            op_button('÷'),
-        ),
-        1.0,
-    );
-    column.add_child(
-        flex_row(
-            digit_button(7),
-            digit_button(8),
-            digit_button(9),
-            op_button('×'),
-        ),
-        1.0,
-    );
-    column.add_child(
-        flex_row(
-            digit_button(4),
-            digit_button(5),
-            digit_button(6),
-            op_button('−'),
-        ),
-        1.0,
-    );
-    column.add_child(
-        flex_row(
-            digit_button(1),
-            digit_button(2),
-            digit_button(3),
-            op_button('+'),
-        ),
-        1.0,
-    );
-    column.add_child(
-        flex_row(
-            op_button('±'),
-            digit_button(0),
-            op_button('.'),
-            op_button('='),
-        ),
-        1.0,
-    );
-    column
+    let mut key_map = HashMap::new();
+    for (col_id, buttons) in button_rows.iter().enumerate() {
+        // Because of the pad(display) above add 1?
+        let col_id = col_id + 1;
+        let mut row = Row::new();
+        for (row_id, button) in buttons.iter().enumerate() {
+            match button {
+                ButtonLabel(Op(c), None) => {
+                    let button = op_button(*c);
+                    key_map.insert(Op(*c), ButtonInfo { row_id, col_id });
+                    row.add_child(button, 1.0);
+                }
+                ButtonLabel(Op(c), Some(label)) => {
+                    let button = op_button_label(*c, label.to_string());
+                    key_map.insert(Op(*c), ButtonInfo { row_id, col_id });
+                    row.add_child(button, 1.0);
+                }
+                ButtonLabel(Digit(d), _) => {
+                    let button = digit_button(*d);
+                    key_map.insert(Digit(*d), ButtonInfo { row_id, col_id });
+                    row.add_child(button, 1.0);
+                }
+            };
+        }
+        column.add_child(row, 1.0);
+    }
+    let key_map_widget = KeyMap::new(column, key_map);
+    key_map_widget
 }
 
 fn main() {
