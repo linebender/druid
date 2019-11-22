@@ -38,7 +38,7 @@ use crate::{
 /// sophistication, for example combinators to combine lenses.
 ///
 /// [Haskell lens]: http://hackage.haskell.org/package/lens
-pub trait Lens<T, U> {
+pub trait Lens<T: ?Sized, U: ?Sized> {
     /// Get non-mut access to the field.
     ///
     /// Discussion question: using a closure as in the [`with_mut`]
