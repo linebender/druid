@@ -124,4 +124,15 @@ impl Clipboard {
             }
         }
     }
+
+    pub fn available_type_names(&self) -> Vec<String> {
+        unsafe {
+            let pasteboard: id = msg_send![class!(NSPasteboard), generalPasteboard];
+            let types: id = msg_send![pasteboard, types];
+            let types_len = types.count() as usize;
+            (0..types_len)
+                .map(|i| util::from_nsstring(types.objectAtIndex(i as NSUInteger)))
+                .collect()
+        }
+    }
 }

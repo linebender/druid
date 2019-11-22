@@ -150,6 +150,12 @@ impl Clipboard {
             }
         }
     }
+
+    pub fn available_type_names(&self) -> Vec<String> {
+        iter_clipboard_types()
+            .map(|id| format!("{}: {}", get_format_name(id), id))
+            .collect()
+    }
 }
 
 unsafe fn make_handle(format: &ClipboardFormat) -> HANDLE {
@@ -253,8 +259,7 @@ fn get_format_name(format: UINT) -> String {
         if result > 0 {
             let len = result as usize;
             let lpstr = std::slice::from_raw_parts(buffer.as_ptr() as *const u8, len);
-            let name = String::from_utf8_lossy(&lpstr).into_owned();
-            name
+            String::from_utf8_lossy(&lpstr).into_owned()
         } else {
             let err = GetLastError();
             if err == 87 {
