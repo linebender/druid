@@ -159,7 +159,7 @@ impl Env {
     /// resources.
     ///
     /// [`L10nManager`]: struct.L10nManager.html
-    pub fn localization_manager(&self) -> &L10nManager {
+    pub(crate) fn localization_manager(&self) -> &L10nManager {
         &self.0.l10n
     }
 }

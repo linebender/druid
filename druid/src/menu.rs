@@ -47,21 +47,20 @@
 //! Creating the default Application menu for macOS:
 //!
 //! ```
-//! use druid::{Data, LocalizedString, RawMods};
-//! use druid::command;
-//! use druid::menu::{MenuDesc, MenuItem};
+//! use druid::{Data, LocalizedString, MenuDesc, MenuItem, RawMods};
+//! use druid::commands;
 //!
 //! fn macos_application_menu<T: Data>() -> MenuDesc<T> {
 //!     MenuDesc::new(LocalizedString::new("macos-menu-application-menu"))
 //!         .append(MenuItem::new(
 //!             LocalizedString::new("macos-menu-about-app"),
-//!             command::sys::SHOW_ABOUT,
+//!             commands::SHOW_ABOUT,
 //!         ))
 //!         .append_separator()
 //!         .append(
 //!             MenuItem::new(
 //!                 LocalizedString::new("macos-menu-preferences"),
-//!                 command::sys::SHOW_PREFERENCES,
+//!                 commands::SHOW_PREFERENCES,
 //!             )
 //!             .hotkey(RawMods::Meta, ",")
 //!             .disabled(),
@@ -71,21 +70,21 @@
 //!         .append(
 //!             MenuItem::new(
 //!                 LocalizedString::new("macos-menu-hide-app"),
-//!                 command::sys::HIDE_APPLICATION,
+//!                 commands::HIDE_APPLICATION,
 //!             )
 //!             .hotkey(RawMods::Meta, "h"),
 //!         )
 //!         .append(
 //!             MenuItem::new(
 //!                 LocalizedString::new("macos-menu-hide-others"),
-//!                 command::sys::HIDE_OTHERS,
+//!                 commands::HIDE_OTHERS,
 //!             )
 //!             .hotkey(RawMods::AltMeta, "h"),
 //!         )
 //!         .append(
 //!             MenuItem::new(
 //!                 LocalizedString::new("macos-menu-show-all"),
-//!                 command::sys::SHOW_ALL,
+//!                 commands::SHOW_ALL,
 //!             )
 //!             .disabled(),
 //!         )
@@ -93,7 +92,7 @@
 //!         .append(
 //!             MenuItem::new(
 //!                 LocalizedString::new("macos-menu-quit-app"),
-//!                 command::sys::QUIT_APP,
+//!                 commands::QUIT_APP,
 //!             )
 //!             .hotkey(RawMods::Meta, "q"),
 //!         )
@@ -110,7 +109,7 @@ use std::num::NonZeroU32;
 
 use crate::kurbo::Point;
 use crate::shell::{HotKey, KeyCompare, Menu as PlatformMenu, RawMods, SysMods};
-use crate::{command, Command, Data, Env, KeyCode, LocalizedString, Selector};
+use crate::{commands, Command, Data, Env, KeyCode, LocalizedString, Selector};
 
 /// A platform-agnostic description of an application, window, or context
 /// menu.
@@ -153,6 +152,7 @@ pub struct MenuItem<T> {
     platform_id: MenuItemId,
 }
 
+/// A menu displayed as a pop-over.
 #[derive(Debug, Clone)]
 pub struct ContextMenu<T> {
     pub(crate) menu: MenuDesc<T>,
@@ -187,8 +187,7 @@ impl<T> MenuItem<T> {
     /// # Example
     ///
     /// ```
-    /// # use druid::{LocalizedString, MenuDesc, Selector, SysMods};
-    /// # use druid::menu::MenuItem;
+    /// # use druid::{LocalizedString, MenuDesc, MenuItem, Selector, SysMods};
     ///
     /// let item = MenuItem::new(LocalizedString::new("My Menu Item"), Selector::new("My Selector"))
     ///     .hotkey(SysMods::Cmd, "m");
@@ -266,8 +265,7 @@ impl<T: Data> MenuDesc<T> {
     /// # Examples
     ///
     /// ```
-    /// use druid::{Command, LocalizedString, MenuDesc, Selector};
-    /// use druid::menu::MenuItem;
+    /// use druid::{Command, LocalizedString, MenuDesc, MenuItem, Selector};
     ///
     /// let num_items: usize = 4;
     /// const MENU_COUNT_ACTION: Selector = Selector::new("menu-count-action");
@@ -453,7 +451,7 @@ impl<T> From<MenuDesc<T>> for MenuEntry<T> {
     }
 }
 
-/// Standard system menu items.
+/// Pre-configured, platform appropriate menus and menu items.
 pub mod sys {
     use super::*;
 
@@ -462,34 +460,31 @@ pub mod sys {
         use super::*;
         /// 'Cut'.
         pub fn cut<T: Data>() -> MenuItem<T> {
-            MenuItem::new(LocalizedString::new("common-menu-cut"), command::sys::CUT)
+            MenuItem::new(LocalizedString::new("common-menu-cut"), commands::CUT)
                 .hotkey(SysMods::Cmd, "x")
         }
 
         /// The 'Copy' menu item.
         pub fn copy<T: Data>() -> MenuItem<T> {
-            MenuItem::new(LocalizedString::new("common-menu-copy"), command::sys::COPY)
+            MenuItem::new(LocalizedString::new("common-menu-copy"), commands::COPY)
                 .hotkey(SysMods::Cmd, "c")
         }
 
         /// The 'Paste' menu item.
         pub fn paste<T: Data>() -> MenuItem<T> {
-            MenuItem::new(
-                LocalizedString::new("common-menu-paste"),
-                command::sys::PASTE,
-            )
-            .hotkey(SysMods::Cmd, "v")
+            MenuItem::new(LocalizedString::new("common-menu-paste"), commands::PASTE)
+                .hotkey(SysMods::Cmd, "v")
         }
 
         /// The 'Undo' menu item.
         pub fn undo<T: Data>() -> MenuItem<T> {
-            MenuItem::new(LocalizedString::new("common-menu-undo"), command::sys::UNDO)
+            MenuItem::new(LocalizedString::new("common-menu-undo"), commands::UNDO)
                 .hotkey(SysMods::Cmd, "z")
         }
 
         /// The 'Redo' menu item.
         pub fn redo<T: Data>() -> MenuItem<T> {
-            let item = MenuItem::new(LocalizedString::new("common-menu-redo"), command::sys::REDO);
+            let item = MenuItem::new(LocalizedString::new("common-menu-redo"), commands::REDO);
 
             #[cfg(target_os = "windows")]
             {
@@ -537,7 +532,7 @@ pub mod sys {
             pub fn new<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-new"),
-                    command::sys::NEW_FILE,
+                    commands::NEW_FILE,
                 )
                 .hotkey(RawMods::Ctrl, "n")
             }
@@ -546,7 +541,7 @@ pub mod sys {
             pub fn open<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-open"),
-                    command::sys::OPEN_FILE,
+                    commands::OPEN_FILE,
                 )
                 .hotkey(RawMods::Ctrl, "o")
             }
@@ -555,7 +550,7 @@ pub mod sys {
             pub fn close<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-close"),
-                    command::sys::CLOSE_WINDOW,
+                    commands::CLOSE_WINDOW,
                 )
             }
 
@@ -563,7 +558,7 @@ pub mod sys {
             pub fn save<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    command::sys::SAVE_FILE,
+                    commands::SAVE_FILE,
                 )
                 .hotkey(RawMods::Ctrl, "s")
             }
@@ -572,7 +567,7 @@ pub mod sys {
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    command::sys::SAVE_FILE,
+                    commands::SAVE_FILE,
                 )
                 .hotkey(RawMods::Ctrl, "s")
             }
@@ -581,7 +576,7 @@ pub mod sys {
             pub fn save_as<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-as"),
-                    command::sys::SAVE_FILE_AS,
+                    commands::SAVE_FILE_AS,
                 )
                 .hotkey(RawMods::CtrlShift, "s")
             }
@@ -590,7 +585,7 @@ pub mod sys {
             pub fn print<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-print"),
-                    command::sys::PRINT,
+                    commands::PRINT,
                 )
                 .hotkey(RawMods::Ctrl, "p")
             }
@@ -599,7 +594,7 @@ pub mod sys {
             pub fn print_preview<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-print-preview"),
-                    command::sys::PRINT_PREVIEW,
+                    commands::PRINT_PREVIEW,
                 )
             }
 
@@ -607,7 +602,7 @@ pub mod sys {
             pub fn page_setup<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-page-setup"),
-                    command::sys::PRINT_SETUP,
+                    commands::PRINT_SETUP,
                 )
             }
 
@@ -615,7 +610,7 @@ pub mod sys {
             pub fn exit<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("win-menu-file-exit"),
-                    command::sys::QUIT_APP,
+                    commands::QUIT_APP,
                 )
                 .hotkey(RawMods::Alt, KeyCode::F4)
             }
@@ -656,7 +651,7 @@ pub mod sys {
             pub fn about<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("macos-menu-about-app"),
-                    command::sys::SHOW_ABOUT,
+                    commands::SHOW_ABOUT,
                 )
             }
 
@@ -664,7 +659,7 @@ pub mod sys {
             pub fn preferences<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("macos-menu-preferences"),
-                    command::sys::SHOW_PREFERENCES,
+                    commands::SHOW_PREFERENCES,
                 )
                 .hotkey(RawMods::Meta, ",")
             }
@@ -673,7 +668,7 @@ pub mod sys {
             pub fn hide<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("macos-menu-hide-app"),
-                    command::sys::HIDE_APPLICATION,
+                    commands::HIDE_APPLICATION,
                 )
                 .hotkey(RawMods::Meta, "h")
             }
@@ -682,7 +677,7 @@ pub mod sys {
             pub fn hide_others<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("macos-menu-hide-others"),
-                    command::sys::HIDE_OTHERS,
+                    commands::HIDE_OTHERS,
                 )
                 .hotkey(RawMods::AltMeta, "h")
             }
@@ -692,7 +687,7 @@ pub mod sys {
             pub fn show_all<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("macos-menu-show-all"),
-                    command::sys::SHOW_ALL,
+                    commands::SHOW_ALL,
                 )
             }
 
@@ -700,7 +695,7 @@ pub mod sys {
             pub fn quit<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("macos-menu-quit-app"),
-                    command::sys::QUIT_APP,
+                    commands::QUIT_APP,
                 )
                 .hotkey(RawMods::Meta, "q")
             }
@@ -738,7 +733,7 @@ pub mod sys {
             pub fn new_file<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-new"),
-                    command::sys::NEW_FILE,
+                    commands::NEW_FILE,
                 )
                 .hotkey(RawMods::Meta, "n")
             }
@@ -747,7 +742,7 @@ pub mod sys {
             pub fn open_file<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-open"),
-                    command::sys::OPEN_FILE,
+                    commands::OPEN_FILE,
                 )
                 .hotkey(RawMods::Meta, "o")
             }
@@ -756,7 +751,7 @@ pub mod sys {
             pub fn close<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-close"),
-                    command::sys::CLOSE_WINDOW,
+                    commands::CLOSE_WINDOW,
                 )
                 .hotkey(RawMods::Meta, "w")
             }
@@ -765,7 +760,7 @@ pub mod sys {
             pub fn save<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    command::sys::SAVE_FILE,
+                    commands::SAVE_FILE,
                 )
                 .hotkey(RawMods::Meta, "s")
             }
@@ -776,7 +771,7 @@ pub mod sys {
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-ellipsis"),
-                    command::sys::SAVE_FILE,
+                    commands::SAVE_FILE,
                 )
                 .hotkey(RawMods::Meta, "s")
             }
@@ -785,7 +780,7 @@ pub mod sys {
             pub fn save_as<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-as"),
-                    command::sys::SAVE_FILE_AS,
+                    commands::SAVE_FILE_AS,
                 )
                 .hotkey(RawMods::MetaShift, "s")
             }
@@ -794,7 +789,7 @@ pub mod sys {
             pub fn page_setup<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-page-setup"),
-                    command::sys::PRINT_SETUP,
+                    commands::PRINT_SETUP,
                 )
                 .hotkey(RawMods::MetaShift, "p")
             }
@@ -803,7 +798,7 @@ pub mod sys {
             pub fn print<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-print"),
-                    command::sys::PRINT,
+                    commands::PRINT,
                 )
                 .hotkey(RawMods::Meta, "p")
             }

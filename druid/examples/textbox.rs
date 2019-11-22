@@ -56,9 +56,9 @@ fn build_widget() -> impl Widget<String> {
 
 fn make_main_menu<T: Data>() -> MenuDesc<T> {
     let edit_menu = MenuDesc::new(LocalizedString::new("common-menu-edit-menu"))
-        .append(druid::menu::sys::common::cut())
-        .append(druid::menu::sys::common::copy())
-        .append(druid::menu::sys::common::paste());
+        .append(druid::platform_menus::common::cut())
+        .append(druid::platform_menus::common::copy())
+        .append(druid::platform_menus::common::paste());
 
     MenuDesc::platform_default()
         .unwrap_or(MenuDesc::empty())

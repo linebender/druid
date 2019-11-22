@@ -42,7 +42,9 @@ pub struct Command {
     object: Option<Arc<dyn Any>>,
 }
 
-/// Commands with special meaning.
+/// [`Command`]s with special meaning, defined by druid.
+///
+/// [`Command`]: struct.Command.html
 pub mod sys {
     use super::Selector;
 

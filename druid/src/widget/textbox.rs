@@ -17,13 +17,12 @@
 use std::cmp::{max, min};
 use std::ops::Range;
 use std::time::{Duration, Instant};
+use unicode_segmentation::GraphemeCursor;
 
 use crate::{
-    BaseState, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx, PaintCtx,
-    RawMods, SysMods, TimerToken, UpdateCtx, Widget,
+    Application, BaseState, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode,
+    LayoutCtx, PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
 };
-
-use crate::shell::Application;
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
 use crate::piet::{
@@ -32,8 +31,6 @@ use crate::piet::{
 };
 use crate::theme;
 use crate::widget::Align;
-
-use crate::unicode_segmentation::GraphemeCursor;
 
 const BORDER_WIDTH: f64 = 1.;
 const PADDING_TOP: f64 = 5.;
@@ -360,13 +357,13 @@ impl Widget<String> for TextBox {
             }
             Event::Command(ref cmd)
                 if ctx.has_focus()
-                    && (cmd.selector == crate::command::sys::COPY
-                        || cmd.selector == crate::command::sys::CUT) =>
+                    && (cmd.selector == crate::commands::COPY
+                        || cmd.selector == crate::commands::CUT) =>
             {
                 if let Some(text) = data.get(self.selection.range()) {
                     Application::clipboard().put_string(text);
                 }
-                if !self.selection.is_caret() && cmd.selector == crate::command::sys::CUT {
+                if !self.selection.is_caret() && cmd.selector == crate::commands::CUT {
                     self.backspace(data);
                 }
                 ctx.set_handled();

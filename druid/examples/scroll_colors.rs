@@ -14,7 +14,7 @@
 
 //! This example allows to play with scroll bars over different color tones.
 
-use druid::shell::piet::Color;
+use druid::piet::Color;
 use druid::widget::{Column, Container, Row, Scroll, SizedBox};
 use druid::{AppLauncher, Widget, WindowDesc};
 

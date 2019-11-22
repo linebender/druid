@@ -17,17 +17,18 @@
 #![deny(intra_doc_link_resolution_failure, unsafe_code)]
 #![allow(clippy::new_ret_no_self)]
 
-pub use druid_shell::{self as shell, kurbo, piet};
+use druid_shell as shell;
+pub use druid_shell::{kurbo, piet};
 
 mod app;
 mod app_delegate;
-pub mod command;
+mod command;
 mod data;
 mod env;
 mod event;
 mod lens;
-pub mod localization;
-pub mod menu;
+mod localization;
+mod menu;
 mod mouse;
 pub mod theme;
 pub mod widget;
@@ -36,7 +37,6 @@ mod window;
 
 use std::collections::VecDeque;
 use std::ops::{Deref, DerefMut};
-
 use std::time::Instant;
 
 use log::{error, warn};
@@ -44,22 +44,22 @@ use log::{error, warn};
 use kurbo::{Affine, Point, Rect, Shape, Size, Vec2};
 use piet::{Piet, RenderContext};
 
-pub use unicode_segmentation;
-
+// these are the types from shell that we expose; others we only use internally.
 pub use shell::{
-    Clipboard, Cursor, FileDialogOptions, FileDialogType, HotKey, KeyCode, KeyEvent, KeyModifiers,
-    MouseButton, RawMods, SysMods, Text, TimerToken, WinCtx, WindowHandle,
+    Application, Clipboard, ClipboardFormat, Cursor, FileDialogOptions, FileDialogType, FileSpec,
+    FormatId, HotKey, KeyCode, KeyEvent, KeyModifiers, MouseButton, RawMods, SysMods, Text,
+    TimerToken, WinCtx, WindowHandle,
 };
 
 pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
-pub use command::{Command, Selector};
+pub use command::{sys as commands, Command, Selector};
 pub use data::Data;
 pub use env::{Env, Key, Value};
 pub use event::{Event, WheelEvent};
 pub use lens::{Lens, LensWrap};
 pub use localization::LocalizedString;
-pub use menu::MenuDesc;
+pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};

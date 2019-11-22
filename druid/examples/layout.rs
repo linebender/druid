@@ -14,7 +14,7 @@
 
 //! This example shows how to construct a basic layout.
 
-use druid::shell::piet::Color;
+use druid::piet::Color;
 use druid::widget::{Button, Column, Label, Row, SizedBox, WidgetExt};
 use druid::{AppLauncher, Widget, WindowDesc};
 
