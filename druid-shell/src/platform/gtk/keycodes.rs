@@ -85,8 +85,8 @@ impl From<u32> for KeyCode {
             Alt_R => KeyCode::RightAlt,
             Shift_L => KeyCode::LeftShift,
             Shift_R => KeyCode::RightShift,
-            Meta_L => KeyCode::LeftMeta,
-            Meta_R => KeyCode::RightMeta,
+            Super_L => KeyCode::LeftMeta,
+            Super_R => KeyCode::RightMeta,
 
             space => KeyCode::Space,
             Caps_Lock => KeyCode::CapsLock,
@@ -212,8 +212,8 @@ impl From<KeyCode> for u32 {
             KeyCode::RightAlt => Alt_R,
             KeyCode::LeftShift => Shift_L,
             KeyCode::RightShift => Shift_R,
-            KeyCode::LeftMeta => Meta_L,
-            KeyCode::RightMeta => Meta_R,
+            KeyCode::LeftMeta => Super_L,
+            KeyCode::RightMeta => Super_R,
 
             KeyCode::Space => space,
             KeyCode::CapsLock => Caps_Lock,
