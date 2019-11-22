@@ -38,15 +38,21 @@ impl Clipboard {
         // this is gross: we need to reclone all the data in formats in order
         // to move it into the closure. :/
         let formats = formats.to_owned();
-        if !clipboard.set_with_data(&entries, move |_, sel, idx| {
+        let success = clipboard.set_with_data(&entries, move |_, sel, idx| {
+            log::info!("got paste callback {}", idx);
             let idx = idx as usize;
             if idx < formats.len() {
                 let item = &formats[idx];
-                let atom = Atom::intern(item.identifier);
-                let stride = 8;
-                sel.set(&atom, stride, item.data.as_slice());
+                if item.identifier == ClipboardFormat::TEXT {
+                    sel.set_text(unsafe { std::str::from_utf8_unchecked(&item.data) });
+                } else {
+                    let atom = Atom::intern(item.identifier);
+                    let stride = 8;
+                    sel.set(&atom, stride, item.data.as_slice());
+                }
             }
-        }) {
+        });
+        if !success {
             log::warn!("failed to set clipboard data.");
         }
     }
@@ -88,12 +94,22 @@ impl Clipboard {
             .wait_for_contents(&atom)
             .map(|data| data.get_data())
     }
+
+    pub fn available_type_names(&self) -> Vec<String> {
+        let display = gdk::Display::get_default().unwrap();
+        let clipboard = gtk::Clipboard::get_default(&display).unwrap();
+        let targets = clipboard.wait_for_targets().unwrap_or_default();
+        targets
+            .iter()
+            .map(|atom| unsafe { format!("{} ({})", atom.name(), atom.value()) })
+            .collect()
+    }
 }
 
 fn make_entries(formats: &[ClipboardFormat]) -> Vec<TargetEntry> {
     formats
         .iter()
         .enumerate()
-        .map(|(i, fmt)| TargetEntry::new(fmt.identifier, TargetFlags::empty(), i as u32))
+        .map(|(i, fmt)| TargetEntry::new(fmt.identifier, TargetFlags::all(), i as u32))
         .collect()
 }
