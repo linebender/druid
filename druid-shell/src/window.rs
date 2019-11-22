@@ -17,20 +17,14 @@
 #![allow(deprecated)] // for the three items that have moved
 
 use std::any::Any;
-use std::path::PathBuf;
 
-use crate::dialog::FileDialogOptions;
+use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Size, Vec2};
 use crate::menu::Menu;
+use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
-
-#[deprecated(since = "0.4.0", note = "Moved to druid_shell::mouse::MouseEvent")]
-pub type MouseEvent = crate::mouse::MouseEvent;
-
-#[deprecated(since = "0.4.0", note = "Moved to druid_shell::mouse::Cursor")]
-pub type Cursor = crate::mouse::Cursor;
 
 // It's possible we'll want to make this type alias at a lower level,
 // see https://github.com/linebender/piet/pull/37 for more discussion.
@@ -298,12 +292,6 @@ pub trait WinHandler {
 
     /// Get a reference to the handler state. Used mostly by idle handlers.
     fn as_any(&mut self) -> &mut dyn Any;
-}
-
-/// Information about a file to be opened or saved.
-#[derive(Debug, Clone)]
-pub struct FileInfo {
-    pub path: PathBuf,
 }
 
 impl From<platform::WindowHandle> for WindowHandle {

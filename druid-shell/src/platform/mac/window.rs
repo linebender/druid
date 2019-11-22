@@ -43,11 +43,11 @@ use super::dialog;
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
 use crate::common_util::IdleCallback;
-use crate::dialog::FileDialogOptions;
+use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::window::{FileInfo, Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
 #[allow(non_upper_case_globals)]

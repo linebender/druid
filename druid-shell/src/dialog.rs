@@ -14,6 +14,14 @@
 
 //! File open/save dialogs.
 
+use std::path::{Path, PathBuf};
+
+/// Information about a file to be opened or saved.
+#[derive(Debug, Clone)]
+pub struct FileInfo {
+    pub(crate) path: PathBuf,
+}
+
 /// Type of file dialog.
 pub enum FileDialogType {
     /// File open dialog.
@@ -27,6 +35,8 @@ pub enum FileDialogType {
 pub struct FileDialogOptions {
     pub show_hidden: bool,
     pub allowed_types: Option<Vec<FileSpec>>,
+    // we don't want a library user to be able to construct this type directly
+    __non_exhaustive: (),
     // multi selection
     // select directories
 }
@@ -54,6 +64,13 @@ pub struct FileSpec {
     ///
     /// This should not include the leading '.'.
     pub extensions: &'static [&'static str],
+}
+
+impl FileInfo {
+    /// The file's path.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
 }
 
 impl FileDialogOptions {
