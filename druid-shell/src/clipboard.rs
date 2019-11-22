@@ -214,16 +214,25 @@ impl From<platform::Clipboard> for Clipboard {
     }
 }
 
-#[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
-impl ClipboardFormat {
-    pub const PDF: &'static str = "com.adobe.pdf";
-    pub const TEXT: &'static str = "public.utf8-plain-text";
-    pub const SVG: &'static str = "public.svg-image";
-}
-
-#[cfg(any(not(target_os = "macos"), feature = "use_gtk"))]
-impl ClipboardFormat {
-    pub const PDF: &'static str = "application/pdf";
-    pub const TEXT: &'static str = "text/plain";
-    pub const SVG: &'static str = "image/svg+xml";
+cfg_if::cfg_if! {
+    if #[cfg(all(target_os = "macos", not(feature = "use_gtk")))] {
+        impl ClipboardFormat {
+            pub const PDF: &'static str = "com.adobe.pdf";
+            pub const TEXT: &'static str = "public.utf8-plain-text";
+            pub const SVG: &'static str = "public.svg-image";
+        }
+    } else {
+        impl ClipboardFormat {
+            cfg_if::cfg_if! {
+                if #[cfg(any(feature = "use_gtk", target_os = "linux"))] {
+                    // trial and error; this is the most supported string type for gtk?
+                    pub const TEXT: &'static str = "UTF8_STRING";
+                } else {
+                    pub const TEXT: &'static str = "text/plain";
+                }
+            }
+            pub const PDF: &'static str = "application/pdf";
+            pub const SVG: &'static str = "image/svg+xml";
+        }
+    }
 }

@@ -14,17 +14,15 @@
 
 //! Platform specific implementations.
 
-#[cfg(all(target_os = "windows", not(feature = "use_gtk")))]
-mod windows;
-#[cfg(all(target_os = "windows", not(feature = "use_gtk")))]
-pub use windows::*;
-
-#[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
-mod mac;
-#[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
-pub use mac::*;
-
-#[cfg(any(feature = "use_gtk", target_os = "linux"))]
-mod gtk;
-#[cfg(any(feature = "use_gtk", target_os = "linux"))]
-pub use self::gtk::*;
+cfg_if::cfg_if! {
+    if #[cfg(all(target_os = "windows", not(feature = "use_gtk")))] {
+        mod windows;
+        pub use windows::*;
+    } else if #[cfg(all(target_os = "macos", not(feature = "use_gtk")))] {
+        mod mac;
+        pub use mac::*;
+    } else if #[cfg(any(feature = "use_gtk", target_os = "linux"))] {
+        mod gtk;
+        pub use self::gtk::*;
+    }
+}

@@ -19,6 +19,7 @@ piet-common = "0.0.7"
 log = "0.4.8"
 lazy_static = "1.0"
 time = "0.1.39"
+cfg-if = "0.1.10"
 
 cairo-rs = {  version = "0.7.1", default_features = false, optional = true }
 gio = { version = "0.7.0", optional = true }
