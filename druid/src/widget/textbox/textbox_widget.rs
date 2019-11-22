@@ -413,6 +413,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
 
                     let selection_pos =
                         Point::new(left_offset + PADDING_LEFT - 1., PADDING_TOP - 2.);
+
                     let selection_rect = RoundedRect::from_origin_size(
                         selection_pos,
                         Size::new(selection_width + 2., font_size + 4.).to_vec2(),
