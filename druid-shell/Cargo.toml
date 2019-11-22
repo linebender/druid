@@ -41,7 +41,7 @@ version = "0.3.6"
 features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser", "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "dcomp", "d3d11", "dwmapi", "wincon", "fileapi", "processenv", "winbase", "handleapi"]
 
 [target.'cfg(target_os="macos")'.dependencies]
-cocoa = "0.19.0"
+cocoa = "0.20.0"
 objc = "0.2.5"
 cairo-rs = { version = "0.7.1", default_features = false }
 
