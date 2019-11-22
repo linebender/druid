@@ -14,7 +14,7 @@
 
 //! This example demonstrates the `Split` widget
 
-use druid::shell::piet::Color;
+use druid::piet::Color;
 use druid::widget::{Align, Container, Label, Padding, Split};
 use druid::{AppLauncher, Widget, WindowDesc};
 

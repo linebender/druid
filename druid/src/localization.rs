@@ -59,10 +59,12 @@ static FALLBACK_STRINGS: &str = include_str!("../resources/i18n/en-US/builtin.ft
 
 /// Provides access to the localization strings for the current locale.
 #[allow(dead_code)]
-pub struct L10nManager {
+pub(crate) struct L10nManager {
+    // these two are not currently used; will be used when we let the user
+    // add additional localization files.
     res_mgr: ResourceManager,
-    current_bundle: BundleStack,
     resources: Vec<String>,
+    current_bundle: BundleStack,
     current_locale: LanguageIdentifier,
 }
 
@@ -97,7 +99,7 @@ pub struct LocalizedString<T> {
 }
 
 /// A stack of localization resources, used for fallback.
-pub struct BundleStack(Vec<FluentBundle<Arc<FluentResource>>>);
+struct BundleStack(Vec<FluentBundle<Arc<FluentResource>>>);
 
 impl BundleStack {
     fn get_message(&self, id: &str) -> Option<FluentMessage> {

@@ -14,11 +14,10 @@
 
 //! Opening and closing windows and using window and context menus.
 
-use druid::menu::{ContextMenu, MenuDesc, MenuItem};
 use druid::widget::{Align, Button, Column, Label, Padding, Row};
 use druid::{
-    AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, Event, EventCtx, LocalizedString,
-    Selector, Widget, WindowDesc, WindowId,
+    AppDelegate, AppLauncher, Command, ContextMenu, Data, DelegateCtx, Env, Event, EventCtx,
+    LocalizedString, MenuDesc, MenuItem, Selector, Widget, WindowDesc, WindowId,
 };
 
 use log::info;
@@ -49,14 +48,14 @@ trait EventCtxExt {
 
 impl EventCtxExt for EventCtx<'_, '_> {
     fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>) {
-        let cmd = Command::new(druid::command::sys::SET_MENU, menu);
+        let cmd = Command::new(druid::commands::SET_MENU, menu);
         self.submit_command(cmd, None);
     }
 }
 
 impl EventCtxExt for DelegateCtx<'_> {
     fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>) {
-        let cmd = Command::new(druid::command::sys::SET_MENU, menu);
+        let cmd = Command::new(druid::commands::SET_MENU, menu);
         self.submit_command(cmd, None);
     }
 }
@@ -94,11 +93,11 @@ impl AppDelegate<State> for Delegate {
         ctx: &mut DelegateCtx,
     ) -> Option<Event> {
         match event {
-            Event::Command(ref cmd) if cmd.selector == druid::command::sys::NEW_FILE => {
+            Event::Command(ref cmd) if cmd.selector == druid::commands::NEW_FILE => {
                 let new_win = WindowDesc::new(ui_builder)
                     .menu(make_menu(data))
                     .window_size((data.selected as f64 * 100.0 + 300.0, 500.0));
-                let command = Command::new(druid::command::sys::NEW_WINDOW, new_win);
+                let command = Command::new(druid::commands::NEW_WINDOW, new_win);
                 ctx.submit_command(command, None);
                 None
             }
@@ -121,7 +120,7 @@ impl AppDelegate<State> for Delegate {
             }
             Event::MouseDown(ref mouse) if mouse.button.is_right() => {
                 let menu = ContextMenu::new(make_context_menu::<State>(), mouse.pos);
-                let cmd = Command::new(druid::command::sys::SHOW_CONTEXT_MENU, menu);
+                let cmd = Command::new(druid::commands::SHOW_CONTEXT_MENU, menu);
                 ctx.submit_command(cmd, None);
                 None
             }
@@ -153,11 +152,11 @@ fn make_menu<T: Data>(state: &State) -> MenuDesc<T> {
     let mut base = MenuDesc::empty();
     #[cfg(target_os = "macos")]
     {
-        base = druid::menu::sys::mac::menu_bar();
+        base = druid::platform_menus::mac::menu_bar();
     }
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     {
-        base = base.append(druid::menu::sys::win::file::default());
+        base = base.append(druid::platform_menus::win::file::default());
     }
     if state.menu_count != 0 {
         base = base.append(
