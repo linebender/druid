@@ -57,11 +57,11 @@ use super::timers::TimerSlots;
 use super::util::{as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 
 use crate::common_util::IdleCallback;
-use crate::dialog::{FileDialogOptions, FileDialogType};
+use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::window::{FileInfo, Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{Text, TimerToken, WinCtx, WinHandler};
 
 extern "system" {
     pub fn DwmFlush();

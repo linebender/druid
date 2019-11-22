@@ -37,10 +37,10 @@ use super::runloop::with_application;
 use super::util::assert_main_thread;
 
 use crate::common_util::IdleCallback;
-use crate::dialog::FileDialogOptions;
+use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::keyboard;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::window::{FileInfo, Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
 /// Taken from https://gtk-rs.org/docs-src/tutorial/closures
