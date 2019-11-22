@@ -22,7 +22,7 @@ active development and its API might change.
 Here's a simple counter example app.
 
 ```rust
-use druid::widget::{Align, Button, Column, Label, Padding};
+use druid::widget::{Align, Button, Column, Label, Padding, WidgetExt};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn main() {
@@ -38,12 +38,15 @@ fn ui_builder() -> impl Widget<u32> {
     // The label text will be computed dynamically based on the current locale and count
     let text =
         LocalizedString::new("hello-counter").with_arg("count", |data: &u32, _env| (*data).into());
-    let label = Label::new(text);
-    let button = Button::new("increment", |_ctx, data, _env| *data += 1);
+    let label = Label::new(text)
+        .padding(5.0)
+        .center();
+    let button = Button::new("increment", |_ctx, data, _env| *data += 1)
+        .padding(5.0);
 
     let mut col = Column::new();
-    col.add_child(Align::centered(Padding::new(5.0, label)), 1.0);
-    col.add_child(Padding::new(5.0, button), 1.0);
+    col.add_child(label, 1.0);
+    col.add_child(button, 1.0);
     col
 }
 ```
@@ -81,6 +84,9 @@ graphics abstraction with multiple backends: `piet-direct2d`, `piet-cairo`, and
 OS support, macOS and Linux use `piet-cairo`, and Windows uses `piet-direct2d`.
 
 ```rust
+use druid::kurbo::{BezPath, Point, Rect};
+use druid::piet::Color;
+
 // Create an arbitrary bezier path
 // (base_state.size() returns the size of the layout rect we're painting in)
 let mut path = BezPath::new();
@@ -110,7 +116,7 @@ for associated data. All trait methods (`paint`, `layout`, `event`, and
 reference is mutable, so that events can directly update the data.
 
 Whenever the application data changes, the framework traverses the widget
-hierarchy with an `update` method. 
+hierarchy with an `update` method.
 
 All the widget trait methods are provided with a corresponding context
 ([EventCtx], [LayoutCtx], [PaintCtx], [UpdateCtx]). The widget can request
@@ -149,8 +155,9 @@ implement your own. You can also compose widgets into new widgets:
 fn build_widget() -> impl Widget<u32> {
     let mut col = Column::new();
     for i in 0..30 {
-        let button = Button::new(format!("Button {}", i), Button::noop);
-        col.add_child(Padding::new(3.0, button), 0.0);
+        let button = Button::new(format!("Button {}", i), Button::noop)
+            .padding(5.0).;
+        col.add_child(button, 0.0);
     }
     Scroll::new(col)
 }
@@ -206,7 +213,7 @@ a lone dependency (it re-exports all the parts of druid-shell, piet, and kurbo
 that you'll need):
 
 ```toml
-druid = "0.3.2"
+druid = "0.4.0"
 ```
 
 Since druid is currently in fast-evolving state, you might prefer to drink from
