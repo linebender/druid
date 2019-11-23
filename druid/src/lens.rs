@@ -41,15 +41,10 @@ use crate::{
 pub trait Lens<T: ?Sized, U: ?Sized> {
     /// Get non-mut access to the field.
     ///
-    /// Discussion question: using a closure as in the [`with_mut`]
-    /// method may improve flexibility (for example, being able to
-    /// synthesize derived data on the fly). Is this flexibility worth
-    /// the increased complexity?
-    ///
-    /// If so, the signature of the `Lens` trait may change.
-    ///
-    /// [`with_mut`]: #tymethod.with_mut
-    fn get<'a>(&self, data: &'a T) -> &'a U;
+    /// Runs the supplied closure with a reference to the data. It's
+    /// structured this way, as opposed to simply returning a reference,
+    /// so that the data might be synthesized on-the-fly by the lens.
+    fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> V;
 
     /// Get mutable access to the field.
     ///
@@ -113,12 +108,15 @@ where
     W: Widget<U>,
 {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
-        self.inner
-            .paint(paint_ctx, base_state, self.lens.get(data), env);
+        let inner = &mut self.inner;
+        self.lens
+            .with(data, |data| inner.paint(paint_ctx, base_state, data, env));
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        self.inner.layout(ctx, bc, self.lens.get(data), env)
+        let inner = &mut self.inner;
+        self.lens
+            .with(data, |data| inner.layout(ctx, bc, data, env))
     }
 
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
@@ -128,16 +126,18 @@ where
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+        let inner = &mut self.inner;
+        let lens = &self.lens;
         if let Some(old_data) = old_data {
-            if self.lens.get(old_data).same(self.lens.get(data)) {
-                return;
-            }
+            lens.with(old_data, |old_data| {
+                lens.with(data, |data| {
+                    if !old_data.same(data) {
+                        inner.update(ctx, Some(old_data), data, env);
+                    }
+                })
+            })
+        } else {
+            lens.with(data, |data| inner.update(ctx, None, data, env));
         }
-        self.inner.update(
-            ctx,
-            old_data.map(|old_data| self.lens.get(old_data)),
-            self.lens.get(data),
-            env,
-        );
     }
 }
