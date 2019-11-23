@@ -75,7 +75,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         quote! {
 
             impl Lens<#ty, #field_ty> for #field_name {
-                fn get<V, F: FnOnce(&#field_ty) -> V>(&self, data: &#ty, f: F) -> V {
+                fn with<V, F: FnOnce(&#field_ty) -> V>(&self, data: &#ty, f: F) -> V {
                     f(&data.#field_name)
                 }
 

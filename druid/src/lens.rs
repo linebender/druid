@@ -44,12 +44,7 @@ pub trait Lens<T: ?Sized, U: ?Sized> {
     /// Runs the supplied closure with a reference to the data. It's
     /// structured this way, as opposed to simply returning a reference,
     /// so that the data might be synthesized on-the-fly by the lens.
-    ///
-    /// Discussion question: should this be renamed to make clearer it's
-    /// running a closure, or is the current name good.
-    ///
-    /// [`with_mut`]: #tymethod.with_mut
-    fn get<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> V;
+    fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> V;
 
     /// Get mutable access to the field.
     ///
@@ -115,12 +110,13 @@ where
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let inner = &mut self.inner;
         self.lens
-            .get(data, |data| inner.paint(paint_ctx, base_state, data, env));
+            .with(data, |data| inner.paint(paint_ctx, base_state, data, env));
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         let inner = &mut self.inner;
-        self.lens.get(data, |data| inner.layout(ctx, bc, data, env))
+        self.lens
+            .with(data, |data| inner.layout(ctx, bc, data, env))
     }
 
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
@@ -133,15 +129,15 @@ where
         let inner = &mut self.inner;
         let lens = &self.lens;
         if let Some(old_data) = old_data {
-            lens.get(old_data, |old_data| {
-                lens.get(data, |data| {
+            lens.with(old_data, |old_data| {
+                lens.with(data, |data| {
                     if !old_data.same(data) {
                         inner.update(ctx, Some(old_data), data, env);
                     }
                 })
             })
         } else {
-            lens.get(data, |data| inner.update(ctx, None, data, env));
+            lens.with(data, |data| inner.update(ctx, None, data, env));
         }
     }
 }
