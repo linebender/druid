@@ -70,3 +70,6 @@ pub use widget_ext::WidgetExt;
 
 mod list;
 pub use crate::widget::list::{List, ListIter};
+
+mod parse;
+pub use crate::widget::parse::Parse;

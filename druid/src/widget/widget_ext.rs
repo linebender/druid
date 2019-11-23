@@ -17,7 +17,7 @@
 use crate::kurbo::Insets;
 use crate::piet::{PaintBrush, UnitPoint};
 
-use super::{Align, Container, EnvScope, Padding, SizedBox};
+use super::{Align, Container, EnvScope, Padding, Parse, SizedBox};
 use crate::{Data, Env, Lens, LensWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
@@ -115,6 +115,14 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`Lens`]: ../trait.Lens.html
     fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<T, L, Self> {
         LensWrap::new(self, lens)
+    }
+
+    /// Parse a `Widget<String>`'s contents
+    fn parse(self) -> Parse<Self>
+    where
+        Self: Widget<String>,
+    {
+        Parse::new(self)
     }
 }
 
