@@ -35,15 +35,12 @@ fn ui_builder() -> impl Widget<AppState> {
 
     let mut col = Flex::column();
     col.add_child(
-        Padding::new(
-            5.0,
-            LensWrap::new(Checkbox::new(), lenses::app_state::which),
-        ),
+        Padding::new(5.0, LensWrap::new(Checkbox::new(), app_state::which)),
         0.0,
     );
     let either = Either::new(
         |data, _env| data.which,
-        Padding::new(5.0, LensWrap::new(Slider::new(), lenses::app_state::value)),
+        Padding::new(5.0, LensWrap::new(Slider::new(), app_state::value)),
         Padding::new(5.0, label),
     );
     col.add_child(either, 0.0);
