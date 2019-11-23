@@ -58,7 +58,7 @@ pub use dialog::{FileDialogOptions, FileDialogType, FileInfo, FileSpec};
 pub use error::Error;
 pub use hotkey::{HotKey, KeyCompare, RawMods, SysMods};
 pub use keyboard::{KeyEvent, KeyModifiers};
-pub use keycodes::KeyCode;
+pub use keycodes::{KeyCode, UnknownKeyMap};
 pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseEvent};
 pub use runloop::RunLoop;

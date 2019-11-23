@@ -165,3 +165,26 @@ impl KeyCode {
         }
     }
 }
+
+/// This trait produces a mapping from KeyCodes, for physical and logical
+/// keyboard function for keys such as those on the Numpad, where the notion of
+/// modifier doesn't quite fit.
+///
+/// These functions are modeled loosely the `code` and `key`
+/// fields KeyboardEvent Web API.
+///
+/// All platforms should implement this trait for KeyCode.
+/// Callers can access this through druid_shell::UnknownKeyMap.
+pub trait UnknownKeyMap {
+    /// This is similar to the KeyboardEvent Web API code field.
+    /// but produces a mapping from Unknown(platform::RawKeyCode), to physical KeyCodes.
+    /// For example if passed an unknown keycode which correlates to
+    /// Numpad0 with numlock off, it will return Numpad0.
+    fn to_physical(self) -> Self;
+
+    /// This is similar to the KeyboardEvent Web API key field.
+    /// but produces a mapping from "Unknown keys", to logical KeyCode buttons.
+    /// For example if passed an unknown keycode which correlates to
+    /// Numpad0 with numlock off, it will return KeyCode::Insert.
+    fn to_logical(self) -> Self;
+}

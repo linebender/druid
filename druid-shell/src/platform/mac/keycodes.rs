@@ -14,9 +14,20 @@
 
 //! macOS keycode handling.
 
-use crate::keycodes::KeyCode;
+use crate::keycodes::{KeyCode, UnknownKeyMap};
 
 pub type RawKeyCode = u16;
+
+impl UnknownKeyMap for KeyCode {
+    // TODO implement
+    fn to_physical(self) -> Self {
+        self
+    }
+    // TODO implement
+    fn to_logical(self) -> Self {
+        self
+    }
+}
 
 impl From<u16> for KeyCode {
     fn from(raw: u16) -> KeyCode {

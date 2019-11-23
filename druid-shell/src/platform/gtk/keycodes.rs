@@ -16,9 +16,45 @@
 
 use gdk::enums::key::*;
 
-use crate::keycodes::KeyCode;
+use crate::keycodes::{KeyCode, UnknownKeyMap};
 
 pub type RawKeyCode = u32;
+
+impl UnknownKeyMap for KeyCode {
+    #[allow(non_upper_case_globals)]
+    fn to_physical(self) -> Self {
+        match self {
+            KeyCode::Unknown(KP_Insert) => KeyCode::Numpad0,
+            KeyCode::Unknown(KP_End) => KeyCode::Numpad1,
+            KeyCode::Unknown(KP_Down) => KeyCode::Numpad2,
+            KeyCode::Unknown(KP_Page_Down) => KeyCode::Numpad3,
+            KeyCode::Unknown(KP_Left) => KeyCode::Numpad4,
+            KeyCode::Unknown(KP_Begin) => KeyCode::Numpad5,
+            KeyCode::Unknown(KP_Right) => KeyCode::Numpad6,
+            KeyCode::Unknown(KP_Home) => KeyCode::Numpad7,
+            KeyCode::Unknown(KP_Up) => KeyCode::Numpad8,
+            KeyCode::Unknown(KP_Page_Up) => KeyCode::Numpad9,
+            _ => self,
+        }
+    }
+
+    #[allow(non_upper_case_globals)]
+    fn to_logical(self) -> Self {
+        match self {
+            KeyCode::Unknown(KP_Insert) => KeyCode::Home,
+            KeyCode::Unknown(KP_End) => KeyCode::End,
+            KeyCode::Unknown(KP_Down) => KeyCode::ArrowDown,
+            KeyCode::Unknown(KP_Page_Down) => KeyCode::PageDown,
+            KeyCode::Unknown(KP_Left) => KeyCode::ArrowLeft,
+            // Fall through for Unknown(KP_Begin) -- numlock off Numpad5.
+            KeyCode::Unknown(KP_Right) => KeyCode::ArrowRight,
+            KeyCode::Unknown(KP_Home) => KeyCode::Home,
+            KeyCode::Unknown(KP_Up) => KeyCode::ArrowUp,
+            KeyCode::Unknown(KP_Page_Up) => KeyCode::PageUp,
+            _ => self,
+        }
+    }
+}
 
 impl From<u32> for KeyCode {
     #[allow(clippy::just_underscores_and_digits, non_upper_case_globals)]

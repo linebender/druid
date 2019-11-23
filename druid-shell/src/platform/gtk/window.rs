@@ -23,6 +23,7 @@ use std::ptr;
 use std::slice;
 use std::sync::{Arc, Mutex, Weak};
 
+use gdk::enums::key;
 use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt};
 use gio::ApplicationExt;
 use gtk::prelude::*;
@@ -693,9 +694,24 @@ fn get_modifiers(modifiers: gdk::ModifierType) -> keyboard::KeyModifiers {
 
 fn make_key_event(key: &EventKey, repeat: bool) -> keyboard::KeyEvent {
     let keyval = key.get_keyval();
-    let hardware_keycode = key.get_hardware_keycode();
-
-    let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval);
+    let keycode = if keyval >= key::KP_0 && keyval <= key::KP_9 {
+        // We don't want hardware mapping when numlock is on.
+        // This is so we emit e.g. KP_0 rather than KP_Insert
+        // Since Numlock isn't really treated as a modifier.
+        // and treating it as a modifier would act differently than other modifiers.
+        // for example taking Numpad0 as the "primary" keycode for the key KP_0,
+        // and KP_Insert as "alternate" for the same key.
+        // Numpad0 would have modifier numlock true
+        // and false when the alternate (e.g. KP_Insert) is pressed.
+        // which would be inverse to all the other modifiers where the "primary"
+        // keycode defaults to false unless the modifier is pressed or enabled.
+        //
+        // Subsequently it seems cleaner to just treat these as distinct keys.
+        keyval
+    } else {
+        let hardware_keycode = key.get_hardware_keycode();
+        hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval)
+    };
 
     let text = gdk::keyval_to_unicode(keyval);
 

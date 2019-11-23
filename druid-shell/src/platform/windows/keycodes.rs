@@ -17,7 +17,7 @@
 use win_vks::*;
 use winapi::um::winuser::*;
 
-use crate::keycodes::KeyCode;
+use crate::keycodes::{KeyCode, UnknownKeyMap};
 
 pub type RawKeyCode = i32;
 
@@ -63,6 +63,17 @@ mod win_vks {
     pub const VK_X: i32 = 0x58;
     pub const VK_Y: i32 = 0x59;
     pub const VK_Z: i32 = 0x5A;
+}
+
+impl UnknownKeyMap for KeyCode {
+    // TODO implement
+    fn to_physical(self) -> Self {
+        self
+    }
+    // TODO implement
+    fn to_logical(self) -> Self {
+        self
+    }
 }
 
 impl From<i32> for KeyCode {
