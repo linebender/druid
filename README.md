@@ -202,7 +202,7 @@ To use the lens, wrap your widget with `LensWrap` (note the conversion of
 CamelCase to snake_case):
 
 ```rust
-LensWrap::new(WidgetThatExpectsf64::new(), lenses::app_state::value);
+LensWrap::new(WidgetThatExpectsf64::new(), app_state::value);
 ```
 
 ## Using druid

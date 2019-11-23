@@ -152,7 +152,7 @@ fn build_calc() -> impl Widget<CalcState> {
     let mut column = Flex::column();
     let display = LensWrap::new(
         DynLabel::new(|data: &String, _env| data.clone()),
-        lenses::calc_state::value,
+        calc_state::value,
     );
     column.add_child(pad(display), 0.0);
     column.add_child(

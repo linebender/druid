@@ -87,15 +87,12 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     });
 
     let expanded = quote! {
-        pub mod lenses {
-            pub mod #twizzled_name {
-                use super::super::*;
+        pub mod #twizzled_name {
+            use super::*;
 
-                use druid::Lens;
-                #(#structs)*
-                #(#impls)*
-            }
-
+            use druid::Lens;
+            #(#structs)*
+            #(#impls)*
         }
     };
 
