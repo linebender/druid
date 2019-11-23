@@ -17,6 +17,8 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
+use crate::kurbo;
+
 pub use druid_derive::Data;
 
 /// A trait used to represent value types.
@@ -230,5 +232,23 @@ impl<T0: Data, T1: Data, T2: Data, T3: Data, T4: Data, T5: Data> Data for (T0, T
             && self.3.same(&other.3)
             && self.4.same(&other.4)
             && self.5.same(&other.5)
+    }
+}
+
+impl Data for kurbo::Point {
+    fn same(&self, other: &Self) -> bool {
+        self.x.same(&other.x) && self.y.same(&other.y)
+    }
+}
+
+impl Data for kurbo::Vec2 {
+    fn same(&self, other: &Self) -> bool {
+        self.x.same(&other.x) && self.y.same(&other.y)
+    }
+}
+
+impl Data for kurbo::Size {
+    fn same(&self, other: &Self) -> bool {
+        self.width.same(&other.width) && self.height.same(&other.height)
     }
 }
