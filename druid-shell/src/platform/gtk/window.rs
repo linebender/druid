@@ -210,9 +210,12 @@ impl WindowBuilder {
                 let mut ctx = WinCtxImpl::from(&handle);
 
                 let extents = context.clip_extents();
+                let dpi_scale = state.window.get_window()
+                    .map(|w| w.get_display().get_default_screen().get_resolution())
+                    .unwrap_or(96.0) / 96.0;
                 let size = (
-                    (extents.2 - extents.0) as u32,
-                    (extents.3 - extents.1) as u32,
+                    ((extents.2 - extents.0) * dpi_scale) as u32,
+                    ((extents.3 - extents.1) * dpi_scale) as u32,
                 );
 
                 if last_size.get() != size {
