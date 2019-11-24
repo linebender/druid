@@ -92,10 +92,24 @@ impl Row {
             children: Vec::new(),
         }
     }
+
+    /// Create a row widget from a set of widgets and flex values.
+    ///
+    /// See `add_child` for details on how the `f64` is interpreted.
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_iter<T: Data>(
+        iter: impl IntoIterator<Item = (impl Widget<T> + 'static, f64)>,
+    ) -> Flex<T> {
+        let mut x = Self::new();
+        for (child, flex) in iter {
+            x.add_child(child, flex);
+        }
+        x
+    }
 }
 
 impl Column {
-    /// Create a new row widget.
+    /// Create a new column widget.
     ///
     /// The child widgets are laid out vertically, from top to bottom.
     pub fn new<T: Data>() -> Flex<T> {
@@ -104,6 +118,20 @@ impl Column {
 
             children: Vec::new(),
         }
+    }
+
+    /// Create a column widget from a set of widgets and flex values.
+    ///
+    /// See `add_child` for details on how the `f64` is interpreted.
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_iter<T: Data>(
+        iter: impl IntoIterator<Item = (impl Widget<T> + 'static, f64)>,
+    ) -> Flex<T> {
+        let mut x = Self::new();
+        for (child, flex) in iter {
+            x.add_child(child, flex);
+        }
+        x
     }
 }
 
