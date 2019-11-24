@@ -32,9 +32,9 @@ pub struct List<T: Data> {
 impl<T: Data> List<T> {
     /// Create a new list widget. Closure will be called every time when a new child
     /// needs to be constructed.
-    pub fn new(closure: impl Fn() -> Box<dyn Widget<T>> + 'static) -> Self {
+    pub fn new<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
         List {
-            closure: Box::new(closure),
+            closure: Box::new(move || Box::new(closure())),
             children: Vec::new(),
         }
     }
