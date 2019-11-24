@@ -46,17 +46,15 @@ fn ui_builder() -> impl Widget<AppData> {
 
     root.add_child(
         Scroll::new(List::new(|| {
-            Box::new(
-                SizedBox::new(
-                    Container::new(Padding::new(
-                        10.0,
-                        DynLabel::new(|d, _| format!("List item #{}", d)),
-                    ))
-                    .background(Color::rgb(0.5, 0.5, 0.5)),
-                )
-                .expand()
-                .height(50.0),
+            SizedBox::new(
+                Container::new(Padding::new(
+                    10.0,
+                    DynLabel::new(|d, _| format!("List item #{}", d)),
+                ))
+                .background(Color::rgb(0.5, 0.5, 0.5)),
             )
+            .expand()
+            .height(50.0)
         }))
         .vertical(),
         1.0,
