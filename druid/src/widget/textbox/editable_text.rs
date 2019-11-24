@@ -14,7 +14,9 @@
 
 //! Traits for text editing and a basic String implementation.
 
+use std::borrow::Cow;
 use std::ops::Range;
+
 use unicode_segmentation::GraphemeCursor;
 
 /// An EditableText trait.
@@ -28,7 +30,7 @@ pub trait EditableText: Sized {
     fn edit(&mut self, iv: Range<usize>, new: impl Into<String>);
 
     /// Get slice of text at range.
-    fn slice(&self, iv: Range<usize>) -> Option<&str>;
+    fn slice(&self, iv: Range<usize>) -> Option<Cow<str>>;
 
     /// Get length of text.
     fn len(&self) -> usize;
@@ -51,12 +53,16 @@ impl EditableText for String {
     type Cursor = StringCursor;
 
     //TODO: this can panic so maybe we should return a Result?
-    fn edit(&mut self, iv: Range<usize>, new: impl Into<String>) {
+    fn edit(&mut self, iv: Range<usize>, new: impl Into<Self>) {
         self.replace_range(iv, &new.into());
     }
 
-    fn slice(&self, iv: Range<usize>) -> Option<&str> {
-        self.get(iv)
+    fn slice(&self, iv: Range<usize>) -> Option<Cow<str>> {
+        if let Some(slice) = self.get(iv) {
+            Some(Cow::from(slice))
+        } else {
+            None
+        }
     }
 
     fn len(&self) -> usize {
