@@ -73,3 +73,6 @@ pub use crate::widget::list::{List, ListIter};
 
 mod parse;
 pub use crate::widget::parse::Parse;
+
+mod svg;
+pub use crate::widget::svg::SVG;
