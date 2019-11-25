@@ -31,13 +31,13 @@ fn build_widget() -> impl Widget<DemoState> {
         }
     });
     let mut row = Flex::row();
-    let checkbox = LensWrap::new(Checkbox::new(), demo_state::double);
+    let checkbox = LensWrap::new(Checkbox::new(), DemoState::double);
     let checkbox_label = Label::new("double the value");
     row.add_child(checkbox, 0.0);
     row.add_child(Padding::new(5.0, checkbox_label), 1.0);
 
-    let bar = LensWrap::new(ProgressBar::new(), demo_state::value);
-    let slider = LensWrap::new(Slider::new(), demo_state::value);
+    let bar = LensWrap::new(ProgressBar::new(), DemoState::value);
+    let slider = LensWrap::new(Slider::new(), DemoState::value);
 
     let button_1 = Button::sized(
         "increment ",

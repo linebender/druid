@@ -188,7 +188,8 @@ struct AppState {
 ### lens
 
 The [Lens datatype] gives access to a part of a larger data structure. Like
-`Data`, This can be derived.
+`Data`, this can be derived. Derived lenses are accessed as associated constants
+with the same name as the field.
 
 ```rust
 #[derive(Clone, Data, Lens)]
@@ -202,7 +203,7 @@ To use the lens, wrap your widget with `LensWrap` (note the conversion of
 CamelCase to snake_case):
 
 ```rust
-LensWrap::new(WidgetThatExpectsf64::new(), app_state::value);
+LensWrap::new(WidgetThatExpectsf64::new(), AppState::value);
 ```
 
 ## Using druid
