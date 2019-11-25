@@ -31,6 +31,10 @@ pub fn derive_data(input: TokenStream) -> TokenStream {
         .into()
 }
 
+/// Generates lenses to access the fields of a struct
+///
+/// An associated constant is defined on the struct for each field,
+/// having the same name as the field.
 #[proc_macro_derive(Lens)]
 pub fn derive_lens(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
