@@ -57,17 +57,23 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         ));
     };
 
-    // Impl Lens for each field
-    let impls = fields.iter().map(|f| {
+    // Define lens types for each field
+    let defs = fields.iter().map(|f| {
         let field_name = &f.ident;
-        let field_ty = &f.ty;
 
         quote! {
             /// Lens for the field on #ty
             #[allow(non_camel_case_types)]
             pub struct #field_name;
+        }
+    });
 
-            impl Lens<#ty, #field_ty> for #field_name {
+    let impls = fields.iter().map(|f| {
+        let field_name = &f.ident;
+        let field_ty = &f.ty;
+
+        quote! {
+            impl druid::Lens<#ty, #field_ty> for #twizzled_name::#field_name {
                 fn with<V, F: FnOnce(&#field_ty) -> V>(&self, data: &#ty, f: F) -> V {
                     f(&data.#field_name)
                 }
@@ -83,22 +89,20 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         let field_name = &f.ident;
         quote! {
             /// Lens for the corresponding field
-            pub const #field_name: #field_name = #field_name;
+            pub const #field_name: #twizzled_name::#field_name = #twizzled_name::#field_name;
         }
     });
 
     let expanded = quote! {
         pub mod #twizzled_name {
-            //! Lens definitions for #ty
-            use super::*;
-            use druid::Lens;
+            #(#defs)*
+        }
 
-            #(#impls)*
+        #(#impls)*
 
-            #[allow(non_upper_case_globals)]
-            impl #ty {
-                #(#associated_items)*
-            }
+        #[allow(non_upper_case_globals)]
+        impl #ty {
+            #(#associated_items)*
         }
     };
 
