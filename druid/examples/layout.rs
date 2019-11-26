@@ -16,26 +16,24 @@
 
 use druid::piet::Color;
 use druid::widget::{Button, Flex, Label, SizedBox, WidgetExt};
-use druid::{AppLauncher, Widget, WindowDesc};
+use druid::{row, AppLauncher, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     // Begin construction of vertical layout
     let mut col = Flex::column();
 
     // Construct a horizontal layout.
-    let mut header = Flex::row();
-    header.add_child(
-        Label::new("One")
+    let header = row! {
+        0.0 => Label::new("One")
             .center()
             .fix_width(60.0)
             .background(Color::rgb8(0x77, 0x77, 0))
             .border(Color::WHITE, 3.0),
-        0.0,
-    );
+        1.0 => SizedBox::empty().expand(),
+        0.0 => Button::new("Two", Button::noop).padding(20.),
+    };
     // Spacing element that will fill all available space in between label
     // and a button. Notice that weight is non-zero.
-    header.add_child(SizedBox::empty().expand(), 1.0);
-    header.add_child(Button::new("Two", Button::noop).padding(20.), 0.0);
     col.add_child(
         header
             .fix_height(100.0)

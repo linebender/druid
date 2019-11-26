@@ -121,6 +121,36 @@ impl<T: Data> Flex<T> {
         }
     }
 
+    /// Create a horizontal stack from a set of widgets and flex values.
+    ///
+    /// See `add_child` for details on how the `f64` is interpreted.
+    pub fn row_from_iter(iter: impl IntoIterator<Item = (Box<dyn Widget<T>>, f64)>) -> Self {
+        Self::from_iter_inner(Axis::Horizontal, iter)
+    }
+
+    /// Create a vertical stack from a set of widgets and flex values.
+    ///
+    /// See `add_child` for details on how the `f64` is interpreted.
+    pub fn column_from_iter(iter: impl IntoIterator<Item = (Box<dyn Widget<T>>, f64)>) -> Self {
+        Self::from_iter_inner(Axis::Vertical, iter)
+    }
+
+    fn from_iter_inner(
+        direction: Axis,
+        iter: impl IntoIterator<Item = (Box<dyn Widget<T>>, f64)>,
+    ) -> Self {
+        Self {
+            direction,
+            children: iter
+                .into_iter()
+                .map(|(widget, flex)| ChildWidget {
+                    widget: WidgetPod::new(widget),
+                    params: Params { flex },
+                })
+                .collect(),
+        }
+    }
+
     /// Add a child widget.
     ///
     /// If `flex` is zero, then the child is non-flex. It is given the same
@@ -242,5 +272,37 @@ impl<T: Data> Widget<T> for Flex<T> {
         for child in &mut self.children {
             child.widget.update(ctx, data, env);
         }
+    }
+}
+
+/// Construct a horizontal `Flex` of widgets with weighted space allocation.
+///
+/// ```
+/// # use druid::{row, widget::{Label, ProgressBar}};
+/// let row = row! {
+///     0.0 => Label::new("foo"),
+///     1.0 => ProgressBar::new(),
+/// };
+/// ```
+#[macro_export]
+macro_rules! row {
+    {$($flex:expr => $widget:expr),* $(,)?} => {
+        $crate::widget::Flex::row_from_iter(vec![$((Box::new($widget) as Box<dyn $crate::Widget<_>>, $flex)),*])
+    }
+}
+
+/// Construct a vertical `Flex` of widgets with weighted space allocation.
+///
+/// ```
+/// # use druid::{column, widget::{Label, ProgressBar}};
+/// let column = column! {
+///     0.0 => Label::new("foo"),
+///     1.0 => ProgressBar::new(),
+/// };
+/// ```
+#[macro_export]
+macro_rules! column {
+    {$($flex:expr => $widget:expr),* $(,)?} => {
+        $crate::widget::Flex::column_from_iter(vec![$((Box::new($widget) as Box<dyn $crate::Widget<_>>, $flex)),*])
     }
 }
