@@ -93,6 +93,8 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         }
     });
 
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
     let expanded = quote! {
         pub mod #twizzled_name {
             #(#defs)*
@@ -101,7 +103,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         #(#impls)*
 
         #[allow(non_upper_case_globals)]
-        impl #ty {
+        impl #impl_generics #ty #ty_generics #where_clause {
             #(#associated_items)*
         }
     };
