@@ -202,29 +202,27 @@ impl Widget<CalcState> for KeyboardHandler<CalcState> {
         match event {
             Event::KeyDown(key_event) => {
                 // map to physical keys since we want numbers with numlock both on and off.
-                let key_event = key_event.map_keycode(UnknownKeyMap::to_physical);
-                if key_event.is_repeat
-                    || !key_event.key_code.is_printable()
-                    || key_event.key_code == Space
-                {
+                let phys_key = key_event.key_code.to_physical();
+
+                if key_event.is_repeat || !phys_key.is_printable() || phys_key == Space {
                     return;
                 }
 
-                let calc_input = match key_event {
-                    k_e if (HotKey::new(Shift, Key8).matches(k_e)
-                        || HotKey::new(None, NumpadMultiply).matches(k_e)) =>
+                let calc_input = match (key_event.mods, phys_key) {
+                    key if (HotKey::new(Shift, Key8) == key
+                        || HotKey::new(None, NumpadMultiply) == key) =>
                     {
                         Some(Op('×'))
                     }
-                    k_e if (HotKey::new(Shift, Equals).matches(k_e)
-                        || HotKey::new(None, NumpadAdd).matches(k_e)) =>
+                    key if (HotKey::new(Shift, Equals) == key
+                        || HotKey::new(None, NumpadAdd) == key) =>
                     {
                         Some(Op('+'))
                     }
-                    k_e if (HotKey::new(Shift, KeyC).matches(k_e)) => Some(Op('C')),
+                    key if (HotKey::new(Shift, KeyC) == key) => Some(Op('C')),
                     // TODO Not really sure a good key for this.
-                    k_e if (HotKey::new(Shift, Backtick).matches(k_e)) => Some(Op('±')),
-                    k_e if k_e.mods == RawMods::None => match k_e.key_code {
+                    key if (HotKey::new(Shift, Backtick) == key) => Some(Op('±')),
+                    (mods, key_code) if mods == RawMods::None => match key_code {
                         Numpad0 | Key0 => Some(Digit(0)),
                         Numpad1 | Key1 => Some(Digit(1)),
                         Numpad2 | Key2 => Some(Digit(2)),

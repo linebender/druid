@@ -132,6 +132,12 @@ impl HotKey {
     }
 }
 
+impl std::cmp::PartialEq<(KeyModifiers, KeyCode)> for HotKey {
+    fn eq(&self, other: &(KeyModifiers, KeyCode)) -> bool {
+        (*self).mods == (*other).0 && (*self).key == (*other).1.into()
+    }
+}
+
 /// A platform-agnostic representation of keyboard modifiers, for command handling.
 ///
 /// This does one thing: it allows specifying hotkeys that use the Command key
