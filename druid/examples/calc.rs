@@ -14,8 +14,12 @@
 
 //! Simple calculator.
 
-use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
+use druid::{
+    AppLauncher, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, Lens, LensWrap,
+    PaintCtx, UpdateCtx, Widget, WindowDesc,
+};
 
+use druid::kurbo::Size;
 use druid::widget::{Button, DynLabel, Flex, Padding};
 
 #[derive(Clone, Data, Lens)]
@@ -25,6 +29,12 @@ struct CalcState {
     operand: f64,
     operator: char,
     in_num: bool,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+enum CalcInput {
+    Op(char),
+    Digit(u8),
 }
 
 impl CalcState {
@@ -110,6 +120,14 @@ impl CalcState {
             _ => unreachable!(),
         }
     }
+
+    fn handle_input(&mut self, input: CalcInput) {
+        use CalcInput::*;
+        match input {
+            Op(c) => self.op(c),
+            Digit(d) => self.digit(d),
+        }
+    }
 }
 
 fn pad<T: Data>(inner: impl Widget<T> + 'static) -> impl Widget<T> {
@@ -146,6 +164,116 @@ fn flex_row<T: Data>(
     row.add_child(w3, 1.0);
     row.add_child(w4, 1.0);
     row
+}
+
+struct KeyboardHandler<T: Data> {
+    child: Flex<T>,
+}
+
+impl Widget<CalcState> for KeyboardHandler<CalcState> {
+    fn paint(
+        &mut self,
+        paint_ctx: &mut PaintCtx,
+        base_state: &BaseState,
+        data: &CalcState,
+        env: &Env,
+    ) {
+        self.child.paint(paint_ctx, base_state, data, env)
+    }
+
+    fn layout(
+        &mut self,
+        layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &CalcState,
+        env: &Env,
+    ) -> Size {
+        self.child.layout(layout_ctx, bc, data, env)
+    }
+
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut CalcState, env: &Env) {
+        use druid::HotKey;
+        use druid::KeyCode::*;
+        use druid::RawMods;
+        use druid::RawMods::Shift;
+        use druid_shell::UnknownKeyMap;
+        use CalcInput::*;
+
+        match event {
+            Event::KeyDown(key_event) => {
+                // map to physical keys since we want numbers with numlock both on and off.
+                let key_event = key_event.map_keycode(UnknownKeyMap::to_physical);
+                if key_event.is_repeat
+                    || !key_event.key_code.is_printable()
+                    || key_event.key_code == Space
+                {
+                    return;
+                }
+
+                let calc_input = match key_event {
+                    k_e if (HotKey::new(Shift, Key8).matches(k_e)
+                        || HotKey::new(None, NumpadMultiply).matches(k_e)) =>
+                    {
+                        Some(Op('×'))
+                    }
+                    k_e if (HotKey::new(Shift, Equals).matches(k_e)
+                        || HotKey::new(None, NumpadAdd).matches(k_e)) =>
+                    {
+                        Some(Op('+'))
+                    }
+                    k_e if (HotKey::new(Shift, KeyC).matches(k_e)) => Some(Op('C')),
+                    // TODO Not really sure a good key for this.
+                    k_e if (HotKey::new(Shift, Backtick).matches(k_e)) => Some(Op('±')),
+                    k_e if k_e.mods == RawMods::None => match k_e.key_code {
+                        Numpad0 | Key0 => Some(Digit(0)),
+                        Numpad1 | Key1 => Some(Digit(1)),
+                        Numpad2 | Key2 => Some(Digit(2)),
+                        Numpad3 | Key3 => Some(Digit(3)),
+                        Numpad4 | Key4 => Some(Digit(4)),
+                        Numpad5 | Key5 => Some(Digit(5)),
+                        Numpad6 | Key6 => Some(Digit(6)),
+                        Numpad7 | Key7 => Some(Digit(7)),
+                        Numpad8 | Key8 => Some(Digit(8)),
+                        Numpad9 | Key9 => Some(Digit(9)),
+                        KeyC => Some(Op('c')),
+                        Backspace => Some(Op('⌫')),
+                        NumpadDecimal | Period => Some(Op('.')),
+                        NumpadEnter | NumpadEquals | Equals | Return => Some(Op('=')),
+                        NumpadSubtract | Minus => Some(Op('−')),
+                        Slash | NumpadDivide => Some(Op('÷')),
+                        _ => None,
+                    },
+                    _ => None,
+                };
+
+                match calc_input {
+                    Some(calc_input) => data.handle_input(calc_input),
+                    None => match key_event.text() {
+                        Some(text) => log::warn!("Unrecognized input {:?}", text),
+                        None => log::warn!("Unrecognized key_code: {:?}", key_event.key_code),
+                    },
+                }
+            }
+            // Without focus we won't receive any key events.
+            // On startup the root window will receive a Size event,
+            Event::Size(_) => {
+                // The root window doesn't seem to propagate the size event down the tree.
+                // So we don't either.
+                ctx.request_focus()
+            }
+            _ => self.child.event(ctx, event, data, env),
+        }
+    }
+
+    fn update(
+        &mut self,
+        ctx: &mut UpdateCtx,
+        old_data: Option<&CalcState>,
+        data: &CalcState,
+        env: &Env,
+    ) {
+        self.child.update(ctx, old_data, data, env)
+    }
 }
 
 fn build_calc() -> impl Widget<CalcState> {
@@ -200,7 +328,7 @@ fn build_calc() -> impl Widget<CalcState> {
         ),
         1.0,
     );
-    column
+    KeyboardHandler { child: column }
 }
 
 fn main() {
