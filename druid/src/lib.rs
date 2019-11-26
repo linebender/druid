@@ -57,7 +57,7 @@ pub use command::{sys as commands, Command, Selector};
 pub use data::Data;
 pub use env::{Env, Key, Value};
 pub use event::{Event, WheelEvent};
-pub use lens::{Lens, LensWrap};
+pub use lens::{Field, Lens, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;

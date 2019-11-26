@@ -206,6 +206,15 @@ CamelCase to snake_case):
 LensWrap::new(WidgetThatExpectsf64::new(), AppState::value);
 ```
 
+Alternatively, lenses for structs, tuples, and indexable containers can be
+constructed on-demand with the `lens` macro:
+
+```rust
+LensWrap::new(WidgetThatExpectsf64::new(), lens!(AppState, value));
+```
+
+This is particularly useful when working with types defined in another crate.
+
 ## Using druid
 
 An explicit goal of druid is to be easy to build, so please open an issue if you
