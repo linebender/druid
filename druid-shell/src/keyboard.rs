@@ -84,6 +84,18 @@ impl KeyEvent {
         }
     }
 
+    /// Map a `KeyEvent`'s `key_code` to by calling f.
+    /// The `KeyEvent` returned leaves all other fields unmodified.
+    pub fn map_keycode(&self, f: fn(KeyCode) -> KeyCode) -> Self {
+        KeyEvent {
+            is_repeat: self.is_repeat,
+            mods: self.mods,
+            key_code: f(self.key_code),
+            text: self.text,
+            unmodified_text: self.unmodified_text,
+        }
+    }
+
     /// For creating `KeyEvent`s during testing.
     #[doc(hidden)]
     pub fn for_test(mods: impl Into<KeyModifiers>, text: &'static str, code: KeyCode) -> Self {
