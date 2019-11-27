@@ -14,7 +14,7 @@
 
 //! Keyboard event types and helpers
 
-use super::keycodes::KeyCode;
+use super::keycodes::{KeyCode, Special};
 use std::fmt;
 
 /// A keyboard event, generated on every key press and key release.
@@ -26,14 +26,7 @@ pub struct KeyEvent {
     pub is_repeat: bool,
     /// The modifiers for this event.
     pub mods: KeyModifiers,
-    // these are exposed via methods, below. The rationale for this approach is
-    // that a key might produce more than a single 'char' of input, but we don't
-    // want to need a heap allocation in the trivial case. This gives us 15 bytes
-    // of string storage, which... might be enough?
-    text: TinyStr,
-    /// The 'unmodified text' is the text that would be produced by this keystroke
-    /// in the absence of ctrl+alt modifiers or preceding dead keys.
-    unmodified_text: TinyStr,
+    key: Key,
     //TODO: add time
 }
 
@@ -60,27 +53,45 @@ impl KeyEvent {
             key_code: key_code.into(),
             is_repeat,
             mods,
-            text,
-            unmodified_text,
+            key: Key::Text {
+                text,
+                unmodified_text,
+            },
         }
     }
 
     /// The resolved input text for this event. This takes into account modifiers,
     /// e.g. the `chars` on macOS for opt+s is 'ß'.
     pub fn text(&self) -> Option<&str> {
-        if self.text.len == 0 {
-            None
-        } else {
-            Some(self.text.as_str())
+        match &self.key {
+            Key::Text {
+                text,
+                unmodified_text: _,
+            } => {
+                if text.len == 0 {
+                    None
+                } else {
+                    Some(text.as_str())
+                }
+            }
+            _ => None,
         }
     }
 
     /// The unmodified input text for this event. On macOS, for opt+s, this is 's'.
     pub fn unmod_text(&self) -> Option<&str> {
-        if self.unmodified_text.len == 0 {
-            None
-        } else {
-            Some(self.unmodified_text.as_str())
+        match &self.key {
+            Key::Text {
+                text: _,
+                unmodified_text,
+            } => {
+                if unmodified_text.len == 0 {
+                    None
+                } else {
+                    Some(unmodified_text.as_str())
+                }
+            }
+            _ => None,
         }
     }
 
@@ -104,6 +115,23 @@ pub struct KeyModifiers {
     pub meta: bool,
 }
 
+/// Either Key `Text` for keys with a textual representation,
+/// Or `Special` for keys with with no textual representation,
+/// but have a logical mapping to another `Special`.
+#[derive(Clone, Copy, Debug)]
+enum Key {
+    Text {
+        // these are exposed via methods, below. The rationale for this approach is
+        // that a key might produce more than a single 'char' of input, but we don't
+        // want to need a heap allocation in the trivial case. This gives us 15 bytes
+        // of string storage, which... might be enough?
+        text: TinyStr,
+        /// The 'unmodified text' is the text that would be produced by this keystroke
+        /// in the absence of ctrl+alt modifiers or preceding dead keys.
+        unmodified_text: TinyStr,
+    },
+    Special(Special),
+}
 /// Should realistically be (8 * N) - 1; we need one byte for the length.
 const TINY_STR_CAPACITY: usize = 15;
 
