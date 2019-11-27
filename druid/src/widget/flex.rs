@@ -121,6 +121,14 @@ impl<T: Data> Flex<T> {
         }
     }
 
+    /// Builder-style variant of `add_child`
+    ///
+    /// Convenient for assembling a group of widgets in a single expression.
+    pub fn with_child(mut self, child: impl Widget<T> + 'static, flex: f64) -> Self {
+        self.add_child(child, flex);
+        self
+    }
+
     /// Add a child widget.
     ///
     /// If `flex` is zero, then the child is non-flex. It is given the same
@@ -130,6 +138,8 @@ impl<T: Data> Flex<T> {
     /// If `flex` is non-zero, then all the space left over after layout of
     /// the non-flex children is divided up, in proportion to the `flex` value,
     /// among the flex children.
+    ///
+    /// See also `with_child`.
     pub fn add_child(&mut self, child: impl Widget<T> + 'static, flex: f64) {
         let params = Params { flex };
         let child = ChildWidget {

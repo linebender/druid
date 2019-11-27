@@ -24,34 +24,29 @@ enum Choice {
 }
 
 fn build_widget() -> impl Widget<Choice> {
-    let mut col = Flex::column();
-
-    col.add_child(
-        Padding::new(5.0, Radio::new("First choice", Choice::A)),
-        0.0,
-    );
-    col.add_child(
-        Padding::new(5.0, Radio::new("Second choice", Choice::B)),
-        0.0,
-    );
-    col.add_child(
-        Padding::new(5.0, Radio::new("Worst choice", Choice::C)),
-        0.0,
-    );
-    col.add_child(Padding::new(5.0, Radio::new("Best choice", Choice::D)), 0.0);
-
-    col.add_child(SizedBox::empty(), 1.0);
-
-    col.add_child(
-        RadioGroup::new(vec![
-            ("Good times", Choice::A),
-            ("Ergonomics", Choice::B),
-            ("No fourth choice!", Choice::C),
-        ]),
-        0.0,
-    );
-
-    col
+    Flex::column()
+        .with_child(
+            Padding::new(5.0, Radio::new("First choice", Choice::A)),
+            0.0,
+        )
+        .with_child(
+            Padding::new(5.0, Radio::new("Second choice", Choice::B)),
+            0.0,
+        )
+        .with_child(
+            Padding::new(5.0, Radio::new("Worst choice", Choice::C)),
+            0.0,
+        )
+        .with_child(Padding::new(5.0, Radio::new("Best choice", Choice::D)), 0.0)
+        .with_child(SizedBox::empty(), 1.0)
+        .with_child(
+            RadioGroup::new(vec![
+                ("Good times", Choice::A),
+                ("Ergonomics", Choice::B),
+                ("No fourth choice!", Choice::C),
+            ]),
+            0.0,
+        )
 }
 
 fn main() {
