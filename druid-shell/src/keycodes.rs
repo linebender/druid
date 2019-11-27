@@ -165,3 +165,45 @@ impl KeyCode {
         }
     }
 }
+
+/// For `KeyCode`s with duplicate variants of keys, For example `LeftShift` and
+/// `RightShift` There exists single resolved key, `Shift` in this case.
+/// `Special` exists in parallel to KeyCode and Takes Modifiers into account.
+/// It does not however represent keys that result in textual characters.
+///
+/// A more complex example is `KeyCode::Numpad4` on platforms with `NumLock`
+///
+/// With the `NumLock` in the on state:
+///     * `KeyCode::Numpad4` has a textual representation of the form "1",
+///       So it does not have a `Special` representation.
+/// When the `Numlock` is off:
+///     * `KeyCode::Numpad4` might resolve to `Special::Left`.
+///
+/// In particular `Special` represents a logical mapping to the Platonic ideal
+/// of key form. Providing the basis for a platform specific mapping.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Special {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+
+    Return,
+
+    Alt,
+    Control,
+    Shift,
+    Meta,
+
+    Insert,
+    Home,
+    End,
+    Delete,
+    PageUp,
+    PageDown,
+
+    Down,
+    Left,
+    Right,
+    Up,
+}
