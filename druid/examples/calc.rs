@@ -140,67 +140,65 @@ fn flex_row<T: Data>(
     w3: impl Widget<T> + 'static,
     w4: impl Widget<T> + 'static,
 ) -> impl Widget<T> {
-    let mut row = Flex::row();
-    row.add_child(w1, 1.0);
-    row.add_child(w2, 1.0);
-    row.add_child(w3, 1.0);
-    row.add_child(w4, 1.0);
-    row
+    Flex::row()
+        .with_child(w1, 1.0)
+        .with_child(w2, 1.0)
+        .with_child(w3, 1.0)
+        .with_child(w4, 1.0)
 }
 
 fn build_calc() -> impl Widget<CalcState> {
-    let mut column = Flex::column();
     let display = LensWrap::new(
         DynLabel::new(|data: &String, _env| data.clone()),
         CalcState::value,
     );
-    column.add_child(pad(display), 0.0);
-    column.add_child(
-        flex_row(
-            op_button_label('c', "CE".to_string()),
-            op_button('C'),
-            op_button('⌫'),
-            op_button('÷'),
-        ),
-        1.0,
-    );
-    column.add_child(
-        flex_row(
-            digit_button(7),
-            digit_button(8),
-            digit_button(9),
-            op_button('×'),
-        ),
-        1.0,
-    );
-    column.add_child(
-        flex_row(
-            digit_button(4),
-            digit_button(5),
-            digit_button(6),
-            op_button('−'),
-        ),
-        1.0,
-    );
-    column.add_child(
-        flex_row(
-            digit_button(1),
-            digit_button(2),
-            digit_button(3),
-            op_button('+'),
-        ),
-        1.0,
-    );
-    column.add_child(
-        flex_row(
-            op_button('±'),
-            digit_button(0),
-            op_button('.'),
-            op_button('='),
-        ),
-        1.0,
-    );
-    column
+    Flex::column()
+        .with_child(pad(display), 0.0)
+        .with_child(
+            flex_row(
+                op_button_label('c', "CE".to_string()),
+                op_button('C'),
+                op_button('⌫'),
+                op_button('÷'),
+            ),
+            1.0,
+        )
+        .with_child(
+            flex_row(
+                digit_button(7),
+                digit_button(8),
+                digit_button(9),
+                op_button('×'),
+            ),
+            1.0,
+        )
+        .with_child(
+            flex_row(
+                digit_button(4),
+                digit_button(5),
+                digit_button(6),
+                op_button('−'),
+            ),
+            1.0,
+        )
+        .with_child(
+            flex_row(
+                digit_button(1),
+                digit_button(2),
+                digit_button(3),
+                op_button('+'),
+            ),
+            1.0,
+        )
+        .with_child(
+            flex_row(
+                op_button('±'),
+                digit_button(0),
+                op_button('.'),
+                op_button('='),
+            ),
+            1.0,
+        )
 }
 
 fn main() {

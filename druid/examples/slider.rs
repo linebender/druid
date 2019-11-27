@@ -22,7 +22,6 @@ struct DemoState {
 }
 
 fn build_widget() -> impl Widget<DemoState> {
-    let mut col = Flex::column();
     let label = DynLabel::new(|data: &DemoState, _env| {
         if data.double {
             format!("2x the value: {0:.2}", data.value * 2.0)
@@ -30,11 +29,11 @@ fn build_widget() -> impl Widget<DemoState> {
             format!("actual value: {0:.2}", data.value)
         }
     });
-    let mut row = Flex::row();
     let checkbox = LensWrap::new(Checkbox::new(), DemoState::double);
     let checkbox_label = Label::new("double the value");
-    row.add_child(checkbox, 0.0);
-    row.add_child(Padding::new(5.0, checkbox_label), 1.0);
+    let row = Flex::row()
+        .with_child(checkbox, 0.0)
+        .with_child(Padding::new(5.0, checkbox_label), 1.0);
 
     let bar = LensWrap::new(ProgressBar::new(), DemoState::value);
     let slider = LensWrap::new(Slider::new(), DemoState::value);
@@ -49,13 +48,13 @@ fn build_widget() -> impl Widget<DemoState> {
         data.value -= 0.1
     });
 
-    col.add_child(Padding::new(5.0, bar), 1.0);
-    col.add_child(Padding::new(5.0, slider), 1.0);
-    col.add_child(Padding::new(5.0, label), 1.0);
-    col.add_child(Padding::new(5.0, row), 1.0);
-    col.add_child(Padding::new(5.0, Align::right(button_1)), 0.0);
-    col.add_child(Padding::new(5.0, button_2), 1.0);
-    col
+    Flex::column()
+        .with_child(Padding::new(5.0, bar), 1.0)
+        .with_child(Padding::new(5.0, slider), 1.0)
+        .with_child(Padding::new(5.0, label), 1.0)
+        .with_child(Padding::new(5.0, row), 1.0)
+        .with_child(Padding::new(5.0, Align::right(button_1)), 0.0)
+        .with_child(Padding::new(5.0, button_2), 1.0)
 }
 
 fn main() {

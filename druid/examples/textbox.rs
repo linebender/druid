@@ -34,8 +34,6 @@ fn main() {
 }
 
 fn build_widget() -> impl Widget<String> {
-    let mut col = Flex::column();
-
     let textbox = TextBox::new();
     let textbox_2 = EnvScope::new(
         |env| {
@@ -48,10 +46,10 @@ fn build_widget() -> impl Widget<String> {
     );
     let label = DynLabel::new(|data: &String, _env| format!("value: {}", data));
 
-    col.add_child(Padding::new(5.0, textbox), 1.0);
-    col.add_child(Padding::new(5.0, textbox_2), 1.0);
-    col.add_child(Padding::new(5.0, label), 1.0);
-    col
+    Flex::column()
+        .with_child(Padding::new(5.0, textbox), 1.0)
+        .with_child(Padding::new(5.0, textbox_2), 1.0)
+        .with_child(Padding::new(5.0, label), 1.0)
 }
 
 fn make_main_menu<T: Data>() -> MenuDesc<T> {

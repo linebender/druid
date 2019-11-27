@@ -30,8 +30,7 @@ fn ui_builder() -> impl Widget<u32> {
     let label = Label::new(text);
     let button = Button::new("increment", |_ctx, data, _env| *data += 1);
 
-    let mut col = Flex::column();
-    col.add_child(Align::centered(Padding::new(5.0, label)), 1.0);
-    col.add_child(Padding::new(5.0, button), 1.0);
-    col
+    Flex::column()
+        .with_child(Align::centered(Padding::new(5.0, label)), 1.0)
+        .with_child(Padding::new(5.0, button), 1.0)
 }
