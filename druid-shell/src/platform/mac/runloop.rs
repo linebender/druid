@@ -32,7 +32,6 @@ impl RunLoop {
 
             let ns_app = NSApp();
             ns_app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
-            ns_app.finishLaunching();
             RunLoop { ns_app }
         }
     }

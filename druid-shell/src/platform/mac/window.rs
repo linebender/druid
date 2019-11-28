@@ -142,12 +142,6 @@ impl WindowBuilder {
                 NO,
             );
 
-            // TODO:
-            // I'm not actually sure if this call is necessary.
-            // I believe this should really be
-            // window.setLevel_(CGWindowLevelForKey(CGWindowLevelKey::normalWindow));
-            // But the rust bindings seem to lack both the function and constant
-            window.setLevel_(0);
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
             // TODO: this should probably be a tracking area instead
