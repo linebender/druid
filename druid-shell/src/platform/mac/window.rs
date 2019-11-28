@@ -158,6 +158,14 @@ impl WindowBuilder {
             let frame = NSView::frame(content_view);
             view.initWithFrame_(frame);
 
+            // register our view class to be alerted when the window becomes key
+            let notif_center_class = class!(NSNotificationCenter);
+            let notif_string = NSString::alloc(nil)
+                .init_str(NSWindowDidBecomeKeyNotification)
+                .autorelease();
+            let notif_center: id = msg_send![notif_center_class, defaultCenter];
+            let () = msg_send![notif_center, addObserver:view selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
+
             if let Some(menu) = self.menu {
                 NSApp().setMainMenu_(menu.menu);
             }
@@ -605,13 +613,6 @@ impl WindowHandle {
             let current_app = NSRunningApplication::currentApplication(nil);
             current_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps);
             let window: id = msg_send![*self.nsview.load(), window];
-            // register our view class to be alerted when it becomes the key view.
-            let notif_center_class = class!(NSNotificationCenter);
-            let notif_string = NSString::alloc(nil)
-                .init_str(NSWindowDidBecomeKeyNotification)
-                .autorelease();
-            let notif_center: id = msg_send![notif_center_class, defaultCenter];
-            let () = msg_send![notif_center, addObserver:*self.nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
             window.makeKeyAndOrderFront_(nil)
         }
     }
