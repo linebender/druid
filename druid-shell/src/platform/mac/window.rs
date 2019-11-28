@@ -158,6 +158,8 @@ impl WindowBuilder {
             let frame = NSView::frame(content_view);
             view.initWithFrame_(frame);
 
+            let () = msg_send![window, setDelegate: view];
+
             if let Some(menu) = self.menu {
                 NSApp().setMainMenu_(menu.menu);
             }
@@ -277,6 +279,10 @@ lazy_static! {
         decl.add_method(
             sel!(showContextMenu:),
             show_context_menu as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
+            sel!(windowWillClose:),
+            window_will_close as extern "C" fn(&mut Object, Sel, id),
         );
         ViewClass(decl.register())
     };
@@ -599,6 +605,18 @@ extern "C" fn window_did_become_key(this: &mut Object, _: Sel, _notification: id
     }
 }
 
+extern "C" fn window_will_close(this: &mut Object, _: Sel, _window: id) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
+        (*view_state).handler.destroy(&mut ctx);
+    }
+}
+
 impl WindowHandle {
     pub fn show(&self) {
         unsafe {
@@ -620,7 +638,7 @@ impl WindowHandle {
     pub fn close(&self) {
         unsafe {
             let window: id = msg_send![*self.nsview.load(), window];
-            window.close();
+            let () = msg_send![window, performSelectorOnMainThread: sel!(close) withObject: nil waitUntilDone: NO];
         }
     }
 
