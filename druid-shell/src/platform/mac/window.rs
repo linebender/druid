@@ -23,9 +23,9 @@ use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
 use cocoa::appkit::{
-    NSApp, NSApplication, NSApplicationActivateIgnoringOtherApps, NSAutoresizingMaskOptions,
-    NSBackingStoreBuffered, NSEvent, NSEventModifierFlags, NSRunningApplication, NSView,
-    NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
+    NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSEvent,
+    NSEventModifierFlags, NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow,
+    NSWindowStyleMask,
 };
 use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSRect, NSSize, NSString};
@@ -602,8 +602,6 @@ extern "C" fn window_did_become_key(this: &mut Object, _: Sel, _notification: id
 impl WindowHandle {
     pub fn show(&self) {
         unsafe {
-            let current_app = NSRunningApplication::currentApplication(nil);
-            current_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps);
             let window: id = msg_send![*self.nsview.load(), window];
             // register our view class to be alerted when it becomes the key view.
             let notif_center_class = class!(NSNotificationCenter);
