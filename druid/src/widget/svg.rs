@@ -83,6 +83,7 @@ impl<T: Data> SVG<T> {
     }
 
     /// Measure the SVG's size
+    #[allow(clippy::needless_return)]
     fn get_size(&self) -> Size {
         let root = self.tree.root();
         match *root.borrow() {
