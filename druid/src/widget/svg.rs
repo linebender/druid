@@ -14,25 +14,33 @@
 
 //! An SVG widget.
 
-use crate::kurbo::{BezPath, Point, Size};
-use crate::piet::{Color, RenderContext};
-
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx,
+    Widget,
 };
-use usvg::{Fill, NodeKind, Paint, PathSegment, Stroke};
 
 use log::error;
-
 use std::marker::PhantomData;
 
+#[cfg(feature = "svg")]
+use crate::{
+    kurbo::BezPath,
+    piet::{Color, RenderContext},
+    Point,
+};
+
+#[cfg(feature = "svg")]
+pub use usvg;
+
 /// A widget that renders a SVG
+#[cfg(feature = "svg")]
 pub struct SVG<T> {
     // On construction the SVG string is parsed into a usvg::Tree.
     tree: usvg::Tree,
     phantom: PhantomData<T>,
 }
 
+#[cfg(feature = "svg")]
 impl<T: Data> SVG<T> {
     /// Create an SVG-drawing widget from a valid SVG string literal.
     ///
@@ -78,7 +86,7 @@ impl<T: Data> SVG<T> {
     fn get_size(&self) -> Size {
         let root = self.tree.root();
         match *root.borrow() {
-            NodeKind::Svg(svg) => {
+            usvg::NodeKind::Svg(svg) => {
                 return Size::new(svg.size.width(), svg.size.height());
             }
             _ => {
@@ -88,78 +96,9 @@ impl<T: Data> SVG<T> {
             }
         };
     }
-
-    /// Convert a parsed usvg tree into Piet draw instructions
-    fn svg_to_piet(&self, scale: f64, offset: Point, paint_ctx: &mut PaintCtx) {
-        let root = self.tree.root();
-
-        for n in root.children() {
-            match *n.borrow() {
-                NodeKind::Path(ref p) => {
-                    let mut path = BezPath::new();
-                    for segment in p.data.iter() {
-                        match *segment {
-                            PathSegment::MoveTo { x, y } => {
-                                let x = (x * scale) + offset.x;
-                                let y = (y * scale) + offset.y;
-                                path.move_to((x, y));
-                            }
-                            PathSegment::LineTo { x, y } => {
-                                let x = (x * scale) + offset.x;
-                                let y = (y * scale) + offset.y;
-                                path.line_to((x, y));
-                            }
-                            PathSegment::CurveTo {
-                                x1,
-                                y1,
-                                x2,
-                                y2,
-                                x,
-                                y,
-                            } => {
-                                let x1 = (x1 * scale) + offset.x;
-                                let y1 = (y1 * scale) + offset.y;
-                                let x2 = (x2 * scale) + offset.x;
-                                let y2 = (y2 * scale) + offset.y;
-                                let x = (x * scale) + offset.x;
-                                let y = (y * scale) + offset.y;
-
-                                //QUESTION is this order correct?
-                                path.curve_to((x1, y1), (x2, y2), (x, y));
-                            }
-                            PathSegment::ClosePath => {
-                                path.close_path();
-                            }
-                        }
-                    }
-                    match &p.fill {
-                        Some(fill) => {
-                            let brush = color_from_fill(fill);
-                            paint_ctx.fill(path.clone(), &brush);
-                        }
-                        None => {}
-                    }
-
-                    match &p.stroke {
-                        Some(stroke) => {
-                            let brush = color_from_stroke(stroke);
-                            paint_ctx.stroke(path.clone(), &brush, stroke.width.value());
-                        }
-                        None => {}
-                    }
-                }
-                NodeKind::Defs => {
-                    // TODO: what is this?
-                }
-                _ => {
-                    // TODO: handle more of the SVG spec.
-                    error!("{:?} is unimplemented", n.clone());
-                }
-            }
-        }
-    }
 }
 
+#[cfg(feature = "svg")]
 impl<T: Data> Widget<T> for SVG<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _data: &T, _env: &Env) {
         //TODO: options for aspect ratio or scaling based on height
@@ -169,7 +108,7 @@ impl<T: Data> Widget<T> for SVG<T> {
         let origin_y = (base_state.size().height - (self.get_size().height * scale)) / 2.0;
         let origin = Point::new(origin_x, origin_y);
 
-        self.svg_to_piet(scale, origin, paint_ctx);
+        svg_to_piet(&self.tree, scale, origin, paint_ctx);
     }
 
     fn layout(
@@ -193,30 +132,152 @@ impl<T: Data> Widget<T> for SVG<T> {
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}
 }
 
-fn color_from_fill(fill: &Fill) -> Color {
-    match fill.paint {
-        Paint::Color(c) => {
-            let alpha = (fill.opacity.value() * 255.0) as u8;
-            Color::rgba8(c.red, c.green, c.blue, alpha)
+/// Convert a parsed usvg tree into Piet draw instructions
+#[cfg(feature = "svg")]
+pub fn svg_to_piet(tree: &usvg::Tree, scale: f64, offset: Point, paint_ctx: &mut PaintCtx) {
+    let root = tree.root();
+
+    for n in root.children() {
+        match *n.borrow() {
+            usvg::NodeKind::Path(ref p) => {
+                let mut path = BezPath::new();
+                for segment in p.data.iter() {
+                    match *segment {
+                        usvg::PathSegment::MoveTo { x, y } => {
+                            let x = (x * scale) + offset.x;
+                            let y = (y * scale) + offset.y;
+                            path.move_to((x, y));
+                        }
+                        usvg::PathSegment::LineTo { x, y } => {
+                            let x = (x * scale) + offset.x;
+                            let y = (y * scale) + offset.y;
+                            path.line_to((x, y));
+                        }
+                        usvg::PathSegment::CurveTo {
+                            x1,
+                            y1,
+                            x2,
+                            y2,
+                            x,
+                            y,
+                        } => {
+                            let x1 = (x1 * scale) + offset.x;
+                            let y1 = (y1 * scale) + offset.y;
+                            let x2 = (x2 * scale) + offset.x;
+                            let y2 = (y2 * scale) + offset.y;
+                            let x = (x * scale) + offset.x;
+                            let y = (y * scale) + offset.y;
+
+                            path.curve_to((x1, y1), (x2, y2), (x, y));
+                        }
+                        usvg::PathSegment::ClosePath => {
+                            path.close_path();
+                        }
+                    }
+                }
+                match &p.fill {
+                    Some(fill) => {
+                        let brush = color_from_fill(fill);
+                        paint_ctx.fill(path.clone(), &brush);
+                    }
+                    None => {}
+                }
+
+                match &p.stroke {
+                    Some(stroke) => {
+                        let brush = color_from_stroke(stroke);
+                        paint_ctx.stroke(path.clone(), &brush, stroke.width.value());
+                    }
+                    None => {}
+                }
+            }
+            usvg::NodeKind::Defs => {
+                // TODO: implement defs
+            }
+            _ => {
+                // TODO: handle more of the SVG spec.
+                error!("{:?} is unimplemented", n.clone());
+            }
+        }
+    }
+}
+
+#[cfg(feature = "svg")]
+fn color_from_stroke(stroke: &usvg::Stroke) -> Color {
+    match stroke.paint {
+        usvg::Paint::Color(c) => {
+            Color::rgb8(c.red, c.green, c.blue).with_alpha(stroke.opacity.value())
         }
         _ => {
-            //TODO: figure this out!
-            error!("I don't know what a Paint::Link is so here's some pink.");
+            //TODO: implement link
+            error!("We don't support Paint::Link yet, so here's some pink.");
             Color::rgb8(255, 192, 203)
         }
     }
 }
 
-fn color_from_stroke(stroke: &Stroke) -> Color {
-    match stroke.paint {
-        Paint::Color(c) => {
-            let alpha = (stroke.opacity.value() * 255.0) as u8;
-            Color::rgba8(c.red, c.green, c.blue, alpha)
+#[cfg(feature = "svg")]
+fn color_from_fill(fill: &usvg::Fill) -> Color {
+    match fill.paint {
+        usvg::Paint::Color(c) => {
+            Color::rgb8(c.red, c.green, c.blue).with_alpha(fill.opacity.value())
         }
         _ => {
-            //TODO: figure this out!
-            error!("I don't know what a Paint::Link is so here's some pink.");
+            //TODO: implement link
+            error!("We don't support Paint::Link yet, so here's some pink.");
             Color::rgb8(255, 192, 203)
         }
     }
+}
+
+/// A fake SVG widget to notify users of the "svg" feature flag.
+#[cfg(not(feature = "svg"))]
+#[derive(Default)]
+pub struct FakeSVG<T: Data> {
+    phantom: PhantomData<T>,
+}
+
+#[cfg(not(feature = "svg"))]
+impl<T: Data> FakeSVG<T> {
+    /// A fake SVG widget to notify users of the "svg" feature flag.
+    pub fn new() -> impl Widget<T> {
+        error!("The SVG widget requires druid's \"svg\" feature flag");
+        FakeSVG {
+            phantom: Default::default(),
+        }
+    }
+    /// A fake SVG widget to notify users of the "svg" feature flag.
+    pub fn new_from_str(_svg_str: &str) -> impl Widget<T> {
+        error!("The SVG widget requires druid's \"svg\" feature flag");
+        FakeSVG {
+            phantom: Default::default(),
+        }
+    }
+    /// A fake SVG widget to notify users of the "svg" feature flag.
+    pub fn new_from_path(_svg_str: &str) -> impl Widget<T> {
+        error!("The SVG widget requires druid's \"svg\" feature flag");
+        FakeSVG {
+            phantom: Default::default(),
+        }
+    }
+}
+
+#[cfg(not(feature = "svg"))]
+impl<T: Data> Widget<T> for FakeSVG<T> {
+    fn paint(&mut self, _paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, _env: &Env) {
+    }
+
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &T,
+        _env: &Env,
+    ) -> Size {
+        bc.max()
+    }
+
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
+
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}
 }

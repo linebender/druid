@@ -13,6 +13,9 @@
 // limitations under the License.
 
 //! This example shows how to draw an SVG.
+//!
+//! Requires the non-default "svg" feature to be enabled:
+//! `cargo run --example svg --features "svg"`
 
 use druid::widget::{Flex, WidgetExt, SVG};
 use druid::{AppLauncher, Widget, WindowDesc};
