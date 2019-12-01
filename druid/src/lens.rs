@@ -16,6 +16,7 @@
 
 use std::marker::PhantomData;
 use std::ops;
+use std::sync::Arc;
 
 pub use druid_derive::Lens;
 
@@ -142,6 +143,28 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         Self: Sized,
     {
         self.then(Index::new(index))
+    }
+
+    /// Adapt to operate on the contents of an `Arc` with efficient copy-on-write semantics
+    ///
+    /// ```
+    /// # use druid::*; use std::sync::Arc;
+    /// let lens = lens::Id.index(2).in_arc();
+    /// let mut x = Arc::new(vec![0, 1, 2, 3]);
+    /// let original = x.clone();
+    /// assert_eq!(lens.get(&x), 2);
+    /// lens.put(&mut x, 2);
+    /// assert!(Arc::ptr_eq(&original, &x), "no-op writes don't cause a deep copy");
+    /// lens.put(&mut x, 42);
+    /// assert_eq!(&*x, &[0, 1, 42, 3]);
+    /// ```
+    fn in_arc(self) -> InArc<Self>
+    where
+        A: Clone,
+        B: Data,
+        Self: Sized,
+    {
+        InArc::new(self)
     }
 }
 
@@ -439,5 +462,47 @@ impl<A: ?Sized> Lens<A, A> for Id {
 
     fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut A, f: F) -> V {
         f(data)
+    }
+}
+
+/// A `Lens` that exposes data within an `Arc` with copy-on-write semantics
+///
+/// A copy is only made in the event that a different value is written.
+#[derive(Debug, Copy, Clone)]
+pub struct InArc<L> {
+    inner: L,
+}
+
+impl<L> InArc<L> {
+    /// Adapt a lens to operate on an `Arc`
+    ///
+    /// See also `LensExt::in_arc`
+    pub fn new<A, B>(inner: L) -> Self
+    where
+        A: Clone,
+        B: Data,
+        L: Lens<A, B>,
+    {
+        Self { inner }
+    }
+}
+
+impl<A, B, L> Lens<Arc<A>, B> for InArc<L>
+where
+    A: Clone,
+    B: Data,
+    L: Lens<A, B>,
+{
+    fn with<V, F: FnOnce(&B) -> V>(&self, data: &Arc<A>, f: F) -> V {
+        self.inner.with(data, f)
+    }
+
+    fn with_mut<V, F: FnOnce(&mut B) -> V>(&self, data: &mut Arc<A>, f: F) -> V {
+        let mut temp = self.inner.with(data, |x| x.clone());
+        let v = f(&mut temp);
+        if self.inner.with(data, |x| !x.same(&temp)) {
+            self.inner.with_mut(Arc::make_mut(data), |x| *x = temp);
+        }
+        v
     }
 }
