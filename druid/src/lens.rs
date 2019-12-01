@@ -91,6 +91,28 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     {
         Then::new(self, other)
     }
+
+    /// Combine a `Lens<A, B>` with a function that can transform a `B` and its inverse.
+    ///
+    /// Useful for cases where the desired value doesn't physically exist in `A`, but can be
+    /// computed. For example, a lens like the following might be used to adapt a value with the
+    /// range 0-2 for use with a `Widget<f64>` like `Slider` that has a range of 0-1:
+    ///
+    /// ```
+    /// # use druid::*;
+    /// let lens = lens!((bool, f64), 1);
+    /// assert_eq!(lens.map(|x| x / 2.0, |x, y| *x = y * 2.0).get(&(true, 2.0)), 1.0);
+    /// ```
+    ///
+    /// The computed `C` may represent a whole or only part of the original `B`.
+    fn map<Get, Put, C>(self, get: Get, put: Put) -> Then<Self, Map<Get, Put>, B>
+    where
+        Get: Fn(&B) -> C,
+        Put: Fn(&mut B, C),
+        Self: Sized,
+    {
+        self.then(Map::new(get, put))
+    }
 }
 
 impl<A: ?Sized, B: ?Sized, T: Lens<A, B>> LensExt<A, B> for T {}
@@ -288,5 +310,42 @@ impl<T: Clone, U: Clone, B> Clone for Then<T, U, B> {
             right: self.right.clone(),
             _marker: PhantomData,
         }
+    }
+}
+
+/// `Lens` built from a getter and a setter
+#[derive(Debug, Copy, Clone)]
+pub struct Map<Get, Put> {
+    get: Get,
+    put: Put,
+}
+
+impl<Get, Put> Map<Get, Put> {
+    /// Construct a mapping
+    ///
+    /// See also `LensExt::map`
+    pub fn new<A: ?Sized, B>(get: Get, put: Put) -> Self
+    where
+        Get: Fn(&A) -> B,
+        Put: Fn(&mut A, B),
+    {
+        Self { get, put }
+    }
+}
+
+impl<A: ?Sized, B, Get, Put> Lens<A, B> for Map<Get, Put>
+where
+    Get: Fn(&A) -> B,
+    Put: Fn(&mut A, B),
+{
+    fn with<V, F: FnOnce(&B) -> V>(&self, data: &A, f: F) -> V {
+        f(&(self.get)(data))
+    }
+
+    fn with_mut<V, F: FnOnce(&mut B) -> V>(&self, data: &mut A, f: F) -> V {
+        let mut temp = (self.get)(data);
+        let x = f(&mut temp);
+        (self.put)(data, temp);
+        x
     }
 }
