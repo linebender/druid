@@ -119,8 +119,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     ///
     /// ```
     /// # use druid::*;
-    /// let lens = lens!((bool, Box<u32>), 1).deref();
-    /// assert_eq!(lens.get(&(false, Box::new(42))), 42);
+    /// assert_eq!(lens::Id.deref().get(&Box::new(42)), 42);
     /// ```
     fn deref(self) -> Then<Self, Deref, B>
     where
@@ -134,8 +133,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     ///
     /// ```
     /// # use druid::*;
-    /// let lens = lens!((bool, Vec<u8>), 1).deref().index(2);
-    /// assert_eq!(lens.get(&(false, vec![0, 1, 2, 3])), 2);
+    /// assert_eq!(lens::Id.index(2).get(&vec![0u32, 1, 2, 3]), 2);
     /// ```
     fn index<I>(self, index: I) -> Then<Self, Index<I>, B>
     where
@@ -425,5 +423,21 @@ where
     }
     fn with_mut<V, F: FnOnce(&mut T::Output) -> V>(&self, data: &mut T, f: F) -> V {
         f(&mut data[self.index.clone()])
+    }
+}
+
+/// The identity lens: the lens which does nothing, i.e. exposes exactly the original value.
+///
+/// Useful for starting a lens combinator chain, or passing to lens-based interfaces.
+#[derive(Debug, Copy, Clone)]
+pub struct Id;
+
+impl<A: ?Sized> Lens<A, A> for Id {
+    fn with<V, F: FnOnce(&A) -> V>(&self, data: &A, f: F) -> V {
+        f(data)
+    }
+
+    fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut A, f: F) -> V {
+        f(data)
     }
 }
