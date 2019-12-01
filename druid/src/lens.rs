@@ -15,6 +15,7 @@
 //! Support for lenses, a way of focusing on subfields of data.
 
 use std::marker::PhantomData;
+use std::ops;
 
 pub use druid_derive::Lens;
 
@@ -112,6 +113,37 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         Self: Sized,
     {
         self.then(Map::new(get, put))
+    }
+
+    /// Invoke a type's `Deref` impl
+    ///
+    /// ```
+    /// # use druid::*;
+    /// let lens = lens!((bool, Box<u32>), 1).deref();
+    /// assert_eq!(lens.get(&(false, Box::new(42))), 42);
+    /// ```
+    fn deref(self) -> Then<Self, Deref, B>
+    where
+        B: ops::Deref + ops::DerefMut,
+        Self: Sized,
+    {
+        self.then(Deref)
+    }
+
+    /// Access an index in a container
+    ///
+    /// ```
+    /// # use druid::*;
+    /// let lens = lens!((bool, Vec<u8>), 1).deref().index(2);
+    /// assert_eq!(lens.get(&(false, vec![0, 1, 2, 3])), 2);
+    /// ```
+    fn index<I>(self, index: I) -> Then<Self, Index<I>, B>
+    where
+        I: Clone,
+        B: ops::Index<I> + ops::IndexMut<I>,
+        Self: Sized,
+    {
+        self.then(Index::new(index))
     }
 }
 
@@ -347,5 +379,51 @@ where
         let x = f(&mut temp);
         (self.put)(data, temp);
         x
+    }
+}
+
+/// `Lens` for invoking `Deref` and `DerefMut` on a type
+///
+/// See also `LensExt::deref`.
+#[derive(Debug, Copy, Clone)]
+pub struct Deref;
+
+impl<T: ?Sized> Lens<T, T::Target> for Deref
+where
+    T: ops::Deref + ops::DerefMut,
+{
+    fn with<V, F: FnOnce(&T::Target) -> V>(&self, data: &T, f: F) -> V {
+        f(data.deref())
+    }
+    fn with_mut<V, F: FnOnce(&mut T::Target) -> V>(&self, data: &mut T, f: F) -> V {
+        f(data.deref_mut())
+    }
+}
+
+/// `Lens` for indexing containers
+#[derive(Debug, Copy, Clone)]
+pub struct Index<I> {
+    index: I,
+}
+
+impl<I> Index<I> {
+    /// Construct a lens that accesses a particular index
+    ///
+    /// See also `LensExt::index`.
+    pub fn new(index: I) -> Self {
+        Self { index }
+    }
+}
+
+impl<T, I> Lens<T, T::Output> for Index<I>
+where
+    T: ?Sized + ops::Index<I> + ops::IndexMut<I>,
+    I: Clone,
+{
+    fn with<V, F: FnOnce(&T::Output) -> V>(&self, data: &T, f: F) -> V {
+        f(&data[self.index.clone()])
+    }
+    fn with_mut<V, F: FnOnce(&mut T::Output) -> V>(&self, data: &mut T, f: F) -> V {
+        f(&mut data[self.index.clone()])
     }
 }
