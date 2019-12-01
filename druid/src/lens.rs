@@ -57,6 +57,44 @@ pub trait Lens<T: ?Sized, U: ?Sized> {
     fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> V;
 }
 
+/// Helpers for manipulating `Lens`es
+pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
+    /// Copy the targeted value out of `data`
+    fn get(&self, data: &A) -> B
+    where
+        B: Clone,
+    {
+        self.with(data, |x| x.clone())
+    }
+
+    /// Set the targeted value in `data` to `value`
+    fn put(&self, data: &mut A, value: B)
+    where
+        B: Sized,
+    {
+        self.with_mut(data, |x| *x = value);
+    }
+
+    /// Compose a `Lens<A, B>` with a `Lens<B, C>` to produce a `Lens<A, C>`
+    ///
+    /// ```
+    /// # use druid::*;
+    /// struct Foo { x: (u32, bool) }
+    /// let lens = lens!(Foo, x).then(lens!((u32, bool), 1));
+    /// assert_eq!(lens.get(&Foo { x: (0, true) }), true);
+    /// ```
+    fn then<Other, C>(self, other: Other) -> Then<Self, Other, B>
+    where
+        Other: Lens<B, C> + Sized,
+        C: ?Sized,
+        Self: Sized,
+    {
+        Then::new(self, other)
+    }
+}
+
+impl<A: ?Sized, B: ?Sized, T: Lens<A, B>> LensExt<A, B> for T {}
+
 // A case can be made this should be in the `widget` module.
 
 /// A wrapper for its widget subtree to have access to a part
@@ -147,7 +185,7 @@ where
 /// See also the `lens` macro.
 ///
 /// ```
-/// let lens = druid::Field::new(|x: &Vec<u32>| &x[42], |x| &mut x[42]);
+/// let lens = druid::lens::Field::new(|x: &Vec<u32>| &x[42], |x| &mut x[42]);
 /// ```
 pub struct Field<Get, GetMut> {
     get: Get,
@@ -194,9 +232,61 @@ where
 #[macro_export]
 macro_rules! lens {
     ($ty:ty, [$index:expr]) => {
-        $crate::Field::new::<$ty, _>(|x| &x[$index], |x| &mut x[$index])
+        $crate::lens::Field::new::<$ty, _>(|x| &x[$index], |x| &mut x[$index])
     };
     ($ty:ty, $field:tt) => {
-        $crate::Field::new::<$ty, _>(|x| &x.$field, |x| &mut x.$field)
+        $crate::lens::Field::new::<$ty, _>(|x| &x.$field, |x| &mut x.$field)
     };
+}
+
+/// `Lens` composed of two lenses joined together
+#[derive(Debug, Copy)]
+pub struct Then<T, U, B: ?Sized> {
+    left: T,
+    right: U,
+    _marker: PhantomData<B>,
+}
+
+impl<T, U, B: ?Sized> Then<T, U, B> {
+    /// Compose two lenses
+    ///
+    /// See also `LensExt::then`.
+    pub fn new<A: ?Sized, C: ?Sized>(left: T, right: U) -> Self
+    where
+        T: Lens<A, B>,
+        U: Lens<B, C>,
+    {
+        Self {
+            left,
+            right,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<T, U, A, B, C> Lens<A, C> for Then<T, U, B>
+where
+    A: ?Sized,
+    B: ?Sized,
+    C: ?Sized,
+    T: Lens<A, B>,
+    U: Lens<B, C>,
+{
+    fn with<V, F: FnOnce(&C) -> V>(&self, data: &A, f: F) -> V {
+        self.left.with(data, |b| self.right.with(b, f))
+    }
+
+    fn with_mut<V, F: FnOnce(&mut C) -> V>(&self, data: &mut A, f: F) -> V {
+        self.left.with_mut(data, |b| self.right.with_mut(b, f))
+    }
+}
+
+impl<T: Clone, U: Clone, B> Clone for Then<T, U, B> {
+    fn clone(&self) -> Self {
+        Self {
+            left: self.left.clone(),
+            right: self.right.clone(),
+            _marker: PhantomData,
+        }
+    }
 }
