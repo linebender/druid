@@ -381,12 +381,16 @@ impl Widget<String> for TextBox {
                         self.selection = Selection::new(0, data.len());
                     }
                     // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
-                    k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft)).matches(k_e) => {
+                    k_e if HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft).matches(k_e)
+                        || HotKey::new(None, KeyCode::Home).matches(k_e) =>
+                    {
                         self.cursor_to(0);
                         self.reset_cursor_blink(ctx);
                     }
                     // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
-                    k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowRight)).matches(k_e) => {
+                    k_e if HotKey::new(SysMods::Cmd, KeyCode::ArrowRight).matches(k_e)
+                        || HotKey::new(None, KeyCode::End).matches(k_e) =>
+                    {
                         self.cursor_to(data.len());
                         self.reset_cursor_blink(ctx);
                     }
