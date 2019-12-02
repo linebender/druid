@@ -14,9 +14,12 @@
 
 //! Simple calculator.
 
-use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
-
+use druid::kurbo::Size;
 use druid::widget::{Button, DynLabel, Flex, Padding};
+use druid::{
+    AppLauncher, BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, Lens, LensWrap,
+    PaintCtx, UpdateCtx, Widget, WindowDesc,
+};
 
 #[derive(Clone, Data, Lens)]
 struct CalcState {
@@ -25,6 +28,12 @@ struct CalcState {
     operand: f64,
     operator: char,
     in_num: bool,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+enum CalcInput {
+    Op(char),
+    Digit(u8),
 }
 
 impl CalcState {
@@ -110,6 +119,14 @@ impl CalcState {
             _ => unreachable!(),
         }
     }
+
+    fn handle_input(&mut self, input: CalcInput) {
+        use CalcInput::*;
+        match input {
+            Op(c) => self.op(c),
+            Digit(d) => self.digit(d),
+        }
+    }
 }
 
 fn pad<T: Data>(inner: impl Widget<T> + 'static) -> impl Widget<T> {
@@ -147,12 +164,170 @@ fn flex_row<T: Data>(
         .with_child(w4, 1.0)
 }
 
+struct KeyboardHandler<T: Data> {
+    child: Flex<T>,
+}
+
+impl Widget<CalcState> for KeyboardHandler<CalcState> {
+    fn paint(
+        &mut self,
+        paint_ctx: &mut PaintCtx,
+        base_state: &BaseState,
+        data: &CalcState,
+        env: &Env,
+    ) {
+        self.child.paint(paint_ctx, base_state, data, env)
+    }
+
+    fn layout(
+        &mut self,
+        layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &CalcState,
+        env: &Env,
+    ) -> Size {
+        self.child.layout(layout_ctx, bc, data, env)
+    }
+
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut CalcState, env: &Env) {
+        use druid::HotKey;
+        use druid::KeyCode::*;
+        use druid::RawMods::Shift;
+        use CalcInput::*;
+
+        match event {
+            Event::KeyDown(key_event) => {
+                if key_event.is_repeat
+                    || !key_event.key_code.is_printable()
+                    || key_event.key_code == Space
+                {
+                    if !(key_event.key_code == Backspace) {
+                        return;
+                    }
+                }
+
+                let calc_input = match key_event {
+                    k_e if (HotKey::new(None, "*").matches(k_e)
+                        || HotKey::new(Shift, "*").matches(k_e)) =>
+                    {
+                        Some(Op('×'))
+                    }
+                    k_e if (HotKey::new(None, "+").matches(k_e)
+                        || HotKey::new(Shift, "+").matches(k_e)) =>
+                    {
+                        Some(Op('+'))
+                    }
+                    k_e if HotKey::new(None, "-").matches(k_e) => Some(Op('−')),
+                    k_e if HotKey::new(None, "/").matches(k_e) => Some(Op('÷')),
+                    k_e if HotKey::new(Shift, KeyC).matches(k_e) => Some(Op('C')),
+                    // TODO Not really sure a good key for this.
+                    k_e if HotKey::new(None, Backtick).matches(k_e) => Some(Op('±')),
+                    // The checks for Numpad[0-9] treat numlock as always on for digits.
+                    // Otherwise we could just match "0".."9".
+                    k_e if HotKey::new(None, "0").matches(k_e)
+                        || HotKey::new(None, Numpad0).matches(k_e) =>
+                    {
+                        Some(Digit(0))
+                    }
+                    k_e if HotKey::new(None, "1").matches(k_e)
+                        || HotKey::new(None, Numpad1).matches(k_e) =>
+                    {
+                        Some(Digit(1))
+                    }
+                    k_e if HotKey::new(None, "2").matches(k_e)
+                        || HotKey::new(None, Numpad2).matches(k_e) =>
+                    {
+                        Some(Digit(2))
+                    }
+                    k_e if HotKey::new(None, "3").matches(k_e)
+                        || HotKey::new(None, Numpad3).matches(k_e) =>
+                    {
+                        Some(Digit(3))
+                    }
+                    k_e if HotKey::new(None, "4").matches(k_e)
+                        || HotKey::new(None, Numpad4).matches(k_e) =>
+                    {
+                        Some(Digit(4))
+                    }
+                    k_e if HotKey::new(None, "5").matches(k_e)
+                        || HotKey::new(None, Numpad5).matches(k_e) =>
+                    {
+                        Some(Digit(5))
+                    }
+                    k_e if HotKey::new(None, "6").matches(k_e)
+                        || HotKey::new(None, Numpad6).matches(k_e) =>
+                    {
+                        Some(Digit(6))
+                    }
+                    k_e if HotKey::new(None, "7").matches(k_e)
+                        || HotKey::new(None, Numpad7).matches(k_e) =>
+                    {
+                        Some(Digit(7))
+                    }
+                    k_e if HotKey::new(None, "8").matches(k_e)
+                        || HotKey::new(None, Numpad8).matches(k_e) =>
+                    {
+                        Some(Digit(8))
+                    }
+                    k_e if HotKey::new(None, "9").matches(k_e)
+                        || HotKey::new(None, Numpad9).matches(k_e) =>
+                    {
+                        Some(Digit(9))
+                    }
+                    // FIXME localization
+                    k_e if HotKey::new(None, ".").matches(k_e)
+                        || HotKey::new(None, NumpadDecimal).matches(k_e) =>
+                    {
+                        Some(Op('.'))
+                    }
+                    k_e if HotKey::new(None, "c").matches(k_e) => Some(Op('c')),
+                    k_e if HotKey::new(None, Backspace).matches(k_e) => Some(Op('⌫')),
+                    // These all return different text so we match them separately.
+                    k_e if HotKey::new(None, Return).matches(k_e)
+                        || HotKey::new(None, NumpadEnter).matches(k_e)
+                        || HotKey::new(None, "=").matches(k_e) =>
+                    {
+                        Some(Op('='))
+                    }
+                    _ => None,
+                };
+
+                match calc_input {
+                    Some(calc_input) => data.handle_input(calc_input),
+                    None => match key_event.text() {
+                        Some(text) => log::warn!("Unrecognized input {:?}", text),
+                        None => log::warn!("Unrecognized key_code: {:?}", key_event.key_code),
+                    },
+                }
+            }
+            // Without focus we won't receive any key events.
+            // On startup the root window will receive a Size event,
+            Event::Size(_) => {
+                // The root window doesn't seem to propagate the size event down the tree.
+                // So we don't either.
+                ctx.request_focus()
+            }
+            _ => self.child.event(ctx, event, data, env),
+        }
+    }
+
+    fn update(
+        &mut self,
+        ctx: &mut UpdateCtx,
+        old_data: Option<&CalcState>,
+        data: &CalcState,
+        env: &Env,
+    ) {
+        self.child.update(ctx, old_data, data, env)
+    }
+}
+
 fn build_calc() -> impl Widget<CalcState> {
     let display = LensWrap::new(
         DynLabel::new(|data: &String, _env| data.clone()),
         CalcState::value,
     );
-    Flex::column()
+    let column = Flex::column()
         .with_child(pad(display), 0.0)
         .with_child(
             flex_row(
@@ -198,7 +373,8 @@ fn build_calc() -> impl Widget<CalcState> {
                 op_button('='),
             ),
             1.0,
-        )
+        );
+    KeyboardHandler { child: column }
 }
 
 fn main() {
