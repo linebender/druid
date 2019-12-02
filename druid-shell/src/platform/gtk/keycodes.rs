@@ -314,3 +314,34 @@ impl From<KeyCode> for Special {
         }
     }
 }
+
+// I Don't think we actually want this, as it must make a choice to map to one of the
+// Left or Right keys in many cases, don't see much of a solution besides
+// Special::Control(keycode)?.
+//
+// But it's currently used in `menu::register_accelerator`.
+impl From<Special> for u32 {
+    #[allow(non_upper_case_globals)]
+    fn from(src: Special) -> u32 {
+        match src {
+            Special::Home => Home,
+            Special::Left => Left,
+            Special::Up => Up,
+            Special::Right => Right,
+            Special::Down => Down,
+            Special::PageUp => Page_Up,
+            Special::PageDown => Page_Down,
+            Special::End => End,
+            Special::Insert => Insert,
+            Special::Delete => Delete,
+            Special::Control => Control_R,
+            Special::Alt => Alt_R,
+            Special::Shift => Shift_R,
+            Special::Meta => Super_R,
+            Special::Unidentified => unreachable!(
+                "Unreachable: converting unknown Special {:?} to a keyval",
+                src
+            ),
+        }
+    }
+}

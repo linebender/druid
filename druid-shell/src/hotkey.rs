@@ -19,7 +19,7 @@ use std::borrow::Borrow;
 use log::warn;
 
 use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::keycodes::KeyCode;
+use crate::keycodes::{KeyCode, Special};
 
 /// A description of a keyboard shortcut.
 ///
@@ -65,6 +65,7 @@ pub struct HotKey {
 pub enum KeyCompare {
     Code(KeyCode),
     Text(&'static str),
+    Special(Special),
 }
 
 impl HotKey {
@@ -128,6 +129,7 @@ impl HotKey {
             && match self.key {
                 KeyCompare::Code(code) => code == event.key_code,
                 KeyCompare::Text(text) => Some(text) == event.text(),
+                KeyCompare::Special(special) => Some(special) == event.special(),
             }
     }
 }
@@ -260,6 +262,12 @@ impl From<SysMods> for RawMods {
 impl From<KeyCode> for KeyCompare {
     fn from(src: KeyCode) -> KeyCompare {
         KeyCompare::Code(src)
+    }
+}
+
+impl From<Special> for KeyCompare {
+    fn from(src: Special) -> KeyCompare {
+        KeyCompare::Special(src)
     }
 }
 

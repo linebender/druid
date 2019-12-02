@@ -134,6 +134,7 @@ fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: 
     let wc = match menu_key.key {
         KeyCompare::Code(key_code) => key_code.into(),
         KeyCompare::Text(text) => text.chars().next().unwrap() as u32,
+        KeyCompare::Special(special) => special.into(),
     };
 
     item.add_accelerator(
