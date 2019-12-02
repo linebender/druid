@@ -183,13 +183,6 @@ impl KeyCode {
 /// of key form. Providing the basis for a platform specific mapping.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Special {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-
-    Return,
-
     Alt,
     Control,
     Shift,
@@ -206,4 +199,8 @@ pub enum Special {
     Left,
     Right,
     Up,
+
+    // w3c keyboard API names this Unidentified
+    // it should probably match Unknown above?
+    Unidentified,
 }

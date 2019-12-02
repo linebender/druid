@@ -33,7 +33,7 @@ pub struct KeyEvent {
 impl KeyEvent {
     /// Create a new `KeyEvent` struct. This accepts either &str or char for the last
     /// two arguments.
-    pub(crate) fn new(
+    pub(crate) fn new_text(
         key_code: impl Into<KeyCode>,
         is_repeat: bool,
         mods: KeyModifiers,
@@ -57,6 +57,21 @@ impl KeyEvent {
                 text,
                 unmodified_text,
             },
+        }
+    }
+
+    /// Create a new `KeyEvent` struct from a `Special` as the last argument.
+    pub(crate) fn new_special(
+        key_code: impl Into<KeyCode>,
+        is_repeat: bool,
+        mods: KeyModifiers,
+        special: Special,
+    ) -> Self {
+        KeyEvent {
+            key_code: key_code.into(),
+            is_repeat,
+            mods,
+            key: Key::Special(special),
         }
     }
 
@@ -95,10 +110,17 @@ impl KeyEvent {
         }
     }
 
+    pub fn special(&self) -> Option<Special> {
+        match self.key {
+            Key::Special(special) => Some(special),
+            _ => None,
+        }
+    }
+
     /// For creating `KeyEvent`s during testing.
     #[doc(hidden)]
     pub fn for_test(mods: impl Into<KeyModifiers>, text: &'static str, code: KeyCode) -> Self {
-        KeyEvent::new(code, false, mods.into(), text, text)
+        KeyEvent::new_text(code, false, mods.into(), text, text)
     }
 }
 
@@ -220,15 +242,6 @@ impl From<char> for StrOrChar {
     }
 }
 
-impl From<Option<char>> for StrOrChar {
-    fn from(src: Option<char>) -> StrOrChar {
-        match src {
-            Some(c) => StrOrChar::Char(c),
-            None => StrOrChar::Str(""),
-        }
-    }
-}
-
 impl fmt::Display for TinyStr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.as_str())
@@ -238,12 +251,6 @@ impl fmt::Display for TinyStr {
 impl fmt::Debug for TinyStr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "TinyStr(\"{}\")", self.as_str())
-    }
-}
-
-impl Default for TinyStr {
-    fn default() -> Self {
-        TinyStr::new("")
     }
 }
 

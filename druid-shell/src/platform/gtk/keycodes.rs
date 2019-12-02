@@ -16,7 +16,7 @@
 
 use gdk::enums::key::*;
 
-use crate::keycodes::KeyCode;
+use crate::keycodes::{KeyCode, Special};
 
 pub type RawKeyCode = u32;
 
@@ -270,6 +270,47 @@ impl From<KeyCode> for u32 {
                 "Unreachable: converting unknown KeyCode {:?} to a keyval",
                 src
             ),
+        }
+    }
+}
+
+impl From<KeyCode> for Special {
+    #[allow(non_upper_case_globals)]
+    fn from(src: KeyCode) -> Special {
+        //        use KeyCode::*;
+        match src {
+            KeyCode::Home | KeyCode::Unknown(KP_Home) => Special::Home,
+            KeyCode::ArrowLeft | KeyCode::Unknown(KP_Left) => Special::Left,
+            KeyCode::ArrowUp | KeyCode::Unknown(KP_Up) => Special::Up,
+            KeyCode::ArrowRight | KeyCode::Unknown(KP_Right) => Special::Right,
+            KeyCode::ArrowDown | KeyCode::Unknown(KP_Down) => Special::Down,
+            KeyCode::PageUp | KeyCode::Unknown(KP_Page_Up) => Special::PageUp,
+            KeyCode::PageDown | KeyCode::Unknown(KP_Page_Down) => Special::PageDown,
+            KeyCode::End | KeyCode::Unknown(KP_End) => Special::End,
+            // Numpad 5 with numlock off, this behavior matches w3c keyboard event api.
+            KeyCode::Unknown(KP_Begin) => Special::Unidentified,
+            KeyCode::Insert | KeyCode::Unknown(KP_Insert) => Special::Insert,
+            KeyCode::Delete | KeyCode::Unknown(KP_Delete) => Special::Delete,
+            KeyCode::LeftControl
+            | KeyCode::RightControl
+            | KeyCode::Unknown(Control_L)
+            | KeyCode::Unknown(Control_R) => Special::Control,
+            KeyCode::LeftAlt
+            | KeyCode::RightAlt
+            | KeyCode::Unknown(Alt_L)
+            | KeyCode::Unknown(Alt_R) => Special::Alt,
+            KeyCode::LeftShift
+            | KeyCode::RightShift
+            | KeyCode::Unknown(Shift_L)
+            | KeyCode::Unknown(Shift_R) => Special::Shift,
+            KeyCode::LeftMeta
+            | KeyCode::RightMeta
+            | KeyCode::Unknown(Super_L)
+            | KeyCode::Unknown(Super_R) => Special::Meta,
+            _ => {
+                log::warn!("Warning: unknown special keycode {:?}", src);
+                Special::Unidentified
+            }
         }
     }
 }

@@ -39,6 +39,7 @@ use super::util::assert_main_thread;
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::keyboard;
+use crate::keycodes::{KeyCode, Special};
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
 use crate::window::{Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
@@ -695,14 +696,91 @@ fn get_modifiers(modifiers: gdk::ModifierType) -> keyboard::KeyModifiers {
 }
 
 fn make_key_event(key: &EventKey, repeat: bool) -> keyboard::KeyEvent {
+    use gdk::enums::key as gdk_key;
     let keyval = key.get_keyval();
-    let hardware_keycode = key.get_hardware_keycode();
 
-    let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval);
+    // KeyCodes::NumPad* is based around the mac's hardware key representation
+    // which doesn't have a numlock
+    //
+    // In these cases, we want to map to a key which is *not* the lowest level key
+    // On PC Keyboards the lower level keys represent NumPadHome and friends.
+    // which don't exist in `keycodes::KeyCode` so we special case these here.
+    //
+    // We can't just do this in hardware_keycode_to_keyval by forcing an interpretation
+    // with Numlock on there since this is unlikely to work laptop keyboards.
+    //
+    // So we do 2 things:
+    // * If the keyval is a NumPad[0-9], decimal or separator, avoid getting the hardware keyval.
+    // * If the keyval is a NumPad{Home,...} We translate it to a NumPad[0-9].
+    let keycode = if (keyval >= gdk_key::KP_0 && keyval <= gdk_key::KP_9)
+        || keyval == gdk_key::KP_Decimal
+        || keyval == gdk_key::KP_Separator
+    {
+        keyval
+    } else if keyval >= gdk_key::KP_Home && keyval <= gdk_key::KP_Delete {
+        //  Note that trying to deal with these by using gdk_keys_to_upper doesn't work out.
+        //  Nor can we just do some arithmetic on keyval, since the two blocks have a different
+        //  order.
+        match keyval {
+            gdk_key::KP_Home => gdk_key::KP_7,
+            gdk_key::KP_Left => gdk_key::KP_4,
+            gdk_key::KP_Up => gdk_key::KP_8,
+            gdk_key::KP_Right => gdk_key::KP_6,
+            gdk_key::KP_Down => gdk_key::KP_2,
+            gdk_key::KP_Page_Up => gdk_key::KP_9,
+            gdk_key::KP_Page_Down => gdk_key::KP_3,
+            gdk_key::KP_End => gdk_key::KP_1,
+            gdk_key::KP_Begin => gdk_key::KP_5,
+            gdk_key::KP_Insert => gdk_key::KP_0,
+            gdk_key::KP_Delete => gdk_key::KP_Decimal,
+            _ => unreachable!("Keypress numlock off key converting {}", keyval),
+        }
+    } else {
+        let hardware_keycode = key.get_hardware_keycode();
+        hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval)
+    };
 
-    let text = gdk::keyval_to_unicode(keyval);
+    // These match the text for the macOS backend
+    // which seems should return 0x3 or ETX for Enter,
+    // and '\r' for Return.
+    //
+    // https://stackoverflow.com/questions/14705240/
+    //
+    // for gtk this currently would return '\r' for Return
+    // and NUL for KP_Enter.
+    //
+    // That leads to Text for Return and Special for Enter.
+    // Probably not the right thing.
+    // It seems like the w3c Web API doesn't actually give text for
+    // control or whitespace characters. If we want to do that instead
+    // see [control/whitespace] below.
+    let text = if keyval == gdk::enums::key::KP_Enter {
+        Some(0x3 as char)
+    } else {
+        // Although it isn't documented according from it's implementation
+        // in the gdk rust bindings, `keyval_to_unicode` will not return Some('\0').
+        // We rely on this to some extent.
+        gdk::keyval_to_unicode(keyval)
+    };
 
-    keyboard::KeyEvent::new(keycode, repeat, get_modifiers(key.get_state()), text, text)
+    // [control/whitespace]
+    // we could filter out whitespace here by matching (What about Space? It seems fine to leave.)
+    // Some(c) if !(c.is_control() || c.is_whitespace()) => {
+    // We would then need to add these control/whitespace to Special.
+    match text {
+        Some(c) => {
+            keyboard::KeyEvent::new_text(keycode, repeat, get_modifiers(key.get_state()), c, c)
+        }
+        _ => {
+            keyboard::KeyEvent::new_special(
+                keycode,
+                repeat,
+                get_modifiers(key.get_state()),
+                // We cannot use KeyCode::from(keyval) here without loss of information.
+                Special::from(KeyCode::Unknown(keyval)).into(),
+            )
+        }
+    }
 }
 
 /// Map a hardware keycode to a keyval by performing a lookup in the keymap and finding the
