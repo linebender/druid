@@ -532,12 +532,12 @@ impl KeyMatcher for char {
         // We allow either text or unmodified text to match.
         let text = key_event.text().unwrap_or("");
         let mut chars = text.chars();
-        if chars.next() == Some(*self) && !chars.next().is_some() {
+        if chars.next() == Some(*self) && chars.next().is_none() {
             return true;
         }
         let unmod_text = key_event.unmod_text().unwrap_or("");
         let mut chars = unmod_text.chars();
-        if chars.next() == Some(*self) && !chars.next().is_some() {
+        if chars.next() == Some(*self) && chars.next().is_none() {
             return true;
         }
         false
