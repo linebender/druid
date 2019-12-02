@@ -79,10 +79,7 @@ impl KeyEvent {
     /// e.g. the `chars` on macOS for opt+s is 'ß'.
     pub fn text(&self) -> Option<&str> {
         match &self.key {
-            Key::Text {
-                text,
-                unmodified_text: _,
-            } => {
+            Key::Text { text, .. } => {
                 if text.len == 0 {
                     None
                 } else {
@@ -97,8 +94,7 @@ impl KeyEvent {
     pub fn unmod_text(&self) -> Option<&str> {
         match &self.key {
             Key::Text {
-                text: _,
-                unmodified_text,
+                unmodified_text, ..
             } => {
                 if unmodified_text.len == 0 {
                     None
