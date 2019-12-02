@@ -45,7 +45,7 @@ use super::util::{assert_main_thread, make_nsstring};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::keycodes::KeyCode;
+use crate::keycodes::{KeyCode, Special};
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
 use crate::window::{Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
@@ -793,7 +793,8 @@ fn make_key_event(event: id) -> KeyEvent {
         let is_repeat: bool = msg_send!(event, isARepeat);
         let modifiers = event.modifierFlags();
         let modifiers = make_modifiers(modifiers);
-        KeyEvent::new(virtual_key, is_repeat, modifiers, text, unmodified_text)
+        // TODO does this need any handling for Special?
+        KeyEvent::new_text(virtual_key, is_repeat, modifiers, text, unmodified_text)
     }
 }
 
@@ -811,7 +812,16 @@ fn mods_changed_key_event(prev: KeyModifiers, event: id) -> (bool, KeyEvent) {
             KeyCode::LeftMeta | KeyCode::RightMeta if prev.meta => false,
             _ => true,
         };
-        let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
+
+        let special = match key_code {
+            KeyCode::LeftShift | KeyCode::RightShift => Special::Shift,
+            KeyCode::LeftAlt | KeyCode::RightAlt => Special::Alt,
+            KeyCode::LeftControl | KeyCode::RightControl => Special::Control,
+            KeyCode::LeftMeta | KeyCode::RightMeta => Special::Meta,
+            _ => Special::Unidentified,
+        };
+
+        let event = KeyEvent::new_special(key_code, is_repeat, modifiers, special);
         (down, event)
     }
 }

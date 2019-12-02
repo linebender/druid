@@ -22,7 +22,7 @@ use super::util::make_nsstring;
 use crate::common_util::strip_access_key;
 use crate::hotkey::{HotKey, KeyCompare};
 use crate::keyboard::KeyModifiers;
-use crate::keycodes::KeyCode;
+use crate::keycodes::{KeyCode, Special};
 
 pub struct Menu {
     pub menu: id,
@@ -113,6 +113,20 @@ impl HotKey {
     fn key_equivalent(&self) -> &str {
         match self.key {
             KeyCompare::Text(t) => t,
+            KeyCompare::Special(Special::Home) => "\u{F729}",
+            KeyCompare::Special(Special::End) => "\u{F72B}",
+            KeyCompare::Special(Special::Insert) => "\u{F727}",
+            KeyCompare::Special(Special::Delete) => "\u{007f}",
+            KeyCompare::Special(Special::PageUp) => "\u{F72C}",
+            KeyCompare::Special(Special::PageDown) => "\u{F72D}",
+            KeyCompare::Special(Special::Up) => "\u{F700}",
+            KeyCompare::Special(Special::Down) => "\u{F701}",
+            KeyCompare::Special(Special::Left) => "\u{F702}",
+            KeyCompare::Special(Special::Right) => "\u{F703}",
+            KeyCompare::Special(other) => {
+                eprintln!("no key equivalent for {:?}", other);
+                ""
+            }
 
             // from NSText.h
             KeyCompare::Code(KeyCode::Return) => "\u{0003}",
