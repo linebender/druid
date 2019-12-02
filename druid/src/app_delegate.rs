@@ -53,7 +53,7 @@ pub trait AppDelegate<T: Data> {
     /// before they are passed down the tree.
     ///
     /// The return value of this function will be passed down the tree. This can
-    /// be the even that was passed in, a different event, or no event. In all cases,
+    /// be the event that was passed in, a different event, or no event. In all cases,
     /// the `update` method will be called as usual.
     fn event(
         &mut self,
