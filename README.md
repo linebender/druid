@@ -203,7 +203,7 @@ To use the lens, wrap your widget with `LensWrap` (note the conversion of
 CamelCase to snake_case):
 
 ```rust
-LensWrap::new(WidgetThatExpectsf64::new(), AppState::value);
+LensWrap::new(WidgetThatExpectsf64::new(), app_state::value);
 ```
 
 Alternatively, lenses for structs, tuples, and indexable containers can be
