@@ -57,7 +57,7 @@ pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
 pub use dialog::{FileDialogOptions, FileDialogType, FileInfo, FileSpec};
 pub use error::Error;
 pub use hotkey::{HotKey, KeyCompare, RawMods, SysMods};
-pub use keyboard::{KeyEvent, KeyModifiers};
+pub use keyboard::{KeyEvent, KeyModifiers, Modifier};
 pub use keycodes::KeyCode;
 pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseEvent};
