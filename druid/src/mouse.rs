@@ -19,7 +19,7 @@ use crate::{KeyModifiers, MouseButton};
 
 /// The state of the mouse for a click, mouse-up, or move event.
 ///
-/// In `druid`, unlike in druid_shell`, we treat the widget's coordinate
+/// In `druid`, unlike in `druid_shell`, we treat the widget's coordinate
 /// space and the window's coordinate space separately.
 #[derive(Debug, Clone)]
 pub struct MouseEvent {
