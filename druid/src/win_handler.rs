@@ -502,7 +502,8 @@ impl<T: Data + 'static> DruidHandler<T> {
     fn handle_cmd(&mut self, window_id: WindowId, cmd: Command, win_ctx: &mut dyn WinCtx) {
         //FIXME: we need some way of getting the correct `WinCtx` for this window.
         match &cmd.selector {
-            &sys_cmd::OPEN_FILE => self.open_file(cmd, window_id, win_ctx),
+            &sys_cmd::SHOW_OPEN_PANEL => self.show_open_panel(cmd, window_id, win_ctx),
+            &sys_cmd::SHOW_SAVE_PANEL => self.show_save_panel(cmd, window_id, win_ctx),
             &sys_cmd::NEW_WINDOW => self.new_window(cmd),
             &sys_cmd::CLOSE_WINDOW => self.close_window(cmd, window_id),
             &sys_cmd::SHOW_WINDOW => self.show_window(cmd),
@@ -520,14 +521,30 @@ impl<T: Data + 'static> DruidHandler<T> {
         }
     }
 
-    fn open_file(&mut self, cmd: Command, window_id: WindowId, win_ctx: &mut dyn WinCtx) {
+    fn show_open_panel(&mut self, cmd: Command, window_id: WindowId, win_ctx: &mut dyn WinCtx) {
         let options = cmd
             .get_object::<FileDialogOptions>()
             .map(|opts| opts.to_owned())
             .unwrap_or_default();
         let result = win_ctx.open_file_sync(options);
         if let Some(info) = result {
-            let event = Event::OpenFile(info);
+            let cmd = Command::new(sys_cmd::OPEN_FILE, info);
+            let event = Event::Command(cmd);
+            self.app_state
+                .borrow_mut()
+                .do_event(window_id, event, win_ctx);
+        }
+    }
+
+    fn show_save_panel(&mut self, cmd: Command, window_id: WindowId, win_ctx: &mut dyn WinCtx) {
+        let options = cmd
+            .get_object::<FileDialogOptions>()
+            .map(|opts| opts.to_owned())
+            .unwrap_or_default();
+        let result = win_ctx.save_as_sync(options);
+        if let Some(info) = result {
+            let cmd = Command::new(sys_cmd::SAVE_FILE, info);
+            let event = Event::Command(cmd);
             self.app_state
                 .borrow_mut()
                 .do_event(window_id, event, win_ctx);

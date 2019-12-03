@@ -18,7 +18,6 @@
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
-use std::ffi::OsString;
 use std::mem;
 use std::ops::Deref;
 use std::ptr::{null, null_mut};
@@ -1146,20 +1145,6 @@ impl WindowHandle {
         self.state.upgrade().map(|w| w.hwnd.get())
     }
 
-    /// Open a modal file dialog.
-    ///
-    /// Note: this method will be reworked to avoid reentrancy problems.
-    /// Currently, calling it may result in important messages being dropped.
-    #[deprecated(since = "0.3.0", note = "use methods on WinCtx instead")]
-    pub fn file_dialog(
-        &self,
-        ty: FileDialogType,
-        options: FileDialogOptions,
-    ) -> Result<OsString, Error> {
-        let hwnd = self.get_hwnd().ok_or(Error::NullHwnd)?;
-        unsafe { get_file_dialog_path(hwnd, ty, options) }
-    }
-
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
         self.state.upgrade().map(|w| IdleHandle {
@@ -1293,6 +1278,8 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
         TimerToken::new(id)
     }
 
+    //FIXME: these two methods will be reworked to avoid reentrancy problems.
+    // Currently, calling it may result in important messages being dropped.
     /// Prompt the user to chose a file to open.
     ///
     /// Blocks while the user picks the file.
@@ -1300,6 +1287,20 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
         let hwnd = self.handle.get_hwnd()?;
         unsafe {
             get_file_dialog_path(hwnd, FileDialogType::Open, options)
+                .ok()
+                .map(|os_str| FileInfo {
+                    path: os_str.into(),
+                })
+        }
+    }
+
+    /// Prompt the user to chose a file to open.
+    ///
+    /// Blocks while the user picks the file.
+    fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        let hwnd = self.handle.get_hwnd()?;
+        unsafe {
+            get_file_dialog_path(hwnd, FileDialogType::Save, options)
                 .ok()
                 .map(|os_str| FileInfo {
                     path: os_str.into(),

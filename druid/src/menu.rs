@@ -576,7 +576,7 @@ pub mod sys {
             pub fn save_as<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-as"),
-                    commands::SAVE_FILE_AS,
+                    commands::SHOW_SAVE_PANEL,
                 )
                 .hotkey(RawMods::CtrlShift, "s")
             }
@@ -780,7 +780,7 @@ pub mod sys {
             pub fn save_as<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-as"),
-                    commands::SAVE_FILE_AS,
+                    commands::SHOW_SAVE_PANEL,
                 )
                 .hotkey(RawMods::MetaShift, "s")
             }

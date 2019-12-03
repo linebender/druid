@@ -16,20 +16,12 @@
 
 use std::ffi::OsString;
 
-use crate::dialog::FileDialogOptions;
+use crate::dialog::{FileDialogOptions, FileDialogType};
 use gtk::{FileChooserAction, FileChooserExt, NativeDialogExt, Window};
 
 use crate::Error;
 
-/// Type of file dialog.
-pub enum FileDialogType {
-    /// File open dialog.
-    Open,
-    /// File save dialog.
-    Save,
-}
-
-pub(crate) fn open_file_sync(
+pub(crate) fn get_file_dialog_path(
     window: &Window,
     ty: FileDialogType,
     options: FileDialogOptions,
