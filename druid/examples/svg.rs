@@ -17,7 +17,7 @@
 //! Requires the non-default "svg" feature to be enabled:
 //! `cargo run --example svg --features "svg"`
 
-use druid::widget::{Flex, WidgetExt, SVG};
+use druid::widget::{Flex, Svg, WidgetExt};
 use druid::{AppLauncher, Widget, WindowDesc};
 
 const TIGER: &str = r###"
@@ -177,7 +177,7 @@ fn main() {
 fn ui_builder() -> impl Widget<u32> {
     let mut col = Flex::column();
 
-    col.add_child(SVG::new_from_str(TIGER).fix_width(100.0).center(), 1.0);
-    col.add_child(SVG::new_from_str(TIGER), 1.0);
+    col.add_child(Svg::new_from_str(TIGER).fix_width(100.0).center(), 1.0);
+    col.add_child(Svg::new_from_str(TIGER), 1.0);
     col
 }

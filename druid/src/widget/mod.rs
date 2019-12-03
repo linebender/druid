@@ -76,7 +76,7 @@ pub use crate::widget::parse::Parse;
 
 mod svg;
 #[cfg(feature = "svg")]
-pub use crate::widget::svg::{svg_to_piet, usvg, SVG};
+pub use crate::widget::svg::{svg_to_piet, svg_tree_from_path, svg_tree_from_str, Svg};
 
 #[cfg(not(feature = "svg"))]
-pub use crate::widget::svg::FakeSVG as SVG;
+pub use crate::widget::svg::FakeSvg as Svg;

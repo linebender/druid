@@ -23,6 +23,14 @@ use log::error;
 use std::marker::PhantomData;
 
 #[cfg(feature = "svg")]
+const EMPTY_SVG: &str = r###"
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 0 0">
+      <g fill="none">
+      </g>
+  </svg>
+"###;
+
+#[cfg(feature = "svg")]
 use crate::{
     kurbo::BezPath,
     piet::{Color, RenderContext},
@@ -30,34 +38,25 @@ use crate::{
 };
 
 #[cfg(feature = "svg")]
-pub use usvg;
+use usvg;
 
 /// A widget that renders a SVG
 #[cfg(feature = "svg")]
-pub struct SVG<T> {
+pub struct Svg<T> {
     // On construction the SVG string is parsed into a usvg::Tree.
     tree: usvg::Tree,
     phantom: PhantomData<T>,
 }
 
 #[cfg(feature = "svg")]
-impl<T: Data> SVG<T> {
+impl<T: Data> Svg<T> {
     /// Create an SVG-drawing widget from a valid SVG string literal.
     ///
     /// The SVG will scale to fit its box constraints.
+    /// If SVG is invalid a blank SVG will be rendered instead.
     pub fn new_from_str(svg_str: &str) -> impl Widget<T> {
-        let re_opt = usvg::Options {
-            keep_named_groups: false,
-            ..usvg::Options::default()
-        };
-
-        let tree = match usvg::Tree::from_str(svg_str, &re_opt) {
-            Ok(tree) => tree,
-            Err(err) => panic!("Couldn't parse SVG because: {}", err),
-        };
-
-        SVG {
-            tree,
+        Svg {
+            tree: svg_tree_from_str(svg_str),
             phantom: Default::default(),
         }
     }
@@ -65,19 +64,10 @@ impl<T: Data> SVG<T> {
     /// Create an SVG-drawing widget from a valid path to an .svg file.
     ///
     /// The SVG will scale to fit its box constraints.
-    pub fn new_from_path(path: &str) -> impl Widget<T> {
-        let re_opt = usvg::Options {
-            keep_named_groups: false,
-            ..usvg::Options::default()
-        };
-
-        let tree = match usvg::Tree::from_file(path, &re_opt) {
-            Ok(tree) => tree,
-            Err(err) => panic!("Couldn't parse SVG because: {}", err),
-        };
-
-        SVG {
-            tree,
+    /// If SVG is missing or invalid a blank SVG will be rendered instead.
+    pub fn new_from_path(path: impl AsRef<std::path::Path>) -> impl Widget<T> {
+        Svg {
+            tree: svg_tree_from_path(path),
             phantom: Default::default(),
         }
     }
@@ -100,7 +90,7 @@ impl<T: Data> SVG<T> {
 }
 
 #[cfg(feature = "svg")]
-impl<T: Data> Widget<T> for SVG<T> {
+impl<T: Data> Widget<T> for Svg<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _data: &T, _env: &Env) {
         //TODO: options for aspect ratio or scaling based on height
         let scale = base_state.size().width / self.get_size().width;
@@ -131,6 +121,42 @@ impl<T: Data> Widget<T> for SVG<T> {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}
+}
+
+// Create a raw usvg tree from an SVG string.
+// Pass this tree to `svg_to_piet()` to draw it.
+#[cfg(feature = "svg")]
+pub fn svg_tree_from_str(svg_str: &str) -> usvg::Tree {
+    let re_opt = usvg::Options {
+        keep_named_groups: false,
+        ..usvg::Options::default()
+    };
+
+    match usvg::Tree::from_str(svg_str, &re_opt) {
+        Ok(tree) => tree,
+        Err(err) => {
+            error!("{}", err);
+            usvg::Tree::from_str(EMPTY_SVG, &re_opt).unwrap()
+        }
+    }
+}
+
+// Create a raw usvg tree from a path to an SVG.
+// Pass this tree to `svg_to_piet()` to draw it.
+#[cfg(feature = "svg")]
+pub fn svg_tree_from_path(path: impl AsRef<std::path::Path>) -> usvg::Tree {
+    let re_opt = usvg::Options {
+        keep_named_groups: false,
+        ..usvg::Options::default()
+    };
+
+    match usvg::Tree::from_file(path, &re_opt) {
+        Ok(tree) => tree,
+        Err(err) => {
+            error!("{}", err);
+            usvg::Tree::from_str(EMPTY_SVG, &re_opt).unwrap()
+        }
+    }
 }
 
 /// Convert a parsed usvg tree into Piet draw instructions
@@ -178,7 +204,7 @@ pub fn svg_to_piet(tree: &usvg::Tree, scale: f64, offset: Point, paint_ctx: &mut
                 }
                 match &p.fill {
                     Some(fill) => {
-                        let brush = color_from_fill(fill);
+                        let brush = color_from_usvg(&fill.paint, fill.opacity);
                         paint_ctx.fill(path.clone(), &brush);
                     }
                     None => {}
@@ -186,7 +212,7 @@ pub fn svg_to_piet(tree: &usvg::Tree, scale: f64, offset: Point, paint_ctx: &mut
 
                 match &p.stroke {
                     Some(stroke) => {
-                        let brush = color_from_stroke(stroke);
+                        let brush = color_from_usvg(&stroke.paint, stroke.opacity);
                         paint_ctx.stroke(path.clone(), &brush, stroke.width.value());
                     }
                     None => {}
@@ -204,25 +230,9 @@ pub fn svg_to_piet(tree: &usvg::Tree, scale: f64, offset: Point, paint_ctx: &mut
 }
 
 #[cfg(feature = "svg")]
-fn color_from_stroke(stroke: &usvg::Stroke) -> Color {
-    match stroke.paint {
-        usvg::Paint::Color(c) => {
-            Color::rgb8(c.red, c.green, c.blue).with_alpha(stroke.opacity.value())
-        }
-        _ => {
-            //TODO: implement link
-            error!("We don't support Paint::Link yet, so here's some pink.");
-            Color::rgb8(255, 192, 203)
-        }
-    }
-}
-
-#[cfg(feature = "svg")]
-fn color_from_fill(fill: &usvg::Fill) -> Color {
-    match fill.paint {
-        usvg::Paint::Color(c) => {
-            Color::rgb8(c.red, c.green, c.blue).with_alpha(fill.opacity.value())
-        }
+fn color_from_usvg(paint: &usvg::Paint, opacity: usvg::Opacity) -> Color {
+    match paint {
+        usvg::Paint::Color(c) => Color::rgb8(c.red, c.green, c.blue).with_alpha(opacity.value()),
         _ => {
             //TODO: implement link
             error!("We don't support Paint::Link yet, so here's some pink.");
@@ -234,37 +244,37 @@ fn color_from_fill(fill: &usvg::Fill) -> Color {
 /// A fake SVG widget to notify users of the "svg" feature flag.
 #[cfg(not(feature = "svg"))]
 #[derive(Default)]
-pub struct FakeSVG<T: Data> {
+pub struct FakeSvg<T: Data> {
     phantom: PhantomData<T>,
 }
 
 #[cfg(not(feature = "svg"))]
-impl<T: Data> FakeSVG<T> {
+impl<T: Data> FakeSvg<T> {
     /// A fake SVG widget to notify users of the "svg" feature flag.
     pub fn new() -> impl Widget<T> {
         error!("The SVG widget requires druid's \"svg\" feature flag");
-        FakeSVG {
+        FakeSvg {
             phantom: Default::default(),
         }
     }
     /// A fake SVG widget to notify users of the "svg" feature flag.
     pub fn new_from_str(_svg_str: &str) -> impl Widget<T> {
         error!("The SVG widget requires druid's \"svg\" feature flag");
-        FakeSVG {
+        FakeSvg {
             phantom: Default::default(),
         }
     }
     /// A fake SVG widget to notify users of the "svg" feature flag.
-    pub fn new_from_path(_svg_str: &str) -> impl Widget<T> {
+    pub fn new_from_path(_path: impl AsRef<std::path::Path>) -> impl Widget<T> {
         error!("The SVG widget requires druid's \"svg\" feature flag");
-        FakeSVG {
+        FakeSvg {
             phantom: Default::default(),
         }
     }
 }
 
 #[cfg(not(feature = "svg"))]
-impl<T: Data> Widget<T> for FakeSVG<T> {
+impl<T: Data> Widget<T> for FakeSvg<T> {
     fn paint(&mut self, _paint_ctx: &mut PaintCtx, _base_state: &BaseState, _data: &T, _env: &Env) {
     }
 
