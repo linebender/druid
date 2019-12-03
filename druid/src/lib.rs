@@ -46,9 +46,9 @@ use piet::{Piet, RenderContext};
 
 // these are the types from shell that we expose; others we only use internally.
 pub use shell::{
-    Application, Clipboard, ClipboardFormat, Cursor, FileDialogOptions, FileDialogType, FileInfo,
-    FileSpec, FormatId, HotKey, KeyCode, KeyEvent, KeyModifiers, MouseButton, RawMods, SysMods,
-    Text, TimerToken, WinCtx, WindowHandle,
+    Application, Clipboard, ClipboardFormat, Cursor, FileDialogOptions, FileInfo, FileSpec,
+    FormatId, HotKey, KeyCode, KeyEvent, KeyModifiers, MouseButton, RawMods, SysMods, Text,
+    TimerToken, WinCtx, WindowHandle,
 };
 
 pub use app::{AppLauncher, WindowDesc};
@@ -556,10 +556,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut recurse = true;
         let mut hot_changed = None;
         let child_event = match event {
-            Event::OpenFile(file) => {
-                recurse = ctx.is_root;
-                Event::OpenFile(file.clone())
-            }
             Event::Size(size) => {
                 recurse = ctx.is_root;
                 Event::Size(*size)

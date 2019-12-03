@@ -199,6 +199,11 @@ pub trait WinCtx<'a> {
     ///
     /// Blocks while the user picks the file.
     fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo>;
+
+    /// Prompt the user to chose a path for saving.
+    ///
+    /// Blocks while the user picks a file.
+    fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo>;
 }
 
 /// App behavior, supplied by the app.

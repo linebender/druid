@@ -31,13 +31,13 @@ use gtk::{AccelGroup, ApplicationWindow};
 use crate::kurbo::{Point, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
-use super::dialog::{self, FileDialogType};
+use super::dialog;
 use super::menu::Menu;
 use super::runloop::with_application;
 use super::util::assert_main_thread;
 
 use crate::common_util::IdleCallback;
-use crate::dialog::{FileDialogOptions, FileInfo};
+use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
 use crate::window::{Text, TimerToken, WinCtx, WinHandler};
@@ -503,13 +503,13 @@ impl WindowHandle {
         }
     }
 
-    pub fn file_dialog(
+    fn file_dialog(
         &self,
         ty: FileDialogType,
         options: FileDialogOptions,
     ) -> Result<OsString, Error> {
         if let Some(state) = self.state.upgrade() {
-            dialog::open_file_sync(state.window.upcast_ref(), ty, options)
+            dialog::get_file_dialog_path(state.window.upcast_ref(), ty, options)
         } else {
             Err(Error::Other(
                 "Cannot upgrade state from weak pointer to arc",
@@ -581,13 +581,17 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
     }
 
     fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        if let Some(state) = self.handle.state.upgrade() {
-            dialog::open_file_sync(state.window.upcast_ref(), FileDialogType::Open, options)
-                .ok()
-                .map(|s| FileInfo { path: s.into() })
-        } else {
-            None
-        }
+        self.handle
+            .file_dialog(FileDialogType::Open, options)
+            .ok()
+            .map(|s| FileInfo { path: s.into() })
+    }
+
+    fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        self.handle
+            .file_dialog(FileDialogType::Save, options)
+            .ok()
+            .map(|s| FileInfo { path: s.into() })
     }
 
     fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken {

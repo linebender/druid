@@ -43,7 +43,7 @@ use super::dialog;
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
 use crate::common_util::IdleCallback;
-use crate::dialog::{FileDialogOptions, FileInfo};
+use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
@@ -748,7 +748,13 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
     }
 
     fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        unsafe { dialog::show_open_file_dialog_sync(options).map(|s| FileInfo { path: s.into() }) }
+        dialog::get_file_dialog_path(FileDialogType::Open, options)
+            .map(|s| FileInfo { path: s.into() })
+    }
+
+    fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        dialog::get_file_dialog_path(FileDialogType::Save, options)
+            .map(|s| FileInfo { path: s.into() })
     }
 }
 

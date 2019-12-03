@@ -92,16 +92,33 @@ pub mod sys {
     pub const NEW_FILE: Selector = Selector::new("druid-builtin.menu-file-new");
 
     /// System command. A file picker dialog will be shown to the user, and an
-    /// Open Event will be sent if a file is chosen.
+    /// `OPEN_FILE` command will be sent if a file is chosen.
     ///
-    /// The argument should be a `FileDialogOptions` struct.
-    pub const OPEN_FILE: Selector = Selector::new("druid-builtin.menu-file-open");
+    /// The argument should be a [`FileDialogOptions`] struct.
+    ///
+    /// [`FileDialogOptions`]: struct.FileDialogOptions.html
+    pub const SHOW_OPEN_PANEL: Selector = Selector::new("druid-builtin.menu-file-open");
+
+    /// Open a file.
+    ///
+    /// The argument must be a [`FileInfo`] object for the file to be opened.
+    ///
+    /// [`FileInfo`]: struct.FileInfo.html
+    pub const OPEN_FILE: Selector = Selector::new("druid-builtin.open-file-path");
+
+    /// Special command. When issued, the system will show the 'save as' panel,
+    /// and if a path is selected the system will issue a `SAVE_FILE` command
+    /// with the selected path as the argument.
+    ///
+    /// The argument should be a [`FileDialogOptions`] object.
+    ///
+    /// [`FileDialogOptions`]: struct.FileDialogOptions.html
+    pub const SHOW_SAVE_PANEL: Selector = Selector::new("druid-builtin.menu-file-save-as");
 
     /// Save the current file.
+    ///
+    /// The argument, if present, should be the path where the file should be saved.
     pub const SAVE_FILE: Selector = Selector::new("druid-builtin.menu-file-save");
-
-    /// Show the 'save as' dialog.
-    pub const SAVE_FILE_AS: Selector = Selector::new("druid-builtin.menu-file-save-as");
 
     /// Show the print-setup window.
     pub const PRINT_SETUP: Selector = Selector::new("druid-builtin.menu-file-print-setup");
