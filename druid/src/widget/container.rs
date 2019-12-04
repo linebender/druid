@@ -64,28 +64,12 @@ impl<T: Data> Container<T> {
 }
 
 impl<T: Data + 'static> Widget<T> for Container<T> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
-        // Paint background color
-        if let Some(ref brush) = self.style.background {
-            let rect = Rect::from_origin_size(Point::ZERO, base_state.size());
-            paint_ctx.render_ctx.fill(rect, brush);
-        }
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        self.inner.event(ctx, event, data, env);
+    }
 
-        // Paint border
-        if let Some(ref border) = self.style.border {
-            let offset = border.width / 2.0;
-            let size = Size::new(
-                base_state.size().width - border.width,
-                base_state.size().height - border.width,
-            );
-            let rect = Rect::from_origin_size((offset, offset), size);
-            paint_ctx
-                .render_ctx
-                .stroke(rect, &border.brush, border.width);
-        }
-
-        // Paint child
-        self.inner.paint_with_offset(paint_ctx, data, env);
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        self.inner.update(ctx, data, env);
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
@@ -108,11 +92,27 @@ impl<T: Data + 'static> Widget<T> for Container<T> {
         )
     }
 
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        self.inner.event(ctx, event, data, env);
-    }
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+        // Paint background color
+        if let Some(ref brush) = self.style.background {
+            let rect = Rect::from_origin_size(Point::ZERO, base_state.size());
+            paint_ctx.render_ctx.fill(rect, brush);
+        }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
-        self.inner.update(ctx, data, env);
+        // Paint border
+        if let Some(ref border) = self.style.border {
+            let offset = border.width / 2.0;
+            let size = Size::new(
+                base_state.size().width - border.width,
+                base_state.size().height - border.width,
+            );
+            let rect = Rect::from_origin_size((offset, offset), size);
+            paint_ctx
+                .render_ctx
+                .stroke(rect, &border.brush, border.width);
+        }
+
+        // Paint child
+        self.inner.paint_with_offset(paint_ctx, data, env);
     }
 }

@@ -33,6 +33,51 @@ impl Checkbox {
 }
 
 impl Widget<bool> for Checkbox {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut bool, _env: &Env) {
+        match event {
+            Event::MouseDown(_) => {
+                ctx.set_active(true);
+                ctx.invalidate();
+            }
+            Event::MouseUp(_) => {
+                if ctx.is_active() {
+                    ctx.set_active(false);
+                    if ctx.is_hot() {
+                        if *data {
+                            *data = false;
+                        } else {
+                            *data = true;
+                        }
+                    }
+                    ctx.invalidate();
+                }
+            }
+            Event::HotChanged(_) => {
+                ctx.invalidate();
+            }
+            _ => (),
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&bool>, _data: &bool, _env: &Env) {
+        ctx.invalidate();
+    }
+
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &bool,
+        env: &Env,
+    ) -> Size {
+        bc.debug_check("Checkbox");
+
+        bc.constrain(Size::new(
+            env.get(theme::BASIC_WIDGET_HEIGHT),
+            env.get(theme::BASIC_WIDGET_HEIGHT),
+        ))
+    }
+
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &bool, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
 
@@ -71,50 +116,5 @@ impl Widget<bool> for Checkbox {
 
             paint_ctx.stroke_styled(path, &env.get(theme::LABEL_COLOR), 2., &style);
         }
-    }
-
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &bool,
-        env: &Env,
-    ) -> Size {
-        bc.debug_check("Checkbox");
-
-        bc.constrain(Size::new(
-            env.get(theme::BASIC_WIDGET_HEIGHT),
-            env.get(theme::BASIC_WIDGET_HEIGHT),
-        ))
-    }
-
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut bool, _env: &Env) {
-        match event {
-            Event::MouseDown(_) => {
-                ctx.set_active(true);
-                ctx.invalidate();
-            }
-            Event::MouseUp(_) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
-                    if ctx.is_hot() {
-                        if *data {
-                            *data = false;
-                        } else {
-                            *data = true;
-                        }
-                    }
-                    ctx.invalidate();
-                }
-            }
-            Event::HotChanged(_) => {
-                ctx.invalidate();
-            }
-            _ => (),
-        }
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&bool>, _data: &bool, _env: &Env) {
-        ctx.invalidate();
     }
 }

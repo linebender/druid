@@ -33,6 +33,36 @@ impl ProgressBar {
 }
 
 impl Widget<f64> for ProgressBar {
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut f64, _env: &Env) {}
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {
+        ctx.invalidate();
+    }
+
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &f64,
+        env: &Env,
+    ) -> Size {
+        bc.debug_check("ProgressBar");
+
+        let default_width = 100.0;
+
+        if bc.is_width_bounded() {
+            bc.constrain(Size::new(
+                bc.max().width,
+                env.get(theme::BASIC_WIDGET_HEIGHT),
+            ))
+        } else {
+            bc.constrain(Size::new(
+                default_width,
+                env.get(theme::BASIC_WIDGET_HEIGHT),
+            ))
+        }
+    }
+
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, env: &Env) {
         let clamped = data.max(0.0).min(1.0);
 
@@ -77,35 +107,5 @@ impl Widget<f64> for ProgressBar {
             (env.get(theme::PRIMARY_LIGHT), env.get(theme::PRIMARY_DARK)),
         );
         paint_ctx.fill(rounded_rect, &bar_gradient);
-    }
-
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &f64,
-        env: &Env,
-    ) -> Size {
-        bc.debug_check("ProgressBar");
-
-        let default_width = 100.0;
-
-        if bc.is_width_bounded() {
-            bc.constrain(Size::new(
-                bc.max().width,
-                env.get(theme::BASIC_WIDGET_HEIGHT),
-            ))
-        } else {
-            bc.constrain(Size::new(
-                default_width,
-                env.get(theme::BASIC_WIDGET_HEIGHT),
-            ))
-        }
-    }
-
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut f64, _env: &Env) {}
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {
-        ctx.invalidate();
     }
 }

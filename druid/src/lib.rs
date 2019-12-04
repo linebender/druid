@@ -172,40 +172,6 @@ pub struct BaseState {
 /// [`Data`]: trait.Data.html
 /// [`WidgetPod`]: struct.WidgetPod.html
 pub trait Widget<T> {
-    /// Paint the widget appearance.
-    ///
-    /// The widget calls methods on the `render_ctx` field of the
-    /// `paint_ctx` in order to paint its appearance. `paint_ctx` auto
-    /// derefs to `render_ctx` for convenience.
-    ///
-    /// Container widgets can paint a background before recursing to their
-    /// children, or annotations (for example, scrollbars) by painting
-    /// afterwards. In addition, they can apply masks and transforms on
-    /// the render context, which is especially useful for scrolling.
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env);
-
-    /// Compute layout.
-    ///
-    /// A leaf widget should determine its size (subject to the provided
-    /// constraints) and return it.
-    ///
-    /// A container widget will recursively call [`WidgetPod::layout`] on its
-    /// child widgets, providing each of them an appropriate box constraint,
-    /// compute layout, then call [`set_layout_rect`] on each of its children.
-    /// Finally, it should return the size of the container. The container
-    /// can recurse in any order, which can be helpful to, for example, compute
-    /// the size of non-flex widgets first, to determine the amount of space
-    /// available for the flex widgets.
-    ///
-    /// For efficiency, a container should only invoke layout of a child widget
-    /// once, though there is nothing enforcing this.
-    ///
-    /// The layout strategy is strongly inspired by Flutter.
-    ///
-    /// [`WidgetPod::layout`]: struct.WidgetPod.html#method.layout
-    /// [`set_layout_rect`]: struct.LayoutCtx.html#method.set_layout_rect
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
-
     /// Handle an event.
     ///
     /// A number of different events (in the [`Event`] enum) are handled in this
@@ -234,25 +200,59 @@ pub trait Widget<T> {
     // Consider a no-op default impl. One reason against is that containers might
     // inadvertently forget to propagate.
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env);
+
+    /// Compute layout.
+    ///
+    /// A leaf widget should determine its size (subject to the provided
+    /// constraints) and return it.
+    ///
+    /// A container widget will recursively call [`WidgetPod::layout`] on its
+    /// child widgets, providing each of them an appropriate box constraint,
+    /// compute layout, then call [`set_layout_rect`] on each of its children.
+    /// Finally, it should return the size of the container. The container
+    /// can recurse in any order, which can be helpful to, for example, compute
+    /// the size of non-flex widgets first, to determine the amount of space
+    /// available for the flex widgets.
+    ///
+    /// For efficiency, a container should only invoke layout of a child widget
+    /// once, though there is nothing enforcing this.
+    ///
+    /// The layout strategy is strongly inspired by Flutter.
+    ///
+    /// [`WidgetPod::layout`]: struct.WidgetPod.html#method.layout
+    /// [`set_layout_rect`]: struct.LayoutCtx.html#method.set_layout_rect
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
+
+    /// Paint the widget appearance.
+    ///
+    /// The widget calls methods on the `render_ctx` field of the
+    /// `paint_ctx` in order to paint its appearance. `paint_ctx` auto
+    /// derefs to `render_ctx` for convenience.
+    ///
+    /// Container widgets can paint a background before recursing to their
+    /// children, or annotations (for example, scrollbars) by painting
+    /// afterwards. In addition, they can apply masks and transforms on
+    /// the render context, which is especially useful for scrolling.
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env);
 }
 
 // TODO: explore getting rid of this (ie be consistent about using
 // `dyn Widget` only).
 impl<T> Widget<T> for Box<dyn Widget<T>> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
-        self.deref_mut().paint(paint_ctx, base_state, data, env);
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        self.deref_mut().layout(ctx, bc, data, env)
-    }
-
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.deref_mut().event(ctx, event, data, env)
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
         self.deref_mut().update(ctx, old_data, data, env);
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+        self.deref_mut().layout(ctx, bc, data, env)
+    }
+
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+        self.deref_mut().paint(paint_ctx, base_state, data, env);
     }
 }
 

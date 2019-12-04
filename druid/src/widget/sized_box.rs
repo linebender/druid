@@ -77,9 +77,15 @@ impl<T: Data> SizedBox<T> {
 }
 
 impl<T: Data> Widget<T> for SizedBox<T> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
-            inner.paint(paint_ctx, base_state, data, env);
+            inner.event(ctx, event, data, env);
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+        if let Some(ref mut inner) = self.inner {
+            inner.update(ctx, old_data, data, env);
         }
     }
 
@@ -115,15 +121,9 @@ impl<T: Data> Widget<T> for SizedBox<T> {
         }
     }
 
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
-            inner.event(ctx, event, data, env);
-        }
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
-        if let Some(ref mut inner) = self.inner {
-            inner.update(ctx, old_data, data, env);
+            inner.paint(paint_ctx, base_state, data, env);
         }
     }
 }

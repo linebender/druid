@@ -60,11 +60,18 @@ impl<T: Data, W: Widget<T>> EnvScope<T, W> {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env);
 
-        self.child.paint(paint_ctx, base_state, data, &new_env);
+        self.child.event(ctx, event, data, &new_env)
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+        let mut new_env = env.clone();
+        (self.f)(&mut new_env);
+
+        self.child.update(ctx, old_data, data, &new_env);
     }
 
     fn layout(
@@ -82,17 +89,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         self.child.layout(layout_ctx, &bc, data, &new_env)
     }
 
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env);
 
-        self.child.event(ctx, event, data, &new_env)
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
-        let mut new_env = env.clone();
-        (self.f)(&mut new_env);
-
-        self.child.update(ctx, old_data, data, &new_env);
+        self.child.paint(paint_ctx, base_state, data, &new_env);
     }
 }

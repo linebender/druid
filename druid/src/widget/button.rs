@@ -77,6 +77,44 @@ impl<T: Data + 'static> Button<T> {
 }
 
 impl<T: Data> Widget<T> for Button<T> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        match event {
+            Event::MouseDown(_) => {
+                ctx.set_active(true);
+                ctx.invalidate();
+            }
+            Event::MouseUp(_) => {
+                if ctx.is_active() {
+                    ctx.set_active(false);
+                    ctx.invalidate();
+                    if ctx.is_hot() {
+                        (self.action)(ctx, data, env);
+                    }
+                }
+            }
+            Event::HotChanged(_) => {
+                ctx.invalidate();
+            }
+            _ => (),
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+        self.label.update(ctx, old_data, data, env)
+    }
+
+    fn layout(
+        &mut self,
+        layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> Size {
+        bc.debug_check("Button");
+
+        self.label.layout(layout_ctx, bc, data, env)
+    }
+
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let is_active = base_state.is_active();
         let is_hot = base_state.is_hot();
@@ -108,43 +146,5 @@ impl<T: Data> Widget<T> for Button<T> {
         paint_ctx.fill(rounded_rect, &bg_gradient);
 
         self.label.paint(paint_ctx, base_state, data, env);
-    }
-
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
-        bc.debug_check("Button");
-
-        self.label.layout(layout_ctx, bc, data, env)
-    }
-
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        match event {
-            Event::MouseDown(_) => {
-                ctx.set_active(true);
-                ctx.invalidate();
-            }
-            Event::MouseUp(_) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
-                    ctx.invalidate();
-                    if ctx.is_hot() {
-                        (self.action)(ctx, data, env);
-                    }
-                }
-            }
-            Event::HotChanged(_) => {
-                ctx.invalidate();
-            }
-            _ => (),
-        }
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
-        self.label.update(ctx, old_data, data, env)
     }
 }
