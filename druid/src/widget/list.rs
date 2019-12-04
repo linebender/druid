@@ -92,7 +92,7 @@ impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Arc<Vec<T>>) {
     }
 
     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (T1, T), usize)) {
-        let mut new_shared = self.0.to_owned();
+        let shared = self.0.to_owned();
         let mut new_data = Vec::with_capacity(self.1.len());
         let mut any_shared_changed = false;
         let mut any_el_changed = false;
@@ -101,11 +101,11 @@ impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Arc<Vec<T>>) {
             let mut d = (self.0.clone(), item.to_owned());
             cb(&mut d, i);
 
-            if !any_shared_changed && !new_shared.same(&d.0) {
+            if !any_shared_changed && !shared.same(&d.0) {
                 any_shared_changed = true;
             }
             if any_shared_changed {
-                new_shared = d.0;
+                self.0 = d.0;
             }
             if !any_el_changed && !item.same(&d.1) {
                 any_el_changed = true;
@@ -113,11 +113,6 @@ impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Arc<Vec<T>>) {
             new_data.push(d.1);
         }
 
-        // It's not clear we need to track this; it's possible it would
-        // be slightly more efficient to just update data.0 in place.
-        if any_shared_changed {
-            self.0 = new_shared;
-        }
         if any_el_changed {
             self.1 = Arc::new(new_data);
         }
