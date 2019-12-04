@@ -63,6 +63,55 @@ impl<T: Data + PartialEq + 'static> Radio<T> {
 }
 
 impl<T: Data + PartialEq> Widget<T> for Radio<T> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, _env: &Env) {
+        match event {
+            Event::MouseDown(_) => {
+                ctx.set_active(true);
+                ctx.invalidate();
+            }
+            Event::MouseUp(_) => {
+                if ctx.is_active() {
+                    ctx.set_active(false);
+                    if ctx.is_hot() {
+                        *data = self.variant.clone();
+                    }
+                    ctx.invalidate();
+                }
+            }
+            Event::HotChanged(_) => {
+                ctx.invalidate();
+            }
+            _ => (),
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {
+        ctx.invalidate();
+    }
+
+    fn layout(
+        &mut self,
+        layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> Size {
+        bc.debug_check("Radio");
+
+        let label_size = self.child_label.layout(layout_ctx, &bc, data, env);
+        let padding = 5.0;
+        let label_x_offset = env.get(theme::BASIC_WIDGET_HEIGHT) + padding;
+        let origin = Point::new(label_x_offset, 0.0);
+
+        self.child_label
+            .set_layout_rect(Rect::from_origin_size(origin, label_size));
+
+        bc.constrain(Size::new(
+            label_x_offset + label_size.width,
+            env.get(theme::BASIC_WIDGET_HEIGHT).max(label_size.height),
+        ))
+    }
+
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
 
@@ -97,54 +146,5 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
         // Paint the text label
         self.child_label.paint_with_offset(paint_ctx, data, env);
-    }
-
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
-        bc.debug_check("Radio");
-
-        let label_size = self.child_label.layout(layout_ctx, &bc, data, env);
-        let padding = 5.0;
-        let label_x_offset = env.get(theme::BASIC_WIDGET_HEIGHT) + padding;
-        let origin = Point::new(label_x_offset, 0.0);
-
-        self.child_label
-            .set_layout_rect(Rect::from_origin_size(origin, label_size));
-
-        bc.constrain(Size::new(
-            label_x_offset + label_size.width,
-            env.get(theme::BASIC_WIDGET_HEIGHT).max(label_size.height),
-        ))
-    }
-
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, _env: &Env) {
-        match event {
-            Event::MouseDown(_) => {
-                ctx.set_active(true);
-                ctx.invalidate();
-            }
-            Event::MouseUp(_) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
-                    if ctx.is_hot() {
-                        *data = self.variant.clone();
-                    }
-                    ctx.invalidate();
-                }
-            }
-            Event::HotChanged(_) => {
-                ctx.invalidate();
-            }
-            _ => (),
-        }
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {
-        ctx.invalidate();
     }
 }

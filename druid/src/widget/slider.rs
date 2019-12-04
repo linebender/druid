@@ -50,6 +50,73 @@ impl Slider {
 }
 
 impl Widget<f64> for Slider {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
+        let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let slider_width = ctx.base_state.size().width;
+
+        match event {
+            Event::MouseDown(mouse) => {
+                ctx.set_active(true);
+                if self.knob_hit_test(knob_size, mouse.pos) {
+                    self.x_offset = self.knob_pos.x - mouse.pos.x
+                } else {
+                    self.x_offset = 0.;
+                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
+                }
+                ctx.invalidate();
+            }
+            Event::MouseUp(mouse) => {
+                if ctx.is_active() {
+                    ctx.set_active(false);
+                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
+                    ctx.invalidate();
+                }
+            }
+            Event::MouseMoved(mouse) => {
+                if ctx.is_active() {
+                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
+                }
+                if ctx.is_hot() {
+                    if self.knob_hit_test(knob_size, mouse.pos) {
+                        self.knob_hovered = true
+                    } else {
+                        self.knob_hovered = false
+                    }
+                }
+                ctx.invalidate();
+            }
+            _ => (),
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {
+        ctx.invalidate();
+    }
+
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &f64,
+        env: &Env,
+    ) -> Size {
+        bc.debug_check("Slider");
+
+        let default_width = 100.0;
+
+        if bc.is_width_bounded() {
+            bc.constrain(Size::new(
+                bc.max().width,
+                env.get(theme::BASIC_WIDGET_HEIGHT),
+            ))
+        } else {
+            bc.constrain(Size::new(
+                default_width,
+                env.get(theme::BASIC_WIDGET_HEIGHT),
+            ))
+        }
+    }
+
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, env: &Env) {
         let clamped = data.max(0.0).min(1.0);
         let rect = Rect::from_origin_size(Point::ORIGIN, base_state.size());
@@ -118,72 +185,5 @@ impl Widget<f64> for Slider {
 
         //Actually paint the knob
         paint_ctx.fill(knob_circle, &knob_gradient);
-    }
-
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &f64,
-        env: &Env,
-    ) -> Size {
-        bc.debug_check("Slider");
-
-        let default_width = 100.0;
-
-        if bc.is_width_bounded() {
-            bc.constrain(Size::new(
-                bc.max().width,
-                env.get(theme::BASIC_WIDGET_HEIGHT),
-            ))
-        } else {
-            bc.constrain(Size::new(
-                default_width,
-                env.get(theme::BASIC_WIDGET_HEIGHT),
-            ))
-        }
-    }
-
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
-        let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
-        let slider_width = ctx.base_state.size().width;
-
-        match event {
-            Event::MouseDown(mouse) => {
-                ctx.set_active(true);
-                if self.knob_hit_test(knob_size, mouse.pos) {
-                    self.x_offset = self.knob_pos.x - mouse.pos.x
-                } else {
-                    self.x_offset = 0.;
-                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
-                }
-                ctx.invalidate();
-            }
-            Event::MouseUp(mouse) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
-                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
-                    ctx.invalidate();
-                }
-            }
-            Event::MouseMoved(mouse) => {
-                if ctx.is_active() {
-                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
-                }
-                if ctx.is_hot() {
-                    if self.knob_hit_test(knob_size, mouse.pos) {
-                        self.knob_hovered = true
-                    } else {
-                        self.knob_hovered = false
-                    }
-                }
-                ctx.invalidate();
-            }
-            _ => (),
-        }
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {
-        ctx.invalidate();
     }
 }

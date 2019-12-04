@@ -124,53 +124,65 @@ impl<T: Data> Split<T> {
     }
 }
 impl<T: Data> Widget<T> for Split<T> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
-        let size = base_state.size();
-        //third, because we're putting the lines at roughly third points.
-        //small, because we floor, to give the extra pixel (roughly) to the middle.
-        let small_third = (self.splitter_size / 3.0).floor();
-        let (line1, line2) = match self.split_direction {
-            Axis::Horizontal => {
-                let reduced_width = size.width - self.splitter_size;
-                let edge1 = reduced_width * self.split_point;
-                let edge2 = edge1 + self.splitter_size;
-                (
-                    Line::new(
-                        Point::new(edge1 + small_third, 0.0),
-                        Point::new(edge1 + small_third, size.height),
-                    ),
-                    Line::new(
-                        Point::new(edge2 - small_third, 0.0),
-                        Point::new(edge2 - small_third, size.height),
-                    ),
-                )
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        if self.child1.state.is_active() {
+            self.child1.event(ctx, event, data, env);
+            if ctx.is_handled() {
+                return;
             }
-            Axis::Vertical => {
-                let reduced_height = size.height - self.splitter_size;
-                let edge1 = reduced_height * self.split_point;
-                let edge2 = edge1 + self.splitter_size;
-                (
-                    Line::new(
-                        Point::new(0.0, edge1 + small_third),
-                        Point::new(size.width, edge1 + small_third),
-                    ),
-                    Line::new(
-                        Point::new(0.0, edge2 - small_third),
-                        Point::new(size.width, edge2 - small_third),
-                    ),
-                )
+        }
+        if self.child2.state.is_active() {
+            self.child2.event(ctx, event, data, env);
+            if ctx.is_handled() {
+                return;
             }
-        };
-        let line_color = if self.draggable {
-            env.get(theme::BORDER_LIGHT)
-        } else {
-            env.get(theme::BORDER)
-        };
-        paint_ctx.stroke(line1, &line_color, 1.0);
-        paint_ctx.stroke(line2, &line_color, 1.0);
+        }
+        if self.draggable {
+            match event {
+                Event::MouseDown(mouse) => {
+                    if mouse.button.is_left()
+                        && self.splitter_hit_test(ctx.base_state.size(), mouse.pos)
+                    {
+                        ctx.set_active(true);
+                        ctx.set_handled();
+                    }
+                }
+                Event::MouseUp(mouse) => {
+                    if mouse.button.is_left() && ctx.is_active() {
+                        ctx.set_active(false);
+                        self.update_splitter(ctx.base_state.size(), mouse.pos);
+                        ctx.invalidate();
+                    }
+                }
+                Event::MouseMoved(mouse) => {
+                    if ctx.is_active() {
+                        self.update_splitter(ctx.base_state.size(), mouse.pos);
+                        ctx.invalidate();
+                    }
 
-        self.child1.paint_with_offset(paint_ctx, &data, env);
-        self.child2.paint_with_offset(paint_ctx, &data, env);
+                    if ctx.is_hot() && self.splitter_hit_test(ctx.base_state.size(), mouse.pos)
+                        || ctx.is_active()
+                    {
+                        match self.split_direction {
+                            Axis::Vertical => ctx.set_cursor(&Cursor::ResizeUpDown),
+                            Axis::Horizontal => ctx.set_cursor(&Cursor::ResizeLeftRight),
+                        };
+                    }
+                }
+                _ => {}
+            }
+        }
+        if !self.child1.state.is_active() {
+            self.child1.event(ctx, event, data, env);
+        }
+        if !self.child2.state.is_active() {
+            self.child2.event(ctx, event, data, env);
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        self.child1.update(ctx, &data, env);
+        self.child2.update(ctx, &data, env);
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
@@ -247,64 +259,52 @@ impl<T: Data> Widget<T> for Split<T> {
         my_size
     }
 
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        if self.child1.state.is_active() {
-            self.child1.event(ctx, event, data, env);
-            if ctx.is_handled() {
-                return;
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+        let size = base_state.size();
+        //third, because we're putting the lines at roughly third points.
+        //small, because we floor, to give the extra pixel (roughly) to the middle.
+        let small_third = (self.splitter_size / 3.0).floor();
+        let (line1, line2) = match self.split_direction {
+            Axis::Horizontal => {
+                let reduced_width = size.width - self.splitter_size;
+                let edge1 = reduced_width * self.split_point;
+                let edge2 = edge1 + self.splitter_size;
+                (
+                    Line::new(
+                        Point::new(edge1 + small_third, 0.0),
+                        Point::new(edge1 + small_third, size.height),
+                    ),
+                    Line::new(
+                        Point::new(edge2 - small_third, 0.0),
+                        Point::new(edge2 - small_third, size.height),
+                    ),
+                )
             }
-        }
-        if self.child2.state.is_active() {
-            self.child2.event(ctx, event, data, env);
-            if ctx.is_handled() {
-                return;
+            Axis::Vertical => {
+                let reduced_height = size.height - self.splitter_size;
+                let edge1 = reduced_height * self.split_point;
+                let edge2 = edge1 + self.splitter_size;
+                (
+                    Line::new(
+                        Point::new(0.0, edge1 + small_third),
+                        Point::new(size.width, edge1 + small_third),
+                    ),
+                    Line::new(
+                        Point::new(0.0, edge2 - small_third),
+                        Point::new(size.width, edge2 - small_third),
+                    ),
+                )
             }
-        }
-        if self.draggable {
-            match event {
-                Event::MouseDown(mouse) => {
-                    if mouse.button.is_left()
-                        && self.splitter_hit_test(ctx.base_state.size(), mouse.pos)
-                    {
-                        ctx.set_active(true);
-                        ctx.set_handled();
-                    }
-                }
-                Event::MouseUp(mouse) => {
-                    if mouse.button.is_left() && ctx.is_active() {
-                        ctx.set_active(false);
-                        self.update_splitter(ctx.base_state.size(), mouse.pos);
-                        ctx.invalidate();
-                    }
-                }
-                Event::MouseMoved(mouse) => {
-                    if ctx.is_active() {
-                        self.update_splitter(ctx.base_state.size(), mouse.pos);
-                        ctx.invalidate();
-                    }
+        };
+        let line_color = if self.draggable {
+            env.get(theme::BORDER_LIGHT)
+        } else {
+            env.get(theme::BORDER)
+        };
+        paint_ctx.stroke(line1, &line_color, 1.0);
+        paint_ctx.stroke(line2, &line_color, 1.0);
 
-                    if ctx.is_hot() && self.splitter_hit_test(ctx.base_state.size(), mouse.pos)
-                        || ctx.is_active()
-                    {
-                        match self.split_direction {
-                            Axis::Vertical => ctx.set_cursor(&Cursor::ResizeUpDown),
-                            Axis::Horizontal => ctx.set_cursor(&Cursor::ResizeLeftRight),
-                        };
-                    }
-                }
-                _ => {}
-            }
-        }
-        if !self.child1.state.is_active() {
-            self.child1.event(ctx, event, data, env);
-        }
-        if !self.child2.state.is_active() {
-            self.child2.event(ctx, event, data, env);
-        }
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
-        self.child1.update(ctx, &data, env);
-        self.child2.update(ctx, &data, env);
+        self.child1.paint_with_offset(paint_ctx, &data, env);
+        self.child2.paint_with_offset(paint_ctx, &data, env);
     }
 }

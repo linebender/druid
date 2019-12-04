@@ -267,38 +267,6 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
-        if let Err(e) = paint_ctx.save() {
-            error!("saving render context failed: {:?}", e);
-            return;
-        }
-        let viewport = Rect::from_origin_size(Point::ORIGIN, base_state.size());
-        paint_ctx.clip(viewport);
-        paint_ctx.transform(Affine::translate(-self.scroll_offset));
-
-        let visible = viewport.with_origin(self.scroll_offset.to_point());
-        paint_ctx.with_child_ctx(visible, |ctx| self.child.paint(ctx, data, env));
-
-        self.draw_bars(paint_ctx, viewport, env);
-
-        if let Err(e) = paint_ctx.restore() {
-            error!("restoring render context failed: {:?}", e);
-        }
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        bc.debug_check("Scroll");
-
-        let child_bc = BoxConstraints::new(Size::ZERO, self.direction.max_size(bc));
-        let size = self.child.layout(ctx, &child_bc, data, env);
-        self.child_size = size;
-        self.child
-            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
-        let self_size = bc.constrain(Size::new(100.0, 100.0));
-        let _ = self.scroll(Vec2::new(0.0, 0.0), self_size);
-        self_size
-    }
-
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let size = ctx.base_state.size();
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
@@ -427,5 +395,37 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
         self.child.update(ctx, data, env);
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+        bc.debug_check("Scroll");
+
+        let child_bc = BoxConstraints::new(Size::ZERO, self.direction.max_size(bc));
+        let size = self.child.layout(ctx, &child_bc, data, env);
+        self.child_size = size;
+        self.child
+            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+        let self_size = bc.constrain(Size::new(100.0, 100.0));
+        let _ = self.scroll(Vec2::new(0.0, 0.0), self_size);
+        self_size
+    }
+
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+        if let Err(e) = paint_ctx.save() {
+            error!("saving render context failed: {:?}", e);
+            return;
+        }
+        let viewport = Rect::from_origin_size(Point::ORIGIN, base_state.size());
+        paint_ctx.clip(viewport);
+        paint_ctx.transform(Affine::translate(-self.scroll_offset));
+
+        let visible = viewport.with_origin(self.scroll_offset.to_point());
+        paint_ctx.with_child_ctx(visible, |ctx| self.child.paint(ctx, data, env));
+
+        self.draw_bars(paint_ctx, viewport, env);
+
+        if let Err(e) = paint_ctx.restore() {
+            error!("restoring render context failed: {:?}", e);
+        }
     }
 }

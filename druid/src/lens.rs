@@ -220,18 +220,6 @@ where
     L: Lens<T, U>,
     W: Widget<U>,
 {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
-        let inner = &mut self.inner;
-        self.lens
-            .with(data, |data| inner.paint(paint_ctx, base_state, data, env));
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let inner = &mut self.inner;
-        self.lens
-            .with(data, |data| inner.layout(ctx, bc, data, env))
-    }
-
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let inner = &mut self.inner;
         self.lens
@@ -252,6 +240,18 @@ where
         } else {
             lens.with(data, |data| inner.update(ctx, None, data, env));
         }
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+        let inner = &mut self.inner;
+        self.lens
+            .with(data, |data| inner.layout(ctx, bc, data, env))
+    }
+
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+        let inner = &mut self.inner;
+        self.lens
+            .with(data, |data| inner.paint(paint_ctx, base_state, data, env));
     }
 }
 

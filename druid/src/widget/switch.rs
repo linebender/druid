@@ -119,6 +119,77 @@ impl Switch {
 }
 
 impl Widget<bool> for Switch {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut bool, env: &Env) {
+        let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let switch_width = switch_height * SWITCH_WIDTH_RATIO;
+        let knob_size = switch_height - 2. * SWITCH_PADDING;
+        let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
+        let off_pos = knob_size / 2. + SWITCH_PADDING;
+
+        match event {
+            Event::MouseDown(_) => {
+                ctx.set_active(true);
+                ctx.invalidate();
+            }
+            Event::MouseUp(_) => {
+                ctx.set_active(false);
+
+                if self.knob_dragged {
+                    // toggle value when dragging if knob has been moved far enough
+                    *data = self.knob_pos.x > switch_width / 2.;
+                } else {
+                    // toggle value on click
+                    *data = !*data;
+                }
+
+                ctx.invalidate();
+                self.knob_dragged = false;
+                self.animation_in_progress = true;
+                ctx.request_anim_frame();
+            }
+            Event::MouseMoved(mouse) => {
+                if ctx.is_active() {
+                    self.knob_pos.x = mouse.pos.x.min(on_pos).max(off_pos);
+                    self.knob_dragged = true;
+                }
+                if ctx.is_hot() {
+                    self.knob_hovered = self.knob_hit_test(knob_size, mouse.pos)
+                }
+                ctx.invalidate();
+            }
+            Event::AnimFrame(_) => {
+                // move knob to right position depending on the value
+                if self.animation_in_progress {
+                    let delta = if *data { 2. } else { -2. };
+                    self.knob_pos.x += delta;
+
+                    if self.knob_pos.x > off_pos && self.knob_pos.x < on_pos {
+                        ctx.request_anim_frame();
+                    } else {
+                        self.animation_in_progress = false;
+                    }
+                }
+            }
+            _ => (),
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&bool>, _data: &bool, _env: &Env) {
+        ctx.invalidate();
+    }
+
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &bool,
+        env: &Env,
+    ) -> Size {
+        let width =
+            (2. * SWITCH_PADDING + env.get(theme::BORDERED_WIDGET_HEIGHT)) * SWITCH_WIDTH_RATIO;
+        bc.constrain(Size::new(width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
+    }
+
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &bool, env: &Env) {
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let switch_width = switch_height * SWITCH_WIDTH_RATIO;
@@ -210,76 +281,5 @@ impl Widget<bool> for Switch {
 
         // paint on/off label
         self.paint_labels(paint_ctx, base_state, env, switch_width);
-    }
-
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &bool,
-        env: &Env,
-    ) -> Size {
-        let width =
-            (2. * SWITCH_PADDING + env.get(theme::BORDERED_WIDGET_HEIGHT)) * SWITCH_WIDTH_RATIO;
-        bc.constrain(Size::new(width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
-    }
-
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut bool, env: &Env) {
-        let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
-        let switch_width = switch_height * SWITCH_WIDTH_RATIO;
-        let knob_size = switch_height - 2. * SWITCH_PADDING;
-        let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
-        let off_pos = knob_size / 2. + SWITCH_PADDING;
-
-        match event {
-            Event::MouseDown(_) => {
-                ctx.set_active(true);
-                ctx.invalidate();
-            }
-            Event::MouseUp(_) => {
-                ctx.set_active(false);
-
-                if self.knob_dragged {
-                    // toggle value when dragging if knob has been moved far enough
-                    *data = self.knob_pos.x > switch_width / 2.;
-                } else {
-                    // toggle value on click
-                    *data = !*data;
-                }
-
-                ctx.invalidate();
-                self.knob_dragged = false;
-                self.animation_in_progress = true;
-                ctx.request_anim_frame();
-            }
-            Event::MouseMoved(mouse) => {
-                if ctx.is_active() {
-                    self.knob_pos.x = mouse.pos.x.min(on_pos).max(off_pos);
-                    self.knob_dragged = true;
-                }
-                if ctx.is_hot() {
-                    self.knob_hovered = self.knob_hit_test(knob_size, mouse.pos)
-                }
-                ctx.invalidate();
-            }
-            Event::AnimFrame(_) => {
-                // move knob to right position depending on the value
-                if self.animation_in_progress {
-                    let delta = if *data { 2. } else { -2. };
-                    self.knob_pos.x += delta;
-
-                    if self.knob_pos.x > off_pos && self.knob_pos.x < on_pos {
-                        ctx.request_anim_frame();
-                    } else {
-                        self.animation_in_progress = false;
-                    }
-                }
-            }
-            _ => (),
-        }
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&bool>, _data: &bool, _env: &Env) {
-        ctx.invalidate();
     }
 }

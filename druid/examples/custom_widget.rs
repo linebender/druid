@@ -28,6 +28,33 @@ use druid::{
 struct CustomWidget;
 
 impl Widget<String> for CustomWidget {
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut String, _env: &Env) {}
+
+    fn update(
+        &mut self,
+        _ctx: &mut UpdateCtx,
+        _old_data: Option<&String>,
+        _data: &String,
+        _env: &Env,
+    ) {
+    }
+
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &String,
+        _env: &Env,
+    ) -> Size {
+        // BoxConstraints are passed by the parent widget.
+        // This method can return any Size within those constraints:
+        // bc.constrain(my_size)
+        //
+        // To check if a dimension is infinite or not (e.g. scrolling):
+        // bc.is_width_bounded() / bc.is_height_bounded()
+        bc.max()
+    }
+
     // The paint method gets called last, after an event flow.
     // It goes event -> update -> layout -> paint, and each method can influence the next.
     // Basically, anything that changes the appearance of a widget causes a paint.
@@ -96,33 +123,6 @@ impl Widget<String> for CustomWidget {
             Rect::from_origin_size(Point::ORIGIN, base_state.size()),
             InterpolationMode::Bilinear,
         );
-    }
-
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &String,
-        _env: &Env,
-    ) -> Size {
-        // BoxConstraints are passed by the parent widget.
-        // This method can return any Size within those constraints:
-        // bc.constrain(my_size)
-        //
-        // To check if a dimension is infinite or not (e.g. scrolling):
-        // bc.is_width_bounded() / bc.is_height_bounded()
-        bc.max()
-    }
-
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut String, _env: &Env) {}
-
-    fn update(
-        &mut self,
-        _ctx: &mut UpdateCtx,
-        _old_data: Option<&String>,
-        _data: &String,
-        _env: &Env,
-    ) {
     }
 }
 

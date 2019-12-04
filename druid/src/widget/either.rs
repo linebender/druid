@@ -47,11 +47,25 @@ impl<T: Data> Either<T> {
 }
 
 impl<T: Data> Widget<T> for Either<T> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.current {
-            self.true_branch.paint(paint_ctx, data, env);
+            self.true_branch.event(ctx, event, data, env)
         } else {
-            self.false_branch.paint(paint_ctx, data, env);
+            self.false_branch.event(ctx, event, data, env)
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        let current = (self.closure)(data, env);
+        if current != self.current {
+            self.current = current;
+            ctx.invalidate();
+            // TODO: more event flow to request here.
+        }
+        if self.current {
+            self.true_branch.update(ctx, data, env);
+        } else {
+            self.false_branch.update(ctx, data, env);
         }
     }
 
@@ -75,25 +89,11 @@ impl<T: Data> Widget<T> for Either<T> {
         }
     }
 
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         if self.current {
-            self.true_branch.event(ctx, event, data, env)
+            self.true_branch.paint(paint_ctx, data, env);
         } else {
-            self.false_branch.event(ctx, event, data, env)
-        }
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
-        let current = (self.closure)(data, env);
-        if current != self.current {
-            self.current = current;
-            ctx.invalidate();
-            // TODO: more event flow to request here.
-        }
-        if self.current {
-            self.true_branch.update(ctx, data, env);
-        } else {
-            self.false_branch.update(ctx, data, env);
+            self.false_branch.paint(paint_ctx, data, env);
         }
     }
 }

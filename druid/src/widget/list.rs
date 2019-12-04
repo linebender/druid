@@ -129,13 +129,37 @@ impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Arc<Vec<T>>) {
 }
 
 impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        let mut children = self.children.iter_mut();
+        data.for_each_mut(|child_data, _| {
+            if let Some(child) = children.next() {
+                child.event(ctx, event, child_data, env);
+            }
+        });
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
         let mut children = self.children.iter_mut();
         data.for_each(|child_data, _| {
             if let Some(child) = children.next() {
-                child.paint_with_offset(paint_ctx, child_data, env);
+                child.update(ctx, child_data, env);
             }
         });
+
+        let len = self.children.len();
+        if len > data.data_len() {
+            self.children.truncate(data.data_len())
+        } else if len < data.data_len() {
+            data.for_each(|child_data, i| {
+                if i < len {
+                    return;
+                }
+
+                let mut child = WidgetPod::new((self.closure)());
+                child.update(ctx, child_data, env);
+                self.children.push(child);
+            });
+        }
     }
 
     fn layout(
@@ -170,36 +194,12 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         bc.constrain(Size::new(width, y))
     }
 
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        let mut children = self.children.iter_mut();
-        data.for_each_mut(|child_data, _| {
-            if let Some(child) = children.next() {
-                child.event(ctx, event, child_data, env);
-            }
-        });
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
         let mut children = self.children.iter_mut();
         data.for_each(|child_data, _| {
             if let Some(child) = children.next() {
-                child.update(ctx, child_data, env);
+                child.paint_with_offset(paint_ctx, child_data, env);
             }
         });
-
-        let len = self.children.len();
-        if len > data.data_len() {
-            self.children.truncate(data.data_len())
-        } else if len < data.data_len() {
-            data.for_each(|child_data, i| {
-                if i < len {
-                    return;
-                }
-
-                let mut child = WidgetPod::new((self.closure)());
-                child.update(ctx, child_data, env);
-                self.children.push(child);
-            });
-        }
     }
 }

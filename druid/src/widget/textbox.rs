@@ -218,107 +218,6 @@ impl TextBox {
 }
 
 impl Widget<String> for TextBox {
-    fn paint(
-        &mut self,
-        paint_ctx: &mut PaintCtx,
-        base_state: &BaseState,
-        data: &String,
-        env: &Env,
-    ) {
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
-        let background_color = env.get(theme::BACKGROUND_LIGHT);
-        let selection_color = env.get(theme::SELECTION_COLOR);
-        let text_color = env.get(theme::LABEL_COLOR);
-        let cursor_color = env.get(theme::CURSOR_COLOR);
-
-        let has_focus = base_state.has_focus();
-
-        let border_color = if has_focus {
-            env.get(theme::PRIMARY_LIGHT)
-        } else {
-            env.get(theme::BORDER)
-        };
-
-        // Paint the background
-        let clip_rect = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(self.width - BORDER_WIDTH, height).to_vec2(),
-            2.,
-        );
-
-        paint_ctx.fill(clip_rect, &background_color);
-
-        // Render text, selection, and cursor inside a clip
-        paint_ctx
-            .with_save(|rc| {
-                rc.clip(clip_rect);
-
-                // Calculate layout
-                let text_layout = self.get_layout(rc.text(), data, env);
-
-                // Shift everything inside the clip by the hscroll_offset
-                rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
-
-                // Draw selection rect
-                if !self.selection.is_caret() {
-                    let (left, right) = (self.selection.min(), self.selection.max());
-                    let left_offset = self.x_for_offset(&text_layout, left);
-                    let right_offset = self.x_for_offset(&text_layout, right);
-
-                    let selection_width = right_offset - left_offset;
-
-                    let selection_pos =
-                        Point::new(left_offset + PADDING_LEFT - 1., PADDING_TOP - 2.);
-                    let selection_rect = RoundedRect::from_origin_size(
-                        selection_pos,
-                        Size::new(selection_width + 2., font_size + 4.).to_vec2(),
-                        1.,
-                    );
-                    rc.fill(selection_rect, &selection_color);
-                }
-
-                // Layout, measure, and draw text
-                let text_height = font_size * 0.8;
-                let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
-
-                rc.draw_text(&text_layout, text_pos, &text_color);
-
-                // Paint the cursor if focused and there's no selection
-                if has_focus && self.cursor_on && self.selection.is_caret() {
-                    let cursor_x = self.x_for_offset(&text_layout, self.cursor());
-                    let xy = text_pos + Vec2::new(cursor_x, 2. - font_size);
-                    let x2y2 = xy + Vec2::new(0., font_size + 2.);
-                    let line = Line::new(xy, x2y2);
-
-                    rc.stroke(line, &cursor_color, 1.);
-                }
-                Ok(())
-            })
-            .unwrap();
-
-        // Paint the border
-        paint_ctx.stroke(clip_rect, &border_color, BORDER_WIDTH);
-    }
-
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &String,
-        env: &Env,
-    ) -> Size {
-        let default_width = 100.0;
-
-        if bc.is_width_bounded() {
-            self.width = bc.max().width;
-        } else {
-            self.width = default_width;
-        }
-
-        bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
-    }
-
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
         let mut text_layout = self.get_layout(ctx.text(), data, env);
         match event {
@@ -462,6 +361,107 @@ impl Widget<String> for TextBox {
         _env: &Env,
     ) {
         ctx.invalidate();
+    }
+
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &String,
+        env: &Env,
+    ) -> Size {
+        let default_width = 100.0;
+
+        if bc.is_width_bounded() {
+            self.width = bc.max().width;
+        } else {
+            self.width = default_width;
+        }
+
+        bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
+    }
+
+    fn paint(
+        &mut self,
+        paint_ctx: &mut PaintCtx,
+        base_state: &BaseState,
+        data: &String,
+        env: &Env,
+    ) {
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let background_color = env.get(theme::BACKGROUND_LIGHT);
+        let selection_color = env.get(theme::SELECTION_COLOR);
+        let text_color = env.get(theme::LABEL_COLOR);
+        let cursor_color = env.get(theme::CURSOR_COLOR);
+
+        let has_focus = base_state.has_focus();
+
+        let border_color = if has_focus {
+            env.get(theme::PRIMARY_LIGHT)
+        } else {
+            env.get(theme::BORDER)
+        };
+
+        // Paint the background
+        let clip_rect = RoundedRect::from_origin_size(
+            Point::ORIGIN,
+            Size::new(self.width - BORDER_WIDTH, height).to_vec2(),
+            2.,
+        );
+
+        paint_ctx.fill(clip_rect, &background_color);
+
+        // Render text, selection, and cursor inside a clip
+        paint_ctx
+            .with_save(|rc| {
+                rc.clip(clip_rect);
+
+                // Calculate layout
+                let text_layout = self.get_layout(rc.text(), data, env);
+
+                // Shift everything inside the clip by the hscroll_offset
+                rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
+
+                // Draw selection rect
+                if !self.selection.is_caret() {
+                    let (left, right) = (self.selection.min(), self.selection.max());
+                    let left_offset = self.x_for_offset(&text_layout, left);
+                    let right_offset = self.x_for_offset(&text_layout, right);
+
+                    let selection_width = right_offset - left_offset;
+
+                    let selection_pos =
+                        Point::new(left_offset + PADDING_LEFT - 1., PADDING_TOP - 2.);
+                    let selection_rect = RoundedRect::from_origin_size(
+                        selection_pos,
+                        Size::new(selection_width + 2., font_size + 4.).to_vec2(),
+                        1.,
+                    );
+                    rc.fill(selection_rect, &selection_color);
+                }
+
+                // Layout, measure, and draw text
+                let text_height = font_size * 0.8;
+                let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
+
+                rc.draw_text(&text_layout, text_pos, &text_color);
+
+                // Paint the cursor if focused and there's no selection
+                if has_focus && self.cursor_on && self.selection.is_caret() {
+                    let cursor_x = self.x_for_offset(&text_layout, self.cursor());
+                    let xy = text_pos + Vec2::new(cursor_x, 2. - font_size);
+                    let x2y2 = xy + Vec2::new(0., font_size + 2.);
+                    let line = Line::new(xy, x2y2);
+
+                    rc.stroke(line, &cursor_color, 1.);
+                }
+                Ok(())
+            })
+            .unwrap();
+
+        // Paint the border
+        paint_ctx.stroke(clip_rect, &border_color, BORDER_WIDTH);
     }
 }
 

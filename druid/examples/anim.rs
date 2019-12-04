@@ -28,28 +28,6 @@ struct AnimWidget {
 }
 
 impl Widget<u32> for AnimWidget {
-    fn paint(
-        &mut self,
-        paint_ctx: &mut PaintCtx,
-        _base_state: &BaseState,
-        _data: &u32,
-        _env: &Env,
-    ) {
-        let center = Point::new(50.0, 50.0);
-        let ambit = center + 45.0 * Vec2::from_angle((0.75 + self.t) * 2.0 * PI);
-        paint_ctx.stroke(Line::new(center, ambit), &Color::WHITE, 1.0);
-    }
-
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &u32,
-        _env: &Env,
-    ) -> Size {
-        bc.constrain((100.0, 100.0))
-    }
-
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut u32, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
@@ -70,6 +48,28 @@ impl Widget<u32> for AnimWidget {
     }
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&u32>, _data: &u32, _env: &Env) {}
+
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &u32,
+        _env: &Env,
+    ) -> Size {
+        bc.constrain((100.0, 100.0))
+    }
+
+    fn paint(
+        &mut self,
+        paint_ctx: &mut PaintCtx,
+        _base_state: &BaseState,
+        _data: &u32,
+        _env: &Env,
+    ) {
+        let center = Point::new(50.0, 50.0);
+        let ambit = center + 45.0 * Vec2::from_angle((0.75 + self.t) * 2.0 * PI);
+        paint_ctx.stroke(Line::new(center, ambit), &Color::WHITE, 1.0);
+    }
 }
 
 fn main() {

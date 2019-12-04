@@ -79,6 +79,29 @@ impl<T: Data> Label<T> {
 }
 
 impl<T: Data> Widget<T> for Label<T> {
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        if self.text.resolve(data, env) {
+            ctx.invalidate();
+        }
+    }
+
+    fn layout(
+        &mut self,
+        layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &T,
+        env: &Env,
+    ) -> Size {
+        bc.debug_check("Label");
+
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let text_layout = self.get_layout(layout_ctx.text(), env);
+        // This magical 1.2 constant helps center the text vertically in the rect it's given
+        bc.constrain((text_layout.width(), font_size * 1.2))
+    }
+
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _data: &T, env: &Env) {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
 
@@ -97,29 +120,6 @@ impl<T: Data> Widget<T> for Label<T> {
         origin.y = origin.y.min(base_state.size().height);
 
         paint_ctx.draw_text(&text_layout, origin, &env.get(theme::LABEL_COLOR));
-    }
-
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &T,
-        env: &Env,
-    ) -> Size {
-        bc.debug_check("Label");
-
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_layout = self.get_layout(layout_ctx.text(), env);
-        // This magical 1.2 constant helps center the text vertically in the rect it's given
-        bc.constrain((text_layout.width(), font_size * 1.2))
-    }
-
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
-        if self.text.resolve(data, env) {
-            ctx.invalidate();
-        }
     }
 }
 
@@ -165,20 +165,10 @@ impl<T: Data> DynLabel<T> {
 }
 
 impl<T: Data> Widget<T> for DynLabel<T> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
-        let align = UnitPoint::LEFT;
-        let origin = align.resolve(Rect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(
-                base_state.size().width,
-                base_state.size().height + (font_size * 1.2) / 2.,
-            ),
-        ));
-
-        let text_layout = self.get_layout(paint_ctx.text(), env, data);
-        paint_ctx.draw_text(&text_layout, origin, &env.get(theme::LABEL_COLOR));
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {
+        ctx.invalidate();
     }
 
     fn layout(
@@ -196,10 +186,20 @@ impl<T: Data> Widget<T> for DynLabel<T> {
         bc.constrain(Size::new(text_layout.width(), font_size * 1.2))
     }
 
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {
-        ctx.invalidate();
+        let align = UnitPoint::LEFT;
+        let origin = align.resolve(Rect::from_origin_size(
+            Point::ORIGIN,
+            Size::new(
+                base_state.size().width,
+                base_state.size().height + (font_size * 1.2) / 2.,
+            ),
+        ));
+
+        let text_layout = self.get_layout(paint_ctx.text(), env, data);
+        paint_ctx.draw_text(&text_layout, origin, &env.get(theme::LABEL_COLOR));
     }
 }
 

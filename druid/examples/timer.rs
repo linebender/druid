@@ -29,28 +29,6 @@ struct TimerWidget {
 }
 
 impl Widget<u32> for TimerWidget {
-    fn paint(
-        &mut self,
-        paint_ctx: &mut PaintCtx,
-        _base_state: &BaseState,
-        _data: &u32,
-        _env: &Env,
-    ) {
-        if self.on {
-            paint_ctx.stroke(Line::new((10.0, 10.0), (10.0, 50.0)), &Color::WHITE, 1.0);
-        }
-    }
-
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &u32,
-        _env: &Env,
-    ) -> Size {
-        bc.constrain((100.0, 100.0))
-    }
-
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut u32, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
@@ -72,6 +50,28 @@ impl Widget<u32> for TimerWidget {
     }
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&u32>, _data: &u32, _env: &Env) {}
+
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &u32,
+        _env: &Env,
+    ) -> Size {
+        bc.constrain((100.0, 100.0))
+    }
+
+    fn paint(
+        &mut self,
+        paint_ctx: &mut PaintCtx,
+        _base_state: &BaseState,
+        _data: &u32,
+        _env: &Env,
+    ) {
+        if self.on {
+            paint_ctx.stroke(Line::new((10.0, 10.0), (10.0, 50.0)), &Color::WHITE, 1.0);
+        }
+    }
 }
 
 fn main() {
