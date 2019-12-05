@@ -120,7 +120,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// [`LensWrap`]: ../struct.LensWrap.html
     /// [`Lens`]: ../trait.Lens.html
-    fn lens<U: Data, L: Lens<T, U>>(self, lens: L) -> LensWrap<U, L, Self> {
+    fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<T, L, Self> {
         LensWrap::new(self, lens)
     }
 }
