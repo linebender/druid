@@ -20,7 +20,7 @@ use druid::piet::Color;
 
 use druid::lens::{self, LensExt};
 use druid::widget::{Button, DynLabel, Flex, List, Scroll, WidgetExt};
-use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
+use druid::{AppLauncher, Data, Lens, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct AppData {
@@ -63,32 +63,29 @@ fn ui_builder() -> impl Widget<AppData> {
 
     // Build a simple list
     lists.add_child(
-        LensWrap::new(
-            Scroll::new(List::new(|| {
-                DynLabel::new(|item: &u32, _| format!("List item #{}", item))
-                    .padding(10.0)
-                    .expand()
-                    .height(50.0)
-                    .background(Color::rgb(0.5, 0.5, 0.5))
-            }))
-            .vertical(),
-            AppData::left,
-        ),
+        Scroll::new(List::new(|| {
+            DynLabel::new(|item: &u32, _| format!("List item #{}", item))
+                .padding(10.0)
+                .expand()
+                .height(50.0)
+                .background(Color::rgb(0.5, 0.5, 0.5))
+        }))
+        .vertical()
+        .lens(AppData::left),
         1.0,
     );
 
     // Build a list with shared data
     lists.add_child(
-        LensWrap::new(
-            Scroll::new(List::new(|| {
-                let mut row = Flex::row();
-                row.add_child(
+        Scroll::new(List::new(|| {
+            Flex::row()
+                .with_child(
                     DynLabel::new(|(_, item): &(Arc<Vec<u32>>, u32), _| {
                         format!("List item #{}", item)
                     }),
                     1.0,
-                );
-                row.add_child(
+                )
+                .with_child(
                     Button::sized(
                         "Delete",
                         |_ctx, (shared, item): &mut (Arc<Vec<u32>>, u32), _env| {
@@ -100,24 +97,22 @@ fn ui_builder() -> impl Widget<AppData> {
                         20.0,
                     ),
                     0.0,
-                );
-
-                row.padding(10.0)
-                    .background(Color::rgb(0.5, 0.0, 0.5))
-                    .fix_height(50.0)
-            }))
-            .vertical(),
-            lens::Id.map(
-                // Expose shared data with children data
-                |d: &AppData| (d.right.clone(), d.right.clone()),
-                |d, x| {
-                    // If shared data was changed reflect the changes in our AppData
-                    if !x.0.same(&d.right) {
-                        d.right = x.0
-                    }
-                },
-            ),
-        ),
+                )
+                .padding(10.0)
+                .background(Color::rgb(0.5, 0.0, 0.5))
+                .fix_height(50.0)
+        }))
+        .vertical()
+        .lens(lens::Id.map(
+            // Expose shared data with children data
+            |d: &AppData| (d.right.clone(), d.right.clone()),
+            |d, x| {
+                // If shared data was changed reflect the changes in our AppData
+                if !x.0.same(&d.right) {
+                    d.right = x.0
+                }
+            },
+        )),
         1.0,
     );
 
