@@ -41,7 +41,7 @@ impl<T: Data + 'static> Button<T> {
         action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
     ) -> Button<T> {
         Button {
-            label: Label::aligned(text, UnitPoint::CENTER),
+            label: Label::new(text).align(UnitPoint::CENTER),
             action: Box::new(action),
         }
     }
@@ -56,7 +56,7 @@ impl<T: Data + 'static> Button<T> {
         Align::vertical(
             UnitPoint::CENTER,
             SizedBox::new(Button {
-                label: Label::aligned(text, UnitPoint::CENTER),
+                label: Label::new(text).align(UnitPoint::CENTER),
                 action: Box::new(action),
             })
             .width(width)
