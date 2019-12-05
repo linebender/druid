@@ -74,10 +74,9 @@ pub use crate::widget::list::{List, ListIter};
 mod parse;
 pub use crate::widget::parse::Parse;
 
-#[cfg(any(feature = "svg", rustdoc))]
-#[doc(cfg(feature = "svg"))]
+#[cfg(feature = "svg")]
+#[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 mod svg;
-
-#[cfg(any(feature = "svg", rustdoc))]
-#[doc(cfg(feature = "svg"))]
+#[cfg(feature = "svg")]
+#[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 pub use crate::widget::svg::{Svg, SvgData};

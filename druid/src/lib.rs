@@ -16,7 +16,7 @@
 
 #![deny(intra_doc_link_resolution_failure, unsafe_code)]
 #![allow(clippy::new_ret_no_self)]
-#![feature(doc_cfg)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use druid_shell as shell;
 pub use druid_shell::{kurbo, piet};
