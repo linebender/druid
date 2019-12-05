@@ -132,12 +132,8 @@ impl TextBox {
     fn insert(&mut self, src: &mut String, new: &str) {
         // TODO: handle incomplete graphemes
 
-        // replace_range will panic if selection is greater than src length hence we try to constrain it.
-        // This is especially needed when data was modified externally.
-        let selection = self.selection.constrain_to(src);
-
-        src.replace_range(selection.range(), new);
-        self.selection = Selection::caret(selection.min() + new.len());
+        src.replace_range(self.selection.range(), new);
+        self.selection = Selection::caret(self.selection.min() + new.len());
     }
 
     fn cursor_to(&mut self, to: usize) {
@@ -219,6 +215,9 @@ impl TextBox {
 
 impl Widget<String> for TextBox {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
+        // Guard against external changes in data
+        self.selection = self.selection.constrain_to(data);
+
         let mut text_layout = self.get_layout(ctx.text(), data, env);
         match event {
             Event::MouseDown(mouse) => {
@@ -388,6 +387,9 @@ impl Widget<String> for TextBox {
         data: &String,
         env: &Env,
     ) {
+        // Guard against changes in data following `event`
+        self.selection = self.selection.constrain_to(data);
+
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let background_color = env.get(theme::BACKGROUND_LIGHT);
@@ -495,33 +497,5 @@ fn prev_grapheme(src: &str, from: usize) -> usize {
         prev
     } else {
         0
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Test that when data is mutated externally widget
-    /// can still be used to insert characters.
-    #[test]
-    fn data_can_be_changed_externally() {
-        let mut widget = TextBox::raw();
-        let mut data = "".to_string();
-
-        // First insert some chars
-        widget.insert(&mut data, "o");
-        widget.insert(&mut data, "n");
-        widget.insert(&mut data, "e");
-
-        assert_eq!("one", data);
-        assert_eq!(3, widget.selection.start);
-        assert_eq!(3, widget.selection.end);
-
-        // Modify data externally (e.g data was changed in the parent widget)
-        data = "".to_string();
-
-        // Insert again
-        widget.insert(&mut data, "a");
     }
 }
