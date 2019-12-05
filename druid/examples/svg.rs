@@ -19,8 +19,8 @@
 
 #[cfg(not(feature = "svg"))]
 fn main() {
-    log::error!("This examples requires the \"svg\" feature to be enabled:");
-    log::error!("cargo run --example svg --features \"svg\"");
+    eprintln!("This examples requires the \"svg\" feature to be enabled:");
+    eprintln!("cargo run --example svg --features \"svg\"");
 }
 
 #[cfg(feature = "svg")]

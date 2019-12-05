@@ -76,16 +76,9 @@ impl<T: Data> Svg<T> {
 }
 
 impl<T: Data> Widget<T> for Svg<T> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _data: &T, _env: &Env) {
-        //TODO: options for aspect ratio or scaling based on height
-        let scale = base_state.size().width / self.get_size().width;
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
-        let origin_x = (base_state.size().width - (self.get_size().width * scale)) / 2.0;
-        let origin_y = (base_state.size().height - (self.get_size().height * scale)) / 2.0;
-        let origin = Point::new(origin_x, origin_y);
-
-        self.svg_data.to_piet(scale, origin, paint_ctx);
-    }
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}
 
     fn layout(
         &mut self,
@@ -102,10 +95,16 @@ impl<T: Data> Widget<T> for Svg<T> {
             bc.constrain(self.get_size())
         }
     }
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _data: &T, _env: &Env) {
+        //TODO: options for aspect ratio or scaling based on height
+        let scale = base_state.size().width / self.get_size().width;
 
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
+        let origin_x = (base_state.size().width - (self.get_size().width * scale)) / 2.0;
+        let origin_y = (base_state.size().height - (self.get_size().height * scale)) / 2.0;
+        let origin = Point::new(origin_x, origin_y);
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}
+        self.svg_data.to_piet(scale, origin, paint_ctx);
+    }
 }
 
 /// Stored SVG data.
