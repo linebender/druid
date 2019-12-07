@@ -20,6 +20,7 @@ use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags, Cancellable};
 use gtk::Application;
 
 use super::util::assert_main_thread;
+use crate::runloop::RunFlags;
 
 // XXX: The application needs to be global because WindowBuilder::build wants
 // to construct an ApplicationWindow, which needs the application, but
@@ -29,18 +30,26 @@ thread_local!(
 );
 
 /// Container for a GTK runloop
-pub struct RunLoop {}
+pub struct RunLoop {
+    name: String,
+}
 
 impl RunLoop {
-    pub fn new() -> RunLoop {
+    pub fn new(name: Option<&'static str>, run_flags: Option<RunFlags>) -> RunLoop {
         assert_main_thread();
 
-        // TODO: we should give control over the application ID to the user
-        let application = Application::new(
-            Some("com.github.xi-editor.druid"),
-            ApplicationFlags::FLAGS_NONE,
-        )
-        .expect("Unable to create GTK application");
+        let runloop = RunLoop {
+            name: name.map_or("com.github.xi-editor.druid".into(), |s| {
+                format!("com.github.xi-editor.druid.{}", s)
+            }),
+        };
+
+        let gtk_app_flags = run_flags.map_or(ApplicationFlags::FLAGS_NONE, |flag| match flag {
+            RunFlags::MultipleInstances => ApplicationFlags::NON_UNIQUE,
+        });
+
+        let application = Application::new(Some(&runloop.name), gtk_app_flags)
+            .expect("Unable to create GTK application");
 
         application.connect_activate(|_app| {
             eprintln!("Activated application");
@@ -51,8 +60,11 @@ impl RunLoop {
             .expect("Could not register GTK application");
 
         GTK_APPLICATION.with(move |x| *x.borrow_mut() = Some(application));
+        runloop
+    }
 
-        RunLoop {}
+    pub fn is_remote_connection(&self) -> bool {
+        GTK_APPLICATION.with(|x| x.borrow().as_ref().unwrap().get_is_remote())
     }
 
     pub fn run(&mut self) {

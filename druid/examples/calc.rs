@@ -202,6 +202,7 @@ fn build_calc() -> impl Widget<CalcState> {
 }
 
 fn main() {
+    use druid::RunFlags;
     let window = WindowDesc::new(build_calc);
     let calc_state = CalcState {
         value: "0".to_string(),
@@ -211,6 +212,8 @@ fn main() {
     };
     AppLauncher::with_window(window)
         .use_simple_logger()
+        .name("calc")
+        //.run_flags(RunFlags::MultipleInstances)
         .launch(calc_state)
         .expect("launch failed");
 }

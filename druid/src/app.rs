@@ -19,7 +19,9 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::kurbo::Size;
-use crate::shell::{Application, Error as PlatformError, RunLoop, WindowBuilder, WindowHandle};
+use crate::shell::{
+    Application, Error as PlatformError, RunFlags, RunLoop, WindowBuilder, WindowHandle,
+};
 use crate::win_handler::AppState;
 use crate::window::{Window, WindowId};
 use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
@@ -32,6 +34,8 @@ pub struct AppLauncher<T> {
     windows: Vec<WindowDesc<T>>,
     env_setup: Option<Box<EnvSetupFn>>,
     delegate: Option<Box<dyn AppDelegate<T>>>,
+    name: Option<&'static str>,
+    run_flags: Option<RunFlags>,
 }
 
 /// A function that can create a widget.
@@ -60,6 +64,8 @@ impl<T: Data + 'static> AppLauncher<T> {
             windows: vec![window],
             env_setup: None,
             delegate: None,
+            name: None,
+            run_flags: None,
         }
     }
 
@@ -88,13 +94,35 @@ impl<T: Data + 'static> AppLauncher<T> {
         self
     }
 
+    /// Set the application's name.
+    pub fn name(mut self, name: &'static str) -> Self {
+        self.name = Some(name);
+        self
+    }
+
+    pub fn run_flags(mut self, flags: RunFlags) -> Self {
+        self.run_flags = Some(flags);
+        self
+    }
+
     /// Build the windows and start the runloop.
     ///
     /// Returns an error if a window cannot be instantiated. This is usually
     /// a fatal error.
     pub fn launch(mut self, data: T) -> Result<(), PlatformError> {
         Application::init();
-        let mut main_loop = RunLoop::new();
+        let mut main_loop = RunLoop::new(self.name, self.run_flags);
+
+        // TODO if it's a remote connection
+        // The platform has detected the program is already running.
+        // We need to do stuff here but on some platforms cannot actually create windows
+        // except through the remote application.
+        // largely depending upon upon how we wire up druid issue #114 (AppHandler)
+        // and friends.
+        if main_loop.is_remote_connection() {
+            return Ok(());
+        }
+
         let mut env = theme::init();
         if let Some(f) = self.env_setup.take() {
             f(&mut env);

@@ -19,14 +19,27 @@ use crate::platform::runloop as platform;
 /// The main application loop.
 pub struct RunLoop(platform::RunLoop);
 
+#[derive(PartialEq, Eq)]
+pub enum RunFlags {
+    /// Run even if druid determines there is an existing instance of the application
+    /// already running on the platform.
+    MultipleInstances,
+}
+
 impl RunLoop {
     /// Create a new `RunLoop`.
     ///
     /// The runloop does not start until [`RunLoop::new`] is called.
     ///
     /// [`RunLoop::new`]: struct.RunLoop.html#method.run
-    pub fn new() -> RunLoop {
-        RunLoop(platform::RunLoop::new())
+    pub fn new(name: Option<&'static str>, run_flags: Option<RunFlags>) -> RunLoop {
+        RunLoop(platform::RunLoop::new(name, run_flags))
+    }
+
+    /// Returns true if this `RunLoop`
+    /// is a remote connection to an already running `Application`'s runloop.
+    pub fn is_remote_connection(&self) -> bool {
+        return self.0.is_remote_connection();
     }
 
     /// Start the runloop.

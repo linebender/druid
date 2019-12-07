@@ -47,8 +47,8 @@ use piet::{Piet, RenderContext};
 // these are the types from shell that we expose; others we only use internally.
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Cursor, FileDialogOptions, FileInfo, FileSpec,
-    FormatId, HotKey, KeyCode, KeyEvent, KeyModifiers, MouseButton, RawMods, SysMods, Text,
-    TimerToken, WinCtx, WindowHandle,
+    FormatId, HotKey, KeyCode, KeyEvent, KeyModifiers, MouseButton, RawMods, RunFlags, SysMods,
+    Text, TimerToken, WinCtx, WindowHandle,
 };
 
 pub use app::{AppLauncher, WindowDesc};
