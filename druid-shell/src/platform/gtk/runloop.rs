@@ -38,7 +38,12 @@ impl RunLoop {
         // TODO: we should give control over the application ID to the user
         let application = Application::new(
             Some("com.github.xi-editor.druid"),
-            ApplicationFlags::FLAGS_NONE,
+            // TODO we set this to avoid connecting to an existing running instance
+            // of "com.github.xi-editor.druid" after which we would never receive
+            // the "Activate application" below. See pull request druid#384
+            // Which shows another way once we have in place a mechanism for
+            // communication with remote instances.
+            ApplicationFlags::NON_UNIQUE,
         )
         .expect("Unable to create GTK application");
 
