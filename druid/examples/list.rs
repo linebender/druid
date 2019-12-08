@@ -108,9 +108,7 @@ fn ui_builder() -> impl Widget<AppData> {
             |d: &AppData| (d.right.clone(), d.right.clone()),
             |d: &mut AppData, x: (Arc<Vec<u32>>, Arc<Vec<u32>>)| {
                 // If shared data was changed reflect the changes in our AppData
-                if !x.0.same(&d.right) {
-                    d.right = x.0
-                }
+                d.right = x.0
             },
         )),
         1.0,
