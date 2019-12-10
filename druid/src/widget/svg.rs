@@ -32,7 +32,6 @@ use crate::{
 
 /// A widget that renders a SVG
 pub struct Svg<T> {
-    // On construction the SVG string is parsed into a SvgData.
     svg_data: SvgData,
     phantom: PhantomData<T>,
 }
