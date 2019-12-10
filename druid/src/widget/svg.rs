@@ -14,19 +14,21 @@
 
 //! An SVG widget.
 
+use std::error::Error;
+use std::marker::PhantomData;
+use std::str::FromStr;
+use std::sync::Arc;
+
+use log::error;
+
+use usvg;
+
 use crate::{
     kurbo::BezPath,
     piet::{Color, RenderContext},
     BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Size,
     UpdateCtx, Widget,
 };
-
-use log::error;
-use std::error::Error;
-use std::marker::PhantomData;
-use std::str::FromStr;
-
-use usvg;
 
 /// A widget that renders a SVG
 pub struct Svg<T> {
@@ -36,25 +38,13 @@ pub struct Svg<T> {
 }
 
 impl<T: Data> Svg<T> {
-    /// Create an SVG-drawing widget from a valid SVG string literal.
+    /// Create an SVG-drawing widget from SvgData.
     ///
     /// The SVG will scale to fit its box constraints.
-    /// If SVG is invalid a blank SVG will be rendered instead.
-    pub fn new(svg_str: &str) -> impl Widget<T> {
-        let svg_data = SvgData::from_str(svg_str);
-
-        match svg_data {
-            Ok(data) => Svg {
-                svg_data: data,
-                phantom: Default::default(),
-            },
-            Err(err) => {
-                error!("{}", err);
-                Svg {
-                    svg_data: SvgData::empty(),
-                    phantom: Default::default(),
-                }
-            }
+    pub fn new(svg_data: SvgData) -> impl Widget<T> {
+        Svg {
+            svg_data,
+            phantom: Default::default(),
         }
     }
 
@@ -109,8 +99,9 @@ impl<T: Data> Widget<T> for Svg<T> {
 
 /// Stored SVG data.
 /// Implements `FromStr` and can be converted to piet draw instructions.
+#[derive(Clone)]
 pub struct SvgData {
-    tree: usvg::Tree,
+    tree: Arc<usvg::Tree>,
 }
 
 impl SvgData {
@@ -122,14 +113,14 @@ impl SvgData {
         };
 
         let empty_svg = r###"
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 0 0">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
               <g fill="none">
               </g>
           </svg>
         "###;
 
         SvgData {
-            tree: usvg::Tree::from_str(empty_svg, &re_opt).unwrap(),
+            tree: Arc::new(usvg::Tree::from_str(empty_svg, &re_opt).unwrap()),
         }
     }
 
@@ -203,6 +194,12 @@ impl SvgData {
     }
 }
 
+impl Default for SvgData {
+    fn default() -> Self {
+        SvgData::empty()
+    }
+}
+
 impl FromStr for SvgData {
     type Err = Box<dyn Error>;
 
@@ -213,7 +210,9 @@ impl FromStr for SvgData {
         };
 
         match usvg::Tree::from_str(svg_str, &re_opt) {
-            Ok(tree) => Ok(SvgData { tree }),
+            Ok(tree) => Ok(SvgData {
+                tree: Arc::new(tree),
+            }),
             Err(err) => Err(err.into()),
         }
     }

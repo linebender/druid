@@ -24,10 +24,14 @@ fn main() {
 }
 
 #[cfg(feature = "svg")]
+use log::error;
+
+#[cfg(feature = "svg")]
 use druid::{
-    widget::{Flex, Svg, WidgetExt},
+    widget::{Flex, Svg, SvgData, WidgetExt},
     AppLauncher, Widget, WindowDesc,
 };
+
 #[cfg(feature = "svg")]
 fn main() {
     let main_window = WindowDesc::new(ui_builder);
@@ -40,10 +44,18 @@ fn main() {
 
 #[cfg(feature = "svg")]
 fn ui_builder() -> impl Widget<u32> {
-    let tiger_svg = include_str!("tiger.svg");
+    let tiger_svg = match include_str!("tiger.svg").parse::<SvgData>() {
+        Ok(svg) => svg,
+        Err(err) => {
+            error!("{}", err);
+            error!("Using an empty SVG instead.");
+            SvgData::default()
+        }
+    };
+
     let mut col = Flex::column();
 
-    col.add_child(Svg::new(tiger_svg).fix_width(100.0).center(), 1.0);
+    col.add_child(Svg::new(tiger_svg.clone()).fix_width(100.0).center(), 1.0);
     col.add_child(Svg::new(tiger_svg), 1.0);
     col
 }
