@@ -873,7 +873,7 @@ impl<'a, 'b> EventCtx<'a, 'b> {
 
     /// Set the "active" state of the widget.
     ///
-    /// See [`BaseState::is_active`](struct.BaseState.html#method.is_hot).
+    /// See [`BaseState::is_active`](struct.BaseState.html#method.is_active).
     pub fn set_active(&mut self, active: bool) {
         self.base_state.is_active = active;
         // TODO: plumb mouse grab through to platform (through druid-shell)
