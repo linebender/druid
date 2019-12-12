@@ -351,12 +351,25 @@ impl<T: Data + 'static> AppState<T> {
         self.windows.add(id, window);
     }
 
-    fn remove_window(&mut self, id: WindowId) -> Option<WindowHandle> {
-        let res = self.windows.remove(id);
-        self.with_delegate(id, |del, data, env, ctx| {
-            del.window_removed(id, data, env, ctx)
+    /// Called after this window has been closed by the platform.
+    ///
+    /// We clean up resources and notifiy the delegate, if necessary.
+    fn remove_window(&mut self, window_id: WindowId, _ctx: &mut dyn WinCtx) {
+        self.with_delegate(window_id, |del, data, env, ctx| {
+            del.window_removed(window_id, data, env, ctx)
         });
-        res
+        self.windows.remove(window_id);
+    }
+
+    /// triggered by a menu item or other command.
+    ///
+    /// This doesn't close the window; it calls the close method on the platform
+    /// window handle; the platform should close the window, and then call
+    /// our handlers `destroy()` method, at which point we can do our cleanup.
+    fn request_close_window(&mut self, window_id: WindowId) {
+        if let Some(state) = self.windows.state.get_mut(&window_id) {
+            state.handle.close();
+        }
     }
 
     fn show_window(&mut self, id: WindowId) {
@@ -505,7 +518,7 @@ impl<T: Data + 'static> DruidHandler<T> {
             &sys_cmd::SHOW_OPEN_PANEL => self.show_open_panel(cmd, window_id, win_ctx),
             &sys_cmd::SHOW_SAVE_PANEL => self.show_save_panel(cmd, window_id, win_ctx),
             &sys_cmd::NEW_WINDOW => self.new_window(cmd),
-            &sys_cmd::CLOSE_WINDOW => self.close_window(cmd, window_id),
+            &sys_cmd::CLOSE_WINDOW => self.request_close_window(cmd, window_id),
             &sys_cmd::SHOW_WINDOW => self.show_window(cmd),
             &sys_cmd::QUIT_APP => self.quit(),
             &sys_cmd::HIDE_APPLICATION => self.hide_app(),
@@ -570,12 +583,9 @@ impl<T: Data + 'static> DruidHandler<T> {
         window.show();
     }
 
-    fn close_window(&mut self, cmd: Command, window_id: WindowId) {
+    fn request_close_window(&mut self, cmd: Command, window_id: WindowId) {
         let id = cmd.get_object().unwrap_or(&window_id);
-        let handle = self.app_state.borrow_mut().remove_window(*id);
-        if let Some(handle) = handle {
-            handle.close();
-        }
+        self.app_state.borrow_mut().request_close_window(*id);
     }
 
     fn show_window(&mut self, cmd: Command) {
@@ -666,6 +676,12 @@ impl<T: Data + 'static> WinHandler for DruidHandler<T> {
 
     fn as_any(&mut self) -> &mut dyn Any {
         self
+    }
+
+    fn destroy(&mut self, ctx: &mut dyn WinCtx) {
+        self.app_state
+            .borrow_mut()
+            .remove_window(self.window_id, ctx);
     }
 }
 
