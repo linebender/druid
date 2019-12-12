@@ -39,6 +39,8 @@ use crate::dialog::{FileDialogOptions, FileDialogType, FileSpec};
 use std::ffi::OsString;
 use std::ptr::null_mut;
 
+use std::convert::TryInto;
+
 // TODO: remove these when they get added to winapi
 DEFINE_GUID! {CLSID_FileOpenDialog,
 0xDC1C_5A9C, 0xE88A, 0x4DDE, 0xA5, 0xA1, 0x60, 0xF8, 0x2A, 0x20, 0xAE, 0xF7}
@@ -117,9 +119,24 @@ pub(crate) unsafe fn get_file_dialog_path(
             .collect::<Vec<_>>()
     });
 
+    // Having Some in raw_spec means that we can safely unwrap options.allowed_types.
+    // Be careful when moving the unwraps out of this block or changing how raw_spec is made.
     if let Some(spec) = &raw_spec {
-        as_result(file_dialog.SetFileTypes(spec.len() as u32, spec.as_ptr()))?;
-        as_result(file_dialog.SetFileTypeIndex(1))?;
+        // We also want to make sure that options.allowed_types wasn't Some(zero-length vector)
+        if !spec.is_empty() {
+            as_result(file_dialog.SetFileTypes(spec.len() as u32, spec.as_ptr()))?;
+
+            let index = match (&options.default_type, &options.allowed_types) {
+                (Some(typ), Some(typs)) => typs.iter().position(|t| t == typ).unwrap_or(0),
+                _ => 0,
+            };
+
+            let default_allowed_type = options.allowed_types.as_ref().unwrap().get(index).unwrap();
+            let default_extension = default_allowed_type.extensions.first().unwrap_or(&"");
+
+            as_result(file_dialog.SetFileTypeIndex((index + 1).try_into().unwrap()))?;
+            as_result(file_dialog.SetDefaultExtension(default_extension.to_wide().as_ptr()))?;
+        }
     }
 
     as_result(file_dialog.SetOptions(flags))?;
