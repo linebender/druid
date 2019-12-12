@@ -48,6 +48,11 @@ pub struct Command {
 pub mod sys {
     use super::Selector;
 
+    /// Druid sends this when a window is created, e.g. at startup.
+    ///
+    /// Note that this will likely get refactored into a full lifecycle event suite later.
+    pub const WINDOW_CREATED: Selector = Selector::new("druid-builtin.window-created");
+
     /// Quit the running application. This command is handled by the druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
 

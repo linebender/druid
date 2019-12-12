@@ -33,8 +33,8 @@ use crate::menu::ContextMenu;
 use crate::theme;
 use crate::window::Window;
 use crate::{
-    BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, MenuDesc,
-    PaintCtx, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
+    commands, BaseState, Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx,
+    MenuDesc, PaintCtx, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
 };
 
 use crate::command::sys as sys_cmd;
@@ -349,6 +349,8 @@ impl<T: Data + 'static> AppState<T> {
 
     pub(crate) fn add_window(&mut self, id: WindowId, window: Window<T>) {
         self.windows.add(id, window);
+        self.command_queue
+            .push_back((id, Command::from(commands::WINDOW_CREATED)));
     }
 
     fn remove_window(&mut self, id: WindowId) -> Option<WindowHandle> {
