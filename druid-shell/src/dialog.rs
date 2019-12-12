@@ -35,6 +35,7 @@ pub enum FileDialogType {
 pub struct FileDialogOptions {
     pub show_hidden: bool,
     pub allowed_types: Option<Vec<FileSpec>>,
+    pub default_type: Option<FileSpec>,
     // we don't want a library user to be able to construct this type directly
     __non_exhaustive: (),
     // multi selection
@@ -49,7 +50,7 @@ pub struct FileDialogOptions {
 /// struct.
 ///
 /// [`COMDLG_FILTERSPEC`]: https://docs.microsoft.com/en-ca/windows/win32/api/shtypes/ns-shtypes-comdlg_filterspec
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FileSpec {
     /// A human readable name, describing this filetype.
     ///
@@ -85,9 +86,17 @@ impl FileDialogOptions {
         self
     }
 
-    /// Set the filetypes the user is allowed to select.
+    /// Set the file types the user is allowed to select.
     pub fn allowed_types(mut self, types: Vec<FileSpec>) -> Self {
         self.allowed_types = Some(types);
+        self
+    }
+
+    /// Set the default file type.
+    /// If it's `None` or not present in [`allowed_types`](#method.allowed_types)
+    /// then the first entry in [`allowed_types`](#method.allowed_types) will be used as default.
+    pub fn default_type(mut self, default_type: FileSpec) -> Self {
+        self.default_type = Some(default_type);
         self
     }
 }
