@@ -79,6 +79,13 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         SizedBox::new(self).height(height)
     }
 
+    /// Wrap this widget in a [`SizedBox`] with an infinite width and height.
+    ///
+    /// [`SizedBox`]: struct.SizedBox.html
+    fn expand(self) -> SizedBox<T> {
+        SizedBox::new(self).expand()
+    }
+
     /// Wrap this widget in a [`Container`] using the provided [`PaintBrush`]
     /// as the background.
     ///
