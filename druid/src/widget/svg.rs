@@ -53,6 +53,7 @@ impl<T: Data> Svg<T> {
         let root = self.svg_data.tree.root();
         match *root.borrow() {
             usvg::NodeKind::Svg(svg) => {
+                // Borrow checker gets confused without an explicit return
                 return Size::new(svg.size.width(), svg.size.height());
             }
             _ => {
@@ -216,6 +217,7 @@ impl FromStr for SvgData {
         }
     }
 }
+
 fn color_from_usvg(paint: &usvg::Paint, opacity: usvg::Opacity) -> Color {
     match paint {
         usvg::Paint::Color(c) => Color::rgb8(c.red, c.green, c.blue).with_alpha(opacity.value()),
