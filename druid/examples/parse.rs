@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, DynLabel, Flex, Padding, Parse, TextBox};
+use druid::widget::{Align, Flex, Label, Padding, Parse, TextBox};
 use druid::{AppLauncher, Widget, WindowDesc};
 
 fn main() {
@@ -25,7 +25,7 @@ fn main() {
 }
 
 fn ui_builder() -> impl Widget<Option<u32>> {
-    let label = DynLabel::new(|data: &Option<u32>, _env| {
+    let label = Label::new(|data: &Option<u32>, _env: &_| {
         data.map_or_else(|| "Invalid input".into(), |x| x.to_string())
     });
     let input = Parse::new(TextBox::new());
