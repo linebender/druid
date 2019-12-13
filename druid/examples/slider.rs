@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, Button, Checkbox, DynLabel, Flex, Label, Padding, ProgressBar, Slider};
+use druid::widget::{Align, Button, Checkbox, Flex, Label, Padding, ProgressBar, Slider};
 use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -22,7 +22,7 @@ struct DemoState {
 }
 
 fn build_widget() -> impl Widget<DemoState> {
-    let label = DynLabel::new(|data: &DemoState, _env| {
+    let label = Label::new(|data: &DemoState, _env: &_| {
         if data.double {
             format!("2x the value: {0:.2}", data.value * 2.0)
         } else {

@@ -15,7 +15,7 @@
 //! Demos the textbox widget, as well as menu creation and overriding theme settings.
 
 use druid::piet::Color;
-use druid::widget::{DynLabel, EnvScope, Flex, Padding, TextBox};
+use druid::widget::{EnvScope, Flex, Label, Padding, TextBox};
 use druid::{theme, AppLauncher, Data, LocalizedString, MenuDesc, Widget, WindowDesc};
 
 fn main() {
@@ -44,7 +44,7 @@ fn build_widget() -> impl Widget<String> {
         },
         TextBox::new(),
     );
-    let label = DynLabel::new(|data: &String, _env| format!("value: {}", data));
+    let label = Label::new(|data: &String, _env: &_| format!("value: {}", data));
 
     Flex::column()
         .with_child(Padding::new(5.0, textbox), 1.0)

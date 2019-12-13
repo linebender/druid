@@ -19,7 +19,7 @@ use std::sync::Arc;
 use druid::piet::Color;
 
 use druid::lens::{self, LensExt};
-use druid::widget::{Button, DynLabel, Flex, List, Scroll, WidgetExt};
+use druid::widget::{Button, Flex, Label, List, Scroll, WidgetExt};
 use druid::{AppLauncher, Data, Lens, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -64,7 +64,7 @@ fn ui_builder() -> impl Widget<AppData> {
     // Build a simple list
     lists.add_child(
         Scroll::new(List::new(|| {
-            DynLabel::new(|item: &u32, _| format!("List item #{}", item))
+            Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
                 .padding(10.0)
                 .expand()
                 .height(50.0)
@@ -80,7 +80,7 @@ fn ui_builder() -> impl Widget<AppData> {
         Scroll::new(List::new(|| {
             Flex::row()
                 .with_child(
-                    DynLabel::new(|(_, item): &(Arc<Vec<u32>>, u32), _| {
+                    Label::new(|(_, item): &(Arc<Vec<u32>>, u32), _env: &_| {
                         format!("List item #{}", item)
                     }),
                     1.0,

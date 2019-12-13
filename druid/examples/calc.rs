@@ -16,7 +16,7 @@
 
 use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 
-use druid::widget::{Button, DynLabel, Flex, Padding};
+use druid::widget::{Button, Flex, Label, Padding};
 
 #[derive(Clone, Data, Lens)]
 struct CalcState {
@@ -149,7 +149,7 @@ fn flex_row<T: Data>(
 
 fn build_calc() -> impl Widget<CalcState> {
     let display = LensWrap::new(
-        DynLabel::new(|data: &String, _env| data.clone()),
+        Label::new(|data: &String, _env: &_| data.clone()),
         CalcState::value,
     );
     Flex::column()
