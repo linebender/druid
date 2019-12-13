@@ -47,6 +47,21 @@ pub struct Label<T> {
 
 impl<T: Data> Label<T> {
     /// Construct a new Label widget.
+    ///
+    /// ```
+    /// use druid::LocalizedString;
+    /// use druid::widget::Label;
+    ///
+    /// // Construct a new Label using static string.
+    /// let _: Label<u32> = Label::new("Hello world");
+    ///
+    /// // Construct a new Label using localized string.
+    /// let text = LocalizedString::new("hello-counter").with_arg("count", |data: &u32, _env| (*data).into());
+    /// let _: Label<u32> = Label::new(text);
+    ///
+    /// // Construct a new dynamic Label. Text will be updated when data changes.
+    /// let _: Label<u32> = Label::new(|data: &u32, _env: &_| format!("Hello world: {}", data));
+    /// ```
     pub fn new(text: impl Into<LabelText<T>>) -> Self {
         let text = text.into();
         Self {
