@@ -23,12 +23,12 @@ use crate::kurbo::RoundedRect;
 use crate::piet::{LinearGradient, UnitPoint};
 
 use crate::theme;
-use crate::widget::{Align, Label, LabelText, SizedBox};
+use crate::widget::{Align, Label, LabelText, SizedBox, WidgetExt};
 use crate::{Point, RenderContext};
 
 /// A button with a text label.
-pub struct Button<T> {
-    label: Label<T>,
+pub struct Button<T: Data> {
+    label: Align<T>,
     /// A closure that will be invoked when the button is clicked.
     action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
 }
@@ -41,7 +41,7 @@ impl<T: Data + 'static> Button<T> {
         action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
     ) -> Button<T> {
         Button {
-            label: Label::new(text).align(UnitPoint::CENTER),
+            label: Label::new(text).center(),
             action: Box::new(action),
         }
     }
@@ -56,7 +56,7 @@ impl<T: Data + 'static> Button<T> {
         Align::vertical(
             UnitPoint::CENTER,
             SizedBox::new(Button {
-                label: Label::new(text).align(UnitPoint::CENTER),
+                label: Label::new(text).center(),
                 action: Box::new(action),
             })
             .width(width)

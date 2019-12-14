@@ -19,9 +19,7 @@ use crate::{
     Widget,
 };
 
-use crate::piet::{
-    FontBuilder, PietFont, PietText, Text, TextLayout, TextLayoutBuilder, UnitPoint,
-};
+use crate::piet::{FontBuilder, PietFont, PietText, Text, TextLayout, TextLayoutBuilder};
 
 use crate::localization::LocalizedString;
 use crate::theme;
@@ -50,7 +48,6 @@ enum WordBreak {
 /// A label that displays some text.
 pub struct Label<T> {
     text: LabelText<T>,
-    align: UnitPoint,
     word_break: WordBreak,
 }
 
@@ -75,15 +72,8 @@ impl<T: Data> Label<T> {
         let text = text.into();
         Self {
             text,
-            align: UnitPoint::LEFT,
             word_break: WordBreak::KeepAll,
         }
-    }
-
-    /// Set text alignment.
-    pub fn align(mut self, align: UnitPoint) -> Self {
-        self.align = align;
-        self
     }
 
     /// Break words into multiple lines if the text doesn't fit in one line.
@@ -225,9 +215,7 @@ impl<T: Data> Widget<T> for Label<T> {
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
-        // TODO: shall align happen outside of Label widget?
         // Find the origin for the text
-        // let mut origin = self.align.resolve(Rect::from_origin_size(Point::ORIGIN, base_state.size()));
         let mut origin = Point::ORIGIN;
 
         let (font, font_size) = self.get_font(paint_ctx.text(), env);

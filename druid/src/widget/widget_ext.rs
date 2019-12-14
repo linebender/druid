@@ -65,6 +65,13 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         Align::horizontal(align, self)
     }
 
+    /// Wrap this widget in an [`Align`] widget.
+    ///
+    /// [`Align`]: struct.Align.html
+    fn align(self, align: UnitPoint) -> Align<T> {
+        Align::new(align, self)
+    }
+
     /// Wrap this widget in a [`SizedBox`] with an explicit width.
     ///
     /// [`SizedBox`]: struct.SizedBox.html
