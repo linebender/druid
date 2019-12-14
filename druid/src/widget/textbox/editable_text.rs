@@ -21,10 +21,10 @@ use unicode_segmentation::GraphemeCursor;
 
 /// An EditableText trait.
 pub trait EditableText: Sized {
-    type Cursor: EditableTextCursor<Self>;
+    // type Cursor: EditableTextCursor<&Self>;
 
     /// Create a cursor with a copy of the text and a offset position.
-    fn cursor(&self, position: usize) -> Self::Cursor;
+    fn cursor(&self, position: usize) -> StringCursor;
 
     /// Replace range with new text.
     fn edit(&mut self, iv: Range<usize>, new: impl Into<String>);
@@ -47,13 +47,16 @@ pub trait EditableText: Sized {
 
     /// Get the previous codepoint offset from the given offset, if it exists.
     fn next_codepoint_offset(&self, offset: usize) -> Option<usize>;
+
+    /// Create an EditableText from &str
+    fn from_str(s: &str) -> Self;
 }
 
 impl EditableText for String {
-    type Cursor = StringCursor;
+    // type Cursor = StringCursor;
 
     //TODO: this can panic so maybe we should return a Result?
-    fn edit(&mut self, iv: Range<usize>, new: impl Into<Self>) {
+    fn edit(&mut self, iv: Range<usize>, new: impl Into<String>) {
         self.replace_range(iv, &new.into());
     }
 
@@ -69,10 +72,12 @@ impl EditableText for String {
         self.len()
     }
 
-    fn cursor(&self, position: usize) -> Self::Cursor {
-        // TODO: can we get rid of this .to_string()?
+    fn cursor<'a>(&'a self, position: usize) -> StringCursor<'a> {
         // TODO: what happens if this position isn't at a valid offset?
-        StringCursor::new(self.to_string(), position)
+        StringCursor {
+            text: &self,
+            position,
+        }
     }
 
     fn prev_grapheme_offset(&self, from: usize) -> Option<usize> {
@@ -102,13 +107,14 @@ impl EditableText for String {
     fn is_empty(&self) -> bool {
         self.is_empty()
     }
+    
+    fn from_str(s: &str) -> Self {
+        s.to_string()
+    }
 }
 
 /// A cursor with convenience functions for moving through EditableText.
 pub trait EditableTextCursor<EditableText> {
-    /// Create a new cursor.
-    fn new(s: EditableText, position: usize) -> Self;
-
     /// Set cursor position.
     fn set(&mut self, position: usize);
 
@@ -143,17 +149,13 @@ pub trait EditableTextCursor<EditableText> {
     fn at_or_prev(&mut self) -> Option<usize>;
 }
 
-#[derive(Debug, Clone)]
-pub struct StringCursor {
-    text: String,
+#[derive(Debug)]
+pub struct StringCursor<'a> {
+    text: &'a str,
     position: usize,
 }
 
-impl EditableTextCursor<String> for StringCursor {
-    fn new(text: String, position: usize) -> StringCursor {
-        StringCursor { text, position }
-    }
-
+impl<'a> EditableTextCursor<&'a String> for StringCursor<'a> {
     fn set(&mut self, position: usize) {
         self.position = position;
     }
