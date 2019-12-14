@@ -18,9 +18,13 @@ use druid::piet::Color;
 use druid::widget::{Button, Flex, Label, SizedBox, WidgetExt};
 use druid::{AppLauncher, Widget, WindowDesc};
 
+const DESCRIPTION: &str = "This example shows how you can build a layout using basic widgets. You can use Flex widget to structure widgets in horizontal or vertial layouts. WidgetExt trait provides convenience methods for padding or widget sizing.";
+
 fn build_app() -> impl Widget<u32> {
     // Begin construction of vertical layout
     let mut col = Flex::column();
+
+    col.add_child(Label::new(DESCRIPTION).break_words(), 0.0);
 
     // Construct a horizontal layout.
     let mut header = Flex::row();
