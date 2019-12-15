@@ -93,6 +93,7 @@ impl Selection {
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
 pub struct TextBox {
+    placeholder: String,
     width: f64,
     hscroll_offset: f64,
     selection: Selection,
@@ -105,6 +106,12 @@ impl TextBox {
     pub fn new() -> impl Widget<String> {
         Align::vertical(UnitPoint::CENTER, Self::raw())
     }
+    /// Create a new TextBox widget with placeholder
+    pub fn with_placeholder<T: Into<String>>(placeholder: T) -> impl Widget<String> {
+        let mut textbox = Self::raw();
+        textbox.placeholder = placeholder.into();
+        Align::vertical(UnitPoint::CENTER, textbox)
+    }
 
     /// Create a new TextBox widget with no Align wrapper
     pub fn raw() -> TextBox {
@@ -114,6 +121,7 @@ impl TextBox {
             selection: Selection::caret(0),
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
+            placeholder: String::new(),
         }
     }
 
@@ -388,13 +396,20 @@ impl Widget<String> for TextBox {
         env: &Env,
     ) {
         // Guard against changes in data following `event`
-        self.selection = self.selection.constrain_to(data);
+        let content = if data.is_empty() {
+            &self.placeholder
+        } else {
+            data
+        };
+
+        self.selection = self.selection.constrain_to(content);
 
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let selection_color = env.get(theme::SELECTION_COLOR);
         let text_color = env.get(theme::LABEL_COLOR);
+        let placeholder_color = env.get(theme::PLACEHOLDER_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
 
         let has_focus = base_state.has_focus();
@@ -420,7 +435,7 @@ impl Widget<String> for TextBox {
                 rc.clip(clip_rect);
 
                 // Calculate layout
-                let text_layout = self.get_layout(rc.text(), data, env);
+                let text_layout = self.get_layout(rc.text(), content, env);
 
                 // Shift everything inside the clip by the hscroll_offset
                 rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
@@ -446,8 +461,13 @@ impl Widget<String> for TextBox {
                 // Layout, measure, and draw text
                 let text_height = font_size * 0.8;
                 let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
+                let color = if data.is_empty() {
+                    &placeholder_color
+                } else {
+                    &text_color
+                };
 
-                rc.draw_text(&text_layout, text_pos, &text_color);
+                rc.draw_text(&text_layout, text_pos, color);
 
                 // Paint the cursor if focused and there's no selection
                 if has_focus && self.cursor_on && self.selection.is_caret() {
