@@ -299,6 +299,10 @@ impl WndProc for MyWndProc {
         *self.handle.borrow_mut() = handle.clone();
         state.handler.connect(&handle.clone().into());
         *self.state.borrow_mut() = Some(state);
+        if let Ok(mut s) = self.state.try_borrow_mut() {
+            let mut ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+            s.as_mut().unwrap().handler.connected(&mut ctx.ctx());
+        }
     }
 
     #[allow(clippy::cognitive_complexity)]

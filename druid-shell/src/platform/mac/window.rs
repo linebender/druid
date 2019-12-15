@@ -170,6 +170,7 @@ impl WindowBuilder {
                 nsview: &handle.nsview,
                 text: Text::new(),
             };
+            (*view_state).handler.connected(&mut ctx);
             (*view_state)
                 .handler
                 .size(frame.size.width as u32, frame.size.height as u32, &mut ctx);

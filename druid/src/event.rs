@@ -46,6 +46,12 @@ use crate::Command;
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Debug, Clone)]
 pub enum Event {
+    /// Called when certain application and window lifecycle events occur.
+    ///
+    /// For the various possible events, see the [`LifeCycle`] enum.
+    ///
+    /// [`LifeCycle`]: enum.LifeCycle.html
+    LifeCycle(LifeCycle),
     /// Called on the root widget when the window size changes.
     ///
     /// Discussion: it's not obvious this should be propagated to user
@@ -129,6 +135,15 @@ pub enum Event {
     /// [`Widget`]: trait.Widget.html
     /// [`EventCtx::submit_command`]: struct.EventCtx.html#method.submit_command
     Command(Command),
+}
+
+/// Application life cycle events.
+#[derive(Debug, Clone, Copy)]
+pub enum LifeCycle {
+    /// Sent to all widgets in a given window when that window is first instantiated.
+    ///
+    /// This is guaranteed to be the first event a window receives.
+    WindowConnected,
 }
 
 /// A mouse wheel event.
