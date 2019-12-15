@@ -384,6 +384,9 @@ impl WindowBuilder {
             .borrow_mut()
             .connect(&handle.clone().into());
 
+        let mut ctx = WinCtxImpl::from(&handle);
+        win_state.handler.borrow_mut().connected(&mut ctx);
+
         Ok(handle)
     }
 }

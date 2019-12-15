@@ -56,7 +56,7 @@ pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use command::{sys as commands, Command, Selector};
 pub use data::Data;
 pub use env::{Env, Key, Value};
-pub use event::{Event, WheelEvent};
+pub use event::{Event, LifeCycle, WheelEvent};
 pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
@@ -556,6 +556,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut recurse = true;
         let mut hot_changed = None;
         let child_event = match event {
+            Event::LifeCycle(event) => Event::LifeCycle(*event),
             Event::Size(size) => {
                 recurse = ctx.is_root;
                 Event::Size(*size)
