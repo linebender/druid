@@ -42,7 +42,7 @@ fn build_widget() -> impl Widget<String> {
             env.set(theme::CURSOR_COLOR, Color::WHITE);
             env.set(theme::SELECTION_COLOR, Color::rgb8(100, 100, 100));
         },
-        TextBox::new(),
+        TextBox::with_placeholder("placeholder"),
     );
     let label = Label::new(|data: &String, _env: &_| format!("value: {}", data));
 

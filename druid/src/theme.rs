@@ -21,6 +21,7 @@ use crate::{Env, Key};
 pub const WINDOW_BACKGROUND_COLOR: Key<Color> = Key::new("window_background_color");
 
 pub const LABEL_COLOR: Key<Color> = Key::new("label_color");
+pub const PLACEHOLDER_COLOR: Key<Color> = Key::new("placeholder_color");
 
 pub const PRIMARY_LIGHT: Key<Color> = Key::new("primary_light");
 pub const PRIMARY_DARK: Key<Color> = Key::new("primary_dark");
@@ -54,6 +55,7 @@ pub fn init() -> Env {
     let mut env = Env::default()
         .adding(WINDOW_BACKGROUND_COLOR, Color::rgb8(0x29, 0x29, 0x29))
         .adding(LABEL_COLOR, Color::rgb8(0xf0, 0xf0, 0xea))
+        .adding(PLACEHOLDER_COLOR, Color::rgb8(0x80, 0x80, 0x80))
         .adding(PRIMARY_LIGHT, Color::rgb8(0x5c, 0xc4, 0xff))
         .adding(PRIMARY_DARK, Color::rgb8(0x00, 0x8d, 0xdd))
         .adding(BACKGROUND_LIGHT, Color::rgb8(0x3a, 0x3a, 0x3a))
