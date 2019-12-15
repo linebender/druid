@@ -21,18 +21,23 @@ use unicode_segmentation::GraphemeCursor;
 
 /// An EditableText trait.
 pub trait EditableText: Sized {
-    // type Cursor: EditableTextCursor<&Self>;
+    // TODO: would be nice to have something like
+    // type Cursor: EditableTextCursor<Self>;
 
-    /// Create a cursor with a copy of the text and a offset position.
+    /// Create a cursor with a reference to the text and a offset position.
+    ///
+    /// Not guaranteed to be a valid cursor on construction.
     fn cursor(&self, position: usize) -> StringCursor;
 
     /// Replace range with new text.
-    fn edit(&mut self, iv: Range<usize>, new: impl Into<String>);
+    /// Can panic if supplied an invalid range.
+    // TODO: make this generic over Self
+    fn edit(&mut self, range: Range<usize>, new: impl Into<String>);
 
     /// Get slice of text at range.
-    fn slice(&self, iv: Range<usize>) -> Option<Cow<str>>;
+    fn slice(&self, range: Range<usize>) -> Option<Cow<str>>;
 
-    /// Get length of text.
+    /// Get length of text (in bytes).
     fn len(&self) -> usize;
 
     /// Get the next grapheme offset from the given offset, if it exists.
@@ -41,27 +46,31 @@ pub trait EditableText: Sized {
     /// Get the previous grapheme offset from the given offset, if it exists.
     fn next_grapheme_offset(&self, offset: usize) -> Option<usize>;
 
-    fn is_empty(&self) -> bool;
     /// Get the next codepoint offset from the given offset, if it exists.
     fn prev_codepoint_offset(&self, offset: usize) -> Option<usize>;
 
     /// Get the previous codepoint offset from the given offset, if it exists.
     fn next_codepoint_offset(&self, offset: usize) -> Option<usize>;
 
-    /// Create an EditableText from &str
+    fn is_empty(&self) -> bool;
+
     fn from_str(s: &str) -> Self;
 }
 
 impl EditableText for String {
-    // type Cursor = StringCursor;
-
-    //TODO: this can panic so maybe we should return a Result?
-    fn edit(&mut self, iv: Range<usize>, new: impl Into<String>) {
-        self.replace_range(iv, &new.into());
+    fn cursor<'a>(&self, position: usize) -> StringCursor {
+        StringCursor {
+            text: &self,
+            position,
+        }
     }
 
-    fn slice(&self, iv: Range<usize>) -> Option<Cow<str>> {
-        if let Some(slice) = self.get(iv) {
+    fn edit(&mut self, range: Range<usize>, new: impl Into<String>) {
+        self.replace_range(range, &new.into());
+    }
+
+    fn slice(&self, range: Range<usize>) -> Option<Cow<str>> {
+        if let Some(slice) = self.get(range) {
             Some(Cow::from(slice))
         } else {
             None
@@ -70,14 +79,6 @@ impl EditableText for String {
 
     fn len(&self) -> usize {
         self.len()
-    }
-
-    fn cursor<'a>(&'a self, position: usize) -> StringCursor<'a> {
-        // TODO: what happens if this position isn't at a valid offset?
-        StringCursor {
-            text: &self,
-            position,
-        }
     }
 
     fn prev_grapheme_offset(&self, from: usize) -> Option<usize> {
@@ -149,6 +150,7 @@ pub trait EditableTextCursor<EditableText> {
     fn at_or_prev(&mut self) -> Option<usize>;
 }
 
+/// A cursor type that implements EditableTextCursor for String
 #[derive(Debug)]
 pub struct StringCursor<'a> {
     text: &'a str,
