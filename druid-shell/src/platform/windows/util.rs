@@ -39,7 +39,9 @@ use winapi::um::winbase::{FILE_TYPE_UNKNOWN, STD_ERROR_HANDLE, STD_OUTPUT_HANDLE
 use winapi::um::wincon::{AttachConsole, ATTACH_PARENT_PROCESS};
 use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
 
-use direct2d::enums::DrawTextOptions;
+// old
+//use direct2d::enums::DrawTextOptions;
+
 use log::error;
 
 use super::error::Error;

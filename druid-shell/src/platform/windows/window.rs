@@ -39,9 +39,13 @@ use winapi::um::winnt::*;
 use winapi::um::winuser::*;
 use winapi::Interface;
 
-use direct2d;
-use direct2d::math::SizeU;
-use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarget};
+// old
+//use direct2d;
+//use direct2d::math::SizeU;
+//use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarget};
+
+use piet_common::d2d::D2DFactory;
+use piet_common::dwrite::DwriteFactory;
 
 use crate::kurbo::{Point, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
@@ -105,7 +109,7 @@ pub enum PresentStrategy {
 #[derive(Default)]
 pub struct WindowHandle {
     // Note: this clone of the dwrite factory might move into WinCtxImpl.
-    dwrite_factory: Option<directwrite::Factory>,
+    dwrite_factory: Option<DwriteFactory>,
     state: Weak<WindowState>,
 }
 
@@ -151,8 +155,8 @@ trait WndProc {
 // implements policies such as the use of Direct2D for painting.
 struct MyWndProc {
     handle: RefCell<WindowHandle>,
-    d2d_factory: direct2d::Factory,
-    dwrite_factory: directwrite::Factory,
+    d2d_factory: D2DFactory,
+    dwrite_factory: DwriteFactory,
     state: RefCell<Option<WndState>>,
 }
 
@@ -174,7 +178,7 @@ struct WndState {
 /// A structure that owns resources for the `WinCtx` (so it lasts long enough).
 struct WinCtxOwner<'a> {
     handle: std::cell::Ref<'a, WindowHandle>,
-    dwrite: &'a directwrite::Factory,
+    dwrite: &'a DwriteFactory,
 }
 
 /// The Windows implementation of the context provided to WinHandler calls.
@@ -237,7 +241,7 @@ fn get_mod_state() -> KeyModifiers {
 }
 
 impl WndState {
-    fn rebuild_render_target(&mut self, d2d: &direct2d::Factory) {
+    fn rebuild_render_target(&mut self, d2d: &D2DFactory) {
         unsafe {
             let swap_chain = self.dcomp_state.as_ref().unwrap().swap_chain;
             let rt = paint::create_render_target_dxgi(d2d, swap_chain, self.dpi)
@@ -249,8 +253,8 @@ impl WndState {
     // Renders but does not present.
     fn render(
         &mut self,
-        d2d: &direct2d::Factory,
-        dw: &directwrite::Factory,
+        d2d: &D2DFactory,
+        dw: &DwriteFactory,
         handle: &RefCell<WindowHandle>,
         c: &mut WinCtxOwner,
     ) {
@@ -294,7 +298,7 @@ impl MyWndProc {
 impl<'a> WinCtxOwner<'a> {
     fn new(
         handle: std::cell::Ref<'a, WindowHandle>,
-        dwrite: &'a directwrite::Factory,
+        dwrite: &'a DwriteFactory,
     ) -> WinCtxOwner<'a> {
         WinCtxOwner { handle, dwrite }
     }
@@ -759,10 +763,10 @@ impl WndProc for MyWndProc {
 
 // Note: there's a clone method in 0.3.0-alpha4. We work around
 // the lack in 0.1.2 by calling the low-level unsafe operations.
-fn clone_dwrite(dwrite: &directwrite::Factory) -> directwrite::Factory {
+fn clone_dwrite(dwrite: &DwriteFactory) -> DwriteFactory {
     unsafe {
         (*dwrite.get_raw()).AddRef();
-        directwrite::Factory::from_raw(dwrite.get_raw())
+        DwriteFactory::from_raw(dwrite.get_raw())
     }
 }
 
@@ -815,11 +819,11 @@ impl WindowBuilder {
             // register once even for multiple window creation.
 
             let class_name = super::util::CLASS_NAME.to_wide();
-            let dwrite_factory = directwrite::Factory::new().unwrap();
+            let dwrite_factory = DwriteFactory::new().unwrap();
             let dw_clone = clone_dwrite(&dwrite_factory);
             let wndproc = MyWndProc {
                 handle: Default::default(),
-                d2d_factory: direct2d::Factory::new().unwrap(),
+                d2d_factory: D2DFactory::new().unwrap(),
                 dwrite_factory: dw_clone,
                 state: RefCell::new(None),
             };

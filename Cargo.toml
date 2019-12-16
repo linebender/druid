@@ -4,3 +4,7 @@ members = [
     "druid-shell",
     "druid-derive",
 ]
+
+[patch.crates-io]
+piet-common = { git = "https://github.com/hwchen/piet", branch = "raw_d2d" }
+

@@ -35,21 +35,49 @@ use winapi::um::dcommon::*;
 use winapi::um::winuser::*;
 use winapi::Interface;
 
-use direct2d;
-use direct2d::enums::{AlphaMode, RenderTargetType};
-use direct2d::render_target::{DxgiSurfaceRenderTarget, GenericRenderTarget, HwndRenderTarget};
+// old
+//use direct2d;
+//use direct2d::enums::{AlphaMode, RenderTargetType};
+//use direct2d::render_target::{DxgiSurfaceRenderTarget, GenericRenderTarget, HwndRenderTarget};
 
+// new
+use piet_common::d2d::D2DFactory;
+use piet_common::dwrite::DwriteFactory;
+use wio::com::ComPtr;
+
+// from winapi::um::d2d1;
+// need to move from one type to another?
+//
+// https://docs.microsoft.com/en-us/windows/win32/direct2d/render-targets-overview
+// ID2D1RenderTarget is the interface. The other resources inherit from it.
+//
+// A Render Target creates resources for drawing and performs drawing operations.
+//
+// - ID2D1HwndRenderTarget objects render content to a window.
+// - ID2D1DCRenderTarget objects render to a GDI device context.
+// - bitmap render target objects render to off-screen bitmap.
+// - DXGI render target objects render to  a DXGI surface for use with Direct3D.
+//
+// https://docs.microsoft.com/en-us/windows/win32/direct2d/devices-and-device-contexts
+// A Device Context, ID2D1DeviceContext, is used for windows 8 and higher. Render Target
+// is used for windows 7 and lower.
+type HwndRenderTarget = ComPtr<ID2D1HwndRenderTarget>;
+type DxgiSurfaceRenderTarget = ComPtr<ID2D1RenderTarget>;
+type GenericRenderTarget = ComPtr<ID2D1RenderTarget>;
+type DeviceContext = ComPtr<winapi::um::d2d1_1::ID2D1DeviceContext>;
+
+// end new
 use super::error::Error;
 use super::util::as_result;
 
 /// Context for painting by app into window.
 pub struct PaintCtx<'a> {
-    pub(crate) d2d_factory: &'a direct2d::Factory,
+    pub(crate) d2d_factory: &'a D2DFactory,
     pub(crate) render_target: &'a mut GenericRenderTarget,
 }
 
 pub(crate) unsafe fn create_render_target(
-    d2d_factory: &direct2d::Factory,
+    d2d_factory: &D2DFactory,
     hwnd: HWND,
 ) -> Result<HwndRenderTarget, Error> {
     let mut rect: RECT = mem::zeroed();
@@ -76,7 +104,7 @@ pub(crate) unsafe fn create_render_target(
 ///
 /// TODO: probably want to create a DeviceContext, it's more flexible.
 pub(crate) unsafe fn create_render_target_dxgi(
-    d2d_factory: &direct2d::Factory,
+    d2d_factory: &D2DFactory,
     swap_chain: *mut IDXGISwapChain1,
     dpi: f32,
 ) -> Result<DxgiSurfaceRenderTarget, Error> {
@@ -113,7 +141,7 @@ pub(crate) unsafe fn create_render_target_dxgi(
 impl<'a> PaintCtx<'a> {
     /// Return the raw Direct2D factory for this painting context. Note: it's possible
     /// this will be wrapped to make it easier to port.
-    pub fn d2d_factory(&self) -> &direct2d::Factory {
+    pub fn d2d_factory(&self) -> &D2DFactory {
         self.d2d_factory
     }
 
