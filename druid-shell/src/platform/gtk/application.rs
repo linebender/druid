@@ -35,7 +35,7 @@ impl Application {
                     // no application is running, main is not running
                 }
                 Some(_) => {
-                    // we still have an active window, close the runLo
+                    // we still have an active window, close the run loop
                     gtk::main_quit();
                 }
             }
