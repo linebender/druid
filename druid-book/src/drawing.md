@@ -1,3 +1,3 @@
-# 04-Drawing the interface
+# Draw the user interface
 
 This chapter will describe how to build up your user interface

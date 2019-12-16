@@ -1,4 +1,4 @@
-# Setting up Druid and starting a project
+# Set up Druid
 This tutorial assumes basic familliarity with Rust and a working setup with the basic tooling like
 Rustup and Cargo. This tutorial will use stable Rust (v1.39.0 at the time of writing) and the latest
 released version of Druid.
@@ -9,21 +9,24 @@ application, then it will show you how to set up a basic application, build it a
 ## Setting up Druid dependencies
 In addition to including the druid library in your project 
 
-#### macOS
+### macOS
 On macOS, druid requires [cairo]; if you use homebrew, `brew install cairo`
 should be sufficient. Removing this dependency is on the roadmap.
 
-#### Linux
+### Linux
 On Linux, druid requires gtk+3.
 
-|
-|---|---|
-|Ubuntu|```sudo apt install gtk3-dev```|
-|Fedora pre 21||
-|Fedora post 21||
+On Ubuntu this can be installed with
+```
+sudo apt-get install libgtk-3-dev
+```
+
+On Fedora 
+```
+sudo dnf install gtk3-devel glib2-devel
+```
 
 See [gtk-rs dependencies] for more installation instructions.
-
 
 ## Starting a project
 Starting a project is as easy as creating an empty application with
@@ -36,6 +39,5 @@ and adding the druid dependency to your Cargo.toml
 druid = "0.4.0"
 ```
 
-
-
+[cairo]: https://www.cairographics.org
 [gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html
