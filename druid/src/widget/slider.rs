@@ -56,7 +56,7 @@ impl Widget<f64> for Slider {
 
         match event {
             Event::MouseDown(mouse) => {
-                ctx.set_active(true);
+                ctx.set_active(ctx.is_hot());
                 if self.knob_hit_test(knob_size, mouse.pos) {
                     self.x_offset = self.knob_pos.x - mouse.pos.x
                 } else {

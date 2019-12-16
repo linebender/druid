@@ -140,11 +140,13 @@ impl<T: Data> Widget<T> for Split<T> {
         if self.draggable {
             match event {
                 Event::MouseDown(mouse) => {
-                    if mouse.button.is_left()
-                        && self.splitter_hit_test(ctx.base_state.size(), mouse.pos)
-                    {
-                        ctx.set_active(true);
-                        ctx.set_handled();
+                    if mouse.button.is_left() {
+                        if self.splitter_hit_test(ctx.base_state.size(), mouse.pos) {
+                            ctx.set_active(true);
+                            ctx.set_handled();
+                        } else {
+                            ctx.set_active(false);
+                        }
                     }
                 }
                 Event::MouseUp(mouse) => {

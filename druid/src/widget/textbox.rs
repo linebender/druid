@@ -222,6 +222,8 @@ impl TextBox {
 }
 
 impl Widget<String> for TextBox {
+    // TODO: Refactor the event function to please clippy
+    #[allow(clippy::cognitive_complexity)]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
         // Guard against external changes in data
         self.selection = self.selection.constrain_to(data);
@@ -229,16 +231,21 @@ impl Widget<String> for TextBox {
         let mut text_layout = self.get_layout(ctx.text(), data, env);
         match event {
             Event::MouseDown(mouse) => {
-                ctx.request_focus();
-                ctx.set_active(true);
-                let cursor_off = self.offset_for_point(mouse.pos, &text_layout);
-                if mouse.mods.shift {
-                    self.selection.end = cursor_off;
+                if ctx.is_hot() {
+                    ctx.request_focus();
+                    ctx.set_active(true);
+                    let cursor_off = self.offset_for_point(mouse.pos, &text_layout);
+                    if mouse.mods.shift {
+                        self.selection.end = cursor_off;
+                    } else {
+                        self.cursor_to(cursor_off);
+                    }
+                    ctx.invalidate();
+                    self.reset_cursor_blink(ctx);
                 } else {
-                    self.cursor_to(cursor_off);
+                    ctx.set_active(false);
+                    ctx.invalidate();
                 }
-                ctx.invalidate();
-                self.reset_cursor_blink(ctx);
             }
             Event::MouseMoved(mouse) => {
                 ctx.set_cursor(&Cursor::IBeam);

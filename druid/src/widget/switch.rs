@@ -126,26 +126,34 @@ impl Widget<bool> for Switch {
         let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
         let off_pos = knob_size / 2. + SWITCH_PADDING;
 
+        let mut end_slide = |ctx: &mut EventCtx, data: &mut bool| {
+            ctx.set_active(false);
+            if self.knob_dragged {
+                // toggle value when dragging if knob has been moved far enough
+                *data = self.knob_pos.x > switch_width / 2.;
+            } else {
+                // toggle value on click
+                *data = !*data;
+            }
+            ctx.invalidate();
+            self.knob_dragged = false;
+            self.animation_in_progress = true;
+            ctx.request_anim_frame();
+        };
+
         match event {
             Event::MouseDown(_) => {
-                ctx.set_active(true);
-                ctx.invalidate();
+                if ctx.is_hot() {
+                    if !ctx.is_active() {
+                        ctx.set_active(true);
+                        ctx.invalidate();
+                    }
+                } else {
+                    end_slide(ctx, data);
+                }
             }
             Event::MouseUp(_) => {
-                ctx.set_active(false);
-
-                if self.knob_dragged {
-                    // toggle value when dragging if knob has been moved far enough
-                    *data = self.knob_pos.x > switch_width / 2.;
-                } else {
-                    // toggle value on click
-                    *data = !*data;
-                }
-
-                ctx.invalidate();
-                self.knob_dragged = false;
-                self.animation_in_progress = true;
-                ctx.request_anim_frame();
+                end_slide(ctx, data);
             }
             Event::MouseMoved(mouse) => {
                 if ctx.is_active() {

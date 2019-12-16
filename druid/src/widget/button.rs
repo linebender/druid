@@ -80,8 +80,10 @@ impl<T: Data> Widget<T> for Button<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(_) => {
-                ctx.set_active(true);
-                ctx.invalidate();
+                if ctx.is_active() != ctx.is_hot() {
+                    ctx.set_active(ctx.is_hot());
+                    ctx.invalidate();
+                }
             }
             Event::MouseUp(_) => {
                 if ctx.is_active() {
