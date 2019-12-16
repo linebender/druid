@@ -77,7 +77,8 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
         }
     }
 
-    fn get_layout(&self, piet_text: &mut PietText, text: &String, env: &Env) -> PietTextLayout {
+    /// Calculate the PietTextLayout from the given text, font, and font size
+    fn get_layout(&self, piet_text: &mut PietText, text: &E, env: &Env) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         // TODO: caching of both the format and the layout
@@ -92,42 +93,51 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
             .unwrap()
     }
 
+    /// Insert text at the cursor position.
+    /// Replaces selected text if there's a selection.
     fn insert(&mut self, src: &mut E, new: &str) {
-        // TODO: handle incomplete graphemes
-
-        // replace_range will panic if selection is greater than src length hence we try to constrain it.
+        // EditableText's edit methodwill panic if selection is greater than src length,
+        // hence we try to constrain it.
         // This is especially needed when data was modified externally.
+        // TODO: perhaps this belongs in update?
         let selection = self.selection.constrain_to(src);
 
         src.edit(selection.range(), new);
         self.selection = Selection::caret(selection.min() + new.len());
     }
 
-    fn cursor_to(&mut self, to: usize) {
-        // TODO: should we do some codepoint or grapheme checking here?
-        self.selection = Selection::caret(to);
+    /// Set the selection to be a caret at the given offset, if that's a valid codepoint boundary.
+    fn caret_to(&mut self, text: &E, to: usize) {
+        match text.cursor(to) {
+            Some(_) => self.selection = Selection::caret(to),
+            None => log::error!("You can't move the cursor there."),
+        }
     }
 
+    /// Return the active edge of the current selection or cursor.
+    // TODO: is this the right name?
     fn cursor(&self) -> usize {
         self.selection.end
     }
 
+    /// Edit a selection using a `Movement`.    
     fn move_selection(&mut self, mvmnt: Movement, text: &E, modify: bool) {
-        // TODO: should we do some codepoint or grapheme checking here?
+        // This movement function should ensure all movements are legit.
+        // If they aren't, that's a problem with the movement function.
         self.selection = movement(mvmnt, self.selection, text, modify);
     }
 
-    /// If it's not a selection, delete to previous grapheme.
-    /// If it is a selection, just delete everything inside the selection.
+    /// Delete to previous grapheme if in caret mode.
+    /// Otherwise just delete everything inside the selection.
     fn delete_backward(&mut self, text: &mut E) {
         if self.selection.is_caret() {
             let cursor = self.cursor();
             let new_cursor = offset_for_delete_backwards(&self.selection, text);
             text.edit(new_cursor..cursor, "");
-            self.cursor_to(new_cursor);
+            self.caret_to(text, new_cursor);
         } else {
             text.edit(self.selection.range(), "");
-            self.cursor_to(self.selection.min());
+            self.caret_to(text, self.selection.min());
         }
     }
 
@@ -192,7 +202,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
         // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);
 
-        let mut text_layout = self.get_layout(ctx.text(), &data.to_string(), env);
+        let mut text_layout = self.get_layout(ctx.text(), &data, env);
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
@@ -201,7 +211,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
                 if mouse.mods.shift {
                     self.selection.end = cursor_off;
                 } else {
-                    self.cursor_to(cursor_off);
+                    self.caret_to(data, cursor_off);
                 }
                 ctx.invalidate();
                 self.reset_cursor_blink(ctx);
@@ -235,7 +245,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
                 if let Some(text) = data.slice(self.selection.range()) {
                     Application::clipboard().put_string(text);
                 }
-                if !self.selection.is_caret() && cmd.selector == crate::command::sys::CUT {
+                if !self.selection.is_caret() && cmd.selector == crate::commands::CUT {
                     self.delete_backward(data);
                 }
                 ctx.set_handled();
@@ -317,7 +327,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
                     }
                     _ => {}
                 }
-                text_layout = self.get_layout(ctx.text(), &data.to_string(), env);
+                text_layout = self.get_layout(ctx.text(), &data, env);
                 self.update_hscroll(&text_layout);
                 ctx.invalidate();
             }
@@ -360,9 +370,9 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &E, env: &Env) {
         // Guard against changes in data following `event`
         let content = if data.is_empty() {
-            self.placeholder.clone()
+            EditableText::from_str(&self.placeholder)
         } else {
-            data.to_string()
+            data.to_owned()
         };
 
         self.selection = self.selection.constrain_to(&content);
@@ -398,7 +408,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
                 rc.clip(clip_rect);
 
                 // Calculate layout
-                let text_layout = self.get_layout(rc.text(), &content.to_string(), env);
+                let text_layout = self.get_layout(rc.text(), &content, env);
 
                 // Shift everything inside the clip by the hscroll_offset
                 rc.transform(Affine::translate((-self.hscroll_offset, 0.)));

@@ -26,8 +26,8 @@ pub trait EditableText: Sized {
 
     /// Create a cursor with a reference to the text and a offset position.
     ///
-    /// Not guaranteed to be a valid cursor on construction.
-    fn cursor(&self, position: usize) -> StringCursor;
+    /// Returns None if the position isn't a codepoint boundary.
+    fn cursor(&self, position: usize) -> Option<StringCursor>;
 
     /// Replace range with new text.
     /// Can panic if supplied an invalid range.
@@ -58,10 +58,16 @@ pub trait EditableText: Sized {
 }
 
 impl EditableText for String {
-    fn cursor<'a>(&self, position: usize) -> StringCursor {
-        StringCursor {
+    fn cursor<'a>(&self, position: usize) -> Option<StringCursor> {
+        let new_cursor = StringCursor {
             text: &self,
             position,
+        };
+
+        if new_cursor.is_boundary() {
+            Some(new_cursor)
+        } else {
+            None
         }
     }
 
@@ -92,12 +98,12 @@ impl EditableText for String {
     }
 
     fn prev_codepoint_offset(&self, from: usize) -> Option<usize> {
-        let mut c = self.cursor(from);
+        let mut c = self.cursor(from).unwrap();
         c.prev()
     }
 
     fn next_codepoint_offset(&self, from: usize) -> Option<usize> {
-        let mut c = self.cursor(from);
+        let mut c = self.cursor(from).unwrap();
         if c.next().is_some() {
             Some(c.pos())
         } else {
@@ -108,7 +114,7 @@ impl EditableText for String {
     fn is_empty(&self) -> bool {
         self.is_empty()
     }
-    
+
     fn from_str(s: &str) -> Self {
         s.to_string()
     }
@@ -288,7 +294,7 @@ mod tests {
     #[test]
     fn prev_next() {
         let input = String::from("abc");
-        let mut cursor = input.cursor(0);
+        let mut cursor = input.cursor(0).unwrap();
         assert_eq!(cursor.next(), Some(0));
         assert_eq!(cursor.next(), Some(1));
         assert_eq!(cursor.prev(), Some(1));
@@ -299,7 +305,7 @@ mod tests {
     #[test]
     fn peek_next_codepoint() {
         let inp = String::from("$¢€£💶");
-        let mut cursor = inp.cursor(0);
+        let mut cursor = inp.cursor(0).unwrap();
         assert_eq!(cursor.peek_next_codepoint(), Some('$'));
         assert_eq!(cursor.peek_next_codepoint(), Some('$'));
         assert_eq!(cursor.next_codepoint(), Some('$'));

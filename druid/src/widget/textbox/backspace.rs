@@ -42,7 +42,9 @@ fn backspace_offset(text: &impl EditableText, start: usize) -> usize {
 
     let mut delete_code_point_count = 0;
     let mut last_seen_vs_code_point_count = 0;
-    let mut cursor = text.cursor(start);
+    let mut cursor = text
+        .cursor(start)
+        .expect("Backspace must begin at a valid codepoint boundary.");
 
     while state != State::Finished && cursor.pos() > 0 {
         let code_point = cursor.prev_codepoint().unwrap_or('0');
