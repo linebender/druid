@@ -23,7 +23,7 @@ use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
 use cocoa::appkit::{
-    NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSEvent,
+    CGFloat, NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSEvent,
     NSEventModifierFlags, NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow,
     NSWindowStyleMask,
 };
@@ -249,6 +249,10 @@ lazy_static! {
             scroll_wheel as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
+            sel!(magnifyWithEvent:),
+            pinch_event as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
             sel!(keyDown:),
             key_down as extern "C" fn(&mut Object, Sel, id),
         );
@@ -437,6 +441,21 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
             text: Text::new(),
         };
         (*view_state).handler.wheel(delta, mods, &mut ctx);
+    }
+}
+
+extern "C" fn pinch_event(this: &mut Object, _: Sel, nsevent: id) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+
+        let delta: CGFloat = msg_send![nsevent, magnification];
+        let mut ctx = WinCtxImpl {
+            nsview: &(*view_state).nsview,
+            text: Text::new(),
+        };
+
+        (*view_state).handler.zoom(delta as f64, &mut ctx);
     }
 }
 
