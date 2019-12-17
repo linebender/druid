@@ -671,6 +671,11 @@ impl<T: Data + 'static> WinHandler for DruidHandler<T> {
         self.do_event(event, ctx);
     }
 
+    fn zoom(&mut self, delta: f64, ctx: &mut dyn WinCtx) {
+        let event = Event::Zoom(delta);
+        self.do_event(event, ctx);
+    }
+
     fn got_focus(&mut self, ctx: &mut dyn WinCtx) {
         self.app_state
             .borrow_mut()

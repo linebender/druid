@@ -97,6 +97,10 @@ pub enum Event {
     Paste(Clipboard),
     /// Called when the mouse wheel or trackpad is scrolled.
     Wheel(WheelEvent),
+    /// Called when the trackpad is pinched.
+    ///
+    /// The value is a delta.
+    Zoom(f64),
     /// Called when the "hot" status changes.
     ///
     /// See [`is_hot`](struct.BaseState.html#method.is_hot) for

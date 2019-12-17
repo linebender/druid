@@ -272,6 +272,11 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, ctx: &mut dyn WinCtx) {}
 
+    /// Called when a platform-defined zoom gesture occurs (such as pinching
+    /// on the trackpad).
+    #[allow(unused_variables)]
+    fn zoom(&mut self, delta: f64, ctx: &mut dyn WinCtx) {}
+
     /// Called when the mouse moves.
     #[allow(unused_variables)]
     fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {}
