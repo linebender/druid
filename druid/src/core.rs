@@ -23,8 +23,8 @@ use log;
 use crate::kurbo::{Affine, Rect, Shape, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::{
-    BoxConstraints, Command, Cursor, Data, Env, Event, Text, TimerToken, Widget, WinCtx,
-    WindowHandle, WindowId,
+    BoxConstraints, Command, Cursor, Data, Env, Event, IntoOptTarget, Target, Text, TimerToken,
+    Widget, WidgetId, WinCtx, WindowHandle, WindowId,
 };
 
 /// Convenience type for dynamic boxed widget.
@@ -47,6 +47,7 @@ pub struct WidgetPod<T: Data, W: Widget<T>> {
     old_data: Option<T>,
     env: Option<Env>,
     inner: W,
+    id: WidgetId,
 }
 
 /// Generic state for all widgets in the hierarchy.
@@ -103,11 +104,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// so it can participate in layout and event flow. The process of
     /// adding a child widget to a container should call this method.
     pub fn new(inner: W) -> WidgetPod<T, W> {
+        let id = inner.get_id().unwrap_or_else(WidgetId::next);
         WidgetPod {
             state: Default::default(),
             old_data: None,
             env: None,
             inner,
+            id,
         }
     }
 
@@ -134,6 +137,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Return a mutable reference to the inner widget.
     pub fn widget_mut(&mut self) -> &mut W {
         &mut self.inner
+    }
+    /// Get the identity of the widget.
+    pub fn id(&self) -> WidgetId {
+        self.id
     }
 
     /// Set layout rectangle.
@@ -338,6 +345,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Event::Timer(*id)
             }
             Event::Command(cmd) => Event::Command(cmd.clone()),
+            Event::TargetedCommand(target, cmd) => {
+                if *target == Target::Widget(self.id) || target.is_window() {
+                    Event::Command(cmd.clone())
+                } else {
+                    // TODO: here's where Bloom filter magic would happen
+                    Event::TargetedCommand(*target, cmd.clone())
+                }
+            }
         };
         child_ctx.base_state.needs_inval = false;
         if let Some(is_hot) = hot_changed {
@@ -392,12 +407,7 @@ impl<T: Data, W: Widget<T> + 'static> WidgetPod<T, W> {
     /// Convert a `WidgetPod` containing a widget of a specific concrete type
     /// into a dynamically boxed widget.
     pub fn boxed(self) -> BoxedWidget<T> {
-        WidgetPod {
-            state: self.state,
-            old_data: self.old_data,
-            env: self.env,
-            inner: Box::new(self.inner),
-        }
+        WidgetPod::new(Box::new(self.inner))
     }
 }
 
@@ -546,7 +556,7 @@ pub struct EventCtx<'a, 'b> {
     pub(crate) win_ctx: &'a mut dyn WinCtx<'b>,
     pub(crate) cursor: &'a mut Option<Cursor>,
     /// Commands submitted to be run after this event.
-    pub(crate) command_queue: &'a mut VecDeque<(WindowId, Command)>,
+    pub(crate) command_queue: &'a mut VecDeque<(Target, Command)>,
     pub(crate) window_id: WindowId,
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     pub(crate) window: &'a WindowHandle,
@@ -734,13 +744,11 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     ///
     /// [`Command`]: struct.Command.html
     /// [`update()`]: trait.Widget.html#tymethod.update
-    pub fn submit_command(
-        &mut self,
-        command: impl Into<Command>,
-        window_id: impl Into<Option<WindowId>>,
-    ) {
-        let window_id = window_id.into().unwrap_or(self.window_id);
-        self.command_queue.push_back((window_id, command.into()))
+    pub fn submit_command(&mut self, command: impl Into<Command>, target: impl IntoOptTarget) {
+        let target = target
+            .into_opt_target()
+            .unwrap_or_else(|| self.window_id.into());
+        self.command_queue.push_back((target, command.into()))
     }
 
     /// Get the window id.

@@ -19,7 +19,7 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 use druid_shell::{Clipboard, KeyEvent, KeyModifiers, TimerToken};
 
 use crate::mouse::MouseEvent;
-use crate::Command;
+use crate::{Command, Target};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -139,6 +139,10 @@ pub enum Event {
     /// [`Widget`]: trait.Widget.html
     /// [`EventCtx::submit_command`]: struct.EventCtx.html#method.submit_command
     Command(Command),
+    /// A command still in the process of being dispatched. This is an internal
+    /// event and should generally not be handled directly by widgets, but is
+    /// important for containers to dispatch to their children.
+    TargetedCommand(Target, Command),
 }
 
 /// Application life cycle events.

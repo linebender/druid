@@ -167,10 +167,7 @@ impl Command {
 
     /// Return a reference to this command's object, if it has one.
     pub fn get_object<T: Any>(&self) -> Option<&T> {
-        match self.object.as_ref() {
-            None => None,
-            Some(obj) => obj.downcast_ref::<T>(),
-        }
+        self.object.as_ref().and_then(|obj| obj.downcast_ref())
     }
 }
 
