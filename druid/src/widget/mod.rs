@@ -67,7 +67,7 @@ pub use widget_ext::WidgetExt;
 use std::ops::DerefMut;
 
 use crate::kurbo::Size;
-use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx};
+use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, WidgetId};
 
 /// The trait implemented by all widgets.
 ///
@@ -170,6 +170,13 @@ pub trait Widget<T> {
     /// afterwards. In addition, they can apply masks and transforms on
     /// the render context, which is especially useful for scrolling.
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env);
+
+    #[doc(hidden)]
+    /// Get the identity of the widget; this is basically only implemented by
+    /// `IdentityWrapper`. Widgets should not implement this on their own.
+    fn get_id(&self) -> Option<WidgetId> {
+        None
+    }
 }
 
 // TODO: explore getting rid of this (ie be consistent about using

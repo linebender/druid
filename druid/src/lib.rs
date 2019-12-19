@@ -35,6 +35,7 @@ mod menu;
 mod mouse;
 pub mod theme;
 pub mod widget;
+mod widget_id;
 mod win_handler;
 mod window;
 
@@ -61,5 +62,6 @@ pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
 pub use widget::Widget;
+pub use widget_id::{IdentityWrapper, IntoOptTarget, Target, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};

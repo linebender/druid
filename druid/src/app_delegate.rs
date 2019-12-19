@@ -16,12 +16,14 @@
 
 use std::collections::VecDeque;
 
-use crate::{Command, Data, Env, Event, WindowId};
+use crate::{Command, Data, Env, Event, Target, WindowId};
+
+use crate::widget_id::IntoOptTarget;
 
 /// A context passed in to [`AppDelegate`] functions.
 pub struct DelegateCtx<'a> {
     pub(crate) source_id: WindowId,
-    pub(crate) command_queue: &'a mut VecDeque<(WindowId, Command)>,
+    pub(crate) command_queue: &'a mut VecDeque<(Target, Command)>,
 }
 
 impl<'a> DelegateCtx<'a> {
@@ -33,9 +35,12 @@ impl<'a> DelegateCtx<'a> {
     ///
     /// [`Command`]: struct.Command.html
     /// [`update()`]: trait.Widget.html#tymethod.update
-    pub fn submit_command(&mut self, command: Command, window_id: impl Into<Option<WindowId>>) {
-        let window_id = window_id.into().unwrap_or(self.source_id);
-        self.command_queue.push_back((window_id, command))
+    pub fn submit_command(&mut self, command: impl Into<Command>, target: impl IntoOptTarget) {
+        let command = command.into();
+        let target = target
+            .into_opt_target()
+            .unwrap_or_else(|| self.source_id.into());
+        self.command_queue.push_back((target, command))
     }
 }
 
