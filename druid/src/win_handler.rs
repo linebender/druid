@@ -242,7 +242,7 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
 
         let platform_menu = menu.build_window_menu(&self.data, &self.env);
         self.state.handle.set_menu(platform_menu);
-        self.window.menu = Some(menu.to_owned());
+        self.window.menu = Some(menu);
     }
 
     fn show_context_menu(&mut self, cmd: &Command) {

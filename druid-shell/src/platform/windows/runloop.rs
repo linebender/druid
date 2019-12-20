@@ -111,8 +111,12 @@ impl RunLoop {
 }
 
 impl RunLoopHandle {
-    /// Add a listener for a Windows handle. Considered unsafe because the
-    /// handle must be valid. Also unsafe because it is not thread safe.
+    /// Add a listener for a Windows handle.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the handle is valid, and that this function
+    /// is only called from the main thread.
     pub unsafe fn add_handler<F>(&self, h: HANDLE, callback: F)
     where
         F: FnMut() + 'static,
