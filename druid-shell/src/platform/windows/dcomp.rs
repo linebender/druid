@@ -73,13 +73,13 @@ pub struct DCompositionVisual(ComPtr<IDCompositionVisual>);
 pub struct DCompositionVirtualSurface(ComPtr<IDCompositionVirtualSurface>);
 
 /// A trait for content which can be added to a visual.
-pub trait Content {
+pub(crate) trait Content {
     unsafe fn unknown_ptr(&mut self) -> *mut IUnknown;
 }
 
 impl D3D11Device {
     /// Creates a new device with basic defaults.
-    pub fn new_simple() -> Result<D3D11Device, HRESULT> {
+    pub(crate) fn new_simple() -> Result<D3D11Device, HRESULT> {
         unsafe {
             let mut d3d11_device: *mut ID3D11Device = null_mut();
             let flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT; // could probably set single threaded
@@ -102,7 +102,7 @@ impl D3D11Device {
         }
     }
 
-    pub fn create_d2d1_device(&mut self) -> Result<D2D1Device, HRESULT> {
+    pub(crate) fn create_d2d1_device(&mut self) -> Result<D2D1Device, HRESULT> {
         unsafe {
             let mut dxgi_device: ComPtr<IDXGIDevice> = self.0.cast()?;
             let mut d2d1_device: *mut ID2D1Device = null_mut();
@@ -111,7 +111,7 @@ impl D3D11Device {
         }
     }
 
-    pub fn raw_ptr(&mut self) -> *mut ID3D11Device {
+    pub(crate) fn raw_ptr(&mut self) -> *mut ID3D11Device {
         self.0.as_raw()
     }
 }
@@ -119,7 +119,7 @@ impl D3D11Device {
 impl D2D1Device {
     /// Create a wrapped DCompositionDevice object. Note: returns Err(0) on systems
     /// not supporting DirectComposition, available 8.1 and above.
-    pub fn create_composition_device(&mut self) -> Result<DCompositionDevice, HRESULT> {
+    pub(crate) fn create_composition_device(&mut self) -> Result<DCompositionDevice, HRESULT> {
         unsafe {
             let create = OPTIONAL_FUNCTIONS.DCompositionCreateDevice2.ok_or(0)?;
             let mut dcomp_device: *mut IDCompositionDevice = null_mut();
@@ -134,7 +134,7 @@ impl D2D1Device {
 }
 
 impl DCompositionDevice {
-    pub unsafe fn create_target_for_hwnd(
+    pub(crate) unsafe fn create_target_for_hwnd(
         &mut self,
         hwnd: HWND,
         topmost: bool,
@@ -146,7 +146,7 @@ impl DCompositionDevice {
         wrap(hr, dcomp_target, DCompositionTarget)
     }
 
-    pub fn create_visual(&mut self) -> Result<DCompositionVisual, HRESULT> {
+    pub(crate) fn create_visual(&mut self) -> Result<DCompositionVisual, HRESULT> {
         unsafe {
             let mut visual: *mut IDCompositionVisual = null_mut();
             let hr = self.0.CreateVisual(&mut visual);
@@ -155,7 +155,7 @@ impl DCompositionDevice {
     }
 
     /// Creates an RGB surface. Probably should allow more options (including alpha).
-    pub fn create_virtual_surface(
+    pub(crate) fn create_virtual_surface(
         &mut self,
         height: u32,
         width: u32,
@@ -173,33 +173,33 @@ impl DCompositionDevice {
         }
     }
 
-    pub fn commit(&mut self) -> Result<(), HRESULT> {
+    pub(crate) fn commit(&mut self) -> Result<(), HRESULT> {
         unsafe { unit_err(self.0.Commit()) }
     }
 }
 
 impl DCompositionTarget {
     // alternatively could be set_root with an option
-    pub fn clear_root(&mut self) -> Result<(), HRESULT> {
+    pub(crate) fn clear_root(&mut self) -> Result<(), HRESULT> {
         unsafe { unit_err(self.0.SetRoot(null_mut())) }
     }
 
-    pub fn set_root(&mut self, visual: &mut DCompositionVisual) -> Result<(), HRESULT> {
+    pub(crate) fn set_root(&mut self, visual: &mut DCompositionVisual) -> Result<(), HRESULT> {
         unsafe { unit_err(self.0.SetRoot(visual.0.as_raw())) }
     }
 }
 
 impl DCompositionVisual {
-    pub fn set_content<T: Content>(&mut self, content: &mut T) -> Result<(), HRESULT> {
+    pub(crate) fn set_content<T: Content>(&mut self, content: &mut T) -> Result<(), HRESULT> {
         unsafe { self.set_content_raw(content.unknown_ptr()) }
     }
 
     // TODO: impl Content trait for swapchain, for type safety
-    pub unsafe fn set_content_raw(&mut self, content: *mut IUnknown) -> Result<(), HRESULT> {
+    pub(crate) unsafe fn set_content_raw(&mut self, content: *mut IUnknown) -> Result<(), HRESULT> {
         unit_err(self.0.SetContent(content))
     }
 
-    pub fn set_pos(&mut self, x: f32, y: f32) {
+    pub(crate) fn set_pos(&mut self, x: f32, y: f32) {
         unsafe {
             self.0.SetOffsetX_1(x);
             self.0.SetOffsetY_1(y);
