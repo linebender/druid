@@ -18,13 +18,22 @@
 
 use super::clipboard::Clipboard;
 use super::util;
+
 use cocoa::appkit::NSApp;
-use cocoa::base::{id, nil};
+use cocoa::base::{id, nil, YES};
+use objc::declare::ClassDecl;
+use objc::runtime::{Class, Object, Sel};
 
 pub struct Application;
 
 impl Application {
-    pub fn init() {}
+    pub fn init() {
+        unsafe {
+            let delegate: id = msg_send![APP_DELEGATE.0, alloc];
+            let () = msg_send![delegate, init];
+            let () = msg_send![NSApp(), setDelegate: delegate];
+        }
+    }
 
     pub fn quit() {
         unsafe {
@@ -63,5 +72,27 @@ impl Application {
             }
             locale
         }
+    }
+}
+
+struct AppDelegate(*const Class);
+unsafe impl Sync for AppDelegate {}
+
+lazy_static! {
+    static ref APP_DELEGATE: AppDelegate = unsafe {
+        let mut decl = ClassDecl::new("DruidAppDelegate", class!(NSObject))
+            .expect("App Delegate definition failed");
+
+        decl.add_method(
+            sel!(applicationDidFinishLaunching:),
+            application_did_finish_launching as extern "C" fn(&mut Object, Sel, id),
+        );
+        AppDelegate(decl.register())
+    };
+}
+
+extern "C" fn application_did_finish_launching(_this: &mut Object, _: Sel, _notification: id) {
+    unsafe {
+        let () = msg_send![NSApp(), activateIgnoringOtherApps: YES];
     }
 }

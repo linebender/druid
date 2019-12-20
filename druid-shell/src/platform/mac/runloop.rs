@@ -14,11 +14,11 @@
 
 //! macOS implementation of runloop.
 
-use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicyRegular};
-use cocoa::base::{id, nil, YES};
-use cocoa::foundation::NSAutoreleasePool;
-
 use super::util::assert_main_thread;
+
+use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicyRegular};
+use cocoa::base::{id, nil};
+use cocoa::foundation::NSAutoreleasePool;
 
 pub struct RunLoop {
     ns_app: id,
@@ -38,7 +38,6 @@ impl RunLoop {
 
     pub fn run(&mut self) {
         unsafe {
-            let () = msg_send![self.ns_app, activateIgnoringOtherApps: YES];
             self.ns_app.run();
         }
     }
