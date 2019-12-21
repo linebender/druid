@@ -19,8 +19,8 @@ use std::f64::consts::PI;
 use druid::kurbo::{Line, Point, Size, Vec2};
 use druid::piet::{Color, RenderContext};
 use druid::{
-    AppLauncher, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
-    Widget, WindowDesc,
+    AppLauncher, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    WindowDesc,
 };
 
 struct AnimWidget {
@@ -59,13 +59,7 @@ impl Widget<u32> for AnimWidget {
         bc.constrain((100.0, 100.0))
     }
 
-    fn paint(
-        &mut self,
-        paint_ctx: &mut PaintCtx,
-        _base_state: &BaseState,
-        _data: &u32,
-        _env: &Env,
-    ) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
         let center = Point::new(50.0, 50.0);
         let ambit = center + 45.0 * Vec2::from_angle((0.75 + self.t) * 2.0 * PI);
         paint_ctx.stroke(Line::new(center, ambit), &Color::WHITE, 1.0);

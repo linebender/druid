@@ -17,8 +17,7 @@
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-    WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A builder for a row widget that can contain flex children.
@@ -248,7 +247,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         Size::new(width, height)
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         for child in &mut self.children {
             child.widget.paint_with_offset(paint_ctx, data, env);
         }

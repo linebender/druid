@@ -173,8 +173,10 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
     }
 
     fn do_paint(&mut self, piet: &mut Piet) {
+        let base_state = BaseState::default();
         let mut paint_ctx = PaintCtx {
             render_ctx: piet,
+            base_state: &base_state,
             window_id: self.window_id,
             region: Rect::ZERO.into(),
         };

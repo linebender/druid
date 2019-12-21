@@ -17,8 +17,7 @@
 use crate::shell::kurbo::{Point, Rect, Size};
 use crate::shell::piet::{PaintBrush, RenderContext};
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-    WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
 struct BorderState {
@@ -92,10 +91,10 @@ impl<T: Data + 'static> Widget<T> for Container<T> {
         )
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         // Paint background color
         if let Some(ref brush) = self.style.background {
-            let rect = Rect::from_origin_size(Point::ZERO, base_state.size());
+            let rect = Rect::from_origin_size(Point::ZERO, paint_ctx.size());
             paint_ctx.render_ctx.fill(rect, brush);
         }
 
@@ -103,8 +102,8 @@ impl<T: Data + 'static> Widget<T> for Container<T> {
         if let Some(ref border) = self.style.border {
             let offset = border.width / 2.0;
             let size = Size::new(
-                base_state.size().width - border.width,
-                base_state.size().height - border.width,
+                paint_ctx.size().width - border.width,
+                paint_ctx.size().height - border.width,
             );
             let rect = Rect::from_origin_size((offset, offset), size);
             paint_ctx

@@ -17,9 +17,7 @@
 use std::f64::INFINITY;
 
 use crate::shell::kurbo::Size;
-use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-};
+use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
 
 /// A widget with predefined size.
 ///
@@ -121,9 +119,9 @@ impl<T: Data> Widget<T> for SizedBox<T> {
         }
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
-            inner.paint(paint_ctx, base_state, data, env);
+            inner.paint(paint_ctx, data, env);
         }
     }
 }

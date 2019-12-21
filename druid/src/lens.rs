@@ -21,9 +21,7 @@ use std::sync::Arc;
 pub use druid_derive::Lens;
 
 use crate::kurbo::Size;
-use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-};
+use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
 
 /// A lens is a datatype that gives access to a part of a larger
 /// data structure.
@@ -248,10 +246,10 @@ where
             .with(data, |data| inner.layout(ctx, bc, data, env))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         let inner = &mut self.inner;
         self.lens
-            .with(data, |data| inner.paint(paint_ctx, base_state, data, env));
+            .with(data, |data| inner.paint(paint_ctx, data, env));
     }
 }
 

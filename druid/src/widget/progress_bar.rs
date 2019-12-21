@@ -18,9 +18,7 @@ use crate::kurbo::{Point, RoundedRect, Size};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::theme;
 use crate::widget::Align;
-use crate::{
-    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-};
+use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
 
 /// A progress bar, displaying a numeric progress value.
 #[derive(Debug, Clone, Default)]
@@ -63,13 +61,13 @@ impl Widget<f64> for ProgressBar {
         }
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &f64, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = data.max(0.0).min(1.0);
 
         let rounded_rect = RoundedRect::from_origin_size(
             Point::ORIGIN,
             (Size {
-                width: base_state.size().width,
+                width: paint_ctx.size().width,
                 height: env.get(theme::BASIC_WIDGET_HEIGHT),
             })
             .to_vec2(),

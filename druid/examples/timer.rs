@@ -19,8 +19,8 @@ use std::time::{Duration, Instant};
 use druid::kurbo::{Line, Size};
 use druid::piet::{Color, RenderContext};
 use druid::{
-    AppLauncher, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken,
-    UpdateCtx, Widget, WindowDesc,
+    AppLauncher, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken, UpdateCtx,
+    Widget, WindowDesc,
 };
 
 struct TimerWidget {
@@ -61,13 +61,7 @@ impl Widget<u32> for TimerWidget {
         bc.constrain((100.0, 100.0))
     }
 
-    fn paint(
-        &mut self,
-        paint_ctx: &mut PaintCtx,
-        _base_state: &BaseState,
-        _data: &u32,
-        _env: &Env,
-    ) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
         if self.on {
             paint_ctx.stroke(Line::new((10.0, 10.0), (10.0, 50.0)), &Color::WHITE, 1.0);
         }
