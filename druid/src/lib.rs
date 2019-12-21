@@ -35,7 +35,6 @@ mod menu;
 mod mouse;
 pub mod theme;
 pub mod widget;
-mod widget_pod;
 mod win_handler;
 mod window;
 
@@ -46,7 +45,9 @@ pub use shell::{
     TimerToken, WinCtx, WindowHandle,
 };
 
-pub use crate::core::{EventCtx, LayoutCtx, PaintCtx, UpdateCtx};
+pub use crate::core::{
+    BaseState, BoxedWidget, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, WidgetPod,
+};
 pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
@@ -59,6 +60,5 @@ pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
 pub use widget::Widget;
-pub use widget_pod::{BaseState, BoxedWidget, WidgetPod};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
