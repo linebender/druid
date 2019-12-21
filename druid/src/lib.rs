@@ -23,6 +23,7 @@ pub use druid_shell::{kurbo, piet};
 
 mod app;
 mod app_delegate;
+mod box_constraints;
 mod command;
 mod core;
 mod data;
@@ -45,9 +46,10 @@ pub use shell::{
     TimerToken, WinCtx, WindowHandle,
 };
 
-pub use crate::core::{BoxConstraints, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
+pub use crate::core::{EventCtx, LayoutCtx, PaintCtx, UpdateCtx};
 pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
+pub use box_constraints::BoxConstraints;
 pub use command::{sys as commands, Command, Selector};
 pub use data::Data;
 pub use env::{Env, Key, Value};
@@ -56,6 +58,7 @@ pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
+pub use widget::Widget;
 pub use widget_pod::{BaseState, BoxedWidget, WidgetPod};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
