@@ -14,19 +14,16 @@
 
 //! A label widget.
 
-use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx,
-    Widget,
-};
-
-use crate::kurbo::Rect;
+use crate::kurbo::{Point, Rect};
 use crate::piet::{
-    FontBuilder, PietText, PietTextLayout, Text, TextLayout, TextLayoutBuilder, UnitPoint,
+    FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
+    UnitPoint,
 };
-
-use crate::localization::LocalizedString;
 use crate::theme;
-use crate::{Point, RenderContext};
+use crate::{
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, PaintCtx,
+    Size, UpdateCtx, Widget,
+};
 
 /// The text for the label
 pub enum LabelText<T> {

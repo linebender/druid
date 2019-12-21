@@ -14,9 +14,10 @@
 
 //! A widget that switches dynamically between two child views.
 
+use crate::kurbo::{Point, Rect, Size};
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect, Size,
-    UpdateCtx, Widget, WidgetPod,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    WidgetPod,
 };
 
 /// A widget that switches between two possible child views.

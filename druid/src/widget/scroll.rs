@@ -14,20 +14,17 @@
 
 //! A container that scrolls its contents.
 
+use log::error;
 use std::f64::INFINITY;
 use std::time::{Duration, Instant};
 
-use log::error;
-
-use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect, Size,
-    TimerToken, UpdateCtx, Vec2, Widget, WidgetPod,
-};
-
+use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
 use crate::piet::RenderContext;
 use crate::theme;
-
-use crate::kurbo::{Affine, RoundedRect};
+use crate::{
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken,
+    UpdateCtx, Widget, WidgetPod,
+};
 
 #[derive(Debug, Clone)]
 enum ScrollDirection {
