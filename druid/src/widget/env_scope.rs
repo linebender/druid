@@ -16,9 +16,9 @@
 
 use std::marker::PhantomData;
 
+use crate::kurbo::Size;
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx,
-    Widget,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 /// A widget that accepts a closure to update the environment for its child.

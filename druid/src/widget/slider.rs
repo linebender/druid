@@ -52,7 +52,7 @@ impl Slider {
 impl Widget<f64> for Slider {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
-        let slider_width = ctx.base_state.size().width;
+        let slider_width = ctx.size().width;
 
         match event {
             Event::MouseDown(mouse) => {

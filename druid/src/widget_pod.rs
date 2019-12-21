@@ -18,9 +18,10 @@ use log;
 
 use crate::kurbo::{Affine, Rect, Shape, Size};
 use crate::piet::RenderContext;
-use crate::{
-    BoxConstraints, BoxedWidget, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-};
+use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
+
+/// Convenience type for dynamic boxed widget.
+pub type BoxedWidget<T> = WidgetPod<T, Box<dyn Widget<T>>>;
 
 /// A container for one widget in the hierarchy.
 ///

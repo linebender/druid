@@ -141,9 +141,7 @@ impl<T: Data> Widget<T> for Split<T> {
         if self.draggable {
             match event {
                 Event::MouseDown(mouse) => {
-                    if mouse.button.is_left()
-                        && self.splitter_hit_test(ctx.base_state.size(), mouse.pos)
-                    {
+                    if mouse.button.is_left() && self.splitter_hit_test(ctx.size(), mouse.pos) {
                         ctx.set_active(true);
                         ctx.set_handled();
                     }
@@ -151,17 +149,17 @@ impl<T: Data> Widget<T> for Split<T> {
                 Event::MouseUp(mouse) => {
                     if mouse.button.is_left() && ctx.is_active() {
                         ctx.set_active(false);
-                        self.update_splitter(ctx.base_state.size(), mouse.pos);
+                        self.update_splitter(ctx.size(), mouse.pos);
                         ctx.invalidate();
                     }
                 }
                 Event::MouseMoved(mouse) => {
                     if ctx.is_active() {
-                        self.update_splitter(ctx.base_state.size(), mouse.pos);
+                        self.update_splitter(ctx.size(), mouse.pos);
                         ctx.invalidate();
                     }
 
-                    if ctx.is_hot() && self.splitter_hit_test(ctx.base_state.size(), mouse.pos)
+                    if ctx.is_hot() && self.splitter_hit_test(ctx.size(), mouse.pos)
                         || ctx.is_active()
                     {
                         match self.split_direction {
@@ -190,8 +188,8 @@ impl<T: Data> Widget<T> for Split<T> {
         bc.debug_check("Split");
 
         let mut my_size = bc.max();
-        let reduced_width = bc.max.width - self.splitter_size;
-        let reduced_height = bc.max.height - self.splitter_size;
+        let reduced_width = my_size.width - self.splitter_size;
+        let reduced_height = my_size.height - self.splitter_size;
         let (child1_bc, child2_bc) = match self.split_direction {
             Axis::Horizontal => {
                 if !bc.is_width_bounded() {
@@ -201,12 +199,12 @@ impl<T: Data> Widget<T> for Split<T> {
                 let child2_width = (reduced_width - child1_width).max(0.0);
                 (
                     BoxConstraints::new(
-                        Size::new(child1_width, bc.min.height),
-                        Size::new(child1_width, bc.max.height),
+                        Size::new(child1_width, bc.min().height),
+                        Size::new(child1_width, bc.max().height),
                     ),
                     BoxConstraints::new(
-                        Size::new(child2_width, bc.min.height),
-                        Size::new(child2_width, bc.max.height),
+                        Size::new(child2_width, bc.min().height),
+                        Size::new(child2_width, bc.max().height),
                     ),
                 )
             }
@@ -218,12 +216,12 @@ impl<T: Data> Widget<T> for Split<T> {
                 let child2_height = (reduced_height - child1_height).max(0.0);
                 (
                     BoxConstraints::new(
-                        Size::new(bc.min.width, child1_height),
-                        Size::new(bc.max.width, child1_height),
+                        Size::new(bc.min().width, child1_height),
+                        Size::new(bc.max().width, child1_height),
                     ),
                     BoxConstraints::new(
-                        Size::new(bc.min.width, child2_height),
-                        Size::new(bc.max.width, child2_height),
+                        Size::new(bc.min().width, child2_height),
+                        Size::new(bc.max().width, child2_height),
                     ),
                 )
             }
