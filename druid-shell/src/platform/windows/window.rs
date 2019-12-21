@@ -192,6 +192,20 @@ struct DCompState {
 /// Message indicating there are idle tasks to run.
 const XI_RUN_IDLE: UINT = WM_USER;
 
+/// Message indicating explit destroy windows
+/// 
+/// A referene of `WindowState` will be hold when we 
+/// call `DestroyWindow` in our main loop. It is because
+/// by design WM_DESTROY messsage will not passed through 
+/// message queue such that `borrow` of WindowState for 
+/// calling back of handler will always fail.
+///
+/// We use an custom message to let message loop itself to
+/// call `DestroyWindow`
+///
+/// see also: https://stackoverflow.com/a/18828222/1378155
+const XI_REQUEST_DESTROY: UINT = WM_USER + 1;
+
 impl Default for PresentStrategy {
     fn default() -> PresentStrategy {
         // We probably want to change this, but we need GDI to work. Too bad about
@@ -689,6 +703,12 @@ impl WndProc for MyWndProc {
                 }
                 Some(0)
             }
+            XI_REQUEST_DESTROY => {
+                unsafe {
+                    DestroyWindow(hwnd);
+                }
+                Some(0)
+            }
             WM_DESTROY => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
@@ -1080,7 +1100,7 @@ impl WindowHandle {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
-                DestroyWindow(hwnd);
+                PostMessageW(hwnd, XI_REQUEST_DESTROY, 0, 0);
             }
         }
     }
