@@ -163,7 +163,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// [`paint`]: trait.Widget.html#method.paint
     /// [`paint_with_offset`]: #method.paint_with_offset
     pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.inner.paint(paint_ctx, &self.state, data, &env);
+        let mut ctx = PaintCtx {
+            render_ctx: paint_ctx.render_ctx,
+            window_id: paint_ctx.window_id,
+            region: paint_ctx.region.clone(),
+            base_state: &self.state,
+        };
+        self.inner.paint(&mut ctx, data, &env);
     }
 
     /// Paint the widget, translating it by the origin of its layout rectangle.
@@ -203,9 +209,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         let visible = paint_ctx.region().to_rect() - layout_origin;
 
-        paint_ctx.with_child_ctx(visible, |ctx| {
-            self.inner.paint(ctx, &self.state, data, &env)
-        });
+        paint_ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, &env));
 
         if let Err(e) = paint_ctx.restore() {
             log::error!("restoring render context failed: {:?}", e);
@@ -474,6 +478,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     pub window_id: WindowId,
     /// The currently visible region.
     pub(crate) region: Region,
+    pub(crate) base_state: &'a BaseState,
 }
 
 /// A region of a widget, generally used to describe what needs to be drawn.
@@ -514,6 +519,30 @@ impl<'a, 'b: 'a> DerefMut for PaintCtx<'a, 'b> {
 }
 
 impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
+    /// Query the "hot" state of the widget.
+    ///
+    /// See [`BaseState::is_hot`](struct.BaseState.html#method.is_hot).
+    pub fn is_hot(&self) -> bool {
+        self.base_state.is_hot()
+    }
+
+    /// Query the "active" state of the widget.
+    pub fn is_active(&self) -> bool {
+        self.base_state.is_active
+    }
+
+    /// Returns the layout size of the current widget.
+    pub fn size(&self) -> Size {
+        self.base_state.size()
+    }
+
+    /// Query the focus state of the widget.
+    ///
+    /// See [`BaseState::has_focus`](struct.BaseState.html#method.has_focus).
+    pub fn has_focus(&self) -> bool {
+        self.base_state.has_focus()
+    }
+
     /// Returns the currently visible [`Region`].
     ///
     /// [`Region`]: struct.Region.html
@@ -531,10 +560,12 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
         let PaintCtx {
             render_ctx,
             window_id,
+            base_state,
             ..
         } = self;
         let mut child_ctx = PaintCtx {
             render_ctx,
+            base_state,
             window_id: *window_id,
             region: region.into(),
         };

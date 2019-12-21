@@ -65,7 +65,7 @@ pub use widget_ext::WidgetExt;
 use std::ops::DerefMut;
 
 use crate::kurbo::Size;
-use crate::{BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx};
+use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx};
 
 /// The trait implemented by all widgets.
 ///
@@ -167,7 +167,7 @@ pub trait Widget<T> {
     /// children, or annotations (for example, scrollbars) by painting
     /// afterwards. In addition, they can apply masks and transforms on
     /// the render context, which is especially useful for scrolling.
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env);
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env);
 }
 
 // TODO: explore getting rid of this (ie be consistent about using
@@ -185,7 +185,7 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
         self.deref_mut().layout(ctx, bc, data, env)
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
-        self.deref_mut().paint(paint_ctx, base_state, data, env);
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.deref_mut().paint(paint_ctx, data, env);
     }
 }

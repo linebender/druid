@@ -18,8 +18,8 @@ use crate::kurbo::{Line, Point, Rect, Size};
 use crate::piet::RenderContext;
 use crate::widget::flex::Axis;
 use crate::{
-    theme, BaseState, BoxConstraints, Cursor, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetPod,
+    theme, BoxConstraints, Cursor, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
+    Widget, WidgetPod,
 };
 
 ///A container containing two other widgets, splitting the area either horizontally or vertically.
@@ -258,8 +258,8 @@ impl<T: Data> Widget<T> for Split<T> {
         my_size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
-        let size = base_state.size();
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+        let size = paint_ctx.size();
         //third, because we're putting the lines at roughly third points.
         //small, because we floor, to give the extra pixel (roughly) to the middle.
         let small_third = (self.splitter_size / 3.0).floor();

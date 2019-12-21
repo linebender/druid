@@ -21,8 +21,7 @@ use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::theme;
 use crate::widget::{Align, Flex, Label, LabelText, Padding};
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-    WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A group of radio buttons
@@ -112,7 +111,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         ))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
 
         let circle = Circle::new((size / 2., size / 2.), 7.);
@@ -129,7 +128,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
         paint_ctx.fill(circle, &background_gradient);
 
-        let border_color = if base_state.is_hot() {
+        let border_color = if paint_ctx.is_hot() {
             env.get(theme::BORDER_LIGHT)
         } else {
             env.get(theme::BORDER)

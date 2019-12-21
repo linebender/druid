@@ -17,9 +17,7 @@
 use std::marker::PhantomData;
 
 use crate::kurbo::Size;
-use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-};
+use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
 
 /// A widget that accepts a closure to update the environment for its child.
 pub struct EnvScope<T: Data, W: Widget<T>> {
@@ -89,10 +87,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         self.child.layout(layout_ctx, &bc, data, &new_env)
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env);
 
-        self.child.paint(paint_ctx, base_state, data, &new_env);
+        self.child.paint(paint_ctx, data, &new_env);
     }
 }

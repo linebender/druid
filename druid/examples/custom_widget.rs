@@ -21,8 +21,8 @@ use druid::piet::{
 };
 
 use druid::{
-    AppLauncher, BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,
-    Widget, WindowDesc,
+    AppLauncher, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
+    WindowDesc,
 };
 
 struct CustomWidget;
@@ -58,25 +58,17 @@ impl Widget<String> for CustomWidget {
     // The paint method gets called last, after an event flow.
     // It goes event -> update -> layout -> paint, and each method can influence the next.
     // Basically, anything that changes the appearance of a widget causes a paint.
-    fn paint(
-        &mut self,
-        paint_ctx: &mut PaintCtx,
-        base_state: &BaseState,
-        data: &String,
-        _env: &Env,
-    ) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &String, _env: &Env) {
         // Let's draw a picture with Piet!
         // Clear the whole context with the color of your choice
         paint_ctx.clear(Color::WHITE);
 
         // Create an arbitrary bezier path
-        // (base_state.size() returns the size of the layout rect we're painting in)
+        // (paint_ctx.size() returns the size of the layout rect we're painting in)
+        let size = paint_ctx.size();
         let mut path = BezPath::new();
         path.move_to(Point::ORIGIN);
-        path.quad_to(
-            (80.0, 90.0),
-            (base_state.size().width, base_state.size().height),
-        );
+        path.quad_to((80.0, 90.0), (size.width, size.height));
         // Create a color
         let stroke_color = Color::rgb8(0x00, 0x80, 0x00);
         // Stroke the path with thickness 1.0
@@ -120,7 +112,7 @@ impl Widget<String> for CustomWidget {
         // The image is automatically scaled to fit the rect you pass to draw_image
         paint_ctx.draw_image(
             &image,
-            Rect::from_origin_size(Point::ORIGIN, base_state.size()),
+            Rect::from_origin_size(Point::ORIGIN, size),
             InterpolationMode::Bilinear,
         );
     }

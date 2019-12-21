@@ -16,8 +16,7 @@
 
 use crate::kurbo::{Rect, Size};
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-    WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
 use crate::piet::UnitPoint;
@@ -126,7 +125,7 @@ impl<T: Data> Widget<T> for Align<T> {
         my_size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _base_state: &BaseState, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint_with_offset(paint_ctx, data, env);
     }
 }

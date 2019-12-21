@@ -22,8 +22,8 @@ use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
 use crate::piet::RenderContext;
 use crate::theme;
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken,
-    UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken, UpdateCtx, Widget,
+    WidgetPod,
 };
 
 #[derive(Debug, Clone)]
@@ -407,12 +407,12 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         self_size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Err(e) = paint_ctx.save() {
             error!("saving render context failed: {:?}", e);
             return;
         }
-        let viewport = Rect::from_origin_size(Point::ORIGIN, base_state.size());
+        let viewport = Rect::from_origin_size(Point::ORIGIN, paint_ctx.size());
         paint_ctx.clip(viewport);
         paint_ctx.transform(Affine::translate(-self.scroll_offset));
 

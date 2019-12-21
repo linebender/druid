@@ -20,8 +20,8 @@ use std::time::{Duration, Instant};
 use unicode_segmentation::GraphemeCursor;
 
 use crate::{
-    Application, BaseState, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode,
-    LayoutCtx, PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
+    Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
+    PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
@@ -388,13 +388,7 @@ impl Widget<String> for TextBox {
         bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 
-    fn paint(
-        &mut self,
-        paint_ctx: &mut PaintCtx,
-        base_state: &BaseState,
-        data: &String,
-        env: &Env,
-    ) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &String, env: &Env) {
         // Guard against changes in data following `event`
         let content = if data.is_empty() {
             &self.placeholder
@@ -412,7 +406,7 @@ impl Widget<String> for TextBox {
         let placeholder_color = env.get(theme::PLACEHOLDER_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
 
-        let has_focus = base_state.has_focus();
+        let has_focus = paint_ctx.has_focus();
 
         let border_color = if has_focus {
             env.get(theme::PRIMARY_LIGHT)

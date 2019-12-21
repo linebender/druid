@@ -18,9 +18,7 @@ use crate::kurbo::{BezPath, Point, RoundedRect, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
 use crate::widget::Align;
-use crate::{
-    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-};
+use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
 
 /// A checkbox that toggles a boolean
 #[derive(Debug, Clone, Default)]
@@ -78,7 +76,7 @@ impl Widget<bool> for Checkbox {
         ))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &bool, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &bool, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
 
         let rect =
@@ -96,7 +94,7 @@ impl Widget<bool> for Checkbox {
 
         paint_ctx.fill(rect, &background_gradient);
 
-        let border_color = if base_state.is_hot() {
+        let border_color = if paint_ctx.is_hot() {
             env.get(theme::BORDER_LIGHT)
         } else {
             env.get(theme::BORDER)
