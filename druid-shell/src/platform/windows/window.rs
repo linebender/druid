@@ -193,11 +193,11 @@ struct DCompState {
 const XI_RUN_IDLE: UINT = WM_USER;
 
 /// Message indicating explit destroy windows
-/// 
-/// A referene of `WindowState` will be hold when we 
+///
+/// A referene of `WindowState` will be hold when we
 /// call `DestroyWindow` in our main loop. It is because
-/// by design WM_DESTROY messsage will not passed through 
-/// message queue such that `borrow` of WindowState for 
+/// by design WM_DESTROY messsage will not passed through
+/// message queue such that `borrow` of WindowState for
 /// calling back of handler will always fail.
 ///
 /// We use an custom message to let message loop itself to
