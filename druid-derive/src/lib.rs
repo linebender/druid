@@ -23,6 +23,7 @@ mod lens;
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
 
+/// Generates implementations of the `Data` trait.
 #[proc_macro_derive(Data, attributes(druid))]
 pub fn derive_data(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
