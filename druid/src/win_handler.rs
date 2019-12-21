@@ -210,7 +210,7 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
             base_state: &mut base_state,
             is_handled: false,
             is_root: true,
-            had_active: self.window.root.state.has_active,
+            had_active: self.window.root.has_active(),
             window: &self.state.handle,
             window_id: self.window_id,
         };

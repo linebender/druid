@@ -15,10 +15,11 @@
 //! A widget which splits an area in two, with a set ratio.
 
 use crate::kurbo::{Line, Point, Rect, Size};
+use crate::piet::RenderContext;
 use crate::widget::flex::Axis;
 use crate::{
     theme, BaseState, BoxConstraints, Cursor, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx,
-    RenderContext, UpdateCtx, Widget, WidgetPod,
+    UpdateCtx, Widget, WidgetPod,
 };
 
 ///A container containing two other widgets, splitting the area either horizontally or vertically.
@@ -125,13 +126,13 @@ impl<T: Data> Split<T> {
 }
 impl<T: Data> Widget<T> for Split<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        if self.child1.state.is_active() {
+        if self.child1.is_active() {
             self.child1.event(ctx, event, data, env);
             if ctx.is_handled() {
                 return;
             }
         }
-        if self.child2.state.is_active() {
+        if self.child2.is_active() {
             self.child2.event(ctx, event, data, env);
             if ctx.is_handled() {
                 return;
@@ -172,10 +173,10 @@ impl<T: Data> Widget<T> for Split<T> {
                 _ => {}
             }
         }
-        if !self.child1.state.is_active() {
+        if !self.child1.is_active() {
             self.child1.event(ctx, event, data, env);
         }
-        if !self.child2.state.is_active() {
+        if !self.child2.is_active() {
             self.child2.event(ctx, event, data, env);
         }
     }
