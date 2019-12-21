@@ -20,9 +20,9 @@ use std::sync::Arc;
 
 pub use druid_derive::Lens;
 
+use crate::kurbo::Size;
 use crate::{
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx,
-    Widget,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 /// A lens is a datatype that gives access to a part of a larger

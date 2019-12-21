@@ -180,7 +180,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 let child_bc = match self.direction {
                     Axis::Horizontal => BoxConstraints::new(
                         Size::new(0.0, bc.min().height),
-                        Size::new(std::f64::INFINITY, bc.max.height),
+                        Size::new(std::f64::INFINITY, bc.max().height),
                     ),
                     Axis::Vertical => BoxConstraints::new(
                         Size::new(bc.min().width, 0.0),

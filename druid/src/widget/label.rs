@@ -14,7 +14,7 @@
 
 //! A label widget.
 
-use crate::kurbo::{Point, Rect};
+use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{
     FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
     UnitPoint,
@@ -22,7 +22,7 @@ use crate::piet::{
 use crate::theme;
 use crate::{
     BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, PaintCtx,
-    Size, UpdateCtx, Widget,
+    UpdateCtx, Widget,
 };
 
 /// The text for the label
