@@ -64,6 +64,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         quote! {
             /// Lens for the field on #ty
             #[allow(non_camel_case_types)]
+            #[derive(Debug, Copy, Clone)]
             pub struct #field_name;
         }
     });
