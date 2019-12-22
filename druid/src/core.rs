@@ -65,7 +65,7 @@ pub struct WidgetPod<T: Data, W: Widget<T>> {
 /// [`paint`]: trait.Widget.html#tymethod.paint
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Default)]
-pub struct BaseState {
+pub(crate) struct BaseState {
     layout_rect: Rect,
 
     // TODO: consider using bitflags for the booleans.
@@ -402,69 +402,12 @@ impl<T: Data, W: Widget<T> + 'static> WidgetPod<T, W> {
 }
 
 impl BaseState {
-    /// The "hot" (aka hover) status of a widget.
-    ///
-    /// A widget is "hot" when the mouse is hovered over it. Widgets will
-    /// often change their appearance as a visual indication that they
-    /// will respond to mouse interaction.
-    ///
-    /// The hot status is computed from the widget's layout rect. In a
-    /// container hierarchy, all widgets with layout rects containing the
-    /// mouse position have hot status.
-    ///
-    /// Discussion: there is currently some confusion about whether a
-    /// widget can be considered hot when some other widget is active (for
-    /// example, when clicking to one widget and dragging to the next).
-    /// The documentation should clearly state the resolution.
-    pub fn is_hot(&self) -> bool {
-        self.is_hot
-    }
-
-    /// The active status of a widget.
-    ///
-    /// Active status generally corresponds to a mouse button down. Widgets
-    /// with behavior similar to a button will call [`set_active`] on mouse
-    /// down and then up.
-    ///
-    /// When a widget is active, it gets mouse events even when the mouse
-    /// is dragged away.
-    ///
-    /// [`set_active`]: struct.EventCtx.html#method.set_active
-    pub fn is_active(&self) -> bool {
-        self.is_active
-    }
-
-    /// The focus status of a widget.
-    ///
-    /// Focus means that the widget receives keyboard events.
-    ///
-    /// A widget can request focus using the [`request_focus`] method.
-    /// This will generally result in a separate event propagation of
-    /// a `FocusChanged` method, including sending `false` to the previous
-    /// widget that held focus.
-    ///
-    /// Only one leaf widget at a time has focus. However, in a container
-    /// hierarchy, all ancestors of that leaf widget are also invoked with
-    /// `FocusChanged(true)`.
-    ///
-    /// Discussion question: is "is_focused" a better name?
-    ///
-    /// [`request_focus`]: struct.EventCtx.html#method.request_focus
-    pub fn has_focus(&self) -> bool {
-        self.has_focus
-    }
-
-    /// The layout size.
-    ///
-    /// This is the layout size as ultimately determined by the parent
-    /// container. Generally it will be the same as the size returned by
-    /// the child widget's [`layout`] method.
-    ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
-    pub fn size(&self) -> Size {
+    #[inline]
+    fn size(&self) -> Size {
         self.layout_rect.size()
     }
 }
+
 /// A context passed to paint methods of widgets.
 ///
 /// Widgets paint their appearance by calling methods on the
@@ -521,26 +464,34 @@ impl<'a, 'b: 'a> DerefMut for PaintCtx<'a, 'b> {
 impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
     /// Query the "hot" state of the widget.
     ///
-    /// See [`BaseState::is_hot`](struct.BaseState.html#method.is_hot).
+    /// See [`EventCtx::is_hot`](struct.EventCtx.html#method.is_hot) for
+    /// additional information.
     pub fn is_hot(&self) -> bool {
-        self.base_state.is_hot()
+        self.base_state.is_hot
     }
 
     /// Query the "active" state of the widget.
+    ///
+    /// See [`EventCtx::is_active`](struct.EventCtx.html#method.is_active) for
+    /// additional information.
     pub fn is_active(&self) -> bool {
         self.base_state.is_active
     }
 
     /// Returns the layout size of the current widget.
+    ///
+    /// See [`EventCtx::size`](struct.EventCtx.html#method.size) for
+    /// additional information.
     pub fn size(&self) -> Size {
         self.base_state.size()
     }
 
     /// Query the focus state of the widget.
     ///
-    /// See [`BaseState::has_focus`](struct.BaseState.html#method.has_focus).
+    /// See [`EventCtx::has_focus`](struct.EventCtx.html#method.has_focus) for
+    /// additional information.
     pub fn has_focus(&self) -> bool {
-        self.base_state.has_focus()
+        self.base_state.has_focus
     }
 
     /// Returns the currently visible [`Region`].
@@ -660,23 +611,40 @@ impl<'a, 'b> EventCtx<'a, 'b> {
 
     /// Set the "active" state of the widget.
     ///
-    /// See [`BaseState::is_active`](struct.BaseState.html#method.is_active).
+    /// See [`EventCtx::is_active`](struct.EventCtx.html#method.is_active).
     pub fn set_active(&mut self, active: bool) {
         self.base_state.is_active = active;
         // TODO: plumb mouse grab through to platform (through druid-shell)
     }
 
-    /// Query the "hot" state of the widget.
+    /// The "hot" (aka hover) status of a widget.
     ///
-    /// See [`BaseState::is_hot`](struct.BaseState.html#method.is_hot).
+    /// A widget is "hot" when the mouse is hovered over it. Widgets will
+    /// often change their appearance as a visual indication that they
+    /// will respond to mouse interaction.
+    ///
+    /// The hot status is computed from the widget's layout rect. In a
+    /// container hierarchy, all widgets with layout rects containing the
+    /// mouse position have hot status.
+    ///
+    /// Discussion: there is currently some confusion about whether a
+    /// widget can be considered hot when some other widget is active (for
+    /// example, when clicking to one widget and dragging to the next).
+    /// The documentation should clearly state the resolution.
     pub fn is_hot(&self) -> bool {
-        self.base_state.is_hot()
+        self.base_state.is_hot
     }
 
-    /// Query the "active" state of the widget.
+    /// The active status of a widget.
     ///
-    /// This is the same state set by [`set_active`](#method.set_active) and
-    /// is provided as a convenience.
+    /// Active status generally corresponds to a mouse button down. Widgets
+    /// with behavior similar to a button will call [`set_active`] on mouse
+    /// down and then up.
+    ///
+    /// When a widget is active, it gets mouse events even when the mouse
+    /// is dragged away.
+    ///
+    /// [`set_active`]: struct.EventCtx.html#method.set_active
     pub fn is_active(&self) -> bool {
         self.base_state.is_active
     }
@@ -702,16 +670,31 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.is_handled
     }
 
-    /// Query the focus state of the widget.
+    /// The focus status of a widget.
     ///
-    /// See [`BaseState::has_focus`](struct.BaseState.html#method.has_focus).
+    /// Focus means that the widget receives keyboard events.
+    ///
+    /// A widget can request focus using the [`request_focus`] method.
+    /// This will generally result in a separate event propagation of
+    /// a `FocusChanged` method, including sending `false` to the previous
+    /// widget that held focus.
+    ///
+    /// Only one leaf widget at a time has focus. However, in a container
+    /// hierarchy, all ancestors of that leaf widget are also invoked with
+    /// `FocusChanged(true)`.
+    ///
+    /// Discussion question: is "is_focused" a better name?
+    ///
+    /// [`request_focus`]: struct.EventCtx.html#method.request_focus
     pub fn has_focus(&self) -> bool {
-        self.base_state.has_focus()
+        self.base_state.has_focus
     }
 
     /// Request keyboard focus.
     ///
-    /// Discussion question: is method needed in contexts other than event?
+    /// See [`has_focus`] for more information.
+    ///
+    /// [`has_focus`]: struct.EventCtx.html#method.has_focus
     pub fn request_focus(&mut self) {
         self.base_state.request_focus = true;
     }
@@ -730,7 +713,15 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.win_ctx.request_timer(deadline)
     }
 
-    /// Returns the layout size of the current widget.
+    /// The layout size.
+    ///
+    /// This is the layout size as ultimately determined by the parent
+    /// container, on the previous layout pass.
+    ///
+    /// Generally it will be the same as the size returned by the child widget's
+    /// [`layout`] method.
+    ///
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn size(&self) -> Size {
         self.base_state.size()
     }
