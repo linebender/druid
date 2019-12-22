@@ -14,8 +14,7 @@
 
 //! A widget which splits an area in two, with a set ratio.
 
-use crate::kurbo::{Line, Point, Rect, Size};
-use crate::piet::RenderContext;
+use crate::prelude::*;
 use crate::widget::flex::Axis;
 use crate::{
     theme, BoxConstraints, Cursor, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx,

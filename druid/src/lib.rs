@@ -62,3 +62,21 @@ pub use mouse::MouseEvent;
 pub use widget::Widget;
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
+
+/// The druid prelude imports geometric types from [`kurbo`], drawing types from [`piet`],
+/// deriveable traits ([`Data`] & [`Lens`]), and the extension traits
+/// ([`WidgetExt`] and [`LensExt`]).
+///
+/// [`kurbo`]: https://crates.io/crates/kurbo
+/// [`piet`]: https://crates.io/crates/piet
+/// [`Data`]: trait.Data.html
+/// [`Lens`]: lens/trait.Lens.html
+/// [`LensExt`]: trait.LensExt.html
+/// [`WidgetExt`]: trait.WidgetExt.html
+pub mod prelude {
+    pub use crate::data::Data;
+    pub use crate::kurbo::*;
+    pub use crate::lens::{Lens, LensExt};
+    pub use crate::piet::*;
+    pub use crate::widget::WidgetExt;
+}

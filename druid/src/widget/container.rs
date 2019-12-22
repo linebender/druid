@@ -14,8 +14,7 @@
 
 //! A convenience widget that combines common styling and positioning widgets.
 
-use crate::shell::kurbo::{Point, Rect, Size};
-use crate::shell::piet::{PaintBrush, RenderContext};
+use crate::prelude::*;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };

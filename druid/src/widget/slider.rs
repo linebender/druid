@@ -14,8 +14,7 @@
 
 //! A slider widget.
 
-use crate::kurbo::{Circle, Point, Rect, RoundedRect, Shape, Size};
-use crate::piet::{LinearGradient, RenderContext, UnitPoint};
+use crate::prelude::*;
 use crate::theme;
 use crate::widget::Align;
 use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};

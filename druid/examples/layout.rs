@@ -14,8 +14,8 @@
 
 //! This example shows how to construct a basic layout.
 
-use druid::piet::Color;
-use druid::widget::{Button, Flex, Label, SizedBox, WidgetExt};
+use druid::prelude::*;
+use druid::widget::{Button, Flex, Label, SizedBox};
 use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {

@@ -16,8 +16,7 @@
 
 use std::marker::PhantomData;
 
-use crate::kurbo::{Circle, Point, Rect, Size};
-use crate::piet::{LinearGradient, RenderContext, UnitPoint};
+use crate::prelude::*;
 use crate::theme;
 use crate::widget::{Align, Flex, Label, LabelText, Padding};
 use crate::{

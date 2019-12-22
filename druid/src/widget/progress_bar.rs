@@ -14,8 +14,7 @@
 
 //! A progress bar widget.
 
-use crate::kurbo::{Point, RoundedRect, Size};
-use crate::piet::{LinearGradient, RenderContext, UnitPoint};
+use crate::prelude::*;
 use crate::theme;
 use crate::widget::Align;
 use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};

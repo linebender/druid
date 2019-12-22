@@ -16,8 +16,7 @@
 
 use std::time::{Duration, Instant};
 
-use druid::kurbo::{Line, Size};
-use druid::piet::{Color, RenderContext};
+use druid::prelude::*;
 use druid::{
     AppLauncher, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken, UpdateCtx,
     Widget, WindowDesc,

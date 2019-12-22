@@ -14,7 +14,7 @@
 
 //! Demos the textbox widget, as well as menu creation and overriding theme settings.
 
-use druid::piet::Color;
+use druid::prelude::*;
 use druid::widget::{EnvScope, Flex, Label, Padding, TextBox};
 use druid::{theme, AppLauncher, Data, LocalizedString, MenuDesc, Widget, WindowDesc};
 

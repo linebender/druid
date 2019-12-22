@@ -14,12 +14,7 @@
 
 //! An example of a custom drawing widget.
 
-use druid::kurbo::{Affine, BezPath, Point, Rect, Size};
-
-use druid::piet::{
-    Color, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayoutBuilder,
-};
-
+use druid::prelude::*;
 use druid::{
     AppLauncher, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
     WindowDesc,

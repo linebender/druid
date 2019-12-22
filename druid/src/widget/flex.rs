@@ -14,8 +14,7 @@
 
 //! A widget that arranges its children in a one-dimensional array.
 
-use crate::kurbo::{Point, Rect, Size};
-
+use crate::prelude::*;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };

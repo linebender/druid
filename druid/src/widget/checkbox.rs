@@ -14,8 +14,7 @@
 
 //! A checkbox widget.
 
-use crate::kurbo::{BezPath, Point, RoundedRect, Size};
-use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
+use crate::prelude::*;
 use crate::theme;
 use crate::widget::Align;
 use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};

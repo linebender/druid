@@ -20,14 +20,11 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use log::error;
-
 use usvg;
 
+use crate::prelude::*;
 use crate::{
-    kurbo::BezPath,
-    piet::{Color, RenderContext},
-    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Size,
-    UpdateCtx, Widget,
+    BaseState, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
 };
 
 /// A widget that renders a SVG

@@ -16,8 +16,7 @@
 
 use std::f64::consts::PI;
 
-use druid::kurbo::{Line, Point, Size, Vec2};
-use druid::piet::{Color, RenderContext};
+use druid::prelude::*;
 use druid::{
     AppLauncher, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
     WindowDesc,

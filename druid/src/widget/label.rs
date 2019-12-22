@@ -14,11 +14,7 @@
 
 //! A label widget.
 
-use crate::kurbo::{Point, Rect, Size};
-use crate::piet::{
-    FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
-    UnitPoint,
-};
+use crate::prelude::*;
 use crate::theme;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, PaintCtx, UpdateCtx,

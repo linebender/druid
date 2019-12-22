@@ -19,18 +19,13 @@ use std::ops::Range;
 use std::time::{Duration, Instant};
 use unicode_segmentation::GraphemeCursor;
 
+use crate::prelude::*;
+use crate::theme;
+use crate::widget::Align;
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
     PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
 };
-
-use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
-use crate::piet::{
-    FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
-    UnitPoint,
-};
-use crate::theme;
-use crate::widget::Align;
 
 const BORDER_WIDTH: f64 = 1.;
 const PADDING_TOP: f64 = 5.;

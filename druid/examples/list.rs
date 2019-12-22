@@ -16,9 +16,8 @@
 
 use std::sync::Arc;
 
-use druid::piet::Color;
-
-use druid::lens::{self, LensExt};
+use druid::lens;
+use druid::prelude::*;
 use druid::widget::{Button, Flex, Label, List, Scroll, WidgetExt};
 use druid::{AppLauncher, Data, Lens, Widget, WindowDesc};
 

@@ -16,7 +16,7 @@
 
 use std::f64::INFINITY;
 
-use crate::shell::kurbo::Size;
+use crate::prelude::*;
 use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
 
 /// A widget with predefined size.
