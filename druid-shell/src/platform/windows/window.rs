@@ -44,8 +44,15 @@ use winapi::Interface;
 //use direct2d::math::SizeU;
 //use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarget};
 
-use piet_common::d2d::D2DFactory;
+//new
+use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
+
+use wio::com::ComPtr;
+
+use crate::platform::windows::HwndRenderTarget;
+
+//end
 
 use crate::kurbo::{Point, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
@@ -163,7 +170,7 @@ struct MyWndProc {
 /// The mutable state of the window.
 struct WndState {
     handler: Box<dyn WinHandler>,
-    render_target: Option<GenericRenderTarget>,
+    render_target: Option<DeviceContext>,
     dcomp_state: Option<DCompState>,
     dpi: f32,
     /// The `KeyCode` of the last `WM_KEYDOWN` event. We stash this so we can
@@ -352,7 +359,7 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     if s.render_target.is_none() {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd)
-                            .map(|rt| rt.as_generic());
+                            .map(|rt| DeviceContext::new(rt));
                         s.render_target = rt.ok();
                     }
                     let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
@@ -380,7 +387,7 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd)
-                            .map(|rt| rt.as_generic());
+                            .map(|rt| DeviceContext::new(rt));
                         s.render_target = rt.ok();
                         {
                             let mut c =
@@ -474,7 +481,7 @@ impl WndProc for MyWndProc {
                                 let width = LOWORD(lparam as u32) as u32;
                                 let height = HIWORD(lparam as u32) as u32;
                                 let size = SizeU(D2D1_SIZE_U { width, height });
-                                let _ = hrt.resize(size);
+                                let _ = hrt.Resize(size);
                             }
                         }
                         InvalidateRect(hwnd, null_mut(), FALSE);
@@ -1361,12 +1368,12 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
 /// Casts render target to hwnd variant.
 ///
 /// TODO: investigate whether there's a better way to do this.
-unsafe fn cast_to_hwnd(rt: &GenericRenderTarget) -> Option<HwndRenderTarget> {
+unsafe fn cast_to_hwnd(rt: &DeviceContext) -> Option<HwndRenderTarget> {
     let raw_ptr = rt.clone().get_raw();
     let mut hwnd = null_mut();
     let err = (*raw_ptr).QueryInterface(&ID2D1HwndRenderTarget::uuidof(), &mut hwnd);
     if SUCCEEDED(err) {
-        Some(HwndRenderTarget::from_raw(
+        Some(ComPtr::from_raw(
             hwnd as *mut ID2D1HwndRenderTarget,
         ))
     } else {

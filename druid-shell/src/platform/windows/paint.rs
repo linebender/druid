@@ -43,28 +43,10 @@ use winapi::Interface;
 // new
 use piet_common::d2d::D2DFactory;
 use piet_common::dwrite::DwriteFactory;
+use winapi::um::d2d1_1::ID2D1DeviceContext;
 use wio::com::ComPtr;
 
-// from winapi::um::d2d1;
-// need to move from one type to another?
-//
-// https://docs.microsoft.com/en-us/windows/win32/direct2d/render-targets-overview
-// ID2D1RenderTarget is the interface. The other resources inherit from it.
-//
-// A Render Target creates resources for drawing and performs drawing operations.
-//
-// - ID2D1HwndRenderTarget objects render content to a window.
-// - ID2D1DCRenderTarget objects render to a GDI device context.
-// - bitmap render target objects render to off-screen bitmap.
-// - DXGI render target objects render to  a DXGI surface for use with Direct3D.
-//
-// https://docs.microsoft.com/en-us/windows/win32/direct2d/devices-and-device-contexts
-// A Device Context, ID2D1DeviceContext, is used for windows 8 and higher. Render Target
-// is used for windows 7 and lower.
-type HwndRenderTarget = ComPtr<ID2D1HwndRenderTarget>;
-type DxgiSurfaceRenderTarget = ComPtr<ID2D1RenderTarget>;
-type GenericRenderTarget = ComPtr<ID2D1RenderTarget>;
-type DeviceContext = ComPtr<winapi::um::d2d1_1::ID2D1DeviceContext>;
+use crate::platform::windows::{HwndRenderTarget, DeviceContext};
 
 // end new
 use super::error::Error;
@@ -73,13 +55,37 @@ use super::util::as_result;
 /// Context for painting by app into window.
 pub struct PaintCtx<'a> {
     pub(crate) d2d_factory: &'a D2DFactory,
-    pub(crate) render_target: &'a mut GenericRenderTarget,
+    pub(crate) render_target: &'a mut DeviceContext,
 }
+
+//pub(crate) unsafe fn create_render_target(
+//    d2d_factory: &D2DFactory,
+//    hwnd: HWND,
+//) -> Result<HwndRenderTarget, Error> {
+//    let mut rect: RECT = mem::zeroed();
+//    if GetClientRect(hwnd, &mut rect) == 0 {
+//        warn!("GetClientRect failed.");
+//        Err(Error::D2Error)
+//    } else {
+//        let width = (rect.right - rect.left) as u32;
+//        let height = (rect.bottom - rect.top) as u32;
+//        let res = HwndRenderTarget::create(d2d_factory)
+//            .with_hwnd(hwnd)
+//            .with_target_type(RenderTargetType::Default)
+//            .with_alpha_mode(AlphaMode::Unknown)
+//            .with_pixel_size(width, height)
+//            .build();
+//        if let Err(ref e) = res {
+//            error!("Creating hwnd render target failed: {:?}", e);
+//        }
+//        res.map_err(|_| Error::D2Error)
+//    }
+//}
 
 pub(crate) unsafe fn create_render_target(
     d2d_factory: &D2DFactory,
     hwnd: HWND,
-) -> Result<HwndRenderTarget, Error> {
+) -> Result<DeviceContext, Error> {
     let mut rect: RECT = mem::zeroed();
     if GetClientRect(hwnd, &mut rect) == 0 {
         warn!("GetClientRect failed.");
@@ -96,7 +102,9 @@ pub(crate) unsafe fn create_render_target(
         if let Err(ref e) = res {
             error!("Creating hwnd render target failed: {:?}", e);
         }
-        res.map_err(|_| Error::D2Error)
+        res
+            .map(|hrt| cast_to_device_context(hrt).expect("removethis"))
+            .map_err(|_| Error::D2Error)
     }
 }
 
@@ -138,16 +146,19 @@ pub(crate) unsafe fn create_render_target_dxgi(
     }
 }
 
-impl<'a> PaintCtx<'a> {
-    /// Return the raw Direct2D factory for this painting context. Note: it's possible
-    /// this will be wrapped to make it easier to port.
-    pub fn d2d_factory(&self) -> &D2DFactory {
-        self.d2d_factory
-    }
 
-    /// Return the raw Direct2D RenderTarget for this painting context. Note: it's possible
-    /// this will be wrapped to make it easier to port.
-    pub fn render_target(&mut self) -> &mut GenericRenderTarget {
-        self.render_target
+/// Casts hwnd variant to DeviceTarget
+///
+/// TODO: investigate whether there's a better way to do this.
+unsafe fn cast_to_device_context(hrt: &HwndRenderTarget) -> Option<DeviceContext> {
+    let raw_ptr = hrt.clone().as_raw();
+    let mut dc = null_mut();
+    let err = (*raw_ptr).QueryInterface(&ID2D1DeviceContext::uuidof(), &mut dc);
+    if SUCCEEDED(err) {
+        Some(ComPtr::from_raw(
+            dc as *mut ID2D1DeviceContext,
+        ))
+    } else {
+        None
     }
 }

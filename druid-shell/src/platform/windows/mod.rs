@@ -26,3 +26,26 @@ pub mod runloop;
 mod timers;
 pub mod util;
 pub mod window;
+
+// from winapi::um::d2d1;
+// need to move from one type to another?
+//
+// https://docs.microsoft.com/en-us/windows/win32/direct2d/render-targets-overview
+// ID2D1RenderTarget is the interface. The other resources inherit from it.
+//
+// A Render Target creates resources for drawing and performs drawing operations.
+//
+// - ID2D1HwndRenderTarget objects render content to a window.
+// - ID2D1DCRenderTarget objects render to a GDI device context.
+// - bitmap render target objects render to off-screen bitmap.
+// - DXGI render target objects render to  a DXGI surface for use with Direct3D.
+//
+// https://docs.microsoft.com/en-us/windows/win32/direct2d/devices-and-device-contexts
+// A Device Context, ID2D1DeviceContext, is used for windows 8 and higher. Render Target
+// is used for windows 7 and lower.
+//
+// Basically, go from HwndRenderTarget or DxgiSurfaceRenderTarget (2d or 3d) to a Device Context.
+// Go back up for particular needs. Move up and down using query_interface.
+use wio::com::ComPtr;
+pub type HwndRenderTarget = ComPtr<winapi::um::d2d1::ID2D1HwndRenderTarget>;
+pub type DeviceContext = ComPtr<winapi::um::d2d1_1::ID2D1DeviceContext>;
