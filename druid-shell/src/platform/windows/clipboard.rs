@@ -152,9 +152,18 @@ impl Clipboard {
     }
 
     pub fn available_type_names(&self) -> Vec<String> {
-        iter_clipboard_types()
+        unsafe {
+            if OpenClipboard(ptr::null_mut()) == FALSE {
+                return vec![];
+            }
+        }
+        let res = iter_clipboard_types()
             .map(|id| format!("{}: {}", get_format_name(id), id))
-            .collect()
+            .collect();
+        unsafe {
+            CloseClipboard();
+        }
+        res
     }
 }
 
