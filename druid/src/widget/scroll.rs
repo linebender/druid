@@ -402,7 +402,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         self.child_size = size;
         self.child
             .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
-        let self_size = bc.constrain(Size::new(100.0, 100.0));
+        let self_size = bc.constrain(self.child_size);
         let _ = self.scroll(Vec2::new(0.0, 0.0), self_size);
         self_size
     }
