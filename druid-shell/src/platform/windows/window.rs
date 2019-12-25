@@ -192,18 +192,16 @@ struct DCompState {
 /// Message indicating there are idle tasks to run.
 const XI_RUN_IDLE: UINT = WM_USER;
 
-/// Message indicating explit destroy windows
+/// Message relaying a request to destroy the window
 ///
-/// A referene of `WindowState` will be hold when we
-/// call `DestroyWindow` in our main loop. It is because
-/// by design WM_DESTROY messsage will not passed through
-/// message queue such that `borrow` of WindowState for
-/// calling back of handler will always fail.
+/// Calling `DestroyWindow` from inside the handler is problematic
+/// because it will recursively cause a `WM_DESTROY` message to be
+/// sent to the window procedure, even while the handler is borrowed.
+/// Thus, the message is dropped and the handler doesn't run.
 ///
-/// We use an custom message to let message loop itself to
-/// call `DestroyWindow`
-///
-/// see also: https://stackoverflow.com/a/18828222/1378155
+/// As a solution, instead of immediately calling `DestroyWindow`, we
+/// send this message to request destroying the window, so that at the
+/// time it is handled, we can successfully borrow the handler.
 const XI_REQUEST_DESTROY: UINT = WM_USER + 1;
 
 impl Default for PresentStrategy {
