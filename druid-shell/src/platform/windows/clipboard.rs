@@ -177,6 +177,9 @@ unsafe fn make_handle(format: &ClipboardFormat) -> HANDLE {
 }
 
 fn get_format_id(format: FormatId) -> Option<UINT> {
+    if let Some((id, _)) = STANDARD_FORMATS.iter().find(|(_, s)| s == &format) {
+        return Some(*id);
+    }
     match format {
         ClipboardFormat::TEXT => Some(CF_UNICODETEXT),
         other => register_identifier(other),
@@ -277,35 +280,38 @@ fn get_format_name(format: UINT) -> String {
 }
 
 // https://docs.microsoft.com/en-ca/windows/win32/dataxchg/standard-clipboard-formats
+const STANDARD_FORMATS: &[(UINT, &'static str)] = &[
+    (1, "CF_TEXT"),
+    (2, "CF_BITMAP"),
+    (3, "CF_METAFILEPICT"),
+    (4, "CF_SYLK"),
+    (5, "CF_DIF"),
+    (6, "CF_TIFF"),
+    (7, "CF_OEMTEXT"),
+    (8, "CF_DIB"),
+    (9, "CF_PALETTE"),
+    (10, "CF_PENDATA"),
+    (11, "CF_RIFF"),
+    (12, "CF_WAVE"),
+    (13, "CF_UNICODETEXT"),
+    (14, "CF_ENHMETAFILE"),
+    (15, "CF_HDROP"),
+    (16, "CF_LOCALE"),
+    (17, "CF_DIBV5"),
+    (0x0080, "CF_OWNERDISPLAY"),
+    (0x0081, "CF_DSPTEXT"),
+    (0x0082, "CF_DSPBITMAP"),
+    (0x0083, "CF_DSPMETAFILEPICT"),
+    (0x008E, "CF_DSPENHMETAFILE"),
+    (0x0200, "CF_PRIVATEFIRST"),
+    (0x02FF, "CF_PRIVATELAST"),
+    (0x0300, "CF_GDIOBJFIRST"),
+    (0x03FF, "CF_GDIOBJLAST"),
+];
+
 fn get_standard_format_name(format: UINT) -> Option<String> {
-    let name = match format {
-        1 => "CF_TEXT",
-        2 => "CF_BITMAP",
-        3 => "CF_METAFILEPICT",
-        4 => "CF_SYLK",
-        5 => "CF_DIF",
-        6 => "CF_TIFF",
-        7 => "CF_OEMTEXT",
-        8 => "CF_DIB",
-        9 => "CF_PALETTE",
-        10 => "CF_PENDATA",
-        11 => "CF_RIFF",
-        12 => "CF_WAVE",
-        13 => "CF_UNICODETEXT",
-        14 => "CF_ENHMETAFILE",
-        15 => "CF_HDROP",
-        16 => "CF_LOCALE",
-        17 => "CF_DIBV5",
-        0x0080 => "CF_OWNERDISPLAY",
-        0x0081 => "CF_DSPTEXT",
-        0x0082 => "CF_DSPBITMAP",
-        0x0083 => "CF_DSPMETAFILEPICT",
-        0x008E => "CF_DSPENHMETAFILE",
-        0x0200 => "CF_PRIVATEFIRST",
-        0x02FF => "CF_PRIVATELAST",
-        0x0300 => "CF_GDIOBJFIRST",
-        0x03FF => "CF_GDIOBJLAST",
-        _ => return None,
-    };
-    Some(name.into())
+    STANDARD_FORMATS
+        .iter()
+        .find(|(id, _)| *id == format)
+        .map(|(_, s)| s.to_string())
 }
