@@ -313,5 +313,5 @@ fn get_standard_format_name(format: UINT) -> Option<String> {
     STANDARD_FORMATS
         .iter()
         .find(|(id, _)| *id == format)
-        .map(|(_, s)| s.to_string())
+        .map(|(_, s)| (*s).to_string())
 }
