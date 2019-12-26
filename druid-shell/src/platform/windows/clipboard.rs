@@ -280,7 +280,7 @@ fn get_format_name(format: UINT) -> String {
 }
 
 // https://docs.microsoft.com/en-ca/windows/win32/dataxchg/standard-clipboard-formats
-const STANDARD_FORMATS: &[(UINT, &'static str)] = &[
+const STANDARD_FORMATS: &[(UINT, &str)] = &[
     (1, "CF_TEXT"),
     (2, "CF_BITMAP"),
     (3, "CF_METAFILEPICT"),
