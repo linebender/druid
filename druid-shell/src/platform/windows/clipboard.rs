@@ -252,7 +252,7 @@ fn iter_clipboard_types() -> impl Iterator<Item = UINT> {
 
 fn get_format_name(format: UINT) -> String {
     if let Some(name) = get_standard_format_name(format) {
-        return name;
+        return name.to_owned();
     }
 
     const BUF_SIZE: usize = 64;
@@ -280,7 +280,7 @@ fn get_format_name(format: UINT) -> String {
 }
 
 // https://docs.microsoft.com/en-ca/windows/win32/dataxchg/standard-clipboard-formats
-const STANDARD_FORMATS: &[(UINT, &str)] = &[
+static STANDARD_FORMATS: &[(UINT, &str)] = &[
     (1, "CF_TEXT"),
     (2, "CF_BITMAP"),
     (3, "CF_METAFILEPICT"),
@@ -309,9 +309,9 @@ const STANDARD_FORMATS: &[(UINT, &str)] = &[
     (0x03FF, "CF_GDIOBJLAST"),
 ];
 
-fn get_standard_format_name(format: UINT) -> Option<String> {
+fn get_standard_format_name(format: UINT) -> Option<&'static str> {
     STANDARD_FORMATS
         .iter()
         .find(|(id, _)| *id == format)
-        .map(|(_, s)| (*s).to_string())
+        .map(|(_, s)| *s)
 }
