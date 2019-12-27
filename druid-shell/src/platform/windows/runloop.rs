@@ -17,11 +17,11 @@
 use std::mem;
 use std::ptr::null_mut;
 use std::sync::{Arc, Mutex};
-use winapi::ctypes::c_int;
-use winapi::shared::windef::*;
 use winapi::um::winbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
+
+use super::accels;
 
 // TODO: remove this, it's been obsoleted by IdleHandle
 #[derive(Clone, Default)]
@@ -41,14 +41,12 @@ struct Listener {
 
 pub struct RunLoop {
     handle: RunLoopHandle,
-    accel: HACCEL,
 }
 
 impl RunLoop {
     pub fn new() -> RunLoop {
         RunLoop {
             handle: Default::default(),
-            accel: null_mut(),
         }
     }
 
@@ -56,13 +54,6 @@ impl RunLoop {
     /// etc.
     pub fn get_handle(&self) -> RunLoopHandle {
         self.handle.clone()
-    }
-
-    /// Set an accelerator table
-    pub fn set_accel(&mut self, accel: &[ACCEL]) {
-        unsafe {
-            self.accel = CreateAcceleratorTableW(accel as *const _ as *mut _, accel.len() as c_int);
-        }
     }
 
     // WAIT_OBJECT_0 is defined as 0, so >= is technically meaningless
@@ -98,9 +89,10 @@ impl RunLoop {
                         return;
                     }
                     let mut msg: MSG = msg.assume_init();
-                    if self.accel.is_null()
-                        || TranslateAcceleratorW(msg.hwnd, self.accel, &mut msg) == 0
-                    {
+                    let accels = accels::find_accels(GetAncestor(msg.hwnd, GA_ROOT));
+                    if accels.map_or(true, |a| {
+                        TranslateAcceleratorW(msg.hwnd, a.handle(), &mut msg) == 0
+                    }) {
                         TranslateMessage(&msg);
                         DispatchMessageW(&msg);
                     }

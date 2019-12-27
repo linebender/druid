@@ -14,6 +14,7 @@
 
 //! Safe wrapper for menus.
 
+use std::collections::HashMap;
 use std::mem;
 use std::ptr::null;
 
@@ -22,12 +23,14 @@ use winapi::shared::windef::*;
 use winapi::um::winuser::*;
 
 use super::util::ToWide;
-use crate::hotkey::HotKey;
+use crate::hotkey::{HotKey, KeyCompare};
+use crate::KeyModifiers;
 
 /// A menu object, which can be either a top-level menubar or a
 /// submenu.
 pub struct Menu {
     hmenu: HMENU,
+    accels: HashMap<u32, ACCEL>,
 }
 
 impl Drop for Menu {
@@ -43,7 +46,10 @@ impl Menu {
     pub fn new() -> Menu {
         unsafe {
             let hmenu = CreateMenu();
-            Menu { hmenu }
+            Menu {
+                hmenu,
+                accels: HashMap::default(),
+            }
         }
     }
 
@@ -51,7 +57,10 @@ impl Menu {
     pub fn new_for_popup() -> Menu {
         unsafe {
             let hmenu = CreatePopupMenu();
-            Menu { hmenu }
+            Menu {
+                hmenu,
+                accels: HashMap::default(),
+            }
         }
     }
 
@@ -65,7 +74,10 @@ impl Menu {
     /// probably want to change that so we can manipulate it later.
     ///
     /// The `text` field has all the fun behavior of winapi CreateMenu.
-    pub fn add_dropdown(&mut self, menu: Menu, text: &str, enabled: bool) {
+    pub fn add_dropdown(&mut self, mut menu: Menu, text: &str, enabled: bool) {
+        let child_accels = std::mem::take(&mut menu.accels);
+        self.accels.extend(child_accels);
+
         unsafe {
             let mut flags = MF_POPUP;
             if !enabled {
@@ -85,11 +97,10 @@ impl Menu {
         &mut self,
         id: u32,
         text: &str,
-        _key: Option<&HotKey>,
+        key: Option<&HotKey>,
         enabled: bool,
         selected: bool,
     ) {
-        // TODO: actually wire up accelerators for key.
         unsafe {
             let mut flags = MF_STRING;
             if !enabled {
@@ -100,6 +111,12 @@ impl Menu {
             }
             AppendMenuW(self.hmenu, flags, id as UINT_PTR, text.to_wide().as_ptr());
         }
+
+        if let Some(key) = key {
+            if let Some(accel) = convert_hotkey(id, key) {
+                self.accels.insert(id, accel);
+            }
+        }
     }
 
     /// Add a separator to the menu.
@@ -108,4 +125,38 @@ impl Menu {
             AppendMenuW(self.hmenu, MF_SEPARATOR, 0, null());
         }
     }
+
+    /// Get the accels table
+    pub fn accels(&self) -> Option<Vec<ACCEL>> {
+        if self.accels.is_empty() {
+            return None;
+        }
+        Some(self.accels.values().cloned().collect())
+    }
+}
+
+fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
+    let code = match key.key {
+        KeyCompare::Code(code) => code,
+        _ => return None,
+    };
+
+    let raw_key = code.to_i32()?;
+    let mut virt_key = FVIRTKEY;
+    let key_mods: KeyModifiers = key.mods.into();
+    if key_mods.ctrl {
+        virt_key |= FCONTROL;
+    }
+    if key_mods.alt {
+        virt_key |= FALT;
+    }
+    if key_mods.shift {
+        virt_key |= FSHIFT;
+    }
+
+    Some(ACCEL {
+        fVirt: virt_key,
+        key: raw_key as u16,
+        cmd: id as u16,
+    })
 }
