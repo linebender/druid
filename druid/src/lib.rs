@@ -38,6 +38,9 @@ pub mod widget;
 mod win_handler;
 mod window;
 
+// Types from kurbo & piet that are required by public API.
+pub use kurbo::{Affine, Insets, Point, Rect, Size, Vec2};
+pub use piet::{Color, LinearGradient, PaintBrush, RadialGradient, RenderContext, UnitPoint};
 // these are the types from shell that we expose; others we only use internally.
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Cursor, Error as PlatformError, FileDialogOptions,
