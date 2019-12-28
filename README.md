@@ -44,10 +44,9 @@ fn ui_builder() -> impl Widget<u32> {
     let button = Button::new("increment", |_ctx, data, _env| *data += 1)
         .padding(5.0);
 
-    let mut col = Flex::column();
-    col.add_child(label, 1.0);
-    col.add_child(button, 1.0);
-    col
+    Flex::column()
+    .with_child(label, 1.0)
+    .with_child(button, 1.0)
 }
 ```
 
@@ -88,12 +87,12 @@ use druid::kurbo::{BezPath, Point, Rect};
 use druid::piet::Color;
 
 // Create an arbitrary bezier path
-// (base_state.size() returns the size of the layout rect we're painting in)
+// (paint_ctx.size() returns the size of the layout rect we're painting in)
 let mut path = BezPath::new();
 path.move_to(Point::ORIGIN);
 path.quad_to(
     (80.0, 90.0),
-    (base_state.size().width, base_state.size().height),
+    (paint_ctx.size().width, paint_ctx.size().height),
 );
 // Create a color
 let stroke_color = Color::rgb8(0x00, 0x80, 0x00);
@@ -127,7 +126,7 @@ includes the current theme parameters (colors, dimensions, etc.).
 
 ```rust
 impl<T: Data> Widget<T> for Button<T> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
       ...
     }
     fn layout(
@@ -284,10 +283,10 @@ active and friendly community.
 [Zulip chat instance]: https://xi.zulipchat.com
 [non-druid examples]: ./druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
-[EventCtx]: https://docs.rs/druid/0.3.3/druid/struct.EventCtx.html
-[LayoutCtx]: https://docs.rs/druid/0.3.3/druid/struct.LayoutCtx.html
-[PaintCtx]: https://docs.rs/druid/0.3.3/druid/struct.PaintCtx.html
-[UpdateCtx]: https://docs.rs/druid/0.3.3/druid/struct.UpdateCtx.html
-[Widget trait]: https://docs.rs/druid/0.3.3/druid/trait.Widget.html
-[Data trait]: https://docs.rs/druid/0.3.3/druid/trait.Data.html
-[Lens datatype]: https://docs.rs/druid/0.3.3/druid/trait.Lens.html
+[EventCtx]: https://docs.rs/druid/0.4.0/druid/struct.EventCtx.html
+[LayoutCtx]: https://docs.rs/druid/0.4.0/druid/struct.LayoutCtx.html
+[PaintCtx]: https://docs.rs/druid/0.4.0/druid/struct.PaintCtx.html
+[UpdateCtx]: https://docs.rs/druid/0.4.0/druid/struct.UpdateCtx.html
+[Widget trait]: https://docs.rs/druid/0.4.0/druid/trait.Widget.html
+[Data trait]: https://docs.rs/druid/0.4.0/druid/trait.Data.html
+[Lens datatype]: https://docs.rs/druid/0.4.0/druid/trait.Lens.html
