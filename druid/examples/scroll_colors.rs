@@ -14,9 +14,8 @@
 
 //! This example allows to play with scroll bars over different color tones.
 
-use druid::piet::Color;
 use druid::widget::{Container, Flex, Scroll, SizedBox};
-use druid::{AppLauncher, Widget, WindowDesc};
+use druid::{AppLauncher, Color, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     let mut col = Flex::column();

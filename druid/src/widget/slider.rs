@@ -15,10 +15,12 @@
 //! A slider widget.
 
 use crate::kurbo::{Circle, Point, Rect, RoundedRect, Shape, Size};
-use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::theme;
 use crate::widget::Align;
-use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
+use crate::{
+    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LinearGradient, PaintCtx, RenderContext,
+    UnitPoint, UpdateCtx, Widget,
+};
 
 /// A slider, allowing interactive update of a numeric value.
 #[derive(Debug, Clone, Default)]

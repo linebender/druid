@@ -14,15 +14,12 @@
 
 //! An example of a custom drawing widget.
 
-use druid::kurbo::{Affine, BezPath, Point, Rect, Size};
-
-use druid::piet::{
-    Color, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayoutBuilder,
-};
+use druid::kurbo::BezPath;
+use druid::piet::{FontBuilder, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
 
 use druid::{
-    AppLauncher, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-    WindowDesc,
+    Affine, AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
+    Rect, RenderContext, Size, UpdateCtx, Widget, WindowDesc,
 };
 
 struct CustomWidget;

@@ -19,11 +19,10 @@ use std::f64::INFINITY;
 use std::time::{Duration, Instant};
 
 use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
-use crate::piet::RenderContext;
 use crate::theme;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken, UpdateCtx, Widget,
-    WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, RenderContext, TimerToken,
+    UpdateCtx, Widget, WidgetPod,
 };
 
 #[derive(Debug, Clone)]

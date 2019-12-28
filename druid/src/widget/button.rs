@@ -15,10 +15,12 @@
 //! A button widget.
 
 use crate::kurbo::{Point, RoundedRect, Size};
-use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::theme;
 use crate::widget::{Align, Label, LabelText, SizedBox};
-use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
+use crate::{
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LinearGradient, PaintCtx, RenderContext,
+    UnitPoint, UpdateCtx, Widget,
+};
 
 /// A button with a text label.
 pub struct Button<T> {

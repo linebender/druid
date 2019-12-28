@@ -15,9 +15,9 @@
 //! A convenience widget that combines common styling and positioning widgets.
 
 use crate::shell::kurbo::{Point, Rect, Size};
-use crate::shell::piet::{PaintBrush, RenderContext};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintBrush, PaintCtx, RenderContext,
+    UpdateCtx, Widget, WidgetPod,
 };
 
 struct BorderState {
