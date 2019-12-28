@@ -13,15 +13,16 @@
 // limitations under the License.
 
 use druid::widget::{Align, Button, Flex, Label, Padding};
-use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
+use druid::{AppLauncher, LocalizedString, PlatformError, Widget, WindowDesc};
 
-fn main() {
+fn main() -> Result<(), PlatformError> {
     let main_window = WindowDesc::new(ui_builder);
     let data = 0_u32;
     AppLauncher::with_window(main_window)
         .use_simple_logger()
-        .launch(data)
-        .expect("launch failed");
+        .launch(data)?;
+
+    Ok(())
 }
 
 fn ui_builder() -> impl Widget<u32> {

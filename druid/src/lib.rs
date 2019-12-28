@@ -40,9 +40,9 @@ mod window;
 
 // these are the types from shell that we expose; others we only use internally.
 pub use shell::{
-    Application, Clipboard, ClipboardFormat, Cursor, FileDialogOptions, FileInfo, FileSpec,
-    FormatId, HotKey, KeyCode, KeyEvent, KeyModifiers, MouseButton, RawMods, SysMods, Text,
-    TimerToken, WinCtx, WindowHandle,
+    Application, Clipboard, ClipboardFormat, Cursor, Error as PlatformError, FileDialogOptions,
+    FileInfo, FileSpec, FormatId, HotKey, KeyCode, KeyEvent, KeyModifiers, MouseButton, RawMods,
+    SysMods, Text, TimerToken, WinCtx, WindowHandle,
 };
 
 pub use crate::core::{BoxedWidget, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, WidgetPod};
