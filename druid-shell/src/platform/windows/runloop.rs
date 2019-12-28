@@ -90,9 +90,11 @@ impl RunLoop {
                     }
                     let mut msg: MSG = msg.assume_init();
                     let accels = accels::find_accels(GetAncestor(msg.hwnd, GA_ROOT));
-                    if accels.map_or(true, |a| {
-                        TranslateAcceleratorW(msg.hwnd, a.handle(), &mut msg) == 0
-                    }) {
+                    let translated = accels.map_or(false, |it| {
+                        TranslateAcceleratorW(msg.hwnd, it.handle(), &mut msg) != 0
+                    });
+
+                    if !translated {
                         TranslateMessage(&msg);
                         DispatchMessageW(&msg);
                     }
