@@ -16,11 +16,10 @@
 
 use std::time::{Duration, Instant};
 
-use druid::kurbo::{Line, Size};
-use druid::piet::{Color, RenderContext};
+use druid::kurbo::Line;
 use druid::{
-    AppLauncher, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, TimerToken, UpdateCtx,
-    Widget, WindowDesc,
+    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, PaintCtx, RenderContext,
+    Size, TimerToken, UpdateCtx, Widget, WindowDesc,
 };
 
 struct TimerWidget {

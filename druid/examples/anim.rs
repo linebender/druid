@@ -16,11 +16,10 @@
 
 use std::f64::consts::PI;
 
-use druid::kurbo::{Line, Point, Size, Vec2};
-use druid::piet::{Color, RenderContext};
+use druid::kurbo::Line;
 use druid::{
-    AppLauncher, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget,
-    WindowDesc,
+    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
+    RenderContext, Size, UpdateCtx, Vec2, Widget, WindowDesc,
 };
 
 struct AnimWidget {

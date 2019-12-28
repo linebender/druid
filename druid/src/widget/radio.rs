@@ -17,11 +17,11 @@
 use std::marker::PhantomData;
 
 use crate::kurbo::{Circle, Point, Rect, Size};
-use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::theme;
 use crate::widget::{Align, Flex, Label, LabelText, Padding};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LinearGradient, PaintCtx, RenderContext,
+    UnitPoint, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A group of radio buttons

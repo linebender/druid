@@ -16,11 +16,9 @@
 
 use std::sync::Arc;
 
-use druid::piet::Color;
-
 use druid::lens::{self, LensExt};
 use druid::widget::{Button, Flex, Label, List, Scroll, WidgetExt};
-use druid::{AppLauncher, Data, Lens, Widget, WindowDesc};
+use druid::{AppLauncher, Color, Data, Lens, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct AppData {
