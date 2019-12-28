@@ -156,7 +156,7 @@ fn build_widget() -> impl Widget<u32> {
     let mut col = Flex::column();
     for i in 0..30 {
         let button = Button::new(format!("Button {}", i), Button::noop)
-            .padding(5.0).;
+            .padding(5.0);
         col.add_child(button, 0.0);
     }
     Scroll::new(col)
