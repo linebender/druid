@@ -47,7 +47,7 @@ use crate::shell::Application;
 use fluent_bundle::{
     FluentArgs, FluentBundle, FluentError, FluentMessage, FluentResource, FluentValue,
 };
-use fluent_locale::{negotiate_languages, NegotiationStrategy};
+use fluent_langneg::{negotiate_languages, NegotiationStrategy};
 use fluent_syntax::ast::Pattern as FluentPattern;
 use unic_langid::LanguageIdentifier;
 
