@@ -8,4 +8,4 @@
 - [Handling state](./state.md)
 - [Create custom widgets](./widgets.md)
 ---
-- [Further reading](./further_reading.md)
+- [More information](./more_information.md)
