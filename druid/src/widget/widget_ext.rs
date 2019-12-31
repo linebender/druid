@@ -112,7 +112,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// [`EnvScope`]: struct.Container.html
     /// [`Env`]: struct.Env.html
-    fn env_scope(self, f: impl Fn(&mut Env) + 'static) -> EnvScope<T, Self> {
+    fn env_scope(self, f: impl Fn(&mut Env, &T) + 'static) -> EnvScope<T, Self> {
         EnvScope::new(f, self)
     }
 
