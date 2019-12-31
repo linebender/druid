@@ -40,7 +40,7 @@ impl<T: Data, W: Widget<T>> EnvScope<T, W> {
     /// # fn build_widget() -> impl Widget<String> {
     ///
     /// EnvScope::new(
-    ///     |env| {
+    ///     |env, data| {
     ///         env.set(theme::LABEL_COLOR, Color::WHITE);
     ///     },
     ///     Label::new("White text!")
