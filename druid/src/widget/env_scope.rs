@@ -21,7 +21,7 @@ use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Upd
 
 /// A widget that accepts a closure to update the environment for its child.
 pub struct EnvScope<T: Data, W: Widget<T>> {
-    f: Box<dyn Fn(&mut Env)>,
+    f: Box<dyn Fn(&mut Env, &T)>,
     child: W,
     phantom: PhantomData<T>,
 }
@@ -48,7 +48,7 @@ impl<T: Data, W: Widget<T>> EnvScope<T, W> {
     ///
     /// # }
     /// ```
-    pub fn new(f: impl Fn(&mut Env) + 'static, child: W) -> EnvScope<T, W> {
+    pub fn new(f: impl Fn(&mut Env, &T) + 'static, child: W) -> EnvScope<T, W> {
         EnvScope {
             f: Box::new(f),
             child,
@@ -60,14 +60,14 @@ impl<T: Data, W: Widget<T>> EnvScope<T, W> {
 impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut new_env = env.clone();
-        (self.f)(&mut new_env);
+        (self.f)(&mut new_env, &data);
 
         self.child.event(ctx, event, data, &new_env)
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
         let mut new_env = env.clone();
-        (self.f)(&mut new_env);
+        (self.f)(&mut new_env, &data);
 
         self.child.update(ctx, old_data, data, &new_env);
     }
@@ -82,14 +82,14 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         bc.debug_check("EnvScope");
 
         let mut new_env = env.clone();
-        (self.f)(&mut new_env);
+        (self.f)(&mut new_env, &data);
 
         self.child.layout(layout_ctx, &bc, data, &new_env)
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut new_env = env.clone();
-        (self.f)(&mut new_env);
+        (self.f)(&mut new_env, &data);
 
         self.child.paint(paint_ctx, data, &new_env);
     }

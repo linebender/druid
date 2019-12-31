@@ -35,7 +35,7 @@ fn main() {
 fn build_widget() -> impl Widget<String> {
     let textbox = TextBox::new();
     let textbox_2 = EnvScope::new(
-        |env| {
+        |env, _| {
             env.set(theme::BACKGROUND_LIGHT, Color::rgb8(50, 50, 50));
             env.set(theme::LABEL_COLOR, Color::WHITE);
             env.set(theme::CURSOR_COLOR, Color::WHITE);
