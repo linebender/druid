@@ -89,6 +89,16 @@ impl Default for ScrollBarsState {
     }
 }
 
+impl ScrollBarsState {
+    /// true if either scrollbar is currently held down/being dragged
+    fn are_held(&self) -> bool {
+        match self.held {
+            BarHeldState::None => false,
+            _ => true,
+        }
+    }
+}
+
 /// A container that scrolls its contents.
 ///
 /// This container holds a single child, and uses the wheel to scroll it
@@ -267,13 +277,17 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         let size = ctx.size();
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
 
-        if match event {
-            Event::MouseMoved(_) | Event::MouseUp(_) => match self.scroll_bars.held {
-                BarHeldState::Vertical(_) | BarHeldState::Horizontal(_) => true,
-                _ => false,
-            },
+        let scroll_bar_is_hovered = match event {
+            Event::MouseMoved(e) | Event::MouseUp(e) | Event::MouseDown(e) => {
+                let offset_pos = e.pos + self.scroll_offset;
+                self.point_hits_vertical_bar(viewport, offset_pos, &env)
+                    || self.point_hits_horizontal_bar(viewport, offset_pos, &env)
+            }
             _ => false,
-        } {
+        };
+
+        if self.scroll_bars.are_held() {
+            // if we're dragging a scrollbar
             match event {
                 Event::MouseMoved(event) => {
                     match self.scroll_bars.held {
@@ -295,25 +309,15 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     }
                     ctx.invalidate();
                 }
-                Event::MouseUp(_) => {
-                    self.scroll_bars.held = BarHeldState::None;
-                }
-                _ => (),
+                Event::MouseUp(_) => self.scroll_bars.held = BarHeldState::None,
+                _ => (), // other events are a noop
             }
-        } else if match event {
-            Event::MouseMoved(event) | Event::MouseDown(event) => {
-                let mut transformed_event = event.clone();
-                transformed_event.pos += self.scroll_offset;
-                self.point_hits_vertical_bar(viewport, transformed_event.pos, &env)
-                    || self.point_hits_horizontal_bar(viewport, transformed_event.pos, &env)
-            }
-            _ => false,
-        } {
+        } else if scroll_bar_is_hovered {
+            // if we're over a scrollbar but not dragging
             match event {
                 Event::MouseMoved(event) => {
-                    let mut transformed_event = event.clone();
-                    transformed_event.pos += self.scroll_offset;
-                    if self.point_hits_vertical_bar(viewport, transformed_event.pos, &env) {
+                    let offset_pos = event.pos + self.scroll_offset;
+                    if self.point_hits_vertical_bar(viewport, offset_pos, &env) {
                         self.scroll_bars.hovered = BarHoveredState::Vertical;
                     } else {
                         self.scroll_bars.hovered = BarHoveredState::Horizontal;
@@ -336,7 +340,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                         );
                     }
                 }
-                _ => (),
+                // if the mouse was downed elsewhere, moved over a scroll bar and released: noop.
+                Event::MouseUp(_) => (),
+                _ => unreachable!(),
             }
         } else {
             let child_event = event.transform_scroll(self.scroll_offset, viewport);
@@ -345,14 +351,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             };
 
             match event {
-                Event::MouseMoved(event) => {
-                    let mut transformed_event = event.clone();
-                    transformed_event.pos += self.scroll_offset;
-                    let pos = transformed_event.pos;
-                    let hits_vertical = self.point_hits_vertical_bar(viewport, pos, &env);
-                    let hits_horizontal = self.point_hits_horizontal_bar(viewport, pos, &env);
-                    let currently_hovered = hits_vertical || hits_horizontal;
-                    if self.scroll_bars.hovered.is_hovered() && !currently_hovered {
+                Event::MouseMoved(_) => {
+                    // if we have just stopped hovering
+                    if self.scroll_bars.hovered.is_hovered() && !scroll_bar_is_hovered {
                         self.scroll_bars.hovered = BarHoveredState::None;
                         self.reset_scrollbar_fade(ctx, &env);
                     }
