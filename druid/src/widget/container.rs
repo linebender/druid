@@ -12,28 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A convenience widget that combines common styling and positioning widgets.
+//! Draws a border and a background around a widget or a widget tree.
 
-use crate::shell::kurbo::{Point, Rect, Size};
+use crate::shell::kurbo::{Point, Rect, RoundedRect, Size};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintBrush, PaintCtx, RenderContext,
     UpdateCtx, Widget, WidgetPod,
 };
 
-struct BorderState {
+struct BorderStyle {
     width: f64,
     brush: PaintBrush,
 }
 
-#[derive(Default)]
-struct ContainerStyle {
-    background: Option<PaintBrush>,
-    border: Option<BorderState>,
-}
-
-/// A convenience widget that combines common styling and positioning widgets.
+/// Draws a border and a background around a widget or a widget tree.
 pub struct Container<T: Data> {
-    style: ContainerStyle,
+    background: Option<PaintBrush>,
+    border: Option<BorderStyle>,
+    corner_radius: f64,
+
     inner: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
@@ -41,23 +38,31 @@ impl<T: Data> Container<T> {
     /// Create Container with a child
     pub fn new(inner: impl Widget<T> + 'static) -> Self {
         Self {
-            style: ContainerStyle::default(),
+            background: None,
+            border: None,
+            corner_radius: 0.0,
             inner: WidgetPod::new(inner).boxed(),
         }
     }
 
     /// Paint background with a color or a gradient.
     pub fn background(mut self, brush: impl Into<PaintBrush>) -> Self {
-        self.style.background = Some(brush.into());
+        self.background = Some(brush.into());
         self
     }
 
     /// Paint a border around the widget with a color or a gradient.
     pub fn border(mut self, brush: impl Into<PaintBrush>, width: f64) -> Self {
-        self.style.border = Some(BorderState {
+        self.border = Some(BorderStyle {
             width,
             brush: brush.into(),
         });
+        self
+    }
+
+    /// Round off corners of this container by setting a corner radius
+    pub fn rounded(mut self, radius: f64) -> Self {
+        self.corner_radius = radius;
         self
     }
 }
@@ -75,7 +80,7 @@ impl<T: Data + 'static> Widget<T> for Container<T> {
         bc.debug_check("Container");
 
         // Shrink constraints by border offset
-        let border_width = match self.style.border {
+        let border_width = match self.border {
             Some(ref border) => border.width,
             None => 0.0,
         };
@@ -92,26 +97,20 @@ impl<T: Data + 'static> Widget<T> for Container<T> {
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        // Paint background color
-        if let Some(ref brush) = self.style.background {
-            let rect = Rect::from_origin_size(Point::ZERO, paint_ctx.size());
-            paint_ctx.render_ctx.fill(rect, brush);
-        }
+        let panel = RoundedRect::from_origin_size(
+            Point::ORIGIN,
+            paint_ctx.size().to_vec2(),
+            self.corner_radius,
+        );
 
-        // Paint border
-        if let Some(ref border) = self.style.border {
-            let offset = border.width / 2.0;
-            let size = Size::new(
-                paint_ctx.size().width - border.width,
-                paint_ctx.size().height - border.width,
-            );
-            let rect = Rect::from_origin_size((offset, offset), size);
-            paint_ctx
-                .render_ctx
-                .stroke(rect, &border.brush, border.width);
-        }
+        if let Some(border) = &self.border {
+            paint_ctx.stroke(panel, &border.brush, border.width);
+        };
 
-        // Paint child
-        self.inner.paint_with_offset(paint_ctx, data, env);
+        if let Some(background) = &self.background {
+            paint_ctx.fill(panel, background);
+        };
+
+        self.inner.paint(paint_ctx, data, env);
     }
 }
