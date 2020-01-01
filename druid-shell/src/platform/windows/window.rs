@@ -26,7 +26,6 @@ use std::sync::{Arc, Mutex};
 
 use log::{debug, error, warn};
 use winapi::ctypes::{c_int, c_void};
-use winapi::shared::basetsd::*;
 use winapi::shared::dxgi::*;
 use winapi::shared::dxgi1_2::*;
 use winapi::shared::dxgiformat::*;
@@ -995,6 +994,11 @@ unsafe fn create_dcomp_state(
     }
 }
 
+#[cfg(target_arch = "x86_64")]
+type WindowLongPtr = winapi::shared::basetsd::LONG_PTR;
+#[cfg(target_arch = "x86")]
+type WindowLongPtr = LONG;
+
 pub(crate) unsafe extern "system" fn win_proc_dispatch(
     hwnd: HWND,
     msg: UINT,
@@ -1004,7 +1008,7 @@ pub(crate) unsafe extern "system" fn win_proc_dispatch(
     if msg == WM_CREATE {
         let create_struct = &*(lparam as *const CREATESTRUCTW);
         let wndproc_ptr = create_struct.lpCreateParams;
-        SetWindowLongPtrW(hwnd, GWLP_USERDATA, wndproc_ptr as LONG_PTR);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, wndproc_ptr as WindowLongPtr);
     }
     let window_ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *const WindowState;
     let result = {
