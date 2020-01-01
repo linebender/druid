@@ -24,8 +24,8 @@ use log::error;
 use usvg;
 
 use crate::{
-    kurbo::BezPath, BaseState, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx,
-    PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget,
+    kurbo::BezPath, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
+    RenderContext, Size, UpdateCtx, Widget,
 };
 
 /// A widget that renders a SVG
@@ -83,12 +83,12 @@ impl<T: Data> Widget<T> for Svg<T> {
             bc.constrain(self.get_size())
         }
     }
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _data: &T, _env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         //TODO: options for aspect ratio or scaling based on height
-        let scale = base_state.size().width / self.get_size().width;
+        let scale = paint_ctx.size().width / self.get_size().width;
 
-        let origin_x = (base_state.size().width - (self.get_size().width * scale)) / 2.0;
-        let origin_y = (base_state.size().height - (self.get_size().height * scale)) / 2.0;
+        let origin_x = (paint_ctx.size().width - (self.get_size().width * scale)) / 2.0;
+        let origin_y = (paint_ctx.size().height - (self.get_size().height * scale)) / 2.0;
         let origin = Point::new(origin_x, origin_y);
 
         self.svg_data.to_piet(scale, origin, paint_ctx);
