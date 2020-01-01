@@ -25,12 +25,12 @@ use crate::window::{Window, WindowId};
 use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
 
 /// A function that modifies the initial environment.
-type EnvSetupFn = dyn FnOnce(&mut Env);
+type EnvSetupFn<T> = dyn FnOnce(&mut Env, &T);
 
 /// Handles initial setup of an application, and starts the runloop.
 pub struct AppLauncher<T> {
     windows: Vec<WindowDesc<T>>,
-    env_setup: Option<Box<EnvSetupFn>>,
+    env_setup: Option<Box<EnvSetupFn<T>>>,
     delegate: Option<Box<dyn AppDelegate<T>>>,
 }
 
@@ -64,10 +64,10 @@ impl<T: Data + 'static> AppLauncher<T> {
     }
 
     /// Provide an optional closure that will be given mutable access to
-    /// the environment before launch.
+    /// the environment and immutable access to the app state before launch.
     ///
     /// This can be used to set or override theme values.
-    pub fn configure_env(mut self, f: impl Fn(&mut Env) + 'static) -> Self {
+    pub fn configure_env(mut self, f: impl Fn(&mut Env, &T) + 'static) -> Self {
         self.env_setup = Some(Box::new(f));
         self
     }
@@ -97,7 +97,7 @@ impl<T: Data + 'static> AppLauncher<T> {
         let mut main_loop = RunLoop::new();
         let mut env = theme::init();
         if let Some(f) = self.env_setup.take() {
-            f(&mut env);
+            f(&mut env, &data);
         }
 
         let state = AppState::new(data, env, self.delegate.take());
