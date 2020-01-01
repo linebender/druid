@@ -83,7 +83,7 @@ impl<T: Data> Widget<T> for Svg<T> {
             bc.constrain(self.get_size())
         }
     }
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         //TODO: options for aspect ratio or scaling based on height
         let scale = paint_ctx.size().width / self.get_size().width;
 
