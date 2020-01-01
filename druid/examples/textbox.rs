@@ -20,7 +20,7 @@ use druid::{theme, AppLauncher, Color, Data, LocalizedString, MenuDesc, Widget, 
 fn main() {
     let window = WindowDesc::new(build_widget).menu(make_main_menu());
     AppLauncher::with_window(window)
-        .configure_env(|env| {
+        .configure_env(|env, _| {
             env.set(theme::SELECTION_COLOR, Color::rgb8(0xA6, 0xCC, 0xFF));
             env.set(theme::WINDOW_BACKGROUND_COLOR, Color::WHITE);
             env.set(theme::LABEL_COLOR, Color::BLACK);
