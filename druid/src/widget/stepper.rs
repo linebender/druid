@@ -15,9 +15,9 @@
 //! A stepper widget.
 
 use crate::{
-    BaseState, BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, TimerToken,
-    UpdateCtx, Widget,
+    BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, TimerToken, UpdateCtx, Widget,
 };
+use std::f64::EPSILON;
 use std::time::{Duration, Instant};
 
 use crate::kurbo::{BezPath, Rect, RoundedRect};
@@ -77,11 +77,11 @@ impl Stepper {
         let old_data = *data;
         *data = (*data + delta).min(self.min).max(self.max);
 
-        if old_data != *data {
+        if (*data - old_data).abs() > EPSILON {
             // callback
             (self.value_changed)(ctx, data, env);
         } else if self.wrap {
-            if *data == self.min {
+            if (*data - self.min).abs() < EPSILON {
                 *data = self.max
             } else {
                 *data = self.min
@@ -91,11 +91,11 @@ impl Stepper {
 }
 
 impl Widget<f64> for Stepper {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, base_state: &BaseState, _data: &f64, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &f64, env: &Env) {
         let rounded_rect =
-            RoundedRect::from_origin_size(Point::ORIGIN, base_state.size().to_vec2(), 4.);
+            RoundedRect::from_origin_size(Point::ORIGIN, paint_ctx.size().to_vec2(), 4.);
 
-        let height = base_state.size().height;
+        let height = paint_ctx.size().height;
         let width = env.get(theme::BASIC_WIDGET_HEIGHT);
         let button_size = Size::new(width, height / 2.);
 
@@ -164,7 +164,7 @@ impl Widget<f64> for Stepper {
         ))
     }
 
-    fn event(&mut self, event: &Event, ctx: &mut EventCtx, data: &mut f64, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
         match event {

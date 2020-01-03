@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Flex, Switch, DynLabel, Label, Padding, Row, Stepper, Switch};
-use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
+use druid::widget::{Flex, Label, Padding, Parse, Stepper, Switch, TextBox};
+use druid::{AppLauncher, Data, Lens, LensExt, LensWrap, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct DemoState {
@@ -30,22 +30,30 @@ fn build_widget() -> impl Widget<DemoState> {
     row.add_child(Padding::new(5.0, switch_label), 0.0);
     row.add_child(Padding::new(5.0, switch), 0.0);
 
-    let label_stepper = LensWrap::new(
+    let stepper = LensWrap::new(
         Stepper::new(0.0, 10.0, 0.25, true, |_ctx, _data, _env| {}),
-        lenses::demo_state::stepper_value,
+        DemoState::stepper_value,
     );
 
-    let mut stepper_row = Row::new();
+    let mut textbox_row = Flex::row();
+    let textbox = LensWrap::new(
+        Parse::new(TextBox::new()),
+        DemoState::stepper_value.map(|x| Some(*x), |x, y| *x = y.unwrap_or(0.0)),
+    );
+    textbox_row.add_child(Padding::new(5.0, textbox), 0.0);
+    textbox_row.add_child(Padding::new(5.0, stepper), 0.0);
 
-    let label = DynLabel::new(|data: &DemoState, _env| {
+    let mut label_row = Flex::row();
+
+    let label = Label::new(|data: &DemoState, _env: &_| {
         format!("Stepper value: {0:.2}", data.stepper_value)
     });
 
-    stepper_row.add_child(Padding::new(5.0, label), 0.0);
-    stepper_row.add_child(Padding::new(5.0, label_stepper), 0.0);
+    label_row.add_child(Padding::new(5.0, label), 0.0);
 
     col.add_child(Padding::new(5.0, row), 1.0);
-    col.add_child(Padding::new(5.0, stepper_row), 1.0);
+    col.add_child(Padding::new(5.0, textbox_row), 1.0);
+    col.add_child(Padding::new(5.0, label_row), 1.0);
     col
 }
 
