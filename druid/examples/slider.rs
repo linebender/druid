@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, Button, Checkbox, Flex, Label, Padding, ProgressBar, Slider};
+use druid::widget::{
+    Align, Button, Checkbox, Flex, Label, Padding, ProgressBar, Slider, WidgetExt,
+};
 use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -38,12 +40,10 @@ fn build_widget() -> impl Widget<DemoState> {
     let bar = LensWrap::new(ProgressBar::new(), DemoState::value);
     let slider = LensWrap::new(Slider::new(), DemoState::value);
 
-    let button_1 = Button::sized(
-        "increment ",
-        |_ctx, data: &mut DemoState, _env| data.value += 0.1,
-        200.0,
-        100.0,
-    );
+    let button_1 = Button::new("increment ", |_ctx, data: &mut DemoState, _env| {
+        data.value += 0.1
+    })
+    .sized(200.0, 100.0);
     let button_2 = Button::new("decrement ", |_ctx, data: &mut DemoState, _env| {
         data.value -= 0.1
     });

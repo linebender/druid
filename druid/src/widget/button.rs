@@ -16,7 +16,7 @@
 
 use crate::kurbo::{Point, RoundedRect, Size};
 use crate::theme;
-use crate::widget::{Align, Label, LabelText, SizedBox};
+use crate::widget::{Label, LabelText};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LinearGradient, PaintCtx, RenderContext,
     UnitPoint, UpdateCtx, Widget,
@@ -40,24 +40,6 @@ impl<T: Data + 'static> Button<T> {
             label: Label::new(text).align(UnitPoint::CENTER),
             action: Box::new(action),
         }
-    }
-
-    /// Create a new button with a fixed size.
-    pub fn sized(
-        text: impl Into<LabelText<T>>,
-        action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
-        width: f64,
-        height: f64,
-    ) -> impl Widget<T> {
-        Align::vertical(
-            UnitPoint::CENTER,
-            SizedBox::new(Button {
-                label: Label::new(text).align(UnitPoint::CENTER),
-                action: Box::new(action),
-            })
-            .width(width)
-            .height(height),
-        )
     }
 
     /// A function that can be passed to `Button::new`, for buttons with no action.
