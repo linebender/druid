@@ -84,16 +84,15 @@ fn ui_builder() -> impl Widget<AppData> {
                     1.0,
                 )
                 .with_child(
-                    Button::sized(
+                    Button::new(
                         "Delete",
                         |_ctx, (shared, item): &mut (Arc<Vec<u32>>, u32), _env| {
                             // We have access to both child's data and shared data.
                             // Remove element from right list.
                             Arc::make_mut(shared).retain(|v| v != item);
                         },
-                        80.0,
-                        20.0,
-                    ),
+                    )
+                    .sized(80.0, 20.0),
                     0.0,
                 )
                 .padding(10.0)

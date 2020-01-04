@@ -21,7 +21,7 @@ use super::{Align, Container, EnvScope, Padding, Parse, SizedBox};
 use crate::{Data, Env, Lens, LensWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
-pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
+pub trait WidgetExt<T: Data + 'static>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a [`Padding`] widget with the given [`Insets`].
     ///
     /// [`Padding`]: struct.Padding.html
@@ -77,6 +77,17 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`SizedBox`]: struct.SizedBox.html
     fn fix_height(self, height: f64) -> SizedBox<T> {
         SizedBox::new(self).height(height)
+    }
+
+    /// Wrap a widget in an [`Align`] and a [`SizedBox`] to make it a fixed size
+    ///
+    /// [`Align`]: struct.Align.html
+    /// [`SizedBox`]: struct.SizedBox.html
+    fn sized(self, width: f64, height: f64) -> Align<T> {
+        SizedBox::new(self)
+            .width(width)
+            .height(height)
+            .align_vertical(UnitPoint::CENTER)
     }
 
     /// Wrap this widget in a [`SizedBox`] with an infinite width and height.
