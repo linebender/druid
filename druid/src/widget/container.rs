@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Draws a border and a background around a widget or a widget tree.
+//! A widget that provides simple visual styling options to a child.
 
 use crate::shell::kurbo::{Point, Rect, RoundedRect, Size};
 use crate::{
@@ -25,7 +25,7 @@ struct BorderStyle {
     brush: PaintBrush,
 }
 
-/// Draws a border and a background around a widget or a widget tree.
+/// A widget that provides simple visual styling options to a child.
 pub struct Container<T: Data> {
     background: Option<PaintBrush>,
     border: Option<BorderStyle>,
