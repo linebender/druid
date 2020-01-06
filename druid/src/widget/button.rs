@@ -14,35 +14,54 @@
 
 //! A button widget.
 
-use crate::kurbo::{Point, RoundedRect, Size};
+use crate::kurbo::{Point, Rect, RoundedRect, Size};
 use crate::theme;
 use crate::widget::{Align, Label, LabelText, SizedBox};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LinearGradient, PaintCtx, RenderContext,
-    UnitPoint, UpdateCtx, Widget,
+    UnitPoint, UpdateCtx, Widget, WidgetPod,
 };
 
-/// A button with a text label.
-pub struct Button<T> {
-    label: Label<T>,
+/// A button with a widget for its label.
+pub struct Button<T: Data> {
+    child: WidgetPod<T, Box<dyn Widget<T>>>,
     /// A closure that will be invoked when the button is clicked.
     action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
 }
 
 impl<T: Data + 'static> Button<T> {
-    /// Create a new button. The closure provided will be called when the button
-    /// is clicked.
+    /// Create a new button with a text label and the default druid styling.
+    /// The closure provided will be called when the button is clicked.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use druid::widget::Button;
+    ///
+    /// let button = Button::new("increment", |_ctx, data, _env| *data += 1);
+    /// ```
     pub fn new(
         text: impl Into<LabelText<T>>,
         action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
     ) -> Button<T> {
+        Button::custom(
+            ButtonBackground::new(Label::new(text).align(UnitPoint::CENTER)),
+            action,
+        )
+    }
+
+    /// Create a new button that displays a custom widget
+    pub fn custom(
+        child: impl Widget<T> + 'static,
+        action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
+    ) -> Button<T> {
         Button {
-            label: Label::new(text).align(UnitPoint::CENTER),
+            child: WidgetPod::new(child).boxed(),
             action: Box::new(action),
         }
     }
 
-    /// Create a new button with a fixed size.
+    /// Create a new button with a fixed size and a text label.
     pub fn sized(
         text: impl Into<LabelText<T>>,
         action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
@@ -51,10 +70,10 @@ impl<T: Data + 'static> Button<T> {
     ) -> impl Widget<T> {
         Align::vertical(
             UnitPoint::CENTER,
-            SizedBox::new(Button {
-                label: Label::new(text).align(UnitPoint::CENTER),
-                action: Box::new(action),
-            })
+            SizedBox::new(Button::custom(
+                Label::new(text).align(UnitPoint::CENTER),
+                action,
+            ))
             .width(width)
             .height(height),
         )
@@ -93,10 +112,12 @@ impl<T: Data> Widget<T> for Button<T> {
             }
             _ => (),
         }
+
+        self.child.event(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
-        self.label.update(ctx, old_data, data, env)
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        self.child.update(ctx, data, env)
     }
 
     fn layout(
@@ -108,7 +129,67 @@ impl<T: Data> Widget<T> for Button<T> {
     ) -> Size {
         bc.debug_check("Button");
 
-        self.label.layout(layout_ctx, bc, data, env)
+        let size = self.child.layout(layout_ctx, &bc, data, env);
+        self.child
+            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+        size
+    }
+
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.child.paint_with_offset(paint_ctx, data, env);
+    }
+}
+
+struct ButtonBackground<T: Data> {
+    child: WidgetPod<T, Box<dyn Widget<T>>>,
+}
+
+impl<T: Data> ButtonBackground<T> {
+    pub fn new(child: impl Widget<T> + 'static) -> ButtonBackground<T> {
+        Self {
+            child: WidgetPod::new(child).boxed(),
+        }
+    }
+}
+
+impl<T: Data> Widget<T> for ButtonBackground<T> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        // TODO: this event stuff seems redundant
+        match event {
+            Event::MouseDown(_) => {
+                ctx.set_active(true);
+                ctx.invalidate();
+            }
+            Event::MouseUp(_) => {
+                if ctx.is_active() {
+                    ctx.set_active(false);
+                    ctx.invalidate();
+                }
+            }
+            _ => (),
+        }
+        self.child.event(ctx, event, data, env);
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+        self.child.update(ctx, data, env)
+    }
+
+    fn layout(
+        &mut self,
+        layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> Size {
+        bc.debug_check("ButtonBackground");
+
+        let size = self.child.layout(layout_ctx, &bc, data, env);
+
+        self.child
+            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+
+        size
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
@@ -141,6 +222,6 @@ impl<T: Data> Widget<T> for Button<T> {
 
         paint_ctx.fill(rounded_rect, &bg_gradient);
 
-        self.label.paint(paint_ctx, data, env);
+        self.child.paint_with_offset(paint_ctx, data, env);
     }
 }

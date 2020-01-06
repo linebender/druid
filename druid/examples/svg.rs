@@ -28,7 +28,7 @@ use log::error;
 
 #[cfg(feature = "svg")]
 use druid::{
-    widget::{Flex, Svg, SvgData, WidgetExt},
+    widget::{Flex, Label, Svg, SvgData, WidgetExt},
     AppLauncher, Widget, WindowDesc,
 };
 
@@ -56,6 +56,13 @@ fn ui_builder() -> impl Widget<u32> {
     let mut col = Flex::column();
 
     col.add_child(Svg::new(tiger_svg.clone()).fix_width(100.0).center(), 1.0);
-    col.add_child(Svg::new(tiger_svg), 1.0);
+    col.add_child(
+        Svg::new(tiger_svg).on_click(|_ctx, data, _env| *data += 1),
+        1.0,
+    );
+    col.add_child(
+        Label::new(|data: &u32, _env: &_| format!("Bottom tiger clicks: {}", data)),
+        1.0,
+    );
     col
 }
