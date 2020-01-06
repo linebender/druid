@@ -38,7 +38,7 @@ impl<T: Data + 'static> Button<T> {
     /// ```
     /// use druid::widget::Button;
     ///
-    /// let button = Button::new("increment", |_ctx, data, _env| *data += 1);
+    /// let button = Button::<u32>::new("increment", |_ctx, data, _env| *data += 1);
     /// ```
     pub fn new(
         text: impl Into<LabelText<T>>,
