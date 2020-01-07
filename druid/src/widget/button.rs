@@ -14,17 +14,17 @@
 
 //! A button widget.
 
-use crate::kurbo::{Point, Rect, RoundedRect, Size};
+use crate::kurbo::{Point, RoundedRect, Size};
 use crate::theme;
 use crate::widget::{Align, Label, LabelText, SizedBox};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LinearGradient, PaintCtx, RenderContext,
-    UnitPoint, UpdateCtx, Widget, WidgetPod,
+    UnitPoint, UpdateCtx, Widget,
 };
 
 /// A button with a widget for its label.
 pub struct Button<T: Data> {
-    child: WidgetPod<T, Box<dyn Widget<T>>>,
+    child: Box<dyn Widget<T>>,
     /// A closure that will be invoked when the button is clicked.
     action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
 }
@@ -56,7 +56,7 @@ impl<T: Data + 'static> Button<T> {
         action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
     ) -> Button<T> {
         Button {
-            child: WidgetPod::new(child).boxed(),
+            child: Box::new(child),
             action: Box::new(action),
         }
     }
@@ -116,8 +116,8 @@ impl<T: Data> Widget<T> for Button<T> {
         self.child.event(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
-        self.child.update(ctx, data, env)
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+        self.child.update(ctx, old_data, data, env);
     }
 
     fn layout(
@@ -129,50 +129,33 @@ impl<T: Data> Widget<T> for Button<T> {
     ) -> Size {
         bc.debug_check("Button");
 
-        let size = self.child.layout(layout_ctx, &bc, data, env);
-        self.child
-            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
-        size
+        self.child.layout(layout_ctx, &bc, data, env)
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.child.paint_with_offset(paint_ctx, data, env);
+        self.child.paint(paint_ctx, data, env);
     }
 }
 
 struct ButtonBackground<T: Data> {
-    child: WidgetPod<T, Box<dyn Widget<T>>>,
+    child: Box<dyn Widget<T>>,
 }
 
 impl<T: Data> ButtonBackground<T> {
     pub fn new(child: impl Widget<T> + 'static) -> ButtonBackground<T> {
         Self {
-            child: WidgetPod::new(child).boxed(),
+            child: Box::new(child),
         }
     }
 }
 
 impl<T: Data> Widget<T> for ButtonBackground<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        // TODO: this event stuff seems redundant
-        match event {
-            Event::MouseDown(_) => {
-                ctx.set_active(true);
-                ctx.invalidate();
-            }
-            Event::MouseUp(_) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
-                    ctx.invalidate();
-                }
-            }
-            _ => (),
-        }
         self.child.event(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
-        self.child.update(ctx, data, env)
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+        self.child.update(ctx, old_data, data, env);
     }
 
     fn layout(
@@ -184,12 +167,7 @@ impl<T: Data> Widget<T> for ButtonBackground<T> {
     ) -> Size {
         bc.debug_check("ButtonBackground");
 
-        let size = self.child.layout(layout_ctx, &bc, data, env);
-
-        self.child
-            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
-
-        size
+        self.child.layout(layout_ctx, &bc, data, env)
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
@@ -218,10 +196,11 @@ impl<T: Data> Widget<T> for ButtonBackground<T> {
             env.get(theme::BORDER)
         };
 
+        //TODO: subtract this added width from the rounded_rect so we don't spill out
         paint_ctx.stroke(rounded_rect, &border_color, 2.0);
 
         paint_ctx.fill(rounded_rect, &bg_gradient);
 
-        self.child.paint_with_offset(paint_ctx, data, env);
+        self.child.paint(paint_ctx, data, env);
     }
 }
