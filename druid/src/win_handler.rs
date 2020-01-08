@@ -155,12 +155,24 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
             0
         };
         let anim_frame_event = Event::AnimFrame(interval);
-        let (_, _, request_anim) = self.do_event_inner(anim_frame_event, ctx);
+        let (_, event_needs_inval, request_anim) = self.do_event_inner(anim_frame_event, ctx);
         let prev = if request_anim {
             Some(this_paint_time)
         } else {
             None
         };
+
+        let mut update_ctx = UpdateCtx {
+            text_factory: ctx.text_factory(),
+            window: &self.state.handle,
+            needs_inval: false,
+            window_id: self.window_id,
+        };
+        self.window.update(&mut update_ctx, self.data, self.env);
+        if update_ctx.needs_inval || event_needs_inval {
+            update_ctx.window.invalidate();
+        }
+
         self.state.prev_paint_time = prev;
         request_anim
     }
