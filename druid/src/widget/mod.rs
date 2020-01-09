@@ -64,7 +64,7 @@ pub use switch::Switch;
 pub use textbox::TextBox;
 pub use widget_ext::WidgetExt;
 
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 
 use crate::kurbo::Size;
 use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, WidgetId};
@@ -196,5 +196,9 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.deref_mut().paint(paint_ctx, data, env);
+    }
+
+    fn get_id(&self) -> Option<WidgetId> {
+        self.deref().get_id()
     }
 }
