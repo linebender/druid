@@ -48,32 +48,14 @@ impl From<WidgetId> for Target {
     }
 }
 
-// We might decide to clean this up; it's to make it easy to offer different
-// arguments to submit_command.
-pub trait IntoOptTarget {
-    fn into_opt_target(self) -> Option<Target>;
-}
-
-impl IntoOptTarget for Target {
-    fn into_opt_target(self) -> Option<Target> {
-        Some(self)
-    }
-}
-
-impl IntoOptTarget for Option<Target> {
-    fn into_opt_target(self) -> Option<Target> {
-        self
-    }
-}
-
-impl IntoOptTarget for WindowId {
-    fn into_opt_target(self) -> Option<Target> {
+impl Into<Option<Target>> for WindowId {
+    fn into(self) -> Option<Target> {
         Some(Target::Window(self))
     }
 }
 
-impl IntoOptTarget for WidgetId {
-    fn into_opt_target(self) -> Option<Target> {
+impl Into<Option<Target>> for WidgetId {
+    fn into(self) -> Option<Target> {
         Some(Target::Widget(self))
     }
 }

@@ -62,6 +62,6 @@ pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
 pub use widget::Widget;
-pub use widget_id::{IdentityWrapper, IntoOptTarget, Target, WidgetId};
+pub use widget_id::{IdentityWrapper, Target, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
