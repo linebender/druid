@@ -63,6 +63,10 @@ impl Widget<u32> for AnimWidget {
         let ambit = center + 45.0 * Vec2::from_angle((0.75 + self.t) * 2.0 * PI);
         paint_ctx.stroke(Line::new(center, ambit), &Color::WHITE, 1.0);
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
+    }
 }
 
 fn main() {

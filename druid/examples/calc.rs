@@ -112,7 +112,7 @@ impl CalcState {
     }
 }
 
-fn pad<T: Data>(inner: impl Widget<T> + 'static) -> impl Widget<T> {
+fn pad<T: Data + 'static>(inner: impl Widget<T> + 'static) -> impl Widget<T> {
     Padding::new(5.0, inner)
 }
 
@@ -134,7 +134,7 @@ fn digit_button(digit: u8) -> impl Widget<CalcState> {
     ))
 }
 
-fn flex_row<T: Data>(
+fn flex_row<T: Data + 'static>(
     w1: impl Widget<T> + 'static,
     w2: impl Widget<T> + 'static,
     w3: impl Widget<T> + 'static,

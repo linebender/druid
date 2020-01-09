@@ -54,4 +54,8 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
     fn paint(&mut self, paint: &mut PaintCtx, _data: &Option<T>, env: &Env) {
         self.widget.paint(paint, &self.state, env)
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
+    }
 }

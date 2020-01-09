@@ -274,4 +274,8 @@ impl Widget<bool> for Switch {
         // paint on/off label
         self.paint_labels(paint_ctx, env, switch_width);
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
+    }
 }

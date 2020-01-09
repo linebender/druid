@@ -22,6 +22,10 @@ use crate::{Data, Env, Lens, LensWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
+    fn boxed(self) -> Box<dyn Widget<T>> {
+        Box::new(self)
+    }
+
     /// Wrap this widget in a [`Padding`] widget with the given [`Insets`].
     ///
     /// [`Padding`]: struct.Padding.html

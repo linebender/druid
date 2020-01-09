@@ -108,4 +108,8 @@ impl Widget<f64> for ProgressBar {
         );
         paint_ctx.fill(rounded_rect, &bar_gradient);
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
+    }
 }

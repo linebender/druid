@@ -72,7 +72,7 @@ impl<T: Data> Button<T> {
     pub fn noop(_: &mut EventCtx, _: &mut T, _: &Env) {}
 }
 
-impl<T: Data> Widget<T> for Button<T> {
+impl<T: Data + 'static> Widget<T> for Button<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(_) => {
@@ -142,5 +142,8 @@ impl<T: Data> Widget<T> for Button<T> {
         paint_ctx.fill(rounded_rect, &bg_gradient);
 
         self.label.paint(paint_ctx, data, env);
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
     }
 }

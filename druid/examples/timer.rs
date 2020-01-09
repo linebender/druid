@@ -65,6 +65,10 @@ impl Widget<u32> for TimerWidget {
             paint_ctx.stroke(Line::new((10.0, 10.0), (10.0, 50.0)), &Color::WHITE, 1.0);
         }
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
+    }
 }
 
 fn main() {

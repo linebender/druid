@@ -46,7 +46,7 @@ use crate::command::sys as sys_cmd;
 ///
 /// This is something of an internal detail and possibly we don't want to surface
 /// it publicly.
-pub struct DruidHandler<T: Data> {
+pub struct DruidHandler<T: Data + 'static> {
     /// The shared app state.
     app_state: Rc<RefCell<AppState<T>>>,
     /// The id for the current window.
@@ -54,7 +54,7 @@ pub struct DruidHandler<T: Data> {
 }
 
 /// State shared by all windows in the UI.
-pub(crate) struct AppState<T: Data> {
+pub(crate) struct AppState<T: Data + 'static> {
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: VecDeque<(WindowId, Command)>,
     windows: Windows<T>,
@@ -63,7 +63,7 @@ pub(crate) struct AppState<T: Data> {
 }
 
 /// All active windows.
-struct Windows<T: Data> {
+struct Windows<T: Data + 'static> {
     windows: HashMap<WindowId, Window<T>>,
     state: HashMap<WindowId, WindowState>,
 }
@@ -75,7 +75,7 @@ pub(crate) struct WindowState {
 }
 
 /// Everything required for a window to handle an event.
-struct SingleWindowState<'a, T: Data> {
+struct SingleWindowState<'a, T: Data + 'static> {
     window_id: WindowId,
     window: &'a mut Window<T>,
     state: &'a mut WindowState,

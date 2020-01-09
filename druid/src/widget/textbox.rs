@@ -479,6 +479,10 @@ impl Widget<String> for TextBox {
         // Paint the border
         paint_ctx.stroke(clip_rect, &border_color, BORDER_WIDTH);
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
+    }
 }
 
 /// Gets the next character from the given index.

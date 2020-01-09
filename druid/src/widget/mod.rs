@@ -62,7 +62,8 @@ pub use switch::Switch;
 pub use textbox::TextBox;
 pub use widget_ext::WidgetExt;
 
-use std::ops::DerefMut;
+use std::any::Any;
+use std::ops::{Deref, DerefMut};
 
 use crate::kurbo::Size;
 use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx};
@@ -105,7 +106,7 @@ use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx
 /// [`update`]: #tymethod.update
 /// [`Data`]: trait.Data.html
 /// [`WidgetPod`]: struct.WidgetPod.html
-pub trait Widget<T> {
+pub trait Widget<T>: 'static {
     /// Handle an event.
     ///
     /// A number of different events (in the [`Event`] enum) are handled in this
@@ -168,11 +169,13 @@ pub trait Widget<T> {
     /// afterwards. In addition, they can apply masks and transforms on
     /// the render context, which is especially useful for scrolling.
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env);
+
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 // TODO: explore getting rid of this (ie be consistent about using
 // `dyn Widget` only).
-impl<T> Widget<T> for Box<dyn Widget<T>> {
+impl<T: 'static> Widget<T> for Box<dyn Widget<T>> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.deref_mut().event(ctx, event, data, env)
     }
@@ -187,5 +190,9 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.deref_mut().paint(paint_ctx, data, env);
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self.deref().as_any()
     }
 }

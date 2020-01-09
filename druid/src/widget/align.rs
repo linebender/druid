@@ -22,7 +22,7 @@ use crate::{
 use crate::piet::UnitPoint;
 
 /// A widget that aligns its child.
-pub struct Align<T: Data> {
+pub struct Align<T: Data + 'static> {
     align: UnitPoint,
     child: WidgetPod<T, Box<dyn Widget<T>>>,
     width_factor: Option<f64>,
@@ -80,7 +80,7 @@ impl<T: Data> Align<T> {
     }
 }
 
-impl<T: Data> Widget<T> for Align<T> {
+impl<T: Data + 'static> Widget<T> for Align<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.child.event(ctx, event, data, env)
     }
@@ -127,5 +127,9 @@ impl<T: Data> Widget<T> for Align<T> {
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint_with_offset(paint_ctx, data, env);
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
     }
 }

@@ -22,7 +22,7 @@ use crate::{
 };
 
 ///A container containing two other widgets, splitting the area either horizontally or vertically.
-pub struct Split<T: Data> {
+pub struct Split<T: Data + 'static> {
     split_direction: Axis,
     draggable: bool,
     split_point: f64,
@@ -31,7 +31,7 @@ pub struct Split<T: Data> {
     child2: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T: Data> Split<T> {
+impl<T: Data + 'static> Split<T> {
     ///Create a new split panel.
     fn new(
         split_direction: Axis,
@@ -123,7 +123,7 @@ impl<T: Data> Split<T> {
         }
     }
 }
-impl<T: Data> Widget<T> for Split<T> {
+impl<T: Data + 'static> Widget<T> for Split<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.child1.is_active() {
             self.child1.event(ctx, event, data, env);
@@ -304,5 +304,9 @@ impl<T: Data> Widget<T> for Split<T> {
 
         self.child1.paint_with_offset(paint_ctx, &data, env);
         self.child2.paint_with_offset(paint_ctx, &data, env);
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
     }
 }

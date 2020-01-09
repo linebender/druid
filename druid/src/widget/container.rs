@@ -26,7 +26,7 @@ struct BorderStyle {
 }
 
 /// A widget that provides simple visual styling options to a child.
-pub struct Container<T: Data> {
+pub struct Container<T: Data + 'static> {
     background: Option<PaintBrush>,
     border: Option<BorderStyle>,
     corner_radius: f64,
@@ -112,5 +112,9 @@ impl<T: Data> Widget<T> for Container<T> {
         };
 
         self.inner.paint(paint_ctx, data, env);
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
     }
 }

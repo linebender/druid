@@ -20,7 +20,7 @@ use crate::{
 };
 
 /// A widget that just adds padding around its child.
-pub struct Padding<T: Data> {
+pub struct Padding<T: Data + 'static> {
     left: f64,
     right: f64,
     top: f64,
@@ -29,7 +29,7 @@ pub struct Padding<T: Data> {
     child: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T: Data> Padding<T> {
+impl<T: Data + 'static> Padding<T> {
     /// Create widget with uniform padding.
     #[deprecated(since = "0.3.0", note = "Use Padding::new() instead")]
     pub fn uniform(padding: f64, child: impl Widget<T> + 'static) -> Padding<T> {
@@ -83,7 +83,7 @@ impl<T: Data> Padding<T> {
     }
 }
 
-impl<T: Data> Widget<T> for Padding<T> {
+impl<T: Data + 'static> Widget<T> for Padding<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.child.event(ctx, event, data, env)
     }
@@ -114,5 +114,9 @@ impl<T: Data> Widget<T> for Padding<T> {
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint_with_offset(paint_ctx, data, env);
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
     }
 }

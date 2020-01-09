@@ -113,6 +113,10 @@ impl Widget<String> for CustomWidget {
             InterpolationMode::Bilinear,
         );
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
+    }
 }
 
 fn main() {

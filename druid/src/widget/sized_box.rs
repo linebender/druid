@@ -74,7 +74,7 @@ impl<T: Data> SizedBox<T> {
     }
 }
 
-impl<T: Data> Widget<T> for SizedBox<T> {
+impl<T: Data + 'static> Widget<T> for SizedBox<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.event(ctx, event, data, env);
@@ -123,5 +123,9 @@ impl<T: Data> Widget<T> for SizedBox<T> {
         if let Some(ref mut inner) = self.inner {
             inner.paint(paint_ctx, data, env);
         }
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
     }
 }

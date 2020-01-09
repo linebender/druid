@@ -115,4 +115,8 @@ impl Widget<bool> for Checkbox {
             paint_ctx.stroke_styled(path, &env.get(theme::LABEL_COLOR), 2., &style);
         }
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
+    }
 }

@@ -23,12 +23,12 @@ use crate::{
 };
 
 /// A list widget for a variable-size collection of items.
-pub struct List<T: Data> {
+pub struct List<T: Data + 'static> {
     closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
 }
 
-impl<T: Data> List<T> {
+impl<T: Data + 'static> List<T> {
     /// Create a new list widget. Closure will be called every time when a new child
     /// needs to be constructed.
     pub fn new<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
@@ -122,7 +122,7 @@ impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Arc<Vec<T>>) {
     }
 }
 
-impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
+impl<C: Data + 'static, T: ListIter<C>> Widget<T> for List<C> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut children = self.children.iter_mut();
         data.for_each_mut(|child_data, _| {
@@ -196,5 +196,9 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
                 child.paint_with_offset(paint_ctx, child_data, env);
             }
         });
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
     }
 }

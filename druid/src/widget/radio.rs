@@ -45,7 +45,7 @@ impl<T: Data + PartialEq> RadioGroup<T> {
 }
 
 /// A single radio button
-pub struct Radio<T: Data + PartialEq> {
+pub struct Radio<T: Data + PartialEq + 'static> {
     variant: T,
     child_label: WidgetPod<T, Box<dyn Widget<T>>>,
 }
@@ -61,7 +61,7 @@ impl<T: Data + PartialEq> Radio<T> {
     }
 }
 
-impl<T: Data + PartialEq> Widget<T> for Radio<T> {
+impl<T: Data + PartialEq + 'static> Widget<T> for Radio<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
@@ -145,5 +145,9 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
         // Paint the text label
         self.child_label.paint_with_offset(paint_ctx, data, env);
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
     }
 }

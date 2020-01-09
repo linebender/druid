@@ -186,4 +186,8 @@ impl Widget<f64> for Slider {
         //Actually paint the knob
         paint_ctx.fill(knob_circle, &knob_gradient);
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        *&self
+    }
 }
