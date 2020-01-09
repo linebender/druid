@@ -23,8 +23,8 @@ use log;
 use crate::kurbo::{Affine, Rect, Shape, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::{
-    BoxConstraints, Command, Cursor, Data, Env, Event, IntoOptTarget, Target, Text, TimerToken,
-    Widget, WidgetId, WinCtx, WindowHandle, WindowId,
+    BoxConstraints, Command, Cursor, Data, Env, Event, Target, Text, TimerToken, Widget, WidgetId,
+    WinCtx, WindowHandle, WindowId,
 };
 
 /// Convenience type for dynamic boxed widget.
@@ -744,10 +744,12 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     ///
     /// [`Command`]: struct.Command.html
     /// [`update()`]: trait.Widget.html#tymethod.update
-    pub fn submit_command(&mut self, command: impl Into<Command>, target: impl IntoOptTarget) {
-        let target = target
-            .into_opt_target()
-            .unwrap_or_else(|| self.window_id.into());
+    pub fn submit_command(
+        &mut self,
+        command: impl Into<Command>,
+        target: impl Into<Option<Target>>,
+    ) {
+        let target = target.into().unwrap_or_else(|| self.window_id.into());
         self.command_queue.push_back((target, command.into()))
     }
 
