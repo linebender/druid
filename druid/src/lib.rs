@@ -53,7 +53,7 @@ pub use crate::core::{BoxedWidget, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Wid
 pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
-pub use command::{sys as commands, Command, Selector};
+pub use command::{sys as commands, Command, Selector, Target};
 pub use data::Data;
 pub use env::{Env, Key, Value};
 pub use event::{Event, LifeCycle, WheelEvent};
@@ -62,6 +62,6 @@ pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
 pub use widget::Widget;
-pub use widget_id::{IdentityWrapper, Target, WidgetId};
+pub use widget_id::{IdentityWrapper, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};

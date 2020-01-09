@@ -17,6 +17,8 @@
 use std::any::Any;
 use std::sync::Arc;
 
+use crate::{WidgetId, WindowId};
+
 /// An identifier for a particular command.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Selector(&'static str);
@@ -40,6 +42,13 @@ pub struct Selector(&'static str);
 pub struct Command {
     pub selector: Selector,
     object: Option<Arc<dyn Any>>,
+}
+
+/// The target of a command.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Target {
+    Window(WindowId),
+    Widget(WidgetId),
 }
 
 /// [`Command`]s with special meaning, defined by druid.
@@ -171,6 +180,15 @@ impl Command {
     }
 }
 
+impl Target {
+    pub(crate) fn is_window(self) -> bool {
+        match self {
+            Target::Window(_) => true,
+            _ => false,
+        }
+    }
+}
+
 impl From<Selector> for Command {
     fn from(selector: Selector) -> Command {
         Command {
@@ -183,6 +201,30 @@ impl From<Selector> for Command {
 impl std::fmt::Display for Selector {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "Selector('{}')", self.0)
+    }
+}
+
+impl From<WindowId> for Target {
+    fn from(id: WindowId) -> Target {
+        Target::Window(id)
+    }
+}
+
+impl From<WidgetId> for Target {
+    fn from(id: WidgetId) -> Target {
+        Target::Widget(id)
+    }
+}
+
+impl Into<Option<Target>> for WindowId {
+    fn into(self) -> Option<Target> {
+        Some(Target::Window(self))
+    }
+}
+
+impl Into<Option<Target>> for WidgetId {
+    fn into(self) -> Option<Target> {
+        Some(Target::Widget(self))
     }
 }
 
