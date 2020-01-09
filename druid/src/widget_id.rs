@@ -16,49 +16,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::kurbo::Size;
 
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WindowId,
-};
-
-/// The target of a command.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Target {
-    Window(WindowId),
-    Widget(WidgetId),
-}
-
-impl Target {
-    pub(crate) fn is_window(self) -> bool {
-        match self {
-            Target::Window(_) => true,
-            _ => false,
-        }
-    }
-}
-
-impl From<WindowId> for Target {
-    fn from(id: WindowId) -> Target {
-        Target::Window(id)
-    }
-}
-
-impl From<WidgetId> for Target {
-    fn from(id: WidgetId) -> Target {
-        Target::Widget(id)
-    }
-}
-
-impl Into<Option<Target>> for WindowId {
-    fn into(self) -> Option<Target> {
-        Some(Target::Window(self))
-    }
-}
-
-impl Into<Option<Target>> for WidgetId {
-    fn into(self) -> Option<Target> {
-        Some(Target::Widget(self))
-    }
-}
+use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
 
 /// A unique identifier for a single widget.
 #[derive(Clone, Copy, Debug, PartialEq)]
