@@ -39,7 +39,7 @@ mod textbox;
 mod widget_ext;
 
 pub use align::Align;
-pub use button::Button;
+pub use button::{Button, Click};
 pub use checkbox::Checkbox;
 pub use container::Container;
 pub use either::Either;

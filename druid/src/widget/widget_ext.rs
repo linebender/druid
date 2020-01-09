@@ -17,7 +17,7 @@
 use crate::kurbo::Insets;
 use crate::piet::{PaintBrush, UnitPoint};
 
-use super::{Align, Button, Container, EnvScope, Padding, Parse, SizedBox};
+use super::{Align, Click, Container, EnvScope, Padding, Parse, SizedBox};
 use crate::{Data, Env, EventCtx, Lens, LensWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
@@ -116,12 +116,12 @@ pub trait WidgetExt<T: Data + 'static>: Widget<T> + Sized + 'static {
         EnvScope::new(f, self)
     }
 
-    /// Wrap this widget in a [`Button`] widget. The button will execute the
+    /// Wrap this widget in a [`Click`] widget. `Click` will execute the
     /// provided closure on click.
     ///
-    /// [`Button`]: struct.Button.html
-    fn on_click(self, action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static) -> Button<T> {
-        Button::custom(self, action)
+    /// [`Click`]: struct.Click.html
+    fn on_click(self, action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static) -> Click<T> {
+        Click::new(self, action)
     }
 
     /// Wrap this widget in a [`LensWrap`] widget for the provided [`Lens`].

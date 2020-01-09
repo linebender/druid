@@ -22,16 +22,15 @@ use crate::{
     UnitPoint, UpdateCtx, Widget,
 };
 
-/// A button with a widget for its label.
-pub struct Button<T: Data> {
-    child: Box<dyn Widget<T>>,
-    /// A closure that will be invoked when the button is clicked.
-    action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
-}
+/// A button with a text label.
+pub struct Button;
 
-impl<T: Data + 'static> Button<T> {
+impl Button {
     /// Create a new button with a text label and the default druid styling.
     /// The closure provided will be called when the button is clicked.
+    ///
+    /// If you want to create a custom button, check out the `Click` widget which
+    /// button is based on.
     ///
     /// # Examples
     ///
@@ -40,29 +39,18 @@ impl<T: Data + 'static> Button<T> {
     ///
     /// let button = Button::<u32>::new("increment", |_ctx, data, _env| *data += 1);
     /// ```
-    pub fn new(
+    pub fn new<T: Data + 'static>(
         text: impl Into<LabelText<T>>,
         action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
-    ) -> Button<T> {
-        Button::custom(
-            ButtonBackground::new(Label::new(text).align(UnitPoint::CENTER)),
+    ) -> Click<T> {
+        Click::new(
+            ButtonDecoration::new(Label::new(text).align(UnitPoint::CENTER)),
             action,
         )
     }
 
-    /// Create a new button that displays a custom widget
-    pub fn custom(
-        child: impl Widget<T> + 'static,
-        action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
-    ) -> Button<T> {
-        Button {
-            child: Box::new(child),
-            action: Box::new(action),
-        }
-    }
-
     /// Create a new button with a fixed size and a text label.
-    pub fn sized(
+    pub fn sized<T: Data + 'static>(
         text: impl Into<LabelText<T>>,
         action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
         width: f64,
@@ -70,7 +58,7 @@ impl<T: Data + 'static> Button<T> {
     ) -> impl Widget<T> {
         Align::vertical(
             UnitPoint::CENTER,
-            SizedBox::new(Button::custom(
+            SizedBox::new(Click::new(
                 Label::new(text).align(UnitPoint::CENTER),
                 action,
             ))
@@ -88,10 +76,35 @@ impl<T: Data + 'static> Button<T> {
     ///
     /// let button = Button::<u32>::new("hello", Button::noop);
     /// ```
-    pub fn noop(_: &mut EventCtx, _: &mut T, _: &Env) {}
+    pub fn noop<T: Data + 'static>(_: &mut EventCtx, _: &mut T, _: &Env) {}
 }
 
-impl<T: Data> Widget<T> for Button<T> {
+/// A widget that catches mouse click events
+pub struct Click<T: Data> {
+    child: Box<dyn Widget<T>>,
+    /// A closure that will be invoked when `Click` is clicked.
+    action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
+}
+
+impl<T: Data + 'static> Click<T> {
+    /// Create a new `Click` widget that displays its child.
+    ///
+    /// Action is a closure that will be invoked when `Click` is clicked.
+    ///
+    /// `Click` sets its child's context to `is_active` during a click and
+    /// `is_hot` when hovered.
+    pub fn new(
+        child: impl Widget<T> + 'static,
+        action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
+    ) -> Click<T> {
+        Click {
+            child: Box::new(child),
+            action: Box::new(action),
+        }
+    }
+}
+
+impl<T: Data> Widget<T> for Click<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(_) => {
@@ -127,7 +140,7 @@ impl<T: Data> Widget<T> for Button<T> {
         data: &T,
         env: &Env,
     ) -> Size {
-        bc.debug_check("Button");
+        bc.debug_check("Click");
 
         self.child.layout(layout_ctx, &bc, data, env)
     }
@@ -137,19 +150,19 @@ impl<T: Data> Widget<T> for Button<T> {
     }
 }
 
-struct ButtonBackground<T: Data> {
+struct ButtonDecoration<T: Data> {
     child: Box<dyn Widget<T>>,
 }
 
-impl<T: Data> ButtonBackground<T> {
-    pub fn new(child: impl Widget<T> + 'static) -> ButtonBackground<T> {
+impl<T: Data> ButtonDecoration<T> {
+    pub fn new(child: impl Widget<T> + 'static) -> ButtonDecoration<T> {
         Self {
             child: Box::new(child),
         }
     }
 }
 
-impl<T: Data> Widget<T> for ButtonBackground<T> {
+impl<T: Data> Widget<T> for ButtonDecoration<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.child.event(ctx, event, data, env);
     }
@@ -165,7 +178,7 @@ impl<T: Data> Widget<T> for ButtonBackground<T> {
         data: &T,
         env: &Env,
     ) -> Size {
-        bc.debug_check("ButtonBackground");
+        bc.debug_check("ButtonDecoration");
 
         self.child.layout(layout_ctx, &bc, data, env)
     }
