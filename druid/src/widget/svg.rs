@@ -24,8 +24,8 @@ use log::error;
 use usvg;
 
 use crate::{
-    kurbo::BezPath, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    RenderContext, Size, UpdateCtx, Widget,
+    kurbo::BezPath, Affine, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx,
+    Point, Rect, RenderContext, Size, UpdateCtx, Widget,
 };
 
 /// A widget that renders a SVG
@@ -85,12 +85,19 @@ impl<T: Data> Widget<T> for Svg<T> {
     }
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         //TODO: options for aspect ratio or scaling based on height
-        let scale = paint_ctx.size().width / self.get_size().width;
+        let scalex = paint_ctx.size().width / self.get_size().width;
+        let scaley = paint_ctx.size().height / self.get_size().height;
+        let scale = scalex.min(scaley);
 
         let origin_x = (paint_ctx.size().width - (self.get_size().width * scale)) / 2.0;
         let origin_y = (paint_ctx.size().height - (self.get_size().height * scale)) / 2.0;
         let origin = Point::new(origin_x, origin_y);
 
+        let clip_rect = Rect::ZERO.with_size(paint_ctx.size());
+
+        // The SvgData's to_piet function dose not clip to the svg's size
+        // CairoRenderContext is very like druids but with some extra goodies like clip
+        paint_ctx.clip(clip_rect);
         self.svg_data.to_piet(scale, origin, paint_ctx);
     }
 }
