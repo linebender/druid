@@ -45,7 +45,7 @@ impl<T: Data + PartialEq> RadioGroup<T> {
 }
 
 /// A single radio button
-pub struct Radio<T: Data + PartialEq + 'static> {
+pub struct Radio<T: Data + PartialEq> {
     variant: T,
     child_label: WidgetPod<T, Box<dyn Widget<T>>>,
 }
@@ -61,7 +61,7 @@ impl<T: Data + PartialEq> Radio<T> {
     }
 }
 
-impl<T: Data + PartialEq + 'static> Widget<T> for Radio<T> {
+impl<T: Data + PartialEq> Widget<T> for Radio<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, _env: &Env) {
         match event {
             Event::MouseDown(_) => {

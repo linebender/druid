@@ -26,7 +26,7 @@ struct BorderStyle {
 }
 
 /// A widget that provides simple visual styling options to a child.
-pub struct Container<T: Data + 'static> {
+pub struct Container<T: Data> {
     background: Option<PaintBrush>,
     border: Option<BorderStyle>,
     corner_radius: f64,
@@ -36,7 +36,7 @@ pub struct Container<T: Data + 'static> {
 
 impl<T: Data> Container<T> {
     /// Create Container with a child
-    pub fn new(inner: impl Widget<T> + 'static) -> Self {
+    pub fn new(inner: impl Widget<T>) -> Self {
         Self {
             background: None,
             border: None,

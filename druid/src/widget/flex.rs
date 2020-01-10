@@ -36,12 +36,12 @@ pub struct Row;
 pub struct Column;
 
 /// A container with either horizontal or vertical layout.
-pub struct Flex<T: Data + 'static> {
+pub struct Flex<T: Data> {
     direction: Axis,
     children: Vec<ChildWidget<T>>,
 }
 
-struct ChildWidget<T: Data + 'static> {
+struct ChildWidget<T: Data> {
     widget: WidgetPod<T, Box<dyn Widget<T>>>,
     params: Params,
 }
@@ -123,7 +123,7 @@ impl<T: Data> Flex<T> {
     /// Builder-style variant of `add_child`
     ///
     /// Convenient for assembling a group of widgets in a single expression.
-    pub fn with_child(mut self, child: impl Widget<T> + 'static, flex: f64) -> Self {
+    pub fn with_child(mut self, child: impl Widget<T>, flex: f64) -> Self {
         self.add_child(child, flex);
         self
     }
@@ -139,7 +139,7 @@ impl<T: Data> Flex<T> {
     /// among the flex children.
     ///
     /// See also `with_child`.
-    pub fn add_child(&mut self, child: impl Widget<T> + 'static, flex: f64) {
+    pub fn add_child(&mut self, child: impl Widget<T>, flex: f64) {
         let params = Params { flex };
         let child = ChildWidget {
             widget: WidgetPod::new(child).boxed(),
@@ -149,7 +149,7 @@ impl<T: Data> Flex<T> {
     }
 }
 
-impl<T: Data + 'static> Widget<T> for Flex<T> {
+impl<T: Data> Widget<T> for Flex<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         for child in &mut self.children {
             child.widget.event(ctx, event, data, env);

@@ -121,7 +121,7 @@ impl<T: Data> WindowDesc<T> {
     /// [`Widget`]: trait.Widget.html
     pub fn new<W, F>(root: F) -> WindowDesc<T>
     where
-        W: Widget<T> + 'static,
+        W: Widget<T>,
         F: Fn() -> W + 'static,
     {
         // wrap this closure in another closure that dyns the result

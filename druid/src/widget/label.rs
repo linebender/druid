@@ -108,7 +108,7 @@ impl<T: Data> LabelText<T> {
     }
 }
 
-impl<T: Data + 'static> Widget<T> for Label<T> {
+impl<T: Data> Widget<T> for Label<T> {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {

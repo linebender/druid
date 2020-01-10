@@ -213,8 +213,8 @@ impl<U, L, W> LensWrap<U, L, W> {
 
 impl<T, U, L, W> Widget<T> for LensWrap<U, L, W>
 where
-    T: Data + 'static,
-    U: Data + 'static,
+    T: Data,
+    U: Data,
     L: Lens<T, U> + 'static,
     W: Widget<U>,
 {

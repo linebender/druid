@@ -272,7 +272,7 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     }
 }
 
-impl<T: Data + 'static, W: Widget<T>> Widget<T> for Scroll<T, W> {
+impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let size = ctx.size();
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);

@@ -72,7 +72,7 @@ impl<T: Data> Button<T> {
     pub fn noop(_: &mut EventCtx, _: &mut T, _: &Env) {}
 }
 
-impl<T: Data + 'static> Widget<T> for Button<T> {
+impl<T: Data> Widget<T> for Button<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(_) => {

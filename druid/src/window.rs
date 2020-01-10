@@ -31,7 +31,7 @@ pub struct WindowId(u32);
 static WINDOW_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
 
 /// Per-window state not owned by user code.
-pub struct Window<T: Data + 'static> {
+pub struct Window<T: Data> {
     pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
     pub(crate) title: LocalizedString<T>,
     size: Size,
@@ -40,7 +40,7 @@ pub struct Window<T: Data + 'static> {
     // delegate?
 }
 
-impl<T: Data + 'static> Window<T> {
+impl<T: Data> Window<T> {
     pub fn new(
         root: impl Widget<T>,
         title: LocalizedString<T>,

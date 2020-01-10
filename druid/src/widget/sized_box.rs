@@ -36,7 +36,7 @@ pub struct SizedBox<T: Data> {
 
 impl<T: Data> SizedBox<T> {
     /// Construct container with child, and both width and height not set.
-    pub fn new(inner: impl Widget<T> + 'static) -> Self {
+    pub fn new(inner: impl Widget<T>) -> Self {
         Self {
             inner: Some(Box::new(inner)),
             width: None,
@@ -74,7 +74,7 @@ impl<T: Data> SizedBox<T> {
     }
 }
 
-impl<T: Data + 'static> Widget<T> for SizedBox<T> {
+impl<T: Data> Widget<T> for SizedBox<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.event(ctx, event, data, env);

@@ -57,7 +57,7 @@ impl<T: Data, W: Widget<T>> EnvScope<T, W> {
     }
 }
 
-impl<T: Data + 'static, W: Widget<T>> Widget<T> for EnvScope<T, W> {
+impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);

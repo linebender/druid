@@ -22,7 +22,7 @@ use crate::{
 };
 
 ///A container containing two other widgets, splitting the area either horizontally or vertically.
-pub struct Split<T: Data + 'static> {
+pub struct Split<T: Data> {
     split_direction: Axis,
     draggable: bool,
     split_point: f64,
@@ -31,13 +31,9 @@ pub struct Split<T: Data + 'static> {
     child2: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T: Data + 'static> Split<T> {
+impl<T: Data> Split<T> {
     ///Create a new split panel.
-    fn new(
-        split_direction: Axis,
-        child1: impl Widget<T> + 'static,
-        child2: impl Widget<T> + 'static,
-    ) -> Self {
+    fn new(split_direction: Axis, child1: impl Widget<T>, child2: impl Widget<T>) -> Self {
         Split {
             split_direction,
             split_point: 0.5,
@@ -48,11 +44,11 @@ impl<T: Data + 'static> Split<T> {
         }
     }
     /// Create a new split panel, splitting the vertical dimension between two children.
-    pub fn vertical(child1: impl Widget<T> + 'static, child2: impl Widget<T> + 'static) -> Self {
+    pub fn vertical(child1: impl Widget<T>, child2: impl Widget<T>) -> Self {
         Self::new(Axis::Vertical, child1, child2)
     }
     /// Create a new split panel, splitting the horizontal dimension between two children.
-    pub fn horizontal(child1: impl Widget<T> + 'static, child2: impl Widget<T> + 'static) -> Self {
+    pub fn horizontal(child1: impl Widget<T>, child2: impl Widget<T>) -> Self {
         Self::new(Axis::Horizontal, child1, child2)
     }
     /// Set container's split point as a fraction of the split dimension
@@ -123,7 +119,7 @@ impl<T: Data + 'static> Split<T> {
         }
     }
 }
-impl<T: Data + 'static> Widget<T> for Split<T> {
+impl<T: Data> Widget<T> for Split<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.child1.is_active() {
             self.child1.event(ctx, event, data, env);

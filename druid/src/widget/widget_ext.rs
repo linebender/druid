@@ -21,7 +21,7 @@ use super::{Align, Container, EnvScope, Padding, Parse, SizedBox};
 use crate::{Data, Env, Lens, LensWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
-pub trait WidgetExt<T: Data + 'static>: Widget<T> + Sized + 'static {
+pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     fn boxed(self) -> Box<dyn Widget<T>> {
         Box::new(self)
     }
@@ -142,7 +142,7 @@ pub trait WidgetExt<T: Data + 'static>: Widget<T> + Sized + 'static {
     }
 }
 
-fn try_get_child_impl<T: Data + 'static, C: 'static>(widget: &dyn Widget<T>) -> Option<&C> {
+fn try_get_child_impl<T: Data, C: 'static>(widget: &dyn Widget<T>) -> Option<&C> {
     let child = Widget::child(widget)?;
     match child.as_any().downcast_ref() {
         Some(concrete) => Some(concrete),
@@ -150,7 +150,7 @@ fn try_get_child_impl<T: Data + 'static, C: 'static>(widget: &dyn Widget<T>) -> 
     }
 }
 
-impl<T: Data, W: Widget<T> + 'static> WidgetExt<T> for W {}
+impl<T: Data, W: Widget<T>> WidgetExt<T> for W {}
 
 // these are 'soft overrides' of methods on WidgetExt; resolution
 // will choose an impl on a type over an impl in a trait for methods with the same
