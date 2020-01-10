@@ -307,6 +307,6 @@ impl<T: Data + 'static> Widget<T> for Split<T> {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }

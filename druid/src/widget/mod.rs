@@ -171,6 +171,10 @@ pub trait Widget<T>: 'static {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env);
 
     fn as_any(&self) -> &dyn std::any::Any;
+
+    fn child(&self) -> Option<&dyn Widget<T>> {
+        None
+    }
 }
 
 // TODO: explore getting rid of this (ie be consistent about using
@@ -194,5 +198,9 @@ impl<T: 'static> Widget<T> for Box<dyn Widget<T>> {
 
     fn as_any(&self) -> &dyn Any {
         self.deref().as_any()
+    }
+
+    fn child(&self) -> Option<&dyn Widget<T>> {
+        self.deref().child()
     }
 }

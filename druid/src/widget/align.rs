@@ -130,6 +130,10 @@ impl<T: Data + 'static> Widget<T> for Align<T> {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
+    }
+
+    fn child(&self) -> Option<&dyn Widget<T>> {
+        Some(self.child.widget())
     }
 }

@@ -98,6 +98,6 @@ impl<T: Data + 'static> Widget<T> for Either<T> {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }

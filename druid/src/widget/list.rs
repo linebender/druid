@@ -199,6 +199,6 @@ impl<C: Data + 'static, T: ListIter<C>> Widget<T> for List<C> {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }

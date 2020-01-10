@@ -148,6 +148,6 @@ impl<T: Data + PartialEq + 'static> Widget<T> for Radio<T> {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }

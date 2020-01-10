@@ -110,6 +110,6 @@ impl Widget<f64> for ProgressBar {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }

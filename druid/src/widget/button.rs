@@ -144,6 +144,6 @@ impl<T: Data + 'static> Widget<T> for Button<T> {
         self.label.paint(paint_ctx, data, env);
     }
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }

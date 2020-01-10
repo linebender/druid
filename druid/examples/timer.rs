@@ -67,7 +67,7 @@ impl Widget<u32> for TimerWidget {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }
 

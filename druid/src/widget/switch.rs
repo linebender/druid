@@ -276,6 +276,6 @@ impl Widget<bool> for Switch {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }

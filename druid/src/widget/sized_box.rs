@@ -126,6 +126,13 @@ impl<T: Data + 'static> Widget<T> for SizedBox<T> {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
+    }
+
+    fn child(&self) -> Option<&dyn Widget<T>> {
+        match self.inner.as_ref() {
+            Some(inner) => Some(inner),
+            None => None,
+        }
     }
 }

@@ -20,7 +20,7 @@ impl<T> Parse<T> {
     }
 }
 
-impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse<W> {
+impl<T: FromStr + Display + Data + 'static, W: Widget<String>> Widget<Option<T>> for Parse<W> {
     fn update(
         &mut self,
         ctx: &mut UpdateCtx,
@@ -56,6 +56,6 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }

@@ -254,6 +254,6 @@ impl<T: Data + 'static> Widget<T> for Flex<T> {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }

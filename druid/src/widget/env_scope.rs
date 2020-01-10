@@ -95,6 +95,10 @@ impl<T: Data + 'static, W: Widget<T>> Widget<T> for EnvScope<T, W> {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
+    }
+
+    fn child(&self) -> Option<&dyn Widget<T>> {
+        Some(&self.child)
     }
 }

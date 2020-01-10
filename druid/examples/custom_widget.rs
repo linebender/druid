@@ -24,6 +24,12 @@ use druid::{
 
 struct CustomWidget;
 
+impl CustomWidget {
+    fn say_something(&self) -> &str {
+        "say something, say anything..."
+    }
+}
+
 impl Widget<String> for CustomWidget {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut String, _env: &Env) {}
 
@@ -115,11 +121,12 @@ impl Widget<String> for CustomWidget {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }
 
 fn main() {
+    demo_as_any_hack();
     let window = WindowDesc::new(|| CustomWidget {});
     AppLauncher::with_window(window)
         .use_simple_logger()
@@ -139,4 +146,29 @@ fn make_image_data(width: usize, height: usize) -> Vec<u8> {
         }
     }
     result
+}
+
+use druid::widget::WidgetExt;
+
+/// Demonstrate retreiving an inner widget through multiple layers of type erasure.
+fn demo_as_any_hack() {
+    let nested = make_nested_widget();
+    assert!(nested.child().is_some(), "MISSING CHILD!?");
+    if let Some(inner) = nested.try_get_child::<CustomWidget>() {
+        eprintln!("{}", inner.say_something());
+    } else {
+        panic!("I can't say anything :(");
+    }
+}
+
+fn make_nested_widget() -> impl Widget<String> {
+    CustomWidget {}
+        .padding(5.0)
+        .fix_width(100.0)
+        .env_scope(|_, _| {})
+        .align_left()
+        .background(Color::rgba8(0, 50, 20, 100))
+        .padding((5.0, 15.0))
+        .fix_height(100.0)
+        .fix_width(200.0)
 }

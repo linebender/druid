@@ -21,7 +21,7 @@ use super::{Align, Container, EnvScope, Padding, Parse, SizedBox};
 use crate::{Data, Env, Lens, LensWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
-pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
+pub trait WidgetExt<T: Data + 'static>: Widget<T> + Sized + 'static {
     fn boxed(self) -> Box<dyn Widget<T>> {
         Box::new(self)
     }
@@ -134,6 +134,19 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         Self: Widget<String>,
     {
         Parse::new(self)
+    }
+
+    /// recursively look for a child of a given type.
+    fn try_get_child<C: 'static>(&self) -> Option<&C> {
+        try_get_child_impl(self)
+    }
+}
+
+fn try_get_child_impl<T: Data + 'static, C: 'static>(widget: &dyn Widget<T>) -> Option<&C> {
+    let child = Widget::child(widget)?;
+    match child.as_any().downcast_ref() {
+        Some(concrete) => Some(concrete),
+        None => try_get_child_impl(child),
     }
 }
 

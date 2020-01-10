@@ -152,7 +152,7 @@ impl<T: Data + 'static> Widget<T> for Label<T> {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }
 

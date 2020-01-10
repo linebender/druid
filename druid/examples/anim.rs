@@ -65,7 +65,7 @@ impl Widget<u32> for AnimWidget {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
     }
 }
 

@@ -115,6 +115,10 @@ impl<T: Data> Widget<T> for Container<T> {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        *&self
+        self
+    }
+
+    fn child(&self) -> Option<&dyn Widget<T>> {
+        Some(self.inner.widget())
     }
 }
