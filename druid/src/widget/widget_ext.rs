@@ -133,12 +133,12 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     }
 }
 
-impl<T: Data + 'static, W: Widget<T> + 'static> WidgetExt<T> for W {}
+impl<T: Data, W: Widget<T> + 'static> WidgetExt<T> for W {}
 
 // these are 'soft overrides' of methods on WidgetExt; resolution
 // will choose an impl on a type over an impl in a trait for methods with the same
 // name.
-impl<T: Data + 'static> Container<T> {
+impl<T: Data> Container<T> {
     pub fn with_background(self, brush: impl Into<PaintBrush>) -> Container<T> {
         self.background(brush)
     }
@@ -148,7 +148,7 @@ impl<T: Data + 'static> Container<T> {
     }
 }
 
-impl<T: Data + 'static> SizedBox<T> {
+impl<T: Data> SizedBox<T> {
     pub fn fixed_width(self, width: f64) -> SizedBox<T> {
         self.width(width)
     }

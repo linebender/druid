@@ -53,7 +53,7 @@ pub struct WindowDesc<T> {
     pub id: WindowId,
 }
 
-impl<T: Data + 'static> AppLauncher<T> {
+impl<T: Data> AppLauncher<T> {
     /// Create a new `AppLauncher` with the provided window.
     pub fn with_window(window: WindowDesc<T>) -> Self {
         AppLauncher {
@@ -112,7 +112,7 @@ impl<T: Data + 'static> AppLauncher<T> {
     }
 }
 
-impl<T: Data + 'static> WindowDesc<T> {
+impl<T: Data> WindowDesc<T> {
     /// Create a new `WindowDesc`, taking a funciton that will generate the root
     /// [`Widget`] for this window.
     ///

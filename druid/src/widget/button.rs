@@ -29,7 +29,7 @@ pub struct Button<T> {
     action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
 }
 
-impl<T: Data + 'static> Button<T> {
+impl<T: Data> Button<T> {
     /// Create a new button. The closure provided will be called when the button
     /// is clicked.
     pub fn new(
