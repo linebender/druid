@@ -26,11 +26,11 @@ use crate::{
 
 /// A group of radio buttons
 #[derive(Debug, Clone)]
-pub struct RadioGroup<T: Data + PartialEq + 'static> {
+pub struct RadioGroup<T: Data + PartialEq> {
     phantom: PhantomData<T>,
 }
 
-impl<T: Data + PartialEq + 'static> RadioGroup<T> {
+impl<T: Data + PartialEq> RadioGroup<T> {
     /// Given a vector of `(label_text, enum_variant)` tuples, create a group of Radio buttons
     pub fn new(
         variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T)>,
@@ -50,7 +50,7 @@ pub struct Radio<T: Data + PartialEq> {
     child_label: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T: Data + PartialEq + 'static> Radio<T> {
+impl<T: Data + PartialEq> Radio<T> {
     /// Create a lone Radio button from label text and an enum variant
     pub fn new(label: impl Into<LabelText<T>>, variant: T) -> impl Widget<T> {
         let radio = Self {

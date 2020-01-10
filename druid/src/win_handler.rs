@@ -132,7 +132,7 @@ impl<T: Data> Windows<T> {
     }
 }
 
-impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
+impl<'a, T: Data> SingleWindowState<'a, T> {
     fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
         let request_anim = self.do_anim_frame(ctx);
         self.do_layout(piet);
@@ -287,7 +287,7 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
     }
 }
 
-impl<T: Data + 'static> AppState<T> {
+impl<T: Data> AppState<T> {
     pub(crate) fn new(
         data: T,
         env: Env,
@@ -462,7 +462,7 @@ impl<T: Data + 'static> AppState<T> {
     }
 }
 
-impl<T: Data + 'static> DruidHandler<T> {
+impl<T: Data> DruidHandler<T> {
     /// Note: the root widget doesn't go in here, because it gets added to the
     /// app state.
     pub(crate) fn new_shared(
@@ -618,7 +618,7 @@ impl<T: Data + 'static> DruidHandler<T> {
     }
 }
 
-impl<T: Data + 'static> WinHandler for DruidHandler<T> {
+impl<T: Data> WinHandler for DruidHandler<T> {
     fn connect(&mut self, handle: &WindowHandle) {
         //NOTE: this method predates `connected`, and we call delegate methods here.
         //it's possible that we should move those calls to occur in connected?

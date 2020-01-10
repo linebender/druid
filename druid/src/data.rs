@@ -89,7 +89,7 @@ pub use druid_derive::Data;
 /// checks for equality. Therefore, such types must also implement `PartialEq`.
 ///
 /// [`Data::same`]: trait.Data.html#tymethod.same
-pub trait Data: Clone {
+pub trait Data: Clone + 'static {
     /// Determine whether two values are the same.
     ///
     /// This is intended to always be a fast operation. If it returns
@@ -143,13 +143,13 @@ impl Data for f64 {
     }
 }
 
-impl<T: ?Sized> Data for Arc<T> {
+impl<T: ?Sized + 'static> Data for Arc<T> {
     fn same(&self, other: &Self) -> bool {
         Arc::ptr_eq(self, other)
     }
 }
 
-impl<T: ?Sized> Data for Rc<T> {
+impl<T: ?Sized + 'static> Data for Rc<T> {
     fn same(&self, other: &Self) -> bool {
         Rc::ptr_eq(self, other)
     }
@@ -162,12 +162,6 @@ impl<T: Data> Data for Option<T> {
             (None, None) => true,
             _ => false,
         }
-    }
-}
-
-impl<T: Data> Data for &T {
-    fn same(&self, other: &Self) -> bool {
-        Data::same(*self, *other)
     }
 }
 
