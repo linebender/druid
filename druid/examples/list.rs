@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use druid::lens::{self, LensExt};
 use druid::widget::{Button, Flex, Label, List, Scroll, WidgetExt};
-use druid::{AppLauncher, Color, Data, Lens, Widget, WindowDesc};
+use druid::{AppLauncher, Color, Data, Lens, UnitPoint, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct AppData {
@@ -92,7 +92,8 @@ fn ui_builder() -> impl Widget<AppData> {
                             Arc::make_mut(shared).retain(|v| v != item);
                         },
                     )
-                    .sized(80.0, 20.0),
+                    .fix_size(80.0, 20.0)
+                    .align_vertical(UnitPoint::CENTER),
                     0.0,
                 )
                 .padding(10.0)

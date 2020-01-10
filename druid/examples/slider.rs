@@ -15,7 +15,7 @@
 use druid::widget::{
     Align, Button, Checkbox, Flex, Label, Padding, ProgressBar, Slider, WidgetExt,
 };
-use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
+use druid::{AppLauncher, Data, Lens, LensWrap, UnitPoint, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct DemoState {
@@ -43,7 +43,9 @@ fn build_widget() -> impl Widget<DemoState> {
     let button_1 = Button::new("increment ", |_ctx, data: &mut DemoState, _env| {
         data.value += 0.1
     })
-    .sized(200.0, 100.0);
+    .fix_size(200.0, 100.0)
+    .align_vertical(UnitPoint::CENTER);
+
     let button_2 = Button::new("decrement ", |_ctx, data: &mut DemoState, _env| {
         data.value -= 0.1
     });
