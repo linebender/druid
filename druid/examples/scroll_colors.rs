@@ -14,7 +14,7 @@
 
 //! This example allows to play with scroll bars over different color tones.
 
-use druid::widget::{Container, Flex, Scroll, SizedBox};
+use druid::widget::{Flex, Panel, Scroll, SizedBox};
 use druid::{AppLauncher, Color, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
@@ -30,7 +30,7 @@ fn build_app() -> impl Widget<u32> {
             let row_progress = j as f64 / rows as f64;
 
             row.add_child(
-                Container::new(SizedBox::empty().width(50.0).height(50.0)).background(Color::rgb(
+                Panel::new(SizedBox::empty().width(50.0).height(50.0)).background(Color::rgb(
                     1.0 * col_progress,
                     1.0 * row_progress,
                     1.0,

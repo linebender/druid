@@ -17,7 +17,7 @@
 use crate::kurbo::Insets;
 use crate::piet::{PaintBrush, UnitPoint};
 
-use super::{Align, Container, EnvScope, Padding, Parse, SizedBox};
+use super::{Align, EnvScope, Padding, Panel, Parse, SizedBox};
 use crate::{Data, Env, Lens, LensWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
@@ -86,31 +86,31 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         SizedBox::new(self).expand()
     }
 
-    /// Wrap this widget in a [`Container`] using the provided [`PaintBrush`]
+    /// Wrap this widget in a [`Panel`] using the provided [`PaintBrush`]
     /// as the background.
     ///
     /// The `PaintBrush` argument can be any color or gradient.
     ///
-    /// [`Container`]: struct.Container.html
+    /// [`Panel`]: struct.Panel.html
     /// [`PaintBrush`]: https://docs.rs/piet/0.0.7/piet/enum.PaintBrush.html
-    fn background(self, brush: impl Into<PaintBrush>) -> Container<T> {
-        Container::new(self).background(brush)
+    fn background(self, brush: impl Into<PaintBrush>) -> Panel<T> {
+        Panel::new(self).background(brush)
     }
 
-    /// Wrap this widget in a [`Container`] with the given border.
+    /// Wrap this widget in a [`Panel`] with the given border.
     ///
     /// The `PaintBrush` argument can be any color or gradient.
     ///
-    /// [`Container`]: struct.Container.html
+    /// [`Panel`]: struct.Panel.html
     /// [`PaintBrush`]: https://docs.rs/piet/0.0.7/piet/enum.PaintBrush.html
-    fn border(self, brush: impl Into<PaintBrush>, width: f64) -> Container<T> {
-        Container::new(self).border(brush, width)
+    fn border(self, brush: impl Into<PaintBrush>, width: f64) -> Panel<T> {
+        Panel::new(self).border(brush, width)
     }
 
     /// Wrap this widget in a [`EnvScope`] widget, modifying the parent
     /// [`Env`] with the provided closure.
     ///
-    /// [`EnvScope`]: struct.Container.html
+    /// [`EnvScope`]: struct.Panel.html
     /// [`Env`]: struct.Env.html
     fn env_scope(self, f: impl Fn(&mut Env, &T) + 'static) -> EnvScope<T, Self> {
         EnvScope::new(f, self)
@@ -138,12 +138,12 @@ impl<T: Data, W: Widget<T> + 'static> WidgetExt<T> for W {}
 // these are 'soft overrides' of methods on WidgetExt; resolution
 // will choose an impl on a type over an impl in a trait for methods with the same
 // name.
-impl<T: Data> Container<T> {
-    pub fn with_background(self, brush: impl Into<PaintBrush>) -> Container<T> {
+impl<T: Data> Panel<T> {
+    pub fn with_background(self, brush: impl Into<PaintBrush>) -> Panel<T> {
         self.background(brush)
     }
 
-    pub fn bordered(self, brush: impl Into<PaintBrush>, width: f64) -> Container<T> {
+    pub fn bordered(self, brush: impl Into<PaintBrush>, width: f64) -> Panel<T> {
         self.border(brush, width)
     }
 }

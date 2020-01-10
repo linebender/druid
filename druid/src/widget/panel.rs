@@ -26,7 +26,7 @@ struct BorderStyle {
 }
 
 /// A widget that provides simple visual styling options to a child.
-pub struct Container<T: Data> {
+pub struct Panel<T: Data> {
     background: Option<PaintBrush>,
     border: Option<BorderStyle>,
     corner_radius: f64,
@@ -34,8 +34,8 @@ pub struct Container<T: Data> {
     inner: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T: Data> Container<T> {
-    /// Create Container with a child
+impl<T: Data> Panel<T> {
+    /// Create Panel with a child
     pub fn new(inner: impl Widget<T> + 'static) -> Self {
         Self {
             background: None,
@@ -60,14 +60,14 @@ impl<T: Data> Container<T> {
         self
     }
 
-    /// Round off corners of this container by setting a corner radius
+    /// Round off corners of this Panel by setting a corner radius
     pub fn rounded(mut self, radius: f64) -> Self {
         self.corner_radius = radius;
         self
     }
 }
 
-impl<T: Data> Widget<T> for Container<T> {
+impl<T: Data> Widget<T> for Panel<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.inner.event(ctx, event, data, env);
     }
@@ -77,7 +77,7 @@ impl<T: Data> Widget<T> for Container<T> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        bc.debug_check("Container");
+        bc.debug_check("Panel");
 
         // Shrink constraints by border offset
         let border_width = match self.border {

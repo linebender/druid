@@ -15,13 +15,13 @@
 //! This example demonstrates the `Split` widget
 
 use druid::piet::Color;
-use druid::widget::{Align, Container, Label, Padding, Split};
+use druid::widget::{Align, Label, Padding, Panel, Split};
 use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     let fixed_horizontal = Padding::new(
         10.0,
-        Container::new(
+        Panel::new(
             Split::horizontal(
                 Align::centered(Label::new("Left Split")),
                 Align::centered(Label::new("Right Split")),
@@ -32,7 +32,7 @@ fn build_app() -> impl Widget<u32> {
     );
     let fixed_vertical = Padding::new(
         10.0,
-        Container::new(
+        Panel::new(
             Split::vertical(
                 Align::centered(Label::new("Top Split")),
                 Align::centered(Label::new("Bottom Split")),
@@ -44,7 +44,7 @@ fn build_app() -> impl Widget<u32> {
     );
     let draggable_horizontal = Padding::new(
         10.0,
-        Container::new(
+        Panel::new(
             Split::horizontal(
                 Align::centered(Label::new("Split A")),
                 Split::horizontal(
@@ -60,7 +60,7 @@ fn build_app() -> impl Widget<u32> {
     );
     let draggable_vertical = Padding::new(
         10.0,
-        Container::new(
+        Panel::new(
             Split::vertical(
                 Split::vertical(fixed_horizontal, fixed_vertical)
                     .split_point(0.33)
