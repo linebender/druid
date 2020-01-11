@@ -262,6 +262,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             command_queue: ctx.command_queue,
             window: &ctx.window,
             window_id: ctx.window_id,
+            widget_id: self.id(),
             base_state: &mut self.state,
             had_active,
             is_handled: false,
@@ -564,6 +565,7 @@ pub struct EventCtx<'a, 'b> {
     pub(crate) had_active: bool,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
+    pub(crate) widget_id: WidgetId,
 }
 
 /// A mutable context provided to data update methods of widgets.
@@ -581,6 +583,7 @@ pub struct UpdateCtx<'a, 'b: 'a> {
     // now keep it super-simple.
     pub(crate) needs_inval: bool,
     pub(crate) window_id: WindowId,
+    pub(crate) widget_id: WidgetId,
 }
 
 impl<'a, 'b> EventCtx<'a, 'b> {
@@ -757,6 +760,11 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     pub fn window_id(&self) -> WindowId {
         self.window_id
     }
+
+    /// get the `WidgetId` of the current widget.
+    pub fn widget_id(&self) -> WidgetId {
+        self.widget_id
+    }
 }
 
 impl<'a, 'b> LayoutCtx<'a, 'b> {
@@ -797,5 +805,10 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     /// Get the window id.
     pub fn window_id(&self) -> WindowId {
         self.window_id
+    }
+
+    /// get the `WidgetId` of the current widget.
+    pub fn widget_id(&self) -> WidgetId {
+        self.widget_id
     }
 }
