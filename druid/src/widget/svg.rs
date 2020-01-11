@@ -132,7 +132,7 @@ impl SvgData {
     /// Convert SvgData into Piet draw instructions
     pub fn to_piet(&self, scale: f64, offset: Point, paint_ctx: &mut PaintCtx) {
         let root = self.tree.root();
-
+        let offset_matrix = Affine::new([scale, 0., 0., scale, offset.x, offset.y]);
         for n in root.children() {
             match *n.borrow() {
                 usvg::NodeKind::Path(ref p) => {
@@ -140,13 +140,9 @@ impl SvgData {
                     for segment in p.data.iter() {
                         match *segment {
                             usvg::PathSegment::MoveTo { x, y } => {
-                                let x = (x * scale) + offset.x;
-                                let y = (y * scale) + offset.y;
                                 path.move_to((x, y));
                             }
                             usvg::PathSegment::LineTo { x, y } => {
-                                let x = (x * scale) + offset.x;
-                                let y = (y * scale) + offset.y;
                                 path.line_to((x, y));
                             }
                             usvg::PathSegment::CurveTo {
@@ -157,13 +153,6 @@ impl SvgData {
                                 x,
                                 y,
                             } => {
-                                let x1 = (x1 * scale) + offset.x;
-                                let y1 = (y1 * scale) + offset.y;
-                                let x2 = (x2 * scale) + offset.x;
-                                let y2 = (y2 * scale) + offset.y;
-                                let x = (x * scale) + offset.x;
-                                let y = (y * scale) + offset.y;
-
                                 path.curve_to((x1, y1), (x2, y2), (x, y));
                             }
                             usvg::PathSegment::ClosePath => {
@@ -171,6 +160,17 @@ impl SvgData {
                             }
                         }
                     }
+
+                    path.apply_affine(Affine::new([
+                        p.transform.a,
+                        p.transform.b,
+                        p.transform.c,
+                        p.transform.d,
+                        p.transform.e,
+                        p.transform.f,
+                    ]));
+                    path.apply_affine(offset_matrix);
+
                     match &p.fill {
                         Some(fill) => {
                             let brush = color_from_usvg(&fill.paint, fill.opacity);
