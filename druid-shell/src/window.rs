@@ -14,15 +14,21 @@
 
 //! Platform independent window types.
 
-use std::any::Any;
-use std::ops::Deref;
+#![allow(deprecated)] // for the three items that have moved
 
-pub use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::kurbo::{Point, Vec2};
-use crate::platform;
+use std::any::Any;
+
+use crate::dialog::{FileDialogOptions, FileInfo};
+use crate::error::Error;
+use crate::keyboard::{KeyEvent, KeyModifiers};
+use crate::kurbo::{Point, Size, Vec2};
+use crate::menu::Menu;
+use crate::mouse::{Cursor, MouseEvent};
+use crate::platform::window as platform;
 
 // It's possible we'll want to make this type alias at a lower level,
 // see https://github.com/linebender/piet/pull/37 for more discussion.
+/// The platform text factory, reexported from piet.
 pub type Text<'a> = <piet_common::Piet<'a> as piet_common::RenderContext>::Text;
 
 /// A token that uniquely identifies a running timer.
@@ -43,17 +49,122 @@ impl TimerToken {
     }
 }
 
-// Handle to Window Level Utilities
-#[derive(Clone, Default)]
-pub struct WindowHandle {
-    pub inner: platform::WindowHandle,
+//NOTE: this has a From<platform::Handle> impl for construction
+/// A handle that can enqueue tasks on the window loop.
+#[derive(Clone)]
+pub struct IdleHandle(platform::IdleHandle);
+
+impl IdleHandle {
+    /// Add an idle handler, which is called (once) when the message loop
+    /// is empty. The idle handler will be run from the main UI thread, and
+    /// won't be scheduled if the associated view has been dropped.
+    ///
+    /// Note: the name "idle" suggests that it will be scheduled with a lower
+    /// priority than other UI events, but that's not necessarily the case.
+    pub fn add_idle<F>(&self, callback: F)
+    where
+        F: FnOnce(&dyn Any) + Send + 'static,
+    {
+        self.0.add_idle(callback)
+    }
 }
 
-impl Deref for WindowHandle {
-    type Target = platform::WindowHandle;
+/// A handle to a platform window object.
+#[derive(Clone, Default)]
+pub struct WindowHandle(platform::WindowHandle);
 
-    fn deref(&self) -> &Self::Target {
-        &self.inner
+impl WindowHandle {
+    /// Make this window visible.
+    ///
+    /// This is part of the initialization process; it should only be called
+    /// once, when a window is first created.
+    pub fn show(&self) {
+        self.0.show()
+    }
+
+    /// Close the window.
+    pub fn close(&self) {
+        self.0.close()
+    }
+
+    /// Bring this window to the front of the window stack and give it focus.
+    pub fn bring_to_front_and_focus(&self) {
+        self.0.bring_to_front_and_focus()
+    }
+
+    /// Request invalidation of the entire window contents.
+    pub fn invalidate(&self) {
+        self.0.invalidate()
+    }
+
+    /// Set the title for this menu.
+    pub fn set_title(&self, title: &str) {
+        self.0.set_title(title)
+    }
+
+    /// Set the top-level menu for this window.
+    pub fn set_menu(&self, menu: Menu) {
+        self.0.set_menu(menu.into_inner())
+    }
+
+    /// Display a pop-up menu at the given position.
+    ///
+    /// `Point` is in the coordinate space of the window.
+    pub fn show_context_menu(&self, menu: Menu, pos: Point) {
+        self.0.show_context_menu(menu.into_inner(), pos)
+    }
+
+    /// Get a handle that can be used to schedule an idle task.
+    pub fn get_idle_handle(&self) -> Option<IdleHandle> {
+        self.0.get_idle_handle().map(IdleHandle)
+    }
+
+    /// Get the dpi of the window.
+    ///
+    /// TODO: we want to migrate this from dpi (with 96 as nominal) to a scale
+    /// factor (with 1 as nominal).
+    pub fn get_dpi(&self) -> f32 {
+        self.0.get_dpi()
+    }
+}
+
+/// A builder type for creating new windows.
+pub struct WindowBuilder(platform::WindowBuilder);
+
+impl WindowBuilder {
+    /// Create a new `WindowBuilder`
+    pub fn new() -> WindowBuilder {
+        WindowBuilder(platform::WindowBuilder::new())
+    }
+
+    /// Set the [`WinHandler`]. This is the object that will receive
+    /// callbacks from this window.
+    ///
+    /// [`WinHandler`]: trait.WinHandler.html
+    pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
+        self.0.set_handler(handler)
+    }
+
+    /// Set the window's initial size.
+    pub fn set_size(&mut self, size: Size) {
+        self.0.set_size(size)
+    }
+
+    /// Set the window's initial title.
+    pub fn set_title(&mut self, title: impl Into<String>) {
+        self.0.set_title(title)
+    }
+
+    /// Set the window's menu.
+    pub fn set_menu(&mut self, menu: Menu) {
+        self.0.set_menu(menu.into_inner())
+    }
+
+    /// Attempt to construct the platform window.
+    ///
+    /// If this fails, your application should exit.
+    pub fn build(self) -> Result<WindowHandle, Error> {
+        self.0.build().map(WindowHandle).map_err(Into::into)
     }
 }
 
@@ -83,6 +194,16 @@ pub trait WinCtx<'a> {
     ///
     /// [`WinHandler::timer()`]: trait.WinHandler.html#tymethod.timer
     fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken;
+
+    /// Prompt the user to chose a file to open.
+    ///
+    /// Blocks while the user picks the file.
+    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo>;
+
+    /// Prompt the user to chose a path for saving.
+    ///
+    /// Blocks while the user picks a file.
+    fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo>;
 }
 
 /// App behavior, supplied by the app.
@@ -94,7 +215,16 @@ pub trait WinCtx<'a> {
 pub trait WinHandler {
     /// Provide the handler with a handle to the window so that it can
     /// invalidate or make other requests.
+    ///
+    /// This method passes the `WindowHandle` directly, because the handler may
+    /// wish to stash it.
     fn connect(&mut self, handle: &WindowHandle);
+
+    /// Called immediately after `connect`.
+    ///
+    /// The handler can implement this method to perform initial setup.
+    #[allow(unused_variables)]
+    fn connected(&mut self, ctx: &mut dyn WinCtx) {}
 
     /// Called when the size of the window is changed. Note that size
     /// is in physical pixels.
@@ -142,6 +272,11 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, ctx: &mut dyn WinCtx) {}
 
+    /// Called when a platform-defined zoom gesture occurs (such as pinching
+    /// on the trackpad).
+    #[allow(unused_variables)]
+    fn zoom(&mut self, delta: f64, ctx: &mut dyn WinCtx) {}
+
     /// Called when the mouse moves.
     #[allow(unused_variables)]
     fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {}
@@ -178,51 +313,8 @@ pub trait WinHandler {
     fn as_any(&mut self) -> &mut dyn Any;
 }
 
-/// The state of the mouse for a click, mouse-up, or move event.
-#[derive(Debug, Clone, PartialEq)]
-pub struct MouseEvent {
-    /// The location of the mouse in the current window.
-    ///
-    /// This is in px units, that is, adjusted for hi-dpi.
-    pub pos: Point,
-    /// Keyboard modifiers at the time of the mouse event.
-    pub mods: KeyModifiers,
-    /// The number of mouse clicks associated with this event. This will always
-    /// be `0` for a mouse-up event.
-    pub count: u32,
-    /// The currently pressed button in the case of a move or click event,
-    /// or the released button in the case of a mouse-up event.
-    pub button: MouseButton,
-}
-
-/// An indicator of which mouse button was pressed.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum MouseButton {
-    /// Left mouse button.
-    Left,
-    /// Middle mouse button.
-    Middle,
-    /// Right mouse button.
-    Right,
-    /// First X button.
-    X1,
-    /// Second X button.
-    X2,
-}
-
-//NOTE: this currently only contains cursors that are included by default on
-//both Windows and macOS. We may want to provide polyfills for various additional cursors,
-//and we will also want to add some mechanism for adding custom cursors.
-/// Mouse cursors.
-#[derive(Clone)]
-pub enum Cursor {
-    /// The default arrow cursor.
-    Arrow,
-    /// A vertical I-beam, for indicating insertion points in text.
-    IBeam,
-    Crosshair,
-    OpenHand,
-    NotAllowed,
-    ResizeLeftRight,
-    ResizeUpDown,
+impl From<platform::WindowHandle> for WindowHandle {
+    fn from(src: platform::WindowHandle) -> WindowHandle {
+        WindowHandle(src)
+    }
 }

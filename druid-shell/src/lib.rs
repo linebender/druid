@@ -13,6 +13,13 @@
 // limitations under the License.
 
 //! Platform abstraction for druid toolkit.
+//!
+//! `druid-shell` is an abstraction around a given platform UI & application
+//! framework. It provides common types, which then defer to a platform-defined
+//! implementation.
+
+#![deny(intra_doc_link_resolution_failure)]
+#![allow(clippy::new_without_default)]
 
 pub use piet_common as piet;
 pub use piet_common::kurbo;
@@ -21,37 +28,38 @@ pub use piet_common::kurbo;
 #[macro_use]
 extern crate winapi;
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
 #[macro_use]
 extern crate objc;
 
+#[cfg(not(any(feature = "use_gtk", target_os = "linux")))]
 #[macro_use]
 extern crate lazy_static;
 
-pub mod error;
-pub mod hotkey;
-pub mod keyboard;
-pub mod keycodes;
-pub mod window;
+mod application;
+mod clipboard;
+mod common_util;
+mod dialog;
+mod error;
+mod hotkey;
+mod keyboard;
+mod keycodes;
+mod menu;
+mod mouse;
+//TODO: don't expose this directly? currently making this private causes
+//a bunch of compiler warnings, so let's revisit that later.
+pub mod platform;
+mod runloop;
+mod window;
 
-#[cfg(target_os = "windows")]
-pub mod windows;
-#[cfg(target_os = "windows")]
-pub use windows as platform;
-#[cfg(target_os = "windows")]
-pub use windows::paint;
-
-#[cfg(target_os = "macos")]
-pub mod mac;
-#[cfg(target_os = "macos")]
-pub use mac as platform;
-
+pub use application::Application;
+pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
+pub use dialog::{FileDialogOptions, FileInfo, FileSpec};
 pub use error::Error;
-
-pub use platform::application;
-pub use platform::dialog;
-pub use platform::menu;
-pub use platform::util;
-pub use platform::win_main as runloop; // TODO: rename to "runloop"
-pub use platform::WindowBuilder;
-pub use util::{get_locale, init};
+pub use hotkey::{HotKey, KeyCompare, RawMods, SysMods};
+pub use keyboard::{KeyEvent, KeyModifiers};
+pub use keycodes::KeyCode;
+pub use menu::Menu;
+pub use mouse::{Cursor, MouseButton, MouseEvent};
+pub use runloop::RunLoop;
+pub use window::{Text, TimerToken, WinCtx, WinHandler, WindowBuilder, WindowHandle};

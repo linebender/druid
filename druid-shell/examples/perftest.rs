@@ -19,13 +19,9 @@ use time::get_time;
 use piet_common::kurbo::{Line, Rect};
 use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
-#[cfg(target_os = "windows")]
-use druid_shell::platform::PresentStrategy;
-
-use druid_shell::keyboard::KeyEvent;
-use druid_shell::platform::WindowBuilder;
-use druid_shell::runloop;
-use druid_shell::window::{WinCtx, WinHandler, WindowHandle};
+use druid_shell::{
+    Application, KeyEvent, RunLoop, WinCtx, WinHandler, WindowBuilder, WindowHandle,
+};
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
@@ -60,7 +56,6 @@ impl WinHandler for PerfTest {
         let font = piet
             .text()
             .new_font_by_name("Consolas", 15.0)
-            .unwrap()
             .build()
             .unwrap();
 
@@ -68,21 +63,11 @@ impl WinHandler for PerfTest {
         let now = now.sec as f64 + 1e-9 * now.nsec as f64;
         let msg = format!("{:3.1}ms", 1e3 * (now - self.last_time));
         self.last_time = now;
-        let layout = piet
-            .text()
-            .new_text_layout(&font, &msg)
-            .unwrap()
-            .build()
-            .unwrap();
+        let layout = piet.text().new_text_layout(&font, &msg).build().unwrap();
         piet.draw_text(&layout, (10.0, 210.0), &FG_COLOR);
 
         let msg = "Hello DWrite! This is a somewhat longer string of text intended to provoke slightly longer draw times.";
-        let layout = piet
-            .text()
-            .new_text_layout(&font, &msg)
-            .unwrap()
-            .build()
-            .unwrap();
+        let layout = piet.text().new_text_layout(&font, &msg).build().unwrap();
         let dy = 15.0;
         let x0 = 210.0;
         let y0 = 10.0;
@@ -115,7 +100,7 @@ impl WinHandler for PerfTest {
     }
 
     fn destroy(&mut self, _ctx: &mut dyn WinCtx) {
-        runloop::request_quit();
+        Application::quit()
     }
 
     fn as_any(&mut self) -> &mut dyn Any {
@@ -124,9 +109,9 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
-    druid_shell::init();
+    Application::init();
 
-    let mut run_loop = runloop::RunLoop::new();
+    let mut run_loop = RunLoop::new();
     let mut builder = WindowBuilder::new();
     let perf_test = PerfTest {
         size: Default::default(),
@@ -135,10 +120,6 @@ fn main() {
     };
     builder.set_handler(Box::new(perf_test));
     builder.set_title("Performance tester");
-
-    // Note: experiment with changing this
-    #[cfg(target_os = "windows")]
-    builder.set_present_strategy(PresentStrategy::FlipRedirect);
 
     let window = builder.build().unwrap();
     window.show();

@@ -1,22 +1,36 @@
 [package]
 name = "druid-shell"
-version = "0.3.0"
+version = "0.4.0"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Platform abstracting application shell used for druid toolkit."
 repository = "https://github.com/xi-editor/druid"
+readme = "README.md"
 categories = ["os::macos-apis", "os::windows-apis", "gui"]
 edition = "2018"
+
+[features]
+use_gtk = ["gtk", "gtk-sys", "gio", "gdk", "gdk-sys", "glib", "glib-sys", "cairo-rs"]
 
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
-piet-common = "0.0.6"
+piet-common = "0.0.7"
 log = "0.4.8"
-
 lazy_static = "1.0"
 time = "0.1.39"
+cfg-if = "0.1.10"
+
+cairo-rs = {  version = "0.7.1", default_features = false, optional = true }
+gio = { version = "0.7.0", optional = true }
+gdk = { version = "0.11.0", optional = true }
+gdk-sys = { version = "0.9.0", optional = true }
+gtk = { version = "0.7.0", optional = true }
+glib = { version = "0.8.1", optional = true }
+glib-sys = { version = "0.9.0", optional = true }
+gtk-sys = { version = "0.9.0", optional = true }
+
 
 [target.'cfg(target_os="windows")'.dependencies]
 directwrite = "0.1.2"
@@ -28,7 +42,19 @@ version = "0.3.6"
 features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser", "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "dcomp", "d3d11", "dwmapi", "wincon", "fileapi", "processenv", "winbase", "handleapi"]
 
 [target.'cfg(target_os="macos")'.dependencies]
-cocoa = "0.18.4"
+cocoa = "0.20.0"
 objc = "0.2.5"
-core-graphics = "0.17.3"
 cairo-rs = { version = "0.7.1", default_features = false }
+
+[target.'cfg(target_os="linux")'.dependencies]
+cairo-rs = {  version = "0.7.1", default_features = false }
+gio = "0.7.0"
+gdk = "0.11.0"
+gdk-sys = "0.9.0"
+glib = "0.8.1"
+glib-sys = "0.9.0"
+gtk-sys = "0.9.0"
+
+[target.'cfg(target_os="linux")'.dependencies.gtk]
+version = "0.7.0"
+features = ["v3_20"]

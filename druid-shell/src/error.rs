@@ -16,33 +16,29 @@
 
 use std::fmt;
 
-#[cfg(target_os = "windows")]
-use winapi::shared::winerror::HRESULT;
+use crate::platform::error as platform;
 
 /// Error codes. At the moment, this is little more than HRESULT, but that
 /// might change.
+#[derive(Debug)]
 pub enum Error {
-    Null,
-    #[cfg(target_os = "windows")]
-    Hr(HRESULT),
-    // Maybe include the full error from the direct2d crate.
-    #[cfg(target_os = "windows")]
-    D2Error,
-    /// A function is available on newer version of windows.
-    #[cfg(target_os = "windows")]
-    OldWindows,
+    Other(&'static str),
+    Platform(platform::Error),
 }
 
-impl fmt::Debug for Error {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            Error::Null => write!(f, "Null error"),
-            #[cfg(target_os = "windows")]
-            Error::Hr(hr) => write!(f, "HRESULT 0x{:x}", hr),
-            #[cfg(target_os = "windows")]
-            Error::D2Error => write!(f, "Direct2D error"),
-            #[cfg(target_os = "windows")]
-            Error::OldWindows => write!(f, "Attempted newer API on older Windows"),
+        match self {
+            Error::Other(s) => write!(f, "{}", s),
+            Error::Platform(p) => fmt::Display::fmt(&p, f),
         }
+    }
+}
+
+impl std::error::Error for Error {}
+
+impl From<platform::Error> for Error {
+    fn from(src: platform::Error) -> Error {
+        Error::Platform(src)
     }
 }
