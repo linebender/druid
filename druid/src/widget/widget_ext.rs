@@ -125,8 +125,38 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
 
     /// Wrap this widget in a [`LensWrap`] widget for the provided [`Lens`].
     ///
+    /// Lenses are useful whenever a widget only needs access to a subfield of a larger struct.
+    /// For Example: If one wants to embed a [`TextBox`] in a Widget of a Data type different from
+    /// `Widget<String>` they need to specify, which part of the Data type the `TextBox` is
+    /// supposed to access.
+    ///
     /// [`LensWrap`]: ../struct.LensWrap.html
     /// [`Lens`]: ../trait.Lens.html
+    /// [`TextBox`]: ../TextBox.html
+    ///
+    ///
+    /// ```
+    /// // Sample use case of lenses
+    ///
+    /// #[derive(Clone, Debug, Data, Lens)]
+    /// struct MyState {
+    ///     search_term: String,
+    ///     scale: f64,
+    ///     ...
+    /// }
+    ///
+    ///
+    /// fn my_sidebar() -> impl Widget<MyState> {
+    ///     // `TextBox` is of type `Widget<String>`
+    ///     // via `.lens` we get it to be of type `Widget<MyState>`
+    ///     let searchbar = TextBox::new().lens(MyState::search_term);
+    ///
+    ///     // ...
+    ///
+    ///     // We can now use or `searchbar` just like any other Element of type `Widget<MyState>`
+    ///     Flex::column().with_child(searchbar, 1.0)
+    /// }
+    /// ```
     fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<T, L, Self> {
         LensWrap::new(self, lens)
     }
