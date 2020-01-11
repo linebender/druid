@@ -17,7 +17,7 @@
 use crate::shell::kurbo::{Point, Rect, RoundedRect, Size};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintBrush, PaintCtx, RenderContext,
-    UpdateCtx, Widget, WidgetPod,
+    UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
 struct BorderStyle {
@@ -112,5 +112,9 @@ impl<T: Data> Widget<T> for Container<T> {
         };
 
         self.inner.paint(paint_ctx, data, env);
+    }
+
+    fn get_id(&self) -> Option<WidgetId> {
+        Some(self.inner.id())
     }
 }
