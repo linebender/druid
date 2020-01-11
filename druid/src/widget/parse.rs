@@ -3,7 +3,9 @@ use std::mem;
 use std::str::FromStr;
 
 use crate::kurbo::Size;
-use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
+use crate::{
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetId,
+};
 
 /// Converts a `Widget<String>` to a `Widget<Option<T>>`, mapping parse errors to None
 pub struct Parse<T> {
@@ -53,5 +55,9 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
 
     fn paint(&mut self, paint: &mut PaintCtx, _data: &Option<T>, env: &Env) {
         self.widget.paint(paint, &self.state, env)
+    }
+
+    fn get_id(&self) -> Option<WidgetId> {
+        self.widget.get_id()
     }
 }
