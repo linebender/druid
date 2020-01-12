@@ -127,8 +127,9 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// Lenses are useful whenever a widget only needs access to a subfield of a larger struct or
     /// generally access to part of a larger value.
-    /// For Example: If one wants to embed a [`TextBox`] in a Widget of a Data type different from
-    /// `Widget<String>`, they need to specify how to access a String within that Data.
+    /// For example: If one wants to embed a [`TextBox`] in a Widget of a Data type different from
+    /// `Widget<String>` they need to specify, which part of the Data type the `TextBox` is
+    /// supposed to access.
     ///
     /// [`LensWrap`]: ../struct.LensWrap.html
     /// [`Lens`]: ../trait.Lens.html
