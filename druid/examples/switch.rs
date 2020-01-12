@@ -41,7 +41,7 @@ fn build_widget() -> impl Widget<DemoState> {
         DemoState::stepper_value.map(|x| Some(*x), |x, y| *x = y.unwrap_or(0.0)),
     );
     textbox_row.add_child(Padding::new(5.0, textbox), 0.0);
-    textbox_row.add_child(Padding::new(5.0, stepper.center().padding(5.0)), 0.0);
+    textbox_row.add_child(Padding::new(5.0, stepper.center()), 0.0);
 
     let mut label_row = Flex::row();
 
