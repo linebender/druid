@@ -20,8 +20,8 @@ use crate::kurbo::{Circle, Point, Rect, Size};
 use crate::theme;
 use crate::widget::{Align, Flex, Label, LabelText, Padding};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LinearGradient, PaintCtx, RenderContext,
-    UnitPoint, UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
+    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A group of radio buttons
@@ -87,6 +87,8 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {
         ctx.invalidate();
     }
+
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
 
     fn layout(
         &mut self,

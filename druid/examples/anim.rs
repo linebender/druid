@@ -18,8 +18,8 @@ use std::f64::consts::PI;
 
 use druid::kurbo::Line;
 use druid::{
-    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    RenderContext, Size, UpdateCtx, Vec2, Widget, WindowDesc,
+    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, Point, RenderContext, Size, UpdateCtx, Vec2, Widget, WindowDesc,
 };
 
 struct AnimWidget {
@@ -47,6 +47,8 @@ impl Widget<u32> for AnimWidget {
     }
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&u32>, _data: &u32, _env: &Env) {}
+
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &u32, _env: &Env) {}
 
     fn layout(
         &mut self,

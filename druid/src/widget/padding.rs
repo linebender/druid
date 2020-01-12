@@ -16,8 +16,8 @@
 
 use crate::kurbo::{Insets, Point, Rect, Size};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetId,
-    WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
 /// A widget that just adds padding around its child.
@@ -79,6 +79,10 @@ impl<T: Data> Widget<T> for Padding<T> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
         self.child.update(ctx, data, env);
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.child.lifecycle(ctx, event, data, env)
     }
 
     fn layout(

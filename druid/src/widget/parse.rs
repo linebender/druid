@@ -4,7 +4,8 @@ use std::str::FromStr;
 
 use crate::kurbo::Size;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetId,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    UpdateCtx, Widget, WidgetId,
 };
 
 /// Converts a `Widget<String>` to a `Widget<Option<T>>`, mapping parse errors to None
@@ -36,6 +37,16 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
         };
         let old = old_data.map(|_| old);
         self.widget.update(ctx, old.as_ref(), &self.state, env)
+    }
+
+    fn lifecycle(
+        &mut self,
+        ctx: &mut LifeCycleCtx,
+        event: &LifeCycle,
+        _data: &Option<T>,
+        env: &Env,
+    ) {
+        self.widget.lifecycle(ctx, event, &self.state, env)
     }
 
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Option<T>, env: &Env) {

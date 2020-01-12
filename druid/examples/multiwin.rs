@@ -93,10 +93,6 @@ impl AppDelegate<State> for Delegate {
         ctx: &mut DelegateCtx,
     ) -> Option<Event> {
         match event {
-            Event::LifeCycle(event) => {
-                log::info!("{:?}", event);
-                Some(Event::LifeCycle(event))
-            }
             Event::TargetedCommand(_, ref cmd) if cmd.selector == druid::commands::NEW_FILE => {
                 let new_win = WindowDesc::new(ui_builder)
                     .menu(make_menu(data))

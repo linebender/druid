@@ -24,8 +24,8 @@ use log::error;
 use usvg;
 
 use crate::{
-    kurbo::BezPath, Affine, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx,
-    Point, Rect, RenderContext, Size, UpdateCtx, Widget,
+    kurbo::BezPath, Affine, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx,
+    LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget,
 };
 
 /// A widget that renders a SVG
