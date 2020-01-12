@@ -37,8 +37,6 @@ pub struct Stepper {
     min: f64,
     step: f64,
     wrap: bool,
-    /// A closure that will be invoked when the value changed.
-    value_changed: Box<dyn Fn(&mut EventCtx, &mut f64, &Env)>,
     /// Keeps track of which button is currently triggered.
     increase_active: bool,
     decrease_active: bool,
@@ -46,40 +44,43 @@ pub struct Stepper {
 }
 
 impl Stepper {
-    pub fn new(value_changed: impl Fn(&mut EventCtx, &mut f64, &Env) + 'static) -> Self {
+    pub fn new() -> Self {
         Stepper {
             max: std::f64::MAX,
             min: std::f64::MIN,
             step: 1.0,
             wrap: false,
-            value_changed: Box::new(value_changed),
             increase_active: false,
             decrease_active: false,
             timer_id: TimerToken::INVALID,
         }
     }
 
+    /// Set the stepper's maximum value.
     pub fn max(mut self, max: f64) -> Self {
         self.max = max;
         self
     }
 
+    /// Set the stepper's minimum value.
     pub fn min(mut self, min: f64) -> Self {
         self.min = min;
         self
     }
 
+    /// Set the steppers amount by which the value increases or decreases.
     pub fn step(mut self, step: f64) -> Self {
         self.step = step;
         self
     }
 
+    /// Set whether the stepper should wrap around the minimum/maximum values.
     pub fn wrap(mut self, wrap: bool) -> Self {
         self.wrap = wrap;
         self
     }
 
-    fn change_value(&mut self, ctx: &mut EventCtx, data: &mut f64, env: &Env) {
+    fn change_value(&mut self, _ctx: &mut EventCtx, data: &mut f64, _env: &Env) {
         // increase/decrease value depending on which button is currently active
         let delta = if self.increase_active {
             self.step
@@ -89,19 +90,21 @@ impl Stepper {
             0.0
         };
 
-        let old_data = *data;
         *data = (*data + delta).max(self.min).min(self.max);
 
-        if (*data - old_data).abs() > EPSILON {
-            // callback
-            (self.value_changed)(ctx, data, env);
-        } else if self.wrap {
+        if self.wrap {
             if (*data - self.min).abs() < EPSILON {
                 *data = self.max
             } else {
                 *data = self.min
             }
         }
+    }
+}
+
+impl Default for Stepper {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

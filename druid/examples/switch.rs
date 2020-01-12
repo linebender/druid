@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, Flex, Label, Padding, Parse, Stepper, Switch, TextBox};
+use druid::widget::{Flex, Label, Padding, Parse, Stepper, Switch, TextBox, WidgetExt};
 use druid::{AppLauncher, Data, Lens, LensExt, LensWrap, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -31,11 +31,7 @@ fn build_widget() -> impl Widget<DemoState> {
     row.add_child(Padding::new(5.0, switch), 0.0);
 
     let stepper = LensWrap::new(
-        Stepper::new(|_ctx, _data, _env| {})
-            .max(10.0)
-            .min(0.0)
-            .step(0.5)
-            .wrap(false),
+        Stepper::new().max(10.0).min(0.0).step(0.5).wrap(false),
         DemoState::stepper_value,
     );
 
@@ -45,7 +41,7 @@ fn build_widget() -> impl Widget<DemoState> {
         DemoState::stepper_value.map(|x| Some(*x), |x, y| *x = y.unwrap_or(0.0)),
     );
     textbox_row.add_child(Padding::new(5.0, textbox), 0.0);
-    textbox_row.add_child(Padding::new(5.0, Align::centered(stepper)), 0.0);
+    textbox_row.add_child(Padding::new(5.0, stepper.center().padding(5.0)), 0.0);
 
     let mut label_row = Flex::row();
 
