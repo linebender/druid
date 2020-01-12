@@ -24,8 +24,12 @@ use crate::kurbo::{BezPath, Rect, RoundedRect};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 
 use crate::theme;
-use crate::widget::Align;
 use crate::Point;
+
+// Delay until stepper starts automatically changing valued when one of the button is held down.
+const STEPPER_REPEAT_DELAY: Duration = Duration::from_millis(500);
+// Delay between value changes when one of the button is held down.
+const STEPPER_REPEAT: Duration = Duration::from_millis(200);
 
 /// A stepper widget for step-wise increasing and decreasing a value.
 pub struct Stepper {
@@ -42,26 +46,37 @@ pub struct Stepper {
 }
 
 impl Stepper {
-    pub fn new(
-        max: f64,
-        min: f64,
-        step: f64,
-        wrap: bool,
-        value_changed: impl Fn(&mut EventCtx, &mut f64, &Env) + 'static,
-    ) -> impl Widget<f64> {
-        Align::vertical(
-            UnitPoint::CENTER,
-            Stepper {
-                max,
-                min,
-                step,
-                wrap,
-                value_changed: Box::new(value_changed),
-                increase_active: false,
-                decrease_active: false,
-                timer_id: TimerToken::INVALID,
-            },
-        )
+    pub fn new(value_changed: impl Fn(&mut EventCtx, &mut f64, &Env) + 'static) -> Self {
+        Stepper {
+            max: std::f64::MAX,
+            min: std::f64::MIN,
+            step: 1.0,
+            wrap: false,
+            value_changed: Box::new(value_changed),
+            increase_active: false,
+            decrease_active: false,
+            timer_id: TimerToken::INVALID,
+        }
+    }
+
+    pub fn max(mut self, max: f64) -> Self {
+        self.max = max;
+        self
+    }
+
+    pub fn min(mut self, min: f64) -> Self {
+        self.min = min;
+        self
+    }
+
+    pub fn step(mut self, step: f64) -> Self {
+        self.step = step;
+        self
+    }
+
+    pub fn wrap(mut self, wrap: bool) -> Self {
+        self.wrap = wrap;
+        self
     }
 
     fn change_value(&mut self, ctx: &mut EventCtx, data: &mut f64, env: &Env) {
@@ -75,7 +90,7 @@ impl Stepper {
         };
 
         let old_data = *data;
-        *data = (*data + delta).min(self.min).max(self.max);
+        *data = (*data + delta).max(self.min).min(self.max);
 
         if (*data - old_data).abs() > EPSILON {
             // callback
@@ -136,19 +151,18 @@ impl Widget<f64> for Stepper {
         };
 
         // draw up and down triangles
-        let mut increase_button_arrow = BezPath::new();
-        increase_button_arrow.move_to(Point::new(4., height / 2. - 4.));
-        increase_button_arrow.line_to(Point::new(width - 4., height / 2. - 4.));
-        increase_button_arrow.line_to(Point::new(width / 2., 4.));
-        increase_button_arrow.close_path();
-        paint_ctx.fill(increase_button_arrow, &env.get(theme::LABEL_COLOR));
+        let mut arrows = BezPath::new();
+        arrows.move_to(Point::new(4., height / 2. - 4.));
+        arrows.line_to(Point::new(width - 4., height / 2. - 4.));
+        arrows.line_to(Point::new(width / 2., 4.));
+        arrows.close_path();
 
-        let mut decrease_button_arrow = BezPath::new();
-        decrease_button_arrow.move_to(Point::new(4., height / 2. + 4.));
-        decrease_button_arrow.line_to(Point::new(width - 4., height / 2. + 4.));
-        decrease_button_arrow.line_to(Point::new(width / 2., height - 4.));
-        decrease_button_arrow.close_path();
-        paint_ctx.fill(decrease_button_arrow, &env.get(theme::LABEL_COLOR));
+        arrows.move_to(Point::new(4., height / 2. + 4.));
+        arrows.line_to(Point::new(width - 4., height / 2. + 4.));
+        arrows.line_to(Point::new(width / 2., height - 4.));
+        arrows.close_path();
+
+        paint_ctx.fill(arrows, &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
@@ -179,7 +193,7 @@ impl Widget<f64> for Stepper {
 
                 self.change_value(ctx, data, env);
 
-                let delay = Instant::now() + Duration::from_millis(500);
+                let delay = Instant::now() + STEPPER_REPEAT_DELAY;
                 self.timer_id = ctx.request_timer(delay);
 
                 ctx.invalidate();
@@ -195,14 +209,19 @@ impl Widget<f64> for Stepper {
             }
             Event::Timer(id) if *id == self.timer_id => {
                 self.change_value(ctx, data, env);
-                let delay = Instant::now() + Duration::from_millis(200);
+                let delay = Instant::now() + STEPPER_REPEAT;
                 self.timer_id = ctx.request_timer(delay);
             }
             _ => (),
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {
-        ctx.invalidate();
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&f64>, data: &f64, _env: &Env) {
+        if old_data
+            .map(|old_data| (*data - old_data).abs() > EPSILON)
+            .unwrap_or(true)
+        {
+            ctx.invalidate();
+        }
     }
 }
