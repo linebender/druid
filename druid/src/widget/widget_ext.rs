@@ -137,11 +137,13 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     ///
     /// ```
+    /// use druid::{Data, Lens, Widget, widget::{TextBox, Flex, WidgetExt}};
+    ///
     /// #[derive(Clone, Debug, Data, Lens)]
     /// struct MyState {
     ///     search_term: String,
     ///     scale: f64,
-    ///     ...
+    ///     // ...
     /// }
     ///
     ///
