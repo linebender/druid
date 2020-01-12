@@ -67,6 +67,9 @@ use std::ops::DerefMut;
 use crate::kurbo::Size;
 use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx};
 
+#[deprecated(since = "0.4.1", note = "Renamed to Panel")]
+pub type Container<T> = Panel<T>;
+
 /// The trait implemented by all widgets.
 ///
 /// All appearance and behavior for a widget is encapsulated in an
