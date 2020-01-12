@@ -18,7 +18,8 @@ use std::f64::INFINITY;
 
 use crate::shell::kurbo::Size;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetId,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    UpdateCtx, Widget, WidgetId,
 };
 
 /// A widget with predefined size.
@@ -91,6 +92,12 @@ impl<T: Data> Widget<T> for SizedBox<T> {
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.update(ctx, old_data, data, env);
+        }
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        if let Some(ref mut inner) = self.inner {
+            inner.lifecycle(ctx, event, data, env)
         }
     }
 

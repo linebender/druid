@@ -48,7 +48,9 @@ pub use shell::{
     SysMods, Text, TimerToken, WinCtx, WindowHandle,
 };
 
-pub use crate::core::{BoxedWidget, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, WidgetPod};
+pub use crate::core::{
+    BoxedWidget, EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx, WidgetPod,
+};
 pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;

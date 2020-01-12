@@ -18,8 +18,8 @@ use druid::kurbo::BezPath;
 use druid::piet::{FontBuilder, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
 
 use druid::{
-    Affine, AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    Rect, RenderContext, Size, UpdateCtx, Widget, WindowDesc,
+    Affine, AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
+    LifeCycleCtx, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WindowDesc,
 };
 
 struct CustomWidget;
@@ -31,6 +31,15 @@ impl Widget<String> for CustomWidget {
         &mut self,
         _ctx: &mut UpdateCtx,
         _old_data: Option<&String>,
+        _data: &String,
+        _env: &Env,
+    ) {
+    }
+
+    fn lifecycle(
+        &mut self,
+        _ctx: &mut LifeCycleCtx,
+        _event: &LifeCycle,
         _data: &String,
         _env: &Env,
     ) {

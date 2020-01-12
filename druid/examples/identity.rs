@@ -33,8 +33,8 @@ use druid::kurbo::RoundedRect;
 use druid::widget::{Button, Flex, IdentityWrapper, WidgetExt};
 use druid::{
     AppLauncher, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, LayoutCtx, Lens,
-    LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size, TimerToken, UpdateCtx, Widget,
-    WindowDesc,
+    LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size,
+    TimerToken, UpdateCtx, Widget, WindowDesc,
 };
 
 const CYCLE_DURATION: Duration = Duration::from_millis(100);
@@ -83,9 +83,6 @@ impl ColorWell {
 impl Widget<OurData> for ColorWell {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut OurData, _env: &Env) {
         match event {
-            Event::LifeCycle(_) if self.randomize => {
-                self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
-            }
             Event::Timer(t) if t == &self.token => {
                 let time_since_start = Instant::now() - self.start;
 
@@ -112,6 +109,15 @@ impl Widget<OurData> for ColorWell {
                     .into();
             }
             Event::Command(cmd) if cmd.selector == UNFREEZE_COLOR => self.frozen = None,
+            _ => (),
+        }
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &OurData, _: &Env) {
+        match event {
+            LifeCycle::WindowConnected if self.randomize => {
+                self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
+            }
             _ => (),
         }
     }

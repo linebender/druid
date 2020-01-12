@@ -15,7 +15,8 @@
 //! A stepper widget.
 
 use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, TimerToken, UpdateCtx, Widget,
+    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
+    TimerToken, UpdateCtx, Widget,
 };
 use std::f64::EPSILON;
 use std::time::{Duration, Instant};
@@ -218,6 +219,8 @@ impl Widget<f64> for Stepper {
             _ => (),
         }
     }
+
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&f64>, data: &f64, _env: &Env) {
         if old_data

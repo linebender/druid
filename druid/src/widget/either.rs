@@ -16,7 +16,8 @@
 
 use crate::kurbo::{Point, Rect, Size};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    UpdateCtx, Widget, WidgetPod,
 };
 
 /// A widget that switches between two possible child views.
@@ -53,6 +54,11 @@ impl<T: Data> Widget<T> for Either<T> {
         } else {
             self.false_branch.event(ctx, event, data, env)
         }
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.true_branch.lifecycle(ctx, event, data, env);
+        self.false_branch.lifecycle(ctx, event, data, env);
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {

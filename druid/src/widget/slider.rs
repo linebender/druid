@@ -18,8 +18,8 @@ use crate::kurbo::{Circle, Point, Rect, RoundedRect, Shape, Size};
 use crate::theme;
 use crate::widget::Align;
 use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LinearGradient, PaintCtx, RenderContext,
-    UnitPoint, UpdateCtx, Widget,
+    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
+    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
 };
 
 /// A slider, allowing interactive update of a numeric value.
@@ -92,6 +92,8 @@ impl Widget<f64> for Slider {
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&f64>, _data: &f64, _env: &Env) {
         ctx.invalidate();
     }
+
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
 
     fn layout(
         &mut self,

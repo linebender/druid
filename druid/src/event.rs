@@ -46,12 +46,6 @@ use crate::{Command, Target};
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Debug, Clone)]
 pub enum Event {
-    /// Called when certain application and window lifecycle events occur.
-    ///
-    /// For the various possible events, see the [`LifeCycle`] enum.
-    ///
-    /// [`LifeCycle`]: enum.LifeCycle.html
-    LifeCycle(LifeCycle),
     /// Called on the root widget when the window size changes.
     ///
     /// Discussion: it's not obvious this should be propagated to user
@@ -148,9 +142,16 @@ pub enum Event {
 /// Application life cycle events.
 #[derive(Debug, Clone, Copy)]
 pub enum LifeCycle {
+    /// Sent to a `Widget` when it is added to the widget tree. This should be
+    /// the first message that each widget receives.
+    ///
+    /// Widgets should handle this event if they need to do any one-time setup
+    /// that requires access to `Data`.
+    WidgetAdded,
     /// Sent to all widgets in a given window when that window is first instantiated.
     ///
-    /// This is guaranteed to be the first event a window receives.
+    /// This is sent after `WidgetAdded`. Widgets should handle this event if
+    /// they need to do some addition setup when a window is first created.
     WindowConnected,
 }
 

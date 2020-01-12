@@ -23,8 +23,8 @@ use log;
 use crate::kurbo::{Affine, Rect, Shape, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::{
-    BoxConstraints, Command, Cursor, Data, Env, Event, Target, Text, TimerToken, Widget, WidgetId,
-    WinCtx, WindowHandle, WindowId,
+    BoxConstraints, Command, Cursor, Data, Env, Event, LifeCycle, Target, Text, TimerToken, Widget,
+    WidgetId, WinCtx, WindowHandle, WindowId,
 };
 
 /// Convenience type for dynamic boxed widget.
@@ -273,7 +273,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut recurse = true;
         let mut hot_changed = None;
         let child_event = match event {
-            Event::LifeCycle(event) => Event::LifeCycle(*event),
             Event::Size(size) => {
                 recurse = ctx.is_root;
                 Event::Size(*size)
@@ -373,6 +372,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.base_state.has_active |= child_ctx.base_state.has_active;
         ctx.base_state.request_focus |= child_ctx.base_state.request_focus;
         ctx.is_handled |= child_ctx.is_handled;
+    }
+
+    pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        let had_request_timer = ctx.request_timer;
+        ctx.request_timer = false;
+        self.inner.lifecycle(ctx, event, data, env);
+        self.state.request_timer |= ctx.request_timer;
+        ctx.request_timer |= had_request_timer;
     }
 
     /// Propagate a data update.
@@ -568,6 +575,14 @@ pub struct EventCtx<'a, 'b> {
     pub(crate) widget_id: WidgetId,
 }
 
+pub struct LifeCycleCtx<'a, 'b: 'a> {
+    pub(crate) command_queue: &'a mut VecDeque<(Target, Command)>,
+    pub(crate) win_ctx: &'a mut dyn WinCtx<'b>,
+    pub(crate) request_timer: bool,
+    pub(crate) window_id: WindowId,
+    pub(crate) widget_id: WidgetId,
+}
+
 /// A mutable context provided to data update methods of widgets.
 ///
 /// Widgets should call [`invalidate`] whenever a data change causes a change
@@ -579,7 +594,7 @@ pub struct UpdateCtx<'a, 'b: 'a> {
     pub(crate) window: &'a WindowHandle,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like
-    // `EventCtx` (and possibly using the same structure). But for
+    // `EventCtx` (and possibly using the same structure).But for
     // now keep it super-simple.
     pub(crate) needs_inval: bool,
     pub(crate) window_id: WindowId,
@@ -767,6 +782,39 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     }
 }
 
+impl<'a, 'b> LifeCycleCtx<'a, 'b> {
+    /// Returns the current widget's `WidgetId`.
+    pub fn widget_id(&self) -> WidgetId {
+        self.widget_id
+    }
+
+    /// Request a timer event.
+    ///
+    /// The return value is a token, which can be used to associate the
+    /// request with the event.
+    pub fn request_timer(&mut self, deadline: Instant) -> TimerToken {
+        self.request_timer = true;
+        self.win_ctx.request_timer(deadline)
+    }
+
+    /// Submit a [`Command`] to be run after this event is handled.
+    ///
+    /// Commands are run in the order they are submitted; all commands
+    /// submitted during the handling of an event are executed before
+    /// the [`update()`] method is called.
+    ///
+    /// [`Command`]: struct.Command.html
+    /// [`update()`]: trait.Widget.html#tymethod.update
+    pub fn submit_command(
+        &mut self,
+        command: impl Into<Command>,
+        target: impl Into<Option<Target>>,
+    ) {
+        let target = target.into().unwrap_or_else(|| self.window_id.into());
+        self.command_queue.push_back((target, command.into()))
+    }
+}
+
 impl<'a, 'b> LayoutCtx<'a, 'b> {
     /// Get an object which can create text layouts.
     pub fn text(&mut self) -> &mut Text<'b> {
@@ -798,6 +846,7 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     /// Note: For the most part we're trying to migrate `WindowHandle`
     /// functionality to `WinCtx`, but the update flow is the exception, as
     /// it's shared across multiple windows.
+    //TODO: can we delete this? where is it used?
     pub fn window(&self) -> &WindowHandle {
         &self.window
     }

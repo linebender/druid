@@ -17,8 +17,8 @@
 use crate::kurbo::{Line, Point, Rect, Size};
 use crate::widget::flex::Axis;
 use crate::{
-    theme, BoxConstraints, Cursor, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, RenderContext,
-    UpdateCtx, Widget, WidgetPod,
+    theme, BoxConstraints, Cursor, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
 };
 
 ///A container containing two other widgets, splitting the area either horizontally or vertically.
@@ -181,6 +181,11 @@ impl<T: Data> Widget<T> for Split<T> {
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
         self.child1.update(ctx, &data, env);
         self.child2.update(ctx, &data, env);
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.child1.lifecycle(ctx, event, data, env);
+        self.child2.lifecycle(ctx, event, data, env);
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {

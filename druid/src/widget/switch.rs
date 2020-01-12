@@ -20,7 +20,10 @@ use crate::piet::{
 };
 use crate::theme;
 use crate::widget::Align;
-use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
+use crate::{
+    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
+    Widget,
+};
 
 const SWITCH_PADDING: f64 = 3.;
 const SWITCH_WIDTH_RATIO: f64 = 2.75;
@@ -168,6 +171,9 @@ impl Widget<bool> for Switch {
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&bool>, _data: &bool, _env: &Env) {
         ctx.invalidate();
+    }
+
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &bool, _env: &Env) {
     }
 
     fn layout(

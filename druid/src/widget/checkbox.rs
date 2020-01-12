@@ -18,7 +18,10 @@ use crate::kurbo::{BezPath, Point, RoundedRect, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
 use crate::widget::Align;
-use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
+use crate::{
+    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
+    Widget,
+};
 
 /// A checkbox that toggles a boolean
 #[derive(Debug, Clone, Default)]
@@ -59,6 +62,9 @@ impl Widget<bool> for Checkbox {
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&bool>, _data: &bool, _env: &Env) {
         ctx.invalidate();
+    }
+
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &bool, _env: &Env) {
     }
 
     fn layout(

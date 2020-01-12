@@ -18,8 +18,8 @@ use crate::kurbo::{Point, Rect, Size};
 use crate::shell::{Counter, WindowHandle};
 
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, MenuDesc,
-    PaintCtx, UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A unique identifier for a window.
@@ -65,6 +65,10 @@ impl<T: Data> Window<T> {
     pub fn update(&mut self, update_ctx: &mut UpdateCtx, data: &T, env: &Env) {
         self.update_title(&update_ctx.window, data, env);
         self.root.update(update_ctx, data, env);
+    }
+
+    pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.root.lifecycle(ctx, event, data, env);
     }
 
     pub fn layout(&mut self, layout_ctx: &mut LayoutCtx, data: &T, env: &Env) {

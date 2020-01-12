@@ -18,8 +18,8 @@ use crate::kurbo::{Point, RoundedRect, Size};
 use crate::theme;
 use crate::widget::{Label, LabelText};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LinearGradient, PaintCtx, RenderContext,
-    UnitPoint, UpdateCtx, Widget,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
+    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
 };
 
 /// A button with a text label.
@@ -79,6 +79,10 @@ impl<T: Data> Widget<T> for Button<T> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
         self.label.update(ctx, old_data, data, env)
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.label.lifecycle(ctx, event, data, env)
     }
 
     fn layout(

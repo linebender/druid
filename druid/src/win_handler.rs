@@ -34,8 +34,9 @@ use crate::menu::ContextMenu;
 use crate::theme;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, LifeCycle, MenuDesc,
-    PaintCtx, Target, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
+    Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, LifeCycle,
+    LifeCycleCtx, MenuDesc, PaintCtx, Target, TimerToken, UpdateCtx, WheelEvent, WindowDesc,
+    WindowId,
 };
 
 use crate::command::sys as sys_cmd;
@@ -278,6 +279,17 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
         }
 
         (is_handled, request_anim)
+    }
+
+    fn do_lifecycle(&mut self, event: LifeCycle, win_ctx: &mut dyn WinCtx) {
+        let mut ctx = LifeCycleCtx {
+            request_timer: false,
+            win_ctx,
+            command_queue: self.command_queue,
+            window_id: self.window_id,
+            widget_id: self.window.root.id(),
+        };
+        self.window.lifecycle(&mut ctx, &event, self.data, self.env);
     }
 
     fn set_menu(&mut self, cmd: &Command) {
@@ -579,6 +591,17 @@ impl<T: Data> DruidHandler<T> {
         result
     }
 
+    // Is this only for events with an external origin, like AnimFrame?
+    // other lifecycle events can happen from mid-tree. What are our guarantees?
+    fn do_lifecycle(&mut self, event: LifeCycle, win_ctx: &mut dyn WinCtx) {
+        self.app_state
+            .borrow_mut()
+            .assemble_window_state(self.window_id)
+            .map(|mut win| win.do_lifecycle(event, win_ctx));
+        //FIXME: maybe we don't want to do commands now, but rather schedule idle?
+        self.process_commands(win_ctx);
+    }
+
     fn process_commands(&mut self, win_ctx: &mut dyn WinCtx) {
         loop {
             let next_cmd = self.app_state.borrow_mut().command_queue.pop_front();
@@ -726,8 +749,8 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn connected(&mut self, ctx: &mut dyn WinCtx) {
-        let event = Event::LifeCycle(LifeCycle::WindowConnected);
-        self.do_event(event, ctx);
+        self.do_lifecycle(LifeCycle::WidgetAdded, ctx);
+        self.do_lifecycle(LifeCycle::WindowConnected, ctx);
     }
 
     fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
