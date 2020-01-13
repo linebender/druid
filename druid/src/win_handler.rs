@@ -281,10 +281,8 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
         (is_handled, request_anim)
     }
 
-    fn do_lifecycle(&mut self, event: LifeCycle, win_ctx: &mut dyn WinCtx) {
+    fn do_lifecycle(&mut self, event: LifeCycle, _win_ctx: &mut dyn WinCtx) {
         let mut ctx = LifeCycleCtx {
-            request_timer: false,
-            win_ctx,
             command_queue: self.command_queue,
             window_id: self.window_id,
             widget_id: self.window.root.id(),
@@ -533,6 +531,7 @@ impl<T: Data> AppState<T> {
             let mut update_ctx = UpdateCtx {
                 text_factory: win_ctx.text_factory(),
                 window: &state.handle,
+                command_queue: &mut self.command_queue,
                 needs_inval: false,
                 window_id: id,
                 widget_id: window.root.id(),
