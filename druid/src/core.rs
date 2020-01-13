@@ -275,7 +275,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let child_event = match event {
             Event::LifeCycle(event) => Event::LifeCycle(*event),
             Event::Size(size) => {
-                recurse = ctx.is_root;
                 Event::Size(*size)
             }
             Event::MouseDown(mouse_event) => {

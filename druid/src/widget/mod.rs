@@ -29,8 +29,10 @@ mod parse;
 mod progress_bar;
 mod radio;
 mod scroll;
+mod scrollbar;
 mod sized_box;
 mod slider;
+//mod smooth_scroll;
 mod split;
 mod stepper;
 #[cfg(feature = "svg")]
@@ -38,6 +40,7 @@ mod stepper;
 mod svg;
 mod switch;
 mod textbox;
+mod virtual_list;
 mod widget_ext;
 
 pub use align::Align;
@@ -55,6 +58,7 @@ pub use parse::Parse;
 pub use progress_bar::ProgressBar;
 pub use radio::{Radio, RadioGroup};
 pub use scroll::Scroll;
+pub use scrollbar::{Scrollbar, ScrollControlState};
 pub use sized_box::SizedBox;
 pub use slider::Slider;
 pub use split::Split;
@@ -64,6 +68,7 @@ pub use stepper::Stepper;
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
 pub use textbox::TextBox;
+pub use virtual_list::{VirtualList};
 pub use widget_ext::WidgetExt;
 
 use std::ops::{Deref, DerefMut};
