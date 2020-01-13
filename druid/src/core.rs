@@ -109,7 +109,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     pub fn new(inner: W) -> WidgetPod<T, W> {
         let id = inner.id().unwrap_or_else(WidgetId::next);
         WidgetPod {
-            state: Default::default(),
+            state: BaseState {
+                children_changed: true,
+                ..Default::default()
+            },
             old_data: None,
             env: None,
             inner,
@@ -338,11 +341,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 recurse = focus || had_focus;
                 Event::FocusChanged(focus)
             }
-            Event::AnimFrame(interval) => {
-                recurse = child_ctx.base_state.request_anim;
-                child_ctx.base_state.request_anim = false;
-                Event::AnimFrame(*interval)
-            }
             Event::Timer(id) => {
                 recurse = child_ctx.base_state.request_timer;
                 Event::Timer(*id)
@@ -383,20 +381,39 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let pre_children = ctx.children;
         let pre_childs_changed = ctx.children_changed;
         let pre_inval = ctx.needs_inval;
+        let pre_request_anim = ctx.request_anim;
+
         ctx.children = Bloom::new();
         ctx.children_changed = false;
         ctx.needs_inval = false;
 
-        self.inner.lifecycle(ctx, event, data, env);
+        let recurse = match event {
+            LifeCycle::AnimFrame(_) => {
+                let r = self.state.request_anim;
+                self.state.request_anim = false;
+                ctx.request_anim = false;
+                r
+            }
+            LifeCycle::RegisterChildren => self.state.children_changed,
+            _ => true,
+        };
+
+        if recurse {
+            self.inner.lifecycle(ctx, event, data, env);
+            self.state.request_anim = ctx.request_anim;
+            ctx.request_anim |= pre_request_anim;
+        }
+
+        self.state.children_changed |= ctx.children_changed;
+        ctx.children_changed |= pre_childs_changed;
+        ctx.needs_inval |= pre_inval;
+
         if let LifeCycle::RegisterChildren = event {
             self.state.children = ctx.children;
             self.state.children_changed = false;
             ctx.children = ctx.children.intersection(pre_children);
             ctx.register_child(self.id());
         }
-        self.state.children_changed |= ctx.children_changed;
-        ctx.children_changed |= pre_childs_changed;
-        ctx.needs_inval |= pre_inval;
     }
 
     /// Propagate a data update.
@@ -608,6 +625,7 @@ pub struct LifeCycleCtx<'a> {
     pub(crate) children: Bloom<WidgetId>,
     pub(crate) children_changed: bool,
     pub(crate) needs_inval: bool,
+    pub(crate) request_anim: bool,
     pub(crate) window_id: WindowId,
     pub(crate) widget_id: WidgetId,
 }
@@ -825,6 +843,8 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     //children_changed: false,
     //needs_inval: false,
     //children: Bloom::default(),
+    //request_anim: false,
+
     //window_id: self.window_id,
     //widget_id: self.widget_id,
     //}
@@ -856,6 +876,11 @@ impl<'a> LifeCycleCtx<'a> {
     /// Widgets must call this method after adding a new child.
     pub fn children_changed(&mut self) {
         self.children_changed = true;
+    }
+
+    /// Request an animation frame.
+    pub fn request_anim_frame(&mut self) {
+        self.request_anim = true;
     }
 
     /// Submit a [`Command`] to be run after this event is handled.
@@ -935,6 +960,7 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
             children: Bloom::default(),
             children_changed: false,
             needs_inval: false,
+            request_anim: false,
             window_id: self.window_id,
             widget_id: self.widget_id,
         }
@@ -970,6 +996,9 @@ mod tests {
         let mut ctx = LifeCycleCtx {
             command_queue: &mut command_queue,
             children: Bloom::new(),
+            children_changed: true,
+            needs_inval: false,
+            request_anim: false,
             window_id: WindowId::next(),
             widget_id: WidgetId::next(),
         };

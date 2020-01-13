@@ -152,7 +152,23 @@ impl Widget<bool> for Switch {
                 }
                 ctx.invalidate();
             }
-            Event::AnimFrame(_) => {
+            _ => (),
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&bool>, _data: &bool, _env: &Env) {
+        ctx.invalidate();
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &bool, env: &Env) {
+        match event {
+            LifeCycle::AnimFrame(_) => {
+                let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+                let switch_width = switch_height * SWITCH_WIDTH_RATIO;
+                let knob_size = switch_height - 2. * SWITCH_PADDING;
+                let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
+                let off_pos = knob_size / 2. + SWITCH_PADDING;
+
                 // move knob to right position depending on the value
                 if self.animation_in_progress {
                     let delta = if *data { 2. } else { -2. };
@@ -167,13 +183,6 @@ impl Widget<bool> for Switch {
             }
             _ => (),
         }
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&bool>, _data: &bool, _env: &Env) {
-        ctx.invalidate();
-    }
-
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &bool, _env: &Env) {
     }
 
     fn layout(
