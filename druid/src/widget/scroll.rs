@@ -360,16 +360,6 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 }
                 // Show the scrollbars any time our size changes
                 Event::Size(_) => self.reset_scrollbar_fade(ctx, &env),
-                // The scroll bars will fade immediately if there's some other widget requesting animation.
-                // Guard by the timer id being invalid.
-                Event::AnimFrame(interval) if self.scroll_bars.timer_id == TimerToken::INVALID => {
-                    // Animate scroll bars opacity
-                    let diff = 2.0 * (*interval as f64) * 1e-9;
-                    self.scroll_bars.opacity -= diff;
-                    if self.scroll_bars.opacity > 0.0 {
-                        ctx.request_anim_frame();
-                    }
-                }
                 Event::Timer(id) if *id == self.scroll_bars.timer_id => {
                     // Schedule scroll bars animation
                     ctx.request_anim_frame();
@@ -395,6 +385,18 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        // The scroll bars will fade immediately if there's some other widget requesting animation.
+        // Guard by the timer id being invalid.
+        if let LifeCycle::AnimFrame(interval) = event {
+            if self.scroll_bars.timer_id == TimerToken::INVALID {
+                // Animate scroll bars opacity
+                let diff = 2.0 * (*interval as f64) * 1e-9;
+                self.scroll_bars.opacity -= diff;
+                if self.scroll_bars.opacity > 0.0 {
+                    ctx.request_anim_frame();
+                }
+            }
+        }
         self.child.lifecycle(ctx, event, data, env)
     }
 

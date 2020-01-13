@@ -172,8 +172,7 @@ impl<T: Data> Windows<T> {
 }
 
 impl<'a, T: Data> SingleWindowState<'a, T> {
-    fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
-        let request_anim = self.do_anim_frame(ctx);
+    fn paint(&mut self, piet: &mut Piet) {
         self.do_layout(piet);
         piet.clear(self.env.get(theme::WINDOW_BACKGROUND_COLOR));
         self.do_paint(piet);
@@ -187,8 +186,6 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
                 error!("failed to get idle handle");
             }
         }
-
-        request_anim
     }
 
     fn do_anim_frame(&mut self, ctx: &mut dyn WinCtx) -> bool {
@@ -204,14 +201,13 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
         } else {
             0
         };
-        let anim_frame_event = Event::AnimFrame(interval);
-        let (_, request_anim) = self.do_event_inner(anim_frame_event, ctx);
-        let prev = if request_anim {
+        let anim_frame_event = LifeCycle::AnimFrame(interval);
+        let request_anim = self.do_lifecycle(anim_frame_event, ctx);
+        self.state.prev_paint_time = if request_anim {
             Some(this_paint_time)
         } else {
             None
         };
-        self.state.prev_paint_time = prev;
         request_anim
     }
 
@@ -236,9 +232,8 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
 
     /// Send an event to the widget hierarchy.
     ///
-    /// Returns two flags. The first is true if the event was handled. The
-    /// second is true if an animation frame is requested.
-    fn do_event_inner(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> (bool, bool) {
+    /// Returns true if the event was handled.
+    fn do_event_inner(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
         // should there be a root base state persisting in the ui state instead?
         let mut cursor = match event {
             Event::MouseMoved(..) => Some(Cursor::Arrow),
@@ -278,26 +273,27 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
         self.state.needs_inval = ctx.base_state.needs_inval | ctx.base_state.request_anim;
         self.state.children_changed |= ctx.base_state.children_changed;
 
-        let request_anim = ctx.base_state.request_anim;
         if let Some(cursor) = cursor {
             win_ctx.set_cursor(&cursor);
         }
 
-        (is_handled, request_anim)
+        is_handled
     }
 
-    fn do_lifecycle(&mut self, event: LifeCycle, _win_ctx: &mut dyn WinCtx) {
+    fn do_lifecycle(&mut self, event: LifeCycle, _win_ctx: &mut dyn WinCtx) -> bool {
         let mut ctx = LifeCycleCtx {
             command_queue: self.command_queue,
             children: Bloom::default(),
             children_changed: false,
             needs_inval: false,
+            request_anim: false,
             window_id: self.window_id,
             widget_id: self.window.root.id(),
         };
         self.window.lifecycle(&mut ctx, &event, self.data, self.env);
         self.state.children_changed |= ctx.children_changed;
         self.state.needs_inval |= ctx.needs_inval;
+        ctx.request_anim
     }
 
     fn set_menu(&mut self, cmd: &Command) {
@@ -464,9 +460,14 @@ impl<T: Data> AppState<T> {
             })
     }
 
+    /// Returns `true` if an animation frame was requested.
     fn paint(&mut self, window_id: WindowId, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
         self.assemble_window_state(window_id)
-            .map(|mut win| win.paint(piet, ctx))
+            .map(|mut win| {
+                let request_anim = win.do_anim_frame(ctx);
+                win.paint(piet);
+                request_anim
+            })
             .unwrap_or(false)
     }
 
@@ -511,7 +512,7 @@ impl<T: Data> AppState<T> {
                         data: &mut self.data,
                         env: &self.env,
                     };
-                    let (handled, _) = win.do_event_inner(event.clone(), win_ctx);
+                    let handled = win.do_event_inner(event.clone(), win_ctx);
                     any_handled |= handled;
                     if handled {
                         break;
@@ -519,13 +520,10 @@ impl<T: Data> AppState<T> {
                 }
                 any_handled
             }
-            _ => {
-                let (handled, _) = self
-                    .assemble_window_state(source_id)
-                    .map(|mut win| win.do_event_inner(event, win_ctx))
-                    .unwrap_or((false, false));
-                handled
-            }
+            _ => self
+                .assemble_window_state(source_id)
+                .map(|mut win| win.do_event_inner(event, win_ctx))
+                .unwrap_or(false),
         };
 
         //TODO: should we be always calling update after an event? shouldn't
