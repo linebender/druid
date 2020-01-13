@@ -125,6 +125,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
 
     /// Wrap this widget in a [`LensWrap`] widget for the provided [`Lens`].
     ///
+    ///
     /// [`LensWrap`]: ../struct.LensWrap.html
     /// [`Lens`]: ../trait.Lens.html
     fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<T, L, Self> {
