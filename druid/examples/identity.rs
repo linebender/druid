@@ -37,9 +37,11 @@ use druid::{
     TimerToken, UpdateCtx, Widget, WindowDesc,
 };
 
-const CYCLE_DURATION: Duration = Duration::from_millis(100);
+const CYCLE_DURATION: Duration = Duration::from_millis(200);
+
 const FREEZE_COLOR: Selector = Selector::new("identity-example.freeze-color");
 const UNFREEZE_COLOR: Selector = Selector::new("identity-example.unfreeze-color");
+const SET_INITIAL_TOKEN: Selector = Selector::new("identity-example.set-initial-token");
 
 /// Honestly: it's just a color in fancy clothing.
 #[derive(Debug, Clone, Data, Lens)]
@@ -85,7 +87,6 @@ impl Widget<OurData> for ColorWell {
         match event {
             Event::Timer(t) if t == &self.token => {
                 let time_since_start = Instant::now() - self.start;
-
                 // there is no logic here; it's a very silly way of creating a color.
                 let bits = (time_since_start.as_nanos() % (0xFFFFFF)) as u32;
                 let mask = 0x924924;
@@ -99,6 +100,10 @@ impl Widget<OurData> for ColorWell {
                 data.color = Color::rgb8(red as u8, green as u8, blue as u8);
                 self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
                 ctx.invalidate();
+            }
+
+            Event::Command(cmd) if cmd.selector == SET_INITIAL_TOKEN => {
+                self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
             }
 
             Event::Command(cmd) if cmd.selector == FREEZE_COLOR => {
@@ -116,7 +121,7 @@ impl Widget<OurData> for ColorWell {
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &OurData, _: &Env) {
         match event {
             LifeCycle::WindowConnected if self.randomize => {
-                self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
+                ctx.submit_command(SET_INITIAL_TOKEN, ctx.widget_id());
             }
             _ => (),
         }
