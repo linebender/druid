@@ -104,7 +104,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// so it can participate in layout and event flow. The process of
     /// adding a child widget to a container should call this method.
     pub fn new(inner: W) -> WidgetPod<T, W> {
-        let id = inner.get_id().unwrap_or_else(WidgetId::next);
+        let id = inner.id().unwrap_or_else(WidgetId::next);
         WidgetPod {
             state: Default::default(),
             old_data: None,

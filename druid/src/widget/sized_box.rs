@@ -127,7 +127,7 @@ impl<T: Data> Widget<T> for SizedBox<T> {
         }
     }
 
-    fn get_id(&self) -> Option<WidgetId> {
-        self.inner.as_ref().and_then(|inner| inner.get_id())
+    fn id(&self) -> Option<WidgetId> {
+        self.inner.as_ref().and_then(|inner| inner.id())
     }
 }

@@ -57,7 +57,7 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
         self.widget.paint(paint, &self.state, env)
     }
 
-    fn get_id(&self) -> Option<WidgetId> {
-        self.widget.get_id()
+    fn id(&self) -> Option<WidgetId> {
+        self.widget.id()
     }
 }

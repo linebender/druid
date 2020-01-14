@@ -174,7 +174,7 @@ pub trait Widget<T> {
     #[doc(hidden)]
     /// Get the identity of the widget; this is basically only implemented by
     /// `IdentityWrapper`. Widgets should not implement this on their own.
-    fn get_id(&self) -> Option<WidgetId> {
+    fn id(&self) -> Option<WidgetId> {
         None
     }
 }
@@ -198,7 +198,7 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
         self.deref_mut().paint(paint_ctx, data, env);
     }
 
-    fn get_id(&self) -> Option<WidgetId> {
-        self.deref().get_id()
+    fn id(&self) -> Option<WidgetId> {
+        self.deref().id()
     }
 }

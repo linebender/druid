@@ -64,7 +64,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<W> {
         self.inner.paint(paint_ctx, data, env);
     }
 
-    fn get_id(&self) -> Option<WidgetId> {
+    fn id(&self) -> Option<WidgetId> {
         Some(self.id)
     }
 }
@@ -81,6 +81,6 @@ mod tests {
         let wrapped_up: Box<dyn Widget<u32>> =
             Box::new(label.padding(5.0).align_left().background(Color::BLACK));
 
-        assert_eq!(wrapped_up.get_id(), Some(id));
+        assert_eq!(wrapped_up.id(), Some(id));
     }
 }
