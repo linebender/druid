@@ -117,7 +117,7 @@ impl<T: Data> Widget<T> for Padding<T> {
         self.child.paint_with_offset(paint_ctx, data, env);
     }
 
-    fn get_id(&self) -> Option<WidgetId> {
+    fn id(&self) -> Option<WidgetId> {
         Some(self.child.id())
     }
 }

@@ -96,7 +96,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         self.child.paint(paint_ctx, data, &new_env);
     }
 
-    fn get_id(&self) -> Option<WidgetId> {
-        self.child.get_id()
+    fn id(&self) -> Option<WidgetId> {
+        self.child.id()
     }
 }

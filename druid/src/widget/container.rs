@@ -114,7 +114,7 @@ impl<T: Data> Widget<T> for Container<T> {
         self.inner.paint(paint_ctx, data, env);
     }
 
-    fn get_id(&self) -> Option<WidgetId> {
+    fn id(&self) -> Option<WidgetId> {
         Some(self.inner.id())
     }
 }
