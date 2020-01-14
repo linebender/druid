@@ -138,6 +138,23 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
     }
 }
 
+impl<T: Data + ToString +  'static, S: ScrollControlState> Default for VirtualList<T, S> {
+    fn default() -> Self {
+        VirtualList {
+            children: Vec::new(),
+            content_metrics: Default::default(),
+            data_range: 0..0,
+            data_provider: Vec::new(),
+            direction: Axis::Vertical,
+            scroll_delta: 0.,
+            renderer_function: |data: &T| -> Box<dyn Widget<T>> { Box::new(Label::new(data.to_string()).fix_height(30.)) },
+            renderer_size: 0.,
+            set_scroll_metrics_later: false,
+            phantom_data: PhantomData
+        }
+    }
+}
+
 impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for VirtualList<T, S> {
     fn event(&mut self, event_ctx: &mut EventCtx, event: &Event, data: &mut S, _env: &Env) {
         match event {
@@ -219,7 +236,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
         while self.data_range.start != 0 && min > 0. {
             if let Some(data) = self.data_provider.get(self.data_range.start - 1) {
                 let mut widget = WidgetPod::new((self.renderer_function)(data));
-                let child_bc = BoxConstraints::new(Size::ZERO, bc.max().clone());
+                let child_bc = BoxConstraints::new(Size::ZERO, bc.max());
                 let child_size = widget.layout(layout_ctx, &child_bc, data, env);
 
                 let mut offset = Point::new(0., 0.);
@@ -247,7 +264,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
         while max < bounds {
             if let Some(data) = self.data_provider.get(self.data_range.end) {
                 let mut widget = WidgetPod::new((self.renderer_function)(data));
-                let child_bc = BoxConstraints::new(Size::ZERO, bc.max().clone());
+                let child_bc = BoxConstraints::new(Size::ZERO, bc.max());
                 let child_size = widget.layout(layout_ctx, &child_bc, data, env);
                 let mut offset = Point::new(0., 0.);
                 max += match self.direction {
