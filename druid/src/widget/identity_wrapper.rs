@@ -12,27 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::atomic::{AtomicU32, Ordering};
+//! A widget that provides an explicit identity to a child.
 
 use crate::kurbo::Size;
-
-use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
-
-/// A unique identifier for a single widget.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct WidgetId(u32);
-
-static WIDGET_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
-
-impl WidgetId {
-    /// Allocate a new, unique widget id.
-    ///
-    /// Do note that if we create 4 billion widgets there may be a collision.
-    pub(crate) fn next() -> WidgetId {
-        let id = WIDGET_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
-        WidgetId(id)
-    }
-}
+use crate::{
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetId,
+};
 
 /// A wrapper that adds an identity to an otherwise anonymous widget.
 pub struct IdentityWrapper<W> {
