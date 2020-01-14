@@ -1,8 +1,11 @@
-use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Size, UpdateCtx, Widget, WidgetPod, BoxedWidget, Rect, Point};
-use crate::widget::{Label, WidgetExt, ScrollControlState};
-use crate::widget::flex::Axis;
-use std::ops::Range;
 use std::marker::PhantomData;
+use std::ops::Range;
+
+use log::error;
+
+use crate::{BoxConstraints, BoxedWidget, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WidgetPod};
+use crate::widget::{Label, ScrollControlState, WidgetExt};
+use crate::widget::flex::Axis;
 
 pub struct VirtualList<T: Data + ToString, S: ScrollControlState> {
     children: Vec<BoxedWidget<T>>,
@@ -18,6 +21,8 @@ pub struct VirtualList<T: Data + ToString, S: ScrollControlState> {
     // Always represents the topmost/rightmost position depending on the direction
     renderer_function: fn(data: &T) -> Box<dyn Widget<T>>,
     renderer_size: f64,
+    set_scroll_metrics_later: bool,
+
     phantom_data: PhantomData<S>,
 }
 
@@ -32,6 +37,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
             scroll_delta: 0.,
             renderer_function: |data: &T| -> Box<dyn Widget<T>> { Box::new(Label::new(data.to_string()).fix_height(30.)) },
             renderer_size: 30.,
+            set_scroll_metrics_later: false,
             phantom_data: Default::default(),
         }
     }
@@ -56,7 +62,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
         self
     }
 
-    fn set_scroll_metrics(&mut self, value: (f64, f64)) {
+    fn set_content_metrics(&mut self, value: (f64, f64)) {
         match self.direction {
             Axis::Vertical => {
                 self.content_metrics.y0 = value.0;
@@ -67,6 +73,21 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
                 self.content_metrics.x1 = value.1;
             }
         };
+    }
+
+    fn set_scroll_metrics(&mut self, event_ctx: &mut EventCtx, data: &mut S) {
+        // Recalculate the max_scroll_position
+        let page_size = match self.direction {
+            Axis::Vertical => event_ctx.size().height,
+            Axis::Horizontal => event_ctx.size().width
+        };
+        if page_size == 0. {
+            self.set_scroll_metrics_later = true;
+            event_ctx.request_anim_frame()
+        }
+        data.set_max_scroll_position((self.data_provider.len() as f64 * self.renderer_size) - page_size);
+        data.set_page_size(page_size);
+        event_ctx.invalidate();
     }
 
     /// Translates all children by the specified delta.
@@ -124,38 +145,44 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
                 if !data.mouse_wheel_enabled() {
                     return;
                 }
-                let size = event_ctx.size();
-                let delta = if size.width > size.height { event.delta.x } else { event.delta.y };
+                let delta = match self.direction {
+                    Axis::Vertical => event.delta.y,
+                    Axis::Horizontal => event.delta.x
+                };
                 data.set_scroll_pos_from_delta(delta);
                 event_ctx.invalidate();
-            },
+            }
 
             Event::MouseMoved(event) => {
                 if !data.tracking_mouse() {
                     return;
                 }
-                let size = event_ctx.size();
-                let pos = if size.width > size.height { event.pos.x } else { event.pos.y };
+                let pos = match self.direction {
+                    Axis::Vertical => event.pos.y,
+                    Axis::Horizontal => event.pos.x
+                };
+
                 let delta = pos - data.last_mouse_pos();
 
                 data.set_scroll_pos_from_delta(delta / data.scale());
                 data.set_last_mouse_pos(pos);
                 event_ctx.invalidate();
-            },
+            }
 
             Event::MouseUp(_) => {
                 data.set_tracking_mouse(false);
-            },
+            }
 
             Event::Size(_) => {
-                // Recalculate the max_scroll_position
-                let size = match self.direction {
-                    Axis::Vertical => event_ctx.size().height,
-                    Axis::Horizontal => event_ctx.size().width
-                };
-                data.set_max_scroll_position((self.data_provider.len() as f64 * self.renderer_size) - size);
-                event_ctx.invalidate();
+                self.set_scroll_metrics(event_ctx, data);
             },
+
+            Event::AnimFrame(_) => {
+                if self.set_scroll_metrics_later {
+                    self.set_scroll_metrics_later = false;
+                    self.set_scroll_metrics(event_ctx, data);
+                }
+            }
 
             _ => ()
         }
@@ -242,15 +269,26 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
             }
         }
 
-        self.set_scroll_metrics((min, max));
+        self.set_content_metrics((min, max));
         self.scroll_delta = 0.;
         bc.max()
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &S, env: &Env) {
+        if let Err(e) = paint_ctx.save() {
+            error!("saving render context failed: {:?}", e);
+            return;
+        }
+        let viewport = Rect::from_origin_size(Point::ORIGIN, paint_ctx.size());
+        paint_ctx.clip(viewport);
+
         for (index, child) in &mut self.children.iter_mut().enumerate() {
             let idx = self.data_range.start + index;
             child.paint_with_offset(paint_ctx, &self.data_provider[idx], env);
+        }
+
+        if let Err(e) = paint_ctx.restore() {
+            error!("restoring render context failed: {:?}", e);
         }
     }
 }

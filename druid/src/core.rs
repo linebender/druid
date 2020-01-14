@@ -266,7 +266,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             base_state: &mut self.state,
             had_active,
             is_handled: false,
-            is_root: false,
         };
         let rect = child_ctx.base_state.layout_rect;
         // Note: could also represent this as `Option<Event>`.
@@ -563,7 +562,6 @@ pub struct EventCtx<'a, 'b> {
     pub(crate) base_state: &'a mut BaseState,
     pub(crate) had_active: bool,
     pub(crate) is_handled: bool,
-    pub(crate) is_root: bool,
     pub(crate) widget_id: WidgetId,
 }
 

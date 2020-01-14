@@ -50,13 +50,20 @@ pub trait ScrollControlState: Data + PartialEq {
 
 pub struct Scrollbar {
     opacity: f64,
+    scroll_policy: ScrollPolicy,
 }
 
 impl Scrollbar {
     pub fn new() -> Scrollbar {
         Scrollbar {
             opacity: 1.,
+            scroll_policy: ScrollPolicy::Auto,
         }
+    }
+
+    pub fn scroll_policy(mut self, val: ScrollPolicy) -> Self {
+        self.scroll_policy = val;
+        self
     }
 
     fn calculated_thumb_size(data: &impl ScrollControlState, env: &Env, size: &Size) -> f64 {
@@ -66,7 +73,8 @@ impl Scrollbar {
         let page_size = data.page_size();
 
         let extent = size.height.max(size.width);
-        (page_size / (max_scroll_position - min_scroll_position + page_size) * extent).max(bar_width * 2.)
+        let target_thumb_size = (page_size / (max_scroll_position - min_scroll_position + page_size)) * extent;
+        target_thumb_size.max(bar_width * 2.)
     }
 }
 
@@ -81,7 +89,7 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
                 let delta = if size.width > size.height { event.delta.x } else { event.delta.y };
                 data.set_scroll_pos_from_delta(delta);
                 event_ctx.invalidate();
-            },
+            }
 
             Event::MouseMoved(event) => {
                 if !data.tracking_mouse() {
@@ -105,22 +113,23 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
                 let distance = size.width.max(size.height);
                 let thumb_size = Scrollbar::calculated_thumb_size(data, env, &size);
                 data.set_scale((distance - thumb_size) / (data.max_scroll_position() - data.min_scroll_position()));
-            },
+            }
 
             Event::MouseUp(_) => {
                 data.set_tracking_mouse(false);
                 data.set_last_mouse_pos(0.);
-            },
+            }
 
             _ => ()
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, _env: &Env) {
         if let Some(old) = old_data {
             if old.max_scroll_position() != data.max_scroll_position()
                 || old.min_scroll_position() != data.min_scroll_position()
                 || old.scroll_position() != data.scroll_position() {
+
                 ctx.invalidate();
             }
         }
@@ -131,6 +140,9 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+        if data.max_scroll_position() < 0. {
+            return;
+        }
         let brush = paint_ctx.render_ctx.solid_brush(
             env.get(theme::SCROLL_BAR_COLOR)
                 .with_alpha(self.opacity),

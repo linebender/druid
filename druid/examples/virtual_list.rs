@@ -99,10 +99,10 @@ fn main() {
         .use_simple_logger()
         .launch(VirtualScrollState {
             last_mouse_pos: 0.,
-            page_size: 1.0,
+            page_size: 0.,
             scroll_position: 0.0,
-            max_scroll_position: (1000000. * 30.) - 400.,
-            min_scroll_position: 0.0,
+            max_scroll_position: 0.,
+            min_scroll_position: 0.,
             mouse_wheel_enabled: true,
             tracking_mouse: false,
             scale: 0.
@@ -115,6 +115,6 @@ fn main() {
         }
         Flex::row()
             .with_child(VirtualList::new().data_provider(data), 1.)
-            .with_child(Scrollbar::new().fix_width(20.), 1.)
+            .with_child(Scrollbar::new().fix_width(20.), 0.)
     }
 }
