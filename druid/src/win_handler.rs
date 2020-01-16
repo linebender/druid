@@ -72,6 +72,7 @@ struct Windows<T: Data> {
 pub(crate) struct WindowState {
     pub(crate) handle: WindowHandle,
     prev_paint_time: Option<Instant>,
+    needs_inval: bool,
 }
 
 /// Everything required for a window to handle an event.
@@ -89,6 +90,7 @@ impl<T: Data> Windows<T> {
         let state = WindowState {
             handle,
             prev_paint_time: None,
+            needs_inval: false,
         };
         self.state.insert(id, state);
     }
@@ -155,7 +157,7 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
             0
         };
         let anim_frame_event = Event::AnimFrame(interval);
-        let (_, _, request_anim) = self.do_event_inner(anim_frame_event, ctx);
+        let (_, request_anim) = self.do_event_inner(anim_frame_event, ctx);
         let prev = if request_anim {
             Some(this_paint_time)
         } else {
@@ -186,10 +188,9 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
 
     /// Send an event to the widget hierarchy.
     ///
-    /// Returns three flags. The first is true if the event was handled. The
-    /// second is true if invalidation is requested. The third is true if an
-    /// animation frame is requested.
-    fn do_event_inner(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> (bool, bool, bool) {
+    /// Returns two flags. The first is true if the event was handled. The
+    /// second is true if an animation frame is requested.
+    fn do_event_inner(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> (bool, bool) {
         // should there be a root base state persisting in the ui state instead?
         let mut cursor = match event {
             Event::MouseMoved(..) => Some(Cursor::Arrow),
@@ -225,13 +226,13 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
             self.window
                 .event(&mut ctx, &focus_event, self.data, self.env);
         }
-        let needs_inval = ctx.base_state.needs_inval;
+        self.state.needs_inval = ctx.base_state.needs_inval | ctx.base_state.request_anim;
         let request_anim = ctx.base_state.request_anim;
         if let Some(cursor) = cursor {
             win_ctx.set_cursor(&cursor);
         }
 
-        (is_handled, needs_inval, request_anim)
+        (is_handled, request_anim)
     }
 
     fn set_menu(&mut self, cmd: &Command) {
@@ -401,7 +402,7 @@ impl<T: Data> AppState<T> {
     fn do_event(&mut self, source_id: WindowId, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
         let event = self.delegate_event(source_id, event);
 
-        let (is_handled, dirty, anim) = if let Some(event) = event {
+        let (is_handled, _) = if let Some(event) = event {
             // handle system window-level commands
             if let Event::Command(ref cmd) = event {
                 match cmd.selector {
@@ -423,23 +424,34 @@ impl<T: Data> AppState<T> {
 
             self.assemble_window_state(source_id)
                 .map(|mut win| win.do_event_inner(event, win_ctx))
-                .unwrap_or((false, false, false))
+                .unwrap_or((false, false))
         } else {
             // if the event was swallowed by the delegate we consider it handled?
-            (true, false, false)
+            (true, false)
         };
 
+        //TODO: should we be always calling update after an event? shouldn't
+        //we at least handle commands first?
+        self.do_update(win_ctx);
+
+        is_handled
+    }
+
+    fn do_update(&mut self, win_ctx: &mut dyn WinCtx) {
         let AppState {
             ref mut windows,
             ref data,
             ref env,
             ..
         } = self;
-        let Windows { state, windows } = windows;
+        let Windows {
+            ref mut state,
+            windows,
+        } = windows;
 
         // we send `update` to all windows, not just the active one:
         for (id, window) in windows {
-            if let Some(state) = state.get(id) {
+            if let Some(state) = state.get_mut(id) {
                 let mut update_ctx = UpdateCtx {
                     text_factory: win_ctx.text_factory(),
                     window: &state.handle,
@@ -447,12 +459,23 @@ impl<T: Data> AppState<T> {
                     window_id: *id,
                 };
                 window.update(&mut update_ctx, data, env);
-                if update_ctx.needs_inval || (*id == source_id && (anim || dirty)) {
-                    update_ctx.window.invalidate();
-                }
+                state.needs_inval |= update_ctx.needs_inval;
             }
         }
-        is_handled
+        self.invalidate_if_needed();
+    }
+
+    /// invalidate any window handles that need it.
+    ///
+    /// This should always be called at the end of an event update cycle,
+    /// including for lifecycle events.
+    fn invalidate_if_needed(&mut self) {
+        for state in self.windows.state.values_mut() {
+            if state.needs_inval {
+                state.handle.invalidate();
+                state.needs_inval = false;
+            }
+        }
     }
 
     fn window_got_focus(&mut self, window_id: WindowId, _ctx: &mut dyn WinCtx) {
