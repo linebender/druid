@@ -64,12 +64,22 @@ pub(crate) struct AppState<T: Data> {
 
 /// All active windows.
 struct Windows<T: Data> {
-    windows: HashMap<WindowId, Window<T>>,
-    state: HashMap<WindowId, WindowState>,
+    windows: HashMap<WindowId, WindowEntry<T>>,
+}
+
+/// The handle and state for a window.
+///
+/// When we create a window, we create our internal window structure (`Window<T>`)
+/// before we have access to the handle (in `WindowState`).
+struct WindowEntry<T: Data> {
+    id: WindowId,
+    window: Option<Window<T>>,
+    state: Option<WindowState>,
 }
 
 /// Per-window state not owned by user code.
 pub(crate) struct WindowState {
+    // TODO: should this be in `WindowEntry` by itself?
     pub(crate) handle: WindowHandle,
     prev_paint_time: Option<Instant>,
     needs_inval: bool,
@@ -85,6 +95,25 @@ struct SingleWindowState<'a, T: Data> {
     env: &'a Env,
 }
 
+impl<T: Data> WindowEntry<T> {
+    fn new(id: WindowId) -> Self {
+        WindowEntry {
+            id,
+            window: None,
+            state: None,
+        }
+    }
+
+    // unpacks this entry if it has both a window and state set.
+    fn contents_if_some(&mut self) -> Option<(WindowId, &mut WindowState, &mut Window<T>)> {
+        if let (Some(state), Some(window)) = (self.state.as_mut(), self.window.as_mut()) {
+            Some((self.id, state, window))
+        } else {
+            None
+        }
+    }
+}
+
 impl<T: Data> Windows<T> {
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
         let state = WindowState {
@@ -92,45 +121,47 @@ impl<T: Data> Windows<T> {
             prev_paint_time: None,
             needs_inval: false,
         };
-        self.state.insert(id, state);
+        self.windows
+            .entry(id)
+            .or_insert_with(|| WindowEntry::new(id))
+            .state = Some(state);
     }
 
     fn add(&mut self, id: WindowId, window: Window<T>) {
-        self.windows.insert(id, window);
+        self.windows
+            .entry(id)
+            .or_insert_with(|| WindowEntry::new(id))
+            .window = Some(window);
     }
 
     fn remove(&mut self, id: WindowId) -> Option<WindowHandle> {
-        self.windows.remove(&id);
-        self.state.remove(&id).map(|state| state.handle)
+        self.windows
+            .remove(&id)
+            .and_then(|entry| entry.state)
+            .map(|state| state.handle)
     }
 
-    //TODO: rename me?
-    fn get<'a>(
-        &'a mut self,
-        window_id: WindowId,
-        command_queue: &'a mut VecDeque<(WindowId, Command)>,
-        data: &'a mut T,
-        env: &'a Env,
-    ) -> Option<SingleWindowState<'a, T>> {
-        let state = self.state.get_mut(&window_id);
-        let window = self.windows.get_mut(&window_id);
+    fn state_mut(&mut self, id: WindowId) -> Option<&mut WindowState> {
+        self.get_mut(id).map(|(_, state, _)| state)
+    }
 
-        match (state, window) {
-            (Some(state), Some(window)) => {
-                return Some(SingleWindowState {
-                    window_id,
-                    window,
-                    state,
-                    command_queue,
-                    data,
-                    env,
-                })
-            }
-            (None, Some(_)) => warn!("missing window for id {:?}", window_id),
-            (Some(_), None) => warn!("missing state for window id {:?}", window_id),
-            (None, None) => warn!("unknown window {:?}", window_id),
-        }
-        None
+    fn iter_mut(&mut self) -> impl Iterator<Item = (WindowId, &mut WindowState, &mut Window<T>)> {
+        self.windows
+            .values_mut()
+            .flat_map(WindowEntry::contents_if_some)
+    }
+
+    fn get_menu_cmd(&self, window_id: WindowId, cmd_id: u32) -> Option<Command> {
+        self.windows
+            .get(&window_id)
+            .and_then(|entry| entry.window.as_ref())
+            .and_then(|w| w.get_menu_cmd(cmd_id))
+    }
+
+    fn get_mut(&mut self, id: WindowId) -> Option<(WindowId, &mut WindowState, &mut Window<T>)> {
+        self.windows
+            .get_mut(&id)
+            .and_then(WindowEntry::contents_if_some)
     }
 }
 
@@ -304,10 +335,7 @@ impl<T: Data> AppState<T> {
     }
 
     fn get_menu_cmd(&self, window_id: WindowId, cmd_id: u32) -> Option<Command> {
-        self.windows
-            .windows
-            .get(&window_id)
-            .and_then(|w| w.get_menu_cmd(cmd_id))
+        self.windows.get_menu_cmd(window_id, cmd_id)
     }
 
     /// A helper fn for setting up the `DelegateCtx`. Takes a closure with
@@ -371,13 +399,13 @@ impl<T: Data> AppState<T> {
     /// window handle; the platform should close the window, and then call
     /// our handlers `destroy()` method, at which point we can do our cleanup.
     fn request_close_window(&mut self, window_id: WindowId) {
-        if let Some(state) = self.windows.state.get_mut(&window_id) {
+        if let Some(state) = self.windows.state_mut(window_id) {
             state.handle.close();
         }
     }
 
     fn show_window(&mut self, id: WindowId) {
-        if let Some(state) = self.windows.state.get(&id) {
+        if let Some(state) = self.windows.state_mut(id) {
             state.handle.bring_to_front_and_focus();
         }
     }
@@ -390,7 +418,16 @@ impl<T: Data> AppState<T> {
             ref env,
             ..
         } = self;
-        windows.get(window_id, command_queue, data, env)
+        windows
+            .get_mut(window_id)
+            .map(move |(window_id, state, window)| SingleWindowState {
+                window_id,
+                window,
+                state,
+                command_queue,
+                data,
+                env,
+            })
     }
 
     fn paint(&mut self, window_id: WindowId, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
@@ -438,29 +475,16 @@ impl<T: Data> AppState<T> {
     }
 
     fn do_update(&mut self, win_ctx: &mut dyn WinCtx) {
-        let AppState {
-            ref mut windows,
-            ref data,
-            ref env,
-            ..
-        } = self;
-        let Windows {
-            ref mut state,
-            windows,
-        } = windows;
-
         // we send `update` to all windows, not just the active one:
-        for (id, window) in windows {
-            if let Some(state) = state.get_mut(id) {
-                let mut update_ctx = UpdateCtx {
-                    text_factory: win_ctx.text_factory(),
-                    window: &state.handle,
-                    needs_inval: false,
-                    window_id: *id,
-                };
-                window.update(&mut update_ctx, data, env);
-                state.needs_inval |= update_ctx.needs_inval;
-            }
+        for (id, state, window) in self.windows.iter_mut() {
+            let mut update_ctx = UpdateCtx {
+                text_factory: win_ctx.text_factory(),
+                window: &state.handle,
+                needs_inval: false,
+                window_id: id,
+            };
+            window.update(&mut update_ctx, &self.data, &self.env);
+            state.needs_inval |= update_ctx.needs_inval;
         }
         self.invalidate_if_needed();
     }
@@ -470,7 +494,7 @@ impl<T: Data> AppState<T> {
     /// This should always be called at the end of an event update cycle,
     /// including for lifecycle events.
     fn invalidate_if_needed(&mut self) {
-        for state in self.windows.state.values_mut() {
+        for (_, state, _) in self.windows.iter_mut() {
             if state.needs_inval {
                 state.handle.invalidate();
                 state.needs_inval = false;
@@ -727,7 +751,6 @@ impl<T: Data> Default for Windows<T> {
     fn default() -> Self {
         Windows {
             windows: HashMap::new(),
-            state: HashMap::new(),
         }
     }
 }
