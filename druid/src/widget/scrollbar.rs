@@ -104,7 +104,7 @@ impl AnimationState {
             let total_time = self.duration + self.delay;
             self.elapsed_time = total_time * (1 - (self.elapsed_time / total_time));
         }
-        self.done = self.to == self.current_value;
+        self.done = self.to.same(&self.current_value);
     }
 }
 
@@ -171,10 +171,10 @@ impl Scrollbar {
 
     fn show(&mut self) {
         // Animation is already fading in
-        if self.animation_state.to == 1. {
+        if self.animation_state.to.same(&1.) {
             return;
         }
-        if self.animation_state.to == 0. {
+        if self.animation_state.to.same(&0.) {
             self.animation_state.reverse();
         }
         self.animation_state.delay = 0;
@@ -182,11 +182,11 @@ impl Scrollbar {
 
     fn hide(&mut self, env: &Env) {
         // Animation is already fading out
-        if self.animation_state.to == 0. {
+        if self.animation_state.to.same(&0.) {
             return;
         }
 
-        if self.animation_state.to == 1. {
+        if self.animation_state.to.same(&1.) {
             self.animation_state.reverse();
         }
         self.animation_state.delay = env.get(theme::SCROLL_BAR_FADE_DELAY) * 1_000_000;
@@ -219,7 +219,7 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
 
             Event::HotChanged(is_hot) => {
                 self.is_hot = *is_hot;
-                if self.is_hot  {
+                if self.is_hot {
                     self.show();
                 } else {
                     self.hide(env);

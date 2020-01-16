@@ -25,7 +25,7 @@ struct VirtualScrollState {
     mouse_wheel_enabled: bool,
     scroll_position: f64,
     tracking_mouse: bool,
-    scale: f64
+    scale: f64,
 }
 
 impl ScrollControlState for VirtualScrollState {
@@ -86,10 +86,10 @@ impl ScrollControlState for VirtualScrollState {
     }
 
     fn set_tracking_mouse(&mut self, val: bool) {
-       self.tracking_mouse = val;
+        self.tracking_mouse = val;
     }
 
-    fn set_scale(&mut self, val:f64) {
+    fn set_scale(&mut self, val: f64) {
         self.scale = val;
     }
 
@@ -111,7 +111,7 @@ fn main() {
             min_scroll_position: 0.,
             mouse_wheel_enabled: true,
             tracking_mouse: false,
-            scale: 0.
+            scale: 0.,
         }).expect("launch failed");
 
     fn build_widget() -> impl Widget<VirtualScrollState> {

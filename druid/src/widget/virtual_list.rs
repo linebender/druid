@@ -138,7 +138,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
     }
 }
 
-impl<T: Data + ToString +  'static, S: ScrollControlState> Default for VirtualList<T, S> {
+impl<T: Data + ToString + 'static, S: ScrollControlState> Default for VirtualList<T, S> {
     fn default() -> Self {
         VirtualList {
             children: Vec::new(),
@@ -150,7 +150,7 @@ impl<T: Data + ToString +  'static, S: ScrollControlState> Default for VirtualLi
             renderer_function: |data: &T| -> Box<dyn Widget<T>> { Box::new(Label::new(data.to_string()).fix_height(30.)) },
             renderer_size: 0.,
             set_scroll_metrics_later: false,
-            phantom_data: PhantomData
+            phantom_data: PhantomData,
         }
     }
 }
@@ -196,7 +196,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
 
             Event::Size(_) => {
                 self.set_scroll_metrics(event_ctx, data);
-            },
+            }
 
             Event::AnimFrame(_) => {
                 if self.set_scroll_metrics_later {
