@@ -65,9 +65,17 @@ impl IdleHandle {
     where
         F: FnOnce(&dyn Any) + Send + 'static,
     {
-        self.0.add_idle(callback)
+        self.0.add_idle_callback(callback)
+    }
+
+    pub fn schedule_idle(&mut self, token: IdleToken) {
+        self.0.add_idle_token(token)
     }
 }
+
+/// A token that uniquely identifies a idle schedule.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
+pub struct IdleToken(usize);
 
 /// A handle to a platform window object.
 #[derive(Clone, Default)]
@@ -308,6 +316,10 @@ pub trait WinHandler {
     /// WM_NCDESTROY).
     #[allow(unused_variables)]
     fn destroy(&mut self, ctx: &mut dyn WinCtx) {}
+
+    /// Called when a idle token is requested by [`IdleHandle::schedule_idle()`] call.
+    #[allow(unused_variables)]
+    fn idle(&mut self, token: IdleToken, ctx: &mut dyn WinCtx) {}
 
     /// Get a reference to the handler state. Used mostly by idle handlers.
     fn as_any(&mut self) -> &mut dyn Any;

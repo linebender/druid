@@ -59,7 +59,7 @@ use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::window::{Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{IdleToken, Text, TimerToken, WinCtx, WinHandler};
 
 extern "system" {
     pub fn DwmFlush();
@@ -116,7 +116,13 @@ pub struct WindowHandle {
 #[derive(Clone)]
 pub struct IdleHandle {
     pub(crate) hwnd: HWND,
-    queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    queue: Arc<Mutex<Vec<IdleKind>>>,
+}
+
+/// This represents different Idle Callback Mechanism
+enum IdleKind {
+    Callback(Box<dyn IdleCallback>),
+    Token(IdleToken),
 }
 
 /// This is the low level window state. All mutable contents are protected
@@ -125,7 +131,7 @@ struct WindowState {
     hwnd: Cell<HWND>,
     dpi: Cell<f32>,
     wndproc: Box<dyn WndProc>,
-    idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    idle_queue: Arc<Mutex<Vec<IdleKind>>>,
 
     // This field doesn't really need to be shared; it could be plumbed
     // as a mutable reference down through WinCtx, but that would require
@@ -267,7 +273,7 @@ impl WndState {
             let handle = handle.borrow().get_idle_handle().unwrap();
             // Note: maybe add WindowHandle as arg to idle handler so we don't need this.
             let handle2 = handle.clone();
-            handle.add_idle(move |_| handle2.invalidate());
+            handle.add_idle_callback(move |_| handle2.invalidate());
         }
     }
 }
@@ -734,9 +740,12 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     let queue = self.handle.borrow().take_idle_queue();
-                    let handler_as_any = s.handler.as_any();
                     for callback in queue {
-                        callback.call(handler_as_any);
+                        let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
+                        match callback {
+                            IdleKind::Callback(it) => it.call(s.handler.as_any()),
+                            IdleKind::Token(token) => s.handler.idle(token, &mut c.ctx()),
+                        }
                     }
                     Some(0)
                 } else {
@@ -1179,7 +1188,7 @@ impl WindowHandle {
         })
     }
 
-    fn take_idle_queue(&self) -> Vec<Box<dyn IdleCallback>> {
+    fn take_idle_queue(&self) -> Vec<IdleKind> {
         if let Some(w) = self.state.upgrade() {
             mem::replace(&mut w.idle_queue.lock().unwrap(), Vec::new())
         } else {
@@ -1246,7 +1255,7 @@ impl IdleHandle {
     /// Add an idle handler, which is called (once) when the message loop
     /// is empty. The idle handler will be run from the window's wndproc,
     /// which means it won't be scheduled if the window is closed.
-    pub fn add_idle<F>(&self, callback: F)
+    pub fn add_idle_callback<F>(&self, callback: F)
     where
         F: FnOnce(&dyn Any) + Send + 'static,
     {
@@ -1256,7 +1265,17 @@ impl IdleHandle {
                 PostMessageW(self.hwnd, XI_RUN_IDLE, 0, 0);
             }
         }
-        queue.push(Box::new(callback));
+        queue.push(IdleKind::Callback(Box::new(callback)));
+    }
+
+    pub fn add_idle_token(&self, token: IdleToken) {
+        let mut queue = self.queue.lock().unwrap();
+        if queue.is_empty() {
+            unsafe {
+                PostMessageW(self.hwnd, XI_RUN_IDLE, 0, 0);
+            }
+        }
+        queue.push(IdleKind::Token(token));
     }
 
     fn invalidate(&self) {

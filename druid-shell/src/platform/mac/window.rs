@@ -47,7 +47,7 @@ use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::window::{Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{IdleToken, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
 #[allow(non_upper_case_globals)]
@@ -58,7 +58,7 @@ pub(crate) struct WindowHandle {
     /// This is an NSView, as our concept of "window" is more the top-level container holding
     /// a view. Also, this is better for hosted applications such as VST.
     nsview: WeakPtr,
-    idle_queue: Weak<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    idle_queue: Weak<Mutex<Vec<IdleKind>>>,
 }
 
 impl Default for WindowHandle {
@@ -81,14 +81,20 @@ pub(crate) struct WindowBuilder {
 #[derive(Clone)]
 pub(crate) struct IdleHandle {
     nsview: WeakPtr,
-    idle_queue: Weak<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    idle_queue: Weak<Mutex<Vec<IdleKind>>>,
+}
+
+/// This represents different Idle Callback Mechanism
+enum IdleKind {
+    Callback(Box<dyn IdleCallback>),
+    Token(IdleToken),
 }
 
 /// This is the state associated with our custom NSView.
 struct ViewState {
     nsview: WeakPtr,
     handler: Box<dyn WinHandler>,
-    idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     last_mods: KeyModifiers,
 }
 
@@ -287,9 +293,7 @@ lazy_static! {
     };
 }
 
-type BoxedCallback = Box<dyn IdleCallback>;
-
-fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<BoxedCallback>>>) {
+fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
     let idle_queue = Arc::new(Mutex::new(Vec::new()));
     let queue_handle = Arc::downgrade(&idle_queue);
     unsafe {
@@ -553,9 +557,18 @@ extern "C" fn run_idle(this: &mut Object, _: Sel) {
         &mut view_state.idle_queue.lock().expect("queue"),
         Vec::new(),
     );
-    let handler_as_any = view_state.handler.as_any();
-    for callback in queue {
-        callback.call(handler_as_any);
+    for item in queue {
+        match item {
+            IdleKind::Callback(it) => it.call(view_state.handler.as_any()),
+            IdleKind::Token(it) => {
+                let nsview = view_state.nsview.clone();
+                let mut ctx = WinCtxImpl {
+                    nsview: &nsview,
+                    text: Text::new(),
+                };
+                view_state.handler.as_mut().idle(it, &mut ctx);
+            }
+        }
     }
 }
 
@@ -725,7 +738,7 @@ impl IdleHandle {
     ///
     /// Note: the name "idle" suggests that it will be scheduled with a lower
     /// priority than other UI events, but that's not necessarily the case.
-    pub fn add_idle<F>(&self, callback: F)
+    pub fn add_idle_callback<F>(&self, callback: F)
     where
         F: FnOnce(&dyn Any) + Send + 'static,
     {
@@ -739,7 +752,22 @@ impl IdleHandle {
                         withObject: nil waitUntilDone: NO);
                 }
             }
-            queue.push(Box::new(callback));
+            queue.push(IdleKind::Callback(Box::new(callback)));
+        }
+    }
+
+    pub fn add_idle_token(&self, token: IdleToken) {
+        if let Some(queue) = self.idle_queue.upgrade() {
+            let mut queue = queue.lock().expect("queue lock");
+            if queue.is_empty() {
+                unsafe {
+                    let nsview = self.nsview.load();
+                    // Note: the nsview might be nil here if the window has been dropped, but that's ok.
+                    let () = msg_send!(*nsview, performSelectorOnMainThread: sel!(runIdle)
+                        withObject: nil waitUntilDone: NO);
+                }
+            }
+            queue.push(IdleKind::Token(token));
         }
     }
 }

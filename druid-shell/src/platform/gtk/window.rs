@@ -40,7 +40,7 @@ use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::window::{Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{IdleToken, Text, TimerToken, WinCtx, WinHandler};
 use crate::Error;
 
 /// Taken from https://gtk-rs.org/docs-src/tutorial/closures
@@ -88,14 +88,20 @@ pub struct WindowBuilder {
 
 #[derive(Clone)]
 pub struct IdleHandle {
-    idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     state: Weak<WindowState>,
+}
+
+/// This represents different Idle Callback Mechanism
+enum IdleKind {
+    Callback(Box<dyn IdleCallback>),
+    Token(IdleToken),
 }
 
 pub(crate) struct WindowState {
     window: ApplicationWindow,
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
-    idle_queue: Arc<Mutex<Vec<Box<dyn IdleCallback>>>>,
+    idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     current_keyval: RefCell<Option<u32>>,
 }
 
@@ -533,17 +539,29 @@ impl IdleHandle {
     ///
     /// Note: the name "idle" suggests that it will be scheduled with a lower
     /// priority than other UI events, but that's not necessarily the case.
-    pub fn add_idle<F>(&self, callback: F)
+    pub fn add_idle_callback<F>(&self, callback: F)
     where
         F: FnOnce(&dyn Any) + Send + 'static,
     {
         let mut queue = self.idle_queue.lock().unwrap();
         if let Some(state) = self.state.upgrade() {
             if queue.is_empty() {
-                queue.push(Box::new(callback));
+                queue.push(IdleKind::Callback(Box::new(callback)));
                 gdk::threads_add_idle(move || run_idle(&state));
             } else {
-                queue.push(Box::new(callback));
+                queue.push(IdleKind::Callback(Box::new(callback)));
+            }
+        }
+    }
+
+    pub fn add_idle_token(&self, token: IdleToken) {
+        let mut queue = self.idle_queue.lock().unwrap();
+        if let Some(state) = self.state.upgrade() {
+            if queue.is_empty() {
+                queue.push(IdleKind::Token(token));
+                gdk::threads_add_idle(move || run_idle(&state));
+            } else {
+                queue.push(IdleKind::Token(token));
             }
         }
     }
@@ -552,12 +570,20 @@ impl IdleHandle {
 fn run_idle(state: &Arc<WindowState>) -> bool {
     assert_main_thread();
     let mut handler = state.handler.borrow_mut();
-    let handler_as_any = handler.as_any();
 
     let queue: Vec<_> = std::mem::replace(&mut state.idle_queue.lock().unwrap(), Vec::new());
 
-    for callback in queue {
-        callback.call(handler_as_any);
+    for item in queue {
+        match item {
+            IdleKind::Callback(it) => it.call(handler.as_any()),
+            IdleKind::Token(it) => {
+                let handle = WindowHandle {
+                    state: Arc::downgrade(&state),
+                };
+                let mut ctx = WinCtxImpl::from(&handle);
+                handler.idle(it, &mut ctx);
+            }
+        }
     }
     false
 }
