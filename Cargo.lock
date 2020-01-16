@@ -281,6 +281,7 @@ dependencies = [
  "fluent-bundle 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-langneg 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-syntax 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "simple_logger 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "unic-langid 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -401,6 +402,11 @@ dependencies = [
 [[package]]
 name = "fluent-syntax"
 version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "fnv"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -1442,6 +1448,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum fluent-bundle 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cb733f6cedee059a77da074a14d1d855f3c7a04de18164b181ba2aa82221e281"
 "checksum fluent-langneg 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)" = "55e840a3a9938e6dd9a57a6a3be02bef1d51b1d75b883cdfe84810c7e7ca1293"
 "checksum fluent-syntax 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7be7427364d95bc7b59f3b7cd0b1a74bb70c2ee0ae667b63b853d359470dc85c"
+"checksum fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "2fad85553e09a6f881f739c29f0b00b0f01357c743266d478b68951ce23285f3"
 "checksum foreign-types 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f6f339eb8adc052cd2ca78910fda869aefa38d22d5cb648e6485e4d3fc06f3b1"
 "checksum foreign-types-shared 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
 "checksum freetype 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "11926b2b410b469d0e9399eca4cbbe237a9ef02176c485803b29216307e8e028"

@@ -14,6 +14,8 @@
 
 //! A widget that provides an explicit identity to a child.
 
+use std::marker::PhantomData;
+
 use crate::kurbo::Size;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
@@ -21,20 +23,30 @@ use crate::{
 };
 
 /// A wrapper that adds an identity to an otherwise anonymous widget.
-pub struct IdentityWrapper<W> {
+pub struct IdentityWrapper<T, W> {
     id: WidgetId,
     inner: W,
+    phantom: PhantomData<T>,
 }
 
-impl<W> IdentityWrapper<W> {
+impl<T: Data, W: Widget<T>> IdentityWrapper<T, W> {
     /// Assign an identity to a widget.
-    pub fn wrap(inner: W) -> (WidgetId, IdentityWrapper<W>) {
-        let id = WidgetId::next();
-        (id, IdentityWrapper { id, inner })
+    pub fn wrap(inner: W) -> (WidgetId, IdentityWrapper<T, W>) {
+        // if the inner widget already has an id (for instance if it uses
+        // a WidgetPod) then we reuse that.
+        let id = inner.id().unwrap_or_else(WidgetId::next);
+        (
+            id,
+            IdentityWrapper {
+                id,
+                inner,
+                phantom: PhantomData,
+            },
+        )
     }
 }
 
-impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<W> {
+impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<T, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.inner.event(ctx, event, data, env);
     }

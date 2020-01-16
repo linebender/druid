@@ -20,6 +20,7 @@ use std::time::Instant;
 
 use log;
 
+use crate::bloom::Bloom;
 use crate::kurbo::{Affine, Rect, Shape, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::{
@@ -95,6 +96,7 @@ pub(crate) struct BaseState {
 
     /// This widget or a descendant has requested focus.
     pub(crate) request_focus: bool,
+    pub(crate) children: Bloom<WidgetId>,
 }
 
 impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
@@ -345,14 +347,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Event::Timer(*id)
             }
             Event::Command(cmd) => Event::Command(cmd.clone()),
-            Event::TargetedCommand(target, cmd) => {
-                if *target == Target::Widget(self.id) || target.is_window() {
-                    Event::Command(cmd.clone())
-                } else {
-                    // TODO: here's where Bloom filter magic would happen
+            Event::TargetedCommand(target, cmd) => match target {
+                Target::Window(_) => Event::Command(cmd.clone()),
+                Target::Widget(id) if *id == self.id => Event::Command(cmd.clone()),
+                Target::Widget(id) => {
+                    recurse = child_ctx.base_state.children.contains(id);
                     Event::TargetedCommand(*target, cmd.clone())
                 }
-            }
+            },
         };
         child_ctx.base_state.needs_inval = false;
         if let Some(is_hot) = hot_changed {
@@ -376,7 +378,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         ctx.widget_id = self.id();
+        let pre_children = ctx.children;
+        ctx.children = Bloom::new();
         self.inner.lifecycle(ctx, event, data, env);
+        if let LifeCycle::RegisterChildren = event {
+            self.state.children = ctx.children;
+            ctx.children = ctx.children.intersection(pre_children);
+            ctx.register_child(self.id());
+        }
     }
 
     /// Propagate a data update.
@@ -574,6 +583,9 @@ pub struct EventCtx<'a, 'b> {
 
 pub struct LifeCycleCtx<'a> {
     pub(crate) command_queue: &'a mut VecDeque<(Target, Command)>,
+    /// the registry for the current widgets children;
+    /// only really meaninful during a `LifeCyle::RegisterChildren` call.
+    pub(crate) children: Bloom<WidgetId>,
     pub(crate) window_id: WindowId,
     pub(crate) widget_id: WidgetId,
 }
@@ -780,6 +792,7 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     pub fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
         LifeCycleCtx {
             command_queue: self.command_queue,
+            children: Bloom::default(),
             window_id: self.window_id,
             widget_id: self.widget_id,
         }
@@ -790,6 +803,12 @@ impl<'a> LifeCycleCtx<'a> {
     /// Returns the current widget's `WidgetId`.
     pub fn widget_id(&self) -> WidgetId {
         self.widget_id
+    }
+
+    /// Registers a child wildget. This should only be called
+    /// in response to a `LifeCycle::RegisterChildren` event.
+    pub fn register_child(&mut self, child_id: WidgetId) {
+        self.children.add(&child_id);
     }
 
     /// Submit a [`Command`] to be run after this event is handled.
@@ -859,8 +878,52 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     pub fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
         LifeCycleCtx {
             command_queue: self.command_queue,
+            children: Bloom::default(),
             window_id: self.window_id,
             widget_id: self.widget_id,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::widget::{Flex, IdentityWrapper, Scroll, Split, TextBox, WidgetExt};
+
+    #[test]
+    fn register_children() {
+        fn make_widgets() -> (WidgetId, WidgetId, WidgetId, impl Widget<Option<u32>>) {
+            let (id1, t1) = IdentityWrapper::wrap(TextBox::raw().parse());
+            let (id2, t2) = IdentityWrapper::wrap(TextBox::raw().parse());
+            let (id3, t3) = IdentityWrapper::wrap(TextBox::raw().parse());
+            eprintln!("{:?}, {:?}, {:?}", id1, id2, id3);
+            let widget = Split::vertical(
+                Flex::row()
+                    .with_child(t1, 1.0)
+                    .with_child(t2, 1.0)
+                    .with_child(t3, 1.0),
+                Scroll::new(TextBox::raw().parse()),
+            );
+            (id1, id2, id3, widget)
+        }
+
+        let (id1, id2, id3, widget) = make_widgets();
+        let mut widget = WidgetPod::new(widget).boxed();
+
+        let mut command_queue: VecDeque<(Target, Command)> = VecDeque::new();
+        let mut ctx = LifeCycleCtx {
+            command_queue: &mut command_queue,
+            children: Bloom::new(),
+            window_id: WindowId::next(),
+            widget_id: WidgetId::next(),
+        };
+
+        let env = Env::default();
+
+        widget.lifecycle(&mut ctx, &LifeCycle::RegisterChildren, &None, &env);
+        assert!(ctx.children.contains(&id1));
+        assert!(ctx.children.contains(&id2));
+        assert!(ctx.children.contains(&id3));
+        assert_eq!(ctx.children.entry_count(), 7);
     }
 }
