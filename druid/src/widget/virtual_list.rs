@@ -3,9 +3,12 @@ use std::ops::Range;
 
 use log::error;
 
-use crate::{BoxConstraints, BoxedWidget, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WidgetPod, Selector, Command};
-use crate::widget::{Label, ScrollControlState, WidgetExt};
 use crate::widget::flex::Axis;
+use crate::widget::{Label, ScrollControlState, WidgetExt};
+use crate::{
+    BoxConstraints, BoxedWidget, Command, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
+    Rect, RenderContext, Selector, Size, UpdateCtx, Widget, WidgetPod,
+};
 
 pub struct VirtualList<T: Data + ToString, S: ScrollControlState> {
     children: Vec<BoxedWidget<T>>,
@@ -35,7 +38,9 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
             data_provider: Vec::new(),
             direction: Axis::Vertical,
             scroll_delta: 0.,
-            renderer_function: |data: &T| -> Box<dyn Widget<T>> { Box::new(Label::new(data.to_string()).fix_height(30.)) },
+            renderer_function: |data: &T| -> Box<dyn Widget<T>> {
+                Box::new(Label::new(data.to_string()).fix_height(30.))
+            },
             renderer_size: 30.,
             set_scroll_metrics_later: false,
             phantom_data: Default::default(),
@@ -79,13 +84,15 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
         // Recalculate the max_scroll_position
         let page_size = match self.direction {
             Axis::Vertical => event_ctx.size().height,
-            Axis::Horizontal => event_ctx.size().width
+            Axis::Horizontal => event_ctx.size().width,
         };
         if page_size == 0. {
             self.set_scroll_metrics_later = true;
             event_ctx.request_anim_frame()
         }
-        data.set_max_scroll_position((self.data_provider.len() as f64 * self.renderer_size) - page_size);
+        data.set_max_scroll_position(
+            (self.data_provider.len() as f64 * self.renderer_size) - page_size,
+        );
         data.set_page_size(page_size);
         event_ctx.invalidate();
     }
@@ -147,7 +154,9 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Default for VirtualLis
             data_provider: Vec::new(),
             direction: Axis::Vertical,
             scroll_delta: 0.,
-            renderer_function: |data: &T| -> Box<dyn Widget<T>> { Box::new(Label::new(data.to_string()).fix_height(30.)) },
+            renderer_function: |data: &T| -> Box<dyn Widget<T>> {
+                Box::new(Label::new(data.to_string()).fix_height(30.))
+            },
             renderer_size: 0.,
             set_scroll_metrics_later: false,
             phantom_data: PhantomData,
@@ -155,7 +164,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Default for VirtualLis
     }
 }
 
-impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for VirtualList<T, S> {
+impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualList<T, S> {
     fn event(&mut self, event_ctx: &mut EventCtx, event: &Event, data: &mut S, _env: &Env) {
         match event {
             Event::Wheel(event) => {
@@ -164,7 +173,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
                 }
                 let delta = match self.direction {
                     Axis::Vertical => event.delta.y,
-                    Axis::Horizontal => event.delta.x
+                    Axis::Horizontal => event.delta.x,
                 };
                 data.set_scroll_pos_from_delta(delta);
                 event_ctx.invalidate();
@@ -180,7 +189,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
                 }
                 let pos = match self.direction {
                     Axis::Vertical => event.pos.y,
-                    Axis::Horizontal => event.pos.x
+                    Axis::Horizontal => event.pos.x,
                 };
 
                 let delta = pos - data.last_mouse_pos();
@@ -205,7 +214,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
                 }
             }
 
-            _ => ()
+            _ => (),
         }
     }
 
@@ -221,10 +230,16 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
         }
     }
 
-    fn layout(&mut self, layout_ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &S, env: &Env) -> Size {
+    fn layout(
+        &mut self,
+        layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &S,
+        env: &Env,
+    ) -> Size {
         let bounds = match self.direction {
             Axis::Vertical => bc.max().height,
-            Axis::Horizontal => bc.max().width
+            Axis::Horizontal => bc.max().width,
         };
         let (mut min, mut max) = self.translate(self.scroll_delta, bounds);
         // We've translated more than the viewport distance
@@ -318,12 +333,6 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
 fn get_scroll_metrics(direction: &Axis, rect: &Rect) -> (f64, f64) {
     match direction {
         Axis::Vertical => (rect.y0, rect.y1),
-        Axis::Horizontal => (rect.x0, rect.x1)
-    }
-}
-
-impl<T: Data> Data for Vec<T> {
-    fn same(&self, other: &Self) -> bool {
-        self.len() == other.len()
+        Axis::Horizontal => (rect.x0, rect.x1),
     }
 }

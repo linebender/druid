@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use druid::widget::{Flex, ScrollControlState, Scrollbar, VirtualList, WidgetExt};
 use druid::{AppLauncher, Data, Lens, Widget, WindowDesc};
-use druid::widget::{VirtualList, Flex, Scrollbar, WidgetExt, ScrollControlState};
 
 #[derive(Clone, Data, Lens, PartialEq)]
 struct VirtualScrollState {
@@ -112,7 +112,8 @@ fn main() {
             mouse_wheel_enabled: true,
             tracking_mouse: false,
             scale: 0.,
-        }).expect("launch failed");
+        })
+        .expect("launch failed");
 
     fn build_widget() -> impl Widget<VirtualScrollState> {
         let mut data = Vec::new();

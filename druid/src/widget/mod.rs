@@ -58,7 +58,7 @@ pub use parse::Parse;
 pub use progress_bar::ProgressBar;
 pub use radio::{Radio, RadioGroup};
 pub use scroll::Scroll;
-pub use scrollbar::{Scrollbar, ScrollControlState};
+pub use scrollbar::{ScrollControlState, Scrollbar};
 pub use sized_box::SizedBox;
 pub use slider::Slider;
 pub use split::Split;
@@ -68,7 +68,7 @@ pub use stepper::Stepper;
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
 pub use textbox::TextBox;
-pub use virtual_list::{VirtualList};
+pub use virtual_list::VirtualList;
 pub use widget_ext::WidgetExt;
 
 use std::ops::{Deref, DerefMut};

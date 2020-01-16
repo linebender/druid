@@ -273,9 +273,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut hot_changed = None;
         let child_event = match event {
             Event::LifeCycle(event) => Event::LifeCycle(*event),
-            Event::Size(size) => {
-                Event::Size(*size)
-            }
+            Event::Size(size) => Event::Size(*size),
             Event::MouseDown(mouse_event) => {
                 let had_hot = child_ctx.base_state.is_hot;
                 let now_hot = rect.winding(mouse_event.pos) != 0;

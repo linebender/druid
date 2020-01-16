@@ -1,8 +1,11 @@
 use std::mem;
 
-use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, RenderContext, Selector, UpdateCtx, Widget};
 use crate::kurbo::{Rect, RoundedRect, Size};
 use crate::theme;
+use crate::{
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, RenderContext, Selector,
+    UpdateCtx, Widget,
+};
 
 /// Trait used for shared state between
 /// the scrollbar and the scroll container.
@@ -46,9 +49,10 @@ pub trait ScrollControlState: Data + PartialEq {
     fn set_scroll_pos_from_delta(&mut self, delta: f64) {
         let scroll_position = self.scroll_position() + delta;
 
-        self.set_scroll_position(self.min_scroll_position()
-            .max(scroll_position
-                .min(self.max_scroll_position())));
+        self.set_scroll_position(
+            self.min_scroll_position()
+                .max(scroll_position.min(self.max_scroll_position())),
+        );
     }
 }
 
@@ -147,7 +151,8 @@ impl Scrollbar {
         let page_size = data.page_size();
 
         let extent = size.height.max(size.width);
-        let target_thumb_size = (page_size / (max_scroll_position - min_scroll_position + page_size)) * extent;
+        let target_thumb_size =
+            (page_size / (max_scroll_position - min_scroll_position + page_size)) * extent;
         target_thumb_size.max(bar_width * 2.)
     }
 
@@ -162,10 +167,20 @@ impl Scrollbar {
 
         if size.width > size.height {
             // Horizontal
-            Rect::new(scaled_scroll_position, 0., scaled_scroll_position + thumb_size, bar_width * 2.)
+            Rect::new(
+                scaled_scroll_position,
+                0.,
+                scaled_scroll_position + thumb_size,
+                bar_width * 2.,
+            )
         } else {
             // Vertical
-            Rect::new(0., scaled_scroll_position, bar_width, scaled_scroll_position + thumb_size)
+            Rect::new(
+                0.,
+                scaled_scroll_position,
+                bar_width,
+                scaled_scroll_position + thumb_size,
+            )
         }
     }
 
@@ -210,8 +225,7 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
         match event {
             Event::Command(command) => {
                 let Selector(id) = command.selector;
-                if id == "scroll"
-                    && *command.get_object().unwrap_or(&0) == data.id() {
+                if id == "scroll" && *command.get_object().unwrap_or(&0) == data.id() {
                     self.show();
                     event_ctx.request_anim_frame();
                 }
@@ -242,7 +256,11 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
                 if !data.mouse_wheel_enabled() {
                     return;
                 }
-                let delta = if size.width > size.height { event.delta.x } else { event.delta.y };
+                let delta = if size.width > size.height {
+                    event.delta.x
+                } else {
+                    event.delta.y
+                };
                 self.show();
                 data.set_scroll_pos_from_delta(delta);
                 event_ctx.invalidate();
@@ -253,7 +271,11 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
                 if !data.tracking_mouse() {
                     return;
                 }
-                let pos = if size.width > size.height { event.pos.x } else { event.pos.y };
+                let pos = if size.width > size.height {
+                    event.pos.x
+                } else {
+                    event.pos.y
+                };
                 let delta = pos - data.last_mouse_pos();
 
                 data.set_scroll_pos_from_delta(delta / data.scale());
@@ -272,7 +294,8 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
                 // to translate scrollbar distance to scroll container distance
                 let distance = size.width.max(size.height);
                 let thumb_size = Scrollbar::calculated_thumb_size(data, env, &size);
-                let scale = (distance - thumb_size) / (data.max_scroll_position() - data.min_scroll_position());
+                let scale = (distance - thumb_size)
+                    / (data.max_scroll_position() - data.min_scroll_position());
                 data.set_scale(scale);
 
                 // Determine if we're over the thumb.
@@ -281,7 +304,11 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
                 let hit_test_rect = Scrollbar::calculated_thumb_rect(data, env, &size);
                 if hit_test_rect.contains(event.pos) {
                     data.set_tracking_mouse(true);
-                    data.set_last_mouse_pos(if size.width > size.height { event.pos.x } else { event.pos.y });
+                    data.set_last_mouse_pos(if size.width > size.height {
+                        event.pos.x
+                    } else {
+                        event.pos.y
+                    });
                 } else {
                     let center = hit_test_rect.center();
                     let delta = if center.x > event.pos.x || center.y > event.pos.y {
@@ -299,7 +326,7 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
                 data.set_last_mouse_pos(0.);
             }
 
-            _ => ()
+            _ => (),
         }
     }
 
@@ -307,7 +334,8 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
         if let Some(old) = old_data {
             if old.max_scroll_position() - data.max_scroll_position() != 0.
                 || old.min_scroll_position() - data.min_scroll_position() != 0.
-                || old.scroll_position() - data.scroll_position() != 0. {
+                || old.scroll_position() - data.scroll_position() != 0.
+            {
                 ctx.invalidate();
             }
         }
@@ -321,10 +349,9 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
         if data.max_scroll_position() < 0. {
             return;
         }
-        let brush = paint_ctx.render_ctx.solid_brush(
-            env.get(theme::SCROLL_BAR_COLOR)
-                .with_alpha(self.opacity),
-        );
+        let brush = paint_ctx
+            .render_ctx
+            .solid_brush(env.get(theme::SCROLL_BAR_COLOR).with_alpha(self.opacity));
         let border_brush = paint_ctx.render_ctx.solid_brush(
             env.get(theme::SCROLL_BAR_BORDER_COLOR)
                 .with_alpha(self.opacity),
@@ -345,16 +372,4 @@ pub enum ScrollPolicy {
     On,
     Off,
     Auto,
-}
-
-#[cfg(test)]
-mod scrollbar_tests {
-    use crate::widget::scrollbar::AnimationState;
-
-    #[test]
-    fn animation_state_test() {
-        let mut state = AnimationState::default();
-        let val = state.tick(1);
-        assert_eq!(val, 23.);
-    }
 }
