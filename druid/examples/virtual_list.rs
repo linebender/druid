@@ -17,6 +17,7 @@ use druid::widget::{VirtualList, Flex, Scrollbar, WidgetExt, ScrollControlState}
 
 #[derive(Clone, Data, Lens, PartialEq)]
 struct VirtualScrollState {
+    id: u64,
     last_mouse_pos: f64,
     page_size: f64,
     max_scroll_position: f64,
@@ -30,6 +31,10 @@ struct VirtualScrollState {
 impl ScrollControlState for VirtualScrollState {
     fn last_mouse_pos(&self) -> f64 {
         self.last_mouse_pos
+    }
+
+    fn id(&self) -> u64 {
+        self.id
     }
 
     fn page_size(&self) -> f64 {
@@ -98,6 +103,7 @@ fn main() {
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(VirtualScrollState {
+            id: 1,
             last_mouse_pos: 0.,
             page_size: 0.,
             scroll_position: 0.0,
@@ -115,6 +121,6 @@ fn main() {
         }
         Flex::row()
             .with_child(VirtualList::new().data_provider(data), 1.)
-            .with_child(Scrollbar::new().fix_width(20.), 0.)
+            .with_child(Scrollbar::default().fix_width(20.), 0.)
     }
 }

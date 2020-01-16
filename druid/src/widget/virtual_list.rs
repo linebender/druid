@@ -3,7 +3,7 @@ use std::ops::Range;
 
 use log::error;
 
-use crate::{BoxConstraints, BoxedWidget, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WidgetPod};
+use crate::{BoxConstraints, BoxedWidget, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WidgetPod, Selector, Command};
 use crate::widget::{Label, ScrollControlState, WidgetExt};
 use crate::widget::flex::Axis;
 
@@ -168,6 +168,10 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
                 };
                 data.set_scroll_pos_from_delta(delta);
                 event_ctx.invalidate();
+
+                let selector = Selector::new("scroll");
+                let command = Command::new(selector, data.id());
+                event_ctx.submit_command(command, None)
             }
 
             Event::MouseMoved(event) => {
@@ -209,8 +213,9 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, > Widget<S> for Virtua
         if let Some(old_data) = old_data {
             let old_scroll_position = old_data.scroll_position();
             let new_scroll_position = data.scroll_position();
-            if old_scroll_position != new_scroll_position {
-                self.scroll_delta += new_scroll_position - old_scroll_position;
+            let delta = new_scroll_position - old_scroll_position;
+            if delta != 0. {
+                self.scroll_delta += delta;
                 update_ctx.invalidate();
             }
         }

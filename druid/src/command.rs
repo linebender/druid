@@ -21,7 +21,7 @@ use crate::{WidgetId, WindowId};
 
 /// An identifier for a particular command.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Selector(&'static str);
+pub struct Selector(pub &'static str);
 
 /// An arbitrary command.
 ///

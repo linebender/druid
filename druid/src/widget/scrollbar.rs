@@ -1,4 +1,6 @@
-use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, RenderContext, UpdateCtx, Widget};
+use std::mem;
+
+use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, RenderContext, Selector, UpdateCtx, Widget};
 use crate::kurbo::{Rect, RoundedRect, Size};
 use crate::theme;
 
@@ -9,6 +11,8 @@ pub trait ScrollControlState: Data + PartialEq {
     /// used to calculate the deltas without maintaining
     /// an offset.
     fn last_mouse_pos(&self) -> f64;
+    /// The identifier for this state object
+    fn id(&self) -> u64;
     /// The size of a page. Used to calculate
     /// scroll distances when clicking on the
     /// scroll track
@@ -48,19 +52,89 @@ pub trait ScrollControlState: Data + PartialEq {
     }
 }
 
+struct AnimationState {
+    elapsed_time: u64,
+    pub current_value: f64,
+    pub delay: u64,
+    pub done: bool,
+    pub duration: u64,
+    pub equation: fn(t: f64, b: f64, c: f64, d: f64) -> f64,
+    pub from: f64,
+    pub to: f64,
+}
+
+/// A time-based animation struct
+impl AnimationState {
+    /// Increments the animation based on the
+    /// specified interval.
+    pub fn tick(&mut self, interval: u64) -> f64 {
+        self.elapsed_time += interval;
+        if interval == 0 || self.elapsed_time < self.delay {
+            return self.current_value;
+        }
+        let t = (self.elapsed_time - self.delay) as f64 / self.duration as f64;
+        // Progress as a percentage between 0 and 1
+        let mut progress = (self.equation)(t, 0., 1., 1.);
+        // We're done if we've hit 1.0 or greater.
+        if progress >= 1. {
+            progress = 1.;
+            self.done = true;
+        }
+        self.current_value = self.from + ((self.to - self.from) * progress);
+        self.current_value
+    }
+
+    pub fn reset(&mut self) {
+        self.current_value = self.from;
+        self.elapsed_time = 0;
+        self.done = false;
+    }
+
+    pub fn reverse(&mut self) {
+        let from = mem::replace(&mut self.from, self.to);
+        self.to = from;
+        // Inverse the elapsed time for reversals
+        // that happen during an ongoing animation
+        // this prevents the animation from taking
+        // the entire duration when it only has a
+        // portion of the interpolation left to go.
+        if self.done {
+            self.reset();
+        } else if self.elapsed_time > 0 {
+            let total_time = self.duration + self.delay;
+            self.elapsed_time = total_time * (1 - (self.elapsed_time / total_time));
+        }
+        self.done = self.to == self.current_value;
+    }
+}
+
+impl Default for AnimationState {
+    fn default() -> Self {
+        AnimationState {
+            current_value: 0.,
+            elapsed_time: 0,
+            delay: 0,
+            done: false,
+            duration: 250_000_000,
+            from: 0.,
+            to: 1.,
+            equation: |t: f64, b: f64, c: f64, d: f64| -> f64 {
+                // cubic ease out
+                let t = t / d - 1.;
+                c * (t * t * t + 1.) + b
+            },
+        }
+    }
+}
+
 pub struct Scrollbar {
+    animation_state: AnimationState,
     opacity: f64,
+    is_hot: bool,
     scroll_policy: ScrollPolicy,
 }
 
 impl Scrollbar {
-    pub fn new() -> Scrollbar {
-        Scrollbar {
-            opacity: 1.,
-            scroll_policy: ScrollPolicy::Auto,
-        }
-    }
-
     pub fn scroll_policy(mut self, val: ScrollPolicy) -> Self {
         self.scroll_policy = val;
         self
@@ -81,8 +155,8 @@ impl Scrollbar {
         let min_scroll_position = data.min_scroll_position();
         let max_scroll_position = data.max_scroll_position();
         let thumb_size = Scrollbar::calculated_thumb_size(data, env, &size);
-        let extent = size.height.max(size.width);
-        let scale = (extent - thumb_size) / (max_scroll_position - min_scroll_position);
+        let distance = size.height.max(size.width);
+        let scale = (distance - thumb_size) / (max_scroll_position - min_scroll_position);
         let scaled_scroll_position = data.scroll_position() * scale;
         let bar_width = env.get(theme::SCROLL_BAR_WIDTH);
 
@@ -94,12 +168,37 @@ impl Scrollbar {
             Rect::new(0., scaled_scroll_position, bar_width, scaled_scroll_position + thumb_size)
         }
     }
+
+    fn show(&mut self) {
+        // Animation is already fading in
+        if self.animation_state.to == 1. {
+            return;
+        }
+        if self.animation_state.to == 0. {
+            self.animation_state.reverse();
+        }
+        self.animation_state.delay = 0;
+    }
+
+    fn hide(&mut self, env: &Env) {
+        // Animation is already fading out
+        if self.animation_state.to == 0. {
+            return;
+        }
+
+        if self.animation_state.to == 1. {
+            self.animation_state.reverse();
+        }
+        self.animation_state.delay = env.get(theme::SCROLL_BAR_FADE_DELAY) * 1_000_000;
+    }
 }
 
 impl Default for Scrollbar {
     fn default() -> Self {
         Scrollbar {
-            opacity: 1.,
+            animation_state: Default::default(),
+            is_hot: false,
+            opacity: 0.,
             scroll_policy: ScrollPolicy::Auto,
         }
     }
@@ -109,13 +208,45 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
     fn event(&mut self, event_ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let size = event_ctx.size();
         match event {
+            Event::Command(command) => {
+                let Selector(id) = command.selector;
+                if id == "scroll"
+                    && *command.get_object().unwrap_or(&0) == data.id() {
+                    self.show();
+                    event_ctx.request_anim_frame();
+                }
+            }
+
+            Event::HotChanged(is_hot) => {
+                self.is_hot = *is_hot;
+                if self.is_hot  {
+                    self.show();
+                } else {
+                    self.hide(env);
+                    event_ctx.request_anim_frame();
+                }
+            }
+
+            Event::AnimFrame(interval) => {
+                if !self.animation_state.done {
+                    self.opacity = self.animation_state.tick(*interval);
+                    event_ctx.request_anim_frame();
+                    event_ctx.invalidate();
+                } else if !self.is_hot && self.opacity > 0. {
+                    self.hide(env);
+                    event_ctx.request_anim_frame();
+                }
+            }
+
             Event::Wheel(event) => {
                 if !data.mouse_wheel_enabled() {
                     return;
                 }
                 let delta = if size.width > size.height { event.delta.x } else { event.delta.y };
+                self.show();
                 data.set_scroll_pos_from_delta(delta);
                 event_ctx.invalidate();
+                event_ctx.request_anim_frame();
             }
 
             Event::MouseMoved(event) => {
@@ -131,6 +262,10 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
             }
 
             Event::MouseDown(event) => {
+                // Do nothing if we're hidden
+                if self.opacity == 0. {
+                    return;
+                }
                 // Set our scale since we could be dragging later
                 // The thumb size is subtracted from the total
                 // scrollable distance and a scale is calculated
@@ -173,7 +308,6 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
             if old.max_scroll_position() - data.max_scroll_position() != 0.
                 || old.min_scroll_position() - data.min_scroll_position() != 0.
                 || old.scroll_position() - data.scroll_position() != 0. {
-
                 ctx.invalidate();
             }
         }
@@ -211,4 +345,16 @@ pub enum ScrollPolicy {
     On,
     Off,
     Auto,
+}
+
+#[cfg(test)]
+mod scrollbar_tests {
+    use crate::widget::scrollbar::AnimationState;
+
+    #[test]
+    fn animation_state_test() {
+        let mut state = AnimationState::default();
+        let val = state.tick(1);
+        assert_eq!(val, 23.);
+    }
 }
