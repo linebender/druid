@@ -97,7 +97,7 @@ impl AppDelegate<State> for Delegate {
                 log::info!("{:?}", event);
                 Some(Event::LifeCycle(event))
             }
-            Event::Command(ref cmd) if cmd.selector == druid::commands::NEW_FILE => {
+            Event::TargetedCommand(_, ref cmd) if cmd.selector == druid::commands::NEW_FILE => {
                 let new_win = WindowDesc::new(ui_builder)
                     .menu(make_menu(data))
                     .window_size((data.selected as f64 * 100.0 + 300.0, 500.0));
@@ -105,19 +105,19 @@ impl AppDelegate<State> for Delegate {
                 ctx.submit_command(command, None);
                 None
             }
-            Event::Command(ref cmd) if cmd.selector == MENU_COUNT_ACTION => {
+            Event::TargetedCommand(_, ref cmd) if cmd.selector == MENU_COUNT_ACTION => {
                 data.selected = *cmd.get_object().unwrap();
                 ctx.set_menu(make_menu::<State>(data));
                 None
             }
             // wouldn't it be nice if a menu (like a button) could just mutate state
             // directly if desired?
-            Event::Command(ref cmd) if cmd.selector == MENU_INCREMENT_ACTION => {
+            Event::TargetedCommand(_, ref cmd) if cmd.selector == MENU_INCREMENT_ACTION => {
                 data.menu_count += 1;
                 ctx.set_menu(make_menu::<State>(data));
                 None
             }
-            Event::Command(ref cmd) if cmd.selector == MENU_DECREMENT_ACTION => {
+            Event::TargetedCommand(_, ref cmd) if cmd.selector == MENU_DECREMENT_ACTION => {
                 data.menu_count = data.menu_count.saturating_sub(1);
                 ctx.set_menu(make_menu::<State>(data));
                 None
