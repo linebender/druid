@@ -29,6 +29,7 @@ use crate::shell::{
 };
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
+use crate::bloom::Bloom;
 use crate::core::BaseState;
 use crate::menu::ContextMenu;
 use crate::theme;
@@ -284,6 +285,7 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
     fn do_lifecycle(&mut self, event: LifeCycle, _win_ctx: &mut dyn WinCtx) {
         let mut ctx = LifeCycleCtx {
             command_queue: self.command_queue,
+            children: Bloom::default(),
             window_id: self.window_id,
             widget_id: self.window.root.id(),
         };
@@ -749,6 +751,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
     fn connected(&mut self, ctx: &mut dyn WinCtx) {
         self.do_lifecycle(LifeCycle::WidgetAdded, ctx);
+        self.do_lifecycle(LifeCycle::RegisterChildren, ctx);
         self.do_lifecycle(LifeCycle::WindowConnected, ctx);
     }
 

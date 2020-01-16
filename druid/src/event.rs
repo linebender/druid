@@ -153,6 +153,13 @@ pub enum LifeCycle {
     /// This is sent after `WidgetAdded`. Widgets should handle this event if
     /// they need to do some addition setup when a window is first created.
     WindowConnected,
+    /// Sent to a widget when its children have changed.
+    ///
+    /// If a widget manages children, it is responsible for calling
+    /// [`LifeCycleCtx::register_child`] for each of its existing children.
+    ///
+    /// [`LifeCycleCtx::register_child`]: struct.LifeCycleCtx.html#method.register_child
+    RegisterChildren,
 }
 
 /// A mouse wheel event.

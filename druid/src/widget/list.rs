@@ -45,15 +45,13 @@ impl<T: Data> List<T> {
         let len = self.children.len();
         match len.cmp(&data.data_len()) {
             Ordering::Greater => self.children.truncate(data.data_len()),
-            Ordering::Less => {
-                data.for_each(|child_data, i| {
-                    if i >= len {
-                        let mut child = WidgetPod::new((self.closure)());
-                        child.lifecycle(ctx, &LifeCycle::WidgetAdded, child_data, env);
-                        self.children.push(child);
-                    }
-                })
-            }
+            Ordering::Less => data.for_each(|child_data, i| {
+                if i >= len {
+                    let mut child = WidgetPod::new((self.closure)());
+                    child.lifecycle(ctx, &LifeCycle::WidgetAdded, child_data, env);
+                    self.children.push(child);
+                }
+            }),
             Ordering::Equal => (),
         }
     }

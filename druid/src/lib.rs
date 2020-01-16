@@ -23,6 +23,7 @@ pub use druid_shell::{kurbo, piet};
 
 mod app;
 mod app_delegate;
+mod bloom;
 mod box_constraints;
 mod command;
 mod core;
