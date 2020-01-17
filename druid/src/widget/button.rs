@@ -70,9 +70,6 @@ impl<T: Data> Widget<T> for Button<T> {
                     }
                 }
             }
-            Event::HotChanged(_) => {
-                ctx.invalidate();
-            }
             _ => (),
         }
     }
@@ -82,6 +79,9 @@ impl<T: Data> Widget<T> for Button<T> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        if let LifeCycle::HotChanged(_) = event {
+            ctx.invalidate();
+        }
         self.label.lifecycle(ctx, event, data, env)
     }
 

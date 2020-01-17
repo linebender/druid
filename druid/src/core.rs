@@ -255,7 +255,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// [`event`]: trait.Widget.html#method.event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         // TODO: factor as much logic as possible into monomorphic functions.
-        if ctx.is_handled || !event.recurse() {
+        if ctx.is_handled {
             // This function is called by containers to propagate an event from
             // containers to children. Non-recurse events will be invoked directly
             // from other points in the library.
@@ -332,7 +332,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 recurse = had_active || child_ctx.base_state.is_hot;
                 Event::Zoom(*zoom)
             }
-            Event::HotChanged(is_hot) => Event::HotChanged(*is_hot),
             Event::FocusChanged(_is_focused) => {
                 let had_focus = child_ctx.base_state.has_focus;
                 let focus = child_ctx.base_state.request_focus;
@@ -357,9 +356,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         };
         child_ctx.base_state.needs_inval = false;
         if let Some(is_hot) = hot_changed {
-            let hot_changed_event = Event::HotChanged(is_hot);
+            let hot_changed_event = LifeCycle::HotChanged(is_hot);
+            let mut lc_ctx = child_ctx.make_lifecycle_ctx();
             self.inner
-                .event(&mut child_ctx, &hot_changed_event, data, &env);
+                .lifecycle(&mut lc_ctx, &hot_changed_event, data, &env);
+            ctx.base_state.needs_inval |= lc_ctx.needs_inval;
         }
         if recurse {
             child_ctx.base_state.has_active = false;
@@ -386,25 +387,26 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.children = Bloom::new();
         ctx.children_changed = false;
         ctx.needs_inval = false;
+        ctx.request_anim = false;
 
         let recurse = match event {
             LifeCycle::AnimFrame(_) => {
                 let r = self.state.request_anim;
                 self.state.request_anim = false;
-                ctx.request_anim = false;
                 r
             }
             LifeCycle::RegisterChildren => self.state.children_changed,
+            LifeCycle::HotChanged(_) => false,
             _ => true,
         };
 
         if recurse {
             self.inner.lifecycle(ctx, event, data, env);
-            self.state.request_anim = ctx.request_anim;
-            ctx.request_anim |= pre_request_anim;
         }
 
+        self.state.request_anim = ctx.request_anim;
         self.state.children_changed |= ctx.children_changed;
+        ctx.request_anim |= pre_request_anim;
         ctx.children_changed |= pre_childs_changed;
         ctx.needs_inval |= pre_inval;
 
@@ -838,18 +840,17 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.widget_id
     }
 
-    //pub(crate) fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
-    //LifeCycleCtx {
-    //command_queue: self.command_queue,
-    //children_changed: false,
-    //needs_inval: false,
-    //children: Bloom::default(),
-    //request_anim: false,
-
-    //window_id: self.window_id,
-    //widget_id: self.widget_id,
-    //}
-    //}
+    pub(crate) fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
+        LifeCycleCtx {
+            command_queue: self.command_queue,
+            children_changed: false,
+            needs_inval: false,
+            children: Bloom::default(),
+            request_anim: false,
+            window_id: self.window_id,
+            widget_id: self.widget_id,
+        }
+    }
 }
 
 impl<'a> LifeCycleCtx<'a> {

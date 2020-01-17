@@ -95,11 +95,6 @@ pub enum Event {
     ///
     /// The value is a delta.
     Zoom(f64),
-    /// Called when the "hot" status changes.
-    ///
-    /// See [`is_hot`](struct.BaseState.html#method.is_hot) for
-    /// discussion about the hot status.
-    HotChanged(bool),
     /// Called when the focus status changes.
     ///
     /// See [`has_focus`](struct.BaseState.html#method.has_focus) for
@@ -160,6 +155,11 @@ pub enum LifeCycle {
     /// will be 0. (This logic is presently per-window but might change to
     /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
     AnimFrame(u64),
+    /// Called when the "hot" status changes.
+    ///
+    /// See [`is_hot`](struct.BaseState.html#method.is_hot) for
+    /// discussion about the hot status.
+    HotChanged(bool),
 }
 
 /// A mouse wheel event.
@@ -222,14 +222,6 @@ impl Event {
                 }
             }
             _ => Some(self.clone()),
-        }
-    }
-
-    /// Whether the event should be propagated from parent to children.
-    pub(crate) fn recurse(&self) -> bool {
-        match self {
-            Event::HotChanged(_) => false,
-            _ => true,
         }
     }
 }

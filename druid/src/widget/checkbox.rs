@@ -53,9 +53,6 @@ impl Widget<bool> for Checkbox {
                     ctx.invalidate();
                 }
             }
-            Event::HotChanged(_) => {
-                ctx.invalidate();
-            }
             _ => (),
         }
     }
@@ -64,7 +61,10 @@ impl Widget<bool> for Checkbox {
         ctx.invalidate();
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &bool, _env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &bool, _env: &Env) {
+        if let LifeCycle::HotChanged(_) = event {
+            ctx.invalidate();
+        }
     }
 
     fn layout(

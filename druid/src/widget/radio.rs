@@ -77,9 +77,6 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
                     ctx.invalidate();
                 }
             }
-            Event::HotChanged(_) => {
-                ctx.invalidate();
-            }
             _ => (),
         }
     }
@@ -88,7 +85,11 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         ctx.invalidate();
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &T, _env: &Env) {
+        if let LifeCycle::HotChanged(_) = event {
+            ctx.invalidate();
+        }
+    }
 
     fn layout(
         &mut self,
