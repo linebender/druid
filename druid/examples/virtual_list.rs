@@ -117,7 +117,7 @@ fn main() {
 
     fn build_widget() -> impl Widget<VirtualScrollState> {
         let mut data = Vec::new();
-        for i in 0..1000000 {
+        for i in 0..1000 {
             data.push(format!("List Item {}", i));
         }
         Flex::row()

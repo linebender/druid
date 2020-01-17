@@ -46,13 +46,14 @@ pub trait ScrollControlState: Data + PartialEq {
     /// for pull or bounce calculations on the container
     fn set_scroll_position(&mut self, val: f64);
 
-    fn set_scroll_pos_from_delta(&mut self, delta: f64) {
+    fn set_scroll_pos_from_delta(&mut self, delta: f64) -> f64 {
         let scroll_position = self.scroll_position() + delta;
+        let clamped_scroll_position = self
+            .min_scroll_position()
+            .max(scroll_position.min(self.max_scroll_position()));
+        self.set_scroll_position(clamped_scroll_position);
 
-        self.set_scroll_position(
-            self.min_scroll_position()
-                .max(scroll_position.min(self.max_scroll_position())),
-        );
+        clamped_scroll_position
     }
 }
 
@@ -245,7 +246,6 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
                 if !self.animation_state.done {
                     self.opacity = self.animation_state.tick(*interval);
                     event_ctx.request_anim_frame();
-                    event_ctx.invalidate();
                 } else if !self.is_hot && self.opacity > 0. {
                     self.hide(env);
                     event_ctx.request_anim_frame();
@@ -263,7 +263,6 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
                 };
                 self.show();
                 data.set_scroll_pos_from_delta(delta);
-                event_ctx.invalidate();
                 event_ctx.request_anim_frame();
             }
 

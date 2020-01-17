@@ -12,11 +12,6 @@ use crate::{
 
 pub struct VirtualList<T: Data + ToString, S: ScrollControlState> {
     children: Vec<BoxedWidget<T>>,
-    // The rect representing the area occupied by
-    // all visible widgets. This will always be
-    // equal to or larger than the BoxConstraints
-    // when virtualized.
-    content_metrics: Rect,
     data_range: Range<usize>,
     data_provider: Vec<T>,
     direction: Axis,
@@ -33,7 +28,6 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
     pub fn new() -> VirtualList<T, S> {
         VirtualList {
             children: Vec::new(),
-            content_metrics: Rect::new(0., 0., 0., 0.),
             data_range: 0..0,
             data_provider: Vec::new(),
             direction: Axis::Vertical,
@@ -67,21 +61,22 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
         self
     }
 
-    fn set_content_metrics(&mut self, value: (f64, f64)) {
+    fn get_content_metrics(&self) -> (f64, f64) {
+        let len = self.children.len();
+        if len == 0 {
+            return (0., 0.);
+        }
+        let first = &self.children[0].get_layout_rect();
+        let last = &self.children[len - 1].get_layout_rect();
         match self.direction {
-            Axis::Vertical => {
-                self.content_metrics.y0 = value.0;
-                self.content_metrics.y1 = value.1;
-            }
-            Axis::Horizontal => {
-                self.content_metrics.x0 = value.0;
-                self.content_metrics.x1 = value.1;
-            }
-        };
+            Axis::Vertical => (first.y0, last.y1),
+            Axis::Horizontal => (first.x0, last.x1),
+        }
     }
 
+    /// Calculates the scroll_position, max_scroll_position
+    /// and page_size based on the available width or height.
     fn set_scroll_metrics(&mut self, event_ctx: &mut EventCtx, data: &mut S) {
-        // Recalculate the max_scroll_position
         let page_size = match self.direction {
             Axis::Vertical => event_ctx.size().height,
             Axis::Horizontal => event_ctx.size().width,
@@ -94,13 +89,21 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
             (self.data_provider.len() as f64 * self.renderer_size) - page_size,
         );
         data.set_page_size(page_size);
+        // determine if we need to adjust the scroll_position.
+        // This happens when a resize occurs on scrolled
+        // content and no more rows can be displayed to fill
+        // up the viewport.
+        let (min, max) = self.get_content_metrics();
+        if max < page_size && data.scroll_position() > 0. {
+            data.set_scroll_pos_from_delta(-min);
+        }
         event_ctx.invalidate();
     }
 
     /// Translates all children by the specified delta.
     /// Children outside the 0..limit bounds are truncated
     fn translate(&mut self, delta: f64, limit: f64) -> (f64, f64) {
-        let (mut min, mut max) = get_scroll_metrics(&self.direction, &self.content_metrics);
+        let (mut min, mut max) = self.get_content_metrics();
         if delta != 0. {
             // TODO - replace implementation with Vec::drain_filter once it's stable.
             let mut to_remove = Vec::new();
@@ -114,7 +117,10 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
                         rect = rect.with_origin(Point::new(rect.x0 - delta, 0.));
                     }
                 }
-                let cm = get_scroll_metrics(&self.direction, &rect);
+                let cm = match self.direction {
+                    Axis::Vertical => (rect.y0, rect.y1),
+                    Axis::Horizontal => (rect.x0, rect.x1),
+                };
 
                 if cm.1 < 0. {
                     // Child is less than the viewport's min
@@ -149,7 +155,6 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Default for VirtualLis
     fn default() -> Self {
         VirtualList {
             children: Vec::new(),
-            content_metrics: Default::default(),
             data_range: 0..0,
             data_provider: Vec::new(),
             direction: Axis::Vertical,
@@ -180,7 +185,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
 
                 let selector = Selector::new("scroll");
                 let command = Command::new(selector, data.id());
-                event_ctx.submit_command(command, None)
+                event_ctx.submit_command(command, None);
             }
 
             Event::MouseMoved(event) => {
@@ -280,7 +285,6 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
         }
 
         // determine if we need to add items in front of the end index
-
         while max < bounds {
             if let Some(data) = self.data_provider.get(self.data_range.end) {
                 let mut widget = WidgetPod::new((self.renderer_function)(data));
@@ -306,7 +310,6 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
             }
         }
 
-        self.set_content_metrics((min, max));
         self.scroll_delta = 0.;
         bc.max()
     }
@@ -327,12 +330,5 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
         if let Err(e) = paint_ctx.restore() {
             error!("restoring render context failed: {:?}", e);
         }
-    }
-}
-
-fn get_scroll_metrics(direction: &Axis, rect: &Rect) -> (f64, f64) {
-    match direction {
-        Axis::Vertical => (rect.y0, rect.y1),
-        Axis::Horizontal => (rect.x0, rect.x1),
     }
 }
