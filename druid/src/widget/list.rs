@@ -43,6 +43,7 @@ impl<T: Data> List<T> {
     /// When the widget is created or the data changes, create or remove children as needed
     fn update_child_count(&mut self, ctx: &mut LifeCycleCtx, data: &impl ListIter<T>, env: &Env) {
         let len = self.children.len();
+        let children_changed = len != data.data_len();
         match len.cmp(&data.data_len()) {
             Ordering::Greater => self.children.truncate(data.data_len()),
             Ordering::Less => data.for_each(|child_data, i| {
@@ -53,6 +54,9 @@ impl<T: Data> List<T> {
                 }
             }),
             Ordering::Equal => (),
+        }
+        if children_changed {
+            ctx.children_changed();
         }
     }
 }
