@@ -87,6 +87,7 @@ pub(crate) struct WindowState {
     pub(crate) handle: WindowHandle,
     prev_paint_time: Option<Instant>,
     needs_inval: bool,
+    children_changed: bool,
 }
 
 /// Everything required for a window to handle an event.
@@ -124,6 +125,7 @@ impl<T: Data> Windows<T> {
             handle,
             prev_paint_time: None,
             needs_inval: false,
+            children_changed: false,
         };
         self.windows
             .entry(id)
@@ -274,6 +276,8 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
                 .event(&mut ctx, &focus_event, self.data, self.env);
         }
         self.state.needs_inval = ctx.base_state.needs_inval | ctx.base_state.request_anim;
+        self.state.children_changed |= ctx.base_state.children_changed;
+
         let request_anim = ctx.base_state.request_anim;
         if let Some(cursor) = cursor {
             win_ctx.set_cursor(&cursor);
@@ -286,10 +290,14 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
         let mut ctx = LifeCycleCtx {
             command_queue: self.command_queue,
             children: Bloom::default(),
+            children_changed: false,
+            needs_inval: false,
             window_id: self.window_id,
             widget_id: self.window.root.id(),
         };
         self.window.lifecycle(&mut ctx, &event, self.data, self.env);
+        self.state.children_changed |= ctx.children_changed;
+        self.state.needs_inval |= ctx.needs_inval;
     }
 
     fn set_menu(&mut self, cmd: &Command) {
@@ -535,11 +543,13 @@ impl<T: Data> AppState<T> {
                 window: &state.handle,
                 command_queue: &mut self.command_queue,
                 needs_inval: false,
+                children_changed: false,
                 window_id: id,
                 widget_id: window.root.id(),
             };
             window.update(&mut update_ctx, &self.data, &self.env);
             state.needs_inval |= update_ctx.needs_inval;
+            state.children_changed |= update_ctx.children_changed;
         }
         self.invalidate_if_needed();
     }

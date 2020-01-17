@@ -182,15 +182,6 @@ impl Command {
     }
 }
 
-impl Target {
-    pub(crate) fn is_window(self) -> bool {
-        match self {
-            Target::Window(_) => true,
-            _ => false,
-        }
-    }
-}
-
 impl From<Selector> for Command {
     fn from(selector: Selector) -> Command {
         Command {

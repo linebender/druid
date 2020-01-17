@@ -97,6 +97,7 @@ pub(crate) struct BaseState {
     /// This widget or a descendant has requested focus.
     pub(crate) request_focus: bool,
     pub(crate) children: Bloom<WidgetId>,
+    pub(crate) children_changed: bool,
 }
 
 impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
@@ -373,19 +374,29 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.base_state.is_hot |= child_ctx.base_state.is_hot;
         ctx.base_state.has_active |= child_ctx.base_state.has_active;
         ctx.base_state.request_focus |= child_ctx.base_state.request_focus;
+        ctx.base_state.children_changed |= child_ctx.base_state.children_changed;
         ctx.is_handled |= child_ctx.is_handled;
     }
 
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         ctx.widget_id = self.id();
         let pre_children = ctx.children;
+        let pre_childs_changed = ctx.children_changed;
+        let pre_inval = ctx.needs_inval;
         ctx.children = Bloom::new();
+        ctx.children_changed = false;
+        ctx.needs_inval = false;
+
         self.inner.lifecycle(ctx, event, data, env);
         if let LifeCycle::RegisterChildren = event {
             self.state.children = ctx.children;
+            self.state.children_changed = false;
             ctx.children = ctx.children.intersection(pre_children);
             ctx.register_child(self.id());
         }
+        self.state.children_changed |= ctx.children_changed;
+        ctx.children_changed |= pre_childs_changed;
+        ctx.needs_inval |= pre_inval;
     }
 
     /// Propagate a data update.
@@ -395,6 +406,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`update`]: trait.Widget.html#method.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
+        let pre_childs_changed = ctx.children_changed;
+        let pre_inval = ctx.needs_inval;
+        ctx.children_changed = false;
+        ctx.needs_inval = false;
+
         let data_same = if let Some(ref old_data) = self.old_data {
             old_data.same(data)
         } else {
@@ -412,6 +428,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.inner.update(ctx, self.old_data.as_ref(), data, env);
         self.old_data = Some(data.clone());
         self.env = Some(env.clone());
+
+        self.state.children_changed |= ctx.children_changed;
+        ctx.children_changed |= pre_childs_changed;
+        ctx.needs_inval |= pre_inval;
     }
 }
 
@@ -586,6 +606,8 @@ pub struct LifeCycleCtx<'a> {
     /// the registry for the current widgets children;
     /// only really meaninful during a `LifeCyle::RegisterChildren` call.
     pub(crate) children: Bloom<WidgetId>,
+    pub(crate) children_changed: bool,
+    pub(crate) needs_inval: bool,
     pub(crate) window_id: WindowId,
     pub(crate) widget_id: WidgetId,
 }
@@ -605,6 +627,7 @@ pub struct UpdateCtx<'a, 'b: 'a> {
     // `EventCtx` (and possibly using the same structure).But for
     // now keep it super-simple.
     pub(crate) needs_inval: bool,
+    pub(crate) children_changed: bool,
     pub(crate) window_id: WindowId,
     pub(crate) widget_id: WidgetId,
 }
@@ -621,6 +644,13 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         // that needs to be propagated (with, likely, special handling for
         // scrolling).
         self.base_state.needs_inval = true;
+    }
+
+    /// Indicate that your children have changed.
+    ///
+    /// Widgets must call this method after adding a new child.
+    pub fn children_changed(&mut self) {
+        self.base_state.children_changed = true;
     }
 
     /// Get an object which can create text layouts.
@@ -789,17 +819,27 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.widget_id
     }
 
-    pub fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
-        LifeCycleCtx {
-            command_queue: self.command_queue,
-            children: Bloom::default(),
-            window_id: self.window_id,
-            widget_id: self.widget_id,
-        }
-    }
+    //pub(crate) fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
+    //LifeCycleCtx {
+    //command_queue: self.command_queue,
+    //children_changed: false,
+    //needs_inval: false,
+    //children: Bloom::default(),
+    //window_id: self.window_id,
+    //widget_id: self.widget_id,
+    //}
+    //}
 }
 
 impl<'a> LifeCycleCtx<'a> {
+    /// Invalidate.
+    ///
+    /// See [`EventCtx::invalidate`](struct.EventCtx.html#method.invalidate) for
+    /// more discussion.
+    pub fn invalidate(&mut self) {
+        self.needs_inval = true;
+    }
+
     /// Returns the current widget's `WidgetId`.
     pub fn widget_id(&self) -> WidgetId {
         self.widget_id
@@ -809,6 +849,13 @@ impl<'a> LifeCycleCtx<'a> {
     /// in response to a `LifeCycle::RegisterChildren` event.
     pub fn register_child(&mut self, child_id: WidgetId) {
         self.children.add(&child_id);
+    }
+
+    /// Indicate that your children have changed.
+    ///
+    /// Widgets must call this method after adding a new child.
+    pub fn children_changed(&mut self) {
+        self.children_changed = true;
     }
 
     /// Submit a [`Command`] to be run after this event is handled.
@@ -850,6 +897,13 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
         self.needs_inval = true;
     }
 
+    /// Indicate that your children have changed.
+    ///
+    /// Widgets must call this method after adding a new child.
+    pub fn children_changed(&mut self) {
+        self.children_changed = true;
+    }
+
     /// Get an object which can create text layouts.
     pub fn text(&mut self) -> &mut Text<'b> {
         self.text_factory
@@ -875,10 +929,12 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
         self.widget_id
     }
 
-    pub fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
+    pub(crate) fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
         LifeCycleCtx {
             command_queue: self.command_queue,
             children: Bloom::default(),
+            children_changed: false,
+            needs_inval: false,
             window_id: self.window_id,
             widget_id: self.widget_id,
         }
