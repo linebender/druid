@@ -77,6 +77,13 @@ impl IdleHandle {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
 pub struct IdleToken(usize);
 
+impl IdleToken {
+    /// Create a new `IdleToken` with the given raw `usize` id.
+    pub const fn new(raw: usize) -> IdleToken {
+        IdleToken(raw)
+    }
+}
+
 /// A handle to a platform window object.
 #[derive(Clone, Default)]
 pub struct WindowHandle(platform::WindowHandle);
