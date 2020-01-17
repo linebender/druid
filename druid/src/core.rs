@@ -31,6 +31,9 @@ use crate::{
 /// Convenience type for dynamic boxed widget.
 pub type BoxedWidget<T> = WidgetPod<T, Box<dyn Widget<T>>>;
 
+/// Our queue type
+pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
+
 /// A container for one widget in the hierarchy.
 ///
 /// Generally, container widgets don't contain other widgets directly,
@@ -609,7 +612,7 @@ pub struct EventCtx<'a, 'b> {
     pub(crate) win_ctx: &'a mut dyn WinCtx<'b>,
     pub(crate) cursor: &'a mut Option<Cursor>,
     /// Commands submitted to be run after this event.
-    pub(crate) command_queue: &'a mut VecDeque<(Target, Command)>,
+    pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) window_id: WindowId,
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     pub(crate) window: &'a WindowHandle,
@@ -621,7 +624,7 @@ pub struct EventCtx<'a, 'b> {
 }
 
 pub struct LifeCycleCtx<'a> {
-    pub(crate) command_queue: &'a mut VecDeque<(Target, Command)>,
+    pub(crate) command_queue: &'a mut CommandQueue,
     /// the registry for the current widgets children;
     /// only really meaninful during a `LifeCyle::RegisterChildren` call.
     pub(crate) children: Bloom<WidgetId>,
@@ -641,7 +644,7 @@ pub struct LifeCycleCtx<'a> {
 pub struct UpdateCtx<'a, 'b: 'a> {
     pub(crate) text_factory: &'a mut Text<'b>,
     pub(crate) window: &'a WindowHandle,
-    pub(crate) command_queue: &'a mut VecDeque<(Target, Command)>,
+    pub(crate) command_queue: &'a mut CommandQueue,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like
     // `EventCtx` (and possibly using the same structure).But for
@@ -994,7 +997,7 @@ mod tests {
         let (id1, id2, id3, widget) = make_widgets();
         let mut widget = WidgetPod::new(widget).boxed();
 
-        let mut command_queue: VecDeque<(Target, Command)> = VecDeque::new();
+        let mut command_queue: CommandQueue = VecDeque::new();
         let mut ctx = LifeCycleCtx {
             command_queue: &mut command_queue,
             children: Bloom::new(),

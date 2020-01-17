@@ -30,7 +30,7 @@ use crate::shell::{
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::bloom::Bloom;
-use crate::core::BaseState;
+use crate::core::{BaseState, CommandQueue};
 use crate::menu::ContextMenu;
 use crate::theme;
 use crate::window::Window;
@@ -60,7 +60,7 @@ pub struct DruidHandler<T: Data> {
 /// State shared by all windows in the UI.
 pub(crate) struct AppState<T: Data> {
     delegate: Option<Box<dyn AppDelegate<T>>>,
-    command_queue: VecDeque<(Target, Command)>,
+    command_queue: CommandQueue,
     windows: Windows<T>,
     pub(crate) env: Env,
     pub(crate) data: T,
@@ -99,12 +99,12 @@ pub(crate) struct WindowState {
 }
 
 /// Everything required for a window to handle an event.
-struct SingleWindowState<'a, T: Data> {
+struct SingleWindowCtx<'a, T: Data> {
     window_id: WindowId,
     window: &'a mut Window<T>,
     handle: &'a mut WindowHandle,
     state: &'a mut WindowState,
-    command_queue: &'a mut VecDeque<(Target, Command)>,
+    command_queue: &'a mut CommandQueue,
     data: &'a mut T,
     env: &'a Env,
 }
@@ -130,6 +130,25 @@ impl<T: Data> WindowEntry<T> {
             })
         } else {
             None
+        }
+    }
+}
+
+impl<'a, T: Data> WindowEntryMut<'a, T> {
+    fn into_ctx(
+        self,
+        command_queue: &'a mut CommandQueue,
+        data: &'a mut T,
+        env: &'a Env,
+    ) -> SingleWindowCtx<'a, T> {
+        SingleWindowCtx {
+            window_id: self.id,
+            window: self.window,
+            handle: self.handle,
+            state: self.state,
+            command_queue,
+            data,
+            env,
         }
     }
 }
@@ -160,8 +179,7 @@ impl<T: Data> Windows<T> {
     fn get_menu_cmd(&self, window_id: WindowId, cmd_id: u32) -> Option<Command> {
         self.windows
             .get(&window_id)
-            .and_then(|entry| entry.window.as_ref())
-            .and_then(|w| w.get_menu_cmd(cmd_id))
+            .and_then(|entry| entry.window.as_ref()?.get_menu_cmd(cmd_id))
     }
 
     fn get_mut(&mut self, id: WindowId) -> Option<WindowEntryMut<T>> {
@@ -169,7 +187,7 @@ impl<T: Data> Windows<T> {
     }
 }
 
-impl<'a, T: Data> SingleWindowState<'a, T> {
+impl<'a, T: Data> SingleWindowCtx<'a, T> {
     fn paint(&mut self, piet: &mut Piet) {
         self.do_layout(piet);
         piet.clear(self.env.get(theme::WINDOW_BACKGROUND_COLOR));
@@ -329,7 +347,7 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
     /// for the current window.
     #[cfg(target_os = "macos")]
     fn macos_update_app_menu(&mut self) {
-        let SingleWindowState {
+        let SingleWindowCtx {
             window,
             handle,
             data,
@@ -437,7 +455,7 @@ impl<T: Data> AppState<T> {
         }
     }
 
-    fn assemble_window_state(&mut self, window_id: WindowId) -> Option<SingleWindowState<'_, T>> {
+    fn assemble_window_state(&mut self, window_id: WindowId) -> Option<SingleWindowCtx<'_, T>> {
         let AppState {
             ref mut command_queue,
             ref mut windows,
@@ -445,22 +463,9 @@ impl<T: Data> AppState<T> {
             ref env,
             ..
         } = self;
-        windows.get_mut(window_id).map(
-            move |WindowEntryMut {
-                      window,
-                      state,
-                      handle,
-                      id,
-                  }| SingleWindowState {
-                window_id: id,
-                window,
-                handle,
-                state,
-                command_queue,
-                data,
-                env,
-            },
-        )
+        windows
+            .get_mut(window_id)
+            .map(move |w| w.into_ctx(command_queue, data, env))
     }
 
     /// Returns `true` if an animation frame was requested.
@@ -507,16 +512,8 @@ impl<T: Data> AppState<T> {
                 // TODO: this is using the WinCtx of the window originating the event,
                 // rather than a WinCtx appropriate to the target window. This probably
                 // needs to get rethought.
-                for mut win in self.windows.iter_mut() {
-                    let mut win = SingleWindowState {
-                        window_id: win.id,
-                        handle: &mut win.handle,
-                        command_queue: &mut self.command_queue,
-                        state: &mut win.state,
-                        window: &mut win.window,
-                        data: &mut self.data,
-                        env: &self.env,
-                    };
+                for win in self.windows.iter_mut() {
+                    let mut win = win.into_ctx(&mut self.command_queue, &mut self.data, &self.env);
                     let handled = win.do_event_inner(event.clone(), win_ctx);
                     any_handled |= handled;
                     if handled {
@@ -579,7 +576,7 @@ impl<T: Data> AppState<T> {
     fn window_got_focus(&mut self, window_id: WindowId, _ctx: &mut dyn WinCtx) {
         self.assemble_window_state(window_id)
             .as_mut()
-            .map(SingleWindowState::window_got_focus);
+            .map(SingleWindowCtx::window_got_focus);
     }
 }
 
