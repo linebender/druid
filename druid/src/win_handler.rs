@@ -188,7 +188,7 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
         }
     }
 
-    fn do_anim_frame(&mut self, ctx: &mut dyn WinCtx) -> bool {
+    fn do_anim_frame(&mut self, ctx: &mut dyn WinCtx) {
         // TODO: this calculation uses wall-clock time of the paint call, which
         // potentially has jitter.
         //
@@ -208,7 +208,6 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
         } else {
             None
         };
-        request_anim
     }
 
     fn do_layout(&mut self, piet: &mut Piet) {
@@ -270,7 +269,7 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
             self.window
                 .event(&mut ctx, &focus_event, self.data, self.env);
         }
-        self.state.needs_inval = ctx.base_state.needs_inval | ctx.base_state.request_anim;
+        self.state.needs_inval = ctx.base_state.needs_inval;
         self.state.children_changed |= ctx.base_state.children_changed;
 
         if let Some(cursor) = cursor {
@@ -464,9 +463,10 @@ impl<T: Data> AppState<T> {
     fn paint(&mut self, window_id: WindowId, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
         self.assemble_window_state(window_id)
             .map(|mut win| {
-                let request_anim = win.do_anim_frame(ctx);
+                win.do_anim_frame(ctx);
                 win.paint(piet);
-                request_anim
+                // this is set if a new frame was requested
+                win.state.prev_paint_time.is_some()
             })
             .unwrap_or(false)
     }

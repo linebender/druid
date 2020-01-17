@@ -786,6 +786,7 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     /// Request an animation frame.
     pub fn request_anim_frame(&mut self) {
         self.base_state.request_anim = true;
+        self.base_state.needs_inval = true;
     }
 
     /// Request a timer event.
