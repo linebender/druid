@@ -103,6 +103,19 @@ pub(crate) struct BaseState {
     pub(crate) children_changed: bool,
 }
 
+impl BaseState {
+    /// Update to incorporate state changes from a child.
+    fn merge_up(&mut self, child_state: &BaseState) {
+        self.needs_inval |= child_state.needs_inval;
+        self.request_anim |= child_state.request_anim;
+        self.request_timer |= child_state.request_timer;
+        self.is_hot |= child_state.is_hot;
+        self.has_active |= child_state.has_active;
+        self.request_focus |= child_state.request_focus;
+        self.children_changed |= child_state.children_changed;
+    }
+}
+
 impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Create a new widget pod.
     ///
@@ -370,13 +383,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             self.inner.event(&mut child_ctx, &child_event, data, &env);
             child_ctx.base_state.has_active |= child_ctx.base_state.is_active;
         };
-        ctx.base_state.needs_inval |= child_ctx.base_state.needs_inval;
-        ctx.base_state.request_anim |= child_ctx.base_state.request_anim;
-        ctx.base_state.request_timer |= child_ctx.base_state.request_timer;
-        ctx.base_state.is_hot |= child_ctx.base_state.is_hot;
-        ctx.base_state.has_active |= child_ctx.base_state.has_active;
-        ctx.base_state.request_focus |= child_ctx.base_state.request_focus;
-        ctx.base_state.children_changed |= child_ctx.base_state.children_changed;
+
+        ctx.base_state.merge_up(&child_ctx.base_state);
         ctx.is_handled |= child_ctx.is_handled;
     }
 
