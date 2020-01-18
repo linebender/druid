@@ -68,7 +68,7 @@ pub use stepper::Stepper;
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
 pub use textbox::TextBox;
-pub use virtual_list::VirtualList;
+pub use virtual_list::{ListData, VirtualList};
 pub use widget_ext::WidgetExt;
 
 use std::ops::{Deref, DerefMut};

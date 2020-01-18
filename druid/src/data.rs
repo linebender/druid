@@ -20,6 +20,7 @@ use std::sync::Arc;
 use crate::kurbo;
 
 pub use druid_derive::Data;
+use std::cell::RefCell;
 
 /// A trait used to represent value types.
 ///
@@ -146,6 +147,12 @@ impl Data for f64 {
 impl<T: ?Sized + 'static> Data for Arc<T> {
     fn same(&self, other: &Self) -> bool {
         Arc::ptr_eq(self, other)
+    }
+}
+
+impl<T: ?Sized + Clone + 'static> Data for RefCell<T> {
+    fn same(&self, other: &Self) -> bool {
+        self.as_ptr() == other.as_ptr()
     }
 }
 

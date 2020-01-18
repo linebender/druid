@@ -6,6 +6,8 @@ use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, RenderContext, Selector,
     UpdateCtx, Widget,
 };
+use std::cell::RefCell;
+use std::marker::PhantomData;
 
 /// Trait used for shared state between
 /// the scrollbar and the scroll container.
@@ -120,7 +122,7 @@ impl Default for AnimationState {
             elapsed_time: 0,
             delay: 0,
             done: false,
-            duration: 250_000_000,
+            duration: 500_000_000,
             from: 0.,
             to: 1.,
             equation: |t: f64, b: f64, c: f64, d: f64| -> f64 {
@@ -132,24 +134,36 @@ impl Default for AnimationState {
     }
 }
 
-pub struct Scrollbar {
+pub struct Scrollbar<S: ScrollControlState> {
     animation_state: AnimationState,
     opacity: f64,
     is_hot: bool,
     scroll_policy: ScrollPolicy,
+    state: PhantomData<S>,
 }
 
-impl Scrollbar {
+impl<S: ScrollControlState> Scrollbar<S> {
+    pub fn new() -> Scrollbar<S> {
+        Scrollbar {
+            animation_state: Default::default(),
+            is_hot: false,
+            opacity: 0.,
+            scroll_policy: ScrollPolicy::Auto,
+
+            state: Default::default(),
+        }
+    }
+
     pub fn scroll_policy(mut self, val: ScrollPolicy) -> Self {
         self.scroll_policy = val;
         self
     }
 
-    fn calculated_thumb_size(data: &impl ScrollControlState, env: &Env, size: &Size) -> f64 {
+    fn calculated_thumb_size(&self, state: &S, env: &Env, size: &Size) -> f64 {
         let bar_width = env.get(theme::SCROLL_BAR_WIDTH);
-        let min_scroll_position = data.min_scroll_position();
-        let max_scroll_position = data.max_scroll_position();
-        let page_size = data.page_size();
+        let min_scroll_position = state.min_scroll_position();
+        let max_scroll_position = state.max_scroll_position();
+        let page_size = state.page_size();
 
         let extent = size.height.max(size.width);
         let target_thumb_size =
@@ -157,13 +171,13 @@ impl Scrollbar {
         target_thumb_size.max(bar_width * 2.)
     }
 
-    fn calculated_thumb_rect(data: &impl ScrollControlState, env: &Env, size: &Size) -> Rect {
-        let min_scroll_position = data.min_scroll_position();
-        let max_scroll_position = data.max_scroll_position();
-        let thumb_size = Scrollbar::calculated_thumb_size(data, env, &size);
+    fn calculated_thumb_rect(&self, state: &S, env: &Env, size: &Size) -> Rect {
+        let min_scroll_position = state.min_scroll_position();
+        let max_scroll_position = state.max_scroll_position();
+        let thumb_size = self.calculated_thumb_size(state, env, &size);
         let distance = size.height.max(size.width);
         let scale = (distance - thumb_size) / (max_scroll_position - min_scroll_position);
-        let scaled_scroll_position = data.scroll_position() * scale;
+        let scaled_scroll_position = state.scroll_position() * scale;
         let bar_width = env.get(theme::SCROLL_BAR_WIDTH);
 
         if size.width > size.height {
@@ -209,24 +223,26 @@ impl Scrollbar {
     }
 }
 
-impl Default for Scrollbar {
-    fn default() -> Self {
-        Scrollbar {
-            animation_state: Default::default(),
-            is_hot: false,
-            opacity: 0.,
-            scroll_policy: ScrollPolicy::Auto,
+impl<S: ScrollControlState> Widget<RefCell<S>> for Scrollbar<S> {
+    fn event(&mut self, event_ctx: &mut EventCtx, event: &Event, data: &mut RefCell<S>, env: &Env) {
+        if self.scroll_policy == ScrollPolicy::Off {
+            return;
         }
-    }
-}
-
-impl<T: ScrollControlState> Widget<T> for Scrollbar {
-    fn event(&mut self, event_ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let size = event_ctx.size();
         match event {
+            Event::AnimFrame(interval) => {
+                if !self.animation_state.done {
+                    self.opacity = self.animation_state.tick(*interval);
+                    event_ctx.request_anim_frame();
+                } else if !self.is_hot && self.opacity > 0. {
+                    self.hide(env);
+                    event_ctx.request_anim_frame();
+                }
+            }
+
             Event::Command(command) => {
                 let Selector(id) = command.selector;
-                if id == "scroll" && *command.get_object().unwrap_or(&0) == data.id() {
+                if id == "scroll" && *command.get_object().unwrap_or(&0) == data.borrow().id() {
                     self.show();
                     event_ctx.request_anim_frame();
                 }
@@ -242,18 +258,76 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
                 }
             }
 
-            Event::AnimFrame(interval) => {
-                if !self.animation_state.done {
-                    self.opacity = self.animation_state.tick(*interval);
-                    event_ctx.request_anim_frame();
-                } else if !self.is_hot && self.opacity > 0. {
-                    self.hide(env);
-                    event_ctx.request_anim_frame();
+            Event::MouseDown(event) => {
+                // Do nothing if we're hidden
+                if self.opacity == 0. {
+                    return;
+                }
+                let state = data.get_mut();
+                // Set our scale since we could be dragging later
+                // The thumb size is subtracted from the total
+                // scrollable distance and a scale is calculated
+                // to translate scrollbar distance to scroll container distance
+                let distance = size.width.max(size.height);
+                let thumb_size = self.calculated_thumb_size(state, env, &size);
+                let scale = (distance - thumb_size)
+                    / (state.max_scroll_position() - state.min_scroll_position());
+                state.set_scale(scale);
+
+                // Determine if we're over the thumb.
+                // If so, prepare it for dragging,
+                // if not, page the scroll_position.
+                let hit_test_rect = self.calculated_thumb_rect(state, env, &size);
+                if hit_test_rect.contains(event.pos) {
+                    state.set_tracking_mouse(true);
+                    state.set_last_mouse_pos(if size.width > size.height {
+                        event.pos.x
+                    } else {
+                        event.pos.y
+                    });
+                } else {
+                    let center = hit_test_rect.center();
+                    let delta = if center.x > event.pos.x || center.y > event.pos.y {
+                        -state.page_size()
+                    } else {
+                        state.page_size()
+                    };
+                    state.set_scroll_pos_from_delta(delta);
+                    event_ctx.invalidate();
                 }
             }
 
+            Event::MouseMoved(event) => {
+                let state = data.get_mut();
+                if !state.tracking_mouse() {
+                    return;
+                }
+                let pos = if size.width > size.height {
+                    event.pos.x
+                } else {
+                    event.pos.y
+                };
+                let delta = pos - state.last_mouse_pos();
+                let scale = state.scale();
+                state.set_scroll_pos_from_delta(delta / scale);
+                state.set_last_mouse_pos(pos);
+                event_ctx.invalidate();
+            }
+
+            Event::MouseUp(_) => {
+                let state = data.get_mut();
+                state.set_tracking_mouse(false);
+                state.set_last_mouse_pos(0.);
+            }
+
+            Event::Size(_) => {
+                self.show();
+                event_ctx.request_anim_frame();
+            }
+
             Event::Wheel(event) => {
-                if !data.mouse_wheel_enabled() {
+                let state = data.get_mut();
+                if !state.mouse_wheel_enabled() {
                     return;
                 }
                 let delta = if size.width > size.height {
@@ -262,90 +336,46 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
                     event.delta.y
                 };
                 self.show();
-                data.set_scroll_pos_from_delta(delta);
+                state.set_scroll_pos_from_delta(delta);
                 event_ctx.request_anim_frame();
-            }
-
-            Event::MouseMoved(event) => {
-                if !data.tracking_mouse() {
-                    return;
-                }
-                let pos = if size.width > size.height {
-                    event.pos.x
-                } else {
-                    event.pos.y
-                };
-                let delta = pos - data.last_mouse_pos();
-
-                data.set_scroll_pos_from_delta(delta / data.scale());
-                data.set_last_mouse_pos(pos);
-                event_ctx.invalidate();
-            }
-
-            Event::MouseDown(event) => {
-                // Do nothing if we're hidden
-                if self.opacity == 0. {
-                    return;
-                }
-                // Set our scale since we could be dragging later
-                // The thumb size is subtracted from the total
-                // scrollable distance and a scale is calculated
-                // to translate scrollbar distance to scroll container distance
-                let distance = size.width.max(size.height);
-                let thumb_size = Scrollbar::calculated_thumb_size(data, env, &size);
-                let scale = (distance - thumb_size)
-                    / (data.max_scroll_position() - data.min_scroll_position());
-                data.set_scale(scale);
-
-                // Determine if we're over the thumb.
-                // If so, prepare it for dragging,
-                // if not, page the scroll_position.
-                let hit_test_rect = Scrollbar::calculated_thumb_rect(data, env, &size);
-                if hit_test_rect.contains(event.pos) {
-                    data.set_tracking_mouse(true);
-                    data.set_last_mouse_pos(if size.width > size.height {
-                        event.pos.x
-                    } else {
-                        event.pos.y
-                    });
-                } else {
-                    let center = hit_test_rect.center();
-                    let delta = if center.x > event.pos.x || center.y > event.pos.y {
-                        -data.page_size()
-                    } else {
-                        data.page_size()
-                    };
-                    data.set_scroll_pos_from_delta(delta);
-                    event_ctx.invalidate();
-                }
-            }
-
-            Event::MouseUp(_) => {
-                data.set_tracking_mouse(false);
-                data.set_last_mouse_pos(0.);
             }
 
             _ => (),
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, _env: &Env) {
+    fn update(
+        &mut self,
+        ctx: &mut UpdateCtx,
+        old_data: Option<&RefCell<S>>,
+        data: &RefCell<S>,
+        _env: &Env,
+    ) {
         if let Some(old) = old_data {
-            if old.max_scroll_position() - data.max_scroll_position() != 0.
-                || old.min_scroll_position() - data.min_scroll_position() != 0.
-                || old.scroll_position() - data.scroll_position() != 0.
+            let old_state = old.borrow();
+            let state = data.borrow();
+            if old_state.max_scroll_position() - state.max_scroll_position() != 0.
+                || old_state.min_scroll_position() - state.min_scroll_position() != 0.
+                || old_state.scroll_position() - state.scroll_position() != 0.
             {
                 ctx.invalidate();
             }
         }
     }
 
-    fn layout(&mut self, _ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, _env: &Env) -> Size {
+    fn layout(
+        &mut self,
+        _ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &RefCell<S>,
+        _env: &Env,
+    ) -> Size {
         bc.constrain(bc.max())
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        if data.max_scroll_position() < 0. {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &RefCell<S>, env: &Env) {
+        let state = data.borrow();
+        if state.max_scroll_position() < 0. {
             return;
         }
         let brush = paint_ctx
@@ -360,13 +390,14 @@ impl<T: ScrollControlState> Widget<T> for Scrollbar {
         let edge_width = env.get(theme::SCROLL_BAR_EDGE_WIDTH);
 
         let size = paint_ctx.size();
-        let bounds = Scrollbar::calculated_thumb_rect(data, env, &size);
+        let bounds = self.calculated_thumb_rect(&state, env, &size);
         let rect = RoundedRect::from_rect(bounds, radius);
         paint_ctx.render_ctx.fill(rect, &brush);
         paint_ctx.render_ctx.stroke(rect, &border_brush, edge_width);
     }
 }
 
+#[derive(PartialEq)]
 pub enum ScrollPolicy {
     On,
     Off,

@@ -12,10 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Flex, ScrollControlState, Scrollbar, VirtualList, WidgetExt};
-use druid::{AppLauncher, Data, Lens, Widget, WindowDesc};
+use std::cell::RefCell;
+use std::sync::Arc;
 
-#[derive(Clone, Data, Lens, PartialEq)]
+use druid::widget::{
+    Flex, ListData, Padding, ScrollControlState, Scrollbar, VirtualList, WidgetExt,
+};
+use druid::{AppLauncher, Data, Insets, Lens, Widget, WindowDesc};
+
+#[derive(Clone, Data, Lens, PartialEq, Default)]
 struct VirtualScrollState {
     id: u64,
     last_mouse_pos: f64,
@@ -98,11 +103,30 @@ impl ScrollControlState for VirtualScrollState {
     }
 }
 
+#[derive(Clone, Data, Lens, PartialEq, Default)]
+struct VirtualListData {
+    state: RefCell<VirtualScrollState>,
+    data: Arc<Vec<String>>,
+}
+
+impl ListData<String, VirtualScrollState> for VirtualListData {
+    fn get_scroll_control_state(&self) -> &RefCell<VirtualScrollState> {
+        &self.state
+    }
+
+    fn get_data(&self) -> Arc<Vec<String>> {
+        self.data.clone()
+    }
+}
+
 fn main() {
     let window = WindowDesc::new(build_widget);
-    AppLauncher::with_window(window)
-        .use_simple_logger()
-        .launch(VirtualScrollState {
+    let mut items = Vec::new();
+    for i in 0..1_000_000 {
+        items.push(format!("List Item {}", i));
+    }
+    let list_data = VirtualListData {
+        state: RefCell::new(VirtualScrollState {
             id: 1,
             last_mouse_pos: 0.,
             page_size: 0.,
@@ -112,16 +136,20 @@ fn main() {
             mouse_wheel_enabled: true,
             tracking_mouse: false,
             scale: 0.,
-        })
+        }),
+        data: Arc::new(items),
+    };
+
+    AppLauncher::with_window(window)
+        .use_simple_logger()
+        .launch(list_data)
         .expect("launch failed");
 
-    fn build_widget() -> impl Widget<VirtualScrollState> {
-        let mut data = Vec::new();
-        for i in 0..1000 {
-            data.push(format!("List Item {}", i));
-        }
+    fn build_widget() -> impl Widget<VirtualListData> {
+        let v_list = VirtualList::new();
+        let scrollbar = Scrollbar::new().fix_width(8.).lens(VirtualListData::state);
         Flex::row()
-            .with_child(VirtualList::new().data_provider(data), 1.)
-            .with_child(Scrollbar::default().fix_width(20.), 0.)
+            .with_child(v_list, 1.)
+            .with_child(Padding::new(Insets::new(0., 2., 5., 4.), scrollbar), 0.)
     }
 }

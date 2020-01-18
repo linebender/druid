@@ -9,27 +9,33 @@ use crate::{
     BoxConstraints, BoxedWidget, Command, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
     Rect, RenderContext, Selector, Size, UpdateCtx, Widget, WidgetPod,
 };
+use std::cell::RefCell;
+use std::sync::Arc;
 
-pub struct VirtualList<T: Data + ToString, S: ScrollControlState> {
+pub trait ListData<T: Data + ToString + 'static, S: ScrollControlState>: Data {
+    fn get_scroll_control_state(&self) -> &RefCell<S>;
+    fn get_data(&self) -> Arc<Vec<T>>;
+}
+
+pub struct VirtualList<T: Data + ToString, S: ScrollControlState, Ld: ListData<T, S>> {
     children: Vec<BoxedWidget<T>>,
     data_range: Range<usize>,
-    data_provider: Vec<T>,
     direction: Axis,
     scroll_delta: f64,
-    // Always represents the topmost/rightmost position depending on the direction
     renderer_function: fn(data: &T) -> Box<dyn Widget<T>>,
     renderer_size: f64,
     set_scroll_metrics_later: bool,
-
-    phantom_data: PhantomData<S>,
+    list_data: PhantomData<Ld>,
+    state: PhantomData<S>,
 }
 
-impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
-    pub fn new() -> VirtualList<T, S> {
+impl<T: Data + ToString + 'static, S: ScrollControlState, Ld: ListData<T, S>>
+    VirtualList<T, S, Ld>
+{
+    pub fn new() -> VirtualList<T, S, Ld> {
         VirtualList {
             children: Vec::new(),
             data_range: 0..0,
-            data_provider: Vec::new(),
             direction: Axis::Vertical,
             scroll_delta: 0.,
             renderer_function: |data: &T| -> Box<dyn Widget<T>> {
@@ -37,7 +43,8 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
             },
             renderer_size: 30.,
             set_scroll_metrics_later: false,
-            phantom_data: Default::default(),
+            list_data: Default::default(),
+            state: Default::default(),
         }
     }
 
@@ -48,11 +55,6 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
 
     pub fn direction(mut self, val: Axis) -> Self {
         self.direction = val;
-        self
-    }
-
-    pub fn data_provider(mut self, val: Vec<T>) -> Self {
-        self.data_provider = val;
         self
     }
 
@@ -76,7 +78,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
 
     /// Calculates the scroll_position, max_scroll_position
     /// and page_size based on the available width or height.
-    fn set_scroll_metrics(&mut self, event_ctx: &mut EventCtx, data: &mut S) {
+    fn set_scroll_metrics(&mut self, event_ctx: &mut EventCtx, list_data: &mut Ld) {
         let page_size = match self.direction {
             Axis::Vertical => event_ctx.size().height,
             Axis::Horizontal => event_ctx.size().width,
@@ -85,17 +87,18 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
             self.set_scroll_metrics_later = true;
             event_ctx.request_anim_frame()
         }
-        data.set_max_scroll_position(
-            (self.data_provider.len() as f64 * self.renderer_size) - page_size,
+        let mut scroll_control_state = list_data.get_scroll_control_state().borrow_mut();
+        scroll_control_state.set_max_scroll_position(
+            (list_data.get_data().len() as f64 * self.renderer_size) - page_size,
         );
-        data.set_page_size(page_size);
+        scroll_control_state.set_page_size(page_size);
         // determine if we need to adjust the scroll_position.
         // This happens when a resize occurs on scrolled
         // content and no more rows can be displayed to fill
         // up the viewport.
         let (min, max) = self.get_content_metrics();
-        if max < page_size && data.scroll_position() > 0. {
-            data.set_scroll_pos_from_delta(-min);
+        if max < page_size && scroll_control_state.scroll_position() > 0. {
+            scroll_control_state.set_scroll_pos_from_delta(-min);
         }
         event_ctx.invalidate();
     }
@@ -151,12 +154,13 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> VirtualList<T, S> {
     }
 }
 
-impl<T: Data + ToString + 'static, S: ScrollControlState> Default for VirtualList<T, S> {
+impl<T: Data + ToString + 'static, S: ScrollControlState, Ld: ListData<T, S>> Default
+    for VirtualList<T, S, Ld>
+{
     fn default() -> Self {
         VirtualList {
             children: Vec::new(),
             data_range: 0..0,
-            data_provider: Vec::new(),
             direction: Axis::Vertical,
             scroll_delta: 0.,
             renderer_function: |data: &T| -> Box<dyn Widget<T>> {
@@ -164,32 +168,37 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Default for VirtualLis
             },
             renderer_size: 0.,
             set_scroll_metrics_later: false,
-            phantom_data: PhantomData,
+            list_data: PhantomData,
+            state: PhantomData,
         }
     }
 }
 
-impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualList<T, S> {
-    fn event(&mut self, event_ctx: &mut EventCtx, event: &Event, data: &mut S, _env: &Env) {
+impl<T: Data + ToString + 'static, S: ScrollControlState, Ld: ListData<T, S>> Widget<Ld>
+    for VirtualList<T, S, Ld>
+{
+    fn event(&mut self, event_ctx: &mut EventCtx, event: &Event, list_data: &mut Ld, _env: &Env) {
         match event {
             Event::Wheel(event) => {
-                if !data.mouse_wheel_enabled() {
+                let mut scroll_control_state = list_data.get_scroll_control_state().borrow_mut();
+                if !scroll_control_state.mouse_wheel_enabled() {
                     return;
                 }
                 let delta = match self.direction {
                     Axis::Vertical => event.delta.y,
                     Axis::Horizontal => event.delta.x,
                 };
-                data.set_scroll_pos_from_delta(delta);
+                scroll_control_state.set_scroll_pos_from_delta(delta);
                 event_ctx.invalidate();
 
                 let selector = Selector::new("scroll");
-                let command = Command::new(selector, data.id());
+                let command = Command::new(selector, scroll_control_state.id());
                 event_ctx.submit_command(command, None);
             }
 
             Event::MouseMoved(event) => {
-                if !data.tracking_mouse() {
+                let mut scroll_control_state = list_data.get_scroll_control_state().borrow_mut();
+                if !scroll_control_state.tracking_mouse() {
                     return;
                 }
                 let pos = match self.direction {
@@ -197,25 +206,26 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
                     Axis::Horizontal => event.pos.x,
                 };
 
-                let delta = pos - data.last_mouse_pos();
-
-                data.set_scroll_pos_from_delta(delta / data.scale());
-                data.set_last_mouse_pos(pos);
+                let delta = pos - scroll_control_state.last_mouse_pos();
+                let scale = scroll_control_state.scale();
+                scroll_control_state.set_scroll_pos_from_delta(delta / scale);
+                scroll_control_state.set_last_mouse_pos(pos);
                 event_ctx.invalidate();
             }
 
             Event::MouseUp(_) => {
-                data.set_tracking_mouse(false);
+                let mut scroll_control_state = list_data.get_scroll_control_state().borrow_mut();
+                scroll_control_state.set_tracking_mouse(false);
             }
 
             Event::Size(_) => {
-                self.set_scroll_metrics(event_ctx, data);
+                self.set_scroll_metrics(event_ctx, list_data);
             }
 
             Event::AnimFrame(_) => {
                 if self.set_scroll_metrics_later {
                     self.set_scroll_metrics_later = false;
-                    self.set_scroll_metrics(event_ctx, data);
+                    self.set_scroll_metrics(event_ctx, list_data);
                 }
             }
 
@@ -223,10 +233,22 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
         }
     }
 
-    fn update(&mut self, update_ctx: &mut UpdateCtx, old_data: Option<&S>, data: &S, _env: &Env) {
+    fn update(
+        &mut self,
+        update_ctx: &mut UpdateCtx,
+        old_data: Option<&Ld>,
+        list_data: &Ld,
+        _env: &Env,
+    ) {
         if let Some(old_data) = old_data {
-            let old_scroll_position = old_data.scroll_position();
-            let new_scroll_position = data.scroll_position();
+            let old_scroll_position = old_data
+                .get_scroll_control_state()
+                .borrow()
+                .scroll_position();
+            let new_scroll_position = list_data
+                .get_scroll_control_state()
+                .borrow()
+                .scroll_position();
             let delta = new_scroll_position - old_scroll_position;
             if delta != 0. {
                 self.scroll_delta += delta;
@@ -239,7 +261,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
         &mut self,
         layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        data: &S,
+        list_data: &Ld,
         env: &Env,
     ) -> Size {
         let bounds = match self.direction {
@@ -249,8 +271,9 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
         let (mut min, mut max) = self.translate(self.scroll_delta, bounds);
         // We've translated more than the viewport distance
         // and need to jump to a new data_range
+        let scroll_control_state = list_data.get_scroll_control_state().borrow();
         if self.children.is_empty() {
-            let fractional_index = data.scroll_position() / self.renderer_size;
+            let fractional_index = scroll_control_state.scroll_position() / self.renderer_size;
             let index = fractional_index.floor() as usize;
             self.data_range = index..index;
             min = 0.;
@@ -259,7 +282,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
         // List items must attempt to fill the given box constraints.
         // Determine if we need to add items behind the start index (scroll_position increasing)
         while self.data_range.start != 0 && min > 0. {
-            if let Some(data) = self.data_provider.get(self.data_range.start - 1) {
+            if let Some(data) = list_data.get_data().get(self.data_range.start - 1) {
                 let mut widget = WidgetPod::new((self.renderer_function)(data));
                 let child_bc = BoxConstraints::new(Size::ZERO, bc.max());
                 let child_size = widget.layout(layout_ctx, &child_bc, data, env);
@@ -286,7 +309,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
 
         // determine if we need to add items in front of the end index
         while max < bounds {
-            if let Some(data) = self.data_provider.get(self.data_range.end) {
+            if let Some(data) = list_data.get_data().get(self.data_range.end) {
                 let mut widget = WidgetPod::new((self.renderer_function)(data));
                 let child_bc = BoxConstraints::new(Size::ZERO, bc.max());
                 let child_size = widget.layout(layout_ctx, &child_bc, data, env);
@@ -314,7 +337,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
         bc.max()
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &S, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, list_data: &Ld, env: &Env) {
         if let Err(e) = paint_ctx.save() {
             error!("saving render context failed: {:?}", e);
             return;
@@ -324,7 +347,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState> Widget<S> for VirtualL
 
         for (index, child) in &mut self.children.iter_mut().enumerate() {
             let idx = self.data_range.start + index;
-            child.paint_with_offset(paint_ctx, &self.data_provider[idx], env);
+            child.paint_with_offset(paint_ctx, &list_data.get_data()[idx], env);
         }
 
         if let Err(e) = paint_ctx.restore() {
