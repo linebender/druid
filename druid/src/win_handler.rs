@@ -178,9 +178,12 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
         let mut paint_ctx = PaintCtx {
             render_ctx: piet,
             base_state: &base_state,
+            z_ops: Vec::new(),
             window_id: self.window_id,
             region: Rect::ZERO.into(),
         };
+
+        eprintln!("paint");
         self.window.paint(&mut paint_ctx, self.data, self.env);
     }
 

@@ -16,7 +16,8 @@
 
 use std::f64::consts::PI;
 
-use druid::kurbo::Line;
+use druid::kurbo::{Circle, Line, Affine};
+use druid::widget::{Align, Button, Checkbox, Flex, Label, Padding, ProgressBar, Slider};
 use druid::{
     AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
     RenderContext, Size, UpdateCtx, Vec2, Widget, WindowDesc,
@@ -62,11 +63,73 @@ impl Widget<u32> for AnimWidget {
         let center = Point::new(50.0, 50.0);
         let ambit = center + 45.0 * Vec2::from_angle((0.75 + self.t) * 2.0 * PI);
         paint_ctx.stroke(Line::new(center, ambit), &Color::WHITE, 1.0);
+
+        paint_ctx.fill(Circle::new(Point::new(100.0, 100.0), 20.0), &Color::WHITE);
+
+        paint_ctx.paint_with_z_index(3, |ctx| {
+            ctx.fill(
+                Circle::new(Point::new(140.0, 100.0), 20.0),
+                &Color::rgb8(255, 255, 0),
+            );
+        });
+
+        paint_ctx.paint_with_z_index(1, |ctx| {
+            ctx.fill(
+                Circle::new(Point::new(120.0, 100.0), 20.0),
+                &Color::rgb8(255, 0, 0),
+            );
+        });
+
+        paint_ctx.fill(
+            Circle::new(Point::new(100.0, 120.0), 20.0),
+            &Color::rgb8(255, 0, 255),
+        );
     }
 }
 
+struct CircleWidget {}
+
+impl Widget<u32> for CircleWidget {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut u32, _env: &Env) {}
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&u32>, _data: &u32, _env: &Env) {}
+
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &u32,
+        _env: &Env,
+    ) -> Size {
+        bc.constrain((500.0, 500.0))
+    }
+
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
+        paint_ctx.transform(Affine::translate((-50.,0.)));
+
+        paint_ctx.fill(
+            Circle::new(Point::new(125.0, 70.0), 20.0),
+            &Color::rgb8(125, 50, 55),
+        );
+//        paint_ctx.paint_with_z_index(2, |ctx| {
+//            ctx.fill(
+//                Circle::new(Point::new(125.0, 70.0), 20.0),
+//                &Color::rgb8(125, 50, 55),
+//            );
+//        });
+    }
+}
+
+fn build_widget() -> impl Widget<u32> {
+    let anim_widget = AnimWidget { t: 0.0 };
+    let circle_widget = CircleWidget {};
+
+    Flex::column()
+        .with_child(Padding::new(0.0, circle_widget), 1.0)
+        .with_child(Padding::new(0.0, anim_widget), 1.0)
+}
+
 fn main() {
-    let window = WindowDesc::new(|| AnimWidget { t: 0.0 });
+    let window = WindowDesc::new(build_widget);
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(0)

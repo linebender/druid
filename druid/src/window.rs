@@ -15,6 +15,7 @@
 //! Management of multiple windows.
 
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::mem;
 
 use crate::kurbo::{Point, Rect, Size};
 
@@ -81,6 +82,17 @@ impl<T: Data> Window<T> {
     pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         let visible = Rect::from_origin_size(Point::ZERO, self.size);
         paint_ctx.with_child_ctx(visible, |ctx| self.root.paint(ctx, data, env));
+        // paint_ctx.paint_z
+
+        eprintln!("xx {:?}", paint_ctx.z_ops.len());
+
+        paint_ctx.z_ops.sort_by_key(|k| k.0);
+
+        let z_ops = mem::replace(&mut paint_ctx.z_ops, Vec::new());
+        for z_op in z_ops.into_iter() {
+//            paint_ctx.with_child_ctx(visible, |ctx| z_op.1(ctx));
+            //z_op.1();
+        }
     }
 
     pub(crate) fn update_title(&mut self, win_handle: &WindowHandle, data: &T, env: &Env) {

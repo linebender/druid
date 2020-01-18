@@ -15,6 +15,7 @@
 //! The fundamental druid types.
 
 use std::collections::VecDeque;
+use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::time::Instant;
 
@@ -166,10 +167,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut ctx = PaintCtx {
             render_ctx: paint_ctx.render_ctx,
             window_id: paint_ctx.window_id,
+            z_ops: Vec::new(),
             region: paint_ctx.region.clone(),
             base_state: &self.state,
         };
         self.inner.paint(&mut ctx, data, &env);
+        paint_ctx.z_ops.append(&mut ctx.z_ops);
     }
 
     /// Paint the widget, translating it by the origin of its layout rectangle.
@@ -419,6 +422,8 @@ pub struct PaintCtx<'a, 'b: 'a> {
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'b>,
     pub window_id: WindowId,
+    /// z-order painting operations
+    pub z_ops: Vec<(u32, Box<dyn FnOnce()>)>,
     /// The currently visible region.
     pub(crate) region: Region,
     pub(crate) base_state: &'a BaseState,
@@ -511,16 +516,65 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
         let PaintCtx {
             render_ctx,
             window_id,
+            z_ops,
             base_state,
             ..
         } = self;
+
+        eprintln!("z_ops {:?}", z_ops.len());
+
         let mut child_ctx = PaintCtx {
             render_ctx,
             base_state,
+            z_ops: Vec::new(),
             window_id: *window_id,
             region: region.into(),
         };
-        f(&mut child_ctx)
+
+        f(&mut child_ctx);
+        self.z_ops.append(&mut child_ctx.z_ops);
+
+//        eprintln!("xx {:?}", child_ctx.z_ops.len());
+//
+//        child_ctx.z_ops.sort_by_key(|k| k.0);
+//
+//        let z_ops = mem::replace(&mut child_ctx.z_ops, Vec::new());
+//        for z_op in z_ops.into_iter() {
+//            z_op.1(&mut child_ctx);
+//        }
+    }
+
+    /// Allows to specify order for paint operations.
+    ///
+    /// Larger `z_idx` indicate that an operation will be executed later.
+    pub fn paint_with_z_index(
+        &mut self,
+        z_idx: u32,
+        paint_func: impl FnOnce(&mut PaintCtx),
+    ) {
+        let PaintCtx {
+            render_ctx,
+            window_id,
+            z_ops,
+            base_state,
+            region,
+            ..
+        } = self;
+
+        eprintln!("z_ops {:?}", z_ops.len());
+
+        let mut child_ctx = PaintCtx {
+            render_ctx,
+            base_state,
+            z_ops: Vec::new(),
+            window_id: *window_id,
+            region: region.clone(),
+        };
+
+        let x = self.render_ctx.ctx.current_transform();
+
+//        let x = || paint_func(&mut child_ctx);
+//        self.z_ops.push((z_idx, Box::new(x)));
     }
 }
 
