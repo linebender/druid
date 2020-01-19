@@ -60,9 +60,11 @@ where
             renderer_function: |_data: &T,
                                 freed_widget: Option<BoxedWidget<T>>|
              -> BoxedWidget<T> {
-                freed_widget.unwrap_or(WidgetPod::new(Box::new(
-                    Label::new(|d: &T, _env: &Env| d.to_string()).fix_height(30.),
-                )))
+                freed_widget.unwrap_or_else(|| {
+                    WidgetPod::new(Box::new(
+                        Label::new(|d: &T, _env: &Env| d.to_string()).fix_height(30.),
+                    ))
+                })
             },
             renderer_size: 30.,
             set_scroll_metrics_later: false,
