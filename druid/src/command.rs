@@ -303,7 +303,7 @@ impl std::fmt::Display for ArgumentError {
             ArgumentError::WrongVariant => write!(
                 f,
                 "Incorrect access method for argument type; \
-            check Command::one_shot docs for more detail."
+                 check Command::one_shot docs for more detail."
             ),
         }
     }

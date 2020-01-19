@@ -350,7 +350,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         if self.old_data.is_none() {
             log::error!(
                 "widget {:?} is receiving an event without having first \
-                recieved WidgetAdded.",
+                 recieved WidgetAdded.",
                 ctx.widget_id()
             );
         }
