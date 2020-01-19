@@ -414,7 +414,6 @@ pub struct ZOrderPaintOp {
     pub z_index: u32,
     pub paint_func: Box<dyn FnOnce(&mut PaintCtx) + 'static>,
     pub transform: Affine,
-    // todo: clip
 }
 
 /// A context passed to paint methods of widgets.

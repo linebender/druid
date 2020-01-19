@@ -183,7 +183,6 @@ impl<'a, T: Data + 'static> SingleWindowState<'a, T> {
             region: Rect::ZERO.into(),
         };
 
-        eprintln!("paint");
         self.window.paint(&mut paint_ctx, self.data, self.env);
     }
 
