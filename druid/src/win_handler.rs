@@ -281,9 +281,10 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
 
         let is_handled = ctx.is_handled;
         if ctx.base_state.request_focus {
-            let focus_event = Event::FocusChanged(true);
+            let mut lc_ctx = ctx.make_lifecycle_ctx();
+            let focus_event = LifeCycle::FocusChanged(true);
             self.window
-                .event(&mut ctx, &focus_event, self.data, self.env);
+                .lifecycle(&mut lc_ctx, &focus_event, self.data, self.env);
         }
         self.state.needs_inval = ctx.base_state.needs_inval;
         self.state.children_changed |= ctx.base_state.children_changed;

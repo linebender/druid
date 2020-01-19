@@ -95,11 +95,6 @@ pub enum Event {
     ///
     /// The value is a delta.
     Zoom(f64),
-    /// Called when the focus status changes.
-    ///
-    /// See [`has_focus`](struct.BaseState.html#method.has_focus) for
-    /// discussion about the focus status.
-    FocusChanged(bool),
     /// Called on a timer event.
     ///
     /// Request a timer event through [`EventCtx::request_timer()`]. That will
@@ -157,9 +152,21 @@ pub enum LifeCycle {
     AnimFrame(u64),
     /// Called when the "hot" status changes.
     ///
+    /// This will always be called _before_ the event that triggered it; that is,
+    /// when the mouse moves over a widget, that widget will receive
+    /// `LifeCycle::HotChanged` before it receives `Event::MouseMoved`.
+    ///
     /// See [`is_hot`](struct.BaseState.html#method.is_hot) for
     /// discussion about the hot status.
     HotChanged(bool),
+    /// Called when the focus status changes.
+    ///
+    /// This will always be called immediately after an event where a widget
+    /// has requested focus.
+    ///
+    /// See [`has_focus`](struct.BaseState.html#method.has_focus) for
+    /// discussion about the focus status.
+    FocusChanged(bool),
 }
 
 /// A mouse wheel event.
