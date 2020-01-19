@@ -348,14 +348,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 recurse = had_active || child_ctx.base_state.is_hot;
                 Event::Zoom(*zoom)
             }
-            Event::FocusChanged(_is_focused) => {
-                let had_focus = child_ctx.base_state.has_focus;
-                let focus = child_ctx.base_state.request_focus;
-                child_ctx.base_state.request_focus = false;
-                child_ctx.base_state.has_focus = focus;
-                recurse = focus || had_focus;
-                Event::FocusChanged(focus)
-            }
             Event::Timer(id) => {
                 recurse = child_ctx.base_state.request_timer;
                 Event::Timer(*id)
@@ -400,6 +392,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.needs_inval = false;
         ctx.request_anim = false;
 
+        let mut replacement_event = None;
         let recurse = match event {
             LifeCycle::AnimFrame(_) => {
                 let r = self.state.request_anim;
@@ -408,10 +401,19 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
             LifeCycle::RegisterChildren => self.state.children_changed,
             LifeCycle::HotChanged(_) => false,
+            LifeCycle::FocusChanged(_) => {
+                let had_focus = self.state.has_focus;
+                let focus = self.state.request_focus;
+                self.state.request_focus = false;
+                self.state.has_focus = focus;
+                replacement_event = Some(LifeCycle::FocusChanged(focus));
+                focus || had_focus
+            }
             _ => true,
         };
 
         if recurse {
+            let event = replacement_event.as_ref().unwrap_or(event);
             self.inner.lifecycle(ctx, event, data, env);
         }
 
@@ -421,6 +423,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.children_changed |= pre_childs_changed;
         ctx.needs_inval |= pre_inval;
 
+        // we only want to update child state after this specific event.
         if let LifeCycle::RegisterChildren = event {
             self.state.children = ctx.children;
             self.state.children_changed = false;
