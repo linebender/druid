@@ -14,11 +14,12 @@
 
 //! Management of multiple windows.
 
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::mem;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::kurbo::{Point, Rect, Size};
 
+use crate::piet::RenderContext;
 use crate::shell::WindowHandle;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, MenuDesc,
@@ -82,16 +83,17 @@ impl<T: Data> Window<T> {
     pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         let visible = Rect::from_origin_size(Point::ZERO, self.size);
         paint_ctx.with_child_ctx(visible, |ctx| self.root.paint(ctx, data, env));
-        // paint_ctx.paint_z
 
-        eprintln!("xx {:?}", paint_ctx.z_ops.len());
-
-        paint_ctx.z_ops.sort_by_key(|k| k.0);
+        paint_ctx.z_ops.sort_by_key(|k| k.z_index);
 
         let z_ops = mem::replace(&mut paint_ctx.z_ops, Vec::new());
         for z_op in z_ops.into_iter() {
-//            paint_ctx.with_child_ctx(visible, |ctx| z_op.1(ctx));
-            //z_op.1();
+            paint_ctx.with_child_ctx(visible, |ctx| {
+                ctx.render_ctx.save();
+                ctx.render_ctx.transform(z_op.transform);
+                (z_op.paint_func)(ctx);
+                ctx.render_ctx.restore();
+            });
         }
     }
 

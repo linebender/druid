@@ -16,7 +16,7 @@
 
 use std::f64::consts::PI;
 
-use druid::kurbo::{Circle, Line, Affine};
+use druid::kurbo::{Affine, Circle, Line};
 use druid::widget::{Align, Button, Checkbox, Flex, Label, Padding, ProgressBar, Slider};
 use druid::{
     AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
@@ -104,18 +104,19 @@ impl Widget<u32> for CircleWidget {
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
-        paint_ctx.transform(Affine::translate((-50.,0.)));
+        paint_ctx.transform(Affine::translate((-50., 0.)));
 
         paint_ctx.fill(
             Circle::new(Point::new(125.0, 70.0), 20.0),
             &Color::rgb8(125, 50, 55),
         );
-//        paint_ctx.paint_with_z_index(2, |ctx| {
-//            ctx.fill(
-//                Circle::new(Point::new(125.0, 70.0), 20.0),
-//                &Color::rgb8(125, 50, 55),
-//            );
-//        });
+
+        paint_ctx.paint_with_z_index(2, |ctx| {
+            ctx.fill(
+                Circle::new(Point::new(135.0, 70.0), 20.0),
+                &Color::rgb8(0, 0, 255),
+            );
+        });
     }
 }
 
@@ -124,8 +125,8 @@ fn build_widget() -> impl Widget<u32> {
     let circle_widget = CircleWidget {};
 
     Flex::column()
-        .with_child(Padding::new(0.0, circle_widget), 1.0)
         .with_child(Padding::new(0.0, anim_widget), 1.0)
+        .with_child(Padding::new(0.0, circle_widget), 1.0)
 }
 
 fn main() {

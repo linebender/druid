@@ -15,7 +15,6 @@
 //! The fundamental druid types.
 
 use std::collections::VecDeque;
-use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::time::Instant;
 
@@ -411,6 +410,13 @@ impl BaseState {
     }
 }
 
+pub struct ZOrderPaintOp {
+    pub z_index: u32,
+    pub paint_func: Box<dyn FnOnce(&mut PaintCtx) + 'static>,
+    pub transform: Affine,
+    // todo: clip
+}
+
 /// A context passed to paint methods of widgets.
 ///
 /// Widgets paint their appearance by calling methods on the
@@ -422,8 +428,8 @@ pub struct PaintCtx<'a, 'b: 'a> {
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'b>,
     pub window_id: WindowId,
-    /// z-order painting operations
-    pub z_ops: Vec<(u32, Box<dyn FnOnce()>)>,
+    /// The z-order paint operations.
+    pub z_ops: Vec<ZOrderPaintOp>,
     /// The currently visible region.
     pub(crate) region: Region,
     pub(crate) base_state: &'a BaseState,
@@ -516,12 +522,10 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
         let PaintCtx {
             render_ctx,
             window_id,
-            z_ops,
+            z_ops: _,
             base_state,
             ..
         } = self;
-
-        eprintln!("z_ops {:?}", z_ops.len());
 
         let mut child_ctx = PaintCtx {
             render_ctx,
@@ -533,15 +537,6 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
 
         f(&mut child_ctx);
         self.z_ops.append(&mut child_ctx.z_ops);
-
-//        eprintln!("xx {:?}", child_ctx.z_ops.len());
-//
-//        child_ctx.z_ops.sort_by_key(|k| k.0);
-//
-//        let z_ops = mem::replace(&mut child_ctx.z_ops, Vec::new());
-//        for z_op in z_ops.into_iter() {
-//            z_op.1(&mut child_ctx);
-//        }
     }
 
     /// Allows to specify order for paint operations.
@@ -549,32 +544,15 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
     /// Larger `z_idx` indicate that an operation will be executed later.
     pub fn paint_with_z_index(
         &mut self,
-        z_idx: u32,
-        paint_func: impl FnOnce(&mut PaintCtx),
+        z_index: u32,
+        paint_func: impl FnOnce(&mut PaintCtx) + 'static,
     ) {
-        let PaintCtx {
-            render_ctx,
-            window_id,
-            z_ops,
-            base_state,
-            region,
-            ..
-        } = self;
-
-        eprintln!("z_ops {:?}", z_ops.len());
-
-        let mut child_ctx = PaintCtx {
-            render_ctx,
-            base_state,
-            z_ops: Vec::new(),
-            window_id: *window_id,
-            region: region.clone(),
-        };
-
-        let x = self.render_ctx.ctx.current_transform();
-
-//        let x = || paint_func(&mut child_ctx);
-//        self.z_ops.push((z_idx, Box::new(x)));
+        let current_transform = self.render_ctx.current_transform();
+        self.z_ops.push(ZOrderPaintOp {
+            z_index,
+            paint_func: Box::new(paint_func),
+            transform: current_transform,
+        })
     }
 }
 
