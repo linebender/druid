@@ -1,5 +1,7 @@
+use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::ops::Range;
+use std::sync::Arc;
 
 use log::error;
 
@@ -9,46 +11,71 @@ use crate::{
     BoxConstraints, BoxedWidget, Command, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
     Rect, RenderContext, Selector, Size, UpdateCtx, Widget, WidgetPod,
 };
-use std::cell::RefCell;
-use std::sync::Arc;
 
-pub trait ListData<T: Data + ToString + 'static, S: ScrollControlState>: Data {
+pub trait ListData<T, S>: Data
+where
+    T: Data + ToString + 'static,
+    S: ScrollControlState,
+{
     fn get_scroll_control_state(&self) -> &RefCell<S>;
     fn get_data(&self) -> Arc<Vec<T>>;
 }
 
-pub struct VirtualList<T: Data + ToString, S: ScrollControlState, Ld: ListData<T, S>> {
+pub struct VirtualList<T, S, Ld>
+where
+    T: Data + ToString + 'static,
+    S: ScrollControlState,
+    Ld: ListData<T, S>,
+{
     children: Vec<BoxedWidget<T>>,
+    cached_children: Vec<BoxedWidget<T>>,
     data_range: Range<usize>,
     direction: Axis,
     scroll_delta: f64,
-    renderer_function: fn(data: &T) -> Box<dyn Widget<T>>,
+    /// Function to be called when a new widget
+    /// is needed by the list. If a previously
+    /// freed widget is available, it is provided
+    /// and can optionally be used.
+    renderer_function: fn(data: &T, freed_widget: Option<BoxedWidget<T>>) -> BoxedWidget<T>,
     renderer_size: f64,
     set_scroll_metrics_later: bool,
+
     list_data: PhantomData<Ld>,
     state: PhantomData<S>,
 }
 
-impl<T: Data + ToString + 'static, S: ScrollControlState, Ld: ListData<T, S>>
-    VirtualList<T, S, Ld>
+impl<T, S, Ld> VirtualList<T, S, Ld>
+where
+    T: Data + ToString + 'static,
+    S: ScrollControlState,
+    Ld: ListData<T, S>,
 {
     pub fn new() -> VirtualList<T, S, Ld> {
         VirtualList {
             children: Vec::new(),
+            cached_children: Vec::new(),
             data_range: 0..0,
             direction: Axis::Vertical,
             scroll_delta: 0.,
-            renderer_function: |data: &T| -> Box<dyn Widget<T>> {
-                Box::new(Label::new(data.to_string()).fix_height(30.))
+            renderer_function: |_data: &T,
+                                freed_widget: Option<BoxedWidget<T>>|
+             -> BoxedWidget<T> {
+                freed_widget.unwrap_or(WidgetPod::new(Box::new(
+                    Label::new(|d: &T, _env: &Env| d.to_string()).fix_height(30.),
+                )))
             },
             renderer_size: 30.,
             set_scroll_metrics_later: false,
+
             list_data: Default::default(),
             state: Default::default(),
         }
     }
 
-    pub fn renderer_function(mut self, val: fn(data: &T) -> Box<dyn Widget<T>>) -> Self {
+    pub fn renderer_function(
+        mut self,
+        val: fn(data: &T, freed_widget: Option<BoxedWidget<T>>) -> BoxedWidget<T>,
+    ) -> Self {
         self.renderer_function = val;
         self
     }
@@ -143,7 +170,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, Ld: ListData<T, S>>
             if !to_remove.is_empty() {
                 to_remove.sort_by(|a, b| b.cmp(a));
                 for index in to_remove {
-                    self.children.remove(index);
+                    self.cached_children.push(self.children.remove(index));
                 }
             }
             min -= delta;
@@ -154,28 +181,22 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, Ld: ListData<T, S>>
     }
 }
 
-impl<T: Data + ToString + 'static, S: ScrollControlState, Ld: ListData<T, S>> Default
-    for VirtualList<T, S, Ld>
+impl<T, S, Ld> Default for VirtualList<T, S, Ld>
+where
+    T: Data + ToString + 'static,
+    S: ScrollControlState,
+    Ld: ListData<T, S>,
 {
     fn default() -> Self {
-        VirtualList {
-            children: Vec::new(),
-            data_range: 0..0,
-            direction: Axis::Vertical,
-            scroll_delta: 0.,
-            renderer_function: |data: &T| -> Box<dyn Widget<T>> {
-                Box::new(Label::new(data.to_string()).fix_height(30.))
-            },
-            renderer_size: 0.,
-            set_scroll_metrics_later: false,
-            list_data: PhantomData,
-            state: PhantomData,
-        }
+        Self::new()
     }
 }
 
-impl<T: Data + ToString + 'static, S: ScrollControlState, Ld: ListData<T, S>> Widget<Ld>
-    for VirtualList<T, S, Ld>
+impl<T, S, Ld> Widget<Ld> for VirtualList<T, S, Ld>
+where
+    T: Data + ToString + 'static,
+    S: ScrollControlState,
+    Ld: ListData<T, S>,
 {
     fn event(&mut self, event_ctx: &mut EventCtx, event: &Event, list_data: &mut Ld, _env: &Env) {
         match event {
@@ -283,7 +304,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, Ld: ListData<T, S>> Wi
         // Determine if we need to add items behind the start index (scroll_position increasing)
         while self.data_range.start != 0 && min > 0. {
             if let Some(data) = list_data.get_data().get(self.data_range.start - 1) {
-                let mut widget = WidgetPod::new((self.renderer_function)(data));
+                let mut widget = (self.renderer_function)(data, self.cached_children.pop());
                 let child_bc = BoxConstraints::new(Size::ZERO, bc.max());
                 let child_size = widget.layout(layout_ctx, &child_bc, data, env);
 
@@ -310,7 +331,7 @@ impl<T: Data + ToString + 'static, S: ScrollControlState, Ld: ListData<T, S>> Wi
         // determine if we need to add items in front of the end index
         while max < bounds {
             if let Some(data) = list_data.get_data().get(self.data_range.end) {
-                let mut widget = WidgetPod::new((self.renderer_function)(data));
+                let mut widget = (self.renderer_function)(data, self.cached_children.pop());
                 let child_bc = BoxConstraints::new(Size::ZERO, bc.max());
                 let child_size = widget.layout(layout_ctx, &child_bc, data, env);
                 let mut offset = Point::new(0., 0.);

@@ -223,6 +223,12 @@ impl<S: ScrollControlState> Scrollbar<S> {
     }
 }
 
+impl<S: ScrollControlState> Default for Scrollbar<S> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<S: ScrollControlState> Widget<RefCell<S>> for Scrollbar<S> {
     fn event(&mut self, event_ctx: &mut EventCtx, event: &Event, data: &mut RefCell<S>, env: &Env) {
         if self.scroll_policy == ScrollPolicy::Off {
