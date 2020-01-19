@@ -22,6 +22,9 @@ mod either;
 mod env_scope;
 mod flex;
 mod identity_wrapper;
+#[cfg(feature = "image")]
+#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
+mod image;
 mod label;
 mod list;
 mod padding;
@@ -41,6 +44,9 @@ mod textbox;
 mod view_switcher;
 mod widget_ext;
 
+#[cfg(feature = "image")]
+#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
+pub use self::image::{FillStrat, Image, ImageData};
 pub use align::Align;
 pub use button::Button;
 pub use checkbox::Checkbox;
