@@ -270,6 +270,18 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`event`]: trait.Widget.html#method.event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        // If data is `None` it means we were just added
+        // This should only be called here if the user has added children but failed to call
+        // `children_changed`?
+        if self.old_data.is_none() {
+            let mut lc_ctx = ctx.make_lifecycle_ctx();
+            self.inner
+                .lifecycle(&mut lc_ctx, &LifeCycle::WidgetAdded, data, &env);
+            self.state.needs_inval |= lc_ctx.needs_inval;
+            self.old_data = Some(data.clone());
+            //FIXME: children can change here? children have already necessarily changed??
+        }
+
         // TODO: factor as much logic as possible into monomorphic functions.
         if ctx.is_handled {
             // This function is called by containers to propagate an event from
@@ -439,26 +451,24 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`update`]: trait.Widget.html#method.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
+        match (self.old_data.as_ref(), self.env.as_ref()) {
+            (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
+            (None, _) => {
+                log::warn!("old_data missing in {:?}, skipping update", self.id());
+                self.old_data = Some(data.clone());
+                self.env = Some(env.clone());
+                return;
+            }
+            _ => (),
+        }
+
         let pre_childs_changed = ctx.children_changed;
         let pre_inval = ctx.needs_inval;
         ctx.children_changed = false;
         ctx.needs_inval = false;
 
-        let data_same = if let Some(ref old_data) = self.old_data {
-            old_data.same(data)
-        } else {
-            false
-        };
-        let env_same = if let Some(ref old_env) = self.env {
-            old_env.same(env)
-        } else {
-            false
-        };
-
-        if data_same && env_same {
-            return;
-        }
-        self.inner.update(ctx, self.old_data.as_ref(), data, env);
+        self.inner
+            .update(ctx, self.old_data.as_ref().unwrap(), data, env);
         self.old_data = Some(data.clone());
         self.env = Some(env.clone());
 

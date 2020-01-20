@@ -222,11 +222,8 @@ impl Widget<f64> for Stepper {
 
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&f64>, data: &f64, _env: &Env) {
-        if old_data
-            .map(|old_data| (*data - old_data).abs() > EPSILON)
-            .unwrap_or(true)
-        {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &f64, data: &f64, _env: &Env) {
+        if (*data - old_data).abs() > EPSILON {
             ctx.invalidate();
         }
     }

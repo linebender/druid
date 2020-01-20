@@ -60,8 +60,7 @@ impl<T: Data> Widget<T> for Either<T> {
         self.true_branch.lifecycle(ctx, event, data, env);
         self.false_branch.lifecycle(ctx, event, data, env);
     }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         let current = (self.closure)(data, env);
         if current != self.current {
             self.current = current;

@@ -51,7 +51,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<T, W> {
         self.inner.event(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.inner.update(ctx, old_data, data, env);
     }
 

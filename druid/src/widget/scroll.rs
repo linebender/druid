@@ -380,7 +380,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.child.update(ctx, data, env);
     }
 

@@ -156,10 +156,6 @@ impl Widget<bool> for Switch {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&bool>, _data: &bool, _env: &Env) {
-        ctx.invalidate();
-    }
-
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &bool, env: &Env) {
         match event {
             LifeCycle::AnimFrame(_) => {
@@ -182,6 +178,12 @@ impl Widget<bool> for Switch {
                 }
             }
             _ => (),
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &bool, data: &bool, _env: &Env) {
+        if old_data != data {
+            ctx.invalidate();
         }
     }
 

@@ -27,14 +27,7 @@ struct CustomWidget;
 impl Widget<String> for CustomWidget {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut String, _env: &Env) {}
 
-    fn update(
-        &mut self,
-        _ctx: &mut UpdateCtx,
-        _old_data: Option<&String>,
-        _data: &String,
-        _env: &Env,
-    ) {
-    }
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &String, _data: &String, _env: &Env) {}
 
     fn lifecycle(
         &mut self,

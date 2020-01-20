@@ -127,11 +127,8 @@ impl Widget<OurData> for ColorWell {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&OurData>, data: &OurData, _: &Env) {
-        if match old_data {
-            Some(d) => !d.same(data),
-            None => true,
-        } {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &OurData, data: &OurData, _: &Env) {
+        if !old_data.same(data) {
             ctx.invalidate()
         }
     }

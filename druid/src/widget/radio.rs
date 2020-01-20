@@ -81,7 +81,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {
         ctx.invalidate();
     }
 
