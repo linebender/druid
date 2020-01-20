@@ -279,7 +279,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 .lifecycle(&mut lc_ctx, &LifeCycle::WidgetAdded, data, &env);
             self.state.needs_inval |= lc_ctx.needs_inval;
             self.old_data = Some(data.clone());
-            //FIXME: children can change here? children have already necessarily changed??
+            self.env = Some(env.clone());
         }
 
         // TODO: factor as much logic as possible into monomorphic functions.
@@ -411,7 +411,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 self.state.request_anim = false;
                 r
             }
-            LifeCycle::RegisterChildren => self.state.children_changed,
+            LifeCycle::RegisterChildren => {
+                // if this is called, it means widgets were added; check if our
+                // widget has data, and if it doesn't assume it is new and send WidgetAdded
+                if self.old_data.is_none() {
+                    self.inner
+                        .lifecycle(ctx, &LifeCycle::WidgetAdded, data, env);
+                    self.old_data = Some(data.clone());
+                    self.env = Some(env.clone());
+                }
+                self.state.children_changed
+            }
             LifeCycle::HotChanged(_) => false,
             LifeCycle::FocusChanged(_) => {
                 let had_focus = self.state.has_focus;
