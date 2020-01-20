@@ -74,7 +74,7 @@ impl<T: Data> Widget<T> for Button<T> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.label.update(ctx, old_data, data, env)
     }
 

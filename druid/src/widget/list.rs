@@ -154,9 +154,10 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         });
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         let mut life_ctx = ctx.make_lifecycle_ctx();
         self.update_child_count(&mut life_ctx, data, env);
+
         let mut children = self.children.iter_mut();
         data.for_each(|child_data, _| {
             if let Some(child) = children.next() {

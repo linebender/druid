@@ -24,19 +24,12 @@ impl<T> Parse<T> {
 }
 
 impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse<W> {
-    fn update(
-        &mut self,
-        ctx: &mut UpdateCtx,
-        old_data: Option<&Option<T>>,
-        data: &Option<T>,
-        env: &Env,
-    ) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &Option<T>, data: &Option<T>, env: &Env) {
         let old = match *data {
             None => return, // Don't clobber the input
             Some(ref x) => mem::replace(&mut self.state, x.to_string()),
         };
-        let old = old_data.map(|_| old);
-        self.widget.update(ctx, old.as_ref(), &self.state, env)
+        self.widget.update(ctx, &old, &self.state, env)
     }
 
     fn lifecycle(

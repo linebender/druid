@@ -178,7 +178,7 @@ impl<T: Data> Widget<T> for Split<T> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.child1.update(ctx, &data, env);
         self.child2.update(ctx, &data, env);
     }

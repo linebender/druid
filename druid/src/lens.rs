@@ -259,20 +259,16 @@ where
             .with_mut(data, |data| inner.event(ctx, event, data, env))
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         let inner = &mut self.inner;
         let lens = &self.lens;
-        if let Some(old_data) = old_data {
-            lens.with(old_data, |old_data| {
-                lens.with(data, |data| {
-                    if !old_data.same(data) {
-                        inner.update(ctx, Some(old_data), data, env);
-                    }
-                })
+        lens.with(old_data, |old_data| {
+            lens.with(data, |data| {
+                if !old_data.same(data) {
+                    inner.update(ctx, old_data, data, env);
+                }
             })
-        } else {
-            lens.with(data, |data| inner.update(ctx, None, data, env));
-        }
+        })
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {

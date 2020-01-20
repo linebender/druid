@@ -145,7 +145,7 @@ pub trait Widget<T> {
     /// used to build resources that will be retained for painting.
     ///
     /// [`invalidate`]: struct.UpdateCtx.html#method.invalidate
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env);
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env);
 
     /// Compute layout.
     ///
@@ -207,7 +207,7 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
         self.deref_mut().event(ctx, event, data, env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.deref_mut().update(ctx, old_data, data, env);
     }
 

@@ -82,7 +82,7 @@ impl<T: Data> Widget<T> for Container<T> {
         self.inner.event(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.inner.update(ctx, data, env);
     }
 

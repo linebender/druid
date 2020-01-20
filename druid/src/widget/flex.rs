@@ -128,7 +128,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         for child in &mut self.children {
             child.widget.update(ctx, data, env);
         }
