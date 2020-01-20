@@ -21,6 +21,15 @@ where
     fn get_data(&self) -> Arc<Vec<T>>;
 }
 
+/// A list widget capable of millions or hundreds of millions
+/// of items without degrading performance and provides enhanced
+/// control over it's contents.
+///
+/// The VirtualList does not include a scrollbar widget. Instead,
+/// it interacts with an implementor of the `ScrollControlState` trait
+/// to get/set the scroll state. This allows developers the flexibility
+/// of their own scroll mechanism or to wire in the `Scrollbar` widget
+/// provided in this crate.
 pub struct VirtualList<T, S, Ld>
 where
     T: Data + ToString + 'static,
@@ -282,10 +291,10 @@ where
 
     fn layout(
         &mut self,
-        layout_ctx: &mut LayoutCtx,
+        _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         list_data: &Ld,
-        env: &Env,
+        _env: &Env,
     ) -> Size {
         let bounds = match self.direction {
             Axis::Vertical => bc.max().height,
@@ -299,32 +308,19 @@ where
             let fractional_index = scroll_control_state.scroll_position() / self.renderer_size;
             let index = fractional_index.floor() as usize;
             self.data_range = index..index;
-            min = 0.;
+
             max = (index as f64 * self.renderer_size) - (fractional_index * self.renderer_size);
+            min = max;
         }
         // List items must attempt to fill the given box constraints.
         // Determine if we need to add items behind the start index (scroll_position increasing)
         while self.data_range.start != 0 && min > 0. {
             if let Some(data) = list_data.get_data().get(self.data_range.start - 1) {
-                let mut widget = (self.renderer_function)(data, self.cached_children.pop());
-                let child_bc = BoxConstraints::new(Size::ZERO, bc.max());
-                let child_size = widget.layout(layout_ctx, &child_bc, data, env);
-
-                let mut offset = Point::new(0., 0.);
-                min -= match self.direction {
-                    Axis::Horizontal => {
-                        offset.x = min - child_size.width;
-                        child_size.width
-                    }
-                    Axis::Vertical => {
-                        offset.y = min - child_size.height;
-                        child_size.height
-                    }
-                };
-                let rect = Rect::from_origin_size(offset, child_size);
-                widget.set_layout_rect(rect);
+                let widget = (self.renderer_function)(data, self.cached_children.pop());
                 self.data_range.start -= 1;
                 self.children.insert(0, widget);
+
+                min -= self.renderer_size;
             } else {
                 break;
             }
@@ -333,27 +329,35 @@ where
         // determine if we need to add items in front of the end index
         while max < bounds {
             if let Some(data) = list_data.get_data().get(self.data_range.end) {
-                let mut widget = (self.renderer_function)(data, self.cached_children.pop());
-                let child_bc = BoxConstraints::new(Size::ZERO, bc.max());
-                let child_size = widget.layout(layout_ctx, &child_bc, data, env);
-                let mut offset = Point::new(0., 0.);
-                max += match self.direction {
-                    Axis::Horizontal => {
-                        offset.x = max;
-                        child_size.width
-                    }
-                    Axis::Vertical => {
-                        offset.y = max;
-                        child_size.height
-                    }
-                };
-                let rect = Rect::from_origin_size(offset, child_size);
-                widget.set_layout_rect(rect);
+                let widget = (self.renderer_function)(data, self.cached_children.pop());
                 self.children.push(widget);
                 self.data_range.end += 1;
+
+                max += self.renderer_size;
             } else {
                 break;
             }
+        }
+
+        // Layout all children starting from `min`
+        let bc_max = bc.max();
+        for child in &mut self.children {
+            let (size, offset) = match self.direction {
+                Axis::Horizontal => {
+                    let size = Size::new(self.renderer_size, bc_max.height);
+                    let offset = Point::new(min, 0.);
+                    (size, offset)
+                }
+                Axis::Vertical => {
+                    let size = Size::new(bc_max.width, self.renderer_size);
+                    let offset = Point::new(0., min);
+                    (size, offset)
+                }
+            };
+            let rect = Rect::from_origin_size(offset, size);
+            child.set_layout_rect(rect);
+
+            min += self.renderer_size;
         }
 
         self.scroll_delta = 0.;

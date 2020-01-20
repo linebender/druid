@@ -186,7 +186,7 @@ impl<S: ScrollControlState> Scrollbar<S> {
                 scaled_scroll_position,
                 0.,
                 scaled_scroll_position + thumb_size,
-                bar_width * 2.,
+                bar_width,
             )
         } else {
             // Vertical

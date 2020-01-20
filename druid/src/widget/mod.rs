@@ -32,7 +32,6 @@ mod scroll;
 mod scrollbar;
 mod sized_box;
 mod slider;
-//mod smooth_scroll;
 mod split;
 mod stepper;
 #[cfg(feature = "svg")]
@@ -49,7 +48,7 @@ pub use checkbox::Checkbox;
 pub use container::Container;
 pub use either::Either;
 pub use env_scope::EnvScope;
-pub use flex::{Column, Flex, Row};
+pub use flex::{Axis, Column, Flex, Row};
 pub use identity_wrapper::IdentityWrapper;
 pub use label::{Label, LabelText};
 pub use list::{List, ListIter};

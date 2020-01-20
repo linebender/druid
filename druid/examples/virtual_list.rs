@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::RefCell;
-use std::sync::Arc;
-
 use druid::widget::{
     Flex, ListData, Padding, ScrollControlState, Scrollbar, VirtualList, WidgetExt,
 };
 use druid::{AppLauncher, Data, Insets, Lens, Widget, WindowDesc};
+use std::cell::RefCell;
+use std::sync::Arc;
 
 #[derive(Clone, Data, Lens, PartialEq, Default)]
 struct VirtualScrollState {
