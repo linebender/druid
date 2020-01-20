@@ -506,7 +506,7 @@ impl<T: Data> AppState<T> {
             }
         }
 
-        let is_handled = match event {
+        match event {
             Event::TargetedCommand(Target::Widget(_), _) => {
                 let mut any_handled = false;
 
@@ -527,13 +527,7 @@ impl<T: Data> AppState<T> {
                 .assemble_window_state(source_id)
                 .map(|mut win| win.do_event_inner(event, win_ctx))
                 .unwrap_or(false),
-        };
-
-        //TODO: should we be always calling update after an event? shouldn't
-        //we at least handle commands first?
-        self.do_update(win_ctx);
-
-        is_handled
+        }
     }
 
     fn do_update(&mut self, win_ctx: &mut dyn WinCtx) {
@@ -558,18 +552,23 @@ impl<T: Data> AppState<T> {
             state.needs_inval |= update_ctx.needs_inval;
             state.children_changed |= update_ctx.children_changed;
         }
-        self.invalidate_if_needed();
+        self.invalidate_and_finalize(win_ctx);
     }
 
     /// invalidate any window handles that need it.
     ///
     /// This should always be called at the end of an event update cycle,
     /// including for lifecycle events.
-    fn invalidate_if_needed(&mut self) {
+    fn invalidate_and_finalize(&mut self, win_ctx: &mut dyn WinCtx) {
         for win in self.windows.iter_mut() {
             if win.state.needs_inval {
                 win.handle.invalidate();
                 win.state.needs_inval = false;
+            }
+            if win.state.children_changed {
+                win.state.children_changed = false;
+                win.into_ctx(&mut self.command_queue, &mut self.data, &self.env)
+                    .do_lifecycle(LifeCycle::RegisterChildren, win_ctx);
             }
         }
     }
@@ -594,6 +593,21 @@ impl<T: Data> DruidHandler<T> {
         }
     }
 
+    /// Called once, when a window first connects; we do some preliminary setup here.
+    fn do_connected(&mut self, win_ctx: &mut dyn WinCtx) {
+        if let Some(mut win) = self
+            .app_state
+            .borrow_mut()
+            .assemble_window_state(self.window_id)
+        {
+            win.do_lifecycle(LifeCycle::WidgetAdded, win_ctx);
+            win.do_lifecycle(LifeCycle::RegisterChildren, win_ctx);
+            win.do_lifecycle(LifeCycle::WindowConnected, win_ctx);
+        }
+        self.process_commands(win_ctx);
+        self.app_state.borrow_mut().invalidate_and_finalize(win_ctx);
+    }
+
     /// Send an event to the widget hierarchy.
     ///
     /// Returns `true` if the event produced an action.
@@ -606,18 +620,8 @@ impl<T: Data> DruidHandler<T> {
             .borrow_mut()
             .do_event(self.window_id, event, win_ctx);
         self.process_commands(win_ctx);
+        self.app_state.borrow_mut().do_update(win_ctx);
         result
-    }
-
-    // Is this only for events with an external origin, like AnimFrame?
-    // other lifecycle events can happen from mid-tree. What are our guarantees?
-    fn do_lifecycle(&mut self, event: LifeCycle, win_ctx: &mut dyn WinCtx) {
-        self.app_state
-            .borrow_mut()
-            .assemble_window_state(self.window_id)
-            .map(|mut win| win.do_lifecycle(event, win_ctx));
-        //FIXME: maybe we don't want to do commands now, but rather schedule idle?
-        self.process_commands(win_ctx);
     }
 
     fn process_commands(&mut self, win_ctx: &mut dyn WinCtx) {
@@ -767,9 +771,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn connected(&mut self, ctx: &mut dyn WinCtx) {
-        self.do_lifecycle(LifeCycle::WidgetAdded, ctx);
-        self.do_lifecycle(LifeCycle::RegisterChildren, ctx);
-        self.do_lifecycle(LifeCycle::WindowConnected, ctx);
+        self.do_connected(ctx);
     }
 
     fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
