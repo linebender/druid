@@ -542,7 +542,6 @@ impl<T: Data> AppState<T> {
             let mut update_ctx = UpdateCtx {
                 text_factory: win_ctx.text_factory(),
                 window: handle,
-                command_queue: &mut self.command_queue,
                 needs_inval: false,
                 children_changed: false,
                 window_id: id,

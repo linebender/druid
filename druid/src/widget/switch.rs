@@ -157,27 +157,24 @@ impl Widget<bool> for Switch {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &bool, env: &Env) {
-        match event {
-            LifeCycle::AnimFrame(_) => {
-                let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
-                let switch_width = switch_height * SWITCH_WIDTH_RATIO;
-                let knob_size = switch_height - 2. * SWITCH_PADDING;
-                let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
-                let off_pos = knob_size / 2. + SWITCH_PADDING;
+        if let LifeCycle::AnimFrame(_) = event {
+            let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+            let switch_width = switch_height * SWITCH_WIDTH_RATIO;
+            let knob_size = switch_height - 2. * SWITCH_PADDING;
+            let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
+            let off_pos = knob_size / 2. + SWITCH_PADDING;
 
-                // move knob to right position depending on the value
-                if self.animation_in_progress {
-                    let delta = if *data { 2. } else { -2. };
-                    self.knob_pos.x += delta;
+            // move knob to right position depending on the value
+            if self.animation_in_progress {
+                let delta = if *data { 2. } else { -2. };
+                self.knob_pos.x += delta;
 
-                    if self.knob_pos.x > off_pos && self.knob_pos.x < on_pos {
-                        ctx.request_anim_frame();
-                    } else {
-                        self.animation_in_progress = false;
-                    }
+                if self.knob_pos.x > off_pos && self.knob_pos.x < on_pos {
+                    ctx.request_anim_frame();
+                } else {
+                    self.animation_in_progress = false;
                 }
             }
-            _ => (),
         }
     }
 

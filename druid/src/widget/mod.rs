@@ -130,7 +130,20 @@ pub trait Widget<T> {
     /// [`Command`]: struct.Command.html
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env);
 
-    #[allow(unused_variables)]
+    /// Handle a life cycle notification.
+    ///
+    /// This method is called to notify your widget of certain special events,
+    /// (available in the [`LifeCycle`] enum) that are generally related to
+    /// changes in the widget graph or in the state of your specific widget.
+    ///
+    /// In general, a widget is not expected to mutate the application state
+    /// in response to these events, but only to update its own internal state
+    /// as required; if a widget needs to mutate data, it can submit a [`Command`]
+    /// that will be executed at the next opportunity.
+    ///
+    /// [`LifeCycle`]: struct.LifeCycle.html
+    /// [`LifeCycleCtx`]: struct.LifeCycleCtx.html
+    /// [`Command`]: struct.Command.html
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env);
 
     /// Handle a change of data.

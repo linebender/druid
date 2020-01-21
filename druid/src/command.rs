@@ -40,6 +40,7 @@ pub struct Selector(&'static str);
 /// ```
 #[derive(Debug, Clone)]
 pub struct Command {
+    /// The command's `Selector`.
     pub selector: Selector,
     object: Option<Arc<dyn Any>>,
 }
@@ -47,7 +48,10 @@ pub struct Command {
 /// The target of a command.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Target {
+    /// The target is a window; the event will be delivered to all
+    /// widgets in that window.
     Window(WindowId),
+    /// The target is a specific widget.
     Widget(WidgetId),
 }
 
