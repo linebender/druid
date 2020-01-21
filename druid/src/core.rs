@@ -654,6 +654,16 @@ pub struct EventCtx<'a, 'b> {
     pub(crate) widget_id: WidgetId,
 }
 
+/// A mutable context provided to the [`lifecycle`] method on widgets.
+///
+/// Certain methods on this context are only meaningful during the handling of
+/// specific lifecycle events; for instance [`register_child`]
+/// should only be called while handling [`LifeCycle::RegisterChildren`].
+///
+/// [`lifecycle`]: widget/trait.Widget.html#tymethod.lifecycle
+/// [`register_child`]: #method.register_child
+/// [`LifeCycleCtx::register_child`]: #method.register_child
+/// [`LifeCycle::RegisterChildren`]: enum.LifeCycle.html#variant.RegisterChildren
 pub struct LifeCycleCtx<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
     /// the registry for the current widgets children;
@@ -675,7 +685,6 @@ pub struct LifeCycleCtx<'a> {
 pub struct UpdateCtx<'a, 'b: 'a> {
     pub(crate) text_factory: &'a mut Text<'b>,
     pub(crate) window: &'a WindowHandle,
-    pub(crate) command_queue: &'a mut CommandQueue,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like
     // `EventCtx` (and possibly using the same structure).But for
@@ -988,18 +997,6 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     /// get the `WidgetId` of the current widget.
     pub fn widget_id(&self) -> WidgetId {
         self.widget_id
-    }
-
-    pub(crate) fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
-        LifeCycleCtx {
-            command_queue: self.command_queue,
-            children: Bloom::default(),
-            children_changed: false,
-            needs_inval: false,
-            request_anim: false,
-            window_id: self.window_id,
-            widget_id: self.widget_id,
-        }
     }
 }
 

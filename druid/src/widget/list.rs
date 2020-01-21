@@ -41,23 +41,21 @@ impl<T: Data> List<T> {
     }
 
     /// When the widget is created or the data changes, create or remove children as needed
-    fn update_child_count(&mut self, ctx: &mut LifeCycleCtx, data: &impl ListIter<T>, env: &Env) {
+    ///
+    /// Returns `true` if children were added or removed.
+    fn update_child_count(&mut self, data: &impl ListIter<T>, _env: &Env) -> bool {
         let len = self.children.len();
-        let children_changed = len != data.data_len();
         match len.cmp(&data.data_len()) {
             Ordering::Greater => self.children.truncate(data.data_len()),
-            Ordering::Less => data.for_each(|child_data, i| {
+            Ordering::Less => data.for_each(|_, i| {
                 if i >= len {
-                    let mut child = WidgetPod::new((self.closure)());
-                    child.lifecycle(ctx, &LifeCycle::WidgetAdded, child_data, env);
+                    let child = WidgetPod::new((self.closure)());
                     self.children.push(child);
                 }
             }),
             Ordering::Equal => (),
         }
-        if children_changed {
-            ctx.children_changed();
-        }
+        len != data.data_len()
     }
 }
 
@@ -155,8 +153,9 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        let mut life_ctx = ctx.make_lifecycle_ctx();
-        self.update_child_count(&mut life_ctx, data, env);
+        if self.update_child_count(data, env) {
+            ctx.children_changed();
+        }
 
         let mut children = self.children.iter_mut();
         data.for_each(|child_data, _| {
@@ -168,7 +167,9 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
-            self.update_child_count(ctx, data, env);
+            if self.update_child_count(data, env) {
+                ctx.children_changed();
+            }
         }
 
         let mut children = self.children.iter_mut();

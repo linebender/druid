@@ -110,15 +110,15 @@ paint_ctx.fill(rect, &fill_color);
 
 Widgets in druid (text boxes, buttons, layout components, etc.) are objects
 which implement the [Widget trait]. The trait is parametrized by a type (`T`)
-for associated data. All trait methods (`paint`, `layout`, `event`, and
-`update`) are provided with access to this data, and in the case of `event` the
-reference is mutable, so that events can directly update the data.
+for associated data. All trait methods (`event`, `lifecycle`, `update`, `paint`,
+and `layout`) are provided with access to this data, and in the case of
+`event` the reference is mutable, so that events can directly update the data.
 
 Whenever the application data changes, the framework traverses the widget
 hierarchy with an `update` method.
 
 All the widget trait methods are provided with a corresponding context
-([EventCtx], [LayoutCtx], [PaintCtx], [UpdateCtx]). The widget can request
+([EventCtx], [LifeCycleCtx], [UpdateCtx], [LayoutCtx], [PaintCtx]). The widget can request
 things and cause actions by calling methods on that context.
 
 In addition, all trait methods are provided with an environment `Env`, which
@@ -126,22 +126,23 @@ includes the current theme parameters (colors, dimensions, etc.).
 
 ```rust
 impl<T: Data> Widget<T> for Button<T> {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-      ...
-    }
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
-      ...
-    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
       ...
     }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+      ...
+    }
+
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+      ...
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+      ...
+    }
+
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
       ...
     }
 }
@@ -284,6 +285,7 @@ active and friendly community.
 [non-druid examples]: ./druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
 [EventCtx]: https://docs.rs/druid/0.4.0/druid/struct.EventCtx.html
+[LifeCycleCtx]: https://docs.rs/druid/0.5.0/druid/struct.EventCtx.html
 [LayoutCtx]: https://docs.rs/druid/0.4.0/druid/struct.LayoutCtx.html
 [PaintCtx]: https://docs.rs/druid/0.4.0/druid/struct.PaintCtx.html
 [UpdateCtx]: https://docs.rs/druid/0.4.0/druid/struct.UpdateCtx.html
