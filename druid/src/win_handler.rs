@@ -25,7 +25,7 @@ use log::{error, info, warn};
 use crate::kurbo::{Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 use crate::shell::{
-    Application, Cursor, FileDialogOptions, MouseEvent, WinCtx, WinHandler, WindowHandle,
+    Application, Cursor, FileDialogOptions, IdleToken, MouseEvent, WinCtx, WinHandler, WindowHandle,
 };
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
@@ -39,6 +39,8 @@ use crate::{
 };
 
 use crate::command::sys as sys_cmd;
+
+const RUN_COMMANDS_TOKEN: IdleToken = IdleToken::new(1);
 
 /// The struct implements the druid-shell `WinHandler` trait.
 ///
@@ -171,6 +173,17 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
         self.do_layout(piet);
         piet.clear(self.env.get(theme::WINDOW_BACKGROUND_COLOR));
         self.do_paint(piet);
+
+        // schedule an idle call with the runloop if there are commands to process after painting is finished,
+        // that would trigger a new event/update pass.
+        if !self.command_queue.is_empty() {
+            if let Some(mut handle) = self.state.handle.get_idle_handle() {
+                handle.schedule_idle(RUN_COMMANDS_TOKEN);
+            } else {
+                error!("failed to get idle handle");
+            }
+        }
+
         request_anim
     }
 
@@ -772,6 +785,12 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
     fn timer(&mut self, token: TimerToken, ctx: &mut dyn WinCtx) {
         self.do_event(Event::Timer(token), ctx);
+    }
+
+    fn idle(&mut self, token: IdleToken, ctx: &mut dyn WinCtx) {
+        if token == RUN_COMMANDS_TOKEN {
+            self.process_commands(ctx);
+        }
     }
 
     fn as_any(&mut self) -> &mut dyn Any {
