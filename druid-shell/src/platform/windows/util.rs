@@ -217,17 +217,6 @@ lazy_static! {
 
 pub(crate) const CLASS_NAME: &str = "druid";
 
-/// Determine a suitable default set of text options. Enables color fonts
-/// on systems that are capable of them (8.1 and above).
-pub fn default_text_options() -> DrawTextOptions {
-    // This is an arbitrary optional function that is 8.1 and above.
-    if OPTIONAL_FUNCTIONS.SetProcessDpiAwareness.is_some() {
-        DrawTextOptions::ENABLE_COLOR_FONT
-    } else {
-        DrawTextOptions::NONE
-    }
-}
-
 /// Convenience macro for defining accelerator tables.
 #[macro_export]
 macro_rules! accel {

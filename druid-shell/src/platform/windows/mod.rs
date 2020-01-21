@@ -46,6 +46,170 @@ pub mod window;
 //
 // Basically, go from HwndRenderTarget or DxgiSurfaceRenderTarget (2d or 3d) to a Device Context.
 // Go back up for particular needs. Move up and down using query_interface.
+use piet_common::d2d::{D2DFactory, DeviceContext};
+use std::fmt::{Debug, Display, Formatter};
+use winapi::Interface;
+use winapi::shared::windef::HWND;
+use winapi::shared::winerror::{HRESULT, SUCCEEDED};
+use winapi::um::d2d1::{D2D1_HWND_RENDER_TARGET_PROPERTIES, D2D1_RENDER_TARGET_PROPERTIES,
+                       D2D1_SIZE_U, ID2D1HwndRenderTarget, ID2D1RenderTarget};
+use winapi::um::d2d1_1::ID2D1DeviceContext;
+use winapi::um::dcommon::D2D1_PIXEL_FORMAT;
 use wio::com::ComPtr;
-pub type HwndRenderTarget = ComPtr<winapi::um::d2d1::ID2D1HwndRenderTarget>;
-pub type DeviceContext = ComPtr<winapi::um::d2d1_1::ID2D1DeviceContext>;
+
+// TODO make newtypes
+// Can probably follow the pattern of direct2d crate
+// e.g. https://github.com/Connicpu/direct2d-rs/blob/v0.1.2/src/render_target/hwnd.rs
+//
+// error and wrap, copy from d2d.rs
+//
+// for creating rendertarget, use
+// https://github.com/hwchen/piet/blob/raw_d2d/piet-direct2d/src/d2d.rs#L165 as example, but fill
+// in properties etc.
+
+#[derive(Clone)]
+pub struct HwndRenderTarget {
+    ptr: ComPtr<ID2D1HwndRenderTarget>
+}
+
+impl HwndRenderTarget {
+    pub fn create<'a>(factory: &'a D2DFactory, hwnd: HWND, width: u32, height: u32) -> Result<Self, Error> {
+        // hardcode
+        // - RenderTargetType::Default
+        // - AlphaMode::Unknown
+        let rt_props = DEFAULT_PROPS;
+        let mut hwnd_props = DEFAULT_HWND_PROPS;
+
+        hwnd_props.pixelSize.width = width;
+        hwnd_props.pixelSize.height = height;
+
+        // now build
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            let hr = (*factory.get_raw()).CreateHwndRenderTarget(
+                &rt_props,
+                &hwnd_props,
+                &mut ptr,
+            );
+
+            if SUCCEEDED(hr) {
+                Ok(HwndRenderTarget::from_raw(ptr))
+            } else {
+                Err(hr.into())
+            }
+        }
+    }
+
+    pub unsafe fn from_ptr(ptr: ComPtr<ID2D1HwndRenderTarget>) -> Self {
+        Self { ptr }
+    }
+
+    pub unsafe fn from_raw(raw: *mut ID2D1HwndRenderTarget) -> Self {
+        HwndRenderTarget {
+            ptr: ComPtr::from_raw(raw),
+        }
+    }
+
+    pub unsafe fn get_raw(&self) -> *mut ID2D1HwndRenderTarget {
+        self.ptr.as_raw()
+    }
+}
+
+// props for creating hwnd render target
+const DEFAULT_PROPS: D2D1_RENDER_TARGET_PROPERTIES = D2D1_RENDER_TARGET_PROPERTIES {
+    _type: 0u32, //RenderTargetType::Default
+    pixelFormat: D2D1_PIXEL_FORMAT {
+        format: 87u32,//Format::B8G8R8A8Unorm, see https://docs.rs/dxgi/0.3.0-alpha4/src/dxgi/enums/format.rs.html#631
+        alphaMode: 0u32, //AlphaMode::Unknown
+    },
+    dpiX: 0.0,
+    dpiY: 0.0,
+    usage: 0,
+    minLevel: 0,
+};
+
+const DEFAULT_HWND_PROPS: D2D1_HWND_RENDER_TARGET_PROPERTIES = D2D1_HWND_RENDER_TARGET_PROPERTIES {
+    hwnd: std::ptr::null_mut(),
+    pixelSize: D2D1_SIZE_U {
+        width: 0,
+        height: 0,
+    },
+    presentOptions: 0,
+};
+
+#[derive(Clone)]
+pub struct DxgiSurfaceRenderTarget {
+    ptr: ComPtr<ID2D1RenderTarget>
+}
+
+impl DxgiSurfaceRenderTarget {
+    pub unsafe fn from_raw(raw: *mut ID2D1RenderTarget) -> Self {
+        DxgiSurfaceRenderTarget {
+            ptr: ComPtr::from_raw(raw),
+        }
+    }
+
+    pub unsafe fn get_raw(&self) -> *mut ID2D1RenderTarget {
+        self.ptr.as_raw()
+    }
+
+    pub unsafe fn as_device_context(&self) -> Option<DeviceContext> {
+        let raw_ptr = self.ptr.as_raw();
+        let mut dc = std::ptr::null_mut();
+        let err = (*raw_ptr).QueryInterface(&ID2D1DeviceContext::uuidof(), &mut dc);
+        if SUCCEEDED(err) {
+            Some(DeviceContext::new(ComPtr::from_raw(
+                dc as *mut ID2D1DeviceContext,
+            )))
+        } else {
+            None
+        }
+    }
+}
+
+// error handling
+pub enum Error {
+    WinapiError(HRESULT),
+}
+
+impl From<HRESULT> for Error {
+    fn from(hr: HRESULT) -> Error {
+        Error::WinapiError(hr)
+    }
+}
+
+impl Debug for Error {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Error::WinapiError(hr) => write!(f, "hresult {:x}", hr),
+        }
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Error::WinapiError(hr) => write!(f, "hresult {:x}", hr),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn description(&self) -> &str {
+        "winapi error"
+    }
+}
+
+/// to wrap the result
+unsafe fn wrap<T, U, F>(hr: HRESULT, ptr: *mut T, f: F) -> Result<U, Error>
+where
+    F: Fn(ComPtr<T>) -> U,
+    T: Interface,
+{
+    if SUCCEEDED(hr) {
+        Ok(f(ComPtr::from_raw(ptr)))
+    } else {
+        Err(hr.into())
+    }
+}
+

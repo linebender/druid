@@ -252,7 +252,7 @@ impl WndState {
         unsafe {
             let swap_chain = self.dcomp_state.as_ref().unwrap().swap_chain;
             let rt = paint::create_render_target_dxgi(d2d, swap_chain, self.dpi)
-                .map(|rt| rt.as_generic());
+                .map(|rt| rt.as_device_context().expect("TODO remove this expect"));
             self.render_target = rt.ok();
         }
     }
@@ -358,8 +358,7 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.render_target.is_none() {
-                        let rt = paint::create_render_target(&self.d2d_factory, hwnd)
-                            .map(|rt| DeviceContext::new(rt));
+                        let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                     }
                     let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
@@ -386,8 +385,7 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
-                        let rt = paint::create_render_target(&self.d2d_factory, hwnd)
-                            .map(|rt| DeviceContext::new(rt));
+                        let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                         {
                             let mut c =
@@ -480,8 +478,8 @@ impl WndProc for MyWndProc {
                             if let Some(hrt) = cast_to_hwnd(rt) {
                                 let width = LOWORD(lparam as u32) as u32;
                                 let height = HIWORD(lparam as u32) as u32;
-                                let size = SizeU(D2D1_SIZE_U { width, height });
-                                let _ = hrt.Resize(size);
+                                let size = D2D1_SIZE_U { width, height };
+                                let _ = hrt.ptr.Resize(&size);
                             }
                         }
                         InvalidateRect(hwnd, null_mut(), FALSE);
@@ -1373,9 +1371,9 @@ unsafe fn cast_to_hwnd(rt: &DeviceContext) -> Option<HwndRenderTarget> {
     let mut hwnd = null_mut();
     let err = (*raw_ptr).QueryInterface(&ID2D1HwndRenderTarget::uuidof(), &mut hwnd);
     if SUCCEEDED(err) {
-        Some(ComPtr::from_raw(
+        Some(HwndRenderTarget::from_ptr(ComPtr::from_raw(
             hwnd as *mut ID2D1HwndRenderTarget,
-        ))
+        )))
     } else {
         None
     }

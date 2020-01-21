@@ -42,11 +42,10 @@ use winapi::Interface;
 
 // new
 use piet_common::d2d::D2DFactory;
-use piet_common::dwrite::DwriteFactory;
 use winapi::um::d2d1_1::ID2D1DeviceContext;
 use wio::com::ComPtr;
 
-use crate::platform::windows::{HwndRenderTarget, DeviceContext};
+use crate::platform::windows::{HwndRenderTarget, DeviceContext, DxgiSurfaceRenderTarget};
 
 // end new
 use super::error::Error;
@@ -93,17 +92,18 @@ pub(crate) unsafe fn create_render_target(
     } else {
         let width = (rect.right - rect.left) as u32;
         let height = (rect.bottom - rect.top) as u32;
-        let res = HwndRenderTarget::create(d2d_factory)
-            .with_hwnd(hwnd)
-            .with_target_type(RenderTargetType::Default)
-            .with_alpha_mode(AlphaMode::Unknown)
-            .with_pixel_size(width, height)
-            .build();
+        let res = HwndRenderTarget::create(
+            d2d_factory,
+            hwnd,
+            width,
+            height,
+        );
+
         if let Err(ref e) = res {
             error!("Creating hwnd render target failed: {:?}", e);
         }
         res
-            .map(|hrt| cast_to_device_context(hrt).expect("removethis"))
+            .map(|hrt| cast_to_device_context(&hrt).expect("removethis"))
             .map_err(|_| Error::D2Error)
     }
 }
@@ -151,13 +151,13 @@ pub(crate) unsafe fn create_render_target_dxgi(
 ///
 /// TODO: investigate whether there's a better way to do this.
 unsafe fn cast_to_device_context(hrt: &HwndRenderTarget) -> Option<DeviceContext> {
-    let raw_ptr = hrt.clone().as_raw();
+    let raw_ptr = hrt.clone().get_raw();
     let mut dc = null_mut();
     let err = (*raw_ptr).QueryInterface(&ID2D1DeviceContext::uuidof(), &mut dc);
     if SUCCEEDED(err) {
-        Some(ComPtr::from_raw(
+        Some(DeviceContext::new(ComPtr::from_raw(
             dc as *mut ID2D1DeviceContext,
-        ))
+        )))
     } else {
         None
     }
