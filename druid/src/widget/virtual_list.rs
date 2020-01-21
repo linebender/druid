@@ -149,7 +149,7 @@ where
         // index - .0075% iterations or less of
         // the list's length.
         while current_position > pos {
-            target_index /= 1.0109375; // tested on indices of 5 or greater
+            target_index /= 1.010_937_5; // tested on indices of 5 or greater
             current_position = self.get_scroll_pos_at_index(target_index.ceil() as usize);
         }
         // At this point the current_position is
