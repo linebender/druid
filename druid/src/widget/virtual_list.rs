@@ -6,11 +6,12 @@ use std::sync::Arc;
 use log::error;
 
 use crate::widget::flex::Axis;
-use crate::widget::{Label, ScrollControlState, WidgetExt};
+use crate::widget::{Label, ScrollControlState};
 use crate::{
     BoxConstraints, BoxedWidget, Command, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
     Rect, RenderContext, Selector, Size, UpdateCtx, Widget, WidgetPod,
 };
+use std::collections::HashMap;
 
 pub trait ListData<T, S>: Data
 where
@@ -20,7 +21,8 @@ where
     fn get_scroll_control_state(&self) -> &RefCell<S>;
     fn get_data(&self) -> Arc<Vec<T>>;
 }
-
+pub type RendererFunction<T> = Box<dyn FnMut(usize, Option<BoxedWidget<T>>) -> BoxedWidget<T>>;
+pub type MeasuringFunction = Box<dyn FnMut(usize) -> f64>;
 /// A list widget capable of millions or hundreds of millions
 /// of items without degrading performance and provides enhanced
 /// control over it's contents.
@@ -40,14 +42,26 @@ where
     cached_children: Vec<BoxedWidget<T>>,
     data_range: Range<usize>,
     direction: Axis,
+    /// Function used to measure list items. This
+    /// should be cheap since all items are measured
+    /// ahead of time when `variable_renderer_sizes' is true
+    measuring_function: MeasuringFunction,
     scroll_delta: f64,
+    scroll_position_cache: HashMap<usize, f64>,
+    set_scroll_metrics_later: bool,
     /// Function to be called when a new widget
     /// is needed by the list. If a previously
     /// freed widget is available, it is provided
     /// and can optionally be used.
-    renderer_function: fn(data: &T, freed_widget: Option<BoxedWidget<T>>) -> BoxedWidget<T>,
+    renderer_function: RendererFunction<T>,
     renderer_size: f64,
-    set_scroll_metrics_later: bool,
+    /// Flag indicating the items in the list
+    /// have variable sizes and the `measuring_function`
+    /// should be called to measure each one.
+    /// Caution should be used since very large lists,
+    /// or complex measuring algorithms can affect
+    /// performance.
+    variable_renderer_size: bool,
 
     list_data: PhantomData<Ld>,
     state: PhantomData<S>,
@@ -65,34 +79,42 @@ where
             cached_children: Vec::new(),
             data_range: 0..0,
             direction: Axis::Vertical,
+            measuring_function: Box::new(|_| -> f64 { 30. }),
             scroll_delta: 0.,
-            renderer_function: |_data: &T,
-                                freed_widget: Option<BoxedWidget<T>>|
-             -> BoxedWidget<T> {
-                freed_widget.unwrap_or_else(|| {
-                    WidgetPod::new(Box::new(
-                        Label::new(|d: &T, _env: &Env| d.to_string()).fix_height(30.),
-                    ))
-                })
-            },
+            scroll_position_cache: HashMap::new(),
+            renderer_function: Box::new(
+                |_idx: usize, freed_widget: Option<BoxedWidget<T>>| -> BoxedWidget<T> {
+                    freed_widget.unwrap_or_else(|| {
+                        WidgetPod::new(Box::new(Label::new(|d: &T, _env: &Env| d.to_string())))
+                    })
+                },
+            ),
             renderer_size: 30.,
             set_scroll_metrics_later: false,
+            variable_renderer_size: false,
 
             list_data: Default::default(),
             state: Default::default(),
         }
     }
 
-    pub fn renderer_function(
-        mut self,
-        val: fn(data: &T, freed_widget: Option<BoxedWidget<T>>) -> BoxedWidget<T>,
-    ) -> Self {
+    pub fn direction(mut self, val: Axis) -> Self {
+        self.direction = val;
+        self
+    }
+
+    pub fn measuring_function(mut self, val: MeasuringFunction) -> Self {
+        self.measuring_function = val;
+        self
+    }
+
+    pub fn renderer_function(mut self, val: RendererFunction<T>) -> Self {
         self.renderer_function = val;
         self
     }
 
-    pub fn direction(mut self, val: Axis) -> Self {
-        self.direction = val;
+    pub fn variable_renderer_size(mut self, val: bool) -> Self {
+        self.variable_renderer_size = val;
         self
     }
 
@@ -101,6 +123,73 @@ where
         self
     }
 
+    fn get_preferred_renderer_size(&mut self, index: usize) -> f64 {
+        if !self.variable_renderer_size {
+            return self.renderer_size;
+        }
+        (self.measuring_function)(index)
+    }
+
+    fn get_index_at_scroll_position(&mut self, pos: f64, data: &Arc<Vec<T>>) -> usize {
+        if pos <= 0. {
+            return 0;
+        }
+        // Shortcut if we're not using variable renderer sizes
+        if !self.variable_renderer_size {
+            return (pos / self.renderer_size).ceil() as usize;
+        }
+
+        let len = data.len() - 1;
+        let mut current_position = self.get_scroll_pos_at_index(len);
+        // Estimate our target index
+        let mut target_index = (pos / current_position) * len as f64;
+
+        // Heuristic for reducing the number of
+        // iterations needed to calculate the
+        // index - .0075% iterations or less of
+        // the list's length.
+        while current_position > pos {
+            target_index /= 1.0109375; // tested on indices of 5 or greater
+            current_position = self.get_scroll_pos_at_index(target_index.ceil() as usize);
+        }
+        // At this point the current_position is
+        // less than to the pos value but we're not sure
+        // by how much.
+        let mut last_pos = current_position;
+        let target_position = current_position;
+
+        for idx in target_index as usize..len {
+            current_position =
+                self.get_scroll_pos_at_index(idx) + self.get_preferred_renderer_size(idx);
+            if current_position >= pos && last_pos <= pos {
+                return idx;
+            }
+            last_pos = target_position;
+        }
+        0
+    }
+
+    fn get_scroll_pos_at_index(&mut self, index: usize) -> f64 {
+        if !self.variable_renderer_size {
+            return index as f64 * self.renderer_size;
+        }
+        if let Some(pos) = self.scroll_position_cache.get(&index) {
+            return *pos;
+        }
+        // Nothing in cache - start with the last calculated index
+        // and build the cache as we go.
+        let start = *self.scroll_position_cache.keys().max().unwrap_or(&0);
+        let mut pos = *self.scroll_position_cache.get(&start).unwrap_or(&0.);
+
+        for idx in start..=index {
+            self.scroll_position_cache.insert(idx, pos);
+            pos += self.get_preferred_renderer_size(idx);
+        }
+        self.scroll_position_cache.get(&index).unwrap().clone()
+    }
+
+    /// Gets the start and end positions of the
+    /// virtualized content depending on the Axis.
     fn get_content_metrics(&self) -> (f64, f64) {
         let len = self.children.len();
         if len == 0 {
@@ -126,9 +215,13 @@ where
             event_ctx.request_anim_frame()
         }
         let mut scroll_control_state = list_data.get_scroll_control_state().borrow_mut();
-        scroll_control_state.set_max_scroll_position(
-            (list_data.get_data().len() as f64 * self.renderer_size) - page_size,
-        );
+        let data = list_data.get_data();
+        let last_index = data.len() - 1;
+        let new_max_scroll_position = self.get_scroll_pos_at_index(last_index);
+        let new_max_size = self.get_preferred_renderer_size(last_index);
+
+        scroll_control_state
+            .set_max_scroll_position(new_max_scroll_position + new_max_size - page_size);
         scroll_control_state.set_page_size(page_size);
         // determine if we need to adjust the scroll_position.
         // This happens when a resize occurs on scrolled
@@ -142,7 +235,7 @@ where
     }
 
     /// Translates all children by the specified delta.
-    /// Children outside the 0..limit bounds are truncated
+    /// Children outside the bounds are truncated.
     fn translate(&mut self, delta: f64, limit: f64) -> (f64, f64) {
         let (mut min, mut max) = self.get_content_metrics();
         if delta != 0. {
@@ -304,60 +397,56 @@ where
         // We've translated more than the viewport distance
         // and need to jump to a new data_range
         let scroll_control_state = list_data.get_scroll_control_state().borrow();
+        let data = list_data.get_data();
         if self.children.is_empty() {
-            let fractional_index = scroll_control_state.scroll_position() / self.renderer_size;
-            let index = fractional_index.floor() as usize;
+            let scroll_position = scroll_control_state.scroll_position();
+            let index = self.get_index_at_scroll_position(scroll_position, &list_data.get_data());
             self.data_range = index..index;
 
-            max = (index as f64 * self.renderer_size) - (fractional_index * self.renderer_size);
+            max = self.get_scroll_pos_at_index(index) - scroll_position;
             min = max;
         }
         // List items must attempt to fill the given box constraints.
         // Determine if we need to add items behind the start index (scroll_position increasing)
         while self.data_range.start != 0 && min > 0. {
-            if let Some(data) = list_data.get_data().get(self.data_range.start - 1) {
-                let widget = (self.renderer_function)(data, self.cached_children.pop());
-                self.data_range.start -= 1;
-                self.children.insert(0, widget);
+            let index = self.data_range.start - 1;
+            let widget = (self.renderer_function)(index, self.cached_children.pop());
+            self.data_range.start -= 1;
+            self.children.insert(0, widget);
 
-                min -= self.renderer_size;
-            } else {
-                break;
-            }
+            min -= self.get_preferred_renderer_size(index);
         }
 
         // determine if we need to add items in front of the end index
-        while max < bounds {
-            if let Some(data) = list_data.get_data().get(self.data_range.end) {
-                let widget = (self.renderer_function)(data, self.cached_children.pop());
-                self.children.push(widget);
-                self.data_range.end += 1;
+        while max < bounds && self.data_range.end < data.len() {
+            let index = self.data_range.end;
+            let widget = (self.renderer_function)(index, self.cached_children.pop());
+            self.children.push(widget);
+            self.data_range.end += 1;
 
-                max += self.renderer_size;
-            } else {
-                break;
-            }
+            max += self.get_preferred_renderer_size(index);
         }
 
         // Layout all children starting from `min`
         let bc_max = bc.max();
-        for child in &mut self.children {
+        for index in self.data_range.start..self.data_range.end {
+            let renderer_size = self.get_preferred_renderer_size(index);
             let (size, offset) = match self.direction {
                 Axis::Horizontal => {
-                    let size = Size::new(self.renderer_size, bc_max.height);
+                    let size = Size::new(renderer_size, bc_max.height);
                     let offset = Point::new(min, 0.);
                     (size, offset)
                 }
                 Axis::Vertical => {
-                    let size = Size::new(bc_max.width, self.renderer_size);
+                    let size = Size::new(bc_max.width, renderer_size);
                     let offset = Point::new(0., min);
                     (size, offset)
                 }
             };
             let rect = Rect::from_origin_size(offset, size);
-            child.set_layout_rect(rect);
+            self.children[index - self.data_range.start].set_layout_rect(rect);
 
-            min += self.renderer_size;
+            min += renderer_size;
         }
 
         self.scroll_delta = 0.;
