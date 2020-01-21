@@ -177,8 +177,11 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
         // schedule an idle call with the runloop if there are commands to process after painting is finished,
         // that would trigger a new event/update pass.
         if !self.command_queue.is_empty() {
-            let mut handle = self.state.handle.get_idle_handle().unwrap();
-            handle.schedule_idle(RUN_COMMANDS_TOKEN);
+            if let Some(mut handle) = self.state.handle.get_idle_handle() {
+                handle.schedule_idle(RUN_COMMANDS_TOKEN);
+            } else {
+                error!("failed to get idle handle");
+            }
         }
 
         request_anim
