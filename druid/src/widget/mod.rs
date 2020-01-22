@@ -204,7 +204,7 @@ pub trait Widget<T> {
 
 impl WidgetId {
     /// Allocate a new, unique widget id.
-    pub(crate) fn next() -> WidgetId {
+    pub fn next() -> WidgetId {
         use crate::shell::Counter;
         static WIDGET_ID_COUNTER: Counter = Counter::new();
         WidgetId(WIDGET_ID_COUNTER.next_nonzero())

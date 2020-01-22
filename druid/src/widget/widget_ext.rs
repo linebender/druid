@@ -17,7 +17,7 @@
 use crate::kurbo::Insets;
 use crate::piet::{PaintBrush, UnitPoint};
 
-use super::{Align, Container, EnvScope, Padding, Parse, SizedBox};
+use super::{Align, Container, EnvScope, IdentityWrapper, Padding, Parse, SizedBox, WidgetId};
 use crate::{Data, Env, Lens, LensWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
@@ -138,6 +138,11 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         Self: Widget<String>,
     {
         Parse::new(self)
+    }
+
+    /// Assign the widget a specific `WidgetId`.
+    fn with_id(self, id: WidgetId) -> IdentityWrapper<Self> {
+        IdentityWrapper::wrap(self, id)
     }
 
     /// Wrap this widget in a `Box`.
