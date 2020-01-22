@@ -594,7 +594,7 @@ extern "C" fn handle_timer(this: &mut Object, _: Sel, timer: id) {
 
     (*view_state)
         .handler
-        .timer(TimerToken::new(token), &mut ctx);
+        .timer(TimerToken::from_raw(token), &mut ctx);
 }
 
 extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
@@ -801,16 +801,16 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
 
     fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken {
         let ti = time_interval_from_deadline(deadline);
-        let token = next_timer_id();
+        let token = TimerToken::next();
         unsafe {
             let nstimer = class!(NSTimer);
             let nsnumber = class!(NSNumber);
-            let user_info: id = msg_send![nsnumber, numberWithUnsignedInteger: token];
+            let user_info: id = msg_send![nsnumber, numberWithUnsignedInteger: token.into_raw()];
             let selector = sel!(handleTimer:);
             let view = self.nsview.load();
             let _: id = msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
         }
-        TimerToken::new(token)
+        token
     }
 
     fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
@@ -887,10 +887,4 @@ fn make_modifiers(raw: NSEventModifierFlags) -> KeyModifiers {
         ctrl: raw.contains(NSEventModifierFlags::NSControlKeyMask),
         meta: raw.contains(NSEventModifierFlags::NSCommandKeyMask),
     }
-}
-
-fn next_timer_id() -> usize {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    static TIMER_ID: AtomicUsize = AtomicUsize::new(1);
-    TIMER_ID.fetch_add(1, Ordering::Relaxed)
 }

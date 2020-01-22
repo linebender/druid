@@ -727,7 +727,7 @@ impl WndProc for MyWndProc {
                 unsafe {
                     KillTimer(hwnd, id);
                 }
-                let token = TimerToken::new(id);
+                let token = TimerToken::from_raw(id as u64);
                 self.handle.borrow().free_timer_slot(token);
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
@@ -1315,12 +1315,12 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
             .map(|hwnd| {
                 let (id, elapse) = self.handle.get_timer_slot(deadline);
                 unsafe {
-                    let id = SetTimer(hwnd, id.get_raw(), elapse, None);
-                    id as usize
+                    // we reuse timer ids; if this is greater than u32::max we have a problem.
+                    SetTimer(hwnd, id.into_raw() as usize, elapse, None) as u64
                 }
             })
             .unwrap_or(0);
-        TimerToken::new(id)
+        TimerToken::from_raw(id)
     }
 
     //FIXME: these two methods will be reworked to avoid reentrancy problems.

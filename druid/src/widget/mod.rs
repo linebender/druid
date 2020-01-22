@@ -66,15 +66,16 @@ pub use switch::Switch;
 pub use textbox::TextBox;
 pub use widget_ext::WidgetExt;
 
+use std::num::NonZeroU64;
 use std::ops::{Deref, DerefMut};
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::kurbo::Size;
 use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx};
 
 /// A unique identifier for a single widget.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct WidgetId(u32);
+// this is NonZeroU64 because we regularly store Option<WidgetId>
+#[derive(Clone, Copy, Debug, Hash, PartialEq)]
+pub struct WidgetId(NonZeroU64);
 
 /// The trait implemented by all widgets.
 ///
@@ -186,16 +187,14 @@ pub trait Widget<T> {
     }
 }
 
-//TODO: we implement this in like 5 different places now :/
-static WIDGET_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
-
 impl WidgetId {
     /// Allocate a new, unique widget id.
     ///
     /// Do note that if we create 4 billion widgets there may be a collision.
     pub(crate) fn next() -> WidgetId {
-        let id = WIDGET_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
-        WidgetId(id)
+        use crate::shell::Counter;
+        static WIDGET_ID_COUNTER: Counter = Counter::new();
+        WidgetId(WIDGET_ID_COUNTER.next_nonzero())
     }
 }
 

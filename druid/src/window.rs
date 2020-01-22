@@ -14,11 +14,9 @@
 
 //! Management of multiple windows.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use crate::kurbo::{Point, Rect, Size};
+use crate::shell::{Counter, WindowHandle};
 
-use crate::shell::WindowHandle;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, MenuDesc,
     PaintCtx, UpdateCtx, Widget, WidgetPod,
@@ -26,9 +24,7 @@ use crate::{
 
 /// A unique identifier for a window.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct WindowId(u32);
-
-static WINDOW_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
+pub struct WindowId(u64);
 
 /// Per-window state not owned by user code.
 pub struct Window<T: Data> {
@@ -102,7 +98,7 @@ impl WindowId {
     ///
     /// Do note that if we create 4 billion windows there may be a collision.
     pub fn next() -> WindowId {
-        let id = WINDOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
-        WindowId(id)
+        static WINDOW_COUNTER: Counter = Counter::new();
+        WindowId(WINDOW_COUNTER.next())
     }
 }

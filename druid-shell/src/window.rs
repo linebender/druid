@@ -18,6 +18,7 @@
 
 use std::any::Any;
 
+use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
 use crate::keyboard::{KeyEvent, KeyModifiers};
@@ -33,18 +34,25 @@ pub type Text<'a> = <piet_common::Piet<'a> as piet_common::RenderContext>::Text;
 
 /// A token that uniquely identifies a running timer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
-pub struct TimerToken(usize);
+pub struct TimerToken(u64);
 
 impl TimerToken {
     /// A token that does not correspond to any timer.
     pub const INVALID: TimerToken = TimerToken(0);
 
-    pub(crate) const fn new(id: usize) -> TimerToken {
+    /// Create a new token.
+    pub fn next() -> TimerToken {
+        static TIMER_COUNTER: Counter = Counter::new();
+        TimerToken(TIMER_COUNTER.next())
+    }
+
+    /// Create a new token from a raw value.
+    pub const fn from_raw(id: u64) -> TimerToken {
         TimerToken(id)
     }
 
-    #[cfg(target_os = "windows")]
-    pub(crate) const fn get_raw(self) -> usize {
+    /// Get the raw value for a token.
+    pub const fn into_raw(self) -> u64 {
         self.0
     }
 }
