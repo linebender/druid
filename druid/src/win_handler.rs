@@ -78,7 +78,6 @@ struct Windows<T: Data> {
 struct WindowEntry<T: Data> {
     id: WindowId,
     window: Option<Window<T>>,
-    state: WindowState,
     pub(crate) handle: Option<WindowHandle>,
 }
 
@@ -86,16 +85,7 @@ struct WindowEntry<T: Data> {
 struct WindowEntryMut<'a, T: Data> {
     id: WindowId,
     window: &'a mut Window<T>,
-    state: &'a mut WindowState,
     handle: &'a mut WindowHandle,
-}
-
-/// Per-window state not owned by user code.
-#[derive(Clone, Copy, Debug, Default)]
-pub(crate) struct WindowState {
-    prev_paint_time: Option<Instant>,
-    needs_inval: bool,
-    children_changed: bool,
 }
 
 /// Everything required for a window to handle an event.
@@ -103,7 +93,6 @@ struct SingleWindowCtx<'a, T: Data> {
     window_id: WindowId,
     window: &'a mut Window<T>,
     handle: &'a mut WindowHandle,
-    state: &'a mut WindowState,
     command_queue: &'a mut CommandQueue,
     data: &'a mut T,
     env: &'a Env,
@@ -115,7 +104,6 @@ impl<T: Data> WindowEntry<T> {
             id,
             window: None,
             handle: None,
-            state: Default::default(),
         }
     }
 
@@ -126,7 +114,6 @@ impl<T: Data> WindowEntry<T> {
                 handle,
                 window,
                 id: self.id,
-                state: &mut self.state,
             })
         } else {
             None
@@ -145,7 +132,6 @@ impl<'a, T: Data> WindowEntryMut<'a, T> {
             window_id: self.id,
             window: self.window,
             handle: self.handle,
-            state: self.state,
             command_queue,
             data,
             env,
@@ -210,7 +196,7 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
         //
         // See https://github.com/xi-editor/druid/issues/85 for discussion.
         let this_paint_time = Instant::now();
-        let prev_paint_time = self.state.prev_paint_time;
+        let prev_paint_time = self.window.prev_paint_time;
         let interval = if let Some(last) = prev_paint_time {
             let duration = this_paint_time.duration_since(last);
             1_000_000_000 * duration.as_secs() + u64::from(duration.subsec_nanos())
@@ -219,7 +205,7 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
         };
         let anim_frame_event = LifeCycle::AnimFrame(interval);
         let request_anim = self.do_lifecycle(anim_frame_event);
-        self.state.prev_paint_time = if request_anim {
+        self.window.prev_paint_time = if request_anim {
             Some(this_paint_time)
         } else {
             None
@@ -280,8 +266,6 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
         self.window.event(&mut ctx, &event, self.data, self.env);
 
         let is_handled = ctx.is_handled;
-        self.state.needs_inval |= ctx.base_state.needs_inval;
-        self.state.children_changed |= ctx.base_state.children_changed;
 
         if ctx.base_state.request_focus {
             self.do_lifecycle(LifeCycle::FocusChanged(true));
@@ -305,8 +289,6 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
             widget_id: self.window.root.id(),
         };
         self.window.lifecycle(&mut ctx, &event, self.data, self.env);
-        self.state.children_changed |= ctx.children_changed;
-        self.state.needs_inval |= ctx.needs_inval;
         ctx.request_anim
     }
 
@@ -474,7 +456,7 @@ impl<T: Data> AppState<T> {
                 win.do_anim_frame();
                 win.paint(piet);
                 // this is set if a new frame was requested
-                win.state.prev_paint_time.is_some()
+                win.window.prev_paint_time.is_some()
             })
             .unwrap_or(false)
     }
@@ -530,13 +512,7 @@ impl<T: Data> AppState<T> {
 
     fn do_update(&mut self, win_ctx: &mut dyn WinCtx) {
         // we send `update` to all windows, not just the active one:
-        for WindowEntryMut {
-            handle,
-            window,
-            id,
-            state,
-        } in self.windows.iter_mut()
-        {
+        for WindowEntryMut { handle, window, id } in self.windows.iter_mut() {
             let mut update_ctx = UpdateCtx {
                 text_factory: win_ctx.text_factory(),
                 window: handle,
@@ -546,8 +522,6 @@ impl<T: Data> AppState<T> {
                 widget_id: window.root.id(),
             };
             window.update(&mut update_ctx, &self.data, &self.env);
-            state.needs_inval |= update_ctx.needs_inval;
-            state.children_changed |= update_ctx.children_changed;
         }
         self.invalidate_and_finalize();
     }
@@ -558,12 +532,12 @@ impl<T: Data> AppState<T> {
     /// including for lifecycle events.
     fn invalidate_and_finalize(&mut self) {
         for win in self.windows.iter_mut() {
-            if win.state.needs_inval {
+            if win.window.needs_inval {
                 win.handle.invalidate();
-                win.state.needs_inval = false;
+                win.window.needs_inval = false;
             }
-            if win.state.children_changed {
-                win.state.children_changed = false;
+            if win.window.children_changed {
+                win.window.children_changed = false;
                 win.into_ctx(&mut self.command_queue, &mut self.data, &self.env)
                     .do_lifecycle(LifeCycle::RegisterChildren);
             }

@@ -14,6 +14,8 @@
 
 //! Management of multiple windows.
 
+use std::time::Instant;
+
 use crate::kurbo::{Point, Rect, Size};
 use crate::shell::{Counter, WindowHandle};
 
@@ -33,6 +35,9 @@ pub struct Window<T: Data> {
     size: Size,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) context_menu: Option<MenuDesc<T>>,
+    pub(crate) prev_paint_time: Option<Instant>,
+    pub(crate) needs_inval: bool,
+    pub(crate) children_changed: bool,
     // delegate?
 }
 
@@ -48,6 +53,9 @@ impl<T: Data> Window<T> {
             title,
             menu,
             context_menu: None,
+            prev_paint_time: None,
+            needs_inval: false,
+            children_changed: false,
         }
     }
 
@@ -60,15 +68,21 @@ impl<T: Data> Window<T> {
         if let Some(cursor) = ctx.cursor {
             ctx.win_ctx.set_cursor(&cursor);
         }
+        self.needs_inval |= ctx.base_state.needs_inval;
+        self.children_changed |= ctx.base_state.children_changed;
     }
 
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         self.root.lifecycle(ctx, event, data, env);
+        self.needs_inval |= ctx.needs_inval;
+        self.children_changed |= ctx.children_changed;
     }
 
     pub fn update(&mut self, update_ctx: &mut UpdateCtx, data: &T, env: &Env) {
         self.update_title(&update_ctx.window, data, env);
         self.root.update(update_ctx, data, env);
+        self.needs_inval |= update_ctx.needs_inval;
+        self.children_changed |= update_ctx.children_changed;
     }
 
     pub fn layout(&mut self, layout_ctx: &mut LayoutCtx, data: &T, env: &Env) {
