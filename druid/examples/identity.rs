@@ -30,7 +30,7 @@
 use std::time::{Duration, Instant};
 
 use druid::kurbo::RoundedRect;
-use druid::widget::{Button, Flex, IdentityWrapper, WidgetExt};
+use druid::widget::{Button, Flex, WidgetExt, WidgetId};
 use druid::{
     AppLauncher, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, LayoutCtx, Lens,
     LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size,
@@ -158,14 +158,15 @@ fn main() {
 }
 
 fn make_ui() -> impl Widget<OurData> {
-    let (id_one, one) = IdentityWrapper::wrap(ColorWell::new(false).padding(10.));
-    let (id_two, two) = IdentityWrapper::wrap(ColorWell::new(false).padding(10.));
-    let (id_three, three) = IdentityWrapper::wrap(ColorWell::new(false).padding(10.));
+    let id_one = WidgetId::next();
+    let id_two = WidgetId::next();
+    let id_three = WidgetId::next();
+
     Flex::column()
         .with_child(ColorWell::new(true).padding(10.0), 1.0)
         .with_child(
             Flex::row()
-                .with_child(one, 1.0)
+                .with_child(ColorWell::new(false).padding(10.).with_id(id_one), 1.0)
                 .with_child(
                     Button::<OurData>::new("freeze", move |ctx, data, _env| {
                         ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_one)
@@ -184,7 +185,7 @@ fn make_ui() -> impl Widget<OurData> {
         )
         .with_child(
             Flex::row()
-                .with_child(two, 1.)
+                .with_child(ColorWell::new(false).padding(10.).with_id(id_two), 1.)
                 .with_child(
                     Button::<OurData>::new("freeze", move |ctx, data, _env| {
                         ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_two)
@@ -203,7 +204,7 @@ fn make_ui() -> impl Widget<OurData> {
         )
         .with_child(
             Flex::row()
-                .with_child(three, 1.)
+                .with_child(ColorWell::new(false).padding(10.0).with_id(id_three), 1.)
                 .with_child(
                     Button::<OurData>::new("freeze", move |ctx, data, _env| {
                         ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_three)

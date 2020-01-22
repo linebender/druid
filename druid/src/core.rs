@@ -532,21 +532,21 @@ impl BaseState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::widget::{Flex, IdentityWrapper, Scroll, Split, TextBox, WidgetExt};
-    use crate::{WidgetId, WindowId};
+    use crate::widget::{Flex, Scroll, Split, TextBox, WidgetExt};
+    use crate::WindowId;
 
     #[test]
     fn register_children() {
         fn make_widgets() -> (WidgetId, WidgetId, WidgetId, impl Widget<Option<u32>>) {
-            let (id1, t1) = IdentityWrapper::wrap(TextBox::raw().parse());
-            let (id2, t2) = IdentityWrapper::wrap(TextBox::raw().parse());
-            let (id3, t3) = IdentityWrapper::wrap(TextBox::raw().parse());
+            let id1 = WidgetId::next();
+            let id2 = WidgetId::next();
+            let id3 = WidgetId::next();
             eprintln!("{:?}, {:?}, {:?}", id1, id2, id3);
             let widget = Split::vertical(
-                Flex::row()
-                    .with_child(t1, 1.0)
-                    .with_child(t2, 1.0)
-                    .with_child(t3, 1.0),
+                Flex::<Option<u32>>::row()
+                    .with_child(TextBox::raw().with_id(id1).parse(), 1.0)
+                    .with_child(TextBox::raw().with_id(id2).parse(), 1.0)
+                    .with_child(TextBox::raw().with_id(id3).parse(), 1.0),
                 Scroll::new(TextBox::raw().parse()),
             );
             (id1, id2, id3, widget)

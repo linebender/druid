@@ -14,8 +14,6 @@
 
 //! A widget that provides an explicit identity to a child.
 
-use std::marker::PhantomData;
-
 use crate::kurbo::Size;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
@@ -23,30 +21,19 @@ use crate::{
 };
 
 /// A wrapper that adds an identity to an otherwise anonymous widget.
-pub struct IdentityWrapper<T, W> {
+pub struct IdentityWrapper<W> {
     id: WidgetId,
     inner: W,
-    phantom: PhantomData<T>,
 }
 
-impl<T: Data, W: Widget<T>> IdentityWrapper<T, W> {
+impl<W> IdentityWrapper<W> {
     /// Assign an identity to a widget.
-    pub fn wrap(inner: W) -> (WidgetId, IdentityWrapper<T, W>) {
-        // if the inner widget already has an id (for instance if it uses
-        // a WidgetPod) then we reuse that.
-        let id = inner.id().unwrap_or_else(WidgetId::next);
-        (
-            id,
-            IdentityWrapper {
-                id,
-                inner,
-                phantom: PhantomData,
-            },
-        )
+    pub fn wrap(inner: W, id: WidgetId) -> IdentityWrapper<W> {
+        IdentityWrapper { id, inner }
     }
 }
 
-impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<T, W> {
+impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.inner.event(ctx, event, data, env);
     }
@@ -75,12 +62,13 @@ impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<T, W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::widget::{Label, WidgetExt};
+    use crate::widget::{Label, WidgetExt, WidgetId};
     use crate::Color;
 
     #[test]
     fn test_nesting() {
-        let (id, label) = IdentityWrapper::wrap(Label::<u32>::new("howdy there friend"));
+        let id = WidgetId::next();
+        let label = IdentityWrapper::wrap(Label::<u32>::new("howdy there friend"), id);
         let wrapped_up: Box<dyn Widget<u32>> =
             Box::new(label.padding(5.0).align_left().background(Color::BLACK));
 
