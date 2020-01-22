@@ -185,7 +185,7 @@ where
             self.scroll_position_cache.insert(idx, pos);
             pos += self.get_preferred_renderer_size(idx);
         }
-        self.scroll_position_cache.get(&index).unwrap().clone()
+        *self.scroll_position_cache.get(&index).unwrap()
     }
 
     /// Gets the start and end positions of the
