@@ -204,7 +204,7 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
         }
     }
 
-    fn do_anim_frame(&mut self, ctx: &mut dyn WinCtx) {
+    fn do_anim_frame(&mut self) {
         // TODO: this calculation uses wall-clock time of the paint call, which
         // potentially has jitter.
         //
@@ -218,7 +218,7 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
             0
         };
         let anim_frame_event = LifeCycle::AnimFrame(interval);
-        let request_anim = self.do_lifecycle(anim_frame_event, ctx);
+        let request_anim = self.do_lifecycle(anim_frame_event);
         self.state.prev_paint_time = if request_anim {
             Some(this_paint_time)
         } else {
@@ -280,14 +280,12 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
         self.window.event(&mut ctx, &event, self.data, self.env);
 
         let is_handled = ctx.is_handled;
-        if ctx.base_state.request_focus {
-            let mut lc_ctx = ctx.make_lifecycle_ctx();
-            let focus_event = LifeCycle::FocusChanged(true);
-            self.window
-                .lifecycle(&mut lc_ctx, &focus_event, self.data, self.env);
-        }
-        self.state.needs_inval = ctx.base_state.needs_inval;
+        self.state.needs_inval |= ctx.base_state.needs_inval;
         self.state.children_changed |= ctx.base_state.children_changed;
+
+        if ctx.base_state.request_focus {
+            self.do_lifecycle(LifeCycle::FocusChanged(true));
+        }
 
         if let Some(cursor) = cursor {
             win_ctx.set_cursor(&cursor);
@@ -296,7 +294,7 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
         is_handled
     }
 
-    fn do_lifecycle(&mut self, event: LifeCycle, _win_ctx: &mut dyn WinCtx) -> bool {
+    fn do_lifecycle(&mut self, event: LifeCycle) -> bool {
         let mut ctx = LifeCycleCtx {
             command_queue: self.command_queue,
             children: Bloom::default(),
@@ -470,10 +468,10 @@ impl<T: Data> AppState<T> {
     }
 
     /// Returns `true` if an animation frame was requested.
-    fn paint(&mut self, window_id: WindowId, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
+    fn paint(&mut self, window_id: WindowId, piet: &mut Piet, _ctx: &mut dyn WinCtx) -> bool {
         self.assemble_window_state(window_id)
             .map(|mut win| {
-                win.do_anim_frame(ctx);
+                win.do_anim_frame();
                 win.paint(piet);
                 // this is set if a new frame was requested
                 win.state.prev_paint_time.is_some()
@@ -551,14 +549,14 @@ impl<T: Data> AppState<T> {
             state.needs_inval |= update_ctx.needs_inval;
             state.children_changed |= update_ctx.children_changed;
         }
-        self.invalidate_and_finalize(win_ctx);
+        self.invalidate_and_finalize();
     }
 
     /// invalidate any window handles that need it.
     ///
     /// This should always be called at the end of an event update cycle,
     /// including for lifecycle events.
-    fn invalidate_and_finalize(&mut self, win_ctx: &mut dyn WinCtx) {
+    fn invalidate_and_finalize(&mut self) {
         for win in self.windows.iter_mut() {
             if win.state.needs_inval {
                 win.handle.invalidate();
@@ -567,7 +565,7 @@ impl<T: Data> AppState<T> {
             if win.state.children_changed {
                 win.state.children_changed = false;
                 win.into_ctx(&mut self.command_queue, &mut self.data, &self.env)
-                    .do_lifecycle(LifeCycle::RegisterChildren, win_ctx);
+                    .do_lifecycle(LifeCycle::RegisterChildren);
             }
         }
     }
@@ -599,12 +597,12 @@ impl<T: Data> DruidHandler<T> {
             .borrow_mut()
             .assemble_window_state(self.window_id)
         {
-            win.do_lifecycle(LifeCycle::WidgetAdded, win_ctx);
-            win.do_lifecycle(LifeCycle::RegisterChildren, win_ctx);
-            win.do_lifecycle(LifeCycle::WindowConnected, win_ctx);
+            win.do_lifecycle(LifeCycle::WidgetAdded);
+            win.do_lifecycle(LifeCycle::RegisterChildren);
+            win.do_lifecycle(LifeCycle::WindowConnected);
         }
         self.process_commands(win_ctx);
-        self.app_state.borrow_mut().invalidate_and_finalize(win_ctx);
+        self.app_state.borrow_mut().invalidate_and_finalize();
     }
 
     /// Send an event to the widget hierarchy.
