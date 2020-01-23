@@ -46,7 +46,7 @@ pub use checkbox::Checkbox;
 pub use container::Container;
 pub use either::Either;
 pub use env_scope::EnvScope;
-pub use flex::{Column, Flex, Row};
+pub use flex::Flex;
 pub use identity_wrapper::IdentityWrapper;
 pub use label::{Label, LabelText};
 pub use list::{List, ListIter};

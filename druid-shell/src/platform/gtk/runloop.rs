@@ -16,7 +16,8 @@
 
 use std::cell::RefCell;
 
-use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags, Cancellable};
+use gio::prelude::ApplicationExtManual;
+use gio::{ApplicationExt, ApplicationFlags, Cancellable};
 use gtk::Application;
 
 use super::util::assert_main_thread;

@@ -14,8 +14,6 @@
 
 //! Platform independent window types.
 
-#![allow(deprecated)] // for the three items that have moved
-
 use std::any::Any;
 
 use crate::dialog::{FileDialogOptions, FileInfo};
