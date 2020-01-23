@@ -157,8 +157,11 @@ fn main() {
         .expect("launch failed");
 }
 
+/// A constant widget id, that might be reused.
+const ID_ONE: WidgetId = WidgetId::reserved(1);
+
 fn make_ui() -> impl Widget<OurData> {
-    let id_one = WidgetId::next();
+    // two ids generated at runtime
     let id_two = WidgetId::next();
     let id_three = WidgetId::next();
 
@@ -166,17 +169,17 @@ fn make_ui() -> impl Widget<OurData> {
         .with_child(ColorWell::new(true).padding(10.0), 1.0)
         .with_child(
             Flex::row()
-                .with_child(ColorWell::new(false).padding(10.).with_id(id_one), 1.0)
+                .with_child(ColorWell::new(false).padding(10.).with_id(ID_ONE), 1.0)
                 .with_child(
                     Button::<OurData>::new("freeze", move |ctx, data, _env| {
-                        ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_one)
+                        ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), ID_ONE)
                     })
                     .padding(10.0),
                     0.5,
                 )
                 .with_child(
                     Button::<OurData>::new("unfreeze", move |ctx, _, _env| {
-                        ctx.submit_command(UNFREEZE_COLOR, id_one)
+                        ctx.submit_command(UNFREEZE_COLOR, ID_ONE)
                     })
                     .padding(10.0),
                     0.5,
