@@ -74,6 +74,11 @@ impl<T: Data> SizedBox<T> {
         self.height = Some(INFINITY);
         self
     }
+
+    #[cfg(test)]
+    pub(crate) fn width_and_height(&self) -> (Option<f64>, Option<f64>) {
+        (self.width, self.height)
+    }
 }
 
 impl<T: Data> Widget<T> for SizedBox<T> {
