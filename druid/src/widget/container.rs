@@ -65,6 +65,16 @@ impl<T: Data> Container<T> {
         self.corner_radius = radius;
         self
     }
+
+    #[cfg(test)]
+    pub(crate) fn background_is_some(&self) -> bool {
+        self.background.is_some()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn border_is_some(&self) -> bool {
+        self.border.is_some()
+    }
 }
 
 impl<T: Data> Widget<T> for Container<T> {
