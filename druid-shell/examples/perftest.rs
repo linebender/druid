@@ -14,7 +14,7 @@
 
 use std::any::Any;
 
-use time::get_time;
+use time::Time;
 
 use piet_common::kurbo::{Line, Rect};
 use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
@@ -44,7 +44,8 @@ impl WinHandler for PerfTest {
 
         piet.stroke(Line::new((0.0, height), (width, 0.0)), &FG_COLOR, 1.0);
 
-        let th = ::std::f64::consts::PI * (get_time().nsec as f64) * 2e-9;
+        let current_ns = Time::now().nanosecond();
+        let th = ::std::f64::consts::PI * (current_ns as f64) * 2e-9;
         let dx = 100.0 * th.sin();
         let dy = 100.0 * th.cos();
         piet.stroke(
@@ -59,8 +60,8 @@ impl WinHandler for PerfTest {
             .build()
             .unwrap();
 
-        let now = get_time();
-        let now = now.sec as f64 + 1e-9 * now.nsec as f64;
+        let now = Time::now();
+        let now = now.second() as f64 + 1e-9 * now.nanosecond() as f64;
         let msg = format!("{:3.1}ms", 1e3 * (now - self.last_time));
         self.last_time = now;
         let layout = piet.text().new_text_layout(&font, &msg).build().unwrap();

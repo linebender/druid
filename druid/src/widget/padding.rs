@@ -31,18 +31,6 @@ pub struct Padding<T: Data> {
 }
 
 impl<T: Data> Padding<T> {
-    /// Create widget with uniform padding.
-    #[deprecated(since = "0.3.0", note = "Use Padding::new() instead")]
-    pub fn uniform(padding: f64, child: impl Widget<T> + 'static) -> Padding<T> {
-        Padding {
-            left: padding,
-            right: padding,
-            top: padding,
-            bottom: padding,
-            child: WidgetPod::new(child).boxed(),
-        }
-    }
-
     /// Create a new widget with the specified padding. This can either be an instance
     /// of [`kurbo::Insets`], a f64 for uniform padding, a 2-tuple for axis-uniform padding
     /// or 4-tuple with (left, top, right, bottom) values.

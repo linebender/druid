@@ -20,21 +20,6 @@ use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
-/// A builder for a row widget that can contain flex children.
-///
-/// The actual widget is implemented by [`Flex`], but this builder
-/// is provided for convenience.
-///
-/// [`Flex`]: struct.Flex.html
-pub struct Row;
-/// A builder for a column widget that can contain flex children.
-///
-/// The actual widget is implemented by [`Flex`], but this builder
-/// is provided for convenience.
-///
-/// [`Flex`]: struct.Flex.html
-pub struct Column;
-
 /// A container with either horizontal or vertical layout.
 pub struct Flex<T: Data> {
     direction: Axis,
@@ -46,7 +31,7 @@ struct ChildWidget<T: Data> {
     params: Params,
 }
 
-pub enum Axis {
+pub(crate) enum Axis {
     Horizontal,
     Vertical,
 }
@@ -76,26 +61,6 @@ impl Axis {
             Axis::Horizontal => (major, minor),
             Axis::Vertical => (minor, major),
         }
-    }
-}
-
-impl Row {
-    /// Create a new row widget.
-    ///
-    /// The child widgets are laid out horizontally, from left to right.
-    #[deprecated(since = "0.4.0", note = "Use Flex::row() instead")]
-    pub fn new<T: Data>() -> Flex<T> {
-        Flex::row()
-    }
-}
-
-impl Column {
-    /// Create a new row widget.
-    ///
-    /// The child widgets are laid out vertically, from top to bottom.
-    #[deprecated(since = "0.4.0", note = "Use Flex::column() instead")]
-    pub fn new<T: Data>() -> Flex<T> {
-        Flex::column()
     }
 }
 

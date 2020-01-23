@@ -17,7 +17,7 @@
 use std::ffi::OsString;
 
 use crate::dialog::{FileDialogOptions, FileDialogType};
-use gtk::{FileChooserAction, FileChooserExt, NativeDialogExt, Window};
+use gtk::{FileChooserAction, FileChooserExt, NativeDialogExt, ResponseType, Window};
 
 use crate::Error;
 
@@ -44,13 +44,13 @@ pub(crate) fn get_file_dialog_path(
     let result = dialog.run();
 
     let result = match result {
-        gtk_sys::GTK_RESPONSE_ACCEPT => match dialog.get_filename() {
+        ResponseType::Accept => match dialog.get_filename() {
             Some(path) => Ok(path.into_os_string()),
             None => Err(Error::Other("No path received for filename")),
         },
-        gtk_sys::GTK_RESPONSE_CANCEL => Err(Error::Other("Dialog was deleted")),
+        ResponseType::Cancel => Err(Error::Other("Dialog was deleted")),
         _ => {
-            eprintln!("Unhandled dialog result: {:?}", result);
+            log::warn!("Unhandled dialog result: {:?}", result);
             Err(Error::Other("Unhandled dialog result"))
         }
     };

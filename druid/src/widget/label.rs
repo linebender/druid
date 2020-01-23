@@ -68,13 +68,6 @@ impl<T: Data> Label<T> {
     }
 
     /// Set text alignment.
-    #[inline]
-    #[deprecated(since = "0.4.1", note = "use text_align instead")]
-    pub fn align(self, align: UnitPoint) -> Self {
-        self.text_align(align)
-    }
-
-    /// Set text alignment.
     pub fn text_align(mut self, align: UnitPoint) -> Self {
         self.align = align;
         self
