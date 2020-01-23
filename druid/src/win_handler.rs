@@ -18,7 +18,6 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
-use std::time::Instant;
 
 use log::{error, info, warn};
 
@@ -188,28 +187,6 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
                 error!("failed to get idle handle");
             }
         }
-    }
-
-    fn do_anim_frame(&mut self) {
-        // TODO: this calculation uses wall-clock time of the paint call, which
-        // potentially has jitter.
-        //
-        // See https://github.com/xi-editor/druid/issues/85 for discussion.
-        let this_paint_time = Instant::now();
-        let prev_paint_time = self.window.prev_paint_time;
-        let interval = if let Some(last) = prev_paint_time {
-            let duration = this_paint_time.duration_since(last);
-            1_000_000_000 * duration.as_secs() + u64::from(duration.subsec_nanos())
-        } else {
-            0
-        };
-        let anim_frame_event = LifeCycle::AnimFrame(interval);
-        let request_anim = self.do_lifecycle(anim_frame_event);
-        self.window.prev_paint_time = if request_anim {
-            Some(this_paint_time)
-        } else {
-            None
-        };
     }
 
     fn do_layout(&mut self, piet: &mut Piet) {
@@ -453,10 +430,9 @@ impl<T: Data> AppState<T> {
     fn paint(&mut self, window_id: WindowId, piet: &mut Piet, _ctx: &mut dyn WinCtx) -> bool {
         self.assemble_window_state(window_id)
             .map(|mut win| {
-                win.do_anim_frame();
+                win.do_lifecycle(LifeCycle::AnimFrame(0));
                 win.paint(piet);
-                // this is set if a new frame was requested
-                win.window.prev_paint_time.is_some()
+                win.window.wants_animation_frame()
             })
             .unwrap_or(false)
     }

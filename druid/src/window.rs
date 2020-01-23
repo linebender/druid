@@ -35,7 +35,7 @@ pub struct Window<T: Data> {
     size: Size,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) context_menu: Option<MenuDesc<T>>,
-    pub(crate) prev_paint_time: Option<Instant>,
+    pub(crate) last_anim: Option<Instant>,
     pub(crate) needs_inval: bool,
     pub(crate) children_changed: bool,
     // delegate?
@@ -53,10 +53,15 @@ impl<T: Data> Window<T> {
             title,
             menu,
             context_menu: None,
-            prev_paint_time: None,
+            last_anim: None,
             needs_inval: false,
             children_changed: false,
         }
+    }
+
+    /// `true` iff any child requested an animation frame during the last `AnimFrame` event.
+    pub fn wants_animation_frame(&self) -> bool {
+        self.last_anim.is_some()
     }
 
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
@@ -73,9 +78,30 @@ impl<T: Data> Window<T> {
     }
 
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        if let LifeCycle::AnimFrame(_) = event {
+            return self.do_anim_frame(ctx, data, env);
+        }
+
         self.root.lifecycle(ctx, event, data, env);
         self.needs_inval |= ctx.needs_inval;
         self.children_changed |= ctx.children_changed;
+    }
+
+    /// AnimFrame has special logic, so we implement it separately.
+    fn do_anim_frame(&mut self, ctx: &mut LifeCycleCtx, data: &T, env: &Env) {
+        // TODO: this calculation uses wall-clock time of the paint call, which
+        // potentially has jitter.
+        //
+        // See https://github.com/xi-editor/druid/issues/85 for discussion.
+        let now = Instant::now();
+        let last = self.last_anim.take();
+        let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
+
+        let event = LifeCycle::AnimFrame(elapsed_ns);
+        self.root.lifecycle(ctx, &event, data, env);
+        if ctx.request_anim {
+            self.last_anim = Some(now);
+        }
     }
 
     pub fn update(&mut self, update_ctx: &mut UpdateCtx, data: &T, env: &Env) {
