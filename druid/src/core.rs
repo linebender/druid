@@ -535,24 +535,23 @@ mod tests {
     use crate::widget::{Flex, Scroll, Split, TextBox, WidgetExt};
     use crate::WindowId;
 
+    const ID_1: WidgetId = WidgetId::reserved(0);
+    const ID_2: WidgetId = WidgetId::reserved(1);
+    const ID_3: WidgetId = WidgetId::reserved(2);
+
     #[test]
     fn register_children() {
-        fn make_widgets() -> (WidgetId, WidgetId, WidgetId, impl Widget<Option<u32>>) {
-            let id1 = WidgetId::next();
-            let id2 = WidgetId::next();
-            let id3 = WidgetId::next();
-            eprintln!("{:?}, {:?}, {:?}", id1, id2, id3);
-            let widget = Split::vertical(
+        fn make_widgets() -> impl Widget<Option<u32>> {
+            Split::vertical(
                 Flex::<Option<u32>>::row()
-                    .with_child(TextBox::raw().with_id(id1).parse(), 1.0)
-                    .with_child(TextBox::raw().with_id(id2).parse(), 1.0)
-                    .with_child(TextBox::raw().with_id(id3).parse(), 1.0),
+                    .with_child(TextBox::raw().with_id(ID_1).parse(), 1.0)
+                    .with_child(TextBox::raw().with_id(ID_2).parse(), 1.0)
+                    .with_child(TextBox::raw().with_id(ID_3).parse(), 1.0),
                 Scroll::new(TextBox::raw().parse()),
-            );
-            (id1, id2, id3, widget)
+            )
         }
 
-        let (id1, id2, id3, widget) = make_widgets();
+        let widget = make_widgets();
         let mut widget = WidgetPod::new(widget).boxed();
 
         let mut command_queue: CommandQueue = VecDeque::new();
@@ -570,9 +569,9 @@ mod tests {
         let env = Env::default();
 
         widget.lifecycle(&mut ctx, &LifeCycle::Register, &None, &env);
-        assert!(ctx.children.contains(&id1));
-        assert!(ctx.children.contains(&id2));
-        assert!(ctx.children.contains(&id3));
+        assert!(ctx.children.contains(&ID_1));
+        assert!(ctx.children.contains(&ID_2));
+        assert!(ctx.children.contains(&ID_3));
         assert_eq!(ctx.children.entry_count(), 7);
     }
 }

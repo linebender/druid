@@ -209,6 +209,21 @@ impl WidgetId {
         static WIDGET_ID_COUNTER: Counter = Counter::new();
         WidgetId(WIDGET_ID_COUNTER.next_nonzero())
     }
+
+    /// Create a reserved `WidgetId`, suitable for reuse.
+    ///
+    /// The caller is responsible for ensuring that this ID is in fact assigned
+    /// to a single widget at any time, or your code may become haunted.
+    ///
+    /// The actual inner representation of the returned `WidgetId` will not
+    /// be the same as the raw value that is passed in; it will be
+    /// `u64::max_value() - raw`.
+    #[allow(unsafe_code)]
+    pub const fn reserved(raw: u16) -> WidgetId {
+        let id = u64::max_value() - raw as u64;
+        // safety: by construction this can never be zero.
+        WidgetId(unsafe { std::num::NonZeroU64::new_unchecked(id) })
+    }
 }
 
 impl<T> Widget<T> for Box<dyn Widget<T>> {
