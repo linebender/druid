@@ -144,7 +144,9 @@ impl WindowBuilder {
             .expect("Tried to build a window without setting the handler");
 
         let window = with_application(|app| ApplicationWindow::new(&app));
-
+        
+        window.set_title(&self.title);
+        
         let dpi_scale = window
             .get_display()
             .map(|c| c.get_default_screen().get_resolution() as f64)
