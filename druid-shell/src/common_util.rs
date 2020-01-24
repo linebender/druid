@@ -21,7 +21,6 @@ use std::any::Any;
 /// Changes "E&xit" to "Exit". Actual ampersands are escaped as "&&".
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub fn strip_access_key(raw_menu_text: &str) -> String {
-    // TODO this is copied from mac/menu.rs maybe this should be moved somewhere common?
     let mut saw_ampersand = false;
     let mut result = String::new();
     for c in raw_menu_text.chars() {

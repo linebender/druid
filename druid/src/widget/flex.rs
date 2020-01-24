@@ -242,7 +242,6 @@ impl<T: Data> Widget<T> for Flex<T> {
             major = total_major;
         }
 
-        // TODO: should be able to make this `into`
         let (width, height) = self.direction.pack(major, minor);
         Size::new(width, height)
     }

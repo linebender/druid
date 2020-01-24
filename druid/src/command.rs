@@ -78,8 +78,10 @@ pub mod sys {
     /// The command's argument should be the id of the target window.
     pub const SHOW_WINDOW: Selector = Selector::new("druid-builtin.show-window");
 
-    /// Display a context (right-click) menu. The argument should be a...
-    //TODO
+    /// Display a context (right-click) menu. The argument must be the [`ContextMenu`].
+    /// object to be displayed.
+    ///
+    /// [`ContextMenu`]: ../struct.ContextMenu.html
     pub const SHOW_CONTEXT_MENU: Selector = Selector::new("druid-builtin.show-context-menu");
 
     /// The selector for a command to set the window's menu. The argument should
