@@ -14,6 +14,7 @@
 
 //! An environment which is passed downward into the widget tree.
 
+use std::any;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -84,7 +85,7 @@ pub trait ValueType<'a>: Sized {
     type Owned: Into<Value>;
 
     /// Attempt to convert the generic `Value` into this type.
-    fn try_from_value(v: &'a Value) -> Result<Self, EnvError>;
+    fn try_from_value(v: &'a Value) -> Result<Self, ValueTypeError>;
 }
 
 /// The error type for environment access.
@@ -92,9 +93,11 @@ pub trait ValueType<'a>: Sized {
 /// This error is expected to happen rarely, if ever, as it only
 /// happens when the string part of keys collide but the types
 /// mismatch.
-///
-/// TODO: replace with a less stringly-typed object.
-pub type EnvError = String;
+#[derive(Debug, Clone)]
+pub struct ValueTypeError {
+    expected: &'static str,
+    found: Value,
+}
 
 impl Env {
     /// Gets a value from the environment, expecting it to be present.
@@ -164,22 +167,6 @@ impl Env {
     }
 }
 
-impl Debug for Value {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        match self {
-            Value::Point(p) => write!(f, "Point {:?}", p),
-            Value::Size(s) => write!(f, "Size {:?}", s),
-            Value::Rect(r) => write!(f, "Rect {:?}", r),
-            Value::Color(c) => write!(f, "Color {:?}", c),
-            // TODO: make PaintBrush impl debug?
-            Value::LinearGradient(g) => write!(f, "LinearGradient {:?}", g),
-            Value::Float(x) => write!(f, "Float {}", x),
-            Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
-            Value::String(s) => write!(f, "String {:?}", s),
-        }
-    }
-}
-
 impl<T> Key<T> {
     /// Create a new strongly typed `Key` with the given string value.
     /// The type of the key will be inferred.
@@ -226,6 +213,21 @@ impl Value {
             (UnsignedInt(_), UnsignedInt(_)) => true,
             (String(_), String(_)) => true,
             _ => false,
+        }
+    }
+}
+
+impl Debug for Value {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Value::Point(p) => write!(f, "Point {:?}", p),
+            Value::Size(s) => write!(f, "Size {:?}", s),
+            Value::Rect(r) => write!(f, "Rect {:?}", r),
+            Value::Color(c) => write!(f, "Color {:?}", c),
+            Value::LinearGradient(g) => write!(f, "LinearGradient {:?}", g),
+            Value::Float(x) => write!(f, "Float {}", x),
+            Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
+            Value::String(s) => write!(f, "String {:?}", s),
         }
     }
 }
@@ -282,19 +284,32 @@ impl<T> From<Key<T>> for String {
     }
 }
 
+impl ValueTypeError {
+    fn new(expected: &'static str, found: Value) -> ValueTypeError {
+        ValueTypeError { expected, found }
+    }
+}
+impl std::fmt::Display for ValueTypeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "Incorrect value type: expected {} found {:?}",
+            self.expected, self.found
+        )
+    }
+}
+
+impl std::error::Error for ValueTypeError {}
+
 /// Use this macro for types which are cheap to clone (ie all `Copy` types).
 macro_rules! impl_value_type_owned {
     ($ty:ty, $var:ident) => {
         impl<'a> ValueType<'a> for $ty {
             type Owned = $ty;
-            fn try_from_value(value: &Value) -> Result<Self, EnvError> {
+            fn try_from_value(value: &Value) -> Result<Self, ValueTypeError> {
                 match value {
                     Value::$var(f) => Ok(f.to_owned()),
-                    other => Err(format!(
-                        "incorrect Value type. Expected {}, found {:?}",
-                        stringify!($var),
-                        other
-                    )),
+                    other => Err(ValueTypeError::new(any::type_name::<$ty>(), other.clone())),
                 }
             }
         }
@@ -313,14 +328,10 @@ macro_rules! impl_value_type_borrowed {
     ($ty:ty, $owned:ty, $var:ident) => {
         impl<'a> ValueType<'a> for &'a $ty {
             type Owned = $owned;
-            fn try_from_value(value: &'a Value) -> Result<Self, EnvError> {
+            fn try_from_value(value: &'a Value) -> Result<Self, ValueTypeError> {
                 match value {
                     Value::$var(f) => Ok(f),
-                    other => Err(format!(
-                        "incorrect Value type. Expected {}, found {:?}",
-                        stringify!($var),
-                        other
-                    )),
+                    other => Err(ValueTypeError::new(any::type_name::<$ty>(), other.clone())),
                 }
             }
         }
@@ -339,14 +350,10 @@ macro_rules! impl_value_type_arc {
     ($ty:ty, $var:ident) => {
         impl<'a> ValueType<'a> for &'a $ty {
             type Owned = $ty;
-            fn try_from_value(value: &'a Value) -> Result<Self, EnvError> {
+            fn try_from_value(value: &'a Value) -> Result<Self, ValueTypeError> {
                 match value {
                     Value::$var(f) => Ok(f),
-                    other => Err(format!(
-                        "incorrect Value type. Expected {}, found {:?}",
-                        stringify!($var),
-                        other
-                    )),
+                    other => Err(ValueTypeError::new(any::type_name::<$ty>(), other.clone())),
                 }
             }
         }
