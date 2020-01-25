@@ -51,7 +51,6 @@ pub struct WidgetPod<T: Data, W: Widget<T>> {
     old_data: Option<T>,
     env: Option<Env>,
     inner: W,
-    id: WidgetId,
 }
 
 /// Generic state for all widgets in the hierarchy.
@@ -69,8 +68,8 @@ pub struct WidgetPod<T: Data, W: Widget<T>> {
 ///
 /// [`paint`]: trait.Widget.html#tymethod.paint
 /// [`WidgetPod`]: struct.WidgetPod.html
-#[derive(Default)]
 pub(crate) struct BaseState {
+    id: WidgetId,
     layout_rect: Rect,
 
     // TODO: consider using bitflags for the booleans.
@@ -94,26 +93,24 @@ pub(crate) struct BaseState {
     /// likely not worth the complexity.
     request_timer: bool,
 
-    /// This widget or a descendant has focus.
-    has_focus: bool,
-
-    /// This widget or a descendant has requested focus.
-    pub(crate) request_focus: bool,
+    pub(crate) request_focus: Option<FocusChange>,
     pub(crate) children: Bloom<WidgetId>,
     pub(crate) children_changed: bool,
 }
 
-impl BaseState {
-    /// Update to incorporate state changes from a child.
-    fn merge_up(&mut self, child_state: &BaseState) {
-        self.needs_inval |= child_state.needs_inval;
-        self.request_anim |= child_state.request_anim;
-        self.request_timer |= child_state.request_timer;
-        self.is_hot |= child_state.is_hot;
-        self.has_active |= child_state.has_active;
-        self.request_focus |= child_state.request_focus;
-        self.children_changed |= child_state.children_changed;
-    }
+/// Methods by which a widget can attempt to change focus state.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum FocusChange {
+    /// The focused widget is giving up focus.
+    Resign,
+    /// A specific widget wants focus
+    Focus(WidgetId),
+    /// Focus should pass to the next focusable widget
+    #[allow(dead_code)]
+    Next,
+    /// Focus should pass to the previous focusable widget
+    #[allow(dead_code)]
+    Previous,
 }
 
 impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
@@ -125,14 +122,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     pub fn new(inner: W) -> WidgetPod<T, W> {
         let id = inner.id().unwrap_or_else(WidgetId::next);
         WidgetPod {
-            state: BaseState {
-                children_changed: true,
-                ..Default::default()
-            },
+            state: BaseState::new(id),
             old_data: None,
             env: None,
             inner,
-            id,
         }
     }
 
@@ -160,9 +153,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     pub fn widget_mut(&mut self) -> &mut W {
         &mut self.inner
     }
+
     /// Get the identity of the widget.
     pub fn id(&self) -> WidgetId {
-        self.id
+        self.state.id
     }
 
     /// Set layout rectangle.
@@ -197,6 +191,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             window_id: paint_ctx.window_id,
             region: paint_ctx.region.clone(),
             base_state: &self.state,
+            focus_widget: paint_ctx.focus_widget,
         };
         self.inner.paint(&mut ctx, data, &env);
     }
@@ -296,11 +291,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             command_queue: ctx.command_queue,
             window: &ctx.window,
             window_id: ctx.window_id,
-            widget_id: self.id(),
             base_state: &mut self.state,
             had_active,
             is_handled: false,
             is_root: false,
+            focus_widget: ctx.focus_widget,
         };
         let rect = child_ctx.base_state.layout_rect;
         // Note: could also represent this as `Option<Event>`.
@@ -341,15 +336,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Event::MouseMoved(mouse_event)
             }
             Event::KeyDown(e) => {
-                recurse = child_ctx.base_state.has_focus;
+                recurse = child_ctx.has_focus();
                 Event::KeyDown(*e)
             }
             Event::KeyUp(e) => {
-                recurse = child_ctx.base_state.has_focus;
+                recurse = child_ctx.has_focus();
                 Event::KeyUp(*e)
             }
             Event::Paste(e) => {
-                recurse = child_ctx.base_state.has_focus;
+                recurse = child_ctx.has_focus();
                 Event::Paste(e.clone())
             }
             Event::Wheel(wheel_event) => {
@@ -367,7 +362,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::Command(cmd) => Event::Command(cmd.clone()),
             Event::TargetedCommand(target, cmd) => match target {
                 Target::Window(_) => Event::Command(cmd.clone()),
-                Target::Widget(id) if *id == self.id => Event::Command(cmd.clone()),
+                Target::Widget(id) if *id == child_ctx.widget_id() => Event::Command(cmd.clone()),
                 Target::Widget(id) => {
                     recurse = child_ctx.base_state.children.contains(id);
                     Event::TargetedCommand(*target, cmd.clone())
@@ -404,7 +399,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.needs_inval = false;
         ctx.request_anim = false;
 
-        let mut replacement_event = None;
         let recurse = match event {
             LifeCycle::AnimFrame(_) => {
                 let r = self.state.request_anim;
@@ -420,22 +414,29 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     self.old_data = Some(data.clone());
                     self.env = Some(env.clone());
                 }
-                self.state.children_changed
+                true
             }
             LifeCycle::HotChanged(_) => false,
+            LifeCycle::RouteFocusChanged { old, new } => {
+                self.state.request_focus = None;
+                let this_changed = old.map(|_| false).or_else(|| new.map(|_| true));
+                if let Some(change) = this_changed {
+                    let event = LifeCycle::FocusChanged(change);
+                    self.inner.lifecycle(ctx, &event, data, env);
+                    false
+                } else {
+                    old.map(|id| ctx.children.contains(&id)).unwrap_or(false)
+                        || new.map(|id| ctx.children.contains(&id)).unwrap_or(false)
+                }
+            }
             LifeCycle::FocusChanged(_) => {
-                let had_focus = self.state.has_focus;
-                let focus = self.state.request_focus;
-                self.state.request_focus = false;
-                self.state.has_focus = focus;
-                replacement_event = Some(LifeCycle::FocusChanged(focus));
-                focus || had_focus
+                self.state.request_focus = None;
+                true
             }
             _ => true,
         };
 
         if recurse {
-            let event = replacement_event.as_ref().unwrap_or(event);
             self.inner.lifecycle(ctx, event, data, env);
         }
 
@@ -499,6 +500,33 @@ impl<T: Data, W: Widget<T> + 'static> WidgetPod<T, W> {
 }
 
 impl BaseState {
+    pub(crate) fn new(id: WidgetId) -> BaseState {
+        BaseState {
+            id,
+            layout_rect: Rect::ZERO,
+            needs_inval: false,
+            is_hot: false,
+            is_active: false,
+            has_active: false,
+            request_anim: false,
+            request_timer: false,
+            request_focus: None,
+            children: Bloom::new(),
+            children_changed: false,
+        }
+    }
+
+    /// Update to incorporate state changes from a child.
+    fn merge_up(&mut self, child_state: &BaseState) {
+        self.needs_inval |= child_state.needs_inval;
+        self.request_anim |= child_state.request_anim;
+        self.request_timer |= child_state.request_timer;
+        self.is_hot |= child_state.is_hot;
+        self.has_active |= child_state.has_active;
+        self.children_changed |= child_state.children_changed;
+        self.request_focus = self.request_focus.or(child_state.request_focus);
+    }
+
     #[inline]
     fn size(&self) -> Size {
         self.layout_rect.size()
@@ -519,6 +547,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     /// The currently visible region.
     pub(crate) region: Region,
     pub(crate) base_state: &'a BaseState,
+    pub(crate) focus_widget: Option<WidgetId>,
 }
 
 /// A region of a widget, generally used to describe what needs to be drawn.
@@ -585,10 +614,11 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
 
     /// Query the focus state of the widget.
     ///
-    /// See [`EventCtx::has_focus`](struct.EventCtx.html#method.has_focus) for
-    /// additional information.
+    /// This is true only if this widget has focus.
     pub fn has_focus(&self) -> bool {
-        self.base_state.has_focus
+        self.focus_widget
+            .map(|id| id == self.base_state.id)
+            .unwrap_or(false)
     }
 
     /// Returns the currently visible [`Region`].
@@ -605,16 +635,11 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
     /// This is used by containers to ensure that their children have the correct
     /// visible region given their layout.
     pub fn with_child_ctx(&mut self, region: impl Into<Region>, f: impl FnOnce(&mut PaintCtx)) {
-        let PaintCtx {
-            render_ctx,
-            window_id,
-            base_state,
-            ..
-        } = self;
         let mut child_ctx = PaintCtx {
-            render_ctx,
-            base_state,
-            window_id: *window_id,
+            render_ctx: self.render_ctx,
+            base_state: self.base_state,
+            window_id: self.window_id,
+            focus_widget: self.focus_widget,
             region: region.into(),
         };
         f(&mut child_ctx)
@@ -648,10 +673,10 @@ pub struct EventCtx<'a, 'b> {
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     pub(crate) window: &'a WindowHandle,
     pub(crate) base_state: &'a mut BaseState,
+    pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) had_active: bool,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
-    pub(crate) widget_id: WidgetId,
 }
 
 /// A mutable context provided to the [`lifecycle`] method on widgets.
@@ -816,7 +841,11 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     ///
     /// [`request_focus`]: struct.EventCtx.html#method.request_focus
     pub fn has_focus(&self) -> bool {
-        self.base_state.has_focus
+        let is_child = self
+            .focus_widget
+            .map(|id| self.base_state.children.contains(&id))
+            .unwrap_or(false);
+        is_child || self.focus_widget == Some(self.widget_id())
     }
 
     /// Request keyboard focus.
@@ -825,7 +854,11 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     ///
     /// [`has_focus`]: struct.EventCtx.html#method.has_focus
     pub fn request_focus(&mut self) {
-        self.base_state.request_focus = true;
+        self.base_state.request_focus = Some(FocusChange::Focus(self.widget_id()));
+    }
+
+    pub fn resign_focus(&mut self) {
+        self.base_state.request_focus = Some(FocusChange::Resign);
     }
 
     /// Request an animation frame.
@@ -880,10 +913,11 @@ impl<'a, 'b> EventCtx<'a, 'b> {
 
     /// get the `WidgetId` of the current widget.
     pub fn widget_id(&self) -> WidgetId {
-        self.widget_id
+        self.base_state.id
     }
 
     pub(crate) fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
+        let widget_id = self.widget_id();
         LifeCycleCtx {
             command_queue: self.command_queue,
             children_changed: false,
@@ -891,7 +925,7 @@ impl<'a, 'b> EventCtx<'a, 'b> {
             children: Bloom::default(),
             request_anim: false,
             window_id: self.window_id,
-            widget_id: self.widget_id,
+            widget_id,
         }
     }
 }

@@ -29,7 +29,7 @@ use crate::shell::{
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::bloom::Bloom;
-use crate::core::{BaseState, CommandQueue};
+use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::menu::ContextMenu;
 use crate::theme;
 use crate::window::Window;
@@ -198,11 +198,12 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
     }
 
     fn do_paint(&mut self, piet: &mut Piet) {
-        let base_state = BaseState::default();
+        let base_state = BaseState::new(self.window.root.id());
         let mut paint_ctx = PaintCtx {
             render_ctx: piet,
             base_state: &base_state,
             window_id: self.window_id,
+            focus_widget: self.window.focus,
             region: Rect::ZERO.into(),
         };
         self.window.paint(&mut paint_ctx, self.data, self.env);
@@ -227,7 +228,7 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
             other => other,
         };
 
-        let mut base_state = BaseState::default();
+        let mut base_state = BaseState::new(self.window.root.id());
         let mut ctx = EventCtx {
             win_ctx,
             cursor: &mut cursor,
@@ -238,14 +239,21 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
             had_active: self.window.root.has_active(),
             window: &self.handle,
             window_id: self.window_id,
-            widget_id: self.window.root.id(),
+            focus_widget: self.window.focus,
         };
         self.window.event(&mut ctx, &event, self.data, self.env);
 
         let is_handled = ctx.is_handled;
 
-        if ctx.base_state.request_focus {
-            self.do_lifecycle(LifeCycle::FocusChanged(true));
+        if let Some(focus_req) = ctx.base_state.request_focus.take() {
+            let old = self.window.focus;
+            let new = match focus_req {
+                FocusChange::Resign => None,
+                FocusChange::Focus(id) => Some(id),
+                _ => None,
+            };
+            self.do_lifecycle(LifeCycle::RouteFocusChanged { old, new });
+            self.window.focus = new;
         }
 
         if let Some(cursor) = cursor {
