@@ -19,6 +19,7 @@ use std::time::Instant;
 use crate::kurbo::{Point, Rect, Size};
 use crate::shell::{Counter, WindowHandle};
 
+use crate::core::FocusChange;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
     LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetId, WidgetPod,
@@ -39,6 +40,7 @@ pub struct Window<T: Data> {
     pub(crate) needs_inval: bool,
     pub(crate) children_changed: bool,
     pub(crate) focus: Option<WidgetId>,
+    focus_widgets: Vec<WidgetId>,
     // delegate?
 }
 
@@ -58,6 +60,7 @@ impl<T: Data> Window<T> {
             needs_inval: false,
             children_changed: false,
             focus: None,
+            focus_widgets: Vec::new(),
         }
     }
 
@@ -87,6 +90,10 @@ impl<T: Data> Window<T> {
         self.root.lifecycle(ctx, event, data, env);
         self.needs_inval |= ctx.needs_inval;
         self.children_changed |= ctx.children_changed;
+
+        if let LifeCycle::Register = event {
+            self.focus_widgets = std::mem::take(&mut ctx.focus_widgets);
+        }
     }
 
     /// AnimFrame has special logic, so we implement it separately.
@@ -136,6 +143,28 @@ impl<T: Data> Window<T> {
             .as_ref()
             .and_then(|m| m.command_for_id(cmd_id))
             .or_else(|| self.menu.as_ref().and_then(|m| m.command_for_id(cmd_id)))
+    }
+
+    pub(crate) fn widget_for_focus_request(&self, focus: FocusChange) -> Option<WidgetId> {
+        match focus {
+            FocusChange::Resign => None,
+            FocusChange::Focus(id) => Some(id),
+            FocusChange::Next => self
+                .focus
+                .and_then(|id| self.focus_widgets.iter().position(|i| i == &id))
+                .map(|idx| {
+                    let next_idx = (idx + 1) % self.focus_widgets.len();
+                    self.focus_widgets[next_idx]
+                }),
+            FocusChange::Previous => self
+                .focus
+                .and_then(|id| self.focus_widgets.iter().position(|i| i == &id))
+                .map(|idx| {
+                    let len = self.focus_widgets.len();
+                    let prev_idx = (idx + len - 1) % len;
+                    self.focus_widgets[prev_idx]
+                }),
+        }
     }
 }
 

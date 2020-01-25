@@ -106,10 +106,8 @@ pub(crate) enum FocusChange {
     /// A specific widget wants focus
     Focus(WidgetId),
     /// Focus should pass to the next focusable widget
-    #[allow(dead_code)]
     Next,
     /// Focus should pass to the previous focusable widget
-    #[allow(dead_code)]
     Previous,
 }
 
@@ -405,7 +403,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 self.state.request_anim = false;
                 r
             }
-            LifeCycle::RegisterChildren => {
+            LifeCycle::Register => {
                 // if this is called, it means widgets were added; check if our
                 // widget has data, and if it doesn't assume it is new and send WidgetAdded
                 if self.old_data.is_none() {
@@ -447,7 +445,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.needs_inval |= pre_inval;
 
         // we only want to update child state after this specific event.
-        if let LifeCycle::RegisterChildren = event {
+        if let LifeCycle::Register = event {
             self.state.children = ctx.children;
             self.state.children_changed = false;
             ctx.children = ctx.children.union(pre_children);
@@ -683,17 +681,20 @@ pub struct EventCtx<'a, 'b> {
 ///
 /// Certain methods on this context are only meaningful during the handling of
 /// specific lifecycle events; for instance [`register_child`]
-/// should only be called while handling [`LifeCycle::RegisterChildren`].
+/// should only be called while handling [`LifeCycle::Register`].
 ///
 /// [`lifecycle`]: widget/trait.Widget.html#tymethod.lifecycle
 /// [`register_child`]: #method.register_child
 /// [`LifeCycleCtx::register_child`]: #method.register_child
-/// [`LifeCycle::RegisterChildren`]: enum.LifeCycle.html#variant.RegisterChildren
+/// [`LifeCycle::Register`]: enum.LifeCycle.html#variant.Register
 pub struct LifeCycleCtx<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
     /// the registry for the current widgets children;
-    /// only really meaninful during a `LifeCyle::RegisterChildren` call.
+    /// only really meaningful during a `LifeCyle::Register` call.
     pub(crate) children: Bloom<WidgetId>,
+    /// during `LifeCycle::Register`, widgets can register themselves
+    /// to participate in automatic focus.
+    pub(crate) focus_widgets: Vec<WidgetId>,
     pub(crate) children_changed: bool,
     pub(crate) needs_inval: bool,
     pub(crate) request_anim: bool,
@@ -857,8 +858,37 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.base_state.request_focus = Some(FocusChange::Focus(self.widget_id()));
     }
 
+    /// Transfer focus to the next focusable widget.
+    ///
+    /// This should only be called by a widget that currently has focus.
+    pub fn focus_next(&mut self) {
+        if self.focus_widget == Some(self.widget_id()) {
+            self.base_state.request_focus = Some(FocusChange::Next);
+        } else {
+            log::warn!("focus_next can only be called by the currently focused widget");
+        }
+    }
+
+    /// Transfer focus to the previous focusable widget.
+    ///
+    /// This should only be called by a widget that currently has focus.
+    pub fn focus_prev(&mut self) {
+        if self.focus_widget == Some(self.widget_id()) {
+            self.base_state.request_focus = Some(FocusChange::Previous);
+        } else {
+            log::warn!("focus_prev can only be called by the currently focused widget");
+        }
+    }
+
+    /// Give up focus.
+    ///
+    /// This should only be called by a widget that currently has focus.
     pub fn resign_focus(&mut self) {
-        self.base_state.request_focus = Some(FocusChange::Resign);
+        if self.focus_widget == Some(self.widget_id()) {
+            self.base_state.request_focus = Some(FocusChange::Resign);
+        } else {
+            log::warn!("resign_focus can only be called by the currently focused widget");
+        }
     }
 
     /// Request an animation frame.
@@ -923,6 +953,7 @@ impl<'a, 'b> EventCtx<'a, 'b> {
             children_changed: false,
             needs_inval: false,
             children: Bloom::default(),
+            focus_widgets: Vec::new(),
             request_anim: false,
             window_id: self.window_id,
             widget_id,
@@ -944,10 +975,19 @@ impl<'a> LifeCycleCtx<'a> {
         self.widget_id
     }
 
-    /// Registers a child wildget. This should only be called
-    /// in response to a `LifeCycle::RegisterChildren` event.
+    /// Registers a child widget.
+    ///
+    /// This should only be called in response to a `LifeCycle::Register` event.
+    ///
+    /// In general, you should not need to call this method; it is handled by
+    /// the `WidgetPod`.
     pub fn register_child(&mut self, child_id: WidgetId) {
         self.children.add(&child_id);
+    }
+
+    /// Register this widget to be eligile to accept focus automatically.
+    pub fn register_for_focus(&mut self) {
+        self.focus_widgets.push(self.widget_id);
     }
 
     /// Indicate that your children have changed.
@@ -1068,11 +1108,12 @@ mod tests {
             request_anim: false,
             window_id: WindowId::next(),
             widget_id: WidgetId::next(),
+            focus_widgets: Vec::new(),
         };
 
         let env = Env::default();
 
-        widget.lifecycle(&mut ctx, &LifeCycle::RegisterChildren, &None, &env);
+        widget.lifecycle(&mut ctx, &LifeCycle::Register, &None, &env);
         assert!(ctx.children.contains(&id1));
         assert!(ctx.children.contains(&id2));
         assert!(ctx.children.contains(&id3));
