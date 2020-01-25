@@ -14,7 +14,7 @@
 
 //! Simple calculator.
 
-use druid::{AppLauncher, Data, Lens, LensWrap, Widget, WindowDesc};
+use druid::{AppLauncher, Data, Lens, LensWrap, LocalizedString, Widget, WindowDesc};
 
 use druid::widget::{Button, Flex, Label, Padding};
 
@@ -202,7 +202,9 @@ fn build_calc() -> impl Widget<CalcState> {
 }
 
 fn main() {
-    let window = WindowDesc::new(build_calc);
+    let window = WindowDesc::new(build_calc).title(
+        LocalizedString::new("calc-demo-window-title").with_placeholder("Simple Calculator".into()),
+    );
     let calc_state = CalcState {
         value: "0".to_string(),
         operand: 0.0,

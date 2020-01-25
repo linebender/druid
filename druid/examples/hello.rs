@@ -16,7 +16,9 @@ use druid::widget::{Align, Button, Flex, Label, Padding};
 use druid::{AppLauncher, LocalizedString, PlatformError, Widget, WindowDesc};
 
 fn main() -> Result<(), PlatformError> {
-    let main_window = WindowDesc::new(ui_builder);
+    let main_window = WindowDesc::new(ui_builder).title(
+        LocalizedString::new("hello-demo-window-title").with_placeholder("Hello World!".into()),
+    );
     let data = 0_u32;
     AppLauncher::with_window(main_window)
         .use_simple_logger()

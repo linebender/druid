@@ -18,8 +18,8 @@ use druid::kurbo::BezPath;
 use druid::piet::{FontBuilder, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
 
 use druid::{
-    Affine, AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    Rect, RenderContext, Size, UpdateCtx, Widget, WindowDesc,
+    Affine, AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LocalizedString,
+    PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WindowDesc,
 };
 
 struct CustomWidget;
@@ -116,7 +116,10 @@ impl Widget<String> for CustomWidget {
 }
 
 fn main() {
-    let window = WindowDesc::new(|| CustomWidget {});
+    let window = WindowDesc::new(|| CustomWidget {}).title(
+        LocalizedString::new("custom-widget-demo-window-title")
+            .with_placeholder("Fancy Colors".into()),
+    );
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch("Druid + Piet".to_string())

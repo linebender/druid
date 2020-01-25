@@ -18,8 +18,8 @@ use std::f64::consts::PI;
 
 use druid::kurbo::Line;
 use druid::{
-    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, PaintCtx, Point,
-    RenderContext, Size, UpdateCtx, Vec2, Widget, WindowDesc,
+    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LocalizedString, PaintCtx,
+    Point, RenderContext, Size, UpdateCtx, Vec2, Widget, WindowDesc,
 };
 
 struct AnimWidget {
@@ -66,7 +66,10 @@ impl Widget<u32> for AnimWidget {
 }
 
 fn main() {
-    let window = WindowDesc::new(|| AnimWidget { t: 0.0 });
+    let window = WindowDesc::new(|| AnimWidget { t: 0.0 }).title(
+        LocalizedString::new("anim-demo-window-title")
+            .with_placeholder("You spin me right round...".into()),
+    );
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(0)

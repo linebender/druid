@@ -13,10 +13,13 @@
 // limitations under the License.
 
 use druid::widget::{Align, Flex, Label, Padding, Parse, TextBox};
-use druid::{AppLauncher, Widget, WindowDesc};
+use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn main() {
-    let main_window = WindowDesc::new(ui_builder);
+    let main_window = WindowDesc::new(ui_builder).title(
+        LocalizedString::new("parse-demo-window-title")
+            .with_placeholder("Number Parsing Demo".into()),
+    );
     let data = Some(0);
     AppLauncher::with_window(main_window)
         .use_simple_logger()

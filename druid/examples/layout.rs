@@ -15,7 +15,7 @@
 //! This example shows how to construct a basic layout.
 
 use druid::widget::{Button, Flex, Label, SizedBox, WidgetExt};
-use druid::{AppLauncher, Color, Widget, WindowDesc};
+use druid::{AppLauncher, Color, LocalizedString, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     // Begin construction of vertical layout
@@ -53,7 +53,9 @@ fn build_app() -> impl Widget<u32> {
 }
 
 fn main() {
-    let window = WindowDesc::new(build_app);
+    let window = WindowDesc::new(build_app).title(
+        LocalizedString::new("layout-demo-window-title").with_placeholder("Very flexable".into()),
+    );
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(0u32)
