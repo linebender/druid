@@ -29,7 +29,7 @@ use crate::shell::{
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::bloom::Bloom;
-use crate::core::{BaseState, CommandQueue, FocusChange};
+use crate::core::{BaseState, CommandQueue};
 use crate::menu::ContextMenu;
 use crate::theme;
 use crate::window::Window;
@@ -247,11 +247,7 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
 
         if let Some(focus_req) = ctx.base_state.request_focus.take() {
             let old = self.window.focus;
-            let new = match focus_req {
-                FocusChange::Resign => None,
-                FocusChange::Focus(id) => Some(id),
-                _ => None,
-            };
+            let new = self.window.widget_for_focus_request(focus_req);
             self.do_lifecycle(LifeCycle::RouteFocusChanged { old, new });
             self.window.focus = new;
         }
@@ -270,6 +266,7 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
             children_changed: false,
             needs_inval: false,
             request_anim: false,
+            focus_widgets: Vec::new(),
             window_id: self.window_id,
             widget_id: self.window.root.id(),
         };
@@ -523,7 +520,7 @@ impl<T: Data> AppState<T> {
             if win.window.children_changed {
                 win.window.children_changed = false;
                 win.into_ctx(&mut self.command_queue, &mut self.data, &self.env)
-                    .do_lifecycle(LifeCycle::RegisterChildren);
+                    .do_lifecycle(LifeCycle::Register);
             }
         }
     }
@@ -556,7 +553,7 @@ impl<T: Data> DruidHandler<T> {
             .assemble_window_state(self.window_id)
         {
             win.do_lifecycle(LifeCycle::WidgetAdded);
-            win.do_lifecycle(LifeCycle::RegisterChildren);
+            win.do_lifecycle(LifeCycle::Register);
             win.do_lifecycle(LifeCycle::WindowConnected);
         }
         self.process_commands(win_ctx);

@@ -137,13 +137,27 @@ pub enum LifeCycle {
     /// This is sent after `WidgetAdded`. Widgets should handle this event if
     /// they need to do some addition setup when a window is first created.
     WindowConnected,
-    /// Sent to a widget when its children have changed.
+    /// Sent to a widget when it or any of its children have changed.
     ///
-    /// If a widget manages children, it is responsible for calling
-    /// [`LifeCycleCtx::register_child`] for each of its existing children.
+    /// This event is used to register widgets with the framework, as well
+    /// as to register widgets to participate in certain framework features.
+    ///
+    /// ## Registering children
+    ///
+    /// Container widgets (widgets which use [`WidgetPod`] to manage children)
+    /// must ensure that this event is forwarded to those children. The [`WidgetPod`]
+    /// itself will handle registering those children with the system; this is
+    /// required for things like correct routing of events.
+    ///
+    /// ## Participating in focus
+    ///
+    /// Widgets which wish to participate in automatic focus (using tab to change
+    /// focus) must handle this event and call [`LifeCycleCtx::register_for_focus`].
     ///
     /// [`LifeCycleCtx::register_child`]: struct.LifeCycleCtx.html#method.register_child
-    RegisterChildren,
+    /// [`WidgetPod`]: struct.WidgetPod.html
+    /// [`LifeCycleCtx::register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
+    Register,
     /// Called at the beginning of a new animation frame.
     ///
     /// On the first frame when transitioning from idle to animating, `interval`

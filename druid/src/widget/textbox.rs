@@ -222,6 +222,7 @@ impl TextBox {
 }
 
 impl Widget<String> for TextBox {
+    #[allow(clippy::cognitive_complexity)]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
         // Guard against external changes in data
         self.selection = self.selection.constrain_to(data);
@@ -280,6 +281,7 @@ impl Widget<String> for TextBox {
                     self.reset_cursor_blink(ctx);
                 }
             }
+            //TODO: move this to a 'handle_key' function, remove the #allow above
             Event::KeyDown(key_event) => {
                 match key_event {
                     // Select all (Ctrl+A || Cmd+A)
@@ -344,6 +346,11 @@ impl Widget<String> for TextBox {
                         }
                         self.reset_cursor_blink(ctx);
                     }
+                    // Tab and shift+tab
+                    k_e if HotKey::new(None, KeyCode::Tab).matches(k_e) => ctx.focus_next(),
+                    k_e if HotKey::new(RawMods::Shift, KeyCode::Tab).matches(k_e) => {
+                        ctx.focus_prev()
+                    }
                     // Actual typing
                     k_e if k_e.key_code.is_printable() => {
                         let incoming_text = k_e.text().unwrap_or("");
@@ -360,13 +367,14 @@ impl Widget<String> for TextBox {
         }
     }
 
-    fn lifecycle(
-        &mut self,
-        _ctx: &mut LifeCycleCtx,
-        _event: &LifeCycle,
-        _data: &String,
-        _env: &Env,
-    ) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &String, _env: &Env) {
+        match event {
+            LifeCycle::WidgetAdded => ctx.invalidate(),
+            LifeCycle::Register => ctx.register_for_focus(),
+            //TODO: lifecyclectx needs to be able to set timers?
+            //LifeCycle::FocusChanged(true) => self.reset_cursor_blink(),
+            _ => (),
+        }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &String, _data: &String, _env: &Env) {
