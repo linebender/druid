@@ -136,10 +136,10 @@ pub trait Widget<T> {
     /// (available in the [`LifeCycle`] enum) that are generally related to
     /// changes in the widget graph or in the state of your specific widget.
     ///
-    /// In general, a widget is not expected to mutate the application state
-    /// in response to these events, but only to update its own internal state
-    /// as required; if a widget needs to mutate data, it can submit a [`Command`]
-    /// that will be executed at the next opportunity.
+    /// A widget is not expected to mutate the application state in response
+    /// to these events, but only to update its own internal state as required;
+    /// if a widget needs to mutate data, it can submit a [`Command`] that will
+    /// be executed at the next opportunity.
     ///
     /// [`LifeCycle`]: struct.LifeCycle.html
     /// [`LifeCycleCtx`]: struct.LifeCycleCtx.html

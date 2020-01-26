@@ -449,7 +449,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         if let LifeCycle::RegisterChildren = event {
             self.state.children = ctx.children;
             self.state.children_changed = false;
-            ctx.children = ctx.children.intersection(pre_children);
+            ctx.children = ctx.children.union(pre_children);
             ctx.register_child(self.id());
         }
     }
@@ -687,7 +687,7 @@ pub struct UpdateCtx<'a, 'b: 'a> {
     pub(crate) window: &'a WindowHandle,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like
-    // `EventCtx` (and possibly using the same structure).But for
+    // `EventCtx` (and possibly using the same structure). But for
     // now keep it super-simple.
     pub(crate) needs_inval: bool,
     pub(crate) children_changed: bool,
