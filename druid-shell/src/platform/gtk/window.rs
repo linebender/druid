@@ -201,7 +201,8 @@ impl WindowBuilder {
                 | EventMask::KEY_PRESS_MASK
                 | EventMask::ENTER_NOTIFY_MASK
                 | EventMask::KEY_RELEASE_MASK
-                | EventMask::SCROLL_MASK,
+                | EventMask::SCROLL_MASK
+                | EventMask::SMOOTH_SCROLL_MASK,
         );
 
         drawing_area.set_can_focus(true);
@@ -334,10 +335,11 @@ impl WindowBuilder {
                         handler.wheel(Vec2::from((120.0, 0.0)), modifiers, &mut ctx);
                     }
                     ScrollDirection::Smooth => {
-                        // TODO: support smooth scrolling via scroll.get_delta and get_is_stop
-                        eprintln!(
-                            "Warning: somehow the Druid widget got a smooth scroll event"
-                        );
+                        //TODO: Look at how gtk's scroll containers implements it
+                        let (mut delta_x, mut delta_y) = scroll.get_delta();
+                        delta_x *= 120.;
+                        delta_y *= 120.;
+                        handler.wheel(Vec2::from((delta_x, delta_y)), modifiers, &mut ctx)
                     }
                     e => {
                         eprintln!(
