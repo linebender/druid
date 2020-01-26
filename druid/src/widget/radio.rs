@@ -81,14 +81,14 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {
-        ctx.invalidate();
-    }
-
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &T, _env: &Env) {
         if let LifeCycle::HotChanged(_) = event {
             ctx.invalidate();
         }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {
+        ctx.invalidate();
     }
 
     fn layout(

@@ -89,15 +89,15 @@ impl<T: Data> Widget<T> for SizedBox<T> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        if let Some(ref mut inner) = self.inner {
-            inner.update(ctx, old_data, data, env);
-        }
-    }
-
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.lifecycle(ctx, event, data, env)
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+        if let Some(ref mut inner) = self.inner {
+            inner.update(ctx, old_data, data, env);
         }
     }
 

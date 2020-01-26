@@ -37,8 +37,6 @@ impl Widget<u32> for AnimWidget {
         }
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &u32, _data: &u32, _env: &Env) {}
-
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &u32, _env: &Env) {
         if let LifeCycle::AnimFrame(interval) = event {
             self.t += (*interval as f64) * 1e-9;
@@ -47,6 +45,8 @@ impl Widget<u32> for AnimWidget {
             }
         }
     }
+
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &u32, _data: &u32, _env: &Env) {}
 
     fn layout(
         &mut self,

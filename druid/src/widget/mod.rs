@@ -213,19 +213,17 @@ impl WidgetId {
     }
 }
 
-// TODO: explore getting rid of this (ie be consistent about using
-// `dyn Widget` only).
 impl<T> Widget<T> for Box<dyn Widget<T>> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.deref_mut().event(ctx, event, data, env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        self.deref_mut().update(ctx, old_data, data, env);
-    }
-
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         self.deref_mut().lifecycle(ctx, event, data, env);
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+        self.deref_mut().update(ctx, old_data, data, env);
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {

@@ -152,19 +152,6 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         });
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        if self.update_child_count(data, env) {
-            ctx.children_changed();
-        }
-
-        let mut children = self.children.iter_mut();
-        data.for_each(|child_data, _| {
-            if let Some(child) = children.next() {
-                child.update(ctx, child_data, env);
-            }
-        });
-    }
-
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
             if self.update_child_count(data, env) {
@@ -176,6 +163,19 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         data.for_each(|child_data, _| {
             if let Some(child) = children.next() {
                 child.lifecycle(ctx, event, child_data, env);
+            }
+        });
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
+        if self.update_child_count(data, env) {
+            ctx.children_changed();
+        }
+
+        let mut children = self.children.iter_mut();
+        data.for_each(|child_data, _| {
+            if let Some(child) = children.next() {
+                child.update(ctx, child_data, env);
             }
         });
     }

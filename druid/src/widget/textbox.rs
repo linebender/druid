@@ -360,10 +360,6 @@ impl Widget<String> for TextBox {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &String, _data: &String, _env: &Env) {
-        ctx.invalidate();
-    }
-
     fn lifecycle(
         &mut self,
         _ctx: &mut LifeCycleCtx,
@@ -371,6 +367,10 @@ impl Widget<String> for TextBox {
         _data: &String,
         _env: &Env,
     ) {
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &String, _data: &String, _env: &Env) {
+        ctx.invalidate();
     }
 
     fn layout(
