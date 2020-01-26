@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A simple bloom filter, used to track child widgets.
+//! A simple Bloom filter, used to track child widgets.
 
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
@@ -28,7 +28,7 @@ const NUM_BITS: u64 = 64;
 const OFFSET_ONE: u64 = 0xcbf2_9ce4_8422_2325;
 const OFFSET_TWO: u64 = 0xe10_3ad8_2dad_8028;
 
-/// A very simple bloom filter optimized for small values.
+/// A very simple Bloom filter optimized for small values.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Bloom<T: ?Sized> {
     bits: u64,
@@ -62,6 +62,7 @@ impl<T: ?Sized + Hash> Bloom<T> {
     #[cfg(test)]
     pub fn clear(&mut self) {
         self.bits = 0;
+        self.entry_count = 0;
     }
 
     /// Add an item to the filter.
@@ -80,7 +81,7 @@ impl<T: ?Sized + Hash> Bloom<T> {
     }
 
     /// Create a new `Bloom` with the items from both filters.
-    pub fn intersection(&self, other: Bloom<T>) -> Bloom<T> {
+    pub fn union(&self, other: Bloom<T>) -> Bloom<T> {
         Bloom {
             bits: self.bits | other.bits,
             data: PhantomData,
@@ -137,7 +138,7 @@ mod tests {
     }
 
     #[test]
-    fn intersection() {
+    fn union() {
         let mut bloom1 = Bloom::default();
         bloom1.add(&0);
         bloom1.add(&1);
@@ -149,7 +150,7 @@ mod tests {
         assert!(!bloom2.contains(&0));
         assert!(!bloom2.contains(&1));
 
-        let bloom3 = bloom1.intersection(bloom2);
+        let bloom3 = bloom1.union(bloom2);
         assert!(bloom3.contains(&0));
         assert!(bloom3.contains(&1));
         assert!(bloom3.contains(&2));

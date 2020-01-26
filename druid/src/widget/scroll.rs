@@ -385,8 +385,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        // The scroll bars will fade immediately if there's some other widget requesting animation.
-        // Guard by the timer id being invalid.
+        // Guard by the timer id being invalid, otherwise the scroll bars would fade
+        // immediately if some other widgeet started animating.
         if let LifeCycle::AnimFrame(interval) = event {
             if self.scroll_bars.timer_id == TimerToken::INVALID {
                 // Animate scroll bars opacity
