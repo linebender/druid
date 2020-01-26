@@ -24,12 +24,9 @@ impl<T> Parse<T> {
 }
 
 impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse<W> {
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &Option<T>, data: &Option<T>, env: &Env) {
-        let old = match *data {
-            None => return, // Don't clobber the input
-            Some(ref x) => mem::replace(&mut self.state, x.to_string()),
-        };
-        self.widget.update(ctx, &old, &self.state, env)
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Option<T>, env: &Env) {
+        self.widget.event(ctx, event, &mut self.state, env);
+        *data = self.state.parse().ok();
     }
 
     fn lifecycle(
@@ -42,9 +39,12 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
         self.widget.lifecycle(ctx, event, &self.state, env)
     }
 
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Option<T>, env: &Env) {
-        self.widget.event(ctx, event, &mut self.state, env);
-        *data = self.state.parse().ok();
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &Option<T>, data: &Option<T>, env: &Env) {
+        let old = match *data {
+            None => return, // Don't clobber the input
+            Some(ref x) => mem::replace(&mut self.state, x.to_string()),
+        };
+        self.widget.update(ctx, &old, &self.state, env)
     }
 
     fn layout(

@@ -62,13 +62,13 @@ impl<T: Data> Window<T> {
         }
     }
 
+    pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.root.lifecycle(ctx, event, data, env);
+    }
+
     pub fn update(&mut self, update_ctx: &mut UpdateCtx, data: &T, env: &Env) {
         self.update_title(&update_ctx.window, data, env);
         self.root.update(update_ctx, data, env);
-    }
-
-    pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        self.root.lifecycle(ctx, event, data, env);
     }
 
     pub fn layout(&mut self, layout_ctx: &mut LayoutCtx, data: &T, env: &Env) {

@@ -259,6 +259,12 @@ where
             .with_mut(data, |data| inner.event(ctx, event, data, env))
     }
 
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        let inner = &mut self.inner;
+        self.lens
+            .with(data, |data| inner.lifecycle(ctx, event, data, env))
+    }
+
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         let inner = &mut self.inner;
         let lens = &self.lens;
@@ -269,12 +275,6 @@ where
                 }
             })
         })
-    }
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        let inner = &mut self.inner;
-        self.lens
-            .with(data, |data| inner.lifecycle(ctx, event, data, env))
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {

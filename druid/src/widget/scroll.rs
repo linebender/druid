@@ -380,10 +380,6 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        self.child.update(ctx, data, env);
-    }
-
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         // Guard by the timer id being invalid, otherwise the scroll bars would fade
         // immediately if some other widgeet started animating.
@@ -398,6 +394,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             }
         }
         self.child.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
+        self.child.update(ctx, data, env);
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {

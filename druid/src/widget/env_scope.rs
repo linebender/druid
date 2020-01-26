@@ -68,17 +68,17 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         self.child.event(ctx, event, data, &new_env)
     }
 
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        let mut new_env = env.clone();
+        (self.f)(&mut new_env, &data);
+        self.child.lifecycle(ctx, event, data, env)
+    }
+
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);
 
         self.child.update(ctx, old_data, data, &new_env);
-    }
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        let mut new_env = env.clone();
-        (self.f)(&mut new_env, &data);
-        self.child.lifecycle(ctx, event, data, env)
     }
 
     fn layout(

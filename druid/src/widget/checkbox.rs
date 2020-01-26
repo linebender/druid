@@ -57,14 +57,14 @@ impl Widget<bool> for Checkbox {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &bool, _data: &bool, _env: &Env) {
-        ctx.invalidate();
-    }
-
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &bool, _env: &Env) {
         if let LifeCycle::HotChanged(_) = event {
             ctx.invalidate();
         }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &bool, _data: &bool, _env: &Env) {
+        ctx.invalidate();
     }
 
     fn layout(
