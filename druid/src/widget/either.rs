@@ -25,7 +25,7 @@ pub struct Either<T: Data> {
     closure: Box<dyn Fn(&T, &Env) -> bool>,
     true_branch: WidgetPod<T, Box<dyn Widget<T>>>,
     false_branch: WidgetPod<T, Box<dyn Widget<T>>>,
-    current: Option<bool>,
+    current: bool,
 }
 
 impl<T: Data> Either<T> {
@@ -42,24 +42,14 @@ impl<T: Data> Either<T> {
             closure: Box::new(closure),
             true_branch: WidgetPod::new(true_branch).boxed(),
             false_branch: WidgetPod::new(false_branch).boxed(),
-            current: None,
-        }
-    }
-
-    fn get_current(&mut self, data: &T, env: &Env) -> bool {
-        if let Some(current) = self.current {
-            current
-        } else {
-            let current = (self.closure)(data, env);
-            self.current = Some(current);
-            current
+            current: false,
         }
     }
 }
 
 impl<T: Data> Widget<T> for Either<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        if self.get_current(data, env) {
+        if self.current {
             self.true_branch.event(ctx, event, data, env)
         } else {
             self.false_branch.event(ctx, event, data, env)
@@ -67,23 +57,24 @@ impl<T: Data> Widget<T> for Either<T> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        match event {
+            LifeCycle::WidgetAdded => {
+                self.current = (self.closure)(data, env);
+            }
+            _ => {}
+        }
         self.true_branch.lifecycle(ctx, event, data, env);
         self.false_branch.lifecycle(ctx, event, data, env);
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        let new_current = (self.closure)(data, env);
-        if self.current.is_none() {
-            self.current = Some(new_current);
-        }
-        if let Some(current) = self.current {
-            if new_current != current {
-                self.current = Some(new_current);
-                ctx.invalidate();
-            }
+        let current = (self.closure)(data, env);
+        if current != self.current {
+            self.current = current;
+            ctx.invalidate();
             // TODO: more event flow to request here.
         }
-        if new_current {
+        if self.current {
             self.true_branch.update(ctx, data, env);
         } else {
             self.false_branch.update(ctx, data, env);
@@ -97,7 +88,7 @@ impl<T: Data> Widget<T> for Either<T> {
         data: &T,
         env: &Env,
     ) -> Size {
-        if self.get_current(data, env) {
+        if self.current {
             let size = self.true_branch.layout(layout_ctx, bc, data, env);
             self.true_branch
                 .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
@@ -111,7 +102,7 @@ impl<T: Data> Widget<T> for Either<T> {
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        if self.get_current(data, env) {
+        if self.current {
             self.true_branch.paint(paint_ctx, data, env);
         } else {
             self.false_branch.paint(paint_ctx, data, env);
