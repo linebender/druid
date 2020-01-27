@@ -21,7 +21,7 @@ use unicode_segmentation::GraphemeCursor;
 
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
-    LifeCycle, LifeCycleCtx, PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
+    LifeCycle, LifeCycleCtx, PaintCtx, RawMods, Selector, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
@@ -35,6 +35,9 @@ use crate::widget::Align;
 const BORDER_WIDTH: f64 = 1.;
 const PADDING_TOP: f64 = 5.;
 const PADDING_LEFT: f64 = 4.;
+
+// we send ourselves this when we want to reset blink, which must be done in event.
+const RESET_BLINK: Selector = Selector::new("druid-builtin.reset-textbox-blink");
 
 #[derive(Debug, Clone, Copy)]
 pub struct Selection {
@@ -275,6 +278,7 @@ impl Widget<String> for TextBox {
                 }
                 ctx.set_handled();
             }
+            Event::Command(cmd) if cmd.selector == RESET_BLINK => self.reset_cursor_blink(ctx),
             Event::Paste(ref item) => {
                 if let Some(string) = item.get_string() {
                     self.insert(data, &string);
@@ -371,8 +375,8 @@ impl Widget<String> for TextBox {
         match event {
             LifeCycle::WidgetAdded => ctx.invalidate(),
             LifeCycle::Register => ctx.register_for_focus(),
-            //TODO: lifecyclectx needs to be able to set timers?
-            //LifeCycle::FocusChanged(true) => self.reset_cursor_blink(),
+            // an open question: should we be able to schedule timers here?
+            LifeCycle::FocusChanged(true) => ctx.submit_command(RESET_BLINK, ctx.widget_id()),
             _ => (),
         }
     }
