@@ -57,11 +57,8 @@ impl<T: Data> Widget<T> for Either<T> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        match event {
-            LifeCycle::WidgetAdded => {
-                self.current = (self.closure)(data, env);
-            }
-            _ => {}
+        if let LifeCycle::WidgetAdded = event {
+            self.current = (self.closure)(data, env);
         }
         self.true_branch.lifecycle(ctx, event, data, env);
         self.false_branch.lifecycle(ctx, event, data, env);
