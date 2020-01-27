@@ -45,16 +45,24 @@ impl<T: Data> Either<T> {
             current: None,
         }
     }
+
+    fn get_current(&mut self, data: &T, env: &Env) -> bool {
+        if let Some(current) = self.current {
+            current
+        } else {
+            let current = (self.closure)(data, env);
+            self.current = Some(current);
+            current
+        }
+    }
 }
 
 impl<T: Data> Widget<T> for Either<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        if let Some(current) = self.current {
-            if current {
-                self.true_branch.event(ctx, event, data, env)
-            } else {
-                self.false_branch.event(ctx, event, data, env)
-            }
+        if self.get_current(data, env) {
+            self.true_branch.event(ctx, event, data, env)
+        } else {
+            self.false_branch.event(ctx, event, data, env)
         }
     }
 
@@ -89,8 +97,7 @@ impl<T: Data> Widget<T> for Either<T> {
         data: &T,
         env: &Env,
     ) -> Size {
-        let current = self.current.unwrap_or((self.closure)(data, env));
-        if current {
+        if self.get_current(data, env) {
             let size = self.true_branch.layout(layout_ctx, bc, data, env);
             self.true_branch
                 .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
@@ -104,8 +111,7 @@ impl<T: Data> Widget<T> for Either<T> {
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let current = self.current.unwrap_or((self.closure)(data, env));
-        if current {
+        if self.get_current(data, env) {
             self.true_branch.paint(paint_ctx, data, env);
         } else {
             self.false_branch.paint(paint_ctx, data, env);
