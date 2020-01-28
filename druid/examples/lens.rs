@@ -18,7 +18,7 @@ use druid::{AppLauncher, Data, Lens, LocalizedString, Widget, WindowDesc};
 
 fn main() {
     let main_window = WindowDesc::new(ui_builder)
-        .title(LocalizedString::new("lens-demo-window-title").with_placeholder("Lens Demo".into()));
+        .title(LocalizedString::new("lens-demo-window-title").with_placeholder("Lens Demo"));
     let data = MyComplexState {
         term: String::new(),
         scale: 0.0,

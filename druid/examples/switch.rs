@@ -58,9 +58,8 @@ fn build_widget() -> impl Widget<DemoState> {
 }
 
 fn main() {
-    let window = WindowDesc::new(build_widget).title(
-        LocalizedString::new("switch-demo-window-title").with_placeholder("Switch Demo".into()),
-    );
+    let window = WindowDesc::new(build_widget)
+        .title(LocalizedString::new("switch-demo-window-title").with_placeholder("Switch Demo"));
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(DemoState {

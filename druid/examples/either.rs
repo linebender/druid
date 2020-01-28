@@ -24,7 +24,7 @@ struct AppState {
 fn main() {
     let main_window = WindowDesc::new(ui_builder).title(
         LocalizedString::new("either-demo-window-title")
-            .with_placeholder("Switcheroo".into())
+            .with_placeholder("Switcheroo")
             .with_arg("view", |data: &AppState, _env| (data.which as u8).into()),
     );
     let data = AppState::default();

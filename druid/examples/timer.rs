@@ -74,7 +74,7 @@ fn main() {
         timer_id: TimerToken::INVALID,
         on: false,
     })
-    .title(LocalizedString::new("timer-demo-window-title").with_placeholder("Tick Tock".into()));
+    .title(LocalizedString::new("timer-demo-window-title").with_placeholder("Tick Tock"));
 
     AppLauncher::with_window(window)
         .use_simple_logger()

@@ -19,7 +19,7 @@ use druid::{theme, AppLauncher, Color, Data, LocalizedString, MenuDesc, Widget, 
 
 fn main() {
     let window = WindowDesc::new(build_widget).menu(make_main_menu()).title(
-        LocalizedString::new("textbox-demo-window-title").with_placeholder("typing is fun!".into()),
+        LocalizedString::new("textbox-demo-window-title").with_placeholder("typing is fun!"),
     );
     AppLauncher::with_window(window)
         .configure_env(|env, _| {

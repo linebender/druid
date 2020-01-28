@@ -17,8 +17,7 @@ use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn main() {
     let main_window = WindowDesc::new(ui_builder).title(
-        LocalizedString::new("parse-demo-window-title")
-            .with_placeholder("Number Parsing Demo".into()),
+        LocalizedString::new("parse-demo-window-title").with_placeholder("Number Parsing Demo"),
     );
     let data = Some(0);
     AppLauncher::with_window(main_window)

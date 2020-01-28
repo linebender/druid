@@ -60,9 +60,8 @@ fn build_widget() -> impl Widget<DemoState> {
 }
 
 fn main() {
-    let window = WindowDesc::new(build_widget).title(
-        LocalizedString::new("slider-demo-window-title").with_placeholder("Sliding along".into()),
-    );
+    let window = WindowDesc::new(build_widget)
+        .title(LocalizedString::new("slider-demo-window-title").with_placeholder("Sliding along"));
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(DemoState {

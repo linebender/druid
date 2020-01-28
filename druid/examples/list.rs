@@ -28,7 +28,7 @@ struct AppData {
 
 fn main() {
     let main_window = WindowDesc::new(ui_builder)
-        .title(LocalizedString::new("list-demo-window-title").with_placeholder("List Demo".into()));
+        .title(LocalizedString::new("list-demo-window-title").with_placeholder("List Demo"));
     // Set our initial data
     let data = AppData {
         left: Arc::new(vec![1, 2]),

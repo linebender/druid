@@ -16,9 +16,8 @@ use druid::widget::{Button, Flex, Padding, Scroll};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn main() {
-    let window = WindowDesc::new(build_widget).title(
-        LocalizedString::new("scroll-demo-window-title").with_placeholder("Scroll demo".into()),
-    );
+    let window = WindowDesc::new(build_widget)
+        .title(LocalizedString::new("scroll-demo-window-title").with_placeholder("Scroll demo"));
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(0u32)

@@ -66,9 +66,8 @@ fn build_app() -> impl Widget<()> {
 }
 
 fn main() -> Result<(), PlatformError> {
-    let main_window = WindowDesc::new(build_app).title(
-        LocalizedString::new("panels-demo-window-title").with_placeholder("Fancy Boxes!".into()),
-    );
+    let main_window = WindowDesc::new(build_app)
+        .title(LocalizedString::new("panels-demo-window-title").with_placeholder("Fancy Boxes!"));
     AppLauncher::with_window(main_window)
         .use_simple_logger()
         .launch(())?;

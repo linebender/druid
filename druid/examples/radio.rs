@@ -51,7 +51,7 @@ fn build_widget() -> impl Widget<Choice> {
 
 fn main() {
     let window = WindowDesc::new(build_widget).title(
-        LocalizedString::new("radio-demo-window-title").with_placeholder("So many choices!".into()),
+        LocalizedString::new("radio-demo-window-title").with_placeholder("So many choices!"),
     );
     AppLauncher::with_window(window)
         .use_simple_logger()

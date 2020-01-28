@@ -37,8 +37,7 @@ fn main() {
     let main_window = WindowDesc::new(ui_builder)
         .menu(make_menu(&State::default()))
         .title(
-            LocalizedString::new("multiwin-demo-window-title")
-                .with_placeholder("Many windows!".into()),
+            LocalizedString::new("multiwin-demo-window-title").with_placeholder("Many windows!"),
         );
     AppLauncher::with_window(main_window)
         .delegate(Delegate)
