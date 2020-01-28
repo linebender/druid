@@ -56,7 +56,7 @@ pub use crate::core::{
 pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
-pub use command::{sys as commands, Command, ExtCommand, Selector, Target};
+pub use command::{sys as commands, Command, Selector, Target};
 pub use data::Data;
 pub use env::{Env, Key, Value};
 pub use event::{Event, LifeCycle, WheelEvent};

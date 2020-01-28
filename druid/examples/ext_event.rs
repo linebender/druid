@@ -20,9 +20,9 @@ use std::time::{Duration, Instant};
 use druid::kurbo::RoundedRect;
 use druid::widget::WidgetExt;
 use druid::{
-    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, ExtCommand, LayoutCtx,
-    LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size,
-    UpdateCtx, Widget, WindowDesc,
+    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
+    LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size, UpdateCtx,
+    Widget, WindowDesc,
 };
 
 const SET_COLOR: Selector = Selector::new("event-example.set-color");
@@ -88,8 +88,9 @@ fn main() {
     thread::spawn(move || {
         loop {
             let time_since_start = Instant::now() - start_time;
-            // there is no logic here; it's a very silly way of creating a color.
             let bits = (time_since_start.as_nanos() % (0xFFFFFF)) as u32;
+
+            // there is no logic here; it's a very silly way of creating a color.
             let mask = 0x924924;
             let red = bits & mask;
             let red = (red >> 16 | red >> 8 | red) & 0xFF;
@@ -99,10 +100,9 @@ fn main() {
             let blue = (blue >> 16 | blue >> 8 | blue) & 0xFF;
 
             let next_color = Color::rgb8(red as u8, green as u8, blue as u8);
-            let cmd = ExtCommand::new(SET_COLOR, next_color);
 
             // if this fails we're shutting down
-            if let Err(_) = event_sink.submit_command(cmd, None) {
+            if let Err(_) = event_sink.submit_command(SET_COLOR, next_color, None) {
                 break;
             }
             thread::sleep(Duration::from_millis(150));

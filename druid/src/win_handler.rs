@@ -632,7 +632,6 @@ impl<T: Data> DruidHandler<T> {
             match ext_cmd {
                 Some((targ, cmd)) => {
                     let targ = targ.unwrap_or_else(|| self.window_id.into());
-                    let cmd: Command = cmd.into();
                     self.handle_cmd(targ, cmd, win_ctx);
                 }
                 None => break,
