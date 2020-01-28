@@ -80,6 +80,7 @@ impl HwndRenderTarget {
         let rt_props = DEFAULT_PROPS;
         let mut hwnd_props = DEFAULT_HWND_PROPS;
 
+        hwnd_props.hwnd = hwnd;
         hwnd_props.pixelSize.width = width;
         hwnd_props.pixelSize.height = height;
 
