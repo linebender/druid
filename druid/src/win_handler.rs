@@ -30,6 +30,7 @@ use crate::shell::{
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::bloom::Bloom;
 use crate::core::{BaseState, CommandQueue};
+use crate::ext_event::ExtEventHost;
 use crate::menu::ContextMenu;
 use crate::theme;
 use crate::window::Window;
@@ -42,6 +43,9 @@ use crate::{
 use crate::command::sys as sys_cmd;
 
 const RUN_COMMANDS_TOKEN: IdleToken = IdleToken::new(1);
+
+/// A token we are called back with if an external event was submitted.
+pub(crate) const EXT_EVENT_IDLE_TOKEN: IdleToken = IdleToken::new(2);
 
 /// The struct implements the druid-shell `WinHandler` trait.
 ///
@@ -60,6 +64,7 @@ pub struct DruidHandler<T: Data> {
 pub(crate) struct AppState<T: Data> {
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: CommandQueue,
+    ext_event_host: ExtEventHost,
     windows: Windows<T>,
     pub(crate) env: Env,
     pub(crate) data: T,
@@ -327,10 +332,12 @@ impl<T: Data> AppState<T> {
         data: T,
         env: Env,
         delegate: Option<Box<dyn AppDelegate<T>>>,
+        ext_event_host: ExtEventHost,
     ) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(AppState {
             delegate,
             command_queue: VecDeque::new(),
+            ext_event_host,
             data,
             env,
             windows: Windows::default(),
@@ -377,6 +384,13 @@ impl<T: Data> AppState<T> {
 
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
         self.windows.connect(id, handle);
+
+        // If the external event host has no handle, it cannot wake us
+        // when an event arrives.
+        if self.ext_event_host.handle_window_id.is_none() {
+            self.set_ext_event_idle_handler(id);
+        }
+
         self.with_delegate(id, |del, data, env, ctx| {
             del.window_added(id, data, env, ctx)
         });
@@ -394,6 +408,32 @@ impl<T: Data> AppState<T> {
             del.window_removed(window_id, data, env, ctx)
         });
         self.windows.remove(window_id);
+
+        // if we are closing the window that is currently responsible for
+        // waking us when external events arrive, we want to pass that responsibility
+        // to another window.
+        if self.ext_event_host.handle_window_id == Some(window_id) {
+            self.ext_event_host.handle_window_id = None;
+            // find any other live window
+            let win_id = self.windows.windows.keys().find(|k| *k != &window_id);
+            if let Some(any_other_window) = win_id.cloned() {
+                self.set_ext_event_idle_handler(any_other_window);
+            }
+        }
+    }
+
+    /// Set the idle handle that will be used to wake us when external events arrive.
+    fn set_ext_event_idle_handler(&mut self, id: WindowId) {
+        if let Some(mut idle) = self
+            .windows
+            .get_mut(id)
+            .and_then(|win| win.handle.get_idle_handle())
+        {
+            if self.ext_event_host.has_pending_items() {
+                idle.schedule_idle(EXT_EVENT_IDLE_TOKEN);
+            }
+            self.ext_event_host.set_idle(idle, id);
+        }
     }
 
     /// triggered by a menu item or other command.
@@ -579,6 +619,21 @@ impl<T: Data> DruidHandler<T> {
                 None => break,
             }
         }
+    }
+
+    fn process_ext_events(&mut self, win_ctx: &mut dyn WinCtx) {
+        loop {
+            let ext_cmd = self.app_state.borrow_mut().ext_event_host.recv();
+            match ext_cmd {
+                Some((targ, cmd)) => {
+                    let targ = targ.unwrap_or_else(|| self.window_id.into());
+                    let cmd: Command = cmd.into();
+                    self.handle_cmd(targ, cmd, win_ctx);
+                }
+                None => break,
+            }
+        }
+        self.app_state.borrow_mut().invalidate_and_finalize();
     }
 
     fn handle_system_cmd(&mut self, cmd_id: u32, win_ctx: &mut dyn WinCtx) {
@@ -779,8 +834,13 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn idle(&mut self, token: IdleToken, ctx: &mut dyn WinCtx) {
-        if token == RUN_COMMANDS_TOKEN {
-            self.process_commands(ctx);
+        match token {
+            RUN_COMMANDS_TOKEN => {
+                self.process_commands(ctx);
+                self.app_state.borrow_mut().invalidate_and_finalize();
+            }
+            EXT_EVENT_IDLE_TOKEN => self.process_ext_events(ctx),
+            other => log::warn!("unexpected idle token {:?}", other),
         }
     }
 

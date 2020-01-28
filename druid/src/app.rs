@@ -18,6 +18,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
 use crate::shell::{Application, Error as PlatformError, RunLoop, WindowBuilder, WindowHandle};
 use crate::win_handler::AppState;
@@ -32,6 +33,7 @@ pub struct AppLauncher<T> {
     windows: Vec<WindowDesc<T>>,
     env_setup: Option<Box<EnvSetupFn<T>>>,
     delegate: Option<Box<dyn AppDelegate<T>>>,
+    ext_event_host: ExtEventHost,
 }
 
 /// A function that can create a widget.
@@ -60,6 +62,7 @@ impl<T: Data> AppLauncher<T> {
             windows: vec![window],
             env_setup: None,
             delegate: None,
+            ext_event_host: ExtEventHost::new(),
         }
     }
 
@@ -88,6 +91,15 @@ impl<T: Data> AppLauncher<T> {
         self
     }
 
+    /// Returns an [`ExtEventSink`] that can be moved between threads,
+    /// and can be used to submit [`ExtCommand`]s back to the application.
+    ///
+    /// [`ExtEventSink`]: struct.ExtEventSink.html
+    /// [`ExtCommand`]: struct.ExtCommand.html
+    pub fn get_external_handle(&self) -> ExtEventSink {
+        self.ext_event_host.make_sink()
+    }
+
     /// Build the windows and start the runloop.
     ///
     /// Returns an error if a window cannot be instantiated. This is usually
@@ -100,7 +112,7 @@ impl<T: Data> AppLauncher<T> {
             f(&mut env, &data);
         }
 
-        let state = AppState::new(data, env, self.delegate.take());
+        let state = AppState::new(data, env, self.delegate.take(), self.ext_event_host);
 
         for desc in self.windows {
             let window = desc.build_native(&state)?;
@@ -142,6 +154,12 @@ impl<T: Data> WindowDesc<T> {
     /// [`LocalizedString`]: struct.LocalizedString.html
     pub fn title(mut self, title: LocalizedString<T>) -> Self {
         self.title = Some(title);
+        self
+    }
+
+    /// Set the menu for this window.
+    pub fn menu(mut self, menu: MenuDesc<T>) -> Self {
+        self.menu = Some(menu);
         self
     }
 
@@ -189,11 +207,5 @@ impl<T: Data> WindowDesc<T> {
             .add_window(self.id, Window::new(root, title, menu));
 
         builder.build()
-    }
-
-    /// Set the menu for this window.
-    pub fn menu(mut self, menu: MenuDesc<T>) -> Self {
-        self.menu = Some(menu);
-        self
     }
 }
