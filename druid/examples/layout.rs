@@ -54,7 +54,7 @@ fn build_app() -> impl Widget<u32> {
 
 fn main() {
     let window = WindowDesc::new(build_app).title(
-        LocalizedString::new("layout-demo-window-title").with_placeholder("Very flexable".into()),
+        LocalizedString::new("layout-demo-window-title").with_placeholder("Very flexible".into()),
     );
     AppLauncher::with_window(window)
         .use_simple_logger()
