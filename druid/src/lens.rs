@@ -54,7 +54,8 @@ pub use druid_derive::Lens;
 
 use crate::kurbo::Size;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetId,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    UpdateCtx, Widget, WidgetId,
 };
 
 /// A lens is a datatype that gives access to a part of a larger
@@ -258,20 +259,22 @@ where
             .with_mut(data, |data| inner.event(ctx, event, data, env))
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        let inner = &mut self.inner;
+        self.lens
+            .with(data, |data| inner.lifecycle(ctx, event, data, env))
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         let inner = &mut self.inner;
         let lens = &self.lens;
-        if let Some(old_data) = old_data {
-            lens.with(old_data, |old_data| {
-                lens.with(data, |data| {
-                    if !old_data.same(data) {
-                        inner.update(ctx, Some(old_data), data, env);
-                    }
-                })
+        lens.with(old_data, |old_data| {
+            lens.with(data, |data| {
+                if !old_data.same(data) {
+                    inner.update(ctx, old_data, data, env);
+                }
             })
-        } else {
-            lens.with(data, |data| inner.update(ctx, None, data, env));
-        }
+        })
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {

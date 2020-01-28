@@ -18,7 +18,6 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
-use std::time::Instant;
 
 use log::{error, info, warn};
 
@@ -29,13 +28,15 @@ use crate::shell::{
 };
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
-use crate::core::BaseState;
+use crate::bloom::Bloom;
+use crate::core::{BaseState, CommandQueue};
 use crate::menu::ContextMenu;
 use crate::theme;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, LifeCycle, MenuDesc,
-    PaintCtx, Target, TimerToken, UpdateCtx, WheelEvent, WindowDesc, WindowId,
+    Command, Data, Env, Event, EventCtx, KeyEvent, KeyModifiers, LayoutCtx, LifeCycle,
+    LifeCycleCtx, MenuDesc, PaintCtx, Target, TimerToken, UpdateCtx, WheelEvent, WindowDesc,
+    WindowId,
 };
 
 use crate::command::sys as sys_cmd;
@@ -58,7 +59,7 @@ pub struct DruidHandler<T: Data> {
 /// State shared by all windows in the UI.
 pub(crate) struct AppState<T: Data> {
     delegate: Option<Box<dyn AppDelegate<T>>>,
-    command_queue: VecDeque<(Target, Command)>,
+    command_queue: CommandQueue,
     windows: Windows<T>,
     pub(crate) env: Env,
     pub(crate) data: T,
@@ -76,23 +77,22 @@ struct Windows<T: Data> {
 struct WindowEntry<T: Data> {
     id: WindowId,
     window: Option<Window<T>>,
-    state: Option<WindowState>,
+    pub(crate) handle: Option<WindowHandle>,
 }
 
-/// Per-window state not owned by user code.
-pub(crate) struct WindowState {
-    // TODO: should this be in `WindowEntry` by itself?
-    pub(crate) handle: WindowHandle,
-    prev_paint_time: Option<Instant>,
-    needs_inval: bool,
+/// A borrowed `WindowEntry` with all fields present.
+struct WindowEntryMut<'a, T: Data> {
+    id: WindowId,
+    window: &'a mut Window<T>,
+    handle: &'a mut WindowHandle,
 }
 
 /// Everything required for a window to handle an event.
-struct SingleWindowState<'a, T: Data> {
+struct SingleWindowCtx<'a, T: Data> {
     window_id: WindowId,
     window: &'a mut Window<T>,
-    state: &'a mut WindowState,
-    command_queue: &'a mut VecDeque<(Target, Command)>,
+    handle: &'a mut WindowHandle,
+    command_queue: &'a mut CommandQueue,
     data: &'a mut T,
     env: &'a Env,
 }
@@ -102,31 +102,48 @@ impl<T: Data> WindowEntry<T> {
         WindowEntry {
             id,
             window: None,
-            state: None,
+            handle: None,
         }
     }
 
     // unpacks this entry if it has both a window and state set.
-    fn contents_if_some(&mut self) -> Option<(WindowId, &mut WindowState, &mut Window<T>)> {
-        if let (Some(state), Some(window)) = (self.state.as_mut(), self.window.as_mut()) {
-            Some((self.id, state, window))
+    fn try_to_mut(&mut self) -> Option<WindowEntryMut<T>> {
+        if let (Some(handle), Some(window)) = (self.handle.as_mut(), self.window.as_mut()) {
+            Some(WindowEntryMut {
+                handle,
+                window,
+                id: self.id,
+            })
         } else {
             None
         }
     }
 }
 
+impl<'a, T: Data> WindowEntryMut<'a, T> {
+    fn into_ctx(
+        self,
+        command_queue: &'a mut CommandQueue,
+        data: &'a mut T,
+        env: &'a Env,
+    ) -> SingleWindowCtx<'a, T> {
+        SingleWindowCtx {
+            window_id: self.id,
+            window: self.window,
+            handle: self.handle,
+            command_queue,
+            data,
+            env,
+        }
+    }
+}
+
 impl<T: Data> Windows<T> {
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
-        let state = WindowState {
-            handle,
-            prev_paint_time: None,
-            needs_inval: false,
-        };
         self.windows
             .entry(id)
             .or_insert_with(|| WindowEntry::new(id))
-            .state = Some(state);
+            .handle = Some(handle);
     }
 
     fn add(&mut self, id: WindowId, window: Window<T>) {
@@ -137,39 +154,26 @@ impl<T: Data> Windows<T> {
     }
 
     fn remove(&mut self, id: WindowId) -> Option<WindowHandle> {
-        self.windows
-            .remove(&id)
-            .and_then(|entry| entry.state)
-            .map(|state| state.handle)
+        self.windows.remove(&id).and_then(|entry| entry.handle)
     }
 
-    fn state_mut(&mut self, id: WindowId) -> Option<&mut WindowState> {
-        self.get_mut(id).map(|(_, state, _)| state)
-    }
-
-    fn iter_mut(&mut self) -> impl Iterator<Item = (WindowId, &mut WindowState, &mut Window<T>)> {
-        self.windows
-            .values_mut()
-            .flat_map(WindowEntry::contents_if_some)
+    fn iter_mut(&mut self) -> impl Iterator<Item = WindowEntryMut<T>> {
+        self.windows.values_mut().flat_map(WindowEntry::try_to_mut)
     }
 
     fn get_menu_cmd(&self, window_id: WindowId, cmd_id: u32) -> Option<Command> {
         self.windows
             .get(&window_id)
-            .and_then(|entry| entry.window.as_ref())
-            .and_then(|w| w.get_menu_cmd(cmd_id))
+            .and_then(|entry| entry.window.as_ref()?.get_menu_cmd(cmd_id))
     }
 
-    fn get_mut(&mut self, id: WindowId) -> Option<(WindowId, &mut WindowState, &mut Window<T>)> {
-        self.windows
-            .get_mut(&id)
-            .and_then(WindowEntry::contents_if_some)
+    fn get_mut(&mut self, id: WindowId) -> Option<WindowEntryMut<T>> {
+        self.windows.get_mut(&id).and_then(WindowEntry::try_to_mut)
     }
 }
 
-impl<'a, T: Data> SingleWindowState<'a, T> {
-    fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
-        let request_anim = self.do_anim_frame(ctx);
+impl<'a, T: Data> SingleWindowCtx<'a, T> {
+    fn paint(&mut self, piet: &mut Piet) {
         self.do_layout(piet);
         piet.clear(self.env.get(theme::WINDOW_BACKGROUND_COLOR));
         self.do_paint(piet);
@@ -177,38 +181,12 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
         // schedule an idle call with the runloop if there are commands to process after painting is finished,
         // that would trigger a new event/update pass.
         if !self.command_queue.is_empty() {
-            if let Some(mut handle) = self.state.handle.get_idle_handle() {
+            if let Some(mut handle) = self.handle.get_idle_handle() {
                 handle.schedule_idle(RUN_COMMANDS_TOKEN);
             } else {
                 error!("failed to get idle handle");
             }
         }
-
-        request_anim
-    }
-
-    fn do_anim_frame(&mut self, ctx: &mut dyn WinCtx) -> bool {
-        // TODO: this calculation uses wall-clock time of the paint call, which
-        // potentially has jitter.
-        //
-        // See https://github.com/xi-editor/druid/issues/85 for discussion.
-        let this_paint_time = Instant::now();
-        let prev_paint_time = self.state.prev_paint_time;
-        let interval = if let Some(last) = prev_paint_time {
-            let duration = this_paint_time.duration_since(last);
-            1_000_000_000 * duration.as_secs() + u64::from(duration.subsec_nanos())
-        } else {
-            0
-        };
-        let anim_frame_event = Event::AnimFrame(interval);
-        let (_, request_anim) = self.do_event_inner(anim_frame_event, ctx);
-        let prev = if request_anim {
-            Some(this_paint_time)
-        } else {
-            None
-        };
-        self.state.prev_paint_time = prev;
-        request_anim
     }
 
     fn do_layout(&mut self, piet: &mut Piet) {
@@ -232,9 +210,8 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
 
     /// Send an event to the widget hierarchy.
     ///
-    /// Returns two flags. The first is true if the event was handled. The
-    /// second is true if an animation frame is requested.
-    fn do_event_inner(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> (bool, bool) {
+    /// Returns true if the event was handled.
+    fn do_event_inner(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
         // should there be a root base state persisting in the ui state instead?
         let mut cursor = match event {
             Event::MouseMoved(..) => Some(Cursor::Arrow),
@@ -243,7 +220,7 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
 
         let event = match event {
             Event::Size(size) => {
-                let dpi = f64::from(self.state.handle.get_dpi());
+                let dpi = f64::from(self.handle.get_dpi());
                 let scale = 96.0 / dpi;
                 Event::Size(Size::new(size.width * scale, size.height * scale))
             }
@@ -259,25 +236,37 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
             is_handled: false,
             is_root: true,
             had_active: self.window.root.has_active(),
-            window: &self.state.handle,
+            window: &self.handle,
             window_id: self.window_id,
             widget_id: self.window.root.id(),
         };
         self.window.event(&mut ctx, &event, self.data, self.env);
 
         let is_handled = ctx.is_handled;
+
         if ctx.base_state.request_focus {
-            let focus_event = Event::FocusChanged(true);
-            self.window
-                .event(&mut ctx, &focus_event, self.data, self.env);
+            self.do_lifecycle(LifeCycle::FocusChanged(true));
         }
-        self.state.needs_inval = ctx.base_state.needs_inval | ctx.base_state.request_anim;
-        let request_anim = ctx.base_state.request_anim;
+
         if let Some(cursor) = cursor {
             win_ctx.set_cursor(&cursor);
         }
 
-        (is_handled, request_anim)
+        is_handled
+    }
+
+    fn do_lifecycle(&mut self, event: LifeCycle) -> bool {
+        let mut ctx = LifeCycleCtx {
+            command_queue: self.command_queue,
+            children: Bloom::default(),
+            children_changed: false,
+            needs_inval: false,
+            request_anim: false,
+            window_id: self.window_id,
+            widget_id: self.window.root.id(),
+        };
+        self.window.lifecycle(&mut ctx, &event, self.data, self.env);
+        ctx.request_anim
     }
 
     fn set_menu(&mut self, cmd: &Command) {
@@ -290,7 +279,7 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
         };
 
         let platform_menu = menu.build_window_menu(&self.data, &self.env);
-        self.state.handle.set_menu(platform_menu);
+        self.handle.set_menu(platform_menu);
         self.window.menu = Some(menu);
     }
 
@@ -303,7 +292,7 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
             }
         };
         let platform_menu = menu.build_popup_menu(&self.data, &self.env);
-        self.state.handle.show_context_menu(platform_menu, point);
+        self.handle.show_context_menu(platform_menu, point);
         self.window.context_menu = Some(menu);
     }
 
@@ -316,9 +305,9 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
     /// for the current window.
     #[cfg(target_os = "macos")]
     fn macos_update_app_menu(&mut self) {
-        let SingleWindowState {
+        let SingleWindowCtx {
             window,
-            state,
+            handle,
             data,
             env,
             ..
@@ -328,7 +317,7 @@ impl<'a, T: Data> SingleWindowState<'a, T> {
             .as_mut()
             .map(|m| m.build_window_menu(&data, &env));
         if let Some(platform_menu) = platform_menu {
-            state.handle.set_menu(platform_menu);
+            handle.set_menu(platform_menu);
         }
     }
 }
@@ -413,18 +402,18 @@ impl<T: Data> AppState<T> {
     /// window handle; the platform should close the window, and then call
     /// our handlers `destroy()` method, at which point we can do our cleanup.
     fn request_close_window(&mut self, window_id: WindowId) {
-        if let Some(state) = self.windows.state_mut(window_id) {
-            state.handle.close();
+        if let Some(win) = self.windows.get_mut(window_id) {
+            win.handle.close();
         }
     }
 
     fn show_window(&mut self, id: WindowId) {
-        if let Some(state) = self.windows.state_mut(id) {
-            state.handle.bring_to_front_and_focus();
+        if let Some(win) = self.windows.get_mut(id) {
+            win.handle.bring_to_front_and_focus();
         }
     }
 
-    fn assemble_window_state(&mut self, window_id: WindowId) -> Option<SingleWindowState<'_, T>> {
+    fn assemble_window_state(&mut self, window_id: WindowId) -> Option<SingleWindowCtx<'_, T>> {
         let AppState {
             ref mut command_queue,
             ref mut windows,
@@ -434,19 +423,17 @@ impl<T: Data> AppState<T> {
         } = self;
         windows
             .get_mut(window_id)
-            .map(move |(window_id, state, window)| SingleWindowState {
-                window_id,
-                window,
-                state,
-                command_queue,
-                data,
-                env,
-            })
+            .map(move |w| w.into_ctx(command_queue, data, env))
     }
 
-    fn paint(&mut self, window_id: WindowId, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
+    /// Returns `true` if an animation frame was requested.
+    fn paint(&mut self, window_id: WindowId, piet: &mut Piet, _ctx: &mut dyn WinCtx) -> bool {
         self.assemble_window_state(window_id)
-            .map(|mut win| win.paint(piet, ctx))
+            .map(|mut win| {
+                win.do_lifecycle(LifeCycle::AnimFrame(0));
+                win.paint(piet);
+                win.window.wants_animation_frame()
+            })
             .unwrap_or(false)
     }
 
@@ -475,23 +462,16 @@ impl<T: Data> AppState<T> {
             }
         }
 
-        let is_handled = match event {
+        match event {
             Event::TargetedCommand(Target::Widget(_), _) => {
                 let mut any_handled = false;
 
                 // TODO: this is using the WinCtx of the window originating the event,
                 // rather than a WinCtx appropriate to the target window. This probably
                 // needs to get rethought.
-                for (window_id, state, window) in self.windows.iter_mut() {
-                    let mut win = SingleWindowState {
-                        window_id,
-                        command_queue: &mut self.command_queue,
-                        state,
-                        window,
-                        data: &mut self.data,
-                        env: &self.env,
-                    };
-                    let (handled, _) = win.do_event_inner(event.clone(), win_ctx);
+                for win in self.windows.iter_mut() {
+                    let mut win = win.into_ctx(&mut self.command_queue, &mut self.data, &self.env);
+                    let handled = win.do_event_inner(event.clone(), win_ctx);
                     any_handled |= handled;
                     if handled {
                         break;
@@ -499,47 +479,43 @@ impl<T: Data> AppState<T> {
                 }
                 any_handled
             }
-            _ => {
-                let (handled, _) = self
-                    .assemble_window_state(source_id)
-                    .map(|mut win| win.do_event_inner(event, win_ctx))
-                    .unwrap_or((false, false));
-                handled
-            }
-        };
-
-        //TODO: should we be always calling update after an event? shouldn't
-        //we at least handle commands first?
-        self.do_update(win_ctx);
-
-        is_handled
+            _ => self
+                .assemble_window_state(source_id)
+                .map(|mut win| win.do_event_inner(event, win_ctx))
+                .unwrap_or(false),
+        }
     }
 
     fn do_update(&mut self, win_ctx: &mut dyn WinCtx) {
         // we send `update` to all windows, not just the active one:
-        for (id, state, window) in self.windows.iter_mut() {
+        for WindowEntryMut { handle, window, id } in self.windows.iter_mut() {
             let mut update_ctx = UpdateCtx {
                 text_factory: win_ctx.text_factory(),
-                window: &state.handle,
+                window: handle,
                 needs_inval: false,
+                children_changed: false,
                 window_id: id,
                 widget_id: window.root.id(),
             };
             window.update(&mut update_ctx, &self.data, &self.env);
-            state.needs_inval |= update_ctx.needs_inval;
         }
-        self.invalidate_if_needed();
+        self.invalidate_and_finalize();
     }
 
     /// invalidate any window handles that need it.
     ///
     /// This should always be called at the end of an event update cycle,
     /// including for lifecycle events.
-    fn invalidate_if_needed(&mut self) {
-        for (_, state, _) in self.windows.iter_mut() {
-            if state.needs_inval {
-                state.handle.invalidate();
-                state.needs_inval = false;
+    fn invalidate_and_finalize(&mut self) {
+        for win in self.windows.iter_mut() {
+            if win.window.needs_inval {
+                win.handle.invalidate();
+                win.window.needs_inval = false;
+            }
+            if win.window.children_changed {
+                win.window.children_changed = false;
+                win.into_ctx(&mut self.command_queue, &mut self.data, &self.env)
+                    .do_lifecycle(LifeCycle::RegisterChildren);
             }
         }
     }
@@ -547,7 +523,7 @@ impl<T: Data> AppState<T> {
     fn window_got_focus(&mut self, window_id: WindowId, _ctx: &mut dyn WinCtx) {
         self.assemble_window_state(window_id)
             .as_mut()
-            .map(SingleWindowState::window_got_focus);
+            .map(SingleWindowCtx::window_got_focus);
     }
 }
 
@@ -564,6 +540,21 @@ impl<T: Data> DruidHandler<T> {
         }
     }
 
+    /// Called once, when a window first connects; we do some preliminary setup here.
+    fn do_connected(&mut self, win_ctx: &mut dyn WinCtx) {
+        if let Some(mut win) = self
+            .app_state
+            .borrow_mut()
+            .assemble_window_state(self.window_id)
+        {
+            win.do_lifecycle(LifeCycle::WidgetAdded);
+            win.do_lifecycle(LifeCycle::RegisterChildren);
+            win.do_lifecycle(LifeCycle::WindowConnected);
+        }
+        self.process_commands(win_ctx);
+        self.app_state.borrow_mut().invalidate_and_finalize();
+    }
+
     /// Send an event to the widget hierarchy.
     ///
     /// Returns `true` if the event produced an action.
@@ -576,6 +567,7 @@ impl<T: Data> DruidHandler<T> {
             .borrow_mut()
             .do_event(self.window_id, event, win_ctx);
         self.process_commands(win_ctx);
+        self.app_state.borrow_mut().do_update(win_ctx);
         result
     }
 
@@ -726,8 +718,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn connected(&mut self, ctx: &mut dyn WinCtx) {
-        let event = Event::LifeCycle(LifeCycle::WindowConnected);
-        self.do_event(event, ctx);
+        self.do_connected(ctx);
     }
 
     fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {

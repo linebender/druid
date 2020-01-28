@@ -146,22 +146,49 @@ impl<T: Data, W: Widget<T> + 'static> WidgetExt<T> for W {}
 // these are 'soft overrides' of methods on WidgetExt; resolution
 // will choose an impl on a type over an impl in a trait for methods with the same
 // name.
-impl<T: Data> Container<T> {
-    pub fn with_background(self, brush: impl Into<PaintBrush>) -> Container<T> {
-        self.background(brush)
-    }
-
-    pub fn bordered(self, brush: impl Into<PaintBrush>, width: f64) -> Container<T> {
-        self.border(brush, width)
-    }
-}
 
 impl<T: Data> SizedBox<T> {
-    pub fn fixed_width(self, width: f64) -> SizedBox<T> {
+    pub fn fix_width(self, width: f64) -> SizedBox<T> {
         self.width(width)
     }
 
-    pub fn fixed_height(self, height: f64) -> SizedBox<T> {
+    pub fn fix_height(self, height: f64) -> SizedBox<T> {
         self.height(height)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::widget::TextBox;
+    use crate::Color;
+
+    #[test]
+    fn container_reuse() {
+        // this should be Container<Align<Container<TextBox>>>
+        let widget = TextBox::new()
+            .background(Color::BLACK)
+            .align_left()
+            .border(Color::BLACK, 1.0);
+        assert!(widget.border_is_some());
+        assert!(!widget.background_is_some());
+
+        // this should be Container<TextBox>
+        let widget = TextBox::new()
+            .background(Color::BLACK)
+            .border(Color::BLACK, 1.0);
+        assert!(widget.background_is_some());
+        assert!(widget.border_is_some());
+    }
+
+    #[test]
+    fn sized_box_reuse() {
+        // this should be SizedBox<Align<SizedBox<TextBox>>>
+        let widget = TextBox::new().fix_height(10.0).align_left().fix_width(1.0);
+        assert_eq!(widget.width_and_height(), (Some(1.0), None));
+
+        // this should be SizedBox<TextBox>
+        let widget = TextBox::new().fix_height(10.0).fix_width(1.0);
+        assert_eq!(widget.width_and_height(), (Some(1.0), Some(10.0)));
     }
 }

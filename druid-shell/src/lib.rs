@@ -54,6 +54,7 @@ mod window;
 
 pub use application::Application;
 pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
+pub use common_util::Counter;
 pub use dialog::{FileDialogOptions, FileInfo, FileSpec};
 pub use error::Error;
 pub use hotkey::{HotKey, KeyCompare, RawMods, SysMods};

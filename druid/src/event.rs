@@ -46,12 +46,6 @@ use crate::{Command, Target};
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Debug, Clone)]
 pub enum Event {
-    /// Called when certain application and window lifecycle events occur.
-    ///
-    /// For the various possible events, see the [`LifeCycle`] enum.
-    ///
-    /// [`LifeCycle`]: enum.LifeCycle.html
-    LifeCycle(LifeCycle),
     /// Called on the root widget when the window size changes.
     ///
     /// Discussion: it's not obvious this should be propagated to user
@@ -101,22 +95,6 @@ pub enum Event {
     ///
     /// The value is a delta.
     Zoom(f64),
-    /// Called when the "hot" status changes.
-    ///
-    /// See [`is_hot`](struct.BaseState.html#method.is_hot) for
-    /// discussion about the hot status.
-    HotChanged(bool),
-    /// Called when the focus status changes.
-    ///
-    /// See [`has_focus`](struct.BaseState.html#method.has_focus) for
-    /// discussion about the focus status.
-    FocusChanged(bool),
-    /// Called at the beginning of a new animation frame.
-    ///
-    /// On the first frame when transitioning from idle to animating, `interval`
-    /// will be 0. (This logic is presently per-window but might change to
-    /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
-    AnimFrame(u64),
     /// Called on a timer event.
     ///
     /// Request a timer event through [`EventCtx::request_timer()`]. That will
@@ -148,10 +126,47 @@ pub enum Event {
 /// Application life cycle events.
 #[derive(Debug, Clone, Copy)]
 pub enum LifeCycle {
+    /// Sent to a `Widget` when it is added to the widget tree. This should be
+    /// the first message that each widget receives.
+    ///
+    /// Widgets should handle this event if they need to do any one-time setup
+    /// that requires access to `Data`.
+    WidgetAdded,
     /// Sent to all widgets in a given window when that window is first instantiated.
     ///
-    /// This is guaranteed to be the first event a window receives.
+    /// This is sent after `WidgetAdded`. Widgets should handle this event if
+    /// they need to do some addition setup when a window is first created.
     WindowConnected,
+    /// Sent to a widget when its children have changed.
+    ///
+    /// If a widget manages children, it is responsible for calling
+    /// [`LifeCycleCtx::register_child`] for each of its existing children.
+    ///
+    /// [`LifeCycleCtx::register_child`]: struct.LifeCycleCtx.html#method.register_child
+    RegisterChildren,
+    /// Called at the beginning of a new animation frame.
+    ///
+    /// On the first frame when transitioning from idle to animating, `interval`
+    /// will be 0. (This logic is presently per-window but might change to
+    /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
+    AnimFrame(u64),
+    /// Called when the "hot" status changes.
+    ///
+    /// This will always be called _before_ the event that triggered it; that is,
+    /// when the mouse moves over a widget, that widget will receive
+    /// `LifeCycle::HotChanged` before it receives `Event::MouseMoved`.
+    ///
+    /// See [`is_hot`](struct.BaseState.html#method.is_hot) for
+    /// discussion about the hot status.
+    HotChanged(bool),
+    /// Called when the focus status changes.
+    ///
+    /// This will always be called immediately after an event where a widget
+    /// has requested focus.
+    ///
+    /// See [`has_focus`](struct.BaseState.html#method.has_focus) for
+    /// discussion about the focus status.
+    FocusChanged(bool),
 }
 
 /// A mouse wheel event.
@@ -214,14 +229,6 @@ impl Event {
                 }
             }
             _ => Some(self.clone()),
-        }
-    }
-
-    /// Whether the event should be propagated from parent to children.
-    pub(crate) fn recurse(&self) -> bool {
-        match self {
-            Event::HotChanged(_) => false,
-            _ => true,
         }
     }
 }

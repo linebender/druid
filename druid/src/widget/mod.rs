@@ -46,7 +46,7 @@ pub use checkbox::Checkbox;
 pub use container::Container;
 pub use either::Either;
 pub use env_scope::EnvScope;
-pub use flex::{Column, Flex, Row};
+pub use flex::Flex;
 pub use identity_wrapper::IdentityWrapper;
 pub use label::{Label, LabelText};
 pub use list::{List, ListIter};
@@ -66,15 +66,18 @@ pub use switch::Switch;
 pub use textbox::TextBox;
 pub use widget_ext::WidgetExt;
 
+use std::num::NonZeroU64;
 use std::ops::{Deref, DerefMut};
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::kurbo::Size;
-use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx};
+use crate::{
+    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
+};
 
 /// A unique identifier for a single widget.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct WidgetId(u32);
+// this is NonZeroU64 because we regularly store Option<WidgetId>
+#[derive(Clone, Copy, Debug, Hash, PartialEq)]
+pub struct WidgetId(NonZeroU64);
 
 /// The trait implemented by all widgets.
 ///
@@ -127,6 +130,22 @@ pub trait Widget<T> {
     /// [`Command`]: struct.Command.html
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env);
 
+    /// Handle a life cycle notification.
+    ///
+    /// This method is called to notify your widget of certain special events,
+    /// (available in the [`LifeCycle`] enum) that are generally related to
+    /// changes in the widget graph or in the state of your specific widget.
+    ///
+    /// A widget is not expected to mutate the application state in response
+    /// to these events, but only to update its own internal state as required;
+    /// if a widget needs to mutate data, it can submit a [`Command`] that will
+    /// be executed at the next opportunity.
+    ///
+    /// [`LifeCycle`]: struct.LifeCycle.html
+    /// [`LifeCycleCtx`]: struct.LifeCycleCtx.html
+    /// [`Command`]: struct.Command.html
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env);
+
     /// Handle a change of data.
     ///
     /// This method is called whenever the data changes. When the appearance of
@@ -139,10 +158,7 @@ pub trait Widget<T> {
     /// used to build resources that will be retained for painting.
     ///
     /// [`invalidate`]: struct.UpdateCtx.html#method.invalidate
-
-    // Consider a no-op default impl. One reason against is that containers might
-    // inadvertently forget to propagate.
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env);
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env);
 
     /// Compute layout.
     ///
@@ -186,27 +202,27 @@ pub trait Widget<T> {
     }
 }
 
-//TODO: we implement this in like 5 different places now :/
-static WIDGET_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
-
 impl WidgetId {
     /// Allocate a new, unique widget id.
     ///
     /// Do note that if we create 4 billion widgets there may be a collision.
     pub(crate) fn next() -> WidgetId {
-        let id = WIDGET_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
-        WidgetId(id)
+        use crate::shell::Counter;
+        static WIDGET_ID_COUNTER: Counter = Counter::new();
+        WidgetId(WIDGET_ID_COUNTER.next_nonzero())
     }
 }
 
-// TODO: explore getting rid of this (ie be consistent about using
-// `dyn Widget` only).
 impl<T> Widget<T> for Box<dyn Widget<T>> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.deref_mut().event(ctx, event, data, env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.deref_mut().lifecycle(ctx, event, data, env);
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.deref_mut().update(ctx, old_data, data, env);
     }
 

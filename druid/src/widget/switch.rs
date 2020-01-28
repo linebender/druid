@@ -20,7 +20,10 @@ use crate::piet::{
 };
 use crate::theme;
 use crate::widget::Align;
-use crate::{BoxConstraints, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget};
+use crate::{
+    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
+    Widget,
+};
 
 const SWITCH_PADDING: f64 = 3.;
 const SWITCH_WIDTH_RATIO: f64 = 2.75;
@@ -149,25 +152,36 @@ impl Widget<bool> for Switch {
                 }
                 ctx.invalidate();
             }
-            Event::AnimFrame(_) => {
-                // move knob to right position depending on the value
-                if self.animation_in_progress {
-                    let delta = if *data { 2. } else { -2. };
-                    self.knob_pos.x += delta;
-
-                    if self.knob_pos.x > off_pos && self.knob_pos.x < on_pos {
-                        ctx.request_anim_frame();
-                    } else {
-                        self.animation_in_progress = false;
-                    }
-                }
-            }
             _ => (),
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&bool>, _data: &bool, _env: &Env) {
-        ctx.invalidate();
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &bool, env: &Env) {
+        if let LifeCycle::AnimFrame(_) = event {
+            let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+            let switch_width = switch_height * SWITCH_WIDTH_RATIO;
+            let knob_size = switch_height - 2. * SWITCH_PADDING;
+            let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
+            let off_pos = knob_size / 2. + SWITCH_PADDING;
+
+            // move knob to right position depending on the value
+            if self.animation_in_progress {
+                let delta = if *data { 2. } else { -2. };
+                self.knob_pos.x += delta;
+
+                if self.knob_pos.x > off_pos && self.knob_pos.x < on_pos {
+                    ctx.request_anim_frame();
+                } else {
+                    self.animation_in_progress = false;
+                }
+            }
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &bool, data: &bool, _env: &Env) {
+        if old_data != data {
+            ctx.invalidate();
+        }
     }
 
     fn layout(

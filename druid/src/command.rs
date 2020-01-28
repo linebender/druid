@@ -40,6 +40,7 @@ pub struct Selector(&'static str);
 /// ```
 #[derive(Debug, Clone)]
 pub struct Command {
+    /// The command's `Selector`.
     pub selector: Selector,
     object: Option<Arc<dyn Any>>,
 }
@@ -47,7 +48,10 @@ pub struct Command {
 /// The target of a command.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Target {
+    /// The target is a window; the event will be delivered to all
+    /// widgets in that window.
     Window(WindowId),
+    /// The target is a specific widget.
     Widget(WidgetId),
 }
 
@@ -78,8 +82,10 @@ pub mod sys {
     /// The command's argument should be the id of the target window.
     pub const SHOW_WINDOW: Selector = Selector::new("druid-builtin.show-window");
 
-    /// Display a context (right-click) menu. The argument should be a...
-    //TODO
+    /// Display a context (right-click) menu. The argument must be the [`ContextMenu`].
+    /// object to be displayed.
+    ///
+    /// [`ContextMenu`]: ../struct.ContextMenu.html
     pub const SHOW_CONTEXT_MENU: Selector = Selector::new("druid-builtin.show-context-menu");
 
     /// The selector for a command to set the window's menu. The argument should
@@ -177,15 +183,6 @@ impl Command {
     /// Return a reference to this command's object, if it has one.
     pub fn get_object<T: Any>(&self) -> Option<&T> {
         self.object.as_ref().and_then(|obj| obj.downcast_ref())
-    }
-}
-
-impl Target {
-    pub(crate) fn is_window(self) -> bool {
-        match self {
-            Target::Window(_) => true,
-            _ => false,
-        }
     }
 }
 

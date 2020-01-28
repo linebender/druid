@@ -21,7 +21,7 @@ use unicode_segmentation::GraphemeCursor;
 
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
-    PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
+    LifeCycle, LifeCycleCtx, PaintCtx, RawMods, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
@@ -360,13 +360,16 @@ impl Widget<String> for TextBox {
         }
     }
 
-    fn update(
+    fn lifecycle(
         &mut self,
-        ctx: &mut UpdateCtx,
-        _old_data: Option<&String>,
+        _ctx: &mut LifeCycleCtx,
+        _event: &LifeCycle,
         _data: &String,
         _env: &Env,
     ) {
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &String, _data: &String, _env: &Env) {
         ctx.invalidate();
     }
 

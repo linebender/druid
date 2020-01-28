@@ -23,6 +23,7 @@ pub use druid_shell::{kurbo, piet};
 
 mod app;
 mod app_delegate;
+mod bloom;
 mod box_constraints;
 mod command;
 mod core;
@@ -48,7 +49,9 @@ pub use shell::{
     SysMods, Text, TimerToken, WinCtx, WindowHandle,
 };
 
-pub use crate::core::{BoxedWidget, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, WidgetPod};
+pub use crate::core::{
+    BoxedWidget, EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx, WidgetPod,
+};
 pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;

@@ -20,15 +20,19 @@ use std::time::Instant;
 
 use log;
 
+use crate::bloom::Bloom;
 use crate::kurbo::{Affine, Rect, Shape, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::{
-    BoxConstraints, Command, Cursor, Data, Env, Event, Target, Text, TimerToken, Widget, WidgetId,
-    WinCtx, WindowHandle, WindowId,
+    BoxConstraints, Command, Cursor, Data, Env, Event, LifeCycle, Target, Text, TimerToken, Widget,
+    WidgetId, WinCtx, WindowHandle, WindowId,
 };
 
 /// Convenience type for dynamic boxed widget.
 pub type BoxedWidget<T> = WidgetPod<T, Box<dyn Widget<T>>>;
+
+/// Our queue type
+pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
 
 /// A container for one widget in the hierarchy.
 ///
@@ -95,6 +99,21 @@ pub(crate) struct BaseState {
 
     /// This widget or a descendant has requested focus.
     pub(crate) request_focus: bool,
+    pub(crate) children: Bloom<WidgetId>,
+    pub(crate) children_changed: bool,
+}
+
+impl BaseState {
+    /// Update to incorporate state changes from a child.
+    fn merge_up(&mut self, child_state: &BaseState) {
+        self.needs_inval |= child_state.needs_inval;
+        self.request_anim |= child_state.request_anim;
+        self.request_timer |= child_state.request_timer;
+        self.is_hot |= child_state.is_hot;
+        self.has_active |= child_state.has_active;
+        self.request_focus |= child_state.request_focus;
+        self.children_changed |= child_state.children_changed;
+    }
 }
 
 impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
@@ -106,7 +125,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     pub fn new(inner: W) -> WidgetPod<T, W> {
         let id = inner.id().unwrap_or_else(WidgetId::next);
         WidgetPod {
-            state: Default::default(),
+            state: BaseState {
+                children_changed: true,
+                ..Default::default()
+            },
             old_data: None,
             env: None,
             inner,
@@ -248,8 +270,20 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`event`]: trait.Widget.html#method.event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        // If data is `None` it means we were just added
+        // This should only be called here if the user has added children but failed to call
+        // `children_changed`?
+        if self.old_data.is_none() {
+            let mut lc_ctx = ctx.make_lifecycle_ctx();
+            self.inner
+                .lifecycle(&mut lc_ctx, &LifeCycle::WidgetAdded, data, &env);
+            self.state.needs_inval |= lc_ctx.needs_inval;
+            self.old_data = Some(data.clone());
+            self.env = Some(env.clone());
+        }
+
         // TODO: factor as much logic as possible into monomorphic functions.
-        if ctx.is_handled || !event.recurse() {
+        if ctx.is_handled {
             // This function is called by containers to propagate an event from
             // containers to children. Non-recurse events will be invoked directly
             // from other points in the library.
@@ -273,7 +307,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut recurse = true;
         let mut hot_changed = None;
         let child_event = match event {
-            Event::LifeCycle(event) => Event::LifeCycle(*event),
             Event::Size(size) => {
                 recurse = ctx.is_root;
                 Event::Size(*size)
@@ -327,52 +360,98 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 recurse = had_active || child_ctx.base_state.is_hot;
                 Event::Zoom(*zoom)
             }
-            Event::HotChanged(is_hot) => Event::HotChanged(*is_hot),
-            Event::FocusChanged(_is_focused) => {
-                let had_focus = child_ctx.base_state.has_focus;
-                let focus = child_ctx.base_state.request_focus;
-                child_ctx.base_state.request_focus = false;
-                child_ctx.base_state.has_focus = focus;
-                recurse = focus || had_focus;
-                Event::FocusChanged(focus)
-            }
-            Event::AnimFrame(interval) => {
-                recurse = child_ctx.base_state.request_anim;
-                child_ctx.base_state.request_anim = false;
-                Event::AnimFrame(*interval)
-            }
             Event::Timer(id) => {
                 recurse = child_ctx.base_state.request_timer;
                 Event::Timer(*id)
             }
             Event::Command(cmd) => Event::Command(cmd.clone()),
-            Event::TargetedCommand(target, cmd) => {
-                if *target == Target::Widget(self.id) || target.is_window() {
-                    Event::Command(cmd.clone())
-                } else {
-                    // TODO: here's where Bloom filter magic would happen
+            Event::TargetedCommand(target, cmd) => match target {
+                Target::Window(_) => Event::Command(cmd.clone()),
+                Target::Widget(id) if *id == self.id => Event::Command(cmd.clone()),
+                Target::Widget(id) => {
+                    recurse = child_ctx.base_state.children.contains(id);
                     Event::TargetedCommand(*target, cmd.clone())
                 }
-            }
+            },
         };
         child_ctx.base_state.needs_inval = false;
         if let Some(is_hot) = hot_changed {
-            let hot_changed_event = Event::HotChanged(is_hot);
+            let hot_changed_event = LifeCycle::HotChanged(is_hot);
+            let mut lc_ctx = child_ctx.make_lifecycle_ctx();
             self.inner
-                .event(&mut child_ctx, &hot_changed_event, data, &env);
+                .lifecycle(&mut lc_ctx, &hot_changed_event, data, &env);
+            ctx.base_state.needs_inval |= lc_ctx.needs_inval;
         }
         if recurse {
             child_ctx.base_state.has_active = false;
             self.inner.event(&mut child_ctx, &child_event, data, &env);
             child_ctx.base_state.has_active |= child_ctx.base_state.is_active;
         };
-        ctx.base_state.needs_inval |= child_ctx.base_state.needs_inval;
-        ctx.base_state.request_anim |= child_ctx.base_state.request_anim;
-        ctx.base_state.request_timer |= child_ctx.base_state.request_timer;
-        ctx.base_state.is_hot |= child_ctx.base_state.is_hot;
-        ctx.base_state.has_active |= child_ctx.base_state.has_active;
-        ctx.base_state.request_focus |= child_ctx.base_state.request_focus;
+
+        ctx.base_state.merge_up(&child_ctx.base_state);
         ctx.is_handled |= child_ctx.is_handled;
+    }
+
+    pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        ctx.widget_id = self.id();
+        let pre_children = ctx.children;
+        let pre_childs_changed = ctx.children_changed;
+        let pre_inval = ctx.needs_inval;
+        let pre_request_anim = ctx.request_anim;
+
+        ctx.children = Bloom::new();
+        ctx.children_changed = false;
+        ctx.needs_inval = false;
+        ctx.request_anim = false;
+
+        let mut replacement_event = None;
+        let recurse = match event {
+            LifeCycle::AnimFrame(_) => {
+                let r = self.state.request_anim;
+                self.state.request_anim = false;
+                r
+            }
+            LifeCycle::RegisterChildren => {
+                // if this is called, it means widgets were added; check if our
+                // widget has data, and if it doesn't assume it is new and send WidgetAdded
+                if self.old_data.is_none() {
+                    self.inner
+                        .lifecycle(ctx, &LifeCycle::WidgetAdded, data, env);
+                    self.old_data = Some(data.clone());
+                    self.env = Some(env.clone());
+                }
+                self.state.children_changed
+            }
+            LifeCycle::HotChanged(_) => false,
+            LifeCycle::FocusChanged(_) => {
+                let had_focus = self.state.has_focus;
+                let focus = self.state.request_focus;
+                self.state.request_focus = false;
+                self.state.has_focus = focus;
+                replacement_event = Some(LifeCycle::FocusChanged(focus));
+                focus || had_focus
+            }
+            _ => true,
+        };
+
+        if recurse {
+            let event = replacement_event.as_ref().unwrap_or(event);
+            self.inner.lifecycle(ctx, event, data, env);
+        }
+
+        self.state.request_anim = ctx.request_anim;
+        self.state.children_changed |= ctx.children_changed;
+        ctx.request_anim |= pre_request_anim;
+        ctx.children_changed |= pre_childs_changed;
+        ctx.needs_inval |= pre_inval;
+
+        // we only want to update child state after this specific event.
+        if let LifeCycle::RegisterChildren = event {
+            self.state.children = ctx.children;
+            self.state.children_changed = false;
+            ctx.children = ctx.children.union(pre_children);
+            ctx.register_child(self.id());
+        }
     }
 
     /// Propagate a data update.
@@ -382,23 +461,30 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`update`]: trait.Widget.html#method.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
-        let data_same = if let Some(ref old_data) = self.old_data {
-            old_data.same(data)
-        } else {
-            false
-        };
-        let env_same = if let Some(ref old_env) = self.env {
-            old_env.same(env)
-        } else {
-            false
-        };
-
-        if data_same && env_same {
-            return;
+        match (self.old_data.as_ref(), self.env.as_ref()) {
+            (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
+            (None, _) => {
+                log::warn!("old_data missing in {:?}, skipping update", self.id());
+                self.old_data = Some(data.clone());
+                self.env = Some(env.clone());
+                return;
+            }
+            _ => (),
         }
-        self.inner.update(ctx, self.old_data.as_ref(), data, env);
+
+        let pre_childs_changed = ctx.children_changed;
+        let pre_inval = ctx.needs_inval;
+        ctx.children_changed = false;
+        ctx.needs_inval = false;
+
+        self.inner
+            .update(ctx, self.old_data.as_ref().unwrap(), data, env);
         self.old_data = Some(data.clone());
         self.env = Some(env.clone());
+
+        self.state.children_changed |= ctx.children_changed;
+        ctx.children_changed |= pre_childs_changed;
+        ctx.needs_inval |= pre_inval;
     }
 }
 
@@ -557,7 +643,7 @@ pub struct EventCtx<'a, 'b> {
     pub(crate) win_ctx: &'a mut dyn WinCtx<'b>,
     pub(crate) cursor: &'a mut Option<Cursor>,
     /// Commands submitted to be run after this event.
-    pub(crate) command_queue: &'a mut VecDeque<(Target, Command)>,
+    pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) window_id: WindowId,
     // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     pub(crate) window: &'a WindowHandle,
@@ -565,6 +651,28 @@ pub struct EventCtx<'a, 'b> {
     pub(crate) had_active: bool,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
+    pub(crate) widget_id: WidgetId,
+}
+
+/// A mutable context provided to the [`lifecycle`] method on widgets.
+///
+/// Certain methods on this context are only meaningful during the handling of
+/// specific lifecycle events; for instance [`register_child`]
+/// should only be called while handling [`LifeCycle::RegisterChildren`].
+///
+/// [`lifecycle`]: widget/trait.Widget.html#tymethod.lifecycle
+/// [`register_child`]: #method.register_child
+/// [`LifeCycleCtx::register_child`]: #method.register_child
+/// [`LifeCycle::RegisterChildren`]: enum.LifeCycle.html#variant.RegisterChildren
+pub struct LifeCycleCtx<'a> {
+    pub(crate) command_queue: &'a mut CommandQueue,
+    /// the registry for the current widgets children;
+    /// only really meaninful during a `LifeCyle::RegisterChildren` call.
+    pub(crate) children: Bloom<WidgetId>,
+    pub(crate) children_changed: bool,
+    pub(crate) needs_inval: bool,
+    pub(crate) request_anim: bool,
+    pub(crate) window_id: WindowId,
     pub(crate) widget_id: WidgetId,
 }
 
@@ -582,6 +690,7 @@ pub struct UpdateCtx<'a, 'b: 'a> {
     // `EventCtx` (and possibly using the same structure). But for
     // now keep it super-simple.
     pub(crate) needs_inval: bool,
+    pub(crate) children_changed: bool,
     pub(crate) window_id: WindowId,
     pub(crate) widget_id: WidgetId,
 }
@@ -598,6 +707,13 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         // that needs to be propagated (with, likely, special handling for
         // scrolling).
         self.base_state.needs_inval = true;
+    }
+
+    /// Indicate that your children have changed.
+    ///
+    /// Widgets must call this method after adding a new child.
+    pub fn children_changed(&mut self) {
+        self.base_state.children_changed = true;
     }
 
     /// Get an object which can create text layouts.
@@ -715,6 +831,7 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     /// Request an animation frame.
     pub fn request_anim_frame(&mut self) {
         self.base_state.request_anim = true;
+        self.base_state.needs_inval = true;
     }
 
     /// Request a timer event.
@@ -765,6 +882,68 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     pub fn widget_id(&self) -> WidgetId {
         self.widget_id
     }
+
+    pub(crate) fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
+        LifeCycleCtx {
+            command_queue: self.command_queue,
+            children_changed: false,
+            needs_inval: false,
+            children: Bloom::default(),
+            request_anim: false,
+            window_id: self.window_id,
+            widget_id: self.widget_id,
+        }
+    }
+}
+
+impl<'a> LifeCycleCtx<'a> {
+    /// Invalidate.
+    ///
+    /// See [`EventCtx::invalidate`](struct.EventCtx.html#method.invalidate) for
+    /// more discussion.
+    pub fn invalidate(&mut self) {
+        self.needs_inval = true;
+    }
+
+    /// Returns the current widget's `WidgetId`.
+    pub fn widget_id(&self) -> WidgetId {
+        self.widget_id
+    }
+
+    /// Registers a child wildget. This should only be called
+    /// in response to a `LifeCycle::RegisterChildren` event.
+    pub fn register_child(&mut self, child_id: WidgetId) {
+        self.children.add(&child_id);
+    }
+
+    /// Indicate that your children have changed.
+    ///
+    /// Widgets must call this method after adding a new child.
+    pub fn children_changed(&mut self) {
+        self.children_changed = true;
+    }
+
+    /// Request an animation frame.
+    pub fn request_anim_frame(&mut self) {
+        self.request_anim = true;
+    }
+
+    /// Submit a [`Command`] to be run after this event is handled.
+    ///
+    /// Commands are run in the order they are submitted; all commands
+    /// submitted during the handling of an event are executed before
+    /// the [`update()`] method is called.
+    ///
+    /// [`Command`]: struct.Command.html
+    /// [`update()`]: trait.Widget.html#tymethod.update
+    pub fn submit_command(
+        &mut self,
+        command: impl Into<Command>,
+        target: impl Into<Option<Target>>,
+    ) {
+        let target = target.into().unwrap_or_else(|| self.window_id.into());
+        self.command_queue.push_back((target, command.into()))
+    }
 }
 
 impl<'a, 'b> LayoutCtx<'a, 'b> {
@@ -788,6 +967,13 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
         self.needs_inval = true;
     }
 
+    /// Indicate that your children have changed.
+    ///
+    /// Widgets must call this method after adding a new child.
+    pub fn children_changed(&mut self) {
+        self.children_changed = true;
+    }
+
     /// Get an object which can create text layouts.
     pub fn text(&mut self) -> &mut Text<'b> {
         self.text_factory
@@ -798,6 +984,7 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     /// Note: For the most part we're trying to migrate `WindowHandle`
     /// functionality to `WinCtx`, but the update flow is the exception, as
     /// it's shared across multiple windows.
+    //TODO: can we delete this? where is it used?
     pub fn window(&self) -> &WindowHandle {
         &self.window
     }
@@ -810,5 +997,51 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     /// get the `WidgetId` of the current widget.
     pub fn widget_id(&self) -> WidgetId {
         self.widget_id
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::widget::{Flex, IdentityWrapper, Scroll, Split, TextBox, WidgetExt};
+
+    #[test]
+    fn register_children() {
+        fn make_widgets() -> (WidgetId, WidgetId, WidgetId, impl Widget<Option<u32>>) {
+            let (id1, t1) = IdentityWrapper::wrap(TextBox::raw().parse());
+            let (id2, t2) = IdentityWrapper::wrap(TextBox::raw().parse());
+            let (id3, t3) = IdentityWrapper::wrap(TextBox::raw().parse());
+            eprintln!("{:?}, {:?}, {:?}", id1, id2, id3);
+            let widget = Split::vertical(
+                Flex::row()
+                    .with_child(t1, 1.0)
+                    .with_child(t2, 1.0)
+                    .with_child(t3, 1.0),
+                Scroll::new(TextBox::raw().parse()),
+            );
+            (id1, id2, id3, widget)
+        }
+
+        let (id1, id2, id3, widget) = make_widgets();
+        let mut widget = WidgetPod::new(widget).boxed();
+
+        let mut command_queue: CommandQueue = VecDeque::new();
+        let mut ctx = LifeCycleCtx {
+            command_queue: &mut command_queue,
+            children: Bloom::new(),
+            children_changed: true,
+            needs_inval: false,
+            request_anim: false,
+            window_id: WindowId::next(),
+            widget_id: WidgetId::next(),
+        };
+
+        let env = Env::default();
+
+        widget.lifecycle(&mut ctx, &LifeCycle::RegisterChildren, &None, &env);
+        assert!(ctx.children.contains(&id1));
+        assert!(ctx.children.contains(&id2));
+        assert!(ctx.children.contains(&id3));
+        assert_eq!(ctx.children.entry_count(), 7);
     }
 }

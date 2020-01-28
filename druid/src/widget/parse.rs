@@ -4,7 +4,8 @@ use std::str::FromStr;
 
 use crate::kurbo::Size;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetId,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    UpdateCtx, Widget, WidgetId,
 };
 
 /// Converts a `Widget<String>` to a `Widget<Option<T>>`, mapping parse errors to None
@@ -23,24 +24,27 @@ impl<T> Parse<T> {
 }
 
 impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse<W> {
-    fn update(
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Option<T>, env: &Env) {
+        self.widget.event(ctx, event, &mut self.state, env);
+        *data = self.state.parse().ok();
+    }
+
+    fn lifecycle(
         &mut self,
-        ctx: &mut UpdateCtx,
-        old_data: Option<&Option<T>>,
-        data: &Option<T>,
+        ctx: &mut LifeCycleCtx,
+        event: &LifeCycle,
+        _data: &Option<T>,
         env: &Env,
     ) {
+        self.widget.lifecycle(ctx, event, &self.state, env)
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &Option<T>, data: &Option<T>, env: &Env) {
         let old = match *data {
             None => return, // Don't clobber the input
             Some(ref x) => mem::replace(&mut self.state, x.to_string()),
         };
-        let old = old_data.map(|_| old);
-        self.widget.update(ctx, old.as_ref(), &self.state, env)
-    }
-
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Option<T>, env: &Env) {
-        self.widget.event(ctx, event, &mut self.state, env);
-        *data = self.state.parse().ok();
+        self.widget.update(ctx, &old, &self.state, env)
     }
 
     fn layout(

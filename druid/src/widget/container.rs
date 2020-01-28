@@ -16,8 +16,8 @@
 
 use crate::shell::kurbo::{Point, Rect, RoundedRect, Size};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintBrush, PaintCtx, RenderContext,
-    UpdateCtx, Widget, WidgetId, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintBrush,
+    PaintCtx, RenderContext, UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
 struct BorderStyle {
@@ -65,6 +65,16 @@ impl<T: Data> Container<T> {
         self.corner_radius = radius;
         self
     }
+
+    #[cfg(test)]
+    pub(crate) fn background_is_some(&self) -> bool {
+        self.background.is_some()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn border_is_some(&self) -> bool {
+        self.border.is_some()
+    }
 }
 
 impl<T: Data> Widget<T> for Container<T> {
@@ -72,7 +82,11 @@ impl<T: Data> Widget<T> for Container<T> {
         self.inner.event(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.inner.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.inner.update(ctx, data, env);
     }
 

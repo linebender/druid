@@ -17,23 +17,9 @@
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    UpdateCtx, Widget, WidgetPod,
 };
-
-/// A builder for a row widget that can contain flex children.
-///
-/// The actual widget is implemented by [`Flex`], but this builder
-/// is provided for convenience.
-///
-/// [`Flex`]: struct.Flex.html
-pub struct Row;
-/// A builder for a column widget that can contain flex children.
-///
-/// The actual widget is implemented by [`Flex`], but this builder
-/// is provided for convenience.
-///
-/// [`Flex`]: struct.Flex.html
-pub struct Column;
 
 /// A container with either horizontal or vertical layout.
 pub struct Flex<T: Data> {
@@ -46,7 +32,7 @@ struct ChildWidget<T: Data> {
     params: Params,
 }
 
-pub enum Axis {
+pub(crate) enum Axis {
     Horizontal,
     Vertical,
 }
@@ -76,26 +62,6 @@ impl Axis {
             Axis::Horizontal => (major, minor),
             Axis::Vertical => (minor, major),
         }
-    }
-}
-
-impl Row {
-    /// Create a new row widget.
-    ///
-    /// The child widgets are laid out horizontally, from left to right.
-    #[deprecated(since = "0.4.0", note = "Use Flex::row() instead")]
-    pub fn new<T: Data>() -> Flex<T> {
-        Flex::row()
-    }
-}
-
-impl Column {
-    /// Create a new row widget.
-    ///
-    /// The child widgets are laid out vertically, from top to bottom.
-    #[deprecated(since = "0.4.0", note = "Use Flex::column() instead")]
-    pub fn new<T: Data>() -> Flex<T> {
-        Flex::column()
     }
 }
 
@@ -156,7 +122,13 @@ impl<T: Data> Widget<T> for Flex<T> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        for child in &mut self.children {
+            child.widget.lifecycle(ctx, event, data, env);
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         for child in &mut self.children {
             child.widget.update(ctx, data, env);
         }
@@ -242,7 +214,6 @@ impl<T: Data> Widget<T> for Flex<T> {
             major = total_major;
         }
 
-        // TODO: should be able to make this `into`
         let (width, height) = self.direction.pack(major, minor);
         Size::new(width, height)
     }

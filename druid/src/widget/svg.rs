@@ -24,8 +24,8 @@ use log::error;
 use usvg;
 
 use crate::{
-    kurbo::BezPath, Affine, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx,
-    Point, Rect, RenderContext, Size, UpdateCtx, Widget,
+    kurbo::BezPath, Affine, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx,
+    LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget,
 };
 
 /// A widget that renders a SVG
@@ -66,7 +66,9 @@ impl<T: Data> Svg<T> {
 impl<T: Data> Widget<T> for Svg<T> {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&T>, _data: &T, _env: &Env) {}
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
+
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {}
 
     fn layout(
         &mut self,

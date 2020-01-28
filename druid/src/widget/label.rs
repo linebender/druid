@@ -21,8 +21,8 @@ use crate::piet::{
 };
 use crate::theme;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LocalizedString, PaintCtx, UpdateCtx,
-    Widget,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    LocalizedString, PaintCtx, UpdateCtx, Widget,
 };
 
 /// The text for the label
@@ -65,13 +65,6 @@ impl<T: Data> Label<T> {
             text,
             align: UnitPoint::LEFT,
         }
-    }
-
-    /// Set text alignment.
-    #[inline]
-    #[deprecated(since = "0.4.1", note = "use text_align instead")]
-    pub fn align(self, align: UnitPoint) -> Self {
-        self.text_align(align)
     }
 
     /// Set text alignment.
@@ -118,7 +111,9 @@ impl<T: Data> LabelText<T> {
 impl<T: Data> Widget<T> for Label<T> {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         if self.text.resolve(data, env) {
             ctx.invalidate();
         }

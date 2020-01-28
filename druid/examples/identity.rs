@@ -33,13 +33,15 @@ use druid::kurbo::RoundedRect;
 use druid::widget::{Button, Flex, IdentityWrapper, WidgetExt};
 use druid::{
     AppLauncher, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, LayoutCtx, Lens,
-    LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size, TimerToken, UpdateCtx, Widget,
-    WindowDesc,
+    LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size,
+    TimerToken, UpdateCtx, Widget, WindowDesc,
 };
 
-const CYCLE_DURATION: Duration = Duration::from_millis(100);
+const CYCLE_DURATION: Duration = Duration::from_millis(200);
+
 const FREEZE_COLOR: Selector = Selector::new("identity-example.freeze-color");
 const UNFREEZE_COLOR: Selector = Selector::new("identity-example.unfreeze-color");
+const SET_INITIAL_TOKEN: Selector = Selector::new("identity-example.set-initial-token");
 
 /// Honestly: it's just a color in fancy clothing.
 #[derive(Debug, Clone, Data, Lens)]
@@ -83,12 +85,8 @@ impl ColorWell {
 impl Widget<OurData> for ColorWell {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut OurData, _env: &Env) {
         match event {
-            Event::LifeCycle(_) if self.randomize => {
-                self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
-            }
             Event::Timer(t) if t == &self.token => {
                 let time_since_start = Instant::now() - self.start;
-
                 // there is no logic here; it's a very silly way of creating a color.
                 let bits = (time_since_start.as_nanos() % (0xFFFFFF)) as u32;
                 let mask = 0x924924;
@@ -104,6 +102,10 @@ impl Widget<OurData> for ColorWell {
                 ctx.invalidate();
             }
 
+            Event::Command(cmd) if cmd.selector == SET_INITIAL_TOKEN => {
+                self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
+            }
+
             Event::Command(cmd) if cmd.selector == FREEZE_COLOR => {
                 self.frozen = cmd
                     .get_object::<Color>()
@@ -116,11 +118,17 @@ impl Widget<OurData> for ColorWell {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&OurData>, data: &OurData, _: &Env) {
-        if match old_data {
-            Some(d) => !d.same(data),
-            None => true,
-        } {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &OurData, _: &Env) {
+        match event {
+            LifeCycle::WindowConnected if self.randomize => {
+                ctx.submit_command(SET_INITIAL_TOKEN, ctx.widget_id());
+            }
+            _ => (),
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &OurData, data: &OurData, _: &Env) {
+        if !old_data.same(data) {
             ctx.invalidate()
         }
     }

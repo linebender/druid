@@ -18,8 +18,8 @@ use std::f64::consts::PI;
 
 use druid::kurbo::Line;
 use druid::{
-    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LocalizedString, PaintCtx,
-    Point, RenderContext, Size, UpdateCtx, Vec2, Widget, WindowDesc,
+    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    LocalizedString, PaintCtx, Point, RenderContext, Size, UpdateCtx, Vec2, Widget, WindowDesc,
 };
 
 struct AnimWidget {
@@ -33,20 +33,20 @@ impl Widget<u32> for AnimWidget {
                 self.t = 0.0;
                 ctx.request_anim_frame();
             }
-            Event::AnimFrame(interval) => {
-                self.t += (*interval as f64) * 1e-9;
-                if self.t < 1.0 {
-                    ctx.request_anim_frame();
-                }
-                // When we do fine-grained invalidation,
-                // no doubt this will be required:
-                //ctx.invalidate();
-            }
             _ => (),
         }
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: Option<&u32>, _data: &u32, _env: &Env) {}
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &u32, _env: &Env) {
+        if let LifeCycle::AnimFrame(interval) = event {
+            self.t += (*interval as f64) * 1e-9;
+            if self.t < 1.0 {
+                ctx.request_anim_frame();
+            }
+        }
+    }
+
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &u32, _data: &u32, _env: &Env) {}
 
     fn layout(
         &mut self,

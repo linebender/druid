@@ -18,7 +18,8 @@ use std::marker::PhantomData;
 
 use crate::kurbo::Size;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetId,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    UpdateCtx, Widget, WidgetId,
 };
 
 /// A widget that accepts a closure to update the environment for its child.
@@ -67,7 +68,13 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         self.child.event(ctx, event, data, &new_env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: Option<&T>, data: &T, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        let mut new_env = env.clone();
+        (self.f)(&mut new_env, &data);
+        self.child.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);
 

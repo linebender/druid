@@ -16,8 +16,8 @@
 
 use crate::kurbo::{Insets, Point, Rect, Size};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, PaintCtx, UpdateCtx, Widget, WidgetId,
-    WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
 /// A widget that just adds padding around its child.
@@ -31,18 +31,6 @@ pub struct Padding<T: Data> {
 }
 
 impl<T: Data> Padding<T> {
-    /// Create widget with uniform padding.
-    #[deprecated(since = "0.3.0", note = "Use Padding::new() instead")]
-    pub fn uniform(padding: f64, child: impl Widget<T> + 'static) -> Padding<T> {
-        Padding {
-            left: padding,
-            right: padding,
-            top: padding,
-            bottom: padding,
-            child: WidgetPod::new(child).boxed(),
-        }
-    }
-
     /// Create a new widget with the specified padding. This can either be an instance
     /// of [`kurbo::Insets`], a f64 for uniform padding, a 2-tuple for axis-uniform padding
     /// or 4-tuple with (left, top, right, bottom) values.
@@ -89,7 +77,11 @@ impl<T: Data> Widget<T> for Padding<T> {
         self.child.event(ctx, event, data, env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: Option<&T>, data: &T, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.child.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.child.update(ctx, data, env);
     }
 

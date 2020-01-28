@@ -20,12 +20,12 @@ use std::time::Instant;
 
 pub struct TimerSlots {
     // Note: we can remove this when checked_duration_since lands.
-    next_fresh_id: usize,
-    free_slots: BTreeSet<usize>,
+    next_fresh_id: u64,
+    free_slots: BTreeSet<u64>,
 }
 
 impl TimerSlots {
-    pub fn new(starting_ix: usize) -> TimerSlots {
+    pub fn new(starting_ix: u64) -> TimerSlots {
         TimerSlots {
             next_fresh_id: starting_ix,
             free_slots: Default::default(),
@@ -35,16 +35,16 @@ impl TimerSlots {
     pub fn alloc(&mut self) -> TimerToken {
         if let Some(first) = self.free_slots.iter().next().cloned() {
             self.free_slots.remove(&first);
-            TimerToken::new(first)
+            TimerToken::from_raw(first)
         } else {
             let result = self.next_fresh_id;
             self.next_fresh_id += 1;
-            TimerToken::new(result)
+            TimerToken::from_raw(result)
         }
     }
 
     pub fn free(&mut self, token: TimerToken) {
-        let id = token.get_raw();
+        let id = token.into_raw();
         if self.next_fresh_id == id + 1 {
             self.next_fresh_id -= 1;
         } else {
@@ -54,11 +54,9 @@ impl TimerSlots {
 
     /// Compute an elapsed value for SetTimer (in ms)
     pub fn compute_elapsed(&self, deadline: Instant) -> u32 {
-        let now = Instant::now();
-        if now >= deadline {
-            0
-        } else {
-            deadline.duration_since(now).as_millis() as u32
-        }
+        deadline
+            .checked_duration_since(Instant::now())
+            .map(|d| d.as_millis() as u32)
+            .unwrap_or(0)
     }
 }
