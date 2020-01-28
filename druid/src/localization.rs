@@ -306,8 +306,8 @@ impl<T> LocalizedString<T> {
     /// Add a placeholder value. This will be used if localization fails.
     ///
     /// This is intended for use during prototyping.
-    pub fn with_placeholder(mut self, placeholder: String) -> Self {
-        self.placeholder = Some(placeholder);
+    pub fn with_placeholder(mut self, placeholder: impl Into<String>) -> Self {
+        self.placeholder = Some(placeholder.into());
         self
     }
 

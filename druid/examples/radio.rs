@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use druid::widget::{Flex, Padding, Radio, RadioGroup, SizedBox};
-use druid::{AppLauncher, Data, Widget, WindowDesc};
+use druid::{AppLauncher, Data, LocalizedString, Widget, WindowDesc};
 
 #[derive(Clone, PartialEq, Data)]
 enum Choice {
@@ -50,7 +50,9 @@ fn build_widget() -> impl Widget<Choice> {
 }
 
 fn main() {
-    let window = WindowDesc::new(build_widget);
+    let window = WindowDesc::new(build_widget).title(
+        LocalizedString::new("radio-demo-window-title").with_placeholder("So many choices!"),
+    );
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(Choice::A)

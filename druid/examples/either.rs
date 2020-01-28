@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use druid::widget::{Checkbox, Either, Flex, Label, Slider, WidgetExt};
-use druid::{AppLauncher, Data, Lens, Widget, WindowDesc};
+use druid::{AppLauncher, Data, Lens, LocalizedString, Widget, WindowDesc};
 
 #[derive(Clone, Default, Data, Lens)]
 struct AppState {
@@ -22,7 +22,11 @@ struct AppState {
 }
 
 fn main() {
-    let main_window = WindowDesc::new(ui_builder);
+    let main_window = WindowDesc::new(ui_builder).title(
+        LocalizedString::new("either-demo-window-title")
+            .with_placeholder("Switcheroo")
+            .with_arg("view", |data: &AppState, _env| (data.which as u8).into()),
+    );
     let data = AppState::default();
     AppLauncher::with_window(main_window)
         .use_simple_logger()

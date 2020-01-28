@@ -15,7 +15,10 @@
 //! This example shows how to construct a basic layout.
 
 use druid::widget::{Flex, Label, WidgetExt};
-use druid::{AppLauncher, Color, LinearGradient, PlatformError, UnitPoint, Widget, WindowDesc};
+use druid::{
+    AppLauncher, Color, LinearGradient, LocalizedString, PlatformError, UnitPoint, Widget,
+    WindowDesc,
+};
 
 fn build_app() -> impl Widget<()> {
     let solid = Color::rgb8(0x3a, 0x3a, 0x3a);
@@ -63,7 +66,9 @@ fn build_app() -> impl Widget<()> {
 }
 
 fn main() -> Result<(), PlatformError> {
-    AppLauncher::with_window(WindowDesc::new(build_app))
+    let main_window = WindowDesc::new(build_app)
+        .title(LocalizedString::new("panels-demo-window-title").with_placeholder("Fancy Boxes!"));
+    AppLauncher::with_window(main_window)
         .use_simple_logger()
         .launch(())?;
 

@@ -34,7 +34,11 @@ struct State {
 
 fn main() {
     simple_logger::init().unwrap();
-    let main_window = WindowDesc::new(ui_builder).menu(make_menu(&State::default()));
+    let main_window = WindowDesc::new(ui_builder)
+        .menu(make_menu(&State::default()))
+        .title(
+            LocalizedString::new("multiwin-demo-window-title").with_placeholder("Many windows!"),
+        );
     AppLauncher::with_window(main_window)
         .delegate(Delegate)
         .launch(State::default())
