@@ -19,7 +19,8 @@ use druid::piet::{FontBuilder, ImageFormat, InterpolationMode, Text, TextLayoutB
 
 use druid::{
     Affine, AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WindowDesc,
+    LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget,
+    WindowDesc,
 };
 
 struct CustomWidget;
