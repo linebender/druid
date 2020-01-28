@@ -20,6 +20,12 @@ use std::sync::Arc;
 use crate::{WidgetId, WindowId};
 
 /// An identifier for a particular command.
+///
+/// This should be a unique string identifier. Certain `Selector`s are defined
+/// by druid, and have special meaning to the framework; these are listed in the
+/// [`druid::commands`] module.
+///
+/// [`druid::commands`]: commands/index.html
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Selector(&'static str);
 
@@ -43,6 +49,20 @@ pub struct Command {
     /// The command's `Selector`.
     pub selector: Selector,
     object: Option<Arc<dyn Any>>,
+}
+
+/// A variant of [`Command`] that can be safely sent across threads.
+///
+/// This type has the additional constraints that the data must be `Send`.
+/// It also cannot be cloned; the intention is that it is only used to cross
+/// thread boundaries, and is converted into a [`Command`] on the other side.
+///
+/// [`Command`]: struct.Command.html
+#[derive(Debug)]
+pub struct ExtCommand {
+    /// The command's `Selector`.
+    pub selector: Selector,
+    object: Option<Box<dyn Any + Send>>,
 }
 
 /// The target of a command.
@@ -195,6 +215,36 @@ impl From<Selector> for Command {
     }
 }
 
+impl From<Selector> for ExtCommand {
+    fn from(selector: Selector) -> ExtCommand {
+        ExtCommand {
+            selector,
+            object: None,
+        }
+    }
+}
+
+impl ExtCommand {
+    /// Create a new `ExtCommand` with an argument. If you do not need
+    /// an argument, `Selector` implements `Into<ExtCommand>`, and can
+    /// be passed to most places that expect a `Command`.
+    pub fn new(selector: Selector, arg: impl Any + Send) -> Self {
+        ExtCommand {
+            selector,
+            object: Some(Box::new(arg)),
+        }
+    }
+}
+
+impl From<ExtCommand> for Command {
+    fn from(src: ExtCommand) -> Command {
+        let ExtCommand { selector, object } = src;
+        let object: Option<Box<dyn Any>> = object.map(|obj| obj as Box<dyn Any>);
+        let object: Option<Arc<_>> = object.map(Into::into);
+        Command { selector, object }
+    }
+}
+
 impl std::fmt::Display for Selector {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "Selector('{}')", self.0)
@@ -233,6 +283,15 @@ mod tests {
         let sel = Selector::new("my-selector");
         let objs = vec![0, 1, 2];
         let command = Command::new(sel, objs);
+        assert_eq!(command.get_object(), Some(&vec![0, 1, 2]));
+    }
+
+    #[test]
+    fn ext_object() {
+        let sel = Selector::new("my-selector");
+        let objs = vec![0, 1, 2];
+        let command = ExtCommand::new(sel, objs);
+        let command: Command = command.into();
         assert_eq!(command.get_object(), Some(&vec![0, 1, 2]));
     }
 }
