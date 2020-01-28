@@ -29,12 +29,13 @@ use log::error;
 #[cfg(feature = "svg")]
 use druid::{
     widget::{Flex, Svg, SvgData, WidgetExt},
-    AppLauncher, Widget, WindowDesc,
+    AppLauncher, LocalizedString, Widget, WindowDesc,
 };
 
 #[cfg(feature = "svg")]
 fn main() {
-    let main_window = WindowDesc::new(ui_builder);
+    let main_window = WindowDesc::new(ui_builder)
+        .title(LocalizedString::new("svg-demo-window-title").with_placeholder("Rawr!"));
     let data = 0_u32;
     AppLauncher::with_window(main_window)
         .use_simple_logger()

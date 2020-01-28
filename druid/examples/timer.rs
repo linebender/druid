@@ -18,8 +18,8 @@ use std::time::{Duration, Instant};
 
 use druid::kurbo::Line;
 use druid::{
-    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, PaintCtx, RenderContext,
-    Size, TimerToken, UpdateCtx, Widget, WindowDesc,
+    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LocalizedString, PaintCtx,
+    RenderContext, Size, TimerToken, UpdateCtx, Widget, WindowDesc,
 };
 
 struct TimerWidget {
@@ -71,7 +71,8 @@ fn main() {
     let window = WindowDesc::new(|| TimerWidget {
         timer_id: TimerToken::INVALID,
         on: false,
-    });
+    })
+    .title(LocalizedString::new("timer-demo-window-title").with_placeholder("Tick Tock".into()));
 
     AppLauncher::with_window(window)
         .use_simple_logger()

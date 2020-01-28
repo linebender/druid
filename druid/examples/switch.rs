@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use druid::widget::{Flex, Label, Padding, Parse, Stepper, Switch, TextBox, WidgetExt};
-use druid::{AppLauncher, Data, Lens, LensExt, LensWrap, Widget, WindowDesc};
+use druid::{AppLauncher, Data, Lens, LensExt, LensWrap, LocalizedString, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct DemoState {
@@ -58,7 +58,9 @@ fn build_widget() -> impl Widget<DemoState> {
 }
 
 fn main() {
-    let window = WindowDesc::new(build_widget);
+    let window = WindowDesc::new(build_widget).title(
+        LocalizedString::new("switch-demo-window-title").with_placeholder("Switch Demo".into()),
+    );
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(DemoState {

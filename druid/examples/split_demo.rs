@@ -16,7 +16,7 @@
 
 use druid::piet::Color;
 use druid::widget::{Align, Container, Label, Padding, Split};
-use druid::{AppLauncher, Widget, WindowDesc};
+use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     let fixed_horizontal = Padding::new(
@@ -78,7 +78,9 @@ fn build_app() -> impl Widget<u32> {
 }
 
 fn main() {
-    let window = WindowDesc::new(build_app);
+    let window = WindowDesc::new(build_app).title(
+        LocalizedString::new("split-demo-window-title").with_placeholder("Split Demo".into()),
+    );
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(0u32)
