@@ -42,13 +42,6 @@ use crate::platform::windows::{DeviceContext, DxgiSurfaceRenderTarget, HwndRende
 use super::error::Error;
 use super::util::as_result;
 
-// TODO: clean this up. Was present in raw_d2d branch but doesn't appear to be used
-///// Context for painting by app into window.
-//pub struct PaintCtx<'a> {
-//    pub(crate) d2d_factory: &'a D2DFactory,
-//    pub(crate) render_target: &'a mut DeviceContext,
-//}
-
 pub(crate) unsafe fn create_render_target(
     d2d_factory: &D2DFactory,
     hwnd: HWND,
