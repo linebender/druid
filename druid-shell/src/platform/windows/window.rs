@@ -292,10 +292,7 @@ impl MyWndProc {
 }
 
 impl<'a> WinCtxOwner<'a> {
-    fn new(
-        handle: std::cell::Ref<'a, WindowHandle>,
-        dwrite: &'a DwriteFactory,
-    ) -> WinCtxOwner<'a> {
+    fn new(handle: std::cell::Ref<'a, WindowHandle>, dwrite: &'a DwriteFactory) -> WinCtxOwner<'a> {
         WinCtxOwner { handle, dwrite }
     }
 
@@ -1354,5 +1351,8 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
 
 /// Casts render target to hwnd variant.
 unsafe fn cast_to_hwnd(dc: &DeviceContext) -> Option<HwndRenderTarget> {
-    dc.get_comptr().cast().ok().map(|com_ptr| HwndRenderTarget::from_ptr(com_ptr))
+    dc.get_comptr()
+        .cast()
+        .ok()
+        .map(|com_ptr| HwndRenderTarget::from_ptr(com_ptr))
 }

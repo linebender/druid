@@ -50,8 +50,10 @@ use piet_common::d2d::{D2DFactory, DeviceContext};
 use std::fmt::{Debug, Display, Formatter};
 use winapi::shared::windef::HWND;
 use winapi::shared::winerror::{HRESULT, SUCCEEDED};
-use winapi::um::d2d1::{D2D1_HWND_RENDER_TARGET_PROPERTIES, D2D1_RENDER_TARGET_PROPERTIES,
-                       D2D1_SIZE_U, ID2D1HwndRenderTarget, ID2D1RenderTarget};
+use winapi::um::d2d1::{
+    ID2D1HwndRenderTarget, ID2D1RenderTarget, D2D1_HWND_RENDER_TARGET_PROPERTIES,
+    D2D1_RENDER_TARGET_PROPERTIES, D2D1_SIZE_U,
+};
 use winapi::um::dcommon::D2D1_PIXEL_FORMAT;
 use wio::com::ComPtr;
 
@@ -67,11 +69,16 @@ use wio::com::ComPtr;
 
 #[derive(Clone)]
 pub struct HwndRenderTarget {
-    ptr: ComPtr<ID2D1HwndRenderTarget>
+    ptr: ComPtr<ID2D1HwndRenderTarget>,
 }
 
 impl HwndRenderTarget {
-    pub fn create<'a>(factory: &'a D2DFactory, hwnd: HWND, width: u32, height: u32) -> Result<Self, Error> {
+    pub fn create<'a>(
+        factory: &'a D2DFactory,
+        hwnd: HWND,
+        width: u32,
+        height: u32,
+    ) -> Result<Self, Error> {
         // hardcode
         // - RenderTargetType::Default
         // - AlphaMode::Unknown
@@ -85,11 +92,7 @@ impl HwndRenderTarget {
         // now build
         unsafe {
             let mut ptr = std::ptr::null_mut();
-            let hr = (*factory.get_raw()).CreateHwndRenderTarget(
-                &rt_props,
-                &hwnd_props,
-                &mut ptr,
-            );
+            let hr = (*factory.get_raw()).CreateHwndRenderTarget(&rt_props, &hwnd_props, &mut ptr);
 
             if SUCCEEDED(hr) {
                 Ok(HwndRenderTarget::from_raw(ptr))
@@ -120,7 +123,7 @@ impl HwndRenderTarget {
 const DEFAULT_PROPS: D2D1_RENDER_TARGET_PROPERTIES = D2D1_RENDER_TARGET_PROPERTIES {
     _type: 0u32, //RenderTargetType::Default
     pixelFormat: D2D1_PIXEL_FORMAT {
-        format: 87u32,//Format::B8G8R8A8Unorm, see https://docs.rs/dxgi/0.3.0-alpha4/src/dxgi/enums/format.rs.html#631
+        format: 87u32, //Format::B8G8R8A8Unorm, see https://docs.rs/dxgi/0.3.0-alpha4/src/dxgi/enums/format.rs.html#631
         alphaMode: 0u32, //AlphaMode::Unknown
     },
     dpiX: 0.0,
@@ -140,7 +143,7 @@ const DEFAULT_HWND_PROPS: D2D1_HWND_RENDER_TARGET_PROPERTIES = D2D1_HWND_RENDER_
 
 #[derive(Clone)]
 pub struct DxgiSurfaceRenderTarget {
-    ptr: ComPtr<ID2D1RenderTarget>
+    ptr: ComPtr<ID2D1RenderTarget>,
 }
 
 impl DxgiSurfaceRenderTarget {
@@ -155,7 +158,10 @@ impl DxgiSurfaceRenderTarget {
     }
 
     pub unsafe fn as_device_context(&self) -> Option<DeviceContext> {
-        self.ptr.cast().ok().map(|com_ptr| DeviceContext::new(com_ptr))
+        self.ptr
+            .cast()
+            .ok()
+            .map(|com_ptr| DeviceContext::new(com_ptr))
     }
 }
 
@@ -191,4 +197,3 @@ impl std::error::Error for Error {
         "winapi error"
     }
 }
-

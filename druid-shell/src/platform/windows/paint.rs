@@ -43,7 +43,7 @@ use winapi::Interface;
 // new
 use piet_common::d2d::D2DFactory;
 
-use crate::platform::windows::{HwndRenderTarget, DeviceContext, DxgiSurfaceRenderTarget};
+use crate::platform::windows::{DeviceContext, DxgiSurfaceRenderTarget, HwndRenderTarget};
 
 // end new
 use super::error::Error;
@@ -90,18 +90,12 @@ pub(crate) unsafe fn create_render_target(
     } else {
         let width = (rect.right - rect.left) as u32;
         let height = (rect.bottom - rect.top) as u32;
-        let res = HwndRenderTarget::create(
-            d2d_factory,
-            hwnd,
-            width,
-            height,
-        );
+        let res = HwndRenderTarget::create(d2d_factory, hwnd, width, height);
 
         if let Err(ref e) = res {
             error!("Creating hwnd render target failed: {:?}", e);
         }
-        res
-            .map(|hrt| cast_to_device_context(&hrt).expect("removethis"))
+        res.map(|hrt| cast_to_device_context(&hrt).expect("removethis"))
             .map_err(|_| Error::D2Error)
     }
 }
@@ -144,8 +138,10 @@ pub(crate) unsafe fn create_render_target_dxgi(
     }
 }
 
-
 /// Casts hwnd variant to DeviceTarget
 unsafe fn cast_to_device_context(hrt: &HwndRenderTarget) -> Option<DeviceContext> {
-    hrt.get_comptr().cast().ok().map(|com_ptr| DeviceContext::new(com_ptr))
+    hrt.get_comptr()
+        .cast()
+        .ok()
+        .map(|com_ptr| DeviceContext::new(com_ptr))
 }
