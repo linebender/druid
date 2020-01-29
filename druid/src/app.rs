@@ -119,7 +119,7 @@ impl<T: Data> WindowDesc<T> {
     /// It is possible that a `WindowDesc` can be reused to launch multiple windows.
     ///
     /// [`Widget`]: trait.Widget.html
-    pub fn new<W, F>(root: F) -> WindowDesc<T>
+    pub fn new<W, F>(root: F) -> Self
     where
         W: Widget<T> + 'static,
         F: Fn() -> W + 'static,
@@ -127,7 +127,7 @@ impl<T: Data> WindowDesc<T> {
         // wrap this closure in another closure that dyns the result
         // this just makes our API slightly cleaner; callers don't need to explicitly box.
         let root_builder: Arc<WidgetBuilderFn<T>> = Arc::new(move || Box::new(root()));
-        WindowDesc {
+        Self {
             root_builder,
             title: None,
             size: None,

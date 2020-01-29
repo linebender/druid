@@ -33,7 +33,7 @@ thread_local!(
 pub struct RunLoop {}
 
 impl RunLoop {
-    pub fn new() -> RunLoop {
+    pub fn new() -> Self {
         assert_main_thread();
 
         // TODO: we should give control over the application ID to the user
@@ -58,7 +58,7 @@ impl RunLoop {
 
         GTK_APPLICATION.with(move |x| *x.borrow_mut() = Some(application));
 
-        RunLoop {}
+        Self {}
     }
 
     pub fn run(&mut self) {

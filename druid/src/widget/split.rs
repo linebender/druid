@@ -38,7 +38,7 @@ impl<T: Data> Split<T> {
         child1: impl Widget<T> + 'static,
         child2: impl Widget<T> + 'static,
     ) -> Self {
-        Split {
+        Self {
             split_direction,
             split_point: 0.5,
             splitter_size: 10.0,

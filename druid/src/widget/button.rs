@@ -35,8 +35,8 @@ impl<T: Data> Button<T> {
     pub fn new(
         text: impl Into<LabelText<T>>,
         action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
-    ) -> Button<T> {
-        Button {
+    ) -> Self {
+        Self {
             label: Label::new(text).text_align(UnitPoint::CENTER),
             action: Box::new(action),
         }

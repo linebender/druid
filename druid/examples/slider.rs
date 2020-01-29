@@ -15,7 +15,7 @@
 use druid::widget::{
     Align, Button, Checkbox, Flex, Label, Padding, ProgressBar, Slider, WidgetExt,
 };
-use druid::{AppLauncher, Data, Lens, LensWrap, UnitPoint, Widget, WindowDesc};
+use druid::{AppLauncher, Data, Lens, LensWrap, LocalizedString, UnitPoint, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct DemoState {
@@ -60,7 +60,8 @@ fn build_widget() -> impl Widget<DemoState> {
 }
 
 fn main() {
-    let window = WindowDesc::new(build_widget);
+    let window = WindowDesc::new(build_widget)
+        .title(LocalizedString::new("slider-demo-window-title").with_placeholder("Sliding along"));
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(DemoState {

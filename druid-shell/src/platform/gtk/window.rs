@@ -113,8 +113,8 @@ pub(crate) struct WinCtxImpl<'a> {
 }
 
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
-        WindowBuilder {
+    pub fn new() -> Self {
+        Self {
             handler: None,
             title: String::new(),
             menu: None,

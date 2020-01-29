@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use druid::lens::{self, LensExt};
 use druid::widget::{Button, Flex, Label, List, Scroll, WidgetExt};
-use druid::{AppLauncher, Color, Data, Lens, UnitPoint, Widget, WindowDesc};
+use druid::{AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct AppData {
@@ -27,7 +27,8 @@ struct AppData {
 }
 
 fn main() {
-    let main_window = WindowDesc::new(ui_builder);
+    let main_window = WindowDesc::new(ui_builder)
+        .title(LocalizedString::new("list-demo-window-title").with_placeholder("List Demo"));
     // Set our initial data
     let data = AppData {
         left: Arc::new(vec![1, 2]),

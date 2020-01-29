@@ -25,14 +25,14 @@ pub struct RunLoop {
 }
 
 impl RunLoop {
-    pub fn new() -> RunLoop {
+    pub fn new() -> Self {
         assert_main_thread();
         unsafe {
             let _pool = NSAutoreleasePool::new(nil);
 
             let ns_app = NSApp();
             ns_app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
-            RunLoop { ns_app }
+            Self { ns_app }
         }
     }
 

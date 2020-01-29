@@ -119,8 +119,8 @@ impl<T: Data, W: Widget<T>> Scroll<T, W> {
     /// This method will allow scrolling in all directions if child's bounds
     /// are larger than the viewport. Use [vertical](#method.vertical)
     /// and [horizontal](#method.horizontal) methods to limit scroll behavior.
-    pub fn new(child: W) -> Scroll<T, W> {
-        Scroll {
+    pub fn new(child: W) -> Self {
+        Self {
             child: WidgetPod::new(child),
             child_size: Default::default(),
             scroll_offset: Vec2::new(0.0, 0.0),

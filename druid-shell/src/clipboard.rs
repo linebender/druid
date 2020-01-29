@@ -191,26 +191,26 @@ impl ClipboardFormat {
     /// as the provided format.
     pub fn new(identifier: FormatId, data: impl Into<Vec<u8>>) -> Self {
         let data = data.into();
-        ClipboardFormat { identifier, data }
+        Self { identifier, data }
     }
 }
 
 impl From<String> for ClipboardFormat {
-    fn from(src: String) -> ClipboardFormat {
+    fn from(src: String) -> Self {
         let data = src.into_bytes();
-        ClipboardFormat::new(ClipboardFormat::TEXT, data)
+        Self::new(ClipboardFormat::TEXT, data)
     }
 }
 
 impl From<&str> for ClipboardFormat {
-    fn from(src: &str) -> ClipboardFormat {
+    fn from(src: &str) -> Self {
         src.to_string().into()
     }
 }
 
 impl From<platform::Clipboard> for Clipboard {
-    fn from(src: platform::Clipboard) -> Clipboard {
-        Clipboard(src)
+    fn from(src: platform::Clipboard) -> Self {
+        Self(src)
     }
 }
 

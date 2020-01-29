@@ -18,7 +18,9 @@ use druid::widget::{EnvScope, Flex, Label, Padding, TextBox};
 use druid::{theme, AppLauncher, Color, Data, LocalizedString, MenuDesc, Widget, WindowDesc};
 
 fn main() {
-    let window = WindowDesc::new(build_widget).menu(make_main_menu());
+    let window = WindowDesc::new(build_widget).menu(make_main_menu()).title(
+        LocalizedString::new("textbox-demo-window-title").with_placeholder("typing is fun!"),
+    );
     AppLauncher::with_window(window)
         .configure_env(|env, _| {
             env.set(theme::SELECTION_COLOR, Color::rgb8(0xA6, 0xCC, 0xFF));

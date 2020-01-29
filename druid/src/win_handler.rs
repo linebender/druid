@@ -533,8 +533,8 @@ impl<T: Data> DruidHandler<T> {
     pub(crate) fn new_shared(
         app_state: Rc<RefCell<AppState<T>>>,
         window_id: WindowId,
-    ) -> DruidHandler<T> {
-        DruidHandler {
+    ) -> Self {
+        Self {
             app_state,
             window_id,
         }

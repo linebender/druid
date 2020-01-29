@@ -19,7 +19,8 @@ use druid::piet::{FontBuilder, ImageFormat, InterpolationMode, Text, TextLayoutB
 
 use druid::{
     Affine, AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WindowDesc,
+    LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget,
+    WindowDesc,
 };
 
 struct CustomWidget;
@@ -118,7 +119,9 @@ impl Widget<String> for CustomWidget {
 }
 
 fn main() {
-    let window = WindowDesc::new(|| CustomWidget {});
+    let window = WindowDesc::new(|| CustomWidget {}).title(
+        LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Fancy Colors"),
+    );
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch("Druid + Piet".to_string())

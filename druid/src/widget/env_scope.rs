@@ -51,8 +51,8 @@ impl<T: Data, W: Widget<T>> EnvScope<T, W> {
     ///
     /// # }
     /// ```
-    pub fn new(f: impl Fn(&mut Env, &T) + 'static, child: W) -> EnvScope<T, W> {
-        EnvScope {
+    pub fn new(f: impl Fn(&mut Env, &T) + 'static, child: W) -> Self {
+        Self {
             f: Box::new(f),
             child,
             phantom: Default::default(),

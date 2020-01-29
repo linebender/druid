@@ -40,18 +40,18 @@ impl Drop for Menu {
 
 impl Menu {
     /// Create a new menu for a window.
-    pub fn new() -> Menu {
+    pub fn new() -> Self {
         unsafe {
             let hmenu = CreateMenu();
-            Menu { hmenu }
+            Self { hmenu }
         }
     }
 
     /// Create a new popup (context / right-click) menu.
-    pub fn new_for_popup() -> Menu {
+    pub fn new_for_popup() -> Self {
         unsafe {
             let hmenu = CreatePopupMenu();
-            Menu { hmenu }
+            Self { hmenu }
         }
     }
 

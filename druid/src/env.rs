@@ -285,8 +285,8 @@ impl<T> From<Key<T>> for String {
 }
 
 impl ValueTypeError {
-    fn new(expected: &'static str, found: Value) -> ValueTypeError {
-        ValueTypeError { expected, found }
+    fn new(expected: &'static str, found: Value) -> Self {
+        Self { expected, found }
     }
 }
 impl std::fmt::Display for ValueTypeError {

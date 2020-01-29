@@ -147,8 +147,7 @@ impl Widget<OurData> for ColorWell {
 
 fn main() {
     let window = WindowDesc::new(make_ui).title(
-        LocalizedString::new("identity-demo-window-title")
-            .with_placeholder("Color Freezing Fun".into()),
+        LocalizedString::new("identity-demo-window-title").with_placeholder("Color Freezing Fun"),
     );
     AppLauncher::with_window(window)
         .use_simple_logger()
