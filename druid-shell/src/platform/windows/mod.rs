@@ -52,7 +52,6 @@ use winapi::shared::windef::HWND;
 use winapi::shared::winerror::{HRESULT, SUCCEEDED};
 use winapi::um::d2d1::{D2D1_HWND_RENDER_TARGET_PROPERTIES, D2D1_RENDER_TARGET_PROPERTIES,
                        D2D1_SIZE_U, ID2D1HwndRenderTarget, ID2D1RenderTarget};
-use winapi::um::d2d1_1::ID2D1DeviceContext;
 use winapi::um::dcommon::D2D1_PIXEL_FORMAT;
 use wio::com::ComPtr;
 
