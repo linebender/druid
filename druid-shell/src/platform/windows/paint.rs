@@ -42,8 +42,6 @@ use winapi::Interface;
 
 // new
 use piet_common::d2d::D2DFactory;
-use winapi::um::d2d1_1::ID2D1DeviceContext;
-use wio::com::ComPtr;
 
 use crate::platform::windows::{HwndRenderTarget, DeviceContext, DxgiSurfaceRenderTarget};
 
@@ -151,14 +149,5 @@ pub(crate) unsafe fn create_render_target_dxgi(
 ///
 /// TODO: investigate whether there's a better way to do this.
 unsafe fn cast_to_device_context(hrt: &HwndRenderTarget) -> Option<DeviceContext> {
-    let raw_ptr = hrt.clone().get_raw();
-    let mut dc = null_mut();
-    let err = (*raw_ptr).QueryInterface(&ID2D1DeviceContext::uuidof(), &mut dc);
-    if SUCCEEDED(err) {
-        Some(DeviceContext::new(ComPtr::from_raw(
-            dc as *mut ID2D1DeviceContext,
-        )))
-    } else {
-        None
-    }
+    hrt.get_comptr().cast().ok().map(|com_ptr| DeviceContext::new(com_ptr))
 }

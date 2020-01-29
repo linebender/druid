@@ -37,7 +37,6 @@ use winapi::um::d2d1::*;
 use winapi::um::unknwnbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
-use winapi::Interface;
 
 // old
 //use direct2d;
@@ -47,8 +46,6 @@ use winapi::Interface;
 //new
 use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
-
-use wio::com::ComPtr;
 
 use crate::platform::windows::HwndRenderTarget;
 
@@ -1364,17 +1361,6 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
 }
 
 /// Casts render target to hwnd variant.
-///
-/// TODO: investigate whether there's a better way to do this.
-unsafe fn cast_to_hwnd(rt: &DeviceContext) -> Option<HwndRenderTarget> {
-    let raw_ptr = rt.clone().get_raw();
-    let mut hwnd = null_mut();
-    let err = (*raw_ptr).QueryInterface(&ID2D1HwndRenderTarget::uuidof(), &mut hwnd);
-    if SUCCEEDED(err) {
-        Some(HwndRenderTarget::from_ptr(ComPtr::from_raw(
-            hwnd as *mut ID2D1HwndRenderTarget,
-        )))
-    } else {
-        None
-    }
+unsafe fn cast_to_hwnd(dc: &DeviceContext) -> Option<HwndRenderTarget> {
+    dc.get_comptr().cast().ok().map(|com_ptr| HwndRenderTarget::from_ptr(com_ptr))
 }

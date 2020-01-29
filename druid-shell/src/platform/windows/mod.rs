@@ -48,7 +48,6 @@ pub mod window;
 // Go back up for particular needs. Move up and down using query_interface.
 use piet_common::d2d::{D2DFactory, DeviceContext};
 use std::fmt::{Debug, Display, Formatter};
-use winapi::Interface;
 use winapi::shared::windef::HWND;
 use winapi::shared::winerror::{HRESULT, SUCCEEDED};
 use winapi::um::d2d1::{D2D1_HWND_RENDER_TARGET_PROPERTIES, D2D1_RENDER_TARGET_PROPERTIES,
@@ -113,6 +112,10 @@ impl HwndRenderTarget {
 
     pub unsafe fn get_raw(&self) -> *mut ID2D1HwndRenderTarget {
         self.ptr.as_raw()
+    }
+
+    pub fn get_comptr(&self) -> &ComPtr<ID2D1HwndRenderTarget> {
+        &self.ptr
     }
 }
 
@@ -202,19 +205,6 @@ impl Display for Error {
 impl std::error::Error for Error {
     fn description(&self) -> &str {
         "winapi error"
-    }
-}
-
-/// to wrap the result
-unsafe fn wrap<T, U, F>(hr: HRESULT, ptr: *mut T, f: F) -> Result<U, Error>
-where
-    F: Fn(ComPtr<T>) -> U,
-    T: Interface,
-{
-    if SUCCEEDED(hr) {
-        Ok(f(ComPtr::from_raw(ptr)))
-    } else {
-        Err(hr.into())
     }
 }
 
