@@ -18,6 +18,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::kurbo;
+use crate::piet;
 
 pub use druid_derive::Data;
 
@@ -244,5 +245,125 @@ impl Data for kurbo::Vec2 {
 impl Data for kurbo::Size {
     fn same(&self, other: &Self) -> bool {
         self.width.same(&other.width) && self.height.same(&other.height)
+    }
+}
+
+impl Data for kurbo::Affine {
+    fn same(&self, other: &Self) -> bool {
+        let rhs = self.as_coeffs();
+        let lhs = other.as_coeffs();
+        rhs.iter().zip(lhs.iter()).all(|(r, l)| r.same(l))
+    }
+}
+
+impl Data for kurbo::Insets {
+    fn same(&self, other: &Self) -> bool {
+        self.x0.same(&other.x0)
+            && self.y0.same(&other.y0)
+            && self.x1.same(&other.x1)
+            && self.y1.same(&other.y1)
+    }
+}
+
+impl Data for kurbo::Rect {
+    fn same(&self, other: &Self) -> bool {
+        self.x0.same(&other.x0)
+            && self.y0.same(&other.y0)
+            && self.x1.same(&other.x1)
+            && self.y1.same(&other.y1)
+    }
+}
+
+impl Data for kurbo::RoundedRect {
+    fn same(&self, other: &Self) -> bool {
+        self.rect().same(&other.rect()) && self.radius().same(&self.radius())
+    }
+}
+
+impl Data for kurbo::Arc {
+    fn same(&self, other: &Self) -> bool {
+        self.center.same(&other.center)
+            && self.radii.same(&other.radii)
+            && self.start_angle.same(&other.start_angle)
+            && self.sweep_angle.same(&other.sweep_angle)
+            && self.x_rotation.same(&other.x_rotation)
+    }
+}
+
+impl Data for kurbo::PathEl {
+    fn same(&self, other: &Self) -> bool {
+        use kurbo::PathEl::*;
+        match (self, other) {
+            (MoveTo(p1), MoveTo(p2)) => p1.same(p2),
+            (LineTo(p1), LineTo(p2)) => p1.same(p2),
+            (QuadTo(x1, y1), QuadTo(x2, y2)) => x1.same(x2) && y1.same(y2),
+            (CurveTo(x1, y1, z1), CurveTo(x2, y2, z2)) => x1.same(x2) && y1.same(y2) && z1.same(z2),
+            (ClosePath, ClosePath) => true,
+            _ => false,
+        }
+    }
+}
+
+impl Data for kurbo::PathSeg {
+    fn same(&self, other: &Self) -> bool {
+        use kurbo::PathSeg;
+        match (self, other) {
+            (PathSeg::Line(l1), PathSeg::Line(l2)) => l1.same(l2),
+            (PathSeg::Quad(q1), PathSeg::Quad(q2)) => q1.same(q2),
+            (PathSeg::Cubic(c1), PathSeg::Cubic(c2)) => c1.same(c2),
+            _ => false,
+        }
+    }
+}
+
+impl Data for kurbo::BezPath {
+    fn same(&self, other: &Self) -> bool {
+        let rhs = self.elements();
+        let lhs = other.elements();
+        if rhs.len() == lhs.len() {
+            rhs.iter().zip(lhs.iter()).all(|(x, y)| x.same(y))
+        } else {
+            false
+        }
+    }
+}
+
+impl Data for kurbo::Circle {
+    fn same(&self, other: &Self) -> bool {
+        self.center.same(&other.center) && self.radius.same(&other.radius)
+    }
+}
+
+impl Data for kurbo::CubicBez {
+    fn same(&self, other: &Self) -> bool {
+        self.p0.same(&other.p0)
+            && self.p1.same(&other.p1)
+            && self.p2.same(&other.p2)
+            && self.p3.same(&other.p3)
+    }
+}
+
+impl Data for kurbo::Line {
+    fn same(&self, other: &Self) -> bool {
+        self.p0.same(&other.p0) && self.p1.same(&other.p1)
+    }
+}
+
+//TODO: ConstPoint.0 is private
+/* impl Data for kurbo::ConstPoint {
+    fn same(&self, other: &Self) -> bool {
+        self.0.same(&other.0)
+    }
+} */
+
+impl Data for kurbo::QuadBez {
+    fn same(&self, other: &Self) -> bool {
+        self.p0.same(&other.p0) && self.p1.same(&other.p1) && self.p2.same(&other.p2)
+    }
+}
+
+impl Data for piet::Color {
+    fn same(&self, other: &Self) -> bool {
+        self.as_rgba_u32().same(&other.as_rgba_u32())
     }
 }
