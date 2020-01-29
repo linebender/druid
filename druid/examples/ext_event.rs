@@ -76,8 +76,7 @@ impl Widget<MyColor> for ColorWell {
 
 fn main() {
     let window = WindowDesc::new(make_ui).title(
-        LocalizedString::new("identity-demo-window-title")
-            .with_placeholder("External Event Demo".into()),
+        LocalizedString::new("identity-demo-window-title").with_placeholder("External Event Demo"),
     );
 
     let launcher = AppLauncher::with_window(window);

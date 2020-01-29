@@ -15,36 +15,31 @@
 //! Simple handle for submitting external events.
 
 use std::any::Any;
+use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
-
-use crossbeam_channel::{Receiver, Sender};
 
 use crate::shell::IdleHandle;
 use crate::win_handler::EXT_EVENT_IDLE_TOKEN;
 use crate::{Command, Selector, Target, WindowId};
 
 pub(crate) type ExtCommand = (Selector, Option<Box<dyn Any + Send>>, Option<Target>);
+
 /// A thing that can move into other threads and be used to submit commands back
 /// to the running application.
 ///
 /// This API is preliminary, and may be changed or removed without warning.
 #[derive(Clone)]
 pub struct ExtEventSink {
-    pub(crate) send: Sender<ExtCommand>,
-    pub(crate) handle: Arc<Mutex<Option<IdleHandle>>>,
+    queue: Arc<Mutex<VecDeque<ExtCommand>>>,
+    handle: Arc<Mutex<Option<IdleHandle>>>,
 }
 
 /// The stuff that we hold onto inside the app that is related to the
 /// handling of external events.
+#[derive(Default)]
 pub(crate) struct ExtEventHost {
-    /// a channel for sending; we clone this and give it to friends that
-    /// we want to be able to send messages to us.
-    send: Sender<ExtCommand>,
-    /// The channel where we receive our friends messages
-    recv: Receiver<ExtCommand>,
-    /// A handle to a thing in druid-shell that we can ask to poke us when
-    /// our friend sends us a message.
-    ///
+    /// A shared queue of items that have been sent to us.
+    queue: Arc<Mutex<VecDeque<ExtCommand>>>,
     /// This doesn't exist when the app starts and it can go away if a window
     /// closes, so we keep a reference here and can update it when needed.
     handle: Arc<Mutex<Option<IdleHandle>>>,
@@ -60,18 +55,12 @@ pub struct ExtEventError;
 
 impl ExtEventHost {
     pub(crate) fn new() -> Self {
-        let (send, recv) = crossbeam_channel::unbounded();
-        ExtEventHost {
-            send,
-            recv,
-            handle: Arc::default(),
-            handle_window_id: None,
-        }
+        Default::default()
     }
 
     pub(crate) fn make_sink(&self) -> ExtEventSink {
         ExtEventSink {
-            send: self.send.clone(),
+            queue: self.queue.clone(),
             handle: self.handle.clone(),
         }
     }
@@ -82,13 +71,14 @@ impl ExtEventHost {
     }
 
     pub(crate) fn has_pending_items(&self) -> bool {
-        !self.recv.is_empty()
+        !self.queue.lock().unwrap().is_empty()
     }
 
     pub(crate) fn recv(&mut self) -> Option<(Option<Target>, Command)> {
-        self.recv
-            .try_recv()
-            .ok()
+        self.queue
+            .lock()
+            .unwrap()
+            .pop_front()
             .map(|(sel, obj, targ)| (targ, Command::from_ext(sel, obj)))
     }
 }
@@ -122,9 +112,11 @@ impl ExtEventSink {
         if let Some(handle) = self.handle.lock().unwrap().as_mut() {
             handle.schedule_idle(EXT_EVENT_IDLE_TOKEN);
         }
-        self.send
-            .send((sel, obj, target))
-            .map_err(|_| ExtEventError)
+        self.queue
+            .lock()
+            .map_err(|_| ExtEventError)?
+            .push_back((sel, obj, target));
+        Ok(())
     }
 }
 
