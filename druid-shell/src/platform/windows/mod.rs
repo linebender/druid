@@ -91,10 +91,18 @@ impl HwndRenderTarget {
         }
     }
 
+    /// construct from COM ptr
+    ///
+    /// # Safety
+    /// TODO
     pub unsafe fn from_ptr(ptr: ComPtr<ID2D1HwndRenderTarget>) -> Self {
         Self { ptr }
     }
 
+    /// construct from raw ptr
+    ///
+    /// # Safety
+    /// TODO
     pub unsafe fn from_raw(raw: *mut ID2D1HwndRenderTarget) -> Self {
         Self::from_ptr(ComPtr::from_raw(raw))
     }
@@ -136,6 +144,10 @@ pub struct DxgiSurfaceRenderTarget {
 }
 
 impl DxgiSurfaceRenderTarget {
+    /// construct from raw ptr
+    ///
+    /// # Safety
+    /// TODO
     pub unsafe fn from_raw(raw: *mut ID2D1RenderTarget) -> Self {
         DxgiSurfaceRenderTarget {
             ptr: ComPtr::from_raw(raw),
@@ -146,6 +158,10 @@ impl DxgiSurfaceRenderTarget {
         self.ptr.as_raw()
     }
 
+    /// cast to DeviceContext
+    ///
+    /// # Safety
+    /// TODO
     pub unsafe fn as_device_context(&self) -> Option<DeviceContext> {
         self.ptr
             .cast()
