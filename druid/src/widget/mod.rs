@@ -261,6 +261,12 @@ impl WidgetId {
     }
 }
 
+impl From<WidgetId> for u64 {
+    fn from(id: WidgetId) -> u64 {
+        id.0.into()
+    }
+}
+
 impl<T> Widget<T> for Box<dyn Widget<T>> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.deref_mut().event(ctx, event, data, env)
