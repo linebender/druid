@@ -27,9 +27,6 @@ mod timers;
 pub mod util;
 pub mod window;
 
-// from winapi::um::d2d1;
-// need to move from one type to another?
-//
 // https://docs.microsoft.com/en-us/windows/win32/direct2d/render-targets-overview
 // ID2D1RenderTarget is the interface. The other resources inherit from it.
 //
@@ -41,11 +38,13 @@ pub mod window;
 // - DXGI render target objects render to  a DXGI surface for use with Direct3D.
 //
 // https://docs.microsoft.com/en-us/windows/win32/direct2d/devices-and-device-contexts
-// A Device Context, ID2D1DeviceContext, is used for windows 8 and higher. Render Target
-// is used for windows 7 and lower.
+// A Device Context, ID2D1DeviceContext, is available as of windows 7 platform update. This
+// is the the minimum compatibility target for druid. We are not making an effort to do
+// RenderTarget only.
 //
 // Basically, go from HwndRenderTarget or DxgiSurfaceRenderTarget (2d or 3d) to a Device Context.
-// Go back up for particular needs. Move up and down using query_interface.
+// Go back up for particular needs.
+
 use piet_common::d2d::{D2DFactory, DeviceContext};
 use std::fmt::{Debug, Display, Formatter};
 use winapi::shared::windef::HWND;
@@ -56,16 +55,6 @@ use winapi::um::d2d1::{
 };
 use winapi::um::dcommon::D2D1_PIXEL_FORMAT;
 use wio::com::ComPtr;
-
-// TODO make newtypes
-// Can probably follow the pattern of direct2d crate
-// e.g. https://github.com/Connicpu/direct2d-rs/blob/v0.1.2/src/render_target/hwnd.rs
-//
-// error and wrap, copy from d2d.rs
-//
-// for creating rendertarget, use
-// https://github.com/hwchen/piet/blob/raw_d2d/piet-direct2d/src/d2d.rs#L165 as example, but fill
-// in properties etc.
 
 #[derive(Clone)]
 pub struct HwndRenderTarget {
