@@ -16,8 +16,7 @@ use_gtk = ["gtk", "gtk-sys", "gio", "gdk", "gdk-sys", "glib", "glib-sys", "cairo
 default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
-#piet-common = "0.0.7"
-piet-common = { git = "https://github.com/hwchen/piet", branch = "raw_d2d" }
+piet-common = "0.0.9"
 log = "0.4.8"
 lazy_static = "1.0"
 time = "0.2.4"
