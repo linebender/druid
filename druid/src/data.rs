@@ -17,7 +17,7 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use crate::kurbo;
+use crate::kurbo::{self, ParamCurve};
 use crate::piet;
 
 pub use druid_derive::Data;
@@ -349,12 +349,11 @@ impl Data for kurbo::Line {
     }
 }
 
-//TODO: ConstPoint.0 is private
-/* impl Data for kurbo::ConstPoint {
+impl Data for kurbo::ConstPoint {
     fn same(&self, other: &Self) -> bool {
-        self.0.same(&other.0)
+        self.eval(0.).same(&other.eval(0.))
     }
-} */
+}
 
 impl Data for kurbo::QuadBez {
     fn same(&self, other: &Self) -> bool {
