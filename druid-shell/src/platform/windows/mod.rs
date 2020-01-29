@@ -62,8 +62,8 @@ pub struct HwndRenderTarget {
 }
 
 impl HwndRenderTarget {
-    pub fn create<'a>(
-        factory: &'a D2DFactory,
+    pub fn create(
+        factory: &D2DFactory,
         hwnd: HWND,
         width: u32,
         height: u32,
