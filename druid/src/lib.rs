@@ -26,6 +26,7 @@ mod app_delegate;
 mod bloom;
 mod box_constraints;
 mod command;
+mod contexts;
 mod core;
 mod data;
 mod env;
@@ -50,13 +51,12 @@ pub use shell::{
     SysMods, Text, TimerToken, WinCtx, WindowHandle,
 };
 
-pub use crate::core::{
-    BoxedWidget, EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx, WidgetPod,
-};
+pub use crate::core::{BoxedWidget, WidgetPod};
 pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
 pub use command::{sys as commands, Command, Selector, Target};
+pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx};
 pub use data::Data;
 pub use env::{Env, Key, Value};
 pub use event::{Event, LifeCycle, WheelEvent};
