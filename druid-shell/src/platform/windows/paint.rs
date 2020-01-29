@@ -35,17 +35,10 @@ use winapi::um::dcommon::*;
 use winapi::um::winuser::*;
 use winapi::Interface;
 
-// old
-//use direct2d;
-//use direct2d::enums::{AlphaMode, RenderTargetType};
-//use direct2d::render_target::{DxgiSurfaceRenderTarget, GenericRenderTarget, HwndRenderTarget};
-
-// new
 use piet_common::d2d::D2DFactory;
 
 use crate::platform::windows::{DeviceContext, DxgiSurfaceRenderTarget, HwndRenderTarget};
 
-// end new
 use super::error::Error;
 use super::util::as_result;
 
