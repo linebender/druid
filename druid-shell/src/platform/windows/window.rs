@@ -37,11 +37,11 @@ use winapi::um::d2d1::*;
 use winapi::um::unknwnbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
-use winapi::Interface;
 
-use direct2d;
-use direct2d::math::SizeU;
-use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarget};
+use piet_common::d2d::{D2DFactory, DeviceContext};
+use piet_common::dwrite::DwriteFactory;
+
+use crate::platform::windows::HwndRenderTarget;
 
 use crate::kurbo::{Point, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
@@ -105,7 +105,7 @@ pub enum PresentStrategy {
 #[derive(Default)]
 pub struct WindowHandle {
     // Note: this clone of the dwrite factory might move into WinCtxImpl.
-    dwrite_factory: Option<directwrite::Factory>,
+    dwrite_factory: Option<DwriteFactory>,
     state: Weak<WindowState>,
 }
 
@@ -151,15 +151,15 @@ trait WndProc {
 // implements policies such as the use of Direct2D for painting.
 struct MyWndProc {
     handle: RefCell<WindowHandle>,
-    d2d_factory: direct2d::Factory,
-    dwrite_factory: directwrite::Factory,
+    d2d_factory: D2DFactory,
+    dwrite_factory: DwriteFactory,
     state: RefCell<Option<WndState>>,
 }
 
 /// The mutable state of the window.
 struct WndState {
     handler: Box<dyn WinHandler>,
-    render_target: Option<GenericRenderTarget>,
+    render_target: Option<DeviceContext>,
     dcomp_state: Option<DCompState>,
     dpi: f32,
     /// The `KeyCode` of the last `WM_KEYDOWN` event. We stash this so we can
@@ -174,7 +174,7 @@ struct WndState {
 /// A structure that owns resources for the `WinCtx` (so it lasts long enough).
 struct WinCtxOwner<'a> {
     handle: std::cell::Ref<'a, WindowHandle>,
-    dwrite: &'a directwrite::Factory,
+    dwrite: &'a DwriteFactory,
 }
 
 /// The Windows implementation of the context provided to WinHandler calls.
@@ -237,11 +237,11 @@ fn get_mod_state() -> KeyModifiers {
 }
 
 impl WndState {
-    fn rebuild_render_target(&mut self, d2d: &direct2d::Factory) {
+    fn rebuild_render_target(&mut self, d2d: &D2DFactory) {
         unsafe {
             let swap_chain = self.dcomp_state.as_ref().unwrap().swap_chain;
             let rt = paint::create_render_target_dxgi(d2d, swap_chain, self.dpi)
-                .map(|rt| rt.as_generic());
+                .map(|rt| rt.as_device_context().expect("TODO remove this expect"));
             self.render_target = rt.ok();
         }
     }
@@ -249,8 +249,8 @@ impl WndState {
     // Renders but does not present.
     fn render(
         &mut self,
-        d2d: &direct2d::Factory,
-        dw: &directwrite::Factory,
+        d2d: &D2DFactory,
+        dw: &DwriteFactory,
         handle: &RefCell<WindowHandle>,
         c: &mut WinCtxOwner,
     ) {
@@ -292,10 +292,7 @@ impl MyWndProc {
 }
 
 impl<'a> WinCtxOwner<'a> {
-    fn new(
-        handle: std::cell::Ref<'a, WindowHandle>,
-        dwrite: &'a directwrite::Factory,
-    ) -> WinCtxOwner<'a> {
+    fn new(handle: std::cell::Ref<'a, WindowHandle>, dwrite: &'a DwriteFactory) -> WinCtxOwner<'a> {
         WinCtxOwner { handle, dwrite }
     }
 
@@ -347,8 +344,7 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.render_target.is_none() {
-                        let rt = paint::create_render_target(&self.d2d_factory, hwnd)
-                            .map(|rt| rt.as_generic());
+                        let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                     }
                     let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
@@ -375,8 +371,7 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
-                        let rt = paint::create_render_target(&self.d2d_factory, hwnd)
-                            .map(|rt| rt.as_generic());
+                        let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                         {
                             let mut c =
@@ -469,8 +464,8 @@ impl WndProc for MyWndProc {
                             if let Some(hrt) = cast_to_hwnd(rt) {
                                 let width = LOWORD(lparam as u32) as u32;
                                 let height = HIWORD(lparam as u32) as u32;
-                                let size = SizeU(D2D1_SIZE_U { width, height });
-                                let _ = hrt.resize(size);
+                                let size = D2D1_SIZE_U { width, height };
+                                let _ = hrt.ptr.Resize(&size);
                             }
                         }
                         InvalidateRect(hwnd, null_mut(), FALSE);
@@ -759,10 +754,10 @@ impl WndProc for MyWndProc {
 
 // Note: there's a clone method in 0.3.0-alpha4. We work around
 // the lack in 0.1.2 by calling the low-level unsafe operations.
-fn clone_dwrite(dwrite: &directwrite::Factory) -> directwrite::Factory {
+fn clone_dwrite(dwrite: &DwriteFactory) -> DwriteFactory {
     unsafe {
         (*dwrite.get_raw()).AddRef();
-        directwrite::Factory::from_raw(dwrite.get_raw())
+        DwriteFactory::from_raw(dwrite.get_raw())
     }
 }
 
@@ -815,11 +810,11 @@ impl WindowBuilder {
             // register once even for multiple window creation.
 
             let class_name = super::util::CLASS_NAME.to_wide();
-            let dwrite_factory = directwrite::Factory::new().unwrap();
+            let dwrite_factory = DwriteFactory::new().unwrap();
             let dw_clone = clone_dwrite(&dwrite_factory);
             let wndproc = MyWndProc {
                 handle: Default::default(),
-                d2d_factory: direct2d::Factory::new().unwrap(),
+                d2d_factory: D2DFactory::new().unwrap(),
                 dwrite_factory: dw_clone,
                 state: RefCell::new(None),
             };
@@ -1355,17 +1350,9 @@ impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
 }
 
 /// Casts render target to hwnd variant.
-///
-/// TODO: investigate whether there's a better way to do this.
-unsafe fn cast_to_hwnd(rt: &GenericRenderTarget) -> Option<HwndRenderTarget> {
-    let raw_ptr = rt.clone().get_raw();
-    let mut hwnd = null_mut();
-    let err = (*raw_ptr).QueryInterface(&ID2D1HwndRenderTarget::uuidof(), &mut hwnd);
-    if SUCCEEDED(err) {
-        Some(HwndRenderTarget::from_raw(
-            hwnd as *mut ID2D1HwndRenderTarget,
-        ))
-    } else {
-        None
-    }
+unsafe fn cast_to_hwnd(dc: &DeviceContext) -> Option<HwndRenderTarget> {
+    dc.get_comptr()
+        .cast()
+        .ok()
+        .map(|com_ptr| HwndRenderTarget::from_ptr(com_ptr))
 }

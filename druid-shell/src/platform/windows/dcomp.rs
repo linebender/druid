@@ -38,9 +38,6 @@ use winapi::um::winnt::HRESULT;
 use winapi::Interface;
 use wio::com::ComPtr;
 
-use direct2d::math::Matrix3x2F;
-use direct2d::{self, RenderTarget};
-
 use log::error;
 
 use super::util::OPTIONAL_FUNCTIONS;

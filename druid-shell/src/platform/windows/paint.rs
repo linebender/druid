@@ -35,23 +35,17 @@ use winapi::um::dcommon::*;
 use winapi::um::winuser::*;
 use winapi::Interface;
 
-use direct2d;
-use direct2d::enums::{AlphaMode, RenderTargetType};
-use direct2d::render_target::{DxgiSurfaceRenderTarget, GenericRenderTarget, HwndRenderTarget};
+use piet_common::d2d::D2DFactory;
+
+use crate::platform::windows::{DeviceContext, DxgiSurfaceRenderTarget, HwndRenderTarget};
 
 use super::error::Error;
 use super::util::as_result;
 
-/// Context for painting by app into window.
-pub struct PaintCtx<'a> {
-    pub(crate) d2d_factory: &'a direct2d::Factory,
-    pub(crate) render_target: &'a mut GenericRenderTarget,
-}
-
 pub(crate) unsafe fn create_render_target(
-    d2d_factory: &direct2d::Factory,
+    d2d_factory: &D2DFactory,
     hwnd: HWND,
-) -> Result<HwndRenderTarget, Error> {
+) -> Result<DeviceContext, Error> {
     let mut rect: RECT = mem::zeroed();
     if GetClientRect(hwnd, &mut rect) == 0 {
         warn!("GetClientRect failed.");
@@ -59,16 +53,13 @@ pub(crate) unsafe fn create_render_target(
     } else {
         let width = (rect.right - rect.left) as u32;
         let height = (rect.bottom - rect.top) as u32;
-        let res = HwndRenderTarget::create(d2d_factory)
-            .with_hwnd(hwnd)
-            .with_target_type(RenderTargetType::Default)
-            .with_alpha_mode(AlphaMode::Unknown)
-            .with_pixel_size(width, height)
-            .build();
+        let res = HwndRenderTarget::create(d2d_factory, hwnd, width, height);
+
         if let Err(ref e) = res {
             error!("Creating hwnd render target failed: {:?}", e);
         }
-        res.map_err(|_| Error::D2Error)
+        res.map(|hrt| cast_to_device_context(&hrt).expect("removethis"))
+            .map_err(|_| Error::D2Error)
     }
 }
 
@@ -76,7 +67,7 @@ pub(crate) unsafe fn create_render_target(
 ///
 /// TODO: probably want to create a DeviceContext, it's more flexible.
 pub(crate) unsafe fn create_render_target_dxgi(
-    d2d_factory: &direct2d::Factory,
+    d2d_factory: &D2DFactory,
     swap_chain: *mut IDXGISwapChain1,
     dpi: f32,
 ) -> Result<DxgiSurfaceRenderTarget, Error> {
@@ -110,16 +101,10 @@ pub(crate) unsafe fn create_render_target_dxgi(
     }
 }
 
-impl<'a> PaintCtx<'a> {
-    /// Return the raw Direct2D factory for this painting context. Note: it's possible
-    /// this will be wrapped to make it easier to port.
-    pub fn d2d_factory(&self) -> &direct2d::Factory {
-        self.d2d_factory
-    }
-
-    /// Return the raw Direct2D RenderTarget for this painting context. Note: it's possible
-    /// this will be wrapped to make it easier to port.
-    pub fn render_target(&mut self) -> &mut GenericRenderTarget {
-        self.render_target
-    }
+/// Casts hwnd variant to DeviceTarget
+unsafe fn cast_to_device_context(hrt: &HwndRenderTarget) -> Option<DeviceContext> {
+    hrt.get_comptr()
+        .cast()
+        .ok()
+        .map(|com_ptr| DeviceContext::new(com_ptr))
 }
