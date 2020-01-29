@@ -105,12 +105,10 @@ impl HwndRenderTarget {
     }
 
     pub unsafe fn from_raw(raw: *mut ID2D1HwndRenderTarget) -> Self {
-        HwndRenderTarget {
-            ptr: ComPtr::from_raw(raw),
-        }
+        Self::from_ptr(ComPtr::from_raw(raw))
     }
 
-    pub unsafe fn get_raw(&self) -> *mut ID2D1HwndRenderTarget {
+    pub fn get_raw(&self) -> *mut ID2D1HwndRenderTarget {
         self.ptr.as_raw()
     }
 
@@ -153,7 +151,7 @@ impl DxgiSurfaceRenderTarget {
         }
     }
 
-    pub unsafe fn get_raw(&self) -> *mut ID2D1RenderTarget {
+    pub fn get_raw(&self) -> *mut ID2D1RenderTarget {
         self.ptr.as_raw()
     }
 
