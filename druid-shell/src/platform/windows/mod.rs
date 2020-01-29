@@ -157,19 +157,6 @@ impl DxgiSurfaceRenderTarget {
         self.ptr.as_raw()
     }
 
-    // TODO use https://docs.rs/wio/0.2.2/i686-pc-windows-msvc/wio/com/struct.ComPtr.html#method.cast
-    //  use something like
-    //  ```
-    //  self.ptr.cast().ok().map(DeviceContext)
-    //  ```
-    //  Note that DeviceContext needs a constructor, something like DeviceContext::from_com()
-    //
-    //
-    //  NOTE for piet_common. for the pub structs, put docstrings that warn that it's windows only,
-    //  used for platform-specific info. The four structs i'm exporting, the device context and the
-    //  factories.
-    //
-    //  Make sure to rebase first for piet
     pub unsafe fn as_device_context(&self) -> Option<DeviceContext> {
         self.ptr.cast().ok().map(|com_ptr| DeviceContext::new(com_ptr))
     }

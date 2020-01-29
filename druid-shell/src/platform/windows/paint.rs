@@ -146,8 +146,6 @@ pub(crate) unsafe fn create_render_target_dxgi(
 
 
 /// Casts hwnd variant to DeviceTarget
-///
-/// TODO: investigate whether there's a better way to do this.
 unsafe fn cast_to_device_context(hrt: &HwndRenderTarget) -> Option<DeviceContext> {
     hrt.get_comptr().cast().ok().map(|com_ptr| DeviceContext::new(com_ptr))
 }

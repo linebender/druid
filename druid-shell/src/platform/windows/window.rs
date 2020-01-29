@@ -38,18 +38,10 @@ use winapi::um::unknwnbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
 
-// old
-//use direct2d;
-//use direct2d::math::SizeU;
-//use direct2d::render_target::{GenericRenderTarget, HwndRenderTarget, RenderTarget};
-
-//new
 use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
 
 use crate::platform::windows::HwndRenderTarget;
-
-//end
 
 use crate::kurbo::{Point, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
