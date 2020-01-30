@@ -247,21 +247,7 @@ impl<'a, T: Data> SingleWindowCtx<'a, T> {
             focus_widget: self.window.focus,
         };
         self.window.event(&mut ctx, &event, self.data, self.env);
-
-        let is_handled = ctx.is_handled;
-
-        if let Some(focus_req) = ctx.base_state.request_focus.take() {
-            let old = self.window.focus;
-            let new = self.window.widget_for_focus_request(focus_req);
-            self.do_lifecycle(LifeCycle::RouteFocusChanged { old, new });
-            self.window.focus = new;
-        }
-
-        if let Some(cursor) = cursor {
-            win_ctx.set_cursor(&cursor);
-        }
-
-        is_handled
+        ctx.is_handled
     }
 
     fn do_lifecycle(&mut self, event: LifeCycle) -> bool {
