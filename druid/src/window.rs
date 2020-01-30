@@ -75,6 +75,15 @@ impl<T: Data> Window<T> {
         }
         self.root.event(ctx, event, data, env);
 
+        if let Some(focus_req) = ctx.base_state.request_focus.take() {
+            let old = self.focus;
+            let new = self.widget_for_focus_request(focus_req);
+            let mut lc_ctx = ctx.make_lifecycle_ctx();
+            let event = LifeCycle::RouteFocusChanged { old, new };
+            self.lifecycle(&mut lc_ctx, &event, data, env);
+            self.focus = new;
+        }
+
         if let Some(cursor) = ctx.cursor {
             ctx.win_ctx.set_cursor(&cursor);
         }
@@ -145,7 +154,7 @@ impl<T: Data> Window<T> {
             .or_else(|| self.menu.as_ref().and_then(|m| m.command_for_id(cmd_id)))
     }
 
-    pub(crate) fn widget_for_focus_request(&self, focus: FocusChange) -> Option<WidgetId> {
+    fn widget_for_focus_request(&self, focus: FocusChange) -> Option<WidgetId> {
         match focus {
             FocusChange::Resign => None,
             FocusChange::Focus(id) => Some(id),
@@ -170,8 +179,6 @@ impl<T: Data> Window<T> {
 
 impl WindowId {
     /// Allocate a new, unique window id.
-    ///
-    /// Do note that if we create 4 billion windows there may be a collision.
     pub fn next() -> WindowId {
         static WINDOW_COUNTER: Counter = Counter::new();
         WindowId(WINDOW_COUNTER.next())
