@@ -14,8 +14,7 @@
 
 //! Calc start of a backspace delete interval
 
-use crate::widget::textbox::Selection;
-use crate::widget::textbox::{EditableText, EditableTextCursor};
+use crate::text::{EditableText, EditableTextCursor, Selection};
 
 use xi_unicode::*;
 

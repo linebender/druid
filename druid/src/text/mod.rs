@@ -12,10 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A text editing widget and its utilities.
-
-mod textbox_widget;
-pub use self::textbox_widget::TextBox;
+//! Text editing utilities.
 
 mod editable_text;
 pub use self::editable_text::{EditableText, EditableTextCursor, StringCursor};

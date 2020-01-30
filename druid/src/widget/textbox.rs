@@ -29,9 +29,7 @@ use crate::piet::{
 use crate::theme;
 use crate::widget::Align;
 
-use crate::widget::textbox::{
-    movement, offset_for_delete_backwards, EditableText, Movement, Selection,
-};
+use crate::text::{movement, offset_for_delete_backwards, EditableText, Movement, Selection};
 
 const BORDER_WIDTH: f64 = 1.;
 const PADDING_TOP: f64 = 5.;

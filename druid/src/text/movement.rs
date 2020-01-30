@@ -14,8 +14,7 @@
 
 //! Text editing movements.
 
-use crate::widget::textbox::EditableText;
-use crate::widget::textbox::Selection;
+use crate::text::{EditableText, Selection};
 
 /// The specification of a movement.
 #[derive(Debug, PartialEq, Clone, Copy)]

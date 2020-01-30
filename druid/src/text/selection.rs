@@ -17,7 +17,7 @@
 use std::cmp::{max, min};
 use std::ops::Range;
 
-use crate::widget::textbox::EditableText;
+use crate::text::EditableText;
 
 /// A Selection type for EditableText.
 #[derive(Debug, Clone, Copy)]
