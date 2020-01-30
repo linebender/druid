@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn container_reuse() {
         // this should be Container<Align<Container<TextBox>>>
-        let widget = TextBox::new()
+        let widget: Container<String> = TextBox::new()
             .background(Color::BLACK)
             .align_left()
             .border(Color::BLACK, 1.0);
@@ -174,7 +174,7 @@ mod tests {
         assert!(!widget.background_is_some());
 
         // this should be Container<TextBox>
-        let widget = TextBox::new()
+        let widget: Container<String> = TextBox::new()
             .background(Color::BLACK)
             .border(Color::BLACK, 1.0);
         assert!(widget.background_is_some());
@@ -184,11 +184,11 @@ mod tests {
     #[test]
     fn sized_box_reuse() {
         // this should be SizedBox<Align<SizedBox<TextBox>>>
-        let widget = TextBox::new().fix_height(10.0).align_left().fix_width(1.0);
+        let widget: SizedBox<String> = TextBox::new().fix_height(10.0).align_left().fix_width(1.0);
         assert_eq!(widget.width_and_height(), (Some(1.0), None));
 
         // this should be SizedBox<TextBox>
-        let widget = TextBox::new().fix_height(10.0).fix_width(1.0);
+        let widget: SizedBox<String> = TextBox::new().fix_height(10.0).fix_width(1.0);
         assert_eq!(widget.width_and_height(), (Some(1.0), Some(10.0)));
     }
 }
