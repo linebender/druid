@@ -36,6 +36,8 @@ pub mod lens;
 mod localization;
 mod menu;
 mod mouse;
+#[cfg(test)]
+mod tests;
 mod text;
 pub mod theme;
 pub mod widget;
