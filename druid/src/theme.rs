@@ -50,8 +50,6 @@ pub const SCROLL_BAR_PAD: Key<f64> = Key::new("scroll_bar_pad");
 pub const SCROLL_BAR_RADIUS: Key<f64> = Key::new("scroll_bar_radius");
 pub const SCROLL_BAR_EDGE_WIDTH: Key<f64> = Key::new("scroll_bar_edge_width");
 
-pub const DEBUG_PAINT: Key<bool> = Key::new("debug_paint");
-
 /// An initial theme.
 pub fn init() -> Env {
     let mut env = Env::default()
@@ -80,8 +78,7 @@ pub fn init() -> Env {
         .adding(SCROLL_BAR_WIDTH, 8.)
         .adding(SCROLL_BAR_PAD, 2.)
         .adding(SCROLL_BAR_RADIUS, 5.)
-        .adding(SCROLL_BAR_EDGE_WIDTH, 1.)
-        .adding(DEBUG_PAINT, false);
+        .adding(SCROLL_BAR_EDGE_WIDTH, 1.);
 
     #[cfg(target_os = "windows")]
     {

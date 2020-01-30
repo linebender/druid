@@ -259,11 +259,9 @@ impl WidgetId {
         // safety: by construction this can never be zero.
         WidgetId(unsafe { std::num::NonZeroU64::new_unchecked(id) })
     }
-}
 
-impl From<WidgetId> for u64 {
-    fn from(id: WidgetId) -> u64 {
-        id.0.into()
+    pub(crate) fn to_raw(self) -> u64 {
+        self.0.into()
     }
 }
 

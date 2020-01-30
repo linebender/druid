@@ -18,9 +18,7 @@ use std::sync::Arc;
 
 use druid::lens::{self, LensExt};
 use druid::widget::{Button, Flex, Label, List, Scroll, WidgetExt};
-use druid::{
-    theme, AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WindowDesc,
-};
+use druid::{AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct AppData {
@@ -37,9 +35,7 @@ fn main() {
         right: Arc::new(vec![1, 2, 3]),
     };
     AppLauncher::with_window(main_window)
-        .configure_env(|env, _| {
-            env.set(theme::DEBUG_PAINT, true);
-        })
+        .debug_paint_layout()
         .use_simple_logger()
         .launch(data)
         .expect("launch failed");

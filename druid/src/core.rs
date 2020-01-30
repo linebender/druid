@@ -19,10 +19,10 @@ use std::collections::VecDeque;
 use log;
 
 use crate::bloom::Bloom;
-use crate::kurbo::{Affine, Rect, Shape, Point, Size};
+use crate::kurbo::{Affine, Point, Rect, Shape, Size};
 use crate::piet::RenderContext;
 use crate::{
-    theme, BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
     PaintCtx, Target, UpdateCtx, Widget, WidgetId,
 };
 
@@ -191,9 +191,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         };
         self.inner.paint(&mut ctx, data, &env);
 
-        if env.get(theme::DEBUG_PAINT) {
+        if env.get(Env::DEBUG_PAINT) {
             let rect = Rect::from_origin_size(Point::ORIGIN, paint_ctx.size());
-            let id: u64 = u64::from(self.id());
+            let id = self.id().to_raw();
             let color = env.get_debug_color(id);
             paint_ctx.stroke(rect, &color, 1.0);
         }

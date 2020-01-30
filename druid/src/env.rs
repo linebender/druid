@@ -43,7 +43,7 @@ pub struct Env(Arc<EnvImpl>);
 #[derive(Clone)]
 struct EnvImpl {
     map: HashMap<String, Value>,
-    debug_colors: HashMap<u64, Color>,
+    debug_colors: Vec<Color>,
     l10n: Arc<L10nManager>,
 }
 
@@ -170,9 +170,17 @@ impl Env {
 
     /// Given an id, returns one of 18 distinct colors
     pub(crate) fn get_debug_color(&self, id: u64) -> Color {
-        let color_num = id % self.0.debug_colors.len() as u64;
-        self.0.debug_colors.get(&color_num).unwrap().clone()
+        let color_num = id as usize % self.0.debug_colors.len();
+        self.0.debug_colors[color_num].clone()
     }
+
+    /// State for whether or not to paint colorful rectangles for layout
+    /// debugging.
+    ///
+    /// Set by the `debug_paint_layout()` method on [`AppLauncher`]'.
+    ///
+    /// [`AppLauncher`]: struct.AppLauncher.html
+    pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("debug_paint");
 }
 
 impl<T> Key<T> {
@@ -284,32 +292,34 @@ impl Default for Env {
 
         // Colors are from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
         // They're picked for visual distinction and accessbility (99 percent)
-        let mut debug_colors = HashMap::new();
-        debug_colors.insert(0, Color::rgb8(230, 25, 75));
-        debug_colors.insert(1, Color::rgb8(60, 180, 75));
-        debug_colors.insert(2, Color::rgb8(255, 225, 25));
-        debug_colors.insert(3, Color::rgb8(0, 130, 200));
-        debug_colors.insert(4, Color::rgb8(245, 130, 48));
-        debug_colors.insert(5, Color::rgb8(70, 240, 240));
-        debug_colors.insert(6, Color::rgb8(240, 50, 230));
-        debug_colors.insert(7, Color::rgb8(250, 190, 190));
-        debug_colors.insert(8, Color::rgb8(0, 128, 128));
-        debug_colors.insert(9, Color::rgb8(230, 190, 255));
-        debug_colors.insert(10, Color::rgb8(170, 110, 40));
-        debug_colors.insert(11, Color::rgb8(255, 250, 200));
-        debug_colors.insert(12, Color::rgb8(128, 0, 0));
-        debug_colors.insert(13, Color::rgb8(170, 255, 195));
-        debug_colors.insert(14, Color::rgb8(0, 0, 128));
-        debug_colors.insert(15, Color::rgb8(128, 128, 128));
-        debug_colors.insert(16, Color::rgb8(255, 255, 255));
-        debug_colors.insert(17, Color::rgb8(0, 0, 0));
+        let debug_colors = vec![
+            Color::rgb8(230, 25, 75),
+            Color::rgb8(60, 180, 75),
+            Color::rgb8(255, 225, 25),
+            Color::rgb8(0, 130, 200),
+            Color::rgb8(245, 130, 48),
+            Color::rgb8(70, 240, 240),
+            Color::rgb8(240, 50, 230),
+            Color::rgb8(250, 190, 190),
+            Color::rgb8(0, 128, 128),
+            Color::rgb8(230, 190, 255),
+            Color::rgb8(170, 110, 40),
+            Color::rgb8(255, 250, 200),
+            Color::rgb8(128, 0, 0),
+            Color::rgb8(170, 255, 195),
+            Color::rgb8(0, 0, 128),
+            Color::rgb8(128, 128, 128),
+            Color::rgb8(255, 255, 255),
+            Color::rgb8(0, 0, 0),
+        ];
 
         let inner = EnvImpl {
             l10n: Arc::new(l10n),
             map: HashMap::new(),
             debug_colors,
         };
-        Env(Arc::new(inner))
+
+        Env(Arc::new(inner)).adding(Env::DEBUG_PAINT, false)
     }
 }
 
