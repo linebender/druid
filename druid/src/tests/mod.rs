@@ -49,3 +49,55 @@ fn take_focus() {
         assert_eq!(harness.window.focus, Some(left_id));
     })
 }
+
+#[test]
+fn simple_layout() {
+    const BOX_WIDTH: f64 = 200.;
+    const PADDING: f64 = 10.;
+
+    let id_1 = WidgetId::next();
+
+    let widget = Split::vertical(Label::new("hi"), Label::new("there"))
+        .fix_size(BOX_WIDTH, BOX_WIDTH)
+        .padding(10.0)
+        .with_id(id_1)
+        .center();
+
+    Harness::create(true, widget, |harness| {
+        harness.send_initial_events();
+        harness.layout();
+        let state = harness.get_state(id_1).expect("failed to retrieve id_1");
+        assert_eq!(
+            state.layout_rect.x0,
+            ((DEFAULT_SIZE.width - BOX_WIDTH) / 2.) - PADDING
+        );
+    })
+}
+
+#[test]
+fn child_tracking() {
+    let (id_1, id_2, id_3) = (WidgetId::next(), WidgetId::next(), WidgetId::next());
+    let id_4 = WidgetId::next();
+
+    let widget = Split::vertical(
+        SizedBox::empty().with_id(id_1),
+        SizedBox::empty().with_id(id_2),
+    )
+    .with_id(id_3)
+    .padding(5.0)
+    .with_id(id_4);
+
+    Harness::create(true, widget, |harness| {
+        harness.send_initial_events();
+        let root = harness.get_state(id_4).unwrap();
+        assert!(root.children.contains(&id_1));
+        assert!(root.children.contains(&id_2));
+        assert!(root.children.contains(&id_3));
+        assert_eq!(root.children.entry_count(), 3);
+
+        let split = harness.get_state(id_3).unwrap();
+        assert!(split.children.contains(&id_1));
+        assert!(split.children.contains(&id_2));
+        assert_eq!(split.children.entry_count(), 2);
+    });
+}

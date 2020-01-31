@@ -18,7 +18,7 @@ use crate::core::{BaseState, CommandQueue};
 use crate::piet::Device;
 use crate::*;
 
-const DEFAULT_SIZE: Size = Size::new(400., 400.);
+pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
 
 /// A type that tries very hard to provide a comforting and safe environment
 /// for widgets who are trying to find their way.
@@ -27,7 +27,7 @@ const DEFAULT_SIZE: Size = Size::new(400., 400.);
 /// can send events to that widget and verify that expected conditions are met.
 ///
 /// Harness tries to act like the normal druid environment; for instance, it will
-/// attempt to dispatch and `Command`s that are sent during event handling, and
+/// attempt to dispatch any `Command`s that are sent during event handling, and
 /// it will call `update` automatically after an event.
 ///
 /// That said, it _is_ missing a bunch of logic that would normally be handled
@@ -86,7 +86,6 @@ impl<T: Data> Harness<T> {
 
     /// Send the events that would normally be sent when the app starts.
     // should we do this automatically? Also these will change regularly?
-    #[allow(dead_code)]
     pub fn send_initial_events(&mut self) {
         self.lifecycle(LifeCycle::WidgetAdded);
         self.lifecycle(LifeCycle::Register);
@@ -182,7 +181,6 @@ impl<T: Data> Harness<T> {
         self.window.update(&mut ctx, &self.data, &self.env);
     }
 
-    #[allow(dead_code)]
     pub fn layout(&mut self) {
         let mut target = self
             .device
