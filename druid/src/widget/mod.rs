@@ -74,7 +74,35 @@ use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
 };
 
-/// A unique identifier for a single widget.
+/// A unique identifier for a single [`Widget`].
+///
+/// `WidgetId`s are generated automatically for all widgets that participate
+/// in layout. More specifically, each [`WidgetPod`] has a unique `WidgetId`.
+///
+/// These ids are used internally to route events, and can be used to communicate
+/// between widgets, by submitting a command (as with [`EventCtx::submit_command`])
+/// and passing a `WidgetId` as the [`Target`].
+///
+/// A widget can retrieve its id via methods on the various contexts, such as
+/// [`LifeCycleCtx::widget_id`].
+///
+/// ## Explicit `WidgetId`s.
+///
+/// Sometimes, you may want to know a widget's id when constructing the widget.
+/// You can give a widget an _explicit_ id by wrapping it in an [`IdentityWrapper`]
+/// widget, or by using the [`WidgetExt::with_id`] convenience method.
+///
+/// If you set a `WidgetId` directly, you are resposible for ensuring that it
+/// is unique in time. That is: only one widget can exist with a given id at a
+/// given time.
+///
+/// [`Widget`]: trait.Widget.html
+/// [`EventCtx::submit_command`]: ../struct.EventCtx.html#method.submit_command
+/// [`Target`]: ../enum.Target.html
+/// [`WidgetPod`]: ../struct.WidgetPod.html
+/// [`LifeCycleCtx::widget_id`]: ../struct.LifeCycleCtx.html#method.id
+/// [`WidgetExt::with_id`]: ../trait.WidgetExt.html#tymethod.with_id
+/// [`IdentityWrapper`]: struct.IdentityWrapper.html
 // this is NonZeroU64 because we regularly store Option<WidgetId>
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub struct WidgetId(NonZeroU64);
@@ -203,7 +231,14 @@ pub trait Widget<T> {
 }
 
 impl WidgetId {
-    /// Allocate a new, unique widget id.
+    /// Allocate a new, unique `WidgetId`.
+    ///
+    /// All widgets are assigned ids automatically; you should only create
+    /// an explicit id if you need to know it ahead of time, for instance
+    /// if you want two sibling widgets to know each others' ids.
+    ///
+    /// You must ensure that a given `WidgetId` is only ever used for one
+    /// widget at a time.
     pub fn next() -> WidgetId {
         use crate::shell::Counter;
         static WIDGET_ID_COUNTER: Counter = Counter::new();
