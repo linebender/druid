@@ -58,20 +58,3 @@ impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<W> {
         Some(self.id)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::widget::{Label, WidgetExt, WidgetId};
-    use crate::Color;
-
-    #[test]
-    fn test_nesting() {
-        let id = WidgetId::next();
-        let label = IdentityWrapper::wrap(Label::<u32>::new("howdy there friend"), id);
-        let wrapped_up: Box<dyn Widget<u32>> =
-            Box::new(label.padding(5.0).align_left().background(Color::BLACK));
-
-        assert_eq!(wrapped_up.id(), Some(id));
-    }
-}
