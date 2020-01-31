@@ -140,7 +140,15 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         Parse::new(self)
     }
 
-    /// Assign the widget a specific `WidgetId`.
+    /// Assign the widget a specific [`WidgetId`].
+    ///
+    /// You must ensure that a given [`WidgetId`] is only ever used for
+    /// a single widget at a time.
+    ///
+    /// An id _may_ be reused over time; for instance if you replace one
+    /// widget with another, you may reuse the first widget's id.
+    ///
+    /// [`WidgetId`]: struct.WidgetId.html
     fn with_id(self, id: WidgetId) -> IdentityWrapper<Self> {
         IdentityWrapper::wrap(self, id)
     }

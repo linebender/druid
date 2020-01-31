@@ -157,7 +157,9 @@ fn main() {
         .expect("launch failed");
 }
 
-/// A constant widget id, that might be reused.
+/// A constant `WidgetId`. This may be passed around and can be reused when
+/// rebuilding a widget graph; however it should only ever be associated with
+/// a single widget at a time.
 const ID_ONE: WidgetId = WidgetId::reserved(1);
 
 fn make_ui() -> impl Widget<OurData> {
