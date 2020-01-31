@@ -71,3 +71,6 @@ pub use mouse::MouseEvent;
 pub use widget::{Widget, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
+
+#[cfg(test)]
+pub(crate) use event::StateCell;

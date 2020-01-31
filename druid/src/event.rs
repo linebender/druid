@@ -124,7 +124,7 @@ pub enum Event {
 }
 
 /// Application life cycle events.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum LifeCycle {
     /// Sent to a `Widget` when it is added to the widget tree. This should be
     /// the first message that each widget receives.
@@ -188,6 +188,17 @@ pub enum LifeCycle {
     /// See [`has_focus`](struct.BaseState.html#method.has_focus) for
     /// discussion about the focus status.
     FocusChanged(bool),
+    /// Testing only: request the `BaseState` of a specific widget.
+    ///
+    /// During testing, you may wish to verify that the state of a widget
+    /// somewhere in the tree is as expected. In that case you can dispatch
+    /// this event, specifying the widget in question, and that widget will
+    /// set its state in the provided `Cell`, if it exists.
+    #[cfg(test)]
+    DebugRequestState {
+        widget: WidgetId,
+        state_cell: StateCell,
+    },
 }
 
 /// A mouse wheel event.
@@ -250,6 +261,45 @@ impl Event {
                 }
             }
             _ => Some(self.clone()),
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) use state_cell::StateCell;
+
+#[cfg(test)]
+mod state_cell {
+    use crate::core::BaseState;
+    use std::{cell::RefCell, rc::Rc};
+
+    /// An interior-mutable struct for fetching BasteState.
+    #[derive(Clone, Default)]
+    pub struct StateCell(Rc<RefCell<Option<BaseState>>>);
+
+    impl std::fmt::Debug for StateCell {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            let inner = if self.0.borrow().is_some() {
+                "Some"
+            } else {
+                "None"
+            };
+            write!(f, "StateCell({})", inner)
+        }
+    }
+
+    impl StateCell {
+        /// Set the state. This will panic if it is called twice.
+        pub(crate) fn set(&self, state: BaseState) {
+            assert!(
+                self.0.borrow_mut().replace(state).is_none(),
+                "StateCell already set"
+            )
+        }
+
+        #[allow(dead_code)]
+        pub(crate) fn take(&self) -> Option<BaseState> {
+            self.0.borrow_mut().take()
         }
     }
 }

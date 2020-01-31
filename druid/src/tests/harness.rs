@@ -76,6 +76,14 @@ impl<T: Data> Harness<T> {
         f(&mut mocks);
     }
 
+    /// Retrieve a copy of this widget's `BaseState`, if possible.
+    pub(crate) fn get_state(&mut self, widget: WidgetId) -> Option<BaseState> {
+        let cell = StateCell::default();
+        let state_cell = cell.clone();
+        self.lifecycle(LifeCycle::DebugRequestState { widget, state_cell });
+        cell.take()
+    }
+
     /// Send the events that would normally be sent when the app starts.
     // should we do this automatically? Also these will change regularly?
     #[allow(dead_code)]

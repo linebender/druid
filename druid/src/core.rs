@@ -66,9 +66,10 @@ pub struct WidgetPod<T: Data, W: Widget<T>> {
 ///
 /// [`paint`]: trait.Widget.html#tymethod.paint
 /// [`WidgetPod`]: struct.WidgetPod.html
+#[derive(Clone)]
 pub(crate) struct BaseState {
     pub(crate) id: WidgetId,
-    layout_rect: Rect,
+    pub(crate) layout_rect: Rect,
 
     // TODO: consider using bitflags for the booleans.
 
@@ -428,6 +429,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     self.inner.lifecycle(ctx, &event, data, env);
                     false
                 } else {
+                    //FIXME: I think this is a bug? we should be checking `self.state.children`
                     old.map(|id| ctx.children.contains(&id)).unwrap_or(false)
                         || new.map(|id| ctx.children.contains(&id)).unwrap_or(false)
                 }
@@ -435,6 +437,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             LifeCycle::FocusChanged(_) => {
                 self.state.request_focus = None;
                 true
+            }
+            #[cfg(test)]
+            LifeCycle::DebugRequestState { widget, state_cell } => {
+                if *widget == self.id() {
+                    state_cell.set(self.state.clone());
+                    false
+                } else {
+                    self.state.children.contains(&widget)
+                }
             }
             _ => true,
         };
