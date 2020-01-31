@@ -101,9 +101,7 @@ impl<T: Data> AppLauncher<T> {
 
     /// Paint colorful rectangles for layout debugging.
     ///
-    /// The rectangles are the size of each widget's `PaintCtx`. The colors are
-    /// distinct per `WidgetPod`, so each non-`WidgetPod` child of a `WidgetPod`
-    /// will have the same color as its parent.
+    /// The rectangles are drawn around each widget's layout rect.
     pub fn debug_paint_layout(self) -> Self {
         self.configure_env(|env, _| {
             env.set(Env::DEBUG_PAINT, true);
