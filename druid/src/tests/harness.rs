@@ -15,7 +15,7 @@
 //! Tools and infrastructure for testing widgets.
 
 use crate::core::{BaseState, CommandQueue};
-use crate::piet::Device;
+use crate::piet::{BitmapTarget, Device, Piet};
 use crate::*;
 
 pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
@@ -40,11 +40,17 @@ pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
 /// if you want those functions run you will need to call them yourself.
 ///
 /// Also, timers don't work.  ¯\_(ツ)_/¯
-pub struct Harness<T: Data> {
-    device: Device,
-    pub data: T,
-    pub env: Env,
-    pub window: Window<T>,
+pub struct Harness<'a, T: Data> {
+    piet: Piet<'a>,
+    inner: Inner<T>,
+}
+
+/// All of the state except for the `Piet` (render context). We need to pass
+/// that in to get around some lifetime issues.
+struct Inner<T: Data> {
+    data: T,
+    env: Env,
+    window: Window<T>,
     handle: WindowHandle,
     command_queue: CommandQueue,
     cursor: Option<Cursor>,
@@ -52,18 +58,26 @@ pub struct Harness<T: Data> {
 }
 
 /// A `WinCtx` impl that we can conjure from the ether.
-pub struct MockWinCtx<'a>(&'a mut Text<'a>);
+pub struct MockWinCtx<'a, 't: 'a>(&'a mut Text<'t>);
 
-impl<T: Data> Harness<T> {
+/// A way to clean up resources when our target goes out of scope.
+// the inner type is an option so that we can take ownership in `drop` even
+// though self is `& mut`.
+struct TargetGuard<'a>(Option<BitmapTarget<'a>>);
+
+impl<T: Data> Harness<'_, T> {
     /// Create a new `Harness` with the given data and a root widget,
     /// and provide that harness to the passed in function.
     ///
     /// For lifetime reasons™, we cannot just make a harness. It's complicated.
     /// I tried my best.
     pub fn create(data: T, root: impl Widget<T> + 'static, mut f: impl FnMut(&mut Harness<T>)) {
-        let device = Device::new().expect("harness failed to get device");
-        let mut mocks = Harness {
-            device,
+        let mut device = Device::new().expect("harness failed to get device");
+        let target = device.bitmap_target(400, 400, 2.).expect("bitmap_target");
+        let mut target = TargetGuard(Some(target));
+        let piet = target.0.as_mut().unwrap().render_context();
+
+        let inner = Inner {
             data,
             env: theme::init(),
             window: Window::new(root, LocalizedString::new(""), None),
@@ -73,7 +87,22 @@ impl<T: Data> Harness<T> {
             window_id: WindowId::next(),
         };
 
-        f(&mut mocks);
+        let mut harness = Harness { piet, inner };
+        f(&mut harness);
+    }
+
+    pub fn window(&self) -> &Window<T> {
+        &self.inner.window
+    }
+
+    #[allow(dead_code)]
+    pub fn window_mut(&mut self) -> &mut Window<T> {
+        &mut self.inner.window
+    }
+
+    #[allow(dead_code)]
+    pub fn data(&self) -> &T {
+        &self.inner.data
     }
 
     /// Retrieve a copy of this widget's `BaseState`, if possible.
@@ -100,19 +129,45 @@ impl<T: Data> Harness<T> {
     ///
     /// Commands dispatched during `update` will not be sent?
     pub fn event(&mut self, event: Event) {
+        self.inner.event(event, &mut self.piet);
+        self.process_commands();
+        self.update();
+    }
+
+    fn process_commands(&mut self) {
+        loop {
+            let cmd = self.inner.command_queue.pop_front();
+            match cmd {
+                Some((target, cmd)) => self.event(Event::TargetedCommand(target, cmd)),
+                None => break,
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn lifecycle(&mut self, event: LifeCycle) {
+        self.inner.lifecycle(event)
+    }
+
+    //TODO: should we expose this? I don't think so?
+    fn update(&mut self) {
+        self.inner.update(&mut self.piet)
+    }
+
+    pub fn layout(&mut self) {
+        self.inner.layout(&mut self.piet)
+    }
+
+    #[allow(dead_code)]
+    pub fn paint(&mut self) {
+        self.inner.paint(&mut self.piet)
+    }
+}
+
+impl<T: Data> Inner<T> {
+    fn event(&mut self, event: Event, piet: &mut Piet) {
         let mut base_state = BaseState::new(self.window.root.id());
 
-        // we need to instantiate this stuff in each method in order to get
-        // around lifetime issues.
-        //
-        // we could fix this by having two types, a 'harness' and a 'harness host';
-        // the latter would house just a render context and the harness,
-        // and would pass the render context into the harness on each call.
-        let mut target = self
-            .device
-            .bitmap_target(400, 400, 100.)
-            .expect("harness failed to create target");
-        let mut piet = target.render_context();
         let text = piet.text();
         let mut win_ctx = MockWinCtx(text);
 
@@ -131,22 +186,10 @@ impl<T: Data> Harness<T> {
 
         self.window
             .event(&mut ctx, &event, &mut self.data, &self.env);
-        self.process_commands();
-        self.update();
-    }
-
-    fn process_commands(&mut self) {
-        loop {
-            let cmd = self.command_queue.pop_front();
-            match cmd {
-                Some((target, cmd)) => self.event(Event::TargetedCommand(target, cmd)),
-                None => break,
-            }
-        }
     }
 
     #[allow(dead_code)]
-    pub fn lifecycle(&mut self, event: LifeCycle) {
+    fn lifecycle(&mut self, event: LifeCycle) {
         let mut ctx = LifeCycleCtx {
             command_queue: &mut self.command_queue,
             children: Default::default(),
@@ -162,14 +205,7 @@ impl<T: Data> Harness<T> {
             .lifecycle(&mut ctx, &event, &self.data, &self.env);
     }
 
-    //TODO: should we expose this? I don't think so?
-    fn update(&mut self) {
-        let mut target = self
-            .device
-            .bitmap_target(400, 400, 100.)
-            .expect("harness failed to create target");
-        let mut piet = target.render_context();
-
+    fn update(&mut self, piet: &mut Piet) {
         let mut ctx = UpdateCtx {
             text_factory: piet.text(),
             window: &self.handle,
@@ -181,13 +217,7 @@ impl<T: Data> Harness<T> {
         self.window.update(&mut ctx, &self.data, &self.env);
     }
 
-    pub fn layout(&mut self) {
-        let mut target = self
-            .device
-            .bitmap_target(400, 400, 100.)
-            .expect("harness failed to create target");
-        let mut piet = target.render_context();
-
+    fn layout(&mut self, piet: &mut Piet) {
         let mut ctx = LayoutCtx {
             text_factory: piet.text(),
             window_id: self.window_id,
@@ -196,16 +226,11 @@ impl<T: Data> Harness<T> {
     }
 
     #[allow(dead_code)]
-    pub fn paint(&mut self) {
+    fn paint(&mut self, piet: &mut Piet) {
         let base_state = BaseState::new(self.window.root.id());
-        let mut target = self
-            .device
-            .bitmap_target(400, 400, 100.)
-            .expect("harness failed to create target");
-        let mut piet = target.render_context();
 
         let mut ctx = PaintCtx {
-            render_ctx: &mut piet,
+            render_ctx: piet,
             window_id: self.window_id,
             region: Rect::ZERO.into(),
             base_state: &base_state,
@@ -215,9 +240,9 @@ impl<T: Data> Harness<T> {
     }
 }
 
-impl<'a> WinCtx<'a> for MockWinCtx<'a> {
+impl<'a, 't> WinCtx<'t> for MockWinCtx<'a, 't> {
     fn invalidate(&mut self) {}
-    fn text_factory(&mut self) -> &mut Text<'a> {
+    fn text_factory(&mut self) -> &mut Text<'t> {
         self.0
     }
 
@@ -231,5 +256,15 @@ impl<'a> WinCtx<'a> for MockWinCtx<'a> {
     }
     fn save_as_sync(&mut self, _: FileDialogOptions) -> Option<FileInfo> {
         None
+    }
+}
+
+impl Drop for TargetGuard<'_> {
+    fn drop(&mut self) {
+        // we need to call this to clean up the context
+        let _ = self
+            .0
+            .take()
+            .map(|t| t.into_raw_pixels(piet::ImageFormat::RgbaPremul));
     }
 }

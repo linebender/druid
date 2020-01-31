@@ -46,7 +46,7 @@ fn take_focus() {
 
     Harness::create(data, app, |harness| {
         harness.event(Event::Command(TAKE_FOCUS.into()));
-        assert_eq!(harness.window.focus, Some(left_id));
+        assert_eq!(harness.window().focus, Some(left_id));
     })
 }
 
