@@ -192,10 +192,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.inner.paint(&mut ctx, data, &env);
 
         if env.get(Env::DEBUG_PAINT) {
-            let rect = Rect::from_origin_size(Point::ORIGIN, paint_ctx.size());
+            let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
             let id = self.id().to_raw();
             let color = env.get_debug_color(id);
-            paint_ctx.stroke(rect, &color, 1.0);
+            ctx.stroke(rect, &color, 1.0);
         }
     }
 
