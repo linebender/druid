@@ -140,6 +140,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         Parse::new(self)
     }
 
+    /// Wrap this widget in a `Box`.
     fn boxed(self) -> Box<dyn Widget<T>> {
         Box::new(self)
     }
