@@ -75,7 +75,7 @@ impl TextBox {
     }
 
     /// Calculate the PietTextLayout from the given text, font, and font size
-    fn get_layout(&self, piet_text: &mut PietText, text: &String, env: &Env) -> PietTextLayout {
+    fn get_layout(&self, piet_text: &mut PietText, text: &str, env: &Env) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         // TODO: caching of both the format and the layout
