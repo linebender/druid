@@ -259,6 +259,10 @@ impl WidgetId {
         // safety: by construction this can never be zero.
         WidgetId(unsafe { std::num::NonZeroU64::new_unchecked(id) })
     }
+
+    pub(crate) fn to_raw(self) -> u64 {
+        self.0.into()
+    }
 }
 
 impl<T> Widget<T> for Box<dyn Widget<T>> {

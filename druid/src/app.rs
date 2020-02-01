@@ -99,6 +99,15 @@ impl<T: Data> AppLauncher<T> {
         self.ext_event_host.make_sink()
     }
 
+    /// Paint colorful rectangles for layout debugging.
+    ///
+    /// The rectangles are drawn around each widget's layout rect.
+    pub fn debug_paint_layout(self) -> Self {
+        self.configure_env(|env, _| {
+            env.set(Env::DEBUG_PAINT, true);
+        })
+    }
+
     /// Build the windows and start the runloop.
     ///
     /// Returns an error if a window cannot be instantiated. This is usually

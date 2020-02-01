@@ -19,7 +19,7 @@ use std::collections::VecDeque;
 use log;
 
 use crate::bloom::Bloom;
-use crate::kurbo::{Affine, Rect, Shape, Size};
+use crate::kurbo::{Affine, Point, Rect, Shape, Size};
 use crate::piet::RenderContext;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
@@ -190,6 +190,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             focus_widget: paint_ctx.focus_widget,
         };
         self.inner.paint(&mut ctx, data, &env);
+
+        if env.get(Env::DEBUG_PAINT) {
+            let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
+            let id = self.id().to_raw();
+            let color = env.get_debug_color(id);
+            ctx.stroke(rect, &color, 1.0);
+        }
     }
 
     /// Paint the widget, translating it by the origin of its layout rectangle.

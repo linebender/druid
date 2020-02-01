@@ -35,6 +35,7 @@ fn main() {
         right: Arc::new(vec![1, 2, 3]),
     };
     AppLauncher::with_window(main_window)
+        .debug_paint_layout()
         .use_simple_logger()
         .launch(data)
         .expect("launch failed");

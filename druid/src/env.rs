@@ -43,6 +43,7 @@ pub struct Env(Arc<EnvImpl>);
 #[derive(Clone)]
 struct EnvImpl {
     map: HashMap<String, Value>,
+    debug_colors: Vec<Color>,
     l10n: Arc<L10nManager>,
 }
 
@@ -70,6 +71,7 @@ pub enum Value {
     Color(Color),
     LinearGradient(Arc<LinearGradient>),
     Float(f64),
+    Bool(bool),
     UnsignedInt(u64),
     String(String),
 }
@@ -165,6 +167,20 @@ impl Env {
     pub(crate) fn localization_manager(&self) -> &L10nManager {
         &self.0.l10n
     }
+
+    /// Given an id, returns one of 18 distinct colors
+    pub(crate) fn get_debug_color(&self, id: u64) -> Color {
+        let color_num = id as usize % self.0.debug_colors.len();
+        self.0.debug_colors[color_num].clone()
+    }
+
+    /// State for whether or not to paint colorful rectangles for layout
+    /// debugging.
+    ///
+    /// Set by the `debug_paint_layout()` method on [`AppLauncher`]'.
+    ///
+    /// [`AppLauncher`]: struct.AppLauncher.html
+    pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("debug_paint");
 }
 
 impl<T> Key<T> {
@@ -210,6 +226,7 @@ impl Value {
             (Color(_), Color(_)) => true,
             (LinearGradient(_), LinearGradient(_)) => true,
             (Float(_), Float(_)) => true,
+            (Bool(_), Bool(_)) => true,
             (UnsignedInt(_), UnsignedInt(_)) => true,
             (String(_), String(_)) => true,
             _ => false,
@@ -226,6 +243,7 @@ impl Debug for Value {
             Value::Color(c) => write!(f, "Color {:?}", c),
             Value::LinearGradient(g) => write!(f, "LinearGradient {:?}", g),
             Value::Float(x) => write!(f, "Float {}", x),
+            Value::Bool(b) => write!(f, "Bool {}", b),
             Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
             Value::String(s) => write!(f, "String {:?}", s),
         }
@@ -244,6 +262,7 @@ impl Data for Value {
             (Color(c1), Color(c2)) => c1.as_rgba_u32() == c2.as_rgba_u32(),
             (LinearGradient(g1), LinearGradient(g2)) => Arc::ptr_eq(g1, g2),
             (Float(f1), Float(f2)) => f1.same(&f2),
+            (Bool(b1), Bool(b2)) => b1 == b2,
             (UnsignedInt(f1), UnsignedInt(f2)) => f1.same(&f2),
             (String(s1), String(s2)) => s1 == s2,
             _ => false,
@@ -270,11 +289,37 @@ impl Data for EnvImpl {
 impl Default for Env {
     fn default() -> Self {
         let l10n = L10nManager::new(vec!["builtin.ftl".into()], "./resources/i18n/");
+
+        // Colors are from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
+        // They're picked for visual distinction and accessbility (99 percent)
+        let debug_colors = vec![
+            Color::rgb8(230, 25, 75),
+            Color::rgb8(60, 180, 75),
+            Color::rgb8(255, 225, 25),
+            Color::rgb8(0, 130, 200),
+            Color::rgb8(245, 130, 48),
+            Color::rgb8(70, 240, 240),
+            Color::rgb8(240, 50, 230),
+            Color::rgb8(250, 190, 190),
+            Color::rgb8(0, 128, 128),
+            Color::rgb8(230, 190, 255),
+            Color::rgb8(170, 110, 40),
+            Color::rgb8(255, 250, 200),
+            Color::rgb8(128, 0, 0),
+            Color::rgb8(170, 255, 195),
+            Color::rgb8(0, 0, 128),
+            Color::rgb8(128, 128, 128),
+            Color::rgb8(255, 255, 255),
+            Color::rgb8(0, 0, 0),
+        ];
+
         let inner = EnvImpl {
             l10n: Arc::new(l10n),
             map: HashMap::new(),
+            debug_colors,
         };
-        Env(Arc::new(inner))
+
+        Env(Arc::new(inner)).adding(Env::DEBUG_PAINT, false)
     }
 }
 
@@ -373,6 +418,7 @@ macro_rules! impl_value_type_arc {
 }
 
 impl_value_type_owned!(f64, Float);
+impl_value_type_owned!(bool, Bool);
 impl_value_type_owned!(u64, UnsignedInt);
 impl_value_type_owned!(Color, Color);
 impl_value_type_owned!(Rect, Rect);
