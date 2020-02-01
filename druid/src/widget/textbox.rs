@@ -17,7 +17,7 @@
 use std::time::{Duration, Instant};
 
 use crate::{
-    Application, BoxConstraints, Cursor, Data, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
+    Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
     LifeCycle, LifeCycleCtx, PaintCtx, RawMods, Selector, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
@@ -40,30 +40,30 @@ const RESET_BLINK: Selector = Selector::new("druid-builtin.reset-textbox-blink")
 
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
-pub struct TextBox<E: EditableText> {
+pub struct TextBox {
     placeholder: String,
     width: f64,
     hscroll_offset: f64,
     selection: Selection,
     cursor_timer: TimerToken,
     cursor_on: bool,
-    phantom: std::marker::PhantomData<E>,
 }
 
-impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
+impl TextBox {
     /// Create a new TextBox widget
-    pub fn new() -> impl Widget<E> {
+    pub fn new() -> impl Widget<String> {
         Align::vertical(UnitPoint::CENTER, Self::raw())
     }
+
     /// Create a new TextBox widget with placeholder
-    pub fn with_placeholder<T: Into<String>>(placeholder: T) -> impl Widget<E> {
+    pub fn with_placeholder<T: Into<String>>(placeholder: T) -> impl Widget<String> {
         let mut textbox = Self::raw();
         textbox.placeholder = placeholder.into();
         Align::vertical(UnitPoint::CENTER, textbox)
     }
 
     /// Create a new TextBox widget with no Align wrapper
-    pub fn raw() -> TextBox<E> {
+    pub fn raw() -> TextBox {
         Self {
             width: 0.0,
             hscroll_offset: 0.,
@@ -71,12 +71,11 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
             placeholder: String::new(),
-            phantom: Default::default(),
         }
     }
 
     /// Calculate the PietTextLayout from the given text, font, and font size
-    fn get_layout(&self, piet_text: &mut PietText, text: &E, env: &Env) -> PietTextLayout {
+    fn get_layout(&self, piet_text: &mut PietText, text: &String, env: &Env) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         // TODO: caching of both the format and the layout
@@ -93,9 +92,10 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
 
     /// Insert text at the cursor position.
     /// Replaces selected text if there's a selection.
-    fn insert(&mut self, src: &mut E, new: &str) {
-        // EditableText's edit methodwill panic if selection is greater than src length,
-        // hence we try to constrain it.
+    fn insert(&mut self, src: &mut String, new: &str) {
+        // EditableText's edit method will panic if selection is greater than
+        // src length, hence we try to constrain it.
+        //
         // This is especially needed when data was modified externally.
         // TODO: perhaps this belongs in update?
         let selection = self.selection.constrain_to(src);
@@ -104,8 +104,9 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
         self.selection = Selection::caret(selection.min() + new.len());
     }
 
-    /// Set the selection to be a caret at the given offset, if that's a valid codepoint boundary.
-    fn caret_to(&mut self, text: &E, to: usize) {
+    /// Set the selection to be a caret at the given offset, if that's a valid
+    /// codepoint boundary.
+    fn caret_to(&mut self, text: &mut String, to: usize) {
         match text.cursor(to) {
             Some(_) => self.selection = Selection::caret(to),
             None => log::error!("You can't move the cursor there."),
@@ -119,7 +120,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
     }
 
     /// Edit a selection using a `Movement`.    
-    fn move_selection(&mut self, mvmnt: Movement, text: &E, modify: bool) {
+    fn move_selection(&mut self, mvmnt: Movement, text: &mut String, modify: bool) {
         // This movement function should ensure all movements are legit.
         // If they aren't, that's a problem with the movement function.
         self.selection = movement(mvmnt, self.selection, text, modify);
@@ -127,7 +128,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
 
     /// Delete to previous grapheme if in caret mode.
     /// Otherwise just delete everything inside the selection.
-    fn delete_backward(&mut self, text: &mut E) {
+    fn delete_backward(&mut self, text: &mut String) {
         if self.selection.is_caret() {
             let cursor = self.cursor();
             let new_cursor = offset_for_delete_backwards(&self.selection, text);
@@ -194,9 +195,9 @@ impl<E: 'static + EditableText + Data + std::string::ToString> TextBox<E> {
     }
 }
 
-impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for TextBox<E> {
+impl Widget<String> for TextBox {
     #[allow(clippy::cognitive_complexity)]
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut E, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
         // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);
 
@@ -333,7 +334,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &E, _env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &String, _env: &Env) {
         match event {
             LifeCycle::WidgetAdded => ctx.invalidate(),
             LifeCycle::Register => ctx.register_for_focus(),
@@ -343,7 +344,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &E, _data: &E, _env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &String, _data: &String, _env: &Env) {
         ctx.invalidate();
     }
 
@@ -351,7 +352,7 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
         &mut self,
         _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _data: &E,
+        _data: &String,
         env: &Env,
     ) -> Size {
         let default_width = 100.0;
@@ -365,15 +366,15 @@ impl<E: 'static + EditableText + Data + std::string::ToString> Widget<E> for Tex
         bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &E, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &String, env: &Env) {
         // Guard against changes in data following `event`
         let content = if data.is_empty() {
-            EditableText::from_str(&self.placeholder)
+            &self.placeholder
         } else {
-            data.to_owned()
+            data
         };
 
-        self.selection = self.selection.constrain_to(&content);
+        self.selection = self.selection.constrain_to(content);
 
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
