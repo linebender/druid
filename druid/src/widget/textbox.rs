@@ -14,10 +14,7 @@
 
 //! A textbox widget.
 
-use std::cmp::{max, min};
-use std::ops::Range;
 use std::time::{Duration, Instant};
-use unicode_segmentation::GraphemeCursor;
 
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
@@ -32,66 +29,14 @@ use crate::piet::{
 use crate::theme;
 use crate::widget::Align;
 
+use crate::text::{movement, offset_for_delete_backwards, EditableText, Movement, Selection};
+
 const BORDER_WIDTH: f64 = 1.;
 const PADDING_TOP: f64 = 5.;
 const PADDING_LEFT: f64 = 4.;
 
 // we send ourselves this when we want to reset blink, which must be done in event.
 const RESET_BLINK: Selector = Selector::new("druid-builtin.reset-textbox-blink");
-
-#[derive(Debug, Clone, Copy)]
-pub struct Selection {
-    /// The inactive edge of a selection, as a byte offset. When
-    /// equal to end, the selection range acts as a caret.
-    pub start: usize,
-
-    /// The active edge of a selection, as a byte offset.
-    pub end: usize,
-}
-
-impl Selection {
-    /// Create a selection that begins at start and goes to end.
-    /// Like dragging a mouse from start to end.
-    pub fn new(start: usize, end: usize) -> Self {
-        Selection { start, end }
-    }
-
-    /// Create a caret, which is just a selection with the same and start and end.
-    pub fn caret(pos: usize) -> Self {
-        Selection {
-            start: pos,
-            end: pos,
-        }
-    }
-
-    /// If start == end, it's a caret
-    pub fn is_caret(self) -> bool {
-        self.start == self.end
-    }
-
-    /// Return the smallest index (left, in left-to-right languages)
-    pub fn min(self) -> usize {
-        min(self.start, self.end)
-    }
-
-    /// Return the largest index (right, in left-to-right languages)
-    pub fn max(self) -> usize {
-        max(self.start, self.end)
-    }
-
-    /// Return a range from smallest to largest index
-    pub fn range(self) -> Range<usize> {
-        self.min()..self.max()
-    }
-
-    /// Constrain selection to be not greater than input string
-    pub fn constrain_to(mut self, s: &str) -> Self {
-        let s_len = s.len();
-        self.start = min(self.start, s_len);
-        self.end = min(self.end, s_len);
-        self
-    }
-}
 
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
@@ -109,6 +54,7 @@ impl TextBox {
     pub fn new() -> impl Widget<String> {
         Align::vertical(UnitPoint::CENTER, Self::raw())
     }
+
     /// Create a new TextBox widget with placeholder
     pub fn with_placeholder<T: Into<String>>(placeholder: T) -> impl Widget<String> {
         let mut textbox = Self::raw();
@@ -128,7 +74,8 @@ impl TextBox {
         }
     }
 
-    fn get_layout(&self, piet_text: &mut PietText, data: &str, env: &Env) -> PietTextLayout {
+    /// Calculate the PietTextLayout from the given text, font, and font size
+    fn get_layout(&self, piet_text: &mut PietText, text: &str, env: &Env) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         // TODO: caching of both the format and the layout
@@ -137,22 +84,60 @@ impl TextBox {
             .build()
             .unwrap();
 
-        piet_text.new_text_layout(&font, data).build().unwrap()
+        piet_text
+            .new_text_layout(&font, &text.to_string())
+            .build()
+            .unwrap()
     }
 
+    /// Insert text at the cursor position.
+    /// Replaces selected text if there's a selection.
     fn insert(&mut self, src: &mut String, new: &str) {
-        // TODO: handle incomplete graphemes
+        // EditableText's edit method will panic if selection is greater than
+        // src length, hence we try to constrain it.
+        //
+        // This is especially needed when data was modified externally.
+        // TODO: perhaps this belongs in update?
+        let selection = self.selection.constrain_to(src);
 
-        src.replace_range(self.selection.range(), new);
-        self.selection = Selection::caret(self.selection.min() + new.len());
+        src.edit(selection.range(), new);
+        self.selection = Selection::caret(selection.min() + new.len());
     }
 
-    fn cursor_to(&mut self, to: usize) {
-        self.selection = Selection::caret(to);
+    /// Set the selection to be a caret at the given offset, if that's a valid
+    /// codepoint boundary.
+    fn caret_to(&mut self, text: &mut String, to: usize) {
+        match text.cursor(to) {
+            Some(_) => self.selection = Selection::caret(to),
+            None => log::error!("You can't move the cursor there."),
+        }
     }
 
+    /// Return the active edge of the current selection or cursor.
+    // TODO: is this the right name?
     fn cursor(&self) -> usize {
         self.selection.end
+    }
+
+    /// Edit a selection using a `Movement`.    
+    fn move_selection(&mut self, mvmnt: Movement, text: &mut String, modify: bool) {
+        // This movement function should ensure all movements are legit.
+        // If they aren't, that's a problem with the movement function.
+        self.selection = movement(mvmnt, self.selection, text, modify);
+    }
+
+    /// Delete to previous grapheme if in caret mode.
+    /// Otherwise just delete everything inside the selection.
+    fn delete_backward(&mut self, text: &mut String) {
+        if self.selection.is_caret() {
+            let cursor = self.cursor();
+            let new_cursor = offset_for_delete_backwards(&self.selection, text);
+            text.edit(new_cursor..cursor, "");
+            self.caret_to(text, new_cursor);
+        } else {
+            text.edit(self.selection.range(), "");
+            self.caret_to(text, self.selection.min());
+        }
     }
 
     /// For a given point, returns the corresponding offset (in bytes) of
@@ -203,20 +188,6 @@ impl TextBox {
         }
     }
 
-    // TODO: Grapheme isn't the correct unit for backspace, see:
-    // https://github.com/xi-editor/xi-editor/blob/master/rust/core-lib/src/backspace.rs
-    fn backspace(&mut self, src: &mut String) {
-        if self.selection.is_caret() {
-            let cursor = self.cursor();
-            let new_cursor = prev_grapheme(&src, cursor);
-            src.replace_range(new_cursor..cursor, "");
-            self.cursor_to(new_cursor);
-        } else {
-            src.replace_range(self.selection.range(), "");
-            self.cursor_to(self.selection.min());
-        }
-    }
-
     fn reset_cursor_blink(&mut self, ctx: &mut EventCtx) {
         self.cursor_on = true;
         let deadline = Instant::now() + Duration::from_millis(500);
@@ -227,10 +198,10 @@ impl TextBox {
 impl Widget<String> for TextBox {
     #[allow(clippy::cognitive_complexity)]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
-        // Guard against external changes in data
+        // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);
 
-        let mut text_layout = self.get_layout(ctx.text(), data, env);
+        let mut text_layout = self.get_layout(ctx.text(), &data, env);
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
@@ -239,7 +210,7 @@ impl Widget<String> for TextBox {
                 if mouse.mods.shift {
                     self.selection.end = cursor_off;
                 } else {
-                    self.cursor_to(cursor_off);
+                    self.caret_to(data, cursor_off);
                 }
                 ctx.invalidate();
                 self.reset_cursor_blink(ctx);
@@ -270,11 +241,11 @@ impl Widget<String> for TextBox {
                     && (cmd.selector == crate::commands::COPY
                         || cmd.selector == crate::commands::CUT) =>
             {
-                if let Some(text) = data.get(self.selection.range()) {
+                if let Some(text) = data.slice(self.selection.range()) {
                     Application::clipboard().put_string(text);
                 }
                 if !self.selection.is_caret() && cmd.selector == crate::commands::CUT {
-                    self.backspace(data);
+                    self.delete_backward(data);
                 }
                 ctx.set_handled();
             }
@@ -290,63 +261,55 @@ impl Widget<String> for TextBox {
                 match key_event {
                     // Select all (Ctrl+A || Cmd+A)
                     k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => {
-                        self.selection = Selection::new(0, data.len());
+                        self.selection.all(data);
                     }
                     // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
-                    k_e if HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft).matches(k_e)
+                    k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft)).matches(k_e)
                         || HotKey::new(None, KeyCode::Home).matches(k_e) =>
                     {
-                        self.cursor_to(0);
+                        self.move_selection(Movement::LeftOfLine, data, false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
-                    k_e if HotKey::new(SysMods::Cmd, KeyCode::ArrowRight).matches(k_e)
+                    k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowRight)).matches(k_e)
                         || HotKey::new(None, KeyCode::End).matches(k_e) =>
                     {
-                        self.cursor_to(data.len());
+                        self.move_selection(Movement::RightOfLine, data, false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Select left (Shift+ArrowLeft)
                     k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowLeft)).matches(k_e) => {
-                        self.selection.end = prev_grapheme(data, self.cursor());
+                        self.move_selection(Movement::Left, data, true);
                     }
                     // Select right (Shift+ArrowRight)
                     k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowRight)).matches(k_e) => {
-                        self.selection.end = next_grapheme(data, self.cursor());
+                        self.move_selection(Movement::Right, data, true);
                     }
                     // Move left (ArrowLeft)
                     k_e if (HotKey::new(None, KeyCode::ArrowLeft)).matches(k_e) => {
-                        if self.selection.is_caret() {
-                            self.cursor_to(prev_grapheme(data, self.cursor()));
-                        } else {
-                            self.cursor_to(self.selection.min());
-                        }
+                        self.move_selection(Movement::Left, data, false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Move right (ArrowRight)
                     k_e if (HotKey::new(None, KeyCode::ArrowRight)).matches(k_e) => {
-                        if self.selection.is_caret() {
-                            self.cursor_to(next_grapheme(data, self.cursor()));
-                        } else {
-                            self.cursor_to(self.selection.max());
-                        }
+                        self.move_selection(Movement::Right, data, false);
                         self.reset_cursor_blink(ctx);
                     }
                     // Backspace
                     k_e if (HotKey::new(None, KeyCode::Backspace)).matches(k_e) => {
-                        self.backspace(data);
+                        self.delete_backward(data);
                         self.reset_cursor_blink(ctx);
                     }
                     // Delete
                     k_e if (HotKey::new(None, KeyCode::Delete)).matches(k_e) => {
                         if self.selection.is_caret() {
                             // Never touch the characters before the cursor.
-                            if next_grapheme_exists(data, self.cursor()) {
-                                self.cursor_to(next_grapheme(data, self.cursor()));
-                                self.backspace(data);
+                            if data.next_grapheme_offset(self.cursor()).is_some() {
+                                self.move_selection(Movement::Right, data, false);
+                                self.delete_backward(data);
                             }
                         } else {
-                            self.backspace(data);
+                            self.delete_backward(data);
                         }
                         self.reset_cursor_blink(ctx);
                     }
@@ -363,7 +326,7 @@ impl Widget<String> for TextBox {
                     }
                     _ => {}
                 }
-                text_layout = self.get_layout(ctx.text(), data, env);
+                text_layout = self.get_layout(ctx.text(), &data, env);
                 self.update_hscroll(&text_layout);
                 ctx.invalidate();
             }
@@ -444,7 +407,7 @@ impl Widget<String> for TextBox {
                 rc.clip(clip_rect);
 
                 // Calculate layout
-                let text_layout = self.get_layout(rc.text(), content, env);
+                let text_layout = self.get_layout(rc.text(), &content, env);
 
                 // Shift everything inside the clip by the hscroll_offset
                 rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
@@ -459,6 +422,7 @@ impl Widget<String> for TextBox {
 
                     let selection_pos =
                         Point::new(left_offset + PADDING_LEFT - 1., PADDING_TOP - 2.);
+
                     let selection_rect = RoundedRect::from_origin_size(
                         selection_pos,
                         Size::new(selection_width + 2., font_size + 4.).to_vec2(),
@@ -496,35 +460,65 @@ impl Widget<String> for TextBox {
     }
 }
 
-/// Gets the next character from the given index.
-fn next_grapheme(src: &str, from: usize) -> usize {
-    let mut c = GraphemeCursor::new(from, src.len(), true);
-    let next_boundary = c.next_boundary(src, 0).unwrap();
-    if let Some(next) = next_boundary {
-        next
-    } else {
-        src.len()
-    }
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-/// Checks if there is a next character from the given index.
-fn next_grapheme_exists(src: &str, from: usize) -> bool {
-    let mut c = GraphemeCursor::new(from, src.len(), true);
-    let next_boundary = c.next_boundary(src, 0).unwrap();
-    if let Some(_next) = next_boundary {
-        true
-    } else {
-        false
-    }
-}
+    /// Test that when data is mutated externally widget
+    /// can still be used to insert characters.
+    #[test]
+    fn data_can_be_changed_externally() {
+        let mut widget = TextBox::raw();
+        let mut data = "".to_string();
 
-/// Gets the previous character from the given index.
-fn prev_grapheme(src: &str, from: usize) -> usize {
-    let mut c = GraphemeCursor::new(from, src.len(), true);
-    let prev_boundary = c.prev_boundary(src, 0).unwrap();
-    if let Some(prev) = prev_boundary {
-        prev
-    } else {
-        0
+        // First insert some chars
+        widget.insert(&mut data, "o");
+        widget.insert(&mut data, "n");
+        widget.insert(&mut data, "e");
+
+        assert_eq!("one", data);
+        assert_eq!(3, widget.selection.start);
+        assert_eq!(3, widget.selection.end);
+
+        // Modify data externally (e.g data was changed in the parent widget)
+        data = "".to_string();
+
+        // Insert again
+        widget.insert(&mut data, "a");
+    }
+
+    /// Test backspace on the combo character o̷
+    #[test]
+    fn backspace_combining() {
+        let mut widget = TextBox::raw();
+        let mut data = "".to_string();
+
+        widget.insert(&mut data, "\u{0073}\u{006F}\u{0337}\u{0073}");
+
+        widget.delete_backward(&mut data);
+        widget.delete_backward(&mut data);
+
+        assert_eq!(data, String::from("\u{0073}\u{006F}"))
+    }
+
+    /// Devanagari codepoints are 3 utf-8 code units each.
+    #[test]
+    fn backspace_devanagari() {
+        let mut widget = TextBox::raw();
+        let mut data = "".to_string();
+
+        widget.insert(&mut data, "हिन्दी");
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from("हिन्द"));
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from("हिन्"));
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from("हिन"));
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from("हि"));
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from("ह"));
+        widget.delete_backward(&mut data);
+        assert_eq!(data, String::from(""));
     }
 }

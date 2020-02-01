@@ -36,6 +36,7 @@ pub mod lens;
 mod localization;
 mod menu;
 mod mouse;
+mod text;
 pub mod theme;
 pub mod widget;
 mod win_handler;
