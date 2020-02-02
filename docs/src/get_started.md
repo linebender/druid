@@ -14,7 +14,7 @@ druid = "0.4.0"
 ```
 
 To show a minimal window with a label replace `main.rs` with this;
-```rust
+```rust, noplaypen
 use druid::{AppLauncher, WindowDesc, Widget};
 use druid::widget::Label;
 use druid::shell::Error;
@@ -38,7 +38,7 @@ We solve both these problems by passing in a widget-tree with one single widget 
 
 To see how this works we will divide our window in four. We'll have two rows and two columns with a single label in each of the quadrants. We can lay-out our labels using the `Flex` widget.
 
-```rust
+```rust, noplaypen
 fn build_ui() -> impl Widget<()> {
     Flex::row()
         .with_child(
@@ -58,7 +58,7 @@ This looks nice but the labels on the left are drawn right against the window ed
 
 Features like padding or alignment are implemented in separate widgets. To add padding you simply wrap the labels in a `Padding` widget. Centering widgets is done using the `Align` widget set to `centered`.
 
-```rust
+```rust, noplaypen
 fn build_ui() -> impl Widget<()> {
     Padding::new(
         10.0,
@@ -77,7 +77,7 @@ fn build_ui() -> impl Widget<()> {
 ```
 
 Do not forget to import the new widgets;
-```rust
+```rust, noplaypen
 use druid::widget::{Label, Flex, Padding, Align};
 ```
 
