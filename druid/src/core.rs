@@ -194,11 +194,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut ctx = PaintCtx {
             render_ctx: paint_ctx.render_ctx,
             window_id: paint_ctx.window_id,
+            z_ops: Vec::new(),
             region: paint_ctx.region.clone(),
             base_state: &self.state,
             focus_widget: paint_ctx.focus_widget,
         };
         self.inner.paint(&mut ctx, data, &env);
+        paint_ctx.z_ops.append(&mut ctx.z_ops);
 
         if env.get(Env::DEBUG_PAINT) {
             let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());

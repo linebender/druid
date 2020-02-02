@@ -21,8 +21,10 @@ use log;
 
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
+use crate::piet::RenderContext;
 use crate::{
-    Command, Cursor, Rect, Size, Target, Text, TimerToken, WidgetId, WinCtx, WindowHandle, WindowId,
+    Affine, Command, Cursor, Rect, Size, Target, Text, TimerToken, WidgetId, WinCtx, WindowHandle,
+    WindowId,
 };
 
 /// A mutable context provided to event handling methods of widgets.
@@ -91,6 +93,13 @@ pub struct LayoutCtx<'a, 'b: 'a> {
     pub(crate) window_id: WindowId,
 }
 
+/// Z-order paint operations with transformations.
+pub struct ZOrderPaintOp {
+    pub z_index: u32,
+    pub paint_func: Box<dyn FnOnce(&mut PaintCtx) + 'static>,
+    pub transform: Affine,
+}
+
 /// A context passed to paint methods of widgets.
 ///
 /// Widgets paint their appearance by calling methods on the
@@ -102,6 +111,8 @@ pub struct PaintCtx<'a, 'b: 'a> {
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'b>,
     pub window_id: WindowId,
+    /// The z-order paint operations.
+    pub z_ops: Vec<ZOrderPaintOp>,
     /// The currently visible region.
     pub(crate) region: Region,
     pub(crate) base_state: &'a BaseState,
@@ -510,11 +521,29 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
         let mut child_ctx = PaintCtx {
             render_ctx: self.render_ctx,
             base_state: self.base_state,
+            z_ops: Vec::new(),
             window_id: self.window_id,
             focus_widget: self.focus_widget,
             region: region.into(),
         };
-        f(&mut child_ctx)
+        f(&mut child_ctx);
+        self.z_ops.append(&mut child_ctx.z_ops);
+    }
+
+    /// Allows to specify order for paint operations.
+    ///
+    /// Larger `z_idx` indicate that an operation will be executed later.
+    pub fn paint_with_z_index(
+        &mut self,
+        z_index: u32,
+        paint_func: impl FnOnce(&mut PaintCtx) + 'static,
+    ) {
+        let current_transform = self.render_ctx.current_transform();
+        self.z_ops.push(ZOrderPaintOp {
+            z_index,
+            paint_func: Box::new(paint_func),
+            transform: current_transform,
+        })
     }
 }
 

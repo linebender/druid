@@ -14,6 +14,7 @@
 
 //! Management of multiple windows.
 
+use std::mem;
 use std::time::Instant;
 
 use crate::kurbo::{Point, Rect, Size};
@@ -302,6 +303,25 @@ impl<T: Data> Window<T> {
         };
         let visible = Rect::from_origin_size(Point::ZERO, self.size);
         paint_ctx.with_child_ctx(visible, |ctx| self.root.paint(ctx, data, env));
+
+        paint_ctx.z_ops.sort_by_key(|k| k.z_index);
+
+        let z_ops = mem::replace(&mut paint_ctx.z_ops, Vec::new());
+        for z_op in z_ops.into_iter() {
+            paint_ctx.with_child_ctx(visible, |ctx| {
+                if let Err(e) = ctx.render_ctx.save() {
+                    log::error!("saving render context failed: {:?}", e);
+                    return;
+                }
+
+                ctx.render_ctx.transform(z_op.transform);
+                (z_op.paint_func)(ctx);
+
+                if let Err(e) = ctx.render_ctx.restore() {
+                    log::error!("restoring render context failed: {:?}", e);
+                }
+            });
+        }
     }
 
     pub(crate) fn update_title(&mut self, data: &T, env: &Env) {
