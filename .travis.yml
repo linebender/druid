@@ -7,7 +7,7 @@ matrix:
     - rust: stable
       name: docs
       on:
-        branch: documentation
+        branch: master
 
       before_script:
         - (test -x $HOME/.cargo/bin/cargo-install-update || cargo install cargo-update)
@@ -24,4 +24,4 @@ matrix:
         local-dir: docs/book
         keep-history: false
         on:
-            branch: documentation
+            branch: master
