@@ -16,7 +16,7 @@
 
 use std::f64::consts::PI;
 
-use druid::kurbo::Line;
+use druid::kurbo::{Circle, Line};
 use druid::{
     AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
     LocalizedString, PaintCtx, Point, RenderContext, Size, UpdateCtx, Vec2, Widget, WindowDesc,
@@ -59,9 +59,14 @@ impl Widget<u32> for AnimWidget {
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
+        let t = self.t;
         let center = Point::new(50.0, 50.0);
-        let ambit = center + 45.0 * Vec2::from_angle((0.75 + self.t) * 2.0 * PI);
-        paint_ctx.stroke(Line::new(center, ambit), &Color::WHITE, 1.0);
+        paint_ctx.paint_with_z_index(1, move |ctx| {
+            let ambit = center + 45.0 * Vec2::from_angle((0.75 + t) * 2.0 * PI);
+            ctx.stroke(Line::new(center, ambit), &Color::WHITE, 1.0);
+        });
+
+        paint_ctx.fill(Circle::new(center, 50.0), &Color::BLACK);
     }
 }
 
