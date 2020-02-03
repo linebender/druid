@@ -17,36 +17,65 @@
 mod harness;
 mod helpers;
 
+use std::cell::Cell;
+use std::rc::Rc;
+
 use crate::widget::*;
 use crate::*;
 use harness::*;
 use helpers::*;
 
-/// test that the first widget to request focus during an event gets it.
 #[test]
 fn take_focus() {
     const TAKE_FOCUS: Selector = Selector::new("druid-tests.take-focus");
 
     /// A widget that takes focus when sent a particular command.
-    fn make_focus_taker() -> impl Widget<bool> {
-        ModularWidget::new(()).event_fn(|_, ctx, event, _data, _env| {
-            if let Event::Command(cmd) = event {
-                if cmd.selector == TAKE_FOCUS {
-                    ctx.request_focus();
+    /// The widget records focus change events into the inner cell.
+    fn make_focus_taker(inner: Rc<Cell<Option<bool>>>) -> impl Widget<bool> {
+        ModularWidget::new(inner)
+            .event_fn(|_, ctx, event, _data, _env| {
+                if let Event::Command(cmd) = event {
+                    if cmd.selector == TAKE_FOCUS {
+                        ctx.request_focus();
+                    }
                 }
-            }
-        })
+            })
+            .lifecycle_fn(|is_focused, _, event, _data, _env| {
+                if let LifeCycle::FocusChanged(focus) = event {
+                    is_focused.set(Some(*focus));
+                }
+            })
     }
 
-    let left_id = WidgetId::next();
-    let left = make_focus_taker().with_id(left_id);
-    let right = make_focus_taker();
-    let app = Split::vertical(left, right);
+    let (id_1, id_2, _id_3) = (WidgetId::next(), WidgetId::next(), WidgetId::next());
+
+    // we use these so that we can check the widget's internal state
+    let left_focus: Rc<Cell<Option<bool>>> = Default::default();
+    let right_focus: Rc<Cell<Option<bool>>> = Default::default();
+    assert!(left_focus.get().is_none());
+
+    let left = make_focus_taker(left_focus.clone()).with_id(id_1);
+    let right = make_focus_taker(right_focus.clone()).with_id(id_2);
+    let app = Split::vertical(left, right).padding(5.0);
     let data = true;
 
     Harness::create(data, app, |harness| {
+        harness.send_initial_events();
+        // nobody should have focus
+        assert!(left_focus.get().is_none());
+        assert!(right_focus.get().is_none());
+
+        // this is sent to all widgets; the first widget to request focus should get it
         harness.event(Event::Command(TAKE_FOCUS.into()));
-        assert_eq!(harness.window().focus, Some(left_id));
+        assert_eq!(harness.window().focus, Some(id_1));
+        assert_eq!(left_focus.get(), Some(true));
+        assert_eq!(right_focus.get(), None);
+
+        // this is sent to a specific widget; it should get focus
+        harness.event(Event::TargetedCommand(id_2.into(), TAKE_FOCUS.into()));
+        assert_eq!(harness.window().focus, Some(id_2));
+        assert_eq!(left_focus.get(), Some(false));
+        assert_eq!(right_focus.get(), Some(true));
     })
 }
 

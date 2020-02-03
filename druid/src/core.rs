@@ -423,15 +423,23 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             LifeCycle::HotChanged(_) => false,
             LifeCycle::RouteFocusChanged { old, new } => {
                 self.state.request_focus = None;
-                let this_changed = old.map(|_| false).or_else(|| new.map(|_| true));
+
+                let this_changed = if *old == Some(self.state.id) {
+                    Some(false)
+                } else if *new == Some(self.state.id) {
+                    Some(true)
+                } else {
+                    None
+                };
+
                 if let Some(change) = this_changed {
                     let event = LifeCycle::FocusChanged(change);
                     self.inner.lifecycle(ctx, &event, data, env);
                     false
                 } else {
-                    //FIXME: I think this is a bug? we should be checking `self.state.children`
-                    old.map(|id| ctx.children.contains(&id)).unwrap_or(false)
-                        || new.map(|id| ctx.children.contains(&id)).unwrap_or(false)
+                    old.map(|id| self.state.children.contains(&id))
+                        .or_else(|| new.map(|id| self.state.children.contains(&id)))
+                        .unwrap_or(false)
                 }
             }
             LifeCycle::FocusChanged(_) => {
