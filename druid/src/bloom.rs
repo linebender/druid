@@ -29,7 +29,7 @@ const OFFSET_ONE: u64 = 0xcbf2_9ce4_8422_2325;
 const OFFSET_TWO: u64 = 0xe10_3ad8_2dad_8028;
 
 /// A very simple Bloom filter optimized for small values.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub(crate) struct Bloom<T: ?Sized> {
     bits: u64,
     data: PhantomData<T>,
@@ -59,7 +59,6 @@ impl<T: ?Sized + Hash> Bloom<T> {
     }
 
     /// Remove all entries from the filter.
-    #[cfg(test)]
     pub fn clear(&mut self) {
         self.bits = 0;
         self.entry_count = 0;
@@ -107,6 +106,12 @@ impl<T: ?Sized + Hash> Bloom<T> {
         let mut hasher = FnvHasher::with_key(seed);
         item.hash(&mut hasher);
         hasher.finish()
+    }
+}
+
+impl<T: ?Sized> std::fmt::Debug for Bloom<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Bloom: {:064b}: ({})", self.bits, self.entry_count)
     }
 }
 

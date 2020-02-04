@@ -19,7 +19,6 @@ use std::time::Instant;
 
 use log;
 
-use crate::bloom::Bloom;
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
 use crate::{
@@ -61,17 +60,8 @@ pub struct EventCtx<'a, 'b> {
 /// [`LifeCycle::Register`]: enum.LifeCycle.html#variant.Register
 pub struct LifeCycleCtx<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
-    /// the registry for the current widgets children;
-    /// only really meaningful during a `LifeCyle::Register` call.
-    pub(crate) children: Bloom<WidgetId>,
-    /// during `LifeCycle::Register`, widgets can register themselves
-    /// to participate in automatic focus.
-    pub(crate) focus_widgets: Vec<WidgetId>,
-    pub(crate) children_changed: bool,
-    pub(crate) needs_inval: bool,
-    pub(crate) request_anim: bool,
+    pub(crate) base_state: &'a mut BaseState,
     pub(crate) window_id: WindowId,
-    pub(crate) widget_id: WidgetId,
 }
 
 /// A mutable context provided to data update methods of widgets.
@@ -350,16 +340,10 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     }
 
     pub(crate) fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
-        let widget_id = self.widget_id();
         LifeCycleCtx {
             command_queue: self.command_queue,
-            children_changed: false,
-            needs_inval: false,
-            children: Bloom::default(),
-            focus_widgets: Vec::new(),
-            request_anim: false,
+            base_state: self.base_state,
             window_id: self.window_id,
-            widget_id,
         }
     }
 }
@@ -370,12 +354,12 @@ impl<'a> LifeCycleCtx<'a> {
     /// See [`EventCtx::invalidate`](struct.EventCtx.html#method.invalidate) for
     /// more discussion.
     pub fn invalidate(&mut self) {
-        self.needs_inval = true;
+        self.base_state.needs_inval = true;
     }
 
     /// Returns the current widget's `WidgetId`.
     pub fn widget_id(&self) -> WidgetId {
-        self.widget_id
+        self.base_state.id
     }
 
     /// Registers a child widget.
@@ -385,24 +369,24 @@ impl<'a> LifeCycleCtx<'a> {
     /// In general, you should not need to call this method; it is handled by
     /// the `WidgetPod`.
     pub fn register_child(&mut self, child_id: WidgetId) {
-        self.children.add(&child_id);
+        self.base_state.children.add(&child_id);
     }
 
     /// Register this widget to be eligile to accept focus automatically.
     pub fn register_for_focus(&mut self) {
-        self.focus_widgets.push(self.widget_id);
+        self.base_state.focus_chain.push(self.widget_id());
     }
 
     /// Indicate that your children have changed.
     ///
     /// Widgets must call this method after adding a new child.
     pub fn children_changed(&mut self) {
-        self.children_changed = true;
+        self.base_state.children_changed = true;
     }
 
     /// Request an animation frame.
     pub fn request_anim_frame(&mut self) {
-        self.request_anim = true;
+        self.base_state.request_anim = true;
     }
 
     /// Submit a [`Command`] to be run after this event is handled.
