@@ -90,7 +90,7 @@ impl<T: Data> PendingWindow<T> {
 
 impl<T: Data> Window<T> {
     /// `true` iff any child requested an animation frame during the last `AnimFrame` event.
-    pub fn wants_animation_frame(&self) -> bool {
+    pub(crate) fn wants_animation_frame(&self) -> bool {
         self.last_anim.is_some()
     }
 
@@ -121,7 +121,7 @@ impl<T: Data> Window<T> {
         }
     }
 
-    pub fn event(
+    pub(crate) fn event(
         &mut self,
         win_ctx: &mut dyn WinCtx,
         queue: &mut CommandQueue,
@@ -181,7 +181,13 @@ impl<T: Data> Window<T> {
     }
 
     /// Returns `true` if any widget has requested an animation frame
-    pub fn lifecycle(&mut self, queue: &mut CommandQueue, event: &LifeCycle, data: &T, env: &Env) {
+    pub(crate) fn lifecycle(
+        &mut self,
+        queue: &mut CommandQueue,
+        event: &LifeCycle,
+        data: &T,
+        env: &Env,
+    ) {
         let mut ctx = LifeCycleCtx {
             command_queue: queue,
             children: Bloom::default(),
@@ -223,7 +229,7 @@ impl<T: Data> Window<T> {
         }
     }
 
-    pub fn update(&mut self, win_ctx: &mut dyn WinCtx, data: &T, env: &Env) {
+    pub(crate) fn update(&mut self, win_ctx: &mut dyn WinCtx, data: &T, env: &Env) {
         self.update_title(data, env);
 
         let mut update_ctx = UpdateCtx {

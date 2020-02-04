@@ -73,14 +73,6 @@ struct Windows<T: Data> {
     windows: HashMap<WindowId, Window<T>>,
 }
 
-/// Everything required for a window to handle an event.
-struct SingleWindowCtx<'a, T: Data> {
-    window: &'a mut Window<T>,
-    command_queue: &'a mut CommandQueue,
-    data: &'a mut T,
-    env: &'a Env,
-}
-
 impl<T: Data> Windows<T> {
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
         if let Some(pending) = self.pending.remove(&id) {
@@ -99,66 +91,12 @@ impl<T: Data> Windows<T> {
         self.windows.remove(&id).map(|entry| entry.handle)
     }
 
-    fn iter_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Window<T>> {
+    fn iter_mut(&mut self) -> impl Iterator<Item = &'_ mut Window<T>> {
         self.windows.values_mut()
-    }
-
-    fn get_menu_cmd(&self, window_id: WindowId, cmd_id: u32) -> Option<Command> {
-        self.windows
-            .get(&window_id)
-            .and_then(|entry| entry.get_menu_cmd(cmd_id))
     }
 
     fn get_mut(&mut self, id: WindowId) -> Option<&mut Window<T>> {
         self.windows.get_mut(&id)
-    }
-}
-
-impl<'a, T: Data> SingleWindowCtx<'a, T> {
-    fn do_paint(&mut self, piet: &mut Piet) {
-        self.window
-            .do_paint(piet, self.command_queue, self.data, self.env);
-    }
-
-    /// Send an event to the widget hierarchy.
-    ///
-    /// Returns true if the event was handled.
-    fn do_event_inner(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
-        self.window
-            .event(win_ctx, self.command_queue, event, self.data, self.env)
-    }
-
-    fn do_lifecycle(&mut self, event: LifeCycle) {
-        self.window
-            .lifecycle(self.command_queue, &event, self.data, self.env)
-    }
-
-    fn set_menu(&mut self, cmd: &Command) {
-        let menu = match cmd.get_object::<MenuDesc<T>>() {
-            Some(menu) => menu.to_owned(),
-            None => {
-                warn!("set-menu command is missing menu object");
-                return;
-            }
-        };
-        self.window.set_menu(menu, &self.data, &self.env)
-    }
-
-    fn show_context_menu(&mut self, cmd: &Command) {
-        let (menu, point) = match cmd.get_object::<ContextMenu<T>>() {
-            Some(ContextMenu { menu, location }) => (menu.to_owned(), *location),
-            None => {
-                warn!("show-context-menu command is missing menu object.");
-                return;
-            }
-        };
-        self.window
-            .show_context_menu(menu, point, &self.data, &self.env)
-    }
-
-    fn window_got_focus(&mut self) {
-        #[cfg(target_os = "macos")]
-        self.window.macos_update_app_menu(&self.data, &self.env)
     }
 }
 
@@ -180,7 +118,10 @@ impl<T: Data> AppState<T> {
     }
 
     fn get_menu_cmd(&self, window_id: WindowId, cmd_id: u32) -> Option<Command> {
-        self.windows.get_menu_cmd(window_id, cmd_id)
+        self.windows
+            .windows
+            .get(&window_id)
+            .and_then(|w| w.get_menu_cmd(cmd_id))
     }
 
     /// A helper fn for setting up the `DelegateCtx`. Takes a closure with
@@ -229,6 +170,22 @@ impl<T: Data> AppState<T> {
         self.with_delegate(id, |del, data, env, ctx| {
             del.window_added(id, data, env, ctx)
         });
+    }
+
+    //FIXME: when we make `WindowConnected` an event, this can all go
+    fn connected(&mut self, id: WindowId) {
+        let AppState {
+            ref mut windows,
+            ref mut command_queue,
+            ref data,
+            ref env,
+            ..
+        } = self;
+        if let Some(win) = windows.get_mut(id) {
+            win.lifecycle(command_queue, &LifeCycle::WidgetAdded, data, env);
+            win.lifecycle(command_queue, &LifeCycle::Register, data, env);
+            win.lifecycle(command_queue, &LifeCycle::WindowConnected, data, env);
+        }
     }
 
     pub(crate) fn add_window(&mut self, id: WindowId, window: PendingWindow<T>) {
@@ -288,32 +245,14 @@ impl<T: Data> AppState<T> {
         }
     }
 
-    fn assemble_window_state(&mut self, window_id: WindowId) -> Option<SingleWindowCtx<'_, T>> {
-        let AppState {
-            ref mut command_queue,
-            ref mut windows,
-            ref mut data,
-            ref env,
-            ..
-        } = self;
-        windows
-            .get_mut(window_id)
-            .map(move |window| SingleWindowCtx {
-                window,
-                command_queue,
-                data,
-                env,
-            })
-    }
-
     /// Returns `true` if an animation frame was requested.
     fn paint(&mut self, window_id: WindowId, piet: &mut Piet, _ctx: &mut dyn WinCtx) -> bool {
-        self.assemble_window_state(window_id)
-            .map(|mut win| {
-                win.do_paint(piet);
-                win.window.wants_animation_frame()
-            })
-            .unwrap_or(false)
+        if let Some(win) = self.windows.get_mut(window_id) {
+            win.do_paint(piet, &mut self.command_queue, &self.data, &self.env);
+            win.wants_animation_frame()
+        } else {
+            false
+        }
     }
 
     fn do_event(&mut self, source_id: WindowId, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
@@ -326,20 +265,24 @@ impl<T: Data> AppState<T> {
         if let Event::TargetedCommand(_target, ref cmd) = event {
             match cmd.selector {
                 sys_cmd::SET_MENU => {
-                    if let Some(mut win) = self.assemble_window_state(source_id) {
-                        win.set_menu(cmd);
-                    }
+                    self.set_menu(source_id, cmd);
                     return true;
                 }
                 sys_cmd::SHOW_CONTEXT_MENU => {
-                    if let Some(mut win) = self.assemble_window_state(source_id) {
-                        win.show_context_menu(cmd);
-                    }
+                    self.show_context_menu(source_id, cmd);
                     return true;
                 }
                 _ => (),
             }
         }
+
+        let AppState {
+            ref mut command_queue,
+            ref mut windows,
+            ref mut data,
+            ref env,
+            ..
+        } = self;
 
         match event {
             Event::TargetedCommand(Target::Widget(_), _) => {
@@ -348,14 +291,8 @@ impl<T: Data> AppState<T> {
                 // TODO: this is using the WinCtx of the window originating the event,
                 // rather than a WinCtx appropriate to the target window. This probably
                 // needs to get rethought.
-                for window in self.windows.iter_mut() {
-                    let handled = window.event(
-                        win_ctx,
-                        &mut self.command_queue,
-                        event.clone(),
-                        &mut self.data,
-                        &self.env,
-                    );
+                for window in windows.iter_mut() {
+                    let handled = window.event(win_ctx, command_queue, event.clone(), data, env);
                     any_handled |= handled;
                     if handled {
                         break;
@@ -363,10 +300,30 @@ impl<T: Data> AppState<T> {
                 }
                 any_handled
             }
-            _ => self
-                .assemble_window_state(source_id)
-                .map(|mut win| win.do_event_inner(event, win_ctx))
-                .unwrap_or(false),
+            _ => match windows.get_mut(source_id) {
+                Some(win) => win.event(win_ctx, command_queue, event, data, env),
+                None => false,
+            },
+        }
+    }
+
+    fn set_menu(&mut self, window_id: WindowId, cmd: &Command) {
+        if let Some(win) = self.windows.get_mut(window_id) {
+            if let Some(menu) = cmd.get_object::<MenuDesc<T>>() {
+                win.set_menu(menu.to_owned(), &self.data, &self.env);
+            } else {
+                log::warn!("set-menu command is missing menu object");
+            }
+        }
+    }
+
+    fn show_context_menu(&mut self, window_id: WindowId, cmd: &Command) {
+        if let Some(win) = self.windows.get_mut(window_id) {
+            if let Some(ContextMenu { menu, location }) = cmd.get_object::<ContextMenu<T>>() {
+                win.show_context_menu(menu.to_owned(), *location, &self.data, &self.env)
+            } else {
+                log::warn!("show-context-menu command is missing menu object.");
+            }
         }
     }
 
@@ -388,11 +345,14 @@ impl<T: Data> AppState<T> {
         }
     }
 
-    fn window_got_focus(&mut self, window_id: WindowId, _ctx: &mut dyn WinCtx) {
-        self.assemble_window_state(window_id)
-            .as_mut()
-            .map(SingleWindowCtx::window_got_focus);
+    #[cfg(target_os = "macos")]
+    fn window_got_focus(&mut self, window_id: WindowId) {
+        if let Some(win) = self.windows.get_mut(window_id) {
+            win.macos_update_app_menu(&self.data, &self.env)
+        }
     }
+    #[cfg(not(target_os = "macos"))]
+    fn window_got_focus(&mut self, _: WindowId) {}
 }
 
 impl<T: Data> DruidHandler<T> {
@@ -410,15 +370,7 @@ impl<T: Data> DruidHandler<T> {
 
     /// Called once, when a window first connects; we do some preliminary setup here.
     fn do_connected(&mut self, win_ctx: &mut dyn WinCtx) {
-        if let Some(mut win) = self
-            .app_state
-            .borrow_mut()
-            .assemble_window_state(self.window_id)
-        {
-            win.do_lifecycle(LifeCycle::WidgetAdded);
-            win.do_lifecycle(LifeCycle::Register);
-            win.do_lifecycle(LifeCycle::WindowConnected);
-        }
+        self.app_state.borrow_mut().connected(self.window_id);
         self.process_commands(win_ctx);
         self.app_state.borrow_mut().invalidate_and_finalize();
     }
@@ -650,10 +602,8 @@ impl<T: Data> WinHandler for DruidHandler<T> {
         self.do_event(event, ctx);
     }
 
-    fn got_focus(&mut self, ctx: &mut dyn WinCtx) {
-        self.app_state
-            .borrow_mut()
-            .window_got_focus(self.window_id, ctx);
+    fn got_focus(&mut self, _ctx: &mut dyn WinCtx) {
+        self.app_state.borrow_mut().window_got_focus(self.window_id);
     }
 
     fn timer(&mut self, token: TimerToken, ctx: &mut dyn WinCtx) {
