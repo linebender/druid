@@ -101,6 +101,7 @@ impl<T: Data> Harness<'_, T> {
     }
 
     /// Retrieve a copy of this widget's `BaseState`, if possible.
+    //FIXME: make this unwrap, and add a `try_get_state` variant?
     pub(crate) fn get_state(&mut self, widget: WidgetId) -> Option<BaseState> {
         let cell = StateCell::default();
         let state_cell = cell.clone();
