@@ -94,7 +94,7 @@ fn simple_layout() {
 
     Harness::create(true, widget, |harness| {
         harness.send_initial_events();
-        harness.layout();
+        harness.just_layout();
         let state = harness.get_state(id_1).expect("failed to retrieve id_1");
         assert_eq!(
             state.layout_rect.x0,

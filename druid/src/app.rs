@@ -22,7 +22,7 @@ use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
 use crate::shell::{Application, Error as PlatformError, RunLoop, WindowBuilder, WindowHandle};
 use crate::win_handler::AppState;
-use crate::window::{Window, WindowId};
+use crate::window::{PendingWindow, WindowId};
 use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
 
 /// A function that modifies the initial environment.
@@ -212,7 +212,7 @@ impl<T: Data> WindowDesc<T> {
         let root = (self.root_builder)();
         state
             .borrow_mut()
-            .add_window(self.id, Window::new(root, title, menu));
+            .add_window(self.id, PendingWindow::new(root, title, menu));
 
         builder.build()
     }

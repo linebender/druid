@@ -13,9 +13,9 @@
 // limitations under the License.
 
 //! Tools and infrastructure for testing widgets.
-
 use crate::core::{BaseState, CommandQueue};
 use crate::piet::{BitmapTarget, Device, Piet};
+use crate::window::PendingWindow;
 use crate::*;
 
 pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
@@ -51,10 +51,7 @@ struct Inner<T: Data> {
     data: T,
     env: Env,
     window: Window<T>,
-    handle: WindowHandle,
-    command_queue: CommandQueue,
-    cursor: Option<Cursor>,
-    window_id: WindowId,
+    cmds: CommandQueue,
 }
 
 /// A `WinCtx` impl that we can conjure from the ether.
@@ -80,11 +77,9 @@ impl<T: Data> Harness<'_, T> {
         let inner = Inner {
             data,
             env: theme::init(),
-            window: Window::new(root, LocalizedString::new(""), None),
-            handle: Default::default(),
-            command_queue: Default::default(),
-            cursor: Default::default(),
-            window_id: WindowId::next(),
+            window: PendingWindow::new(root, LocalizedString::new(""), None)
+                .into_window(WindowId::next(), Default::default()),
+            cmds: Default::default(),
         };
 
         let mut harness = Harness { piet, inner };
@@ -136,7 +131,7 @@ impl<T: Data> Harness<'_, T> {
 
     fn process_commands(&mut self) {
         loop {
-            let cmd = self.inner.command_queue.pop_front();
+            let cmd = self.inner.cmds.pop_front();
             match cmd {
                 Some((target, cmd)) => self.event(Event::TargetedCommand(target, cmd)),
                 None => break,
@@ -154,7 +149,8 @@ impl<T: Data> Harness<'_, T> {
         self.inner.update(&mut self.piet)
     }
 
-    pub fn layout(&mut self) {
+    /// Only do a layout pass, without painting
+    pub fn just_layout(&mut self) {
         self.inner.layout(&mut self.piet)
     }
 
@@ -166,77 +162,35 @@ impl<T: Data> Harness<'_, T> {
 
 impl<T: Data> Inner<T> {
     fn event(&mut self, event: Event, piet: &mut Piet) {
-        let mut base_state = BaseState::new(self.window.root.id());
-
-        let text = piet.text();
-        let mut win_ctx = MockWinCtx(text);
-
-        let mut ctx = EventCtx {
-            win_ctx: &mut win_ctx,
-            cursor: &mut self.cursor,
-            command_queue: &mut self.command_queue,
-            window_id: self.window_id,
-            window: &self.handle,
-            base_state: &mut base_state,
-            focus_widget: None,
-            had_active: false,
-            is_handled: false,
-            is_root: true,
-        };
-
-        self.window
-            .event(&mut ctx, &event, &mut self.data, &self.env);
+        let mut win_ctx = MockWinCtx(piet.text());
+        self.window.event(
+            &mut win_ctx,
+            &mut self.cmds,
+            event,
+            &mut self.data,
+            &self.env,
+        );
     }
 
     #[allow(dead_code)]
     fn lifecycle(&mut self, event: LifeCycle) {
-        let mut ctx = LifeCycleCtx {
-            command_queue: &mut self.command_queue,
-            children: Default::default(),
-            window_id: self.window_id,
-            widget_id: self.window.root.id(),
-            focus_widgets: Vec::new(),
-            request_anim: false,
-            needs_inval: false,
-            children_changed: false,
-        };
-
         self.window
-            .lifecycle(&mut ctx, &event, &self.data, &self.env);
+            .lifecycle(&mut self.cmds, &event, &self.data, &self.env);
     }
 
     fn update(&mut self, piet: &mut Piet) {
-        let mut ctx = UpdateCtx {
-            text_factory: piet.text(),
-            window: &self.handle,
-            needs_inval: false,
-            children_changed: false,
-            window_id: self.window_id,
-            widget_id: self.window.root.id(),
-        };
-        self.window.update(&mut ctx, &self.data, &self.env);
+        let mut win_ctx = MockWinCtx(piet.text());
+        self.window.update(&mut win_ctx, &self.data, &self.env);
     }
 
     fn layout(&mut self, piet: &mut Piet) {
-        let mut ctx = LayoutCtx {
-            text_factory: piet.text(),
-            window_id: self.window_id,
-        };
-        self.window.layout(&mut ctx, &self.data, &self.env);
+        self.window.just_layout(piet, &self.data, &self.env);
     }
 
     #[allow(dead_code)]
     fn paint(&mut self, piet: &mut Piet) {
-        let base_state = BaseState::new(self.window.root.id());
-
-        let mut ctx = PaintCtx {
-            render_ctx: piet,
-            window_id: self.window_id,
-            region: Rect::ZERO.into(),
-            base_state: &base_state,
-            focus_widget: self.window.focus,
-        };
-        self.window.paint(&mut ctx, &self.data, &self.env);
+        self.window
+            .do_paint(piet, &mut self.cmds, &self.data, &self.env);
     }
 }
 
