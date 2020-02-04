@@ -20,7 +20,6 @@ use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::shell::{Counter, Cursor, WinCtx, WindowHandle};
 
-use crate::bloom::Bloom;
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
@@ -51,7 +50,7 @@ pub struct Window<T: Data> {
     pub(crate) needs_inval: bool,
     pub(crate) children_changed: bool,
     pub(crate) focus: Option<WidgetId>,
-    focus_widgets: Vec<WidgetId>,
+    pub(crate) focus_widgets: Vec<WidgetId>,
     pub(crate) handle: WindowHandle,
     // delegate?
 }
@@ -176,7 +175,13 @@ impl<T: Data> Window<T> {
         }
 
         self.needs_inval |= base_state.needs_inval;
-        self.children_changed |= base_state.children_changed;
+        // If children are changed during the handling of an event,
+        // we need to send WidgetAdded and Register now, so that they
+        // are ready for update/layout.
+        if base_state.children_changed {
+            self.lifecycle(queue, &LifeCycle::Register, data, env);
+        }
+
         is_handled
     }
 
@@ -188,15 +193,11 @@ impl<T: Data> Window<T> {
         data: &T,
         env: &Env,
     ) {
+        let mut base_state = BaseState::new(self.root.id());
         let mut ctx = LifeCycleCtx {
             command_queue: queue,
-            children: Bloom::default(),
-            children_changed: false,
-            needs_inval: false,
-            request_anim: false,
-            focus_widgets: Vec::new(),
             window_id: self.id,
-            widget_id: self.root.id(),
+            base_state: &mut base_state,
         };
 
         if let LifeCycle::AnimFrame(_) = event {
@@ -204,11 +205,11 @@ impl<T: Data> Window<T> {
         }
 
         self.root.lifecycle(&mut ctx, event, data, env);
-        self.needs_inval |= ctx.needs_inval;
-        self.children_changed |= ctx.children_changed;
+        self.needs_inval |= ctx.base_state.needs_inval;
+        self.children_changed |= ctx.base_state.children_changed;
 
         if let LifeCycle::Register = event {
-            self.focus_widgets = std::mem::take(&mut ctx.focus_widgets);
+            self.focus_widgets = std::mem::take(&mut ctx.base_state.focus_chain);
         }
     }
 
@@ -224,7 +225,7 @@ impl<T: Data> Window<T> {
 
         let event = LifeCycle::AnimFrame(elapsed_ns);
         self.root.lifecycle(ctx, &event, data, env);
-        if ctx.request_anim {
+        if ctx.base_state.request_anim {
             self.last_anim = Some(now);
         }
     }

@@ -104,6 +104,39 @@ fn simple_layout() {
 }
 
 #[test]
+fn participate_in_autofocus() {
+    let (id_1, id_2, id_3) = (WidgetId::next(), WidgetId::next(), WidgetId::next());
+    let id_4 = WidgetId::next();
+    const ID_5: WidgetId = WidgetId::reserved(0);
+    const ID_6: WidgetId = WidgetId::reserved(1);
+
+    fn make_replacement() -> impl Widget<String> {
+        Split::vertical(TextBox::raw().with_id(ID_5), TextBox::raw().with_id(ID_6))
+    }
+
+    let replacer = ReplaceChild::new(TextBox::raw().with_id(id_4), make_replacement);
+
+    let widget = Split::vertical(
+        Flex::row()
+            .with_child(TextBox::raw().with_id(id_1), 1.0)
+            .with_child(TextBox::raw().with_id(id_2), 1.0)
+            .with_child(TextBox::raw().with_id(id_3), 1.0),
+        replacer,
+    );
+    Harness::create("my test text".to_string(), widget, |harness| {
+        harness.send_initial_events();
+        assert_eq!(harness.window().focus_widgets, vec![id_1, id_2, id_3, id_4]);
+
+        let target: Target = harness.window().id.into();
+        harness.event(Event::TargetedCommand(target, REPLACE_CHILD.into()));
+        assert_eq!(
+            harness.window().focus_widgets,
+            vec![id_1, id_2, id_3, ID_5, ID_6]
+        );
+    })
+}
+
+#[test]
 fn child_tracking() {
     let (id_1, id_2, id_3) = (WidgetId::next(), WidgetId::next(), WidgetId::next());
     let id_4 = WidgetId::next();

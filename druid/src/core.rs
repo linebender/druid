@@ -92,6 +92,7 @@ pub(crate) struct BaseState {
     /// likely not worth the complexity.
     pub(crate) request_timer: bool,
 
+    pub(crate) focus_chain: Vec<WidgetId>,
     pub(crate) request_focus: Option<FocusChange>,
     pub(crate) children: Bloom<WidgetId>,
     pub(crate) children_changed: bool,
@@ -117,9 +118,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// so it can participate in layout and event flow. The process of
     /// adding a child widget to a container should call this method.
     pub fn new(inner: W) -> WidgetPod<T, W> {
-        let id = inner.id().unwrap_or_else(WidgetId::next);
+        let mut state = BaseState::new(inner.id().unwrap_or_else(WidgetId::next));
+        state.children_changed = true;
         WidgetPod {
-            state: BaseState::new(id),
+            state,
             old_data: None,
             env: None,
             inner,
@@ -276,7 +278,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let mut lc_ctx = ctx.make_lifecycle_ctx();
             self.inner
                 .lifecycle(&mut lc_ctx, &LifeCycle::WidgetAdded, data, &env);
-            self.state.needs_inval |= lc_ctx.needs_inval;
             self.old_data = Some(data.clone());
             self.env = Some(env.clone());
         }
@@ -379,7 +380,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let mut lc_ctx = child_ctx.make_lifecycle_ctx();
             self.inner
                 .lifecycle(&mut lc_ctx, &hot_changed_event, data, &env);
-            ctx.base_state.needs_inval |= lc_ctx.needs_inval;
         }
         if recurse {
             child_ctx.base_state.has_active = false;
@@ -392,17 +392,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        ctx.widget_id = self.id();
-        let pre_children = ctx.children;
-        let pre_childs_changed = ctx.children_changed;
-        let pre_inval = ctx.needs_inval;
-        let pre_request_anim = ctx.request_anim;
-
-        ctx.children = Bloom::new();
-        ctx.children_changed = false;
-        ctx.needs_inval = false;
-        ctx.request_anim = false;
-
         let recurse = match event {
             LifeCycle::AnimFrame(_) => {
                 let r = self.state.request_anim;
@@ -418,7 +407,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     self.old_data = Some(data.clone());
                     self.env = Some(env.clone());
                 }
-                true
+                if self.state.children_changed {
+                    self.state.children.clear();
+                    self.state.focus_chain.clear();
+                }
+                self.state.children_changed
             }
             LifeCycle::HotChanged(_) => false,
             LifeCycle::RouteFocusChanged { old, new } => {
@@ -458,21 +451,23 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             _ => true,
         };
 
+        let mut child_ctx = LifeCycleCtx {
+            command_queue: ctx.command_queue,
+            base_state: &mut self.state,
+            window_id: ctx.window_id,
+        };
+
         if recurse {
-            self.inner.lifecycle(ctx, event, data, env);
+            self.inner.lifecycle(&mut child_ctx, event, data, env);
         }
 
-        self.state.request_anim = ctx.request_anim;
-        self.state.children_changed |= ctx.children_changed;
-        ctx.request_anim |= pre_request_anim;
-        ctx.children_changed |= pre_childs_changed;
-        ctx.needs_inval |= pre_inval;
+        ctx.base_state.merge_up(&self.state);
 
         // we only want to update child state after this specific event.
         if let LifeCycle::Register = event {
-            self.state.children = ctx.children;
             self.state.children_changed = false;
-            ctx.children = ctx.children.union(pre_children);
+            ctx.base_state.children = ctx.base_state.children.union(self.state.children);
+            ctx.base_state.focus_chain.extend(&self.state.focus_chain);
             ctx.register_child(self.id());
         }
     }
@@ -533,6 +528,7 @@ impl BaseState {
             request_anim: false,
             request_timer: false,
             request_focus: None,
+            focus_chain: Vec::new(),
             children: Bloom::new(),
             children_changed: false,
         }
@@ -581,23 +577,19 @@ mod tests {
         let mut widget = WidgetPod::new(widget).boxed();
 
         let mut command_queue: CommandQueue = VecDeque::new();
+        let mut state = BaseState::new(WidgetId::next());
         let mut ctx = LifeCycleCtx {
             command_queue: &mut command_queue,
-            children: Bloom::new(),
-            children_changed: true,
-            needs_inval: false,
-            request_anim: false,
+            base_state: &mut state,
             window_id: WindowId::next(),
-            widget_id: WidgetId::next(),
-            focus_widgets: Vec::new(),
         };
 
         let env = Env::default();
 
         widget.lifecycle(&mut ctx, &LifeCycle::Register, &None, &env);
-        assert!(ctx.children.contains(&ID_1));
-        assert!(ctx.children.contains(&ID_2));
-        assert!(ctx.children.contains(&ID_3));
-        assert_eq!(ctx.children.entry_count(), 7);
+        assert!(state.children.contains(&ID_1));
+        assert!(state.children.contains(&ID_2));
+        assert!(state.children.contains(&ID_3));
+        assert_eq!(state.children.entry_count(), 7);
     }
 }
