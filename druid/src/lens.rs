@@ -545,3 +545,39 @@ where
         v
     }
 }
+
+#[derive(Debug, Copy, Clone)]
+pub struct Tuple<L, R> {
+    left: L,
+    right: R,
+}
+
+impl<L, R> Tuple<L, R> {
+    pub fn new<T, U1, U2>(left: L, right: R) -> Self
+    where
+        L: Lens<T, U1>,
+        R: Lens<T, U2>,
+    {
+        Self { left, right }
+    }
+}
+
+impl<T, U1, U2, L, R> Lens<T, (U1, U2)> for Tuple<L, R>
+where
+    U1: Clone,
+    U2: Clone,
+    L: Lens<T, U1>,
+    R: Lens<T, U2>,
+{
+    fn with<V, F: FnOnce(&(U1, U2)) -> V>(&self, data: &T, f: F) -> V {
+        f(&(self.left.get(data), self.right.get(data)))
+    }
+
+    fn with_mut<V, F: FnOnce(&mut (U1, U2)) -> V>(&self, data: &mut T, f: F) -> V {
+        let mut r = (self.left.get(data), self.right.get(data));
+        let v = f(&mut r);
+        self.left.put(data, r.0);
+        self.right.put(data, r.1);
+        v
+    }
+}
