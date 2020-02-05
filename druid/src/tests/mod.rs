@@ -123,6 +123,10 @@ fn participate_in_autofocus() {
     );
 
     Harness::create("my test text".to_string(), widget, |harness| {
+        // verify that all widgets are marked as having children_changed
+        // (this should always be true for a new widget)
+        harness.inspect_state(|state| assert!(state.children_changed));
+
         harness.send_initial_events();
         // verify that we start out with four widgets registered for focus
         assert_eq!(harness.window().focus_widgets, vec![id_1, id_2, id_3, id_4]);
@@ -135,6 +139,9 @@ fn participate_in_autofocus() {
             harness.window().focus_widgets,
             vec![id_1, id_2, id_3, id_5, id_6]
         );
+
+        // verify that no widgets still report that their children changed:
+        harness.inspect_state(|state| assert!(!state.children_changed))
     })
 }
 

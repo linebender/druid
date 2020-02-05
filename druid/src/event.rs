@@ -199,6 +199,8 @@ pub enum LifeCycle {
         widget: WidgetId,
         state_cell: StateCell,
     },
+    #[cfg(test)]
+    DebugInspectState(StateCheckFn),
 }
 
 /// A mouse wheel event.
@@ -266,25 +268,29 @@ impl Event {
 }
 
 #[cfg(test)]
-pub(crate) use state_cell::StateCell;
+pub(crate) use state_cell::{StateCell, StateCheckFn};
 
 #[cfg(test)]
 mod state_cell {
     use crate::core::BaseState;
+    use crate::WidgetId;
     use std::{cell::RefCell, rc::Rc};
 
     /// An interior-mutable struct for fetching BasteState.
     #[derive(Clone, Default)]
     pub struct StateCell(Rc<RefCell<Option<BaseState>>>);
 
-    impl std::fmt::Debug for StateCell {
-        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            let inner = if self.0.borrow().is_some() {
-                "Some"
-            } else {
-                "None"
-            };
-            write!(f, "StateCell({})", inner)
+    #[derive(Clone)]
+    pub struct StateCheckFn(Rc<dyn Fn(&BaseState)>);
+
+    /// a hacky way of printing the widget id if we panic
+    struct WidgetDrop(bool, WidgetId);
+
+    impl Drop for WidgetDrop {
+        fn drop(&mut self) {
+            if self.0 {
+                eprintln!("panic in {:?}", self.1);
+            }
         }
     }
 
@@ -300,6 +306,35 @@ mod state_cell {
         #[allow(dead_code)]
         pub(crate) fn take(&self) -> Option<BaseState> {
             self.0.borrow_mut().take()
+        }
+    }
+
+    impl StateCheckFn {
+        pub(crate) fn new(f: impl Fn(&BaseState) + 'static) -> Self {
+            StateCheckFn(Rc::new(f))
+        }
+
+        pub(crate) fn call(&self, state: &BaseState) {
+            let mut panic_reporter = WidgetDrop(true, state.id);
+            (self.0)(&state);
+            panic_reporter.0 = false;
+        }
+    }
+
+    impl std::fmt::Debug for StateCell {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            let inner = if self.0.borrow().is_some() {
+                "Some"
+            } else {
+                "None"
+            };
+            write!(f, "StateCell({})", inner)
+        }
+    }
+
+    impl std::fmt::Debug for StateCheckFn {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "StateCheckFn")
         }
     }
 }
