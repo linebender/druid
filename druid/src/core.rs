@@ -128,6 +128,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
     }
 
+    /// Read-only access to state. We don't mark the field as `pub` because
+    /// we want to control mutation.
+    pub(crate) fn state(&self) -> &BaseState {
+        &self.state
+    }
+
     /// Query the "active" state of the widget.
     pub fn is_active(&self) -> bool {
         self.state.is_active
@@ -200,6 +206,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let color = env.get_debug_color(id);
             ctx.stroke(rect, &color, 1.0);
         }
+
+        self.state.needs_inval = false;
     }
 
     /// Paint the widget, translating it by the origin of its layout rectangle.
@@ -495,19 +503,19 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             _ => (),
         }
 
-        let pre_childs_changed = ctx.children_changed;
-        let pre_inval = ctx.needs_inval;
-        ctx.children_changed = false;
-        ctx.needs_inval = false;
+        let mut child_ctx = UpdateCtx {
+            window: ctx.window,
+            text_factory: ctx.text_factory,
+            base_state: &mut self.state,
+            window_id: ctx.window_id,
+        };
 
         self.inner
-            .update(ctx, self.old_data.as_ref().unwrap(), data, env);
+            .update(&mut child_ctx, self.old_data.as_ref().unwrap(), data, env);
         self.old_data = Some(data.clone());
         self.env = Some(env.clone());
 
-        self.state.children_changed |= ctx.children_changed;
-        ctx.children_changed |= pre_childs_changed;
-        ctx.needs_inval |= pre_inval;
+        ctx.base_state.merge_up(&self.state)
     }
 }
 

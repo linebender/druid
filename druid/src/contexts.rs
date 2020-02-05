@@ -77,10 +77,8 @@ pub struct UpdateCtx<'a, 'b: 'a> {
     // invalidations, which would mean a structure very much like
     // `EventCtx` (and possibly using the same structure). But for
     // now keep it super-simple.
-    pub(crate) needs_inval: bool,
-    pub(crate) children_changed: bool,
     pub(crate) window_id: WindowId,
-    pub(crate) widget_id: WidgetId,
+    pub(crate) base_state: &'a mut BaseState,
 }
 
 /// A context provided to layout handling methods of widgets.
@@ -413,14 +411,14 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     /// See [`EventCtx::invalidate`](struct.EventCtx.html#method.invalidate) for
     /// more discussion.
     pub fn invalidate(&mut self) {
-        self.needs_inval = true;
+        self.base_state.needs_inval = true;
     }
 
     /// Indicate that your children have changed.
     ///
     /// Widgets must call this method after adding a new child.
     pub fn children_changed(&mut self) {
-        self.children_changed = true;
+        self.base_state.children_changed = true;
     }
 
     /// Get an object which can create text layouts.
@@ -445,7 +443,7 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
 
     /// get the `WidgetId` of the current widget.
     pub fn widget_id(&self) -> WidgetId {
-        self.widget_id
+        self.base_state.id
     }
 }
 

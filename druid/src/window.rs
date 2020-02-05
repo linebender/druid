@@ -47,10 +47,7 @@ pub struct Window<T: Data> {
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) context_menu: Option<MenuDesc<T>>,
     pub(crate) last_anim: Option<Instant>,
-    pub(crate) needs_inval: bool,
-    pub(crate) children_changed: bool,
     pub(crate) focus: Option<WidgetId>,
-    pub(crate) focus_widgets: Vec<WidgetId>,
     pub(crate) handle: WindowHandle,
     // delegate?
 }
@@ -78,10 +75,7 @@ impl<T: Data> PendingWindow<T> {
             menu,
             context_menu: None,
             last_anim: None,
-            needs_inval: false,
-            children_changed: false,
             focus: None,
-            focus_widgets: Vec::new(),
             handle,
         }
     }
@@ -91,6 +85,10 @@ impl<T: Data> Window<T> {
     /// `true` iff any child requested an animation frame during the last `AnimFrame` event.
     pub(crate) fn wants_animation_frame(&self) -> bool {
         self.last_anim.is_some()
+    }
+
+    pub(crate) fn focus_chain(&self) -> &[WidgetId] {
+        &self.root.state().focus_chain
     }
 
     pub(crate) fn set_menu(&mut self, mut menu: MenuDesc<T>, data: &T, env: &Env) {
@@ -174,7 +172,6 @@ impl<T: Data> Window<T> {
             win_ctx.set_cursor(&cursor);
         }
 
-        self.needs_inval |= base_state.needs_inval;
         // If children are changed during the handling of an event,
         // we need to send WidgetAdded and Register now, so that they
         // are ready for update/layout.
@@ -205,12 +202,6 @@ impl<T: Data> Window<T> {
         }
 
         self.root.lifecycle(&mut ctx, event, data, env);
-        self.needs_inval |= ctx.base_state.needs_inval;
-        self.children_changed |= ctx.base_state.children_changed;
-
-        if let LifeCycle::Register = event {
-            self.focus_widgets = std::mem::take(&mut ctx.base_state.focus_chain);
-        }
     }
 
     /// AnimFrame has special logic, so we implement it separately.
@@ -233,18 +224,15 @@ impl<T: Data> Window<T> {
     pub(crate) fn update(&mut self, win_ctx: &mut dyn WinCtx, data: &T, env: &Env) {
         self.update_title(data, env);
 
+        let mut base_state = BaseState::new(self.root.id());
         let mut update_ctx = UpdateCtx {
             text_factory: win_ctx.text_factory(),
+            base_state: &mut base_state,
             window: &self.handle,
-            needs_inval: false,
-            children_changed: false,
             window_id: self.id,
-            widget_id: self.root.id(),
         };
 
         self.root.update(&mut update_ctx, data, env);
-        self.needs_inval |= update_ctx.needs_inval;
-        self.children_changed |= update_ctx.children_changed;
     }
 
     pub(crate) fn invalidate_and_finalize(
@@ -253,14 +241,11 @@ impl<T: Data> Window<T> {
         data: &T,
         env: &Env,
     ) {
-        if self.needs_inval {
+        if self.root.state().needs_inval {
             self.handle.invalidate();
-            // TODO: should we just clear this after paint?
-            self.needs_inval = false;
         }
-        if self.children_changed {
+        if self.root.state().children_changed {
             self.lifecycle(queue, &LifeCycle::Register, data, env);
-            self.children_changed = false;
         }
     }
 
@@ -338,18 +323,18 @@ impl<T: Data> Window<T> {
             FocusChange::Focus(id) => Some(id),
             FocusChange::Next => self
                 .focus
-                .and_then(|id| self.focus_widgets.iter().position(|i| i == &id))
+                .and_then(|id| self.focus_chain().iter().position(|i| i == &id))
                 .map(|idx| {
-                    let next_idx = (idx + 1) % self.focus_widgets.len();
-                    self.focus_widgets[next_idx]
+                    let next_idx = (idx + 1) % self.focus_chain().len();
+                    self.focus_chain()[next_idx]
                 }),
             FocusChange::Previous => self
                 .focus
-                .and_then(|id| self.focus_widgets.iter().position(|i| i == &id))
+                .and_then(|id| self.focus_chain().iter().position(|i| i == &id))
                 .map(|idx| {
-                    let len = self.focus_widgets.len();
+                    let len = self.focus_chain().len();
                     let prev_idx = (idx + len - 1) % len;
-                    self.focus_widgets[prev_idx]
+                    self.focus_chain()[prev_idx]
                 }),
         }
     }
