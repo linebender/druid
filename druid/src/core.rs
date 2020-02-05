@@ -448,6 +448,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     self.state.children.contains(&widget)
                 }
             }
+            #[cfg(test)]
+            LifeCycle::DebugInspectState(f) => {
+                f.call(&self.state);
+                true
+            }
             _ => true,
         };
 

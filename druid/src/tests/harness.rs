@@ -108,6 +108,14 @@ impl<T: Data> Harness<'_, T> {
         cell.take()
     }
 
+    /// Inspect the `BaseState` of each widget in the tree.
+    ///
+    /// The provided closure will be called on each widget.
+    pub(crate) fn inspect_state(&mut self, f: impl Fn(&BaseState) + 'static) {
+        let checkfn = StateCheckFn::new(f);
+        self.lifecycle(LifeCycle::DebugInspectState(checkfn))
+    }
+
     /// Send a command to a target.
     pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
         let target = target.into().unwrap_or_else(|| self.inner.window.id.into());
