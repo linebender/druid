@@ -66,13 +66,13 @@ fn take_focus() {
         assert!(right_focus.get().is_none());
 
         // this is sent to all widgets; the first widget to request focus should get it
-        harness.event(Event::Command(TAKE_FOCUS.into()));
+        harness.submit_command(TAKE_FOCUS, None);
         assert_eq!(harness.window().focus, Some(id_1));
         assert_eq!(left_focus.get(), Some(true));
         assert_eq!(right_focus.get(), None);
 
         // this is sent to a specific widget; it should get focus
-        harness.event(Event::TargetedCommand(id_2.into(), TAKE_FOCUS.into()));
+        harness.submit_command(TAKE_FOCUS, id_2);
         assert_eq!(harness.window().focus, Some(id_2));
         assert_eq!(left_focus.get(), Some(false));
         assert_eq!(right_focus.get(), Some(true));
@@ -106,15 +106,13 @@ fn simple_layout() {
 #[test]
 fn participate_in_autofocus() {
     let (id_1, id_2, id_3) = (WidgetId::next(), WidgetId::next(), WidgetId::next());
-    let id_4 = WidgetId::next();
-    const ID_5: WidgetId = WidgetId::reserved(0);
-    const ID_6: WidgetId = WidgetId::reserved(1);
+    let (id_4, id_5, id_6) = (WidgetId::next(), WidgetId::next(), WidgetId::next());
 
-    fn make_replacement() -> impl Widget<String> {
-        Split::vertical(TextBox::raw().with_id(ID_5), TextBox::raw().with_id(ID_6))
-    }
-
-    let replacer = ReplaceChild::new(TextBox::raw().with_id(id_4), make_replacement);
+    // this widget starts with a single child, and will replace them with a split
+    // when we send it a command.
+    let replacer = ReplaceChild::new(TextBox::raw().with_id(id_4), move || {
+        Split::vertical(TextBox::raw().with_id(id_5), TextBox::raw().with_id(id_6))
+    });
 
     let widget = Split::vertical(
         Flex::row()
@@ -123,15 +121,19 @@ fn participate_in_autofocus() {
             .with_child(TextBox::raw().with_id(id_3), 1.0),
         replacer,
     );
+
     Harness::create("my test text".to_string(), widget, |harness| {
         harness.send_initial_events();
+        // verify that we start out with four widgets registered for focus
         assert_eq!(harness.window().focus_widgets, vec![id_1, id_2, id_3, id_4]);
 
-        let target: Target = harness.window().id.into();
-        harness.event(Event::TargetedCommand(target, REPLACE_CHILD.into()));
+        // tell the replacer widget to swap its children
+        harness.submit_command(REPLACE_CHILD, None);
+
+        // verify that the two new children are registered for focus.
         assert_eq!(
             harness.window().focus_widgets,
-            vec![id_1, id_2, id_3, ID_5, ID_6]
+            vec![id_1, id_2, id_3, id_5, id_6]
         );
     })
 }
