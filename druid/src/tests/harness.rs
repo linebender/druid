@@ -108,6 +108,13 @@ impl<T: Data> Harness<'_, T> {
         cell.take()
     }
 
+    /// Send a command to a target.
+    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
+        let target = target.into().unwrap_or_else(|| self.inner.window.id.into());
+        let event = Event::TargetedCommand(target, cmd.into());
+        self.event(event);
+    }
+
     /// Send the events that would normally be sent when the app starts.
     // should we do this automatically? Also these will change regularly?
     pub fn send_initial_events(&mut self) {
