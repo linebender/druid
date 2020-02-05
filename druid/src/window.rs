@@ -142,6 +142,10 @@ impl<T: Data> Window<T> {
             other => other,
         };
 
+        if let Event::WindowConnected = event {
+            self.lifecycle(queue, &LifeCycle::WidgetAdded, data, env);
+        }
+
         let mut base_state = BaseState::new(self.root.id());
         let is_handled = {
             let mut ctx = EventCtx {
@@ -174,16 +178,14 @@ impl<T: Data> Window<T> {
         }
 
         // If children are changed during the handling of an event,
-        // we need to send WidgetAdded and Register now, so that they
-        // are ready for update/layout.
+        // we need to send WidgetAdded now, so that they are ready for update/layout.
         if base_state.children_changed {
-            self.lifecycle(queue, &LifeCycle::Register, data, env);
+            self.lifecycle(queue, &LifeCycle::WidgetAdded, data, env);
         }
 
         is_handled
     }
 
-    /// Returns `true` if any widget has requested an animation frame
     pub(crate) fn lifecycle(
         &mut self,
         queue: &mut CommandQueue,
@@ -242,11 +244,11 @@ impl<T: Data> Window<T> {
         data: &T,
         env: &Env,
     ) {
+        if self.root.state().children_changed {
+            self.lifecycle(queue, &LifeCycle::WidgetAdded, data, env);
+        }
         if self.root.state().needs_inval {
             self.handle.invalidate();
-        }
-        if self.root.state().children_changed {
-            self.lifecycle(queue, &LifeCycle::Register, data, env);
         }
     }
 

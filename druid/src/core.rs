@@ -340,15 +340,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`event`]: trait.Widget.html#method.event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        // If data is `None` it means we were just added
-        // This should only be called here if the user has added children but failed to call
-        // `children_changed`?
         if self.old_data.is_none() {
-            let mut lc_ctx = ctx.make_lifecycle_ctx();
-            self.inner
-                .lifecycle(&mut lc_ctx, &LifeCycle::WidgetAdded, data, &env);
-            self.old_data = Some(data.clone());
-            self.env = Some(env.clone());
+            log::error!(
+                "widget {:?} is receiving an event without having first \
+                recieved WidgetAdded.",
+                ctx.widget_id()
+            );
         }
 
         // TODO: factor as much logic as possible into monomorphic functions.
@@ -376,6 +373,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut recurse = true;
         let mut hot_changed = None;
         let child_event = match event {
+            Event::WindowConnected => Event::WindowConnected,
             Event::Size(size) => {
                 recurse = ctx.is_root;
                 Event::Size(*size)
@@ -467,12 +465,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 self.state.request_anim = false;
                 r
             }
-            LifeCycle::Register => {
-                // if this is called, it means widgets were added; check if our
-                // widget has data, and if it doesn't assume it is new and send WidgetAdded
+            LifeCycle::WidgetAdded => {
+                // if this is called, it means widgets were added. That might be
+                // be us; if we don't have old_data we set it now.
                 if self.old_data.is_none() {
-                    self.inner
-                        .lifecycle(ctx, &LifeCycle::WidgetAdded, data, env);
                     self.old_data = Some(data.clone());
                     self.env = Some(env.clone());
                 }
@@ -522,7 +518,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 f.call(&self.state);
                 true
             }
-            _ => true,
         };
 
         let mut child_ctx = LifeCycleCtx {
@@ -538,7 +533,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.base_state.merge_up(&self.state);
 
         // we only want to update child state after this specific event.
-        if let LifeCycle::Register = event {
+        if let LifeCycle::WidgetAdded = event {
             self.state.children_changed = false;
             ctx.base_state.children = ctx.base_state.children.union(self.state.children);
             ctx.base_state.focus_chain.extend(&self.state.focus_chain);
@@ -669,10 +664,10 @@ mod tests {
 
         let env = Env::default();
 
-        widget.lifecycle(&mut ctx, &LifeCycle::Register, &None, &env);
-        assert!(state.children.contains(&ID_1));
-        assert!(state.children.contains(&ID_2));
-        assert!(state.children.contains(&ID_3));
-        assert_eq!(state.children.entry_count(), 7);
+        widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &None, &env);
+        assert!(ctx.base_state.children.contains(&ID_1));
+        assert!(ctx.base_state.children.contains(&ID_2));
+        assert!(ctx.base_state.children.contains(&ID_3));
+        assert_eq!(ctx.base_state.children.entry_count(), 7);
     }
 }

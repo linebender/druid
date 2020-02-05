@@ -33,8 +33,8 @@ use crate::ext_event::ExtEventHost;
 use crate::menu::ContextMenu;
 use crate::window::{PendingWindow, Window};
 use crate::{
-    Command, Data, Env, Event, KeyEvent, KeyModifiers, LifeCycle, MenuDesc, Target, TimerToken,
-    WheelEvent, WindowDesc, WindowId,
+    Command, Data, Env, Event, KeyEvent, KeyModifiers, MenuDesc, Target, TimerToken, WheelEvent,
+    WindowDesc, WindowId,
 };
 
 use crate::command::sys as sys_cmd;
@@ -170,22 +170,6 @@ impl<T: Data> AppState<T> {
         self.with_delegate(id, |del, data, env, ctx| {
             del.window_added(id, data, env, ctx)
         });
-    }
-
-    //FIXME: when we make `WindowConnected` an event, this can all go
-    fn connected(&mut self, id: WindowId) {
-        let AppState {
-            ref mut windows,
-            ref mut command_queue,
-            ref data,
-            ref env,
-            ..
-        } = self;
-        if let Some(win) = windows.get_mut(id) {
-            win.lifecycle(command_queue, &LifeCycle::WidgetAdded, data, env);
-            win.lifecycle(command_queue, &LifeCycle::Register, data, env);
-            win.lifecycle(command_queue, &LifeCycle::WindowConnected, data, env);
-        }
     }
 
     pub(crate) fn add_window(&mut self, id: WindowId, window: PendingWindow<T>) {
@@ -368,13 +352,6 @@ impl<T: Data> DruidHandler<T> {
         }
     }
 
-    /// Called once, when a window first connects; we do some preliminary setup here.
-    fn do_connected(&mut self, win_ctx: &mut dyn WinCtx) {
-        self.app_state.borrow_mut().connected(self.window_id);
-        self.process_commands(win_ctx);
-        self.app_state.borrow_mut().invalidate_and_finalize();
-    }
-
     /// Send an event to the widget hierarchy.
     ///
     /// Returns `true` if the event produced an action.
@@ -544,7 +521,8 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn connected(&mut self, ctx: &mut dyn WinCtx) {
-        self.do_connected(ctx);
+        let event = Event::WindowConnected;
+        self.do_event(event, ctx);
     }
 
     fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {

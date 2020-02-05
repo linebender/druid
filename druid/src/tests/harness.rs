@@ -127,9 +127,7 @@ impl<T: Data> Harness<'_, T> {
     /// Send the events that would normally be sent when the app starts.
     // should we do this automatically? Also these will change regularly?
     pub fn send_initial_events(&mut self) {
-        self.lifecycle(LifeCycle::WidgetAdded);
-        self.lifecycle(LifeCycle::Register);
-        self.lifecycle(LifeCycle::WindowConnected);
+        self.event(Event::WindowConnected);
         self.event(Event::Size(DEFAULT_SIZE));
     }
 
@@ -155,8 +153,7 @@ impl<T: Data> Harness<'_, T> {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn lifecycle(&mut self, event: LifeCycle) {
+    fn lifecycle(&mut self, event: LifeCycle) {
         self.inner.lifecycle(event)
     }
 
@@ -188,7 +185,6 @@ impl<T: Data> Inner<T> {
         );
     }
 
-    #[allow(dead_code)]
     fn lifecycle(&mut self, event: LifeCycle) {
         self.window
             .lifecycle(&mut self.cmds, &event, &self.data, &self.env);
