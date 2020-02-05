@@ -125,15 +125,15 @@ fn participate_in_autofocus() {
     Harness::create("my test text".to_string(), widget, |harness| {
         harness.send_initial_events();
         // verify that we start out with four widgets registered for focus
-        assert_eq!(harness.window().focus_widgets, vec![id_1, id_2, id_3, id_4]);
+        assert_eq!(harness.window().focus_chain(), &[id_1, id_2, id_3, id_4]);
 
         // tell the replacer widget to swap its children
         harness.submit_command(REPLACE_CHILD, None);
 
         // verify that the two new children are registered for focus.
         assert_eq!(
-            harness.window().focus_widgets,
-            vec![id_1, id_2, id_3, id_5, id_6]
+            harness.window().focus_chain(),
+            &[id_1, id_2, id_3, id_5, id_6]
         );
     })
 }
