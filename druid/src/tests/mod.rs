@@ -26,6 +26,7 @@ use crate::*;
 use harness::*;
 use helpers::*;
 
+/// test that the first widget to request focus during an event gets it.
 #[test]
 fn propogate_hot() {
     let (button, pad, root, empty) = widget_id4();
@@ -173,6 +174,51 @@ fn take_focus() {
 }
 
 #[test]
+fn simple_lifecyle() {
+    let record = Recording::default();
+    let widget = SizedBox::empty().record(&record);
+    Harness::create(true, widget, |harness| {
+        harness.send_initial_events();
+        assert_matches!(record.next(), Record::L(LifeCycle::WidgetAdded));
+        assert_matches!(record.next(), Record::E(Event::WindowConnected));
+        assert_matches!(record.next(), Record::E(Event::Size(_)));
+        assert!(record.is_empty());
+    })
+}
+
+#[test]
+/// Test that lifecycle events are sent correctly to a child added during event
+/// handling
+fn adding_child_lifecycle() {
+    let record = Recording::default();
+    let record_new_child = Recording::default();
+    let record_new_child2 = record_new_child.clone();
+
+    let replacer = ReplaceChild::new(TextBox::raw(), move || {
+        Split::vertical(TextBox::raw(), TextBox::raw().record(&record_new_child2))
+    });
+
+    let widget = Split::vertical(Label::new("hi").record(&record), replacer);
+
+    Harness::create(String::new(), widget, |harness| {
+        harness.send_initial_events();
+
+        assert_matches!(record.next(), Record::L(LifeCycle::WidgetAdded));
+        assert_matches!(record.next(), Record::E(Event::WindowConnected));
+        assert!(record.is_empty());
+
+        assert!(record_new_child.is_empty());
+
+        harness.submit_command(REPLACE_CHILD, None);
+
+        assert_matches!(record.next(), Record::E(Event::Command(_)));
+
+        assert_matches!(record_new_child.next(), Record::L(LifeCycle::WidgetAdded));
+        assert!(record_new_child.is_empty());
+    })
+}
+
+#[test]
 fn participate_in_autofocus() {
     let (id_1, id_2, id_3, id_4, id_5, id_6) = widget_id6();
 
@@ -228,10 +274,10 @@ fn child_tracking() {
     Harness::create(true, widget, |harness| {
         harness.send_initial_events();
         let root = harness.get_state(id_4).unwrap();
+        assert_eq!(root.children.entry_count(), 3);
         assert!(root.children.contains(&id_1));
         assert!(root.children.contains(&id_2));
         assert!(root.children.contains(&id_3));
-        assert_eq!(root.children.entry_count(), 3);
 
         let split = harness.get_state(id_3).unwrap();
         assert!(split.children.contains(&id_1));

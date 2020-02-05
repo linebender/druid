@@ -54,12 +54,11 @@ pub struct EventCtx<'a, 'b> {
 ///
 /// Certain methods on this context are only meaningful during the handling of
 /// specific lifecycle events; for instance [`register_child`]
-/// should only be called while handling [`LifeCycle::Register`].
+/// should only be called while handling [`LifeCycle::WidgetAdded`].
 ///
 /// [`lifecycle`]: widget/trait.Widget.html#tymethod.lifecycle
 /// [`register_child`]: #method.register_child
-/// [`LifeCycleCtx::register_child`]: #method.register_child
-/// [`LifeCycle::Register`]: enum.LifeCycle.html#variant.Register
+/// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
 pub struct LifeCycleCtx<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) base_state: &'a mut BaseState,
@@ -374,7 +373,7 @@ impl<'a> LifeCycleCtx<'a> {
 
     /// Registers a child widget.
     ///
-    /// This should only be called in response to a `LifeCycle::Register` event.
+    /// This should only be called in response to a `LifeCycle::WidgetAdded` event.
     ///
     /// In general, you should not need to call this method; it is handled by
     /// the `WidgetPod`.

@@ -46,6 +46,16 @@ use crate::{Command, Target, WidgetId};
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Debug, Clone)]
 pub enum Event {
+    /// Sent to all widgets in a given window when that window is first instantiated.
+    ///
+    /// This should always be the first `Event` received, although widgets will
+    /// receive [`LifeCycle::WidgetAdded`] first.
+    ///
+    /// Widgets should handle this event if they need to do some addition setup
+    /// when a window is first created.
+    ///
+    /// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
+    WindowConnected,
     /// Called on the root widget when the window size changes.
     ///
     /// Discussion: it's not obvious this should be propagated to user
@@ -129,18 +139,10 @@ pub enum LifeCycle {
     /// Sent to a `Widget` when it is added to the widget tree. This should be
     /// the first message that each widget receives.
     ///
-    /// Widgets should handle this event if they need to do any one-time setup
-    /// that requires access to `Data`.
-    WidgetAdded,
-    /// Sent to all widgets in a given window when that window is first instantiated.
+    /// Widgets should handle this event in order to do any initial setup.
     ///
-    /// This is sent after `WidgetAdded`. Widgets should handle this event if
-    /// they need to do some addition setup when a window is first created.
-    WindowConnected,
-    /// Sent to a widget when it or any of its children have changed.
-    ///
-    /// This event is used to register widgets with the framework, as well
-    /// as to register widgets to participate in certain framework features.
+    /// In addition to setup, this event is also used by the framework to
+    /// track certain types of important widget state.
     ///
     /// ## Registering children
     ///
@@ -157,7 +159,7 @@ pub enum LifeCycle {
     /// [`LifeCycleCtx::register_child`]: struct.LifeCycleCtx.html#method.register_child
     /// [`WidgetPod`]: struct.WidgetPod.html
     /// [`LifeCycleCtx::register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
-    Register,
+    WidgetAdded,
     /// Called at the beginning of a new animation frame.
     ///
     /// On the first frame when transitioning from idle to animating, `interval`
