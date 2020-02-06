@@ -298,15 +298,16 @@ impl<T: Data> Window<T> {
             render_ctx: piet,
             base_state: &base_state,
             window_id: self.id,
+            z_ops: Vec::new(),
             focus_widget: self.focus,
             region: Rect::ZERO.into(),
         };
         let visible = Rect::from_origin_size(Point::ZERO, self.size);
         paint_ctx.with_child_ctx(visible, |ctx| self.root.paint(ctx, data, env));
 
-        paint_ctx.z_ops.sort_by_key(|k| k.z_index);
+        let mut z_ops = mem::take(&mut paint_ctx.z_ops);
+        z_ops.sort_by_key(|k| k.z_index);
 
-        let z_ops = mem::replace(&mut paint_ctx.z_ops, Vec::new());
         for z_op in z_ops.into_iter() {
             paint_ctx.with_child_ctx(visible, |ctx| {
                 if let Err(e) = ctx.render_ctx.save() {

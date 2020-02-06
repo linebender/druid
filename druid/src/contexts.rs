@@ -94,7 +94,7 @@ pub struct LayoutCtx<'a, 'b: 'a> {
 }
 
 /// Z-order paint operations with transformations.
-pub struct ZOrderPaintOp {
+pub(crate) struct ZOrderPaintOp {
     pub z_index: u32,
     pub paint_func: Box<dyn FnOnce(&mut PaintCtx) + 'static>,
     pub transform: Affine,
@@ -112,7 +112,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     pub render_ctx: &'a mut Piet<'b>,
     pub window_id: WindowId,
     /// The z-order paint operations.
-    pub z_ops: Vec<ZOrderPaintOp>,
+    pub(crate) z_ops: Vec<ZOrderPaintOp>,
     /// The currently visible region.
     pub(crate) region: Region,
     pub(crate) base_state: &'a BaseState,
@@ -532,7 +532,7 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
 
     /// Allows to specify order for paint operations.
     ///
-    /// Larger `z_idx` indicate that an operation will be executed later.
+    /// Larger `z_index` indicate that an operation will be executed later.
     pub fn paint_with_z_index(
         &mut self,
         z_index: u32,
