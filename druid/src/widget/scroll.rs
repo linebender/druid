@@ -322,9 +322,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     } else {
                         self.scroll_bars.hovered = BarHoveredState::Horizontal;
                     }
-
-                    self.scroll_bars.opacity = env.get(theme::SCROLL_BAR_MAX_OPACITY);
-                    self.scroll_bars.timer_id = TimerToken::INVALID; // Cancel any fade out in progress
+                    self.reset_scrollbar_fade(ctx, &env);
                     ctx.invalidate();
                 }
                 Event::MouseDown(event) => {
