@@ -168,16 +168,19 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        if self.update_child_count(data, env) {
-            ctx.children_changed();
-        }
-
+        // we send update to children first, before adding or removing children;
+        // this way we avoid sending update to newly added children, at the cost
+        // of potentially updating children that are going to be removed.
         let mut children = self.children.iter_mut();
         data.for_each(|child_data, _| {
             if let Some(child) = children.next() {
                 child.update(ctx, child_data, env);
             }
         });
+
+        if self.update_child_count(data, env) {
+            ctx.children_changed();
+        }
     }
 
     fn layout(
