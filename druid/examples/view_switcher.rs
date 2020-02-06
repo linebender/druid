@@ -16,13 +16,11 @@
 
 use druid::widget::{Button, Flex, Label, Split, TextBox, ViewSwitcher, WidgetExt};
 use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WindowDesc};
-use std::sync::Arc;
 
 #[derive(Clone, Data, Lens)]
 struct AppState {
     current_view: u32,
     current_text: String,
-    numbers: Arc<Vec<u32>>,
 }
 
 fn main() {
@@ -30,7 +28,6 @@ fn main() {
     let data = AppState {
         current_view: 0,
         current_text: "Edit me!".to_string(),
-        numbers: Arc::new((0..5).collect()),
     };
     AppLauncher::with_window(main_window)
         .use_simple_logger()
