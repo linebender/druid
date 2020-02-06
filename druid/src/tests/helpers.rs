@@ -305,3 +305,12 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
         self.recording.push(Record::Paint)
     }
 }
+
+pub fn widget_id4() -> (WidgetId, WidgetId, WidgetId, WidgetId) {
+    (
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+    )
+}
