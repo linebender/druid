@@ -102,7 +102,9 @@ impl<T: Data> Widget<T> for Button<T> {
         let is_hot = paint_ctx.is_hot();
 
         let rounded_rect =
-            RoundedRect::from_origin_size(Point::ORIGIN, paint_ctx.size().to_vec2(), 4.);
+            RoundedRect::from_origin_size(Point::ORIGIN,
+                                          paint_ctx.size().to_vec2(),
+                                          env.get(theme::BUTTON_RADIUS));
         let bg_gradient = if is_active {
             LinearGradient::new(
                 UnitPoint::TOP,

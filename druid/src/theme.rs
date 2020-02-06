@@ -31,6 +31,7 @@ pub const FOREGROUND_LIGHT: Key<Color> = Key::new("foreground_light");
 pub const FOREGROUND_DARK: Key<Color> = Key::new("foreground_dark");
 pub const BUTTON_DARK: Key<Color> = Key::new("button_dark");
 pub const BUTTON_LIGHT: Key<Color> = Key::new("button_light");
+pub const BUTTON_RADIUS: Key<f64> = Key::new("button_radius");
 pub const BORDER: Key<Color> = Key::new("border");
 pub const BORDER_LIGHT: Key<Color> = Key::new("border_light");
 pub const SELECTION_COLOR: Key<Color> = Key::new("selection_color");
@@ -40,6 +41,8 @@ pub const FONT_NAME: Key<&str> = Key::new("font_name");
 pub const TEXT_SIZE_NORMAL: Key<f64> = Key::new("text_size_normal");
 pub const BASIC_WIDGET_HEIGHT: Key<f64> = Key::new("basic_widget_height");
 pub const BORDERED_WIDGET_HEIGHT: Key<f64> = Key::new("bordered_widget_height");
+
+pub const TEXTBOX_RADIUS: Key<f64> = Key::new("textbox_radius");
 
 pub const SCROLL_BAR_COLOR: Key<Color> = Key::new("scroll_bar_color");
 pub const SCROLL_BAR_BORDER_COLOR: Key<Color> = Key::new("scroll_bar_border_color");
@@ -71,6 +74,8 @@ pub fn init() -> Env {
         .adding(TEXT_SIZE_NORMAL, 15.0)
         .adding(BASIC_WIDGET_HEIGHT, 18.0)
         .adding(BORDERED_WIDGET_HEIGHT, 24.0)
+        .adding(TEXTBOX_RADIUS, 2.)
+        .adding(BUTTON_RADIUS, 4.)
         .adding(SCROLL_BAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))
         .adding(SCROLL_BAR_BORDER_COLOR, Color::rgb8(0x77, 0x77, 0x77))
         .adding(SCROLL_BAR_MAX_OPACITY, 0.7)
