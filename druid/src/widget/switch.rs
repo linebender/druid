@@ -243,7 +243,7 @@ impl Widget<bool> for Switch {
             ),
         );
 
-        paint_ctx.stroke(background_rect, &env.get(theme::BORDER), 2.0);
+        paint_ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), 2.0);
         paint_ctx.fill(background_rect, &background_gradient_on_state);
         paint_ctx.fill(background_rect, &background_gradient_off_state);
         paint_ctx.clip(background_rect);

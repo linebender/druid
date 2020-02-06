@@ -79,7 +79,7 @@ impl Widget<f64> for ProgressBar {
         );
 
         //Paint the border
-        paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER), 2.0);
+        paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), 2.0);
 
         //Paint the background
         let background_gradient = LinearGradient::new(

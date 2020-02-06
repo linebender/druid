@@ -389,7 +389,7 @@ impl Widget<String> for TextBox {
         let border_color = if has_focus {
             env.get(theme::PRIMARY_LIGHT)
         } else {
-            env.get(theme::BORDER)
+            env.get(theme::BORDER_DARK)
         };
 
         // Paint the background

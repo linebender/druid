@@ -32,7 +32,8 @@ pub const FOREGROUND_DARK: Key<Color> = Key::new("foreground_dark");
 pub const BUTTON_DARK: Key<Color> = Key::new("button_dark");
 pub const BUTTON_LIGHT: Key<Color> = Key::new("button_light");
 pub const BUTTON_RADIUS: Key<f64> = Key::new("button_radius");
-pub const BORDER: Key<Color> = Key::new("border");
+pub const BUTTON_BORDER_WIDTH: Key<f64> = Key::new("button_border_width");
+pub const BORDER_DARK: Key<Color> = Key::new("border");
 pub const BORDER_LIGHT: Key<Color> = Key::new("border_light");
 pub const SELECTION_COLOR: Key<Color> = Key::new("selection_color");
 pub const CURSOR_COLOR: Key<Color> = Key::new("cursor_color");
@@ -67,7 +68,9 @@ pub fn init() -> Env {
         .adding(FOREGROUND_DARK, Color::rgb8(0xbf, 0xbf, 0xbf))
         .adding(BUTTON_DARK, Color::BLACK)
         .adding(BUTTON_LIGHT, Color::rgb8(0x21, 0x21, 0x21))
-        .adding(BORDER, Color::rgb8(0x3a, 0x3a, 0x3a))
+        .adding(BUTTON_RADIUS, 4.)
+        .adding(BUTTON_BORDER_WIDTH, 2.)
+        .adding(BORDER_DARK, Color::rgb8(0x3a, 0x3a, 0x3a))
         .adding(BORDER_LIGHT, Color::rgb8(0xa1, 0xa1, 0xa1))
         .adding(SELECTION_COLOR, Color::rgb8(0xf3, 0x00, 0x21))
         .adding(CURSOR_COLOR, Color::WHITE)
@@ -75,7 +78,6 @@ pub fn init() -> Env {
         .adding(BASIC_WIDGET_HEIGHT, 18.0)
         .adding(BORDERED_WIDGET_HEIGHT, 24.0)
         .adding(TEXTBOX_RADIUS, 2.)
-        .adding(BUTTON_RADIUS, 4.)
         .adding(SCROLL_BAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))
         .adding(SCROLL_BAR_BORDER_COLOR, Color::rgb8(0x77, 0x77, 0x77))
         .adding(SCROLL_BAR_MAX_OPACITY, 0.7)
