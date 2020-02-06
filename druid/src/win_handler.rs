@@ -496,7 +496,7 @@ impl<T: Data> DruidHandler<T> {
     }
 
     fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
-        let desc = cmd.get_object::<WindowDesc<T>>()?;
+        let desc = cmd.take_object::<WindowDesc<T>>()?;
         let window = desc.build_native(&self.app_state)?;
         window.show();
         Ok(())
