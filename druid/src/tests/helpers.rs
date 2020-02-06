@@ -290,7 +290,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.inner.update(ctx, old_data, data, env);
-        let inval = ctx.needs_inval;
+        let inval = ctx.base_state.needs_inval;
         self.recording.push(Record::Update(inval));
     }
 
@@ -304,4 +304,13 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
         self.inner.paint(ctx, data, env);
         self.recording.push(Record::Paint)
     }
+}
+
+pub fn widget_id4() -> (WidgetId, WidgetId, WidgetId, WidgetId) {
+    (
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+    )
 }

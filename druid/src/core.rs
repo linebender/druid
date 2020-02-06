@@ -554,7 +554,6 @@ impl BaseState {
         self.needs_inval |= child_state.needs_inval;
         self.request_anim |= child_state.request_anim;
         self.request_timer |= child_state.request_timer;
-        self.is_hot |= child_state.is_hot;
         self.has_active |= child_state.has_active;
         self.children_changed |= child_state.children_changed;
         self.request_focus = self.request_focus.or(child_state.request_focus);

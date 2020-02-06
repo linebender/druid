@@ -26,6 +26,98 @@ use harness::*;
 use helpers::*;
 
 #[test]
+fn propogate_hot() {
+    let (button, pad, root, empty) = widget_id4();
+
+    let root_rec = Recording::default();
+    let padding_rec = Recording::default();
+    let button_rec = Recording::default();
+
+    let widget = Split::horizontal(
+        SizedBox::empty().with_id(empty),
+        Button::new("hot", |_, _, _| {})
+            .record(&button_rec)
+            .with_id(button)
+            .padding(50.)
+            .record(&padding_rec)
+            .with_id(pad),
+    )
+    .record(&root_rec)
+    .with_id(root);
+
+    fn make_mouse(x: f64, y: f64) -> MouseEvent {
+        let pos = Point::new(x, y);
+        MouseEvent {
+            pos,
+            window_pos: pos,
+            mods: KeyModifiers::default(),
+            count: 0,
+            button: MouseButton::Left,
+        }
+    }
+    Harness::create((), widget, |harness| {
+        harness.send_initial_events();
+        harness.just_layout();
+
+        // we don't care about setup events, so discard them now.
+        root_rec.clear();
+        padding_rec.clear();
+        button_rec.clear();
+
+        harness.inspect_state(|state| assert!(!state.is_hot));
+
+        // What we are doing here is moving the mouse to different widgets,
+        // and verifying both the widget's `is_hot` status and also that
+        // each widget received the expected HotChanged messages.
+
+        harness.event(Event::MouseMoved(make_mouse(10., 10.)));
+        assert!(harness.get_state(root).unwrap().is_hot);
+        assert!(harness.get_state(empty).unwrap().is_hot);
+        assert!(!harness.get_state(pad).unwrap().is_hot);
+
+        assert_matches!(root_rec.next(), Record::L(LifeCycle::HotChanged(true)));
+        assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
+
+        harness.event(Event::MouseMoved(make_mouse(210., 10.)));
+
+        assert!(harness.get_state(root).unwrap().is_hot);
+        assert!(!harness.get_state(empty).unwrap().is_hot);
+        assert!(!harness.get_state(button).unwrap().is_hot);
+        assert!(harness.get_state(pad).unwrap().is_hot);
+
+        assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(padding_rec.next(), Record::L(LifeCycle::HotChanged(true)));
+        assert_matches!(padding_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
+
+        harness.event(Event::MouseMoved(make_mouse(260., 60.)));
+        assert!(harness.get_state(root).unwrap().is_hot);
+        assert!(!harness.get_state(empty).unwrap().is_hot);
+        assert!(harness.get_state(button).unwrap().is_hot);
+        assert!(harness.get_state(pad).unwrap().is_hot);
+
+        assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(padding_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(button_rec.next(), Record::L(LifeCycle::HotChanged(true)));
+        assert_matches!(button_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
+
+        harness.event(Event::MouseMoved(make_mouse(10., 10.)));
+        assert!(harness.get_state(root).unwrap().is_hot);
+        assert!(harness.get_state(empty).unwrap().is_hot);
+        assert!(!harness.get_state(button).unwrap().is_hot);
+        assert!(!harness.get_state(pad).unwrap().is_hot);
+
+        assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(padding_rec.next(), Record::L(LifeCycle::HotChanged(false)));
+        assert_matches!(padding_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(button_rec.next(), Record::L(LifeCycle::HotChanged(false)));
+        assert_matches!(button_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
+    });
+}
+#[test]
 fn take_focus() {
     const TAKE_FOCUS: Selector = Selector::new("druid-tests.take-focus");
 
