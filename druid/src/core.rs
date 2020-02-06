@@ -19,7 +19,7 @@ use std::collections::VecDeque;
 use log;
 
 use crate::bloom::Bloom;
-use crate::kurbo::{Affine, Point, Rect, Shape, Size};
+use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size};
 use crate::piet::RenderContext;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
@@ -43,7 +43,7 @@ pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
 /// needs to propagate, and to provide the previous data so that a
 /// widget can process a diff between the old value and the new.
 ///
-/// [`update`]: trait.Widget.html#tymethod.update
+/// [`update`]: widget/trait.Widget.html#tymethod.update
 pub struct WidgetPod<T: Data, W: Widget<T>> {
     state: BaseState,
     old_data: Option<T>,
@@ -64,12 +64,16 @@ pub struct WidgetPod<T: Data, W: Widget<T>> {
 /// that, widgets will generally not interact with it directly,
 /// but it is an important part of the [`WidgetPod`] struct.
 ///
-/// [`paint`]: trait.Widget.html#tymethod.paint
+/// [`paint`]: widget/trait.Widget.html#tymethod.paint
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Clone)]
 pub(crate) struct BaseState {
     pub(crate) id: WidgetId,
     pub(crate) layout_rect: Rect,
+    /// The insets applied to the layout rect to generate the paint rect.
+    /// In general, these will be zero; the exception is for things like
+    /// drop shadows or overflowing text.
+    paint_insets: Insets,
 
     // TODO: consider using bitflags for the booleans.
 
@@ -172,11 +176,63 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.state.layout_rect = layout_rect;
     }
 
-    /// Get the layout rectangle.
-    ///
-    /// This will be same value as set by `set_layout_rect`.
+    #[deprecated(since = "0.5.0", note = "use layout_rect() instead")]
+    #[doc(hidden)]
     pub fn get_layout_rect(&self) -> Rect {
         self.state.layout_rect
+    }
+
+    /// The layout rectangle.
+    ///
+    /// This will be same value as set by `set_layout_rect`.
+    pub fn layout_rect(&self) -> Rect {
+        self.state.layout_rect
+    }
+
+    /// Get the widget's paint [`Rect`].
+    ///
+    /// This is the [`Rect`] that widget has indicated it needs to paint in.
+    /// This is the same as the [`layout_rect`] with the [`paint_insets`] applied;
+    /// in the general case it is the same as the [`layout_rect`].
+    ///
+    /// [`layout_rect`]: #method.layout_rect
+    /// [`Rect`]: struct.Rect.html
+    /// [`paint_insets`]: #method.paint_insets
+    pub fn paint_rect(&self) -> Rect {
+        self.state.paint_rect()
+    }
+
+    /// Return the paint [`Insets`] for this widget.
+    ///
+    /// If these [`Insets`] are nonzero, they describe the area beyond a widget's
+    /// layout rect where it needs to paint.
+    ///
+    /// These are generally zero; exceptions are widgets that do things like
+    /// paint a drop shadow.
+    ///
+    /// A widget can set its insets by calling [`set_paint_insets`] during its
+    /// [`layout`] method.
+    ///
+    /// [`Insets`]: struct.Insets.html
+    /// [`set_paint_insets`]: struct.LayoutCtx.html#method.set_paint_insets
+    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    pub fn paint_insets(&self) -> Insets {
+        self.state.paint_insets
+    }
+
+    /// Given a parents layout size, determine the appropriate paint `Insets`
+    /// for the parent.
+    ///
+    /// This is a convenience method to be used from the [`layout`] method
+    /// of a `Widget` that manages a child; it allows the parent to correctly
+    /// propogate a child's desired paint rect, if it extends beyond the bounds
+    /// of the parent's layout rect.
+    ///
+    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    pub fn compute_parent_paint_rect(&self, parent_size: Size) -> Insets {
+        let parent_bounds = Rect::ZERO.with_size(parent_size);
+        let union_pant_rect = self.paint_rect().union(parent_bounds);
+        union_pant_rect - parent_bounds
     }
 
     /// Paint a child widget.
@@ -187,8 +243,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Note that this method does not apply the offset of the layout rect.
     /// If that is desired, use [`paint_with_offset`] instead.
     ///
-    /// [`layout`]: trait.Widget.html#method.layout
-    /// [`paint`]: trait.Widget.html#method.paint
+    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    /// [`paint`]: widget/trait.Widget.html#tymethod.paint
     /// [`paint_with_offset`]: #method.paint_with_offset
     pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut ctx = PaintCtx {
@@ -235,7 +291,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         env: &Env,
         paint_if_not_visible: bool,
     ) {
-        if !paint_if_not_visible && !paint_ctx.region().intersects(self.state.layout_rect) {
+        if !paint_if_not_visible && !paint_ctx.region().intersects(self.state.paint_rect()) {
             return;
         }
 
@@ -269,7 +325,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         data: &T,
         env: &Env,
     ) -> Size {
-        self.inner.layout(layout_ctx, bc, data, &env)
+        layout_ctx.paint_insets = Insets::ZERO;
+        let size = self.inner.layout(layout_ctx, bc, data, &env);
+        self.state.paint_insets = layout_ctx.paint_insets;
+        size
     }
 
     /// Propagate an event.
@@ -536,6 +595,7 @@ impl BaseState {
         BaseState {
             id,
             layout_rect: Rect::ZERO,
+            paint_insets: Insets::ZERO,
             needs_inval: false,
             is_hot: false,
             is_active: false,
@@ -562,6 +622,15 @@ impl BaseState {
     #[inline]
     pub(crate) fn size(&self) -> Size {
         self.layout_rect.size()
+    }
+
+    /// The paint region for this widget.
+    ///
+    /// For more information, see [`WidgetPod::paint_rect`].
+    ///
+    /// [`WidgetPod::paint_rect`]: struct.WidgetPod.html#method.paint_rect
+    pub(crate) fn paint_rect(&self) -> Rect {
+        self.layout_rect + self.paint_insets
     }
 }
 

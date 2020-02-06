@@ -169,7 +169,8 @@ impl Env {
     }
 
     /// Given an id, returns one of 18 distinct colors
-    pub(crate) fn get_debug_color(&self, id: u64) -> Color {
+    #[doc(hidden)]
+    pub fn get_debug_color(&self, id: u64) -> Color {
         let color_num = id as usize % self.0.debug_colors.len();
         self.0.debug_colors[color_num].clone()
     }

@@ -12,8 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Button, Flex, Padding, Scroll};
-use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
+//! Shows a scroll widget, and also demonstrates how widgets that paint
+//! outside their bounds can specify their paint region.
+
+use druid::kurbo::Circle;
+use druid::piet::RadialGradient;
+use druid::widget::{Flex, Padding, Scroll};
+use druid::{
+    AppLauncher, BoxConstraints, Data, Env, Event, EventCtx, Insets, LayoutCtx, LifeCycle,
+    LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Size, UpdateCtx, Widget,
+    WindowDesc,
+};
 
 fn main() {
     let window = WindowDesc::new(build_widget)
@@ -27,8 +36,35 @@ fn main() {
 fn build_widget() -> impl Widget<u32> {
     let mut col = Flex::column();
     for i in 0..30 {
-        let button = Button::new(format!("Button {}", i), Button::noop);
-        col.add_child(Padding::new(3.0, button), 0.0);
+        col.add_child(Padding::new(3.0, OverPainter(i)), 0.0);
     }
     Scroll::new(col)
+}
+
+/// A widget that paints outside of its bounds.
+struct OverPainter(u64);
+
+const INSETS: Insets = Insets::uniform(50.);
+
+impl<T: Data> Widget<T> for OverPainter {
+    fn event(&mut self, _: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {}
+
+    fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &T, _: &Env) {}
+
+    fn update(&mut self, _: &mut UpdateCtx, _: &T, _: &T, _: &Env) {}
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _: &T, _: &Env) -> Size {
+        ctx.set_paint_insets(INSETS);
+        bc.constrain(Size::new(100., 100.))
+    }
+
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _: &T, env: &Env) {
+        let rect = Rect::ZERO.with_size(paint_ctx.size());
+        let color = env.get_debug_color(self.0);
+        let radius = (rect + INSETS).size().height / 2.0;
+        let circle = Circle::new(rect.center(), radius);
+        let grad = RadialGradient::new(1.0, (color.clone(), color.clone().with_alpha(0.0)));
+        paint_ctx.fill(circle, &grad);
+        paint_ctx.stroke(rect, &color, 2.0);
+    }
 }

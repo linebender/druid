@@ -16,6 +16,7 @@
 
 mod harness;
 mod helpers;
+mod layout_tests;
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -139,7 +140,7 @@ fn take_focus() {
             })
     }
 
-    let (id_1, id_2, _id_3) = (WidgetId::next(), WidgetId::next(), WidgetId::next());
+    let (id_1, id_2, _id_3) = widget_id3();
 
     // we use these so that we can check the widget's internal state
     let left_focus: Rc<Cell<Option<bool>>> = Default::default();
@@ -172,33 +173,8 @@ fn take_focus() {
 }
 
 #[test]
-fn simple_layout() {
-    const BOX_WIDTH: f64 = 200.;
-    const PADDING: f64 = 10.;
-
-    let id_1 = WidgetId::next();
-
-    let widget = Split::vertical(Label::new("hi"), Label::new("there"))
-        .fix_size(BOX_WIDTH, BOX_WIDTH)
-        .padding(10.0)
-        .with_id(id_1)
-        .center();
-
-    Harness::create(true, widget, |harness| {
-        harness.send_initial_events();
-        harness.just_layout();
-        let state = harness.get_state(id_1).expect("failed to retrieve id_1");
-        assert_eq!(
-            state.layout_rect.x0,
-            ((DEFAULT_SIZE.width - BOX_WIDTH) / 2.) - PADDING
-        );
-    })
-}
-
-#[test]
 fn participate_in_autofocus() {
-    let (id_1, id_2, id_3) = (WidgetId::next(), WidgetId::next(), WidgetId::next());
-    let (id_4, id_5, id_6) = (WidgetId::next(), WidgetId::next(), WidgetId::next());
+    let (id_1, id_2, id_3, id_4, id_5, id_6) = widget_id6();
 
     // this widget starts with a single child, and will replace them with a split
     // when we send it a command.
@@ -239,8 +215,7 @@ fn participate_in_autofocus() {
 
 #[test]
 fn child_tracking() {
-    let (id_1, id_2, id_3) = (WidgetId::next(), WidgetId::next(), WidgetId::next());
-    let id_4 = WidgetId::next();
+    let (id_1, id_2, id_3, id_4) = widget_id4();
 
     let widget = Split::vertical(
         SizedBox::empty().with_id(id_1),

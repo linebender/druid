@@ -17,7 +17,7 @@
 use std::mem;
 use std::time::Instant;
 
-use crate::kurbo::{Point, Rect, Size};
+use crate::kurbo::{Insets, Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::shell::{Counter, Cursor, WinCtx, WindowHandle};
 
@@ -279,6 +279,7 @@ impl<T: Data> Window<T> {
         let mut layout_ctx = LayoutCtx {
             text_factory: piet.text(),
             window_id: self.id,
+            paint_insets: Insets::ZERO,
         };
         let bc = BoxConstraints::tight(self.size);
         let size = self.root.layout(&mut layout_ctx, &bc, data, env);

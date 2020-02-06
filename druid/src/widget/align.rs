@@ -127,6 +127,9 @@ impl<T: Data> Widget<T> for Align<T> {
             .resolve(Rect::new(0., 0., extra_width, extra_height));
         self.child
             .set_layout_rect(Rect::from_origin_size(origin, size));
+
+        let my_insets = self.child.compute_parent_paint_rect(my_size);
+        layout_ctx.set_paint_insets(my_insets);
         my_size
     }
 
