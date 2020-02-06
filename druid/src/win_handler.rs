@@ -19,7 +19,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use log::{error, info, warn};
+use log::{info, warn};
 
 use crate::kurbo::{Size, Vec2};
 use crate::piet::Piet;
@@ -309,20 +309,20 @@ impl<T: Data> AppState<T> {
 
     fn set_menu(&mut self, window_id: WindowId, cmd: &Command) {
         if let Some(win) = self.windows.get_mut(window_id) {
-            if let Some(menu) = cmd.get_object::<MenuDesc<T>>() {
-                win.set_menu(menu.to_owned(), &self.data, &self.env);
-            } else {
-                log::warn!("set-menu command is missing menu object");
+            match cmd.get_object::<MenuDesc<T>>() {
+                Ok(menu) => win.set_menu(menu.to_owned(), &self.data, &self.env),
+                Err(e) => log::warn!("set-menu object error: '{}'", e),
             }
         }
     }
 
     fn show_context_menu(&mut self, window_id: WindowId, cmd: &Command) {
         if let Some(win) = self.windows.get_mut(window_id) {
-            if let Some(ContextMenu { menu, location }) = cmd.get_object::<ContextMenu<T>>() {
-                win.show_context_menu(menu.to_owned(), *location, &self.data, &self.env)
-            } else {
-                log::warn!("show-context-menu command is missing menu object.");
+            match cmd.get_object::<ContextMenu<T>>() {
+                Ok(ContextMenu { menu, location }) => {
+                    win.show_context_menu(menu.to_owned(), *location, &self.data, &self.env)
+                }
+                Err(e) => log::warn!("show-context-menu object error: '{}'", e),
             }
         }
     }
@@ -436,7 +436,11 @@ impl<T: Data> DruidHandler<T> {
             match &cmd.selector {
                 &sys_cmd::SHOW_OPEN_PANEL => self.show_open_panel(cmd, window_id, win_ctx),
                 &sys_cmd::SHOW_SAVE_PANEL => self.show_save_panel(cmd, window_id, win_ctx),
-                &sys_cmd::NEW_WINDOW => self.new_window(cmd),
+                &sys_cmd::NEW_WINDOW => {
+                    if let Err(e) = self.new_window(cmd) {
+                        log::error!("failed to create window: '{}'", e);
+                    }
+                }
                 &sys_cmd::CLOSE_WINDOW => self.request_close_window(cmd, window_id),
                 &sys_cmd::SHOW_WINDOW => self.show_window(cmd),
                 &sys_cmd::QUIT_APP => self.quit(),
@@ -491,23 +495,11 @@ impl<T: Data> DruidHandler<T> {
         }
     }
 
-    fn new_window(&mut self, cmd: Command) {
-        let desc = match cmd.get_object::<WindowDesc<T>>() {
-            Some(wd) => wd,
-            None => {
-                warn!("new_window command is missing window description");
-                return;
-            }
-        };
-
-        let window = match desc.build_native(&self.app_state) {
-            Ok(win) => win,
-            Err(e) => {
-                error!("failed to create window: '{:?}'", e);
-                return;
-            }
-        };
+    fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
+        let desc = cmd.get_object::<WindowDesc<T>>()?;
+        let window = desc.build_native(&self.app_state)?;
         window.show();
+        Ok(())
     }
 
     fn request_close_window(&mut self, cmd: Command, window_id: WindowId) {
