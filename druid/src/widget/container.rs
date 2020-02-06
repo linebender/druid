@@ -104,10 +104,14 @@ impl<T: Data> Widget<T> for Container<T> {
         self.inner
             .set_layout_rect(Rect::from_origin_size(origin, size));
 
-        Size::new(
+        let my_size = Size::new(
             size.width + 2.0 * border_width,
             size.height + 2.0 * border_width,
-        )
+        );
+
+        let my_insets = self.inner.compute_parent_paint_rect(my_size);
+        ctx.set_paint_insets(my_insets);
+        my_size
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {

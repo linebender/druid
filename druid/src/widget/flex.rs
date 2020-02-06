@@ -198,11 +198,13 @@ impl<T: Data> Widget<T> for Flex<T> {
 
         // Finalize layout, assigning positions to each child.
         let mut major = 0.0;
+        let mut child_paint_rect = Rect::ZERO;
         for child in &mut self.children {
             // top-align, could do center etc. based on child height
-            let rect = child.widget.get_layout_rect();
+            let rect = child.widget.layout_rect();
             let pos: Point = self.direction.pack(major, 0.0).into();
             child.widget.set_layout_rect(rect.with_origin(pos));
+            child_paint_rect = child_paint_rect.union(child.widget.paint_rect());
             major += self.direction.major(rect.size());
         }
 
@@ -215,7 +217,11 @@ impl<T: Data> Widget<T> for Flex<T> {
         }
 
         let (width, height) = self.direction.pack(major, minor);
-        Size::new(width, height)
+        let my_size = Size::new(width, height);
+        let my_bounds = Rect::ZERO.with_size(my_size);
+        let insets = child_paint_rect - my_bounds;
+        layout_ctx.set_paint_insets(insets);
+        my_size
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {

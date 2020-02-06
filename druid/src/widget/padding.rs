@@ -102,7 +102,11 @@ impl<T: Data> Widget<T> for Padding<T> {
         let origin = Point::new(self.left, self.top);
         self.child
             .set_layout_rect(Rect::from_origin_size(origin, size));
-        Size::new(size.width + hpad, size.height + vpad)
+
+        let my_size = Size::new(size.width + hpad, size.height + vpad);
+        let my_insets = self.child.compute_parent_paint_rect(my_size);
+        layout_ctx.set_paint_insets(my_insets);
+        my_size
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {

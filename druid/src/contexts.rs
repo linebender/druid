@@ -23,8 +23,8 @@ use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::{
-    Affine, Command, Cursor, Rect, Size, Target, Text, TimerToken, WidgetId, WinCtx, WindowHandle,
-    WindowId,
+    Affine, Command, Cursor, Insets, Rect, Size, Target, Text, TimerToken, WidgetId, WinCtx,
+    WindowHandle, WindowId,
 };
 
 /// A mutable context provided to event handling methods of widgets.
@@ -90,6 +90,7 @@ pub struct UpdateCtx<'a, 'b: 'a> {
 /// during widget layout.
 pub struct LayoutCtx<'a, 'b: 'a> {
     pub(crate) text_factory: &'a mut Text<'b>,
+    pub(crate) paint_insets: Insets,
     pub(crate) window_id: WindowId,
 }
 
@@ -467,6 +468,21 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
     /// Get the window id.
     pub fn window_id(&self) -> WindowId {
         self.window_id
+    }
+
+    /// Set explicit paint [`Insets`] for this widget.
+    ///
+    /// You are not required to set explicit paint bounds unless you need
+    /// to paint outside of your layout bounds. In this case, the argument
+    /// should be an [`Insets`] struct that indicates where your widget
+    /// needs to overpaint, relative to its bounds.
+    ///
+    /// For more information, see [`WidgetPod::paint_insets`].
+    ///
+    /// [`Insets`]: struct.Insets.html
+    /// [`WidgetPod::paint_insets`]: struct.WidgetPod.html#method.paint_insets
+    pub fn set_paint_insets(&mut self, insets: impl Into<Insets>) {
+        self.paint_insets = insets.into().nonnegative();
     }
 }
 

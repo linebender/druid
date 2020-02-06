@@ -193,6 +193,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         let mut width = bc.min().width;
         let mut y = 0.0;
 
+        let mut paint_rect = Rect::ZERO;
         let mut children = self.children.iter_mut();
         data.for_each(|child_data, _| {
             let child = match children.next() {
@@ -208,11 +209,15 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
             let child_size = child.layout(layout_ctx, &child_bc, child_data, env);
             let rect = Rect::from_origin_size(Point::new(0.0, y), child_size);
             child.set_layout_rect(rect);
+            paint_rect = paint_rect.union(child.paint_rect());
             width = width.max(child_size.width);
             y += child_size.height;
         });
 
-        bc.constrain(Size::new(width, y))
+        let my_size = bc.constrain(Size::new(width, y));
+        let insets = paint_rect - Rect::ZERO.with_size(my_size);
+        layout_ctx.set_paint_insets(insets);
+        my_size
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
