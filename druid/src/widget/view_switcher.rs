@@ -3,55 +3,60 @@ use crate::{
     Point, Rect, Size, UpdateCtx, Widget, WidgetPod,
 };
 
-pub struct ViewSwitcher<T, U>
-where
-    T: Data + PartialEq,
-    U: Data,
-{
-    closure: Box<dyn Fn(&(T, U), &Env) -> Box<dyn Widget<(T, U)>>>,
-    current_child: Option<WidgetPod<(T, U), Box<dyn Widget<(T, U)>>>>,
+pub struct ViewSwitcher<T: Data, U: PartialEq + Clone> {
+    child_selector: Box<dyn Fn(&T, &Env) -> U>,
+    child_builder: Box<dyn Fn(U, &Env) -> Box<dyn Widget<T>>>,
+    active_child: Option<WidgetPod<T, Box<dyn Widget<T>>>>,
+    active_child_id: Option<U>,
 }
 
-impl<T, U> ViewSwitcher<T, U>
-where
-    T: Data + PartialEq,
-    U: Data,
-{
-    pub fn new(closure: impl Fn(&(T, U), &Env) -> Box<dyn Widget<(T, U)>> + 'static) -> Self {
+impl<T: Data, U: PartialEq + Clone> ViewSwitcher<T, U> {
+    pub fn new(
+        child_selector: impl Fn(&T, &Env) -> U + 'static,
+        child_builder: impl Fn(U, &Env) -> Box<dyn Widget<T>> + 'static,
+    ) -> Self {
         Self {
-            closure: Box::new(closure),
-            current_child: None,
+            child_selector: Box::new(child_selector),
+            child_builder: Box::new(child_builder),
+            active_child: None,
+            active_child_id: None,
         }
     }
 }
 
-impl<T, U> Widget<(T, U)> for ViewSwitcher<T, U>
-where
-    T: Data + PartialEq,
-    U: Data,
-{
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut (T, U), env: &Env) {
-        if let Some(ref mut child) = self.current_child {
+impl<T: Data, U: PartialEq + Clone> Widget<T> for ViewSwitcher<T, U> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        if let Some(ref mut child) = self.active_child {
             child.event(ctx, event, data, env);
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &(T, U), env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
-            self.current_child = Some(WidgetPod::new((self.closure)(data, env)));
+            let child_id = (self.child_selector)(data, env);
+            self.active_child_id = Some(child_id.clone());
+            self.active_child = Some(WidgetPod::new((self.child_builder)(child_id, env)));
         }
-        if let Some(ref mut child) = self.current_child {
+        if let Some(ref mut child) = self.active_child {
             child.lifecycle(ctx, event, data, env);
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &(T, U), data: &(T, U), env: &Env) {
-        if self.current_child.is_none() || data.0 != old_data.0 {
-            self.current_child = Some(WidgetPod::new((self.closure)(data, env)));
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+        let child_id = (self.child_selector)(data, env);
+        match &self.active_child_id {
+            Some(current_child_id) => {
+                if &child_id != current_child_id {
+                    self.active_child = Some(WidgetPod::new((self.child_builder)(child_id.clone(), env)));
+                    self.active_child_id = Some(child_id);
+                    ctx.children_changed();
+                }
+            }
+            None => {}
         }
 
-        if let Some(ref mut child) = self.current_child {
-            child.update(ctx, data, env);
+        if !old_data.same(data) {
+            ctx.invalidate();
         }
     }
 
@@ -59,10 +64,10 @@ where
         &mut self,
         layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        data: &(T, U),
+        data: &T,
         env: &Env,
     ) -> Size {
-        match self.current_child {
+        match self.active_child {
             Some(ref mut child) => {
                 let size = child.layout(layout_ctx, bc, data, env);
                 child.set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
@@ -72,8 +77,8 @@ where
         }
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &(T, U), env: &Env) {
-        if let Some(ref mut child) = self.current_child {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        if let Some(ref mut child) = self.active_child {
             child.paint(ctx, data, env);
         }
     }
