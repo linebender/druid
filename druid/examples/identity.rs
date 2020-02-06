@@ -109,6 +109,7 @@ impl Widget<OurData> for ColorWell {
             Event::Command(cmd) if cmd.selector == FREEZE_COLOR => {
                 self.frozen = cmd
                     .get_object::<Color>()
+                    .ok()
                     .cloned()
                     .expect("payload is always a Color")
                     .into();

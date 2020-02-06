@@ -15,7 +15,7 @@
 //! Custom commands.
 
 use std::any::Any;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::{WidgetId, WindowId};
 
@@ -34,6 +34,18 @@ pub struct Selector(&'static str);
 /// A `Command` consists of a `Selector`, that indicates what the command is,
 /// and an optional argument, that can be used to pass arbitrary data.
 ///
+///
+/// # One-shot and reusable `Commands`
+///
+/// Commands come in two varieties, 'reusable' and 'one-shot'.
+///
+/// Regular commands are created with [`Command::new`], and their argument
+/// objects may be accessed repeatedly, via [`Command::get_object`].
+///
+/// One-shot commands are intended for cases where an object should only be
+/// used once; an example would be if you have some resource that cannot be
+/// cloned, and you wish to send it to another widget.
+///
 /// # Examples
 /// ```
 /// use druid::{Command, Selector};
@@ -42,13 +54,32 @@ pub struct Selector(&'static str);
 /// let rows = vec![1, 3, 10, 12];
 /// let command = Command::new(selector, rows);
 ///
-/// assert_eq!(command.get_object(), Some(&vec![1, 3, 10, 12]));
+/// assert_eq!(command.get_object(), Ok(&vec![1, 3, 10, 12]));
 /// ```
 #[derive(Debug, Clone)]
 pub struct Command {
     /// The command's `Selector`.
     pub selector: Selector,
-    object: Option<Arc<dyn Any>>,
+    object: Option<Arg>,
+}
+
+#[derive(Debug, Clone)]
+enum Arg {
+    Reusable(Arc<dyn Any>),
+    OneShot(Arc<Mutex<Option<Box<dyn Any>>>>),
+}
+
+/// Errors that can occur when attempting to retrieve the a command's argument.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ArgumentError {
+    /// The command did not have an argument.
+    NoArgument,
+    /// The argument was expected to be reusable and wasn't, or vice-versa.
+    WrongVariant,
+    /// The argument could not be downcast to the specified type.
+    IncorrectType,
+    /// The one-shot argument has already been taken.
+    Consumed,
 }
 
 /// The target of a command.
@@ -182,20 +213,67 @@ impl Command {
     pub fn new(selector: Selector, arg: impl Any) -> Self {
         Command {
             selector,
-            object: Some(Arc::new(arg)),
+            object: Some(Arg::Reusable(Arc::new(arg))),
+        }
+    }
+
+    /// Create a new 'one-shot' `Command`.
+    ///
+    /// Unlike those created with `Command::new`, one-shot commands cannot
+    /// be reused; their argument is consumed when it is accessed, via
+    /// [`Command::take_object`].
+    ///
+    /// [`Command::take_object`]: #method.take_object
+    pub fn one_shot(selector: Selector, arg: impl Any) -> Self {
+        Command {
+            selector,
+            object: Some(Arg::OneShot(Arc::new(Mutex::new(Some(Box::new(arg)))))),
         }
     }
 
     /// Used to create a command from the types sent via an `ExtEventSink`.
     pub(crate) fn from_ext(selector: Selector, object: Option<Box<dyn Any + Send>>) -> Self {
         let object: Option<Box<dyn Any>> = object.map(|obj| obj as Box<dyn Any>);
-        let object: Option<Arc<_>> = object.map(Into::into);
+        let object = object.map(|o| Arg::Reusable(o.into()));
         Command { selector, object }
     }
 
-    /// Return a reference to this command's object, if it has one.
-    pub fn get_object<T: Any>(&self) -> Option<&T> {
-        self.object.as_ref().and_then(|obj| obj.downcast_ref())
+    /// Return a reference to this `Command`'s object, if it has one.
+    ///
+    /// This only works for 'reusable' commands; it does not work for commands
+    /// created with [`Command::one_shot`]
+    ///
+    /// [`Command::one_shot`]: #method.one_shot
+    pub fn get_object<T: Any>(&self) -> Result<&T, ArgumentError> {
+        match self.object.as_ref() {
+            Some(Arg::Reusable(o)) => o.downcast_ref().ok_or(ArgumentError::IncorrectType),
+            Some(Arg::OneShot(_)) => Err(ArgumentError::WrongVariant),
+            None => Err(ArgumentError::NoArgument),
+        }
+    }
+
+    /// Attempt to take the object of a [`one-shot`] command.
+    ///
+    /// [`one-shot`]: #method.one_shot
+    pub fn take_object<T: Any>(&self) -> Result<Box<T>, ArgumentError> {
+        match self.object.as_ref() {
+            Some(Arg::Reusable(_)) => Err(ArgumentError::WrongVariant),
+            Some(Arg::OneShot(inner)) => {
+                let obj = inner
+                    .lock()
+                    .unwrap()
+                    .take()
+                    .ok_or(ArgumentError::Consumed)?;
+                match obj.downcast::<T>() {
+                    Ok(obj) => Ok(obj),
+                    Err(obj) => {
+                        inner.lock().unwrap().replace(obj);
+                        Err(ArgumentError::IncorrectType)
+                    }
+                }
+            }
+            None => Err(ArgumentError::NoArgument),
+        }
     }
 }
 
@@ -213,6 +291,23 @@ impl std::fmt::Display for Selector {
         write!(f, "Selector('{}')", self.0)
     }
 }
+
+impl std::fmt::Display for ArgumentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ArgumentError::NoArgument => write!(f, "Command has no argument"),
+            ArgumentError::IncorrectType => write!(f, "Downcast failed: wrong concrete type"),
+            ArgumentError::Consumed => write!(f, "One-shot command arguemnt already consumed"),
+            ArgumentError::WrongVariant => write!(
+                f,
+                "Incorrect access method for argument type; \
+            check Command::one_shot docs for more detail."
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ArgumentError {}
 
 impl From<WindowId> for Target {
     fn from(id: WindowId) -> Target {
@@ -246,6 +341,6 @@ mod tests {
         let sel = Selector::new("my-selector");
         let objs = vec![0, 1, 2];
         let command = Command::new(sel, objs);
-        assert_eq!(command.get_object(), Some(&vec![0, 1, 2]));
+        assert_eq!(command.get_object(), Ok(&vec![0, 1, 2]));
     }
 }
