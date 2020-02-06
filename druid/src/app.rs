@@ -16,11 +16,11 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::Arc;
 
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
 use crate::shell::{Application, Error as PlatformError, RunLoop, WindowBuilder, WindowHandle};
+use crate::widget::WidgetExt;
 use crate::win_handler::AppState;
 use crate::window::{PendingWindow, WindowId};
 use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
@@ -36,16 +36,13 @@ pub struct AppLauncher<T> {
     ext_event_host: ExtEventHost,
 }
 
-/// A function that can create a widget.
-type WidgetBuilderFn<T> = dyn Fn() -> Box<dyn Widget<T>> + 'static;
-
 /// A description of a window to be instantiated.
 ///
 /// This includes a function that can build the root widget, as well as other
 /// window properties such as the title.
 pub struct WindowDesc<T> {
-    pub(crate) root_builder: Arc<WidgetBuilderFn<T>>,
-    pub(crate) title: Option<LocalizedString<T>>,
+    pub(crate) root: Box<dyn Widget<T>>,
+    pub(crate) title: LocalizedString<T>,
     pub(crate) size: Option<Size>,
     pub(crate) menu: Option<MenuDesc<T>>,
     /// The `WindowId` that will be assigned to this window.
@@ -144,12 +141,11 @@ impl<T: Data> WindowDesc<T> {
         W: Widget<T> + 'static,
         F: Fn() -> W + 'static,
     {
-        // wrap this closure in another closure that dyns the result
+        // wrap this closure in another closure that boxes the created widget.
         // this just makes our API slightly cleaner; callers don't need to explicitly box.
-        let root_builder: Arc<WidgetBuilderFn<T>> = Arc::new(move || Box::new(root()));
         WindowDesc {
-            root_builder,
-            title: None,
+            root: root().boxed(),
+            title: LocalizedString::new("app-name"),
             size: None,
             menu: MenuDesc::platform_default(),
             id: WindowId::next(),
@@ -161,7 +157,7 @@ impl<T: Data> WindowDesc<T> {
     ///
     /// [`LocalizedString`]: struct.LocalizedString.html
     pub fn title(mut self, title: LocalizedString<T>) -> Self {
-        self.title = Some(title);
+        self.title = title;
         self
     }
 
@@ -171,9 +167,10 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Set the window size at creation
+    /// Set the initial window size.
     ///
-    /// You can pass in a tuple `(width, height)` or `kurbo::Size` e.g. to create a window 1000px wide and 500px high
+    /// You can pass in a tuple `(width, height)` or `kurbo::Size` e.g.
+    /// to create a window 1000px wide and 500px high
     /// ```ignore
     /// window.window_size((1000.0, 500.0));
     /// ```
@@ -184,35 +181,33 @@ impl<T: Data> WindowDesc<T> {
 
     /// Attempt to create a platform window from this `WindowDesc`.
     pub(crate) fn build_native(
-        &self,
+        mut self,
         state: &Rc<RefCell<AppState<T>>>,
     ) -> Result<WindowHandle, PlatformError> {
-        let mut title = self
-            .title
-            .clone()
-            .unwrap_or_else(|| LocalizedString::new("app-name"));
-        title.resolve(&state.borrow().data, &state.borrow().env);
-        let mut menu = self.menu.to_owned();
-        let platform_menu = menu
+        self.title
+            .resolve(&state.borrow().data, &state.borrow().env);
+
+        let platform_menu = self
+            .menu
             .as_mut()
             .map(|m| m.build_window_menu(&state.borrow().data, &state.borrow().env));
 
         let handler = DruidHandler::new_shared(state.clone(), self.id);
 
         let mut builder = WindowBuilder::new();
+
         builder.set_handler(Box::new(handler));
         if let Some(size) = self.size {
             builder.set_size(size);
         }
-        builder.set_title(title.localized_str());
+
+        builder.set_title(self.title.localized_str());
         if let Some(menu) = platform_menu {
             builder.set_menu(menu);
         }
 
-        let root = (self.root_builder)();
-        state
-            .borrow_mut()
-            .add_window(self.id, PendingWindow::new(root, title, menu));
+        let window = PendingWindow::new(self.root, self.title, self.menu);
+        state.borrow_mut().add_window(self.id, window);
 
         builder.build()
     }
