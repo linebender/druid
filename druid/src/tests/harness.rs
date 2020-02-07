@@ -40,14 +40,14 @@ pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
 /// if you want those functions run you will need to call them yourself.
 ///
 /// Also, timers don't work.  ¯\_(ツ)_/¯
-pub struct Harness<'a, T: Data> {
+pub struct Harness<'a, T> {
     piet: Piet<'a>,
     inner: Inner<T>,
 }
 
 /// All of the state except for the `Piet` (render context). We need to pass
 /// that in to get around some lifetime issues.
-struct Inner<T: Data> {
+struct Inner<T> {
     data: T,
     env: Env,
     window: Window<T>,

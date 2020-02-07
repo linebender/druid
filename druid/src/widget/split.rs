@@ -22,7 +22,7 @@ use crate::{
 };
 
 ///A container containing two other widgets, splitting the area either horizontally or vertically.
-pub struct Split<T: Data> {
+pub struct Split<T> {
     split_direction: Axis,
     draggable: bool,
     split_point: f64,
@@ -31,7 +31,7 @@ pub struct Split<T: Data> {
     child2: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T: Data> Split<T> {
+impl<T> Split<T> {
     ///Create a new split panel.
     fn new(
         split_direction: Axis,

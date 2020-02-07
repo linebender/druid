@@ -26,7 +26,7 @@ struct BorderStyle {
 }
 
 /// A widget that provides simple visual styling options to a child.
-pub struct Container<T: Data> {
+pub struct Container<T> {
     background: Option<PaintBrush>,
     border: Option<BorderStyle>,
     corner_radius: f64,

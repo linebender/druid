@@ -44,7 +44,7 @@ pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
 /// widget can process a diff between the old value and the new.
 ///
 /// [`update`]: widget/trait.Widget.html#tymethod.update
-pub struct WidgetPod<T: Data, W: Widget<T>> {
+pub struct WidgetPod<T, W> {
     state: BaseState,
     old_data: Option<T>,
     env: Option<Env>,
@@ -115,7 +115,7 @@ pub(crate) enum FocusChange {
     Previous,
 }
 
-impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
+impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// Create a new widget pod.
     ///
     /// In a widget hierarchy, each widget is wrapped in a `WidgetPod`
@@ -234,7 +234,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let union_pant_rect = self.paint_rect().union(parent_bounds);
         union_pant_rect - parent_bounds
     }
+}
 
+impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Paint a child widget.
     ///
     /// Generally called by container widgets as part of their [`paint`]
@@ -575,7 +577,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 }
 
-impl<T: Data, W: Widget<T> + 'static> WidgetPod<T, W> {
+impl<T, W: Widget<T> + 'static> WidgetPod<T, W> {
     /// Box the contained widget.
     ///
     /// Convert a `WidgetPod` containing a widget of a specific concrete type

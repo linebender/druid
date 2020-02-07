@@ -21,7 +21,7 @@ use crate::{
 };
 
 /// A widget that just adds padding around its child.
-pub struct Padding<T: Data> {
+pub struct Padding<T> {
     left: f64,
     right: f64,
     top: f64,
@@ -30,7 +30,7 @@ pub struct Padding<T: Data> {
     child: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T: Data> Padding<T> {
+impl<T> Padding<T> {
     /// Create a new widget with the specified padding. This can either be an instance
     /// of [`kurbo::Insets`], a f64 for uniform padding, a 2-tuple for axis-uniform padding
     /// or 4-tuple with (left, top, right, bottom) values.

@@ -33,14 +33,14 @@ use crate::{
 pub struct WindowId(u64);
 
 /// Internal window state that is waiting for a window handle to show up.
-pub(crate) struct PendingWindow<T: Data> {
+pub(crate) struct PendingWindow<T> {
     root: WidgetPod<T, Box<dyn Widget<T>>>,
     title: LocalizedString<T>,
     menu: Option<MenuDesc<T>>,
 }
 
 /// Per-window state not owned by user code.
-pub struct Window<T: Data> {
+pub struct Window<T> {
     pub(crate) id: WindowId,
     pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
     pub(crate) title: LocalizedString<T>,
@@ -53,7 +53,7 @@ pub struct Window<T: Data> {
     // delegate?
 }
 
-impl<T: Data> PendingWindow<T> {
+impl<T> PendingWindow<T> {
     pub(crate) fn new(
         root: impl Widget<T> + 'static,
         title: LocalizedString<T>,
