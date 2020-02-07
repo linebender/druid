@@ -104,7 +104,7 @@ impl<T: Data> Widget<T> for Padding<T> {
             .set_layout_rect(Rect::from_origin_size(origin, size));
 
         let my_size = Size::new(size.width + hpad, size.height + vpad);
-        let my_insets = self.child.compute_parent_paint_rect(my_size);
+        let my_insets = self.child.compute_parent_paint_insets(my_size);
         layout_ctx.set_paint_insets(my_insets);
         my_size
     }

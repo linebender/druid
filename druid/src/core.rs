@@ -229,7 +229,8 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// of the parent's layout rect.
     ///
     /// [`layout`]: widget/trait.Widget.html#tymethod.layout
-    pub fn compute_parent_paint_rect(&self, parent_size: Size) -> Insets {
+    /// [`Insets`]: struct.Insets.html
+    pub fn compute_parent_paint_insets(&self, parent_size: Size) -> Insets {
         let parent_bounds = Rect::ZERO.with_size(parent_size);
         let union_pant_rect = self.paint_rect().union(parent_bounds);
         union_pant_rect - parent_bounds

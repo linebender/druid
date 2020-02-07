@@ -164,9 +164,10 @@ fn flex_paint_rect_overflow() {
         let state = harness.get_state(id);
         assert_eq!(state.layout_rect.origin(), Point::new(10., 10.,));
         assert_eq!(state.paint_rect().origin(), Point::new(-10., -10.,));
-        assert_eq!(
-            state.paint_rect().size(),
-            (state.layout_rect + Insets::uniform(20.)).size()
-        );
+
+        // each of our children insets 20. on a different side; their union
+        // is a uniform 20. inset.
+        let expected_paint_rect = state.layout_rect + Insets::uniform(20.);
+        assert_eq!(state.paint_rect().size(), expected_paint_rect.size());
     })
 }
