@@ -55,23 +55,34 @@ jobs:
           profile: minimal
           override: true
 
-      - name: cargo clippy
+      - name: cargo clippy (no-svg)
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
+          args: --all -- -D warnings
+        if: contains(matrix.os, 'ubuntu') != true
+
+      - name: cargo clippy (svg)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all --all-features -- -D warnings
+        if: contains(matrix.os, 'ubuntu')
+
 
       - name: cargo test --all
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all
+        if: contains(matrix.os, 'ubuntu') != true
 
-      - name: cargo test --features=svg
+      - name: cargo test --all --all-features
         uses: actions-rs/cargo@v1
         with:
-            command: test
-            args: --manifest-path=druid/Cargo.toml --features=svg
+          command: test
+          args: --all --all-features
+        if: contains(matrix.os, 'ubuntu')
 
       - name: Run rustc -D warnings in druid/
         uses: actions-rs/cargo@v1
