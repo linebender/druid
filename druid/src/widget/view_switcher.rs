@@ -20,7 +20,7 @@ use crate::{
 };
 
 /// A widget that can switch dynamically between one of many views depending
-/// application state.
+/// on application state.
 pub struct ViewSwitcher<T: Data, U: PartialEq> {
     child_selector: Box<dyn Fn(&T, &Env) -> U>,
     child_builder: Box<dyn Fn(&U, &Env) -> Box<dyn Widget<T>>>,
