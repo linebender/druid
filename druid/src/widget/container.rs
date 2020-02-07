@@ -109,7 +109,7 @@ impl<T: Data> Widget<T> for Container<T> {
             size.height + 2.0 * border_width,
         );
 
-        let my_insets = self.inner.compute_parent_paint_rect(my_size);
+        let my_insets = self.inner.compute_parent_paint_insets(my_size);
         ctx.set_paint_insets(my_insets);
         my_size
     }
