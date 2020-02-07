@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2020 The xi-editor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,8 +21,9 @@ use crate::{
 
 /// A widget that can switch dynamically between one of many views depending
 /// on application state.
-pub struct ViewSwitcher<T: Data, U: PartialEq> {
-    child_selector: Box<dyn Fn(&T, &Env) -> U>,
+
+pub struct ViewSwitcher<T: Data, U> {
+    child_picker: Box<dyn Fn(&T, &Env) -> U>,
     child_builder: Box<dyn Fn(&U, &Env) -> Box<dyn Widget<T>>>,
     active_child: Option<WidgetPod<T, Box<dyn Widget<T>>>>,
     active_child_id: Option<U>,
@@ -31,19 +32,19 @@ pub struct ViewSwitcher<T: Data, U: PartialEq> {
 impl<T: Data, U: PartialEq> ViewSwitcher<T, U> {
     /// Create a new view switcher.
     ///
-    /// The `child_selector` closure is called every time the application data changes.
+    /// The `child_picker` closure is called every time the application data changes.
     /// If the value it returns is the same as the one it returned during the previous
     /// data change, nothing happens. If it returns a different value, then the
     /// `child_builder` closure is called with the new value.
     ///
-    /// The `child_builder` closure is expected to create a new child widget depending
-    /// on the selector to it.
+    /// The `child_builder` closure creates a new child widget based on
+    /// the value passed to it.
     pub fn new(
-        child_selector: impl Fn(&T, &Env) -> U + 'static,
+        child_picker: impl Fn(&T, &Env) -> U + 'static,
         child_builder: impl Fn(&U, &Env) -> Box<dyn Widget<T>> + 'static,
     ) -> Self {
         Self {
-            child_selector: Box::new(child_selector),
+            child_picker: Box::new(child_picker),
             child_builder: Box::new(child_builder),
             active_child: None,
             active_child_id: None,
@@ -53,30 +54,28 @@ impl<T: Data, U: PartialEq> ViewSwitcher<T, U> {
 
 impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        if let Some(ref mut child) = self.active_child {
+        if let Some(child) = self.active_child.as_mut() {
             child.event(ctx, event, data, env);
         }
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
-            let child_id = (self.child_selector)(data, env);
+            let child_id = (self.child_picker)(data, env);
             self.active_child = Some(WidgetPod::new((self.child_builder)(&child_id, env)));
             self.active_child_id = Some(child_id);
         }
-        if let Some(ref mut child) = self.active_child {
+        if let Some(child) = self.active_child.as_mut() {
             child.lifecycle(ctx, event, data, env);
         }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        let child_id = (self.child_selector)(data, env);
-        if let Some(ref active_child_id) = self.active_child_id {
-            if &child_id != active_child_id {
-                self.active_child = Some(WidgetPod::new((self.child_builder)(&child_id, env)));
-                self.active_child_id = Some(child_id);
-                ctx.children_changed();
-            }
+        let child_id = (self.child_picker)(data, env);
+        if Some(&child_id) != self.active_child_id.as_ref() {
+            self.active_child = Some(WidgetPod::new((self.child_builder)(&child_id, env)));
+            self.active_child_id = Some(child_id);
+            ctx.children_changed();
         }
 
         if !old_data.same(data) {
@@ -91,6 +90,7 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
         data: &T,
         env: &Env,
     ) -> Size {
+        // TODO: correctly handle paint bounds for the child.
         match self.active_child {
             Some(ref mut child) => {
                 let size = child.layout(layout_ctx, bc, data, env);
