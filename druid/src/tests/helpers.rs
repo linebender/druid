@@ -290,7 +290,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.inner.update(ctx, old_data, data, env);
-        let inval = ctx.needs_inval;
+        let inval = ctx.base_state.needs_inval;
         self.recording.push(Record::Update(inval));
     }
 
