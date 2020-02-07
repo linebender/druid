@@ -21,14 +21,14 @@ use crate::{
 };
 
 /// A widget that switches between two possible child views.
-pub struct Either<T: Data> {
+pub struct Either<T> {
     closure: Box<dyn Fn(&T, &Env) -> bool>,
     true_branch: WidgetPod<T, Box<dyn Widget<T>>>,
     false_branch: WidgetPod<T, Box<dyn Widget<T>>>,
     current: bool,
 }
 
-impl<T: Data> Either<T> {
+impl<T> Either<T> {
     /// Create a new widget that switches between two views.
     ///
     /// The given closure is evaluated on data change. If its value is `true`, then

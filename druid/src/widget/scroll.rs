@@ -105,7 +105,7 @@ impl ScrollBarsState {
 /// when the child's bounds are larger than the viewport.
 ///
 /// The child is laid out with completely unconstrained layout bounds.
-pub struct Scroll<T: Data, W: Widget<T>> {
+pub struct Scroll<T, W> {
     child: WidgetPod<T, W>,
     child_size: Size,
     scroll_offset: Vec2,
@@ -113,7 +113,7 @@ pub struct Scroll<T: Data, W: Widget<T>> {
     scroll_bars: ScrollBarsState,
 }
 
-impl<T: Data, W: Widget<T>> Scroll<T, W> {
+impl<T, W: Widget<T>> Scroll<T, W> {
     /// Create a new scroll container.
     ///
     /// This method will allow scrolling in all directions if child's bounds

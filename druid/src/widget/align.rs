@@ -23,14 +23,14 @@ use crate::{
 use crate::piet::UnitPoint;
 
 /// A widget that aligns its child.
-pub struct Align<T: Data> {
+pub struct Align<T> {
     align: UnitPoint,
     child: WidgetPod<T, Box<dyn Widget<T>>>,
     width_factor: Option<f64>,
     height_factor: Option<f64>,
 }
 
-impl<T: Data> Align<T> {
+impl<T> Align<T> {
     /// Create widget with alignment.
     ///
     /// Note that the `align` parameter is specified as a `UnitPoint` in

@@ -25,7 +25,7 @@ use crate::{
 };
 
 /// A list widget for a variable-size collection of items.
-pub struct List<T: Data> {
+pub struct List<T> {
     closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
 }
@@ -60,7 +60,7 @@ impl<T: Data> List<T> {
 }
 
 /// This iterator enables writing List widget for any `Data`.
-pub trait ListIter<T: Data>: Data {
+pub trait ListIter<T>: Data {
     /// Iterate over each data child.
     fn for_each(&self, cb: impl FnMut(&T, usize));
 

@@ -22,12 +22,12 @@ use crate::{
 };
 
 /// A container with either horizontal or vertical layout.
-pub struct Flex<T: Data> {
+pub struct Flex<T> {
     direction: Axis,
     children: Vec<ChildWidget<T>>,
 }
 
-struct ChildWidget<T: Data> {
+struct ChildWidget<T> {
     widget: WidgetPod<T, Box<dyn Widget<T>>>,
     params: Params,
 }
@@ -65,7 +65,7 @@ impl Axis {
     }
 }
 
-impl<T: Data> Flex<T> {
+impl<T> Flex<T> {
     /// Create a new horizontal stack.
     ///
     /// The child widgets are laid out horizontally, from left to right.

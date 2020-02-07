@@ -14,8 +14,6 @@
 
 //! A widget that accepts a closure to update the environment for its child.
 
-use std::marker::PhantomData;
-
 use crate::kurbo::Size;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
@@ -23,13 +21,12 @@ use crate::{
 };
 
 /// A widget that accepts a closure to update the environment for its child.
-pub struct EnvScope<T: Data, W: Widget<T>> {
+pub struct EnvScope<T, W> {
     f: Box<dyn Fn(&mut Env, &T)>,
     child: W,
-    phantom: PhantomData<T>,
 }
 
-impl<T: Data, W: Widget<T>> EnvScope<T, W> {
+impl<T, W> EnvScope<T, W> {
     /// Create a widget that updates the environment for its child.
     ///
     /// Accepts a closure that sets Env values.
@@ -55,7 +52,6 @@ impl<T: Data, W: Widget<T>> EnvScope<T, W> {
         EnvScope {
             f: Box::new(f),
             child,
-            phantom: Default::default(),
         }
     }
 }

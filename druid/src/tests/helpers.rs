@@ -55,7 +55,7 @@ pub struct ModularWidget<S, T> {
 }
 
 /// A widget that can replace its child on command
-pub struct ReplaceChild<T: Data> {
+pub struct ReplaceChild<T> {
     inner: WidgetPod<T, Box<dyn Widget<T>>>,
     replacer: Box<dyn Fn() -> Box<dyn Widget<T>>>,
 }

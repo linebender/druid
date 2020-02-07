@@ -14,8 +14,6 @@
 
 //! A radio button widget.
 
-use std::marker::PhantomData;
-
 use crate::kurbo::{Circle, Point, Rect, Size};
 use crate::theme;
 use crate::widget::{Align, Flex, Label, LabelText, Padding};
@@ -26,13 +24,11 @@ use crate::{
 
 /// A group of radio buttons
 #[derive(Debug, Clone)]
-pub struct RadioGroup<T: Data + PartialEq> {
-    phantom: PhantomData<T>,
-}
+pub struct RadioGroup;
 
-impl<T: Data + PartialEq> RadioGroup<T> {
+impl RadioGroup {
     /// Given a vector of `(label_text, enum_variant)` tuples, create a group of Radio buttons
-    pub fn new(
+    pub fn new<T: Data + PartialEq>(
         variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T)>,
     ) -> impl Widget<T> {
         let mut col = Flex::column();
@@ -45,7 +41,7 @@ impl<T: Data + PartialEq> RadioGroup<T> {
 }
 
 /// A single radio button
-pub struct Radio<T: Data + PartialEq> {
+pub struct Radio<T> {
     variant: T,
     child_label: WidgetPod<T, Box<dyn Widget<T>>>,
 }

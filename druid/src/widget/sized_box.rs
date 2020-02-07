@@ -31,13 +31,13 @@ use crate::{
 /// If not given a child, SizedBox will try to size itself as close to the specified height
 /// and width as possible given the parent's constraints. If height or width is not set,
 /// it will be treated as zero.
-pub struct SizedBox<T: Data> {
+pub struct SizedBox<T> {
     inner: Option<Box<dyn Widget<T>>>,
     width: Option<f64>,
     height: Option<f64>,
 }
 
-impl<T: Data> SizedBox<T> {
+impl<T> SizedBox<T> {
     /// Construct container with child, and both width and height not set.
     pub fn new(inner: impl Widget<T> + 'static) -> Self {
         Self {
