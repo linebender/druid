@@ -100,9 +100,16 @@ impl<T: Data> Harness<'_, T> {
         &self.inner.data
     }
 
-    /// Retrieve a copy of this widget's `BaseState`, if possible.
-    //FIXME: make this unwrap, and add a `try_get_state` variant?
-    pub(crate) fn get_state(&mut self, widget: WidgetId) -> Option<BaseState> {
+    /// Retrieve a copy of this widget's `BaseState`, or die trying.
+    pub(crate) fn get_state(&mut self, widget: WidgetId) -> BaseState {
+        match self.try_get_state(widget) {
+            Some(thing) => thing,
+            None => panic!("get_state failed for widget {:?}", widget),
+        }
+    }
+
+    /// Attempt to retrieve a copy of this widget's `BaseState`.
+    pub(crate) fn try_get_state(&mut self, widget: WidgetId) -> Option<BaseState> {
         let cell = StateCell::default();
         let state_cell = cell.clone();
         self.lifecycle(LifeCycle::DebugRequestState { widget, state_cell });

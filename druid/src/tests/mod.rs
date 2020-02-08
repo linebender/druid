@@ -73,9 +73,9 @@ fn propogate_hot() {
         // each widget received the expected HotChanged messages.
 
         harness.event(Event::MouseMoved(make_mouse(10., 10.)));
-        assert!(harness.get_state(root).unwrap().is_hot);
-        assert!(harness.get_state(empty).unwrap().is_hot);
-        assert!(!harness.get_state(pad).unwrap().is_hot);
+        assert!(harness.get_state(root).is_hot);
+        assert!(harness.get_state(empty).is_hot);
+        assert!(!harness.get_state(pad).is_hot);
 
         assert_matches!(root_rec.next(), Record::L(LifeCycle::HotChanged(true)));
         assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
@@ -83,10 +83,10 @@ fn propogate_hot() {
 
         harness.event(Event::MouseMoved(make_mouse(210., 10.)));
 
-        assert!(harness.get_state(root).unwrap().is_hot);
-        assert!(!harness.get_state(empty).unwrap().is_hot);
-        assert!(!harness.get_state(button).unwrap().is_hot);
-        assert!(harness.get_state(pad).unwrap().is_hot);
+        assert!(harness.get_state(root).is_hot);
+        assert!(!harness.get_state(empty).is_hot);
+        assert!(!harness.get_state(button).is_hot);
+        assert!(harness.get_state(pad).is_hot);
 
         assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
         assert_matches!(padding_rec.next(), Record::L(LifeCycle::HotChanged(true)));
@@ -94,10 +94,10 @@ fn propogate_hot() {
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
         harness.event(Event::MouseMoved(make_mouse(260., 60.)));
-        assert!(harness.get_state(root).unwrap().is_hot);
-        assert!(!harness.get_state(empty).unwrap().is_hot);
-        assert!(harness.get_state(button).unwrap().is_hot);
-        assert!(harness.get_state(pad).unwrap().is_hot);
+        assert!(harness.get_state(root).is_hot);
+        assert!(!harness.get_state(empty).is_hot);
+        assert!(harness.get_state(button).is_hot);
+        assert!(harness.get_state(pad).is_hot);
 
         assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
         assert_matches!(padding_rec.next(), Record::E(Event::MouseMoved(_)));
@@ -106,10 +106,10 @@ fn propogate_hot() {
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
         harness.event(Event::MouseMoved(make_mouse(10., 10.)));
-        assert!(harness.get_state(root).unwrap().is_hot);
-        assert!(harness.get_state(empty).unwrap().is_hot);
-        assert!(!harness.get_state(button).unwrap().is_hot);
-        assert!(!harness.get_state(pad).unwrap().is_hot);
+        assert!(harness.get_state(root).is_hot);
+        assert!(harness.get_state(empty).is_hot);
+        assert!(!harness.get_state(button).is_hot);
+        assert!(!harness.get_state(pad).is_hot);
 
         assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
         assert_matches!(padding_rec.next(), Record::L(LifeCycle::HotChanged(false)));
@@ -273,13 +273,13 @@ fn child_tracking() {
 
     Harness::create(true, widget, |harness| {
         harness.send_initial_events();
-        let root = harness.get_state(id_4).unwrap();
+        let root = harness.get_state(id_4);
         assert_eq!(root.children.entry_count(), 3);
         assert!(root.children.contains(&id_1));
         assert!(root.children.contains(&id_2));
         assert!(root.children.contains(&id_3));
 
-        let split = harness.get_state(id_3).unwrap();
+        let split = harness.get_state(id_3);
         assert!(split.children.contains(&id_1));
         assert!(split.children.contains(&id_2));
         assert_eq!(split.children.entry_count(), 2);
