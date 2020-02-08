@@ -212,14 +212,17 @@ pub trait Widget<T> {
 
     /// Paint the widget appearance.
     ///
-    /// The widget calls methods on the `render_ctx` field of the
-    /// `paint_ctx` in order to paint its appearance. `paint_ctx` auto
-    /// derefs to `render_ctx` for convenience.
+    /// The [`PaintCtx`] derefs to something that implements the [`RenderContext`]
+    /// trait, which exposes various methods that the widget can use to paint
+    /// its appearance.
     ///
     /// Container widgets can paint a background before recursing to their
     /// children, or annotations (for example, scrollbars) by painting
     /// afterwards. In addition, they can apply masks and transforms on
     /// the render context, which is especially useful for scrolling.
+    ///
+    /// [`PaintCtx`]: ../struct.PaintCtx.html
+    /// [`RenderContext`]: ../trait.RenderContext.html
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env);
 
     #[doc(hidden)]
