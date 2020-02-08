@@ -136,12 +136,6 @@ impl Menu {
 }
 
 fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
-    let code = match key.key {
-        KeyCompare::Code(code) => code,
-        _ => return None,
-    };
-
-    let raw_key = code.to_i32()?;
     let mut virt_key = FVIRTKEY;
     let key_mods: KeyModifiers = key.mods.into();
     if key_mods.ctrl {
@@ -153,6 +147,25 @@ fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
     if key_mods.shift {
         virt_key |= FSHIFT;
     }
+
+    let raw_key = match key.key {
+        KeyCompare::Code(code) => code.to_i32()?,
+        KeyCompare::Text(text) => {
+            // See https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscana
+            let code = unsafe { VkKeyScanA(text.chars().next().unwrap() as i8) };
+            let ctrl_code = code >> 8;
+            if ctrl_code & 0x1 != 0 {
+                virt_key |= FSHIFT;
+            }
+            if ctrl_code & 0x02 != 0 {
+                virt_key |= FCONTROL;
+            }
+            if ctrl_code & 0x04 != 0 {
+                virt_key |= FALT;
+            }
+            (code & 0x00ff) as i32
+        }
+    };
 
     Some(ACCEL {
         fVirt: virt_key,
