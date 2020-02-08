@@ -50,7 +50,7 @@ impl Widget<f64> for ProgressBar {
     ) -> Size {
         bc.debug_check("ProgressBar");
 
-        let default_width = 100.0;
+        let default_max_width = 100.0;
 
         if bc.is_width_bounded() {
             bc.constrain(Size::new(
@@ -59,7 +59,7 @@ impl Widget<f64> for ProgressBar {
             ))
         } else {
             bc.constrain(Size::new(
-                default_width,
+                default_max_width,
                 env.get(theme::BASIC_WIDGET_HEIGHT),
             ))
         }

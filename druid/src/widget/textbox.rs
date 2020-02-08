@@ -395,7 +395,7 @@ impl Widget<String> for TextBox {
         let clip_rect = RoundedRect::from_origin_size(
             Point::ORIGIN,
             Size::new(self.width - BORDER_WIDTH, height).to_vec2(),
-            env.get(theme::TEXTBOX_RADIUS),
+            env.get(theme::TEXTBOX_BORDER_RADIUS),
         );
 
         paint_ctx.fill(clip_rect, &background_color);
