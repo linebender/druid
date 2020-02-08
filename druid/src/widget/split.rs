@@ -149,13 +149,13 @@ impl<T: Data> Widget<T> for Split<T> {
                     if mouse.button.is_left() && ctx.is_active() {
                         ctx.set_active(false);
                         self.update_splitter(ctx.size(), mouse.pos);
-                        ctx.invalidate();
+                        ctx.request_paint();
                     }
                 }
                 Event::MouseMoved(mouse) => {
                     if ctx.is_active() {
                         self.update_splitter(ctx.size(), mouse.pos);
-                        ctx.invalidate();
+                        ctx.request_paint();
                     }
 
                     if ctx.is_hot() && self.splitter_hit_test(ctx.size(), mouse.pos)

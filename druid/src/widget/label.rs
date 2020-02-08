@@ -115,7 +115,7 @@ impl<T: Data> Widget<T> for Label<T> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         if self.text.resolve(data, env) {
-            ctx.invalidate();
+            ctx.request_paint();
         }
     }
 

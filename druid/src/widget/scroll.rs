@@ -307,7 +307,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                         }
                         _ => (),
                     }
-                    ctx.invalidate();
+                    ctx.request_paint();
                 }
                 Event::MouseUp(_) => self.scroll_bars.held = BarHeldState::None,
                 _ => (), // other events are a noop
@@ -325,7 +325,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
                     self.scroll_bars.opacity = env.get(theme::SCROLL_BAR_MAX_OPACITY);
                     self.scroll_bars.timer_id = TimerToken::INVALID; // Cancel any fade out in progress
-                    ctx.invalidate();
+                    ctx.request_paint();
                 }
                 Event::MouseDown(event) => {
                     let pos = event.pos + self.scroll_offset;
@@ -372,7 +372,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         if !ctx.is_handled() {
             if let Event::Wheel(wheel) = event {
                 if self.scroll(wheel.delta, size) {
-                    ctx.invalidate();
+                    ctx.request_paint();
                     ctx.set_handled();
                     self.reset_scrollbar_fade(ctx, &env);
                 }

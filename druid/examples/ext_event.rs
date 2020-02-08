@@ -48,7 +48,7 @@ impl Widget<MyColor> for ColorWell {
         match event {
             Event::Command(cmd) if cmd.selector == SET_COLOR => {
                 data.0 = cmd.get_object::<Color>().unwrap().clone();
-                ctx.invalidate();
+                ctx.request_paint();
             }
             _ => (),
         }
@@ -59,7 +59,7 @@ impl Widget<MyColor> for ColorWell {
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &MyColor, data: &MyColor, _: &Env) {
         if !old_data.same(data) {
-            ctx.invalidate()
+            ctx.request_paint()
         }
     }
 

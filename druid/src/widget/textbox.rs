@@ -212,26 +212,26 @@ impl Widget<String> for TextBox {
                 } else {
                     self.caret_to(data, cursor_off);
                 }
-                ctx.invalidate();
+                ctx.request_paint();
                 self.reset_cursor_blink(ctx);
             }
             Event::MouseMoved(mouse) => {
                 ctx.set_cursor(&Cursor::IBeam);
                 if ctx.is_active() {
                     self.selection.end = self.offset_for_point(mouse.pos, &text_layout);
-                    ctx.invalidate();
+                    ctx.request_paint();
                 }
             }
             Event::MouseUp(_) => {
                 if ctx.is_active() {
                     ctx.set_active(false);
-                    ctx.invalidate();
+                    ctx.request_paint();
                 }
             }
             Event::Timer(id) => {
                 if *id == self.cursor_timer {
                     self.cursor_on = !self.cursor_on;
-                    ctx.invalidate();
+                    ctx.request_paint();
                     let deadline = Instant::now() + Duration::from_millis(500);
                     self.cursor_timer = ctx.request_timer(deadline);
                 }
@@ -328,7 +328,7 @@ impl Widget<String> for TextBox {
                 }
                 text_layout = self.get_layout(ctx.text(), &data, env);
                 self.update_hscroll(&text_layout);
-                ctx.invalidate();
+                ctx.request_paint();
             }
             _ => (),
         }
@@ -344,7 +344,7 @@ impl Widget<String> for TextBox {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &String, _data: &String, _env: &Env) {
-        ctx.invalidate();
+        ctx.request_paint();
     }
 
     fn layout(

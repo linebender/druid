@@ -63,13 +63,13 @@ impl Widget<f64> for Slider {
                     self.x_offset = 0.;
                     *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                 }
-                ctx.invalidate();
+                ctx.request_paint();
             }
             Event::MouseUp(mouse) => {
                 if ctx.is_active() {
                     ctx.set_active(false);
                     *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
-                    ctx.invalidate();
+                    ctx.request_paint();
                 }
             }
             Event::MouseMoved(mouse) => {
@@ -83,7 +83,7 @@ impl Widget<f64> for Slider {
                         self.knob_hovered = false
                     }
                 }
-                ctx.invalidate();
+                ctx.request_paint();
             }
             _ => (),
         }
@@ -92,7 +92,7 @@ impl Widget<f64> for Slider {
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &f64, _data: &f64, _env: &Env) {
-        ctx.invalidate();
+        ctx.request_paint();
     }
 
     fn layout(

@@ -98,7 +98,7 @@ impl Widget<OurData> for ColorWell {
 
                 data.color = Color::rgb8(red as u8, green as u8, blue as u8);
                 self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
-                ctx.invalidate();
+                ctx.request_paint();
             }
 
             Event::WindowConnected if self.randomize => {
@@ -123,7 +123,7 @@ impl Widget<OurData> for ColorWell {
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &OurData, data: &OurData, _: &Env) {
         if !old_data.same(data) {
-            ctx.invalidate()
+            ctx.request_paint()
         }
     }
 
