@@ -29,10 +29,10 @@ use crate::{
 
 /// A mutable context provided to event handling methods of widgets.
 ///
-/// Widgets should call [`invalidate`] whenever an event causes a change
+/// Widgets should call [`request_paint`] whenever an event causes a change
 /// in the widget's appearance, to schedule a repaint.
 ///
-/// [`invalidate`]: #method.invalidate
+/// [`request_paint`]: #method.request_paint
 pub struct EventCtx<'a, 'b> {
     // Note: there's a bunch of state that's just passed down, might
     // want to group that into a single struct.
@@ -67,10 +67,10 @@ pub struct LifeCycleCtx<'a> {
 
 /// A mutable context provided to data update methods of widgets.
 ///
-/// Widgets should call [`invalidate`] whenever a data change causes a change
+/// Widgets should call [`request_paint`] whenever a data change causes a change
 /// in the widget's appearance, to schedule a repaint.
 ///
-/// [`invalidate`]: #method.invalidate
+/// [`request_paint`]: #method.request_paint
 pub struct UpdateCtx<'a, 'b: 'a> {
     pub(crate) text_factory: &'a mut Text<'b>,
     pub(crate) window: &'a WindowHandle,
@@ -124,16 +124,20 @@ pub struct PaintCtx<'a, 'b: 'a> {
 pub struct Region(Rect);
 
 impl<'a, 'b> EventCtx<'a, 'b> {
-    /// Invalidate.
-    ///
-    /// Right now, it just invalidates the entire window, but we'll want
-    /// finer grained invalidation before long.
+    #[deprecated(since = "0.5.0", note = "use request_paint instead")]
     pub fn invalidate(&mut self) {
         // Note: for the current functionality, we could shortcut and just
         // request an invalidate on the window. But when we do fine-grained
         // invalidation, we'll want to compute the invalidation region, and
         // that needs to be propagated (with, likely, special handling for
         // scrolling).
+        self.base_state.needs_inval = true;
+    }
+
+    /// Request a [`paint`] pass.
+    ///
+    /// [`paint`]: trait.Widget.html#tymethod.paint
+    pub fn request_paint(&mut self) {
         self.base_state.needs_inval = true;
     }
 
@@ -358,11 +362,15 @@ impl<'a, 'b> EventCtx<'a, 'b> {
 }
 
 impl<'a> LifeCycleCtx<'a> {
-    /// Invalidate.
-    ///
-    /// See [`EventCtx::invalidate`](struct.EventCtx.html#method.invalidate) for
-    /// more discussion.
+    #[deprecated(since = "0.5.0", note = "use request_paint instead")]
     pub fn invalidate(&mut self) {
+        self.base_state.needs_inval = true;
+    }
+
+    /// Request a [`paint`] pass.
+    ///
+    /// [`paint`]: trait.Widget.html#tymethod.paint
+    pub fn request_paint(&mut self) {
         self.base_state.needs_inval = true;
     }
 
@@ -417,11 +425,15 @@ impl<'a> LifeCycleCtx<'a> {
 }
 
 impl<'a, 'b> UpdateCtx<'a, 'b> {
-    /// Invalidate.
-    ///
-    /// See [`EventCtx::invalidate`](struct.EventCtx.html#method.invalidate) for
-    /// more discussion.
+    #[deprecated(since = "0.5.0", note = "use request_paint instead")]
     pub fn invalidate(&mut self) {
+        self.base_state.needs_inval = true;
+    }
+
+    /// Request a [`paint`] pass.
+    ///
+    /// [`paint`]: trait.Widget.html#tymethod.paint
+    pub fn request_paint(&mut self) {
         self.base_state.needs_inval = true;
     }
 

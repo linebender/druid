@@ -38,7 +38,7 @@ impl Widget<f64> for ProgressBar {
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &f64, _data: &f64, _env: &Env) {
-        ctx.invalidate();
+        ctx.request_paint();
     }
 
     fn layout(

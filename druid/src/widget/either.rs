@@ -68,7 +68,7 @@ impl<T: Data> Widget<T> for Either<T> {
         let current = (self.closure)(data, env);
         if current != self.current {
             self.current = current;
-            ctx.invalidate();
+            ctx.request_paint();
             // TODO: more event flow to request here.
         }
         if self.current {

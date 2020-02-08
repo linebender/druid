@@ -143,8 +143,8 @@ pub struct WidgetId(NonZeroU64);
 ///
 /// [`event`]: #tymethod.event
 /// [`update`]: #tymethod.update
-/// [`Data`]: trait.Data.html
-/// [`WidgetPod`]: struct.WidgetPod.html
+/// [`Data`]: ../trait.Data.html
+/// [`WidgetPod`]: ../struct.WidgetPod.html
 pub trait Widget<T> {
     /// Handle an event.
     ///
@@ -153,9 +153,9 @@ pub trait Widget<T> {
     /// requesting things from the [`EventCtx`], mutating the data, or submitting
     /// a [`Command`].
     ///
-    /// [`Event`]: struct.Event.html
-    /// [`EventCtx`]: struct.EventCtx.html
-    /// [`Command`]: struct.Command.html
+    /// [`Event`]: ../struct.Event.html
+    /// [`EventCtx`]: ../struct.EventCtx.html
+    /// [`Command`]: ../struct.Command.html
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env);
 
     /// Handle a life cycle notification.
@@ -169,15 +169,15 @@ pub trait Widget<T> {
     /// if a widget needs to mutate data, it can submit a [`Command`] that will
     /// be executed at the next opportunity.
     ///
-    /// [`LifeCycle`]: struct.LifeCycle.html
-    /// [`LifeCycleCtx`]: struct.LifeCycleCtx.html
-    /// [`Command`]: struct.Command.html
+    /// [`LifeCycle`]: ../struct.LifeCycle.html
+    /// [`LifeCycleCtx`]: ../struct.LifeCycleCtx.html
+    /// [`Command`]: ../struct.Command.html
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env);
 
     /// Handle a change of data.
     ///
     /// This method is called whenever the data changes. When the appearance of
-    /// the widget depends on data, call [`invalidate`] so that it's scheduled
+    /// the widget depends on data, call [`request_paint`] so that it's scheduled
     /// for repaint.
     ///
     /// The previous value of the data is provided in case the widget wants to
@@ -185,7 +185,7 @@ pub trait Widget<T> {
     /// will be called with `None` for `old_data`. Thus, this method can also be
     /// used to build resources that will be retained for painting.
     ///
-    /// [`invalidate`]: struct.UpdateCtx.html#method.invalidate
+    /// [`request_paint`]: ../struct.UpdateCtx.html#method.request_paint
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env);
 
     /// Compute layout.
@@ -206,8 +206,8 @@ pub trait Widget<T> {
     ///
     /// The layout strategy is strongly inspired by Flutter.
     ///
-    /// [`WidgetPod::layout`]: struct.WidgetPod.html#method.layout
-    /// [`set_layout_rect`]: struct.LayoutCtx.html#method.set_layout_rect
+    /// [`WidgetPod::layout`]: ../struct.WidgetPod.html#method.layout
+    /// [`set_layout_rect`]: ../struct.LayoutCtx.html#method.set_layout_rect
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
     /// Paint the widget appearance.

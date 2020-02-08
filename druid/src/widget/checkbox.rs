@@ -38,7 +38,7 @@ impl Widget<bool> for Checkbox {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
-                ctx.invalidate();
+                ctx.request_paint();
             }
             Event::MouseUp(_) => {
                 if ctx.is_active() {
@@ -50,7 +50,7 @@ impl Widget<bool> for Checkbox {
                             *data = true;
                         }
                     }
-                    ctx.invalidate();
+                    ctx.request_paint();
                 }
             }
             _ => (),
@@ -59,12 +59,12 @@ impl Widget<bool> for Checkbox {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &bool, _env: &Env) {
         if let LifeCycle::HotChanged(_) = event {
-            ctx.invalidate();
+            ctx.request_paint();
         }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &bool, _data: &bool, _env: &Env) {
-        ctx.invalidate();
+        ctx.request_paint();
     }
 
     fn layout(

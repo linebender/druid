@@ -59,12 +59,12 @@ impl<T: Data> Widget<T> for Button<T> {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
-                ctx.invalidate();
+                ctx.request_paint();
             }
             Event::MouseUp(_) => {
                 if ctx.is_active() {
                     ctx.set_active(false);
-                    ctx.invalidate();
+                    ctx.request_paint();
                     if ctx.is_hot() {
                         (self.action)(ctx, data, env);
                     }
@@ -76,7 +76,7 @@ impl<T: Data> Widget<T> for Button<T> {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::HotChanged(_) = event {
-            ctx.invalidate();
+            ctx.request_paint();
         }
         self.label.lifecycle(ctx, event, data, env)
     }

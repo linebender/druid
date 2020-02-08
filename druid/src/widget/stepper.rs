@@ -200,7 +200,7 @@ impl Widget<f64> for Stepper {
                 let delay = Instant::now() + STEPPER_REPEAT_DELAY;
                 self.timer_id = ctx.request_timer(delay);
 
-                ctx.invalidate();
+                ctx.request_paint();
             }
             Event::MouseUp(_) => {
                 ctx.set_active(false);
@@ -209,7 +209,7 @@ impl Widget<f64> for Stepper {
                 self.increase_active = false;
                 self.timer_id = TimerToken::INVALID;
 
-                ctx.invalidate();
+                ctx.request_paint();
             }
             Event::Timer(id) if *id == self.timer_id => {
                 self.change_value(ctx, data, env);
@@ -224,7 +224,7 @@ impl Widget<f64> for Stepper {
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &f64, data: &f64, _env: &Env) {
         if (*data - old_data).abs() > EPSILON {
-            ctx.invalidate();
+            ctx.request_paint();
         }
     }
 }

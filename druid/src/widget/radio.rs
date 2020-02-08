@@ -66,7 +66,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
-                ctx.invalidate();
+                ctx.request_paint();
             }
             Event::MouseUp(_) => {
                 if ctx.is_active() {
@@ -74,7 +74,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
                     if ctx.is_hot() {
                         *data = self.variant.clone();
                     }
-                    ctx.invalidate();
+                    ctx.request_paint();
                 }
             }
             _ => (),
@@ -83,12 +83,12 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &T, _env: &Env) {
         if let LifeCycle::HotChanged(_) = event {
-            ctx.invalidate();
+            ctx.request_paint();
         }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {
-        ctx.invalidate();
+        ctx.request_paint();
     }
 
     fn layout(

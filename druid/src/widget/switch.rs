@@ -124,7 +124,7 @@ impl Widget<bool> for Switch {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
-                ctx.invalidate();
+                ctx.request_paint();
             }
             Event::MouseUp(_) => {
                 ctx.set_active(false);
@@ -137,7 +137,7 @@ impl Widget<bool> for Switch {
                     *data = !*data;
                 }
 
-                ctx.invalidate();
+                ctx.request_paint();
                 self.knob_dragged = false;
                 self.animation_in_progress = true;
                 ctx.request_anim_frame();
@@ -150,7 +150,7 @@ impl Widget<bool> for Switch {
                 if ctx.is_hot() {
                     self.knob_hovered = self.knob_hit_test(knob_size, mouse.pos)
                 }
-                ctx.invalidate();
+                ctx.request_paint();
             }
             _ => (),
         }
@@ -180,7 +180,7 @@ impl Widget<bool> for Switch {
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &bool, data: &bool, _env: &Env) {
         if old_data != data {
-            ctx.invalidate();
+            ctx.request_paint();
         }
     }
 

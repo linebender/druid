@@ -32,14 +32,14 @@ impl Widget<u32> for TimerWidget {
         match event {
             Event::MouseDown(_) => {
                 self.on = !self.on;
-                ctx.invalidate();
+                ctx.request_paint();
                 let deadline = Instant::now() + Duration::from_millis(500);
                 self.timer_id = ctx.request_timer(deadline);
             }
             Event::Timer(id) => {
                 if *id == self.timer_id {
                     self.on = !self.on;
-                    ctx.invalidate();
+                    ctx.request_paint();
                     let deadline = Instant::now() + Duration::from_millis(500);
                     self.timer_id = ctx.request_timer(deadline);
                 }
