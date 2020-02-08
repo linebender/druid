@@ -155,6 +155,7 @@ struct MyWndProc {
     d2d_factory: D2DFactory,
     dwrite_factory: DwriteFactory,
     state: RefCell<Option<WndState>>,
+    present_strategy: PresentStrategy,
 }
 
 /// The mutable state of the window.
@@ -330,6 +331,21 @@ impl WndProc for MyWndProc {
     ) -> Option<LRESULT> {
         //println!("wndproc msg: {}", msg);
         match msg {
+            WM_CREATE => {
+                let dcomp_state = unsafe {
+                    create_dcomp_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
+                        warn!("Creating swapchain failed, falling back to hwnd: {:?}", e);
+                        None
+                    })
+                };
+
+                self.state.borrow_mut().as_mut().unwrap().dcomp_state = dcomp_state;
+                if let Some(state) = self.handle.borrow().state.upgrade() {
+                    state.hwnd.set(hwnd);
+                }
+
+                Some(0)
+            }
             WM_ERASEBKGND => Some(0),
             WM_SETFOCUS => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
@@ -818,6 +834,7 @@ impl WindowBuilder {
                 d2d_factory: D2DFactory::new().unwrap(),
                 dwrite_factory: dw_clone,
                 state: RefCell::new(None),
+                present_strategy: self.present_strategy,
             };
 
             let window = WindowState {
@@ -843,6 +860,17 @@ impl WindowBuilder {
                 96.0
             };
             win.dpi.set(dpi);
+
+            let state = WndState {
+                handler: self.handler.unwrap(),
+                render_target: None,
+                dcomp_state: None,
+                dpi,
+                stashed_key_code: KeyCode::Unknown(0),
+                stashed_char: None,
+            };
+            win.wndproc.connect(&handle, state);
+
             let width = (self.size.width * (f64::from(dpi) / 96.0)) as i32;
             let height = (self.size.height * (f64::from(dpi) / 96.0)) as i32;
 
@@ -869,7 +897,7 @@ impl WindowBuilder {
                 0 as HWND,
                 hmenu,
                 0 as HINSTANCE,
-                win.clone(),
+                win,
             );
             if hwnd.is_null() {
                 return Err(Error::NullHwnd);
@@ -878,23 +906,6 @@ impl WindowBuilder {
             if let Some(accels) = accels {
                 register_accel(hwnd, &accels);
             }
-
-            let dcomp_state = create_dcomp_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
-                warn!("Creating swapchain failed, falling back to hwnd: {:?}", e);
-                None
-            });
-
-            win.hwnd.set(hwnd);
-            let state = WndState {
-                handler: self.handler.unwrap(),
-                render_target: None,
-                dcomp_state,
-                dpi,
-                stashed_key_code: KeyCode::Unknown(0),
-                stashed_char: None,
-            };
-            win.wndproc.connect(&handle, state);
-            mem::drop(win);
             Ok(handle)
         }
     }
