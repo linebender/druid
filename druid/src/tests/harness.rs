@@ -101,11 +101,20 @@ impl<T: Data> Harness<'_, T> {
     }
 
     /// Retrieve a copy of this widget's `BaseState`, if possible.
+    //FIXME: make this unwrap, and add a `try_get_state` variant?
     pub(crate) fn get_state(&mut self, widget: WidgetId) -> Option<BaseState> {
         let cell = StateCell::default();
         let state_cell = cell.clone();
         self.lifecycle(LifeCycle::DebugRequestState { widget, state_cell });
         cell.take()
+    }
+
+    /// Inspect the `BaseState` of each widget in the tree.
+    ///
+    /// The provided closure will be called on each widget.
+    pub(crate) fn inspect_state(&mut self, f: impl Fn(&BaseState) + 'static) {
+        let checkfn = StateCheckFn::new(f);
+        self.lifecycle(LifeCycle::DebugInspectState(checkfn))
     }
 
     /// Send a command to a target.
@@ -118,9 +127,7 @@ impl<T: Data> Harness<'_, T> {
     /// Send the events that would normally be sent when the app starts.
     // should we do this automatically? Also these will change regularly?
     pub fn send_initial_events(&mut self) {
-        self.lifecycle(LifeCycle::WidgetAdded);
-        self.lifecycle(LifeCycle::Register);
-        self.lifecycle(LifeCycle::WindowConnected);
+        self.event(Event::WindowConnected);
         self.event(Event::Size(DEFAULT_SIZE));
     }
 
@@ -146,8 +153,7 @@ impl<T: Data> Harness<'_, T> {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn lifecycle(&mut self, event: LifeCycle) {
+    fn lifecycle(&mut self, event: LifeCycle) {
         self.inner.lifecycle(event)
     }
 
@@ -179,7 +185,6 @@ impl<T: Data> Inner<T> {
         );
     }
 
-    #[allow(dead_code)]
     fn lifecycle(&mut self, event: LifeCycle) {
         self.window
             .lifecycle(&mut self.cmds, &event, &self.data, &self.env);

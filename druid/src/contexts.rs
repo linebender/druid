@@ -21,8 +21,10 @@ use log;
 
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
+use crate::piet::RenderContext;
 use crate::{
-    Command, Cursor, Rect, Size, Target, Text, TimerToken, WidgetId, WinCtx, WindowHandle, WindowId,
+    Affine, Command, Cursor, Insets, Rect, Size, Target, Text, TimerToken, WidgetId, WinCtx,
+    WindowHandle, WindowId,
 };
 
 /// A mutable context provided to event handling methods of widgets.
@@ -52,12 +54,11 @@ pub struct EventCtx<'a, 'b> {
 ///
 /// Certain methods on this context are only meaningful during the handling of
 /// specific lifecycle events; for instance [`register_child`]
-/// should only be called while handling [`LifeCycle::Register`].
+/// should only be called while handling [`LifeCycle::WidgetAdded`].
 ///
 /// [`lifecycle`]: widget/trait.Widget.html#tymethod.lifecycle
 /// [`register_child`]: #method.register_child
-/// [`LifeCycleCtx::register_child`]: #method.register_child
-/// [`LifeCycle::Register`]: enum.LifeCycle.html#variant.Register
+/// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
 pub struct LifeCycleCtx<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) base_state: &'a mut BaseState,
@@ -77,10 +78,8 @@ pub struct UpdateCtx<'a, 'b: 'a> {
     // invalidations, which would mean a structure very much like
     // `EventCtx` (and possibly using the same structure). But for
     // now keep it super-simple.
-    pub(crate) needs_inval: bool,
-    pub(crate) children_changed: bool,
     pub(crate) window_id: WindowId,
-    pub(crate) widget_id: WidgetId,
+    pub(crate) base_state: &'a mut BaseState,
 }
 
 /// A context provided to layout handling methods of widgets.
@@ -90,7 +89,15 @@ pub struct UpdateCtx<'a, 'b: 'a> {
 /// during widget layout.
 pub struct LayoutCtx<'a, 'b: 'a> {
     pub(crate) text_factory: &'a mut Text<'b>,
+    pub(crate) paint_insets: Insets,
     pub(crate) window_id: WindowId,
+}
+
+/// Z-order paint operations with transformations.
+pub(crate) struct ZOrderPaintOp {
+    pub z_index: u32,
+    pub paint_func: Box<dyn FnOnce(&mut PaintCtx) + 'static>,
+    pub transform: Affine,
 }
 
 /// A context passed to paint methods of widgets.
@@ -104,6 +111,8 @@ pub struct PaintCtx<'a, 'b: 'a> {
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'b>,
     pub window_id: WindowId,
+    /// The z-order paint operations.
+    pub(crate) z_ops: Vec<ZOrderPaintOp>,
     /// The currently visible region.
     pub(crate) region: Region,
     pub(crate) base_state: &'a BaseState,
@@ -364,7 +373,7 @@ impl<'a> LifeCycleCtx<'a> {
 
     /// Registers a child widget.
     ///
-    /// This should only be called in response to a `LifeCycle::Register` event.
+    /// This should only be called in response to a `LifeCycle::WidgetAdded` event.
     ///
     /// In general, you should not need to call this method; it is handled by
     /// the `WidgetPod`.
@@ -413,14 +422,14 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     /// See [`EventCtx::invalidate`](struct.EventCtx.html#method.invalidate) for
     /// more discussion.
     pub fn invalidate(&mut self) {
-        self.needs_inval = true;
+        self.base_state.needs_inval = true;
     }
 
     /// Indicate that your children have changed.
     ///
     /// Widgets must call this method after adding a new child.
     pub fn children_changed(&mut self) {
-        self.children_changed = true;
+        self.base_state.children_changed = true;
     }
 
     /// Get an object which can create text layouts.
@@ -445,7 +454,7 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
 
     /// get the `WidgetId` of the current widget.
     pub fn widget_id(&self) -> WidgetId {
-        self.widget_id
+        self.base_state.id
     }
 }
 
@@ -458,6 +467,21 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
     /// Get the window id.
     pub fn window_id(&self) -> WindowId {
         self.window_id
+    }
+
+    /// Set explicit paint [`Insets`] for this widget.
+    ///
+    /// You are not required to set explicit paint bounds unless you need
+    /// to paint outside of your layout bounds. In this case, the argument
+    /// should be an [`Insets`] struct that indicates where your widget
+    /// needs to overpaint, relative to its bounds.
+    ///
+    /// For more information, see [`WidgetPod::paint_insets`].
+    ///
+    /// [`Insets`]: struct.Insets.html
+    /// [`WidgetPod::paint_insets`]: struct.WidgetPod.html#method.paint_insets
+    pub fn set_paint_insets(&mut self, insets: impl Into<Insets>) {
+        self.paint_insets = insets.into().nonnegative();
     }
 }
 
@@ -512,11 +536,29 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
         let mut child_ctx = PaintCtx {
             render_ctx: self.render_ctx,
             base_state: self.base_state,
+            z_ops: Vec::new(),
             window_id: self.window_id,
             focus_widget: self.focus_widget,
             region: region.into(),
         };
-        f(&mut child_ctx)
+        f(&mut child_ctx);
+        self.z_ops.append(&mut child_ctx.z_ops);
+    }
+
+    /// Allows to specify order for paint operations.
+    ///
+    /// Larger `z_index` indicate that an operation will be executed later.
+    pub fn paint_with_z_index(
+        &mut self,
+        z_index: u32,
+        paint_func: impl FnOnce(&mut PaintCtx) + 'static,
+    ) {
+        let current_transform = self.render_ctx.current_transform();
+        self.z_ops.push(ZOrderPaintOp {
+            z_index,
+            paint_func: Box::new(paint_func),
+            transform: current_transform,
+        })
     }
 }
 

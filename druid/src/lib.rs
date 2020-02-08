@@ -73,4 +73,4 @@ pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
 
 #[cfg(test)]
-pub(crate) use event::StateCell;
+pub(crate) use event::{StateCell, StateCheckFn};

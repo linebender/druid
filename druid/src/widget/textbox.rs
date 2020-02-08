@@ -336,8 +336,7 @@ impl Widget<String> for TextBox {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &String, _env: &Env) {
         match event {
-            LifeCycle::WidgetAdded => ctx.invalidate(),
-            LifeCycle::Register => ctx.register_for_focus(),
+            LifeCycle::WidgetAdded => ctx.register_for_focus(),
             // an open question: should we be able to schedule timers here?
             LifeCycle::FocusChanged(true) => ctx.submit_command(RESET_BLINK, ctx.widget_id()),
             _ => (),

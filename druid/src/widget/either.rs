@@ -89,11 +89,13 @@ impl<T: Data> Widget<T> for Either<T> {
             let size = self.true_branch.layout(layout_ctx, bc, data, env);
             self.true_branch
                 .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+            layout_ctx.set_paint_insets(self.true_branch.paint_insets());
             size
         } else {
             let size = self.false_branch.layout(layout_ctx, bc, data, env);
             self.false_branch
                 .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+            layout_ctx.set_paint_insets(self.true_branch.paint_insets());
             size
         }
     }

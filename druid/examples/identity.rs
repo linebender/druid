@@ -37,11 +37,10 @@ use druid::{
     TimerToken, UpdateCtx, Widget, WindowDesc,
 };
 
-const CYCLE_DURATION: Duration = Duration::from_millis(200);
+const CYCLE_DURATION: Duration = Duration::from_millis(100);
 
 const FREEZE_COLOR: Selector = Selector::new("identity-example.freeze-color");
 const UNFREEZE_COLOR: Selector = Selector::new("identity-example.unfreeze-color");
-const SET_INITIAL_TOKEN: Selector = Selector::new("identity-example.set-initial-token");
 
 /// Honestly: it's just a color in fancy clothing.
 #[derive(Debug, Clone, Data, Lens)]
@@ -102,13 +101,14 @@ impl Widget<OurData> for ColorWell {
                 ctx.invalidate();
             }
 
-            Event::Command(cmd) if cmd.selector == SET_INITIAL_TOKEN => {
+            Event::WindowConnected if self.randomize => {
                 self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
             }
 
             Event::Command(cmd) if cmd.selector == FREEZE_COLOR => {
                 self.frozen = cmd
                     .get_object::<Color>()
+                    .ok()
                     .cloned()
                     .expect("payload is always a Color")
                     .into();
@@ -118,13 +118,7 @@ impl Widget<OurData> for ColorWell {
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &OurData, _: &Env) {
-        match event {
-            LifeCycle::WindowConnected if self.randomize => {
-                ctx.submit_command(SET_INITIAL_TOKEN, ctx.widget_id());
-            }
-            _ => (),
-        }
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &OurData, _: &Env) {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &OurData, data: &OurData, _: &Env) {

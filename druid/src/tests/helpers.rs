@@ -16,8 +16,23 @@
 //!
 //! This includes tools for making throwaway widgets more easily.
 
+use std::cell::RefCell;
+use std::collections::VecDeque;
+use std::rc::Rc;
+
 use crate::widget::WidgetExt;
 use crate::*;
+
+// taken from the matches crate; useful for the Recorder widget.
+#[macro_export]
+macro_rules! assert_matches {
+     ($expression:expr, $($pattern:tt)+) => {
+         match $expression {
+             $($pattern)+ => (),
+             ref e => panic!("assertion failed: `{:?}` does not match `{}`", e, stringify!($($pattern)+)),
+         }
+     }
+ }
 
 pub type EventFn<S, T> = dyn FnMut(&mut S, &mut EventCtx, &Event, &T, &Env);
 pub type LifeCycleFn<S, T> = dyn FnMut(&mut S, &mut LifeCycleCtx, &LifeCycle, &T, &Env);
@@ -44,6 +59,58 @@ pub struct ReplaceChild<T: Data> {
     inner: WidgetPod<T, Box<dyn Widget<T>>>,
     replacer: Box<dyn Fn() -> Box<dyn Widget<T>>>,
 }
+
+/// A widget that records each time one of its methods is called.
+///
+/// Make one like this:
+///
+/// ```
+/// let recording = Recording::default();
+/// let widget = Label::new().padding(4.0).record(&recording);
+///
+/// Harness::create((), widget, |harness| {
+///     widget.send_initial_events();
+///     assert_matches!(recording.next(), Record::L(LifeCycle::WidgetAdded));
+/// })
+/// ```
+pub struct Recorder<W> {
+    recording: Recording,
+    inner: W,
+}
+
+/// A recording of widget method calls.
+#[derive(Debug, Clone, Default)]
+pub struct Recording(Rc<RefCell<VecDeque<Record>>>);
+
+/// A recording of a method call on a widget.
+///
+/// Each member of the enum coorresponds to one of the methods on `Widget`.
+#[derive(Debug, Clone)]
+pub enum Record {
+    /// An `Event`.
+    E(Event),
+    /// A `LifeCycle` event.
+    L(LifeCycle),
+    Layout(Size),
+    Update(bool),
+    Paint,
+    // instead of always returning an Option<Record>, we have a none variant;
+    // this would be code smell elsewhere but here I think it makes the tests
+    // easier to read.
+    None,
+}
+
+/// like WidgetExt but just for this one thing
+pub trait TestWidgetExt<T: Data>: Widget<T> + Sized + 'static {
+    fn record(self, recording: &Recording) -> Recorder<Self> {
+        Recorder {
+            inner: self,
+            recording: recording.clone(),
+        }
+    }
+}
+
+impl<T: Data, W: Widget<T> + 'static> TestWidgetExt<T> for W {}
 
 #[allow(dead_code)]
 impl<S, T> ModularWidget<S, T> {
@@ -172,4 +239,109 @@ impl<T: Data> Widget<T> for ReplaceChild<T> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.inner.paint(ctx, data, env)
     }
+}
+
+#[allow(dead_code)]
+impl Recording {
+    pub fn is_empty(&self) -> bool {
+        self.0.borrow().is_empty()
+    }
+
+    #[allow(dead_code)]
+    pub fn len(&self) -> usize {
+        self.0.borrow().len()
+    }
+
+    pub fn clear(&self) {
+        self.0.borrow_mut().clear()
+    }
+
+    /// Returns the next event in the recording, if one exists.
+    ///
+    /// This consumes the event.
+    pub fn next(&self) -> Record {
+        self.0.borrow_mut().pop_front().unwrap_or(Record::None)
+    }
+
+    fn push(&self, event: Record) {
+        self.0.borrow_mut().push_back(event)
+    }
+}
+
+impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        self.recording.push(Record::E(event.clone()));
+        self.inner.event(ctx, event, data, env)
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        let should_record = match event {
+            LifeCycle::DebugRequestState { .. } => false,
+            LifeCycle::DebugInspectState(_) => false,
+            _ => true,
+        };
+
+        if should_record {
+            self.recording.push(Record::L(event.clone()));
+        }
+
+        self.inner.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+        self.inner.update(ctx, old_data, data, env);
+        let inval = ctx.base_state.needs_inval;
+        self.recording.push(Record::Update(inval));
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+        let size = self.inner.layout(ctx, bc, data, env);
+        self.recording.push(Record::Layout(size));
+        size
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.inner.paint(ctx, data, env);
+        self.recording.push(Record::Paint)
+    }
+}
+
+// easily make a bunch of WidgetIds
+pub fn widget_id2() -> (WidgetId, WidgetId) {
+    (WidgetId::next(), WidgetId::next())
+}
+
+pub fn widget_id3() -> (WidgetId, WidgetId, WidgetId) {
+    (WidgetId::next(), WidgetId::next(), WidgetId::next())
+}
+
+pub fn widget_id4() -> (WidgetId, WidgetId, WidgetId, WidgetId) {
+    (
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+    )
+}
+
+#[allow(dead_code)]
+pub fn widget_id5() -> (WidgetId, WidgetId, WidgetId, WidgetId, WidgetId) {
+    (
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+    )
+}
+
+pub fn widget_id6() -> (WidgetId, WidgetId, WidgetId, WidgetId, WidgetId, WidgetId) {
+    (
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+        WidgetId::next(),
+    )
 }

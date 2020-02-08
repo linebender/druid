@@ -19,7 +19,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use log::{error, info, warn};
+use log::{info, warn};
 
 use crate::kurbo::{Size, Vec2};
 use crate::piet::Piet;
@@ -33,8 +33,8 @@ use crate::ext_event::ExtEventHost;
 use crate::menu::ContextMenu;
 use crate::window::{PendingWindow, Window};
 use crate::{
-    Command, Data, Env, Event, KeyEvent, KeyModifiers, LifeCycle, MenuDesc, Target, TimerToken,
-    WheelEvent, WindowDesc, WindowId,
+    Command, Data, Env, Event, KeyEvent, KeyModifiers, MenuDesc, Target, TimerToken, WheelEvent,
+    WindowDesc, WindowId,
 };
 
 use crate::command::sys as sys_cmd;
@@ -172,22 +172,6 @@ impl<T: Data> AppState<T> {
         });
     }
 
-    //FIXME: when we make `WindowConnected` an event, this can all go
-    fn connected(&mut self, id: WindowId) {
-        let AppState {
-            ref mut windows,
-            ref mut command_queue,
-            ref data,
-            ref env,
-            ..
-        } = self;
-        if let Some(win) = windows.get_mut(id) {
-            win.lifecycle(command_queue, &LifeCycle::WidgetAdded, data, env);
-            win.lifecycle(command_queue, &LifeCycle::Register, data, env);
-            win.lifecycle(command_queue, &LifeCycle::WindowConnected, data, env);
-        }
-    }
-
     pub(crate) fn add_window(&mut self, id: WindowId, window: PendingWindow<T>) {
         self.windows.add(id, window);
     }
@@ -309,20 +293,20 @@ impl<T: Data> AppState<T> {
 
     fn set_menu(&mut self, window_id: WindowId, cmd: &Command) {
         if let Some(win) = self.windows.get_mut(window_id) {
-            if let Some(menu) = cmd.get_object::<MenuDesc<T>>() {
-                win.set_menu(menu.to_owned(), &self.data, &self.env);
-            } else {
-                log::warn!("set-menu command is missing menu object");
+            match cmd.get_object::<MenuDesc<T>>() {
+                Ok(menu) => win.set_menu(menu.to_owned(), &self.data, &self.env),
+                Err(e) => log::warn!("set-menu object error: '{}'", e),
             }
         }
     }
 
     fn show_context_menu(&mut self, window_id: WindowId, cmd: &Command) {
         if let Some(win) = self.windows.get_mut(window_id) {
-            if let Some(ContextMenu { menu, location }) = cmd.get_object::<ContextMenu<T>>() {
-                win.show_context_menu(menu.to_owned(), *location, &self.data, &self.env)
-            } else {
-                log::warn!("show-context-menu command is missing menu object.");
+            match cmd.get_object::<ContextMenu<T>>() {
+                Ok(ContextMenu { menu, location }) => {
+                    win.show_context_menu(menu.to_owned(), *location, &self.data, &self.env)
+                }
+                Err(e) => log::warn!("show-context-menu object error: '{}'", e),
             }
         }
     }
@@ -366,13 +350,6 @@ impl<T: Data> DruidHandler<T> {
             app_state,
             window_id,
         }
-    }
-
-    /// Called once, when a window first connects; we do some preliminary setup here.
-    fn do_connected(&mut self, win_ctx: &mut dyn WinCtx) {
-        self.app_state.borrow_mut().connected(self.window_id);
-        self.process_commands(win_ctx);
-        self.app_state.borrow_mut().invalidate_and_finalize();
     }
 
     /// Send an event to the widget hierarchy.
@@ -436,7 +413,11 @@ impl<T: Data> DruidHandler<T> {
             match &cmd.selector {
                 &sys_cmd::SHOW_OPEN_PANEL => self.show_open_panel(cmd, window_id, win_ctx),
                 &sys_cmd::SHOW_SAVE_PANEL => self.show_save_panel(cmd, window_id, win_ctx),
-                &sys_cmd::NEW_WINDOW => self.new_window(cmd),
+                &sys_cmd::NEW_WINDOW => {
+                    if let Err(e) = self.new_window(cmd) {
+                        log::error!("failed to create window: '{}'", e);
+                    }
+                }
                 &sys_cmd::CLOSE_WINDOW => self.request_close_window(cmd, window_id),
                 &sys_cmd::SHOW_WINDOW => self.show_window(cmd),
                 &sys_cmd::QUIT_APP => self.quit(),
@@ -491,23 +472,11 @@ impl<T: Data> DruidHandler<T> {
         }
     }
 
-    fn new_window(&mut self, cmd: Command) {
-        let desc = match cmd.get_object::<WindowDesc<T>>() {
-            Some(wd) => wd,
-            None => {
-                warn!("new_window command is missing window description");
-                return;
-            }
-        };
-
-        let window = match desc.build_native(&self.app_state) {
-            Ok(win) => win,
-            Err(e) => {
-                error!("failed to create window: '{:?}'", e);
-                return;
-            }
-        };
+    fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
+        let desc = cmd.take_object::<WindowDesc<T>>()?;
+        let window = desc.build_native(&self.app_state)?;
         window.show();
+        Ok(())
     }
 
     fn request_close_window(&mut self, cmd: Command, window_id: WindowId) {
@@ -552,7 +521,8 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn connected(&mut self, ctx: &mut dyn WinCtx) {
-        self.do_connected(ctx);
+        let event = Event::WindowConnected;
+        self.do_event(event, ctx);
     }
 
     fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
