@@ -141,6 +141,20 @@ impl<'a, 'b> EventCtx<'a, 'b> {
         self.base_state.needs_inval = true;
     }
 
+    /// Request a layout pass.
+    ///
+    /// A Widget's [`layout`] method is always called when the widget tree
+    /// changes, or the window is resized.
+    ///
+    /// If your widget would like to have layout called at any other time,
+    /// (such as if it would like to change the layout of children in
+    /// response to some event) it must call this method.
+    ///
+    /// [`layout`]: trait.Widget.html#tymethod.layout
+    pub fn request_layout(&mut self) {
+        self.base_state.needs_layout = true;
+    }
+
     /// Indicate that your children have changed.
     ///
     /// Widgets must call this method after adding a new child.
@@ -374,6 +388,15 @@ impl<'a> LifeCycleCtx<'a> {
         self.base_state.needs_inval = true;
     }
 
+    /// Request layout.
+    ///
+    /// See [`EventCtx::request_layout`] for more information.
+    ///
+    /// [`EventCtx::request_layout`]: struct.EventCtx.html#method.request_layout
+    pub fn request_layout(&mut self) {
+        self.base_state.needs_layout = true;
+    }
+
     /// Returns the current widget's `WidgetId`.
     pub fn widget_id(&self) -> WidgetId {
         self.base_state.id
@@ -435,6 +458,15 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     /// [`paint`]: trait.Widget.html#tymethod.paint
     pub fn request_paint(&mut self) {
         self.base_state.needs_inval = true;
+    }
+
+    /// Request layout.
+    ///
+    /// See [`EventCtx::request_layout`] for more information.
+    ///
+    /// [`EventCtx::request_layout`]: struct.EventCtx.html#method.request_layout
+    pub fn request_layout(&mut self) {
+        self.base_state.needs_layout = true;
     }
 
     /// Indicate that your children have changed.

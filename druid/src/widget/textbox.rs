@@ -119,7 +119,7 @@ impl TextBox {
         self.selection.end
     }
 
-    /// Edit a selection using a `Movement`.    
+    /// Edit a selection using a `Movement`.
     fn move_selection(&mut self, mvmnt: Movement, text: &mut String, modify: bool) {
         // This movement function should ensure all movements are legit.
         // If they aren't, that's a problem with the movement function.

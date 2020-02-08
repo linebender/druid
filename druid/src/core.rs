@@ -84,6 +84,8 @@ pub(crate) struct BaseState {
 
     pub(crate) is_active: bool,
 
+    pub(crate) needs_layout: bool,
+
     /// Any descendant is active.
     has_active: bool,
 
@@ -124,6 +126,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     pub fn new(inner: W) -> WidgetPod<T, W> {
         let mut state = BaseState::new(inner.id().unwrap_or_else(WidgetId::next));
         state.children_changed = true;
+        state.needs_layout = true;
         WidgetPod {
             state,
             old_data: None,
@@ -331,6 +334,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         layout_ctx.paint_insets = Insets::ZERO;
         let size = self.inner.layout(layout_ctx, bc, data, &env);
         self.state.paint_insets = layout_ctx.paint_insets;
+        self.state.needs_layout = false;
         size
     }
 
@@ -378,6 +382,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let child_event = match event {
             Event::WindowConnected => Event::WindowConnected,
             Event::Size(size) => {
+                child_ctx.request_layout();
                 recurse = ctx.is_root;
                 Event::Size(*size)
             }
@@ -596,6 +601,7 @@ impl BaseState {
             paint_insets: Insets::ZERO,
             needs_inval: false,
             is_hot: false,
+            needs_layout: false,
             is_active: false,
             has_active: false,
             request_anim: false,
@@ -610,6 +616,7 @@ impl BaseState {
     /// Update to incorporate state changes from a child.
     fn merge_up(&mut self, child_state: &BaseState) {
         self.needs_inval |= child_state.needs_inval;
+        self.needs_layout |= child_state.needs_layout;
         self.request_anim |= child_state.request_anim;
         self.request_timer |= child_state.request_timer;
         self.has_active |= child_state.has_active;
