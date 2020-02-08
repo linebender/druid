@@ -261,8 +261,13 @@ impl<T: Data> Window<T> {
         data: &T,
         env: &Env,
     ) {
+        // FIXME: only do AnimFrame if root has requested_anim?
         self.lifecycle(queue, &LifeCycle::AnimFrame(0), data, env);
-        self.layout(piet, data, env);
+
+        if self.root.state().needs_layout {
+            self.layout(piet, data, env);
+        }
+
         piet.clear(env.get(crate::theme::WINDOW_BACKGROUND_COLOR));
         self.paint(piet, data, env);
 

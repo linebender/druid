@@ -155,6 +155,7 @@ impl<T: Data> Widget<T> for Split<T> {
                 Event::MouseMoved(mouse) => {
                     if ctx.is_active() {
                         self.update_splitter(ctx.size(), mouse.pos);
+                        ctx.request_layout();
                         ctx.request_paint();
                     }
 
