@@ -32,7 +32,7 @@ fn simple_layout() {
     Harness::create(true, widget, |harness| {
         harness.send_initial_events();
         harness.just_layout();
-        let state = harness.get_state(id_1).expect("failed to retrieve id_1");
+        let state = harness.get_state(id_1);
         assert_eq!(
             state.layout_rect.x0,
             ((DEFAULT_SIZE.width - BOX_WIDTH) / 2.) - PADDING
@@ -62,13 +62,13 @@ fn row_column() {
     Harness::create((), widget, |harness| {
         harness.send_initial_events();
         harness.just_layout();
-        let state1 = harness.get_state(id1).expect("id1");
+        let state1 = harness.get_state(id1);
         assert_eq!(state1.layout_rect.origin(), Point::ZERO);
-        let state2 = harness.get_state(id2).expect("id2");
+        let state2 = harness.get_state(id2);
         assert_eq!(state2.layout_rect.origin(), Point::new(0., 200.));
-        let state3 = harness.get_state(id3).expect("id3");
+        let state3 = harness.get_state(id3);
         assert_eq!(state3.layout_rect.origin(), Point::ZERO);
-        let state5 = harness.get_state(id5).expect("id5");
+        let state5 = harness.get_state(id5);
         assert_eq!(state5.layout_rect.origin(), Point::new(0., 200.));
     })
 }
@@ -94,7 +94,7 @@ fn simple_paint_rect() {
         harness.send_initial_events();
         harness.just_layout();
 
-        let state = harness.get_state(id1).expect("id1");
+        let state = harness.get_state(id1);
 
         // offset by padding
         assert_eq!(state.layout_rect.origin(), Point::new(10., 10.,));
@@ -106,7 +106,7 @@ fn simple_paint_rect() {
         assert_eq!(state.paint_rect().size(), Size::new(100., 140.,));
 
         // now does the container widget correctly propogate the child's paint rect?
-        let state = harness.get_state(id2).expect("id2");
+        let state = harness.get_state(id2);
 
         assert_eq!(state.layout_rect.origin(), Point::ZERO);
         // offset by padding, but then inset by paint insets
@@ -161,7 +161,7 @@ fn flex_paint_rect_overflow() {
         harness.send_initial_events();
         harness.just_layout();
 
-        let state = harness.get_state(id).unwrap();
+        let state = harness.get_state(id);
         assert_eq!(state.layout_rect.origin(), Point::new(10., 10.,));
         assert_eq!(state.paint_rect().origin(), Point::new(-10., -10.,));
         assert_eq!(
