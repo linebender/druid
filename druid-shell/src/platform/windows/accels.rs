@@ -21,6 +21,11 @@ use winapi::um::winuser::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+// NOTE:
+// https://docs.microsoft.com/en-us/windows/win32/wsw/thread-safety
+// All handles you obtain from functions in Kernel32 are thread-safe,
+// unless the MSDN Library article for the function explicitly mentions it is not.
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 struct WindowHandle(HWND);
 unsafe impl Send for WindowHandle {}
