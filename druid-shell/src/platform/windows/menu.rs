@@ -152,7 +152,14 @@ fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
         KeyCompare::Code(code) => code.to_i32()?,
         KeyCompare::Text(text) => {
             // See https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscana
-            let code = unsafe { VkKeyScanA(text.chars().next().unwrap() as i8) };
+            let wchar = match text.encode_utf16().next() {
+                Some(it) => it,
+                None => {
+                    log::error!("The text of Hotkey is empty");
+                    return None;
+                }
+            };
+            let code = unsafe { VkKeyScanW(wchar) };
             let ctrl_code = code >> 8;
             if ctrl_code & 0x1 != 0 {
                 virt_key |= FSHIFT;
