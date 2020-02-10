@@ -14,6 +14,7 @@
 
 //! Windows implementation of druid-shell.
 
+mod accels;
 pub mod application;
 pub mod clipboard;
 pub mod dcomp;
