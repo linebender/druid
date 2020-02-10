@@ -103,7 +103,7 @@ impl Widget<bool> for Checkbox {
         let border_color = if paint_ctx.is_hot() {
             env.get(theme::BORDER_LIGHT)
         } else {
-            env.get(theme::BORDER)
+            env.get(theme::BORDER_DARK)
         };
 
         paint_ctx.stroke(rect, &border_color, 1.);

@@ -306,7 +306,7 @@ impl<T: Data> Widget<T> for Split<T> {
         let line_color = if self.draggable {
             env.get(theme::BORDER_LIGHT)
         } else {
-            env.get(theme::BORDER)
+            env.get(theme::BORDER_DARK)
         };
         paint_ctx.stroke(line1, &line_color, 1.0);
         paint_ctx.stroke(line2, &line_color, 1.0);

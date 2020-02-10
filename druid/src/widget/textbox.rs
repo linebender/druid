@@ -388,14 +388,14 @@ impl Widget<String> for TextBox {
         let border_color = if has_focus {
             env.get(theme::PRIMARY_LIGHT)
         } else {
-            env.get(theme::BORDER)
+            env.get(theme::BORDER_DARK)
         };
 
         // Paint the background
         let clip_rect = RoundedRect::from_origin_size(
             Point::ORIGIN,
             Size::new(self.width - BORDER_WIDTH, height).to_vec2(),
-            2.,
+            env.get(theme::TEXTBOX_BORDER_RADIUS),
         );
 
         paint_ctx.fill(clip_rect, &background_color);
