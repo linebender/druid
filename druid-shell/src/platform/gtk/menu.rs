@@ -88,10 +88,8 @@ impl Menu {
 
                     let handle = handle.clone();
                     item.connect_activate(move |_| {
-                        let mut ctx = WinCtxImpl::from(&handle);
-
                         if let Some(state) = handle.state.upgrade() {
-                            state.handler.borrow_mut().command(id, &mut ctx);
+                            state.handler.borrow_mut().command(id, &mut WinCtxImpl);
                         }
                     });
 

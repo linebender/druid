@@ -107,10 +107,7 @@ pub(crate) struct WindowState {
     current_keyval: RefCell<Option<u32>>,
 }
 
-pub(crate) struct WinCtxImpl<'a> {
-    handle: &'a WindowHandle,
-    text: Text<'static>,
-}
+pub(crate) struct WinCtxImpl;
 
 impl WindowBuilder {
     pub fn new() -> WindowBuilder {
@@ -218,7 +215,6 @@ impl WindowBuilder {
 
         drawing_area.connect_draw(clone!(handle => move |widget, context| {
             if let Some(state) = handle.state.upgrade() {
-                let mut ctx = WinCtxImpl::from(&handle);
 
                 let extents = context.clip_extents();
                 let dpi_scale = state.window.get_window()
@@ -231,7 +227,7 @@ impl WindowBuilder {
 
                 if last_size.get() != size {
                     last_size.set(size);
-                    state.handler.borrow_mut().size(size.0, size.1, &mut ctx);
+                    state.handler.borrow_mut().size(size.0, size.1, &mut WinCtxImpl);
                 }
 
                 // For some reason piet needs a mutable context, so give it one I guess.
@@ -240,7 +236,7 @@ impl WindowBuilder {
 
                 if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
                     let anim = handler_borrow
-                        .paint(&mut piet_context, &mut ctx);
+                        .paint(&mut piet_context, &mut WinCtxImpl);
                     if let Err(e) = piet_context.finish() {
                         eprintln!("piet error on render: {:?}", e);
                     }
@@ -257,7 +253,6 @@ impl WindowBuilder {
 
         drawing_area.connect_button_press_event(clone!(handle => move |_widget, button| {
             if let Some(state) = handle.state.upgrade() {
-                let mut ctx = WinCtxImpl::from(&handle);
 
                 state.handler.borrow_mut().mouse_down(
                     &MouseEvent {
@@ -266,7 +261,7 @@ impl WindowBuilder {
                         mods: get_modifiers(button.get_state()),
                         button: get_mouse_button(button.get_button()),
                     },
-                    &mut ctx,
+                    &mut WinCtxImpl,
                 );
             }
 
@@ -275,7 +270,6 @@ impl WindowBuilder {
 
         drawing_area.connect_button_release_event(clone!(handle => move |_widget, button| {
             if let Some(state) = handle.state.upgrade() {
-                let mut ctx = WinCtxImpl::from(&handle);
 
                 state.handler.borrow_mut().mouse_up(
                     &MouseEvent {
@@ -284,7 +278,7 @@ impl WindowBuilder {
                         count: 0,
                         button: get_mouse_button(button.get_button()),
                     },
-                    &mut ctx,
+                    &mut WinCtxImpl,
                 );
             }
 
@@ -293,7 +287,6 @@ impl WindowBuilder {
 
         drawing_area.connect_motion_notify_event(clone!(handle=>move |_widget, motion| {
             if let Some(state) = handle.state.upgrade() {
-                let mut ctx = WinCtxImpl::from(&handle);
 
                 let pos = Point::from(motion.get_position());
                 let mouse_event = MouseEvent {
@@ -306,7 +299,7 @@ impl WindowBuilder {
                 state
                     .handler
                     .borrow_mut()
-                    .mouse_move(&mouse_event, &mut ctx);
+                    .mouse_move(&mouse_event, &mut WinCtxImpl);
             }
 
             Inhibit(true)
@@ -314,7 +307,6 @@ impl WindowBuilder {
 
         drawing_area.connect_scroll_event(clone!(handle => move |_widget, scroll| {
             if let Some(state) = handle.state.upgrade() {
-                let mut ctx = WinCtxImpl::from(&handle);
 
                 let modifiers = get_modifiers(scroll.get_state());
 
@@ -323,23 +315,23 @@ impl WindowBuilder {
                 let mut handler = state.handler.borrow_mut();
                 match scroll.get_direction() {
                     ScrollDirection::Up => {
-                        handler.wheel(Vec2::from((0.0, -120.0)), modifiers, &mut ctx);
+                        handler.wheel(Vec2::from((0.0, -120.0)), modifiers, &mut WinCtxImpl);
                     }
                     ScrollDirection::Down => {
-                        handler.wheel(Vec2::from((0.0, 120.0)), modifiers, &mut ctx);
+                        handler.wheel(Vec2::from((0.0, 120.0)), modifiers, &mut WinCtxImpl);
                     }
                     ScrollDirection::Left => {
-                        handler.wheel(Vec2::from((-120.0, 0.0)), modifiers, &mut ctx);
+                        handler.wheel(Vec2::from((-120.0, 0.0)), modifiers, &mut WinCtxImpl);
                     }
                     ScrollDirection::Right => {
-                        handler.wheel(Vec2::from((120.0, 0.0)), modifiers, &mut ctx);
+                        handler.wheel(Vec2::from((120.0, 0.0)), modifiers, &mut WinCtxImpl);
                     }
                     ScrollDirection::Smooth => {
                         //TODO: Look at how gtk's scroll containers implements it
                         let (mut delta_x, mut delta_y) = scroll.get_delta();
                         delta_x *= 120.;
                         delta_y *= 120.;
-                        handler.wheel(Vec2::from((delta_x, delta_y)), modifiers, &mut ctx)
+                        handler.wheel(Vec2::from((delta_x, delta_y)), modifiers, &mut WinCtxImpl)
                     }
                     e => {
                         eprintln!(
@@ -355,7 +347,6 @@ impl WindowBuilder {
 
         drawing_area.connect_key_press_event(clone!(handle => move |_widget, key| {
             if let Some(state) = handle.state.upgrade() {
-                let mut ctx = WinCtxImpl::from(&handle);
 
                 let mut current_keyval = state.current_keyval.borrow_mut();
                 let repeat = *current_keyval == Some(key.get_keyval());
@@ -363,7 +354,7 @@ impl WindowBuilder {
                 *current_keyval = Some(key.get_keyval());
 
                 let key_event = make_key_event(key, repeat);
-                state.handler.borrow_mut().key_down(key_event, &mut ctx);
+                state.handler.borrow_mut().key_down(key_event, &mut WinCtxImpl);
             }
 
             Inhibit(true)
@@ -371,12 +362,11 @@ impl WindowBuilder {
 
         drawing_area.connect_key_release_event(clone!(handle => move |_widget, key| {
             if let Some(state) = handle.state.upgrade() {
-                let mut ctx = WinCtxImpl::from(&handle);
 
                 *(state.current_keyval.borrow_mut()) = None;
 
                 let key_event = make_key_event(key, false);
-                state.handler.borrow_mut().key_up(key_event, &mut ctx);
+                state.handler.borrow_mut().key_up(key_event, &mut WinCtxImpl);
             }
 
             Inhibit(true)
@@ -384,8 +374,7 @@ impl WindowBuilder {
 
         drawing_area.connect_destroy(clone!(handle => move |_widget| {
             if let Some(state) = handle.state.upgrade() {
-                let mut ctx = WinCtxImpl::from(&handle);
-                state.handler.borrow_mut().destroy(&mut ctx);
+                state.handler.borrow_mut().destroy(&mut WinCtxImpl);
             }
         }));
 
@@ -396,8 +385,7 @@ impl WindowBuilder {
             .borrow_mut()
             .connect(&handle.clone().into());
 
-        let mut ctx = WinCtxImpl::from(&handle);
-        win_state.handler.borrow_mut().connected(&mut ctx);
+        win_state.handler.borrow_mut().connected(&mut WinCtxImpl);
 
         Ok(handle)
     }
@@ -455,8 +443,7 @@ impl WindowHandle {
         gdk::threads_add_timeout(interval, move || {
             if let Some(state) = handle.state.upgrade() {
                 if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                    let mut ctx = WinCtxImpl::from(&handle);
-                    handler_borrow.timer(token, &mut ctx);
+                    handler_borrow.timer(token, &mut WinCtxImpl);
                     return false;
                 }
             }
@@ -635,28 +622,13 @@ fn run_idle(state: &Arc<WindowState>) -> bool {
     for item in queue {
         match item {
             IdleKind::Callback(it) => it.call(handler.as_any()),
-            IdleKind::Token(it) => {
-                let handle = WindowHandle {
-                    state: Arc::downgrade(&state),
-                };
-                let mut ctx = WinCtxImpl::from(&handle);
-                handler.idle(it, &mut ctx);
-            }
+            IdleKind::Token(it) => handler.idle(it, &mut WinCtxImpl),
         }
     }
     false
 }
 
-impl<'a> WinCtx<'a> for WinCtxImpl<'a> {}
-
-impl<'a> From<&'a WindowHandle> for WinCtxImpl<'a> {
-    fn from(handle: &'a WindowHandle) -> Self {
-        WinCtxImpl {
-            handle,
-            text: Text::new(),
-        }
-    }
-}
+impl<'a> WinCtx<'a> for WinCtxImpl {}
 
 fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cursor> {
     gdk::Cursor::new_from_name(
