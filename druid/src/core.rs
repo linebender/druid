@@ -364,7 +364,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
         let had_active = self.state.has_active;
         let mut child_ctx = EventCtx {
-            win_ctx: ctx.win_ctx,
             cursor: ctx.cursor,
             command_queue: ctx.command_queue,
             window: &ctx.window,
@@ -569,7 +568,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         let mut child_ctx = UpdateCtx {
             window: ctx.window,
-            text_factory: ctx.text_factory,
+            //text_factory: ctx.text_factory,
             base_state: &mut self.state,
             window_id: ctx.window_id,
         };

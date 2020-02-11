@@ -683,6 +683,50 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_cursor(&mut self, cursor: &Cursor) {
+        unsafe {
+            let nscursor = class!(NSCursor);
+            let cursor: id = match cursor {
+                Cursor::Arrow => msg_send![nscursor, arrowCursor],
+                Cursor::IBeam => msg_send![nscursor, IBeamCursor],
+                Cursor::Crosshair => msg_send![nscursor, crosshairCursor],
+                Cursor::OpenHand => msg_send![nscursor, openHandCursor],
+                Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],
+                Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
+                Cursor::ResizeUpDown => msg_send![nscursor, resizeUpDownCursor],
+            };
+            let () = msg_send![cursor, set];
+        }
+    }
+
+    pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
+        let ti = time_interval_from_deadline(deadline);
+        let token = TimerToken::next();
+        unsafe {
+            let nstimer = class!(NSTimer);
+            let nsnumber = class!(NSNumber);
+            let user_info: id = msg_send![nsnumber, numberWithUnsignedInteger: token.into_raw()];
+            let selector = sel!(handleTimer:);
+            let view = self.nsview.load();
+            let _: id = msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
+        }
+        token
+    }
+
+    pub fn text(&self) -> Text {
+        Text::new()
+    }
+
+    pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        dialog::get_file_dialog_path(FileDialogType::Open, options)
+            .map(|s| FileInfo { path: s.into() })
+    }
+
+    pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        dialog::get_file_dialog_path(FileDialogType::Save, options)
+            .map(|s| FileInfo { path: s.into() })
+    }
+
     /// Set the title for this menu.
     pub fn set_title(&self, title: &str) {
         unsafe {
@@ -772,57 +816,7 @@ impl IdleHandle {
     }
 }
 
-impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
-    fn invalidate(&mut self) {
-        unsafe {
-            let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
-        }
-    }
-
-    fn text_factory(&mut self) -> &mut Text<'a> {
-        &mut self.text
-    }
-
-    fn set_cursor(&mut self, cursor: &Cursor) {
-        unsafe {
-            let nscursor = class!(NSCursor);
-            let cursor: id = match cursor {
-                Cursor::Arrow => msg_send![nscursor, arrowCursor],
-                Cursor::IBeam => msg_send![nscursor, IBeamCursor],
-                Cursor::Crosshair => msg_send![nscursor, crosshairCursor],
-                Cursor::OpenHand => msg_send![nscursor, openHandCursor],
-                Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],
-                Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
-                Cursor::ResizeUpDown => msg_send![nscursor, resizeUpDownCursor],
-            };
-            let () = msg_send![cursor, set];
-        }
-    }
-
-    fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken {
-        let ti = time_interval_from_deadline(deadline);
-        let token = TimerToken::next();
-        unsafe {
-            let nstimer = class!(NSTimer);
-            let nsnumber = class!(NSNumber);
-            let user_info: id = msg_send![nsnumber, numberWithUnsignedInteger: token.into_raw()];
-            let selector = sel!(handleTimer:);
-            let view = self.nsview.load();
-            let _: id = msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
-        }
-        token
-    }
-
-    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        dialog::get_file_dialog_path(FileDialogType::Open, options)
-            .map(|s| FileInfo { path: s.into() })
-    }
-
-    fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        dialog::get_file_dialog_path(FileDialogType::Save, options)
-            .map(|s| FileInfo { path: s.into() })
-    }
-}
+impl<'a> WinCtx<'a> for WinCtxImpl<'a> {}
 
 /// Convert an `Instant` into an NSTimeInterval, i.e. a fractional number
 /// of seconds from now.

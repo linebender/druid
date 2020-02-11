@@ -239,7 +239,7 @@ impl<T: Data> AppState<T> {
         }
     }
 
-    fn do_event(&mut self, source_id: WindowId, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
+    fn do_event(&mut self, source_id: WindowId, event: Event, _win_ctx: &mut dyn WinCtx) -> bool {
         // if the event was swallowed by the delegate we consider it handled?
         let event = match self.delegate_event(source_id, event) {
             Some(event) => event,
@@ -276,7 +276,7 @@ impl<T: Data> AppState<T> {
                 // rather than a WinCtx appropriate to the target window. This probably
                 // needs to get rethought.
                 for window in windows.iter_mut() {
-                    let handled = window.event(win_ctx, command_queue, event.clone(), data, env);
+                    let handled = window.event(command_queue, event.clone(), data, env);
                     any_handled |= handled;
                     if handled {
                         break;
@@ -285,7 +285,7 @@ impl<T: Data> AppState<T> {
                 any_handled
             }
             _ => match windows.get_mut(source_id) {
-                Some(win) => win.event(win_ctx, command_queue, event, data, env),
+                Some(win) => win.event(command_queue, event, data, env),
                 None => false,
             },
         }
@@ -311,10 +311,10 @@ impl<T: Data> AppState<T> {
         }
     }
 
-    fn do_update(&mut self, win_ctx: &mut dyn WinCtx) {
+    fn do_update(&mut self, _win_ctx: &mut dyn WinCtx) {
         // we send `update` to all windows, not just the active one:
         for window in self.windows.iter_mut() {
-            window.update(win_ctx, &self.data, &self.env);
+            window.update(&self.data, &self.env);
         }
         self.invalidate_and_finalize();
     }
@@ -447,7 +447,17 @@ impl<T: Data> DruidHandler<T> {
             .get_object::<FileDialogOptions>()
             .map(|opts| opts.to_owned())
             .unwrap_or_default();
-        let result = win_ctx.open_file_sync(options);
+        //FIXME: this is blocking; if we hold `borrow_mut` we are likely to cause
+        //a crash. as a workaround we take a clone of the window handle.
+        //it's less clear what the better solution would be.
+        let handle = self
+            .app_state
+            .borrow_mut()
+            .windows
+            .get_mut(window_id)
+            .map(|w| w.handle.clone());
+
+        let result = handle.and_then(|mut handle| handle.open_file_sync(options));
         if let Some(info) = result {
             let cmd = Command::new(sys_cmd::OPEN_FILE, info);
             let event = Event::TargetedCommand(window_id.into(), cmd);
@@ -462,7 +472,13 @@ impl<T: Data> DruidHandler<T> {
             .get_object::<FileDialogOptions>()
             .map(|opts| opts.to_owned())
             .unwrap_or_default();
-        let result = win_ctx.save_as_sync(options);
+        let handle = self
+            .app_state
+            .borrow_mut()
+            .windows
+            .get_mut(window_id)
+            .map(|w| w.handle.clone());
+        let result = handle.and_then(|mut handle| handle.save_as_sync(options));
         if let Some(info) = result {
             let cmd = Command::new(sys_cmd::SAVE_FILE, info);
             let event = Event::TargetedCommand(window_id.into(), cmd);

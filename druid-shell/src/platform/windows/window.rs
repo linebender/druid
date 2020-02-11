@@ -103,9 +103,8 @@ pub enum PresentStrategy {
     FlipRedirect,
 }
 
-#[derive(Default)]
 pub struct WindowHandle {
-    // Note: this clone of the dwrite factory might move into WinCtxImpl.
+    //FIXME: why is this optional?
     dwrite_factory: Option<DwriteFactory>,
     state: Weak<WindowState>,
 }
@@ -1192,6 +1191,59 @@ impl WindowHandle {
         }
     }
 
+    pub fn text(&self) -> Text {
+        Text::new(self.dwrite_factory.as_ref().unwrap())
+    }
+
+    /// Request a timer event.
+    ///
+    /// The return value is an identifier.
+    pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
+        let (id, elapse) = self.get_timer_slot(deadline);
+        let id = self
+            .get_hwnd()
+            // we reuse timer ids; if this is greater than u32::max we have a problem.
+            .map(|hwnd| unsafe { SetTimer(hwnd, id.into_raw() as usize, elapse, None) as u64 })
+            .unwrap_or(0);
+        TimerToken::from_raw(id)
+    }
+
+    /// Set the cursor icon.
+    pub fn set_cursor(&mut self, cursor: &Cursor) {
+        unsafe {
+            let cursor = LoadCursorW(0 as HINSTANCE, cursor.get_lpcwstr());
+            SetCursor(cursor);
+        }
+    }
+
+    //FIXME: these two methods will be reworked to avoid reentrancy problems.
+    // Currently, calling it may result in important messages being dropped.
+    /// Prompt the user to chose a file to open.
+    ///
+    /// Blocks while the user picks the file.
+    pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        let hwnd = self.get_hwnd()?;
+        unsafe {
+            get_file_dialog_path(hwnd, FileDialogType::Open, options)
+                .ok()
+                .map(|s| FileInfo { path: s.into() })
+        }
+    }
+
+    /// Prompt the user to chose a file to open.
+    ///
+    /// Blocks while the user picks the file.
+    pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        let hwnd = self.get_hwnd()?;
+        unsafe {
+            get_file_dialog_path(hwnd, FileDialogType::Save, options)
+                .ok()
+                .map(|os_str| FileInfo {
+                    path: os_str.into(),
+                })
+        }
+    }
+
     /// Get the raw HWND handle, for uses that are not wrapped in
     /// druid_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
@@ -1305,72 +1357,7 @@ impl IdleHandle {
 
 // Note: this has mostly methods moved from `WindowHandle`, so mostly forwards
 // to those. As a cleanup, some may be implemented more directly.
-impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
-    fn invalidate(&mut self) {
-        self.handle.invalidate();
-    }
-
-    /// Get a reference to the text factory.
-    fn text_factory(&mut self) -> &mut Text<'a> {
-        &mut self.text
-    }
-
-    /// Set the cursor icon.
-    fn set_cursor(&mut self, cursor: &Cursor) {
-        unsafe {
-            let cursor = LoadCursorW(0 as HINSTANCE, cursor.get_lpcwstr());
-            SetCursor(cursor);
-        }
-    }
-
-    /// Request a timer event.
-    ///
-    /// The return value is an identifier.
-    fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken {
-        let id = self
-            .handle
-            .get_hwnd()
-            .map(|hwnd| {
-                let (id, elapse) = self.handle.get_timer_slot(deadline);
-                unsafe {
-                    // we reuse timer ids; if this is greater than u32::max we have a problem.
-                    SetTimer(hwnd, id.into_raw() as usize, elapse, None) as u64
-                }
-            })
-            .unwrap_or(0);
-        TimerToken::from_raw(id)
-    }
-
-    //FIXME: these two methods will be reworked to avoid reentrancy problems.
-    // Currently, calling it may result in important messages being dropped.
-    /// Prompt the user to chose a file to open.
-    ///
-    /// Blocks while the user picks the file.
-    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        let hwnd = self.handle.get_hwnd()?;
-        unsafe {
-            get_file_dialog_path(hwnd, FileDialogType::Open, options)
-                .ok()
-                .map(|os_str| FileInfo {
-                    path: os_str.into(),
-                })
-        }
-    }
-
-    /// Prompt the user to chose a file to open.
-    ///
-    /// Blocks while the user picks the file.
-    fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        let hwnd = self.handle.get_hwnd()?;
-        unsafe {
-            get_file_dialog_path(hwnd, FileDialogType::Save, options)
-                .ok()
-                .map(|os_str| FileInfo {
-                    path: os_str.into(),
-                })
-        }
-    }
-}
+impl<'a> WinCtx<'a> for WinCtxImpl<'a> {}
 
 /// Casts render target to hwnd variant.
 unsafe fn cast_to_hwnd(dc: &DeviceContext) -> Option<HwndRenderTarget> {
@@ -1378,4 +1365,13 @@ unsafe fn cast_to_hwnd(dc: &DeviceContext) -> Option<HwndRenderTarget> {
         .cast()
         .ok()
         .map(|com_ptr| HwndRenderTarget::from_ptr(com_ptr))
+}
+
+impl Default for WindowHandle {
+    fn default() -> Self {
+        WindowHandle {
+            state: Default::default(),
+            dwrite_factory: DwriteFactory::new().ok(),
+        }
+    }
 }

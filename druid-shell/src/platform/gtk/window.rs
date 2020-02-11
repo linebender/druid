@@ -431,6 +431,59 @@ impl WindowHandle {
             state.window.queue_draw();
         }
     }
+
+    pub fn text(&self) -> Text {
+        Text::new()
+    }
+
+    pub fn request_timer(&self, deadline: Instant) -> TimerToken {
+        let interval = deadline
+            .checked_duration_since(Instant::now())
+            .unwrap_or_default()
+            .as_millis();
+        let interval = match u32::try_from(interval) {
+            Ok(iv) => iv,
+            Err(_) => {
+                log::warn!("timer duration exceeds gtk max of 2^32 millis");
+                u32::max_value()
+            }
+        };
+
+        let token = TimerToken::next();
+        let handle = self.clone();
+
+        gdk::threads_add_timeout(interval, move || {
+            if let Some(state) = handle.state.upgrade() {
+                if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
+                    let mut ctx = WinCtxImpl::from(&handle);
+                    handler_borrow.timer(token, &mut ctx);
+                    return false;
+                }
+            }
+            true
+        });
+        token
+    }
+
+    pub fn set_cursor(&mut self, cursor: &Cursor) {
+        if let Some(gdk_window) = self.state.upgrade().and_then(|s| s.window.get_window()) {
+            let cursor = make_gdk_cursor(cursor, &gdk_window);
+            gdk_window.set_cursor(cursor.as_ref());
+        }
+    }
+
+    pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        self.file_dialog(FileDialogType::Open, options)
+            .ok()
+            .map(|s| FileInfo { path: s.into() })
+    }
+
+    pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        self.file_dialog(FileDialogType::Save, options)
+            .ok()
+            .map(|s| FileInfo { path: s.into() })
+    }
+
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
         self.state.upgrade().map(|s| IdleHandle {
@@ -594,71 +647,7 @@ fn run_idle(state: &Arc<WindowState>) -> bool {
     false
 }
 
-impl<'a> WinCtx<'a> for WinCtxImpl<'a> {
-    fn invalidate(&mut self) {
-        self.handle.invalidate();
-    }
-
-    fn text_factory(&mut self) -> &mut Text<'a> {
-        &mut self.text
-    }
-
-    fn set_cursor(&mut self, cursor: &Cursor) {
-        if let Some(gdk_window) = self
-            .handle
-            .state
-            .upgrade()
-            .and_then(|s| s.window.get_window())
-        {
-            let cursor = make_gdk_cursor(cursor, &gdk_window);
-            gdk_window.set_cursor(cursor.as_ref());
-        }
-    }
-
-    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        self.handle
-            .file_dialog(FileDialogType::Open, options)
-            .ok()
-            .map(|s| FileInfo { path: s.into() })
-    }
-
-    fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        self.handle
-            .file_dialog(FileDialogType::Save, options)
-            .ok()
-            .map(|s| FileInfo { path: s.into() })
-    }
-
-    fn request_timer(&mut self, deadline: Instant) -> TimerToken {
-        let interval = deadline
-            .checked_duration_since(Instant::now())
-            .unwrap_or_default()
-            .as_millis();
-        let interval = match u32::try_from(interval) {
-            Ok(iv) => iv,
-            Err(_) => {
-                log::warn!("timer duration exceeds gtk max of 2^32 millis");
-                u32::max_value()
-            }
-        };
-
-        let token = TimerToken::next();
-
-        let handle = self.handle.clone();
-
-        gdk::threads_add_timeout(interval, move || {
-            if let Some(state) = handle.state.upgrade() {
-                if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                    let mut ctx = WinCtxImpl::from(&handle);
-                    handler_borrow.timer(token, &mut ctx);
-                    return false;
-                }
-            }
-            true
-        });
-        token
-    }
-}
+impl<'a> WinCtx<'a> for WinCtxImpl<'a> {}
 
 impl<'a> From<&'a WindowHandle> for WinCtxImpl<'a> {
     fn from(handle: &'a WindowHandle) -> Self {

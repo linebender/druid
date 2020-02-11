@@ -23,8 +23,8 @@ use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::{
-    Affine, Command, Cursor, Insets, Rect, Size, Target, Text, TimerToken, WidgetId, WinCtx,
-    WindowHandle, WindowId,
+    Affine, Command, Cursor, Insets, Rect, Size, Target, Text, TimerToken, WidgetId, WindowHandle,
+    WindowId,
 };
 
 /// A mutable context provided to event handling methods of widgets.
@@ -33,15 +33,13 @@ use crate::{
 /// in the widget's appearance, to schedule a repaint.
 ///
 /// [`request_paint`]: #method.request_paint
-pub struct EventCtx<'a, 'b> {
+pub struct EventCtx<'a> {
     // Note: there's a bunch of state that's just passed down, might
     // want to group that into a single struct.
-    pub(crate) win_ctx: &'a mut dyn WinCtx<'b>,
     pub(crate) cursor: &'a mut Option<Cursor>,
     /// Commands submitted to be run after this event.
     pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) window_id: WindowId,
-    // TODO: migrate most usage of `WindowHandle` to `WinCtx` instead.
     pub(crate) window: &'a WindowHandle,
     pub(crate) base_state: &'a mut BaseState,
     pub(crate) focus_widget: Option<WidgetId>,
@@ -71,8 +69,8 @@ pub struct LifeCycleCtx<'a> {
 /// in the widget's appearance, to schedule a repaint.
 ///
 /// [`request_paint`]: #method.request_paint
-pub struct UpdateCtx<'a, 'b: 'a> {
-    pub(crate) text_factory: &'a mut Text<'b>,
+pub struct UpdateCtx<'a> {
+    //pub(crate) text_factory: &'a mut Text<'b>,
     pub(crate) window: &'a WindowHandle,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like
@@ -123,7 +121,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
 #[derive(Debug, Clone)]
 pub struct Region(Rect);
 
-impl<'a, 'b> EventCtx<'a, 'b> {
+impl<'a> EventCtx<'a> {
     #[deprecated(since = "0.5.0", note = "use request_paint instead")]
     pub fn invalidate(&mut self) {
         // Note: for the current functionality, we could shortcut and just
@@ -163,8 +161,8 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     }
 
     /// Get an object which can create text layouts.
-    pub fn text(&mut self) -> &mut Text<'b> {
-        self.win_ctx.text_factory()
+    pub fn text(&mut self) -> Text {
+        self.window.text()
     }
 
     /// Set the cursor icon.
@@ -225,11 +223,6 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     }
 
     /// Returns a reference to the current `WindowHandle`.
-    ///
-    /// Note: we're in the process of migrating towards providing functionality
-    /// provided by the window handle in mutable contexts instead. If you're
-    /// considering a new use of this method, try adding it to `WinCtx` and
-    /// plumbing it through instead.
     pub fn window(&self) -> &WindowHandle {
         &self.window
     }
@@ -323,7 +316,7 @@ impl<'a, 'b> EventCtx<'a, 'b> {
     /// request with the event.
     pub fn request_timer(&mut self, deadline: Instant) -> TimerToken {
         self.base_state.request_timer = true;
-        self.win_ctx.request_timer(deadline)
+        self.window.request_timer(deadline)
     }
 
     /// The layout size.
@@ -447,7 +440,7 @@ impl<'a> LifeCycleCtx<'a> {
     }
 }
 
-impl<'a, 'b> UpdateCtx<'a, 'b> {
+impl<'a> UpdateCtx<'a> {
     #[deprecated(since = "0.5.0", note = "use request_paint instead")]
     pub fn invalidate(&mut self) {
         self.base_state.needs_inval = true;
@@ -477,15 +470,11 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     }
 
     /// Get an object which can create text layouts.
-    pub fn text(&mut self) -> &mut Text<'b> {
-        self.text_factory
+    pub fn text(&mut self) -> Text {
+        self.window.text()
     }
 
     /// Returns a reference to the current `WindowHandle`.
-    ///
-    /// Note: For the most part we're trying to migrate `WindowHandle`
-    /// functionality to `WinCtx`, but the update flow is the exception, as
-    /// it's shared across multiple windows.
     //TODO: can we delete this? where is it used?
     pub fn window(&self) -> &WindowHandle {
         &self.window

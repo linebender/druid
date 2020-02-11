@@ -19,7 +19,7 @@ use std::time::Instant;
 
 use crate::kurbo::{Insets, Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
-use crate::shell::{Counter, Cursor, WinCtx, WindowHandle};
+use crate::shell::{Counter, Cursor, WindowHandle};
 
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::win_handler::RUN_COMMANDS_TOKEN;
@@ -121,7 +121,6 @@ impl<T: Data> Window<T> {
 
     pub(crate) fn event(
         &mut self,
-        win_ctx: &mut dyn WinCtx,
         queue: &mut CommandQueue,
         event: Event,
         data: &mut T,
@@ -149,7 +148,6 @@ impl<T: Data> Window<T> {
         let mut base_state = BaseState::new(self.root.id());
         let is_handled = {
             let mut ctx = EventCtx {
-                win_ctx,
                 cursor: &mut cursor,
                 command_queue: queue,
                 base_state: &mut base_state,
@@ -174,7 +172,7 @@ impl<T: Data> Window<T> {
         }
 
         if let Some(cursor) = cursor {
-            win_ctx.set_cursor(&cursor);
+            self.handle.set_cursor(&cursor);
         }
 
         // If children are changed during the handling of an event,
@@ -224,12 +222,12 @@ impl<T: Data> Window<T> {
         }
     }
 
-    pub(crate) fn update(&mut self, win_ctx: &mut dyn WinCtx, data: &T, env: &Env) {
+    pub(crate) fn update(&mut self, data: &T, env: &Env) {
         self.update_title(data, env);
 
         let mut base_state = BaseState::new(self.root.id());
         let mut update_ctx = UpdateCtx {
-            text_factory: win_ctx.text_factory(),
+            //text_factory: win_ctx.text_factory(),
             base_state: &mut base_state,
             window: &self.handle,
             window_id: self.id,
