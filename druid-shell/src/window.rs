@@ -130,6 +130,46 @@ impl WindowHandle {
         self.0.set_menu(menu.into_inner())
     }
 
+    /// Get access to a type that can perform text layout.
+    pub fn text(&self) -> Text {
+        self.0.text()
+    }
+
+    /// Schedule a timer.
+    ///
+    /// This causes a [`WinHandler::timer()`] call at the deadline. The
+    /// return value is a token that can be used to associate the request
+    /// with the handler call.
+    ///
+    /// Note that this is not a precise timer. On Windows, the typical
+    /// resolution is around 10ms. Therefore, it's best used for things
+    /// like blinking a cursor or triggering tooltips, not for anything
+    /// requiring precision.
+    ///
+    /// [`WinHandler::timer()`]: trait.WinHandler.html#tymethod.timer
+    pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
+        self.0.request_timer(deadline)
+    }
+
+    /// Set the cursor icon.
+    pub fn set_cursor(&mut self, cursor: &Cursor) {
+        self.0.set_cursor(cursor)
+    }
+
+    /// Prompt the user to chose a file to open.
+    ///
+    /// Blocks while the user picks the file.
+    pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        self.0.open_file_sync(options)
+    }
+
+    /// Prompt the user to chose a path for saving.
+    ///
+    /// Blocks while the user picks a file.
+    pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        self.0.save_as_sync(options)
+    }
+
     /// Display a pop-up menu at the given position.
     ///
     /// `Point` is in the coordinate space of the window.
@@ -192,42 +232,7 @@ impl WindowBuilder {
 }
 
 /// A context supplied to most `WinHandler` methods.
-pub trait WinCtx<'a> {
-    /// Invalidate the entire window.
-    ///
-    /// TODO: finer grained invalidation.
-    fn invalidate(&mut self);
-
-    /// Get a reference to an object that can do text layout.
-    fn text_factory(&mut self) -> &mut Text<'a>;
-
-    /// Set the cursor icon.
-    fn set_cursor(&mut self, cursor: &Cursor);
-
-    /// Schedule a timer.
-    ///
-    /// This causes a [`WinHandler::timer()`] call at the deadline. The
-    /// return value is a token that can be used to associate the request
-    /// with the handler call.
-    ///
-    /// Note that this is not a precise timer. On Windows, the typical
-    /// resolution is around 10ms. Therefore, it's best used for things
-    /// like blinking a cursor or triggering tooltips, not for anything
-    /// requiring precision.
-    ///
-    /// [`WinHandler::timer()`]: trait.WinHandler.html#tymethod.timer
-    fn request_timer(&mut self, deadline: std::time::Instant) -> TimerToken;
-
-    /// Prompt the user to chose a file to open.
-    ///
-    /// Blocks while the user picks the file.
-    fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo>;
-
-    /// Prompt the user to chose a path for saving.
-    ///
-    /// Blocks while the user picks a file.
-    fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo>;
-}
+pub trait WinCtx<'a> {}
 
 /// App behavior, supplied by the app.
 ///

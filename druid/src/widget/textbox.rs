@@ -201,7 +201,7 @@ impl Widget<String> for TextBox {
         // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);
 
-        let mut text_layout = self.get_layout(ctx.text(), &data, env);
+        let mut text_layout = self.get_layout(&mut ctx.text(), &data, env);
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
@@ -326,7 +326,7 @@ impl Widget<String> for TextBox {
                     }
                     _ => {}
                 }
-                text_layout = self.get_layout(ctx.text(), &data, env);
+                text_layout = self.get_layout(&mut ctx.text(), &data, env);
                 self.update_hscroll(&text_layout);
                 ctx.request_paint();
             }

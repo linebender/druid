@@ -54,9 +54,6 @@ struct Inner<T> {
     cmds: CommandQueue,
 }
 
-/// A `WinCtx` impl that we can conjure from the ether.
-pub struct MockWinCtx<'a, 't: 'a>(&'a mut Text<'t>);
-
 /// A way to clean up resources when our target goes out of scope.
 // the inner type is an option so that we can take ownership in `drop` even
 // though self is `& mut`.
@@ -145,7 +142,7 @@ impl<T: Data> Harness<'_, T> {
     ///
     /// Commands dispatched during `update` will not be sent?
     pub fn event(&mut self, event: Event) {
-        self.inner.event(event, &mut self.piet);
+        self.inner.event(event);
         self.process_commands();
         self.update();
     }
@@ -166,7 +163,7 @@ impl<T: Data> Harness<'_, T> {
 
     //TODO: should we expose this? I don't think so?
     fn update(&mut self) {
-        self.inner.update(&mut self.piet)
+        self.inner.update()
     }
 
     /// Only do a layout pass, without painting
@@ -181,15 +178,9 @@ impl<T: Data> Harness<'_, T> {
 }
 
 impl<T: Data> Inner<T> {
-    fn event(&mut self, event: Event, piet: &mut Piet) {
-        let mut win_ctx = MockWinCtx(piet.text());
-        self.window.event(
-            &mut win_ctx,
-            &mut self.cmds,
-            event,
-            &mut self.data,
-            &self.env,
-        );
+    fn event(&mut self, event: Event) {
+        self.window
+            .event(&mut self.cmds, event, &mut self.data, &self.env);
     }
 
     fn lifecycle(&mut self, event: LifeCycle) {
@@ -197,9 +188,8 @@ impl<T: Data> Inner<T> {
             .lifecycle(&mut self.cmds, &event, &self.data, &self.env);
     }
 
-    fn update(&mut self, piet: &mut Piet) {
-        let mut win_ctx = MockWinCtx(piet.text());
-        self.window.update(&mut win_ctx, &self.data, &self.env);
+    fn update(&mut self) {
+        self.window.update(&self.data, &self.env);
     }
 
     fn layout(&mut self, piet: &mut Piet) {
@@ -210,25 +200,6 @@ impl<T: Data> Inner<T> {
     fn paint(&mut self, piet: &mut Piet) {
         self.window
             .do_paint(piet, &mut self.cmds, &self.data, &self.env);
-    }
-}
-
-impl<'a, 't> WinCtx<'t> for MockWinCtx<'a, 't> {
-    fn invalidate(&mut self) {}
-    fn text_factory(&mut self) -> &mut Text<'t> {
-        self.0
-    }
-
-    fn set_cursor(&mut self, _cursor: &Cursor) {}
-    //TODO: we could actually implement timers if we were ambitious
-    fn request_timer(&mut self, _deadline: std::time::Instant) -> TimerToken {
-        TimerToken::next()
-    }
-    fn open_file_sync(&mut self, _: FileDialogOptions) -> Option<FileInfo> {
-        None
-    }
-    fn save_as_sync(&mut self, _: FileDialogOptions) -> Option<FileInfo> {
-        None
     }
 }
 

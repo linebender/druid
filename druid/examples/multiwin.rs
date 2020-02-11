@@ -50,7 +50,7 @@ trait EventCtxExt {
     fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>);
 }
 
-impl EventCtxExt for EventCtx<'_, '_> {
+impl EventCtxExt for EventCtx<'_> {
     fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>) {
         let cmd = Command::new(druid::commands::SET_MENU, menu);
         self.submit_command(cmd, None);
