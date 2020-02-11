@@ -255,20 +255,24 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 
     fn point_hits_vertical_bar(&self, viewport: Rect, pos: Point, env: &Env) -> bool {
         if viewport.height() < self.child_size.height {
-            let bounds = self.calc_vertical_bar_bounds(viewport, &env);
-            return pos.y > bounds.y0 && pos.y < bounds.y1 && pos.x > bounds.x0;
+            // Stretch hitbox to edge of widget
+            let mut bounds = self.calc_vertical_bar_bounds(viewport, &env);
+            bounds.x1 = self.scroll_offset.x + viewport.width();
+            bounds.contains(pos)
+        } else {
+            false
         }
-
-        false
     }
 
     fn point_hits_horizontal_bar(&self, viewport: Rect, pos: Point, env: &Env) -> bool {
         if viewport.width() < self.child_size.width {
-            let bounds = self.calc_horizontal_bar_bounds(viewport, &env);
-            return pos.x > bounds.x0 && pos.x < bounds.x1 && pos.y > bounds.y0;
+            // Stretch hitbox to edge of widget
+            let mut bounds = self.calc_horizontal_bar_bounds(viewport, &env);
+            bounds.y1 = self.scroll_offset.y + viewport.height();
+            bounds.contains(pos)
+        } else {
+            false
         }
-
-        false
     }
 }
 
