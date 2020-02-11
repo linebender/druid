@@ -349,7 +349,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 _ => unreachable!(),
             }
         } else {
-            let child_event = event.transform_scroll(self.scroll_offset, viewport);
+            let force_event = self.child.is_hot() || self.child.is_active();
+            let child_event = event.transform_scroll(self.scroll_offset, viewport, force_event);
             if let Some(child_event) = child_event {
                 self.child.event(ctx, &child_event, data, env)
             };
