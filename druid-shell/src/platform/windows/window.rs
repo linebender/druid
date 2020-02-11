@@ -19,7 +19,6 @@
 use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::mem;
-use std::ops::Deref;
 use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
@@ -172,17 +171,8 @@ struct WndState {
     //TODO: track surrogate orphan
 }
 
-/// A structure that owns resources for the `WinCtx` (so it lasts long enough).
-struct WinCtxOwner<'a> {
-    handle: std::cell::Ref<'a, WindowHandle>,
-    dwrite: &'a DwriteFactory,
-}
-
 /// The Windows implementation of the context provided to WinHandler calls.
-struct WinCtxImpl<'a> {
-    handle: &'a WindowHandle,
-    text: Text<'a>,
-}
+struct WinCtxImpl;
 
 /// State for DirectComposition. This is optional because it is only supported
 /// on 8.1 and up.
@@ -248,19 +238,13 @@ impl WndState {
     }
 
     // Renders but does not present.
-    fn render(
-        &mut self,
-        d2d: &D2DFactory,
-        dw: &DwriteFactory,
-        handle: &RefCell<WindowHandle>,
-        c: &mut WinCtxOwner,
-    ) {
+    fn render(&mut self, d2d: &D2DFactory, dw: &DwriteFactory, handle: &RefCell<WindowHandle>) {
         let rt = self.render_target.as_mut().unwrap();
         rt.begin_draw();
         let anim;
         {
             let mut piet_ctx = Piet::new(d2d, dw, rt);
-            anim = self.handler.paint(&mut piet_ctx, &mut c.ctx());
+            anim = self.handler.paint(&mut piet_ctx, &mut WinCtxImpl);
             if let Err(e) = piet_ctx.finish() {
                 error!("piet error on render: {:?}", e);
             }
@@ -292,31 +276,13 @@ impl MyWndProc {
     }
 }
 
-impl<'a> WinCtxOwner<'a> {
-    fn new(handle: std::cell::Ref<'a, WindowHandle>, dwrite: &'a DwriteFactory) -> WinCtxOwner<'a> {
-        WinCtxOwner { handle, dwrite }
-    }
-
-    fn ctx<'b>(&'b mut self) -> WinCtxImpl<'b>
-    where
-        'a: 'b,
-    {
-        let text = Text::new(&self.dwrite);
-        WinCtxImpl {
-            handle: self.handle.deref(),
-            text,
-        }
-    }
-}
-
 impl WndProc for MyWndProc {
     fn connect(&self, handle: &WindowHandle, mut state: WndState) {
         *self.handle.borrow_mut() = handle.clone();
         state.handler.connect(&handle.clone().into());
         *self.state.borrow_mut() = Some(state);
         if let Ok(mut s) = self.state.try_borrow_mut() {
-            let mut ctx = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-            s.as_mut().unwrap().handler.connected(&mut ctx.ctx());
+            s.as_mut().unwrap().handler.connected(&mut WinCtxImpl);
         }
     }
 
@@ -349,8 +315,7 @@ impl WndProc for MyWndProc {
             WM_SETFOCUS => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.got_focus(&mut c.ctx());
+                    s.handler.got_focus(&mut WinCtxImpl);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -363,14 +328,8 @@ impl WndProc for MyWndProc {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                     }
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.rebuild_resources(&mut c.ctx());
-                    s.render(
-                        &self.d2d_factory,
-                        &self.dwrite_factory,
-                        &self.handle,
-                        &mut c,
-                    );
+                    s.handler.rebuild_resources(&mut WinCtxImpl);
+                    s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
                     if let Some(ref mut ds) = s.dcomp_state {
                         if !ds.sizing {
                             (*ds.swap_chain).Present(1, 0);
@@ -390,15 +349,8 @@ impl WndProc for MyWndProc {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                         {
-                            let mut c =
-                                WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                            s.handler.rebuild_resources(&mut c.ctx());
-                            s.render(
-                                &self.d2d_factory,
-                                &self.dwrite_factory,
-                                &self.handle,
-                                &mut c,
-                            );
+                            s.handler.rebuild_resources(&mut WinCtxImpl);
+                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
                         }
 
                         if let Some(ref mut ds) = s.dcomp_state {
@@ -431,18 +383,9 @@ impl WndProc for MyWndProc {
                             0,
                         );
                         if SUCCEEDED(res) {
-                            let mut c =
-                                WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                            s.handler.rebuild_resources(&mut c.ctx());
+                            s.handler.rebuild_resources(&mut WinCtxImpl);
                             s.rebuild_render_target(&self.d2d_factory);
-                            let mut c =
-                                WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                            s.render(
-                                &self.d2d_factory,
-                                &self.dwrite_factory,
-                                &self.handle,
-                                &mut c,
-                            );
+                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
                             (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
                         } else {
                             error!("ResizeBuffers failed: 0x{:x}", res);
@@ -468,8 +411,7 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     let width = LOWORD(lparam as u32) as u32;
                     let height = HIWORD(lparam as u32) as u32;
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.size(width, height, &mut c.ctx());
+                    s.handler.size(width, height, &mut WinCtxImpl);
                     let use_hwnd = if let Some(ref dcomp_state) = s.dcomp_state {
                         dcomp_state.sizing
                     } else {
@@ -499,14 +441,7 @@ impl WndProc for MyWndProc {
                         }
                         if SUCCEEDED(res) {
                             s.rebuild_render_target(&self.d2d_factory);
-                            let mut c =
-                                WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                            s.render(
-                                &self.d2d_factory,
-                                &self.dwrite_factory,
-                                &self.handle,
-                                &mut c,
-                            );
+                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
                             if let Some(ref mut dcomp_state) = s.dcomp_state {
                                 (*dcomp_state.swap_chain).Present(0, 0);
                                 let _ = dcomp_state.dcomp_device.commit();
@@ -524,9 +459,8 @@ impl WndProc for MyWndProc {
             WM_COMMAND => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
                     s.handler
-                        .command(LOWORD(wparam as u32) as u32, &mut c.ctx());
+                        .command(LOWORD(wparam as u32) as u32, &mut WinCtxImpl);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -551,8 +485,7 @@ impl WndProc for MyWndProc {
                     let is_repeat = (lparam & 0xFFFF) > 0;
                     let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
 
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    if s.handler.key_down(event, &mut c.ctx()) {
+                    if s.handler.key_down(event, &mut WinCtxImpl) {
                         Some(0)
                     } else {
                         None
@@ -579,8 +512,7 @@ impl WndProc for MyWndProc {
                     let is_repeat = (lparam & 0xFFFF) > 0;
                     let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
 
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    if s.handler.key_down(event, &mut c.ctx()) {
+                    if s.handler.key_down(event, &mut WinCtxImpl) {
                         Some(0)
                     } else {
                         None
@@ -597,9 +529,8 @@ impl WndProc for MyWndProc {
                     let modifiers = get_mod_state();
                     let is_repeat = false;
                     let text = s.stashed_char.take();
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
                     let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
-                    s.handler.key_up(event, &mut c.ctx());
+                    s.handler.key_up(event, &mut WinCtxImpl);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -614,8 +545,7 @@ impl WndProc for MyWndProc {
                     let delta_y = HIWORD(wparam as u32) as i16 as f64;
                     let delta = Vec2::new(0.0, -delta_y);
                     let mods = get_mod_state();
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.wheel(delta, mods, &mut c.ctx());
+                    s.handler.wheel(delta, mods, &mut WinCtxImpl);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -627,8 +557,7 @@ impl WndProc for MyWndProc {
                     let delta_x = HIWORD(wparam as u32) as i16 as f64;
                     let delta = Vec2::new(delta_x, 0.0);
                     let mods = get_mod_state();
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.wheel(delta, mods, &mut c.ctx());
+                    s.handler.wheel(delta, mods, &mut WinCtxImpl);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -658,8 +587,7 @@ impl WndProc for MyWndProc {
                         button,
                         count: 0,
                     };
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.mouse_move(&event, &mut c.ctx());
+                    s.handler.mouse_move(&event, &mut WinCtxImpl);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -706,11 +634,10 @@ impl WndProc for MyWndProc {
                         button,
                         count,
                     };
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
                     if count > 0 {
-                        s.handler.mouse_down(&event, &mut c.ctx());
+                        s.handler.mouse_down(&event, &mut WinCtxImpl);
                     } else {
-                        s.handler.mouse_up(&event, &mut c.ctx());
+                        s.handler.mouse_up(&event, &mut WinCtxImpl);
                     }
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
@@ -726,8 +653,7 @@ impl WndProc for MyWndProc {
             WM_DESTROY => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.destroy(&mut c.ctx());
+                    s.handler.destroy(&mut WinCtxImpl);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -742,8 +668,7 @@ impl WndProc for MyWndProc {
                 self.handle.borrow().free_timer_slot(token);
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
-                    s.handler.timer(token, &mut c.ctx());
+                    s.handler.timer(token, &mut WinCtxImpl);
                 }
                 Some(1)
             }
@@ -752,10 +677,9 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     let queue = self.handle.borrow().take_idle_queue();
                     for callback in queue {
-                        let mut c = WinCtxOwner::new(self.handle.borrow(), &self.dwrite_factory);
                         match callback {
                             IdleKind::Callback(it) => it.call(s.handler.as_any()),
-                            IdleKind::Token(token) => s.handler.idle(token, &mut c.ctx()),
+                            IdleKind::Token(token) => s.handler.idle(token, &mut WinCtxImpl),
                         }
                     }
                     Some(0)
@@ -1357,7 +1281,7 @@ impl IdleHandle {
 
 // Note: this has mostly methods moved from `WindowHandle`, so mostly forwards
 // to those. As a cleanup, some may be implemented more directly.
-impl<'a> WinCtx<'a> for WinCtxImpl<'a> {}
+impl<'a> WinCtx<'a> for WinCtxImpl {}
 
 /// Casts render target to hwnd variant.
 unsafe fn cast_to_hwnd(dc: &DeviceContext) -> Option<HwndRenderTarget> {
