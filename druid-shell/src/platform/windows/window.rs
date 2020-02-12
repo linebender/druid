@@ -269,13 +269,9 @@ impl MyWndProc {
 }
 
 impl WndProc for MyWndProc {
-    fn connect(&self, handle: &WindowHandle, mut state: WndState) {
+    fn connect(&self, handle: &WindowHandle, state: WndState) {
         *self.handle.borrow_mut() = handle.clone();
-        state.handler.connect(&handle.clone().into());
         *self.state.borrow_mut() = Some(state);
-        if let Ok(mut s) = self.state.try_borrow_mut() {
-            s.as_mut().unwrap().handler.connected();
-        }
     }
 
     #[allow(clippy::cognitive_complexity)]
@@ -299,6 +295,11 @@ impl WndProc for MyWndProc {
                 self.state.borrow_mut().as_mut().unwrap().dcomp_state = dcomp_state;
                 if let Some(state) = self.handle.borrow().state.upgrade() {
                     state.hwnd.set(hwnd);
+                }
+                let handle = self.handle.borrow().to_owned();
+                if let Some(state) = self.state.borrow_mut().as_mut() {
+                    state.handler.connect(&handle.into());
+                    state.handler.connected();
                 }
 
                 Some(0)
