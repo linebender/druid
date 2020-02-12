@@ -35,7 +35,7 @@ fn propogate_hot() {
     let padding_rec = Recording::default();
     let button_rec = Recording::default();
 
-    let widget = Split::horizontal(
+    let widget = Split::vertical(
         SizedBox::empty().with_id(empty),
         Button::new("hot", |_, _, _| {})
             .record(&button_rec)
