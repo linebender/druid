@@ -15,14 +15,12 @@
 //! GTK implementation of menus.
 
 use gdk::ModifierType;
-use gtk::AccelGroup;
-use gtk::GtkMenuExt;
-use gtk::Menu as GtkMenu;
-use gtk::MenuBar as GtkMenuBar;
-use gtk::MenuItem as GtkMenuItem;
-use gtk::{GtkMenuItemExt, MenuShellExt, SeparatorMenuItemBuilder, WidgetExt};
+use gtk::{
+    AccelGroup, GtkMenuExt, GtkMenuItemExt, Menu as GtkMenu, MenuBar as GtkMenuBar,
+    MenuItem as GtkMenuItem, MenuShellExt, SeparatorMenuItemBuilder, WidgetExt,
+};
 
-use super::window::{WinCtxImpl, WindowHandle};
+use super::window::WindowHandle;
 use crate::common_util::strip_access_key;
 use crate::hotkey::{HotKey, KeyCompare, RawMods};
 use crate::keyboard::KeyModifiers;
@@ -89,7 +87,7 @@ impl Menu {
                     let handle = handle.clone();
                     item.connect_activate(move |_| {
                         if let Some(state) = handle.state.upgrade() {
-                            state.handler.borrow_mut().command(id, &mut WinCtxImpl);
+                            state.handler.borrow_mut().command(id);
                         }
                     });
 

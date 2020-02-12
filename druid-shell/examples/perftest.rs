@@ -19,9 +19,7 @@ use time::Time;
 use piet_common::kurbo::{Line, Rect};
 use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
-use druid_shell::{
-    Application, KeyEvent, RunLoop, WinCtx, WinHandler, WindowBuilder, WindowHandle,
-};
+use druid_shell::{Application, KeyEvent, RunLoop, WinHandler, WindowBuilder, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
@@ -37,7 +35,7 @@ impl WinHandler for PerfTest {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut Piet, _ctx: &mut dyn WinCtx) -> bool {
+    fn paint(&mut self, piet: &mut Piet) -> bool {
         let (width, height) = self.size;
         let rect = Rect::new(0.0, 0.0, width, height);
         piet.fill(rect, &BG_COLOR);
@@ -80,19 +78,19 @@ impl WinHandler for PerfTest {
         true
     }
 
-    fn command(&mut self, id: u32, _ctx: &mut dyn WinCtx) {
+    fn command(&mut self, id: u32) {
         match id {
             0x100 => self.handle.close(),
             _ => println!("unexpected id {}", id),
         }
     }
 
-    fn key_down(&mut self, event: KeyEvent, _ctx: &mut dyn WinCtx) -> bool {
+    fn key_down(&mut self, event: KeyEvent) -> bool {
         println!("keydown: {:?}", event);
         false
     }
 
-    fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
+    fn size(&mut self, width: u32, height: u32) {
         let dpi = self.handle.get_dpi();
         let dpi_scale = dpi as f64 / 96.0;
         let width_f = (width as f64) / dpi_scale;
@@ -100,7 +98,7 @@ impl WinHandler for PerfTest {
         self.size = (width_f, height_f);
     }
 
-    fn destroy(&mut self, _ctx: &mut dyn WinCtx) {
+    fn destroy(&mut self) {
         Application::quit()
     }
 

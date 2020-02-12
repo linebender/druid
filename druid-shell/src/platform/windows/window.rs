@@ -59,7 +59,7 @@ use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::window::{IdleToken, Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 extern "system" {
     pub fn DwmFlush();
@@ -103,8 +103,7 @@ pub enum PresentStrategy {
 }
 
 pub struct WindowHandle {
-    //FIXME: why is this optional?
-    dwrite_factory: Option<DwriteFactory>,
+    dwrite_factory: DwriteFactory,
     state: Weak<WindowState>,
 }
 
@@ -131,10 +130,6 @@ struct WindowState {
     dpi: Cell<f32>,
     wndproc: Box<dyn WndProc>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
-
-    // This field doesn't really need to be shared; it could be plumbed
-    // as a mutable reference down through WinCtx, but that would require
-    // some refactoring.
     timers: Arc<Mutex<TimerSlots>>,
 }
 
@@ -170,9 +165,6 @@ struct WndState {
     stashed_char: Option<char>,
     //TODO: track surrogate orphan
 }
-
-/// The Windows implementation of the context provided to WinHandler calls.
-struct WinCtxImpl;
 
 /// State for DirectComposition. This is optional because it is only supported
 /// on 8.1 and up.
@@ -244,7 +236,7 @@ impl WndState {
         let anim;
         {
             let mut piet_ctx = Piet::new(d2d, dw, rt);
-            anim = self.handler.paint(&mut piet_ctx, &mut WinCtxImpl);
+            anim = self.handler.paint(&mut piet_ctx);
             if let Err(e) = piet_ctx.finish() {
                 error!("piet error on render: {:?}", e);
             }
@@ -282,7 +274,7 @@ impl WndProc for MyWndProc {
         state.handler.connect(&handle.clone().into());
         *self.state.borrow_mut() = Some(state);
         if let Ok(mut s) = self.state.try_borrow_mut() {
-            s.as_mut().unwrap().handler.connected(&mut WinCtxImpl);
+            s.as_mut().unwrap().handler.connected();
         }
     }
 
@@ -315,7 +307,7 @@ impl WndProc for MyWndProc {
             WM_SETFOCUS => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    s.handler.got_focus(&mut WinCtxImpl);
+                    s.handler.got_focus();
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -328,7 +320,7 @@ impl WndProc for MyWndProc {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                     }
-                    s.handler.rebuild_resources(&mut WinCtxImpl);
+                    s.handler.rebuild_resources();
                     s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
                     if let Some(ref mut ds) = s.dcomp_state {
                         if !ds.sizing {
@@ -349,7 +341,7 @@ impl WndProc for MyWndProc {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                         {
-                            s.handler.rebuild_resources(&mut WinCtxImpl);
+                            s.handler.rebuild_resources();
                             s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
                         }
 
@@ -383,7 +375,7 @@ impl WndProc for MyWndProc {
                             0,
                         );
                         if SUCCEEDED(res) {
-                            s.handler.rebuild_resources(&mut WinCtxImpl);
+                            s.handler.rebuild_resources();
                             s.rebuild_render_target(&self.d2d_factory);
                             s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
                             (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
@@ -411,7 +403,7 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     let width = LOWORD(lparam as u32) as u32;
                     let height = HIWORD(lparam as u32) as u32;
-                    s.handler.size(width, height, &mut WinCtxImpl);
+                    s.handler.size(width, height);
                     let use_hwnd = if let Some(ref dcomp_state) = s.dcomp_state {
                         dcomp_state.sizing
                     } else {
@@ -459,8 +451,7 @@ impl WndProc for MyWndProc {
             WM_COMMAND => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    s.handler
-                        .command(LOWORD(wparam as u32) as u32, &mut WinCtxImpl);
+                    s.handler.command(LOWORD(wparam as u32) as u32);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -485,7 +476,7 @@ impl WndProc for MyWndProc {
                     let is_repeat = (lparam & 0xFFFF) > 0;
                     let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
 
-                    if s.handler.key_down(event, &mut WinCtxImpl) {
+                    if s.handler.key_down(event) {
                         Some(0)
                     } else {
                         None
@@ -512,7 +503,7 @@ impl WndProc for MyWndProc {
                     let is_repeat = (lparam & 0xFFFF) > 0;
                     let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
 
-                    if s.handler.key_down(event, &mut WinCtxImpl) {
+                    if s.handler.key_down(event) {
                         Some(0)
                     } else {
                         None
@@ -530,7 +521,7 @@ impl WndProc for MyWndProc {
                     let is_repeat = false;
                     let text = s.stashed_char.take();
                     let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
-                    s.handler.key_up(event, &mut WinCtxImpl);
+                    s.handler.key_up(event);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -545,7 +536,7 @@ impl WndProc for MyWndProc {
                     let delta_y = HIWORD(wparam as u32) as i16 as f64;
                     let delta = Vec2::new(0.0, -delta_y);
                     let mods = get_mod_state();
-                    s.handler.wheel(delta, mods, &mut WinCtxImpl);
+                    s.handler.wheel(delta, mods);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -557,7 +548,7 @@ impl WndProc for MyWndProc {
                     let delta_x = HIWORD(wparam as u32) as i16 as f64;
                     let delta = Vec2::new(delta_x, 0.0);
                     let mods = get_mod_state();
-                    s.handler.wheel(delta, mods, &mut WinCtxImpl);
+                    s.handler.wheel(delta, mods);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -587,7 +578,7 @@ impl WndProc for MyWndProc {
                         button,
                         count: 0,
                     };
-                    s.handler.mouse_move(&event, &mut WinCtxImpl);
+                    s.handler.mouse_move(&event);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -635,9 +626,9 @@ impl WndProc for MyWndProc {
                         count,
                     };
                     if count > 0 {
-                        s.handler.mouse_down(&event, &mut WinCtxImpl);
+                        s.handler.mouse_down(&event);
                     } else {
-                        s.handler.mouse_up(&event, &mut WinCtxImpl);
+                        s.handler.mouse_up(&event);
                     }
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
@@ -653,7 +644,7 @@ impl WndProc for MyWndProc {
             WM_DESTROY => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    s.handler.destroy(&mut WinCtxImpl);
+                    s.handler.destroy();
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -668,7 +659,7 @@ impl WndProc for MyWndProc {
                 self.handle.borrow().free_timer_slot(token);
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    s.handler.timer(token, &mut WinCtxImpl);
+                    s.handler.timer(token);
                 }
                 Some(1)
             }
@@ -679,7 +670,7 @@ impl WndProc for MyWndProc {
                     for callback in queue {
                         match callback {
                             IdleKind::Callback(it) => it.call(s.handler.as_any()),
-                            IdleKind::Token(token) => s.handler.idle(token, &mut WinCtxImpl),
+                            IdleKind::Token(token) => s.handler.idle(token),
                         }
                     }
                     Some(0)
@@ -769,7 +760,7 @@ impl WindowBuilder {
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
-                dwrite_factory: Some(dwrite_factory),
+                dwrite_factory,
                 state: Rc::downgrade(&win),
             };
 
@@ -1025,9 +1016,9 @@ impl Cursor {
 // TODO: when upgrading to directwrite 0.3, just derive Clone instead.
 impl Clone for WindowHandle {
     fn clone(&self) -> WindowHandle {
-        let dw_clone = self.dwrite_factory.as_ref().map(|dw| clone_dwrite(dw));
+        let dwrite_factory = clone_dwrite(&self.dwrite_factory);
         WindowHandle {
-            dwrite_factory: dw_clone,
+            dwrite_factory,
             state: self.state.clone(),
         }
     }
@@ -1116,7 +1107,7 @@ impl WindowHandle {
     }
 
     pub fn text(&self) -> Text {
-        Text::new(self.dwrite_factory.as_ref().unwrap())
+        Text::new(&self.dwrite_factory)
     }
 
     /// Request a timer event.
@@ -1279,10 +1270,6 @@ impl IdleHandle {
     }
 }
 
-// Note: this has mostly methods moved from `WindowHandle`, so mostly forwards
-// to those. As a cleanup, some may be implemented more directly.
-impl<'a> WinCtx<'a> for WinCtxImpl {}
-
 /// Casts render target to hwnd variant.
 unsafe fn cast_to_hwnd(dc: &DeviceContext) -> Option<HwndRenderTarget> {
     dc.get_comptr()
@@ -1295,7 +1282,7 @@ impl Default for WindowHandle {
     fn default() -> Self {
         WindowHandle {
             state: Default::default(),
-            dwrite_factory: DwriteFactory::new().ok(),
+            dwrite_factory: DwriteFactory::new().unwrap(),
         }
     }
 }

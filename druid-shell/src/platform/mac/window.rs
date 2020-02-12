@@ -47,7 +47,7 @@ use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::window::{IdleToken, Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use crate::Error;
 
 #[allow(non_upper_case_globals)]
@@ -97,8 +97,6 @@ struct ViewState {
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     last_mods: KeyModifiers,
 }
-
-struct WinCtxImpl;
 
 impl WindowBuilder {
     pub fn new() -> WindowBuilder {
@@ -169,12 +167,10 @@ impl WindowBuilder {
                 idle_queue,
             };
             (*view_state).handler.connect(&handle.clone().into());
-            (*view_state).handler.connected(&mut WinCtxImpl);
-            (*view_state).handler.size(
-                frame.size.width as u32,
-                frame.size.height as u32,
-                &mut WinCtxImpl,
-            );
+            (*view_state).handler.connected();
+            (*view_state)
+                .handler
+                .size(frame.size.width as u32, frame.size.height as u32);
 
             Ok(handle)
         }
@@ -312,10 +308,9 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let mut ctx = WinCtxImpl;
         (*view_state)
             .handler
-            .size(size.width as u32, size.height as u32, &mut ctx);
+            .size(size.width as u32, size.height as u32);
         let superclass = msg_send![this, superclass];
         let () = msg_send![super(this, superclass), setFrameSize: size];
     }
@@ -373,7 +368,7 @@ fn mouse_down(this: &mut Object, nsevent: id, button: MouseButton) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let event = mouse_event(nsevent, this as id, Some(button));
-        (*view_state).handler.mouse_down(&event, &mut WinCtxImpl);
+        (*view_state).handler.mouse_down(&event);
     }
 }
 
@@ -390,7 +385,7 @@ fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let event = mouse_event(nsevent, this as id, Some(button));
-        (*view_state).handler.mouse_up(&event, &mut WinCtxImpl);
+        (*view_state).handler.mouse_up(&event);
     }
 }
 
@@ -399,7 +394,7 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let event = mouse_event(nsevent, this as id, None);
-        (*view_state).handler.mouse_move(&event, &mut WinCtxImpl);
+        (*view_state).handler.mouse_move(&event);
     }
 }
 
@@ -420,7 +415,7 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
         let mods = make_modifiers(mods);
 
         let delta = Vec2::new(dx, dy);
-        (*view_state).handler.wheel(delta, mods, &mut WinCtxImpl);
+        (*view_state).handler.wheel(delta, mods);
     }
 }
 
@@ -430,7 +425,7 @@ extern "C" fn pinch_event(this: &mut Object, _: Sel, nsevent: id) {
         let view_state = &mut *(view_state as *mut ViewState);
 
         let delta: CGFloat = msg_send![nsevent, magnification];
-        (*view_state).handler.zoom(delta as f64, &mut WinCtxImpl);
+        (*view_state).handler.zoom(delta as f64);
     }
 }
 
@@ -441,7 +436,7 @@ extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    (*view_state).handler.key_down(event, &mut WinCtxImpl);
+    (*view_state).handler.key_down(event);
     view_state.last_mods = event.mods;
 }
 
@@ -451,7 +446,7 @@ extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    (*view_state).handler.key_up(event, &mut WinCtxImpl);
+    (*view_state).handler.key_up(event);
     view_state.last_mods = event.mods;
 }
 
@@ -463,9 +458,9 @@ extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
     let (down, event) = mods_changed_key_event(view_state.last_mods, nsevent);
     view_state.last_mods = event.mods;
     if down {
-        (*view_state).handler.key_down(event, &mut WinCtxImpl);
+        (*view_state).handler.key_down(event);
     } else {
-        (*view_state).handler.key_up(event, &mut WinCtxImpl);
+        (*view_state).handler.key_up(event);
     }
 }
 
@@ -487,7 +482,7 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let mut piet_ctx = Piet::new(&mut cairo_ctx);
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let anim = (*view_state).handler.paint(&mut piet_ctx, &mut WinCtxImpl);
+        let anim = (*view_state).handler.paint(&mut piet_ctx);
         if let Err(e) = piet_ctx.finish() {
             error!("{}", e)
         }
@@ -516,7 +511,7 @@ extern "C" fn run_idle(this: &mut Object, _: Sel) {
         match item {
             IdleKind::Callback(it) => it.call(view_state.handler.as_any()),
             IdleKind::Token(it) => {
-                view_state.handler.as_mut().idle(it, &mut WinCtxImpl);
+                view_state.handler.as_mut().idle(it);
             }
         }
     }
@@ -538,9 +533,7 @@ extern "C" fn handle_timer(this: &mut Object, _: Sel, timer: id) {
         msg_send![user_info, unsignedIntValue]
     };
 
-    (*view_state)
-        .handler
-        .timer(TimerToken::from_raw(token), &mut WinCtxImpl);
+    (*view_state).handler.timer(TimerToken::from_raw(token));
 }
 
 extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
@@ -548,7 +541,7 @@ extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
         let tag: isize = msg_send![item, tag];
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        (*view_state).handler.command(tag as u32, &mut WinCtxImpl);
+        (*view_state).handler.command(tag as u32);
     }
 }
 
@@ -566,7 +559,7 @@ extern "C" fn window_did_become_key(this: &mut Object, _: Sel, _notification: id
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        (*view_state).handler.got_focus(&mut WinCtxImpl);
+        (*view_state).handler.got_focus();
     }
 }
 
@@ -574,7 +567,7 @@ extern "C" fn window_will_close(this: &mut Object, _: Sel, _window: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        (*view_state).handler.destroy(&mut WinCtxImpl);
+        (*view_state).handler.destroy();
     }
 }
 
@@ -749,8 +742,6 @@ impl IdleHandle {
         }
     }
 }
-
-impl<'a> WinCtx<'a> for WinCtxImpl {}
 
 /// Convert an `Instant` into an NSTimeInterval, i.e. a fractional number
 /// of seconds from now.

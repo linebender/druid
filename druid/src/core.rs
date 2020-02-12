@@ -568,7 +568,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         let mut child_ctx = UpdateCtx {
             window: ctx.window,
-            //text_factory: ctx.text_factory,
             base_state: &mut self.state,
             window_id: ctx.window_id,
         };
