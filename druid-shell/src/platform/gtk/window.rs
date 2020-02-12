@@ -636,7 +636,7 @@ impl IdleHandle {
         if let Some(state) = self.state.upgrade() {
             if queue.is_empty() {
                 queue.push(IdleKind::Callback(Box::new(callback)));
-                gdk::threads_add_idle(move || run_idle(&state));
+                threads_add_idle(move || run_idle(&state));
             } else {
                 queue.push(IdleKind::Callback(Box::new(callback)));
             }
@@ -648,12 +648,30 @@ impl IdleHandle {
         if let Some(state) = self.state.upgrade() {
             if queue.is_empty() {
                 queue.push(IdleKind::Token(token));
-                gdk::threads_add_idle(move || run_idle(&state));
+                threads_add_idle(move || run_idle(&state));
             } else {
                 queue.push(IdleKind::Token(token));
             }
         }
     }
+}
+
+// FIXME: delete when https://github.com/gtk-rs/gdk/issues/304 is resolved
+// this is currently broken in the gdk crate, because their codegen is inserting
+// assert_main_thread even though this function is explicitly threadsafe.
+pub fn threads_add_idle<P: Fn() -> bool + Send + Sync + 'static>(function: P) -> u32 {
+    use glib::translate::ToGlib;
+    let function_data: Box<P> = Box::new(function);
+    unsafe extern "C" fn function_func<P: Fn() -> bool + Send + Sync + 'static>(
+        user_data: glib_sys::gpointer,
+    ) -> glib_sys::gboolean {
+        let callback: &P = &*(user_data as *mut _);
+        let res = (*callback)();
+        res.to_glib()
+    }
+    let function = Some(function_func::<P> as _);
+    let super_callback0: Box<P> = function_data;
+    unsafe { gdk_sys::gdk_threads_add_idle(function, Box::into_raw(super_callback0) as *mut _) }
 }
 
 fn run_idle(state: &Arc<WindowState>) -> bool {
