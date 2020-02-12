@@ -19,7 +19,7 @@ use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
     Application, Cursor, FileDialogOptions, FileSpec, HotKey, KeyEvent, KeyModifiers, Menu,
-    MouseEvent, RunLoop, SysMods, TimerToken, WinCtx, WinHandler, WindowBuilder, WindowHandle,
+    MouseEvent, RunLoop, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
@@ -36,7 +36,7 @@ impl WinHandler for HelloState {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut piet_common::Piet, _ctx: &mut dyn WinCtx) -> bool {
+    fn paint(&mut self, piet: &mut piet_common::Piet) -> bool {
         let (width, height) = self.size;
         let rect = Rect::new(0.0, 0.0, width, height);
         piet.fill(rect, &BG_COLOR);
@@ -44,7 +44,7 @@ impl WinHandler for HelloState {
         false
     }
 
-    fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {
+    fn command(&mut self, id: u32) {
         match id {
             0x100 => {
                 self.handle.close();
@@ -56,42 +56,42 @@ impl WinHandler for HelloState {
                     FileSpec::TEXT,
                     FileSpec::JPG,
                 ]);
-                let filename = ctx.open_file_sync(options);
+                let filename = self.handle.open_file_sync(options);
                 println!("result: {:?}", filename);
             }
             _ => println!("unexpected id {}", id),
         }
     }
 
-    fn key_down(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) -> bool {
+    fn key_down(&mut self, event: KeyEvent) -> bool {
         let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
-        let id = ctx.request_timer(deadline);
+        let id = self.handle.request_timer(deadline);
         println!("keydown: {:?}, timer id = {:?}", event, id);
         false
     }
 
-    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, _ctx: &mut dyn WinCtx) {
+    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers) {
         println!("mouse_wheel {:?} {:?}", delta, mods);
     }
 
-    fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
-        ctx.set_cursor(&Cursor::Arrow);
+    fn mouse_move(&mut self, event: &MouseEvent) {
+        self.handle.set_cursor(&Cursor::Arrow);
         println!("mouse_move {:?}", event);
     }
 
-    fn mouse_down(&mut self, event: &MouseEvent, _ctx: &mut dyn WinCtx) {
+    fn mouse_down(&mut self, event: &MouseEvent) {
         println!("mouse_down {:?}", event);
     }
 
-    fn mouse_up(&mut self, event: &MouseEvent, _ctx: &mut dyn WinCtx) {
+    fn mouse_up(&mut self, event: &MouseEvent) {
         println!("mouse_up {:?}", event);
     }
 
-    fn timer(&mut self, id: TimerToken, _ctx: &mut dyn WinCtx) {
+    fn timer(&mut self, id: TimerToken) {
         println!("timer fired: {:?}", id);
     }
 
-    fn size(&mut self, width: u32, height: u32, _ctx: &mut dyn WinCtx) {
+    fn size(&mut self, width: u32, height: u32) {
         let dpi = self.handle.get_dpi();
         let dpi_scale = dpi as f64 / 96.0;
         let width_f = (width as f64) / dpi_scale;
@@ -99,7 +99,7 @@ impl WinHandler for HelloState {
         self.size = (width_f, height_f);
     }
 
-    fn destroy(&mut self, _ctx: &mut dyn WinCtx) {
+    fn destroy(&mut self) {
         Application::quit()
     }
 

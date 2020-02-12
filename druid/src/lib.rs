@@ -51,7 +51,7 @@ pub use piet::{Color, LinearGradient, PaintBrush, RadialGradient, RenderContext,
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Cursor, Error as PlatformError, FileDialogOptions,
     FileInfo, FileSpec, FormatId, HotKey, KeyCode, KeyEvent, KeyModifiers, MouseButton, RawMods,
-    SysMods, Text, TimerToken, WinCtx, WindowHandle,
+    SysMods, Text, TimerToken, WindowHandle,
 };
 
 pub use crate::core::{BoxedWidget, WidgetPod};

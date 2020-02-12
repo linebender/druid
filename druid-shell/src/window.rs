@@ -231,9 +231,6 @@ impl WindowBuilder {
     }
 }
 
-/// A context supplied to most `WinHandler` methods.
-pub trait WinCtx<'a> {}
-
 /// App behavior, supplied by the app.
 ///
 /// Many of the "window procedure" messages map to calls to this trait.
@@ -252,17 +249,17 @@ pub trait WinHandler {
     ///
     /// The handler can implement this method to perform initial setup.
     #[allow(unused_variables)]
-    fn connected(&mut self, ctx: &mut dyn WinCtx) {}
+    fn connected(&mut self) {}
 
     /// Called when the size of the window is changed. Note that size
     /// is in physical pixels.
     #[allow(unused_variables)]
-    fn size(&mut self, width: u32, height: u32, ctx: &mut dyn WinCtx) {}
+    fn size(&mut self, width: u32, height: u32) {}
 
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
     /// should be scheduled for the next animation frame.
-    fn paint(&mut self, piet: &mut piet_common::Piet, ctx: &mut dyn WinCtx) -> bool;
+    fn paint(&mut self, piet: &mut piet_common::Piet) -> bool;
 
     /// Called when the resources need to be rebuilt.
     ///
@@ -270,24 +267,24 @@ pub trait WinHandler {
     /// `GenericRenderTarget` on Direct2D. If we move to `DeviceContext`
     /// instead, then it's possible we don't need this.
     #[allow(unused_variables)]
-    fn rebuild_resources(&mut self, ctx: &mut dyn WinCtx) {}
+    fn rebuild_resources(&mut self) {}
 
     /// Called when a menu item is selected.
     #[allow(unused_variables)]
-    fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {}
+    fn command(&mut self, id: u32) {}
 
     /// Called on a key down event.
     ///
     /// Return `true` if the event is handled.
     #[allow(unused_variables)]
-    fn key_down(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) -> bool {
+    fn key_down(&mut self, event: KeyEvent) -> bool {
         false
     }
 
     /// Called when a key is released. This corresponds to the WM_KEYUP message
     /// on Windows, or keyUp(withEvent:) on macOS.
     #[allow(unused_variables)]
-    fn key_up(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) {}
+    fn key_up(&mut self, event: KeyEvent) {}
 
     /// Called on a mouse wheel event.
     ///
@@ -298,48 +295,48 @@ pub trait WinHandler {
     ///
     /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
     #[allow(unused_variables)]
-    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, ctx: &mut dyn WinCtx) {}
+    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers) {}
 
     /// Called when a platform-defined zoom gesture occurs (such as pinching
     /// on the trackpad).
     #[allow(unused_variables)]
-    fn zoom(&mut self, delta: f64, ctx: &mut dyn WinCtx) {}
+    fn zoom(&mut self, delta: f64) {}
 
     /// Called when the mouse moves.
     #[allow(unused_variables)]
-    fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {}
+    fn mouse_move(&mut self, event: &MouseEvent) {}
 
     /// Called on mouse button down.
     #[allow(unused_variables)]
-    fn mouse_down(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {}
+    fn mouse_down(&mut self, event: &MouseEvent) {}
 
     /// Called on mouse button up.
     #[allow(unused_variables)]
-    fn mouse_up(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {}
+    fn mouse_up(&mut self, event: &MouseEvent) {}
 
     /// Called on timer event.
     ///
     /// This is called at (approximately) the requested deadline by a
-    /// [`WinCtx::request_timer()`] call. The token argument here is the same
+    /// [`WindowHandle::request_timer()`] call. The token argument here is the same
     /// as the return value of that call.
     ///
-    /// [`WinCtx::request_timer()`]: trait.WinCtx.html#tymethod.request_timer
+    /// [`WindowHandle::request_timer()`]: struct.WindowHandle.html#tymethod.request_timer
     #[allow(unused_variables)]
-    fn timer(&mut self, token: TimerToken, ctx: &mut dyn WinCtx) {}
+    fn timer(&mut self, token: TimerToken) {}
 
     /// Called when this window becomes the focused window.
     #[allow(unused_variables)]
-    fn got_focus(&mut self, ctx: &mut dyn WinCtx) {}
+    fn got_focus(&mut self) {}
 
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is
     /// WM_NCDESTROY).
     #[allow(unused_variables)]
-    fn destroy(&mut self, ctx: &mut dyn WinCtx) {}
+    fn destroy(&mut self) {}
 
     /// Called when a idle token is requested by [`IdleHandle::schedule_idle()`] call.
     #[allow(unused_variables)]
-    fn idle(&mut self, token: IdleToken, ctx: &mut dyn WinCtx) {}
+    fn idle(&mut self, token: IdleToken) {}
 
     /// Get a reference to the handler state. Used mostly by idle handlers.
     fn as_any(&mut self) -> &mut dyn Any;

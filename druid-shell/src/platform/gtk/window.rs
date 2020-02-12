@@ -42,7 +42,7 @@ use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::window::{IdleToken, Text, TimerToken, WinCtx, WinHandler};
+use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use crate::Error;
 
 /// Taken from https://gtk-rs.org/docs-src/tutorial/closures
@@ -106,8 +106,6 @@ pub(crate) struct WindowState {
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     current_keyval: RefCell<Option<u32>>,
 }
-
-pub(crate) struct WinCtxImpl;
 
 impl WindowBuilder {
     pub fn new() -> WindowBuilder {
@@ -227,7 +225,7 @@ impl WindowBuilder {
 
                 if last_size.get() != size {
                     last_size.set(size);
-                    state.handler.borrow_mut().size(size.0, size.1, &mut WinCtxImpl);
+                    state.handler.borrow_mut().size(size.0, size.1);
                 }
 
                 // For some reason piet needs a mutable context, so give it one I guess.
@@ -236,7 +234,7 @@ impl WindowBuilder {
 
                 if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
                     let anim = handler_borrow
-                        .paint(&mut piet_context, &mut WinCtxImpl);
+                        .paint(&mut piet_context);
                     if let Err(e) = piet_context.finish() {
                         eprintln!("piet error on render: {:?}", e);
                     }
@@ -261,7 +259,6 @@ impl WindowBuilder {
                         mods: get_modifiers(button.get_state()),
                         button: get_mouse_button(button.get_button()),
                     },
-                    &mut WinCtxImpl,
                 );
             }
 
@@ -278,7 +275,6 @@ impl WindowBuilder {
                         count: 0,
                         button: get_mouse_button(button.get_button()),
                     },
-                    &mut WinCtxImpl,
                 );
             }
 
@@ -299,7 +295,7 @@ impl WindowBuilder {
                 state
                     .handler
                     .borrow_mut()
-                    .mouse_move(&mouse_event, &mut WinCtxImpl);
+                    .mouse_move(&mouse_event);
             }
 
             Inhibit(true)
@@ -315,23 +311,23 @@ impl WindowBuilder {
                 let mut handler = state.handler.borrow_mut();
                 match scroll.get_direction() {
                     ScrollDirection::Up => {
-                        handler.wheel(Vec2::from((0.0, -120.0)), modifiers, &mut WinCtxImpl);
+                        handler.wheel(Vec2::from((0.0, -120.0)), modifiers);
                     }
                     ScrollDirection::Down => {
-                        handler.wheel(Vec2::from((0.0, 120.0)), modifiers, &mut WinCtxImpl);
+                        handler.wheel(Vec2::from((0.0, 120.0)), modifiers);
                     }
                     ScrollDirection::Left => {
-                        handler.wheel(Vec2::from((-120.0, 0.0)), modifiers, &mut WinCtxImpl);
+                        handler.wheel(Vec2::from((-120.0, 0.0)), modifiers);
                     }
                     ScrollDirection::Right => {
-                        handler.wheel(Vec2::from((120.0, 0.0)), modifiers, &mut WinCtxImpl);
+                        handler.wheel(Vec2::from((120.0, 0.0)), modifiers);
                     }
                     ScrollDirection::Smooth => {
                         //TODO: Look at how gtk's scroll containers implements it
                         let (mut delta_x, mut delta_y) = scroll.get_delta();
                         delta_x *= 120.;
                         delta_y *= 120.;
-                        handler.wheel(Vec2::from((delta_x, delta_y)), modifiers, &mut WinCtxImpl)
+                        handler.wheel(Vec2::from((delta_x, delta_y)), modifiers)
                     }
                     e => {
                         eprintln!(
@@ -354,7 +350,7 @@ impl WindowBuilder {
                 *current_keyval = Some(key.get_keyval());
 
                 let key_event = make_key_event(key, repeat);
-                state.handler.borrow_mut().key_down(key_event, &mut WinCtxImpl);
+                state.handler.borrow_mut().key_down(key_event);
             }
 
             Inhibit(true)
@@ -366,7 +362,7 @@ impl WindowBuilder {
                 *(state.current_keyval.borrow_mut()) = None;
 
                 let key_event = make_key_event(key, false);
-                state.handler.borrow_mut().key_up(key_event, &mut WinCtxImpl);
+                state.handler.borrow_mut().key_up(key_event);
             }
 
             Inhibit(true)
@@ -374,7 +370,7 @@ impl WindowBuilder {
 
         drawing_area.connect_destroy(clone!(handle => move |_widget| {
             if let Some(state) = handle.state.upgrade() {
-                state.handler.borrow_mut().destroy(&mut WinCtxImpl);
+                state.handler.borrow_mut().destroy();
             }
         }));
 
@@ -385,7 +381,7 @@ impl WindowBuilder {
             .borrow_mut()
             .connect(&handle.clone().into());
 
-        win_state.handler.borrow_mut().connected(&mut WinCtxImpl);
+        win_state.handler.borrow_mut().connected();
 
         Ok(handle)
     }
@@ -443,7 +439,7 @@ impl WindowHandle {
         gdk::threads_add_timeout(interval, move || {
             if let Some(state) = handle.state.upgrade() {
                 if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                    handler_borrow.timer(token, &mut WinCtxImpl);
+                    handler_borrow.timer(token);
                     return false;
                 }
             }
@@ -622,13 +618,11 @@ fn run_idle(state: &Arc<WindowState>) -> bool {
     for item in queue {
         match item {
             IdleKind::Callback(it) => it.call(handler.as_any()),
-            IdleKind::Token(it) => handler.idle(it, &mut WinCtxImpl),
+            IdleKind::Token(it) => handler.idle(it),
         }
     }
     false
 }
-
-impl<'a> WinCtx<'a> for WinCtxImpl {}
 
 fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cursor> {
     gdk::Cursor::new_from_name(

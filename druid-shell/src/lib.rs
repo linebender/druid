@@ -64,5 +64,5 @@ pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseEvent};
 pub use runloop::RunLoop;
 pub use window::{
-    IdleHandle, IdleToken, Text, TimerToken, WinCtx, WinHandler, WindowBuilder, WindowHandle,
+    IdleHandle, IdleToken, Text, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };

@@ -227,7 +227,6 @@ impl<T: Data> Window<T> {
 
         let mut base_state = BaseState::new(self.root.id());
         let mut update_ctx = UpdateCtx {
-            //text_factory: win_ctx.text_factory(),
             base_state: &mut base_state,
             window: &self.handle,
             window_id: self.id,

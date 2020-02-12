@@ -24,7 +24,7 @@ use log::{info, warn};
 use crate::kurbo::{Size, Vec2};
 use crate::piet::Piet;
 use crate::shell::{
-    Application, FileDialogOptions, IdleToken, MouseEvent, WinCtx, WinHandler, WindowHandle,
+    Application, FileDialogOptions, IdleToken, MouseEvent, WinHandler, WindowHandle,
 };
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
@@ -179,7 +179,7 @@ impl<T: Data> AppState<T> {
     /// Called after this window has been closed by the platform.
     ///
     /// We clean up resources and notifiy the delegate, if necessary.
-    fn remove_window(&mut self, window_id: WindowId, _ctx: &mut dyn WinCtx) {
+    fn remove_window(&mut self, window_id: WindowId) {
         self.with_delegate(window_id, |del, data, env, ctx| {
             del.window_removed(window_id, data, env, ctx)
         });
@@ -230,7 +230,7 @@ impl<T: Data> AppState<T> {
     }
 
     /// Returns `true` if an animation frame was requested.
-    fn paint(&mut self, window_id: WindowId, piet: &mut Piet, _ctx: &mut dyn WinCtx) -> bool {
+    fn paint(&mut self, window_id: WindowId, piet: &mut Piet) -> bool {
         if let Some(win) = self.windows.get_mut(window_id) {
             win.do_paint(piet, &mut self.command_queue, &self.data, &self.env);
             win.wants_animation_frame()
@@ -239,7 +239,7 @@ impl<T: Data> AppState<T> {
         }
     }
 
-    fn do_event(&mut self, source_id: WindowId, event: Event, _win_ctx: &mut dyn WinCtx) -> bool {
+    fn do_event(&mut self, source_id: WindowId, event: Event) -> bool {
         // if the event was swallowed by the delegate we consider it handled?
         let event = match self.delegate_event(source_id, event) {
             Some(event) => event,
@@ -272,9 +272,6 @@ impl<T: Data> AppState<T> {
             Event::TargetedCommand(Target::Widget(_), _) => {
                 let mut any_handled = false;
 
-                // TODO: this is using the WinCtx of the window originating the event,
-                // rather than a WinCtx appropriate to the target window. This probably
-                // needs to get rethought.
                 for window in windows.iter_mut() {
                     let handled = window.event(command_queue, event.clone(), data, env);
                     any_handled |= handled;
@@ -311,7 +308,7 @@ impl<T: Data> AppState<T> {
         }
     }
 
-    fn do_update(&mut self, _win_ctx: &mut dyn WinCtx) {
+    fn do_update(&mut self) {
         // we send `update` to all windows, not just the active one:
         for window in self.windows.iter_mut() {
             window.update(&self.data, &self.env);
@@ -358,33 +355,30 @@ impl<T: Data> DruidHandler<T> {
     ///
     /// This is principally because in certain cases (such as keydown on Windows)
     /// the OS needs to know if an event was handled.
-    fn do_event(&mut self, event: Event, win_ctx: &mut dyn WinCtx) -> bool {
-        let result = self
-            .app_state
-            .borrow_mut()
-            .do_event(self.window_id, event, win_ctx);
-        self.process_commands(win_ctx);
-        self.app_state.borrow_mut().do_update(win_ctx);
+    fn do_event(&mut self, event: Event) -> bool {
+        let result = self.app_state.borrow_mut().do_event(self.window_id, event);
+        self.process_commands();
+        self.app_state.borrow_mut().do_update();
         result
     }
 
-    fn process_commands(&mut self, win_ctx: &mut dyn WinCtx) {
+    fn process_commands(&mut self) {
         loop {
             let next_cmd = self.app_state.borrow_mut().command_queue.pop_front();
             match next_cmd {
-                Some((target, cmd)) => self.handle_cmd(target, cmd, win_ctx),
+                Some((target, cmd)) => self.handle_cmd(target, cmd),
                 None => break,
             }
         }
     }
 
-    fn process_ext_events(&mut self, win_ctx: &mut dyn WinCtx) {
+    fn process_ext_events(&mut self) {
         loop {
             let ext_cmd = self.app_state.borrow_mut().ext_event_host.recv();
             match ext_cmd {
                 Some((targ, cmd)) => {
                     let targ = targ.unwrap_or_else(|| self.window_id.into());
-                    self.handle_cmd(targ, cmd, win_ctx);
+                    self.handle_cmd(targ, cmd);
                 }
                 None => break,
             }
@@ -392,7 +386,7 @@ impl<T: Data> DruidHandler<T> {
         self.app_state.borrow_mut().invalidate_and_finalize();
     }
 
-    fn handle_system_cmd(&mut self, cmd_id: u32, win_ctx: &mut dyn WinCtx) {
+    fn handle_system_cmd(&mut self, cmd_id: u32) {
         let cmd = self.app_state.borrow().get_menu_cmd(self.window_id, cmd_id);
         match cmd {
             Some(cmd) => self
@@ -402,17 +396,16 @@ impl<T: Data> DruidHandler<T> {
                 .push_back((self.window_id.into(), cmd)),
             None => warn!("No command for menu id {}", cmd_id),
         }
-        self.process_commands(win_ctx)
+        self.process_commands()
     }
 
     /// Handle a command. Top level commands (e.g. for creating and destroying windows)
     /// have their logic here; other commands are passed to the window.
-    fn handle_cmd(&mut self, target: Target, cmd: Command, win_ctx: &mut dyn WinCtx) {
-        //FIXME: we need some way of getting the correct `WinCtx` for this window.
+    fn handle_cmd(&mut self, target: Target, cmd: Command) {
         if let Target::Window(window_id) = target {
             match &cmd.selector {
-                &sys_cmd::SHOW_OPEN_PANEL => self.show_open_panel(cmd, window_id, win_ctx),
-                &sys_cmd::SHOW_SAVE_PANEL => self.show_save_panel(cmd, window_id, win_ctx),
+                &sys_cmd::SHOW_OPEN_PANEL => self.show_open_panel(cmd, window_id),
+                &sys_cmd::SHOW_SAVE_PANEL => self.show_save_panel(cmd, window_id),
                 &sys_cmd::NEW_WINDOW => {
                     if let Err(e) = self.new_window(cmd) {
                         log::error!("failed to create window: '{}'", e);
@@ -423,26 +416,22 @@ impl<T: Data> DruidHandler<T> {
                 &sys_cmd::QUIT_APP => self.quit(),
                 &sys_cmd::HIDE_APPLICATION => self.hide_app(),
                 &sys_cmd::HIDE_OTHERS => self.hide_others(),
-                &sys_cmd::PASTE => self.do_paste(window_id, win_ctx),
+                &sys_cmd::PASTE => self.do_paste(window_id),
                 sel => {
                     info!("handle_cmd {}", sel);
                     let event = Event::TargetedCommand(target, cmd);
-                    self.app_state
-                        .borrow_mut()
-                        .do_event(window_id, event, win_ctx);
+                    self.app_state.borrow_mut().do_event(window_id, event);
                 }
             }
         } else {
             info!("handle_cmd {} -> widget", cmd.selector);
             let event = Event::TargetedCommand(target, cmd);
             // TODO: self.window_id the correct source identifier here?
-            self.app_state
-                .borrow_mut()
-                .do_event(self.window_id, event, win_ctx);
+            self.app_state.borrow_mut().do_event(self.window_id, event);
         }
     }
 
-    fn show_open_panel(&mut self, cmd: Command, window_id: WindowId, win_ctx: &mut dyn WinCtx) {
+    fn show_open_panel(&mut self, cmd: Command, window_id: WindowId) {
         let options = cmd
             .get_object::<FileDialogOptions>()
             .map(|opts| opts.to_owned())
@@ -461,13 +450,11 @@ impl<T: Data> DruidHandler<T> {
         if let Some(info) = result {
             let cmd = Command::new(sys_cmd::OPEN_FILE, info);
             let event = Event::TargetedCommand(window_id.into(), cmd);
-            self.app_state
-                .borrow_mut()
-                .do_event(window_id, event, win_ctx);
+            self.app_state.borrow_mut().do_event(window_id, event);
         }
     }
 
-    fn show_save_panel(&mut self, cmd: Command, window_id: WindowId, win_ctx: &mut dyn WinCtx) {
+    fn show_save_panel(&mut self, cmd: Command, window_id: WindowId) {
         let options = cmd
             .get_object::<FileDialogOptions>()
             .map(|opts| opts.to_owned())
@@ -482,9 +469,7 @@ impl<T: Data> DruidHandler<T> {
         if let Some(info) = result {
             let cmd = Command::new(sys_cmd::SAVE_FILE, info);
             let event = Event::TargetedCommand(window_id.into(), cmd);
-            self.app_state
-                .borrow_mut()
-                .do_event(window_id, event, win_ctx);
+            self.app_state.borrow_mut().do_event(window_id, event);
         }
     }
 
@@ -507,9 +492,9 @@ impl<T: Data> DruidHandler<T> {
         self.app_state.borrow_mut().show_window(id);
     }
 
-    fn do_paste(&mut self, window_id: WindowId, ctx: &mut dyn WinCtx) {
+    fn do_paste(&mut self, window_id: WindowId) {
         let event = Event::Paste(Application::clipboard());
-        self.app_state.borrow_mut().do_event(window_id, event, ctx);
+        self.app_state.borrow_mut().do_event(window_id, event);
     }
 
     fn quit(&self) {
@@ -536,73 +521,73 @@ impl<T: Data> WinHandler for DruidHandler<T> {
             .connect(self.window_id, handle.clone());
     }
 
-    fn connected(&mut self, ctx: &mut dyn WinCtx) {
+    fn connected(&mut self) {
         let event = Event::WindowConnected;
-        self.do_event(event, ctx);
+        self.do_event(event);
     }
 
-    fn paint(&mut self, piet: &mut Piet, ctx: &mut dyn WinCtx) -> bool {
-        self.app_state.borrow_mut().paint(self.window_id, piet, ctx)
+    fn paint(&mut self, piet: &mut Piet) -> bool {
+        self.app_state.borrow_mut().paint(self.window_id, piet)
     }
 
-    fn size(&mut self, width: u32, height: u32, ctx: &mut dyn WinCtx) {
+    fn size(&mut self, width: u32, height: u32) {
         let event = Event::Size(Size::new(f64::from(width), f64::from(height)));
-        self.do_event(event, ctx);
+        self.do_event(event);
     }
 
-    fn command(&mut self, id: u32, ctx: &mut dyn WinCtx) {
-        self.handle_system_cmd(id, ctx);
+    fn command(&mut self, id: u32) {
+        self.handle_system_cmd(id);
     }
 
-    fn mouse_down(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
+    fn mouse_down(&mut self, event: &MouseEvent) {
         // TODO: double-click detection (or is this done in druid-shell?)
         let event = Event::MouseDown(event.clone().into());
-        self.do_event(event, ctx);
+        self.do_event(event);
     }
 
-    fn mouse_up(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
+    fn mouse_up(&mut self, event: &MouseEvent) {
         let event = Event::MouseUp(event.clone().into());
-        self.do_event(event, ctx);
+        self.do_event(event);
     }
 
-    fn mouse_move(&mut self, event: &MouseEvent, ctx: &mut dyn WinCtx) {
+    fn mouse_move(&mut self, event: &MouseEvent) {
         let event = Event::MouseMoved(event.clone().into());
-        self.do_event(event, ctx);
+        self.do_event(event);
     }
 
-    fn key_down(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) -> bool {
-        self.do_event(Event::KeyDown(event), ctx)
+    fn key_down(&mut self, event: KeyEvent) -> bool {
+        self.do_event(Event::KeyDown(event))
     }
 
-    fn key_up(&mut self, event: KeyEvent, ctx: &mut dyn WinCtx) {
-        self.do_event(Event::KeyUp(event), ctx);
+    fn key_up(&mut self, event: KeyEvent) {
+        self.do_event(Event::KeyUp(event));
     }
 
-    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers, ctx: &mut dyn WinCtx) {
+    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers) {
         let event = Event::Wheel(WheelEvent { delta, mods });
-        self.do_event(event, ctx);
+        self.do_event(event);
     }
 
-    fn zoom(&mut self, delta: f64, ctx: &mut dyn WinCtx) {
+    fn zoom(&mut self, delta: f64) {
         let event = Event::Zoom(delta);
-        self.do_event(event, ctx);
+        self.do_event(event);
     }
 
-    fn got_focus(&mut self, _ctx: &mut dyn WinCtx) {
+    fn got_focus(&mut self) {
         self.app_state.borrow_mut().window_got_focus(self.window_id);
     }
 
-    fn timer(&mut self, token: TimerToken, ctx: &mut dyn WinCtx) {
-        self.do_event(Event::Timer(token), ctx);
+    fn timer(&mut self, token: TimerToken) {
+        self.do_event(Event::Timer(token));
     }
 
-    fn idle(&mut self, token: IdleToken, ctx: &mut dyn WinCtx) {
+    fn idle(&mut self, token: IdleToken) {
         match token {
             RUN_COMMANDS_TOKEN => {
-                self.process_commands(ctx);
+                self.process_commands();
                 self.app_state.borrow_mut().invalidate_and_finalize();
             }
-            EXT_EVENT_IDLE_TOKEN => self.process_ext_events(ctx),
+            EXT_EVENT_IDLE_TOKEN => self.process_ext_events(),
             other => log::warn!("unexpected idle token {:?}", other),
         }
     }
@@ -611,10 +596,8 @@ impl<T: Data> WinHandler for DruidHandler<T> {
         self
     }
 
-    fn destroy(&mut self, ctx: &mut dyn WinCtx) {
-        self.app_state
-            .borrow_mut()
-            .remove_window(self.window_id, ctx);
+    fn destroy(&mut self) {
+        self.app_state.borrow_mut().remove_window(self.window_id);
     }
 }
 
