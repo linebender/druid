@@ -20,12 +20,18 @@ use crate::platform::application as platform;
 //TODO: we may want to make the user create an instance of this (Application::global()?)
 //but for now I'd like to keep changes minimal.
 /// The top level application object.
-pub struct Application;
+pub struct Application(platform::Application);
 
 impl Application {
-    /// Initialize the app. At the moment, this is mostly needed for hi-dpi.
-    pub fn init() {
-        platform::Application::init()
+    pub fn new() -> Application {
+        Application(platform::Application::new())
+    }
+
+    /// Start the runloop.
+    ///
+    /// This will block the current thread until the program has finished executing.
+    pub fn run(&mut self) {
+        self.0.run()
     }
 
     /// Terminate the application.
