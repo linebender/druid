@@ -33,9 +33,9 @@ use gtk::{AccelGroup, ApplicationWindow};
 use crate::kurbo::{Point, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
+use super::application::with_application;
 use super::dialog;
 use super::menu::Menu;
-use super::runloop::with_application;
 use super::util::assert_main_thread;
 
 use crate::common_util::IdleCallback;

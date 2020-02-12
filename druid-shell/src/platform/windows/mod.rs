@@ -23,7 +23,6 @@ pub mod error;
 pub mod keycodes;
 pub mod menu;
 pub mod paint;
-pub mod runloop;
 mod timers;
 pub mod util;
 pub mod window;

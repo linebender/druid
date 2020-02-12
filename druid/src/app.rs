@@ -19,7 +19,7 @@ use std::rc::Rc;
 
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
-use crate::shell::{Application, Error as PlatformError, RunLoop, WindowBuilder, WindowHandle};
+use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
 use crate::widget::WidgetExt;
 use crate::win_handler::AppState;
 use crate::window::{PendingWindow, WindowId};
@@ -110,8 +110,7 @@ impl<T: Data> AppLauncher<T> {
     /// Returns an error if a window cannot be instantiated. This is usually
     /// a fatal error.
     pub fn launch(mut self, data: T) -> Result<(), PlatformError> {
-        Application::init();
-        let mut main_loop = RunLoop::new();
+        let mut app = Application::new();
         let mut env = theme::init();
         if let Some(f) = self.env_setup.take() {
             f(&mut env, &data);
@@ -124,7 +123,7 @@ impl<T: Data> AppLauncher<T> {
             window.show();
         }
 
-        main_loop.run();
+        app.run();
         Ok(())
     }
 }

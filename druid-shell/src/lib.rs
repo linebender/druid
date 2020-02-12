@@ -47,7 +47,6 @@ mod keycodes;
 mod menu;
 mod mouse;
 mod platform;
-mod runloop;
 mod window;
 
 pub use application::Application;
@@ -60,7 +59,6 @@ pub use keyboard::{KeyEvent, KeyModifiers};
 pub use keycodes::KeyCode;
 pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseEvent};
-pub use runloop::RunLoop;
 pub use window::{
     IdleHandle, IdleToken, Text, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };

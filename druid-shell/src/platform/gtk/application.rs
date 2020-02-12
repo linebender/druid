@@ -14,22 +14,68 @@
 
 //! GTK implementation of features at the application scope.
 
-use gtk::GtkApplicationExt;
+use std::cell::RefCell;
+
+use gio::prelude::ApplicationExtManual;
+use gio::{ApplicationExt, ApplicationFlags, Cancellable};
+use gtk::{Application as GtkApplication, GtkApplicationExt};
 
 use super::clipboard::Clipboard;
-use super::runloop;
 use super::util;
+
+// XXX: The application needs to be global because WindowBuilder::build wants
+// to construct an ApplicationWindow, which needs the application, but
+// WindowBuilder::build does not get the RunLoop
+thread_local!(
+    static GTK_APPLICATION: RefCell<Option<GtkApplication>> = RefCell::new(None);
+);
 
 pub struct Application;
 
 impl Application {
-    pub fn init() {
+    pub fn new() -> Application {
         gtk::init().expect("GTK initialization failed");
+        util::assert_main_thread();
+
+        // TODO: we should give control over the application ID to the user
+        let application = GtkApplication::new(
+            Some("com.github.xi-editor.druid"),
+            // TODO we set this to avoid connecting to an existing running instance
+            // of "com.github.xi-editor.druid" after which we would never receive
+            // the "Activate application" below. See pull request druid#384
+            // Which shows another way once we have in place a mechanism for
+            // communication with remote instances.
+            ApplicationFlags::NON_UNIQUE,
+        )
+        .expect("Unable to create GTK application");
+
+        application.connect_activate(|_app| {
+            log::info!("gtk: Activated application");
+        });
+
+        application
+            .register(None as Option<&Cancellable>)
+            .expect("Could not register GTK application");
+
+        GTK_APPLICATION.with(move |x| *x.borrow_mut() = Some(application));
+        Application
+    }
+
+    pub fn run(&mut self) {
+        util::assert_main_thread();
+
+        // TODO: should we pass the command line arguments?
+        GTK_APPLICATION.with(|x| {
+            x.borrow()
+                .as_ref()
+                .unwrap() // Safe because we initialized this in RunLoop::new
+                .run(&[])
+        });
     }
 
     pub fn quit() {
         util::assert_main_thread();
-        runloop::with_application(|app| {
+        with_application(|app| {
             match app.get_active_window() {
                 None => {
                     // no application is running, main is not running
@@ -50,4 +96,19 @@ impl Application {
         //TODO ahem
         "en-US".into()
     }
+}
+
+#[inline]
+pub(crate) fn with_application<F, R>(f: F) -> R
+where
+    F: std::ops::FnOnce(GtkApplication) -> R,
+{
+    util::assert_main_thread();
+    GTK_APPLICATION.with(move |app| {
+        let app = app
+            .borrow()
+            .clone()
+            .expect("Tried to manipulate the application before RunLoop::new was called");
+        f(app)
+    })
 }

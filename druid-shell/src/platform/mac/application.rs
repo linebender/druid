@@ -19,19 +19,34 @@
 use super::clipboard::Clipboard;
 use super::util;
 
-use cocoa::appkit::NSApp;
+use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicyRegular};
 use cocoa::base::{id, nil, YES};
+use cocoa::foundation::NSAutoreleasePool;
 use objc::declare::ClassDecl;
 use objc::runtime::{Class, Object, Sel};
 
-pub struct Application;
+pub struct Application {
+    ns_app: id,
+}
 
 impl Application {
-    pub fn init() {
+    pub fn new() -> Application {
+        util::assert_main_thread();
         unsafe {
+            let _pool = NSAutoreleasePool::new(nil);
+
             let delegate: id = msg_send![APP_DELEGATE.0, alloc];
             let () = msg_send![delegate, init];
-            let () = msg_send![NSApp(), setDelegate: delegate];
+            let ns_app = NSApp();
+            let () = msg_send![ns_app, setDelegate: delegate];
+            ns_app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
+            Application { ns_app }
+        }
+    }
+
+    pub fn run(&mut self) {
+        unsafe {
+            self.ns_app.run();
         }
     }
 
