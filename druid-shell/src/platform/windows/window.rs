@@ -88,6 +88,7 @@ pub enum PresentStrategy {
     /// testing, it causes diagonal banding artifacts with Nvidia
     /// adapters, and incremental present doesn't work. However, it
     /// is compatible with GDI (such as menus).
+    #[allow(dead_code)]
     Sequential,
 
     /// Corresponds to the swap effect DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL.
@@ -710,16 +711,6 @@ impl WindowBuilder {
         self.handler = Some(handler);
     }
 
-    pub fn set_scroll(&mut self, hscroll: bool, vscroll: bool) {
-        self.dwStyle &= !(WS_HSCROLL | WS_VSCROLL);
-        if hscroll {
-            self.dwStyle |= WS_HSCROLL;
-        }
-        if vscroll {
-            self.dwStyle |= WS_VSCROLL;
-        }
-    }
-
     pub fn set_size(&mut self, size: Size) {
         self.size = size;
     }
@@ -730,10 +721,6 @@ impl WindowBuilder {
 
     pub fn set_menu(&mut self, menu: Menu) {
         self.menu = Some(menu);
-    }
-
-    pub fn set_present_strategy(&mut self, present_strategy: PresentStrategy) {
-        self.present_strategy = present_strategy;
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
