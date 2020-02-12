@@ -46,9 +46,7 @@ mod keyboard;
 mod keycodes;
 mod menu;
 mod mouse;
-//TODO: don't expose this directly? currently making this private causes
-//a bunch of compiler warnings, so let's revisit that later.
-pub mod platform;
+mod platform;
 mod runloop;
 mod window;
 

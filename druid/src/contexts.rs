@@ -70,7 +70,6 @@ pub struct LifeCycleCtx<'a> {
 ///
 /// [`request_paint`]: #method.request_paint
 pub struct UpdateCtx<'a> {
-    //pub(crate) text_factory: &'a mut Text<'b>,
     pub(crate) window: &'a WindowHandle,
     // Discussion: we probably want to propagate more fine-grained
     // invalidations, which would mean a structure very much like

@@ -42,11 +42,3 @@ impl RunLoop {
         }
     }
 }
-
-/// Request to quit the application, exiting the runloop.
-pub fn request_quit() {
-    unsafe {
-        // Is this threadsafe, or should we schedule on main loop?
-        let () = msg_send![NSApp(), terminate: nil];
-    }
-}
