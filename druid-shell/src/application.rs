@@ -17,14 +17,33 @@
 use crate::clipboard::Clipboard;
 use crate::platform::application as platform;
 
+/// A top-level handler that is not associated with any window.
+///
+/// This is most important on macOS, where it is entirely normal for
+/// an application to exist with no open windows.
+///
+/// # Note
+///
+/// This is currently very limited in its functionality, and is currently
+/// designed to address a single case, which is handling menu commands when
+/// no window is open.
+///
+/// It is possible that this will expand to cover additional functionality
+/// in the future.
+pub trait AppHandler {
+    /// Called when a menu item is selected.
+    #[allow(unused_variables)]
+    fn command(&mut self, id: u32) {}
+}
+
 //TODO: we may want to make the user create an instance of this (Application::global()?)
 //but for now I'd like to keep changes minimal.
 /// The top level application object.
 pub struct Application(platform::Application);
 
 impl Application {
-    pub fn new() -> Application {
-        Application(platform::Application::new())
+    pub fn new(handler: Option<Box<dyn AppHandler>>) -> Application {
+        Application(platform::Application::new(handler))
     }
 
     /// Start the runloop.

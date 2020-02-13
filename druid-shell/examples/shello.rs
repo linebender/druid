@@ -128,7 +128,7 @@ fn main() {
     menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
-    let mut app = Application::new();
+    let mut app = Application::new(None);
     let mut builder = WindowBuilder::new();
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");

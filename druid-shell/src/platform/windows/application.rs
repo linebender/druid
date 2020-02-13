@@ -27,6 +27,8 @@ use winapi::um::winuser::{
     TranslateAcceleratorW, TranslateMessage, GA_ROOT, IDI_APPLICATION, MSG, WNDCLASSW,
 };
 
+use crate::application::AppHandler;
+
 use super::accels;
 use super::clipboard::Clipboard;
 use super::util::{self, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
@@ -35,7 +37,7 @@ use super::window::win_proc_dispatch;
 pub struct Application;
 
 impl Application {
-    pub fn new() -> Application {
+    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
         Application::init();
         Application
     }

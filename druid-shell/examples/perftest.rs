@@ -108,7 +108,7 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
-    let mut app = Application::new();
+    let mut app = Application::new(None);
     let mut builder = WindowBuilder::new();
     let perf_test = PerfTest {
         size: Default::default(),
