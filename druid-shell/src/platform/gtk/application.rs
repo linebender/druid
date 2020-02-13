@@ -22,6 +22,7 @@ use gtk::{Application as GtkApplication, GtkApplicationExt};
 
 use super::clipboard::Clipboard;
 use super::util;
+use crate::application::AppHandler;
 
 // XXX: The application needs to be global because WindowBuilder::build wants
 // to construct an ApplicationWindow, which needs the application, but
@@ -33,7 +34,7 @@ thread_local!(
 pub struct Application;
 
 impl Application {
-    pub fn new() -> Application {
+    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
         gtk::init().expect("GTK initialization failed");
         util::assert_main_thread();
 

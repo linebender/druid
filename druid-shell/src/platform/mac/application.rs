@@ -16,8 +16,11 @@
 
 #![allow(non_upper_case_globals)]
 
+use std::ffi::c_void;
+
 use super::clipboard::Clipboard;
 use super::util;
+use crate::application::AppHandler;
 
 use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicyRegular};
 use cocoa::base::{id, nil, YES};
@@ -25,18 +28,23 @@ use cocoa::foundation::NSAutoreleasePool;
 use objc::declare::ClassDecl;
 use objc::runtime::{Class, Object, Sel};
 
+static APP_HANDLER_IVAR: &str = "druidAppHandler";
+
 pub struct Application {
     ns_app: id,
 }
 
 impl Application {
-    pub fn new() -> Application {
+    pub fn new(handler: Option<Box<dyn AppHandler>>) -> Application {
         util::assert_main_thread();
         unsafe {
             let _pool = NSAutoreleasePool::new(nil);
 
             let delegate: id = msg_send![APP_DELEGATE.0, alloc];
             let () = msg_send![delegate, init];
+            let state = DelegateState { handler };
+            let handler_ptr = Box::into_raw(Box::new(state));
+            (*delegate).set_ivar(APP_HANDLER_IVAR, handler_ptr as *mut c_void);
             let ns_app = NSApp();
             let () = msg_send![ns_app, setDelegate: delegate];
             ns_app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
@@ -90,6 +98,18 @@ impl Application {
     }
 }
 
+struct DelegateState {
+    handler: Option<Box<dyn AppHandler>>,
+}
+
+impl DelegateState {
+    fn command(&mut self, command: u32) {
+        if let Some(inner) = self.handler.as_mut() {
+            inner.command(command)
+        }
+    }
+}
+
 struct AppDelegate(*const Class);
 unsafe impl Sync for AppDelegate {}
 
@@ -97,10 +117,16 @@ lazy_static! {
     static ref APP_DELEGATE: AppDelegate = unsafe {
         let mut decl = ClassDecl::new("DruidAppDelegate", class!(NSObject))
             .expect("App Delegate definition failed");
+        decl.add_ivar::<*mut c_void>(APP_HANDLER_IVAR);
 
         decl.add_method(
             sel!(applicationDidFinishLaunching:),
             application_did_finish_launching as extern "C" fn(&mut Object, Sel, id),
+        );
+
+        decl.add_method(
+            sel!(handleMenuItem:),
+            handle_menu_item as extern "C" fn(&mut Object, Sel, id),
         );
         AppDelegate(decl.register())
     };
@@ -109,5 +135,15 @@ lazy_static! {
 extern "C" fn application_did_finish_launching(_this: &mut Object, _: Sel, _notification: id) {
     unsafe {
         let () = msg_send![NSApp(), activateIgnoringOtherApps: YES];
+    }
+}
+
+/// This handles menu items in the case that all windows are closed.
+extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
+    unsafe {
+        let tag: isize = msg_send![item, tag];
+        let inner: *mut c_void = *this.get_ivar(APP_HANDLER_IVAR);
+        let inner = &mut *(inner as *mut DelegateState);
+        (*inner).command(tag as u32);
     }
 }
