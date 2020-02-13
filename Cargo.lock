@@ -295,6 +295,7 @@ name = "druid-shell"
 version = "0.5.0"
 dependencies = [
  "cairo-rs 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cairo-sys-rs 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "cocoa 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gdk 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -311,6 +312,7 @@ dependencies = [
  "time 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "wio 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xcb 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1367,6 +1369,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "x11"
+version = "2.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pkg-config 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "xcb"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x11 2.18.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "xi-unicode"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1531,6 +1552,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum winapi-i686-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
 "checksum winapi-x86_64-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 "checksum wio 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "5d129932f4644ac2396cb456385cbf9e63b5b30c6e8dc4820bdca4eb082037a5"
+"checksum x11 2.18.2 (registry+https://github.com/rust-lang/crates.io-index)" = "77ecd092546cb16f25783a5451538e73afc8d32e242648d54f4ae5459ba1e773"
+"checksum xcb 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "62056f63138b39116f82a540c983cc11f1c90cd70b3d492a70c25eaa50bd22a6"
 "checksum xi-unicode 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7395cdb9d0a6219fa0ea77d08c946adf9c1984c72fcd443ace30365f3daadef7"
 "checksum xmlparser 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b16981128b9e811347d0e72c25b2b22773da22b6dc30282846ad50427e89ba97"
 "checksum xmlwriter 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"

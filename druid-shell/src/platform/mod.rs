@@ -21,6 +21,9 @@ cfg_if::cfg_if! {
     } else if #[cfg(all(target_os = "macos", not(feature = "use_gtk")))] {
         mod mac;
         pub use mac::*;
+    } else if #[cfg(all(feature = "use_x11", target_os = "linux"))] {
+        mod x11;
+        pub use x11::*;
     } else if #[cfg(any(feature = "use_gtk", target_os = "linux"))] {
         mod gtk;
         pub use self::gtk::*;
