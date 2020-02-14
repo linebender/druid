@@ -92,6 +92,10 @@ impl<T: Data> Window<T> {
         &self.root.state().focus_chain
     }
 
+    pub(crate) fn may_contain_widget(&self, widget_id: WidgetId) -> bool {
+        self.root.state().children.contains(&widget_id)
+    }
+
     pub(crate) fn set_menu(&mut self, mut menu: MenuDesc<T>, data: &T, env: &Env) {
         let platform_menu = menu.build_window_menu(data, env);
         self.handle.set_menu(platform_menu);
