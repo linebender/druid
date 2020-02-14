@@ -446,6 +446,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     recurse = child_ctx.base_state.children.contains(id);
                     Event::TargetedCommand(*target, cmd.clone())
                 }
+                Target::Global => panic!("Target::Global should be converted before WidgetPod"),
             },
         };
         child_ctx.base_state.needs_inval = false;

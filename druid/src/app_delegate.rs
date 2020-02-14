@@ -19,8 +19,9 @@ use std::collections::VecDeque;
 use crate::{Command, Data, Env, Event, Target, WindowId};
 
 /// A context passed in to [`AppDelegate`] functions.
+///
+/// [`AppDelegate`]: trait.AppDelegate.html
 pub struct DelegateCtx<'a> {
-    pub(crate) source_id: WindowId,
     pub(crate) command_queue: &'a mut VecDeque<(Target, Command)>,
 }
 
@@ -32,14 +33,14 @@ impl<'a> DelegateCtx<'a> {
     /// the [`update()`] method is called.
     ///
     /// [`Command`]: struct.Command.html
-    /// [`update()`]: trait.Widget.html#tymethod.update
+    /// [`update()`]: widget/trait.Widget.html#tymethod.update
     pub fn submit_command(
         &mut self,
         command: impl Into<Command>,
         target: impl Into<Option<Target>>,
     ) {
         let command = command.into();
-        let target = target.into().unwrap_or_else(|| self.source_id.into());
+        let target = target.into().unwrap_or(Target::Global);
         self.command_queue.push_back((target, command))
     }
 }
@@ -54,20 +55,48 @@ impl<'a> DelegateCtx<'a> {
 /// You customize the `AppDelegate` by implementing its methods on your own type.
 #[allow(unused)]
 pub trait AppDelegate<T: Data> {
-    /// The `AppDelegate`'s event handler. This function receives all events,
-    /// before they are passed down the tree.
+    /// The `AppDelegate`'s event handler. This function receives all
+    /// non-command events, before they are passed down the tree.
     ///
     /// The return value of this function will be passed down the tree. This can
     /// be the event that was passed in, a different event, or no event. In all cases,
-    /// the `update` method will be called as usual.
+    /// the [`update()`] method will be called as usual.
+    ///
+    /// [`update()`]: widget/trait.Widget.html#tymethod.update
     fn event(
         &mut self,
+        ctx: &mut DelegateCtx,
+        window_id: WindowId,
         event: Event,
         data: &mut T,
         env: &Env,
-        ctx: &mut DelegateCtx,
     ) -> Option<Event> {
         Some(event)
+    }
+
+    /// The `AppDelegate`s [`Command`] handler.
+    ///
+    /// This function is called with each ([`Target`], [`Command`]) pair before
+    /// they are sent down the tree.
+    ///
+    /// If your implementation returns `true`, the command will be sent down
+    /// the widget tree. Otherwise it will not.
+    ///
+    /// To do anything fancier than this, you can submit arbitary commands
+    /// via [`DelegateCtx::submit_command`].
+    ///
+    /// [`Target`]: enum.Target.html
+    /// [`Command`]: struct.Command.html
+    /// [`DelegateCtx::submit_command`]: struct.DelegateCtx.html#method.submit_command
+    fn command(
+        &mut self,
+        ctx: &mut DelegateCtx,
+        target: &Target,
+        cmd: &Command,
+        data: &mut T,
+        env: &Env,
+    ) -> bool {
+        true
     }
 
     /// The handler for window creation events.

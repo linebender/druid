@@ -49,7 +49,7 @@ mod mouse;
 mod platform;
 mod window;
 
-pub use application::Application;
+pub use application::{AppHandler, Application};
 pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
 pub use common_util::Counter;
 pub use dialog::{FileDialogOptions, FileInfo, FileSpec};

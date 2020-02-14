@@ -14,14 +14,11 @@
 
 //! Window building and app lifecycle.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
 use crate::widget::WidgetExt;
-use crate::win_handler::AppState;
+use crate::win_handler::{AppHandler, AppState};
 use crate::window::{PendingWindow, WindowId};
 use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
 
@@ -110,16 +107,17 @@ impl<T: Data> AppLauncher<T> {
     /// Returns an error if a window cannot be instantiated. This is usually
     /// a fatal error.
     pub fn launch(mut self, data: T) -> Result<(), PlatformError> {
-        let mut app = Application::new(None);
         let mut env = theme::init();
         if let Some(f) = self.env_setup.take() {
             f(&mut env, &data);
         }
 
-        let state = AppState::new(data, env, self.delegate.take(), self.ext_event_host);
+        let mut state = AppState::new(data, env, self.delegate.take(), self.ext_event_host);
+        let handler = AppHandler::new(state.clone());
 
+        let mut app = Application::new(Some(Box::new(handler)));
         for desc in self.windows {
-            let window = desc.build_native(&state)?;
+            let window = desc.build_native(&mut state)?;
             window.show();
         }
 
@@ -181,15 +179,13 @@ impl<T: Data> WindowDesc<T> {
     /// Attempt to create a platform window from this `WindowDesc`.
     pub(crate) fn build_native(
         mut self,
-        state: &Rc<RefCell<AppState<T>>>,
+        state: &mut AppState<T>,
     ) -> Result<WindowHandle, PlatformError> {
-        self.title
-            .resolve(&state.borrow().data, &state.borrow().env);
+        let data = state.data();
+        let env = state.env();
+        self.title.resolve(&data, &env);
 
-        let platform_menu = self
-            .menu
-            .as_mut()
-            .map(|m| m.build_window_menu(&state.borrow().data, &state.borrow().env));
+        let platform_menu = self.menu.as_mut().map(|m| m.build_window_menu(&data, &env));
 
         let handler = DruidHandler::new_shared(state.clone(), self.id);
 
@@ -206,7 +202,7 @@ impl<T: Data> WindowDesc<T> {
         }
 
         let window = PendingWindow::new(self.root, self.title, self.menu);
-        state.borrow_mut().add_window(self.id, window);
+        state.add_window(self.id, window);
 
         builder.build()
     }
