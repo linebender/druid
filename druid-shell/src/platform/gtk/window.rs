@@ -191,6 +191,7 @@ impl WindowBuilder {
         drawing_area.set_events(
             EventMask::EXPOSURE_MASK
                 | EventMask::POINTER_MOTION_MASK
+                | EventMask::LEAVE_NOTIFY_MASK
                 | EventMask::BUTTON_PRESS_MASK
                 | EventMask::BUTTON_RELEASE_MASK
                 | EventMask::KEY_PRESS_MASK
@@ -281,7 +282,7 @@ impl WindowBuilder {
             Inhibit(true)
         }));
 
-        drawing_area.connect_motion_notify_event(clone!(handle=>move |_widget, motion| {
+        drawing_area.connect_motion_notify_event(clone!(handle => move |_widget, motion| {
             if let Some(state) = handle.state.upgrade() {
 
                 let pos = Point::from(motion.get_position());
@@ -290,6 +291,26 @@ impl WindowBuilder {
                     mods: get_modifiers(motion.get_state()),
                     count: 0,
                     button: get_mouse_button_from_modifiers(motion.get_state()),
+                };
+
+                state
+                    .handler
+                    .borrow_mut()
+                    .mouse_move(&mouse_event);
+            }
+
+            Inhibit(true)
+        }));
+
+        drawing_area.connect_leave_notify_event(clone!(handle => move |_widget, crossing| {
+            if let Some(state) = handle.state.upgrade() {
+
+                let pos = Point::from(crossing.get_position());
+                let mouse_event = MouseEvent {
+                    pos,
+                    mods: get_modifiers(crossing.get_state()),
+                    count: 0,
+                    button: get_mouse_button_from_modifiers(crossing.get_state()),
                 };
 
                 state
