@@ -76,6 +76,9 @@ struct Inner<T> {
     command_queue: CommandQueue,
     ext_event_host: ExtEventHost,
     windows: Windows<T>,
+    /// the application-level menu, only set on macos and only if there
+    /// are no open windows.
+    root_menu: Option<MenuDesc<T>>,
     pub(crate) env: Env,
     pub(crate) data: T,
 }
@@ -100,8 +103,8 @@ impl<T> Windows<T> {
         assert!(self.pending.insert(id, win).is_none(), "duplicate pending");
     }
 
-    fn remove(&mut self, id: WindowId) -> Option<WindowHandle> {
-        self.windows.remove(&id).map(|entry| entry.handle)
+    fn remove(&mut self, id: WindowId) -> Option<Window<T>> {
+        self.windows.remove(&id)
     }
 
     fn iter_mut(&mut self) -> impl Iterator<Item = &'_ mut Window<T>> {
@@ -133,6 +136,7 @@ impl<T> AppState<T> {
         let inner = Rc::new(RefCell::new(Inner {
             delegate,
             command_queue: VecDeque::new(),
+            root_menu: None,
             ext_event_host,
             data,
             env,
@@ -147,10 +151,10 @@ impl<T: Data> Inner<T> {
     fn get_menu_cmd(&self, window_id: Option<WindowId>, cmd_id: u32) -> Option<Command> {
         match window_id {
             Some(id) => self.windows.get(id).and_then(|w| w.get_menu_cmd(cmd_id)),
-            None => {
-                log::warn!("cannot get menu command without window_id");
-                None
-            }
+            None => self
+                .root_menu
+                .as_ref()
+                .and_then(|m| m.command_for_id(cmd_id)),
         }
     }
 
@@ -211,7 +215,14 @@ impl<T: Data> Inner<T> {
     /// We clean up resources and notifiy the delegate, if necessary.
     fn remove_window(&mut self, window_id: WindowId) {
         self.with_delegate(|del, data, env, ctx| del.window_removed(window_id, data, env, ctx));
-        self.windows.remove(window_id);
+        // when closing the last window:
+        if let Some(mut win) = self.windows.remove(window_id) {
+            if self.windows.windows.is_empty() {
+                // on mac we need to keep the menu around
+                self.root_menu = win.menu.take();
+                //FIXME: on windows we need to shutdown the app here?
+            }
+        }
 
         // if we are closing the window that is currently responsible for
         // waking us when external events arrive, we want to pass that responsibility
