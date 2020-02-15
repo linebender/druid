@@ -22,7 +22,7 @@ use crate::{
 /// A widget that can switch dynamically between one of many views depending
 /// on application state.
 
-pub struct ViewSwitcher<T: Data, U> {
+pub struct ViewSwitcher<T, U> {
     child_picker: Box<dyn Fn(&T, &Env) -> U>,
     child_builder: Box<dyn Fn(&U, &Env) -> Box<dyn Widget<T>>>,
     active_child: Option<WidgetPod<T, Box<dyn Widget<T>>>>,
@@ -90,7 +90,6 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
         data: &T,
         env: &Env,
     ) -> Size {
-        // TODO: correctly handle paint bounds for the child.
         match self.active_child {
             Some(ref mut child) => {
                 let size = child.layout(layout_ctx, bc, data, env);
