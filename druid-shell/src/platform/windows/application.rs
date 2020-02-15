@@ -36,16 +36,15 @@ pub struct Application;
 
 impl Application {
     pub fn new() -> Application {
+        Application::init();
         Application
     }
 
     pub fn run(&mut self) {
-        Application::init();
         unsafe {
             // Handle windows messages
             loop {
                 let mut msg = mem::MaybeUninit::uninit();
-                // Note: we could use PM_REMOVE here and avoid the GetMessage below
                 let res = GetMessageW(msg.as_mut_ptr(), ptr::null_mut(), 0, 0);
                 if res <= 0 {
                     return;
