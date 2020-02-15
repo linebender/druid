@@ -79,7 +79,7 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
         }
 
         if !old_data.same(data) {
-            ctx.invalidate();
+            ctx.request_paint();
         }
     }
 
