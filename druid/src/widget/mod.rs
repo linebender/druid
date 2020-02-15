@@ -38,6 +38,7 @@ mod stepper;
 mod svg;
 mod switch;
 mod textbox;
+mod view_switcher;
 mod widget_ext;
 
 pub use align::Align;
@@ -64,6 +65,7 @@ pub use stepper::Stepper;
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
 pub use textbox::TextBox;
+pub use view_switcher::ViewSwitcher;
 pub use widget_ext::WidgetExt;
 
 use std::num::NonZeroU64;
