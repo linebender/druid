@@ -4,7 +4,7 @@ pub struct Application;
 
 impl Application {
     pub fn init() {
-        unimplemented!(); // TODO
+        // TODO: currently a no-op
     }
 
     pub fn quit() {

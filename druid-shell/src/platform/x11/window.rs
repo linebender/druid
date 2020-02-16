@@ -12,11 +12,12 @@ pub struct WindowBuilder;
 
 impl WindowBuilder {
     pub fn new() -> WindowBuilder {
-        unimplemented!(); // TODO
+        // TODO
+        WindowBuilder {}
     }
 
     pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
-        unimplemented!(); // TODO
+        // TODO: currently a no-op
     }
 
     pub fn set_size(&mut self, size: Size) {
@@ -24,7 +25,7 @@ impl WindowBuilder {
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
-        unimplemented!(); // TODO
+        // TODO: currently a no-op
     }
 
     pub fn set_menu(&mut self, menu: Menu) {
@@ -32,7 +33,8 @@ impl WindowBuilder {
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
-        unimplemented!(); // TODO
+        // TODO: actual implementation
+        Ok(WindowHandle::default())
     }
 }
 
@@ -57,7 +59,7 @@ pub struct WindowHandle;
 
 impl WindowHandle {
     pub fn show(&self) {
-        unimplemented!(); // TODO
+        // TODO: currently a no-op
     }
 
     pub fn close(&self) {

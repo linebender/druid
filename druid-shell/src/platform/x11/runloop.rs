@@ -2,10 +2,13 @@ pub struct RunLoop;
 
 impl RunLoop {
     pub fn new() -> RunLoop {
-        unimplemented!(); // TODO
+        // TODO
+        RunLoop {}
     }
 
     pub fn run(&mut self) {
-        unimplemented!(); // TODO
+        // TODO: actual implementation
+        loop {
+        }
     }
 }
