@@ -181,6 +181,7 @@ impl XWindow {
         if let Err(e) = piet_ctx.finish() {
             panic!("piet error on render: {:?}", e); // TODO: hook up to error or something?
         }
+        conn.flush();
     }
 }
 
