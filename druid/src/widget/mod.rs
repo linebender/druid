@@ -17,6 +17,7 @@
 mod align;
 mod button;
 mod checkbox;
+mod common;
 mod container;
 mod either;
 mod env_scope;
@@ -46,10 +47,11 @@ mod widget_ext;
 
 #[cfg(feature = "image")]
 #[cfg_attr(docsrs, doc(cfg(feature = "image")))]
-pub use self::image::{FillStrat, Image, ImageData};
+pub use self::image::{Image, ImageData};
 pub use align::Align;
 pub use button::Button;
 pub use checkbox::Checkbox;
+pub use common::FillStrat;
 pub use container::Container;
 pub use either::Either;
 pub use env_scope::EnvScope;
