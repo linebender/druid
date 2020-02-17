@@ -36,6 +36,11 @@ extern crate objc;
 #[macro_use]
 extern crate lazy_static;
 
+// TODO: refactor the #[cfg]?
+#[cfg(all(target_os = "linux", feature = "use_x11"))]
+#[macro_use]
+extern crate lazy_static;
+
 mod application;
 mod clipboard;
 mod common_util;

@@ -16,6 +16,10 @@
 
 use crate::platform::runloop as platform;
 
+// TODO: super hacky way to connect the XWindow to the RunLoop. Better way to do it?
+#[cfg(all(target_os = "linux", feature = "use_x11"))]
+use crate::platform::window::XWindow;
+
 /// The main application loop.
 pub struct RunLoop(platform::RunLoop);
 
@@ -34,5 +38,11 @@ impl RunLoop {
     /// This will block the current thread until the program has finished executing.
     pub fn run(&mut self) {
         self.0.run()
+    }
+
+    /// Allow the RunLoop to send events to the correct window.
+    // TODO: super hacky way to connect the XWindow to the RunLoop. Better way to do it?
+    pub(crate) fn add_xwindow(&mut self, x_id: u32, xwindow: XWindow) {
+        self.0.add_xwindow(x_id, xwindow);
     }
 }

@@ -23,6 +23,7 @@ use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Size, Vec2};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
+use crate::runloop::RunLoop;
 use crate::platform::window as platform;
 
 // It's possible we'll want to make this type alias at a lower level,
@@ -223,11 +224,22 @@ impl WindowBuilder {
         self.0.set_menu(menu.into_inner())
     }
 
+
     /// Attempt to construct the platform window.
     ///
     /// If this fails, your application should exit.
+    #[cfg(not(all(target_os = "linux", feature = "use_x11")))]
     pub fn build(self) -> Result<WindowHandle, Error> {
         self.0.build().map(WindowHandle).map_err(Into::into)
+    }
+
+    /// Attempt to construct the platform window.
+    ///
+    /// If this fails, your application should exit.
+    // TODO: super hacky way to connect the XWindow to the RunLoop. Better way to do it?
+    #[cfg(all(target_os = "linux", feature = "use_x11"))]
+    pub fn build(self, run_loop: &mut RunLoop) -> Result<WindowHandle, Error> {
+        self.0.build(run_loop).map(WindowHandle).map_err(Into::into)
     }
 }
 
