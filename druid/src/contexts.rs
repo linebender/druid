@@ -518,6 +518,11 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
 }
 
 impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
+    /// get the `WidgetId` of the current widget.
+    pub fn widget_id(&self) -> WidgetId {
+        self.base_state.id
+    }
+
     /// Query the "hot" state of the widget.
     ///
     /// See [`EventCtx::is_hot`](struct.EventCtx.html#method.is_hot) for
