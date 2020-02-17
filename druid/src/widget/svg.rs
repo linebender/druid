@@ -40,7 +40,7 @@ impl<T: Data> Svg<T> {
     /// Create an SVG-drawing widget from SvgData.
     ///
     /// The SVG will scale to fit its box constraints.
-    pub fn new(svg_data: SvgData) -> impl Widget<T> {
+    pub fn new(svg_data: SvgData) -> Self {
         Svg {
             svg_data,
             phantom: Default::default(),

@@ -24,16 +24,14 @@ fn main() {
 }
 
 #[cfg(feature = "svg")]
-use log::error;
-
-#[cfg(feature = "svg")]
-use druid::{
-    widget::{Flex, Svg, SvgData, WidgetExt},
-    AppLauncher, LocalizedString, Widget, WindowDesc,
-};
-
-#[cfg(feature = "svg")]
 fn main() {
+    use log::error;
+
+    use druid::{
+        widget::{FillStrat, Flex, Svg, SvgData, WidgetExt},
+        AppLauncher, LocalizedString, Widget, WindowDesc,
+    };
+
     let main_window = WindowDesc::new(ui_builder)
         .title(LocalizedString::new("svg-demo-window-title").with_placeholder("Rawr!"));
     let data = 0_u32;
@@ -41,22 +39,22 @@ fn main() {
         .use_simple_logger()
         .launch(data)
         .expect("launch failed");
-}
 
-#[cfg(feature = "svg")]
-fn ui_builder() -> impl Widget<u32> {
-    let tiger_svg = match include_str!("tiger.svg").parse::<SvgData>() {
-        Ok(svg) => svg,
-        Err(err) => {
-            error!("{}", err);
-            error!("Using an empty SVG instead.");
-            SvgData::default()
-        }
-    };
+    fn ui_builder() -> impl Widget<u32> {
+        let tiger_svg = match include_str!("tiger.svg").parse::<SvgData>() {
+            Ok(svg) => svg,
+            Err(err) => {
+                error!("{}", err);
+                error!("Using an empty SVG instead.");
+                SvgData::default()
+            }
+        };
 
-    let mut col = Flex::column();
+        let mut col = Flex::column();
 
-    col.add_child(Svg::new(tiger_svg.clone()).fix_width(100.0).center(), 1.0);
-    col.add_child(Svg::new(tiger_svg), 1.0);
-    col
+        col.add_child(Svg::new(tiger_svg.clone()).fix_width(100.0).center(), 1.0);
+        col.add_child(Svg::new(tiger_svg.clone()).fill_mode(FillStrat::Fill), 1.0);
+        col.add_child(Svg::new(tiger_svg), 1.0);
+        col
+    }
 }
