@@ -449,7 +449,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Target::Global => panic!("Target::Global should be converted before WidgetPod"),
             },
         };
-        child_ctx.base_state.needs_inval = false;
         if let Some(is_hot) = hot_changed {
             let hot_changed_event = LifeCycle::HotChanged(is_hot);
             let mut lc_ctx = child_ctx.make_lifecycle_ctx();
