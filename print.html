@@ -1,0 +1,348 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Druid</title>
+        
+        <meta name="robots" content="noindex" />
+        
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div id="sidebar-scrollbox" class="sidebar-scrollbox">
+                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction to Druid</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="drawing.html"><strong aria-hidden="true">4.</strong> Draw the user interface</a></li><li class="expanded "><a href="user_input.html"><strong aria-hidden="true">5.</strong> Handling user input</a></li><li class="expanded "><a href="state.html"><strong aria-hidden="true">6.</strong> Handling state</a></li><li class="expanded "><a href="widgets.html"><strong aria-hidden="true">7.</strong> Create custom widgets</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">8.</strong> More information</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div id="menu-bar-sticky-container">
+                        <div class="left-buttons">
+                            <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                                <i class="fa fa-bars"></i>
+                            </button>
+                            <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                                <i class="fa fa-paint-brush"></i>
+                            </button>
+                            <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            </ul>
+                            
+                            <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                                <i class="fa fa-search"></i>
+                            </button>
+                            
+                        </div>
+
+                        <h1 class="menu-title">Druid</h1>
+
+                        <div class="right-buttons">
+                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                                <i id="print-button" class="fa fa-print"></i>
+                            </a>
+                            
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#introduction-to-druid" id="introduction-to-druid">Introduction to Druid</a></h1>
+<p>A simple explanation of what Druid is and why you want to use it (this could also be copied to 
+the crates.io page)</p>
+<h1><a class="header" href="#set-up-druid" id="set-up-druid">Set up Druid</a></h1>
+<p>This tutorial assumes basic familliarity with Rust and a working setup with the basic tooling like
+Rustup and Cargo. This tutorial will use stable Rust (v1.39.0 at the time of writing) and the latest
+released version of Druid.</p>
+<p>This tutorial will first walk you through setting up the dependencies for developing a Druid
+application, then it will show you how to set up a basic application, build it and run it.</p>
+<h2><a class="header" href="#setting-up-druid-dependencies" id="setting-up-druid-dependencies">Setting up Druid dependencies</a></h2>
+<p>In addition to including the druid library in your project </p>
+<h3><a class="header" href="#macos" id="macos">macOS</a></h3>
+<p>On macOS, druid requires <a href="https://www.cairographics.org">cairo</a>; if you use homebrew, <code>brew install cairo</code>
+should be sufficient. Removing this dependency is on the roadmap.</p>
+<h3><a class="header" href="#linux" id="linux">Linux</a></h3>
+<p>On Linux, druid requires gtk+3.</p>
+<p>On Ubuntu this can be installed with</p>
+<pre><code>sudo apt-get install libgtk-3-dev
+</code></pre>
+<p>On Fedora </p>
+<pre><code>sudo dnf install gtk3-devel glib2-devel
+</code></pre>
+<p>See <a href="http://gtk-rs.org/docs/requirements.html">gtk-rs dependencies</a> for more installation instructions.</p>
+<h2><a class="header" href="#starting-a-project" id="starting-a-project">Starting a project</a></h2>
+<p>Starting a project is as easy as creating an empty application with</p>
+<pre><code>cargo new my-application
+</code></pre>
+<p>and adding the druid dependency to your Cargo.toml</p>
+<pre><code>[dependencies]
+druid = &quot;0.4.0&quot;
+</code></pre>
+<h1><a class="header" href="#get-started-with-druid" id="get-started-with-druid">Get started with Druid</a></h1>
+<p>This chapter will walk you through setting up a simple druid application from start to finish.</p>
+<h2><a class="header" href="#set-up-a-druid-project" id="set-up-a-druid-project">Set up a Druid project</a></h2>
+<p>Setting up a project is a simple as creating a new Rust project;</p>
+<pre><code class="language-bash">&gt; cargo new druid-example
+</code></pre>
+<p>And then adding druid as a dependency to Cargo.toml</p>
+<pre><code class="language-toml">[dependencies]
+druid = &quot;0.4.0&quot;
+</code></pre>
+<p>To show a minimal window with a label replace <code>main.rs</code> with this;</p>
+<pre><code class="language-rust noplaypen">use druid::{AppLauncher, WindowDesc, Widget};
+use druid::widget::Label;
+use druid::shell::Error;
+
+fn build_ui() -&gt; impl Widget&lt;()&gt; {
+    Label::new(&quot;Hello world&quot;)
+}
+
+fn main() -&gt; Result&lt;(), Error&gt; {
+    AppLauncher::with_window(WindowDesc::new(build_ui)).launch(())?;
+    Ok(())
+}
+</code></pre>
+<p>In our main function we create an <code>AppLauncher</code>, pass it a <code>WindowDesc</code> that wraps build_ui function and launch it. Druid will use our <code>build_ui</code> function to build and rebuild our main window every time it needs to refresh. <code>build_ui</code> returns a tree of widgets. For now this tree consists of one simple label widget.</p>
+<p>This is a very simple example application and it's missing some important pieces. We will add these in the coming few paragraphs.</p>
+<h2><a class="header" href="#draw-more-widgets" id="draw-more-widgets">Draw more widgets</a></h2>
+<p>The first thing we could do to make our example application more interesting is to draw more than one widget. Unfortunately <code>WindowDesc::new</code> expects a function that returns only one Widget. We also need a way to tell Druid how to lay-out our widgets.
+We solve both these problems by passing in a widget-tree with one single widget at the top. Widgets can have children and widgets higher up in the tree know how to lay-out their children. That way we describe a window as a widget-tree with layout containers as the branches and widgets as the leaves. Our <code>build_ui</code> function is then responsible for building this widget tree.</p>
+<p>To see how this works we will divide our window in four. We'll have two rows and two columns with a single label in each of the quadrants. We can lay-out our labels using the <code>Flex</code> widget.</p>
+<pre><code class="language-rust noplaypen">fn build_ui() -&gt; impl Widget&lt;()&gt; {
+    Flex::row()
+        .with_child(
+            Flex::column()
+                .with_child(Label::new(&quot;top left&quot;), 1.0)
+                .with_child(Label::new(&quot;bottom left&quot;), 1.0), 
+            1.0)
+        .with_child(
+            Flex::column()
+                .with_child(Label::new(&quot;top right&quot;), 1.0)
+                .with_child(Label::new(&quot;bottom right&quot;), 1.0),
+            1.0)
+}
+</code></pre>
+<p>This looks nice but the labels on the left are drawn right against the window edge, so we needs some padding. Lets say we also want to center the two bottom labels. Unlike many other UI frameworks, widgets in Druid don't have padding or alignment properties themselves. Widgets are kept as simple as possible. </p>
+<p>Features like padding or alignment are implemented in separate widgets. To add padding you simply wrap the labels in a <code>Padding</code> widget. Centering widgets is done using the <code>Align</code> widget set to <code>centered</code>.</p>
+<pre><code class="language-rust noplaypen">fn build_ui() -&gt; impl Widget&lt;()&gt; {
+    Padding::new(
+        10.0,
+        Flex::row()
+            .with_child(
+                Flex::column()
+                    .with_child(Label::new(&quot;top left&quot;), 1.0)
+                    .with_child(Align::centered(Label::new(&quot;bottom left&quot;)), 1.0), 
+                1.0)
+            .with_child(
+                Flex::column()
+                    .with_child(Label::new(&quot;top right&quot;), 1.0)
+                    .with_child(Align::centered(Label::new(&quot;bottom right&quot;)), 1.0),
+                1.0))
+}
+</code></pre>
+<p>Do not forget to import the new widgets;</p>
+<pre><code class="language-rust noplaypen">use druid::widget::{Label, Flex, Padding, Align};
+</code></pre>
+<h2><a class="header" href="#application-state" id="application-state">Application state</a></h2>
+<p>We can display a window and draw and position widgets in it. Now it's time to find out how we can tie these widgets to
+the rest of our application. First lets see how we can display information from our application in the user interface.
+For this we need to define what our application's state looks like.</p>
+<p>...</p>
+<h2><a class="header" href="#handle-user-input" id="handle-user-input">Handle user input</a></h2>
+<p>...</p>
+<h2><a class="header" href="#putting-it-all-together" id="putting-it-all-together">Putting it all together</a></h2>
+<p>...</p>
+<h1><a class="header" href="#draw-the-user-interface" id="draw-the-user-interface">Draw the user interface</a></h1>
+<p>This chapter will describe how to build up your user interface</p>
+<h1><a class="header" href="#handling-user-input" id="handling-user-input">Handling user input</a></h1>
+<p>This chapter will describe how to wire up your user interface to your Rust code</p>
+<h1><a class="header" href="#handling-state" id="handling-state">Handling state</a></h1>
+<p>This chapter will describe how to handle state in your application</p>
+<h1><a class="header" href="#create-custom-widgets" id="create-custom-widgets">Create custom widgets</a></h1>
+<p>This chapter will describe how to create a custom widget</p>
+<h1><a class="header" href="#more-information" id="more-information">More information</a></h1>
+<p>If you want more information about Druid this document contains links more tutorials, blogposts and
+youtube videos.</p>
+<h2><a class="header" href="#related-projects" id="related-projects">Related projects</a></h2>
+<p>These three projects provide the basis that Druid works on</p>
+<ul>
+<li><a href="https://github.com/linebender/piet">Piet</a> An abstraction for 2D graphics.</li>
+<li><a href="https://github.com/linebender/kurbo">Kurbo</a> A Rust library for manipulating curves</li>
+<li><a href="https://github.com/linebender/skribo">Skribo</a> A Rust library for low-level text layout</li>
+</ul>
+<h2><a class="header" href="#projects-using-druid" id="projects-using-druid">Projects using Druid</a></h2>
+<h2><a class="header" href="#presentations" id="presentations">Presentations</a></h2>
+<p>Some presentations about Druid, its background and related topics have been recorded</p>
+<ul>
+<li><a href="https://youtu.be/xH2x99FTY4k">Declarative UI patterns in Rust</a> by Raph Levien at the Bay Area Rust Meetup December 3 2019</li>
+<li><a href="https://youtu.be/4YTfxresvS8">Data oriented GUI in Rust</a> by Raph Levien at the Bay Area Rust Meetup June 28 2018</li>
+</ul>
+<h2><a class="header" href="#blog-posts" id="blog-posts">Blog posts</a></h2>
+<p>People have been blogging about Druid</p>
+<ul>
+<li><a href="https://pauljmiller.com/posts/druid-widget-tutorial.html">Building a widget for Druid</a> a blog post by Paul Miller on how to create custom Widgets that explains lots of Druid on the way</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+        
+        
+        <script type="text/javascript">
+            window.playpen_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+        
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+        
+        
+
+    </body>
+</html>
