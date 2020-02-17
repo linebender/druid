@@ -23,79 +23,11 @@ use std::path::Path;
 use image;
 
 use crate::{
+    piet::{ImageFormat, InterpolationMode},
+    widget::common::FillStrat,
     Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget,
+    PaintCtx, Rect, RenderContext, Size, UpdateCtx, Widget,
 };
-
-use crate::piet::{ImageFormat, InterpolationMode};
-
-// These are based on https://api.flutter.dev/flutter/painting/BoxFit-class.html
-#[derive(Clone, Copy, PartialEq)]
-pub enum FillStrat {
-    /// As large as posible without changing aspect ratio of image and all of image shown
-    Contain,
-    /// As large as posible with no dead space so that some of the image may be clipped
-    Cover,
-    /// Fill the widget with no dead space, aspect ratio of widget is used
-    Fill,
-    /// Fill the hight with the images aspect ratio, some of the image may be clipped
-    FitHeight,
-    /// Fill the width with the images aspect ratio, some of the image may be clipped
-    FitWidth,
-    /// Do not scale
-    None,
-    /// Scale down to fit but do not scale up
-    ScaleDown,
-}
-
-impl Default for FillStrat {
-    fn default() -> Self {
-        FillStrat::Contain
-    }
-}
-
-/// Calculate an origin and scale for an image with a given `FillStrat`.
-///
-/// This takes some properties of a widget and a fill strategy and returns an affine matrix
-/// used to position and scale the image in the widget.
-fn get_affine_from_fill(parent: Size, fit_box: Size, fit_type: FillStrat) -> Affine {
-    let scalex = parent.width / fit_box.width;
-    let scaley = parent.height / fit_box.height;
-
-    let scale: Point = match fit_type {
-        FillStrat::Contain => {
-            let scale = scalex.min(scaley);
-            Point { x: scale, y: scale }
-        }
-        FillStrat::Cover => {
-            let scale = scalex.max(scaley);
-            Point { x: scale, y: scale }
-        }
-        FillStrat::Fill => Point {
-            x: scalex,
-            y: scaley,
-        },
-        FillStrat::FitHeight => Point {
-            x: scaley,
-            y: scaley,
-        },
-        FillStrat::FitWidth => Point {
-            x: scalex,
-            y: scalex,
-        },
-        FillStrat::ScaleDown => {
-            let scale = scalex.min(scaley).min(1.0);
-            Point { x: scale, y: scale }
-        }
-        FillStrat::None => Point { x: 1.0, y: 1.0 },
-    };
-
-    let origin_x = (parent.width - (fit_box.width * scale.x)) / 2.0;
-    let origin_y = (parent.height - (fit_box.height * scale.y)) / 2.0;
-    let origin = Point::new(origin_x, origin_y);
-
-    Affine::new([scale.x, 0., 0., scale.y, origin.x, origin.y])
-}
 
 /// A widget that renders an Image
 pub struct Image<T> {
@@ -152,8 +84,9 @@ impl<T: Data> Widget<T> for Image<T> {
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, _env: &Env) {
-        let offset_matrix =
-            get_affine_from_fill(paint_ctx.size(), self.image_data.get_size(), self.fill);
+        let offset_matrix = self
+            .fill
+            .affine_to_fill(paint_ctx.size(), self.image_data.get_size());
 
         // The ImageData's to_piet function does not clip to the image's size
         // CairoRenderContext is very like druids but with some extra goodies like clip
