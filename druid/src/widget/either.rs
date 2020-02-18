@@ -68,8 +68,8 @@ impl<T: Data> Widget<T> for Either<T> {
         let current = (self.closure)(data, env);
         if current != self.current {
             self.current = current;
+            ctx.request_layout();
             ctx.request_paint();
-            // TODO: more event flow to request here.
         }
         if self.current {
             self.true_branch.update(ctx, data, env);
