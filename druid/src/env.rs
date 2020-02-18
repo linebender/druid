@@ -102,6 +102,37 @@ pub struct ValueTypeError {
 }
 
 impl Env {
+    /// State for whether or not to paint colorful rectangles for layout
+    /// debugging.
+    ///
+    /// Set by the `debug_paint_layout()` method on [`WidgetExt`]'.
+    ///
+    /// [`WidgetExt`]: widget/trait.WidgetExt.html
+    pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("druid.built-in.debug-paint");
+
+    /// A key used to tell widgets to print additional debug information.
+    ///
+    /// This does nothing by default; however you can check this key while
+    /// debugging a widget to limit println spam.
+    ///
+    /// For convenience, this key can be set with the [`WidgetExt::debug_widget`]
+    /// method.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use druid::Env;
+    /// # let env = Env::default();
+    /// # let widget_id = 0;
+    /// # let my_rect = druid::Rect::ZERO;
+    /// if env.get(Env::DEBUG_WIDGET) {
+    ///     eprintln!("widget {:?} bounds: {:?}", widget_id, my_rect);
+    /// }
+    /// ```
+    ///
+    /// [`WidgetExt::debug_widget`]: widget/trait.WidgetExt.html#method.debug_widget
+    pub const DEBUG_WIDGET: Key<bool> = Key::new("druid.built-in.debug-widget");
+
     /// Gets a value from the environment, expecting it to be present.
     ///
     /// Note that the return value is a reference for "expensive" types such
@@ -174,14 +205,6 @@ impl Env {
         let color_num = id as usize % self.0.debug_colors.len();
         self.0.debug_colors[color_num].clone()
     }
-
-    /// State for whether or not to paint colorful rectangles for layout
-    /// debugging.
-    ///
-    /// Set by the `debug_paint_layout()` method on [`AppLauncher`]'.
-    ///
-    /// [`AppLauncher`]: struct.AppLauncher.html
-    pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("debug_paint");
 }
 
 impl<T> Key<T> {
@@ -320,7 +343,9 @@ impl Default for Env {
             debug_colors,
         };
 
-        Env(Arc::new(inner)).adding(Env::DEBUG_PAINT, false)
+        Env(Arc::new(inner))
+            .adding(Env::DEBUG_PAINT, false)
+            .adding(Env::DEBUG_WIDGET, false)
     }
 }
 

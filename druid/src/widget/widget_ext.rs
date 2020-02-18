@@ -118,7 +118,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`Env`] with the provided closure.
     ///
     /// [`EnvScope`]: struct.Container.html
-    /// [`Env`]: struct.Env.html
+    /// [`Env`]: ../struct.Env.html
     fn env_scope(self, f: impl Fn(&mut Env, &T) + 'static) -> EnvScope<T, Self> {
         EnvScope::new(f, self)
     }
@@ -128,6 +128,16 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`layout`]: trait.Widget.html#tymethod.layout
     fn debug_paint_layout(self) -> EnvScope<T, Self> {
         EnvScope::new(|env, _| env.set(Env::DEBUG_PAINT, true), self)
+    }
+
+    /// Set the [`DEBUG_WIDGET`] env variable for this widget (and its descendants).
+    ///
+    /// This does nothing by default, but you can use this variable while
+    /// debugging to only print messages from particular instances of a widget.
+    ///
+    /// [`DEBUG_WIDGET`]: ../struct.Env.html#associatedconstant.DEBUG_WIDGET
+    fn debug_widget(self) -> EnvScope<T, Self> {
+        EnvScope::new(|env, _| env.set(Env::DEBUG_WIDGET, true), self)
     }
 
     /// Wrap this widget in a [`LensWrap`] widget for the provided [`Lens`].
