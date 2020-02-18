@@ -21,7 +21,7 @@
 #[cfg(not(feature = "image"))]
 fn main() {
     eprintln!("This examples requires the \"image\" feature to be enabled:");
-    eprintln!("cargo run --example image --features \"image\"");
+    eprintln!("cargo run --example=image --features=image");
 }
 
 #[cfg(feature = "image")]
