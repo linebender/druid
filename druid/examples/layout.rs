@@ -49,14 +49,13 @@ fn build_app() -> impl Widget<u32> {
         col.add_child(Button::new(format!("Button #{}", i), Button::noop), weight);
     }
 
-    col
+    col.debug_paint_layout()
 }
 
 fn main() {
     let window = WindowDesc::new(build_app)
         .title(LocalizedString::new("layout-demo-window-title").with_placeholder("Very flexible"));
     AppLauncher::with_window(window)
-        .debug_paint_layout()
         .use_simple_logger()
         .launch(0u32)
         .expect("launch failed");

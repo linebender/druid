@@ -96,10 +96,9 @@ impl<T: Data> AppLauncher<T> {
     /// Paint colorful rectangles for layout debugging.
     ///
     /// The rectangles are drawn around each widget's layout rect.
+    #[deprecated(since = "0.5.0", note = "Use WidgetExt::debug_paint_layout instead.")]
     pub fn debug_paint_layout(self) -> Self {
-        self.configure_env(|env, _| {
-            env.set(Env::DEBUG_PAINT, true);
-        })
+        self
     }
 
     /// Build the windows and start the runloop.
