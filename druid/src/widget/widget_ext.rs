@@ -123,6 +123,13 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         EnvScope::new(f, self)
     }
 
+    /// Draw the [`layout`] `Rect`s of  this widget and its children.
+    ///
+    /// [`layout`]: trait.Widget.html#tymethod.layout
+    fn debug_paint_layout(self) -> EnvScope<T, Self> {
+        EnvScope::new(|env, _| env.set(Env::DEBUG_PAINT, true), self)
+    }
+
     /// Wrap this widget in a [`LensWrap`] widget for the provided [`Lens`].
     ///
     ///
@@ -172,6 +179,25 @@ impl<T: Data> SizedBox<T> {
 
     pub fn fix_height(self, height: f64) -> SizedBox<T> {
         self.height(height)
+    }
+}
+
+// if two things are modifying an env one after another, just combine the modifications
+impl<T: Data, W> EnvScope<T, W> {
+    pub fn env_scope(self, f2: impl Fn(&mut Env, &T) + 'static) -> EnvScope<T, W> {
+        let EnvScope { f, child } = self;
+        let new_f = move |env: &mut Env, data: &T| {
+            f(env, data);
+            f2(env, data);
+        };
+        EnvScope {
+            f: Box::new(new_f),
+            child,
+        }
+    }
+
+    pub fn debug_paint_layout(self) -> EnvScope<T, W> {
+        self.env_scope(|env, _| env.set(Env::DEBUG_PAINT, true))
     }
 }
 

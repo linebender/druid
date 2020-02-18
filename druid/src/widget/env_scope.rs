@@ -22,8 +22,8 @@ use crate::{
 
 /// A widget that accepts a closure to update the environment for its child.
 pub struct EnvScope<T, W> {
-    f: Box<dyn Fn(&mut Env, &T)>,
-    child: W,
+    pub(crate) f: Box<dyn Fn(&mut Env, &T)>,
+    pub(crate) child: W,
 }
 
 impl<T, W> EnvScope<T, W> {
