@@ -118,7 +118,7 @@ impl ImageData {
 
     /// Load an image from a DynamicImage from the image crate
     pub fn from_dynamic_image(image_data: image::DynamicImage) -> ImageData {
-        let rgb_image = image_data.to_rgb();
+        let rgb_image = image_data.to_rgba();
         let sizeofimage = rgb_image.dimensions();
         ImageData {
             pixels: rgb_image.to_vec(),
@@ -157,7 +157,7 @@ impl ImageData {
                         self.x_pixels as usize,
                         self.y_pixels as usize,
                         &self.pixels,
-                        ImageFormat::Rgb,
+                        ImageFormat::RgbaSeparate,
                     )
                     .unwrap();
                 let rec = Rect::from_origin_size(
