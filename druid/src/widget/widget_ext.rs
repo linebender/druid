@@ -17,7 +17,10 @@
 use crate::kurbo::Insets;
 use crate::piet::{PaintBrush, UnitPoint};
 
-use super::{Align, Container, EnvScope, IdentityWrapper, Padding, Parse, SizedBox, WidgetId};
+use super::{
+    Align, Container, Controller, ControllerHost, EnvScope, IdentityWrapper, Padding, Parse,
+    SizedBox, WidgetId,
+};
 use crate::{Data, Env, Lens, LensWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
@@ -121,6 +124,13 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`Env`]: ../struct.Env.html
     fn env_scope(self, f: impl Fn(&mut Env, &T) + 'static) -> EnvScope<T, Self> {
         EnvScope::new(f, self)
+    }
+
+    /// Wrap this widget with the provided [`Controller`].
+    ///
+    /// [`Controller`]: struct.Controller.html
+    fn controller<C: Controller<T, Self>>(self, controller: C) -> ControllerHost<Self, C> {
+        ControllerHost::new(self, controller)
     }
 
     /// Draw the [`layout`] `Rect`s of  this widget and its children.
