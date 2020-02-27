@@ -313,14 +313,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     }
                     ctx.request_paint();
                 }
-                Event::MouseUp(event) => {
+                Event::MouseUp(_) => {
                     self.scroll_bars.held = BarHeldState::None;
                     ctx.set_active(false);
 
-                    let offset_pos = event.pos + self.scroll_offset;
-                    if !self.point_hits_vertical_bar(viewport, offset_pos, &env)
-                        && !self.point_hits_horizontal_bar(viewport, offset_pos, &env)
-                    {
+                    if !scroll_bar_is_hovered {
                         self.scroll_bars.hovered = BarHoveredState::None;
                         self.reset_scrollbar_fade(ctx, &env);
                     }
