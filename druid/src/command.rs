@@ -31,7 +31,7 @@ pub struct Selector(&'static str);
 
 /// An arbitrary command.
 ///
-/// A `Command` consists of a `Selector`, that indicates what the command is,
+/// A `Command` consists of a [`Selector`], that indicates what the command is,
 /// and an optional argument, that can be used to pass arbitrary data.
 ///
 ///
@@ -56,6 +56,10 @@ pub struct Selector(&'static str);
 ///
 /// assert_eq!(command.get_object(), Ok(&vec![1, 3, 10, 12]));
 /// ```
+///
+/// [`Command::new`]: #method.new
+/// [`Command::get_object`]: #method.get_object
+/// [`Selector`]: struct.Selector.html
 #[derive(Debug, Clone)]
 pub struct Command {
     /// The command's `Selector`.
@@ -96,7 +100,7 @@ pub enum Target {
 
 /// [`Command`]s with special meaning, defined by druid.
 ///
-/// [`Command`]: struct.Command.html
+/// [`Command`]: ../struct.Command.html
 pub mod sys {
     use super::Selector;
 
@@ -223,9 +227,9 @@ impl Command {
     ///
     /// Unlike those created with `Command::new`, one-shot commands cannot
     /// be reused; their argument is consumed when it is accessed, via
-    /// [`Command::take_object`].
+    /// [`take_object`].
     ///
-    /// [`Command::take_object`]: #method.take_object
+    /// [`take_object`]: #method.take_object
     pub fn one_shot(selector: Selector, arg: impl Any) -> Self {
         Command {
             selector,
@@ -243,9 +247,9 @@ impl Command {
     /// Return a reference to this `Command`'s object, if it has one.
     ///
     /// This only works for 'reusable' commands; it does not work for commands
-    /// created with [`Command::one_shot`]
+    /// created with [`one_shot`].
     ///
-    /// [`Command::one_shot`]: #method.one_shot
+    /// [`one_shot`]: #method.one_shot
     pub fn get_object<T: Any>(&self) -> Result<&T, ArgumentError> {
         match self.object.as_ref() {
             Some(Arg::Reusable(o)) => o.downcast_ref().ok_or(ArgumentError::IncorrectType),
