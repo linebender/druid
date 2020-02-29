@@ -213,6 +213,16 @@ impl WindowBuilder {
         self.0.set_size(size)
     }
 
+    /// Set wheter the window should be resizable
+    pub fn set_resizable(&mut self, resizable: bool) {
+        self.0.set_resizable(resizable)
+    }
+
+    /// Set wheter the window should be decorated
+    pub fn set_decorated(&mut self, decorated: bool) {
+        self.0.set_decorated(decorated)
+    }
+
     /// Set the window's initial title.
     pub fn set_title(&mut self, title: impl Into<String>) {
         self.0.set_title(title)

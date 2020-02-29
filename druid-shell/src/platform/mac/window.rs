@@ -76,6 +76,8 @@ pub(crate) struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     size: Size,
+    resizable: bool,
+    decorated: bool,
 }
 
 #[derive(Clone)]
@@ -114,6 +116,16 @@ impl WindowBuilder {
 
     pub fn set_size(&mut self, size: Size) {
         self.size = size;
+    }
+
+    pub fn set_resizable(&mut self, resizable: bool) {
+        // TODO: Use this in `self.build`
+        self.resizable = resizable;
+    }
+
+    pub fn set_decorated(&mut self, decorated: bool) {
+        // TODO: Use this in `self.build`
+        self.decorated = decorated;
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {

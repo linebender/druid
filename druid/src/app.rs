@@ -42,6 +42,8 @@ pub struct WindowDesc<T> {
     pub(crate) title: LocalizedString<T>,
     pub(crate) size: Option<Size>,
     pub(crate) menu: Option<MenuDesc<T>>,
+    pub(crate) resizable: bool,
+    pub(crate) decorated: bool,
     /// The `WindowId` that will be assigned to this window.
     ///
     /// This can be used to track a window from when it is launched and when
@@ -144,6 +146,8 @@ impl<T: Data> WindowDesc<T> {
             title: LocalizedString::new("app-name"),
             size: None,
             menu: MenuDesc::platform_default(),
+            resizable: true,
+            decorated: true,
             id: WindowId::next(),
         }
     }
@@ -175,6 +179,16 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    pub fn set_resizable(mut self, resizable: bool) -> Self {
+        self.resizable = resizable;
+        self
+    }
+
+    pub fn set_decorated(mut self, decorated: bool) -> Self {
+        self.decorated = decorated;
+        self
+    }
+
     /// Attempt to create a platform window from this `WindowDesc`.
     pub(crate) fn build_native(
         mut self,
@@ -189,6 +203,9 @@ impl<T: Data> WindowDesc<T> {
         let handler = DruidHandler::new_shared(state.clone(), self.id);
 
         let mut builder = WindowBuilder::new();
+
+        builder.set_resizable(self.resizable);
+        builder.set_decorated(self.decorated);
 
         builder.set_handler(Box::new(handler));
         if let Some(size) = self.size {

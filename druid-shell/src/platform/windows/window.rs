@@ -72,6 +72,8 @@ pub struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     present_strategy: PresentStrategy,
+    resizable: bool,
+    decorated: bool,
     size: Size,
 }
 
@@ -701,6 +703,8 @@ impl WindowBuilder {
             dwStyle: WS_OVERLAPPEDWINDOW,
             title: String::new(),
             menu: None,
+            resizable: true,
+            decorated: true,
             present_strategy: Default::default(),
             size: Size::new(500.0, 400.0),
         }
@@ -713,6 +717,16 @@ impl WindowBuilder {
 
     pub fn set_size(&mut self, size: Size) {
         self.size = size;
+    }
+
+    pub fn set_resizable(&mut self, resizable: bool) {
+        // TODO: Use this in `self.build`
+        self.resizable = resizable;
+    }
+
+    pub fn set_decorated(&mut self, decorated: bool) {
+        // TODO: Use this in `self.build`
+        self.decorated = decorated;
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
