@@ -32,12 +32,7 @@ extern crate winapi;
 #[macro_use]
 extern crate objc;
 
-#[cfg(not(any(feature = "use_gtk", target_os = "linux")))]
-#[macro_use]
-extern crate lazy_static;
-
-// TODO(x11/initial_pr): refactor the #[cfg]?
-#[cfg(all(target_os = "linux", feature = "use_x11"))]
+#[cfg(not(feature = "use_gtk"))]
 #[macro_use]
 extern crate lazy_static;
 

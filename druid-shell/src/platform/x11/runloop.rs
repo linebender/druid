@@ -23,23 +23,14 @@ impl RunLoop {
 
     pub fn run(&mut self) {
         let conn = Application::get_connection();
-
-        let mut t0 = Instant::now();
-
         loop {
             if let Some(ev) = conn.wait_for_event() {
                 let ev_type = ev.response_type() & !0x80;
                 match ev_type {
                     xcb::EXPOSE => {
-                        let t1 = Instant::now();
-                        println!("Event delay: {:?}", t1-t0);
-
                         let event = unsafe { xcb::cast_event::<xcb::ExposeEvent>(&ev) };
                         let window_id = event.window();
-                        println!("event: xcb::EXPOSE (window id: {})", window_id);
                         self.x_id_to_xwindow_map.get_mut(&window_id).map(|w| w.render());
-
-                        t0 = t1;
                     }
                     _ => {}
                 }

@@ -14,6 +14,9 @@
 
 //! X11 implementation of druid-shell.
 
+// TODO(x11/render_improvements): screen is currently flashing when resizing in perftest.
+//     Might be related to the "sleep scheduler" in XWindow::render()?
+// TODO(x11/render_improvements): double-buffering / present strategies / etc?
 // TODO(x11/initial_pr): handle keyboard events.
 // TODO(x11/initial_pr): handle mouse events.
 

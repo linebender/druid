@@ -40,27 +40,24 @@ impl WindowBuilder {
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
-        // TODO(x11/initial_pr): implement WindowBuilder::set_title (currently a no-op)
+        self.title = title.into();
     }
 
     pub fn set_menu(&mut self, menu: Menu) {
         // TODO(x11/menus): implement WindowBuilder::set_menu (currently a no-op)
     }
 
-    // TODO(x11/initial_pr): set double-buffering / present strategy?
-    // TODO(x11/initial_pr): Windows has cascadeTopLeftFromPoint -- do I need this?
-    // TODO(x11/initial_pr): Windows has initWithFrame -- do I need this?
     // TODO(x11/menus): make menus if requested
     pub fn build(self, run_loop: &mut RunLoop) -> Result<WindowHandle, Error> {
         let conn = Application::get_connection();
         let screen_num = Application::get_screen_num();
         let window_id = conn.generate_id();
         let setup = conn.get_setup();
+        // TODO(x11/errors): Don't unwrap for screen or visual_type?
         let screen = setup.roots().nth(screen_num as usize).unwrap();
-        // TODO(x11/initial_pr): don't unwrap here?
         let mut visual_type = get_visual_from_screen(&screen).unwrap();
         let visual_id = visual_type.visual_id();
-        // TODO(x11/initial_pr): what window masks should go here (mouse, keyboard)?
+
         let cw_values = [
             (xcb::CW_BACK_PIXEL, screen.white_pixel()),
             (
@@ -117,9 +114,7 @@ impl WindowBuilder {
 
         conn.flush();
 
-        println!("THIS WINDOW'S ID: {}", window_id);
-
-        let xwindow = XWindow::new(window_id, self.handler.unwrap());
+        let xwindow = XWindow::new(window_id, self.handler.unwrap(), self.size);
         run_loop.add_xwindow(window_id, xwindow);
 
         Ok(WindowHandle::new(window_id))
@@ -135,16 +130,16 @@ pub struct XWindow {
 }
 
 impl XWindow {
-    pub fn new(window_id: u32, window_handler: Box<dyn WinHandler>) -> XWindow {
+    pub fn new(window_id: u32, window_handler: Box<dyn WinHandler>, size: Size) -> XWindow {
         let conn = Application::get_connection();
         let setup = conn.get_setup();
         let screen_num = Application::get_screen_num();
+        // TODO(x11/errors): Don't unwrap for screen or visual_type?
         let screen = setup.roots().nth(screen_num as usize).unwrap();
-        // TODO(x11/initial_pr): don't unwrap here?
         let mut visual_type = get_visual_from_screen(&screen).unwrap();
-        let visual_id = visual_type.visual_id();
 
         // Create a draw surface
+        // TODO(x11/initial_pr): We have to re-create this draw surface if the window size changes.
         let cairo_xcb_connection = unsafe {
             cairo::XCBConnection::from_raw_none(conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t)
         };
@@ -156,9 +151,8 @@ impl XWindow {
             &cairo_xcb_connection,
             &cairo_drawable,
             &cairo_visual_type,
-            // TODO(x11/initial_pr): don't hardcode sizes
-            500,
-            400,
+            size.width as i32,
+            size.height as i32,
         ).expect("couldn't create a cairo surface");
         let mut cairo_ctx = cairo::Context::new(&cairo_surface);
 
@@ -186,7 +180,6 @@ impl XWindow {
             // TODO(x11/errors): hook up to error or something?
             panic!("piet error on render: {:?}", e);
         }
-        conn.flush();
 
         if anim && self.refresh_rate.is_some() {
             // TODO(x11/render_improvements): Sleeping is a terrible way to schedule redraws.
@@ -195,11 +188,9 @@ impl XWindow {
             let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
             std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
 
-            // TODO(x11/initial_pr): un-magic-number-ify
-            let expose_event = xcb::ExposeEvent::new(self.window_id, 0, 0, 100, 100, 32);
-            xcb::send_event(&conn, false, self.window_id, xcb::EVENT_MASK_EXPOSURE, &expose_event);
-            conn.flush();
+            request_redraw(self.window_id);
         }
+        conn.flush();
     }
 }
 
@@ -224,12 +215,12 @@ impl IdleHandle {
     where
         F: FnOnce(&dyn Any) + Send + 'static,
     {
-        // TODO(x11/initial_pr): implement IdleHandle::add_idle_callback, or re-TODO
+        // TODO(x11/idle_handles): implement IdleHandle::add_idle_callback
         unimplemented!();
     }
 
     pub fn add_idle_token(&self, token: IdleToken) {
-        // TODO(x11/initial_pr): implement IdleHandle::add_idle_token, or re-TODO
+        // TODO(x11/idle_handles): implement IdleHandle::add_idle_token
         unimplemented!();
     }
 }
@@ -263,13 +254,20 @@ impl WindowHandle {
     }
 
     pub fn invalidate(&self) {
-        // TODO(x11/initial_pr): implement WindowHandle::invalidate, or re-TODO
-        unimplemented!();
+        request_redraw(self.window_id);
     }
 
     pub fn set_title(&self, title: &str) {
-        // TODO(x11/initial_pr): implement WindowHandle::set_title, or re-TODO
-        unimplemented!();
+        let conn = Application::get_connection();
+        xcb::change_property(
+            &conn,
+            xcb::PROP_MODE_REPLACE as u8,
+            self.window_id,
+            xcb::ATOM_WM_NAME,
+            xcb::ATOM_STRING,
+            8,
+            title.as_bytes(),
+        );
     }
 
     pub fn set_menu(&self, menu: Menu) {
@@ -277,37 +275,39 @@ impl WindowHandle {
     }
 
     pub fn text(&self) -> Text {
-        // TODO(x11/initial_pr): implement WindowHandle::text, or re-TODO
-        unimplemented!();
+        // I'm not entirely sure what this method is doing here, so here's a Text.
+        Text::new()
     }
 
     pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
-        // TODO(x11/initial_pr): implement WindowHandle::request_timer, or re-TODO
+        // TODO(x11/timers): implement WindowHandle::request_timer
+        //     This one might be tricky, since there's not really any timers to hook into in X11.
+        //     Might have to code up our own Timer struct, running in its own thread?
         unimplemented!();
     }
 
     pub fn set_cursor(&mut self, cursor: &Cursor) {
-        // TODO(x11/initial_pr): implement WindowHandle::set_cursor, or re-TODO
+        // TODO(x11/cursors): implement WindowHandle::set_cursor
         unimplemented!();
     }
 
     pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        // TODO(x11/initial_pr): implement WindowHandle::open_file_sync, or re-TODO
+        // TODO(x11/file_dialogs): implement WindowHandle::open_file_sync
         unimplemented!();
     }
 
     pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        // TODO(x11/initial_pr): implement WindowHandle::save_as_sync, or re-TODO
+        // TODO(x11/file_dialogs): implement WindowHandle::save_as_sync
         unimplemented!();
     }
 
     pub fn show_context_menu(&self, menu: Menu, pos: Point) {
-        // TODO(x11/initial_pr): implement WindowHandle::show_context_menu, or re-TODO
+        // TODO(x11/menus): implement WindowHandle::show_context_menu
         unimplemented!();
     }
 
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        // TODO(x11/initial_pr): implement WindowHandle::get_idle_handle, or re-TODO
+        // TODO(x11/idle_handles): implement WindowHandle::get_idle_handle
         unimplemented!();
     }
 
@@ -315,4 +315,15 @@ impl WindowHandle {
         // TODO(x11/dpi_scaling): figure out DPI scaling
         unimplemented!();
     }
+}
+
+fn request_redraw(window_id: u32) {
+    let conn = Application::get_connection();
+
+    // TODO(x11/render_improvements): Set x, y, width, and height correctly.
+    //     We redraw the entire surface on an ExposeEvent, so these args currently do nothing.
+    // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
+    let expose_event = xcb::ExposeEvent::new(window_id, /*x=*/0, /*y=*/0, /*width=*/0, /*height=*/0,
+                                             /*count=*/0);
+    xcb::send_event(&conn, false, window_id, xcb::EVENT_MASK_EXPOSURE, &expose_event);
 }
