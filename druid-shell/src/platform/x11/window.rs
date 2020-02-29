@@ -45,7 +45,7 @@ impl WindowBuilder {
     }
 
     pub fn set_menu(&mut self, menu: Menu) {
-        unimplemented!(); // TODO
+        // TODO: currently a no-op.
     }
 
     pub fn build(self, run_loop: &mut RunLoop) -> Result<WindowHandle, Error> {

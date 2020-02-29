@@ -135,8 +135,17 @@ fn main() {
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
-    let window = builder.build().unwrap();
 
-    window.show();
+    // TODO: super hacky way to connect the XWindow to the RunLoop. Better way to do it?
+    cfg_if::cfg_if! {
+        if #[cfg(all(target_os = "linux", feature = "use_x11"))] {
+            let window = builder.build(&mut run_loop).unwrap();
+            window.show();
+        } else {
+            let window = builder.build().unwrap();
+            window.show();
+        }
+    }
+
     run_loop.run();
 }
