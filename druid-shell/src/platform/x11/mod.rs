@@ -21,3 +21,5 @@ pub mod keycodes;
 pub mod menu;
 pub mod runloop;
 pub mod window;
+
+mod util;

@@ -38,7 +38,16 @@ struct XcbConnection {
 
 impl XcbConnection {
     fn new() -> Self {
-        let (conn, screen_num) = xcb::Connection::connect_with_xlib_display().unwrap();
+        let (mut conn, screen_num) = xcb::Connection::connect_with_xlib_display().unwrap();
+
+        // Various setup stuff for the connection.
+
+        // Need to set up the randr query version, or else querying randr for certain screen
+        // information (refresh rate, etc) won't work correctly.
+        unsafe {
+            xcb::ffi::randr::xcb_randr_query_version(conn.get_raw_conn(), 1, 1);
+        }
+
         Self {
             connection: Arc::new(conn),
             screen_num,

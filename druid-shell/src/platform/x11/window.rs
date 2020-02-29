@@ -14,6 +14,7 @@ use crate::piet::{Piet, RenderContext};
 use super::menu::Menu;
 use super::error::Error;
 use super::application::Application;
+use super::util;
 
 pub struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
@@ -131,23 +132,12 @@ impl WindowBuilder {
 pub struct XWindow {
     window_id: u32,
     handler: Box<dyn WinHandler>,
+    cairo_context: cairo::Context,
+    refresh_rate: Option<f64>,
 }
 
 impl XWindow {
     pub fn new(window_id: u32, window_handler: Box<dyn WinHandler>) -> XWindow {
-        XWindow {
-            window_id,
-            handler: window_handler,
-        }
-    }
-
-    pub fn debug_print(&self) {
-        println!("XWindow::debug_print()");
-    }
-
-    pub fn paint(&mut self) {
-        println!("XWindow::paint()");
-        println!("window id: {}", self.window_id);
         let conn = Application::get_connection();
         let setup = conn.get_setup();
         let screen_num = Application::get_screen_num();
@@ -157,12 +147,10 @@ impl XWindow {
 
         // Create a draw surface
         let cairo_xcb_connection = unsafe {
-            // TODO: difference between from_raw_none, from_raw_borrow, from_raw_full?
             cairo::XCBConnection::from_raw_none(conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t)
         };
-        let cairo_drawable = cairo::XCBDrawable(self.window_id);
+        let cairo_drawable = cairo::XCBDrawable(window_id);
         let cairo_visual_type = unsafe {
-            // TODO: difference between from_raw_none, from_raw_borrow, from_raw_full?
             cairo::XCBVisualType::from_raw_none(&mut visual_type.base as *mut _ as *mut cairo_sys::xcb_visualtype_t)
         };
         let cairo_surface = cairo::XCBSurface::create(
@@ -172,16 +160,50 @@ impl XWindow {
             500, // TODO: don't hardcode size
             400, // TODO: don't hardcode size
         ).expect("couldn't create a cairo surface");
-
         let mut cairo_ctx = cairo::Context::new(&cairo_surface);
-        cairo_ctx.set_source_rgb(0.0, 0.5, 0.0);
-        cairo_ctx.paint();
-        let mut piet_ctx = Piet::new(&mut cairo_ctx);
-        self.handler.paint(&mut piet_ctx);
+
+        // Figure out the refresh rate of the current screen
+        let refresh_rate = util::refresh_rate(&conn, window_id);
+
+        XWindow {
+            window_id,
+            handler: window_handler,
+            cairo_context: cairo_ctx,
+            refresh_rate,
+        }
+    }
+
+    pub fn debug_print(&self) {
+        println!("XWindow::debug_print()");
+    }
+
+
+    pub fn render(&mut self) {
+        //println!("XWindow::paint()");
+        //println!("window id: {}", self.window_id);
+        let conn = Application::get_connection();
+
+        self.cairo_context.set_source_rgb(0.0, 0.0, 0.0);
+        self.cairo_context.paint();
+        let mut piet_ctx = Piet::new(&mut self.cairo_context);
+        let anim = self.handler.paint(&mut piet_ctx);
         if let Err(e) = piet_ctx.finish() {
             panic!("piet error on render: {:?}", e); // TODO: hook up to error or something?
         }
         conn.flush();
+
+        if anim && self.refresh_rate.is_some() {
+            // TODO: Sleeping is a terrible way to schedule redraws. I think I'll end up having to
+            //       write a redraw scheduler or something. :|
+            //       Doing it this way for now to proof-of-concept it.
+            let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
+            std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
+
+            // TODO: un-magic-number-ify
+            let expose_event = xcb::ExposeEvent::new(self.window_id, 0, 0, 100, 100, 32);
+            xcb::send_event(&conn, false, self.window_id, xcb::EVENT_MASK_EXPOSURE, &expose_event);
+            conn.flush();
+        }
     }
 }
 
