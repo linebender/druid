@@ -6,8 +6,10 @@ pub fn refresh_rate(conn: &xcb::Connection, window_id: Window) -> Option<f64> {
     let reply = cookie.get_reply().unwrap();
     let mut modes = reply.modes();
 
-    // TODO: Assuming the first mode is the one we want to use. This is probably a bug on some
-    //       setups. Any better way to find the correct one?
+    // TODO(x11/render_improvements): Figure out a more correct way of getting the screen's refresh rate.
+    //     Or maybe we don't even need this function if I figure out a better way to schedule redraws?
+    //     Assuming the first mode is the one we want to use. This is probably a bug on some setups.
+    //     Any better way to find the correct one?
     let mut refresh_rate = modes.nth(0).and_then(|mode_info| {
         let flags = mode_info.mode_flags();
         let vtotal = {

@@ -16,7 +16,7 @@
 
 use crate::platform::runloop as platform;
 
-// TODO: super hacky way to connect the XWindow to the RunLoop. Better way to do it?
+// TODO(x11/architecture): super hacky way to connect the XWindow to the RunLoop. Better way to do it?
 #[cfg(all(target_os = "linux", feature = "use_x11"))]
 use crate::platform::window::XWindow;
 
@@ -41,7 +41,7 @@ impl RunLoop {
     }
 
     /// Allow the RunLoop to send events to the correct window.
-    // TODO: super hacky way to connect the XWindow to the RunLoop. Better way to do it?
+    // TODO(x11/architecture): super hacky way to connect the XWindow to the RunLoop. Better way to do it?
     #[cfg(all(target_os = "linux", feature = "use_x11"))]
     pub(crate) fn add_xwindow(&mut self, x_id: u32, xwindow: XWindow) {
         self.0.add_xwindow(x_id, xwindow);

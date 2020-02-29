@@ -14,6 +14,9 @@
 
 //! X11 implementation of druid-shell.
 
+// TODO(x11/initial_pr): handle keyboard events.
+// TODO(x11/initial_pr): handle mouse events.
+
 pub mod application;
 pub mod clipboard;
 pub mod error;

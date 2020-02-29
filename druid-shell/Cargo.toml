@@ -46,8 +46,9 @@ cocoa = "0.20.0"
 objc = "0.2.5"
 cairo-rs = { version = "0.8.0", default_features = false }
 
+# TODO(x11/dependencies): only use feature "xcb" if using XCB
 [target.'cfg(target_os="linux")'.dependencies]
-cairo-rs = {  version = "0.8.0", default_features = false, features = ["xcb"] } # TODO: only use feature "xcb" if using XCB
+cairo-rs = {  version = "0.8.0", default_features = false, features = ["xcb"] }
 gio = "0.8.0"
 gdk = "0.12.0"
 gdk-sys = "0.9.0"

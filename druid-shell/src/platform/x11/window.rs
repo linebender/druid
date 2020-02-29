@@ -24,7 +24,6 @@ pub struct WindowBuilder {
 
 impl WindowBuilder {
     pub fn new() -> WindowBuilder {
-        // TODO
         WindowBuilder {
             handler: None,
             title: String::new(),
@@ -37,34 +36,31 @@ impl WindowBuilder {
     }
 
     pub fn set_size(&mut self, size: Size) {
-        unimplemented!(); // TODO
+        self.size = size;
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
-        // TODO: currently a no-op
+        // TODO(x11/initial_pr): implement WindowBuilder::set_title (currently a no-op)
     }
 
     pub fn set_menu(&mut self, menu: Menu) {
-        // TODO: currently a no-op.
+        // TODO(x11/menus): implement WindowBuilder::set_menu (currently a no-op)
     }
 
+    // TODO(x11/initial_pr): set double-buffering / present strategy?
+    // TODO(x11/initial_pr): Windows has cascadeTopLeftFromPoint -- do I need this?
+    // TODO(x11/initial_pr): Windows has initWithFrame -- do I need this?
+    // TODO(x11/menus): make menus if requested
     pub fn build(self, run_loop: &mut RunLoop) -> Result<WindowHandle, Error> {
-        // TODO: cascadeTopLeftFromPoint?
-        // TODO: initWithFrame?
-        // TODO: make menus?
-        // TODO: multi-window support (???)
-        // TODO: set double-buffering / present strategy?
-
         let conn = Application::get_connection();
         let screen_num = Application::get_screen_num();
         let window_id = conn.generate_id();
         let setup = conn.get_setup();
         let screen = setup.roots().nth(screen_num as usize).unwrap();
-        let mut visual_type = get_visual_from_screen(&screen).unwrap(); // TODO: don't unwrap here?
+        // TODO(x11/initial_pr): don't unwrap here?
+        let mut visual_type = get_visual_from_screen(&screen).unwrap();
         let visual_id = visual_type.visual_id();
-
-        // TODO: what window masks should go here?
-        // TODO: event masks (mouse, keyboard)
+        // TODO(x11/initial_pr): what window masks should go here (mouse, keyboard)?
         let cw_values = [
             (xcb::CW_BACK_PIXEL, screen.white_pixel()),
             (
@@ -81,22 +77,24 @@ impl WindowBuilder {
         xcb::create_window(
             // Connection to the X server
             &conn,
-            // Window depth -- TODO: what should go here?
+            // Window depth
             XCB_COPY_FROM_PARENT.try_into().unwrap(),
             // The new window's ID
             window_id,
             // Parent window of this new window
-            // TODO: either `screen.root()` (no parent window) or pass parent here to attach
+            // TODO(#468): either `screen.root()` (no parent window) or pass parent here to attach
             screen.root(),
-            // X-coordinate of the new window -- TODO: what to put here?
+            // X-coordinate of the new window
             0,
-            // Y-coordinate of the new window -- TODO: what to put here?
+            // Y-coordinate of the new window
             0,
-            // Width of the new window -- TODO: figure out DPI scaling
+            // Width of the new window
+            // TODO(x11/dpi_scaling): figure out DPI scaling
             self.size.width as u16,
-            // Height of the new window -- TODO: figure out DPI scaling
+            // Height of the new window
+            // TODO(x11/dpi_scaling): figure out DPI scaling
             self.size.height as u16,
-            // Border width -- TODO: what to put here?
+            // Border width
             0,
             // Window class type
             xcb::WINDOW_CLASS_INPUT_OUTPUT as u16,
@@ -142,7 +140,8 @@ impl XWindow {
         let setup = conn.get_setup();
         let screen_num = Application::get_screen_num();
         let screen = setup.roots().nth(screen_num as usize).unwrap();
-        let mut visual_type = get_visual_from_screen(&screen).unwrap(); // TODO: don't unwrap here?
+        // TODO(x11/initial_pr): don't unwrap here?
+        let mut visual_type = get_visual_from_screen(&screen).unwrap();
         let visual_id = visual_type.visual_id();
 
         // Create a draw surface
@@ -157,8 +156,9 @@ impl XWindow {
             &cairo_xcb_connection,
             &cairo_drawable,
             &cairo_visual_type,
-            500, // TODO: don't hardcode size
-            400, // TODO: don't hardcode size
+            // TODO(x11/initial_pr): don't hardcode sizes
+            500,
+            400,
         ).expect("couldn't create a cairo surface");
         let mut cairo_ctx = cairo::Context::new(&cairo_surface);
 
@@ -173,11 +173,6 @@ impl XWindow {
         }
     }
 
-    pub fn debug_print(&self) {
-        println!("XWindow::debug_print()");
-    }
-
-
     pub fn render(&mut self) {
         //println!("XWindow::paint()");
         //println!("window id: {}", self.window_id);
@@ -188,18 +183,19 @@ impl XWindow {
         let mut piet_ctx = Piet::new(&mut self.cairo_context);
         let anim = self.handler.paint(&mut piet_ctx);
         if let Err(e) = piet_ctx.finish() {
-            panic!("piet error on render: {:?}", e); // TODO: hook up to error or something?
+            // TODO(x11/errors): hook up to error or something?
+            panic!("piet error on render: {:?}", e);
         }
         conn.flush();
 
         if anim && self.refresh_rate.is_some() {
-            // TODO: Sleeping is a terrible way to schedule redraws. I think I'll end up having to
-            //       write a redraw scheduler or something. :|
-            //       Doing it this way for now to proof-of-concept it.
+            // TODO(x11/render_improvements): Sleeping is a terrible way to schedule redraws.
+            //     I think I'll end up having to write a redraw scheduler or something. :|
+            //     Doing it this way for now to proof-of-concept it.
             let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
             std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
 
-            // TODO: un-magic-number-ify
+            // TODO(x11/initial_pr): un-magic-number-ify
             let expose_event = xcb::ExposeEvent::new(self.window_id, 0, 0, 100, 100, 32);
             xcb::send_event(&conn, false, self.window_id, xcb::EVENT_MASK_EXPOSURE, &expose_event);
             conn.flush();
@@ -208,7 +204,6 @@ impl XWindow {
 }
 
 // Apparently you have to get the visualtype this way :|
-// TODO: consider refactoring
 fn get_visual_from_screen(screen: &xcb::Screen<'_>) -> Option<xcb::xproto::Visualtype> {
     let conn = Application::get_connection();
     for depth in screen.allowed_depths() {
@@ -229,11 +224,13 @@ impl IdleHandle {
     where
         F: FnOnce(&dyn Any) + Send + 'static,
     {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement IdleHandle::add_idle_callback, or re-TODO
+        unimplemented!();
     }
 
     pub fn add_idle_token(&self, token: IdleToken) {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement IdleHandle::add_idle_token, or re-TODO
+        unimplemented!();
     }
 }
 
@@ -256,54 +253,66 @@ impl WindowHandle {
     }
 
     pub fn close(&self) {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement WindowHandle::close, or re-TODO
+        unimplemented!();
     }
 
     pub fn bring_to_front_and_focus(&self) {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement WindowHandle::bring_to_front_and_focus, or re-TODO
+        unimplemented!();
     }
 
     pub fn invalidate(&self) {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement WindowHandle::invalidate, or re-TODO
+        unimplemented!();
     }
 
     pub fn set_title(&self, title: &str) {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement WindowHandle::set_title, or re-TODO
+        unimplemented!();
     }
 
     pub fn set_menu(&self, menu: Menu) {
-        unimplemented!(); // TODO
+        // TODO(x11/menus): implement WindowHandle::set_menu (currently a no-op)
     }
 
     pub fn text(&self) -> Text {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement WindowHandle::text, or re-TODO
+        unimplemented!();
     }
 
     pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement WindowHandle::request_timer, or re-TODO
+        unimplemented!();
     }
 
     pub fn set_cursor(&mut self, cursor: &Cursor) {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement WindowHandle::set_cursor, or re-TODO
+        unimplemented!();
     }
 
     pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement WindowHandle::open_file_sync, or re-TODO
+        unimplemented!();
     }
 
     pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement WindowHandle::save_as_sync, or re-TODO
+        unimplemented!();
     }
 
     pub fn show_context_menu(&self, menu: Menu, pos: Point) {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement WindowHandle::show_context_menu, or re-TODO
+        unimplemented!();
     }
 
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        unimplemented!(); // TODO
+        // TODO(x11/initial_pr): implement WindowHandle::get_idle_handle, or re-TODO
+        unimplemented!();
     }
 
     pub fn get_dpi(&self) -> f32 {
-        unimplemented!(); // TODO
+        // TODO(x11/dpi_scaling): figure out DPI scaling
+        unimplemented!();
     }
 }

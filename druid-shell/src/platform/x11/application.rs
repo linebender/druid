@@ -22,11 +22,12 @@ impl Application {
     }
 
     pub fn clipboard() -> Clipboard {
-        unimplemented!(); // TODO
+        // TODO(x11/clipboard): implement Application::clipboard
+        unimplemented!();
     }
 
     pub fn get_locale() -> String {
-        // TODO
+        // TODO(x11/locales): implement Application::get_locale
         "en-US".into()
     }
 }

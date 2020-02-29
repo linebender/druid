@@ -236,7 +236,7 @@ impl WindowBuilder {
     /// Attempt to construct the platform window.
     ///
     /// If this fails, your application should exit.
-    // TODO: super hacky way to connect the XWindow to the RunLoop. Better way to do it?
+    // TODO(x11/architecture): super hacky way to connect the XWindow to the RunLoop. Better way to do it?
     #[cfg(all(target_os = "linux", feature = "use_x11"))]
     pub fn build(self, run_loop: &mut RunLoop) -> Result<WindowHandle, Error> {
         self.0.build(run_loop).map(WindowHandle).map_err(Into::into)

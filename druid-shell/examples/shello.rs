@@ -136,7 +136,7 @@ fn main() {
     builder.set_title("Hello example");
     builder.set_menu(menubar);
 
-    // TODO: super hacky way to connect the XWindow to the RunLoop. Better way to do it?
+    // TODO(x11/architecture): super hacky way to connect the XWindow to the RunLoop. Better way to do it?
     cfg_if::cfg_if! {
         if #[cfg(all(target_os = "linux", feature = "use_x11"))] {
             let window = builder.build(&mut run_loop).unwrap();
