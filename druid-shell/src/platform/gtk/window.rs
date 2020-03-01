@@ -429,7 +429,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_resizable(&self, resizable: bool) {
+    pub fn resizable(&self, resizable: bool) {
         if let Some(state) = self.state.upgrade() {
             state.window.set_resizable(resizable)
         }

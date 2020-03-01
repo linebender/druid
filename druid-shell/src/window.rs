@@ -112,7 +112,7 @@ impl WindowHandle {
 
     /// Set whether the window should be resizable
     pub fn resizable(&self, resizable: bool) {
-        self.0.set_resizable(resizable)
+        self.0.resizable(resizable)
     }
 
     /// Set whether the window should show titlebar
