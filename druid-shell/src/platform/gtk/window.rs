@@ -87,7 +87,7 @@ pub struct WindowBuilder {
     menu: Option<Menu>,
     size: Size,
     resizable: bool,
-    decorated: bool,
+    show_titlebar: bool,
 }
 
 #[derive(Clone)]
@@ -117,7 +117,7 @@ impl WindowBuilder {
             menu: None,
             size: Size::new(500.0, 400.0),
             resizable: true,
-            decorated: true,
+            show_titlebar: true,
         }
     }
 
@@ -129,12 +129,12 @@ impl WindowBuilder {
         self.size = size;
     }
 
-    pub fn set_resizable(&mut self, resizable: bool) {
+    pub fn resizable(&mut self, resizable: bool) {
         self.resizable = resizable;
     }
 
-    pub fn set_decorated(&mut self, decorated: bool) {
-        self.decorated = decorated;
+    pub fn show_titlebar(&mut self, show_titlebar: bool) {
+        self.show_titlebar = show_titlebar;
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -156,7 +156,7 @@ impl WindowBuilder {
 
         window.set_title(&self.title);
         window.set_resizable(self.resizable);
-        window.set_decorated(self.decorated);
+        window.set_decorated(self.show_titlebar);
 
         let dpi_scale = window
             .get_display()
@@ -435,9 +435,9 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_decorated(&self, decorated: bool) {
+    pub fn show_titlebar(&self, show_titlebar: bool) {
         if let Some(state) = self.state.upgrade() {
-            state.window.set_decorated(decorated)
+            state.window.set_decorated(show_titlebar)
         }
     }
 

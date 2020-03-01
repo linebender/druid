@@ -719,14 +719,14 @@ impl WindowBuilder {
         self.size = size;
     }
 
-    pub fn set_resizable(&mut self, resizable: bool) {
+    pub fn resizable(&mut self, resizable: bool) {
         // TODO: Use this in `self.build`
         self.resizable = resizable;
     }
 
-    pub fn set_decorated(&mut self, decorated: bool) {
+    pub fn show_titlebar(&mut self, show_titlebar: bool) {
         // TODO: Use this in `self.build`
-        self.decorated = decorated;
+        self.show_titlebar = show_titlebar;
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {

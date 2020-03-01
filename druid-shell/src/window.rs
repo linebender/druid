@@ -214,13 +214,13 @@ impl WindowBuilder {
     }
 
     /// Set wheter the window should be resizable
-    pub fn set_resizable(&mut self, resizable: bool) {
-        self.0.set_resizable(resizable)
+    pub fn resizable(&mut self, resizable: bool) {
+        self.0.resizable(resizable)
     }
 
-    /// Set wheter the window should be decorated
-    pub fn set_decorated(&mut self, decorated: bool) {
-        self.0.set_decorated(decorated)
+    /// Set wheter the window should have a titlebar and decorations
+    pub fn show_titlebar(&mut self, show_titlebar: bool) {
+        self.0.show_titlebar(show_titlebar)
     }
 
     /// Set the window's initial title.

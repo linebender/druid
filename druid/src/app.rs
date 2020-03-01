@@ -43,7 +43,7 @@ pub struct WindowDesc<T> {
     pub(crate) size: Option<Size>,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) resizable: bool,
-    pub(crate) decorated: bool,
+    pub(crate) show_titlebar: bool,
     /// The `WindowId` that will be assigned to this window.
     ///
     /// This can be used to track a window from when it is launched and when
@@ -147,7 +147,7 @@ impl<T: Data> WindowDesc<T> {
             size: None,
             menu: MenuDesc::platform_default(),
             resizable: true,
-            decorated: true,
+            show_titlebar: true,
             id: WindowId::next(),
         }
     }
@@ -179,13 +179,13 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    pub fn set_resizable(mut self, resizable: bool) -> Self {
+    pub fn resizable(mut self, resizable: bool) -> Self {
         self.resizable = resizable;
         self
     }
 
-    pub fn set_decorated(mut self, decorated: bool) -> Self {
-        self.decorated = decorated;
+    pub fn show_titlebar(mut self, show_titlebar: bool) -> Self {
+        self.show_titlebar = show_titlebar;
         self
     }
 
@@ -204,8 +204,8 @@ impl<T: Data> WindowDesc<T> {
 
         let mut builder = WindowBuilder::new();
 
-        builder.set_resizable(self.resizable);
-        builder.set_decorated(self.decorated);
+        builder.resizable(self.resizable);
+        builder.show_titlebar(self.show_titlebar);
 
         builder.set_handler(Box::new(handler));
         if let Some(size) = self.size {
