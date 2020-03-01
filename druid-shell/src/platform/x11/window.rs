@@ -244,13 +244,17 @@ impl WindowHandle {
     }
 
     pub fn close(&self) {
-        // TODO(x11/initial_pr): implement WindowHandle::close, or re-TODO
-        unimplemented!();
+        // Hopefully there aren't any references to this window after this function is called.
+        let conn = Application::get_connection();
+        xcb::destroy_window(&conn, self.window_id);
     }
 
+    /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
-        // TODO(x11/initial_pr): implement WindowHandle::bring_to_front_and_focus, or re-TODO
-        unimplemented!();
+        // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
+        let conn = Application::get_connection();
+        xcb::configure_window(&conn, self.window_id, &[(xcb::CONFIG_WINDOW_STACK_MODE as u16, xcb::STACK_MODE_ABOVE)]);
+        xcb::set_input_focus(&conn, xcb::INPUT_FOCUS_POINTER_ROOT as u8, self.window_id, xcb::CURRENT_TIME);
     }
 
     pub fn invalidate(&self) {

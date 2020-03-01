@@ -22,12 +22,11 @@ impl Application {
     }
 
     pub fn clipboard() -> Clipboard {
-        // TODO(x11/clipboard): implement Application::clipboard
-        unimplemented!();
+        unimplemented!(); // TODO
     }
 
     pub fn get_locale() -> String {
-        // TODO(x11/locales): implement Application::get_locale
+        // TODO
         "en-US".into()
     }
 }
@@ -39,15 +38,7 @@ struct XcbConnection {
 
 impl XcbConnection {
     fn new() -> Self {
-        let (mut conn, screen_num) = xcb::Connection::connect_with_xlib_display().unwrap();
-
-        // Various setup stuff for the connection.
-
-        // Need to set up the randr query version, or else querying randr for certain screen
-        // information (refresh rate, etc) won't work correctly.
-        unsafe {
-            xcb::ffi::randr::xcb_randr_query_version(conn.get_raw_conn(), 1, 1);
-        }
+        let (conn, screen_num) = xcb::Connection::connect_with_xlib_display().unwrap();
 
         Self {
             connection: Arc::new(conn),
