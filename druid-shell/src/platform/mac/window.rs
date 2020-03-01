@@ -76,6 +76,8 @@ pub(crate) struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     size: Size,
+    resizable: bool,
+    show_titlebar: bool,
 }
 
 #[derive(Clone)]
@@ -105,6 +107,8 @@ impl WindowBuilder {
             title: String::new(),
             menu: None,
             size: Size::new(500.0, 400.0),
+            resizable: true,
+            show_titlebar: true,
         }
     }
 
@@ -114,6 +118,16 @@ impl WindowBuilder {
 
     pub fn set_size(&mut self, size: Size) {
         self.size = size;
+    }
+
+    pub fn resizable(&mut self, resizable: bool) {
+        // TODO: Use this in `self.build`
+        self.resizable = resizable;
+    }
+
+    pub fn show_titlebar(&mut self, show_titlebar: bool) {
+        // TODO: Use this in `self.build`
+        self.show_titlebar = show_titlebar;
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -662,6 +676,12 @@ impl WindowHandle {
             window.setTitle_(title);
         }
     }
+
+    // TODO: Implement this
+    pub fn show_titlebar(&self, _show_titlebar: bool) {}
+
+    // TODO: Implement this
+    pub fn resizable(&self, _resizable: bool) {}
 
     pub fn set_menu(&self, menu: Menu) {
         unsafe {
