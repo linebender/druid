@@ -3,7 +3,11 @@ use std::collections::HashMap;
 use super::application::Application;
 use super::window::XWindow;
 
+use crate::keyboard::KeyModifiers;
 use crate::keycodes::KeyCode;
+use crate::kurbo::Point;
+use crate::mouse::{MouseButton, MouseEvent};
+
 use std::time::{Duration, Instant};
 pub struct RunLoop {
     // Used for forwarding events to the correct window, drawing, etc.
@@ -45,11 +49,38 @@ impl RunLoop {
 
                         let window_id = key_press.event();
                         println!("window_id {}", window_id);
-                        let v = self
-                            .x_id_to_xwindow_map
+                        self.x_id_to_xwindow_map
                             .get_mut(&window_id)
                             .map(|w| w.key_down(key_code));
                     }
+                    xcb::BUTTON_PRESS => {
+                        println!("button {}", ev_type);
+                        let button_press: &xcb::ButtonPressEvent = unsafe { xcb::cast_event(&ev) };
+                        println!(
+                            "x {:?}, y {:?}",
+                            button_press.event_x(),
+                            button_press.event_y()
+                        );
+                        let window_id = button_press.event();
+                        let mouse_event = MouseEvent {
+                            pos: Point::new(
+                                button_press.event_x() as f64,
+                                button_press.event_y() as f64,
+                            ),
+                            mods: KeyModifiers {
+                                shift: false,
+                                alt: false,
+                                ctrl: false,
+                                meta: false,
+                            },
+                            count: 0,
+                            button: MouseButton::Left,
+                        };
+                        self.x_id_to_xwindow_map
+                            .get_mut(&window_id)
+                            .map(|w| w.mouse_down(&mouse_event));
+                    }
+
                     _ => {
                         println!("event {}", ev_type);
                     }

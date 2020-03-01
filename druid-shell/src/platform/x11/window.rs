@@ -8,7 +8,7 @@ use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::kurbo::{Point, Size};
-use crate::mouse::Cursor;
+use crate::mouse::{Cursor, MouseEvent};
 use crate::piet::{Piet, RenderContext};
 use crate::runloop::RunLoop;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
@@ -219,6 +219,11 @@ impl XWindow {
             key_code,
             key_code,
         ));
+    }
+
+    pub fn mouse_down(&mut self, mouse_event: &MouseEvent) {
+        println!("XWindow::mouse_down()");
+        self.handler.mouse_down(mouse_event);
     }
 }
 
