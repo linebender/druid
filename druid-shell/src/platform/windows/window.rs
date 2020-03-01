@@ -1073,6 +1073,12 @@ impl WindowHandle {
         }
     }
 
+    // TODO: Implement this
+    pub fn show_titlebar(&self, show_titlebar: bool) {}
+
+    // TODO: Implement this
+    pub fn resizable(&self, resizable: bool) {}
+
     pub fn set_menu(&self, menu: Menu) {
         let accels = menu.accels();
         let hmenu = menu.into_hmenu();
