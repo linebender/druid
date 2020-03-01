@@ -73,7 +73,7 @@ pub struct WindowBuilder {
     menu: Option<Menu>,
     present_strategy: PresentStrategy,
     resizable: bool,
-    decorated: bool,
+    show_titlebar: bool,
     size: Size,
 }
 
@@ -704,7 +704,7 @@ impl WindowBuilder {
             title: String::new(),
             menu: None,
             resizable: true,
-            decorated: true,
+            show_titlebar: true,
             present_strategy: Default::default(),
             size: Size::new(500.0, 400.0),
         }

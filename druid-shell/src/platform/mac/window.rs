@@ -107,6 +107,8 @@ impl WindowBuilder {
             title: String::new(),
             menu: None,
             size: Size::new(500.0, 400.0),
+            resizable: true,
+            show_titlebar: true,
         }
     }
 
