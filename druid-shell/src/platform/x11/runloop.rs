@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use super::window::XWindow;
 use super::application::Application;
+use super::window::XWindow;
 
+use crate::keycodes::KeyCode;
 use std::time::{Duration, Instant};
-
 pub struct RunLoop {
     // Used for forwarding events to the correct window, drawing, etc.
     x_id_to_xwindow_map: HashMap<u32, XWindow>,
@@ -30,9 +30,29 @@ impl RunLoop {
                     xcb::EXPOSE => {
                         let event = unsafe { xcb::cast_event::<xcb::ExposeEvent>(&ev) };
                         let window_id = event.window();
-                        self.x_id_to_xwindow_map.get_mut(&window_id).map(|w| w.render());
+                        println!("window_id {}", window_id);
+                        self.x_id_to_xwindow_map
+                            .get_mut(&window_id)
+                            .map(|w| w.render());
                     }
-                    _ => {}
+                    xcb::KEY_PRESS => {
+                        println!("key {}", ev_type);
+                        let key_press: &xcb::KeyPressEvent = unsafe { xcb::cast_event(&ev) };
+                        // println!("Key '{}' pressed ", key_press.detail());
+                        let key: u32 = key_press.detail() as u32;
+                        let key_code: KeyCode = key.into();
+                        // println!("Key '{:?}' pressed ", key_code);
+
+                        let window_id = key_press.event();
+                        println!("window_id {}", window_id);
+                        let v = self
+                            .x_id_to_xwindow_map
+                            .get_mut(&window_id)
+                            .map(|w| w.key_down(key_code));
+                    }
+                    _ => {
+                        println!("event {}", ev_type);
+                    }
                 }
             }
         }

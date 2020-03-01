@@ -23,8 +23,8 @@ use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::kurbo::{Point, Size, Vec2};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
-use crate::runloop::RunLoop;
 use crate::platform::window as platform;
+use crate::runloop::RunLoop;
 
 // It's possible we'll want to make this type alias at a lower level,
 // see https://github.com/linebender/piet/pull/37 for more discussion.
@@ -224,7 +224,6 @@ impl WindowBuilder {
         self.0.set_menu(menu.into_inner())
     }
 
-
     /// Attempt to construct the platform window.
     ///
     /// If this fails, your application should exit.
@@ -290,6 +289,7 @@ pub trait WinHandler {
     /// Return `true` if the event is handled.
     #[allow(unused_variables)]
     fn key_down(&mut self, event: KeyEvent) -> bool {
+        println!("default key_down");
         false
     }
 

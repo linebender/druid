@@ -12,6 +12,7 @@ edition = "2018"
 [features]
 use_gtk = ["gtk", "gtk-sys", "gio", "gdk", "gdk-sys", "glib", "glib-sys", "cairo-rs"]
 use_x11 = ["xcb", "cairo-sys-rs"]
+#default_features = ["use_x11"]
 
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"

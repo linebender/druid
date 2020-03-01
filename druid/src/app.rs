@@ -130,7 +130,7 @@ impl<T: Data> AppLauncher<T> {
 }
 
 impl<T: Data> WindowDesc<T> {
-    /// Create a new `WindowDesc`, taking a funciton that will generate the root
+    /// Create a new `WindowDesc`, taking a function that will generate the root
     /// [`Widget`] for this window.
     ///
     /// It is possible that a `WindowDesc` can be reused to launch multiple windows.
@@ -209,6 +209,10 @@ impl<T: Data> WindowDesc<T> {
         let window = PendingWindow::new(self.root, self.title, self.menu);
         state.borrow_mut().add_window(self.id, window);
 
+        // if #[cfg(all(target_os = "linux", feature = "use_x11"))] {
+        //     let window = builder.build(&mut run_loop).unwrap();
+        //     window.show();
+        // }
         builder.build()
     }
 }
