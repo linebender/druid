@@ -110,6 +110,16 @@ impl WindowHandle {
         self.0.close()
     }
 
+    /// Set whether the window should be resizable
+    pub fn resizable(&self, resizable: bool) {
+        self.0.set_resizable(resizable)
+    }
+
+    /// Set whether the window should show titlebar
+    pub fn show_titlebar(&self, show_titlebar: bool) {
+        self.0.show_titlebar(show_titlebar)
+    }
+
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
         self.0.bring_to_front_and_focus()
@@ -213,12 +223,12 @@ impl WindowBuilder {
         self.0.set_size(size)
     }
 
-    /// Set wheter the window should be resizable
+    /// Set whether the window should be resizable
     pub fn resizable(&mut self, resizable: bool) {
         self.0.resizable(resizable)
     }
 
-    /// Set wheter the window should have a titlebar and decorations
+    /// Set whether the window should have a titlebar and decorations
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
     }
