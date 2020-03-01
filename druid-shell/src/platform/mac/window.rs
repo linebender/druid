@@ -77,7 +77,7 @@ pub(crate) struct WindowBuilder {
     menu: Option<Menu>,
     size: Size,
     resizable: bool,
-    decorated: bool,
+    show_titlebar: bool,
 }
 
 #[derive(Clone)]
