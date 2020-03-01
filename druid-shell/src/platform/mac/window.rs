@@ -678,10 +678,10 @@ impl WindowHandle {
     }
 
     // TODO: Implement this
-    pub fn show_titlebar(&self, show_titlebar: bool) {}
+    pub fn show_titlebar(&self, _show_titlebar: bool) {}
 
     // TODO: Implement this
-    pub fn resizable(&self, resizable: bool) {}
+    pub fn resizable(&self, _resizable: bool) {}
 
     pub fn set_menu(&self, menu: Menu) {
         unsafe {
