@@ -64,29 +64,37 @@ impl WinHandler for HelloState {
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
-        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
-        let id = self.handle.request_timer(deadline);
-        println!("keydown: {:?}, timer id = {:?}", event, id);
+        // TODO: Timer Support
+        // TODO: Modifiers, and proper locale/key mappings
+        // let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
+        // let id = self.handle.request_timer(deadline);
+        //println!("keydown: {:?}, timer id = {:?}", event, id);
+        println!("keydown: {:?}", event);
         false
     }
 
+    // TODO: Not implemented
     fn wheel(&mut self, delta: Vec2, mods: KeyModifiers) {
         println!("mouse_wheel {:?} {:?}", delta, mods);
     }
 
+    // TODO: Not implemented
     fn mouse_move(&mut self, event: &MouseEvent) {
         self.handle.set_cursor(&Cursor::Arrow);
         println!("mouse_move {:?}", event);
     }
 
+    // TODO: Modifiers
     fn mouse_down(&mut self, event: &MouseEvent) {
         println!("mouse_down {:?}", event);
     }
 
+    // TODO: Not implemented
     fn mouse_up(&mut self, event: &MouseEvent) {
         println!("mouse_up {:?}", event);
     }
 
+    // TODO: Not implemented
     fn timer(&mut self, id: TimerToken) {
         println!("timer fired: {:?}", id);
     }

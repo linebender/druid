@@ -24,6 +24,7 @@ use crate::kurbo::{Point, Size, Vec2};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
+#[cfg(all(target_os = "linux", feature = "use_x11"))]
 use crate::runloop::RunLoop;
 
 // It's possible we'll want to make this type alias at a lower level,

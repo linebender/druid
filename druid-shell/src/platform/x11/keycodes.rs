@@ -1,7 +1,3 @@
-// TODO(x11/initial_pr): implement keycodes.rs, or re-TODO
-// TODO(x11/initial_pr): What type should RawKeyCode be? or re-TODO
-// pub type RawKeyCode = i32;
-
 // Copyright 2019 The xi-editor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// GTK keycode handling.
+// X11 keycode handling.
 
 use gdk::enums::key::*;
 
@@ -202,7 +198,10 @@ impl Into<StrOrChar> for KeyCode {
                KeyCode::ArrowRight
                KeyCode::ArrowDown
             */
-            _ => unimplemented!("KeyCode {:?}", self),
+            _ => {
+                log::warn!("Warning: unknown keycode str representation {:?}", self);
+                StrOrChar::Char('?')
+            }
         }
     }
 }

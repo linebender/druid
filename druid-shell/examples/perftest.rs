@@ -92,8 +92,7 @@ impl WinHandler for PerfTest {
 
     fn size(&mut self, width: u32, height: u32) {
         let dpi = self.handle.get_dpi();
-        println!("dpi {}", dpi);
-        let dpi_scale = dpi as f64 / 200.0;
+        let dpi_scale = dpi as f64 / 96.0;
         let width_f = (width as f64) / dpi_scale;
         let height_f = (height as f64) / dpi_scale;
         self.size = (width_f, height_f);
@@ -110,8 +109,6 @@ impl WinHandler for PerfTest {
 
 fn main() {
     Application::init();
-
-    println!("here we go");
 
     let mut run_loop = RunLoop::new();
     let mut builder = WindowBuilder::new();

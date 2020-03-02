@@ -32,15 +32,14 @@ impl RunLoop {
                 let ev_type = ev.response_type() & !0x80;
                 match ev_type {
                     xcb::EXPOSE => {
-                        let event = unsafe { xcb::cast_event::<xcb::ExposeEvent>(&ev) };
-                        let window_id = event.window();
-                        println!("window_id {}", window_id);
+                        let expose: &xcb::ExposeEvent = unsafe { xcb::cast_event(&ev) };
+                        let window_id = expose.window();
+                        // println!("window_id {}", window_id);
                         self.x_id_to_xwindow_map
                             .get_mut(&window_id)
                             .map(|w| w.render());
                     }
                     xcb::KEY_PRESS => {
-                        println!("key {}", ev_type);
                         let key_press: &xcb::KeyPressEvent = unsafe { xcb::cast_event(&ev) };
                         // println!("Key '{}' pressed ", key_press.detail());
                         let key: u32 = key_press.detail() as u32;
@@ -54,13 +53,13 @@ impl RunLoop {
                             .map(|w| w.key_down(key_code));
                     }
                     xcb::BUTTON_PRESS => {
-                        println!("button {}", ev_type);
+                        // println!("button {}", ev_type);
                         let button_press: &xcb::ButtonPressEvent = unsafe { xcb::cast_event(&ev) };
-                        println!(
-                            "x {:?}, y {:?}",
-                            button_press.event_x(),
-                            button_press.event_y()
-                        );
+                        // println!(
+                        //     "x {:?}, y {:?}",
+                        //     button_press.event_x(),
+                        //     button_press.event_y()
+                        // );
                         let window_id = button_press.event();
                         let mouse_event = MouseEvent {
                             pos: Point::new(
@@ -82,7 +81,7 @@ impl RunLoop {
                     }
 
                     _ => {
-                        println!("event {}", ev_type);
+                        // println!("event {}", ev_type);
                     }
                 }
             }
