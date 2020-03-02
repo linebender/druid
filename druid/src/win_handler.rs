@@ -445,7 +445,11 @@ impl<T: Data> AppState<T> {
                 self.process_commands();
                 self.inner.borrow_mut().invalidate_and_finalize();
             }
-            EXT_EVENT_IDLE_TOKEN => self.process_ext_events(),
+            EXT_EVENT_IDLE_TOKEN => {
+                self.process_ext_events();
+                self.process_commands();
+                self.inner.borrow_mut().do_update();
+            }
             other => log::warn!("unexpected idle token {:?}", other),
         }
     }
@@ -468,7 +472,6 @@ impl<T: Data> AppState<T> {
                 None => break,
             }
         }
-        self.inner.borrow_mut().invalidate_and_finalize();
     }
 
     /// Handle a 'command' message from druid-shell. These map to  an item
