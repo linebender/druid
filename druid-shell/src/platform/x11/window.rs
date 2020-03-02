@@ -1,19 +1,21 @@
 use std::any::Any;
-use std::sync::Arc;
 use std::convert::TryInto;
+use std::sync::Arc;
 
 use xcb::ffi::XCB_COPY_FROM_PARENT;
 
+use crate::dialog::{FileDialogOptions, FileInfo};
+use crate::keyboard::{KeyEvent, KeyModifiers};
+use crate::keycodes::KeyCode;
+use crate::kurbo::{Point, Size};
+use crate::mouse::{Cursor, MouseEvent};
+use crate::piet::{Piet, RenderContext};
 use crate::runloop::RunLoop;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
-use crate::mouse::{Cursor};
-use crate::dialog::{FileDialogOptions, FileInfo};
-use crate::kurbo::{Point, Size};
-use crate::piet::{Piet, RenderContext};
 
-use super::menu::Menu;
-use super::error::Error;
 use super::application::Application;
+use super::error::Error;
+use super::menu::Menu;
 use super::util;
 
 pub struct WindowBuilder {
@@ -141,11 +143,15 @@ impl XWindow {
         // Create a draw surface
         // TODO(x11/initial_pr): We have to re-create this draw surface if the window size changes.
         let cairo_xcb_connection = unsafe {
-            cairo::XCBConnection::from_raw_none(conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t)
+            cairo::XCBConnection::from_raw_none(
+                conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t
+            )
         };
         let cairo_drawable = cairo::XCBDrawable(window_id);
         let cairo_visual_type = unsafe {
-            cairo::XCBVisualType::from_raw_none(&mut visual_type.base as *mut _ as *mut cairo_sys::xcb_visualtype_t)
+            cairo::XCBVisualType::from_raw_none(
+                &mut visual_type.base as *mut _ as *mut cairo_sys::xcb_visualtype_t,
+            )
         };
         let cairo_surface = cairo::XCBSurface::create(
             &cairo_xcb_connection,
@@ -153,7 +159,8 @@ impl XWindow {
             &cairo_visual_type,
             size.width as i32,
             size.height as i32,
-        ).expect("couldn't create a cairo surface");
+        )
+        .expect("couldn't create a cairo surface");
         let mut cairo_ctx = cairo::Context::new(&cairo_surface);
 
         // Figure out the refresh rate of the current screen
@@ -191,6 +198,32 @@ impl XWindow {
             request_redraw(self.window_id);
         }
         conn.flush();
+    }
+
+    pub fn key_down(&mut self, key_code: KeyCode) {
+        println!("XWindow::key_down()");
+
+        self.handler.key_down(KeyEvent::new(
+            key_code,
+            false,
+            KeyModifiers {
+                /// Shift.
+                shift: false,
+                /// Option on macOS.
+                alt: false,
+                /// Control.
+                ctrl: false,
+                /// Meta / Windows / Command
+                meta: false,
+            },
+            key_code,
+            key_code,
+        ));
+    }
+
+    pub fn mouse_down(&mut self, mouse_event: &MouseEvent) {
+        println!("XWindow::mouse_down()");
+        self.handler.mouse_down(mouse_event);
     }
 }
 
@@ -232,9 +265,7 @@ pub struct WindowHandle {
 
 impl WindowHandle {
     fn new(window_id: u32) -> WindowHandle {
-        WindowHandle {
-            window_id,
-        }
+        WindowHandle { window_id }
     }
 
     pub fn show(&self) {
@@ -327,7 +358,15 @@ fn request_redraw(window_id: u32) {
     // TODO(x11/render_improvements): Set x, y, width, and height correctly.
     //     We redraw the entire surface on an ExposeEvent, so these args currently do nothing.
     // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
-    let expose_event = xcb::ExposeEvent::new(window_id, /*x=*/0, /*y=*/0, /*width=*/0, /*height=*/0,
-                                             /*count=*/0);
-    xcb::send_event(&conn, false, window_id, xcb::EVENT_MASK_EXPOSURE, &expose_event);
+    let expose_event = xcb::ExposeEvent::new(
+        window_id, /*x=*/ 0, /*y=*/ 0, /*width=*/ 0, /*height=*/ 0,
+        /*count=*/ 0,
+    );
+    xcb::send_event(
+        &conn,
+        false,
+        window_id,
+        xcb::EVENT_MASK_EXPOSURE,
+        &expose_event,
+    );
 }

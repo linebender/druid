@@ -24,6 +24,8 @@ use crate::kurbo::{Point, Size, Vec2};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
+#[cfg(all(target_os = "linux", feature = "use_x11"))]
+use crate::runloop::RunLoop;
 
 #[cfg(all(target_os = "linux", feature = "use_x11"))]
 use crate::runloop::RunLoop;
@@ -226,7 +228,6 @@ impl WindowBuilder {
         self.0.set_menu(menu.into_inner())
     }
 
-
     /// Attempt to construct the platform window.
     ///
     /// If this fails, your application should exit.
@@ -292,6 +293,7 @@ pub trait WinHandler {
     /// Return `true` if the event is handled.
     #[allow(unused_variables)]
     fn key_down(&mut self, event: KeyEvent) -> bool {
+        println!("default key_down");
         false
     }
 
