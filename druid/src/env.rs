@@ -54,6 +54,7 @@ struct EnvImpl {
 /// so the type for a string is `Key<&str>`.
 ///
 /// [`ValueType`]: trait.ValueType.html
+#[derive(Clone)]
 pub struct Key<T> {
     key: &'static str,
     value_type: PhantomData<T>,
@@ -452,3 +453,33 @@ impl_value_type_owned!(Point, Point);
 impl_value_type_owned!(Size, Size);
 impl_value_type_borrowed!(str, String, String);
 impl_value_type_arc!(LinearGradient, LinearGradient);
+
+#[derive(Clone)]
+pub enum KeyOrValue<T: Clone> {
+    Concrete(T),
+    Key(Key<T>),
+}
+
+impl<'a, T: ValueType<'a> + Clone> KeyOrValue<T> {
+    pub fn resolve(self, env: &'a Env) -> T {
+        match self {
+            KeyOrValue::Concrete(value) => value,
+            KeyOrValue::Key(key) => {
+                let value: T = env.get(key);
+                T::from(value)
+            }
+        }
+    }
+}
+
+impl<T: Clone> From<T> for KeyOrValue<T> {
+    fn from(value: T) -> KeyOrValue<T> {
+        KeyOrValue::Concrete(value.into())
+    }
+}
+
+impl<T: Clone> From<Key<T>> for KeyOrValue<T> {
+    fn from(key: Key<T>) -> KeyOrValue<T> {
+        KeyOrValue::Key(key)
+    }
+}
