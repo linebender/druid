@@ -221,6 +221,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                     data.drawing = true;
                     let grid_pos_opt = self.grid_pos(e.pos);
                     grid_pos_opt.iter().for_each(|pos|data.grid[*pos] = true);
+                    ctx.request_paint();
                 }
             }
             Event::MouseUp(e) => {
@@ -232,6 +233,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                 if data.drawing {
                     let grid_pos_opt = self.grid_pos(e.pos);
                     grid_pos_opt.iter().for_each(|pos|data.grid[*pos] = true);
+                    ctx.request_paint();
                 }
             }
             _ => {}
