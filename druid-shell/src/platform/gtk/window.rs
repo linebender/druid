@@ -416,8 +416,6 @@ impl WindowBuilder {
             .borrow_mut()
             .connect(&handle.clone().into());
 
-        win_state.handler.borrow_mut().connected();
-
         Ok(handle)
     }
 }

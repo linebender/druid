@@ -181,7 +181,6 @@ impl WindowBuilder {
                 idle_queue,
             };
             (*view_state).handler.connect(&handle.clone().into());
-            (*view_state).handler.connected();
             (*view_state)
                 .handler
                 .size(frame.size.width as u32, frame.size.height as u32);

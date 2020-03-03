@@ -606,9 +606,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
         //it's possible that we should move those calls to occur in connected?
         self.app_state
             .connect_window(self.window_id, handle.clone());
-    }
 
-    fn connected(&mut self) {
         let event = Event::WindowConnected;
         self.app_state.do_window_event(event, self.window_id);
     }
