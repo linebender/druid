@@ -17,7 +17,7 @@
 use std::ops::{Index, IndexMut};
 use std::time::{Duration, Instant};
 
-use druid::{AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size, TimerToken, UpdateCtx, Widget, WindowDesc};
+use druid::{AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size, TimerToken, UpdateCtx, Widget, WindowDesc, MouseButton};
 
 const GRID_SIZE: usize = 40;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
@@ -109,6 +109,7 @@ impl PartialEq for Grid {
 #[derive(Clone)]
 struct AppData {
     grid: Grid,
+    drawing: bool,
 }
 
 impl Grid {
@@ -180,8 +181,24 @@ impl Data for AppData {
 
 struct GameOfLifeWidget {
     timer_id: TimerToken,
+    cell_size: Size,
 }
 
+impl GameOfLifeWidget {
+    fn grid_pos(&self, p: Point) -> Option<GridPos> {
+        let w0 = self.cell_size.width;
+        let h0 = self.cell_size.height;
+        if p.x < 0.0 || p.y < 0.0 || w0 == 0.0 || h0 == 0.0 {
+            return None;
+        }
+        let row = (p.x / w0) as usize;
+        let col = (p.y / h0) as usize;
+        if row >= GRID_SIZE || col >= GRID_SIZE {
+            return None;
+        }
+        Some(GridPos { row, col })
+    }
+}
 
 impl Widget<AppData> for GameOfLifeWidget {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppData, _env: &Env) {
@@ -197,6 +214,24 @@ impl Widget<AppData> for GameOfLifeWidget {
                     ctx.request_paint();
                     let deadline = Instant::now() + Duration::from_millis(150);
                     self.timer_id = ctx.request_timer(deadline);
+                }
+            }
+            Event::MouseDown(e) => {
+                if e.button == MouseButton::Left {
+                    data.drawing = true;
+                    let grid_pos_opt = self.grid_pos(e.pos);
+                    grid_pos_opt.iter().for_each(|pos|data.grid[*pos] = true);
+                }
+            }
+            Event::MouseDown(e) => {
+                if e.button == MouseButton::Left {
+                    data.drawing = false;
+                }
+            }
+            Event::MouseMoved(e) => {
+                if data.drawing {
+                    let grid_pos_opt = self.grid_pos(e.pos);
+                    grid_pos_opt.iter().for_each(|pos|data.grid[*pos] = true);
                 }
             }
             _ => {}
@@ -228,6 +263,7 @@ impl Widget<AppData> for GameOfLifeWidget {
         let w0 = size.width / 40.0;
         let h0 = size.height / 40.0;
         let cell_size = Size { width: w0, height: h0 };
+        self.cell_size = cell_size;
         for row in 0..GRID_SIZE {
             for col in 0..GRID_SIZE {
                 let pos = GridPos { row, col };
@@ -267,7 +303,7 @@ fn blinker(top: GridPos) -> Option<[GridPos; 3]> {
 }
 
 fn main() {
-    let window = WindowDesc::new(|| GameOfLifeWidget { timer_id: TimerToken::INVALID }).title(
+    let window = WindowDesc::new(|| GameOfLifeWidget { timer_id: TimerToken::INVALID, cell_size: Size{ width: 0.0, height: 0.0 } }).title(
         LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Game of Life"),
     );
     let mut grid = Grid::new();
@@ -281,7 +317,7 @@ fn main() {
     }
     AppLauncher::with_window(window)
         .use_simple_logger()
-        .launch(AppData { grid })
+        .launch(AppData { grid, drawing: false })
         .expect("launch failed");
 }
 
