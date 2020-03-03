@@ -602,8 +602,6 @@ impl<T: Data> crate::shell::AppHandler for AppHandler<T> {
 
 impl<T: Data> WinHandler for DruidHandler<T> {
     fn connect(&mut self, handle: &WindowHandle) {
-        //NOTE: this method predates `connected`, and we call delegate methods here.
-        //it's possible that we should move those calls to occur in connected?
         self.app_state
             .connect_window(self.window_id, handle.clone());
 
