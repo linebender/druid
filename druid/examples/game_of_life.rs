@@ -17,7 +17,11 @@
 use std::ops::{Index, IndexMut};
 use std::time::{Duration, Instant};
 
-use druid::{AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size, TimerToken, UpdateCtx, Widget, WindowDesc, MouseButton};
+use druid::{
+    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
+    LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size,
+    TimerToken, UpdateCtx, Widget, WindowDesc,
+};
 
 const GRID_SIZE: usize = 40;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
@@ -39,28 +43,40 @@ impl GridPos {
         if self.row == 0 {
             None
         } else {
-            Some(GridPos { row: self.row - 1, col: self.col })
+            Some(GridPos {
+                row: self.row - 1,
+                col: self.col,
+            })
         }
     }
     pub fn below(&self) -> Option<GridPos> {
         if self.row == GRID_SIZE - 1 {
             None
         } else {
-            Some(GridPos { row: self.row + 1, col: self.col })
+            Some(GridPos {
+                row: self.row + 1,
+                col: self.col,
+            })
         }
     }
     pub fn left(&self) -> Option<GridPos> {
         if self.col == 0 {
             None
         } else {
-            Some(GridPos { row: self.row, col: self.col - 1 })
+            Some(GridPos {
+                row: self.row,
+                col: self.col - 1,
+            })
         }
     }
     pub fn right(&self) -> Option<GridPos> {
         if self.col == GRID_SIZE - 1 {
             None
         } else {
-            Some(GridPos { row: self.row, col: self.col + 1 })
+            Some(GridPos {
+                row: self.row,
+                col: self.col + 1,
+            })
         }
     }
     #[allow(dead_code)]
@@ -114,7 +130,9 @@ struct AppData {
 
 impl Grid {
     pub fn new() -> Grid {
-        Grid { storage: [false; POOL_SIZE] }
+        Grid {
+            storage: [false; POOL_SIZE],
+        }
     }
     pub fn evolve(&mut self) {
         let mut indices_to_mutate: Vec<GridPos> = vec![];
@@ -148,15 +166,23 @@ impl Grid {
         let above_right = above.and_then(|pos| pos.right());
         let below_left = below.and_then(|pos| pos.left());
         let below_right = below.and_then(|pos| pos.right());
-        [above, below, left, right, above_left, above_right, below_left, below_right]
+        [
+            above,
+            below,
+            left,
+            right,
+            above_left,
+            above_right,
+            below_left,
+            below_right,
+        ]
     }
 
     pub fn n_neighbors(&self, pos: GridPos) -> usize {
         Grid::neighbors(pos)
             .iter()
-            .filter(|x| {
-                x.is_some() && self[x.unwrap()]
-            }).count()
+            .filter(|x| x.is_some() && self[x.unwrap()])
+            .count()
     }
 
     pub fn set_alive(&mut self, positions: &[GridPos]) {
@@ -220,7 +246,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                 if e.button == MouseButton::Left {
                     data.drawing = true;
                     let grid_pos_opt = self.grid_pos(e.pos);
-                    grid_pos_opt.iter().for_each(|pos|data.grid[*pos] = true);
+                    grid_pos_opt.iter().for_each(|pos| data.grid[*pos] = true);
                     ctx.request_paint();
                 }
             }
@@ -232,7 +258,7 @@ impl Widget<AppData> for GameOfLifeWidget {
             Event::MouseMoved(e) => {
                 if data.drawing {
                     let grid_pos_opt = self.grid_pos(e.pos);
-                    grid_pos_opt.iter().for_each(|pos|data.grid[*pos] = true);
+                    grid_pos_opt.iter().for_each(|pos| data.grid[*pos] = true);
                     ctx.request_paint();
                 }
             }
@@ -246,7 +272,8 @@ impl Widget<AppData> for GameOfLifeWidget {
         _event: &LifeCycle,
         _data: &AppData,
         _env: &Env,
-    ) {}
+    ) {
+    }
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &AppData, _data: &AppData, _env: &Env) {}
 
@@ -264,13 +291,19 @@ impl Widget<AppData> for GameOfLifeWidget {
         let size: Size = paint_ctx.size();
         let w0 = size.width / 40.0;
         let h0 = size.height / 40.0;
-        let cell_size = Size { width: w0, height: h0 };
+        let cell_size = Size {
+            width: w0,
+            height: h0,
+        };
         self.cell_size = cell_size;
         for row in 0..GRID_SIZE {
             for col in 0..GRID_SIZE {
                 let pos = GridPos { row, col };
                 if data.grid[pos] {
-                    let pos = Point { x: w0 * row as f64, y: h0 * col as f64 };
+                    let pos = Point {
+                        x: w0 * row as f64,
+                        y: h0 * col as f64,
+                    };
                     let rect = Rect::from_origin_size(pos, cell_size);
                     paint_ctx.fill(rect, &CELL_COLOR);
                 }
@@ -288,9 +321,14 @@ fn glider(left_most: GridPos) -> Option<[GridPos; 5]> {
         return None;
     }
     let center = left_most.right().unwrap();
-    Some([left_most, center.below_right().unwrap(), center.below().unwrap(), center.right().unwrap(), center.above_right().unwrap()])
+    Some([
+        left_most,
+        center.below_right().unwrap(),
+        center.below().unwrap(),
+        center.right().unwrap(),
+        center.above_right().unwrap(),
+    ])
 }
-
 
 // gives back positions of a blinker pattern
 //  *
@@ -305,7 +343,14 @@ fn blinker(top: GridPos) -> Option<[GridPos; 3]> {
 }
 
 fn main() {
-    let window = WindowDesc::new(|| GameOfLifeWidget { timer_id: TimerToken::INVALID, cell_size: Size{ width: 0.0, height: 0.0 } }).title(
+    let window = WindowDesc::new(|| GameOfLifeWidget {
+        timer_id: TimerToken::INVALID,
+        cell_size: Size {
+            width: 0.0,
+            height: 0.0,
+        },
+    })
+    .title(
         LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Game of Life"),
     );
     let mut grid = Grid::new();
@@ -319,7 +364,9 @@ fn main() {
     }
     AppLauncher::with_window(window)
         .use_simple_logger()
-        .launch(AppData { grid, drawing: false })
+        .launch(AppData {
+            grid,
+            drawing: false,
+        })
         .expect("launch failed");
 }
-
