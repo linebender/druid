@@ -29,7 +29,7 @@ use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
 use crate::ext_event::ExtEventHost;
 use crate::menu::ContextMenu;
-use crate::window::{PendingWindow, Window};
+use crate::window::Window;
 use crate::{
     Command, Data, Env, Event, KeyEvent, KeyModifiers, MenuDesc, Target, TimerToken, WheelEvent,
     WindowDesc, WindowId,
@@ -85,21 +85,22 @@ struct Inner<T> {
 
 /// All active windows.
 struct Windows<T> {
-    pending: HashMap<WindowId, PendingWindow<T>>,
+    pending: HashMap<WindowId, WindowDesc<T>>,
     windows: HashMap<WindowId, Window<T>>,
 }
 
 impl<T> Windows<T> {
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
         if let Some(pending) = self.pending.remove(&id) {
-            let win = pending.into_window(id, handle);
+            let win = Window::new(id, handle, pending);
+            // let win = pending.into_window(id, handle);
             assert!(self.windows.insert(id, win).is_none(), "duplicate window");
         } else {
             log::error!("no window for connecting handle {:?}", id);
         }
     }
 
-    fn add(&mut self, id: WindowId, win: PendingWindow<T>) {
+    fn add(&mut self, id: WindowId, win: WindowDesc<T>) {
         assert!(self.pending.insert(id, win).is_none(), "duplicate pending");
     }
 
@@ -406,7 +407,7 @@ impl<T: Data> AppState<T> {
         self.inner.borrow().env.clone()
     }
 
-    pub(crate) fn add_window(&self, id: WindowId, window: PendingWindow<T>) {
+    pub(crate) fn add_window(&self, id: WindowId, window: WindowDesc<T>) {
         self.inner.borrow_mut().windows.add(id, window);
     }
 
