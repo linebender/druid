@@ -302,7 +302,6 @@ impl WndProc for MyWndProc {
                 let handle = self.handle.borrow().to_owned();
                 if let Some(state) = self.state.borrow_mut().as_mut() {
                     state.handler.connect(&handle.into());
-                    state.handler.connected();
                 }
 
                 Some(0)

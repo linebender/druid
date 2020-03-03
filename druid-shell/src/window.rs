@@ -265,12 +265,6 @@ pub trait WinHandler {
     /// wish to stash it.
     fn connect(&mut self, handle: &WindowHandle);
 
-    /// Called immediately after `connect`.
-    ///
-    /// The handler can implement this method to perform initial setup.
-    #[allow(unused_variables)]
-    fn connected(&mut self) {}
-
     /// Called when the size of the window is changed. Note that size
     /// is in physical pixels.
     #[allow(unused_variables)]
