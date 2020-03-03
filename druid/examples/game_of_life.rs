@@ -205,14 +205,14 @@ impl Widget<AppData> for GameOfLifeWidget {
         match event {
             Event::WindowConnected => {
                 ctx.request_paint();
-                let deadline = Instant::now() + Duration::from_millis(150);
+                let deadline = Instant::now() + Duration::from_millis(550);
                 self.timer_id = ctx.request_timer(deadline);
             }
             Event::Timer(id) => {
                 if *id == self.timer_id {
                     data.grid.evolve();
                     ctx.request_paint();
-                    let deadline = Instant::now() + Duration::from_millis(150);
+                    let deadline = Instant::now() + Duration::from_millis(550);
                     self.timer_id = ctx.request_timer(deadline);
                 }
             }
@@ -223,7 +223,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                     grid_pos_opt.iter().for_each(|pos|data.grid[*pos] = true);
                 }
             }
-            Event::MouseDown(e) => {
+            Event::MouseUp(e) => {
                 if e.button == MouseButton::Left {
                     data.drawing = false;
                 }
