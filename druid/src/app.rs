@@ -19,7 +19,7 @@ use crate::kurbo::Size;
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
 use crate::widget::WidgetExt;
 use crate::win_handler::{AppHandler, AppState};
-use crate::window::{PendingWindow, WindowId};
+use crate::window::WindowId;
 use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
 
 /// A function that modifies the initial environment.
@@ -137,7 +137,7 @@ impl<T: Data> WindowDesc<T> {
     pub fn new<W, F>(root: F) -> WindowDesc<T>
     where
         W: Widget<T> + 'static,
-        F: Fn() -> W + 'static,
+        F: FnOnce() -> W + 'static,
     {
         // wrap this closure in another closure that boxes the created widget.
         // this just makes our API slightly cleaner; callers don't need to explicitly box.
@@ -217,7 +217,11 @@ impl<T: Data> WindowDesc<T> {
             builder.set_menu(menu);
         }
 
-        let window = PendingWindow::new(self.root, self.title, self.menu);
+        let root = self.root;
+        let mut window = WindowDesc::new(|| root);
+        window.title = self.title;
+        window.menu = self.menu;
+
         state.add_window(self.id, window);
 
         builder.build()

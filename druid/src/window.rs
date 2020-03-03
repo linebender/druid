@@ -25,19 +25,12 @@ use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetId, WidgetPod,
+    LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetId, WidgetPod, WindowDesc,
 };
 
 /// A unique identifier for a window.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct WindowId(u64);
-
-/// Internal window state that is waiting for a window handle to show up.
-pub(crate) struct PendingWindow<T> {
-    root: WidgetPod<T, Box<dyn Widget<T>>>,
-    title: LocalizedString<T>,
-    menu: Option<MenuDesc<T>>,
-}
 
 /// Per-window state not owned by user code.
 pub struct Window<T> {
@@ -53,27 +46,14 @@ pub struct Window<T> {
     // delegate?
 }
 
-impl<T> PendingWindow<T> {
-    pub(crate) fn new(
-        root: impl Widget<T> + 'static,
-        title: LocalizedString<T>,
-        menu: Option<MenuDesc<T>>,
-    ) -> PendingWindow<T> {
-        PendingWindow {
-            root: WidgetPod::new(Box::new(root)),
-            title,
-            menu,
-        }
-    }
-
-    pub(crate) fn into_window(self, id: WindowId, handle: WindowHandle) -> Window<T> {
-        let PendingWindow { root, title, menu } = self;
+impl<T> Window<T> {
+    pub(crate) fn new(id: WindowId, handle: WindowHandle, desc: WindowDesc<T>) -> Window<T> {
         Window {
             id,
-            root,
-            size: Size::ZERO,
-            title,
-            menu,
+            root: WidgetPod::new(desc.root),
+            size: desc.size.unwrap_or(Size::ZERO),
+            title: desc.title,
+            menu: desc.menu,
             context_menu: None,
             last_anim: None,
             focus: None,
