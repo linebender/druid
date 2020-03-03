@@ -18,7 +18,8 @@ use druid::kurbo::BezPath;
 use druid::piet::{FontBuilder, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
 
 
-use druid::{Affine, AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WindowDesc, Data};
+use druid::{Affine, AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WindowDesc, Data, TimerToken};
+use std::time::{Instant, Duration};
 
 
 const POOL_SIZE: i32 = 1600;
@@ -54,15 +55,14 @@ impl AppData {
                 indices_to_mutate.push(i as usize);
             }
         }
-        println!("mut idx: {:?}", indices_to_mutate);
         for i_mut in indices_to_mutate {
             self.grid[i_mut] *= -1;
         }
     }
 
     // return the indices of neighbors of a cell, clockwise, starting from top-left corner
-    pub fn neighbors(i: i32) -> [i32; 8]{
-        return [i-41, i-40, i-39, i+1, i+41, i+40, i+39, i-1];
+    pub fn neighbors(i: i32) -> [i32; 8] {
+        return [i - 41, i - 40, i - 39, i + 1, i + 41, i + 40, i + 39, i - 1];
     }
 }
 
@@ -77,15 +77,26 @@ impl Data for AppData {
     }
 }
 
-struct CustomWidget;
+struct CustomWidget {
+    timer_id: TimerToken,
+}
 
 
 impl Widget<AppData> for CustomWidget {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut AppData, _env: &Env) {
         match _event {
-            Event::MouseDown(_e) => {
-                _data.evolve();
+            Event::WindowConnected => {
                 _ctx.request_paint();
+                let deadline = Instant::now() + Duration::from_millis(50);
+                self.timer_id = _ctx.request_timer(deadline);
+            }
+            Event::Timer(id) => {
+                if *id == self.timer_id {
+                    _data.evolve();
+                    _ctx.request_paint();
+                    let deadline = Instant::now() + Duration::from_millis(500);
+                    self.timer_id = _ctx.request_timer(deadline);
+                }
             }
             _ => {}
         }
@@ -113,14 +124,14 @@ impl Widget<AppData> for CustomWidget {
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &AppData, _env: &Env) {
         let size: Size = paint_ctx.size();
-        let w0 = size.width/40.0;
-        let h0 = size.height/40.0;
-        let cell_size = Size{ width: w0, height: h0 };
+        let w0 = size.width / 40.0;
+        let h0 = size.height / 40.0;
+        let cell_size = Size { width: w0, height: h0 };
         for i in 0..1600 {
             if data.grid[i] == 1 {
                 let xi = i % 40;
-                let yi =  i / 40;
-                let pos = Point{ x: w0 * xi as f64, y: h0 * yi as f64};
+                let yi = i / 40;
+                let pos = Point { x: w0 * xi as f64, y: h0 * yi as f64 };
                 let rect = Rect::from_origin_size(pos, cell_size);
                 paint_ctx.fill(rect, &CELL_COLOR);
             }
@@ -129,7 +140,7 @@ impl Widget<AppData> for CustomWidget {
 }
 
 fn main() {
-    let window = WindowDesc::new(|| CustomWidget {}).title(
+    let window = WindowDesc::new(|| CustomWidget {timer_id: TimerToken::INVALID}).title(
         LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Game of Life"),
     );
     let mut grid = [-1; 1600];
@@ -165,7 +176,7 @@ fn main() {
     grid[353] = 1;
     AppLauncher::with_window(window)
         .use_simple_logger()
-        .launch(AppData{ grid })
+        .launch(AppData { grid })
         .expect("launch failed");
 }
 
