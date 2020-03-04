@@ -16,18 +16,18 @@
 
 use crate::shell::kurbo::{Point, Rect, RoundedRect, Size};
 use crate::{
-    BoxConstraints, Color, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintBrush,
+    PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
 };
 
 struct BorderStyle {
-    width: KeyOrValue<f64>,
-    brush: KeyOrValue<Color>,
+    width: f64,
+    brush: PaintBrush,
 }
 
 /// A widget that provides simple visual styling options to a child.
 pub struct Container<T> {
-    background: Option<KeyOrValue<Color>>,
+    background: Option<PaintBrush>,
     border: Option<BorderStyle>,
     corner_radius: f64,
 
@@ -46,19 +46,15 @@ impl<T: Data> Container<T> {
     }
 
     /// Paint background with a color or a gradient.
-    pub fn background(mut self, brush: impl Into<KeyOrValue<Color>>) -> Self {
+    pub fn background(mut self, brush: impl Into<PaintBrush>) -> Self {
         self.background = Some(brush.into());
         self
     }
 
     /// Paint a border around the widget with a color or a gradient.
-    pub fn border(
-        mut self,
-        brush: impl Into<KeyOrValue<Color>>,
-        width: impl Into<KeyOrValue<f64>>,
-    ) -> Self {
+    pub fn border(mut self, brush: impl Into<PaintBrush>, width: f64) -> Self {
         self.border = Some(BorderStyle {
-            width: width.into(),
+            width,
             brush: brush.into(),
         });
         self
@@ -98,8 +94,8 @@ impl<T: Data> Widget<T> for Container<T> {
         bc.debug_check("Container");
 
         // Shrink constraints by border offset
-        let border_width = match &self.border {
-            Some(border) => border.width.resolve(env),
+        let border_width = match self.border {
+            Some(ref border) => border.width,
             None => 0.0,
         };
         let child_bc = bc.shrink((2.0 * border_width, 2.0 * border_width));
@@ -126,12 +122,11 @@ impl<T: Data> Widget<T> for Container<T> {
         );
 
         if let Some(border) = &self.border {
-            paint_ctx.stroke(panel, &border.brush.resolve(env), border.width.resolve(env));
+            paint_ctx.stroke(panel, &border.brush, border.width);
         };
 
-        if let Some(background) = self.background.as_ref() {
-            let background = background.resolve(env);
-            paint_ctx.fill(panel, &background);
+        if let Some(background) = &self.background {
+            paint_ctx.fill(panel, background);
         };
 
         self.inner.paint(paint_ctx, data, env);

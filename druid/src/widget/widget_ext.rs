@@ -15,10 +15,10 @@
 //! Convenience methods for widgets.
 
 use crate::kurbo::Insets;
-use crate::piet::UnitPoint;
+use crate::piet::{PaintBrush, UnitPoint};
 
 use super::{Align, Container, EnvScope, IdentityWrapper, Padding, Parse, SizedBox, WidgetId};
-use crate::{Color, Data, Env, KeyOrValue, Lens, LensWrap, Widget};
+use crate::{Data, Env, Lens, LensWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
@@ -100,7 +100,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// [`Container`]: struct.Container.html
     /// [`PaintBrush`]: https://docs.rs/piet/0.0.7/piet/enum.PaintBrush.html
-    fn background(self, brush: impl Into<KeyOrValue<Color>>) -> Container<T> {
+    fn background(self, brush: impl Into<PaintBrush>) -> Container<T> {
         Container::new(self).background(brush)
     }
 
@@ -110,11 +110,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// [`Container`]: struct.Container.html
     /// [`PaintBrush`]: https://docs.rs/piet/0.0.7/piet/enum.PaintBrush.html
-    fn border(
-        self,
-        brush: impl Into<KeyOrValue<Color>>,
-        width: impl Into<KeyOrValue<f64>>,
-    ) -> Container<T> {
+    fn border(self, brush: impl Into<PaintBrush>, width: f64) -> Container<T> {
         Container::new(self).border(brush, width)
     }
 
