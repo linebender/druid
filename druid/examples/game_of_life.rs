@@ -248,7 +248,6 @@ impl Widget<AppData> for GameOfLifeWidget {
                     data.drawing = true;
                     let grid_pos_opt = self.grid_pos(e.pos);
                     grid_pos_opt.iter().for_each(|pos| data.grid[*pos] = true);
-                    ctx.request_paint();
                 }
             }
             Event::MouseUp(e) => {
@@ -260,7 +259,6 @@ impl Widget<AppData> for GameOfLifeWidget {
                 if data.drawing {
                     let grid_pos_opt = self.grid_pos(e.pos);
                     grid_pos_opt.iter().for_each(|pos| data.grid[*pos] = true);
-                    ctx.request_paint();
                 }
             }
             _ => {}
@@ -276,7 +274,9 @@ impl Widget<AppData> for GameOfLifeWidget {
     ) {
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &AppData, _data: &AppData, _env: &Env) {}
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &AppData, _data: &AppData, _env: &Env) {
+        ctx.request_paint();
+    }
 
     fn layout(
         &mut self,
