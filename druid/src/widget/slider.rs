@@ -16,13 +16,15 @@
 
 use crate::kurbo::{Circle, Point, Rect, RoundedRect, Shape, Size};
 use crate::theme;
-use crate::widget::Align;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
     PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
 };
 
 /// A slider, allowing interactive update of a numeric value.
+///
+/// This slider implements `Widget<f64>`, and works on values clamped
+/// in the range 0..1.0.
 #[derive(Debug, Clone, Default)]
 pub struct Slider {
     knob_pos: Point,
@@ -31,8 +33,9 @@ pub struct Slider {
 }
 
 impl Slider {
-    pub fn new() -> impl Widget<f64> {
-        Align::vertical(UnitPoint::CENTER, Self::default())
+    /// Create a new `Slider`.
+    pub fn new() -> Slider {
+        Default::default()
     }
 }
 
