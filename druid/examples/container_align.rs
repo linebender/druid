@@ -12,27 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Demonstrates alignment of children in the flex container.
+//! Demonstrates alignment and padding of children in the flex container.
 
 use druid::widget::{
-    Alignment, Button, Checkbox, Flex, Label, ProgressBar, Slider, Stepper, Switch, TextBox,
-    WidgetExt,
+    Alignment, Button, Checkbox, Either, Flex, Label, ProgressBar, Slider, Stepper, Switch,
+    TextBox, WidgetExt,
 };
-use druid::{
-    AppLauncher, Color, Data, Env, Lens, LocalizedString, PlatformError, Widget, WindowDesc,
-};
+use druid::{AppLauncher, Data, Env, Lens, LocalizedString, PlatformError, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 pub struct AppState {
+    vertical: bool,
     pub input_text: String,
     pub enabled: bool,
     volume: f64,
 }
 
-fn make_widget_row(alignment: Alignment) -> impl Widget<AppState> {
-    Flex::row()
-        .alignment(alignment)
-        .with_child(TextBox::new().lens(AppState::input_text).center(), 0.)
+fn make_flex(flex: Flex<AppState>) -> impl Widget<AppState> {
+    flex.with_child(TextBox::new().lens(AppState::input_text).center(), 0.)
         .with_child(
             Button::new("Clear", |_ctx, data: &mut AppState, _env| {
                 data.input_text.clear();
@@ -58,28 +55,81 @@ fn make_widget_row(alignment: Alignment) -> impl Widget<AppState> {
             0.0,
         )
         .with_child(Switch::new().lens(AppState::enabled), 0.)
-        .background(Color::rgba8(0, 0, 0xFF, 0x40))
         .padding((0., 5.0))
 }
 
 fn make_ui() -> impl Widget<AppState> {
-    Flex::column()
+    let horiz = Flex::column()
         .with_child(Label::new("top aligned").padding((0., 10., 0., 0.)), 0.)
-        .with_child(make_widget_row(Alignment::Start), 0.)
+        .with_child(make_flex(Flex::row().alignment(Alignment::Start)), 0.)
         .with_child(Label::new("center aligned").padding((0., 10., 0., 0.)), 0.)
-        .with_child(make_widget_row(Alignment::Center), 0.)
+        .with_child(
+            make_flex(
+                Flex::row()
+                    .alignment(Alignment::Center)
+                    .child_spacing(druid::theme::CONTROL_SPACING_HORIZ),
+            ),
+            0.,
+        )
         .with_child(Label::new("bottom aligned").padding((0., 10., 0., 0.)), 0.)
-        .with_child(make_widget_row(Alignment::End), 0.)
+        .with_child(
+            make_flex(Flex::row().alignment(Alignment::End).child_spacing(20.)),
+            0.,
+        )
+        .center();
+
+    let vert = Flex::row()
+        .child_spacing(10.)
+        .with_child(make_flex(Flex::column().alignment(Alignment::Start)), 0.)
+        .with_child(
+            make_flex(
+                Flex::column()
+                    .alignment(Alignment::Center)
+                    .child_spacing(8.),
+            ),
+            0.,
+        )
+        .with_child(
+            make_flex(Flex::column().alignment(Alignment::End).child_spacing(20.)),
+            0.,
+        )
+        .center();
+
+    let either = Either::new(|data, _| data.vertical, vert, horiz);
+
+    Flex::column()
+        .child_spacing(20.)
+        .with_child(
+            Label::new(|data: &AppState, _: &Env| {
+                if data.vertical {
+                    "Vertical".into()
+                } else {
+                    "Horiziontal".into()
+                }
+            })
+            .center(),
+            0.0,
+        )
+        .with_child(either, 0.0)
+        .with_child(
+            Button::new("Toggle Axis", |_, data: &mut AppState, _| {
+                data.vertical = !data.vertical
+            })
+            .padding(10.)
+            .center(),
+            0.0,
+        )
         .center()
 }
 
 fn main() -> Result<(), PlatformError> {
     let main_window = WindowDesc::new(make_ui)
-        .window_size((550., 320.00))
+        .window_size((700., 500.00))
         .title(LocalizedString::new("Container Alignment"));
 
     let data = AppState {
         input_text: "hello".into(),
+        vertical: false,
         enabled: false,
         volume: 0.0,
     };

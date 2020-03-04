@@ -17,14 +17,15 @@
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A container with either horizontal or vertical layout.
 pub struct Flex<T> {
     direction: Axis,
     alignment: Alignment,
+    child_spacing: KeyOrValue<f64>,
     children: Vec<ChildWidget<T>>,
 }
 
@@ -95,6 +96,7 @@ impl<T> Flex<T> {
             direction: Axis::Horizontal,
             children: Vec::new(),
             alignment: Alignment::Start,
+            child_spacing: Default::default(),
         }
     }
 
@@ -106,6 +108,7 @@ impl<T> Flex<T> {
             direction: Axis::Vertical,
             children: Vec::new(),
             alignment: Alignment::Start,
+            child_spacing: Default::default(),
         }
     }
 
@@ -114,6 +117,16 @@ impl<T> Flex<T> {
     /// [`Alignment`]: enum.Alignment.html
     pub fn alignment(mut self, alignment: Alignment) -> Self {
         self.alignment = alignment;
+        self
+    }
+
+    /// Builder-style method for specifying the padding between children.
+    ///
+    /// The argument can be either an `f64` or a [`Key<f64>`].
+    ///
+    /// [`Key<f64>`]: struct.Key.html
+    pub fn child_spacing(mut self, spacing: impl Into<KeyOrValue<f64>>) -> Self {
+        self.child_spacing = spacing.into();
         self
     }
 
@@ -130,6 +143,15 @@ impl<T> Flex<T> {
     /// [`Alignment`]: enum.Alignment.html
     pub fn set_alignment(&mut self, alignment: Alignment) {
         self.alignment = alignment;
+    }
+
+    /// Set the padding between children.
+    ///
+    /// The argument can be either an `f64` or a [`Key<f64>`].
+    ///
+    /// [`Key<f64>`]: struct.Key.html
+    pub fn set_child_spacing(&mut self, spacing: impl Into<KeyOrValue<f64>>) {
+        self.child_spacing = spacing.into();
     }
 
     /// Add a child widget.
@@ -180,9 +202,11 @@ impl<T: Data> Widget<T> for Flex<T> {
         env: &Env,
     ) -> Size {
         bc.debug_check("Flex");
+        let child_spacing = self.child_spacing.resolve(env);
 
         // Measure non-flex children.
-        let mut total_non_flex = 0.0;
+        let total_spacing = self.children.len().saturating_sub(1) as f64 * child_spacing;
+        let mut total_non_flex = total_spacing;
         let mut minor = self.direction.minor(bc.min());
         for child in &mut self.children {
             if child.params.flex == 0.0 {
@@ -246,7 +270,10 @@ impl<T: Data> Widget<T> for Flex<T> {
             child.widget.set_layout_rect(rect.with_origin(pos));
             child_paint_rect = child_paint_rect.union(child.widget.paint_rect());
             major += self.direction.major(rect.size());
+            major += child_spacing;
         }
+        // we don't pad after the last child
+        major -= child_spacing;
 
         if flex_sum > 0.0 && total_major.is_infinite() {
             log::warn!("A child of Flex is flex, but Flex is unbounded.")

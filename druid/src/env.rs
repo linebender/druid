@@ -56,6 +56,7 @@ struct EnvImpl {
 ///
 /// [`ValueType`]: trait.ValueType.html
 /// [`Env`]: struct.Env.html
+#[derive(Clone)]
 pub struct Key<T> {
     key: &'static str,
     value_type: PhantomData<T>,
@@ -486,5 +487,11 @@ impl<T: Into<Value>> From<T> for KeyOrValue<T> {
 impl<T: Into<Value>> From<Key<T>> for KeyOrValue<T> {
     fn from(key: Key<T>) -> KeyOrValue<T> {
         KeyOrValue::Key(key)
+    }
+}
+
+impl<T: Into<Value> + Default> Default for KeyOrValue<T> {
+    fn default() -> Self {
+        KeyOrValue::Concrete(T::default().into())
     }
 }

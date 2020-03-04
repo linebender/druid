@@ -55,6 +55,9 @@ pub const SCROLL_BAR_PAD: Key<f64> = Key::new("scroll_bar_pad");
 pub const SCROLL_BAR_RADIUS: Key<f64> = Key::new("scroll_bar_radius");
 pub const SCROLL_BAR_EDGE_WIDTH: Key<f64> = Key::new("scroll_bar_edge_width");
 
+/// The default horizontal spacing that should be used between control widgets.
+pub const CONTROL_SPACING_HORIZ: Key<f64> = Key::new("druid.theme.default-control-spacing");
+
 /// An initial theme.
 pub fn init() -> Env {
     let mut env = Env::default()
@@ -87,7 +90,8 @@ pub fn init() -> Env {
         .adding(SCROLL_BAR_WIDTH, 8.)
         .adding(SCROLL_BAR_PAD, 2.)
         .adding(SCROLL_BAR_RADIUS, 5.)
-        .adding(SCROLL_BAR_EDGE_WIDTH, 1.);
+        .adding(SCROLL_BAR_EDGE_WIDTH, 1.)
+        .adding(CONTROL_SPACING_HORIZ, 8.0);
 
     #[cfg(target_os = "windows")]
     {
