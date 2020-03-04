@@ -84,7 +84,7 @@ pub enum Value {
 /// value or a value from the environment for some purpose.
 ///
 /// [`Key<T>`]: struct.Key.html
-/// [`Env<T>`]: struct.Env.html
+/// [`Env`]: struct.Env.html
 pub enum KeyOrValue<T> {
     Concrete(Value),
     Key(Key<T>),
