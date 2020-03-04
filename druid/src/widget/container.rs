@@ -99,7 +99,7 @@ impl<T: Data> Widget<T> for Container<T> {
 
         // Shrink constraints by border offset
         let border_width = match &self.border {
-            Some(border) => border.width.clone().resolve(env),
+            Some(border) => border.width.resolve(env),
             None => 0.0,
         };
         let child_bc = bc.shrink((2.0 * border_width, 2.0 * border_width));
@@ -126,15 +126,12 @@ impl<T: Data> Widget<T> for Container<T> {
         );
 
         if let Some(border) = &self.border {
-            paint_ctx.stroke(
-                panel,
-                &border.brush.clone().resolve(env),
-                border.width.clone().resolve(env),
-            );
+            paint_ctx.stroke(panel, &border.brush.resolve(env), border.width.resolve(env));
         };
 
-        if let Some(background) = &self.background {
-            paint_ctx.fill(panel, &background.clone().resolve(env));
+        if let Some(background) = self.background.as_ref() {
+            let background = background.resolve(env);
+            paint_ctx.fill(panel, &background);
         };
 
         self.inner.paint(paint_ctx, data, env);
