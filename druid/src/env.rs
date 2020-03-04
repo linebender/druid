@@ -15,6 +15,7 @@
 //! An environment which is passed downward into the widget tree.
 
 use std::any;
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -47,13 +48,14 @@ struct EnvImpl {
     l10n: Arc<L10nManager>,
 }
 
-/// A typed key.
+/// A typed [`Env`] key.
 ///
 /// This lets you retrieve values of a given type. The parameter
 /// implements [`ValueType`]. For "expensive" types, this is a reference,
 /// so the type for a string is `Key<&str>`.
 ///
 /// [`ValueType`]: trait.ValueType.html
+/// [`Env`]: struct.Env.html
 pub struct Key<T> {
     key: &'static str,
     value_type: PhantomData<T>,
@@ -74,6 +76,18 @@ pub enum Value {
     Bool(bool),
     UnsignedInt(u64),
     String(String),
+}
+
+/// Either a concrete `T` or a [`Key<T>`] that can be resolved in the [`Env`].
+///
+/// This is a way to allow widgets to interchangeably use either a specific
+/// value or a value from the environment for some purpose.
+///
+/// [`Key<T>`]: struct.Key.html
+/// [`Env`]: struct.Env.html
+pub enum KeyOrValue<T> {
+    Concrete(Value),
+    Key(Key<T>),
 }
 
 /// Values which can be stored in an environment.
@@ -142,7 +156,8 @@ impl Env {
     /// # Panics
     ///
     /// Panics if the key is not found, or if it is present with the wrong type.
-    pub fn get<'a, V: ValueType<'a>>(&'a self, key: Key<V>) -> V {
+    pub fn get<'a, V: ValueType<'a>>(&'a self, key: impl Borrow<Key<V>>) -> V {
+        let key = key.borrow();
         if let Some(value) = self.0.map.get(key.key) {
             value.to_inner_unchecked()
         } else {
@@ -155,10 +170,10 @@ impl Env {
     /// # Panics
     ///
     /// Panics if the value for the key is found, but has the wrong type.
-    pub fn try_get<'a, V: ValueType<'a>>(&'a self, key: Key<V>) -> Option<V> {
+    pub fn try_get<'a, V: ValueType<'a>>(&'a self, key: impl Borrow<Key<V>>) -> Option<V> {
         self.0
             .map
-            .get(key.key)
+            .get(key.borrow().key)
             .map(|value| value.to_inner_unchecked())
     }
 
@@ -452,3 +467,24 @@ impl_value_type_owned!(Point, Point);
 impl_value_type_owned!(Size, Size);
 impl_value_type_borrowed!(str, String, String);
 impl_value_type_arc!(LinearGradient, LinearGradient);
+
+impl<'a, T: ValueType<'a>> KeyOrValue<T> {
+    pub fn resolve(&'a self, env: &'a Env) -> T {
+        match self {
+            KeyOrValue::Concrete(value) => value.to_inner_unchecked(),
+            KeyOrValue::Key(key) => env.get(key),
+        }
+    }
+}
+
+impl<T: Into<Value>> From<T> for KeyOrValue<T> {
+    fn from(value: T) -> KeyOrValue<T> {
+        KeyOrValue::Concrete(value.into())
+    }
+}
+
+impl<T: Into<Value>> From<Key<T>> for KeyOrValue<T> {
+    fn from(key: Key<T>) -> KeyOrValue<T> {
+        KeyOrValue::Key(key)
+    }
+}
