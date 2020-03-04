@@ -155,7 +155,7 @@ impl<'a> Iterator for ColorScheme<'a> {
 }
 
 
-#[derive(Clone, Lens)]
+#[derive(Clone, Lens, Data)]
 struct AppData {
     grid: Grid,
     drawing: bool,
@@ -241,11 +241,6 @@ impl Grid {
     }
 }
 
-impl Data for AppData {
-    fn same(&self, other: &Self) -> bool {
-        self.grid == other.grid
-    }
-}
 
 struct GameOfLifeWidget<'a> {
     timer_id: TimerToken,
@@ -409,8 +404,12 @@ fn make_widget() -> impl Widget<AppData> {
                     // pause / resume button
                     Button::new(
                         |data: &bool, _: &Env| match data {
-                            true => "Resume".into(),
-                            false => "Pause".into(),
+                            true => {
+                                "Resume".into()
+                            },
+                            false => {
+                                "Pause".into()
+                            },
                         },
                         |ctx, data: &mut bool, _: &Env| {
                             *data = !*data;
@@ -420,6 +419,8 @@ fn make_widget() -> impl Widget<AppData> {
                     )
                         .lens(AppData::paused)
                         .center()
+                        .fix_width(80.)
+                        .fix_height(40.)
                         .padding((8.0, 4.0)),
                     0.0,
                 )
@@ -431,6 +432,8 @@ fn make_widget() -> impl Widget<AppData> {
                     })
                         .lens(AppData::grid)
                         .center()
+                        .fix_width(80.)
+                        .fix_height(40.)
                         .padding((8.0, 4.0)),
                     0.0,
                 )
