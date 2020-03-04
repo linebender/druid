@@ -23,7 +23,7 @@ use druid::{
     TimerToken, UpdateCtx, Widget, WindowDesc,
 };
 use std::sync::Arc;
-use druid::widget::{Flex, Button, WidgetExt};
+use druid::widget::{Flex, Button, WidgetExt, Label, Slider};
 
 const GRID_SIZE: usize = 40;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
@@ -130,16 +130,17 @@ struct ColorScheme<'a> {
     current: usize,
 }
 
-const c0: Color = Color::from_rgba32_u32(0xEBF1F7);
-const c1: Color = Color::from_rgba32_u32(0xA3FCF7);
-const c2: Color = Color::from_rgba32_u32(0xA2E3D8);
-const c3: Color = Color::from_rgba32_u32(0xF2E6F1);
-const c4: Color = Color::from_rgba32_u32(0xE0AFAF);
+const BG: Color = Color::grey8(23 as u8);
+const C0: Color = Color::from_rgba32_u32(0xEBF1F7);
+const C1: Color = Color::from_rgba32_u32(0xA3FCF7);
+const C2: Color = Color::from_rgba32_u32(0xA2E3D8);
+const C3: Color = Color::from_rgba32_u32(0xF2E6F1);
+const C4: Color = Color::from_rgba32_u32(0xE0AFAF);
 
 impl Default for ColorScheme<'_> {
     fn default() -> Self {
         ColorScheme {
-            colors: vec![&c0, &c1, &c2, &c3, &c4],
+            colors: vec![&C0, &C1, &C2, &C3, &C4],
             current: 0,
         }
     }
@@ -160,6 +161,18 @@ struct AppData {
     grid: Grid,
     drawing: bool,
     paused: bool,
+    speed: f64,
+}
+
+impl AppData {
+    // allows time interval in the range [100ms, 5000ms]
+    // equivalently, 0.2 ~ 20fps
+    pub fn iter_interval(&self) -> u64 {
+        (1000. / self.fps()) as u64
+    }
+    pub fn fps(&self) -> f64 {
+        self.speed.max(0.01) * 20.0
+    }
 }
 
 impl Grid {
@@ -269,7 +282,7 @@ impl Widget<AppData> for GameOfLifeWidget<'_> {
         match event {
             Event::WindowConnected => {
                 ctx.request_paint();
-                let deadline = Instant::now() + Duration::from_millis(550);
+                let deadline = Instant::now() + Duration::from_millis(data.iter_interval() as u64);
                 self.timer_id = ctx.request_timer(deadline);
             }
             Event::Timer(id) => {
@@ -278,7 +291,7 @@ impl Widget<AppData> for GameOfLifeWidget<'_> {
                         data.grid.evolve();
                         ctx.request_paint();
                     }
-                    let deadline = Instant::now() + Duration::from_millis(550);
+                    let deadline = Instant::now() + Duration::from_millis(data.iter_interval() as u64);
                     self.timer_id = ctx.request_timer(deadline);
                 }
             }
@@ -398,47 +411,67 @@ fn make_widget() -> impl Widget<AppData> {
             1.0,
         )
         .with_child(
-            // a row with two buttons
-            Flex::row()
+            Flex::column()
                 .with_child(
-                    // pause / resume button
-                    Button::new(
-                        |data: &bool, _: &Env| match data {
-                            true => {
-                                "Resume".into()
-                            },
-                            false => {
-                                "Pause".into()
-                            },
-                        },
-                        |ctx, data: &mut bool, _: &Env| {
-                            *data = !*data;
-                            ctx.request_layout();
-                            ctx.request_paint();
-                        },
-                    )
-                        .lens(AppData::paused)
-                        .center()
-                        .fix_width(80.)
-                        .fix_height(40.)
-                        .padding((8.0, 4.0)),
-                    0.0,
+                    // a row with two buttons
+                    Flex::row()
+                        .with_child(
+                            // pause / resume button
+                            Button::new(
+                                |data: &bool, _: &Env| match data {
+                                    true => {
+                                        "Resume".into()
+                                    }
+                                    false => {
+                                        "Pause".into()
+                                    }
+                                },
+                                |ctx, data: &mut bool, _: &Env| {
+                                    *data = !*data;
+                                    ctx.request_layout();
+                                    ctx.request_paint();
+                                },
+                            )
+                                .lens(AppData::paused)
+                                .center()
+                                .fix_width(80.)
+                                .fix_height(40.)
+                                .padding((2.0, 2.0)),
+                            1.0,
+                        )
+                        .with_child(
+                            // clear button
+                            Button::new("Clear", |ctx, data: &mut Grid, _: &Env| {
+                                data.clear();
+                                ctx.request_paint();
+                            })
+                                .lens(AppData::grid)
+                                .center()
+                                .fix_height(30.)
+                                .padding((2.0, 2.0)),
+                            1.0,
+                        )
+                        .fix_height(35.)
+                        .padding(4.0),
+                    0.,
                 )
                 .with_child(
-                    // clear button
-                    Button::new("Clear", |ctx, data: &mut Grid, _: &Env| {
-                        data.clear();
-                        ctx.request_paint();
-                    })
-                        .lens(AppData::grid)
-                        .center()
-                        .fix_width(80.)
-                        .fix_height(40.)
-                        .padding((8.0, 4.0)),
-                    0.0,
-                )
-                .fix_height(40.)
-                .padding(4.0),
+                    Flex::row()
+                        .with_child(
+                            Label::new(|data: &AppData, _env: &_| format!("{:.2}FPS", data.fps()))
+                                .padding(3.0),
+                            0.,
+                        )
+                        .with_child(
+                            Slider::new()
+                                .lens(AppData::speed),
+                            1.,
+                        )
+                        .padding(4.0)
+                    ,
+                    0.,
+                ).background(BG)
+            ,
             0.,
         )
 }
@@ -465,6 +498,7 @@ fn main() {
             grid,
             drawing: false,
             paused: false,
+            speed: 0.5,
         })
         .expect("launch failed");
 }
