@@ -24,10 +24,8 @@ use crate::{
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
 use crate::piet::{
     FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
-    UnitPoint,
 };
 use crate::theme;
-use crate::widget::Align;
 
 use crate::text::{movement, offset_for_delete_backwards, EditableText, Movement, Selection};
 
@@ -51,19 +49,7 @@ pub struct TextBox {
 
 impl TextBox {
     /// Create a new TextBox widget
-    pub fn new() -> impl Widget<String> {
-        Align::vertical(UnitPoint::CENTER, Self::raw())
-    }
-
-    /// Create a new TextBox widget with placeholder
-    pub fn with_placeholder<T: Into<String>>(placeholder: T) -> impl Widget<String> {
-        let mut textbox = Self::raw();
-        textbox.placeholder = placeholder.into();
-        Align::vertical(UnitPoint::CENTER, textbox)
-    }
-
-    /// Create a new TextBox widget with no Align wrapper
-    pub fn raw() -> TextBox {
+    pub fn new() -> TextBox {
         Self {
             width: 0.0,
             hscroll_offset: 0.,
@@ -72,6 +58,18 @@ impl TextBox {
             cursor_on: false,
             placeholder: String::new(),
         }
+    }
+
+    /// Builder-style method to set the `TextBox`'s placeholder text.
+    pub fn with_placeholder(mut self, placeholder: impl Into<String>) -> Self {
+        self.placeholder = placeholder.into();
+        self
+    }
+
+    #[deprecated(since = "0.5.0", note = "Use TxtBox::new instead")]
+    #[doc(hidden)]
+    pub fn raw() -> TextBox {
+        Self::new()
     }
 
     /// Calculate the PietTextLayout from the given text, font, and font size
@@ -456,6 +454,12 @@ impl Widget<String> for TextBox {
     }
 }
 
+impl Default for TextBox {
+    fn default() -> Self {
+        TextBox::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -464,7 +468,7 @@ mod tests {
     /// can still be used to insert characters.
     #[test]
     fn data_can_be_changed_externally() {
-        let mut widget = TextBox::raw();
+        let mut widget = TextBox::new();
         let mut data = "".to_string();
 
         // First insert some chars
@@ -486,7 +490,7 @@ mod tests {
     /// Test backspace on the combo character o̷
     #[test]
     fn backspace_combining() {
-        let mut widget = TextBox::raw();
+        let mut widget = TextBox::new();
         let mut data = "".to_string();
 
         widget.insert(&mut data, "\u{0073}\u{006F}\u{0337}\u{0073}");
@@ -500,7 +504,7 @@ mod tests {
     /// Devanagari codepoints are 3 utf-8 code units each.
     #[test]
     fn backspace_devanagari() {
-        let mut widget = TextBox::raw();
+        let mut widget = TextBox::new();
         let mut data = "".to_string();
 
         widget.insert(&mut data, "हिन्दी");
