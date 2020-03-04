@@ -15,23 +15,25 @@
 //! This example shows how to construct a basic layout.
 
 use druid::widget::{Flex, Label, WidgetExt};
-use druid::{AppLauncher, Color, LocalizedString, PlatformError, Widget, WindowDesc};
+use druid::{
+    AppLauncher, Color, LinearGradient, LocalizedString, PlatformError, UnitPoint, Widget,
+    WindowDesc,
+};
 
 fn build_app() -> impl Widget<()> {
     let solid = Color::rgb8(0x3a, 0x3a, 0x3a);
-
-    // let gradient = LinearGradient::new(
-    //     UnitPoint::TOP_LEFT,
-    //     UnitPoint::BOTTOM_RIGHT,
-    //     (Color::rgb8(0x11, 0x11, 0x11), Color::rgb8(0xbb, 0xbb, 0xbb)),
-    // );
+    let gradient = LinearGradient::new(
+        UnitPoint::TOP_LEFT,
+        UnitPoint::BOTTOM_RIGHT,
+        (Color::rgb8(0x11, 0x11, 0x11), Color::rgb8(0xbb, 0xbb, 0xbb)),
+    );
 
     Flex::column()
         .with_child(
             Flex::row()
                 .with_child(
                     Label::new("top left")
-                        .border(solid.clone(), 4.0)
+                        .border(gradient.clone(), 4.0)
                         .padding(10.0),
                     1.0,
                 )
@@ -47,7 +49,7 @@ fn build_app() -> impl Widget<()> {
             Flex::row()
                 .with_child(
                     Label::new("bottom left")
-                        .background(solid.clone())
+                        .background(gradient.clone())
                         .rounded(10.0)
                         .padding(10.0),
                     1.0,
