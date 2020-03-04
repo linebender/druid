@@ -19,16 +19,17 @@ use std::time::{Duration, Instant};
 
 use druid::{
     AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size,
+    LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size, Lens,
     TimerToken, UpdateCtx, Widget, WindowDesc,
 };
 use std::sync::Arc;
+use druid::widget::{Flex, Button, WidgetExt};
 
 const GRID_SIZE: usize = 40;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
 // const CELL_COLOR: Color = Color::rgb8(0xf3 as u8, 0xf4 as u8, 8 as u8);
 
-#[derive(Clone)]
+#[derive(Clone, Data)]
 struct Grid {
     storage: Arc<Vec<bool>>,
 }
@@ -154,10 +155,11 @@ impl<'a> Iterator for ColorScheme<'a> {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Lens)]
 struct AppData {
     grid: Grid,
     drawing: bool,
+    paused: bool,
 }
 
 impl Grid {
@@ -229,6 +231,14 @@ impl Grid {
             self[*pos] = false;
         }
     }
+
+    pub fn clear(&mut self) {
+        for row in 0..GRID_SIZE {
+            for col in 0..GRID_SIZE {
+                self[GridPos { row, col }] = false;
+            }
+        }
+    }
 }
 
 impl Data for AppData {
@@ -269,8 +279,10 @@ impl Widget<AppData> for GameOfLifeWidget<'_> {
             }
             Event::Timer(id) => {
                 if *id == self.timer_id {
-                    data.grid.evolve();
-                    ctx.request_paint();
+                    if !data.paused {
+                        data.grid.evolve();
+                        ctx.request_paint();
+                    }
                     let deadline = Instant::now() + Duration::from_millis(550);
                     self.timer_id = ctx.request_timer(deadline);
                 }
@@ -376,16 +388,61 @@ fn blinker(top: GridPos) -> Option<[GridPos; 3]> {
     Some([top, center, center.below().unwrap()])
 }
 
+
+fn make_widget() -> impl Widget<AppData> {
+    Flex::column()
+        .with_child(
+            GameOfLifeWidget {
+                timer_id: TimerToken::INVALID,
+                cell_size: Size {
+                    width: 0.0,
+                    height: 0.0,
+                },
+                color_scheme: Default::default(),
+            },
+            1.0,
+        )
+        .with_child(
+            // a row with two buttons
+            Flex::row()
+                .with_child(
+                    // pause / resume button
+                    Button::new(
+                        |data: &bool, _: &Env| match data {
+                            true => "Resume".into(),
+                            false => "Pause".into(),
+                        },
+                        |ctx, data: &mut bool, _: &Env| {
+                            *data = !*data;
+                            ctx.request_layout();
+                            ctx.request_paint();
+                        },
+                    )
+                        .lens(AppData::paused)
+                        .center()
+                        .padding((8.0, 4.0)),
+                    0.0,
+                )
+                .with_child(
+                    // clear button
+                    Button::new("Clear", |ctx, data: &mut Grid, _: &Env| {
+                        data.clear();
+                        ctx.request_paint();
+                    })
+                        .lens(AppData::grid)
+                        .center()
+                        .padding((8.0, 4.0)),
+                    0.0,
+                )
+                .fix_height(40.)
+                .padding(4.0),
+            0.,
+        )
+}
+
 fn main() {
-    let window = WindowDesc::new(|| GameOfLifeWidget {
-        timer_id: TimerToken::INVALID,
-        cell_size: Size {
-            width: 0.0,
-            height: 0.0,
-        },
-        color_scheme: Default::default(),
-    })
-        .window_size(Size{ width: 800.0, height: 800.0 })
+    let window = WindowDesc::new(make_widget)
+        .window_size(Size { width: 800.0, height: 800.0 })
         .resizable(false)
         .title(
             LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Game of Life"),
@@ -404,6 +461,7 @@ fn main() {
         .launch(AppData {
             grid,
             drawing: false,
+            paused: false,
         })
         .expect("launch failed");
 }
