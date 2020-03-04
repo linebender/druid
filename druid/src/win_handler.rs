@@ -93,7 +93,6 @@ impl<T> Windows<T> {
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
         if let Some(pending) = self.pending.remove(&id) {
             let win = Window::new(id, handle, pending);
-            // let win = pending.into_window(id, handle);
             assert!(self.windows.insert(id, win).is_none(), "duplicate window");
         } else {
             log::error!("no window for connecting handle {:?}", id);

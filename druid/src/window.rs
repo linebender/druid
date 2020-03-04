@@ -51,7 +51,7 @@ impl<T> Window<T> {
         Window {
             id,
             root: WidgetPod::new(desc.root),
-            size: desc.size.unwrap_or(Size::ZERO),
+            size: Size::ZERO,
             title: desc.title,
             menu: desc.menu,
             context_menu: None,
