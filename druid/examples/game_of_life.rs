@@ -17,17 +17,21 @@
 use std::ops::{Index, IndexMut};
 use std::time::{Duration, Instant};
 
-use druid::{
-    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size, Lens,
-    TimerToken, UpdateCtx, Widget, WindowDesc,
-};
+use druid::{AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size, Lens, TimerToken, UpdateCtx, Widget, WindowDesc, UnitPoint};
 use std::sync::Arc;
 use druid::widget::{Flex, Button, WidgetExt, Label, Slider};
 
+
 const GRID_SIZE: usize = 40;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
-// const CELL_COLOR: Color = Color::rgb8(0xf3 as u8, 0xf4 as u8, 8 as u8);
+
+
+const BG: Color = Color::grey8(23 as u8);
+const C0: Color = Color::from_rgba32_u32(0xEBF1F7);
+const C1: Color = Color::from_rgba32_u32(0xA3FCF7);
+const C2: Color = Color::from_rgba32_u32(0xA2E3D8);
+const C3: Color = Color::from_rgba32_u32(0xF2E6F1);
+const C4: Color = Color::from_rgba32_u32(0xE0AFAF);
 
 #[derive(Clone, Data)]
 struct Grid {
@@ -38,6 +42,13 @@ struct Grid {
 struct GridPos {
     row: usize,
     col: usize,
+}
+
+
+#[derive(Clone)]
+struct ColorScheme<'a> {
+    colors: Vec<&'a Color>,
+    current: usize,
 }
 
 impl GridPos {
@@ -97,63 +108,7 @@ impl GridPos {
     }
 }
 
-impl Index<GridPos> for Grid {
-    type Output = bool;
 
-    fn index(&self, pos: GridPos) -> &Self::Output {
-        let idx = pos.row * GRID_SIZE + pos.col;
-        self.storage.index(idx)
-    }
-}
-
-impl IndexMut<GridPos> for Grid {
-    fn index_mut(&mut self, pos: GridPos) -> &mut Self::Output {
-        let idx = pos.row * GRID_SIZE + pos.col;
-        Arc::make_mut(&mut self.storage).index_mut(idx)
-    }
-}
-
-impl PartialEq for Grid {
-    fn eq(&self, other: &Self) -> bool {
-        for i in 0..POOL_SIZE {
-            if self.storage[i as usize] != other.storage[i as usize] {
-                return false;
-            }
-        }
-        return true;
-    }
-}
-
-#[derive(Clone)]
-struct ColorScheme<'a> {
-    colors: Vec<&'a Color>,
-    current: usize,
-}
-
-const BG: Color = Color::grey8(23 as u8);
-const C0: Color = Color::from_rgba32_u32(0xEBF1F7);
-const C1: Color = Color::from_rgba32_u32(0xA3FCF7);
-const C2: Color = Color::from_rgba32_u32(0xA2E3D8);
-const C3: Color = Color::from_rgba32_u32(0xF2E6F1);
-const C4: Color = Color::from_rgba32_u32(0xE0AFAF);
-
-impl Default for ColorScheme<'_> {
-    fn default() -> Self {
-        ColorScheme {
-            colors: vec![&C0, &C1, &C2, &C3, &C4],
-            current: 0,
-        }
-    }
-}
-
-impl<'a> Iterator for ColorScheme<'a> {
-    type Item = &'a Color;
-    fn next(&mut self) -> Option<Self::Item> {
-        let result = &self.colors[self.current];
-        self.current = (self.current + 1) % self.colors.len();
-        Some(result)
-    }
-}
 
 
 #[derive(Clone, Lens, Data)]
@@ -464,9 +419,12 @@ fn make_widget() -> impl Widget<AppData> {
                         )
                         .with_child(
                             Slider::new()
-                                .lens(AppData::speed),
+                                .lens(AppData::speed)
+                                .padding(3.0),
                             1.,
                         )
+                        .align_vertical(UnitPoint::CENTER)
+                        .align_horizontal(UnitPoint::CENTER)
                         .padding(4.0)
                     ,
                     0.,
@@ -501,4 +459,51 @@ fn main() {
             speed: 0.5,
         })
         .expect("launch failed");
+}
+
+
+impl Index<GridPos> for Grid {
+    type Output = bool;
+
+    fn index(&self, pos: GridPos) -> &Self::Output {
+        let idx = pos.row * GRID_SIZE + pos.col;
+        self.storage.index(idx)
+    }
+}
+
+impl IndexMut<GridPos> for Grid {
+    fn index_mut(&mut self, pos: GridPos) -> &mut Self::Output {
+        let idx = pos.row * GRID_SIZE + pos.col;
+        Arc::make_mut(&mut self.storage).index_mut(idx)
+    }
+}
+
+impl PartialEq for Grid {
+    fn eq(&self, other: &Self) -> bool {
+        for i in 0..POOL_SIZE {
+            if self.storage[i as usize] != other.storage[i as usize] {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
+
+impl Default for ColorScheme<'_> {
+    fn default() -> Self {
+        ColorScheme {
+            colors: vec![&C0, &C1, &C2, &C3, &C4],
+            current: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for ColorScheme<'a> {
+    type Item = &'a Color;
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = &self.colors[self.current];
+        self.current = (self.current + 1) % self.colors.len();
+        Some(result)
+    }
 }
