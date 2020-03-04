@@ -65,7 +65,7 @@ fn ui_builder() -> impl Widget<AppData> {
 
     let stepper_textbox = LensWrap::new(
         Parse::new(TextBox::new()),
-        AppData::size.map(|x| Some(*x), |x, y| *x = y.unwrap_or(0.0)),
+        AppData::size.map(|x| Some(*x), |x, y| *x = y.unwrap_or(24.0)),
     );
 
     let stepper_row = Flex::row()
