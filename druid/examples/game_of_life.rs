@@ -17,14 +17,16 @@
 use std::ops::{Index, IndexMut};
 use std::time::{Duration, Instant};
 
-use druid::{AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size, Lens, TimerToken, UpdateCtx, Widget, WindowDesc, UnitPoint};
+use druid::widget::{Button, Flex, Label, Slider, WidgetExt};
+use druid::{
+    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
+    LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size,
+    TimerToken, UnitPoint, UpdateCtx, Widget, WindowDesc,
+};
 use std::sync::Arc;
-use druid::widget::{Flex, Button, WidgetExt, Label, Slider};
-
 
 const GRID_SIZE: usize = 40;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
-
 
 const BG: Color = Color::grey8(23 as u8);
 const C0: Color = Color::from_rgba32_u32(0xEBF1F7);
@@ -43,7 +45,6 @@ struct GridPos {
     row: usize,
     col: usize,
 }
-
 
 #[derive(Clone)]
 struct ColorScheme<'a> {
@@ -107,9 +108,6 @@ impl GridPos {
         self.below().and_then(|pos| pos.right())
     }
 }
-
-
-
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
@@ -209,7 +207,6 @@ impl Grid {
     }
 }
 
-
 struct GameOfLifeWidget<'a> {
     timer_id: TimerToken,
     cell_size: Size,
@@ -246,7 +243,8 @@ impl Widget<AppData> for GameOfLifeWidget<'_> {
                         data.grid.evolve();
                         ctx.request_paint();
                     }
-                    let deadline = Instant::now() + Duration::from_millis(data.iter_interval() as u64);
+                    let deadline =
+                        Instant::now() + Duration::from_millis(data.iter_interval() as u64);
                     self.timer_id = ctx.request_timer(deadline);
                 }
             }
@@ -278,7 +276,8 @@ impl Widget<AppData> for GameOfLifeWidget<'_> {
         _event: &LifeCycle,
         _data: &AppData,
         _env: &Env,
-    ) {}
+    ) {
+    }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &AppData, _data: &AppData, _env: &Env) {
         ctx.request_paint();
@@ -293,7 +292,10 @@ impl Widget<AppData> for GameOfLifeWidget<'_> {
     ) -> Size {
         let max_size = bc.max();
         let min_side = max_size.height.min(max_size.width);
-        Size { width: min_side, height: min_side }
+        Size {
+            width: min_side,
+            height: min_side,
+        }
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &AppData, _env: &Env) {
@@ -351,7 +353,6 @@ fn blinker(top: GridPos) -> Option<[GridPos; 3]> {
     Some([top, center, center.below().unwrap()])
 }
 
-
 fn make_widget() -> impl Widget<AppData> {
     Flex::column()
         .with_child(
@@ -374,12 +375,8 @@ fn make_widget() -> impl Widget<AppData> {
                             // pause / resume button
                             Button::new(
                                 |data: &bool, _: &Env| match data {
-                                    true => {
-                                        "Resume".into()
-                                    }
-                                    false => {
-                                        "Pause".into()
-                                    }
+                                    true => "Resume".into(),
+                                    false => "Pause".into(),
                                 },
                                 |ctx, data: &mut bool, _: &Env| {
                                     *data = !*data;
@@ -387,11 +384,11 @@ fn make_widget() -> impl Widget<AppData> {
                                     ctx.request_paint();
                                 },
                             )
-                                .lens(AppData::paused)
-                                .center()
-                                .fix_width(80.)
-                                .fix_height(40.)
-                                .padding((2.0, 2.0)),
+                            .lens(AppData::paused)
+                            .center()
+                            .fix_width(80.)
+                            .fix_height(40.)
+                            .padding((2.0, 2.0)),
                             1.0,
                         )
                         .with_child(
@@ -400,10 +397,10 @@ fn make_widget() -> impl Widget<AppData> {
                                 data.clear();
                                 ctx.request_paint();
                             })
-                                .lens(AppData::grid)
-                                .center()
-                                .fix_height(30.)
-                                .padding((2.0, 2.0)),
+                            .lens(AppData::grid)
+                            .center()
+                            .fix_height(30.)
+                            .padding((2.0, 2.0)),
                             1.0,
                         )
                         .fix_height(35.)
@@ -417,29 +414,27 @@ fn make_widget() -> impl Widget<AppData> {
                                 .padding(3.0),
                             0.,
                         )
-                        .with_child(
-                            Slider::new()
-                                .lens(AppData::speed)
-                                .padding(3.0),
-                            1.,
-                        )
+                        .with_child(Slider::new().lens(AppData::speed).padding(3.0), 1.)
                         .align_vertical(UnitPoint::CENTER)
                         .align_horizontal(UnitPoint::CENTER)
-                        .padding(4.0)
-                    ,
+                        .padding(4.0),
                     0.,
-                ).background(BG)
-            ,
+                )
+                .background(BG),
             0.,
         )
 }
 
 fn main() {
     let window = WindowDesc::new(make_widget)
-        .window_size(Size { width: 800.0, height: 800.0 })
+        .window_size(Size {
+            width: 800.0,
+            height: 800.0,
+        })
         .resizable(false)
         .title(
-            LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Game of Life"),
+            LocalizedString::new("custom-widget-demo-window-title")
+                .with_placeholder("Game of Life"),
         );
     let mut grid = Grid::new();
     let pattern0 = glider(GridPos { row: 5, col: 5 });
@@ -460,7 +455,6 @@ fn main() {
         })
         .expect("launch failed");
 }
-
 
 impl Index<GridPos> for Grid {
     type Output = bool;
@@ -488,7 +482,6 @@ impl PartialEq for Grid {
         return true;
     }
 }
-
 
 impl Default for ColorScheme<'_> {
     fn default() -> Self {
