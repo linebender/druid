@@ -316,7 +316,9 @@ impl Widget<AppData> for GameOfLifeWidget<'_> {
         _data: &AppData,
         _env: &Env,
     ) -> Size {
-        bc.max()
+        let max_size = bc.max();
+        let min_side = max_size.height.min(max_size.width);
+        Size { width: min_side, height: min_side }
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &AppData, _env: &Env) {
@@ -381,8 +383,10 @@ fn main() {
             width: 0.0,
             height: 0.0,
         },
-        color_scheme: Default::default()
+        color_scheme: Default::default(),
     })
+        .window_size(Size{ width: 800.0, height: 800.0 })
+        .resizable(false)
         .title(
             LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Game of Life"),
         );
