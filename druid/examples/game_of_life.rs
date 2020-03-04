@@ -26,7 +26,7 @@ use std::sync::Arc;
 
 const GRID_SIZE: usize = 40;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
-const CELL_COLOR: Color = Color::rgb8(0xf3 as u8, 0xf4 as u8, 8 as u8);
+// const CELL_COLOR: Color = Color::rgb8(0xf3 as u8, 0xf4 as u8, 8 as u8);
 
 #[derive(Clone)]
 struct Grid {
@@ -124,6 +124,37 @@ impl PartialEq for Grid {
 }
 
 #[derive(Clone)]
+struct ColorScheme<'a> {
+    colors: Vec<&'a Color>,
+    current: usize,
+}
+
+const c0: Color = Color::from_rgba32_u32(0xEBF1F7);
+const c1: Color = Color::from_rgba32_u32(0xA3FCF7);
+const c2: Color = Color::from_rgba32_u32(0xA2E3D8);
+const c3: Color = Color::from_rgba32_u32(0xF2E6F1);
+const c4: Color = Color::from_rgba32_u32(0xE0AFAF);
+
+impl Default for ColorScheme<'_> {
+    fn default() -> Self {
+        ColorScheme {
+            colors: vec![&c0, &c1, &c2, &c3, &c4],
+            current: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for ColorScheme<'a> {
+    type Item = &'a Color;
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = &self.colors[self.current];
+        self.current = (self.current + 1) % self.colors.len();
+        Some(result)
+    }
+}
+
+
+#[derive(Clone)]
 struct AppData {
     grid: Grid,
     drawing: bool,
@@ -206,12 +237,13 @@ impl Data for AppData {
     }
 }
 
-struct GameOfLifeWidget {
+struct GameOfLifeWidget<'a> {
     timer_id: TimerToken,
     cell_size: Size,
+    color_scheme: ColorScheme<'a>,
 }
 
-impl GameOfLifeWidget {
+impl GameOfLifeWidget<'_> {
     fn grid_pos(&self, p: Point) -> Option<GridPos> {
         let w0 = self.cell_size.width;
         let h0 = self.cell_size.height;
@@ -227,7 +259,7 @@ impl GameOfLifeWidget {
     }
 }
 
-impl Widget<AppData> for GameOfLifeWidget {
+impl Widget<AppData> for GameOfLifeWidget<'_> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppData, _env: &Env) {
         match event {
             Event::WindowConnected => {
@@ -271,8 +303,7 @@ impl Widget<AppData> for GameOfLifeWidget {
         _event: &LifeCycle,
         _data: &AppData,
         _env: &Env,
-    ) {
-    }
+    ) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &AppData, _data: &AppData, _env: &Env) {
         ctx.request_paint();
@@ -306,7 +337,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                         y: h0 * col as f64,
                     };
                     let rect = Rect::from_origin_size(pos, cell_size);
-                    paint_ctx.fill(rect, &CELL_COLOR);
+                    paint_ctx.fill(rect, self.color_scheme.next().unwrap());
                 }
             }
         }
@@ -350,10 +381,11 @@ fn main() {
             width: 0.0,
             height: 0.0,
         },
+        color_scheme: Default::default()
     })
-    .title(
-        LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Game of Life"),
-    );
+        .title(
+            LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Game of Life"),
+        );
     let mut grid = Grid::new();
     let pattern0 = glider(GridPos { row: 5, col: 5 });
     for x in &pattern0 {
