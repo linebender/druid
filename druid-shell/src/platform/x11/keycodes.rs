@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// X11 keycode handling.
+//! X11 keycode handling.
 
 use gdk::enums::key::*;
 
@@ -109,7 +109,9 @@ impl From<RawKeyCode> for KeyCode {
 
             37 => KeyCode::LeftControl,
             133 => KeyCode::LeftMeta,
-            64 => KeyCode::LeftAlt,
+            // TODO(x11/keycodes): case 64 is duplicated; which one is correct?
+            //     What should the other be?
+            // 64 => KeyCode::LeftAlt,
             65 => KeyCode::Space,
             108 => KeyCode::RightAlt,
             105 => KeyCode::RightControl,
@@ -170,7 +172,6 @@ impl Into<StrOrChar> for KeyCode {
             KeyCode::KeyK => StrOrChar::Char('k'),
             KeyCode::KeyL => StrOrChar::Char('l'),
             KeyCode::Semicolon => StrOrChar::Char(';'),
-            KeyCode::Comma => StrOrChar::Char(','),
             // KeyCode::Hash => StrOrChar::Char('#'),
             // KeyCode::LeftShift => StrOrChar::Char('0'),
             KeyCode::Backslash => StrOrChar::Char('/'),

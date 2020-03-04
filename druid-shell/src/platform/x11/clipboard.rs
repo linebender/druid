@@ -1,15 +1,31 @@
+// Copyright 2018 The xi-editor Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! Interactions with the system pasteboard on X11.
+
 use crate::clipboard::{ClipboardFormat, FormatId};
 
 #[derive(Debug, Clone, Default)]
 pub struct Clipboard;
 
 impl Clipboard {
-    pub fn put_string(&mut self, s: impl AsRef<str>) {
+    pub fn put_string(&mut self, _s: impl AsRef<str>) {
         // TODO(x11/clipboard): implement Clipboard::put_string
         unimplemented!();
     }
 
-    pub fn put_formats(&mut self, formats: &[ClipboardFormat]) {
+    pub fn put_formats(&mut self, _formats: &[ClipboardFormat]) {
         // TODO(x11/clipboard): implement Clipboard::put_formats
         unimplemented!();
     }
@@ -19,12 +35,12 @@ impl Clipboard {
         unimplemented!();
     }
 
-    pub fn preferred_format(&self, formats: &[FormatId]) -> Option<FormatId> {
+    pub fn preferred_format(&self, _formats: &[FormatId]) -> Option<FormatId> {
         // TODO(x11/clipboard): implement Clipboard::preferred_format
         unimplemented!();
     }
 
-    pub fn get_format(&self, format: FormatId) -> Option<Vec<u8>> {
+    pub fn get_format(&self, _format: FormatId) -> Option<Vec<u8>> {
         // TODO(x11/clipboard): implement Clipboard::get_format
         unimplemented!();
     }

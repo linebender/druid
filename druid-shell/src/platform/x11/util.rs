@@ -1,4 +1,20 @@
-use xcb::{Connection, Window};
+// Copyright 2018 The xi-editor Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! Miscellaneous utility functions for working with X11.
+
+use xcb::Window;
 
 // See: https://github.com/rtbo/rust-xcb/blob/master/examples/randr_screen_modes.rs
 pub fn refresh_rate(conn: &xcb::Connection, window_id: Window) -> Option<f64> {
@@ -10,7 +26,7 @@ pub fn refresh_rate(conn: &xcb::Connection, window_id: Window) -> Option<f64> {
     //     Or maybe we don't even need this function if I figure out a better way to schedule redraws?
     //     Assuming the first mode is the one we want to use. This is probably a bug on some setups.
     //     Any better way to find the correct one?
-    let mut refresh_rate = modes.nth(0).and_then(|mode_info| {
+    let refresh_rate = modes.nth(0).and_then(|mode_info| {
         let flags = mode_info.mode_flags();
         let vtotal = {
             let mut val = mode_info.vtotal();

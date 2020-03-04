@@ -1,6 +1,21 @@
+// Copyright 2018 The xi-editor Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! X11 window creation and window management.
+
 use std::any::Any;
 use std::convert::TryInto;
-use std::sync::Arc;
 
 use xcb::ffi::XCB_COPY_FROM_PARENT;
 
@@ -45,7 +60,7 @@ impl WindowBuilder {
         self.title = title.into();
     }
 
-    pub fn set_menu(&mut self, menu: Menu) {
+    pub fn set_menu(&mut self, _menu: Menu) {
         // TODO(x11/menus): implement WindowBuilder::set_menu (currently a no-op)
     }
 
@@ -57,7 +72,7 @@ impl WindowBuilder {
         let setup = conn.get_setup();
         // TODO(x11/errors): Don't unwrap for screen or visual_type?
         let screen = setup.roots().nth(screen_num as usize).unwrap();
-        let mut visual_type = get_visual_from_screen(&screen).unwrap();
+        let visual_type = get_visual_from_screen(&screen).unwrap();
         let visual_id = visual_type.visual_id();
 
         let cw_values = [
@@ -141,7 +156,7 @@ impl XWindow {
         let mut visual_type = get_visual_from_screen(&screen).unwrap();
 
         // Create a draw surface
-        // TODO(x11/initial_pr): We have to re-create this draw surface if the window size changes.
+        // TODO(x11/render_improvements): We have to re-create this draw surface if the window size changes.
         let cairo_xcb_connection = unsafe {
             cairo::XCBConnection::from_raw_none(
                 conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t
@@ -161,7 +176,7 @@ impl XWindow {
             size.height as i32,
         )
         .expect("couldn't create a cairo surface");
-        let mut cairo_ctx = cairo::Context::new(&cairo_surface);
+        let cairo_ctx = cairo::Context::new(&cairo_surface);
 
         // Figure out the refresh rate of the current screen
         let refresh_rate = util::refresh_rate(&conn, window_id);
@@ -175,8 +190,6 @@ impl XWindow {
     }
 
     pub fn render(&mut self) {
-        //println!("XWindow::paint()");
-        //println!("window id: {}", self.window_id);
         let conn = Application::get_connection();
 
         self.cairo_context.set_source_rgb(0.0, 0.0, 0.0);
@@ -201,8 +214,6 @@ impl XWindow {
     }
 
     pub fn key_down(&mut self, key_code: KeyCode) {
-        println!("XWindow::key_down()");
-
         self.handler.key_down(KeyEvent::new(
             key_code,
             false,
@@ -222,14 +233,12 @@ impl XWindow {
     }
 
     pub fn mouse_down(&mut self, mouse_event: &MouseEvent) {
-        println!("XWindow::mouse_down()");
         self.handler.mouse_down(mouse_event);
     }
 }
 
 // Apparently you have to get the visualtype this way :|
 fn get_visual_from_screen(screen: &xcb::Screen<'_>) -> Option<xcb::xproto::Visualtype> {
-    let conn = Application::get_connection();
     for depth in screen.allowed_depths() {
         for visual in depth.visuals() {
             if visual.visual_id() == screen.root_visual() {
@@ -244,7 +253,7 @@ fn get_visual_from_screen(screen: &xcb::Screen<'_>) -> Option<xcb::xproto::Visua
 pub struct IdleHandle;
 
 impl IdleHandle {
-    pub fn add_idle_callback<F>(&self, callback: F)
+    pub fn add_idle_callback<F>(&self, _callback: F)
     where
         F: FnOnce(&dyn Any) + Send + 'static,
     {
@@ -252,7 +261,7 @@ impl IdleHandle {
         unimplemented!();
     }
 
-    pub fn add_idle_token(&self, token: IdleToken) {
+    pub fn add_idle_token(&self, _token: IdleToken) {
         // TODO(x11/idle_handles): implement IdleHandle::add_idle_token
         unimplemented!();
     }
@@ -284,8 +293,17 @@ impl WindowHandle {
     pub fn bring_to_front_and_focus(&self) {
         // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
         let conn = Application::get_connection();
-        xcb::configure_window(&conn, self.window_id, &[(xcb::CONFIG_WINDOW_STACK_MODE as u16, xcb::STACK_MODE_ABOVE)]);
-        xcb::set_input_focus(&conn, xcb::INPUT_FOCUS_POINTER_ROOT as u8, self.window_id, xcb::CURRENT_TIME);
+        xcb::configure_window(
+            &conn,
+            self.window_id,
+            &[(xcb::CONFIG_WINDOW_STACK_MODE as u16, xcb::STACK_MODE_ABOVE)],
+        );
+        xcb::set_input_focus(
+            &conn,
+            xcb::INPUT_FOCUS_POINTER_ROOT as u8,
+            self.window_id,
+            xcb::CURRENT_TIME,
+        );
     }
 
     pub fn invalidate(&self) {
@@ -305,7 +323,7 @@ impl WindowHandle {
         );
     }
 
-    pub fn set_menu(&self, menu: Menu) {
+    pub fn set_menu(&self, _menu: Menu) {
         // TODO(x11/menus): implement WindowHandle::set_menu (currently a no-op)
     }
 
@@ -314,29 +332,29 @@ impl WindowHandle {
         Text::new()
     }
 
-    pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
+    pub fn request_timer(&self, _deadline: std::time::Instant) -> TimerToken {
         // TODO(x11/timers): implement WindowHandle::request_timer
         //     This one might be tricky, since there's not really any timers to hook into in X11.
         //     Might have to code up our own Timer struct, running in its own thread?
         unimplemented!();
     }
 
-    pub fn set_cursor(&mut self, cursor: &Cursor) {
+    pub fn set_cursor(&mut self, _cursor: &Cursor) {
         // TODO(x11/cursors): implement WindowHandle::set_cursor
         unimplemented!();
     }
 
-    pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+    pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
         // TODO(x11/file_dialogs): implement WindowHandle::open_file_sync
         unimplemented!();
     }
 
-    pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+    pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
         // TODO(x11/file_dialogs): implement WindowHandle::save_as_sync
         unimplemented!();
     }
 
-    pub fn show_context_menu(&self, menu: Menu, pos: Point) {
+    pub fn show_context_menu(&self, _menu: Menu, _pos: Point) {
         // TODO(x11/menus): implement WindowHandle::show_context_menu
         unimplemented!();
     }

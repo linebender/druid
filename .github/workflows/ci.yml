@@ -2,7 +2,6 @@ on:
   push:
     branches:
       - master
-      - druid_shell_x11 # TODO(x11/initial_pr): Only here for testing, remove before PR
   pull_request:
 
 jobs:

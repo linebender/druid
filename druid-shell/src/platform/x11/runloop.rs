@@ -1,3 +1,19 @@
+// Copyright 2018 The xi-editor Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! Runloop for X11.
+
 use std::collections::HashMap;
 
 use super::application::Application;
@@ -8,7 +24,6 @@ use crate::keycodes::KeyCode;
 use crate::kurbo::Point;
 use crate::mouse::{MouseButton, MouseEvent};
 
-use std::time::{Duration, Instant};
 pub struct RunLoop {
     // Used for forwarding events to the correct window, drawing, etc.
     x_id_to_xwindow_map: HashMap<u32, XWindow>,
@@ -34,17 +49,14 @@ impl RunLoop {
                     xcb::EXPOSE => {
                         let expose: &xcb::ExposeEvent = unsafe { xcb::cast_event(&ev) };
                         let window_id = expose.window();
-                        // println!("window_id {}", window_id);
                         self.x_id_to_xwindow_map
                             .get_mut(&window_id)
                             .map(|w| w.render());
                     }
                     xcb::KEY_PRESS => {
                         let key_press: &xcb::KeyPressEvent = unsafe { xcb::cast_event(&ev) };
-                        // println!("Key '{}' pressed ", key_press.detail());
                         let key: u32 = key_press.detail() as u32;
                         let key_code: KeyCode = key.into();
-                        // println!("Key '{:?}' pressed ", key_code);
 
                         let window_id = key_press.event();
                         println!("window_id {}", window_id);
@@ -53,13 +65,7 @@ impl RunLoop {
                             .map(|w| w.key_down(key_code));
                     }
                     xcb::BUTTON_PRESS => {
-                        // println!("button {}", ev_type);
                         let button_press: &xcb::ButtonPressEvent = unsafe { xcb::cast_event(&ev) };
-                        // println!(
-                        //     "x {:?}, y {:?}",
-                        //     button_press.event_x(),
-                        //     button_press.event_y()
-                        // );
                         let window_id = button_press.event();
                         let mouse_event = MouseEvent {
                             pos: Point::new(
@@ -80,9 +86,7 @@ impl RunLoop {
                             .map(|w| w.mouse_down(&mouse_event));
                     }
 
-                    _ => {
-                        // println!("event {}", ev_type);
-                    }
+                    _ => {}
                 }
             }
         }

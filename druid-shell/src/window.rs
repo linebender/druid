@@ -24,8 +24,6 @@ use crate::kurbo::{Point, Size, Vec2};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
-#[cfg(all(target_os = "linux", feature = "use_x11"))]
-use crate::runloop::RunLoop;
 
 #[cfg(all(target_os = "linux", feature = "use_x11"))]
 use crate::runloop::RunLoop;
@@ -293,7 +291,6 @@ pub trait WinHandler {
     /// Return `true` if the event is handled.
     #[allow(unused_variables)]
     fn key_down(&mut self, event: KeyEvent) -> bool {
-        println!("default key_down");
         false
     }
 
