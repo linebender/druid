@@ -22,6 +22,7 @@ use druid::{
     LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size,
     TimerToken, UpdateCtx, Widget, WindowDesc,
 };
+use std::sync::Arc;
 
 const GRID_SIZE: usize = 40;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
@@ -29,7 +30,7 @@ const CELL_COLOR: Color = Color::rgb8(0xf3 as u8, 0xf4 as u8, 8 as u8);
 
 #[derive(Clone)]
 struct Grid {
-    storage: [bool; POOL_SIZE],
+    storage: Arc<Vec<bool>>,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -107,7 +108,7 @@ impl Index<GridPos> for Grid {
 impl IndexMut<GridPos> for Grid {
     fn index_mut(&mut self, pos: GridPos) -> &mut Self::Output {
         let idx = pos.row * GRID_SIZE + pos.col;
-        self.storage.index_mut(idx)
+        Arc::make_mut(&mut self.storage).index_mut(idx)
     }
 }
 
@@ -131,7 +132,7 @@ struct AppData {
 impl Grid {
     pub fn new() -> Grid {
         Grid {
-            storage: [false; POOL_SIZE],
+            storage: Arc::new(vec![false; POOL_SIZE]),
         }
     }
     pub fn evolve(&mut self) {
