@@ -16,7 +16,7 @@
 
 use crate::kurbo::{Circle, Point, Rect, Size};
 use crate::theme;
-use crate::widget::{Align, Flex, Label, LabelText, Padding};
+use crate::widget::{Flex, Label, LabelText, Padding, WidgetExt};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
     PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget, WidgetPod,
@@ -46,14 +46,13 @@ pub struct Radio<T> {
     child_label: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T: Data + PartialEq> Radio<T> {
+impl<T: Data> Radio<T> {
     /// Create a lone Radio button from label text and an enum variant
-    pub fn new(label: impl Into<LabelText<T>>, variant: T) -> impl Widget<T> {
-        let radio = Self {
+    pub fn new(label: impl Into<LabelText<T>>, variant: T) -> Radio<T> {
+        Radio {
             variant,
-            child_label: WidgetPod::new(Label::new(label)).boxed(),
-        };
-        Align::vertical(UnitPoint::LEFT, radio)
+            child_label: WidgetPod::new(Label::new(label).boxed()),
+        }
     }
 }
 
