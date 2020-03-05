@@ -17,19 +17,19 @@
 use crate::kurbo::{BezPath, Point, RoundedRect, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
-use crate::widget::Align;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
     Widget,
 };
 
-/// A checkbox that toggles a boolean
+/// A checkbox that toggles a `bool`.
 #[derive(Debug, Clone, Default)]
 pub struct Checkbox;
 
 impl Checkbox {
-    pub fn new() -> impl Widget<bool> {
-        Align::vertical(UnitPoint::CENTER, Self::default())
+    /// Create a new `Checkbox`.
+    pub fn new() -> Checkbox {
+        Default::default()
     }
 }
 
