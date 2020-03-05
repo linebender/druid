@@ -233,12 +233,14 @@ pub struct WheelEvent {
 
 impl Event {
     /// Transform the event for the contents of a scrolling container.
-    pub fn transform_scroll(&self, offset: Vec2, viewport: Rect) -> Option<Event> {
-        // TODO: need to wire this up so that it always propagates mouse events
-        // if the widget is active.
+    ///
+    /// the `force` flag is used to ensure an event is delivered even
+    /// if the cursor is out of the viewport, such as if the contents are active
+    /// or hot.
+    pub fn transform_scroll(&self, offset: Vec2, viewport: Rect, force: bool) -> Option<Event> {
         match self {
             Event::MouseDown(mouse_event) => {
-                if viewport.winding(mouse_event.pos) != 0 {
+                if force || viewport.winding(mouse_event.pos) != 0 {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos += offset;
                     Some(Event::MouseDown(mouse_event))
@@ -247,7 +249,7 @@ impl Event {
                 }
             }
             Event::MouseUp(mouse_event) => {
-                if viewport.winding(mouse_event.pos) != 0 {
+                if force || viewport.winding(mouse_event.pos) != 0 {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos += offset;
                     Some(Event::MouseUp(mouse_event))
@@ -256,7 +258,7 @@ impl Event {
                 }
             }
             Event::MouseMoved(mouse_event) => {
-                if viewport.winding(mouse_event.pos) != 0 {
+                if force || viewport.winding(mouse_event.pos) != 0 {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos += offset;
                     Some(Event::MouseMoved(mouse_event))

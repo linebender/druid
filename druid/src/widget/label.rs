@@ -33,7 +33,14 @@ pub enum LabelText<T> {
     Specific(String),
     /// The provided closure is called on update, and its return
     /// value is used as the text for the label.
-    Dynamic(Box<dyn Fn(&T, &Env) -> String>),
+    Dynamic(Dynamic<T>),
+}
+
+/// Text that is computed dynamically.
+#[doc(hidden)]
+pub struct Dynamic<T> {
+    f: Box<dyn Fn(&T, &Env) -> String>,
+    resolved: String,
 }
 
 /// A label that displays some text.
@@ -73,25 +80,33 @@ impl<T: Data> Label<T> {
         self
     }
 
-    fn get_layout(&mut self, t: &mut PietText, env: &Env, data: &T) -> PietTextLayout {
+    fn get_layout(&mut self, t: &mut PietText, env: &Env) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
 
         // TODO: caching of both the format and the layout
         let font = t.new_font_by_name(font_name, font_size).build().unwrap();
-        self.text.with_display_text(data, env, |text| {
-            t.new_text_layout(&font, &text).build().unwrap()
-        })
+        self.text
+            .with_display_text(|text| t.new_text_layout(&font, &text).build().unwrap())
+    }
+}
+
+impl<T> Dynamic<T> {
+    fn resolve(&mut self, data: &T, env: &Env) -> bool {
+        let new = (self.f)(data, env);
+        let changed = new != self.resolved;
+        self.resolved = new;
+        changed
     }
 }
 
 impl<T: Data> LabelText<T> {
     /// Call callback with the text that should be displayed.
-    pub fn with_display_text<V>(&self, data: &T, env: &Env, mut cb: impl FnMut(&str) -> V) -> V {
+    pub fn with_display_text<V>(&self, mut cb: impl FnMut(&str) -> V) -> V {
         match self {
             LabelText::Specific(s) => cb(s.as_str()),
             LabelText::Localized(s) => cb(s.localized_str()),
-            LabelText::Dynamic(f) => cb((f)(data, env).as_str()),
+            LabelText::Dynamic(s) => cb(s.resolved.as_str()),
         }
     }
 
@@ -103,7 +118,7 @@ impl<T: Data> LabelText<T> {
         match self {
             LabelText::Specific(_) => false,
             LabelText::Localized(s) => s.resolve(data, env),
-            LabelText::Dynamic(_s) => false,
+            LabelText::Dynamic(s) => s.resolve(data, env),
         }
     }
 }
@@ -111,10 +126,15 @@ impl<T: Data> LabelText<T> {
 impl<T: Data> Widget<T> for Label<T> {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        if let LifeCycle::WidgetAdded = event {
+            self.text.resolve(data, env);
+        }
+    }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        if self.text.resolve(data, env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+        if !old_data.same(data) && self.text.resolve(data, env) {
+            ctx.request_layout();
             ctx.request_paint();
         }
     }
@@ -123,20 +143,20 @@ impl<T: Data> Widget<T> for Label<T> {
         &mut self,
         layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        data: &T,
+        _data: &T,
         env: &Env,
     ) -> Size {
         bc.debug_check("Label");
 
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_layout = self.get_layout(layout_ctx.text(), env, data);
+        let text_layout = self.get_layout(layout_ctx.text(), env);
         // This magical 1.2 constant helps center the text vertically in the rect it's given
         bc.constrain(Size::new(text_layout.width(), font_size * 1.2))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, env: &Env) {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_layout = self.get_layout(paint_ctx.text(), env, data);
+        let text_layout = self.get_layout(paint_ctx.text(), env);
 
         // Find the origin for the text
         let mut origin = self.align.resolve(Rect::from_origin_size(
@@ -174,6 +194,10 @@ impl<T> From<LocalizedString<T>> for LabelText<T> {
 
 impl<T, F: Fn(&T, &Env) -> String + 'static> From<F> for LabelText<T> {
     fn from(src: F) -> LabelText<T> {
-        LabelText::Dynamic(Box::new(src))
+        let f = Box::new(src);
+        LabelText::Dynamic(Dynamic {
+            f,
+            resolved: String::default(),
+        })
     }
 }

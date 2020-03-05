@@ -350,7 +350,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         if self.old_data.is_none() {
             log::error!(
                 "widget {:?} is receiving an event without having first \
-                recieved WidgetAdded.",
+                 recieved WidgetAdded.",
                 ctx.widget_id()
             );
         }
@@ -446,9 +446,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     recurse = child_ctx.base_state.children.contains(id);
                     Event::TargetedCommand(*target, cmd.clone())
                 }
+                Target::Global => panic!("Target::Global should be converted before WidgetPod"),
             },
         };
-        child_ctx.base_state.needs_inval = false;
         if let Some(is_hot) = hot_changed {
             let hot_changed_event = LifeCycle::HotChanged(is_hot);
             let mut lc_ctx = child_ctx.make_lifecycle_ctx();

@@ -35,7 +35,6 @@ fn main() {
         right: Arc::new(vec![1, 2, 3]),
     };
     AppLauncher::with_window(main_window)
-        .debug_paint_layout()
         .use_simple_logger()
         .launch(data)
         .expect("launch failed");
@@ -116,5 +115,6 @@ fn ui_builder() -> impl Widget<AppData> {
 
     root.add_child(lists, 1.0);
 
-    root
+    // Mark the widget as needing its layout rects painted
+    root.debug_paint_layout()
 }

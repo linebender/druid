@@ -15,7 +15,6 @@
 //! Tools and infrastructure for testing widgets.
 use crate::core::{BaseState, CommandQueue};
 use crate::piet::{BitmapTarget, Device, Piet};
-use crate::window::PendingWindow;
 use crate::*;
 
 pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
@@ -71,11 +70,13 @@ impl<T: Data> Harness<'_, T> {
         let mut target = TargetGuard(Some(target));
         let piet = target.0.as_mut().unwrap().render_context();
 
+        let desc = WindowDesc::new(|| root);
+        let window = Window::new(WindowId::next(), Default::default(), desc);
+
         let inner = Inner {
             data,
             env: theme::init(),
-            window: PendingWindow::new(root, LocalizedString::new(""), None)
-                .into_window(WindowId::next(), Default::default()),
+            window,
             cmds: Default::default(),
         };
 

@@ -24,24 +24,27 @@ use log::error;
 use usvg;
 
 use crate::{
-    kurbo::BezPath, Affine, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx,
-    LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget,
+    kurbo::BezPath, widget::common::FillStrat, Affine, BoxConstraints, Color, Data, Env, Event,
+    EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Rect, RenderContext, Size, UpdateCtx,
+    Widget,
 };
 
 /// A widget that renders a SVG
 pub struct Svg<T> {
     svg_data: SvgData,
     phantom: PhantomData<T>,
+    fill: FillStrat,
 }
 
 impl<T: Data> Svg<T> {
     /// Create an SVG-drawing widget from SvgData.
     ///
     /// The SVG will scale to fit its box constraints.
-    pub fn new(svg_data: SvgData) -> impl Widget<T> {
+    pub fn new(svg_data: SvgData) -> Self {
         Svg {
             svg_data,
             phantom: Default::default(),
+            fill: FillStrat::default(),
         }
     }
 
@@ -60,6 +63,17 @@ impl<T: Data> Svg<T> {
                 return Size::ZERO;
             }
         };
+    }
+
+    /// A builder-style method for specifying the fill strategy.
+    pub fn fill_mode(mut self, mode: FillStrat) -> Self {
+        self.fill = mode;
+        self
+    }
+
+    /// Modify the widget's `FillStrat`.
+    pub fn set_fill(&mut self, newfil: FillStrat) {
+        self.fill = newfil;
     }
 }
 
@@ -86,21 +100,14 @@ impl<T: Data> Widget<T> for Svg<T> {
         }
     }
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, _env: &Env) {
-        //TODO: options for aspect ratio or scaling based on height
-        let scalex = paint_ctx.size().width / self.get_size().width;
-        let scaley = paint_ctx.size().height / self.get_size().height;
-        let scale = scalex.min(scaley);
-
-        let origin_x = (paint_ctx.size().width - (self.get_size().width * scale)) / 2.0;
-        let origin_y = (paint_ctx.size().height - (self.get_size().height * scale)) / 2.0;
-        let origin = Point::new(origin_x, origin_y);
+        let offset_matrix = self.fill.affine_to_fill(paint_ctx.size(), self.get_size());
 
         let clip_rect = Rect::ZERO.with_size(paint_ctx.size());
 
         // The SvgData's to_piet function dose not clip to the svg's size
         // CairoRenderContext is very like druids but with some extra goodies like clip
         paint_ctx.clip(clip_rect);
-        self.svg_data.to_piet(scale, origin, paint_ctx);
+        self.svg_data.to_piet(offset_matrix, paint_ctx);
     }
 }
 
@@ -132,9 +139,8 @@ impl SvgData {
     }
 
     /// Convert SvgData into Piet draw instructions
-    pub fn to_piet(&self, scale: f64, offset: Point, paint_ctx: &mut PaintCtx) {
+    pub fn to_piet(&self, offset_matrix: Affine, paint_ctx: &mut PaintCtx) {
         let root = self.tree.root();
-        let offset_matrix = Affine::new([scale, 0., 0., scale, offset.x, offset.y]);
         for n in root.children() {
             match *n.borrow() {
                 usvg::NodeKind::Path(ref p) => {

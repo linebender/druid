@@ -60,17 +60,22 @@ impl Widget<String> for CustomWidget {
     // Basically, anything that changes the appearance of a widget causes a paint.
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &String, _env: &Env) {
         // Let's draw a picture with Piet!
-        // Clear the whole context with the color of your choice
-        paint_ctx.clear(Color::WHITE);
 
-        // Create an arbitrary bezier path
+        // Clear the whole widget with the color of your choice
         // (paint_ctx.size() returns the size of the layout rect we're painting in)
         let size = paint_ctx.size();
+        let rect = Rect::from_origin_size(Point::ORIGIN, size);
+        paint_ctx.fill(rect, &Color::WHITE);
+
+        // Note: paint_ctx also has a `clear` method, but that clears the whole context,
+        // and we only want to clear this widget's area.
+
+        // Create an arbitrary bezier path
         let mut path = BezPath::new();
         path.move_to(Point::ORIGIN);
         path.quad_to((80.0, 90.0), (size.width, size.height));
         // Create a color
-        let stroke_color = Color::rgb8(0x00, 0x80, 0x00);
+        let stroke_color = Color::rgb8(0, 128, 0);
         // Stroke the path with thickness 1.0
         paint_ctx.stroke(path, &stroke_color, 1.0);
 

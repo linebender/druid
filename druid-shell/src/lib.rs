@@ -50,13 +50,10 @@ mod keyboard;
 mod keycodes;
 mod menu;
 mod mouse;
-//TODO: don't expose this directly? currently making this private causes
-//a bunch of compiler warnings, so let's revisit that later.
-pub mod platform;
-mod runloop;
+mod platform;
 mod window;
 
-pub use application::Application;
+pub use application::{AppHandler, Application};
 pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
 pub use common_util::Counter;
 pub use dialog::{FileDialogOptions, FileInfo, FileSpec};
@@ -66,7 +63,6 @@ pub use keyboard::{KeyEvent, KeyModifiers};
 pub use keycodes::KeyCode;
 pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseEvent};
-pub use runloop::RunLoop;
 pub use window::{
     IdleHandle, IdleToken, Text, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };

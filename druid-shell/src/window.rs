@@ -25,9 +25,6 @@ use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
 
-#[cfg(all(target_os = "linux", feature = "use_x11"))]
-use crate::runloop::RunLoop;
-
 // It's possible we'll want to make this type alias at a lower level,
 // see https://github.com/linebender/piet/pull/37 for more discussion.
 /// The platform text factory, reexported from piet.
@@ -111,6 +108,16 @@ impl WindowHandle {
     /// Close the window.
     pub fn close(&self) {
         self.0.close()
+    }
+
+    /// Set whether the window should be resizable
+    pub fn resizable(&self, resizable: bool) {
+        self.0.resizable(resizable)
+    }
+
+    /// Set whether the window should show titlebar
+    pub fn show_titlebar(&self, show_titlebar: bool) {
+        self.0.show_titlebar(show_titlebar)
     }
 
     /// Bring this window to the front of the window stack and give it focus.
@@ -216,6 +223,16 @@ impl WindowBuilder {
         self.0.set_size(size)
     }
 
+    /// Set whether the window should be resizable
+    pub fn resizable(&mut self, resizable: bool) {
+        self.0.resizable(resizable)
+    }
+
+    /// Set whether the window should have a titlebar and decorations
+    pub fn show_titlebar(&mut self, show_titlebar: bool) {
+        self.0.show_titlebar(show_titlebar)
+    }
+
     /// Set the window's initial title.
     pub fn set_title(&mut self, title: impl Into<String>) {
         self.0.set_title(title)
@@ -229,18 +246,8 @@ impl WindowBuilder {
     /// Attempt to construct the platform window.
     ///
     /// If this fails, your application should exit.
-    #[cfg(not(all(target_os = "linux", feature = "use_x11")))]
     pub fn build(self) -> Result<WindowHandle, Error> {
         self.0.build().map(WindowHandle).map_err(Into::into)
-    }
-
-    /// Attempt to construct the platform window.
-    ///
-    /// If this fails, your application should exit.
-    // TODO(x11/architecture): super hacky way to connect the XWindow to the RunLoop. Better way to do it?
-    #[cfg(all(target_os = "linux", feature = "use_x11"))]
-    pub fn build(self, run_loop: &mut RunLoop) -> Result<WindowHandle, Error> {
-        self.0.build(run_loop).map(WindowHandle).map_err(Into::into)
     }
 }
 
@@ -257,12 +264,6 @@ pub trait WinHandler {
     /// This method passes the `WindowHandle` directly, because the handler may
     /// wish to stash it.
     fn connect(&mut self, handle: &WindowHandle);
-
-    /// Called immediately after `connect`.
-    ///
-    /// The handler can implement this method to perform initial setup.
-    #[allow(unused_variables)]
-    fn connected(&mut self) {}
 
     /// Called when the size of the window is changed. Note that size
     /// is in physical pixels.

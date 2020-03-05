@@ -19,8 +19,6 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use log::{info, warn};
-
 use crate::kurbo::{Size, Vec2};
 use crate::piet::Piet;
 use crate::shell::{
@@ -31,7 +29,7 @@ use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
 use crate::ext_event::ExtEventHost;
 use crate::menu::ContextMenu;
-use crate::window::{PendingWindow, Window};
+use crate::window::Window;
 use crate::{
     Command, Data, Env, Event, KeyEvent, KeyModifiers, MenuDesc, Target, TimerToken, WheelEvent,
     WindowDesc, WindowId,
@@ -52,47 +50,69 @@ pub(crate) const EXT_EVENT_IDLE_TOKEN: IdleToken = IdleToken::new(2);
 /// it publicly.
 pub struct DruidHandler<T> {
     /// The shared app state.
-    app_state: Rc<RefCell<AppState<T>>>,
+    app_state: AppState<T>,
     /// The id for the current window.
     window_id: WindowId,
 }
 
+/// The top level event handler.
+///
+/// This corresponds to the `AppHandler` trait in druid-shell, which is only
+/// used to handle events that are not associated with a window.
+///
+/// Currently, this means only menu items on macOS when no window is open.
+pub(crate) struct AppHandler<T> {
+    app_state: AppState<T>,
+}
+
 /// State shared by all windows in the UI.
+#[derive(Clone)]
 pub(crate) struct AppState<T> {
+    inner: Rc<RefCell<Inner<T>>>,
+}
+
+struct Inner<T> {
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: CommandQueue,
     ext_event_host: ExtEventHost,
     windows: Windows<T>,
+    /// the application-level menu, only set on macos and only if there
+    /// are no open windows.
+    root_menu: Option<MenuDesc<T>>,
     pub(crate) env: Env,
     pub(crate) data: T,
 }
 
 /// All active windows.
 struct Windows<T> {
-    pending: HashMap<WindowId, PendingWindow<T>>,
+    pending: HashMap<WindowId, WindowDesc<T>>,
     windows: HashMap<WindowId, Window<T>>,
 }
 
 impl<T> Windows<T> {
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
         if let Some(pending) = self.pending.remove(&id) {
-            let win = pending.into_window(id, handle);
+            let win = Window::new(id, handle, pending);
             assert!(self.windows.insert(id, win).is_none(), "duplicate window");
         } else {
             log::error!("no window for connecting handle {:?}", id);
         }
     }
 
-    fn add(&mut self, id: WindowId, win: PendingWindow<T>) {
+    fn add(&mut self, id: WindowId, win: WindowDesc<T>) {
         assert!(self.pending.insert(id, win).is_none(), "duplicate pending");
     }
 
-    fn remove(&mut self, id: WindowId) -> Option<WindowHandle> {
-        self.windows.remove(&id).map(|entry| entry.handle)
+    fn remove(&mut self, id: WindowId) -> Option<Window<T>> {
+        self.windows.remove(&id)
     }
 
     fn iter_mut(&mut self) -> impl Iterator<Item = &'_ mut Window<T>> {
         self.windows.values_mut()
+    }
+
+    fn get(&self, id: WindowId) -> Option<&Window<T>> {
+        self.windows.get(&id)
     }
 
     fn get_mut(&mut self, id: WindowId) -> Option<&mut Window<T>> {
@@ -100,48 +120,63 @@ impl<T> Windows<T> {
     }
 }
 
-impl<T: Data> AppState<T> {
+impl<T> AppHandler<T> {
+    pub(crate) fn new(app_state: AppState<T>) -> Self {
+        Self { app_state }
+    }
+}
+
+impl<T> AppState<T> {
     pub(crate) fn new(
         data: T,
         env: Env,
         delegate: Option<Box<dyn AppDelegate<T>>>,
         ext_event_host: ExtEventHost,
-    ) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(AppState {
+    ) -> Self {
+        let inner = Rc::new(RefCell::new(Inner {
             delegate,
             command_queue: VecDeque::new(),
+            root_menu: None,
             ext_event_host,
             data,
             env,
             windows: Windows::default(),
-        }))
+        }));
+
+        AppState { inner }
+    }
+}
+
+impl<T: Data> Inner<T> {
+    fn get_menu_cmd(&self, window_id: Option<WindowId>, cmd_id: u32) -> Option<Command> {
+        match window_id {
+            Some(id) => self.windows.get(id).and_then(|w| w.get_menu_cmd(cmd_id)),
+            None => self
+                .root_menu
+                .as_ref()
+                .and_then(|m| m.command_for_id(cmd_id)),
+        }
     }
 
-    fn get_menu_cmd(&self, window_id: WindowId, cmd_id: u32) -> Option<Command> {
-        self.windows
-            .windows
-            .get(&window_id)
-            .and_then(|w| w.get_menu_cmd(cmd_id))
+    fn append_command(&mut self, target: Target, cmd: Command) {
+        self.command_queue.push_back((target, cmd));
     }
 
     /// A helper fn for setting up the `DelegateCtx`. Takes a closure with
     /// an arbitrary return type `R`, and returns `Some(R)` if an `AppDelegate`
     /// is configured.
-    fn with_delegate<R, F>(&mut self, id: WindowId, f: F) -> Option<R>
+    fn with_delegate<R, F>(&mut self, f: F) -> Option<R>
     where
         F: FnOnce(&mut Box<dyn AppDelegate<T>>, &mut T, &Env, &mut DelegateCtx) -> R,
     {
-        let AppState {
+        let Inner {
             ref mut delegate,
             ref mut command_queue,
             ref mut data,
             ref env,
             ..
         } = self;
-        let mut ctx = DelegateCtx {
-            source_id: id,
-            command_queue,
-        };
+        let mut ctx = DelegateCtx { command_queue };
         if let Some(delegate) = delegate {
             Some(f(delegate, data, env, &mut ctx))
         } else {
@@ -151,11 +186,16 @@ impl<T: Data> AppState<T> {
 
     fn delegate_event(&mut self, id: WindowId, event: Event) -> Option<Event> {
         if self.delegate.is_some() {
-            self.with_delegate(id, |del, data, env, ctx| del.event(event, data, env, ctx))
+            self.with_delegate(|del, data, env, ctx| del.event(ctx, id, event, data, env))
                 .unwrap()
         } else {
             Some(event)
         }
+    }
+
+    fn delegate_cmd(&mut self, target: &Target, cmd: &Command) -> bool {
+        self.with_delegate(|del, data, env, ctx| del.command(ctx, target, cmd, data, env))
+            .unwrap_or(true)
     }
 
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
@@ -167,23 +207,22 @@ impl<T: Data> AppState<T> {
             self.set_ext_event_idle_handler(id);
         }
 
-        self.with_delegate(id, |del, data, env, ctx| {
-            del.window_added(id, data, env, ctx)
-        });
-    }
-
-    pub(crate) fn add_window(&mut self, id: WindowId, window: PendingWindow<T>) {
-        self.windows.add(id, window);
+        self.with_delegate(|del, data, env, ctx| del.window_added(id, data, env, ctx));
     }
 
     /// Called after this window has been closed by the platform.
     ///
     /// We clean up resources and notifiy the delegate, if necessary.
     fn remove_window(&mut self, window_id: WindowId) {
-        self.with_delegate(window_id, |del, data, env, ctx| {
-            del.window_removed(window_id, data, env, ctx)
-        });
-        self.windows.remove(window_id);
+        self.with_delegate(|del, data, env, ctx| del.window_removed(window_id, data, env, ctx));
+        // when closing the last window:
+        if let Some(mut win) = self.windows.remove(window_id) {
+            if self.windows.windows.is_empty() {
+                // on mac we need to keep the menu around
+                self.root_menu = win.menu.take();
+                //FIXME: on windows we need to shutdown the app here?
+            }
+        }
 
         // if we are closing the window that is currently responsible for
         // waking us when external events arrive, we want to pass that responsibility
@@ -239,52 +278,63 @@ impl<T: Data> AppState<T> {
         }
     }
 
-    fn do_event(&mut self, source_id: WindowId, event: Event) -> bool {
+    fn dispatch_cmd(&mut self, target: Target, cmd: Command) {
+        if !self.delegate_cmd(&target, &cmd) {
+            return;
+        }
+
+        match target {
+            Target::Window(id) => {
+                // first handle special window-level events
+                match cmd.selector {
+                    sys_cmd::SET_MENU => return self.set_menu(id, &cmd),
+                    sys_cmd::SHOW_CONTEXT_MENU => return self.show_context_menu(id, &cmd),
+                    _ => (),
+                }
+                if let Some(w) = self.windows.get_mut(id) {
+                    let event = Event::Command(cmd);
+                    w.event(&mut self.command_queue, event, &mut self.data, &self.env);
+                }
+            }
+            // in this case we send it to every window that might contain
+            // this widget, breaking if the event is handled.
+            Target::Widget(id) => {
+                for w in self.windows.iter_mut().filter(|w| w.may_contain_widget(id)) {
+                    let event = Event::TargetedCommand(id.into(), cmd.clone());
+                    if w.event(&mut self.command_queue, event, &mut self.data, &self.env) {
+                        break;
+                    }
+                }
+            }
+            Target::Global => {
+                for w in self.windows.iter_mut() {
+                    let event = Event::Command(cmd.clone());
+                    if w.event(&mut self.command_queue, event, &mut self.data, &self.env) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    fn do_window_event(&mut self, source_id: WindowId, event: Event) -> bool {
+        match event {
+            Event::Command(..) | Event::TargetedCommand(..) => {
+                panic!("commands should be dispatched via dispatch_cmd");
+            }
+            _ => (),
+        }
+
         // if the event was swallowed by the delegate we consider it handled?
         let event = match self.delegate_event(source_id, event) {
             Some(event) => event,
             None => return true,
         };
 
-        if let Event::TargetedCommand(_target, ref cmd) = event {
-            match cmd.selector {
-                sys_cmd::SET_MENU => {
-                    self.set_menu(source_id, cmd);
-                    return true;
-                }
-                sys_cmd::SHOW_CONTEXT_MENU => {
-                    self.show_context_menu(source_id, cmd);
-                    return true;
-                }
-                _ => (),
-            }
-        }
-
-        let AppState {
-            ref mut command_queue,
-            ref mut windows,
-            ref mut data,
-            ref env,
-            ..
-        } = self;
-
-        match event {
-            Event::TargetedCommand(Target::Widget(_), _) => {
-                let mut any_handled = false;
-
-                for window in windows.iter_mut() {
-                    let handled = window.event(command_queue, event.clone(), data, env);
-                    any_handled |= handled;
-                    if handled {
-                        break;
-                    }
-                }
-                any_handled
-            }
-            _ => match windows.get_mut(source_id) {
-                Some(win) => win.event(command_queue, event, data, env),
-                None => false,
-            },
+        if let Some(win) = self.windows.get_mut(source_id) {
+            win.event(&mut self.command_queue, event, &mut self.data, &self.env)
+        } else {
+            false
         }
     }
 
@@ -339,14 +389,37 @@ impl<T: Data> AppState<T> {
 impl<T: Data> DruidHandler<T> {
     /// Note: the root widget doesn't go in here, because it gets added to the
     /// app state.
-    pub(crate) fn new_shared(
-        app_state: Rc<RefCell<AppState<T>>>,
-        window_id: WindowId,
-    ) -> DruidHandler<T> {
+    pub(crate) fn new_shared(app_state: AppState<T>, window_id: WindowId) -> DruidHandler<T> {
         DruidHandler {
             app_state,
             window_id,
         }
+    }
+}
+
+impl<T: Data> AppState<T> {
+    pub(crate) fn data(&self) -> T {
+        self.inner.borrow().data.clone()
+    }
+
+    pub(crate) fn env(&self) -> Env {
+        self.inner.borrow().env.clone()
+    }
+
+    pub(crate) fn add_window(&self, id: WindowId, window: WindowDesc<T>) {
+        self.inner.borrow_mut().windows.add(id, window);
+    }
+
+    fn connect_window(&mut self, window_id: WindowId, handle: WindowHandle) {
+        self.inner.borrow_mut().connect(window_id, handle)
+    }
+
+    fn remove_window(&mut self, window_id: WindowId) {
+        self.inner.borrow_mut().remove_window(window_id)
+    }
+
+    fn window_got_focus(&mut self, window_id: WindowId) {
+        self.inner.borrow_mut().window_got_focus(window_id)
     }
 
     /// Send an event to the widget hierarchy.
@@ -355,16 +428,35 @@ impl<T: Data> DruidHandler<T> {
     ///
     /// This is principally because in certain cases (such as keydown on Windows)
     /// the OS needs to know if an event was handled.
-    fn do_event(&mut self, event: Event) -> bool {
-        let result = self.app_state.borrow_mut().do_event(self.window_id, event);
+    fn do_window_event(&mut self, event: Event, window_id: WindowId) -> bool {
+        let result = self.inner.borrow_mut().do_window_event(window_id, event);
         self.process_commands();
-        self.app_state.borrow_mut().do_update();
+        self.inner.borrow_mut().do_update();
         result
+    }
+
+    fn paint_window(&mut self, window_id: WindowId, piet: &mut Piet) -> bool {
+        self.inner.borrow_mut().paint(window_id, piet)
+    }
+
+    fn idle(&mut self, token: IdleToken) {
+        match token {
+            RUN_COMMANDS_TOKEN => {
+                self.process_commands();
+                self.inner.borrow_mut().invalidate_and_finalize();
+            }
+            EXT_EVENT_IDLE_TOKEN => {
+                self.process_ext_events();
+                self.process_commands();
+                self.inner.borrow_mut().do_update();
+            }
+            other => log::warn!("unexpected idle token {:?}", other),
+        }
     }
 
     fn process_commands(&mut self) {
         loop {
-            let next_cmd = self.app_state.borrow_mut().command_queue.pop_front();
+            let next_cmd = self.inner.borrow_mut().command_queue.pop_front();
             match next_cmd {
                 Some((target, cmd)) => self.handle_cmd(target, cmd),
                 None => break,
@@ -374,60 +466,52 @@ impl<T: Data> DruidHandler<T> {
 
     fn process_ext_events(&mut self) {
         loop {
-            let ext_cmd = self.app_state.borrow_mut().ext_event_host.recv();
+            let ext_cmd = self.inner.borrow_mut().ext_event_host.recv();
             match ext_cmd {
-                Some((targ, cmd)) => {
-                    let targ = targ.unwrap_or_else(|| self.window_id.into());
-                    self.handle_cmd(targ, cmd);
-                }
+                Some((targ, cmd)) => self.handle_cmd(targ.unwrap_or(Target::Global), cmd),
                 None => break,
             }
         }
-        self.app_state.borrow_mut().invalidate_and_finalize();
     }
 
-    fn handle_system_cmd(&mut self, cmd_id: u32) {
-        let cmd = self.app_state.borrow().get_menu_cmd(self.window_id, cmd_id);
+    /// Handle a 'command' message from druid-shell. These map to  an item
+    /// in an application, window, or context (right-click) menu.
+    ///
+    /// If the menu is  associated with a window (the general case) then
+    /// the `window_id` will be `Some(_)`, otherwise (such as if no window
+    /// is open but a menu exists, as on macOS) it will be `None`.
+    fn handle_system_cmd(&mut self, cmd_id: u32, window_id: Option<WindowId>) {
+        let cmd = self.inner.borrow().get_menu_cmd(window_id, cmd_id);
+        let target = window_id.map(Into::into).unwrap_or(Target::Global);
         match cmd {
-            Some(cmd) => self
-                .app_state
-                .borrow_mut()
-                .command_queue
-                .push_back((self.window_id.into(), cmd)),
-            None => warn!("No command for menu id {}", cmd_id),
+            Some(cmd) => self.inner.borrow_mut().append_command(target, cmd),
+            None => log::warn!("No command for menu id {}", cmd_id),
         }
         self.process_commands()
     }
 
-    /// Handle a command. Top level commands (e.g. for creating and destroying windows)
-    /// have their logic here; other commands are passed to the window.
+    /// Handle a command. Top level commands (e.g. for creating and destroying
+    /// windows) have their logic here; other commands are passed to the window.
     fn handle_cmd(&mut self, target: Target, cmd: Command) {
-        if let Target::Window(window_id) = target {
-            match &cmd.selector {
-                &sys_cmd::SHOW_OPEN_PANEL => self.show_open_panel(cmd, window_id),
-                &sys_cmd::SHOW_SAVE_PANEL => self.show_save_panel(cmd, window_id),
-                &sys_cmd::NEW_WINDOW => {
-                    if let Err(e) = self.new_window(cmd) {
-                        log::error!("failed to create window: '{}'", e);
-                    }
-                }
-                &sys_cmd::CLOSE_WINDOW => self.request_close_window(cmd, window_id),
-                &sys_cmd::SHOW_WINDOW => self.show_window(cmd),
-                &sys_cmd::QUIT_APP => self.quit(),
-                &sys_cmd::HIDE_APPLICATION => self.hide_app(),
-                &sys_cmd::HIDE_OTHERS => self.hide_others(),
-                &sys_cmd::PASTE => self.do_paste(window_id),
-                sel => {
-                    info!("handle_cmd {}", sel);
-                    let event = Event::TargetedCommand(target, cmd);
-                    self.app_state.borrow_mut().do_event(window_id, event);
+        use Target as T;
+        match (target, &cmd.selector) {
+            // these are handled the same no matter where they  come from
+            (_, &sys_cmd::QUIT_APP) => self.quit(),
+            (_, &sys_cmd::HIDE_APPLICATION) => self.hide_app(),
+            (_, &sys_cmd::HIDE_OTHERS) => self.hide_others(),
+            (_, &sys_cmd::NEW_WINDOW) => {
+                if let Err(e) = self.new_window(cmd) {
+                    log::error!("failed to create window: '{}'", e);
                 }
             }
-        } else {
-            info!("handle_cmd {} -> widget", cmd.selector);
-            let event = Event::TargetedCommand(target, cmd);
-            // TODO: self.window_id the correct source identifier here?
-            self.app_state.borrow_mut().do_event(self.window_id, event);
+            // these should come from a window
+            // FIXME: we need to be  able to open a file without a window handle
+            (T::Window(id), &sys_cmd::SHOW_OPEN_PANEL) => self.show_open_panel(cmd, id),
+            (T::Window(id), &sys_cmd::SHOW_SAVE_PANEL) => self.show_save_panel(cmd, id),
+            (T::Window(id), &sys_cmd::CLOSE_WINDOW) => self.request_close_window(cmd, id),
+            (T::Window(_), &sys_cmd::SHOW_WINDOW) => self.show_window(cmd),
+            (T::Window(id), &sys_cmd::PASTE) => self.do_paste(id),
+            _sel => self.inner.borrow_mut().dispatch_cmd(target, cmd),
         }
     }
 
@@ -440,7 +524,7 @@ impl<T: Data> DruidHandler<T> {
         //a crash. as a workaround we take a clone of the window handle.
         //it's less clear what the better solution would be.
         let handle = self
-            .app_state
+            .inner
             .borrow_mut()
             .windows
             .get_mut(window_id)
@@ -449,8 +533,7 @@ impl<T: Data> DruidHandler<T> {
         let result = handle.and_then(|mut handle| handle.open_file_sync(options));
         if let Some(info) = result {
             let cmd = Command::new(sys_cmd::OPEN_FILE, info);
-            let event = Event::TargetedCommand(window_id.into(), cmd);
-            self.app_state.borrow_mut().do_event(window_id, event);
+            self.inner.borrow_mut().dispatch_cmd(window_id.into(), cmd);
         }
     }
 
@@ -460,7 +543,7 @@ impl<T: Data> DruidHandler<T> {
             .map(|opts| opts.to_owned())
             .unwrap_or_default();
         let handle = self
-            .app_state
+            .inner
             .borrow_mut()
             .windows
             .get_mut(window_id)
@@ -468,33 +551,32 @@ impl<T: Data> DruidHandler<T> {
         let result = handle.and_then(|mut handle| handle.save_as_sync(options));
         if let Some(info) = result {
             let cmd = Command::new(sys_cmd::SAVE_FILE, info);
-            let event = Event::TargetedCommand(window_id.into(), cmd);
-            self.app_state.borrow_mut().do_event(window_id, event);
+            self.inner.borrow_mut().dispatch_cmd(window_id.into(), cmd);
         }
     }
 
     fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
         let desc = cmd.take_object::<WindowDesc<T>>()?;
-        let window = desc.build_native(&self.app_state)?;
+        let window = desc.build_native(self)?;
         window.show();
         Ok(())
     }
 
     fn request_close_window(&mut self, cmd: Command, window_id: WindowId) {
         let id = cmd.get_object().unwrap_or(&window_id);
-        self.app_state.borrow_mut().request_close_window(*id);
+        self.inner.borrow_mut().request_close_window(*id);
     }
 
     fn show_window(&mut self, cmd: Command) {
         let id: WindowId = *cmd
             .get_object()
             .expect("show window selector missing window id");
-        self.app_state.borrow_mut().show_window(id);
+        self.inner.borrow_mut().show_window(id);
     }
 
     fn do_paste(&mut self, window_id: WindowId) {
         let event = Event::Paste(Application::clipboard());
-        self.app_state.borrow_mut().do_event(window_id, event);
+        self.inner.borrow_mut().do_window_event(window_id, event);
     }
 
     fn quit(&self) {
@@ -512,84 +594,81 @@ impl<T: Data> DruidHandler<T> {
     }
 }
 
+impl<T: Data> crate::shell::AppHandler for AppHandler<T> {
+    fn command(&mut self, id: u32) {
+        self.app_state.handle_system_cmd(id, None)
+    }
+}
+
 impl<T: Data> WinHandler for DruidHandler<T> {
     fn connect(&mut self, handle: &WindowHandle) {
-        //NOTE: this method predates `connected`, and we call delegate methods here.
-        //it's possible that we should move those calls to occur in connected?
         self.app_state
-            .borrow_mut()
-            .connect(self.window_id, handle.clone());
-    }
+            .connect_window(self.window_id, handle.clone());
 
-    fn connected(&mut self) {
         let event = Event::WindowConnected;
-        self.do_event(event);
+        self.app_state.do_window_event(event, self.window_id);
     }
 
     fn paint(&mut self, piet: &mut Piet) -> bool {
-        self.app_state.borrow_mut().paint(self.window_id, piet)
+        self.app_state.paint_window(self.window_id, piet)
     }
 
     fn size(&mut self, width: u32, height: u32) {
         let event = Event::Size(Size::new(f64::from(width), f64::from(height)));
-        self.do_event(event);
+        self.app_state.do_window_event(event, self.window_id);
     }
 
     fn command(&mut self, id: u32) {
-        self.handle_system_cmd(id);
+        self.app_state.handle_system_cmd(id, Some(self.window_id));
     }
 
     fn mouse_down(&mut self, event: &MouseEvent) {
         // TODO: double-click detection (or is this done in druid-shell?)
         let event = Event::MouseDown(event.clone().into());
-        self.do_event(event);
+        self.app_state.do_window_event(event, self.window_id);
     }
 
     fn mouse_up(&mut self, event: &MouseEvent) {
         let event = Event::MouseUp(event.clone().into());
-        self.do_event(event);
+        self.app_state.do_window_event(event, self.window_id);
     }
 
     fn mouse_move(&mut self, event: &MouseEvent) {
         let event = Event::MouseMoved(event.clone().into());
-        self.do_event(event);
+        self.app_state.do_window_event(event, self.window_id);
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
-        self.do_event(Event::KeyDown(event))
+        self.app_state
+            .do_window_event(Event::KeyDown(event), self.window_id)
     }
 
     fn key_up(&mut self, event: KeyEvent) {
-        self.do_event(Event::KeyUp(event));
+        self.app_state
+            .do_window_event(Event::KeyUp(event), self.window_id);
     }
 
     fn wheel(&mut self, delta: Vec2, mods: KeyModifiers) {
         let event = Event::Wheel(WheelEvent { delta, mods });
-        self.do_event(event);
+        self.app_state.do_window_event(event, self.window_id);
     }
 
     fn zoom(&mut self, delta: f64) {
         let event = Event::Zoom(delta);
-        self.do_event(event);
+        self.app_state.do_window_event(event, self.window_id);
     }
 
     fn got_focus(&mut self) {
-        self.app_state.borrow_mut().window_got_focus(self.window_id);
+        self.app_state.window_got_focus(self.window_id);
     }
 
     fn timer(&mut self, token: TimerToken) {
-        self.do_event(Event::Timer(token));
+        self.app_state
+            .do_window_event(Event::Timer(token), self.window_id);
     }
 
     fn idle(&mut self, token: IdleToken) {
-        match token {
-            RUN_COMMANDS_TOKEN => {
-                self.process_commands();
-                self.app_state.borrow_mut().invalidate_and_finalize();
-            }
-            EXT_EVENT_IDLE_TOKEN => self.process_ext_events(),
-            other => log::warn!("unexpected idle token {:?}", other),
-        }
+        self.app_state.idle(token);
     }
 
     fn as_any(&mut self) -> &mut dyn Any {
@@ -597,7 +676,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn destroy(&mut self) {
-        self.app_state.borrow_mut().remove_window(self.window_id);
+        self.app_state.remove_window(self.window_id);
     }
 }
 
