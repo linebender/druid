@@ -25,7 +25,6 @@ use crate::keycodes::KeyCode;
 use crate::kurbo::{Point, Size};
 use crate::mouse::{Cursor, MouseEvent};
 use crate::piet::{Piet, RenderContext};
-use crate::runloop::RunLoop;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 use super::application::Application;
@@ -56,6 +55,14 @@ impl WindowBuilder {
         self.size = size;
     }
 
+    pub fn resizable(&mut self, _resizable: bool) {
+        log::warn!("WindowBuilder::resizable not implemented for x11")
+    }
+
+    pub fn show_titlebar(&mut self, _show_titlebar: bool) {
+        log::warn!("WindowBuilder::show_titlebar not implemented for x11")
+    }
+
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
         self.title = title.into();
     }
@@ -65,7 +72,7 @@ impl WindowBuilder {
     }
 
     // TODO(x11/menus): make menus if requested
-    pub fn build(self, run_loop: &mut RunLoop) -> Result<WindowHandle, Error> {
+    pub fn build(self) -> Result<WindowHandle, Error> {
         let conn = Application::get_connection();
         let screen_num = Application::get_screen_num();
         let window_id = conn.generate_id();
@@ -132,7 +139,7 @@ impl WindowBuilder {
         conn.flush();
 
         let xwindow = XWindow::new(window_id, self.handler.unwrap(), self.size);
-        run_loop.add_xwindow(window_id, xwindow);
+        Application::add_xwindow(window_id, xwindow);
 
         Ok(WindowHandle::new(window_id))
     }
@@ -287,6 +294,16 @@ impl WindowHandle {
         // Hopefully there aren't any references to this window after this function is called.
         let conn = Application::get_connection();
         xcb::destroy_window(&conn, self.window_id);
+    }
+
+    /// Set whether the window should be resizable
+    pub fn resizable(&self, _resizable: bool) {
+        log::warn!("resizeable not implementd on x11");
+    }
+
+    /// Set whether the window should show titlebar
+    pub fn show_titlebar(&self, _show_titlebar: bool) {
+        log::warn!("show_titlebar not implementd on x11");
     }
 
     /// Bring this window to the front of the window stack and give it focus.

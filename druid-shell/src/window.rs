@@ -25,9 +25,6 @@ use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
 
-#[cfg(all(target_os = "linux", feature = "use_x11"))]
-use crate::runloop::RunLoop;
-
 // It's possible we'll want to make this type alias at a lower level,
 // see https://github.com/linebender/piet/pull/37 for more discussion.
 /// The platform text factory, reexported from piet.
@@ -249,18 +246,8 @@ impl WindowBuilder {
     /// Attempt to construct the platform window.
     ///
     /// If this fails, your application should exit.
-    #[cfg(not(all(target_os = "linux", feature = "use_x11")))]
     pub fn build(self) -> Result<WindowHandle, Error> {
         self.0.build().map(WindowHandle).map_err(Into::into)
-    }
-
-    /// Attempt to construct the platform window.
-    ///
-    /// If this fails, your application should exit.
-    // TODO(x11/architecture): super hacky way to connect the XWindow to the RunLoop. Better way to do it?
-    #[cfg(all(target_os = "linux", feature = "use_x11"))]
-    pub fn build(self, run_loop: &mut RunLoop) -> Result<WindowHandle, Error> {
-        self.0.build(run_loop).map(WindowHandle).map_err(Into::into)
     }
 }
 
