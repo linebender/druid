@@ -17,7 +17,7 @@
 use std::ops::{Index, IndexMut};
 use std::time::{Duration, Instant};
 
-use druid::widget::{Button, Flex, Label, Slider, WidgetExt};
+use druid::widget::{Alignment, Button, Flex, Label, Slider, WidgetExt};
 use druid::{
     AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
     LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size,
@@ -311,12 +311,12 @@ impl Widget<AppData> for GameOfLifeWidget<'_> {
             for col in 0..GRID_SIZE {
                 let pos = GridPos { row, col };
                 if data.grid[pos] {
-                    let pos = Point {
+                    let point = Point {
                         x: w0 * row as f64,
                         y: h0 * col as f64,
                     };
-                    let rect = Rect::from_origin_size(pos, cell_size);
-                    paint_ctx.fill(rect, self.color_scheme.next().unwrap());
+                    let rect = Rect::from_origin_size(point, cell_size);
+                    paint_ctx.fill(rect, self.color_scheme[pos]);
                 }
             }
         }
@@ -415,8 +415,7 @@ fn make_widget() -> impl Widget<AppData> {
                             0.,
                         )
                         .with_child(Slider::new().lens(AppData::speed).padding(3.0), 1.)
-                        .align_vertical(UnitPoint::CENTER)
-                        .align_horizontal(UnitPoint::CENTER)
+                        .alignment(Alignment::Center)
                         .padding(4.0),
                     0.,
                 )
@@ -456,9 +455,16 @@ fn main() {
         .expect("launch failed");
 }
 
+impl<'a> Index<GridPos> for ColorScheme<'a> {
+    type Output = &'a Color;
+    fn index(&self, pos: GridPos) -> &Self::Output {
+        let idx = pos.row * GRID_SIZE + pos.col;
+        self.colors.index(idx % self.colors.len())
+    }
+}
+
 impl Index<GridPos> for Grid {
     type Output = bool;
-
     fn index(&self, pos: GridPos) -> &Self::Output {
         let idx = pos.row * GRID_SIZE + pos.col;
         self.storage.index(idx)
