@@ -55,40 +55,47 @@ jobs:
           profile: minimal
           override: true
 
-      - name: cargo clippy (no-svg)
+      - name: cargo clippy (druid)
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --all -- -D warnings
-        if: contains(matrix.os, 'ubuntu') != true
+          args: --manifest-path=druid/Cargo.toml --features=svg,image -- -D warnings
 
-      - name: cargo clippy (svg)
+      - name: cargo clippy (druid-shell)
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --all --all-features -- -D warnings
-        if: contains(matrix.os, 'ubuntu')
+          args: --manifest-path=druid-shell/Cargo.toml -- -D warnings
 
+      - name: cargo clippy (druid-derive)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid-derive/Cargo.toml -- -D warnings
 
-      - name: cargo test --all
+      - name: cargo test (druid)
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all
-        if: contains(matrix.os, 'ubuntu') != true
+          args: --manifest-path=druid/Cargo.toml --features=svg,image
 
-      - name: cargo test --all --all-features
+      - name: cargo test (druid-shell)
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all --all-features
-        if: contains(matrix.os, 'ubuntu')
+          args: --manifest-path=druid-shell/Cargo.toml
+
+      - name: cargo test (druid-derive)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid-shell/Cargo.toml
 
       - name: Run rustc -D warnings in druid/
         uses: actions-rs/cargo@v1
         with:
           command: rustc
-          args: --manifest-path=druid/Cargo.toml -- -D warnings
+          args: --manifest-path=druid/Cargo.toml --features=svg,image -- -D warnings
 
       - name: Run rustc -d warnings in druid/druid-shell
         uses: actions-rs/cargo@v1
@@ -165,3 +172,47 @@ jobs:
         with:
           command: doc
           args: --document-private-items
+
+  # by default on linux we test gtk; to test x11 we need a separate job.
+  test-stable-x11:
+    runs-on: ubuntu-latest
+    name: cargo test stable (x11)
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install deps
+        run: |
+          sudo apt update
+          sudo apt install libx11-dev libgtk-3-dev
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+          profile: minimal
+          override: true
+
+      - name: cargo clippy (x11)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid-shell/Cargo.toml --features=use_x11 -- -D warnings
+
+      - name: cargo test druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid-shell/Cargo.toml --features=use_x11
+
+      - name: cargo test druid
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid/Cargo.toml --features=use_x11
+
+      - name: Run rustc -d warnings in druid/druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=druid-shell/Cargo.toml  --features=use_x11 -- -D warnings
