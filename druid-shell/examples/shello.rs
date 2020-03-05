@@ -19,7 +19,7 @@ use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
     Application, Cursor, FileDialogOptions, FileSpec, HotKey, KeyEvent, KeyModifiers, Menu,
-    MouseEvent, RunLoop, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    MouseEvent, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
@@ -117,8 +117,6 @@ impl WinHandler for HelloState {
 }
 
 fn main() {
-    Application::init();
-
     let mut file_menu = Menu::new();
     file_menu.add_item(
         0x100,
@@ -138,7 +136,7 @@ fn main() {
     menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
-    let mut run_loop = RunLoop::new();
+    let mut app = Application::new(None);
     let mut builder = WindowBuilder::new();
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");
@@ -155,5 +153,5 @@ fn main() {
         }
     }
 
-    run_loop.run();
+    app.run();
 }

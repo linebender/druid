@@ -14,13 +14,22 @@
 
 //! Windows implementation of features at the application scope.
 
+use std::mem;
+use std::ptr;
+
 use winapi::shared::minwindef::HINSTANCE;
 use winapi::shared::ntdef::LPCWSTR;
 use winapi::shared::windef::HCURSOR;
 use winapi::um::shellscalingapi::PROCESS_SYSTEM_DPI_AWARE;
 use winapi::um::wingdi::CreateSolidBrush;
-use winapi::um::winuser::{LoadIconW, PostQuitMessage, RegisterClassW, IDI_APPLICATION, WNDCLASSW};
+use winapi::um::winuser::{
+    DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PostQuitMessage, RegisterClassW,
+    TranslateAcceleratorW, TranslateMessage, GA_ROOT, IDI_APPLICATION, MSG, WNDCLASSW,
+};
 
+use crate::application::AppHandler;
+
+use super::accels;
 use super::clipboard::Clipboard;
 use super::util::{self, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
 use super::window::win_proc_dispatch;
@@ -28,8 +37,36 @@ use super::window::win_proc_dispatch;
 pub struct Application;
 
 impl Application {
+    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
+        Application::init();
+        Application
+    }
+
+    pub fn run(&mut self) {
+        unsafe {
+            // Handle windows messages
+            loop {
+                let mut msg = mem::MaybeUninit::uninit();
+                let res = GetMessageW(msg.as_mut_ptr(), ptr::null_mut(), 0, 0);
+                if res <= 0 {
+                    return;
+                }
+                let mut msg: MSG = msg.assume_init();
+                let accels = accels::find_accels(GetAncestor(msg.hwnd, GA_ROOT));
+                let translated = accels.map_or(false, |it| {
+                    TranslateAcceleratorW(msg.hwnd, it.handle(), &mut msg) != 0
+                });
+
+                if !translated {
+                    TranslateMessage(&msg);
+                    DispatchMessageW(&msg);
+                }
+            }
+        }
+    }
+
     /// Initialize the app. At the moment, this is mostly needed for hi-dpi.
-    pub fn init() {
+    fn init() {
         util::attach_console();
         if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
             // This function is only supported on windows 10

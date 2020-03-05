@@ -313,7 +313,15 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     }
                     ctx.request_paint();
                 }
-                Event::MouseUp(_) => self.scroll_bars.held = BarHeldState::None,
+                Event::MouseUp(_) => {
+                    self.scroll_bars.held = BarHeldState::None;
+                    ctx.set_active(false);
+
+                    if !scroll_bar_is_hovered {
+                        self.scroll_bars.hovered = BarHoveredState::None;
+                        self.reset_scrollbar_fade(ctx, &env);
+                    }
+                }
                 _ => (), // other events are a noop
             }
         } else if scroll_bar_is_hovered {
@@ -335,10 +343,12 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     let pos = event.pos + self.scroll_offset;
 
                     if self.point_hits_vertical_bar(viewport, pos, &env) {
+                        ctx.set_active(true);
                         self.scroll_bars.held = BarHeldState::Vertical(
                             pos.y - self.calc_vertical_bar_bounds(viewport, &env).y0,
                         );
                     } else if self.point_hits_horizontal_bar(viewport, pos, &env) {
+                        ctx.set_active(true);
                         self.scroll_bars.held = BarHeldState::Horizontal(
                             pos.x - self.calc_horizontal_bar_bounds(viewport, &env).x0,
                         );
@@ -349,7 +359,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 _ => unreachable!(),
             }
         } else {
-            let child_event = event.transform_scroll(self.scroll_offset, viewport);
+            let force_event = self.child.is_hot() || self.child.is_active();
+            let child_event = event.transform_scroll(self.scroll_offset, viewport, force_event);
             if let Some(child_event) = child_event {
                 self.child.event(ctx, &child_event, data, env)
             };

@@ -14,15 +14,12 @@
 
 //! Window building and app lifecycle.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
-use crate::shell::{Application, Error as PlatformError, RunLoop, WindowBuilder, WindowHandle};
+use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
 use crate::widget::WidgetExt;
-use crate::win_handler::AppState;
-use crate::window::{PendingWindow, WindowId};
+use crate::win_handler::{AppHandler, AppState};
+use crate::window::WindowId;
 use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
 
 /// A function that modifies the initial environment.
@@ -45,6 +42,8 @@ pub struct WindowDesc<T> {
     pub(crate) title: LocalizedString<T>,
     pub(crate) size: Option<Size>,
     pub(crate) menu: Option<MenuDesc<T>>,
+    pub(crate) resizable: bool,
+    pub(crate) show_titlebar: bool,
     /// The `WindowId` that will be assigned to this window.
     ///
     /// This can be used to track a window from when it is launched and when
@@ -99,10 +98,9 @@ impl<T: Data> AppLauncher<T> {
     /// Paint colorful rectangles for layout debugging.
     ///
     /// The rectangles are drawn around each widget's layout rect.
+    #[deprecated(since = "0.5.0", note = "Use WidgetExt::debug_paint_layout instead.")]
     pub fn debug_paint_layout(self) -> Self {
-        self.configure_env(|env, _| {
-            env.set(Env::DEBUG_PAINT, true);
-        })
+        self
     }
 
     /// Build the windows and start the runloop.
@@ -110,21 +108,21 @@ impl<T: Data> AppLauncher<T> {
     /// Returns an error if a window cannot be instantiated. This is usually
     /// a fatal error.
     pub fn launch(mut self, data: T) -> Result<(), PlatformError> {
-        Application::init();
-        let mut main_loop = RunLoop::new();
         let mut env = theme::init();
         if let Some(f) = self.env_setup.take() {
             f(&mut env, &data);
         }
 
-        let state = AppState::new(data, env, self.delegate.take(), self.ext_event_host);
+        let mut state = AppState::new(data, env, self.delegate.take(), self.ext_event_host);
+        let handler = AppHandler::new(state.clone());
 
+        let mut app = Application::new(Some(Box::new(handler)));
         for desc in self.windows {
-            let window = desc.build_native(&state)?;
+            let window = desc.build_native(&mut state)?;
             window.show();
         }
 
-        main_loop.run();
+        app.run();
         Ok(())
     }
 }
@@ -139,7 +137,7 @@ impl<T: Data> WindowDesc<T> {
     pub fn new<W, F>(root: F) -> WindowDesc<T>
     where
         W: Widget<T> + 'static,
-        F: Fn() -> W + 'static,
+        F: FnOnce() -> W + 'static,
     {
         // wrap this closure in another closure that boxes the created widget.
         // this just makes our API slightly cleaner; callers don't need to explicitly box.
@@ -148,6 +146,8 @@ impl<T: Data> WindowDesc<T> {
             title: LocalizedString::new("app-name"),
             size: None,
             menu: MenuDesc::platform_default(),
+            resizable: true,
+            show_titlebar: true,
             id: WindowId::next(),
         }
     }
@@ -179,22 +179,33 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    pub fn resizable(mut self, resizable: bool) -> Self {
+        self.resizable = resizable;
+        self
+    }
+
+    pub fn show_titlebar(mut self, show_titlebar: bool) -> Self {
+        self.show_titlebar = show_titlebar;
+        self
+    }
+
     /// Attempt to create a platform window from this `WindowDesc`.
     pub(crate) fn build_native(
         mut self,
-        state: &Rc<RefCell<AppState<T>>>,
+        state: &mut AppState<T>,
     ) -> Result<WindowHandle, PlatformError> {
-        self.title
-            .resolve(&state.borrow().data, &state.borrow().env);
+        let data = state.data();
+        let env = state.env();
+        self.title.resolve(&data, &env);
 
-        let platform_menu = self
-            .menu
-            .as_mut()
-            .map(|m| m.build_window_menu(&state.borrow().data, &state.borrow().env));
+        let platform_menu = self.menu.as_mut().map(|m| m.build_window_menu(&data, &env));
 
         let handler = DruidHandler::new_shared(state.clone(), self.id);
 
         let mut builder = WindowBuilder::new();
+
+        builder.resizable(self.resizable);
+        builder.show_titlebar(self.show_titlebar);
 
         builder.set_handler(Box::new(handler));
         if let Some(size) = self.size {
@@ -206,8 +217,12 @@ impl<T: Data> WindowDesc<T> {
             builder.set_menu(menu);
         }
 
-        let window = PendingWindow::new(self.root, self.title, self.menu);
-        state.borrow_mut().add_window(self.id, window);
+        let root = self.root;
+        let mut window = WindowDesc::new(|| root);
+        window.title = self.title;
+        window.menu = self.menu;
+
+        state.add_window(self.id, window);
 
         builder.build()
     }

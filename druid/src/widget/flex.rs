@@ -24,6 +24,7 @@ use crate::{
 /// A container with either horizontal or vertical layout.
 pub struct Flex<T> {
     direction: Axis,
+    alignment: Alignment,
     children: Vec<ChildWidget<T>>,
 }
 
@@ -35,6 +36,26 @@ struct ChildWidget<T> {
 pub(crate) enum Axis {
     Horizontal,
     Vertical,
+}
+
+/// The alignment of the widgets inside of the container.
+///
+/// If a widget is smaller than the container on the minor axis, this determines
+/// where it is positioned.
+#[derive(Debug, Clone, Copy)]
+pub enum Alignment {
+    /// Top or leading.
+    ///
+    /// In a vertical container, widgets are top aligned. In a horiziontal
+    /// container, their leading edges are aligned.
+    Start,
+    /// Widgets are centered in the container.
+    Center,
+    /// Bottom  or trailing.
+    ///
+    /// In a vertical container, widgets are bottom aligned. In a horiziontal
+    /// container, their trailing edges are aligned.
+    End,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -73,6 +94,7 @@ impl<T> Flex<T> {
         Flex {
             direction: Axis::Horizontal,
             children: Vec::new(),
+            alignment: Alignment::Start,
         }
     }
 
@@ -83,15 +105,31 @@ impl<T> Flex<T> {
         Flex {
             direction: Axis::Vertical,
             children: Vec::new(),
+            alignment: Alignment::Start,
         }
     }
 
-    /// Builder-style variant of `add_child`
+    /// Builder-style method for specifying the childrens' [`Alignment`].
+    ///
+    /// [`Alignment`]: enum.Alignment.html
+    pub fn alignment(mut self, alignment: Alignment) -> Self {
+        self.alignment = alignment;
+        self
+    }
+
+    /// Builder-style variant of `add_child`.
     ///
     /// Convenient for assembling a group of widgets in a single expression.
     pub fn with_child(mut self, child: impl Widget<T> + 'static, flex: f64) -> Self {
         self.add_child(child, flex);
         self
+    }
+
+    /// Set the childrens' [`Alignment`].
+    ///
+    /// [`Alignment`]: enum.Alignment.html
+    pub fn set_alignment(&mut self, alignment: Alignment) {
+        self.alignment = alignment;
     }
 
     /// Add a child widget.
@@ -200,9 +238,11 @@ impl<T: Data> Widget<T> for Flex<T> {
         let mut major = 0.0;
         let mut child_paint_rect = Rect::ZERO;
         for child in &mut self.children {
-            // top-align, could do center etc. based on child height
             let rect = child.widget.layout_rect();
-            let pos: Point = self.direction.pack(major, 0.0).into();
+            let extra_minor = minor - self.direction.minor(rect.size());
+            let align_minor = self.alignment.align(extra_minor);
+            let pos: Point = self.direction.pack(major, align_minor).into();
+
             child.widget.set_layout_rect(rect.with_origin(pos));
             child_paint_rect = child_paint_rect.union(child.widget.paint_rect());
             major += self.direction.major(rect.size());
@@ -227,6 +267,19 @@ impl<T: Data> Widget<T> for Flex<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         for child in &mut self.children {
             child.widget.paint_with_offset(paint_ctx, data, env);
+        }
+    }
+}
+
+impl Alignment {
+    /// Given the difference between the size of the container and the size
+    /// of the child (on their minor axis) return the necessary offset for
+    /// this alignment.
+    fn align(self, val: f64) -> f64 {
+        match self {
+            Alignment::Start => 0.0,
+            Alignment::Center => val / 2.0,
+            Alignment::End => val,
         }
     }
 }

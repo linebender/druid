@@ -85,6 +85,8 @@ pub enum ArgumentError {
 /// The target of a command.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Target {
+    /// The target is the top-level application.
+    Global,
     /// The target is a window; the event will be delivered to all
     /// widgets in that window.
     Window(WindowId),
@@ -301,7 +303,7 @@ impl std::fmt::Display for ArgumentError {
             ArgumentError::WrongVariant => write!(
                 f,
                 "Incorrect access method for argument type; \
-            check Command::one_shot docs for more detail."
+                 check Command::one_shot docs for more detail."
             ),
         }
     }

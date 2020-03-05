@@ -72,6 +72,8 @@ pub struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     present_strategy: PresentStrategy,
+    resizable: bool,
+    show_titlebar: bool,
     size: Size,
 }
 
@@ -88,6 +90,7 @@ pub enum PresentStrategy {
     /// testing, it causes diagonal banding artifacts with Nvidia
     /// adapters, and incremental present doesn't work. However, it
     /// is compatible with GDI (such as menus).
+    #[allow(dead_code)]
     Sequential,
 
     /// Corresponds to the swap effect DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL.
@@ -299,7 +302,6 @@ impl WndProc for MyWndProc {
                 let handle = self.handle.borrow().to_owned();
                 if let Some(state) = self.state.borrow_mut().as_mut() {
                     state.handler.connect(&handle.into());
-                    state.handler.connected();
                 }
 
                 Some(0)
@@ -700,6 +702,8 @@ impl WindowBuilder {
             dwStyle: WS_OVERLAPPEDWINDOW,
             title: String::new(),
             menu: None,
+            resizable: true,
+            show_titlebar: true,
             present_strategy: Default::default(),
             size: Size::new(500.0, 400.0),
         }
@@ -710,18 +714,18 @@ impl WindowBuilder {
         self.handler = Some(handler);
     }
 
-    pub fn set_scroll(&mut self, hscroll: bool, vscroll: bool) {
-        self.dwStyle &= !(WS_HSCROLL | WS_VSCROLL);
-        if hscroll {
-            self.dwStyle |= WS_HSCROLL;
-        }
-        if vscroll {
-            self.dwStyle |= WS_VSCROLL;
-        }
-    }
-
     pub fn set_size(&mut self, size: Size) {
         self.size = size;
+    }
+
+    pub fn resizable(&mut self, resizable: bool) {
+        // TODO: Use this in `self.build`
+        self.resizable = resizable;
+    }
+
+    pub fn show_titlebar(&mut self, show_titlebar: bool) {
+        // TODO: Use this in `self.build`
+        self.show_titlebar = show_titlebar;
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -730,10 +734,6 @@ impl WindowBuilder {
 
     pub fn set_menu(&mut self, menu: Menu) {
         self.menu = Some(menu);
-    }
-
-    pub fn set_present_strategy(&mut self, present_strategy: PresentStrategy) {
-        self.present_strategy = present_strategy;
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
@@ -1071,6 +1071,12 @@ impl WindowHandle {
             }
         }
     }
+
+    // TODO: Implement this
+    pub fn show_titlebar(&self, _show_titlebar: bool) {}
+
+    // TODO: Implement this
+    pub fn resizable(&self, _resizable: bool) {}
 
     pub fn set_menu(&self, menu: Menu) {
         let accels = menu.accels();

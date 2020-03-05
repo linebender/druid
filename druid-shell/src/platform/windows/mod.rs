@@ -23,7 +23,6 @@ pub mod error;
 pub mod keycodes;
 pub mod menu;
 pub mod paint;
-pub mod runloop;
 mod timers;
 pub mod util;
 pub mod window;
@@ -108,10 +107,6 @@ impl HwndRenderTarget {
         Self::from_ptr(ComPtr::from_raw(raw))
     }
 
-    pub fn get_raw(&self) -> *mut ID2D1HwndRenderTarget {
-        self.ptr.as_raw()
-    }
-
     pub fn get_comptr(&self) -> &ComPtr<ID2D1HwndRenderTarget> {
         &self.ptr
     }
@@ -153,10 +148,6 @@ impl DxgiSurfaceRenderTarget {
         DxgiSurfaceRenderTarget {
             ptr: ComPtr::from_raw(raw),
         }
-    }
-
-    pub fn get_raw(&self) -> *mut ID2D1RenderTarget {
-        self.ptr.as_raw()
     }
 
     /// cast to DeviceContext

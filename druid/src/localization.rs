@@ -40,7 +40,6 @@ use std::{fs, io};
 
 use log::{debug, error, warn};
 
-use crate::data::Data;
 use crate::env::Env;
 use crate::shell::Application;
 
@@ -320,9 +319,7 @@ impl<T> LocalizedString<T> {
             .or_else(|| self.placeholder.as_ref().map(String::as_ref))
             .unwrap_or(self.key)
     }
-}
 
-impl<T: Data> LocalizedString<T> {
     /// Add a named argument and a corresponding [`ArgClosure`]. This closure
     /// is a function that will return a value for the given key from the current
     /// environment and data.

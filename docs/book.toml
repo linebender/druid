@@ -1,0 +1,6 @@
+[book]
+authors = ["Mendelt Siebenga"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Druid"

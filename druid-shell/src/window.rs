@@ -113,6 +113,16 @@ impl WindowHandle {
         self.0.close()
     }
 
+    /// Set whether the window should be resizable
+    pub fn resizable(&self, resizable: bool) {
+        self.0.resizable(resizable)
+    }
+
+    /// Set whether the window should show titlebar
+    pub fn show_titlebar(&self, show_titlebar: bool) {
+        self.0.show_titlebar(show_titlebar)
+    }
+
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
         self.0.bring_to_front_and_focus()
@@ -216,6 +226,16 @@ impl WindowBuilder {
         self.0.set_size(size)
     }
 
+    /// Set whether the window should be resizable
+    pub fn resizable(&mut self, resizable: bool) {
+        self.0.resizable(resizable)
+    }
+
+    /// Set whether the window should have a titlebar and decorations
+    pub fn show_titlebar(&mut self, show_titlebar: bool) {
+        self.0.show_titlebar(show_titlebar)
+    }
+
     /// Set the window's initial title.
     pub fn set_title(&mut self, title: impl Into<String>) {
         self.0.set_title(title)
@@ -257,12 +277,6 @@ pub trait WinHandler {
     /// This method passes the `WindowHandle` directly, because the handler may
     /// wish to stash it.
     fn connect(&mut self, handle: &WindowHandle);
-
-    /// Called immediately after `connect`.
-    ///
-    /// The handler can implement this method to perform initial setup.
-    #[allow(unused_variables)]
-    fn connected(&mut self) {}
 
     /// Called when the size of the window is changed. Note that size
     /// is in physical pixels.

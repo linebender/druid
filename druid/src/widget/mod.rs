@@ -17,11 +17,15 @@
 mod align;
 mod button;
 mod checkbox;
+mod common;
 mod container;
 mod either;
 mod env_scope;
 mod flex;
 mod identity_wrapper;
+#[cfg(feature = "image")]
+#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
+mod image;
 mod label;
 mod list;
 mod padding;
@@ -38,15 +42,20 @@ mod stepper;
 mod svg;
 mod switch;
 mod textbox;
+mod view_switcher;
 mod widget_ext;
 
+#[cfg(feature = "image")]
+#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
+pub use self::image::{Image, ImageData};
 pub use align::Align;
 pub use button::Button;
 pub use checkbox::Checkbox;
+pub use common::FillStrat;
 pub use container::Container;
 pub use either::Either;
 pub use env_scope::EnvScope;
-pub use flex::Flex;
+pub use flex::{Alignment, Flex};
 pub use identity_wrapper::IdentityWrapper;
 pub use label::{Label, LabelText};
 pub use list::{List, ListIter};
@@ -64,6 +73,7 @@ pub use stepper::Stepper;
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
 pub use textbox::TextBox;
+pub use view_switcher::ViewSwitcher;
 pub use widget_ext::WidgetExt;
 
 use std::num::NonZeroU64;
