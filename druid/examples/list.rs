@@ -17,7 +17,7 @@
 use std::sync::Arc;
 
 use druid::lens::{self, LensExt};
-use druid::widget::{Button, Flex, Label, List, Scroll, WidgetExt};
+use druid::widget::{Button, Flex, Label, List, Scroll, SizedBox, WidgetExt};
 use druid::{AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -64,6 +64,7 @@ fn ui_builder() -> impl Widget<AppData> {
     lists.add_child(
         Scroll::new(List::new(|| {
             Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
+                .align_vertical(UnitPoint::LEFT)
                 .padding(10.0)
                 .expand()
                 .height(50.0)
@@ -81,9 +82,11 @@ fn ui_builder() -> impl Widget<AppData> {
                 .with_child(
                     Label::new(|(_, item): &(Arc<Vec<u32>>, u32), _env: &_| {
                         format!("List item #{}", item)
-                    }),
-                    1.0,
+                    })
+                    .align_vertical(UnitPoint::LEFT),
+                    0.0,
                 )
+                .with_child(SizedBox::empty(), 1.0)
                 .with_child(
                     Button::new(
                         "Delete",

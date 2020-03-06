@@ -14,16 +14,21 @@
 
 //! A label widget.
 
-use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{
     Color, FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout,
     TextLayoutBuilder, UnitPoint,
 };
-use crate::theme;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle, LifeCycleCtx,
-    LocalizedString, PaintCtx, UpdateCtx, Widget,
+    theme, BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
+    LifeCycleCtx, LocalizedString, PaintCtx, Point, Size, UpdateCtx, Widget,
 };
+
+// a fudgey way to get an approximate line height from a font size
+const LINE_HEIGHT_FACTOR: f64 = 1.2;
+// a fudgey way of figuring out where to put the baseline, relative to line height
+const BASELINE_GUESS_FACTOR: f64 = 0.8;
+// added padding between the edges of the widget and the text.
+const LABEL_X_PADDING: f64 = 2.0;
 
 /// The text for the label
 pub enum LabelText<T> {
@@ -46,13 +51,12 @@ pub struct Dynamic<T> {
 /// A label that displays some text.
 pub struct Label<T> {
     text: LabelText<T>,
-    align: UnitPoint,
     color: KeyOrValue<Color>,
     size: KeyOrValue<f64>,
 }
 
 impl<T: Data> Label<T> {
-    /// Construct a new Label widget.
+    /// Construct a new `Label` widget.
     ///
     /// ```
     /// use druid::LocalizedString;
@@ -72,15 +76,14 @@ impl<T: Data> Label<T> {
         let text = text.into();
         Self {
             text,
-            align: UnitPoint::LEFT,
             color: theme::LABEL_COLOR.into(),
             size: theme::TEXT_SIZE_NORMAL.into(),
         }
     }
 
     /// Set text alignment.
-    pub fn text_align(mut self, align: UnitPoint) -> Self {
-        self.align = align;
+    #[deprecated(since = "0.5.0", note = "Use an Align widget instead")]
+    pub fn text_align(self, _align: UnitPoint) -> Self {
         self
     }
 
@@ -192,26 +195,19 @@ impl<T: Data> Widget<T> for Label<T> {
 
         let font_size = self.size.resolve(env);
         let text_layout = self.get_layout(layout_ctx.text(), env);
-        // This magical 1.2 constant helps center the text vertically in the rect it's given
-        bc.constrain(Size::new(text_layout.width(), font_size * 1.2))
+        bc.constrain(Size::new(
+            text_layout.width() + 2. * LABEL_X_PADDING,
+            font_size * LINE_HEIGHT_FACTOR,
+        ))
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, env: &Env) {
         let font_size = self.size.resolve(env);
         let text_layout = self.get_layout(paint_ctx.text(), env);
+        let line_height = font_size * LINE_HEIGHT_FACTOR;
 
         // Find the origin for the text
-        let mut origin = self.align.resolve(Rect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(
-                (paint_ctx.size().width - text_layout.width()).max(0.0),
-                paint_ctx.size().height + (font_size * 1.2) / 2.,
-            ),
-        ));
-
-        //Make sure we don't draw the text too low
-        origin.y = origin.y.min(paint_ctx.size().height);
-
+        let origin = Point::new(LABEL_X_PADDING, line_height * BASELINE_GUESS_FACTOR);
         let color = self.color.resolve(env);
 
         paint_ctx.draw_text(&text_layout, origin, &color);

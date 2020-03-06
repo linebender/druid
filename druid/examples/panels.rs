@@ -33,12 +33,14 @@ fn build_app() -> impl Widget<()> {
             Flex::row()
                 .with_child(
                     Label::new("top left")
+                        .center()
                         .border(gradient.clone(), 4.0)
                         .padding(10.0),
                     1.0,
                 )
                 .with_child(
                     Label::new("top right")
+                        .center()
                         .background(solid.clone())
                         .padding(10.0),
                     1.0,
@@ -49,6 +51,7 @@ fn build_app() -> impl Widget<()> {
             Flex::row()
                 .with_child(
                     Label::new("bottom left")
+                        .center()
                         .background(gradient.clone())
                         .rounded(10.0)
                         .padding(10.0),
@@ -56,6 +59,7 @@ fn build_app() -> impl Widget<()> {
                 )
                 .with_child(
                     Label::new("bottom right")
+                        .center()
                         .border(solid.clone(), 4.0)
                         .rounded(10.0)
                         .padding(10.0),
