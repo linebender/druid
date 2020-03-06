@@ -16,19 +16,21 @@
 
 use crate::kurbo::{Point, RoundedRect, Size};
 use crate::theme;
-use crate::widget::Align;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
     PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
 };
 
 /// A progress bar, displaying a numeric progress value.
+///
+/// This type impls `Widget<f64>`, expecting a float in the range `0.0..1.0`.
 #[derive(Debug, Clone, Default)]
-pub struct ProgressBar {}
+pub struct ProgressBar;
 
 impl ProgressBar {
-    pub fn new() -> impl Widget<f64> {
-        Align::vertical(UnitPoint::CENTER, Self::default())
+    /// Return a new `ProgressBar`.
+    pub fn new() -> ProgressBar {
+        Self::default()
     }
 }
 
