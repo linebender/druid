@@ -37,7 +37,7 @@ impl<T: Data> Button<T> {
         action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
     ) -> Button<T> {
         Button {
-            label: Label::new(text).text_align(UnitPoint::CENTER),
+            label: Label::new(text),
             action: Box::new(action),
         }
     }
