@@ -52,9 +52,9 @@ fn build_widget() -> impl Widget<DemoState> {
     label_row.add_child(Padding::new(5.0, label), 0.0);
 
     col.add_child(Padding::new(5.0, row), 1.0);
-    col.add_child(Padding::new(5.0, textbox_row), 1.0);
+    col.add_child(Padding::new(5.0, textbox_row), 0.0);
     col.add_child(Padding::new(5.0, label_row), 1.0);
-    col
+    col.debug_paint_layout()
 }
 
 fn main() {
