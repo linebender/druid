@@ -35,9 +35,6 @@ pub struct Application;
 
 impl Application {
     pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
-        gtk::init().expect("GTK initialization failed");
-        util::assert_main_thread();
-
         // TODO: we should give control over the application ID to the user
         let application = GtkApplication::new(
             Some("com.github.xi-editor.druid"),
