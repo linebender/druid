@@ -14,7 +14,6 @@ edition = "2018"
 default-target = "x86_64-pc-windows-msvc"
 
 [features]
-use_gtk = ["druid-shell/use_gtk"]
 x11 = ["druid-shell/x11"]
 svg = ["usvg"]
 
