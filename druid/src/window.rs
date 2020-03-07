@@ -126,7 +126,7 @@ impl<T: Data> Window<T> {
         };
 
         if let Event::WindowConnected = event {
-            self.lifecycle(queue, &LifeCycle::WidgetAdded, data, env);
+            self.lifecycle(queue, &LifeCycle::RouteWidgetAdded, data, env);
         }
 
         let mut base_state = BaseState::new(self.root.id());
@@ -160,9 +160,9 @@ impl<T: Data> Window<T> {
         }
 
         // If children are changed during the handling of an event,
-        // we need to send WidgetAdded now, so that they are ready for update/layout.
+        // we need to send RouteWidgetAdded now, so that they are ready for update/layout.
         if base_state.children_changed {
-            self.lifecycle(queue, &LifeCycle::WidgetAdded, data, env);
+            self.lifecycle(queue, &LifeCycle::RouteWidgetAdded, data, env);
         }
 
         is_handled
@@ -226,7 +226,7 @@ impl<T: Data> Window<T> {
         env: &Env,
     ) {
         if self.root.state().children_changed {
-            self.lifecycle(queue, &LifeCycle::WidgetAdded, data, env);
+            self.lifecycle(queue, &LifeCycle::RouteWidgetAdded, data, env);
         }
         if self.root.state().needs_inval {
             self.handle.invalidate();

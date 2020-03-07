@@ -160,6 +160,8 @@ pub enum LifeCycle {
     /// [`WidgetPod`]: struct.WidgetPod.html
     /// [`LifeCycleCtx::register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
     WidgetAdded,
+    /// Used internally by the framework to route WidgetAdded to the required widgets.
+    RouteWidgetAdded,
     /// Called at the beginning of a new animation frame.
     ///
     /// On the first frame when transitioning from idle to animating, `interval`

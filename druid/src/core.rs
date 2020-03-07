@@ -350,7 +350,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         if self.old_data.is_none() {
             log::error!(
                 "widget {:?} is receiving an event without having first \
-                 recieved WidgetAdded.",
+                 received WidgetAdded.",
                 ctx.widget_id()
             );
         }
@@ -473,17 +473,29 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 r
             }
             LifeCycle::WidgetAdded => {
-                // if this is called, it means widgets were added. That might be
-                // be us; if we don't have old_data we set it now.
+                assert!(self.old_data.is_none());
+
+                self.old_data = Some(data.clone());
+                self.env = Some(env.clone());
+
+                true
+            }
+            LifeCycle::RouteWidgetAdded => {
+                // if this is called either we were just created, in
+                // which case we need to change lifecycle event to
+                // WidgetAdded or in case we were already created
+                // we just pass this event down
                 if self.old_data.is_none() {
-                    self.old_data = Some(data.clone());
-                    self.env = Some(env.clone());
+                    self.lifecycle(ctx, &LifeCycle::WidgetAdded, data, env);
+                    return;
+                } else {
+                    if self.state.children_changed {
+                        self.state.children.clear();
+                        self.state.focus_chain.clear();
+                    }
+
+                    self.state.children_changed
                 }
-                if self.state.children_changed {
-                    self.state.children.clear();
-                    self.state.focus_chain.clear();
-                }
-                self.state.children_changed
             }
             LifeCycle::HotChanged(_) => false,
             LifeCycle::RouteFocusChanged { old, new } => {
@@ -539,12 +551,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         ctx.base_state.merge_up(&self.state);
 
-        // we only want to update child state after this specific event.
-        if let LifeCycle::WidgetAdded = event {
-            self.state.children_changed = false;
-            ctx.base_state.children = ctx.base_state.children.union(self.state.children);
-            ctx.base_state.focus_chain.extend(&self.state.focus_chain);
-            ctx.register_child(self.id());
+        // we need to (re)register children in case of one of the following events
+        match event {
+            LifeCycle::WidgetAdded | LifeCycle::RouteWidgetAdded => {
+                self.state.children_changed = false;
+                ctx.base_state.children = ctx.base_state.children.union(self.state.children);
+                ctx.base_state.focus_chain.extend(&self.state.focus_chain);
+                ctx.register_child(self.id());
+            }
+            _ => (),
         }
     }
 
