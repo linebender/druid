@@ -585,12 +585,12 @@ impl<T: Data> AppState<T> {
     }
 
     fn hide_app(&self) {
-        #[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
+        #[cfg(target_os = "macos")]
         Application::hide()
     }
 
     fn hide_others(&mut self) {
-        #[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
+        #[cfg(target_os = "macos")]
         Application::hide_others()
     }
 }
