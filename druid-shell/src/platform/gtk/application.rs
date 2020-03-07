@@ -83,7 +83,7 @@ impl Application {
                 }
                 Some(_) => {
                     // we still have an active window, close the run loop
-                    gtk::main_quit();
+                    app.quit();
                 }
             }
         });
