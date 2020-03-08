@@ -23,7 +23,6 @@ pub mod clipboard;
 pub mod error;
 pub mod keycodes;
 pub mod menu;
-pub mod runloop;
 pub mod window;
 
 mod util;
