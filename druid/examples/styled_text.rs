@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Example of dynamic text styling
+
 use druid::widget::{Alignment, Flex, Label, Parse, Stepper, TextBox, WidgetExt};
 use druid::{
-    theme, AppLauncher, Data, Lens, LensExt, LensWrap, LocalizedString, PlatformError, Widget,
+    theme, AppLauncher, Data, Key, Lens, LensExt, LensWrap, LocalizedString, PlatformError, Widget,
     WindowDesc,
 };
+
+// This is a custom key we'll use with Env to set and get our text size.
+const MY_CUSTOM_TEXT_SIZE: Key<f64> = Key::new("styled_text.custom_text_size");
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
@@ -46,14 +51,16 @@ fn ui_builder() -> impl Widget<AppData> {
         Label::new(|data: &String, _env: &_| format!("Default: {}", data)).lens(AppData::text);
 
     // The text_color and text_size builder methods can override the defaults
-    // with either a theme key (like we're doing here), or a concrete value
-    // (Color and f64, respectively).
+    // provided by the theme by passing in a Key or a concrete value.
+    //
+    // In this example, text_color receives a Key from the theme, while
+    // text_size gets a custom key which we set with the env_scope wrapper.
     let styled_label =
         Label::new(|data: &AppData, _env: &_| format!("Size {:.1}: {}", data.size, data.text))
             .text_color(theme::PRIMARY_LIGHT)
-            .text_size(theme::TEXT_SIZE_LARGE)
+            .text_size(MY_CUSTOM_TEXT_SIZE)
             .env_scope(|env: &mut druid::Env, data: &AppData| {
-                env.set(theme::TEXT_SIZE_LARGE, data.size)
+                env.set(MY_CUSTOM_TEXT_SIZE, data.size)
             });
 
     let stepper = Stepper::new()
