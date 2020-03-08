@@ -22,6 +22,7 @@ use syn::{Error, ExprPath, Meta, NestedMeta};
 const BASE_ATTR_PATH: &str = "druid";
 const IGNORE_ATTR_PATH: &str = "ignore";
 const SAME_FN_ATTR_PATH: &str = "same_fn";
+const LENS_NAME_OVERRIDE_ATTR_PATH: &str = "lens_name";
 
 /// The fields for a struct or an enum variant.
 #[derive(Debug)]
@@ -30,7 +31,7 @@ pub struct Fields {
     fields: Vec<Field>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldKind {
     Named,
     // this also covers Unit; we determine 'unit-ness' based on the number
@@ -44,12 +45,25 @@ pub enum FieldIdent {
     Unnamed(usize),
 }
 
+impl FieldIdent {
+    pub fn unwrap_named(&self) -> syn::Ident {
+        if let FieldIdent::Named(s) = self {
+            syn::Ident::new(&s, Span::call_site())
+        } else {
+            panic!("Unwrap named called on unnamed FieldIdent");
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Field {
     pub ident: FieldIdent,
+    pub ty: syn::Type,
+
     /// `true` if this field should be ignored.
     pub ignore: bool,
     pub same_fn: Option<ExprPath>,
+    pub lens_name_override: Option<Ident>,
     //TODO: more attrs here
 }
 
@@ -85,8 +99,11 @@ impl Field {
             None => FieldIdent::Unnamed(index),
         };
 
+        let ty = field.ty.clone();
+
         let mut ignore = false;
         let mut same_fn = None;
+        let mut lens_name_override = None;
 
         for attr in field
             .attrs
@@ -115,6 +132,16 @@ impl Field {
                                 let path = parse_lit_into_expr_path(&meta.lit)?;
                                 same_fn = Some(path);
                             }
+                            NestedMeta::Meta(Meta::NameValue(meta))
+                                if meta.path.is_ident(LENS_NAME_OVERRIDE_ATTR_PATH) =>
+                            {
+                                if lens_name_override.is_some() {
+                                    return Err(Error::new(meta.span(), "Duplicate attribute"));
+                                }
+
+                                let ident = parse_lit_into_ident(&meta.lit)?;
+                                lens_name_override = Some(ident);
+                            }
                             other => return Err(Error::new(other.span(), "Unknown attribute")),
                         }
                     }
@@ -129,8 +156,10 @@ impl Field {
         }
         Ok(Field {
             ident,
+            ty,
             ignore,
             same_fn,
+            lens_name_override,
         })
     }
 
@@ -172,4 +201,17 @@ fn parse_lit_into_expr_path(lit: &syn::Lit) -> Result<ExprPath, Error> {
 
     let tokens = syn::parse_str(&string.value())?;
     syn::parse2(tokens)
+}
+
+fn parse_lit_into_ident(lit: &syn::Lit) -> Result<Ident, Error> {
+    let ident = if let syn::Lit::Str(lit) = lit {
+        Ident::new(&lit.value(), lit.span())
+    } else {
+        return Err(Error::new(
+            lit.span(),
+            "expected str, found... something else",
+        ));
+    };
+
+    Ok(ident)
 }
