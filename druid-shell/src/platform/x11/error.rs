@@ -23,8 +23,9 @@ pub enum Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, _f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         // TODO(x11/errors): implement Error::fmt
-        unimplemented!();
+        log::warn!("Error::fmt is currently unimplemented for X11 platforms.");
+        write!(f, "X11 Error")
     }
 }

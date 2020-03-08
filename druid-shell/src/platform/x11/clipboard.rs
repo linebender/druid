@@ -22,31 +22,35 @@ pub struct Clipboard;
 impl Clipboard {
     pub fn put_string(&mut self, _s: impl AsRef<str>) {
         // TODO(x11/clipboard): implement Clipboard::put_string
-        unimplemented!();
+        log::warn!("Clipboard::put_string is currently unimplemented for X11 platforms.");
     }
 
     pub fn put_formats(&mut self, _formats: &[ClipboardFormat]) {
         // TODO(x11/clipboard): implement Clipboard::put_formats
-        unimplemented!();
+        log::warn!("Clipboard::put_formats is currently unimplemented for X11 platforms.");
     }
 
     pub fn get_string(&self) -> Option<String> {
         // TODO(x11/clipboard): implement Clipboard::get_string
-        unimplemented!();
+        log::warn!("Clipboard::set_string is currently unimplemented for X11 platforms.");
+        None
     }
 
     pub fn preferred_format(&self, _formats: &[FormatId]) -> Option<FormatId> {
         // TODO(x11/clipboard): implement Clipboard::preferred_format
-        unimplemented!();
+        log::warn!("Clipboard::preferred_format is currently unimplemented for X11 platforms.");
+        None
     }
 
     pub fn get_format(&self, _format: FormatId) -> Option<Vec<u8>> {
         // TODO(x11/clipboard): implement Clipboard::get_format
-        unimplemented!();
+        log::warn!("Clipboard::get_format is currently unimplemented for X11 platforms.");
+        None
     }
 
     pub fn available_type_names(&self) -> Vec<String> {
         // TODO(x11/clipboard): implement Clipboard::available_type_names
-        unimplemented!();
+        log::warn!("Clipboard::available_type_names is currently unimplemented for X11 platforms.");
+        vec![]
     }
 }

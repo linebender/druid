@@ -56,11 +56,11 @@ impl WindowBuilder {
     }
 
     pub fn resizable(&mut self, _resizable: bool) {
-        log::warn!("WindowBuilder::resizable not implemented for x11")
+        log::warn!("WindowBuilder::resizable is currently unimplemented for X11 platforms.");
     }
 
     pub fn show_titlebar(&mut self, _show_titlebar: bool) {
-        log::warn!("WindowBuilder::show_titlebar not implemented for x11")
+        log::warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -265,12 +265,12 @@ impl IdleHandle {
         F: FnOnce(&dyn Any) + Send + 'static,
     {
         // TODO(x11/idle_handles): implement IdleHandle::add_idle_callback
-        unimplemented!();
+        log::warn!("IdleHandle::add_idle_callback is currently unimplemented for X11 platforms.");
     }
 
     pub fn add_idle_token(&self, _token: IdleToken) {
         // TODO(x11/idle_handles): implement IdleHandle::add_idle_token
-        unimplemented!();
+        log::warn!("IdleHandle::add_idle_token is currently unimplemented for X11 platforms.");
     }
 }
 
@@ -298,12 +298,12 @@ impl WindowHandle {
 
     /// Set whether the window should be resizable
     pub fn resizable(&self, _resizable: bool) {
-        log::warn!("resizeable not implementd on x11");
+        log::warn!("WindowHandle::resizeable is currently unimplemented for X11 platforms.");
     }
 
     /// Set whether the window should show titlebar
     pub fn show_titlebar(&self, _show_titlebar: bool) {
-        log::warn!("show_titlebar not implementd on x11");
+        log::warn!("WindowHandle::show_titlebar is currently unimplemented for X11 platforms.");
     }
 
     /// Bring this window to the front of the window stack and give it focus.
@@ -353,37 +353,42 @@ impl WindowHandle {
         // TODO(x11/timers): implement WindowHandle::request_timer
         //     This one might be tricky, since there's not really any timers to hook into in X11.
         //     Might have to code up our own Timer struct, running in its own thread?
-        unimplemented!();
+        log::warn!("WindowHandle::resizeable is currently unimplemented for X11 platforms.");
+        TimerToken::INVALID
     }
 
     pub fn set_cursor(&mut self, _cursor: &Cursor) {
         // TODO(x11/cursors): implement WindowHandle::set_cursor
-        unimplemented!();
+        log::warn!("WindowHandle::set_cursor is currently unimplemented for X11 platforms.");
     }
 
     pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
         // TODO(x11/file_dialogs): implement WindowHandle::open_file_sync
-        unimplemented!();
+        log::warn!("WindowHandle::open_file_sync is currently unimplemented for X11 platforms.");
+        None
     }
 
     pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
         // TODO(x11/file_dialogs): implement WindowHandle::save_as_sync
-        unimplemented!();
+        log::warn!("WindowHandle::save_as_sync is currently unimplemented for X11 platforms.");
+        None
     }
 
     pub fn show_context_menu(&self, _menu: Menu, _pos: Point) {
         // TODO(x11/menus): implement WindowHandle::show_context_menu
-        unimplemented!();
+        log::warn!("WindowHandle::show_context_menu is currently unimplemented for X11 platforms.");
     }
 
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
         // TODO(x11/idle_handles): implement WindowHandle::get_idle_handle
-        unimplemented!();
+        log::warn!("WindowHandle::get_idle_handle is currently unimplemented for X11 platforms.");
+        None
     }
 
     pub fn get_dpi(&self) -> f32 {
         // TODO(x11/dpi_scaling): figure out DPI scaling
-        unimplemented!();
+        log::warn!("WindowHandle::get_dpi is currently unimplemented for X11 platforms.");
+        96.0
     }
 }
 

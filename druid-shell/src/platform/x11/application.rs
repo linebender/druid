@@ -123,11 +123,13 @@ impl Application {
 
     pub fn clipboard() -> Clipboard {
         // TODO(x11/clipboard): implement Application::clipboard
-        unimplemented!();
+        log::warn!("Application::clipboard is currently unimplemented for X11 platforms.");
+        Clipboard {}
     }
 
     pub fn get_locale() -> String {
         // TODO(x11/locales): implement Application::get_locale
+        log::warn!("Application::get_locale is currently unimplemented for X11 platforms. (defaulting to en-US)");
         "en-US".into()
     }
 }
