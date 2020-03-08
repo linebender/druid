@@ -94,15 +94,6 @@ impl<T: Data> Label<T> {
         self
     }
 
-    /// Set the text color.
-    ///
-    /// The argument can be either a `Color` or a [`Key<Color>`].
-    ///
-    /// [`Key<Color>`]: struct.Key.html
-    pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
-        self.color = color.into();
-    }
-
     /// Builder-style method for setting the text size.
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
@@ -111,6 +102,15 @@ impl<T: Data> Label<T> {
     pub fn text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
         self.size = size.into();
         self
+    }
+
+    /// Set the text color.
+    ///
+    /// The argument can be either a `Color` or a [`Key<Color>`].
+    ///
+    /// [`Key<Color>`]: struct.Key.html
+    pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
+        self.color = color.into();
     }
 
     /// Set the text size.
