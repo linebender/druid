@@ -146,7 +146,7 @@ impl WindowBuilder {
 }
 
 // X11-specific event handling and window drawing (etc.)
-pub struct XWindow {
+pub(crate) struct XWindow {
     window_id: u32,
     handler: Box<dyn WinHandler>,
     cairo_context: cairo::Context,
