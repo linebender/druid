@@ -197,22 +197,22 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --features=use_x11 -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --features=x11 -- -D warnings
 
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-shell/Cargo.toml --features=use_x11
+          args: --manifest-path=druid-shell/Cargo.toml --features=x11
 
       - name: cargo test druid
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --features=use_x11
+          args: --manifest-path=druid/Cargo.toml --features=x11
 
       - name: Run rustc -d warnings in druid/druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: rustc
-          args: --manifest-path=druid-shell/Cargo.toml  --features=use_x11 -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml  --features=x11 -- -D warnings

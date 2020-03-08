@@ -36,7 +36,7 @@ extern crate objc;
 #[macro_use]
 extern crate lazy_static;
 
-#[cfg(all(target_os = "linux", feature = "use_x11"))]
+#[cfg(all(target_os = "linux", feature = "x11"))]
 #[macro_use]
 extern crate lazy_static;
 
