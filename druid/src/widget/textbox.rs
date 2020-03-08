@@ -18,7 +18,7 @@ use std::time::{Duration, Instant};
 
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
-    LifeCycle, LifeCycleCtx, PaintCtx, RawMods, Selector, SysMods, TimerToken, UpdateCtx, Widget,
+    LifeCycle, LifeCycleCtx, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
@@ -278,11 +278,11 @@ impl Widget<String> for TextBox {
                         self.reset_cursor_blink(ctx);
                     }
                     // Select left (Shift+ArrowLeft)
-                    k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowLeft)).matches(k_e) => {
+                    k_e if (HotKey::new(SysMods::Shift, KeyCode::ArrowLeft)).matches(k_e) => {
                         self.move_selection(Movement::Left, data, true);
                     }
                     // Select right (Shift+ArrowRight)
-                    k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowRight)).matches(k_e) => {
+                    k_e if (HotKey::new(SysMods::Shift, KeyCode::ArrowRight)).matches(k_e) => {
                         self.move_selection(Movement::Right, data, true);
                     }
                     // Move left (ArrowLeft)
@@ -315,7 +315,7 @@ impl Widget<String> for TextBox {
                     }
                     // Tab and shift+tab
                     k_e if HotKey::new(None, KeyCode::Tab).matches(k_e) => ctx.focus_next(),
-                    k_e if HotKey::new(RawMods::Shift, KeyCode::Tab).matches(k_e) => {
+                    k_e if HotKey::new(SysMods::Shift, KeyCode::Tab).matches(k_e) => {
                         ctx.focus_prev()
                     }
                     // Actual typing
