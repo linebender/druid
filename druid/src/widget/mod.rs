@@ -66,7 +66,7 @@ pub use radio::{Radio, RadioGroup};
 pub use scroll::Scroll;
 pub use sized_box::SizedBox;
 pub use slider::Slider;
-pub use split::{Split, SplitConstraints};
+pub use split::Split;
 pub use stepper::Stepper;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]

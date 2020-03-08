@@ -21,28 +21,11 @@ use crate::{
     PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
 };
 
-pub struct SplitConstraints {
-    min_size: f64,
-}
-
-impl Default for SplitConstraints {
-    fn default() -> Self {
-        Self { min_size: 0.0 }
-    }
-}
-
-impl SplitConstraints {
-    pub fn with_min_size(min_size: f64) -> Self {
-        Self { min_size }
-    }
-}
-
 ///A container containing two other widgets, splitting the area either horizontally or vertically.
 pub struct Split<T> {
     split_direction: Axis,
     draggable: bool,
-    constraints_left: SplitConstraints,
-    constraints_right: SplitConstraints,
+    min_size: f64,
     split_point: f64,
     splitter_size: f64,
     child1: WidgetPod<T, Box<dyn Widget<T>>>,
@@ -58,8 +41,7 @@ impl<T> Split<T> {
     ) -> Self {
         Split {
             split_direction,
-            constraints_left: SplitConstraints::default(),
-            constraints_right: SplitConstraints::default(),
+            min_size: 0.0,
             split_point: 0.5,
             splitter_size: 10.0,
             draggable: false,
@@ -85,10 +67,11 @@ impl<T> Split<T> {
         self.split_point = split_point;
         self
     }
-    pub fn split_constraints(mut self, left: SplitConstraints, right: SplitConstraints) -> Self {
-        // TODO add checks
-        self.constraints_left = left;
-        self.constraints_right = right;
+    /// Set the minimum size for both sides of the split
+    /// The value must be atleast 0.0
+    pub fn min_size(mut self, min_size: f64) -> Self {
+        assert!(min_size >= 0.0);
+        self.min_size = min_size;
 
         self
     }
@@ -126,12 +109,11 @@ impl<T> Split<T> {
         };
 
         let min_offset = (self.splitter_size * 0.5).min(5.0);
-        let mut min_limit = self.constraints_left.min_size.max(min_offset);
-        let mut max_limit =
-            size_in_split_direction - self.constraints_right.min_size.max(min_offset);
+        let mut min_limit = self.min_size.max(min_offset);
+        let mut max_limit = (size_in_split_direction - self.min_size.max(min_offset)).max(0.0);
 
         if min_limit > max_limit {
-            min_limit = (min_limit + max_limit) / 2.0;
+            min_limit = 0.5 * (min_limit + max_limit);
             max_limit = min_limit;
         }
 
@@ -297,16 +279,28 @@ impl<T: Data> Widget<T> for Split<T> {
         // Update our splits to hold our constraints if needed
         let (min_limit, max_limit) = self.calculate_limits(my_size);
         self.split_point = match self.split_direction {
-            Axis::Vertical => clamp(
-                self.split_point,
-                min_limit / my_size.width,
-                max_limit / my_size.width,
-            ),
-            Axis::Horizontal => clamp(
-                self.split_point,
-                min_limit / my_size.height,
-                max_limit / my_size.height,
-            ),
+            Axis::Vertical => {
+                if my_size.width <= std::f64::EPSILON {
+                    0.5
+                } else {
+                    clamp(
+                        self.split_point,
+                        min_limit / my_size.width,
+                        max_limit / my_size.width,
+                    )
+                }
+            }
+            Axis::Horizontal => {
+                if my_size.height <= std::f64::EPSILON {
+                    0.5
+                } else {
+                    clamp(
+                        self.split_point,
+                        min_limit / my_size.height,
+                        max_limit / my_size.height,
+                    )
+                }
+            }
         };
 
         my_size

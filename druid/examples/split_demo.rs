@@ -15,7 +15,7 @@
 //! This example demonstrates the `Split` widget
 
 use druid::piet::Color;
-use druid::widget::{Align, Container, Label, Padding, Split, SplitConstraints};
+use druid::widget::{Align, Container, Label, Padding, Split};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
@@ -47,22 +47,11 @@ fn build_app() -> impl Widget<u32> {
         Container::new(
             Split::vertical(
                 Align::centered(Label::new("Split A")),
-                Split::vertical(
-                    Align::centered(Label::new("Split B")),
-                    Align::centered(Label::new("Split C")),
-                )
-                .draggable(true)
-                .split_constraints(
-                    SplitConstraints::with_min_size(50.0),
-                    SplitConstraints::with_min_size(50.0),
-                ),
+                Align::centered(Label::new("Split B")),
             )
-            .split_point(0.33)
+            .split_point(0.5)
             .draggable(true)
-            .split_constraints(
-                SplitConstraints::with_min_size(50.0),
-                SplitConstraints::with_min_size(100.0),
-            ),
+            .min_size(60.0),
         )
         .border(Color::WHITE, 1.0),
     );
