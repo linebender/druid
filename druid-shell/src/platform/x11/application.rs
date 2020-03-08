@@ -72,7 +72,9 @@ impl Application {
                         let window_id = expose.window();
                         WINDOW_MAP.with(|map| {
                             let mut windows = map.borrow_mut();
-                            windows.get_mut(&window_id).map(|w| w.render());
+                            if let Some(w) = windows.get_mut(&window_id) {
+                                w.render();
+                            }
                         })
                     }
                     xcb::KEY_PRESS => {
@@ -84,7 +86,9 @@ impl Application {
                         println!("window_id {}", window_id);
                         WINDOW_MAP.with(|map| {
                             let mut windows = map.borrow_mut();
-                            windows.get_mut(&window_id).map(|w| w.key_down(key_code));
+                            if let Some(w) = windows.get_mut(&window_id) {
+                                w.key_down(key_code);
+                            }
                         })
                     }
                     xcb::BUTTON_PRESS => {
@@ -106,9 +110,9 @@ impl Application {
                         };
                         WINDOW_MAP.with(|map| {
                             let mut windows = map.borrow_mut();
-                            windows
-                                .get_mut(&window_id)
-                                .map(|w| w.mouse_down(&mouse_event));
+                            if let Some(w) = windows.get_mut(&window_id) {
+                                w.mouse_down(&mouse_event);
+                            }
                         })
                     }
                     _ => {}
