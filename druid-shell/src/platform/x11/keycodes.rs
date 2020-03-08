@@ -326,10 +326,9 @@ impl From<KeyCode> for u32 {
             KeyCode::ArrowDown => Down,
             KeyCode::ArrowLeft => Left,
             KeyCode::ArrowRight => Right,
-            KeyCode::Unknown(_) => unreachable!(
-                "Unreachable: converting unknown KeyCode {:?} to a keyval",
-                src
-            ),
+
+            // We don't know what this keycode is, so just return it directly.
+            KeyCode::Unknown(unknown_keycode) => unknown_keycode,
         }
     }
 }
