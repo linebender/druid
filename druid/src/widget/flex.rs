@@ -84,6 +84,19 @@ impl Axis {
             Axis::Vertical => (minor, major),
         }
     }
+
+    fn constraints(&self, bc: &BoxConstraints, min_major: f64, major: f64) -> BoxConstraints {
+        match self {
+            Axis::Horizontal => BoxConstraints::new(
+                Size::new(min_major, bc.min().height),
+                Size::new(major, bc.max().height),
+            ),
+            Axis::Vertical => BoxConstraints::new(
+                Size::new(bc.min().width, min_major),
+                Size::new(bc.max().width, major),
+            ),
+        }
+    }
 }
 
 impl<T> Flex<T> {
@@ -186,16 +199,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         let mut minor = self.direction.minor(bc.min());
         for child in &mut self.children {
             if child.params.flex == 0.0 {
-                let child_bc = match self.direction {
-                    Axis::Horizontal => BoxConstraints::new(
-                        Size::new(0.0, bc.min().height),
-                        Size::new(std::f64::INFINITY, bc.max().height),
-                    ),
-                    Axis::Vertical => BoxConstraints::new(
-                        Size::new(bc.min().width, 0.0),
-                        Size::new(bc.max().width, std::f64::INFINITY),
-                    ),
-                };
+                let child_bc = self.direction.constraints(bc, 0.0, std::f64::INFINITY);
                 let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
                 minor = minor.max(self.direction.minor(child_size));
                 total_non_flex += self.direction.major(child_size);
@@ -215,17 +219,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 let major = remaining * child.params.flex / flex_sum;
 
                 let min_major = if major.is_infinite() { 0.0 } else { major };
-
-                let child_bc = match self.direction {
-                    Axis::Horizontal => BoxConstraints::new(
-                        Size::new(min_major, bc.min().height),
-                        Size::new(major, bc.max().height),
-                    ),
-                    Axis::Vertical => BoxConstraints::new(
-                        Size::new(bc.min().width, min_major),
-                        Size::new(bc.max().width, major),
-                    ),
-                };
+                let child_bc = self.direction.constraints(bc, min_major, major);
                 let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
                 minor = minor.max(self.direction.minor(child_size));
                 // Stash size.
