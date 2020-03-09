@@ -27,6 +27,7 @@ pub struct Flex<T> {
     direction: Axis,
     cross_alignment: CrossAxisAlignment,
     main_alignment: MainAxisAlignment,
+    fill_major_axis: bool,
     children: Vec<ChildWidget<T>>,
 }
 
@@ -114,6 +115,7 @@ impl Axis {
         }
     }
 
+    /// Generate constraints with new values on the major axis.
     fn constraints(&self, bc: &BoxConstraints, min_major: f64, major: f64) -> BoxConstraints {
         match self {
             Axis::Horizontal => BoxConstraints::new(
@@ -138,6 +140,7 @@ impl<T: Data> Flex<T> {
             children: Vec::new(),
             cross_alignment: CrossAxisAlignment::Start,
             main_alignment: MainAxisAlignment::Start,
+            fill_major_axis: false,
         }
     }
 
@@ -150,6 +153,7 @@ impl<T: Data> Flex<T> {
             children: Vec::new(),
             cross_alignment: CrossAxisAlignment::Start,
             main_alignment: MainAxisAlignment::Start,
+            fill_major_axis: false,
         }
     }
 
@@ -166,6 +170,25 @@ impl<T: Data> Flex<T> {
     /// [`MainAxisAlignment`]: enum.MainAxisAlignment.html
     pub fn main_axis_alignment(mut self, alignment: MainAxisAlignment) -> Self {
         self.main_alignment = alignment;
+        self
+    }
+
+    /// Builder-style method for setting whether the container must expand
+    /// to fill the available space on its main axis.
+    ///
+    /// If any children have flex then this container will expand to fill all
+    /// available space on its main axis; But if no children are flex,
+    /// this flag determines whether or not the container should shrink to fit,
+    /// or must expand to fill.
+    ///
+    /// If it expands, and there is extra space left over, that space is
+    /// distributed in accordance with the [`MainAxisAlignment`].
+    ///
+    /// The default value is `false`.
+    ///
+    /// [`MainAxisAlignment`]: enum.MainAxisAlignment.html
+    pub fn must_fill_main_axis(mut self, fill: bool) -> Self {
+        self.fill_major_axis = fill;
         self
     }
 
@@ -205,6 +228,12 @@ impl<T: Data> Flex<T> {
     /// [`MainAxisAlignment`]: enum.MainAxisAlignment.html
     pub fn set_main_axis_alignment(&mut self, alignment: MainAxisAlignment) {
         self.main_alignment = alignment;
+    }
+
+    /// Set whether the container must expand to fill the available space on
+    /// its main axis.
+    pub fn set_must_fill_main_axis(&mut self, fill: bool) {
+        self.fill_major_axis = fill;
     }
 
     /// Add a child widget.
@@ -315,10 +344,15 @@ impl<T: Data> Widget<T> for Flex<T> {
         }
 
         // figure out if we have extra space on major axis, and if so how to use it
-        let major_used = total_non_flex + flex_used;
-        let extra = (self.direction.major(bc.min()) - major_used).max(0.0);
-        let spacing = self.main_alignment.spacing(extra, self.children.len());
+        let extra = if self.fill_major_axis {
+            (remaining - flex_used).max(0.0)
+        } else {
+            // if we are *not* expected to fill our available space this usually
+            // means we don't have any extra, unless dictated by our constraints.
+            (self.direction.major(bc.min()) - (total_non_flex + flex_used)).max(0.0)
+        };
 
+        let spacing = self.main_alignment.spacing(extra, self.children.len());
         // Finalize layout, assigning positions to each child.
         let mut major = spacing.pre;
         let mut child_paint_rect = Rect::ZERO;
@@ -345,7 +379,17 @@ impl<T: Data> Widget<T> for Flex<T> {
         }
 
         let my_size: Size = self.direction.pack(major, minor).into();
-        let my_size = bc.constrain(my_size);
+
+        // if we don't have to fill the main axis, we loosen that axis before constraining
+        let my_size = if !self.fill_major_axis {
+            let max_major = self.direction.major(bc.max());
+            self.direction
+                .constraints(bc, 0.0, max_major)
+                .constrain(my_size)
+        } else {
+            bc.constrain(my_size)
+        };
+
         let my_bounds = Rect::ZERO.with_size(my_size);
         let insets = child_paint_rect - my_bounds;
         layout_ctx.set_paint_insets(insets);
