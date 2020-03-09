@@ -230,7 +230,7 @@ Since druid is currently in fast-evolving state, you might prefer to drink from
 the firehose:
 
 ```toml
-druid = { git = "https://github.com/xi-editor/druid.git", version = "0.4" }
+druid = { git = "https://github.com/xi-editor/druid.git", version = "0.5" }
 ```
 
 ### Platform notes
