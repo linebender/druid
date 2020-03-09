@@ -28,8 +28,8 @@ use crate::piet::{
 use crate::theme;
 
 use crate::text::{
-    movement, offset_for_delete_backwards, BufferEvent, EditableText, EventDomain, Movement,
-    Selection, SingleLineTextInput, TextInput, ViewEvent,
+    movement, offset_for_delete_backwards, EditAction, EditableText, Movement, Selection,
+    SingleLineTextInput, TextInput,
 };
 
 const BORDER_WIDTH: f64 = 1.;
@@ -120,18 +120,14 @@ impl TextBox {
         self.selection.end
     }
 
-    fn do_edit_action(&mut self, edit_action: EventDomain, text: &mut String) {
+    fn do_edit_action(&mut self, edit_action: EditAction, text: &mut String) {
         match edit_action {
-            EventDomain::Buffer(BufferEvent::Insert(chars)) => self.insert(text, &chars),
-            EventDomain::Buffer(BufferEvent::Backspace) => self.delete_backward(text),
-            EventDomain::Buffer(BufferEvent::Delete) => self.delete_forward(text),
-            EventDomain::View(ViewEvent::Move(movement)) => {
-                self.move_selection(movement, text, false)
-            }
-            EventDomain::View(ViewEvent::ModifySelection(movement)) => {
-                self.move_selection(movement, text, true)
-            }
-            EventDomain::View(ViewEvent::SelectAll) => self.selection.all(text),
+            EditAction::Insert(chars) => self.insert(text, &chars),
+            EditAction::Backspace => self.delete_backward(text),
+            EditAction::Delete => self.delete_forward(text),
+            EditAction::Move(movement) => self.move_selection(movement, text, false),
+            EditAction::ModifySelection(movement) => self.move_selection(movement, text, true),
+            EditAction::SelectAll => self.selection.all(text),
         }
     }
 
