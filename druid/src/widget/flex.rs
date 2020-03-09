@@ -64,21 +64,21 @@ struct Params {
 }
 
 impl Axis {
-    fn major(&self, coords: Size) -> f64 {
+    pub(crate) fn major(&self, coords: Size) -> f64 {
         match *self {
             Axis::Horizontal => coords.width,
             Axis::Vertical => coords.height,
         }
     }
 
-    fn minor(&self, coords: Size) -> f64 {
+    pub(crate) fn minor(&self, coords: Size) -> f64 {
         match *self {
             Axis::Horizontal => coords.height,
             Axis::Vertical => coords.width,
         }
     }
 
-    fn pack(&self, major: f64, minor: f64) -> (f64, f64) {
+    pub(crate) fn pack(&self, major: f64, minor: f64) -> (f64, f64) {
         match *self {
             Axis::Horizontal => (major, minor),
             Axis::Vertical => (minor, major),

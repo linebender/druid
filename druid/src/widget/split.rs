@@ -68,7 +68,7 @@ impl<T> Split<T> {
         self
     }
     /// Set the minimum size for both sides of the split
-    /// The value must be atleast 0.0
+    /// The value must be greater than or equal to `0.0`.
     pub fn min_size(mut self, min_size: f64) -> Self {
         assert!(min_size >= 0.0);
         self.min_size = min_size;
@@ -103,14 +103,13 @@ impl<T> Split<T> {
         }
     }
     fn calculate_limits(&self, size: Size) -> (f64, f64) {
-        let size_in_split_direction = match self.split_direction {
-            Axis::Vertical => size.width,
-            Axis::Horizontal => size.height,
-        };
+        // Since the Axis::Direction tells us the direction of the splitter itself
+        // we need the minor axis to get the size of the 'splitted' direction
+        let size_in_splitted_direction = self.split_direction.minor(size);
 
         let min_offset = (self.splitter_size * 0.5).min(5.0);
         let mut min_limit = self.min_size.max(min_offset);
-        let mut max_limit = (size_in_split_direction - self.min_size.max(min_offset)).max(0.0);
+        let mut max_limit = (size_in_splitted_direction - self.min_size.max(min_offset)).max(0.0);
 
         if min_limit > max_limit {
             min_limit = 0.5 * (min_limit + max_limit);
