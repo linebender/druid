@@ -16,12 +16,12 @@
 
 use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{
-    FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
-    UnitPoint,
+    Color, FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout,
+    TextLayoutBuilder, UnitPoint,
 };
 use crate::theme;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle, LifeCycleCtx,
     LocalizedString, PaintCtx, UpdateCtx, Widget,
 };
 
@@ -47,6 +47,8 @@ pub struct Dynamic<T> {
 pub struct Label<T> {
     text: LabelText<T>,
     align: UnitPoint,
+    color: KeyOrValue<Color>,
+    size: KeyOrValue<f64>,
 }
 
 impl<T: Data> Label<T> {
@@ -71,6 +73,8 @@ impl<T: Data> Label<T> {
         Self {
             text,
             align: UnitPoint::LEFT,
+            color: theme::LABEL_COLOR.into(),
+            size: theme::TEXT_SIZE_NORMAL.into(),
         }
     }
 
@@ -80,9 +84,47 @@ impl<T: Data> Label<T> {
         self
     }
 
+    /// Builder-style method for setting the text color.
+    ///
+    /// The argument can be either a `Color` or a [`Key<Color>`].
+    ///
+    /// [`Key<Color>`]: struct.Key.html
+    pub fn text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
+        self.color = color.into();
+        self
+    }
+
+    /// Builder-style method for setting the text size.
+    ///
+    /// The argument can be either an `f64` or a [`Key<f64>`].
+    ///
+    /// [`Key<f64>`]: struct.Key.html
+    pub fn text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
+        self.size = size.into();
+        self
+    }
+
+    /// Set the text color.
+    ///
+    /// The argument can be either a `Color` or a [`Key<Color>`].
+    ///
+    /// [`Key<Color>`]: struct.Key.html
+    pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
+        self.color = color.into();
+    }
+
+    /// Set the text size.
+    ///
+    /// The argument can be either an `f64` or a [`Key<f64>`].
+    ///
+    /// [`Key<f64>`]: struct.Key.html
+    pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
+        self.size = size.into();
+    }
+
     fn get_layout(&mut self, t: &mut PietText, env: &Env) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let font_size = self.size.resolve(env);
 
         // TODO: caching of both the format and the layout
         let font = t.new_font_by_name(font_name, font_size).build().unwrap();
@@ -148,14 +190,14 @@ impl<T: Data> Widget<T> for Label<T> {
     ) -> Size {
         bc.debug_check("Label");
 
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let font_size = self.size.resolve(env);
         let text_layout = self.get_layout(layout_ctx.text(), env);
         // This magical 1.2 constant helps center the text vertically in the rect it's given
         bc.constrain(Size::new(text_layout.width(), font_size * 1.2))
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, env: &Env) {
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let font_size = self.size.resolve(env);
         let text_layout = self.get_layout(paint_ctx.text(), env);
 
         // Find the origin for the text
@@ -170,7 +212,9 @@ impl<T: Data> Widget<T> for Label<T> {
         //Make sure we don't draw the text too low
         origin.y = origin.y.min(paint_ctx.size().height);
 
-        paint_ctx.draw_text(&text_layout, origin, &env.get(theme::LABEL_COLOR));
+        let color = self.color.resolve(env);
+
+        paint_ctx.draw_text(&text_layout, origin, &color);
     }
 }
 
