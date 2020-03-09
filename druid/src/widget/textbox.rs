@@ -28,8 +28,8 @@ use crate::piet::{
 use crate::theme;
 
 use crate::text::{
-    movement, offset_for_delete_backwards, EditAction, EditableText, Movement, Selection,
-    SingleLineTextInput, TextInput,
+    movement, offset_for_delete_backwards, BufferEvent, EditableText, EventDomain, Movement,
+    Selection, SingleLineTextInput, TextInput, ViewEvent,
 };
 
 const BORDER_WIDTH: f64 = 1.;
@@ -120,26 +120,18 @@ impl TextBox {
         self.selection.end
     }
 
-    fn do_edit_action(&mut self, edit_action: EditAction, text: &mut String) {
+    fn do_edit_action(&mut self, edit_action: EventDomain, text: &mut String) {
         match edit_action {
-            EditAction::Insert { chars } => self.insert(text, &chars),
-            EditAction::DeleteBackward => self.delete_backward(text),
-            EditAction::DeleteForward => self.delete_forward(text),
-            EditAction::MoveLeft => self.move_selection(Movement::Left, text, false),
-            EditAction::MoveLeftAndModifySelection => {
-                self.move_selection(Movement::Left, text, true)
+            EventDomain::Buffer(BufferEvent::Insert(chars)) => self.insert(text, &chars),
+            EventDomain::Buffer(BufferEvent::Backspace) => self.delete_backward(text),
+            EventDomain::Buffer(BufferEvent::Delete) => self.delete_forward(text),
+            EventDomain::View(ViewEvent::Move(movement)) => {
+                self.move_selection(movement, text, false)
             }
-            EditAction::MoveRight => self.move_selection(Movement::Right, text, false),
-            EditAction::MoveRightAndModifySelection => {
-                self.move_selection(Movement::Right, text, true)
+            EventDomain::View(ViewEvent::ModifySelection(movement)) => {
+                self.move_selection(movement, text, true)
             }
-            EditAction::MoveToLeftEndOfLine => {
-                self.move_selection(Movement::LeftOfLine, text, false)
-            }
-            EditAction::MoveToRightEndOfLine => {
-                self.move_selection(Movement::RightOfLine, text, false)
-            }
-            EditAction::SelectAll => self.selection.all(text),
+            EventDomain::View(ViewEvent::SelectAll) => self.selection.all(text),
         }
     }
 
