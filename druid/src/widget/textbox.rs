@@ -354,15 +354,12 @@ impl Widget<String> for TextBox {
         _data: &String,
         env: &Env,
     ) -> Size {
-        let default_width = 100.0;
+        let width = env.get(theme::WIDE_WIDGET_WIDTH);
+        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
-        if bc.is_width_bounded() {
-            self.width = bc.max().width;
-        } else {
-            self.width = default_width;
-        }
-
-        bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
+        let size = bc.constrain((width, height));
+        self.width = size.width;
+        size
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &String, env: &Env) {
