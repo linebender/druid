@@ -19,7 +19,7 @@ default-target = "x86_64-pc-windows-msvc"
 piet-common = "0.0.9"
 log = "0.4.8"
 lazy_static = "1.0"
-time = "0.2.4"
+time = "0.2.7"
 cfg-if = "0.1.10"
 
 cairo-rs = {  version = "0.8.0", default_features = false, optional = true }
