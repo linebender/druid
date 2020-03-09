@@ -15,8 +15,8 @@
 //! Demonstrates alignment of children in the flex container.
 
 use druid::widget::{
-    Button, Checkbox, CrossAxisAlignment, Flex, Label, ProgressBar, RadioGroup, SizedBox, Slider,
-    Stepper, Switch, TextBox, WidgetExt,
+    Button, Checkbox, CrossAxisAlignment, Flex, Label, MainAxisAlignment, ProgressBar, RadioGroup,
+    SizedBox, Slider, Stepper, Switch, TextBox, WidgetExt,
 };
 use druid::{
     AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
@@ -40,22 +40,17 @@ struct DemoState {
 #[derive(Clone, Data, Lens)]
 struct Params {
     axis: FlexType,
-    alignment: MyAlignment,
+    cross_alignment: CrossAxisAlignment,
+    main_alignment: MainAxisAlignment,
     debug_layout: bool,
     fix_minor_axis: bool,
+    fix_major_axis: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Data)]
 enum FlexType {
     Row,
     Column,
-}
-
-#[derive(Clone, Copy, PartialEq, Data)]
-enum MyAlignment {
-    Start,
-    Center,
-    End,
 }
 
 /// builds a child Flex widget from some paramaters.
@@ -135,20 +130,38 @@ fn make_control_row() -> impl Widget<AppState> {
         )
         .with_child(
             Flex::column()
-                .with_child(Label::new("CrossAxisAlignmentnment:").padding(5.0), 0.)
+                .with_child(Label::new("CrossAxisAlignment:").padding(5.0), 0.)
                 .with_child(
                     RadioGroup::new(vec![
-                        ("Start", MyAlignment::Start),
-                        ("Center", MyAlignment::Center),
-                        ("End", MyAlignment::End),
+                        ("Start", CrossAxisAlignment::Start),
+                        ("Center", CrossAxisAlignment::Center),
+                        ("End", CrossAxisAlignment::End),
                     ])
-                    .lens(Params::alignment),
+                    .lens(Params::cross_alignment),
                     0.,
                 ),
             0.0,
         )
         .with_child(
             Flex::column()
+                .with_child(Label::new("MainAxisAlignment:").padding(5.0), 0.)
+                .with_child(
+                    RadioGroup::new(vec![
+                        ("Start", MainAxisAlignment::Start),
+                        ("Center", MainAxisAlignment::Center),
+                        ("End", MainAxisAlignment::End),
+                        ("SpaceBetween", MainAxisAlignment::SpaceBetween),
+                        ("SpaceEvenly", MainAxisAlignment::SpaceEvenly),
+                        ("SpaceAround", MainAxisAlignment::SpaceAround),
+                    ])
+                    .lens(Params::main_alignment),
+                    0.,
+                ),
+            0.0,
+        )
+        .with_child(
+            Flex::column()
+                .with_child(Label::new("Misc:").padding(5.0), 0.)
                 .with_child(
                     labeled_checkbox("Debug layout").lens(Params::debug_layout),
                     0.0,
@@ -156,6 +169,11 @@ fn make_control_row() -> impl Widget<AppState> {
                 .with_child(SizedBox::empty().height(10.), 0.0)
                 .with_child(
                     labeled_checkbox("Fix minor axis size").lens(Params::fix_minor_axis),
+                    0.,
+                )
+                .with_child(SizedBox::empty().height(10.), 0.0)
+                .with_child(
+                    labeled_checkbox("Fix major axis size").lens(Params::fix_major_axis),
                     0.,
                 )
                 .padding(5.0),
@@ -167,16 +185,12 @@ fn make_control_row() -> impl Widget<AppState> {
 }
 
 fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
-    let alignment = match state.alignment {
-        MyAlignment::Start => CrossAxisAlignment::Start,
-        MyAlignment::End => CrossAxisAlignment::End,
-        MyAlignment::Center => CrossAxisAlignment::Center,
-    };
     let flex = match state.axis {
         FlexType::Column => Flex::column(),
         FlexType::Row => Flex::row(),
     }
-    .cross_axis_alignment(alignment);
+    .cross_axis_alignment(state.cross_alignment)
+    .main_axis_alignment(state.main_alignment);
 
     let flex = flex
         .with_child(TextBox::new().lens(DemoState::input_text), 0.)
@@ -204,18 +218,29 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
             0.0,
         )
         .with_child(Switch::new().lens(DemoState::enabled), 0.)
-        .background(Color::rgba8(0, 0, 0xFF, 0x40))
+        .background(Color::rgba8(0, 0, 0xFF, 0x30))
         .lens(AppState::demo_state);
 
-    let mut flex = match (state.axis, state.fix_minor_axis) {
-        (FlexType::Row, true) => flex.fix_height(200.).boxed(),
-        (FlexType::Column, true) => flex.fix_width(200.).boxed(),
-        _ => flex.boxed(),
-    };
-    if state.debug_layout {
-        flex = flex.debug_paint_layout().boxed();
+    let mut flex = SizedBox::new(flex);
+    if state.fix_minor_axis {
+        match state.axis {
+            FlexType::Row => flex = flex.height(200.),
+            FlexType::Column => flex = flex.width(200.),
+        }
     }
-    flex
+
+    if state.fix_major_axis {
+        match state.axis {
+            FlexType::Row => flex = flex.width(600.),
+            FlexType::Column => flex = flex.height(300.),
+        }
+    }
+
+    if state.debug_layout {
+        flex.debug_paint_layout().boxed()
+    } else {
+        flex.boxed()
+    }
 }
 
 fn make_ui() -> impl Widget<AppState> {
@@ -229,7 +254,7 @@ fn make_ui() -> impl Widget<AppState> {
 
 fn main() -> Result<(), PlatformError> {
     let main_window = WindowDesc::new(make_ui)
-        .window_size((550., 400.00))
+        .window_size((600., 600.00))
         .title(LocalizedString::new("Flex Container Options"));
 
     let demo_state = DemoState {
@@ -240,9 +265,11 @@ fn main() -> Result<(), PlatformError> {
 
     let params = Params {
         axis: FlexType::Row,
-        alignment: MyAlignment::Start,
+        cross_alignment: CrossAxisAlignment::Center,
+        main_alignment: MainAxisAlignment::Start,
         debug_layout: false,
         fix_minor_axis: false,
+        fix_major_axis: false,
     };
 
     let data = AppState { demo_state, params };
