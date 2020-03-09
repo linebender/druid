@@ -25,6 +25,7 @@ use crate::{
 pub struct Flex<T> {
     direction: Axis,
     cross_alignment: CrossAxisAlignment,
+    main_alignment: MainAxisAlignment,
     children: Vec<ChildWidget<T>>,
 }
 
@@ -42,7 +43,7 @@ pub(crate) enum Axis {
 ///
 /// If a widget is smaller than the container on the minor axis, this determines
 /// where it is positioned.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CrossAxisAlignment {
     /// Top or leading.
     ///
@@ -56,6 +57,33 @@ pub enum CrossAxisAlignment {
     /// In a vertical container, widgets are bottom aligned. In a horiziontal
     /// container, their trailing edges are aligned.
     End,
+}
+
+/// Arrangement of children on the main axis.
+///
+/// If there is surplus space on the main axis after laying out children, this
+/// enum represents how children are laid out in this space.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MainAxisAlignment {
+    /// Top or leading.
+    ///
+    /// Children are aligned with the top or leading edge, without padding.
+    Start,
+    /// Children are centered, without padding.
+    Center,
+    /// Bottom or trailing.
+    ///
+    /// Children are aligned with the bottom or trailing edge, without padding.
+    End,
+    /// Extra space is divided evenly between each child.
+    SpaceBetween,
+    /// Extra space is divided evenly between each child, as well as at the ends.
+    SpaceEvenly,
+    /// Space between each child, with less at the start and end.
+    ///
+    /// This divides space such that each child is separated by `n` units,
+    /// and the start and end have `n/2` units of padding.
+    SpaceAround,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -108,6 +136,7 @@ impl<T> Flex<T> {
             direction: Axis::Horizontal,
             children: Vec::new(),
             cross_alignment: CrossAxisAlignment::Start,
+            main_alignment: MainAxisAlignment::Start,
         }
     }
 
@@ -119,6 +148,7 @@ impl<T> Flex<T> {
             direction: Axis::Vertical,
             children: Vec::new(),
             cross_alignment: CrossAxisAlignment::Start,
+            main_alignment: MainAxisAlignment::Start,
         }
     }
 
@@ -127,6 +157,14 @@ impl<T> Flex<T> {
     /// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
     pub fn cross_axis_alignment(mut self, alignment: CrossAxisAlignment) -> Self {
         self.cross_alignment = alignment;
+        self
+    }
+
+    /// Builder-style method for specifying the childrens' [`MainAxisAlignment`].
+    ///
+    /// [`MainAxisAlignment`]: enum.MainAxisAlignment.html
+    pub fn main_axis_alignment(mut self, alignment: MainAxisAlignment) -> Self {
+        self.main_alignment = alignment;
         self
     }
 
@@ -143,6 +181,13 @@ impl<T> Flex<T> {
     /// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
     pub fn set_cross_axis_alignment(&mut self, alignment: CrossAxisAlignment) {
         self.cross_alignment = alignment;
+    }
+
+    /// Set the childrens' [`MainAxisAlignment`].
+    ///
+    /// [`MainAxisAlignment`]: enum.MainAxisAlignment.html
+    pub fn set_main_axis_alignment(&mut self, alignment: MainAxisAlignment) {
+        self.main_alignment = alignment;
     }
 
     /// Add a child widget.
@@ -216,6 +261,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         let total_major = self.direction.major(bc.max());
         let remaining = (total_major - total_non_flex).max(0.0);
         let flex_sum: f64 = self.children.iter().map(|child| child.params.flex).sum();
+        let mut flex_used: f64 = 0.0;
 
         // Measure flex children.
         for child in &mut self.children {
@@ -225,6 +271,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 let min_major = if major.is_infinite() { 0.0 } else { major };
                 let child_bc = self.direction.constraints(&loosened_bc, min_major, major);
                 let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
+                flex_used += self.direction.major(child_size);
                 minor = minor.max(self.direction.minor(child_size));
                 // Stash size.
                 let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
@@ -232,8 +279,13 @@ impl<T: Data> Widget<T> for Flex<T> {
             }
         }
 
+        // figure out if we have extra space on major axis, and if so how to use it
+        let major_used = total_non_flex + flex_used;
+        let extra = (self.direction.major(bc.min()) - major_used).max(0.0);
+        let spacing = self.main_alignment.spacing(extra, self.children.len());
+
         // Finalize layout, assigning positions to each child.
-        let mut major = 0.0;
+        let mut major = spacing.pre;
         let mut child_paint_rect = Rect::ZERO;
         for child in &mut self.children {
             let rect = child.widget.layout_rect();
@@ -244,7 +296,10 @@ impl<T: Data> Widget<T> for Flex<T> {
             child.widget.set_layout_rect(rect.with_origin(pos));
             child_paint_rect = child_paint_rect.union(child.widget.paint_rect());
             major += self.direction.major(rect.size());
+            major += spacing.between;
         }
+        major -= spacing.between;
+        major += spacing.post;
 
         if flex_sum > 0.0 && total_major.is_infinite() {
             log::warn!("A child of Flex is flex, but Flex is unbounded.")
@@ -254,8 +309,8 @@ impl<T: Data> Widget<T> for Flex<T> {
             major = total_major;
         }
 
-        let (width, height) = self.direction.pack(major, minor);
-        let my_size = bc.constrain(Size::new(width, height));
+        let my_size: Size = self.direction.pack(major, minor).into();
+        let my_size = bc.constrain(my_size);
         let my_bounds = Rect::ZERO.with_size(my_size);
         let insets = child_paint_rect - my_bounds;
         layout_ctx.set_paint_insets(insets);
@@ -279,5 +334,64 @@ impl CrossAxisAlignment {
             CrossAxisAlignment::Center => val / 2.0,
             CrossAxisAlignment::End => val,
         }
+    }
+}
+
+impl MainAxisAlignment {
+    fn spacing(self, extra: f64, n_children: usize) -> Spacing {
+        if extra.is_infinite() {
+            return Spacing::default();
+        }
+        let (pre, between, post) = match self {
+            MainAxisAlignment::Start => (0., 0., extra),
+            MainAxisAlignment::End => (extra, 0., 0.),
+            MainAxisAlignment::Center => (extra * 0.5, 0., extra * 0.5),
+            MainAxisAlignment::SpaceBetween => {
+                let space = match n_children {
+                    0 | 1 => 0.0,
+                    n => extra / (n - 1) as f64,
+                };
+                (0., space, 0.)
+            }
+            MainAxisAlignment::SpaceEvenly => {
+                let n = (n_children + 1) as f64;
+                let space = extra / n;
+                (space, space, space)
+            }
+            MainAxisAlignment::SpaceAround => {
+                let n = n_children as f64;
+                let space = extra / n;
+                (space / 2.0, space, space / 2.0)
+            }
+        };
+        Spacing { pre, between, post }.assert_finite()
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+struct Spacing {
+    pre: f64,
+    between: f64,
+    post: f64,
+}
+
+impl Spacing {
+    fn assert_finite(self) -> Self {
+        assert!(self.pre.is_finite() && self.between.is_finite() && self.post.is_finite());
+        self
+    }
+}
+
+// we have these impls mostly for our 'flex' example, but I could imagine
+// them being broadly useful?
+impl Data for MainAxisAlignment {
+    fn same(&self, other: &MainAxisAlignment) -> bool {
+        self == other
+    }
+}
+
+impl Data for CrossAxisAlignment {
+    fn same(&self, other: &CrossAxisAlignment) -> bool {
+        self == other
     }
 }
