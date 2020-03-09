@@ -49,20 +49,10 @@ impl Widget<f64> for ProgressBar {
         env: &Env,
     ) -> Size {
         bc.debug_check("ProgressBar");
-
-        let default_width = 100.0;
-
-        if bc.is_width_bounded() {
-            bc.constrain(Size::new(
-                bc.max().width,
-                env.get(theme::BASIC_WIDGET_HEIGHT),
-            ))
-        } else {
-            bc.constrain(Size::new(
-                default_width,
-                env.get(theme::BASIC_WIDGET_HEIGHT),
-            ))
-        }
+        bc.constrain(Size::new(
+            env.get(theme::WIDE_WIDGET_WIDTH),
+            env.get(theme::BASIC_WIDGET_HEIGHT),
+        ))
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &f64, env: &Env) {
