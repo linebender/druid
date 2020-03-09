@@ -44,6 +44,7 @@ struct Params {
     axis: FlexType,
     cross_alignment: CrossAxisAlignment,
     main_alignment: MainAxisAlignment,
+    fill_major_axis: bool,
     debug_layout: bool,
     fix_minor_axis: bool,
     fix_major_axis: bool,
@@ -180,6 +181,11 @@ fn make_control_row() -> impl Widget<AppState> {
                 )
                 .with_spacer(10.)
                 .with_child(
+                    labeled_checkbox("Fill main axis").lens(Params::fill_major_axis),
+                    0.,
+                )
+                .with_spacer(10.)
+                .with_child(
                     labeled_checkbox("Fix minor axis size").lens(Params::fix_minor_axis),
                     0.,
                 )
@@ -248,7 +254,8 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
         FlexType::Row => Flex::row(),
     }
     .cross_axis_alignment(state.cross_alignment)
-    .main_axis_alignment(state.main_alignment);
+    .main_axis_alignment(state.main_alignment)
+    .must_fill_main_axis(state.fill_major_axis);
 
     let mut flex = flex.with_child(TextBox::new().lens(DemoState::input_text), 0.);
     space_if_needed(&mut flex, state);
@@ -315,9 +322,9 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
 fn make_ui() -> impl Widget<AppState> {
     Flex::column()
         .with_child(make_control_row(), 0.0)
-        .with_child(SizedBox::empty().height(20.), 0.0)
-        .with_child(Rebuilder::new(), 0.0)
-        .align_vertical(UnitPoint::TOP_LEFT)
+        .with_spacer(20.)
+        .with_child(Rebuilder::new().align_vertical(UnitPoint::TOP_LEFT), 1.0)
+        .must_fill_main_axis(true)
         .padding(10.0)
 }
 
@@ -341,6 +348,7 @@ fn main() -> Result<(), PlatformError> {
         fix_major_axis: false,
         spacers: Spacers::None,
         spacer_size: DEFAULT_SPACER_SIZE,
+        fill_major_axis: false,
     };
 
     let data = AppState { demo_state, params };
