@@ -27,4 +27,4 @@ pub mod backspace;
 pub use self::backspace::offset_for_delete_backwards;
 
 mod text_input;
-pub use self::text_input::{EditAction, SingleLineTextInput, TextInput};
+pub use self::text_input::{BufferEvent, EventDomain, SingleLineTextInput, TextInput, ViewEvent};
