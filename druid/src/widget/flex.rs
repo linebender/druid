@@ -16,6 +16,7 @@
 
 use crate::kurbo::{Point, Rect, Size};
 
+use crate::widget::SizedBox;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
     UpdateCtx, Widget, WidgetPod,
@@ -127,7 +128,7 @@ impl Axis {
     }
 }
 
-impl<T> Flex<T> {
+impl<T: Data> Flex<T> {
     /// Create a new horizontal stack.
     ///
     /// The child widgets are laid out horizontally, from left to right.
@@ -176,6 +177,22 @@ impl<T> Flex<T> {
         self
     }
 
+    /// Builder-style method for adding a fixed-size spacer to the container.
+    pub fn with_spacer(mut self, len: f64) -> Self {
+        self.add_spacer(len);
+        self
+    }
+
+    /// Builder-style method for adding a `flex` spacer to the container.
+    ///
+    /// See [`add_child`] for an overview of `flex`.
+    ///
+    /// [`add_child`]: #method.add_child
+    pub fn with_flex_spacer(mut self, flex: f64) -> Self {
+        self.add_flex_spacer(flex);
+        self
+    }
+
     /// Set the childrens' [`CrossAxisAlignment`].
     ///
     /// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
@@ -208,6 +225,24 @@ impl<T> Flex<T> {
             params,
         };
         self.children.push(child);
+    }
+
+    /// Add an empty spacer widget with the given length.
+    pub fn add_spacer(&mut self, len: f64) {
+        let spacer = match self.direction {
+            Axis::Horizontal => SizedBox::empty().width(len),
+            Axis::Vertical => SizedBox::empty().height(len),
+        };
+        self.add_child(spacer, 0.0);
+    }
+
+    /// Add an empty spacer widget with a specific `flex` factor.
+    ///
+    /// See [`add_child`] for an overview of `flex`.
+    ///
+    /// [`add_child`]: #method.add_child
+    pub fn add_flex_spacer(&mut self, flex: f64) {
+        self.add_child(SizedBox::empty(), flex);
     }
 }
 
