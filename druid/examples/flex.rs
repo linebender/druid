@@ -15,8 +15,8 @@
 //! Demonstrates alignment of children in the flex container.
 
 use druid::widget::{
-    Alignment, Button, Checkbox, Flex, Label, ProgressBar, RadioGroup, SizedBox, Slider, Stepper,
-    Switch, TextBox, WidgetExt,
+    Button, Checkbox, CrossAxisAlignment, Flex, Label, ProgressBar, RadioGroup, SizedBox, Slider,
+    Stepper, Switch, TextBox, WidgetExt,
 };
 use druid::{
     AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
@@ -135,7 +135,7 @@ fn make_control_row() -> impl Widget<AppState> {
         )
         .with_child(
             Flex::column()
-                .with_child(Label::new("Alignment:").padding(5.0), 0.)
+                .with_child(Label::new("CrossAxisAlignmentnment:").padding(5.0), 0.)
                 .with_child(
                     RadioGroup::new(vec![
                         ("Start", MyAlignment::Start),
@@ -168,15 +168,15 @@ fn make_control_row() -> impl Widget<AppState> {
 
 fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
     let alignment = match state.alignment {
-        MyAlignment::Start => Alignment::Start,
-        MyAlignment::End => Alignment::End,
-        MyAlignment::Center => Alignment::Center,
+        MyAlignment::Start => CrossAxisAlignment::Start,
+        MyAlignment::End => CrossAxisAlignment::End,
+        MyAlignment::Center => CrossAxisAlignment::Center,
     };
     let flex = match state.axis {
         FlexType::Column => Flex::column(),
         FlexType::Row => Flex::row(),
     }
-    .alignment(alignment);
+    .cross_axis_alignment(alignment);
 
     let flex = flex
         .with_child(TextBox::new().lens(DemoState::input_text), 0.)
