@@ -193,13 +193,17 @@ impl<T: Data> Widget<T> for Flex<T> {
         env: &Env,
     ) -> Size {
         bc.debug_check("Flex");
+        // we loosen our constraints when passing to children.
+        let loosened_bc = bc.loosen();
 
         // Measure non-flex children.
         let mut total_non_flex = 0.0;
         let mut minor = self.direction.minor(bc.min());
         for child in &mut self.children {
             if child.params.flex == 0.0 {
-                let child_bc = self.direction.constraints(bc, 0.0, std::f64::INFINITY);
+                let child_bc = self
+                    .direction
+                    .constraints(&loosened_bc, 0.0, std::f64::INFINITY);
                 let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
                 minor = minor.max(self.direction.minor(child_size));
                 total_non_flex += self.direction.major(child_size);
@@ -219,7 +223,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 let major = remaining * child.params.flex / flex_sum;
 
                 let min_major = if major.is_infinite() { 0.0 } else { major };
-                let child_bc = self.direction.constraints(bc, min_major, major);
+                let child_bc = self.direction.constraints(&loosened_bc, min_major, major);
                 let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
                 minor = minor.max(self.direction.minor(child_size));
                 // Stash size.
@@ -251,7 +255,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         }
 
         let (width, height) = self.direction.pack(major, minor);
-        let my_size = Size::new(width, height);
+        let my_size = bc.constrain(Size::new(width, height));
         let my_bounds = Rect::ZERO.with_size(my_size);
         let insets = child_paint_rect - my_bounds;
         layout_ctx.set_paint_insets(insets);

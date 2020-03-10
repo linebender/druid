@@ -16,7 +16,7 @@
 
 use druid::{AppLauncher, Data, Lens, LensWrap, LocalizedString, Widget, WindowDesc};
 
-use druid::widget::{Button, Flex, Label, Padding};
+use druid::widget::{Button, Flex, Label, WidgetExt};
 
 #[derive(Clone, Data, Lens)]
 struct CalcState {
@@ -112,15 +112,10 @@ impl CalcState {
     }
 }
 
-fn pad<T: Data>(inner: impl Widget<T> + 'static) -> impl Widget<T> {
-    Padding::new(5.0, inner)
-}
-
 fn op_button_label(op: char, label: String) -> impl Widget<CalcState> {
-    pad(Button::new(
-        label,
-        move |_ctx, data: &mut CalcState, _env| data.op(op),
-    ))
+    Button::new(label, move |_ctx, data: &mut CalcState, _env| data.op(op))
+        .expand()
+        .padding(5.0)
 }
 
 fn op_button(op: char) -> impl Widget<CalcState> {
@@ -128,10 +123,12 @@ fn op_button(op: char) -> impl Widget<CalcState> {
 }
 
 fn digit_button(digit: u8) -> impl Widget<CalcState> {
-    pad(Button::new(
+    Button::new(
         format!("{}", digit),
         move |_ctx, data: &mut CalcState, _env| data.digit(digit),
-    ))
+    )
+    .expand()
+    .padding(5.0)
 }
 
 fn flex_row<T: Data>(
@@ -151,9 +148,10 @@ fn build_calc() -> impl Widget<CalcState> {
     let display = LensWrap::new(
         Label::new(|data: &String, _env: &_| data.clone()),
         CalcState::value,
-    );
+    )
+    .padding(5.0);
     Flex::column()
-        .with_child(pad(display), 0.0)
+        .with_child(display, 0.0)
         .with_child(
             flex_row(
                 op_button_label('c', "CE".to_string()),

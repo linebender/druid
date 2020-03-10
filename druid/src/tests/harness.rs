@@ -42,6 +42,7 @@ pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
 pub struct Harness<'a, T> {
     piet: Piet<'a>,
     inner: Inner<T>,
+    window_size: Size,
 }
 
 /// All of the state except for the `Piet` (render context). We need to pass
@@ -80,8 +81,18 @@ impl<T: Data> Harness<'_, T> {
             cmds: Default::default(),
         };
 
-        let mut harness = Harness { piet, inner };
+        let mut harness = Harness {
+            piet,
+            inner,
+            window_size: DEFAULT_SIZE,
+        };
         f(&mut harness);
+    }
+
+    /// Set the size without sending a resize event; intended to be used
+    /// before calling `send_initial_events`
+    pub fn set_initial_size(&mut self, size: Size) {
+        self.window_size = size;
     }
 
     pub fn window(&self) -> &Window<T> {
@@ -133,7 +144,7 @@ impl<T: Data> Harness<'_, T> {
     // should we do this automatically? Also these will change regularly?
     pub fn send_initial_events(&mut self) {
         self.event(Event::WindowConnected);
-        self.event(Event::Size(DEFAULT_SIZE));
+        self.event(Event::Size(self.window_size));
     }
 
     /// Send an event to the widget.
