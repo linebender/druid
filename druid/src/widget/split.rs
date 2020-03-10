@@ -93,6 +93,7 @@ impl<T> Split<T> {
         self.draggable = draggable;
         self
     }
+    /// Set whether the splitter handle is a solid rectangle or two parallel lines.
     pub fn solid(mut self, solid: bool) -> Self {
         self.solid = solid;
         self
