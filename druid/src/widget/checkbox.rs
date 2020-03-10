@@ -29,7 +29,7 @@ pub struct Checkbox;
 impl Checkbox {
     /// Create a new `Checkbox`.
     pub fn new() -> Checkbox {
-        Default::default()
+        Checkbox::default()
     }
 }
 

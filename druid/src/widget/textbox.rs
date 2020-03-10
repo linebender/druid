@@ -66,7 +66,7 @@ impl TextBox {
         self
     }
 
-    #[deprecated(since = "0.5.0", note = "Use TxtBox::new instead")]
+    #[deprecated(since = "0.5.0", note = "Use TextBox::new instead")]
     #[doc(hidden)]
     pub fn raw() -> TextBox {
         Self::new()
