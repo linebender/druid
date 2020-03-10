@@ -24,7 +24,7 @@ use crate::{
 /// A container with either horizontal or vertical layout.
 pub struct Flex<T> {
     direction: Axis,
-    alignment: Alignment,
+    cross_alignment: CrossAxisAlignment,
     children: Vec<ChildWidget<T>>,
 }
 
@@ -38,12 +38,12 @@ pub(crate) enum Axis {
     Vertical,
 }
 
-/// The alignment of the widgets inside of the container.
+/// The alignment of the widgets on the container's cross (or minor) axis.
 ///
 /// If a widget is smaller than the container on the minor axis, this determines
 /// where it is positioned.
 #[derive(Debug, Clone, Copy)]
-pub enum Alignment {
+pub enum CrossAxisAlignment {
     /// Top or leading.
     ///
     /// In a vertical container, widgets are top aligned. In a horiziontal
@@ -107,7 +107,7 @@ impl<T> Flex<T> {
         Flex {
             direction: Axis::Horizontal,
             children: Vec::new(),
-            alignment: Alignment::Start,
+            cross_alignment: CrossAxisAlignment::Start,
         }
     }
 
@@ -118,15 +118,15 @@ impl<T> Flex<T> {
         Flex {
             direction: Axis::Vertical,
             children: Vec::new(),
-            alignment: Alignment::Start,
+            cross_alignment: CrossAxisAlignment::Start,
         }
     }
 
-    /// Builder-style method for specifying the childrens' [`Alignment`].
+    /// Builder-style method for specifying the childrens' [`CrossAxisAlignment`].
     ///
-    /// [`Alignment`]: enum.Alignment.html
-    pub fn alignment(mut self, alignment: Alignment) -> Self {
-        self.alignment = alignment;
+    /// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
+    pub fn cross_axis_alignment(mut self, alignment: CrossAxisAlignment) -> Self {
+        self.cross_alignment = alignment;
         self
     }
 
@@ -138,11 +138,11 @@ impl<T> Flex<T> {
         self
     }
 
-    /// Set the childrens' [`Alignment`].
+    /// Set the childrens' [`CrossAxisAlignment`].
     ///
-    /// [`Alignment`]: enum.Alignment.html
-    pub fn set_alignment(&mut self, alignment: Alignment) {
-        self.alignment = alignment;
+    /// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
+    pub fn set_cross_axis_alignment(&mut self, alignment: CrossAxisAlignment) {
+        self.cross_alignment = alignment;
     }
 
     /// Add a child widget.
@@ -234,7 +234,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         for child in &mut self.children {
             let rect = child.widget.layout_rect();
             let extra_minor = minor - self.direction.minor(rect.size());
-            let align_minor = self.alignment.align(extra_minor);
+            let align_minor = self.cross_alignment.align(extra_minor);
             let pos: Point = self.direction.pack(major, align_minor).into();
 
             child.widget.set_layout_rect(rect.with_origin(pos));
@@ -265,15 +265,15 @@ impl<T: Data> Widget<T> for Flex<T> {
     }
 }
 
-impl Alignment {
+impl CrossAxisAlignment {
     /// Given the difference between the size of the container and the size
     /// of the child (on their minor axis) return the necessary offset for
     /// this alignment.
     fn align(self, val: f64) -> f64 {
         match self {
-            Alignment::Start => 0.0,
-            Alignment::Center => val / 2.0,
-            Alignment::End => val,
+            CrossAxisAlignment::Start => 0.0,
+            CrossAxisAlignment::Center => val / 2.0,
+            CrossAxisAlignment::End => val,
         }
     }
 }
