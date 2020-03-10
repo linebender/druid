@@ -170,12 +170,12 @@ impl<T> Split<T> {
         let (edge1, edge2) = self.get_edges(paint_ctx);
         let rect = match self.split_direction {
             Axis::Vertical => Rect::from_points(
-                Point::new(edge1 + small_third, 1.0),
-                Point::new(edge2 - small_third, size.height + 1.0),
+                Point::new(edge1 + small_third, 0.0),
+                Point::new(edge2 - small_third, size.height),
             ),
             Axis::Horizontal => Rect::from_points(
-                Point::new(1.0, edge1 + small_third),
-                Point::new(size.width + 1.0, edge2 - small_third),
+                Point::new(0.0, edge1 + small_third),
+                Point::new(size.width, edge2 - small_third),
             ),
         };
         let splitter_color = self.get_color(env);
