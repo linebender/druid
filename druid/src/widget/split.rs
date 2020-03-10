@@ -67,7 +67,8 @@ impl<T> Split<T> {
         self.split_point = split_point;
         self
     }
-    /// Set the minimum size for both sides of the split
+    /// Builder-style method to set the minimum size for both sides of the split.
+    ///
     /// The value must be greater than or equal to `0.0`.
     pub fn min_size(mut self, min_size: f64) -> Self {
         assert!(min_size >= 0.0);
