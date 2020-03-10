@@ -125,31 +125,39 @@ fn flex_paint_rect_overflow() {
 
     let widget = Flex::row()
         .with_child(
-            ModularWidget::new(()).layout_fn(|_, ctx, bc, _, _| {
-                ctx.set_paint_insets(Insets::new(20., 0., 0., 0.));
-                bc.constrain(Size::new(10., 10.))
-            }),
+            ModularWidget::new(())
+                .layout_fn(|_, ctx, bc, _, _| {
+                    ctx.set_paint_insets(Insets::new(20., 0., 0., 0.));
+                    bc.constrain(Size::new(10., 10.))
+                })
+                .expand(),
             1.0,
         )
         .with_child(
-            ModularWidget::new(()).layout_fn(|_, ctx, bc, _, _| {
-                ctx.set_paint_insets(Insets::new(0., 20., 0., 0.));
-                bc.constrain(Size::new(10., 10.))
-            }),
+            ModularWidget::new(())
+                .layout_fn(|_, ctx, bc, _, _| {
+                    ctx.set_paint_insets(Insets::new(0., 20., 0., 0.));
+                    bc.constrain(Size::new(10., 10.))
+                })
+                .expand(),
             1.0,
         )
         .with_child(
-            ModularWidget::new(()).layout_fn(|_, ctx, bc, _, _| {
-                ctx.set_paint_insets(Insets::new(0., 0., 0., 20.));
-                bc.constrain(Size::new(10., 10.))
-            }),
+            ModularWidget::new(())
+                .layout_fn(|_, ctx, bc, _, _| {
+                    ctx.set_paint_insets(Insets::new(0., 0., 0., 20.));
+                    bc.constrain(Size::new(10., 10.))
+                })
+                .expand(),
             1.0,
         )
         .with_child(
-            ModularWidget::new(()).layout_fn(|_, ctx, bc, _, _| {
-                ctx.set_paint_insets(Insets::new(0., 0., 20., 0.));
-                bc.constrain(Size::new(10., 10.))
-            }),
+            ModularWidget::new(())
+                .layout_fn(|_, ctx, bc, _, _| {
+                    ctx.set_paint_insets(Insets::new(0., 0., 20., 0.));
+                    bc.constrain(Size::new(10., 10.))
+                })
+                .expand(),
             1.0,
         )
         .with_id(id)
@@ -158,6 +166,7 @@ fn flex_paint_rect_overflow() {
         .center();
 
     Harness::create((), widget, |harness| {
+        harness.set_initial_size(Size::new(300., 300.));
         harness.send_initial_events();
         harness.just_layout();
 
