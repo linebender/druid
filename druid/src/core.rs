@@ -667,10 +667,10 @@ mod tests {
         fn make_widgets() -> impl Widget<Option<u32>> {
             Split::vertical(
                 Flex::<Option<u32>>::row()
-                    .with_child(TextBox::raw().with_id(ID_1).parse(), 1.0)
-                    .with_child(TextBox::raw().with_id(ID_2).parse(), 1.0)
-                    .with_child(TextBox::raw().with_id(ID_3).parse(), 1.0),
-                Scroll::new(TextBox::raw().parse()),
+                    .with_child(TextBox::new().with_id(ID_1).parse(), 1.0)
+                    .with_child(TextBox::new().with_id(ID_2).parse(), 1.0)
+                    .with_child(TextBox::new().with_id(ID_3).parse(), 1.0),
+                Scroll::new(TextBox::new().parse()),
             )
         }
 
