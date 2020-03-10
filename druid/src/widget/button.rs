@@ -14,17 +14,22 @@
 
 //! A button widget.
 
-use crate::kurbo::{Point, RoundedRect, Size};
 use crate::theme;
 use crate::widget::{Label, LabelText};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
-    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
+    Affine, BoxConstraints, Data, Env, Event, EventCtx, Insets, LayoutCtx, LifeCycle, LifeCycleCtx,
+    LinearGradient, PaintCtx, Point, Rect, RenderContext, Size, UnitPoint, UpdateCtx, Widget,
 };
+
+// the minimum padding added to a button.
+// NOTE: these values are chosen to match the existing look of TextBox; these
+// should be reevaluated at some point.
+const LABEL_INSETS: Insets = Insets::uniform_xy(8., 2.);
 
 /// A button with a text label.
 pub struct Button<T> {
     label: Label<T>,
+    label_size: Size,
     /// A closure that will be invoked when the button is clicked.
     action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
 }
@@ -38,6 +43,7 @@ impl<T: Data> Button<T> {
     ) -> Button<T> {
         Button {
             label: Label::new(text),
+            label_size: Size::ZERO,
             action: Box::new(action),
         }
     }
@@ -93,19 +99,27 @@ impl<T: Data> Widget<T> for Button<T> {
         env: &Env,
     ) -> Size {
         bc.debug_check("Button");
+        let padding = Size::new(LABEL_INSETS.x_value(), LABEL_INSETS.y_value());
+        let label_bc = bc.shrink(padding).loosen();
+        self.label_size = self.label.layout(layout_ctx, &label_bc, data, env);
+        // HACK: to make sure we look okay at default sizes when beside a textbox,
+        // we make sure we will have at least the same height as the default textbox.
+        let min_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
-        self.label.layout(layout_ctx, bc, data, env)
+        bc.constrain(Size::new(
+            self.label_size.width + padding.width,
+            (self.label_size.height + padding.height).max(min_height),
+        ))
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
         let is_active = paint_ctx.is_active();
         let is_hot = paint_ctx.is_hot();
+        let size = paint_ctx.size();
 
-        let rounded_rect = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            paint_ctx.size().to_vec2(),
-            env.get(theme::BUTTON_BORDER_RADIUS),
-        );
+        let rounded_rect = Rect::from_origin_size(Point::ORIGIN, size)
+            .to_rounded_rect(env.get(theme::BUTTON_BORDER_RADIUS));
+
         let bg_gradient = if is_active {
             LinearGradient::new(
                 UnitPoint::TOP,
@@ -134,6 +148,18 @@ impl<T: Data> Widget<T> for Button<T> {
 
         paint_ctx.fill(rounded_rect, &bg_gradient);
 
+        let label_offset = (size.to_vec2() - self.label_size.to_vec2()) / 2.0;
+
+        if let Err(e) = paint_ctx.save() {
+            log::error!("saving render context failed: {:?}", e);
+            return;
+        }
+
+        paint_ctx.transform(Affine::translate(label_offset));
         self.label.paint(paint_ctx, data, env);
+
+        if let Err(e) = paint_ctx.restore() {
+            log::error!("restoring render context failed: {:?}", e);
+        }
     }
 }

@@ -34,5 +34,5 @@ fn ui_builder() -> impl Widget<u32> {
 
     Flex::column()
         .with_child(Align::centered(Padding::new(5.0, label)), 1.0)
-        .with_child(Padding::new(5.0, button), 1.0)
+        .with_child(Align::centered(Padding::new(5.0, button)), 1.0)
 }
