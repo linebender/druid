@@ -276,8 +276,7 @@ impl Widget<AppData> for GameOfLifeWidget {
         _event: &LifeCycle,
         _data: &AppData,
         _env: &Env,
-    ) {
-    }
+    ) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &AppData, _data: &AppData, _env: &Env) {
         ctx.request_paint();
@@ -384,11 +383,11 @@ fn make_widget() -> impl Widget<AppData> {
                                     ctx.request_paint();
                                 },
                             )
-                            .lens(AppData::paused)
-                            .center()
-                            .fix_width(80.)
-                            .fix_height(40.)
-                            .padding((2.0, 2.0)),
+                                .lens(AppData::paused)
+                                .center()
+                                .fix_width(80.)
+                                .fix_height(40.)
+                                .padding((2.0, 2.0)),
                             1.0,
                         )
                         .with_child(
@@ -397,10 +396,10 @@ fn make_widget() -> impl Widget<AppData> {
                                 data.clear();
                                 ctx.request_paint();
                             })
-                            .lens(AppData::grid)
-                            .center()
-                            .fix_height(30.)
-                            .padding((2.0, 2.0)),
+                                .lens(AppData::grid)
+                                .center()
+                                .fix_height(30.)
+                                .padding((2.0, 2.0)),
                             1.0,
                         )
                         .fix_height(35.)
@@ -414,7 +413,7 @@ fn make_widget() -> impl Widget<AppData> {
                                 .padding(3.0),
                             0.,
                         )
-                        .with_child(Slider::new().lens(AppData::speed).padding(3.0), 1.)
+                        .with_child(Slider::new().lens(AppData::speed).padding(3.0).expand(), 1.)
                         .alignment(Alignment::Center)
                         .padding(4.0),
                     0.,
