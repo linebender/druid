@@ -21,7 +21,7 @@ use druid::widget::{Alignment, Button, Flex, Label, Slider, WidgetExt};
 use druid::{
     AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
     LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size,
-    TimerToken, UnitPoint, UpdateCtx, Widget, WindowDesc,
+    TimerToken, UpdateCtx, Widget, WindowDesc,
 };
 use std::sync::Arc;
 
@@ -300,8 +300,8 @@ impl Widget<AppData> for GameOfLifeWidget<'_> {
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &AppData, _env: &Env) {
         let size: Size = paint_ctx.size();
-        let w0 = size.width / 40.0;
-        let h0 = size.height / 40.0;
+        let w0 = size.width / GRID_SIZE as f64;
+        let h0 = size.height / GRID_SIZE as f64;
         let cell_size = Size {
             width: w0,
             height: h0,
