@@ -47,8 +47,8 @@ struct GridPos {
 }
 
 #[derive(Clone)]
-struct ColorScheme<'a> {
-    colors: Vec<&'a Color>,
+struct ColorScheme {
+    colors: Vec<Color>,
     current: usize,
 }
 
@@ -207,13 +207,13 @@ impl Grid {
     }
 }
 
-struct GameOfLifeWidget<'a> {
+struct GameOfLifeWidget {
     timer_id: TimerToken,
     cell_size: Size,
-    color_scheme: ColorScheme<'a>,
+    color_scheme: ColorScheme,
 }
 
-impl GameOfLifeWidget<'_> {
+impl GameOfLifeWidget {
     fn grid_pos(&self, p: Point) -> Option<GridPos> {
         let w0 = self.cell_size.width;
         let h0 = self.cell_size.height;
@@ -229,7 +229,7 @@ impl GameOfLifeWidget<'_> {
     }
 }
 
-impl Widget<AppData> for GameOfLifeWidget<'_> {
+impl Widget<AppData> for GameOfLifeWidget {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppData, _env: &Env) {
         match event {
             Event::WindowConnected => {
@@ -316,7 +316,7 @@ impl Widget<AppData> for GameOfLifeWidget<'_> {
                         y: h0 * col as f64,
                     };
                     let rect = Rect::from_origin_size(point, cell_size);
-                    paint_ctx.fill(rect, self.color_scheme[pos]);
+                    paint_ctx.fill(rect, &self.color_scheme[pos]);
                 }
             }
         }
@@ -455,8 +455,8 @@ fn main() {
         .expect("launch failed");
 }
 
-impl<'a> Index<GridPos> for ColorScheme<'a> {
-    type Output = &'a Color;
+impl Index<GridPos> for ColorScheme {
+    type Output = Color;
     fn index(&self, pos: GridPos) -> &Self::Output {
         let idx = pos.row * GRID_SIZE + pos.col;
         self.colors.index(idx % self.colors.len())
@@ -489,20 +489,20 @@ impl PartialEq for Grid {
     }
 }
 
-impl Default for ColorScheme<'_> {
+impl Default for ColorScheme {
     fn default() -> Self {
         ColorScheme {
-            colors: vec![&C0, &C1, &C2, &C3, &C4],
+            colors: vec![C0, C1, C2, C3, C4],
             current: 0,
         }
     }
 }
 
-impl<'a> Iterator for ColorScheme<'a> {
-    type Item = &'a Color;
-    fn next(&mut self) -> Option<Self::Item> {
-        let result = &self.colors[self.current];
-        self.current = (self.current + 1) % self.colors.len();
-        Some(result)
-    }
-}
+// impl<'a> Iterator for ColorScheme<'a> {
+//     type Item = &'a Color;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         let result = &self.colors[self.current];
+//         self.current = (self.current + 1) % self.colors.len();
+//         Some(result)
+//     }
+// }
