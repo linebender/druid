@@ -21,6 +21,14 @@ use crate::{Env, Key};
 pub const COLOR_PRIMARY_LIGHT: Key<Color> = Key::new("color_primary_light");
 pub const COLOR_PRIMARY: Key<Color> = Key::new("color_primary");
 
+pub const COLOR_BASE_LIGHTEST: Key<Color> = Key::new("color_base_lightest");
+pub const COLOR_BASE_LIGHTER: Key<Color> = Key::new("color_base_lighter");
+pub const COLOR_BASE_LIGHT: Key<Color> = Key::new("color_base_light");
+pub const COLOR_BASE: Key<Color> = Key::new("color_base");
+pub const COLOR_BASE_DARK: Key<Color> = Key::new("color_base_dark");
+pub const COLOR_BASE_DARKER: Key<Color> = Key::new("color_base_darker");
+pub const COLOR_BASE_DARKEST: Key<Color> = Key::new("color_base_darkest");
+
 pub const WINDOW_BACKGROUND_COLOR: Key<Color> = Key::new("window_background_color");
 
 pub const LABEL_COLOR: Key<Color> = Key::new("label_color");
@@ -65,6 +73,13 @@ pub fn init() -> Env {
     let mut env = Env::default()
         .adding(COLOR_PRIMARY_LIGHT, Color::rgb8(0x5c, 0xc4, 0xff))
         .adding(COLOR_PRIMARY, Color::rgb8(0x00, 0x8d, 0xdd))
+        .adding(COLOR_BASE_LIGHTEST, Color::rgb8(0xe0, 0xe0, 0xe0))
+        .adding(COLOR_BASE_LIGHTER, Color::rgb8(0xcf, 0xcf, 0xcf))
+        .adding(COLOR_BASE_LIGHT, Color::rgb8(0xa9, 0xa9, 0xa9))
+        .adding(COLOR_BASE, Color::rgb8(0x77, 0x77, 0x77))
+        .adding(COLOR_BASE_DARK, Color::rgb8(0x56, 0x56, 0x56))
+        .adding(COLOR_BASE_DARKER, Color::rgb8(0x3d, 0x3d, 0x3d))
+        .adding(COLOR_BASE_DARKER, Color::rgb8(0x21, 0x21, 0x21))
         .adding(WINDOW_BACKGROUND_COLOR, Color::rgb8(0x29, 0x29, 0x29))
         .adding(LABEL_COLOR, Color::rgb8(0xf0, 0xf0, 0xea))
         .adding(PLACEHOLDER_COLOR, Color::rgb8(0x80, 0x80, 0x80))
