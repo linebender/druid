@@ -21,6 +21,8 @@ use crate::{Env, Key};
 pub const COLOR_PRIMARY_LIGHT: Key<Color> = Key::new("color_primary_light");
 pub const COLOR_PRIMARY: Key<Color> = Key::new("color_primary");
 
+pub const COLOR_SECONDARY: Key<Color> = Key::new("color_secondary");
+
 pub const COLOR_BASE_LIGHTEST: Key<Color> = Key::new("color_base_lightest");
 pub const COLOR_BASE_LIGHTER: Key<Color> = Key::new("color_base_lighter");
 pub const COLOR_BASE_LIGHT: Key<Color> = Key::new("color_base_light");
@@ -34,7 +36,6 @@ pub const BUTTON_DARK: Key<Color> = Key::new("button_dark");
 pub const BUTTON_LIGHT: Key<Color> = Key::new("button_light");
 pub const BUTTON_BORDER_RADIUS: Key<f64> = Key::new("button_radius");
 pub const BUTTON_BORDER_WIDTH: Key<f64> = Key::new("button_border_width");
-pub const SELECTION_COLOR: Key<Color> = Key::new("selection_color");
 pub const CURSOR_COLOR: Key<Color> = Key::new("cursor_color");
 
 pub const FONT_NAME: Key<&str> = Key::new("font_name");
@@ -62,6 +63,7 @@ pub fn init() -> Env {
     let mut env = Env::default()
         .adding(COLOR_PRIMARY_LIGHT, Color::rgb8(0x5c, 0xc4, 0xff))
         .adding(COLOR_PRIMARY, Color::rgb8(0x00, 0x8d, 0xdd))
+        .adding(COLOR_SECONDARY, Color::rgb8(0xf3, 0x00, 0x21))
         .adding(COLOR_BASE_LIGHTEST, Color::rgb8(0xe0, 0xe0, 0xe0))
         .adding(COLOR_BASE_LIGHTER, Color::rgb8(0xcf, 0xcf, 0xcf))
         .adding(COLOR_BASE_LIGHT, Color::rgb8(0xa9, 0xa9, 0xa9))
@@ -74,7 +76,6 @@ pub fn init() -> Env {
         .adding(BUTTON_LIGHT, Color::rgb8(0x21, 0x21, 0x21))
         .adding(BUTTON_BORDER_RADIUS, 4.)
         .adding(BUTTON_BORDER_WIDTH, 2.)
-        .adding(SELECTION_COLOR, Color::rgb8(0xf3, 0x00, 0x21))
         .adding(CURSOR_COLOR, Color::WHITE)
         .adding(TEXT_SIZE_NORMAL, 15.0)
         .adding(TEXT_SIZE_LARGE, 24.0)

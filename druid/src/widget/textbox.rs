@@ -373,7 +373,7 @@ impl Widget<String> for TextBox {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let background_color = env.get(theme::COLOR_BASE_DARK);
-        let selection_color = env.get(theme::SELECTION_COLOR);
+        let selection_color = env.get(theme::COLOR_SECONDARY);
         let text_color = env.get(theme::COLOR_BASE_LIGHTEST);
         let placeholder_color = env.get(theme::COLOR_BASE);
         let cursor_color = env.get(theme::CURSOR_COLOR);
