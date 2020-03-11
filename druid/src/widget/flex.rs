@@ -23,6 +23,80 @@ use crate::{
 };
 
 /// A container with either horizontal or vertical layout.
+///
+/// This widget is the foundation of most layouts, and is highly configurable.
+///
+/// # Flex layout algorithm
+///
+/// Children of a `Flex` container can have an optional `flex` parameter.
+/// Layout occurs in several passes. First we measure (calling their [`layout`]
+/// method) our non-flex children, providing them with unbounded space on the
+/// main axis. Next, the remaining space is divided between the flex children
+/// according to their flex factor, and they are measured. Unlike a non-flex
+/// child, a child with a non-zero flex factor has a maximum allowed size
+/// on the main axis; non-flex children are allowed to choose their size first,
+/// and freely.
+///
+/// If you would like a child to be forced to use up all of the flex space
+/// passed to it, you can place it in  a `SizedBox` set to `expand` in the
+/// appropriate axis. There are convenience methods for this available on
+/// [`WidgetExt`]: [`expand_width`] and [`expand_height`].
+///
+///
+/// # Options
+///
+/// To experiment with these options, see the `flex` example in `druid/examples`.
+///
+/// - [`CrossAxisAlignment`] determines how children are positioned on the
+/// cross or 'minor' axis. The default is `CrossAxisAlignment::Center`.
+///
+/// - [`MainAxisAlignment`] determines how children are positioned on the main
+/// axis; this is only meaningful if the container has more space on the main
+/// axis than is taken up by its children.
+///
+/// - [`must_fill_main_axis`] determines whether the container is obliged to
+/// be maximally large on the major axis, as determined by its own constraints.
+/// If this is `true`, then the container must fill the available space on that
+/// axis; otherwise it may be smaller if its children are smaller.
+///
+/// Additional options can be set (or overridden) in the [`FlexParams`].
+///
+/// # Examples
+///
+/// Construction with builder methods
+///
+/// ```
+/// use druid::widget::{Flex, FlexParams, Label, Slider, CrossAxisAlignment};
+///
+/// let my_row = Flex::row()
+///     .cross_axis_alignment(CrossAxisAlignment::Center)
+///     .must_fill_main_axis(true)
+///     .with_child(Label::new("hello"), 0.0)
+///     .with_spacer(8.0)
+///     .with_flex_child(Slider::new(), 1.0);
+/// ```
+///
+/// Construction with mutating methods
+///
+/// ```
+/// use druid::widget::{Flex, FlexParams, Label, Slider, CrossAxisAlignment};
+///
+/// let mut my_row = Flex::row();
+/// my_row.set_must_fill_main_axis(true);
+/// my_row.set_cross_axis_alignment(CrossAxisAlignment::Center);
+/// my_row.add_child(Label::new("hello"), 0.0);
+/// my_row.add_spacer(8.0);
+/// my_row.add_flex_child(Slider::new(), 1.0);
+/// ```
+///
+/// [`layout`]: trait.Widget.html#tymethod.layout
+/// [`MainAxisAlignment`]: enum.MainAxisAlignment.html
+/// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
+/// [`must_fill_main_axis`]: struct.Flex.html#method.must_fill_main_axis
+/// [`FlexParams`]: struct.FlexParams.html
+/// [`WidgetExt`]: trait.WidgetExt.html
+/// [`expand_height`]: trait.WidgetExt.html#method.expand_height
+/// [`expand_width`]: trait.WidgetExt.html#method.expand_width
 pub struct Flex<T> {
     direction: Axis,
     cross_alignment: CrossAxisAlignment,
@@ -33,13 +107,50 @@ pub struct Flex<T> {
 
 struct ChildWidget<T> {
     widget: WidgetPod<T, Box<dyn Widget<T>>>,
-    params: Params,
+    params: FlexParams,
 }
 
 /// A dummy widget we use to do spacing.
 struct Spacer {
     axis: Axis,
     len: KeyOrValue<f64>,
+}
+
+/// Optional parameters for an item in a [`Flex`] container (row or column).
+///
+/// Generally, when you would like to add a flexible child to a container,
+/// you can simply call [`with_flex_child`] or [`add_flex_child`], passing the
+/// child and the desired flex factor as a `f64`, which has an impl of
+/// `Into<FlexParams>`.
+///
+/// If you need to set additional paramaters, such as a custom [`CrossAxisAlignment`],
+/// you can construct `FlexParams`  directly. By default, the child has the
+/// same `CrossAxisAlignment` as the container.
+///
+/// For an overview  of the flex layout algorithm, see the [`Flex`] docs.
+///
+/// # Examples
+/// ```
+/// use druid::widget::{FlexParams, Label, CrossAxisAlignment};
+///
+/// let mut row = druid::widget::Flex::<()>::row();
+/// let child_1 = Label::new("I'm hungry");
+/// let child_2 = Label::new("I'm scared");
+/// // normally you just use a float:
+/// row.add_flex_child(child_1, 1.0);
+/// // you can construct FlexParams if needed:
+/// let params = FlexParams::new(2.0, CrossAxisAlignment::End);
+/// row.add_flex_child(child_2, params);
+/// ```
+///
+/// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
+/// [`Flex`]: struct.Flex.html
+/// [`with_flex_child`]: struct.Flex.html#method.with_flex_child
+/// [`add_flex_child`]: struct.Flex.html#method.add_flex_child
+#[derive(Copy, Clone, Default)]
+pub struct FlexParams {
+    flex: f64,
+    alignment: Option<CrossAxisAlignment>,
 }
 
 #[derive(Clone, Copy)]
@@ -95,9 +206,34 @@ pub enum MainAxisAlignment {
     SpaceAround,
 }
 
-#[derive(Copy, Clone, Default)]
-struct Params {
-    flex: f64,
+impl FlexParams {
+    /// Create custom `FlexParams` with a specific `flex_factor` and an optional
+    /// [`CrossAxisAlignment`].
+    ///
+    /// You likely only need to create these manually if you need to specify
+    /// a custom alignment; if you only need to use a custom `flex_factor` you
+    /// can pass an `f64`  to any of the functions that take `FlexParams`.
+    ///
+    /// By default, the widget uses the alignment of its parent [`Flex`] container.
+    ///
+    ///
+    /// [`Flex`]: struct.Flex.html
+    /// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
+    pub fn new(flex: f64, alignment: impl Into<Option<CrossAxisAlignment>>) -> Self {
+        FlexParams {
+            flex,
+            alignment: alignment.into(),
+        }
+    }
+}
+
+impl<T> ChildWidget<T> {
+    fn new(child: impl Widget<T> + 'static, params: FlexParams) -> Self {
+        ChildWidget {
+            widget: WidgetPod::new(Box::new(child)),
+            params,
+        }
+    }
 }
 
 impl Axis {
@@ -203,7 +339,35 @@ impl<T: Data> Flex<T> {
     ///
     /// Convenient for assembling a group of widgets in a single expression.
     pub fn with_child(mut self, child: impl Widget<T> + 'static, flex: f64) -> Self {
-        self.add_child(child, flex);
+        self.add_flex_child(child, flex);
+        self
+    }
+
+    /// Builder-style method to add a flexible child to the container.
+    ///
+    /// This function takes a child widget and [`FlexParams`]; importantly
+    /// you can pass in a float as your [`FlexParams`] in most cases.
+    ///
+    /// For the non-builder varient, see [`add_flex_child`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use druid::widget::{Flex, FlexParams, Label, Slider, CrossAxisAlignment};
+    ///
+    /// let my_row = Flex::row()
+    ///     .with_flex_child(Slider::new(), 1.0)
+    ///     .with_flex_child(Slider::new(), FlexParams::new(1.0, CrossAxisAlignment::Center));
+    /// ```
+    ///
+    /// [`FlexParams`]: struct.FlexParams.html
+    /// [`add_flex_child`]: #method.add_flex_child
+    pub fn with_flex_child(
+        mut self,
+        child: impl Widget<T> + 'static,
+        params: impl Into<FlexParams>,
+    ) -> Self {
+        self.add_flex_child(child, params);
         self
     }
 
@@ -254,12 +418,36 @@ impl<T: Data> Flex<T> {
     /// among the flex children.
     ///
     /// See also `with_child`.
+    //TODO: make this fn not take `flex`; I just don't want to break api yet.
     pub fn add_child(&mut self, child: impl Widget<T> + 'static, flex: f64) {
-        let params = Params { flex };
-        let child = ChildWidget {
-            widget: WidgetPod::new(child).boxed(),
-            params,
-        };
+        self.add_flex_child(child, flex);
+    }
+
+    /// Add a flexible child widget.
+    ///
+    /// This function takes a child widget and [`FlexParams`]; importantly
+    /// you can pass in a float as your [`FlexParams`] in most cases.
+    ///
+    /// For the non-builder varient, see [`add_flex_child`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use druid::widget::{Flex, FlexParams, Label, Slider, CrossAxisAlignment};
+    ///
+    /// let mut my_row = Flex::row();
+    /// my_row.add_flex_child(Slider::new(), 1.0);
+    /// my_row.add_flex_child(Slider::new(), FlexParams::new(1.0, CrossAxisAlignment::Center));
+    /// ```
+    ///
+    /// [`FlexParams`]: struct.FlexParams.html
+    /// [`add_flex_child`]: #method.add_flex_child
+    pub fn add_flex_child(
+        &mut self,
+        child: impl Widget<T> + 'static,
+        params: impl Into<FlexParams>,
+    ) {
+        let child = ChildWidget::new(child, params.into());
         self.children.push(child);
     }
 
@@ -269,7 +457,7 @@ impl<T: Data> Flex<T> {
             axis: self.direction,
             len: len.into(),
         };
-        self.add_child(spacer, 0.0);
+        self.add_flex_child(spacer, 0.0);
     }
 
     /// Add an empty spacer widget with a specific `flex` factor.
@@ -278,7 +466,7 @@ impl<T: Data> Flex<T> {
     ///
     /// [`add_child`]: #method.add_child
     pub fn add_flex_spacer(&mut self, flex: f64) {
-        self.add_child(SizedBox::empty(), flex);
+        self.add_flex_child(SizedBox::empty(), flex);
     }
 }
 
@@ -319,7 +507,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             if child.params.flex == 0.0 {
                 let child_bc = self
                     .direction
-                    .constraints(&loosened_bc, 0.0, std::f64::INFINITY);
+                    .constraints(&loosened_bc, 0., std::f64::INFINITY);
                 let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
                 minor = minor.max(self.direction.minor(child_size));
                 total_non_flex += self.direction.major(child_size);
@@ -338,8 +526,8 @@ impl<T: Data> Widget<T> for Flex<T> {
         for child in &mut self.children {
             if child.params.flex != 0.0 {
                 let major = remaining * child.params.flex / flex_sum;
+                let min_major = 0.0;
 
-                let min_major = if major.is_infinite() { 0.0 } else { major };
                 let child_bc = self.direction.constraints(&loosened_bc, min_major, major);
                 let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
                 flex_used += self.direction.major(child_size);
@@ -366,7 +554,8 @@ impl<T: Data> Widget<T> for Flex<T> {
         for child in &mut self.children {
             let rect = child.widget.layout_rect();
             let extra_minor = minor - self.direction.minor(rect.size());
-            let align_minor = self.cross_alignment.align(extra_minor);
+            let alignment = child.params.alignment.unwrap_or(self.cross_alignment);
+            let align_minor = alignment.align(extra_minor);
             let pos: Point = self.direction.pack(major, align_minor).into();
 
             child.widget.set_layout_rect(rect.with_origin(pos));
@@ -491,4 +680,13 @@ impl<T: Data> Widget<T> for Spacer {
         self.axis.pack(major, 0.0).into()
     }
     fn paint(&mut self, _: &mut PaintCtx, _: &T, _: &Env) {}
+}
+
+impl From<f64> for FlexParams {
+    fn from(flex: f64) -> FlexParams {
+        FlexParams {
+            flex,
+            alignment: None,
+        }
+    }
 }
