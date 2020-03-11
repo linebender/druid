@@ -255,16 +255,16 @@ impl Widget<bool> for Switch {
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
             (
-                env.get(theme::FOREGROUND_LIGHT),
-                env.get(theme::FOREGROUND_DARK),
+                env.get(theme::COLOR_BASE_LIGHTEST),
+                env.get(theme::COLOR_BASE_LIGHT),
             ),
         );
         let flipped_knob_gradient = LinearGradient::new(
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
             (
-                env.get(theme::FOREGROUND_DARK),
-                env.get(theme::FOREGROUND_LIGHT),
+                env.get(theme::COLOR_BASE_LIGHT),
+                env.get(theme::COLOR_BASE_LIGHTEST),
             ),
         );
 
@@ -276,9 +276,9 @@ impl Widget<bool> for Switch {
 
         // paint the border
         let border_color = if is_hovered || is_active {
-            env.get(theme::FOREGROUND_LIGHT)
+            env.get(theme::COLOR_BASE_LIGHTEST)
         } else {
-            env.get(theme::FOREGROUND_DARK)
+            env.get(theme::COLOR_BASE_LIGHT)
         };
 
         paint_ctx.stroke(knob_circle, &border_color, 2.);
