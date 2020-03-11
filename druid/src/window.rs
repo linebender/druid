@@ -249,7 +249,7 @@ impl<T: Data> Window<T> {
             self.layout(piet, data, env);
         }
 
-        piet.clear(env.get(crate::theme::WINDOW_BACKGROUND_COLOR));
+        piet.clear(env.get(crate::theme::COLOR_BASE_DARKEST));
         self.paint(piet, data, env);
 
         // If commands were submitted during anim frame, ask the handler

@@ -24,7 +24,7 @@ fn main() {
     AppLauncher::with_window(window)
         .configure_env(|env, _| {
             env.set(theme::SELECTION_COLOR, Color::rgb8(0xA6, 0xCC, 0xFF));
-            env.set(theme::WINDOW_BACKGROUND_COLOR, Color::WHITE);
+            env.set(theme::COLOR_BASE_DARKEST, Color::WHITE);
             env.set(theme::LABEL_COLOR, Color::BLACK);
             env.set(theme::CURSOR_COLOR, Color::BLACK);
             env.set(theme::BACKGROUND_LIGHT, Color::rgb8(230, 230, 230));
