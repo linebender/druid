@@ -57,7 +57,7 @@ fn ui_builder() -> impl Widget<AppData> {
     // text_size gets a custom key which we set with the env_scope wrapper.
     let styled_label =
         Label::new(|data: &AppData, _env: &_| format!("Size {:.1}: {}", data.size, data.text))
-            .text_color(theme::PRIMARY_LIGHT)
+            .text_color(theme::COLOR_PRIMARY_LIGHT)
             .text_size(MY_CUSTOM_TEXT_SIZE)
             .env_scope(|env: &mut druid::Env, data: &AppData| {
                 env.set(MY_CUSTOM_TEXT_SIZE, data.size)

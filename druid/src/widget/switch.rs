@@ -229,8 +229,8 @@ impl Widget<bool> for Switch {
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
             (
-                env.get(theme::PRIMARY_LIGHT).with_alpha(opacity),
-                env.get(theme::PRIMARY_DARK).with_alpha(opacity),
+                env.get(theme::COLOR_PRIMARY_LIGHT).with_alpha(opacity),
+                env.get(theme::COLOR_PRIMARY).with_alpha(opacity),
             ),
         );
         let background_gradient_off_state = LinearGradient::new(

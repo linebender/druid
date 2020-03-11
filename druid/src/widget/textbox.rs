@@ -381,7 +381,7 @@ impl Widget<String> for TextBox {
         let has_focus = paint_ctx.has_focus();
 
         let border_color = if has_focus {
-            env.get(theme::PRIMARY_LIGHT)
+            env.get(theme::COLOR_PRIMARY_LIGHT)
         } else {
             env.get(theme::BORDER_DARK)
         };
