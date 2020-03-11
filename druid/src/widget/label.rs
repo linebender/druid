@@ -76,7 +76,7 @@ impl<T: Data> Label<T> {
         let text = text.into();
         Self {
             text,
-            color: theme::LABEL_COLOR.into(),
+            color: theme::COLOR_BASE_LIGHTEST.into(),
             size: theme::TEXT_SIZE_NORMAL.into(),
         }
     }

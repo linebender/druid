@@ -138,7 +138,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         if *data == self.variant {
             let inner_circle = Circle::new((size / 2., size / 2.), 2.);
 
-            paint_ctx.fill(inner_circle, &env.get(theme::LABEL_COLOR));
+            paint_ctx.fill(inner_circle, &env.get(theme::COLOR_BASE_LIGHTEST));
         }
 
         // Paint the text label

@@ -118,7 +118,7 @@ impl Widget<bool> for Checkbox {
             style.set_line_cap(LineCap::Round);
             style.set_line_join(LineJoin::Round);
 
-            paint_ctx.stroke_styled(path, &env.get(theme::LABEL_COLOR), 2., &style);
+            paint_ctx.stroke_styled(path, &env.get(theme::COLOR_BASE_LIGHTEST), 2., &style);
         }
     }
 }

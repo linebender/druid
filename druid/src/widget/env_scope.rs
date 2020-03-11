@@ -41,7 +41,7 @@ impl<T, W> EnvScope<T, W> {
     ///
     /// EnvScope::new(
     ///     |env, data| {
-    ///         env.set(theme::LABEL_COLOR, Color::WHITE);
+    ///         env.set(theme::COLOR_BASE_LIGHTEST, Color::WHITE);
     ///     },
     ///     Label::new("White text!")
     /// )

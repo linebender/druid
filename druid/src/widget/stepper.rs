@@ -166,7 +166,7 @@ impl Widget<f64> for Stepper {
         arrows.line_to(Point::new(width / 2., height - 4.));
         arrows.close_path();
 
-        paint_ctx.fill(arrows, &env.get(theme::LABEL_COLOR));
+        paint_ctx.fill(arrows, &env.get(theme::COLOR_BASE_LIGHTEST));
     }
 
     fn layout(

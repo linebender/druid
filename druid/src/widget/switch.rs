@@ -103,12 +103,12 @@ impl Switch {
         paint_ctx.draw_text(
             &on_label_layout,
             on_label_origin,
-            &env.get(theme::LABEL_COLOR),
+            &env.get(theme::COLOR_BASE_LIGHTEST),
         );
         paint_ctx.draw_text(
             &off_label_layout,
             off_label_origin,
-            &env.get(theme::LABEL_COLOR),
+            &env.get(theme::COLOR_BASE_LIGHTEST),
         );
     }
 }
