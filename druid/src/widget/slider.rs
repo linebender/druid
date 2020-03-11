@@ -133,7 +133,7 @@ impl Widget<f64> for Slider {
             ),
         );
 
-        paint_ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), 2.0);
+        paint_ctx.stroke(background_rect, &env.get(theme::COLOR_BASE_DARKER), 2.0);
 
         paint_ctx.fill(background_rect, &background_gradient);
 

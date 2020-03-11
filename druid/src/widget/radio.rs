@@ -127,9 +127,9 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         paint_ctx.fill(circle, &background_gradient);
 
         let border_color = if paint_ctx.is_hot() {
-            env.get(theme::BORDER_LIGHT)
+            env.get(theme::COLOR_BASE_LIGHT)
         } else {
-            env.get(theme::BORDER_DARK)
+            env.get(theme::COLOR_BASE_DARKER)
         };
 
         paint_ctx.stroke(circle, &border_color, 1.);

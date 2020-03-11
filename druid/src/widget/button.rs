@@ -135,9 +135,9 @@ impl<T: Data> Widget<T> for Button<T> {
         };
 
         let border_color = if is_hot {
-            env.get(theme::BORDER_LIGHT)
+            env.get(theme::COLOR_BASE_LIGHT)
         } else {
-            env.get(theme::BORDER_DARK)
+            env.get(theme::COLOR_BASE_DARKER)
         };
 
         paint_ctx.stroke(

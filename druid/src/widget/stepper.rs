@@ -118,7 +118,7 @@ impl Widget<f64> for Stepper {
         let width = env.get(theme::BASIC_WIDGET_HEIGHT);
         let button_size = Size::new(width, height / 2.);
 
-        paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), 2.0);
+        paint_ctx.stroke(rounded_rect, &env.get(theme::COLOR_BASE_DARKER), 2.0);
         paint_ctx.clip(rounded_rect);
 
         // draw buttons for increase/decrease
