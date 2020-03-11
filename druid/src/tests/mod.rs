@@ -305,15 +305,11 @@ fn register_after_adding_child() {
         assert!(harness.get_state(id_5).children.contains(&id_6));
         assert!(harness.get_state(id_5).children.contains(&id_1));
         assert!(harness.get_state(id_5).children.contains(&id_4));
-        assert!(!harness.get_state(id_5).children.contains(&id_7));
-        assert!(!harness.get_state(id_5).children.contains(&id_2));
-        assert!(!harness.get_state(id_5).children.contains(&id_3));
         assert_eq!(harness.get_state(id_5).children.entry_count(), 3);
 
         harness.submit_command(REPLACE_CHILD, None);
 
         assert!(harness.get_state(id_5).children.contains(&id_6));
-        assert!(!harness.get_state(id_5).children.contains(&id_1));
         assert!(harness.get_state(id_5).children.contains(&id_4));
         assert!(harness.get_state(id_5).children.contains(&id_7));
         assert!(harness.get_state(id_5).children.contains(&id_2));
