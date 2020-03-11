@@ -13,11 +13,17 @@ pub enum EditAction {
     Move(Movement),
     ModifySelection(Movement),
     SelectAll,
-    // Click(MouseAction),
-    // Drag(MouseAction),
+    Click(MouseAction),
+    Drag(MouseAction),
     Delete, // { movement: Movement, kill: bool },
     Backspace,
     Insert(String),
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct MouseAction {
+    pub column: usize,
+    pub shift: bool,
 }
 
 pub trait TextInput {

@@ -28,8 +28,8 @@ use crate::piet::{
 use crate::theme;
 
 use crate::text::{
-    movement, offset_for_delete_backwards, EditAction, EditableText, Movement, Selection,
-    SingleLineTextInput, TextInput,
+    movement, offset_for_delete_backwards, EditAction, EditableText, MouseAction, Movement,
+    Selection, SingleLineTextInput, TextInput,
 };
 
 const BORDER_WIDTH: f64 = 1.;
@@ -128,6 +128,14 @@ impl TextBox {
             EditAction::Move(movement) => self.move_selection(movement, text, false),
             EditAction::ModifySelection(movement) => self.move_selection(movement, text, true),
             EditAction::SelectAll => self.selection.all(text),
+            EditAction::Click(action) => {
+                if action.shift {
+                    self.selection.end = action.column;
+                } else {
+                    self.caret_to(text, action.column);
+                }
+            }
+            EditAction::Drag(action) => self.selection.end = action.column,
         }
     }
 
@@ -220,31 +228,36 @@ impl TextBox {
 }
 
 impl Widget<String> for TextBox {
-    #[allow(clippy::cognitive_complexity)]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
         // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);
 
         let mut text_layout = self.get_layout(&mut ctx.text(), &data, env);
         let mut edit_action = None;
+        let force_reset_cursor_blink = false;
+        let mut text_changed = false;
 
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
                 ctx.set_active(true);
-                let cursor_off = self.offset_for_point(mouse.pos, &text_layout);
-                if mouse.mods.shift {
-                    self.selection.end = cursor_off;
-                } else {
-                    self.caret_to(data, cursor_off);
-                }
+
+                let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
+                edit_action = Some(EditAction::Click(MouseAction {
+                    column: cursor_offset,
+                    shift: mouse.mods.shift,
+                }));
+
                 ctx.request_paint();
-                self.reset_cursor_blink(ctx);
             }
             Event::MouseMoved(mouse) => {
                 ctx.set_cursor(&Cursor::IBeam);
                 if ctx.is_active() {
-                    self.selection.end = self.offset_for_point(mouse.pos, &text_layout);
+                    let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
+                    edit_action = Some(EditAction::Drag(MouseAction {
+                        column: cursor_offset,
+                        shift: mouse.mods.shift,
+                    }));
                     ctx.request_paint();
                 }
             }
@@ -272,6 +285,7 @@ impl Widget<String> for TextBox {
                 }
                 if !self.selection.is_caret() && cmd.selector == crate::commands::CUT {
                     self.delete_backward(data);
+                    text_changed = true;
                 }
                 ctx.set_handled();
             }
@@ -280,9 +294,11 @@ impl Widget<String> for TextBox {
                 if let Some(string) = item.get_string() {
                     self.insert(data, &string);
                     self.reset_cursor_blink(ctx);
+
+                    text_changed = true;
+                    ctx.request_paint();
                 }
             }
-            //TODO: move this to a 'handle_key' function, remove the #allow above
             Event::KeyDown(key_event) => {
                 let event_handled = match key_event {
                     // Tab and shift+tab
@@ -299,17 +315,26 @@ impl Widget<String> for TextBox {
 
                 if !event_handled {
                     edit_action = SingleLineTextInput::new().handle_event(key_event);
+                    text_changed = true;
                 }
 
-                text_layout = self.get_layout(&mut ctx.text(), &data, env);
-                self.update_hscroll(&text_layout);
                 ctx.request_paint();
             }
             _ => (),
         }
 
+        // TODO figure out if text changed from edit action
+        if text_changed {
+            text_layout = self.get_layout(&mut ctx.text(), &data, env);
+            self.update_hscroll(&text_layout);
+        }
+
         if let Some(edit_action) = edit_action {
+            let previous_selector = self.selection.end;
             self.do_edit_action(edit_action, data);
+            if force_reset_cursor_blink || self.selection.end != previous_selector {
+                self.reset_cursor_blink(ctx);
+            }
         }
     }
 
