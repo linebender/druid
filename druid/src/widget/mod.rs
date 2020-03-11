@@ -57,7 +57,7 @@ pub use container::Container;
 pub use controller::{Controller, ControllerHost};
 pub use either::Either;
 pub use env_scope::EnvScope;
-pub use flex::{CrossAxisAlignment, Flex, MainAxisAlignment};
+pub use flex::{CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
 pub use identity_wrapper::IdentityWrapper;
 pub use label::{Label, LabelText};
 pub use list::{List, ListIter};
