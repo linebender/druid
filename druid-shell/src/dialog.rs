@@ -86,13 +86,13 @@ impl FileDialogOptions {
         self
     }
 
-    /// Set whether folders should be selectable
+    /// Set whether folders should be selectable.
     pub fn select_directories(mut self) -> Self {
         self.select_directories = true;
         self
     }
 
-    /// Set whether multiple files can be selected
+    /// Set whether multiple files can be selected.
     pub fn multi_selection(mut self) -> Self {
         self.multi_selection = true;
         self
