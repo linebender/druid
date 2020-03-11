@@ -21,18 +21,6 @@ pub enum EditAction {
     Paste(String),
 }
 
-impl EditAction {
-    // Returns whether executing the edit action mutates the underlying data storage
-    pub fn is_mutation(&self) -> bool {
-        match self {
-            Self::Delete => true,
-            Self::Backspace => true,
-            Self::Insert(_) | Self::Paste(_) => true,
-            _ => false,
-        }
-    }
-}
-
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct MouseAction {
     pub column: usize,

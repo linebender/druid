@@ -30,7 +30,7 @@ pub enum Movement {
 }
 
 /// Compute the result of movement on a selection .
-pub fn movement(m: Movement, s: Selection, text: &impl EditableText, modify: bool) -> Selection {
+pub fn movement(m: &Movement, s: Selection, text: &impl EditableText, modify: bool) -> Selection {
     let offset = match m {
         Movement::Left => {
             if s.is_caret() || modify {
