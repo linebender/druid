@@ -51,7 +51,7 @@ fn build_app() -> impl Widget<u32> {
             )
             .split_point(0.5)
             .draggable(true)
-            .solid(true)
+            .fill_splitter_handle(true)
             .min_size(60.0),
         )
         .border(Color::WHITE, 1.0),

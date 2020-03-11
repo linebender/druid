@@ -96,7 +96,7 @@ impl<T> Split<T> {
     /// Builder-style method to set whether the splitter handle is drawn as a solid rectangle.
     ///
     /// If this is `false` (the default), it will be drawn as two parallel lines.
-    pub fn solid(mut self, solid: bool) -> Self {
+    pub fn fill_splitter_handle(mut self, solid: bool) -> Self {
         self.solid = solid;
         self
     }
