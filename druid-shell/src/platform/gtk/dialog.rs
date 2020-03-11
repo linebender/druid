@@ -30,7 +30,7 @@ pub(crate) fn get_file_dialog_path(
 
     let (title, action) = match (ty, options.select_directories) {
         (FileDialogType::Open, false) => ("Open File", FileChooserAction::Open),
-        (FileDialogType::Open, true) => ("Open File", FileChooserAction::SelectFolder),
+        (FileDialogType::Open, true) => ("Open Folder", FileChooserAction::SelectFolder),
         (FileDialogType::Save, _) => ("Save File", FileChooserAction::Save),
     };
 
@@ -44,8 +44,6 @@ pub(crate) fn get_file_dialog_path(
     dialog.set_show_hidden(options.show_hidden);
 
     dialog.set_select_multiple(options.multi_selection);
-
-    // dialog.set_show_hidden(options.select_directories);
 
     let result = dialog.run();
 
