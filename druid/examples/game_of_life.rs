@@ -385,8 +385,8 @@ fn make_widget() -> impl Widget<AppData> {
                             )
                                 .lens(AppData::paused)
                                 .center()
-                                .fix_width(80.)
                                 .fix_height(40.)
+                                .expand()
                                 .padding((2.0, 2.0)),
                             1.0,
                         )
@@ -398,7 +398,8 @@ fn make_widget() -> impl Widget<AppData> {
                             })
                                 .lens(AppData::grid)
                                 .center()
-                                .fix_height(30.)
+                                .fix_height(40.)
+                                .expand()
                                 .padding((2.0, 2.0)),
                             1.0,
                         )
@@ -415,6 +416,7 @@ fn make_widget() -> impl Widget<AppData> {
                         )
                         .with_child(Slider::new().lens(AppData::speed).padding(3.0).expand(), 1.)
                         .alignment(Alignment::Center)
+                        .fix_height(75.)
                         .padding(4.0),
                     0.,
                 )
