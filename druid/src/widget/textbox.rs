@@ -120,7 +120,7 @@ impl TextBox {
         self.selection.end
     }
 
-    fn do_edit_action(&mut self, edit_action: &EditAction, text: &mut String) {
+    fn do_edit_action(&mut self, edit_action: EditAction, text: &mut String) {
         match edit_action {
             EditAction::Insert(chars) | EditAction::Paste(chars) => self.insert(text, &chars),
             EditAction::Backspace => self.delete_backward(text),
@@ -140,7 +140,7 @@ impl TextBox {
     }
 
     /// Edit a selection using a `Movement`.
-    fn move_selection(&mut self, mvmnt: &Movement, text: &mut String, modify: bool) {
+    fn move_selection(&mut self, mvmnt: Movement, text: &mut String, modify: bool) {
         // This movement function should ensure all movements are legit.
         // If they aren't, that's a problem with the movement function.
         self.selection = movement(mvmnt, self.selection, text, modify);
@@ -164,7 +164,7 @@ impl TextBox {
         if self.selection.is_caret() {
             // Never touch the characters before the cursor.
             if text.next_grapheme_offset(self.cursor()).is_some() {
-                self.move_selection(&Movement::Right, text, false);
+                self.move_selection(Movement::Right, text, false);
                 self.delete_backward(text);
             }
         } else {
@@ -317,14 +317,14 @@ impl Widget<String> for TextBox {
         }
 
         if let Some(edit_action) = edit_action {
-            self.do_edit_action(&edit_action, data);
-            self.reset_cursor_blink(ctx);
-
             let is_select_all = if let EditAction::SelectAll = &edit_action {
                 true
             } else {
                 false
             };
+
+            self.do_edit_action(edit_action, data);
+            self.reset_cursor_blink(ctx);
 
             if !is_select_all {
                 text_layout = self.get_layout(&mut ctx.text(), &data, env);
