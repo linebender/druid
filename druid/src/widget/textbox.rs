@@ -122,7 +122,7 @@ impl TextBox {
 
     fn do_edit_action(&mut self, edit_action: EditAction, text: &mut String) {
         match edit_action {
-            EditAction::Insert(chars) => self.insert(text, &chars),
+            EditAction::Insert(chars) | EditAction::Paste(chars) => self.insert(text, &chars),
             EditAction::Backspace => self.delete_backward(text),
             EditAction::Delete => self.delete_forward(text),
             EditAction::Move(movement) => self.move_selection(movement, text, false),
@@ -234,8 +234,6 @@ impl Widget<String> for TextBox {
 
         let mut text_layout = self.get_layout(&mut ctx.text(), &data, env);
         let mut edit_action = None;
-        let force_reset_cursor_blink = false;
-        let mut text_changed = false;
 
         match event {
             Event::MouseDown(mouse) => {
@@ -284,18 +282,14 @@ impl Widget<String> for TextBox {
                     Application::clipboard().put_string(text);
                 }
                 if !self.selection.is_caret() && cmd.selector == crate::commands::CUT {
-                    self.delete_backward(data);
-                    text_changed = true;
+                    edit_action = Some(EditAction::Delete);
                 }
                 ctx.set_handled();
             }
             Event::Command(cmd) if cmd.selector == RESET_BLINK => self.reset_cursor_blink(ctx),
             Event::Paste(ref item) => {
                 if let Some(string) = item.get_string() {
-                    self.insert(data, &string);
-                    self.reset_cursor_blink(ctx);
-
-                    text_changed = true;
+                    edit_action = Some(EditAction::Paste(string));
                     ctx.request_paint();
                 }
             }
@@ -315,7 +309,6 @@ impl Widget<String> for TextBox {
 
                 if !event_handled {
                     edit_action = SingleLineTextInput::new().handle_event(key_event);
-                    text_changed = true;
                 }
 
                 ctx.request_paint();
@@ -323,17 +316,20 @@ impl Widget<String> for TextBox {
             _ => (),
         }
 
-        // TODO figure out if text changed from edit action
-        if text_changed {
-            text_layout = self.get_layout(&mut ctx.text(), &data, env);
-            self.update_hscroll(&text_layout);
-        }
-
         if let Some(edit_action) = edit_action {
+            let text_changed = edit_action.is_mutation();
+
             let previous_selector = self.selection.end;
             self.do_edit_action(edit_action, data);
-            if force_reset_cursor_blink || self.selection.end != previous_selector {
+            let cursor_changed = self.selection.end != previous_selector;
+
+            if text_changed || cursor_changed {
                 self.reset_cursor_blink(ctx);
+            }
+
+            if text_changed {
+                text_layout = self.get_layout(&mut ctx.text(), &data, env);
+                self.update_hscroll(&text_layout);
             }
         }
     }
