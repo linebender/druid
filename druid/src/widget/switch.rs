@@ -237,8 +237,8 @@ impl Widget<bool> for Switch {
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
             (
-                env.get(theme::BACKGROUND_LIGHT).with_alpha(1. - opacity),
-                env.get(theme::BACKGROUND_DARK).with_alpha(1. - opacity),
+                env.get(theme::COLOR_BASE_DARK).with_alpha(1. - opacity),
+                env.get(theme::COLOR_BASE_DARKER).with_alpha(1. - opacity),
             ),
         );
 

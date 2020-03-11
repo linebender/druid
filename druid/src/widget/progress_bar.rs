@@ -78,8 +78,8 @@ impl Widget<f64> for ProgressBar {
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
             (
-                env.get(theme::BACKGROUND_LIGHT),
-                env.get(theme::BACKGROUND_DARK),
+                env.get(theme::COLOR_BASE_DARK),
+                env.get(theme::COLOR_BASE_DARKER),
             ),
         );
         paint_ctx.fill(rounded_rect, &background_gradient);

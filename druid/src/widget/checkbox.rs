@@ -93,8 +93,8 @@ impl Widget<bool> for Checkbox {
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
             (
-                env.get(theme::BACKGROUND_LIGHT),
-                env.get(theme::BACKGROUND_DARK),
+                env.get(theme::COLOR_BASE_DARK),
+                env.get(theme::COLOR_BASE_DARKER),
             ),
         );
 

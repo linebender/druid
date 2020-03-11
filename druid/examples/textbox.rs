@@ -27,7 +27,7 @@ fn main() {
             env.set(theme::COLOR_BASE_DARKEST, Color::WHITE);
             env.set(theme::COLOR_BASE_LIGHTEST, Color::BLACK);
             env.set(theme::CURSOR_COLOR, Color::BLACK);
-            env.set(theme::BACKGROUND_LIGHT, Color::rgb8(230, 230, 230));
+            env.set(theme::COLOR_BASE_DARK, Color::rgb8(230, 230, 230));
         })
         .use_simple_logger()
         .launch("typing is fun!".to_string())
@@ -38,7 +38,7 @@ fn build_widget() -> impl Widget<String> {
     let textbox = TextBox::new();
     let textbox_2 = EnvScope::new(
         |env, _| {
-            env.set(theme::BACKGROUND_LIGHT, Color::rgb8(50, 50, 50));
+            env.set(theme::COLOR_BASE_DARK, Color::rgb8(50, 50, 50));
             env.set(theme::COLOR_BASE_LIGHTEST, Color::WHITE);
             env.set(theme::CURSOR_COLOR, Color::WHITE);
             env.set(theme::SELECTION_COLOR, Color::rgb8(100, 100, 100));
