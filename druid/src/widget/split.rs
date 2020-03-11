@@ -93,7 +93,9 @@ impl<T> Split<T> {
         self.draggable = draggable;
         self
     }
-    /// Set whether the splitter handle is a solid rectangle or two parallel lines.
+    /// Builder-style method to set whether the splitter handle is drawn as a solid rectangle.
+    ///
+    /// If this is `false` (the default), it will be drawn as two parallel lines.
     pub fn solid(mut self, solid: bool) -> Self {
         self.solid = solid;
         self
