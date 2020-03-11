@@ -276,7 +276,8 @@ impl Widget<AppData> for GameOfLifeWidget {
         _event: &LifeCycle,
         _data: &AppData,
         _env: &Env,
-    ) {}
+    ) {
+    }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &AppData, _data: &AppData, _env: &Env) {
         ctx.request_paint();
@@ -383,11 +384,11 @@ fn make_widget() -> impl Widget<AppData> {
                                     ctx.request_paint();
                                 },
                             )
-                                .lens(AppData::paused)
-                                .center()
-                                .fix_height(40.)
-                                .expand()
-                                .padding((2.0, 2.0)),
+                            .lens(AppData::paused)
+                            .center()
+                            .fix_height(40.)
+                            .expand()
+                            .padding((2.0, 2.0)),
                             1.0,
                         )
                         .with_child(
@@ -396,11 +397,11 @@ fn make_widget() -> impl Widget<AppData> {
                                 data.clear();
                                 ctx.request_paint();
                             })
-                                .lens(AppData::grid)
-                                .center()
-                                .fix_height(40.)
-                                .expand()
-                                .padding((2.0, 2.0)),
+                            .lens(AppData::grid)
+                            .center()
+                            .fix_height(40.)
+                            .expand()
+                            .padding((2.0, 2.0)),
                             1.0,
                         )
                         .fix_height(35.)
