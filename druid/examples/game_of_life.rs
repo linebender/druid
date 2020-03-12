@@ -252,7 +252,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                 if e.button == MouseButton::Left {
                     data.drawing = true;
                     let grid_pos_opt = self.grid_pos(e.pos);
-                    grid_pos_opt.iter().for_each(|pos| data.grid[*pos] = true);
+                    grid_pos_opt.iter().for_each(|pos| data.grid[*pos] = !data.grid[*pos]);
                 }
             }
             Event::MouseUp(e) => {
@@ -491,12 +491,3 @@ impl Default for ColorScheme {
         }
     }
 }
-
-// impl<'a> Iterator for ColorScheme<'a> {
-//     type Item = &'a Color;
-//     fn next(&mut self) -> Option<Self::Item> {
-//         let result = &self.colors[self.current];
-//         self.current = (self.current + 1) % self.colors.len();
-//         Some(result)
-//     }
-// }
