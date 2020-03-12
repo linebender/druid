@@ -252,7 +252,9 @@ impl Widget<AppData> for GameOfLifeWidget {
                 if e.button == MouseButton::Left {
                     data.drawing = true;
                     let grid_pos_opt = self.grid_pos(e.pos);
-                    grid_pos_opt.iter().for_each(|pos| data.grid[*pos] = !data.grid[*pos]);
+                    grid_pos_opt
+                        .iter()
+                        .for_each(|pos| data.grid[*pos] = !data.grid[*pos]);
                 }
             }
             Event::MouseUp(e) => {
