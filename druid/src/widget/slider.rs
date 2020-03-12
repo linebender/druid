@@ -68,6 +68,10 @@ impl Slider {
             .min(1.0);
         self.min + scalar * (self.max - self.min)
     }
+
+    fn normalize(&self, data: f64) -> f64 {
+        (data.max(self.min).min(self.max) - self.min) / (self.max - self.min)
+    }
 }
 
 impl Widget<f64> for Slider {
@@ -130,7 +134,7 @@ impl Widget<f64> for Slider {
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &f64, env: &Env) {
-        let clamped = data.max(0.0).min(1.0);
+        let clamped = self.normalize(*data);
         let rect = Rect::from_origin_size(Point::ORIGIN, paint_ctx.size());
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let track_thickness = 4.;
