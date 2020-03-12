@@ -225,11 +225,11 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         }
 
         let brush = paint_ctx.render_ctx.solid_brush(
-            env.get(theme::SCROLL_BAR_COLOR)
+            env.get(theme::COLOR_INK_INVERTED)
                 .with_alpha(self.scroll_bars.opacity),
         );
         let border_brush = paint_ctx.render_ctx.solid_brush(
-            env.get(theme::SCROLL_BAR_BORDER_COLOR)
+            env.get(theme::COLOR_BASE)
                 .with_alpha(self.scroll_bars.opacity),
         );
 

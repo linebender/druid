@@ -31,6 +31,9 @@ pub const COLOR_BASE_DARK: Key<Color> = Key::new("color_base_dark");
 pub const COLOR_BASE_DARKER: Key<Color> = Key::new("color_base_darker");
 pub const COLOR_BASE_DARKEST: Key<Color> = Key::new("color_base_darkest");
 
+pub const COLOR_INK: Key<Color> = Key::new("color_ink");
+pub const COLOR_INK_INVERTED: Key<Color> = Key::new("color_ink_inverted");
+
 pub const PROGRESS_BAR_RADIUS: Key<f64> = Key::new("progress_bar_radius");
 pub const BUTTON_DARK: Key<Color> = Key::new("button_dark");
 pub const BUTTON_LIGHT: Key<Color> = Key::new("button_light");
@@ -49,8 +52,6 @@ pub const BORDERED_WIDGET_HEIGHT: Key<f64> = Key::new("bordered_widget_height");
 
 pub const TEXTBOX_BORDER_RADIUS: Key<f64> = Key::new("textbox_radius");
 
-pub const SCROLL_BAR_COLOR: Key<Color> = Key::new("scroll_bar_color");
-pub const SCROLL_BAR_BORDER_COLOR: Key<Color> = Key::new("scroll_bar_border_color");
 pub const SCROLL_BAR_MAX_OPACITY: Key<f64> = Key::new("scroll_bar_max_opacity");
 pub const SCROLL_BAR_FADE_DELAY: Key<u64> = Key::new("scroll_bar_fade_time");
 pub const SCROLL_BAR_WIDTH: Key<f64> = Key::new("scroll_bar_width");
@@ -71,6 +72,8 @@ pub fn init() -> Env {
         .adding(COLOR_BASE_DARK, Color::rgb8(0x56, 0x56, 0x56))
         .adding(COLOR_BASE_DARKER, Color::rgb8(0x3d, 0x3d, 0x3d))
         .adding(COLOR_BASE_DARKEST, Color::rgb8(0x29, 0x29, 0x29))
+        .adding(COLOR_INK, Color::rgb8(0x00, 0x00, 0x00))
+        .adding(COLOR_INK_INVERTED, Color::rgb8(0xff, 0xff, 0xff))
         .adding(PROGRESS_BAR_RADIUS, 4.)
         .adding(BUTTON_DARK, Color::BLACK)
         .adding(BUTTON_LIGHT, Color::rgb8(0x21, 0x21, 0x21))
@@ -83,8 +86,6 @@ pub fn init() -> Env {
         .adding(WIDE_WIDGET_WIDTH, 100.)
         .adding(BORDERED_WIDGET_HEIGHT, 24.0)
         .adding(TEXTBOX_BORDER_RADIUS, 2.)
-        .adding(SCROLL_BAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))
-        .adding(SCROLL_BAR_BORDER_COLOR, Color::rgb8(0x77, 0x77, 0x77))
         .adding(SCROLL_BAR_MAX_OPACITY, 0.7)
         .adding(SCROLL_BAR_FADE_DELAY, 1500u64)
         .adding(SCROLL_BAR_WIDTH, 8.)
