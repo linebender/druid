@@ -48,7 +48,7 @@ impl Slider {
 
     /// Builder-style method to set the range covered by this slider.
     ///
-    /// The default range is `0.0..1.0`. 
+    /// The default range is `0.0..1.0`.
     pub fn with_range(mut self, min: f64, max: f64) -> Self {
         self.min = min;
         self.max = max;
