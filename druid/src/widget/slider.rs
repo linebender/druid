@@ -24,7 +24,7 @@ use crate::{
 /// A slider, allowing interactive update of a numeric value.
 ///
 /// This slider implements `Widget<f64>`, and works on values clamped
-/// in the range 0..1.0.
+/// in the range `min..max`.
 #[derive(Debug, Clone, Default)]
 pub struct Slider {
     min: f64,
