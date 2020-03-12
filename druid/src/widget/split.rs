@@ -25,6 +25,7 @@ use crate::{
 pub struct Split<T> {
     split_direction: Axis,
     draggable: bool,
+    min_size: f64,
     split_point: f64,
     splitter_size: f64,
     child1: WidgetPod<T, Box<dyn Widget<T>>>,
@@ -40,6 +41,7 @@ impl<T> Split<T> {
     ) -> Self {
         Split {
             split_direction,
+            min_size: 0.0,
             split_point: 0.5,
             splitter_size: 10.0,
             draggable: false,
@@ -63,6 +65,15 @@ impl<T> Split<T> {
             "split_point must be between 0.0 and 1.0!"
         );
         self.split_point = split_point;
+        self
+    }
+    /// Builder-style method to set the minimum size for both sides of the split.
+    ///
+    /// The value must be greater than or equal to `0.0`.
+    pub fn min_size(mut self, min_size: f64) -> Self {
+        assert!(min_size >= 0.0);
+        self.min_size = min_size;
+
         self
     }
     /// Set the width of the splitter bar, in pixels
@@ -92,33 +103,32 @@ impl<T> Split<T> {
             }
         }
     }
+    fn calculate_limits(&self, size: Size) -> (f64, f64) {
+        // Since the Axis::Direction tells us the direction of the splitter itself
+        // we need the minor axis to get the size of the 'splitted' direction
+        let size_in_splitted_direction = self.split_direction.minor(size);
+
+        let min_offset = (self.splitter_size * 0.5).min(5.0);
+        let mut min_limit = self.min_size.max(min_offset);
+        let mut max_limit = (size_in_splitted_direction - self.min_size.max(min_offset)).max(0.0);
+
+        if min_limit > max_limit {
+            min_limit = 0.5 * (min_limit + max_limit);
+            max_limit = min_limit;
+        }
+
+        (min_limit, max_limit)
+    }
+
     fn update_splitter(&mut self, size: Size, mouse_pos: Point) {
         self.split_point = match self.split_direction {
             Axis::Vertical => {
-                let max_limit = size.width - (self.splitter_size * 0.5).min(5.0);
-                let min_limit = (self.splitter_size * 0.5).min(5.0);
-                let max_split = max_limit / size.width;
-                let min_split = min_limit / size.width;
-                if mouse_pos.x > max_limit {
-                    max_split
-                } else if mouse_pos.x < min_limit {
-                    min_split
-                } else {
-                    mouse_pos.x / size.width
-                }
+                let (min_limit, max_limit) = self.calculate_limits(size);
+                clamp(mouse_pos.x, min_limit, max_limit) / size.width
             }
             Axis::Horizontal => {
-                let max_limit = size.height - (self.splitter_size * 0.5).min(5.0);
-                let min_limit = (self.splitter_size * 0.5).min(5.0);
-                let max_split = max_limit / size.height;
-                let min_split = min_limit / size.height;
-                if mouse_pos.y > max_limit {
-                    max_split
-                } else if mouse_pos.y < min_limit {
-                    min_split
-                } else {
-                    mouse_pos.y / size.height
-                }
+                let (min_limit, max_limit) = self.calculate_limits(size);
+                clamp(mouse_pos.y, min_limit, max_limit) / size.height
             }
         }
     }
@@ -193,6 +203,7 @@ impl<T: Data> Widget<T> for Split<T> {
         bc.debug_check("Split");
 
         let mut my_size = bc.max();
+
         let reduced_width = my_size.width - self.splitter_size;
         let reduced_height = my_size.height - self.splitter_size;
         let (child1_bc, child2_bc) = match self.split_direction {
@@ -264,6 +275,34 @@ impl<T: Data> Widget<T> for Split<T> {
         let paint_rect = self.child1.paint_rect().union(self.child2.paint_rect());
         let insets = paint_rect - Rect::ZERO.with_size(my_size);
         ctx.set_paint_insets(insets);
+
+        // Update our splits to hold our constraints if needed
+        let (min_limit, max_limit) = self.calculate_limits(my_size);
+        self.split_point = match self.split_direction {
+            Axis::Vertical => {
+                if my_size.width <= std::f64::EPSILON {
+                    0.5
+                } else {
+                    clamp(
+                        self.split_point,
+                        min_limit / my_size.width,
+                        max_limit / my_size.width,
+                    )
+                }
+            }
+            Axis::Horizontal => {
+                if my_size.height <= std::f64::EPSILON {
+                    0.5
+                } else {
+                    clamp(
+                        self.split_point,
+                        min_limit / my_size.height,
+                        max_limit / my_size.height,
+                    )
+                }
+            }
+        };
+
         my_size
     }
 
@@ -315,4 +354,16 @@ impl<T: Data> Widget<T> for Split<T> {
         self.child1.paint_with_offset(paint_ctx, &data, env);
         self.child2.paint_with_offset(paint_ctx, &data, env);
     }
+}
+
+// Move to std lib clamp as soon as https://github.com/rust-lang/rust/issues/44095 lands
+fn clamp(mut x: f64, min: f64, max: f64) -> f64 {
+    assert!(min <= max);
+    if x < min {
+        x = min;
+    }
+    if x > max {
+        x = max;
+    }
+    x
 }

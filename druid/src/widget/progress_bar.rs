@@ -16,19 +16,21 @@
 
 use crate::kurbo::{Point, RoundedRect, Size};
 use crate::theme;
-use crate::widget::Align;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
     PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
 };
 
 /// A progress bar, displaying a numeric progress value.
+///
+/// This type impls `Widget<f64>`, expecting a float in the range `0.0..1.0`.
 #[derive(Debug, Clone, Default)]
-pub struct ProgressBar {}
+pub struct ProgressBar;
 
 impl ProgressBar {
-    pub fn new() -> impl Widget<f64> {
-        Align::vertical(UnitPoint::CENTER, Self::default())
+    /// Return a new `ProgressBar`.
+    pub fn new() -> ProgressBar {
+        Self::default()
     }
 }
 
@@ -49,20 +51,10 @@ impl Widget<f64> for ProgressBar {
         env: &Env,
     ) -> Size {
         bc.debug_check("ProgressBar");
-
-        let default_width = 100.0;
-
-        if bc.is_width_bounded() {
-            bc.constrain(Size::new(
-                bc.max().width,
-                env.get(theme::BASIC_WIDGET_HEIGHT),
-            ))
-        } else {
-            bc.constrain(Size::new(
-                default_width,
-                env.get(theme::BASIC_WIDGET_HEIGHT),
-            ))
-        }
+        bc.constrain(Size::new(
+            env.get(theme::WIDE_WIDGET_WIDTH),
+            env.get(theme::BASIC_WIDGET_HEIGHT),
+        ))
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &f64, env: &Env) {

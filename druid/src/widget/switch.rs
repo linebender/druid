@@ -19,7 +19,6 @@ use crate::piet::{
     FontBuilder, LinearGradient, RenderContext, Text, TextLayout, TextLayoutBuilder, UnitPoint,
 };
 use crate::theme;
-use crate::widget::Align;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
     Widget,
@@ -28,7 +27,7 @@ use crate::{
 const SWITCH_PADDING: f64 = 3.;
 const SWITCH_WIDTH_RATIO: f64 = 2.75;
 
-/// A switch that toggles a boolean.
+/// A switch that toggles a `bool`.
 #[derive(Debug, Clone, Default)]
 pub struct Switch {
     knob_pos: Point,
@@ -38,8 +37,9 @@ pub struct Switch {
 }
 
 impl Switch {
-    pub fn new() -> impl Widget<bool> {
-        Align::vertical(UnitPoint::CENTER, Self::default())
+    /// Create a new `Switch`.
+    pub fn new() -> Switch {
+        Self::default()
     }
 
     fn knob_hit_test(&self, knob_width: f64, mouse_pos: Point) -> bool {
@@ -191,8 +191,7 @@ impl Widget<bool> for Switch {
         _data: &bool,
         env: &Env,
     ) -> Size {
-        let width =
-            (2. * SWITCH_PADDING + env.get(theme::BORDERED_WIDGET_HEIGHT)) * SWITCH_WIDTH_RATIO;
+        let width = env.get(theme::BORDERED_WIDGET_HEIGHT) * SWITCH_WIDTH_RATIO;
         bc.constrain(Size::new(width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 

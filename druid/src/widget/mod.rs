@@ -57,7 +57,7 @@ pub use container::Container;
 pub use controller::{Controller, ControllerHost};
 pub use either::Either;
 pub use env_scope::EnvScope;
-pub use flex::{Alignment, Flex};
+pub use flex::{CrossAxisAlignment, Flex, MainAxisAlignment};
 pub use identity_wrapper::IdentityWrapper;
 pub use label::{Label, LabelText};
 pub use list::{List, ListIter};
@@ -181,7 +181,7 @@ pub trait Widget<T> {
     /// if a widget needs to mutate data, it can submit a [`Command`] that will
     /// be executed at the next opportunity.
     ///
-    /// [`LifeCycle`]: ../struct.LifeCycle.html
+    /// [`LifeCycle`]: ../enum.LifeCycle.html
     /// [`LifeCycleCtx`]: ../struct.LifeCycleCtx.html
     /// [`Command`]: ../struct.Command.html
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env);

@@ -41,7 +41,11 @@ pub const CURSOR_COLOR: Key<Color> = Key::new("cursor_color");
 
 pub const FONT_NAME: Key<&str> = Key::new("font_name");
 pub const TEXT_SIZE_NORMAL: Key<f64> = Key::new("text_size_normal");
+pub const TEXT_SIZE_LARGE: Key<f64> = Key::new("text_size_large");
 pub const BASIC_WIDGET_HEIGHT: Key<f64> = Key::new("basic_widget_height");
+
+/// The default minimum width for a 'wide' widget; a textbox, slider, progress bar, etc.
+pub const WIDE_WIDGET_WIDTH: Key<f64> = Key::new("druid.widgets.long-widget-width");
 pub const BORDERED_WIDGET_HEIGHT: Key<f64> = Key::new("bordered_widget_height");
 
 pub const TEXTBOX_BORDER_RADIUS: Key<f64> = Key::new("textbox_radius");
@@ -77,7 +81,9 @@ pub fn init() -> Env {
         .adding(SELECTION_COLOR, Color::rgb8(0xf3, 0x00, 0x21))
         .adding(CURSOR_COLOR, Color::WHITE)
         .adding(TEXT_SIZE_NORMAL, 15.0)
+        .adding(TEXT_SIZE_LARGE, 24.0)
         .adding(BASIC_WIDGET_HEIGHT, 18.0)
+        .adding(WIDE_WIDGET_WIDTH, 100.)
         .adding(BORDERED_WIDGET_HEIGHT, 24.0)
         .adding(TEXTBOX_BORDER_RADIUS, 2.)
         .adding(SCROLL_BAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))

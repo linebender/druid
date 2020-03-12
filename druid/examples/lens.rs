@@ -31,6 +31,7 @@ fn main() {
 
 #[derive(Clone, Debug, Data, Lens)]
 struct MyComplexState {
+    #[druid(lens_name = "term_lens")]
     term: String,
     scale: f64,
 }
@@ -38,7 +39,7 @@ struct MyComplexState {
 fn ui_builder() -> impl Widget<MyComplexState> {
     // `TextBox` is of type `Widget<String>`
     // via `.lens` we get it to be of type `Widget<MyComplexState>`
-    let searchbar = TextBox::new().lens(MyComplexState::term);
+    let searchbar = TextBox::new().lens(MyComplexState::term_lens);
 
     // `Slider` is of type `Widget<f64>`
     // via `.lens` we get it to be of type `Widget<MyComplexState>`

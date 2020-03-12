@@ -194,8 +194,8 @@ fn adding_child_lifecycle() {
     let record_new_child = Recording::default();
     let record_new_child2 = record_new_child.clone();
 
-    let replacer = ReplaceChild::new(TextBox::raw(), move || {
-        Split::vertical(TextBox::raw(), TextBox::raw().record(&record_new_child2))
+    let replacer = ReplaceChild::new(TextBox::new(), move || {
+        Split::vertical(TextBox::new(), TextBox::new().record(&record_new_child2))
     });
 
     let widget = Split::vertical(Label::new("hi").record(&record), replacer);
@@ -224,15 +224,15 @@ fn participate_in_autofocus() {
 
     // this widget starts with a single child, and will replace them with a split
     // when we send it a command.
-    let replacer = ReplaceChild::new(TextBox::raw().with_id(id_4), move || {
-        Split::vertical(TextBox::raw().with_id(id_5), TextBox::raw().with_id(id_6))
+    let replacer = ReplaceChild::new(TextBox::new().with_id(id_4), move || {
+        Split::vertical(TextBox::new().with_id(id_5), TextBox::new().with_id(id_6))
     });
 
     let widget = Split::vertical(
         Flex::row()
-            .with_child(TextBox::raw().with_id(id_1), 1.0)
-            .with_child(TextBox::raw().with_id(id_2), 1.0)
-            .with_child(TextBox::raw().with_id(id_3), 1.0),
+            .with_child(TextBox::new().with_id(id_1), 1.0)
+            .with_child(TextBox::new().with_id(id_2), 1.0)
+            .with_child(TextBox::new().with_id(id_3), 1.0),
         replacer,
     );
 
@@ -292,8 +292,8 @@ fn register_after_adding_child() {
     let (id_1, id_2, id_3, id_4, id_5, id_6) = widget_id6();
     let id_7 = WidgetId::next();
 
-    let replacer = ReplaceChild::new(TextBox::raw().with_id(id_1), move || {
-        Split::vertical(TextBox::raw().with_id(id_2), TextBox::raw().with_id(id_3)).with_id(id_7)
+    let replacer = ReplaceChild::new(TextBox::new().with_id(id_1), move || {
+        Split::vertical(TextBox::new().with_id(id_2), TextBox::new().with_id(id_3)).with_id(id_7)
     })
     .with_id(id_6);
 
@@ -305,15 +305,11 @@ fn register_after_adding_child() {
         assert!(harness.get_state(id_5).children.contains(&id_6));
         assert!(harness.get_state(id_5).children.contains(&id_1));
         assert!(harness.get_state(id_5).children.contains(&id_4));
-        assert!(!harness.get_state(id_5).children.contains(&id_7));
-        assert!(!harness.get_state(id_5).children.contains(&id_2));
-        assert!(!harness.get_state(id_5).children.contains(&id_3));
         assert_eq!(harness.get_state(id_5).children.entry_count(), 3);
 
         harness.submit_command(REPLACE_CHILD, None);
 
         assert!(harness.get_state(id_5).children.contains(&id_6));
-        assert!(!harness.get_state(id_5).children.contains(&id_1));
         assert!(harness.get_state(id_5).children.contains(&id_4));
         assert!(harness.get_state(id_5).children.contains(&id_7));
         assert!(harness.get_state(id_5).children.contains(&id_2));

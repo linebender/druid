@@ -13,7 +13,8 @@
 // limitations under the License.
 
 use druid::widget::{
-    Align, Button, Checkbox, Flex, Label, Padding, ProgressBar, Slider, WidgetExt,
+    Align, Button, Checkbox, CrossAxisAlignment, Flex, Label, Padding, ProgressBar, Slider,
+    WidgetExt,
 };
 use druid::{AppLauncher, Data, Lens, LensWrap, LocalizedString, UnitPoint, Widget, WindowDesc};
 
@@ -34,8 +35,9 @@ fn build_widget() -> impl Widget<DemoState> {
     let checkbox = LensWrap::new(Checkbox::new(), DemoState::double);
     let checkbox_label = Label::new("double the value");
     let row = Flex::row()
-        .with_child(checkbox, 0.0)
-        .with_child(Padding::new(5.0, checkbox_label), 1.0);
+        .cross_axis_alignment(CrossAxisAlignment::End)
+        .with_child(checkbox.center().padding(5.0), 0.0)
+        .with_child(checkbox_label, 0.0);
 
     let bar = LensWrap::new(ProgressBar::new(), DemoState::value);
     let slider = LensWrap::new(Slider::new(), DemoState::value);
