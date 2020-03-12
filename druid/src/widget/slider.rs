@@ -27,6 +27,8 @@ use crate::{
 /// in the range 0..1.0.
 #[derive(Debug, Clone, Default)]
 pub struct Slider {
+    min: f64,
+    max: f64,
     knob_pos: Point,
     knob_hovered: bool,
     x_offset: f64,
@@ -35,7 +37,19 @@ pub struct Slider {
 impl Slider {
     /// Create a new `Slider`.
     pub fn new() -> Slider {
-        Default::default()
+        let mut slider: Slider = Default::default();
+        slider.max = 1.0;
+        slider
+    }
+
+    pub fn adaptive(min: f64, max: f64) -> Slider {
+        Slider {
+            min,
+            max,
+            knob_pos: Default::default(),
+            knob_hovered: Default::default(),
+            x_offset: Default::default(),
+        }
     }
 }
 
@@ -46,9 +60,10 @@ impl Slider {
     }
 
     fn calculate_value(&self, mouse_x: f64, knob_width: f64, slider_width: f64) -> f64 {
-        ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
+        let scalar = ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
             .max(0.0)
-            .min(1.0)
+            .min(1.0);
+        self.min + scalar * (self.max - self.min)
     }
 }
 
