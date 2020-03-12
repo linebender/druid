@@ -56,13 +56,9 @@ impl Slider {
         }
     }
 
-    pub fn max(mut self, max: f64) -> Self {
-        self.max = max;
-        self
-    }
-
-    pub fn min(mut self, min: f64) -> Self {
+    pub fn with_range(mut self, min: f64, max: f64) -> Self {
         self.min = min;
+        self.max = max;
         self
     }
 }
