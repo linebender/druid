@@ -78,21 +78,21 @@ impl Widget<f64> for Slider {
             Event::MouseMoved(mouse) => {
                 if ctx.is_active() {
                     *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
+                    ctx.request_paint();
                 }
                 if ctx.is_hot() {
-                    if self.knob_hit_test(knob_size, mouse.pos) {
-                        self.knob_hovered = true
-                    } else {
-                        self.knob_hovered = false
+                    let knob_hover = self.knob_hit_test(knob_size, mouse.pos);
+                    if knob_hover != self.knob_hovered {
+                        self.knob_hovered = knob_hover;
+                        ctx.request_paint();
                     }
                 }
-                ctx.request_paint();
             }
             _ => (),
         }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) { }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &f64, _data: &f64, _env: &Env) {
         ctx.request_paint();
