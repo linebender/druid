@@ -69,7 +69,7 @@ impl Slider {
         self.min + scalar * (self.max - self.min)
     }
 
-    fn normalize(&self, data: f64) -> f64{
+    fn normalize(&self, data: f64) -> f64 {
         (data.max(self.min).min(self.max) - self.min) / (self.max - self.min)
     }
 }
