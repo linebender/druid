@@ -218,7 +218,6 @@ fn make_spacer_select() -> impl Widget<Params> {
             Flex::row()
                 .with_child(
                     TextBox::new()
-                        .with_placeholder(DEFAULT_SPACER_SIZE.to_string())
                         .parse()
                         .lens(
                             Params::spacer_size
