@@ -418,6 +418,7 @@ fn make_widget() -> impl Widget<AppData> {
                 .background(BG),
             0.,
         )
+        .cross_axis_alignment(CrossAxisAlignment::Center)
 }
 
 fn main() {
