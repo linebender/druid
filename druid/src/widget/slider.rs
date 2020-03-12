@@ -43,7 +43,6 @@ impl Slider {
             knob_pos: Default::default(),
             knob_hovered: Default::default(),
             x_offset: Default::default(),
-            
         }
     }
 
@@ -55,6 +54,16 @@ impl Slider {
             knob_hovered: Default::default(),
             x_offset: Default::default(),
         }
+    }
+
+    pub fn max(mut self, max: f64) -> Self {
+        self.max = max;
+        self
+    }
+
+    pub fn min(mut self, min: f64) -> Self {
+        self.min = min;
+        self
     }
 }
 
