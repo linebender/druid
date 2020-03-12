@@ -24,9 +24,11 @@ use crate::{
 /// A slider, allowing interactive update of a numeric value.
 ///
 /// This slider implements `Widget<f64>`, and works on values clamped
-/// in the range 0..1.0.
+/// in the range `min..max`.
 #[derive(Debug, Clone, Default)]
 pub struct Slider {
+    min: f64,
+    max: f64,
     knob_pos: Point,
     knob_hovered: bool,
     x_offset: f64,
@@ -35,7 +37,22 @@ pub struct Slider {
 impl Slider {
     /// Create a new `Slider`.
     pub fn new() -> Slider {
-        Default::default()
+        Slider {
+            min: 0.,
+            max: 1.,
+            knob_pos: Default::default(),
+            knob_hovered: Default::default(),
+            x_offset: Default::default(),
+        }
+    }
+
+    /// Builder-style method to set the range covered by this slider.
+    ///
+    /// The default range is `0.0..1.0`.
+    pub fn with_range(mut self, min: f64, max: f64) -> Self {
+        self.min = min;
+        self.max = max;
+        self
     }
 }
 
@@ -46,9 +63,10 @@ impl Slider {
     }
 
     fn calculate_value(&self, mouse_x: f64, knob_width: f64, slider_width: f64) -> f64 {
-        ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
+        let scalar = ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
             .max(0.0)
-            .min(1.0)
+            .min(1.0);
+        self.min + scalar * (self.max - self.min)
     }
 }
 
