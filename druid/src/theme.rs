@@ -39,7 +39,6 @@ pub const BUTTON_DARK: Key<Color> = Key::new("button_dark");
 pub const BUTTON_LIGHT: Key<Color> = Key::new("button_light");
 pub const BUTTON_BORDER_RADIUS: Key<f64> = Key::new("button_radius");
 pub const BUTTON_BORDER_WIDTH: Key<f64> = Key::new("button_border_width");
-pub const CURSOR_COLOR: Key<Color> = Key::new("cursor_color");
 
 pub const FONT_NAME: Key<&str> = Key::new("font_name");
 pub const TEXT_SIZE_NORMAL: Key<f64> = Key::new("text_size_normal");
@@ -79,7 +78,6 @@ pub fn init() -> Env {
         .adding(BUTTON_LIGHT, Color::rgb8(0x21, 0x21, 0x21))
         .adding(BUTTON_BORDER_RADIUS, 4.)
         .adding(BUTTON_BORDER_WIDTH, 2.)
-        .adding(CURSOR_COLOR, Color::WHITE)
         .adding(TEXT_SIZE_NORMAL, 15.0)
         .adding(TEXT_SIZE_LARGE, 24.0)
         .adding(BASIC_WIDGET_HEIGHT, 18.0)

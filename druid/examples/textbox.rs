@@ -26,7 +26,7 @@ fn main() {
             env.set(theme::COLOR_SECONDARY, Color::rgb8(0xA6, 0xCC, 0xFF));
             env.set(theme::COLOR_BASE_DARKEST, Color::WHITE);
             env.set(theme::COLOR_BASE_LIGHTEST, Color::BLACK);
-            env.set(theme::CURSOR_COLOR, Color::BLACK);
+            env.set(theme::COLOR_INK_INVERTED, Color::BLACK);
             env.set(theme::COLOR_BASE_DARK, Color::rgb8(230, 230, 230));
         })
         .use_simple_logger()
@@ -40,7 +40,7 @@ fn build_widget() -> impl Widget<String> {
         |env, _| {
             env.set(theme::COLOR_BASE_DARK, Color::rgb8(50, 50, 50));
             env.set(theme::COLOR_BASE_LIGHTEST, Color::WHITE);
-            env.set(theme::CURSOR_COLOR, Color::WHITE);
+            env.set(theme::COLOR_INK_INVERTED, Color::WHITE);
             env.set(theme::COLOR_SECONDARY, Color::rgb8(100, 100, 100));
         },
         TextBox::new().with_placeholder("placeholder"),

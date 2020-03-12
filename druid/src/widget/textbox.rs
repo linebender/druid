@@ -376,7 +376,7 @@ impl Widget<String> for TextBox {
         let selection_color = env.get(theme::COLOR_SECONDARY);
         let text_color = env.get(theme::COLOR_BASE_LIGHTEST);
         let placeholder_color = env.get(theme::COLOR_BASE);
-        let cursor_color = env.get(theme::CURSOR_COLOR);
+        let cursor_color = env.get(theme::COLOR_INK_INVERTED);
 
         let has_focus = paint_ctx.has_focus();
 
