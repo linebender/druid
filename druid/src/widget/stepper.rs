@@ -138,7 +138,7 @@ impl Widget<f64> for Stepper {
         let inactive_gradient = LinearGradient::new(
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
-            (env.get(theme::BUTTON_DARK), env.get(theme::BUTTON_LIGHT)),
+            (env.get(theme::COLOR_INK), env.get(theme::COLOR_BASE_DARKEST)),
         );
 
         // draw buttons that are currently triggered as active

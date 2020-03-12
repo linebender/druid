@@ -35,8 +35,6 @@ pub const COLOR_INK: Key<Color> = Key::new("color_ink");
 pub const COLOR_INK_INVERTED: Key<Color> = Key::new("color_ink_inverted");
 
 pub const PROGRESS_BAR_RADIUS: Key<f64> = Key::new("progress_bar_radius");
-pub const BUTTON_DARK: Key<Color> = Key::new("button_dark");
-pub const BUTTON_LIGHT: Key<Color> = Key::new("button_light");
 pub const BUTTON_BORDER_RADIUS: Key<f64> = Key::new("button_radius");
 pub const BUTTON_BORDER_WIDTH: Key<f64> = Key::new("button_border_width");
 
@@ -74,8 +72,6 @@ pub fn init() -> Env {
         .adding(COLOR_INK, Color::rgb8(0x00, 0x00, 0x00))
         .adding(COLOR_INK_INVERTED, Color::rgb8(0xff, 0xff, 0xff))
         .adding(PROGRESS_BAR_RADIUS, 4.)
-        .adding(BUTTON_DARK, Color::BLACK)
-        .adding(BUTTON_LIGHT, Color::rgb8(0x21, 0x21, 0x21))
         .adding(BUTTON_BORDER_RADIUS, 4.)
         .adding(BUTTON_BORDER_WIDTH, 2.)
         .adding(TEXT_SIZE_NORMAL, 15.0)
