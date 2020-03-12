@@ -98,7 +98,10 @@ impl Widget<f64> for ProgressBar {
         let bar_gradient = LinearGradient::new(
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
-            (env.get(theme::COLOR_PRIMARY_LIGHT), env.get(theme::COLOR_PRIMARY)),
+            (
+                env.get(theme::COLOR_PRIMARY_LIGHT),
+                env.get(theme::COLOR_PRIMARY),
+            ),
         );
         paint_ctx.fill(rounded_rect, &bar_gradient);
     }

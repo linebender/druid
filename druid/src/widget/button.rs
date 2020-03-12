@@ -124,13 +124,19 @@ impl<T: Data> Widget<T> for Button<T> {
             LinearGradient::new(
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
-                (env.get(theme::COLOR_BASE_DARKEST), env.get(theme::COLOR_INK)),
+                (
+                    env.get(theme::COLOR_BASE_DARKEST),
+                    env.get(theme::COLOR_INK),
+                ),
             )
         } else {
             LinearGradient::new(
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
-                (env.get(theme::COLOR_INK), env.get(theme::COLOR_BASE_DARKEST)),
+                (
+                    env.get(theme::COLOR_INK),
+                    env.get(theme::COLOR_BASE_DARKEST),
+                ),
             )
         };
 
