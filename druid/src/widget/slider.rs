@@ -37,9 +37,14 @@ pub struct Slider {
 impl Slider {
     /// Create a new `Slider`.
     pub fn new() -> Slider {
-        let mut slider: Slider = Default::default();
-        slider.max = 1.0;
-        slider
+        Slider {
+            min: 0.,
+            max: 1.,
+            knob_pos: Default::default(),
+            knob_hovered: Default::default(),
+            x_offset: Default::default(),
+            
+        }
     }
 
     pub fn adaptive(min: f64, max: f64) -> Slider {
