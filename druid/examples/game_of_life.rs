@@ -413,7 +413,6 @@ fn make_widget() -> impl Widget<AppData> {
                         .padding(8.0),
                     0.,
                 )
-                // .debug_paint_layout()
                 .background(BG),
             0.,
         )
