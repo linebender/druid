@@ -17,7 +17,7 @@
 use std::ops::{Index, IndexMut};
 use std::time::{Duration, Instant};
 
-use druid::widget::{Alignment, Button, Flex, Label, Slider, WidgetExt};
+use druid::widget::{Button, CrossAxisAlignment, Flex, Label, Slider, WidgetExt};
 use druid::{
     AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
     LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size,
@@ -385,10 +385,7 @@ fn make_widget() -> impl Widget<AppData> {
                                 },
                             )
                             .lens(AppData::paused)
-                            .center()
-                            .fix_height(40.)
-                            .expand()
-                            .padding((2.0, 2.0)),
+                            .padding((5., 5.)),
                             1.0,
                         )
                         .with_child(
@@ -398,14 +395,10 @@ fn make_widget() -> impl Widget<AppData> {
                                 ctx.request_paint();
                             })
                             .lens(AppData::grid)
-                            .center()
-                            .fix_height(40.)
-                            .expand()
-                            .padding((2.0, 2.0)),
+                            .padding((5., 5.)),
                             1.0,
                         )
-                        .fix_height(35.)
-                        .padding(4.0),
+                        .padding(8.0),
                     0.,
                 )
                 .with_child(
@@ -415,12 +408,12 @@ fn make_widget() -> impl Widget<AppData> {
                                 .padding(3.0),
                             0.,
                         )
-                        .with_child(Slider::new().lens(AppData::speed).padding(3.0).expand(), 1.)
-                        .alignment(Alignment::Center)
-                        .fix_height(75.)
-                        .padding(4.0),
+                        .with_child(Slider::new().lens(AppData::speed).padding((0., 0.)), 1.)
+                        .cross_axis_alignment(CrossAxisAlignment::Center)
+                        .padding(8.0),
                     0.,
                 )
+                // .debug_paint_layout()
                 .background(BG),
             0.,
         )
