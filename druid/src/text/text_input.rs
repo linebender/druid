@@ -1,13 +1,29 @@
+// Copyright 2019 The xi-editor Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! Map input to `EditAction`s
+
 use super::Movement;
 use crate::{HotKey, KeyCode, SysMods};
-use druid_shell::KeyEvent;
+use druid_shell::{KeyEvent, KeyModifiers};
 
 // This following enumerations are heavily inspired by xi-editors enumerations found at
 // https://github.com/xi-editor/xi-editor/blob/e2589974fc4050beb33af82481aa71b258358e48/rust/core-lib/src/edit_types.rs
 // This is done with the goal of eventually being able to easily switch
 // to a xi-based implementation of our Events.
 
-/// Events that only modify view state
+/// An enum that represents actions in a text buffer.
 #[derive(Debug, PartialEq, Clone)]
 pub enum EditAction {
     Move(Movement),
@@ -15,16 +31,18 @@ pub enum EditAction {
     SelectAll,
     Click(MouseAction),
     Drag(MouseAction),
-    Delete, // { movement: Movement, kill: bool },
+    Delete,
     Backspace,
     Insert(String),
     Paste(String),
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+/// Extra information related to mouse actions
+#[derive(PartialEq, Debug, Clone)]
 pub struct MouseAction {
+    pub row: usize,
     pub column: usize,
-    pub shift: bool,
+    pub mods: KeyModifiers,
 }
 
 pub trait TextInput {
@@ -35,15 +53,15 @@ pub trait TextInput {
 
 /// Handles key events and returns actions that are applicable to
 /// single line textboxes
-pub struct SingleLineTextInput {}
+pub struct BasicTextInput {}
 
-impl SingleLineTextInput {
+impl BasicTextInput {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl TextInput for SingleLineTextInput {
+impl TextInput for BasicTextInput {
     fn handle_event(&self, event: &KeyEvent) -> Option<EditAction> {
         let action = match event {
             // Select all (Ctrl+A || Cmd+A)

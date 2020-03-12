@@ -28,8 +28,8 @@ use crate::piet::{
 use crate::theme;
 
 use crate::text::{
-    movement, offset_for_delete_backwards, EditAction, EditableText, MouseAction, Movement,
-    Selection, SingleLineTextInput, TextInput,
+    movement, offset_for_delete_backwards, BasicTextInput, EditAction, EditableText, MouseAction,
+    Movement, Selection, TextInput,
 };
 
 const BORDER_WIDTH: f64 = 1.;
@@ -129,7 +129,7 @@ impl TextBox {
             EditAction::ModifySelection(movement) => self.move_selection(movement, text, true),
             EditAction::SelectAll => self.selection.all(text),
             EditAction::Click(action) => {
-                if action.shift {
+                if action.mods.shift {
                     self.selection.end = action.column;
                 } else {
                     self.caret_to(text, action.column);
@@ -242,8 +242,9 @@ impl Widget<String> for TextBox {
 
                 let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
                 edit_action = Some(EditAction::Click(MouseAction {
+                    row: 0,
                     column: cursor_offset,
-                    shift: mouse.mods.shift,
+                    mods: mouse.mods,
                 }));
 
                 ctx.request_paint();
@@ -253,8 +254,9 @@ impl Widget<String> for TextBox {
                 if ctx.is_active() {
                     let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
                     edit_action = Some(EditAction::Drag(MouseAction {
+                        row: 0,
                         column: cursor_offset,
-                        shift: mouse.mods.shift,
+                        mods: mouse.mods,
                     }));
                     ctx.request_paint();
                 }
@@ -308,7 +310,7 @@ impl Widget<String> for TextBox {
                 };
 
                 if !event_handled {
-                    edit_action = SingleLineTextInput::new().handle_event(key_event);
+                    edit_action = BasicTextInput::new().handle_event(key_event);
                 }
 
                 ctx.request_paint();
