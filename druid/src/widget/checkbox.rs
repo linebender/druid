@@ -80,11 +80,6 @@ impl Widget<bool> for Checkbox {
     ) -> Size {
         bc.debug_check("Checkbox");
 
-        // bc.constrain(Size::new(
-        //     env.get(theme::BASIC_WIDGET_HEIGHT),
-        //     env.get(theme::BASIC_WIDGET_HEIGHT),
-        // ))
-
         let label_size = self.child_label.layout(layout_ctx, &bc, data, env);
         let padding = 8.0;
         let label_x_offset = env.get(theme::BASIC_WIDGET_HEIGHT) + padding;
