@@ -43,7 +43,7 @@ struct AppData {
 struct SunflowerWidget {}
 
 impl Widget<AppData> for SunflowerWidget {
-    fn event(&mut self, _ctx: &mut EventCtx,_eventt: &Event, _data: &mut AppData, _env: &Env) {}
+    fn event(&mut self, _ctx: &mut EventCtx, _eventt: &Event, _data: &mut AppData, _env: &Env) {}
 
     fn lifecycle(
         &mut self,
