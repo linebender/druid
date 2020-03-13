@@ -20,7 +20,7 @@
 //! For example: If one wants to embed a [`TextBox`] in a widget with a `Data` type
 //! that is not `String`, they need to specify how to access a `String` from within the `Data`.
 //!
-//! [`TextBox`]: ../TextBox.html
+//! [`TextBox`]: ../widget/struct.TextBox.html
 //! ```
 //! use druid::{Data, Lens, Widget, widget::{TextBox, Flex, WidgetExt}};
 //!

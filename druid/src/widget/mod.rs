@@ -126,7 +126,7 @@ pub struct WidgetId(NonZeroU64);
 ///
 /// The trait is parametrized by a type (`T`) for associated data.
 /// All trait methods are provided with access to this data, and
-/// in the case of `event` the reference is mutable, so that events
+/// in the case of [`event`] the reference is mutable, so that events
 /// can directly update the data.
 ///
 /// Whenever the application data changes, the framework traverses
@@ -139,7 +139,7 @@ pub struct WidgetId(NonZeroU64);
 /// on that context.
 ///
 /// In addition, all trait methods are provided with an environment
-/// ([`Env`](struct.Env.html)).
+/// ([`Env`]).
 ///
 /// Container widgets will generally not call `Widget` methods directly
 /// on their child widgets, but rather will own their widget wrapped in
@@ -156,6 +156,7 @@ pub struct WidgetId(NonZeroU64);
 /// [`event`]: #tymethod.event
 /// [`update`]: #tymethod.update
 /// [`Data`]: ../trait.Data.html
+/// [`Env`]: ../struct.Env.html
 /// [`WidgetPod`]: ../struct.WidgetPod.html
 pub trait Widget<T> {
     /// Handle an event.
@@ -165,7 +166,7 @@ pub trait Widget<T> {
     /// requesting things from the [`EventCtx`], mutating the data, or submitting
     /// a [`Command`].
     ///
-    /// [`Event`]: ../struct.Event.html
+    /// [`Event`]: ../enum.Event.html
     /// [`EventCtx`]: ../struct.EventCtx.html
     /// [`Command`]: ../struct.Command.html
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env);
@@ -219,7 +220,7 @@ pub trait Widget<T> {
     /// The layout strategy is strongly inspired by Flutter.
     ///
     /// [`WidgetPod::layout`]: ../struct.WidgetPod.html#method.layout
-    /// [`set_layout_rect`]: ../struct.LayoutCtx.html#method.set_layout_rect
+    /// [`set_layout_rect`]: ../struct.WidgetPod.html#method.set_layout_rect
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
     /// Paint the widget appearance.

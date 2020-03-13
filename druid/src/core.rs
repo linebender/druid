@@ -152,6 +152,9 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     }
 
     /// Query the "hot" state of the widget.
+    ///
+    /// See [`EventCtx::is_hot`](struct.EventCtx.html#method.is_hot) for
+    /// additional information.
     pub fn is_hot(&self) -> bool {
         self.state.is_hot
     }
@@ -323,7 +326,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Generally called by container widgets as part of their [`layout`]
     /// method.
     ///
-    /// [`layout`]: trait.Widget.html#method.layout
+    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
     pub fn layout(
         &mut self,
         layout_ctx: &mut LayoutCtx,
@@ -345,7 +348,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// flow logic resides, particularly whether to continue propagating
     /// the event.
     ///
-    /// [`event`]: trait.Widget.html#method.event
+    /// [`event`]: widget/trait.Widget.html#tymethod.event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.old_data.is_none() {
             log::error!(
@@ -568,7 +571,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Generally called by container widgets as part of their [`update`]
     /// method.
     ///
-    /// [`update`]: trait.Widget.html#method.update
+    /// [`update`]: widget/trait.Widget.html#tymethod.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
         match (self.old_data.as_ref(), self.env.as_ref()) {
             (Some(d), Some(e)) if d.same(data) && e.same(env) => return,

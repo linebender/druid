@@ -61,7 +61,7 @@ pub use box_constraints::BoxConstraints;
 pub use command::{sys as commands, Command, Selector, Target};
 pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx};
 pub use data::Data;
-pub use env::{Env, Key, KeyOrValue, Value};
+pub use env::{Env, Key, KeyOrValue, Value, ValueType};
 pub use event::{Event, LifeCycle, WheelEvent};
 pub use ext_event::{ExtEventError, ExtEventSink};
 pub use lens::{Lens, LensExt, LensWrap};

@@ -319,11 +319,9 @@ impl<T> LocalizedString<T> {
             .unwrap_or(self.key)
     }
 
-    /// Add a named argument and a corresponding [`ArgClosure`]. This closure
+    /// Add a named argument and a corresponding closure. This closure
     /// is a function that will return a value for the given key from the current
     /// environment and data.
-    ///
-    /// [`ArgClosure`]: type.ArgClosure.html
     pub fn with_arg(
         mut self,
         key: &'static str,
