@@ -33,6 +33,8 @@ const two_sqrt_inv: f64 = 1. / SQRT_2;
 const three_sqrt_inv: f64 = 1. / 1.73205080757;
 const pi_inv: f64 = 1. / PI;
 const default_angle_factor: f64 = 0.256666666666;
+const default_n_seeds: f64 = 1000.;
+const default_radius_scale: f64 = 6.;
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
@@ -95,110 +97,139 @@ fn make_widget() -> impl Widget<AppData> {
     Flex::column()
         .with_child(SunflowerWidget {}, 1.0)
         .with_child(
-            Flex::column()
+            Flex::row()
                 .with_child(
-                    Label::new(|data: &AppData, _env: &_| {
-                        format!("Angle incrementation factor: {:.8}", data.angle_factor)
-                    })
-                    .padding(3.0),
+                    // buttons on the left
+                    Flex::column()
+                        .with_child(Label::new("Angle factor shortcuts").padding(10.), 0.)
+                        .with_child(
+                            Flex::row().with_child(
+                                Button::new("Use SQRT2", |ctx, data: &mut f64, _: &Env| {
+                                    *data = two_sqrt_inv;
+                                })
+                                .lens(AppData::angle_factor)
+                                .padding((5., 5.)),
+                                1.,
+                            ),
+                            0.0,
+                        )
+                        .with_child(
+                            Flex::row().with_child(
+                                Button::new("Use SQRT3", |ctx, data: &mut f64, _: &Env| {
+                                    *data = three_sqrt_inv;
+                                })
+                                .lens(AppData::angle_factor)
+                                .padding((5., 5.)),
+                                1.,
+                            ),
+                            0.0,
+                        )
+                        .with_child(
+                            Flex::row().with_child(
+                                Button::new("Use e", |ctx, data: &mut f64, _: &Env| {
+                                    *data = e_inv;
+                                })
+                                .lens(AppData::angle_factor)
+                                .padding((5., 5.)),
+                                1.,
+                            ),
+                            0.0,
+                        )
+                        .with_child(
+                            Flex::row().with_child(
+                                Button::new("Use golden ratio", |ctx, data: &mut f64, _: &Env| {
+                                    *data = phi_inv;
+                                })
+                                .lens(AppData::angle_factor)
+                                .padding((5., 5.)),
+                                1.,
+                            ),
+                            0.0,
+                        )
+                        .padding((10., 3.))
+                        .fix_width(200.),
                     0.,
                 )
                 .with_child(
-                    Flex::row()
+                    // spinners
+                    Flex::column()
+                        .with_child(Label::new("Parameters").padding(10.), 0.)
                         .with_child(
-                            Button::new("Use SQRT2", |ctx, data: &mut f64, _: &Env| {
-                                *data = two_sqrt_inv;
-                            })
-                            .lens(AppData::angle_factor)
-                            .padding((5., 5.)),
-                            1.0,
-                        )
-                        .with_child(
-                            Button::new("Use SQRT3", |ctx, data: &mut f64, _: &Env| {
-                                *data = three_sqrt_inv;
-                            })
-                            .lens(AppData::angle_factor)
-                            .padding((5., 5.)),
-                            1.0,
-                        )
-                        .with_child(
-                            Button::new("Use e", |ctx, data: &mut f64, _: &Env| {
-                                *data = e_inv;
-                            })
-                            .lens(AppData::angle_factor)
-                            .padding((5., 5.)),
-                            1.0,
-                        )
-                        .with_child(
-                            Button::new("Use golden ratio", |ctx, data: &mut f64, _: &Env| {
-                                *data = phi_inv;
-                            })
-                            .lens(AppData::angle_factor)
-                            .padding((5., 5.)),
-                            1.0,
-                        )
-                        .padding(8.0),
-                    0.,
-                )
-                .with_child(
-                    Flex::row()
-                        .with_child(
-                            TextBox::new()
-                                .with_placeholder(default_angle_factor.to_string())
-                                .parse()
-                                .lens(AppData::angle_factor.map(
-                                    |x| Some(*x),
-                                    |x, y| *x = y.unwrap_or(default_angle_factor),
-                                )),
-                            1.0,
-                        )
-                        .with_child(
-                            Stepper::new()
-                                .min(0.)
-                                .max(1.)
-                                .step(0.00001)
-                                .lens(AppData::angle_factor),
+                            Flex::row()
+                                .with_child(Label::new("Angle factor"), 1.)
+                                .with_child(
+                                    TextBox::new()
+                                        .with_placeholder(default_angle_factor.to_string())
+                                        .parse()
+                                        .lens(AppData::angle_factor.map(
+                                            |x| Some(*x),
+                                            |x, y| *x = y.unwrap_or(default_angle_factor),
+                                        )),
+                                    2.0,
+                                )
+                                .with_child(
+                                    Stepper::new()
+                                        .min(0.)
+                                        .max(1.)
+                                        .step(0.00001)
+                                        .lens(AppData::angle_factor),
+                                    0.,
+                                )
+                                .padding(5.),
                             0.,
-                        ),
-                    0.,
+                        )
+                        .with_child(
+                            Flex::row()
+                                .with_child(Label::new("Seed number"), 1.)
+                                .with_child(
+                                    TextBox::new()
+                                        .with_placeholder(default_n_seeds.to_string())
+                                        .parse()
+                                        .lens(AppData::n_seeds.map(
+                                            |x| Some(*x),
+                                            |x, y| *x = y.unwrap_or(default_n_seeds),
+                                        )),
+                                    2.0,
+                                )
+                                .with_child(
+                                    Stepper::new()
+                                        .min(100.)
+                                        .max(5000.)
+                                        .step(50.)
+                                        .lens(AppData::n_seeds),
+                                    0.,
+                                )
+                                .padding(5.),
+                            0.,
+                        )
+                        .with_child(
+                            Flex::row()
+                                .with_child(Label::new("Radius scale"), 1.)
+                                .with_child(
+                                    TextBox::new()
+                                        .with_placeholder(default_radius_scale.to_string())
+                                        .parse()
+                                        .lens(AppData::scale.map(
+                                            |x| Some(*x),
+                                            |x, y| *x = y.unwrap_or(default_radius_scale),
+                                        )),
+                                    2.0,
+                                )
+                                .with_child(
+                                    Stepper::new()
+                                        .min(3.)
+                                        .max(10.)
+                                        .step(0.1)
+                                        .lens(AppData::scale),
+                                    0.,
+                                )
+                                .padding(5.),
+                            0.,
+                        )
+                        .padding((10., 3.)),
+                    3.,
                 )
-                .with_child(
-                    Label::new(|data: &AppData, _env: &_| {
-                        format!("Number of seeds: {}", data.n_seeds)
-                    })
-                    .padding(3.0),
-                    0.,
-                )
-                .with_child(
-                    Flex::row().with_child(
-                        Slider::new()
-                            .with_range(10., 5000.0)
-                            .lens(AppData::n_seeds)
-                            .padding(3.),
-                        1.,
-                    ),
-                    0.,
-                )
-                .with_child(
-                    Label::new(|data: &AppData, _env: &_| {
-                        format!("Radius increment scale {}", data.scale)
-                    })
-                    .padding(3.0),
-                    0.,
-                )
-                .with_child(
-                    Flex::row().with_child(
-                        Slider::new()
-                            .with_range(4., 10.)
-                            .lens(AppData::scale)
-                            .padding(3.),
-                        1.,
-                    ),
-                    0.,
-                )
-                .cross_axis_alignment(CrossAxisAlignment::Center)
-                .padding(8.)
-                .background(Color::grey(0.2)),
+                .cross_axis_alignment(CrossAxisAlignment::Start),
             0.,
         )
         .cross_axis_alignment(CrossAxisAlignment::Center)
