@@ -95,6 +95,12 @@ pub(crate) unsafe fn get_file_dialog_path(
     if options.show_hidden {
         flags |= FOS_FORCESHOWHIDDEN;
     }
+    if options.select_directories {
+        flags |= FOS_PICKFOLDERS;
+    }
+    if options.multi_selection {
+        flags |= FOS_ALLOWMULTISELECT;
+    }
 
     // - allowed filetypes
 

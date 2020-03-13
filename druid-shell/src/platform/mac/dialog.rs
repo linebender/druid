@@ -42,6 +42,14 @@ pub(crate) fn get_file_dialog_path(
             let () = msg_send![panel, setShowsHiddenFiles: YES];
         }
 
+        if options.select_directories {
+            let () = msg_send![panel, setCanChooseDirectories: YES];
+        }
+
+        if options.multi_selection {
+            let () = msg_send![panel, setAllowsMultipleSelection: YES];
+        }
+
         // A vector of NSStrings. this must outlive `nsarray_allowed_types`.
         let allowed_types = options.allowed_types.as_ref().map(|specs| {
             specs

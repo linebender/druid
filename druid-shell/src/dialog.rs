@@ -36,10 +36,10 @@ pub struct FileDialogOptions {
     pub show_hidden: bool,
     pub allowed_types: Option<Vec<FileSpec>>,
     pub default_type: Option<FileSpec>,
+    pub select_directories: bool,
+    pub multi_selection: bool,
     // we don't want a library user to be able to construct this type directly
     __non_exhaustive: (),
-    // multi selection
-    // select directories
 }
 
 /// A description of a filetype, for specifiying allowed types in a file dialog.
@@ -83,6 +83,18 @@ impl FileDialogOptions {
     /// Set the 'show hidden files' bit.
     pub fn show_hidden(mut self) -> Self {
         self.show_hidden = true;
+        self
+    }
+
+    /// Set whether folders should be selectable.
+    pub fn select_directories(mut self) -> Self {
+        self.select_directories = true;
+        self
+    }
+
+    /// Set whether multiple files can be selected.
+    pub fn multi_selection(mut self) -> Self {
+        self.multi_selection = true;
         self
     }
 
