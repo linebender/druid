@@ -38,7 +38,12 @@ fn ui_builder() -> impl Widget<AppState> {
     let label = Label::new("Click to reveal slider");
 
     let mut col = Flex::column();
-    col.add_child(Checkbox::new().lens(AppState::which).padding(5.0), 0.0);
+    col.add_child(
+        Checkbox::new("Toggle slider")
+            .lens(AppState::which)
+            .padding(5.0),
+        0.0,
+    );
     let either = Either::new(
         |data, _env| data.which,
         Slider::new().lens(AppState::value).padding(5.0),

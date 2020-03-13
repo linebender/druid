@@ -122,12 +122,6 @@ impl Widget<AppState> for Rebuilder {
     }
 }
 
-fn labeled_checkbox(text: &str) -> impl Widget<bool> {
-    Flex::row()
-        .with_child(Checkbox::new().padding((0., 0., 8., 0.)), 0.)
-        .with_child(Label::new(text), 0.)
-}
-
 fn make_control_row() -> impl Widget<AppState> {
     Flex::row()
         .with_child(
@@ -176,22 +170,22 @@ fn make_control_row() -> impl Widget<AppState> {
             Flex::column()
                 .with_child(Label::new("Misc:").padding((0., 0., 0., 10.)), 0.)
                 .with_child(
-                    labeled_checkbox("Debug layout").lens(Params::debug_layout),
+                    Checkbox::new("Debug layout").lens(Params::debug_layout),
                     0.0,
                 )
                 .with_spacer(10.)
                 .with_child(
-                    labeled_checkbox("Fill main axis").lens(Params::fill_major_axis),
+                    Checkbox::new("Fill main axis").lens(Params::fill_major_axis),
                     0.,
                 )
                 .with_spacer(10.)
                 .with_child(
-                    labeled_checkbox("Fix minor axis size").lens(Params::fix_minor_axis),
+                    Checkbox::new("Fix minor axis size").lens(Params::fix_minor_axis),
                     0.,
                 )
                 .with_spacer(10.)
                 .with_child(
-                    labeled_checkbox("Fix major axis size").lens(Params::fix_major_axis),
+                    Checkbox::new("Fix major axis size").lens(Params::fix_major_axis),
                     0.,
                 )
                 .padding(5.0),
@@ -276,7 +270,7 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
         0.,
     );
     space_if_needed(&mut flex, state);
-    flex.add_child(Checkbox::new().lens(DemoState::enabled), 0.);
+    flex.add_child(Checkbox::new("Demo").lens(DemoState::enabled), 0.);
     space_if_needed(&mut flex, state);
     flex.add_child(Slider::new().lens(DemoState::volume), 0.);
     space_if_needed(&mut flex, state);

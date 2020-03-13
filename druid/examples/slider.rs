@@ -13,8 +13,7 @@
 // limitations under the License.
 
 use druid::widget::{
-    Align, Button, Checkbox, CrossAxisAlignment, Flex, Label, Padding, ProgressBar, Slider,
-    WidgetExt,
+    Align, Button, Checkbox, Flex, Label, Padding, ProgressBar, Slider, WidgetExt,
 };
 use druid::{AppLauncher, Data, Lens, LensWrap, LocalizedString, UnitPoint, Widget, WindowDesc};
 
@@ -32,15 +31,10 @@ fn build_widget() -> impl Widget<DemoState> {
             format!("actual value: {0:.2}", data.value)
         }
     });
-    let checkbox = LensWrap::new(Checkbox::new(), DemoState::double);
-    let checkbox_label = Label::new("double the value");
-    let row = Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::End)
-        .with_child(checkbox.center().padding(5.0), 0.0)
-        .with_child(checkbox_label, 0.0);
+    let checkbox = Checkbox::new("double the value").lens(DemoState::double);
 
-    let bar = LensWrap::new(ProgressBar::new(), DemoState::value);
-    let slider = LensWrap::new(Slider::new(), DemoState::value);
+    let bar = LensWrap::new(ProgressBar::new(), DemoState::value).expand();
+    let slider = LensWrap::new(Slider::new(), DemoState::value).expand();
 
     let button_1 = Button::new("increment ", |_ctx, data: &mut DemoState, _env| {
         data.value += 0.1
@@ -56,7 +50,7 @@ fn build_widget() -> impl Widget<DemoState> {
         .with_child(Padding::new(5.0, bar), 1.0)
         .with_child(Padding::new(5.0, slider), 1.0)
         .with_child(Padding::new(5.0, label), 1.0)
-        .with_child(Padding::new(5.0, row), 1.0)
+        .with_child(Padding::new(5.0, checkbox), 1.0)
         .with_child(Padding::new(5.0, Align::right(button_1)), 0.0)
         .with_child(Padding::new(5.0, button_2), 1.0)
 }

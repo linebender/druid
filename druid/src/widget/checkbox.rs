@@ -14,22 +14,26 @@
 
 //! A checkbox widget.
 
-use crate::kurbo::{BezPath, Point, RoundedRect, Size};
+use crate::kurbo::{BezPath, Point, Rect, RoundedRect, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
+use crate::widget::{Label, LabelText, WidgetExt};
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
-    Widget,
+    Widget, WidgetPod,
 };
 
 /// A checkbox that toggles a `bool`.
-#[derive(Debug, Clone, Default)]
-pub struct Checkbox;
+pub struct Checkbox {
+    child_label: WidgetPod<bool, Box<dyn Widget<bool>>>,
+}
 
 impl Checkbox {
-    /// Create a new `Checkbox`.
-    pub fn new() -> Checkbox {
-        Checkbox::default()
+    /// Create a new `Checkbox` with a label.
+    pub fn new(label: impl Into<LabelText<bool>>) -> Checkbox {
+        Checkbox {
+            child_label: WidgetPod::new(Label::new(label).boxed()),
+        }
     }
 }
 
@@ -69,16 +73,24 @@ impl Widget<bool> for Checkbox {
 
     fn layout(
         &mut self,
-        _layout_ctx: &mut LayoutCtx,
+        layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _data: &bool,
+        data: &bool,
         env: &Env,
     ) -> Size {
         bc.debug_check("Checkbox");
 
+        let label_size = self.child_label.layout(layout_ctx, &bc, data, env);
+        let padding = 8.0;
+        let label_x_offset = env.get(theme::BASIC_WIDGET_HEIGHT) + padding;
+        let origin = Point::new(label_x_offset, 0.0);
+
+        self.child_label
+            .set_layout_rect(Rect::from_origin_size(origin, label_size));
+
         bc.constrain(Size::new(
-            env.get(theme::BASIC_WIDGET_HEIGHT),
-            env.get(theme::BASIC_WIDGET_HEIGHT),
+            label_x_offset + label_size.width,
+            env.get(theme::BASIC_WIDGET_HEIGHT).max(label_size.height),
         ))
     }
 
@@ -109,6 +121,7 @@ impl Widget<bool> for Checkbox {
         paint_ctx.stroke(rect, &border_color, 1.);
 
         if *data {
+            // Paint the checkmark
             let mut path = BezPath::new();
             path.move_to((4.0, 9.0));
             path.line_to((8.0, 13.0));
@@ -120,5 +133,8 @@ impl Widget<bool> for Checkbox {
 
             paint_ctx.stroke_styled(path, &env.get(theme::LABEL_COLOR), 2., &style);
         }
+
+        // Paint the text label
+        self.child_label.paint_with_offset(paint_ctx, data, env);
     }
 }
