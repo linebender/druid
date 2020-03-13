@@ -17,13 +17,14 @@
 use crate::kurbo::{Line, Point, Rect, Size};
 use crate::widget::flex::Axis;
 use crate::{
-    theme, BoxConstraints, Cursor, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
+    theme, BoxConstraints, Color, Cursor, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
+    LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
 };
 
 ///A container containing two other widgets, splitting the area either horizontally or vertically.
 pub struct Split<T> {
     split_direction: Axis,
+    solid: bool,
     draggable: bool,
     min_size: f64,
     split_point: f64,
@@ -42,6 +43,7 @@ impl<T> Split<T> {
         Split {
             split_direction,
             min_size: 0.0,
+            solid: false,
             split_point: 0.5,
             splitter_size: 10.0,
             draggable: false,
@@ -91,6 +93,13 @@ impl<T> Split<T> {
         self.draggable = draggable;
         self
     }
+    /// Builder-style method to set whether the splitter handle is drawn as a solid rectangle.
+    ///
+    /// If this is `false` (the default), it will be drawn as two parallel lines.
+    pub fn fill_splitter_handle(mut self, solid: bool) -> Self {
+        self.solid = solid;
+        self
+    }
     fn splitter_hit_test(&self, size: Size, mouse_pos: Point) -> bool {
         match self.split_direction {
             Axis::Vertical => {
@@ -131,6 +140,81 @@ impl<T> Split<T> {
                 clamp(mouse_pos.y, min_limit, max_limit) / size.height
             }
         }
+    }
+    fn get_edges(&mut self, paint_ctx: &PaintCtx) -> (f64, f64) {
+        let size = paint_ctx.size();
+        match self.split_direction {
+            Axis::Vertical => {
+                let reduced_width = size.width - self.splitter_size;
+                let edge1 = reduced_width * self.split_point;
+                let edge2 = edge1 + self.splitter_size;
+                (edge1, edge2)
+            }
+            Axis::Horizontal => {
+                let reduced_height = size.height - self.splitter_size;
+                let edge1 = reduced_height * self.split_point;
+                let edge2 = edge1 + self.splitter_size;
+                (edge1, edge2)
+            }
+        }
+    }
+    fn get_color(&self, env: &Env) -> Color {
+        if self.draggable {
+            env.get(theme::BORDER_LIGHT)
+        } else {
+            env.get(theme::BORDER_DARK)
+        }
+    }
+    fn paint_solid(&mut self, paint_ctx: &mut PaintCtx, env: &Env) {
+        let size = paint_ctx.size();
+        //third, because we're putting the lines at roughly third points.
+        //small, because we floor, to give the extra pixel (roughly) to the middle.
+        let small_third = (self.splitter_size / 3.0).floor();
+        let (edge1, edge2) = self.get_edges(paint_ctx);
+        let rect = match self.split_direction {
+            Axis::Vertical => Rect::from_points(
+                Point::new(edge1 + small_third, 0.0),
+                Point::new(edge2 - small_third, size.height),
+            ),
+            Axis::Horizontal => Rect::from_points(
+                Point::new(0.0, edge1 + small_third),
+                Point::new(size.width, edge2 - small_third),
+            ),
+        };
+        let splitter_color = self.get_color(env);
+        paint_ctx.fill(rect, &splitter_color);
+    }
+    fn paint_stroked(&mut self, paint_ctx: &mut PaintCtx, env: &Env) {
+        let size = paint_ctx.size();
+        //third, because we're putting the lines at roughly third points.
+        //small, because we floor, to give the extra pixel (roughly) to the middle.
+        let small_third = (self.splitter_size / 3.0).floor();
+        let (edge1, edge2) = self.get_edges(paint_ctx);
+        let (line1, line2) = match self.split_direction {
+            Axis::Vertical => (
+                Line::new(
+                    Point::new(edge1 + small_third, 0.0),
+                    Point::new(edge1 + small_third, size.height),
+                ),
+                Line::new(
+                    Point::new(edge2 - small_third, 0.0),
+                    Point::new(edge2 - small_third, size.height),
+                ),
+            ),
+            Axis::Horizontal => (
+                Line::new(
+                    Point::new(0.0, edge1 + small_third),
+                    Point::new(size.width, edge1 + small_third),
+                ),
+                Line::new(
+                    Point::new(0.0, edge2 - small_third),
+                    Point::new(size.width, edge2 - small_third),
+                ),
+            ),
+        };
+        let splitter_color = self.get_color(env);
+        paint_ctx.stroke(line1, &splitter_color, 1.0);
+        paint_ctx.stroke(line2, &splitter_color, 1.0);
     }
 }
 impl<T: Data> Widget<T> for Split<T> {
@@ -307,50 +391,11 @@ impl<T: Data> Widget<T> for Split<T> {
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let size = paint_ctx.size();
-        //third, because we're putting the lines at roughly third points.
-        //small, because we floor, to give the extra pixel (roughly) to the middle.
-        let small_third = (self.splitter_size / 3.0).floor();
-        let (line1, line2) = match self.split_direction {
-            Axis::Vertical => {
-                let reduced_width = size.width - self.splitter_size;
-                let edge1 = reduced_width * self.split_point;
-                let edge2 = edge1 + self.splitter_size;
-                (
-                    Line::new(
-                        Point::new(edge1 + small_third, 0.0),
-                        Point::new(edge1 + small_third, size.height),
-                    ),
-                    Line::new(
-                        Point::new(edge2 - small_third, 0.0),
-                        Point::new(edge2 - small_third, size.height),
-                    ),
-                )
-            }
-            Axis::Horizontal => {
-                let reduced_height = size.height - self.splitter_size;
-                let edge1 = reduced_height * self.split_point;
-                let edge2 = edge1 + self.splitter_size;
-                (
-                    Line::new(
-                        Point::new(0.0, edge1 + small_third),
-                        Point::new(size.width, edge1 + small_third),
-                    ),
-                    Line::new(
-                        Point::new(0.0, edge2 - small_third),
-                        Point::new(size.width, edge2 - small_third),
-                    ),
-                )
-            }
-        };
-        let line_color = if self.draggable {
-            env.get(theme::BORDER_LIGHT)
+        if self.solid {
+            self.paint_solid(paint_ctx, env);
         } else {
-            env.get(theme::BORDER_DARK)
-        };
-        paint_ctx.stroke(line1, &line_color, 1.0);
-        paint_ctx.stroke(line2, &line_color, 1.0);
-
+            self.paint_stroked(paint_ctx, env);
+        }
         self.child1.paint_with_offset(paint_ctx, &data, env);
         self.child2.paint_with_offset(paint_ctx, &data, env);
     }
