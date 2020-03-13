@@ -133,7 +133,7 @@ impl<'a> EventCtx<'a> {
 
     /// Request a [`paint`] pass.
     ///
-    /// [`paint`]: trait.Widget.html#tymethod.paint
+    /// [`paint`]: widget/trait.Widget.html#tymethod.paint
     pub fn request_paint(&mut self) {
         self.base_state.needs_inval = true;
     }
@@ -147,7 +147,7 @@ impl<'a> EventCtx<'a> {
     /// (such as if it would like to change the layout of children in
     /// response to some event) it must call this method.
     ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
     pub fn request_layout(&mut self) {
         self.base_state.needs_layout = true;
     }
@@ -326,7 +326,7 @@ impl<'a> EventCtx<'a> {
     /// Generally it will be the same as the size returned by the child widget's
     /// [`layout`] method.
     ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
     pub fn size(&self) -> Size {
         self.base_state.size()
     }
@@ -335,10 +335,10 @@ impl<'a> EventCtx<'a> {
     ///
     /// Commands are run in the order they are submitted; all commands
     /// submitted during the handling of an event are executed before
-    /// the [`update()`] method is called.
+    /// the [`update`] method is called.
     ///
     /// [`Command`]: struct.Command.html
-    /// [`update()`]: trait.Widget.html#tymethod.update
+    /// [`update`]: widget/trait.Widget.html#tymethod.update
     pub fn submit_command(
         &mut self,
         command: impl Into<Command>,
@@ -375,7 +375,7 @@ impl<'a> LifeCycleCtx<'a> {
 
     /// Request a [`paint`] pass.
     ///
-    /// [`paint`]: trait.Widget.html#tymethod.paint
+    /// [`paint`]: widget/trait.Widget.html#tymethod.paint
     pub fn request_paint(&mut self) {
         self.base_state.needs_inval = true;
     }
@@ -425,10 +425,10 @@ impl<'a> LifeCycleCtx<'a> {
     ///
     /// Commands are run in the order they are submitted; all commands
     /// submitted during the handling of an event are executed before
-    /// the [`update()`] method is called.
+    /// the [`update`] method is called.
     ///
     /// [`Command`]: struct.Command.html
-    /// [`update()`]: trait.Widget.html#tymethod.update
+    /// [`update`]: widget/trait.Widget.html#tymethod.update
     pub fn submit_command(
         &mut self,
         command: impl Into<Command>,
