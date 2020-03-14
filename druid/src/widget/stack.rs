@@ -15,32 +15,14 @@
 //! A widget that arranges its children in a one-dimensional array.
 
 use crate::kurbo::{Point, Rect, Size};
-
-use crate::widget::SizedBox;
-use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx, Widget, WidgetPod, BoxedWidget};
-
-macro_rules! print_debug {
-    ($name:ident) => {
-        println!(
-            "{}: {:?}",
-            stringify!($name),
-            $name,
-        );
-    };
-}
+use crate::{
+    BoxConstraints, BoxedWidget, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, UpdateCtx, Widget, WidgetPod,
+};
 
 /// A container with either horizontal or vertical layout.
 pub struct Stack<T> {
     children: Vec<BoxedWidget<T>>,
-}
-
-
-
-
-
-#[derive(Copy, Clone, Default)]
-struct Params {
-    flex: f64,
 }
 
 impl<T: Data> Stack<T> {
@@ -67,8 +49,6 @@ impl<T: Data> Stack<T> {
     pub fn add_child(&mut self, child: impl Widget<T> + 'static) {
         self.children.push(WidgetPod::new(child).boxed());
     }
-
-
 }
 
 impl<T: Data> Widget<T> for Stack<T> {
@@ -103,15 +83,16 @@ impl<T: Data> Widget<T> for Stack<T> {
         let mut max_height: f64 = 0.;
         for child in &mut self.children {
             let child_size: Size = child.layout(layout_ctx, &loosened_bc, data, env);
-            print_debug!(child_size);
             max_width = max_width.max(child_size.width);
             max_height = max_height.max(child_size.height);
             // Stash size.
             let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
             child.set_layout_rect(rect);
         }
-        let stack_size = Size{ width: max_width, height: max_height };
-        print_debug!(stack_size);
+        let stack_size = Size {
+            width: max_width,
+            height: max_height,
+        };
         stack_size
     }
 
@@ -121,9 +102,3 @@ impl<T: Data> Widget<T> for Stack<T> {
         }
     }
 }
-
-
-
-
-
-

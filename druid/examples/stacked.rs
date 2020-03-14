@@ -14,7 +14,7 @@
 
 //! This example shows how to construct a stack layout.
 
-use druid::widget::{Stack, ImageData, Image};
+use druid::widget::{Image, ImageData, Stack};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {

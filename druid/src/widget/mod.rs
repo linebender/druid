@@ -23,7 +23,6 @@ mod controller;
 mod either;
 mod env_scope;
 mod flex;
-mod stack;
 mod identity_wrapper;
 #[cfg(feature = "image")]
 #[cfg_attr(docsrs, doc(cfg(feature = "image")))]
@@ -38,6 +37,7 @@ mod scroll;
 mod sized_box;
 mod slider;
 mod split;
+mod stack;
 mod stepper;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
@@ -59,7 +59,6 @@ pub use controller::{Controller, ControllerHost};
 pub use either::Either;
 pub use env_scope::EnvScope;
 pub use flex::{CrossAxisAlignment, Flex, MainAxisAlignment};
-pub use stack::{Stack};
 pub use identity_wrapper::IdentityWrapper;
 pub use label::{Label, LabelText};
 pub use list::{List, ListIter};
@@ -71,6 +70,7 @@ pub use scroll::Scroll;
 pub use sized_box::SizedBox;
 pub use slider::Slider;
 pub use split::Split;
+pub use stack::Stack;
 pub use stepper::Stepper;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
