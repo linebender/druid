@@ -64,16 +64,9 @@ impl WinHandler for HelloState {
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
-        // TODO(x11/timers): Timers not implemented yet on X11, so this won't work there.
-        cfg_if::cfg_if! {
-            if #[cfg(all(target_os = "linux", feature = "x11"))] {
-                println!("keydown: {:?}", event);
-            } else {
-                let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
-                let id = self.handle.request_timer(deadline);
-                println!("keydown: {:?}, timer id = {:?}", event, id);
-            }
-        }
+        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
+        let id = self.handle.request_timer(deadline);
+        println!("keydown: {:?}, timer id = {:?}", event, id);
 
         false
     }

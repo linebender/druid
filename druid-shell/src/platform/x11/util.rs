@@ -26,7 +26,7 @@ pub fn refresh_rate(conn: &xcb::Connection, window_id: Window) -> Option<f64> {
     //     Or maybe we don't even need this function if I figure out a better way to schedule redraws?
     //     Assuming the first mode is the one we want to use. This is probably a bug on some setups.
     //     Any better way to find the correct one?
-    let refresh_rate = modes.nth(0).and_then(|mode_info| {
+    let refresh_rate = modes.next().and_then(|mode_info| {
         let flags = mode_info.mode_flags();
         let vtotal = {
             let mut val = mode_info.vtotal();

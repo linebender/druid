@@ -23,8 +23,7 @@ pub struct FileInfo {
 }
 
 /// Type of file dialog.
-// TODO(x11/file_dialogs): Remove this #[cfg]
-#[cfg(not(all(target_os = "linux", feature = "x11")))]
+#[cfg(not(feature = "x11"))]
 pub enum FileDialogType {
     /// File open dialog.
     Open,

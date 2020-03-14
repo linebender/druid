@@ -21,8 +21,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// Strip the access keys from the menu string.
 ///
 /// Changes "E&xit" to "Exit". Actual ampersands are escaped as "&&".
-// TODO(x11/menus): Re-evaluate this #[cfg]; used to be just "macos OR linux" before.
-#[cfg(any(target_os = "macos", all(target_os = "linux", not(feature = "x11"))))]
+#[allow(dead_code)]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 pub fn strip_access_key(raw_menu_text: &str) -> String {
     let mut saw_ampersand = false;
     let mut result = String::new();
