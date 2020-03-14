@@ -34,6 +34,7 @@ pub struct Image<T> {
     image_data: ImageData,
     phantom: PhantomData<T>,
     fill: FillStrat,
+    interpolation: InterpolationMode,
 }
 
 impl<T: Data> Image<T> {
@@ -45,6 +46,7 @@ impl<T: Data> Image<T> {
             image_data,
             phantom: Default::default(),
             fill: FillStrat::default(),
+            interpolation: InterpolationMode::Bilinear,
         }
     }
 
@@ -57,6 +59,17 @@ impl<T: Data> Image<T> {
     /// Modify the widget's `FillStrat`.
     pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
+    }
+
+    /// A builder-style method for specifying the interpolation strategy.
+    pub fn interpolation_mode(mut self, interpolation: InterpolationMode) -> Self {
+        self.interpolation = interpolation;
+        self
+    }
+
+    /// Modify the widget's `InterpolationMode`.
+    pub fn set_interpolation_mode(&mut self, interpolation: InterpolationMode) {
+        self.interpolation = interpolation;
     }
 }
 
@@ -94,7 +107,8 @@ impl<T: Data> Widget<T> for Image<T> {
             let clip_rect = Rect::ZERO.with_size(paint_ctx.size());
             paint_ctx.clip(clip_rect);
         }
-        self.image_data.to_piet(offset_matrix, paint_ctx);
+        self.image_data
+            .to_piet(offset_matrix, paint_ctx, self.interpolation);
     }
 }
 
@@ -147,7 +161,12 @@ impl ImageData {
     }
 
     /// Convert ImageData into Piet draw instructions
-    fn to_piet(&self, offset_matrix: Affine, paint_ctx: &mut PaintCtx) {
+    fn to_piet(
+        &self,
+        offset_matrix: Affine,
+        paint_ctx: &mut PaintCtx,
+        interpolation: InterpolationMode,
+    ) {
         paint_ctx
             .with_save(|ctx| {
                 ctx.transform(offset_matrix);
@@ -164,7 +183,7 @@ impl ImageData {
                     (0.0, 0.0),
                     (self.x_pixels as f64, self.y_pixels as f64),
                 );
-                ctx.draw_image(&im, rec, InterpolationMode::Bilinear);
+                ctx.draw_image(&im, rec, interpolation);
 
                 Ok(())
             })
