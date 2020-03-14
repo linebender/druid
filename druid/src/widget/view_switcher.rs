@@ -70,7 +70,7 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         let child_id = (self.child_picker)(data, env);
         if Some(&child_id) != self.active_child_id.as_ref() {
             self.active_child = Some(WidgetPod::new((self.child_builder)(&child_id, env)));
@@ -78,11 +78,8 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
             ctx.children_changed();
         }
 
-        if !old_data.same(data) {
-            if let Some(child) = self.active_child.as_mut() {
-                child.update(ctx, data, env);
-            }
-            ctx.request_paint();
+        if let Some(child) = self.active_child.as_mut() {
+            child.update(ctx, data, env);
         }
     }
 
