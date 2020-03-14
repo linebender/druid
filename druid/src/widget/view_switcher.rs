@@ -79,6 +79,9 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
         }
 
         if !old_data.same(data) {
+            if let Some(child) = self.active_child.as_mut() {
+                child.update(ctx, data, env);
+            }
             ctx.request_paint();
         }
     }
