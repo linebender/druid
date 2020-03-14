@@ -69,7 +69,6 @@ impl<T: Data> Widget<T> for Either<T> {
         if current != self.current {
             self.current = current;
             ctx.request_layout();
-            ctx.request_paint();
         }
         if self.current {
             self.true_branch.update(ctx, data, env);

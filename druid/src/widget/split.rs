@@ -250,7 +250,6 @@ impl<T: Data> Widget<T> for Split<T> {
                     if ctx.is_active() {
                         self.update_splitter(ctx.size(), mouse.pos);
                         ctx.request_layout();
-                        ctx.request_paint();
                     }
 
                     if ctx.is_hot() && self.splitter_hit_test(ctx.size(), mouse.pos)
