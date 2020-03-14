@@ -383,7 +383,6 @@ fn make_widget() -> impl Widget<AppData> {
                                 |ctx, data: &mut bool, _: &Env| {
                                     *data = !*data;
                                     ctx.request_layout();
-                                    ctx.request_paint();
                                 },
                             )
                             .lens(AppData::paused)

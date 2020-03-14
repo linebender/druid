@@ -193,7 +193,6 @@ impl<T: Data> Widget<T> for Label<T> {
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         if !old_data.same(data) && self.text.resolve(data, env) {
             ctx.request_layout();
-            ctx.request_paint();
         }
     }
 

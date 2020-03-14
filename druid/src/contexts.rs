@@ -459,6 +459,7 @@ impl<'a> UpdateCtx<'a> {
     /// [`EventCtx::request_layout`]: struct.EventCtx.html#method.request_layout
     pub fn request_layout(&mut self) {
         self.base_state.needs_layout = true;
+        self.request_paint();
     }
 
     /// Indicate that your children have changed.
