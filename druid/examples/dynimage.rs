@@ -22,13 +22,11 @@ fn main() {
         let png_data = ImageData::from_file("examples/PicWithAlpha.png").unwrap();
         let mut dyn_img = DynamicImage::new_rgba8(300, 300);
         let color = Rgba([155, 133, 100, 125]);
-        unsafe {
-            for i in 0..280 {
-                for j in 0..20 {
-                    dyn_img.unsafe_put_pixel(i, i + j, color.clone());
-                }
-                dyn_img.unsafe_put_pixel(i, 300 - i - 1, color);
+        for i in 0..280 {
+            for j in 0..20 {
+                dyn_img.put_pixel(i, i + j, color.clone());
             }
+            dyn_img.put_pixel(i, 300 - i - 1, color);
         }
         let dyn_data = ImageData::from_dynamic_image(dyn_img);
         let img0 = Image::new(png_data.clone())
