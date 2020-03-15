@@ -17,7 +17,6 @@
 
 use std::convert::AsRef;
 use std::error::Error;
-use std::marker::PhantomData;
 use std::path::Path;
 
 use image;
@@ -30,21 +29,19 @@ use crate::{
 };
 
 /// A widget that renders an Image
-pub struct Image<T> {
+pub struct Image {
     image_data: ImageData,
-    phantom: PhantomData<T>,
     fill: FillStrat,
     interpolation: InterpolationMode,
 }
 
-impl<T: Data> Image<T> {
+impl Image {
     /// Create an image drawing widget from `ImageData`.
     ///
     /// The Image will scale to fit its box constraints.
     pub fn new(image_data: ImageData) -> Self {
         Image {
             image_data,
-            phantom: Default::default(),
             fill: FillStrat::default(),
             interpolation: InterpolationMode::Bilinear,
         }
@@ -73,18 +70,18 @@ impl<T: Data> Image<T> {
     }
 }
 
-impl<T: Data> Widget<T> for Image<T> {
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
+impl Widget<u8> for Image {
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut u8, _env: &Env) {}
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &u8, _env: &Env) {}
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {}
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &u8, _data: &u8, _env: &Env) {}
 
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _data: &T,
+        _data: &u8,
         _env: &Env,
     ) -> Size {
         bc.debug_check("Image");
