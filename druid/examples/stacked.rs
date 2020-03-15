@@ -14,8 +14,6 @@
 //
 //! This example shows how to construct a stack layout.
 
-
-
 fn main() {
     use druid::widget::{Button, Stack, WidgetExt};
     use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
