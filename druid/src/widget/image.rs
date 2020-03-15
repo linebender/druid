@@ -118,6 +118,7 @@ pub struct ImageData {
     pixels: Vec<u8>,
     x_pixels: u32,
     y_pixels: u32,
+    format: ImageFormat,
 }
 
 impl ImageData {
@@ -127,17 +128,44 @@ impl ImageData {
             pixels: [].to_vec(),
             x_pixels: 0,
             y_pixels: 0,
+            format: ImageFormat::RgbaSeparate,
         }
     }
 
     /// Load an image from a DynamicImage from the image crate
     pub fn from_dynamic_image(image_data: image::DynamicImage) -> ImageData {
-        let rgb_image = image_data.to_rgba();
+        match image_data.color() {
+            image::ColorType::RGBA(_) | image::ColorType::BGRA(_) | image::ColorType::GrayA(_) => {
+                Self::from_dynamic_image_with_alpha(image_data)
+            }
+            image::ColorType::RGB(_)
+            | image::ColorType::Gray(_)
+            | image::ColorType::Palette(_)
+            | image::ColorType::BGR(_) => Self::from_dynamic_image_without_alpha(image_data),
+        }
+    }
+
+    /// Load an image from a DynamicImage with alpha
+    pub fn from_dynamic_image_with_alpha(image_data: image::DynamicImage) -> ImageData {
+        let rgba_image = image_data.to_rgba();
+        let sizeofimage = rgba_image.dimensions();
+        ImageData {
+            pixels: rgba_image.to_vec(),
+            x_pixels: sizeofimage.0,
+            y_pixels: sizeofimage.1,
+            format: ImageFormat::RgbaSeparate,
+        }
+    }
+
+    /// Load an image from a DynamicImage without alpha
+    pub fn from_dynamic_image_without_alpha(image_data: image::DynamicImage) -> ImageData {
+        let rgb_image = image_data.to_rgb();
         let sizeofimage = rgb_image.dimensions();
         ImageData {
             pixels: rgb_image.to_vec(),
             x_pixels: sizeofimage.0,
             y_pixels: sizeofimage.1,
+            format: ImageFormat::Rgb,
         }
     }
 
@@ -176,7 +204,7 @@ impl ImageData {
                         self.x_pixels as usize,
                         self.y_pixels as usize,
                         &self.pixels,
-                        ImageFormat::RgbaSeparate,
+                        self.format,
                     )
                     .unwrap();
                 let rec = Rect::from_origin_size(
