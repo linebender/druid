@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A widget that arranges its children in a one-dimensional array.
+//! A widget that arranges its children on top of one another.
 
 use crate::kurbo::{Point, Rect, Size};
 use crate::{
@@ -20,7 +20,7 @@ use crate::{
     PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
-/// A container with either horizontal or vertical layout.
+/// A container that lays out its children along the z-axis, first child at bottom, last child on top.
 pub struct Stack<T> {
     children: Vec<BoxedWidget<T>>,
 }
