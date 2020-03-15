@@ -72,10 +72,17 @@ pub enum Value {
     Rect(Rect),
     Color(Color),
     LinearGradient(Arc<LinearGradient>),
+    Brush(Brush),
     Float(f64),
     Bool(bool),
     UnsignedInt(u64),
     String(String),
+}
+
+#[derive(Debug, Clone)]
+pub enum Brush {
+    Color(Color),
+    LinearGradient(Arc<LinearGradient>),
 }
 
 /// Either a concrete `T` or a [`Key<T>`] that can be resolved in the [`Env`].
@@ -264,6 +271,7 @@ impl Value {
             (Rect(_), Rect(_)) => true,
             (Color(_), Color(_)) => true,
             (LinearGradient(_), LinearGradient(_)) => true,
+            (Brush(_), Brush(_)) => true,
             (Float(_), Float(_)) => true,
             (Bool(_), Bool(_)) => true,
             (UnsignedInt(_), UnsignedInt(_)) => true,
@@ -281,6 +289,7 @@ impl Debug for Value {
             Value::Rect(r) => write!(f, "Rect {:?}", r),
             Value::Color(c) => write!(f, "Color {:?}", c),
             Value::LinearGradient(g) => write!(f, "LinearGradient {:?}", g),
+            Value::Brush(b) => write!(f, "Brush {:?}", b),
             Value::Float(x) => write!(f, "Float {}", x),
             Value::Bool(b) => write!(f, "Bool {}", b),
             Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
@@ -300,6 +309,7 @@ impl Data for Value {
             (Size(s1), Size(s2)) => s1.width.same(&s2.width) && s1.height.same(&s2.height),
             (Color(c1), Color(c2)) => c1.as_rgba_u32() == c2.as_rgba_u32(),
             (LinearGradient(g1), LinearGradient(g2)) => Arc::ptr_eq(g1, g2),
+            (Brush(b1), Brush(b2)) => Value::same(&b1.into(), &b2.into()),
             (Float(f1), Float(f2)) => f1.same(&f2),
             (Bool(b1), Bool(b2)) => b1 == b2,
             (UnsignedInt(f1), UnsignedInt(f2)) => f1.same(&f2),
@@ -468,12 +478,69 @@ impl_value_type_owned!(Size, Size);
 impl_value_type_borrowed!(str, String, String);
 impl_value_type_arc!(LinearGradient, LinearGradient);
 
+
+impl<'a> ValueType<'a> for Brush {
+    type Owned = Brush;
+    fn try_from_value(value: &Value) -> Result<Self, ValueTypeError> {
+        match value {
+            Value::Brush(b) => match b {
+                Brush::Color(c) => Ok(Brush::Color(c.to_owned())),
+                Brush::LinearGradient(g) => Ok(Brush::LinearGradient(Arc::clone(g))),
+            }
+            other => Err(ValueTypeError::new(any::type_name::<Brush>(), other.clone())),
+        }
+    }
+}
+
+impl Into<Value> for Brush {
+    fn into(self) -> Value {
+        match self {
+            Brush::Color(c) => Value::Color(c),
+            Brush::LinearGradient(g) => Value::LinearGradient(Arc::clone(&g)),
+        }
+    }
+}
+
+impl Into<Value> for &Brush {
+    fn into(self) -> Value {
+        match self {
+            Brush::Color(c) => Value::Color(c.clone()),
+            Brush::LinearGradient(g) => Value::LinearGradient(Arc::clone(g)),
+        }
+    }
+}
+
+impl From<Color> for Brush {
+    fn from(color: Color) -> Self {
+        Brush::Color(color)
+    }
+}
+
+impl From<LinearGradient> for Brush {
+    fn from(gradient: LinearGradient) -> Self {
+        Brush::LinearGradient(Arc::new(gradient))
+    }
+}
+
+
 impl<'a, T: ValueType<'a>> KeyOrValue<T> {
     pub fn resolve(&'a self, env: &'a Env) -> T {
         match self {
             KeyOrValue::Concrete(value) => value.to_inner_unchecked(),
             KeyOrValue::Key(key) => env.get(key),
         }
+    }
+}
+
+impl From<Color> for KeyOrValue<Brush> {
+    fn from(value: Color) -> KeyOrValue<Brush> {
+        KeyOrValue::Concrete(value.into())
+    }
+}
+
+impl From<LinearGradient> for KeyOrValue<Brush> {
+    fn from(value: LinearGradient) -> KeyOrValue<Brush> {
+        KeyOrValue::Concrete(value.into())
     }
 }
 

@@ -15,10 +15,8 @@
 //! A widget that provides simple visual styling options to a child.
 
 use crate::shell::kurbo::{Point, Rect, RoundedRect, Size};
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintBrush,
-    PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
-};
+use crate::{BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintBrush, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod, KeyOrValue};
+use crate::env::Brush;
 
 struct BorderStyle {
     width: f64,
@@ -27,7 +25,7 @@ struct BorderStyle {
 
 /// A widget that provides simple visual styling options to a child.
 pub struct Container<T> {
-    background: Option<PaintBrush>,
+    background: Option<KeyOrValue<Brush>>,
     border: Option<BorderStyle>,
     corner_radius: f64,
 
@@ -46,7 +44,7 @@ impl<T: Data> Container<T> {
     }
 
     /// Paint background with a color or a gradient.
-    pub fn background(mut self, brush: impl Into<PaintBrush>) -> Self {
+    pub fn background(mut self, brush: impl Into<KeyOrValue<Brush>>) -> Self {
         self.background = Some(brush.into());
         self
     }
@@ -126,7 +124,10 @@ impl<T: Data> Widget<T> for Container<T> {
         };
 
         if let Some(background) = &self.background {
-            paint_ctx.fill(panel, background);
+            match background.resolve(env) {
+                Brush::Color(c) => paint_ctx.fill(panel, &c),
+                Brush::LinearGradient(g) => paint_ctx.fill(panel, g.as_ref()),
+            };
         };
 
         self.inner.paint(paint_ctx, data, env);

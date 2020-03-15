@@ -21,7 +21,8 @@ use super::{
     Align, Container, Controller, ControllerHost, EnvScope, IdentityWrapper, Padding, Parse,
     SizedBox, WidgetId,
 };
-use crate::{Data, Env, Lens, LensWrap, Widget};
+use crate::{Data, Env, Lens, LensWrap, Widget, KeyOrValue};
+use crate::env::Brush;
 
 /// A trait that provides extra methods for combining `Widget`s.
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
@@ -103,7 +104,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// [`Container`]: struct.Container.html
     /// [`PaintBrush`]: https://docs.rs/piet/0.0.7/piet/enum.PaintBrush.html
-    fn background(self, brush: impl Into<PaintBrush>) -> Container<T> {
+    fn background(self, brush: impl Into<KeyOrValue<Brush>>) -> Container<T> {
         Container::new(self).background(brush)
     }
 
