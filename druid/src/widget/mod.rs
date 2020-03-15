@@ -39,6 +39,7 @@ mod scroll;
 mod sized_box;
 mod slider;
 mod split;
+mod stack;
 mod stepper;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
@@ -75,6 +76,7 @@ pub use scroll::Scroll;
 pub use sized_box::SizedBox;
 pub use slider::Slider;
 pub use split::Split;
+pub use stack::Stack;
 pub use stepper::Stepper;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
