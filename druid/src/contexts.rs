@@ -150,7 +150,7 @@ impl<'a> EventCtx<'a> {
     /// [`layout`]: widget/trait.Widget.html#tymethod.layout
     pub fn request_layout(&mut self) {
         self.base_state.needs_layout = true;
-        self.request_paint();
+        self.base_state.needs_inval = true;
     }
 
     /// Indicate that your children have changed.
@@ -388,7 +388,7 @@ impl<'a> LifeCycleCtx<'a> {
     /// [`EventCtx::request_layout`]: struct.EventCtx.html#method.request_layout
     pub fn request_layout(&mut self) {
         self.base_state.needs_layout = true;
-        self.request_paint();
+        self.base_state.needs_inval = true;
     }
 
     /// Returns the current widget's `WidgetId`.
@@ -461,7 +461,7 @@ impl<'a> UpdateCtx<'a> {
     /// [`EventCtx::request_layout`]: struct.EventCtx.html#method.request_layout
     pub fn request_layout(&mut self) {
         self.base_state.needs_layout = true;
-        self.request_paint();
+        self.base_state.needs_inval = true;
     }
 
     /// Indicate that your children have changed.
