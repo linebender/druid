@@ -18,8 +18,8 @@ use crate::kurbo::{Point, Rect, Size};
 
 use crate::widget::SizedBox;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A container with either horizontal or vertical layout.
@@ -36,6 +36,13 @@ struct ChildWidget<T> {
     params: Params,
 }
 
+/// A dummy widget we use to do spacing.
+struct Spacer {
+    axis: Axis,
+    len: KeyOrValue<f64>,
+}
+
+#[derive(Clone, Copy)]
 pub(crate) enum Axis {
     Horizontal,
     Vertical,
@@ -94,29 +101,29 @@ struct Params {
 }
 
 impl Axis {
-    pub(crate) fn major(&self, coords: Size) -> f64 {
-        match *self {
+    pub(crate) fn major(self, coords: Size) -> f64 {
+        match self {
             Axis::Horizontal => coords.width,
             Axis::Vertical => coords.height,
         }
     }
 
-    pub(crate) fn minor(&self, coords: Size) -> f64 {
-        match *self {
+    pub(crate) fn minor(self, coords: Size) -> f64 {
+        match self {
             Axis::Horizontal => coords.height,
             Axis::Vertical => coords.width,
         }
     }
 
-    pub(crate) fn pack(&self, major: f64, minor: f64) -> (f64, f64) {
-        match *self {
+    pub(crate) fn pack(self, major: f64, minor: f64) -> (f64, f64) {
+        match self {
             Axis::Horizontal => (major, minor),
             Axis::Vertical => (minor, major),
         }
     }
 
     /// Generate constraints with new values on the major axis.
-    fn constraints(&self, bc: &BoxConstraints, min_major: f64, major: f64) -> BoxConstraints {
+    fn constraints(self, bc: &BoxConstraints, min_major: f64, major: f64) -> BoxConstraints {
         match self {
             Axis::Horizontal => BoxConstraints::new(
                 Size::new(min_major, bc.min().height),
@@ -201,7 +208,7 @@ impl<T: Data> Flex<T> {
     }
 
     /// Builder-style method for adding a fixed-size spacer to the container.
-    pub fn with_spacer(mut self, len: f64) -> Self {
+    pub fn with_spacer(mut self, len: impl Into<KeyOrValue<f64>>) -> Self {
         self.add_spacer(len);
         self
     }
@@ -257,10 +264,10 @@ impl<T: Data> Flex<T> {
     }
 
     /// Add an empty spacer widget with the given length.
-    pub fn add_spacer(&mut self, len: f64) {
-        let spacer = match self.direction {
-            Axis::Horizontal => SizedBox::empty().width(len),
-            Axis::Vertical => SizedBox::empty().height(len),
+    pub fn add_spacer(&mut self, len: impl Into<KeyOrValue<f64>>) {
+        let spacer = Spacer {
+            axis: self.direction,
+            len: len.into(),
         };
         self.add_child(spacer, 0.0);
     }
@@ -473,4 +480,15 @@ impl Data for CrossAxisAlignment {
     fn same(&self, other: &CrossAxisAlignment) -> bool {
         self == other
     }
+}
+
+impl<T: Data> Widget<T> for Spacer {
+    fn event(&mut self, _: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {}
+    fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &T, _: &Env) {}
+    fn update(&mut self, _: &mut UpdateCtx, _: &T, _: &T, _: &Env) {}
+    fn layout(&mut self, _: &mut LayoutCtx, _: &BoxConstraints, _: &T, env: &Env) -> Size {
+        let major = self.len.resolve(env);
+        self.axis.pack(major, 0.0).into()
+    }
+    fn paint(&mut self, _: &mut PaintCtx, _: &T, _: &Env) {}
 }
