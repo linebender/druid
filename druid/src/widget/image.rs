@@ -24,8 +24,8 @@ use image;
 use crate::{
     piet::{ImageFormat, InterpolationMode},
     widget::common::FillStrat,
-    Affine, BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Rect, RenderContext, Size, UpdateCtx, Widget,
+    Affine, BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    Rect, RenderContext, Size, UpdateCtx, Widget,
 };
 
 /// A widget that renders an Image
