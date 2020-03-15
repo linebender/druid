@@ -71,17 +71,17 @@ impl Image {
 }
 
 impl Widget<u32> for Image {
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut u8, _env: &Env) {}
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut u32, _env: &Env) {}
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &u8, _env: &Env) {}
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &u32, _env: &Env) {}
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &u8, _data: &u8, _env: &Env) {}
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &u32, _data: &u32, _env: &Env) {}
 
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _data: &u8,
+        _data: &u32,
         _env: &Env,
     ) -> Size {
         bc.debug_check("Image");
@@ -93,7 +93,13 @@ impl Widget<u32> for Image {
         }
     }
 
+<<<<<<< HEAD
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
+=======
+    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
+        // dbg!(paint_ctx.size());
+        // dbg!(self.image_data.get_size());
+>>>>>>> accomodate the image example
         let offset_matrix = self
             .fill
             .affine_to_fill(ctx.size(), self.image_data.get_size());
