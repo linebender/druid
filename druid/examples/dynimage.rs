@@ -13,7 +13,7 @@ fn main() {
 #[cfg(feature = "image")]
 fn main() {
     use druid::{
-        widget::{FillStrat, Flex, Image, ImageData, WidgetExt, },
+        widget::{FillStrat, Flex, Image, ImageData, WidgetExt},
         AppLauncher, Widget, WindowDesc,
     };
     use image::{DynamicImage, GenericImage, Rgba};
@@ -25,17 +25,21 @@ fn main() {
         unsafe {
             for i in 0..280 {
                 for j in 0..20 {
-                    dyn_img.unsafe_put_pixel(i, i+j, color.clone());
+                    dyn_img.unsafe_put_pixel(i, i + j, color.clone());
                 }
                 dyn_img.unsafe_put_pixel(i, 300 - i - 1, color);
             }
         }
         let dyn_data = ImageData::from_dynamic_image(dyn_img);
-        let img0 = Image::new(png_data.clone()).fill_mode(FillStrat::ScaleDown).fix_width(500.).center();
-        let img1 = Image::new(dyn_data).fill_mode(FillStrat::ScaleDown).fix_width(300.).center();
-        let root = Flex::column()
-            .with_child(img0, 1.)
-            .with_child(img1, 1.);
+        let img0 = Image::new(png_data.clone())
+            .fill_mode(FillStrat::ScaleDown)
+            .fix_width(500.)
+            .center();
+        let img1 = Image::new(dyn_data)
+            .fill_mode(FillStrat::ScaleDown)
+            .fix_width(300.)
+            .center();
+        let root = Flex::column().with_child(img0, 1.).with_child(img1, 1.);
         root
     }
     let main_window = WindowDesc::new(ui_builder);
@@ -45,5 +49,3 @@ fn main() {
         .launch(data)
         .expect("launch failed");
 }
-
-
