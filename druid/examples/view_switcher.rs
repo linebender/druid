@@ -54,7 +54,7 @@ fn make_ui() -> impl Widget<AppState> {
 
     let view_switcher = ViewSwitcher::new(
         |data: &AppState, _env| data.current_view,
-        |selector, _env| match selector {
+        |selector, _data, _env| match selector {
             0 => Box::new(Label::new("Simple Label").center()),
             1 => Box::new(Button::new("Simple Button", |_event, _data, _env| {
                 println!("Simple button clicked!");
