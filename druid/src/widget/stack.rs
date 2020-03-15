@@ -21,6 +21,7 @@ use crate::{
 };
 
 /// A container that lays out its children along the z-axis, first child at bottom, last child on top.
+#[derive(Default)]
 pub struct Stack<T> {
     children: Vec<BoxedWidget<T>>,
 }

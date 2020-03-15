@@ -11,30 +11,35 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+//
 //! This example shows how to construct a stack layout.
 
-use druid::widget::{Button, Image, ImageData, Stack, WidgetExt};
-use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
-fn build_app() -> impl Widget<u8> {
-    // Begin construction of vertical layout
-    let simple_data = ImageData::from_file("examples/PicWithAlpha.png").unwrap();
-    let dog_data = ImageData::from_file("examples/dog.jpg").unwrap();
-    let dog_img = Image::new(dog_data);
-    let simple_img = Image::new(simple_data);
-    Stack::new()
-        .with_child(dog_img)
-        .with_child(simple_img)
-        .with_child(
-            Button::new("Button 1", Button::noop)
-                .fix_height(300.)
-                .fix_width(300.),
-        )
-        .with_child(Button::new("Button 2", Button::noop))
-}
 
 fn main() {
+    use druid::widget::{Button, Stack, WidgetExt};
+    use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
+
+    fn build_app() -> impl Widget<u8> {
+        Stack::new()
+            .with_child(
+                Button::new("Button 1", Button::noop)
+                    .fix_height(600.)
+                    .fix_width(600.),
+            )
+            .with_child(
+                Button::new("Button 1", Button::noop)
+                    .fix_height(150.)
+                    .fix_width(150.),
+            )
+            .with_child(
+                Button::new("Button 1", Button::noop)
+                    .fix_height(50.)
+                    .fix_width(100.),
+            )
+            .with_child(Button::new("Button 2", Button::noop))
+    }
+
     let window = WindowDesc::new(build_app)
         .window_size((800., 800.))
         .title(LocalizedString::new("layout-demo-window-title").with_placeholder("Stacked"));
