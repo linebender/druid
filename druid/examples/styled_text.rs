@@ -16,12 +16,13 @@
 
 use druid::widget::{Flex, Label, Parse, Stepper, TextBox, WidgetExt};
 use druid::{
-    theme, AppLauncher, Data, Key, Lens, LensExt, LensWrap, LocalizedString, PlatformError, Widget,
-    WindowDesc,
+    theme, AppLauncher, Color, Data, Env, EventCtx, Key, Lens, LensExt, LensWrap, LocalizedString,
+    PlatformError, Widget, WindowDesc,
 };
 
 // This is a custom key we'll use with Env to set and get our text size.
 const MY_CUSTOM_TEXT_SIZE: Key<f64> = Key::new("styled_text.custom_text_size");
+const MY_CUSTOM_COLOR: Key<Color> = Key::new("styled_text.custom_text_color");
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
@@ -59,8 +60,14 @@ fn ui_builder() -> impl Widget<AppData> {
         Label::new(|data: &AppData, _env: &_| format!("Size {:.1}: {}", data.size, data.text))
             .text_color(theme::PRIMARY_LIGHT)
             .text_size(MY_CUSTOM_TEXT_SIZE)
+            .on_click(|data: &mut AppData, env: &mut Env| {
+                env.set(theme::PRIMARY_LIGHT, Color::WHITE);
+                data.size *= 1.1;
+                println!("clicked!");
+                dbg!(env.get(theme::PRIMARY_LIGHT));
+            })
             .env_scope(|env: &mut druid::Env, data: &AppData| {
-                env.set(MY_CUSTOM_TEXT_SIZE, data.size)
+                env.set(MY_CUSTOM_TEXT_SIZE, data.size);
             });
 
     let stepper = Stepper::new()
