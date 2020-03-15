@@ -15,8 +15,8 @@
 //! Convenience methods for widgets.
 
 use super::{
-    Align, BackgroundBrush, Container, Controller, ControllerHost, EnvScope, IdentityWrapper,
-    Padding, Parse, SizedBox, WidgetId,
+    Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
+    IdentityWrapper, Padding, Parse, SizedBox, WidgetId,
 };
 use crate::{Color, Data, Env, Insets, KeyOrValue, Lens, LensWrap, UnitPoint, Widget};
 
@@ -132,6 +132,11 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`Controller`]: struct.Controller.html
     fn controller<C: Controller<T, Self>>(self, controller: C) -> ControllerHost<Self, C> {
         ControllerHost::new(self, controller)
+    }
+
+    fn on_click(self, f: impl Fn(&mut T, &mut Env) + 'static) -> ControllerHost<Self, Click<T>> {
+        let click = Click::new(f);
+        ControllerHost::new(self, click)
     }
 
     /// Draw the [`layout`] `Rect`s of  this widget and its children.
