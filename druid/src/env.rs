@@ -22,11 +22,8 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use crate::kurbo::{Point, Rect, Size};
-use crate::piet::{Color, LinearGradient};
-
 use crate::localization::L10nManager;
-use crate::Data;
+use crate::{Color, Data, Point, Rect, Size};
 
 /// An environment passed down through all widget traversals.
 ///
@@ -71,7 +68,6 @@ pub enum Value {
     Size(Size),
     Rect(Rect),
     Color(Color),
-    LinearGradient(Arc<LinearGradient>),
     Float(f64),
     Bool(bool),
     UnsignedInt(u64),
@@ -263,7 +259,6 @@ impl Value {
             (Size(_), Size(_)) => true,
             (Rect(_), Rect(_)) => true,
             (Color(_), Color(_)) => true,
-            (LinearGradient(_), LinearGradient(_)) => true,
             (Float(_), Float(_)) => true,
             (Bool(_), Bool(_)) => true,
             (UnsignedInt(_), UnsignedInt(_)) => true,
@@ -280,7 +275,6 @@ impl Debug for Value {
             Value::Size(s) => write!(f, "Size {:?}", s),
             Value::Rect(r) => write!(f, "Rect {:?}", r),
             Value::Color(c) => write!(f, "Color {:?}", c),
-            Value::LinearGradient(g) => write!(f, "LinearGradient {:?}", g),
             Value::Float(x) => write!(f, "Float {}", x),
             Value::Bool(b) => write!(f, "Bool {}", b),
             Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
@@ -299,7 +293,6 @@ impl Data for Value {
             }
             (Size(s1), Size(s2)) => s1.width.same(&s2.width) && s1.height.same(&s2.height),
             (Color(c1), Color(c2)) => c1.as_rgba_u32() == c2.as_rgba_u32(),
-            (LinearGradient(g1), LinearGradient(g2)) => Arc::ptr_eq(g1, g2),
             (Float(f1), Float(f2)) => f1.same(&f2),
             (Bool(b1), Bool(b2)) => b1 == b2,
             (UnsignedInt(f1), UnsignedInt(f2)) => f1.same(&f2),
@@ -430,34 +423,6 @@ macro_rules! impl_value_type_borrowed {
     };
 }
 
-/// Use this macro for types that would be expensive to clone; they
-/// are stored as an `Arc<>`.
-macro_rules! impl_value_type_arc {
-    ($ty:ty, $var:ident) => {
-        impl<'a> ValueType<'a> for &'a $ty {
-            type Owned = $ty;
-            fn try_from_value(value: &'a Value) -> Result<Self, ValueTypeError> {
-                match value {
-                    Value::$var(f) => Ok(f),
-                    other => Err(ValueTypeError::new(any::type_name::<$ty>(), other.clone())),
-                }
-            }
-        }
-
-        impl Into<Value> for $ty {
-            fn into(self) -> Value {
-                Value::$var(Arc::new(self))
-            }
-        }
-
-        impl Into<Value> for Arc<$ty> {
-            fn into(self) -> Value {
-                Value::$var(self)
-            }
-        }
-    };
-}
-
 impl_value_type_owned!(f64, Float);
 impl_value_type_owned!(bool, Bool);
 impl_value_type_owned!(u64, UnsignedInt);
@@ -466,7 +431,6 @@ impl_value_type_owned!(Rect, Rect);
 impl_value_type_owned!(Point, Point);
 impl_value_type_owned!(Size, Size);
 impl_value_type_borrowed!(str, String, String);
-impl_value_type_arc!(LinearGradient, LinearGradient);
 
 impl<'a, T: ValueType<'a>> KeyOrValue<T> {
     pub fn resolve(&'a self, env: &'a Env) -> T {
