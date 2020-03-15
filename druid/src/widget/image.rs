@@ -70,7 +70,7 @@ impl Image {
     }
 }
 
-impl Widget<u8> for Image {
+impl Widget<u32> for Image {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut u8, _env: &Env) {}
 
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &u8, _env: &Env) {}
