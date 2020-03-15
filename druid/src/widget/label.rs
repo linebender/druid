@@ -81,6 +81,19 @@ impl<T: Data> Label<T> {
         }
     }
 
+    /// Set a new text.
+    ///
+    /// Takes an already resolved string as input.
+    ///
+    /// If you're looking for full [`LabelText`] support,
+    /// then you need to create a new [`Label`].
+    ///
+    /// [`Label`]: #method.new
+    /// [`LabelText`]: enum.LabelText.html
+    pub fn set_text(&mut self, text: impl Into<String>) {
+        self.text = LabelText::Specific(text.into());
+    }
+
     /// Set text alignment.
     #[deprecated(since = "0.5.0", note = "Use an Align widget instead")]
     pub fn text_align(self, _align: UnitPoint) -> Self {
