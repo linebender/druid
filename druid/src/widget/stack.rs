@@ -57,7 +57,6 @@ impl<T: Data> Stack<T> {
 }
 
 impl<T: Data> Widget<T> for Stack<T> {
-
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         for child in &mut self.children.iter_mut().rev() {
             child.event(ctx, event, data, env);
