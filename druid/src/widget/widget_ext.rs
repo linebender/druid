@@ -14,14 +14,11 @@
 
 //! Convenience methods for widgets.
 
-use crate::kurbo::Insets;
-use crate::piet::{PaintBrush, UnitPoint};
-
 use super::{
-    Align, Container, Controller, ControllerHost, EnvScope, IdentityWrapper, Padding, Parse,
-    SizedBox, WidgetId,
+    Align, BackgroundBrush, Container, Controller, ControllerHost, EnvScope, IdentityWrapper,
+    Padding, Parse, SizedBox, WidgetId,
 };
-use crate::{Color, Data, Env, KeyOrValue, Lens, LensWrap, Widget};
+use crate::{Color, Data, Env, Insets, KeyOrValue, Lens, LensWrap, UnitPoint, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
@@ -96,14 +93,13 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         SizedBox::new(self).expand()
     }
 
-    /// Wrap this widget in a [`Container`] using the provided [`PaintBrush`]
-    /// as the background.
+    /// Wrap this widget in a [`Container`] with the provided `background`.
     ///
-    /// The `PaintBrush` argument can be any color or gradient.
+    /// See [`Container::background`] for more information.
     ///
     /// [`Container`]: struct.Container.html
-    /// [`PaintBrush`]: https://docs.rs/piet/0.0.7/piet/enum.PaintBrush.html
-    fn background(self, brush: impl Into<PaintBrush>) -> Container<T> {
+    /// [`Container::background`]: struct.Container.html#method.background
+    fn background(self, brush: impl Into<BackgroundBrush<T>>) -> Container<T> {
         Container::new(self).background(brush)
     }
 

@@ -14,10 +14,11 @@
 
 //! A widget that provides simple visual styling options to a child.
 
+use super::BackgroundBrush;
 use crate::shell::kurbo::{Point, Rect, RoundedRect, Size};
 use crate::{
     BoxConstraints, Color, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintBrush, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
+    LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
 };
 
 struct BorderStyle {
@@ -27,7 +28,7 @@ struct BorderStyle {
 
 /// A widget that provides simple visual styling options to a child.
 pub struct Container<T> {
-    background: Option<PaintBrush>,
+    background: Option<BackgroundBrush<T>>,
     border: Option<BorderStyle>,
     corner_radius: f64,
 
@@ -45,8 +46,18 @@ impl<T: Data> Container<T> {
         }
     }
 
-    /// Paint background with a color or a gradient.
-    pub fn background(mut self, brush: impl Into<PaintBrush>) -> Self {
+    /// Set the background for this widget.
+    ///
+    /// This can be passed anything which can be represented by a [`BackgroundBrush`];
+    /// noteably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
+    /// any gradient, or a fully custom [`Painter`] widget.
+    ///
+    /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
+    /// [`Color`]: ../struct.Color.thml
+    /// [`Key<Color>`]: ../struct.Key.thml
+    /// [`Env`]: ../struct.Env.html
+    /// [`Painter`]: struct.Painter.html
+    pub fn background(mut self, brush: impl Into<BackgroundBrush<T>>) -> Self {
         self.background = Some(brush.into());
         self
     }
@@ -130,12 +141,23 @@ impl<T: Data> Widget<T> for Container<T> {
             self.corner_radius,
         );
 
+        if let Err(e) = paint_ctx.save() {
+            log::error!("{}", e);
+            return;
+        }
+
+        paint_ctx.clip(panel);
+
+        if let Some(background) = self.background.as_mut() {
+            background.paint(paint_ctx, data, env);
+        }
+
+        if let Err(e) = paint_ctx.restore() {
+            log::error!("{}", e);
+        }
+
         if let Some(border) = &self.border {
             paint_ctx.stroke(panel, &border.color.resolve(env), border.width.resolve(env));
-        };
-
-        if let Some(background) = &self.background {
-            paint_ctx.fill(panel, background);
         };
 
         self.inner.paint(paint_ctx, data, env);
