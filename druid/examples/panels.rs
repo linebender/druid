@@ -34,7 +34,7 @@ fn build_app() -> impl Widget<()> {
                 .with_child(
                     Label::new("top left")
                         .center()
-                        .border(gradient.clone(), 4.0)
+                        .border(solid.clone(), 4.0)
                         .padding(10.0),
                     1.0,
                 )

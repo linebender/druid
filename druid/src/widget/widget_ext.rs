@@ -21,7 +21,7 @@ use super::{
     Align, Container, Controller, ControllerHost, EnvScope, IdentityWrapper, Padding, Parse,
     SizedBox, WidgetId,
 };
-use crate::{Data, Env, Lens, LensWrap, Widget};
+use crate::{Color, Data, Env, KeyOrValue, Lens, LensWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
@@ -109,12 +109,17 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
 
     /// Wrap this widget in a [`Container`] with the given border.
     ///
-    /// The `PaintBrush` argument can be any color or gradient.
+    /// Arguments can be either concrete values, or a [`Key`] of the respective
+    /// type.
     ///
     /// [`Container`]: struct.Container.html
-    /// [`PaintBrush`]: https://docs.rs/piet/0.0.7/piet/enum.PaintBrush.html
-    fn border(self, brush: impl Into<PaintBrush>, width: f64) -> Container<T> {
-        Container::new(self).border(brush, width)
+    /// [`Key`]: struct.Key.html
+    fn border(
+        self,
+        color: impl Into<KeyOrValue<Color>>,
+        width: impl Into<KeyOrValue<f64>>,
+    ) -> Container<T> {
+        Container::new(self).border(color, width)
     }
 
     /// Wrap this widget in a [`EnvScope`] widget, modifying the parent

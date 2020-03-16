@@ -16,13 +16,13 @@
 
 use crate::shell::kurbo::{Point, Rect, RoundedRect, Size};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintBrush,
-    PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Color, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
+    LifeCycleCtx, PaintBrush, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
 };
 
 struct BorderStyle {
-    width: f64,
-    brush: PaintBrush,
+    width: KeyOrValue<f64>,
+    color: KeyOrValue<Color>,
 }
 
 /// A widget that provides simple visual styling options to a child.
@@ -51,11 +51,20 @@ impl<T: Data> Container<T> {
         self
     }
 
-    /// Paint a border around the widget with a color or a gradient.
-    pub fn border(mut self, brush: impl Into<PaintBrush>, width: f64) -> Self {
+    /// Paint a border around the widget with a color and width.
+    ///
+    /// Arguments can be either concrete values, or a [`Key`] of the respective
+    /// type.
+    ///
+    /// [`Key`]: struct.Key.html
+    pub fn border(
+        mut self,
+        color: impl Into<KeyOrValue<Color>>,
+        width: impl Into<KeyOrValue<f64>>,
+    ) -> Self {
         self.border = Some(BorderStyle {
-            width,
-            brush: brush.into(),
+            color: color.into(),
+            width: width.into(),
         });
         self
     }
@@ -95,7 +104,7 @@ impl<T: Data> Widget<T> for Container<T> {
 
         // Shrink constraints by border offset
         let border_width = match self.border {
-            Some(ref border) => border.width,
+            Some(ref border) => border.width.resolve(env),
             None => 0.0,
         };
         let child_bc = bc.shrink((2.0 * border_width, 2.0 * border_width));
@@ -122,7 +131,7 @@ impl<T: Data> Widget<T> for Container<T> {
         );
 
         if let Some(border) = &self.border {
-            paint_ctx.stroke(panel, &border.brush, border.width);
+            paint_ctx.stroke(panel, &border.color.resolve(env), border.width.resolve(env));
         };
 
         if let Some(background) = &self.background {
