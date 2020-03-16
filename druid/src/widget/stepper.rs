@@ -21,7 +21,7 @@ use crate::{
 use std::f64::EPSILON;
 use std::time::{Duration, Instant};
 
-use crate::kurbo::{BezPath, Rect, RoundedRect};
+use crate::kurbo::{BezPath, Rect};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 
 use crate::theme;
@@ -111,8 +111,7 @@ impl Default for Stepper {
 
 impl Widget<f64> for Stepper {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &f64, env: &Env) {
-        let rounded_rect =
-            RoundedRect::from_origin_size(Point::ORIGIN, paint_ctx.size().to_vec2(), 4.);
+        let rounded_rect = paint_ctx.size().to_rounded_rect(4.0);
 
         let height = paint_ctx.size().height;
         let width = env.get(theme::BASIC_WIDGET_HEIGHT);

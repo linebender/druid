@@ -279,7 +279,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let size = ctx.size();
-        let viewport = Rect::from_origin_size(Point::ORIGIN, size);
+        let viewport = size.to_rect();
 
         let scroll_bar_is_hovered = match event {
             Event::MouseMoved(e) | Event::MouseUp(e) | Event::MouseDown(e) => {
@@ -421,8 +421,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         let child_bc = BoxConstraints::new(Size::ZERO, self.direction.max_size(bc));
         let size = self.child.layout(ctx, &child_bc, data, env);
         self.child_size = size;
-        self.child
-            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+        self.child.set_layout_rect(size.to_rect());
         let self_size = bc.constrain(self.child_size);
         let _ = self.scroll(Vec2::new(0.0, 0.0), self_size);
         self_size
@@ -433,7 +432,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             error!("saving render context failed: {:?}", e);
             return;
         }
-        let viewport = Rect::from_origin_size(Point::ORIGIN, paint_ctx.size());
+        let viewport = paint_ctx.size().to_rect();
         paint_ctx.clip(viewport);
         paint_ctx.transform(Affine::translate(-self.scroll_offset));
 

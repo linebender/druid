@@ -25,8 +25,7 @@ use usvg;
 
 use crate::{
     kurbo::BezPath, widget::common::FillStrat, Affine, BoxConstraints, Color, Data, Env, Event,
-    EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Rect, RenderContext, Size, UpdateCtx,
-    Widget,
+    EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, Size, UpdateCtx, Widget,
 };
 
 /// A widget that renders a SVG
@@ -102,7 +101,7 @@ impl<T: Data> Widget<T> for Svg<T> {
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         let offset_matrix = self.fill.affine_to_fill(paint_ctx.size(), self.get_size());
 
-        let clip_rect = Rect::ZERO.with_size(paint_ctx.size());
+        let clip_rect = paint_ctx.size().to_rect();
 
         // The SvgData's to_piet function dose not clip to the svg's size
         // CairoRenderContext is very like druids but with some extra goodies like clip

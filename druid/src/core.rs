@@ -19,7 +19,7 @@ use std::collections::VecDeque;
 use log;
 
 use crate::bloom::Bloom;
-use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size};
+use crate::kurbo::{Affine, Insets, Rect, Shape, Size};
 use crate::piet::RenderContext;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
@@ -237,7 +237,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`layout`]: widget/trait.Widget.html#tymethod.layout
     /// [`Insets`]: struct.Insets.html
     pub fn compute_parent_paint_insets(&self, parent_size: Size) -> Insets {
-        let parent_bounds = Rect::ZERO.with_size(parent_size);
+        let parent_bounds = parent_size.to_rect();
         let union_pant_rect = self.paint_rect().union(parent_bounds);
         union_pant_rect - parent_bounds
     }
@@ -268,7 +268,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         paint_ctx.z_ops.append(&mut ctx.z_ops);
 
         if env.get(Env::DEBUG_PAINT) {
-            let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
+            let rect = ctx.size().to_rect();
             let id = self.id().to_raw();
             let color = env.get_debug_color(id);
             ctx.stroke(rect, &color, 1.0);

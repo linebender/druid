@@ -324,8 +324,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 minor = minor.max(self.direction.minor(child_size));
                 total_non_flex += self.direction.major(child_size);
                 // Stash size.
-                let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
-                child.widget.set_layout_rect(rect);
+                child.widget.set_layout_rect(child_size.to_rect());
             }
         }
 
@@ -345,8 +344,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 flex_used += self.direction.major(child_size);
                 minor = minor.max(self.direction.minor(child_size));
                 // Stash size.
-                let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
-                child.widget.set_layout_rect(rect);
+                child.widget.set_layout_rect(child_size.to_rect());
             }
         }
 
@@ -397,7 +395,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             bc.constrain(my_size)
         };
 
-        let my_bounds = Rect::ZERO.with_size(my_size);
+        let my_bounds = my_size.to_rect();
         let insets = child_paint_rect - my_bounds;
         layout_ctx.set_paint_insets(insets);
         my_size

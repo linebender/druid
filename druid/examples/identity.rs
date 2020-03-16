@@ -132,8 +132,7 @@ impl Widget<OurData> for ColorWell {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &OurData, _env: &Env) {
-        let rect = Rect::ZERO.with_size(ctx.size());
-        let rect = RoundedRect::from_rect(rect, 5.0);
+        let rect = ctx.size().to_rounded_rect(5.0);
         let color = self.frozen.as_ref().unwrap_or(&data.color);
         ctx.fill(rect, color);
     }

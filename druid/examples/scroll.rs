@@ -59,7 +59,7 @@ impl<T: Data> Widget<T> for OverPainter {
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, _: &T, env: &Env) {
-        let rect = Rect::ZERO.with_size(paint_ctx.size());
+        let rect = paint_ctx.size().to_rect();
         let color = env.get_debug_color(self.0);
         let radius = (rect + INSETS).size().height / 2.0;
         let circle = Circle::new(rect.center(), radius);

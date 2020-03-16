@@ -215,7 +215,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         });
 
         let my_size = bc.constrain(Size::new(width, y));
-        let insets = paint_rect - Rect::ZERO.with_size(my_size);
+        let insets = paint_rect - my_size.to_rect();
         layout_ctx.set_paint_insets(insets);
         my_size
     }

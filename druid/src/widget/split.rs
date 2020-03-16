@@ -335,7 +335,7 @@ impl<T: Data> Widget<T> for Split<T> {
             Axis::Vertical => {
                 my_size.height = child1_size.height.max(child2_size.height);
                 (
-                    Rect::from_origin_size(Point::ORIGIN, child1_size),
+                    child1_size.to_rect(),
                     Rect::from_origin_size(
                         Point::new(child1_size.width + self.splitter_size, 0.0),
                         child2_size,
@@ -345,7 +345,7 @@ impl<T: Data> Widget<T> for Split<T> {
             Axis::Horizontal => {
                 my_size.width = child1_size.width.max(child2_size.width);
                 (
-                    Rect::from_origin_size(Point::ORIGIN, child1_size),
+                    child1_size.to_rect(),
                     Rect::from_origin_size(
                         Point::new(0.0, child1_size.height + self.splitter_size),
                         child2_size,
@@ -357,7 +357,7 @@ impl<T: Data> Widget<T> for Split<T> {
         self.child2.set_layout_rect(child2_rect);
 
         let paint_rect = self.child1.paint_rect().union(self.child2.paint_rect());
-        let insets = paint_rect - Rect::ZERO.with_size(my_size);
+        let insets = paint_rect - my_size.to_rect();
         ctx.set_paint_insets(insets);
 
         // Update our splits to hold our constraints if needed

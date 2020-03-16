@@ -14,7 +14,7 @@
 
 //! A toggle switch widget.
 
-use crate::kurbo::{Circle, Point, Rect, RoundedRect, Shape, Size};
+use crate::kurbo::{Circle, Point, Shape, Size};
 use crate::piet::{
     FontBuilder, LinearGradient, RenderContext, Text, TextLayout, TextLayoutBuilder, UnitPoint,
 };
@@ -52,6 +52,7 @@ impl Switch {
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let knob_size = switch_height - 2. * SWITCH_PADDING;
+        let size = paint_ctx.size();
 
         let font = paint_ctx
             .text()
@@ -73,22 +74,19 @@ impl Switch {
             .build()
             .unwrap();
 
-        // position off/on labels
-        let mut on_label_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(
-                (paint_ctx.size().width - on_label_layout.width()).max(0.0),
-                switch_height + (font_size * 1.2) / 2.,
-            ),
-        ));
+        let label_height = switch_height + (font_size * 1.2) / 2.;
 
-        let mut off_label_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(
-                (paint_ctx.size().width - off_label_layout.width()).max(0.0),
-                switch_height + (font_size * 1.2) / 2.,
-            ),
-        ));
+        // position off/on labels
+        let on_label_size = Size::new(
+            (size.width - on_label_layout.width()).max(0.0),
+            label_height,
+        );
+        let off_label_size = Size::new(
+            (size.width - off_label_layout.width()).max(0.0),
+            label_height,
+        );
+        let mut on_label_origin = UnitPoint::LEFT.resolve(on_label_size.to_rect());
+        let mut off_label_origin = UnitPoint::LEFT.resolve(off_label_size.to_rect());
 
         // adjust label position
         on_label_origin.y = on_label_origin.y.min(switch_height);
@@ -202,11 +200,8 @@ impl Widget<bool> for Switch {
         let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
         let off_pos = knob_size / 2. + SWITCH_PADDING;
 
-        let background_rect = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(switch_width, switch_height).to_vec2(),
-            switch_height / 2.,
-        );
+        let background_rect =
+            Size::new(switch_width, switch_height).to_rounded_rect(switch_height / 2.0);
 
         // position knob
         if !self.animation_in_progress && !self.knob_dragged {

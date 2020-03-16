@@ -14,11 +14,10 @@
 
 //! A progress bar widget.
 
-use crate::kurbo::{Point, RoundedRect, Size};
 use crate::theme;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
-    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
+    PaintCtx, RenderContext, Size, UnitPoint, UpdateCtx, Widget,
 };
 
 /// A progress bar, displaying a numeric progress value.
@@ -59,16 +58,9 @@ impl Widget<f64> for ProgressBar {
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = data.max(0.0).min(1.0);
+        let height = env.get(theme::BASIC_WIDGET_HEIGHT);
 
-        let rounded_rect = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            (Size {
-                width: paint_ctx.size().width,
-                height: env.get(theme::BASIC_WIDGET_HEIGHT),
-            })
-            .to_vec2(),
-            4.,
-        );
+        let rounded_rect = Size::new(paint_ctx.size().width, height).to_rounded_rect(4.0);
 
         //Paint the border
         paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), 2.0);
@@ -86,15 +78,9 @@ impl Widget<f64> for ProgressBar {
 
         //Paint the bar
         let calculated_bar_width = clamped * rounded_rect.width();
-        let rounded_rect = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            (Size {
-                width: calculated_bar_width,
-                height: env.get(theme::BASIC_WIDGET_HEIGHT),
-            })
-            .to_vec2(),
-            env.get(theme::PROGRESS_BAR_RADIUS),
-        );
+        let rounded_rect = Size::new(calculated_bar_width, height)
+            .to_rounded_rect(env.get(theme::PROGRESS_BAR_RADIUS));
+
         let bar_gradient = LinearGradient::new(
             UnitPoint::TOP,
             UnitPoint::BOTTOM,

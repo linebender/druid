@@ -18,7 +18,7 @@ use crate::theme;
 use crate::widget::{Label, LabelText};
 use crate::{
     Affine, BoxConstraints, Data, Env, Event, EventCtx, Insets, LayoutCtx, LifeCycle, LifeCycleCtx,
-    LinearGradient, PaintCtx, Point, Rect, RenderContext, Size, UnitPoint, UpdateCtx, Widget,
+    LinearGradient, PaintCtx, RenderContext, Size, UnitPoint, UpdateCtx, Widget,
 };
 
 // the minimum padding added to a button.
@@ -116,9 +116,9 @@ impl<T: Data> Widget<T> for Button<T> {
         let is_active = paint_ctx.is_active();
         let is_hot = paint_ctx.is_hot();
         let size = paint_ctx.size();
+        let corner_radius = env.get(theme::BUTTON_BORDER_RADIUS);
 
-        let rounded_rect = Rect::from_origin_size(Point::ORIGIN, size)
-            .to_rounded_rect(env.get(theme::BUTTON_BORDER_RADIUS));
+        let rounded_rect = size.to_rounded_rect(corner_radius);
 
         let bg_gradient = if is_active {
             LinearGradient::new(

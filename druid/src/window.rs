@@ -271,8 +271,7 @@ impl<T: Data> Window<T> {
         };
         let bc = BoxConstraints::tight(self.size);
         let size = self.root.layout(&mut layout_ctx, &bc, data, env);
-        self.root
-            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+        self.root.set_layout_rect(size.to_rect());
     }
 
     /// only expose `layout` for testing; normally it is called as part of `do_paint`
@@ -291,7 +290,7 @@ impl<T: Data> Window<T> {
             focus_widget: self.focus,
             region: Rect::ZERO.into(),
         };
-        let visible = Rect::from_origin_size(Point::ZERO, self.size);
+        let visible = self.size.to_rect();
         paint_ctx.with_child_ctx(visible, |ctx| self.root.paint(ctx, data, env));
 
         let mut z_ops = mem::take(&mut paint_ctx.z_ops);

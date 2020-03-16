@@ -91,7 +91,7 @@ impl<T: Data> Widget<T> for Image<T> {
         // The ImageData's to_piet function does not clip to the image's size
         // CairoRenderContext is very like druids but with some extra goodies like clip
         if self.fill != FillStrat::Contain {
-            let clip_rect = Rect::ZERO.with_size(paint_ctx.size());
+            let clip_rect = paint_ctx.size().to_rect();
             paint_ctx.clip(clip_rect);
         }
         self.image_data.to_piet(offset_matrix, paint_ctx);

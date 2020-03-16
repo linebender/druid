@@ -17,12 +17,11 @@
 use std::thread;
 use std::time::{Duration, Instant};
 
-use druid::kurbo::RoundedRect;
 use druid::widget::WidgetExt;
 use druid::{
     AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size, UpdateCtx,
-    Widget, WindowDesc,
+    LifeCycleCtx, LocalizedString, PaintCtx, RenderContext, Selector, Size, UpdateCtx, Widget,
+    WindowDesc,
 };
 
 const SET_COLOR: Selector = Selector::new("event-example.set-color");
@@ -68,8 +67,7 @@ impl Widget<MyColor> for ColorWell {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &MyColor, _env: &Env) {
-        let rect = Rect::ZERO.with_size(ctx.size());
-        let rect = RoundedRect::from_rect(rect, 5.0);
+        let rect = ctx.size().to_rounded_rect(5.0);
         ctx.fill(rect, &data.0);
     }
 }

@@ -14,7 +14,7 @@
 
 //! A checkbox widget.
 
-use crate::kurbo::{BezPath, Point, Rect, RoundedRect, Size};
+use crate::kurbo::{BezPath, Point, Rect, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
 use crate::widget::{Label, LabelText, WidgetExt};
@@ -96,9 +96,7 @@ impl Widget<bool> for Checkbox {
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &bool, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
-
-        let rect =
-            RoundedRect::from_origin_size(Point::ORIGIN, Size::new(size, size).to_vec2(), 2.);
+        let rect = Size::new(size, size).to_rounded_rect(2.0);
 
         //Paint the background
         let background_gradient = LinearGradient::new(

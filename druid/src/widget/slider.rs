@@ -135,7 +135,7 @@ impl Widget<f64> for Slider {
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = self.normalize(*data);
-        let rect = Rect::from_origin_size(Point::ORIGIN, paint_ctx.size());
+        let rect = paint_ctx.size().to_rect();
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let track_thickness = 4.;
 
@@ -143,8 +143,8 @@ impl Widget<f64> for Slider {
         let background_width = rect.width() - knob_size;
         let background_origin = Point::new(knob_size / 2., (knob_size - track_thickness) / 2.);
         let background_size = Size::new(background_width, track_thickness);
-        let background_rect =
-            RoundedRect::from_origin_size(background_origin, background_size.to_vec2(), 2.);
+        let background_rect = Rect::from_origin_size(background_origin, background_size);
+        let background_rect = RoundedRect::from_rect(background_rect, 2.0);
 
         let background_gradient = LinearGradient::new(
             UnitPoint::TOP,

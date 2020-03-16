@@ -14,9 +14,8 @@
 
 //! A widget that switches dynamically between two child views.
 
-use crate::kurbo::{Point, Rect, Size};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
     UpdateCtx, Widget, WidgetPod,
 };
 
@@ -87,14 +86,12 @@ impl<T: Data> Widget<T> for Either<T> {
     ) -> Size {
         if self.current {
             let size = self.true_branch.layout(layout_ctx, bc, data, env);
-            self.true_branch
-                .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+            self.true_branch.set_layout_rect(size.to_rect());
             layout_ctx.set_paint_insets(self.true_branch.paint_insets());
             size
         } else {
             let size = self.false_branch.layout(layout_ctx, bc, data, env);
-            self.false_branch
-                .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+            self.false_branch.set_layout_rect(size.to_rect());
             layout_ctx.set_paint_insets(self.true_branch.paint_insets());
             size
         }

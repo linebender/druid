@@ -21,7 +21,7 @@ use crate::{
     LifeCycle, LifeCycleCtx, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
-use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
+use crate::kurbo::{Affine, Line, Point, Rect, Size, Vec2};
 use crate::piet::{
     FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
 };
@@ -387,11 +387,8 @@ impl Widget<String> for TextBox {
         };
 
         // Paint the background
-        let clip_rect = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(self.width - BORDER_WIDTH, height).to_vec2(),
-            env.get(theme::TEXTBOX_BORDER_RADIUS),
-        );
+        let clip_rect = Size::new(self.width - BORDER_WIDTH, height)
+            .to_rounded_rect(env.get(theme::TEXTBOX_BORDER_RADIUS));
 
         paint_ctx.fill(clip_rect, &background_color);
 
@@ -417,11 +414,11 @@ impl Widget<String> for TextBox {
                     let selection_pos =
                         Point::new(left_offset + PADDING_LEFT - 1., PADDING_TOP - 2.);
 
-                    let selection_rect = RoundedRect::from_origin_size(
+                    let selection_rect = Rect::from_origin_size(
                         selection_pos,
-                        Size::new(selection_width + 2., font_size + 4.).to_vec2(),
-                        1.,
-                    );
+                        Size::new(selection_width + 2., font_size + 4.),
+                    )
+                    .to_rounded_rect(1.);
                     rc.fill(selection_rect, &selection_color);
                 }
 
