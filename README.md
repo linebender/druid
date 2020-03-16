@@ -245,6 +245,10 @@ should be sufficient. Removing this dependency is on the roadmap.
 On Linux, druid requires gtk+3; see [gtk-rs dependencies] for installation
 instructions.
 
+Alternatively, there is an X11 backend available, although it is currently
+[missing quite a few features](https://github.com/xi-editor/druid/issues/475).
+You can try it out with `--features=x11`.
+
 ## Alternatives
 
 Druid is only one of many ongoing [Rust-native GUI experiments]. To mention a
