@@ -261,6 +261,15 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
         0.,
     );
 
+    flex.add_child(
+        Button::click_based_button("Clear", |_ctx, data: &mut DemoState, _env| {
+            data.input_text.clear();
+            data.enabled = false;
+            data.volume = 0.0;
+        }),
+        0.,
+    );
+
     space_if_needed(&mut flex, state);
 
     flex.add_child(

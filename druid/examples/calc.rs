@@ -123,7 +123,7 @@ fn op_button(op: char) -> impl Widget<CalcState> {
 }
 
 fn digit_button(digit: u8) -> impl Widget<CalcState> {
-    Button::new(
+    Button::click_based_button(
         format!("{}", digit),
         move |_ctx, data: &mut CalcState, _env| data.digit(digit),
     )
