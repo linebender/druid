@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2020 The xi-editor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,14 +15,14 @@
 //! A clickable widget.
 
 use crate::widget::Controller;
-use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, UpdateCtx, Widget};
+use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, Widget};
 
 pub struct Click<T> {
-    action: Box<dyn Fn(&mut T, &mut Env)>,
+    action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
 }
 
 impl<T: Data> Click<T> {
-    pub fn new(action: impl Fn(&mut T, &mut Env) + 'static) -> Self {
+    pub fn new(action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static) -> Self {
         Click {
             action: Box::new(action),
         }
@@ -34,40 +34,35 @@ impl<T: Data, W: Widget<T>> Controller<T, W> for Click<T> {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
+                ctx.request_paint();
             }
             Event::MouseUp(_) => {
                 if ctx.is_active() {
                     ctx.set_active(false);
                     if ctx.is_hot() {
-                        let mut new_env = env.clone();
-                        (self.action)(data, &mut new_env);
-                        ctx.request_paint();
-                        child.event(ctx, event, data, &new_env);
+                        (self.action)(ctx, data, env);
                     }
+                    ctx.request_paint();
                 }
             }
-            _ => (),
+            _ => {}
         }
+
+        child.event(ctx, event, data, env);
     }
 
-    // fn lifecycle(
-    //     &mut self,
-    //     child: &mut W,
-    //     ctx: &mut LifeCycleCtx,
-    //     event: &LifeCycle,
-    //     data: &T,
-    //     env: &Env,
-    // ) {
-    //     let mut new_env = env.clone();
-    //     let mut new_data = data.clone();
-    //     (self.action)(&mut new_data, &mut new_env);
-    //     child.lifecycle(ctx, event, &mut new_data, env)
-    // }
+    fn lifecycle(
+        &mut self,
+        child: &mut W,
+        ctx: &mut LifeCycleCtx,
+        event: &LifeCycle,
+        data: &T,
+        env: &Env,
+    ) {
+        if let LifeCycle::HotChanged(_) | LifeCycle::FocusChanged(_) = event {
+            ctx.request_paint();
+        }
 
-    // fn update(&mut self, child: &mut W, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-    //     let mut new_env = env.clone();
-    //     let mut new_data = data.clone();
-    //     (self.action)(&mut new_data, &mut new_env);
-    //     child.update(ctx, old_data, &new_data, &new_env)
-    // }
+        child.lifecycle(ctx, event, data, env);
+    }
 }
