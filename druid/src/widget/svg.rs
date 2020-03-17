@@ -72,7 +72,7 @@ impl<T: Data> Svg<T> {
     }
 
     /// Modify the widget's `FillStrat`.
-    pub fn set_fill(&mut self, newfil: FillStrat) {
+    pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
     }
 }
