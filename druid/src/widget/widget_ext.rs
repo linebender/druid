@@ -88,9 +88,33 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
 
     /// Wrap this widget in a [`SizedBox`] with an infinite width and height.
     ///
+    /// Only call this method if you want your widget to occupy all available
+    /// space. If you only care about expanding in one of width or height, use
+    /// [`expand_width`] or [`expand_height`] instead.
+    ///
+    /// [`expand_height`]: #method.expand_height
+    /// [`expand_width`]: #method.expand_width
     /// [`SizedBox`]: struct.SizedBox.html
     fn expand(self) -> SizedBox<T> {
         SizedBox::new(self).expand()
+    }
+
+    /// Wrap this widget in a [`SizedBox`] with an infinite width.
+    ///
+    /// This will force the child to use all available space on the x-axis.
+    ///
+    /// [`SizedBox`]: struct.SizedBox.html
+    fn expand_width(self) -> SizedBox<T> {
+        SizedBox::new(self).expand_width()
+    }
+
+    /// Wrap this widget in a [`SizedBox`] with an infinite width.
+    ///
+    /// This will force the child to use all available space on the y-axis.
+    ///
+    /// [`SizedBox`]: struct.SizedBox.html
+    fn expand_height(self) -> SizedBox<T> {
+        SizedBox::new(self).expand_height()
     }
 
     /// Wrap this widget in a [`Container`] with the provided `background`.
