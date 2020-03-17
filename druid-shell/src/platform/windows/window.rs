@@ -957,6 +957,10 @@ pub(crate) unsafe extern "system" fn win_proc_dispatch(
         }
     };
 
+    if msg == WM_DESTROY {
+      PostQuitMessage(0);
+    }
+
     if msg == WM_NCDESTROY && !window_ptr.is_null() {
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
         mem::drop(Rc::from_raw(window_ptr));
