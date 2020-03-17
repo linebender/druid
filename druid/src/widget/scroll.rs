@@ -25,6 +25,8 @@ use crate::{
     RenderContext, TimerToken, UpdateCtx, Widget, WidgetPod,
 };
 
+const SCROLLBAR_MIN_SIZE: f64 = 45.0;
+
 #[derive(Debug, Clone)]
 enum ScrollDirection {
     Horizontal,
@@ -186,16 +188,25 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         let bar_width = env.get(theme::SCROLL_BAR_WIDTH);
         let bar_pad = env.get(theme::SCROLL_BAR_PAD);
 
-        let scale_y = viewport.height() / self.child_size.height;
+        let percent_visible = viewport.height() / self.child_size.height;
+        let percent_scrolled = self.scroll_offset.y / (self.child_size.height - viewport.height());
 
-        let top_y_offset = (scale_y * self.scroll_offset.y).ceil();
-        let bottom_y_offset = (scale_y * viewport.height()).ceil() + top_y_offset;
+        let mut length = (percent_visible * viewport.height()).ceil();
+        if length < SCROLLBAR_MIN_SIZE {
+            length = SCROLLBAR_MIN_SIZE;
+        }
+
+        let vertical_padding = bar_pad + bar_pad + bar_width;
+
+        let top_y_offset =
+            ((viewport.height() - length - vertical_padding) * percent_scrolled).ceil();
+        let bottom_y_offset = top_y_offset + length;
 
         let x0 = self.scroll_offset.x + viewport.width() - bar_width - bar_pad;
         let y0 = self.scroll_offset.y + top_y_offset + bar_pad;
 
         let x1 = self.scroll_offset.x + viewport.width() - bar_pad;
-        let y1 = self.scroll_offset.y + bottom_y_offset - (bar_pad * 2.) - bar_width;
+        let y1 = self.scroll_offset.y + bottom_y_offset;
 
         Rect::new(x0, y0, x1, y1)
     }
@@ -204,15 +215,24 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         let bar_width = env.get(theme::SCROLL_BAR_WIDTH);
         let bar_pad = env.get(theme::SCROLL_BAR_PAD);
 
-        let scale_x = viewport.width() / self.child_size.width;
+        let percent_visible = viewport.width() / self.child_size.width;
+        let percent_scrolled = self.scroll_offset.x / (self.child_size.width - viewport.width());
 
-        let left_x_offset = (scale_x * self.scroll_offset.x).ceil();
-        let right_x_offset = (scale_x * viewport.width()).ceil() + left_x_offset;
+        let mut length = (percent_visible * viewport.width()).ceil();
+        if length < SCROLLBAR_MIN_SIZE {
+            length = SCROLLBAR_MIN_SIZE;
+        }
+
+        let horizontal_padding = bar_pad + bar_pad + bar_width;
+
+        let left_x_offset =
+            ((viewport.width() - length - horizontal_padding) * percent_scrolled).ceil();
+        let right_x_offset = left_x_offset + length;
 
         let x0 = self.scroll_offset.x + left_x_offset + bar_pad;
         let y0 = self.scroll_offset.y + viewport.height() - bar_width - bar_pad;
 
-        let x1 = self.scroll_offset.x + right_x_offset - (bar_pad * 2.) - bar_width;
+        let x1 = self.scroll_offset.x + right_x_offset;
         let y1 = self.scroll_offset.y + viewport.height() - bar_pad;
 
         Rect::new(x0, y0, x1, y1)
