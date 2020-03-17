@@ -299,17 +299,10 @@ impl<T: Data> Window<T> {
 
         for z_op in z_ops.into_iter() {
             ctx.with_child_ctx(visible, |ctx| {
-                if let Err(e) = ctx.render_ctx.save() {
-                    log::error!("saving render context failed: {:?}", e);
-                    return;
-                }
-
-                ctx.render_ctx.transform(z_op.transform);
-                (z_op.paint_func)(ctx);
-
-                if let Err(e) = ctx.render_ctx.restore() {
-                    log::error!("restoring render context failed: {:?}", e);
-                }
+                ctx.with_save(|ctx| {
+                    ctx.render_ctx.transform(z_op.transform);
+                    (z_op.paint_func)(ctx);
+                });
             });
         }
     }

@@ -443,9 +443,7 @@ impl Widget<String> for TextBox {
 
                 rc.stroke(line, &cursor_color, 1.);
             }
-            Ok(())
-        })
-        .unwrap();
+        });
 
         // Paint the border
         ctx.stroke(clip_rect, &border_color, BORDER_WIDTH);

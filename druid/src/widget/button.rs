@@ -150,16 +150,9 @@ impl<T: Data> Widget<T> for Button<T> {
 
         let label_offset = (size.to_vec2() - self.label_size.to_vec2()) / 2.0;
 
-        if let Err(e) = ctx.save() {
-            log::error!("saving render context failed: {:?}", e);
-            return;
-        }
-
-        ctx.transform(Affine::translate(label_offset));
-        self.label.paint(ctx, data, env);
-
-        if let Err(e) = ctx.restore() {
-            log::error!("restoring render context failed: {:?}", e);
-        }
+        ctx.with_save(|ctx| {
+            ctx.transform(Affine::translate(label_offset));
+            self.label.paint(ctx, data, env);
+        });
     }
 }

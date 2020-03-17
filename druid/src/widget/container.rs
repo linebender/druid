@@ -136,20 +136,13 @@ impl<T: Data> Widget<T> for Container<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Some(background) = self.background.as_mut() {
-            if let Err(e) = ctx.save() {
-                log::error!("{}", e);
-                return;
-            }
+            let panel = ctx.size().to_rounded_rect(self.corner_radius);
 
-            let bg_rect = ctx.size().to_rounded_rect(self.corner_radius);
-            ctx.clip(bg_rect);
-            background.paint(ctx, data, env);
-
-            if let Err(e) = ctx.restore() {
-                log::error!("{}", e);
-                return;
-            }
-        };
+            ctx.with_save(|ctx| {
+                ctx.clip(panel);
+                background.paint(ctx, data, env);
+            });
+        }
 
         if let Some(border) = &self.border {
             let border_width = border.width.resolve(env);
