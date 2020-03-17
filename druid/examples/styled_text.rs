@@ -14,15 +14,14 @@
 
 //! Example of dynamic text styling
 
-use druid::widget::{Flex, Label, Parse, Stepper, TextBox, WidgetExt};
+use druid::widget::{CrossAxisAlignment, Flex, Label, Painter, Parse, Stepper, TextBox, WidgetExt};
 use druid::{
-    theme, AppLauncher, Color, Data, Env, EventCtx, Key, Lens, LensExt, LensWrap, LocalizedString,
-    PlatformError, Widget, WindowDesc,
+    theme, AppLauncher, Color, Data, Key, Lens, LensExt, LensWrap, LocalizedString, PlatformError,
+    RenderContext, Widget, WindowDesc,
 };
 
 // This is a custom key we'll use with Env to set and get our text size.
 const MY_CUSTOM_TEXT_SIZE: Key<f64> = Key::new("styled_text.custom_text_size");
-const MY_CUSTOM_COLOR: Key<Color> = Key::new("styled_text.custom_text_color");
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
@@ -46,6 +45,17 @@ fn main() -> Result<(), PlatformError> {
 }
 
 fn ui_builder() -> impl Widget<AppData> {
+    let my_painter = Painter::new(|ctx, _, _| {
+        let bounds = ctx.size().to_rect();
+        if ctx.is_hot() {
+            ctx.fill(bounds, &Color::rgba8(0, 0, 0, 128));
+        }
+
+        if ctx.is_active() {
+            ctx.stroke(bounds, &Color::WHITE, 2.0);
+        }
+    });
+
     // This is druid's default text style.
     // It's set by theme::LABEL_COLOR and theme::TEXT_SIZE_NORMAL
     let label =
@@ -60,11 +70,9 @@ fn ui_builder() -> impl Widget<AppData> {
         Label::new(|data: &AppData, _env: &_| format!("Size {:.1}: {}", data.size, data.text))
             .text_color(theme::PRIMARY_LIGHT)
             .text_size(MY_CUSTOM_TEXT_SIZE)
-            .on_click(|data: &mut AppData, env: &mut Env| {
-                env.set(theme::PRIMARY_LIGHT, Color::WHITE);
+            .background(my_painter)
+            .on_click(|_, data, _| {
                 data.size *= 1.1;
-                println!("clicked!");
-                dbg!(env.get(theme::PRIMARY_LIGHT));
             })
             .env_scope(|env: &mut druid::Env, data: &AppData| {
                 env.set(MY_CUSTOM_TEXT_SIZE, data.size);
@@ -85,7 +93,7 @@ fn ui_builder() -> impl Widget<AppData> {
         .with_child(stepper_textbox, 0.0)
         .with_child(stepper, 0.0);
 
-    let input = TextBox::new().lens(AppData::text);
+    let input = TextBox::new().fix_width(200.0).lens(AppData::text);
 
     Flex::column()
         .with_child(label.center(), 1.0)

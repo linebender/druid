@@ -18,7 +18,7 @@ use super::{
     Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, Padding, Parse, SizedBox, WidgetId,
 };
-use crate::{Color, Data, Env, Insets, KeyOrValue, Lens, LensWrap, UnitPoint, Widget};
+use crate::{Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LensWrap, UnitPoint, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
@@ -158,7 +158,10 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         ControllerHost::new(self, controller)
     }
 
-    fn on_click(self, f: impl Fn(&mut T, &mut Env) + 'static) -> ControllerHost<Self, Click<T>> {
+    fn on_click(
+        self,
+        f: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
+    ) -> ControllerHost<Self, Click<T>> {
         let click = Click::new(f);
         ControllerHost::new(self, click)
     }
