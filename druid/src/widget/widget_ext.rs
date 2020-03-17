@@ -15,10 +15,12 @@
 //! Convenience methods for widgets.
 
 use super::{
-    Align, BackgroundBrush, Container, Controller, ControllerHost, EnvScope, IdentityWrapper,
-    Padding, Parse, SizedBox, WidgetId,
+    Align, BackgroundBrush, ConstrainedBox, Container, Controller, ControllerHost, EnvScope,
+    IdentityWrapper, Padding, Parse, SizedBox, WidgetId,
 };
-use crate::{Color, Data, Env, Insets, KeyOrValue, Lens, LensWrap, UnitPoint, Widget};
+use crate::{
+    BoxConstraints, Color, Data, Env, Insets, KeyOrValue, Lens, LensWrap, UnitPoint, Widget,
+};
 
 /// A trait that provides extra methods for combining `Widget`s.
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
@@ -91,6 +93,43 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`SizedBox`]: struct.SizedBox.html
     fn expand(self) -> SizedBox<T> {
         SizedBox::new(self).expand()
+    }
+
+    /// Wrap this widget in a [`ConstrainedBox`]. The function provided can
+    /// return arbitrary BoxConstraints, so please constrain responsibly.
+    ///
+    /// [`ConstrainedBox`]: struct.ConstrainedBox.html
+    fn constrain(
+        self,
+        constrain: impl Fn(&BoxConstraints) -> BoxConstraints + 'static,
+    ) -> ConstrainedBox<T> {
+        ConstrainedBox::new(self, Box::new(constrain))
+    }
+
+    /// Wrap this widget in a [`ConstrainedBox`]. This mutates the widget's
+    /// minimum BoxConstraints height.
+    ///
+    /// [`ConstrainedBox`]: struct.ConstrainedBox.html
+    fn min_height(self, height: f64) -> ConstrainedBox<T> {
+        self.constrain(move |bc: &BoxConstraints| {
+            BoxConstraints::new(
+                (bc.min().width, height).into(),
+                (bc.max().width, (bc.max().height).max(height)).into(),
+            )
+        })
+    }
+
+    /// Wrap this widget in a [`ConstrainedBox`]. This mutates the widget's
+    /// minimum BoxConstraints width.
+    ///
+    /// [`ConstrainedBox`]: struct.ConstrainedBox.html
+    fn min_width(self, width: f64) -> ConstrainedBox<T> {
+        self.constrain(move |bc: &BoxConstraints| {
+            BoxConstraints::new(
+                (width, bc.min().height).into(),
+                ((bc.max().width).max(width), bc.max().height).into(),
+            )
+        })
     }
 
     /// Wrap this widget in a [`Container`] with the provided `background`.
