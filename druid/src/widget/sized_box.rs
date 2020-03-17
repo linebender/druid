@@ -69,9 +69,31 @@ impl<T> SizedBox<T> {
     }
 
     /// Expand container to fit the parent.
-    /// It is equivalent to setting width and height to Infinity.
+    ///
+    /// Only call this method if you want your widget to occupy all available
+    /// space. If you only care about expanding in one of width or height, use
+    /// [`expand_width`] or [`expand_height`] instead.
+    ///
+    /// [`expand_height`]: #method.expand_height
+    /// [`expand_width`]: #method.expand_width
     pub fn expand(mut self) -> Self {
         self.width = Some(INFINITY);
+        self.height = Some(INFINITY);
+        self
+    }
+
+    /// Expand the container on the x-axis.
+    ///
+    /// This will force the child to have maximum width.
+    pub fn expand_width(mut self) -> Self {
+        self.width = Some(INFINITY);
+        self
+    }
+
+    /// Expand the container on the y-axis.
+    ///
+    /// This will force the child to have maximum height.
+    pub fn expand_height(mut self) -> Self {
         self.height = Some(INFINITY);
         self
     }
