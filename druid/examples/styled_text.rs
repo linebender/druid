@@ -33,7 +33,7 @@ fn main() -> Result<(), PlatformError> {
         LocalizedString::new("styled-text-demo-window-title").with_placeholder("Type Styler"),
     );
     let data = AppData {
-        text: "This is what text looks like".to_string(),
+        text: "Here's some sample text".to_string(),
         size: 24.0,
     };
 
