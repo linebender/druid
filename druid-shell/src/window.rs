@@ -223,6 +223,11 @@ impl WindowBuilder {
         self.0.set_size(size)
     }
 
+    /// Set the window's initial size.
+    pub fn set_min_size(&mut self, size: Size) {
+        self.0.set_min_size(size)
+    }
+
     /// Set whether the window should be resizable
     pub fn resizable(&mut self, resizable: bool) {
         self.0.resizable(resizable)

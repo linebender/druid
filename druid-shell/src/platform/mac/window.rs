@@ -76,6 +76,7 @@ pub(crate) struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     size: Size,
+    min_size: Option<Size>,
     resizable: bool,
     show_titlebar: bool,
 }
@@ -107,6 +108,7 @@ impl WindowBuilder {
             title: String::new(),
             menu: None,
             size: Size::new(500.0, 400.0),
+            min_size: None,
             resizable: true,
             show_titlebar: true,
         }
@@ -118,6 +120,11 @@ impl WindowBuilder {
 
     pub fn set_size(&mut self, size: Size) {
         self.size = size;
+    }
+
+    pub fn set_min_size(&mut self, size: Size) {
+        // TODO: Use this in `self.build`
+        self.min_size = Some(size);
     }
 
     pub fn resizable(&mut self, resizable: bool) {

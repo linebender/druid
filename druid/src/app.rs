@@ -41,6 +41,7 @@ pub struct WindowDesc<T> {
     pub(crate) root: Box<dyn Widget<T>>,
     pub(crate) title: LocalizedString<T>,
     pub(crate) size: Option<Size>,
+    pub(crate) min_size: Option<Size>,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) resizable: bool,
     pub(crate) show_titlebar: bool,
@@ -145,6 +146,7 @@ impl<T: Data> WindowDesc<T> {
             root: root().boxed(),
             title: LocalizedString::new("app-name"),
             size: None,
+            min_size: None,
             menu: MenuDesc::platform_default(),
             resizable: true,
             show_titlebar: true,
@@ -179,6 +181,14 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    /// Set the minimal window size, similar to [`window_size`]
+    ///
+    /// [`window_size`]: struct.WindowDesc.html#method.window_size
+    pub fn with_min_size(mut self, size: impl Into<Size>) -> Self {
+        self.min_size = Some(size.into());
+        self
+    }
+
     pub fn resizable(mut self, resizable: bool) -> Self {
         self.resizable = resizable;
         self
@@ -210,6 +220,9 @@ impl<T: Data> WindowDesc<T> {
         builder.set_handler(Box::new(handler));
         if let Some(size) = self.size {
             builder.set_size(size);
+        }
+        if let Some(min_size) = self.min_size {
+            builder.set_min_size(min_size);
         }
 
         builder.set_title(self.title.localized_str());

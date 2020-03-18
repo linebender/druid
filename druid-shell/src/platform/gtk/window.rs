@@ -86,6 +86,7 @@ pub struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     size: Size,
+    min_size: Option<Size>,
     resizable: bool,
     show_titlebar: bool,
 }
@@ -116,6 +117,7 @@ impl WindowBuilder {
             title: String::new(),
             menu: None,
             size: Size::new(500.0, 400.0),
+            min_size: None,
             resizable: true,
             show_titlebar: true,
         }
@@ -127,6 +129,10 @@ impl WindowBuilder {
 
     pub fn set_size(&mut self, size: Size) {
         self.size = size;
+    }
+
+    pub fn set_min_size(&mut self, size: Size) {
+        self.min_size = Some(size);
     }
 
     pub fn resizable(&mut self, resizable: bool) {
@@ -168,6 +174,13 @@ impl WindowBuilder {
             (self.size.width * dpi_scale) as i32,
             (self.size.height * dpi_scale) as i32,
         );
+
+        if let Some(min_size) = self.min_size {
+            window.set_size_request(
+                (min_size.width * dpi_scale) as i32,
+                (min_size.height * dpi_scale) as i32,
+            );
+        }
 
         let accel_group = AccelGroup::new();
         window.add_accel_group(&accel_group);
