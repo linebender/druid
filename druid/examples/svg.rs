@@ -52,9 +52,9 @@ fn main() {
 
         let mut col = Flex::column();
 
-        col.add_child(Svg::new(tiger_svg.clone()).fix_width(100.0).center(), 1.0);
-        col.add_child(Svg::new(tiger_svg.clone()).fill_mode(FillStrat::Fill), 1.0);
-        col.add_child(Svg::new(tiger_svg), 1.0);
-        col
+        col.add_flex_child(Svg::new(tiger_svg.clone()).fix_width(60.0).center(), 1.0);
+        col.add_flex_child(Svg::new(tiger_svg.clone()).fill_mode(FillStrat::Fill), 1.0);
+        col.add_flex_child(Svg::new(tiger_svg), 1.0);
+        col.debug_paint_layout()
     }
 }

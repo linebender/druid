@@ -50,16 +50,16 @@ fn build_app() -> impl Widget<()> {
     });
 
     Flex::column()
-        .with_child(
+        .with_flex_child(
             Flex::row()
-                .with_child(
+                .with_flex_child(
                     Label::new("top left")
                         .center()
                         .border(DARK_GREY, 4.0)
                         .padding(10.0),
                     1.0,
                 )
-                .with_child(
+                .with_flex_child(
                     Label::new("top right")
                         .center()
                         .background(DARK_GREY)
@@ -68,9 +68,9 @@ fn build_app() -> impl Widget<()> {
                 ),
             1.0,
         )
-        .with_child(
+        .with_flex_child(
             Flex::row()
-                .with_child(
+                .with_flex_child(
                     Label::new("bottom left")
                         .center()
                         .background(gradient)
@@ -78,7 +78,7 @@ fn build_app() -> impl Widget<()> {
                         .padding(10.0),
                     1.0,
                 )
-                .with_child(
+                .with_flex_child(
                     Label::new("bottom right")
                         .center()
                         .border(LIGHTER_GREY, 4.0)

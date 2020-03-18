@@ -20,8 +20,8 @@ use druid::widget::{
 };
 use druid::{
     AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LensExt,
-    LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, PlatformError, Size, UnitPoint, UpdateCtx,
-    Widget, WidgetId, WindowDesc,
+    LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, PlatformError, Size, UpdateCtx, Widget,
+    WidgetId, WindowDesc,
 };
 
 const DEFAULT_SPACER_SIZE: f64 = 8.;
@@ -126,17 +126,15 @@ fn make_control_row() -> impl Widget<AppState> {
     Flex::row()
         .with_child(
             Flex::column()
-                .with_child(Label::new("Type:").padding(5.0), 0.)
+                .with_child(Label::new("Type:").padding(5.0))
                 .with_child(
                     RadioGroup::new(vec![("Row", FlexType::Row), ("Column", FlexType::Column)])
                         .lens(Params::axis),
-                    0.,
                 ),
-            0.0,
         )
         .with_child(
             Flex::column()
-                .with_child(Label::new("CrossAxis:").padding(5.0), 0.)
+                .with_child(Label::new("CrossAxis:").padding(5.0))
                 .with_child(
                     RadioGroup::new(vec![
                         ("Start", CrossAxisAlignment::Start),
@@ -144,13 +142,11 @@ fn make_control_row() -> impl Widget<AppState> {
                         ("End", CrossAxisAlignment::End),
                     ])
                     .lens(Params::cross_alignment),
-                    0.,
                 ),
-            0.0,
         )
         .with_child(
             Flex::column()
-                .with_child(Label::new("MainAxis:").padding(5.0), 0.)
+                .with_child(Label::new("MainAxis:").padding(5.0))
                 .with_child(
                     RadioGroup::new(vec![
                         ("Start", MainAxisAlignment::Start),
@@ -161,35 +157,20 @@ fn make_control_row() -> impl Widget<AppState> {
                         ("Around", MainAxisAlignment::SpaceAround),
                     ])
                     .lens(Params::main_alignment),
-                    0.,
                 ),
-            0.0,
         )
-        .with_child(make_spacer_select(), 0.0)
+        .with_child(make_spacer_select())
         .with_child(
             Flex::column()
-                .with_child(Label::new("Misc:").padding((0., 0., 0., 10.)), 0.)
-                .with_child(
-                    Checkbox::new("Debug layout").lens(Params::debug_layout),
-                    0.0,
-                )
+                .with_child(Label::new("Misc:").padding((0., 0., 0., 10.)))
+                .with_child(Checkbox::new("Debug layout").lens(Params::debug_layout))
                 .with_spacer(10.)
-                .with_child(
-                    Checkbox::new("Fill main axis").lens(Params::fill_major_axis),
-                    0.,
-                )
+                .with_child(Checkbox::new("Fill main axis").lens(Params::fill_major_axis))
                 .with_spacer(10.)
-                .with_child(
-                    Checkbox::new("Fix minor axis size").lens(Params::fix_minor_axis),
-                    0.,
-                )
+                .with_child(Checkbox::new("Fix minor axis size").lens(Params::fix_minor_axis))
                 .with_spacer(10.)
-                .with_child(
-                    Checkbox::new("Fix major axis size").lens(Params::fix_major_axis),
-                    0.,
-                )
+                .with_child(Checkbox::new("Fix major axis size").lens(Params::fix_major_axis))
                 .padding(5.0),
-            0.0,
         )
         .border(Color::grey(0.6), 2.0)
         .rounded(5.0)
@@ -198,7 +179,7 @@ fn make_control_row() -> impl Widget<AppState> {
 
 fn make_spacer_select() -> impl Widget<Params> {
     Flex::column()
-        .with_child(Label::new("Insert Spacers:").padding(5.0), 0.)
+        .with_child(Label::new("Insert Spacers:").padding(5.0))
         .with_child(
             RadioGroup::new(vec![
                 ("None", Spacers::None),
@@ -206,7 +187,6 @@ fn make_spacer_select() -> impl Widget<Params> {
                 ("Fixed:", Spacers::Fixed),
             ])
             .lens(Params::spacers),
-            0.,
         )
         .with_child(
             Flex::row()
@@ -218,17 +198,14 @@ fn make_spacer_select() -> impl Widget<Params> {
                                 .map(|x| Some(*x), |x, y| *x = y.unwrap_or(DEFAULT_SPACER_SIZE)),
                         )
                         .fix_width(60.0),
-                    0.0,
                 )
                 .with_child(
                     Stepper::new()
                         .with_range(2.0, 50.0)
                         .with_step(2.0)
                         .lens(Params::spacer_size),
-                    0.0,
                 )
                 .padding((8.0, 5.0)),
-            0.0,
         )
 }
 
@@ -249,40 +226,35 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
     .main_axis_alignment(state.main_alignment)
     .must_fill_main_axis(state.fill_major_axis);
 
-    let mut flex = flex.with_child(TextBox::new().lens(DemoState::input_text), 0.);
+    let mut flex = flex.with_child(TextBox::new().lens(DemoState::input_text));
     space_if_needed(&mut flex, state);
 
-    flex.add_child(
-        Button::new("Clear", |_ctx, data: &mut DemoState, _env| {
-            data.input_text.clear();
-            data.enabled = false;
-            data.volume = 0.0;
-        }),
-        0.,
-    );
+    flex.add_child(Button::new("Clear", |_ctx, data: &mut DemoState, _env| {
+        data.input_text.clear();
+        data.enabled = false;
+        data.volume = 0.0;
+    }));
 
     space_if_needed(&mut flex, state);
 
-    flex.add_child(
-        Label::new(|data: &DemoState, _: &Env| data.input_text.clone()),
-        0.,
-    );
+    flex.add_child(Label::new(|data: &DemoState, _: &Env| {
+        data.input_text.clone()
+    }));
     space_if_needed(&mut flex, state);
-    flex.add_child(Checkbox::new("Demo").lens(DemoState::enabled), 0.);
+    flex.add_child(Checkbox::new("Demo").lens(DemoState::enabled));
     space_if_needed(&mut flex, state);
-    flex.add_child(Slider::new().lens(DemoState::volume), 0.);
+    flex.add_child(Slider::new().lens(DemoState::volume));
     space_if_needed(&mut flex, state);
-    flex.add_child(ProgressBar::new().lens(DemoState::volume), 0.);
+    flex.add_child(ProgressBar::new().lens(DemoState::volume));
     space_if_needed(&mut flex, state);
     flex.add_child(
         Stepper::new()
             .with_range(0.0, 1.0)
             .with_step(0.1)
             .lens(DemoState::volume),
-        0.0,
     );
     space_if_needed(&mut flex, state);
-    flex.add_child(Switch::new().lens(DemoState::enabled), 0.);
+    flex.add_child(Switch::new().lens(DemoState::enabled));
 
     let flex = flex
         .background(Color::rgba8(0, 0, 0xFF, 0x30))
@@ -312,11 +284,12 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
 
 fn make_ui() -> impl Widget<AppState> {
     Flex::column()
-        .with_child(make_control_row(), 0.0)
-        .with_spacer(20.)
-        .with_child(Rebuilder::new().align_vertical(UnitPoint::TOP_LEFT), 1.0)
         .must_fill_main_axis(true)
+        .with_child(make_control_row())
+        .with_spacer(20.)
+        .with_flex_child(Rebuilder::new(), 1.0)
         .padding(10.0)
+        .debug_paint_layout()
 }
 
 fn main() -> Result<(), PlatformError> {

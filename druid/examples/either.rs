@@ -42,13 +42,12 @@ fn ui_builder() -> impl Widget<AppState> {
         Checkbox::new("Toggle slider")
             .lens(AppState::which)
             .padding(5.0),
-        0.0,
     );
     let either = Either::new(
         |data, _env| data.which,
         Slider::new().lens(AppState::value).padding(5.0),
         label.padding(5.0),
     );
-    col.add_child(either, 0.0);
+    col.add_child(either);
     col
 }

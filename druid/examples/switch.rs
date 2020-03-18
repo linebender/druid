@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Flex, Label, Padding, Parse, Stepper, Switch, TextBox, WidgetExt};
+use druid::widget::{
+    Flex, Label, MainAxisAlignment, Padding, Parse, Stepper, Switch, TextBox, WidgetExt,
+};
 use druid::{AppLauncher, Data, Lens, LensExt, LensWrap, LocalizedString, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -27,8 +29,8 @@ fn build_widget() -> impl Widget<DemoState> {
     let switch = LensWrap::new(Switch::new(), DemoState::value);
     let switch_label = Label::new("Setting label");
 
-    row.add_child(Padding::new(5.0, switch_label), 0.0);
-    row.add_child(Padding::new(5.0, switch), 0.0);
+    row.add_child(Padding::new(5.0, switch_label));
+    row.add_child(Padding::new(5.0, switch));
 
     let stepper = LensWrap::new(
         Stepper::new()
@@ -43,8 +45,8 @@ fn build_widget() -> impl Widget<DemoState> {
         Parse::new(TextBox::new()),
         DemoState::stepper_value.map(|x| Some(*x), |x, y| *x = y.unwrap_or(0.0)),
     );
-    textbox_row.add_child(Padding::new(5.0, textbox), 0.0);
-    textbox_row.add_child(Padding::new(5.0, stepper.center()), 0.0);
+    textbox_row.add_child(Padding::new(5.0, textbox));
+    textbox_row.add_child(Padding::new(5.0, stepper.center()));
 
     let mut label_row = Flex::row();
 
@@ -52,12 +54,13 @@ fn build_widget() -> impl Widget<DemoState> {
         format!("Stepper value: {0:.2}", data.stepper_value)
     });
 
-    label_row.add_child(Padding::new(5.0, label), 0.0);
+    label_row.add_child(Padding::new(5.0, label));
 
-    col.add_child(Padding::new(5.0, row), 1.0);
-    col.add_child(Padding::new(5.0, textbox_row), 0.0);
-    col.add_child(Padding::new(5.0, label_row), 1.0);
-    col.debug_paint_layout()
+    col.set_main_axis_alignment(MainAxisAlignment::Center);
+    col.add_child(Padding::new(5.0, row));
+    col.add_child(Padding::new(5.0, textbox_row));
+    col.add_child(Padding::new(5.0, label_row));
+    col.center()
 }
 
 fn main() {

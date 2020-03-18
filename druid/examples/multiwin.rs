@@ -73,11 +73,11 @@ fn ui_builder() -> impl Widget<State> {
     });
 
     let mut col = Flex::column();
-    col.add_child(Align::centered(Padding::new(5.0, label)), 1.0);
+    col.add_flex_child(Align::centered(Padding::new(5.0, label)), 1.0);
     let mut row = Flex::row();
-    row.add_child(Padding::new(5.0, inc_button), 1.0);
-    row.add_child(Padding::new(5.0, dec_button), 1.0);
-    col.add_child(row, 1.0);
+    row.add_child(Padding::new(5.0, inc_button));
+    row.add_child(Padding::new(5.0, dec_button));
+    col.add_flex_child(Align::centered(row), 1.0);
     col
 }
 

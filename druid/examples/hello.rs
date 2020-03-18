@@ -52,9 +52,9 @@ fn build_root_widget() -> impl Widget<HelloState> {
 
     // arrange the two widgets vertically, with some padding
     let layout = Flex::column()
-        .with_child(label, 0.0)
+        .with_child(label)
         .with_spacer(VERTICAL_WIDGET_SPACING)
-        .with_child(textbox, 0.0);
+        .with_child(textbox);
 
     // center the two widgets in the available space
     Align::centered(layout)
