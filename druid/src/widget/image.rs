@@ -192,22 +192,17 @@ impl ImageData {
     fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, interpolation: InterpolationMode) {
         ctx.with_save(|ctx| {
             ctx.transform(offset_matrix);
-
+            let size = self.get_size();
             let im = ctx
                 .make_image(
-                    self.x_pixels as usize,
-                    self.y_pixels as usize,
+                    size.width as usize,
+                    size.height as usize,
                     &self.pixels,
                     self.format,
                 )
                 .unwrap();
-            let rec =
-                Rect::from_origin_size((0.0, 0.0), (self.x_pixels as f64, self.y_pixels as f64));
-            ctx.draw_image(&im, rec, interpolation);
-
-            Ok(())
+            ctx.draw_image(&im, size.to_rect(), interpolation);
         })
-        .unwrap();
     }
 }
 

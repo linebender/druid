@@ -14,7 +14,6 @@
 
 //! A container that scrolls its contents.
 
-use log::error;
 use std::f64::INFINITY;
 use std::time::{Duration, Instant};
 
@@ -429,21 +428,15 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        if let Err(e) = ctx.save() {
-            error!("saving render context failed: {:?}", e);
-            return;
-        }
-        let viewport = Rect::from_origin_size(Point::ORIGIN, ctx.size());
-        ctx.clip(viewport);
-        ctx.transform(Affine::translate(-self.scroll_offset));
+        let viewport = ctx.size().to_rect();
+        ctx.with_save(|ctx| {
+            ctx.clip(viewport);
+            ctx.transform(Affine::translate(-self.scroll_offset));
 
-        let visible = viewport.with_origin(self.scroll_offset.to_point());
-        ctx.with_child_ctx(visible, |ctx| self.child.paint(ctx, data, env));
+            let visible = viewport.with_origin(self.scroll_offset.to_point());
+            ctx.with_child_ctx(visible, |ctx| self.child.paint(ctx, data, env));
 
-        self.draw_bars(ctx, viewport, env);
-
-        if let Err(e) = ctx.restore() {
-            error!("restoring render context failed: {:?}", e);
-        }
+            self.draw_bars(ctx, viewport, env);
+        });
     }
 }

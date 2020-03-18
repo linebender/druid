@@ -585,6 +585,40 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
         self.z_ops.append(&mut child_ctx.z_ops);
     }
 
+    /// Saves the current context, executes the closures, and restores the context.
+    ///
+    /// This is useful if you would like to transform or clip or otherwise
+    /// modify the drawing context but do not want that modification to
+    /// effect other widgets.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use druid::{Env, PaintCtx, RenderContext, theme};
+    /// # struct T;
+    /// # impl T {
+    /// fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
+    ///     let clip_rect = ctx.size().to_rect().inset(5.0);
+    ///     ctx.with_save(|ctx| {
+    ///         ctx.clip(clip_rect);
+    ///         ctx.stroke(clip_rect, &env.get(theme::PRIMARY_DARK), 5.0);
+    ///     });
+    /// }
+    /// # }
+    /// ```
+    pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCtx)) {
+        if let Err(e) = self.render_ctx.save() {
+            log::error!("Failed to save RenderContext: '{}'", e);
+            return;
+        }
+
+        f(self);
+
+        if let Err(e) = self.render_ctx.restore() {
+            log::error!("Failed to restore RenderContext: '{}'", e);
+        }
+    }
+
     /// Allows to specify order for paint operations.
     ///
     /// Larger `z_index` indicate that an operation will be executed later.
