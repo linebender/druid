@@ -77,7 +77,7 @@ impl Stepper {
     /// Set whether the stepper should wrap around the minimum/maximum values.
     ///
     /// The default is no wrap
-    pub fn with_wrap(mut self, wrap: bool) -> Self {
+    pub fn with_wraparound(mut self, wrap: bool) -> Self {
         self.wrap = wrap;
         self
     }

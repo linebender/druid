@@ -34,7 +34,7 @@ fn build_widget() -> impl Widget<DemoState> {
         Stepper::new()
             .with_range(0.0, 10.0)
             .with_step(0.5)
-            .with_wrap(false),
+            .with_wraparound(false),
         DemoState::stepper_value,
     );
 

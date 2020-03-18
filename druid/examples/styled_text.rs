@@ -66,7 +66,7 @@ fn ui_builder() -> impl Widget<AppData> {
     let stepper = Stepper::new()
         .with_range(0.0, 100.0)
         .with_step(1.0)
-        .with_wrap(false)
+        .with_wraparound(false)
         .lens(AppData::size);
 
     let stepper_textbox = LensWrap::new(
