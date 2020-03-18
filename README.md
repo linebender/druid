@@ -87,23 +87,23 @@ use druid::kurbo::{BezPath, Point, Rect};
 use druid::piet::Color;
 
 // Create an arbitrary bezier path
-// (paint_ctx.size() returns the size of the layout rect we're painting in)
+// (ctx.size() returns the size of the layout rect we're painting in)
 let mut path = BezPath::new();
 path.move_to(Point::ORIGIN);
 path.quad_to(
     (80.0, 90.0),
-    (paint_ctx.size().width, paint_ctx.size().height),
+    (ctx.size().width, ctx.size().height),
 );
 // Create a color
 let stroke_color = Color::rgb8(0x00, 0x80, 0x00);
 // Stroke the path with thickness 1.0
-paint_ctx.stroke(path, &stroke_color, 1.0);
+ctx.stroke(path, &stroke_color, 1.0);
 
 // Rectangles: the path for practical people
 let rect = Rect::from_origin_size((10., 10.), (100., 100.));
 // Note the Color:rgba8 which includes an alpha channel (7F in this case)
 let fill_color = Color::rgba8(0x00, 0x00, 0x00, 0x7F);
-paint_ctx.fill(rect, &fill_color);
+ctx.fill(rect, &fill_color);
 ```
 
 ### widgets
@@ -142,7 +142,7 @@ impl<T: Data> Widget<T> for Button<T> {
       ...
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
       ...
     }
 }

@@ -113,8 +113,8 @@ impl Widget<AppState> for Rebuilder {
         self.inner.layout(ctx, bc, data, env)
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &AppState, env: &Env) {
-        self.inner.paint(paint_ctx, data, env)
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &AppState, env: &Env) {
+        self.inner.paint(ctx, data, env)
     }
 
     fn id(&self) -> Option<WidgetId> {

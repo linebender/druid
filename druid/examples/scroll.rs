@@ -58,13 +58,13 @@ impl<T: Data> Widget<T> for OverPainter {
         bc.constrain(Size::new(100., 100.))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _: &T, env: &Env) {
-        let rect = Rect::ZERO.with_size(paint_ctx.size());
+    fn paint(&mut self, ctx: &mut PaintCtx, _: &T, env: &Env) {
+        let rect = Rect::ZERO.with_size(ctx.size());
         let color = env.get_debug_color(self.0);
         let radius = (rect + INSETS).size().height / 2.0;
         let circle = Circle::new(rect.center(), radius);
         let grad = RadialGradient::new(1.0, (color.clone(), color.clone().with_alpha(0.0)));
-        paint_ctx.fill(circle, &grad);
-        paint_ctx.stroke(rect, &color, 2.0);
+        ctx.fill(circle, &grad);
+        ctx.stroke(rect, &color, 2.0);
     }
 }
