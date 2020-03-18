@@ -283,10 +283,9 @@ where
             .with(data, |data| inner.layout(ctx, bc, data, env))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let inner = &mut self.inner;
-        self.lens
-            .with(data, |data| inner.paint(paint_ctx, data, env));
+        self.lens.with(data, |data| inner.paint(ctx, data, env));
     }
 
     fn id(&self) -> Option<WidgetId> {

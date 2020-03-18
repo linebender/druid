@@ -62,9 +62,9 @@ impl Widget<u32> for TimerWidget {
         bc.constrain((100.0, 100.0))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
         if self.on {
-            paint_ctx.stroke(Line::new((10.0, 10.0), (10.0, 50.0)), &Color::WHITE, 1.0);
+            ctx.stroke(Line::new((10.0, 10.0), (10.0, 50.0)), &Color::WHITE, 1.0);
         }
     }
 }

@@ -300,8 +300,8 @@ impl Widget<AppData> for GameOfLifeWidget {
         }
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &AppData, _env: &Env) {
-        let size: Size = paint_ctx.size();
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &AppData, _env: &Env) {
+        let size: Size = ctx.size();
         let w0 = size.width / GRID_SIZE as f64;
         let h0 = size.height / GRID_SIZE as f64;
         let cell_size = Size {
@@ -318,7 +318,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                         y: h0 * col as f64,
                     };
                     let rect = Rect::from_origin_size(point, cell_size);
-                    paint_ctx.fill(rect, &self.color_scheme[pos]);
+                    ctx.fill(rect, &self.color_scheme[pos]);
                 }
             }
         }
