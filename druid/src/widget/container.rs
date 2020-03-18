@@ -15,7 +15,7 @@
 //! A widget that provides simple visual styling options to a child.
 
 use super::BackgroundBrush;
-use crate::shell::kurbo::{Point, Rect, RoundedRect, Size};
+use crate::shell::kurbo::{Point, Rect, Size};
 use crate::{
     BoxConstraints, Color, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
@@ -114,8 +114,8 @@ impl<T: Data> Widget<T> for Container<T> {
         bc.debug_check("Container");
 
         // Shrink constraints by border offset
-        let border_width = match self.border {
-            Some(ref border) => border.width.resolve(env),
+        let border_width = match &self.border {
+            Some(border) => border.width.resolve(env),
             None => 0.0,
         };
         let child_bc = bc.shrink((2.0 * border_width, 2.0 * border_width));
@@ -135,28 +135,32 @@ impl<T: Data> Widget<T> for Container<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let panel =
-            RoundedRect::from_origin_size(Point::ORIGIN, ctx.size().to_vec2(), self.corner_radius);
-
-        if let Err(e) = ctx.save() {
-            log::error!("{}", e);
-            return;
-        }
-
-        ctx.clip(panel);
-
         if let Some(background) = self.background.as_mut() {
+            if let Err(e) = ctx.save() {
+                log::error!("{}", e);
+                return;
+            }
+
+            let bg_rect = ctx.size().to_rounded_rect(self.corner_radius);
+            ctx.clip(bg_rect);
             background.paint(ctx, data, env);
-        }
 
-        if let Err(e) = ctx.restore() {
-            log::error!("{}", e);
-        }
-
-        if let Some(border) = &self.border {
-            ctx.stroke(panel, &border.color.resolve(env), border.width.resolve(env));
+            if let Err(e) = ctx.restore() {
+                log::error!("{}", e);
+                return;
+            }
         };
 
-        self.inner.paint(ctx, data, env);
+        if let Some(border) = &self.border {
+            let border_width = border.width.resolve(env);
+            let border_rect = ctx
+                .size()
+                .to_rect()
+                .inset(border_width / -2.0)
+                .to_rounded_rect(self.corner_radius);
+            ctx.stroke(border_rect, &border.color.resolve(env), border_width);
+        };
+
+        self.inner.paint_with_offset(ctx, data, env);
     }
 }
