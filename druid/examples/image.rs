@@ -28,7 +28,7 @@ fn main() {
 fn main() {
     use druid::{
         widget::{FillStrat, Flex, Image, ImageData, WidgetExt},
-        AppLauncher, Widget, WindowDesc,
+        AppLauncher, Color, Widget, WindowDesc,
     };
 
     fn ui_builder() -> impl Widget<u32> {
@@ -36,7 +36,13 @@ fn main() {
 
         let mut col = Flex::column();
 
-        col.add_child(Image::new(png_data.clone()).fix_width(100.0).center(), 1.0);
+        col.add_flex_child(
+            Image::new(png_data.clone())
+                .border(Color::WHITE, 1.0)
+                .fix_width(100.0)
+                .center(),
+            1.0,
+        );
 
         /*
         // If you want to change the fill stratagy you can but you need the widget to be mut
@@ -44,8 +50,10 @@ fn main() {
         otherimage.set_fill(FillStrat::FitWidth);
         */
 
-        let otherimage = Image::new(png_data).fill_mode(FillStrat::FitWidth);
-        col.add_child(otherimage, 1.0);
+        let otherimage = Image::new(png_data)
+            .fill_mode(FillStrat::FitWidth)
+            .border(Color::WHITE, 1.0);
+        col.add_flex_child(otherimage, 1.0);
         col
     };
 

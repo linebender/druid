@@ -171,13 +171,13 @@ fn flex_row<T: Data>(
     w4: impl Widget<T> + 'static,
 ) -> impl Widget<T> {
     Flex::row()
-        .with_child(w1, 1.0)
+        .with_flex_child(w1, 1.0)
         .with_spacer(1.0)
-        .with_child(w2, 1.0)
+        .with_flex_child(w2, 1.0)
         .with_spacer(1.0)
-        .with_child(w3, 1.0)
+        .with_flex_child(w3, 1.0)
         .with_spacer(1.0)
-        .with_child(w4, 1.0)
+        .with_flex_child(w4, 1.0)
 }
 
 fn build_calc() -> impl Widget<CalcState> {
@@ -187,10 +187,10 @@ fn build_calc() -> impl Widget<CalcState> {
         .padding(5.0);
     Flex::column()
         .with_flex_spacer(0.2)
-        .with_child(display, 0.0)
+        .with_child(display)
         .with_flex_spacer(0.2)
         .cross_axis_alignment(CrossAxisAlignment::End)
-        .with_child(
+        .with_flex_child(
             flex_row(
                 op_button_label('c', "CE".to_string()),
                 op_button('C'),
@@ -200,7 +200,7 @@ fn build_calc() -> impl Widget<CalcState> {
             1.0,
         )
         .with_spacer(1.0)
-        .with_child(
+        .with_flex_child(
             flex_row(
                 digit_button(7),
                 digit_button(8),
@@ -210,7 +210,7 @@ fn build_calc() -> impl Widget<CalcState> {
             1.0,
         )
         .with_spacer(1.0)
-        .with_child(
+        .with_flex_child(
             flex_row(
                 digit_button(4),
                 digit_button(5),
@@ -220,7 +220,7 @@ fn build_calc() -> impl Widget<CalcState> {
             1.0,
         )
         .with_spacer(1.0)
-        .with_child(
+        .with_flex_child(
             flex_row(
                 digit_button(1),
                 digit_button(2),
@@ -230,7 +230,7 @@ fn build_calc() -> impl Widget<CalcState> {
             1.0,
         )
         .with_spacer(1.0)
-        .with_child(
+        .with_flex_child(
             flex_row(
                 op_button('±'),
                 digit_button(0),

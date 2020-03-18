@@ -42,7 +42,7 @@
 //!     // ...
 //!
 //!     // We can now use `searchbar` just like any other `Widget<MyState>`
-//!     Flex::column().with_child(searchbar, 1.0)
+//!     Flex::column().with_child(searchbar)
 //! }
 //! ```
 

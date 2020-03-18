@@ -30,7 +30,7 @@
 use std::time::{Duration, Instant};
 
 use druid::kurbo::RoundedRect;
-use druid::widget::{Button, Flex, WidgetExt, WidgetId};
+use druid::widget::{Button, CrossAxisAlignment, Flex, WidgetExt, WidgetId};
 use druid::{
     AppLauncher, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, LayoutCtx, Lens,
     LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size,
@@ -70,7 +70,7 @@ impl ColorWell {
         let frozen = if randomize {
             None
         } else {
-            Some(Color::rgba(0., 0., 0., 0.))
+            Some(Color::rgba(0., 0., 0., 0.2))
         };
         ColorWell {
             randomize,
@@ -162,62 +162,51 @@ fn make_ui() -> impl Widget<OurData> {
     let id_three = WidgetId::next();
 
     Flex::column()
-        .with_child(ColorWell::new(true).padding(10.0), 1.0)
-        .with_child(
+        .with_flex_child(ColorWell::new(true), 1.0)
+        .with_spacer(10.0)
+        .with_flex_child(
             Flex::row()
-                .with_child(ColorWell::new(false).padding(10.).with_id(ID_ONE), 1.0)
-                .with_child(
-                    Button::<OurData>::new("freeze", move |ctx, data, _env| {
-                        ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), ID_ONE)
-                    })
-                    .padding(10.0),
-                    0.5,
-                )
-                .with_child(
-                    Button::<OurData>::new("unfreeze", move |ctx, _, _env| {
-                        ctx.submit_command(UNFREEZE_COLOR, ID_ONE)
-                    })
-                    .padding(10.0),
-                    0.5,
-                ),
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_flex_child(ColorWell::new(false).with_id(ID_ONE), 1.0)
+                .with_spacer(10.0)
+                .with_child(Button::<OurData>::new("freeze", move |ctx, data, _env| {
+                    ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), ID_ONE)
+                }))
+                .with_spacer(10.0)
+                .with_child(Button::<OurData>::new("unfreeze", move |ctx, _, _env| {
+                    ctx.submit_command(UNFREEZE_COLOR, ID_ONE)
+                })),
             0.5,
         )
-        .with_child(
+        .with_spacer(10.0)
+        .with_flex_child(
             Flex::row()
-                .with_child(ColorWell::new(false).padding(10.).with_id(id_two), 1.)
-                .with_child(
-                    Button::<OurData>::new("freeze", move |ctx, data, _env| {
-                        ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_two)
-                    })
-                    .padding(10.0),
-                    0.5,
-                )
-                .with_child(
-                    Button::<OurData>::new("unfreeze", move |ctx, _, _env| {
-                        ctx.submit_command(UNFREEZE_COLOR, id_two)
-                    })
-                    .padding(10.0),
-                    0.5,
-                ),
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_flex_child(ColorWell::new(false).with_id(id_two), 1.)
+                .with_spacer(10.0)
+                .with_child(Button::<OurData>::new("freeze", move |ctx, data, _env| {
+                    ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_two)
+                }))
+                .with_spacer(10.0)
+                .with_child(Button::<OurData>::new("unfreeze", move |ctx, _, _env| {
+                    ctx.submit_command(UNFREEZE_COLOR, id_two)
+                })),
             0.5,
         )
-        .with_child(
+        .with_spacer(10.0)
+        .with_flex_child(
             Flex::row()
-                .with_child(ColorWell::new(false).padding(10.0).with_id(id_three), 1.)
-                .with_child(
-                    Button::<OurData>::new("freeze", move |ctx, data, _env| {
-                        ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_three)
-                    })
-                    .padding(10.0),
-                    0.5,
-                )
-                .with_child(
-                    Button::<OurData>::new("unfreeze", move |ctx, _, _env| {
-                        ctx.submit_command(UNFREEZE_COLOR, id_three)
-                    })
-                    .padding(10.0),
-                    0.5,
-                ),
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_flex_child(ColorWell::new(false).with_id(id_three), 1.)
+                .with_spacer(10.0)
+                .with_child(Button::<OurData>::new("freeze", move |ctx, data, _env| {
+                    ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_three)
+                }))
+                .with_spacer(10.0)
+                .with_child(Button::<OurData>::new("unfreeze", move |ctx, _, _env| {
+                    ctx.submit_command(UNFREEZE_COLOR, id_three)
+                })),
             0.5,
         )
+        .padding(10.)
 }

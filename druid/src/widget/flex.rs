@@ -71,7 +71,7 @@ use crate::{
 /// let my_row = Flex::row()
 ///     .cross_axis_alignment(CrossAxisAlignment::Center)
 ///     .must_fill_main_axis(true)
-///     .with_child(Label::new("hello"), 0.0)
+///     .with_child(Label::new("hello"))
 ///     .with_spacer(8.0)
 ///     .with_flex_child(Slider::new(), 1.0);
 /// ```
@@ -84,7 +84,7 @@ use crate::{
 /// let mut my_row = Flex::row();
 /// my_row.set_must_fill_main_axis(true);
 /// my_row.set_cross_axis_alignment(CrossAxisAlignment::Center);
-/// my_row.add_child(Label::new("hello"), 0.0);
+/// my_row.add_child(Label::new("hello"));
 /// my_row.add_spacer(8.0);
 /// my_row.add_flex_child(Slider::new(), 1.0);
 /// ```
@@ -338,8 +338,8 @@ impl<T: Data> Flex<T> {
     /// Builder-style variant of `add_child`.
     ///
     /// Convenient for assembling a group of widgets in a single expression.
-    pub fn with_child(mut self, child: impl Widget<T> + 'static, flex: f64) -> Self {
-        self.add_flex_child(child, flex);
+    pub fn with_child(mut self, child: impl Widget<T> + 'static) -> Self {
+        self.add_flex_child(child, 0.0);
         self
     }
 
@@ -378,10 +378,6 @@ impl<T: Data> Flex<T> {
     }
 
     /// Builder-style method for adding a `flex` spacer to the container.
-    ///
-    /// See [`add_child`] for an overview of `flex`.
-    ///
-    /// [`add_child`]: #method.add_child
     pub fn with_flex_spacer(mut self, flex: f64) -> Self {
         self.add_flex_spacer(flex);
         self
@@ -407,20 +403,13 @@ impl<T: Data> Flex<T> {
         self.fill_major_axis = fill;
     }
 
-    /// Add a child widget.
+    /// Add a non-flex child widget.
     ///
-    /// If `flex` is zero, then the child is non-flex. It is given the same
-    /// constraints on the "minor axis" as its parent, but unconstrained on the
-    /// "major axis".
+    /// See also [`with_child`].
     ///
-    /// If `flex` is non-zero, then all the space left over after layout of
-    /// the non-flex children is divided up, in proportion to the `flex` value,
-    /// among the flex children.
-    ///
-    /// See also `with_child`.
-    //TODO: make this fn not take `flex`; I just don't want to break api yet.
-    pub fn add_child(&mut self, child: impl Widget<T> + 'static, flex: f64) {
-        self.add_flex_child(child, flex);
+    /// [`with_child`]: #method.with_child
+    pub fn add_child(&mut self, child: impl Widget<T> + 'static) {
+        self.add_flex_child(child, 0.0);
     }
 
     /// Add a flexible child widget.
@@ -461,12 +450,12 @@ impl<T: Data> Flex<T> {
     }
 
     /// Add an empty spacer widget with a specific `flex` factor.
-    ///
-    /// See [`add_child`] for an overview of `flex`.
-    ///
-    /// [`add_child`]: #method.add_child
     pub fn add_flex_spacer(&mut self, flex: f64) {
-        self.add_flex_child(SizedBox::empty(), flex);
+        let child = match self.direction {
+            Axis::Vertical => SizedBox::empty().expand_height(),
+            Axis::Horizontal => SizedBox::empty().expand_width(),
+        };
+        self.add_flex_child(child, flex);
     }
 }
 

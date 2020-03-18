@@ -230,9 +230,9 @@ fn participate_in_autofocus() {
 
     let widget = Split::vertical(
         Flex::row()
-            .with_child(TextBox::new().with_id(id_1), 1.0)
-            .with_child(TextBox::new().with_id(id_2), 1.0)
-            .with_child(TextBox::new().with_id(id_3), 1.0),
+            .with_flex_child(TextBox::new().with_id(id_1), 1.0)
+            .with_flex_child(TextBox::new().with_id(id_2), 1.0)
+            .with_flex_child(TextBox::new().with_id(id_3), 1.0),
         replacer,
     );
 

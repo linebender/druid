@@ -357,7 +357,7 @@ fn blinker(top: GridPos) -> Option<[GridPos; 3]> {
 
 fn make_widget() -> impl Widget<AppData> {
     Flex::column()
-        .with_child(
+        .with_flex_child(
             GameOfLifeWidget {
                 timer_id: TimerToken::INVALID,
                 cell_size: Size {
@@ -373,7 +373,7 @@ fn make_widget() -> impl Widget<AppData> {
                 .with_child(
                     // a row with two buttons
                     Flex::row()
-                        .with_child(
+                        .with_flex_child(
                             // pause / resume button
                             Button::new(
                                 |data: &bool, _: &Env| match data {
@@ -389,7 +389,7 @@ fn make_widget() -> impl Widget<AppData> {
                             .padding((5., 5.)),
                             1.0,
                         )
-                        .with_child(
+                        .with_flex_child(
                             // clear button
                             Button::new("Clear", |ctx, data: &mut Grid, _: &Env| {
                                 data.clear();
@@ -400,21 +400,17 @@ fn make_widget() -> impl Widget<AppData> {
                             1.0,
                         )
                         .padding(8.0),
-                    0.,
                 )
                 .with_child(
                     Flex::row()
                         .with_child(
                             Label::new(|data: &AppData, _env: &_| format!("{:.2}FPS", data.fps()))
                                 .padding(3.0),
-                            0.,
                         )
-                        .with_child(Slider::new().lens(AppData::speed).padding((0., 0.)), 1.)
+                        .with_flex_child(Slider::new().expand_width().lens(AppData::speed), 1.)
                         .padding(8.0),
-                    0.,
                 )
                 .background(BG),
-            0.,
         )
 }
 

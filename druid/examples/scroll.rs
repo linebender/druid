@@ -36,7 +36,7 @@ fn main() {
 fn build_widget() -> impl Widget<u32> {
     let mut col = Flex::column();
     for i in 0..30 {
-        col.add_child(Padding::new(3.0, OverPainter(i)), 0.0);
+        col.add_child(Padding::new(3.0, OverPainter(i)));
     }
     Scroll::new(col)
 }

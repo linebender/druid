@@ -34,7 +34,7 @@ impl RadioGroup {
         let mut col = Flex::column();
         for (label, variant) in variants.into_iter() {
             let radio = Radio::new(label, variant);
-            col.add_child(Padding::new(5.0, radio), 0.0);
+            col.add_child(Padding::new(5.0, radio));
         }
         col
     }

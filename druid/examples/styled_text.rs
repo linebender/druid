@@ -14,7 +14,7 @@
 
 //! Example of dynamic text styling
 
-use druid::widget::{Flex, Label, Painter, Parse, Stepper, TextBox, WidgetExt};
+use druid::widget::{Flex, Label, MainAxisAlignment, Painter, Parse, Stepper, TextBox, WidgetExt};
 use druid::{
     theme, AppLauncher, Color, Data, Key, Lens, LensExt, LensWrap, LocalizedString, PlatformError,
     RenderContext, Widget, WindowDesc,
@@ -89,15 +89,17 @@ fn ui_builder() -> impl Widget<AppData> {
         AppData::size.map(|x| Some(*x), |x, y| *x = y.unwrap_or(24.0)),
     );
 
-    let stepper_row = Flex::row()
-        .with_child(stepper_textbox, 0.0)
-        .with_child(stepper, 0.0);
+    let stepper_row = Flex::row().with_child(stepper_textbox).with_child(stepper);
 
     let input = TextBox::new().fix_width(200.0).lens(AppData::text);
 
     Flex::column()
-        .with_child(label.center(), 1.0)
-        .with_child(styled_label.center(), 1.0)
-        .with_child(stepper_row.center(), 1.0)
-        .with_child(input.padding(5.0).center(), 1.0)
+        .main_axis_alignment(MainAxisAlignment::Center)
+        .with_child(label)
+        .with_spacer(8.0)
+        .with_child(styled_label)
+        .with_spacer(32.0)
+        .with_child(stepper_row)
+        .with_spacer(8.0)
+        .with_child(input.padding(5.0))
 }
