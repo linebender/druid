@@ -19,7 +19,7 @@ use std::collections::VecDeque;
 use log;
 
 use crate::bloom::Bloom;
-use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size};
+use crate::kurbo::{Affine, Insets, Rect, Shape, Size};
 use crate::piet::RenderContext;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
@@ -268,10 +268,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         paint_ctx.z_ops.append(&mut ctx.z_ops);
 
         if env.get(Env::DEBUG_PAINT) {
-            let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
+            const BORDER_WIDTH: f64 = 1.0;
+            let rect = ctx.size().to_rect().inset(BORDER_WIDTH / -2.0);
             let id = self.id().to_raw();
             let color = env.get_debug_color(id);
-            ctx.stroke(rect, &color, 1.0);
+            ctx.stroke(rect, &color, BORDER_WIDTH);
         }
 
         self.state.needs_inval = false;
