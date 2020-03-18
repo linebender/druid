@@ -59,7 +59,8 @@ impl<T: Data> Widget<T> for ConstrainedBox<T> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("ConstrainedBox");
 
-        let child_bc = (self.constrain)(bc);
+        let child_bc = bc.constrain_bc(&(self.constrain)(bc));
+
         self.inner.layout(ctx, &child_bc, data, env)
     }
 

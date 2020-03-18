@@ -56,7 +56,6 @@ fn build_app() -> impl Widget<()> {
                     Label::new("top left")
                         .center()
                         .border(DARK_GREY, 4.0)
-                        .min_height(50.0)
                         .padding(10.0),
                     1.0,
                 )
@@ -76,7 +75,6 @@ fn build_app() -> impl Widget<()> {
                         .center()
                         .background(gradient)
                         .rounded(10.0)
-                        .min_width(50.0)
                         .padding(10.0),
                     1.0,
                 )

@@ -70,6 +70,14 @@ impl BoxConstraints {
         size.into().clamp(self.min, self.max)
     }
 
+    /// Clamp a given BoxConstraints so that it fits within the constraints.
+    pub fn constrain_bc(&self, bc: &BoxConstraints) -> BoxConstraints {
+        BoxConstraints {
+            min: self.constrain(bc.min()),
+            max: self.constrain(bc.max()),
+        }
+    }
+
     /// Returns the max size of these constraints.
     pub fn max(&self) -> Size {
         self.max
