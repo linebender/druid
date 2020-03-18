@@ -83,10 +83,16 @@ pub use widget_ext::WidgetExt;
 use std::num::NonZeroU64;
 use std::ops::{Deref, DerefMut};
 
-use crate::kurbo::Size;
-use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
-};
+/// The types required to implement a `Widget`.
+pub mod prelude {
+    pub use super::{Widget, WidgetId};
+    pub use crate::{
+        BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+        RenderContext, Size, UpdateCtx,
+    };
+}
+
+use prelude::*;
 
 /// A unique identifier for a single [`Widget`].
 ///
