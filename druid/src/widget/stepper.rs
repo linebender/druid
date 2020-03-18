@@ -68,7 +68,7 @@ impl Stepper {
 
     /// Set the steppers amount by which the value increases or decreases.
     ///
-    /// The default step is 1.0
+    /// The default step is `1.0`.
     pub fn with_step(mut self, step: f64) -> Self {
         self.step = step;
         self
@@ -76,7 +76,7 @@ impl Stepper {
 
     /// Set whether the stepper should wrap around the minimum/maximum values.
     ///
-    /// The default is no wrap
+    /// The default is `false`.
     pub fn with_wraparound(mut self, wrap: bool) -> Self {
         self.wrap = wrap;
         self
