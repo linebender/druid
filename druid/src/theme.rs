@@ -25,6 +25,8 @@ pub const PLACEHOLDER_COLOR: Key<Color> = Key::new("placeholder_color");
 
 pub const PRIMARY_LIGHT: Key<Color> = Key::new("primary_light");
 pub const PRIMARY_DARK: Key<Color> = Key::new("primary_dark");
+pub const SECONDARY_LIGHT: Key<Color> = Key::new("secondary_light");
+pub const SECONDARY_DARK: Key<Color> = Key::new("secondary_dark");
 pub const PROGRESS_BAR_RADIUS: Key<f64> = Key::new("progress_bar_radius");
 pub const BACKGROUND_LIGHT: Key<Color> = Key::new("background_light");
 pub const BACKGROUND_DARK: Key<Color> = Key::new("background_dark");
@@ -67,6 +69,8 @@ pub fn init() -> Env {
         .adding(PLACEHOLDER_COLOR, Color::rgb8(0x80, 0x80, 0x80))
         .adding(PRIMARY_LIGHT, Color::rgb8(0x5c, 0xc4, 0xff))
         .adding(PRIMARY_DARK, Color::rgb8(0x00, 0x8d, 0xdd))
+        .adding(SECONDARY_LIGHT, Color::rgb8(0xff, 0x67, 0x37))
+        .adding(SECONDARY_DARK, Color::rgb8(0xff, 0x3d, 0x00))
         .adding(PROGRESS_BAR_RADIUS, 4.)
         .adding(BACKGROUND_LIGHT, Color::rgb8(0x3a, 0x3a, 0x3a))
         .adding(BACKGROUND_DARK, Color::rgb8(0x31, 0x31, 0x31))
