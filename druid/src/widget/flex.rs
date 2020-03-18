@@ -403,9 +403,9 @@ impl<T: Data> Widget<T> for Flex<T> {
         my_size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         for child in &mut self.children {
-            child.widget.paint_with_offset(paint_ctx, data, env);
+            child.widget.paint_with_offset(ctx, data, env);
         }
     }
 }

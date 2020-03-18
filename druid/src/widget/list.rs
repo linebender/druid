@@ -220,11 +220,11 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         my_size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut children = self.children.iter_mut();
         data.for_each(|child_data, _| {
             if let Some(child) = children.next() {
-                child.paint_with_offset(paint_ctx, child_data, env);
+                child.paint_with_offset(ctx, child_data, env);
             }
         });
     }

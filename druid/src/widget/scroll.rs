@@ -219,16 +219,16 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     }
 
     /// Draw scroll bars.
-    fn draw_bars(&self, paint_ctx: &mut PaintCtx, viewport: Rect, env: &Env) {
+    fn draw_bars(&self, ctx: &mut PaintCtx, viewport: Rect, env: &Env) {
         if self.scroll_bars.opacity <= 0.0 {
             return;
         }
 
-        let brush = paint_ctx.render_ctx.solid_brush(
+        let brush = ctx.render_ctx.solid_brush(
             env.get(theme::SCROLL_BAR_COLOR)
                 .with_alpha(self.scroll_bars.opacity),
         );
-        let border_brush = paint_ctx.render_ctx.solid_brush(
+        let border_brush = ctx.render_ctx.solid_brush(
             env.get(theme::SCROLL_BAR_BORDER_COLOR)
                 .with_alpha(self.scroll_bars.opacity),
         );
@@ -240,16 +240,16 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         if viewport.height() < self.child_size.height {
             let bounds = self.calc_vertical_bar_bounds(viewport, &env);
             let rect = RoundedRect::from_rect(bounds, radius);
-            paint_ctx.render_ctx.fill(rect, &brush);
-            paint_ctx.render_ctx.stroke(rect, &border_brush, edge_width);
+            ctx.render_ctx.fill(rect, &brush);
+            ctx.render_ctx.stroke(rect, &border_brush, edge_width);
         }
 
         // Horizontal bar
         if viewport.width() < self.child_size.width {
             let bounds = self.calc_horizontal_bar_bounds(viewport, &env);
             let rect = RoundedRect::from_rect(bounds, radius);
-            paint_ctx.render_ctx.fill(rect, &brush);
-            paint_ctx.render_ctx.stroke(rect, &border_brush, edge_width);
+            ctx.render_ctx.fill(rect, &brush);
+            ctx.render_ctx.stroke(rect, &border_brush, edge_width);
         }
     }
 
@@ -428,21 +428,21 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         self_size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        if let Err(e) = paint_ctx.save() {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        if let Err(e) = ctx.save() {
             error!("saving render context failed: {:?}", e);
             return;
         }
-        let viewport = Rect::from_origin_size(Point::ORIGIN, paint_ctx.size());
-        paint_ctx.clip(viewport);
-        paint_ctx.transform(Affine::translate(-self.scroll_offset));
+        let viewport = Rect::from_origin_size(Point::ORIGIN, ctx.size());
+        ctx.clip(viewport);
+        ctx.transform(Affine::translate(-self.scroll_offset));
 
         let visible = viewport.with_origin(self.scroll_offset.to_point());
-        paint_ctx.with_child_ctx(visible, |ctx| self.child.paint(ctx, data, env));
+        ctx.with_child_ctx(visible, |ctx| self.child.paint(ctx, data, env));
 
-        self.draw_bars(paint_ctx, viewport, env);
+        self.draw_bars(ctx, viewport, env);
 
-        if let Err(e) = paint_ctx.restore() {
+        if let Err(e) = ctx.restore() {
             error!("restoring render context failed: {:?}", e);
         }
     }

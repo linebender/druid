@@ -96,19 +96,19 @@ impl<T: Data> Widget<T> for Image<T> {
         }
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, _env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         let offset_matrix = self
             .fill
-            .affine_to_fill(paint_ctx.size(), self.image_data.get_size());
+            .affine_to_fill(ctx.size(), self.image_data.get_size());
 
         // The ImageData's to_piet function does not clip to the image's size
         // CairoRenderContext is very like druids but with some extra goodies like clip
         if self.fill != FillStrat::Contain {
-            let clip_rect = Rect::ZERO.with_size(paint_ctx.size());
-            paint_ctx.clip(clip_rect);
+            let clip_rect = Rect::ZERO.with_size(ctx.size());
+            ctx.clip(clip_rect);
         }
         self.image_data
-            .to_piet(offset_matrix, paint_ctx, self.interpolation);
+            .to_piet(offset_matrix, ctx, self.interpolation);
     }
 }
 
@@ -189,33 +189,25 @@ impl ImageData {
     }
 
     /// Convert ImageData into Piet draw instructions
-    fn to_piet(
-        &self,
-        offset_matrix: Affine,
-        paint_ctx: &mut PaintCtx,
-        interpolation: InterpolationMode,
-    ) {
-        paint_ctx
-            .with_save(|ctx| {
-                ctx.transform(offset_matrix);
+    fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, interpolation: InterpolationMode) {
+        ctx.with_save(|ctx| {
+            ctx.transform(offset_matrix);
 
-                let im = ctx
-                    .make_image(
-                        self.x_pixels as usize,
-                        self.y_pixels as usize,
-                        &self.pixels,
-                        self.format,
-                    )
-                    .unwrap();
-                let rec = Rect::from_origin_size(
-                    (0.0, 0.0),
-                    (self.x_pixels as f64, self.y_pixels as f64),
-                );
-                ctx.draw_image(&im, rec, interpolation);
+            let im = ctx
+                .make_image(
+                    self.x_pixels as usize,
+                    self.y_pixels as usize,
+                    &self.pixels,
+                    self.format,
+                )
+                .unwrap();
+            let rec =
+                Rect::from_origin_size((0.0, 0.0), (self.x_pixels as f64, self.y_pixels as f64));
+            ctx.draw_image(&im, rec, interpolation);
 
-                Ok(())
-            })
-            .unwrap();
+            Ok(())
+        })
+        .unwrap();
     }
 }
 

@@ -57,13 +57,13 @@ impl Widget<f64> for ProgressBar {
         ))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &f64, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = data.max(0.0).min(1.0);
 
         let rounded_rect = RoundedRect::from_origin_size(
             Point::ORIGIN,
             (Size {
-                width: paint_ctx.size().width,
+                width: ctx.size().width,
                 height: env.get(theme::BASIC_WIDGET_HEIGHT),
             })
             .to_vec2(),
@@ -71,7 +71,7 @@ impl Widget<f64> for ProgressBar {
         );
 
         //Paint the border
-        paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), 2.0);
+        ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), 2.0);
 
         //Paint the background
         let background_gradient = LinearGradient::new(
@@ -82,7 +82,7 @@ impl Widget<f64> for ProgressBar {
                 env.get(theme::BACKGROUND_DARK),
             ),
         );
-        paint_ctx.fill(rounded_rect, &background_gradient);
+        ctx.fill(rounded_rect, &background_gradient);
 
         //Paint the bar
         let calculated_bar_width = clamped * rounded_rect.width();
@@ -100,6 +100,6 @@ impl Widget<f64> for ProgressBar {
             UnitPoint::BOTTOM,
             (env.get(theme::PRIMARY_LIGHT), env.get(theme::PRIMARY_DARK)),
         );
-        paint_ctx.fill(rounded_rect, &bar_gradient);
+        ctx.fill(rounded_rect, &bar_gradient);
     }
 }

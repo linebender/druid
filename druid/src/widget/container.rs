@@ -134,32 +134,29 @@ impl<T: Data> Widget<T> for Container<T> {
         my_size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let panel = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            paint_ctx.size().to_vec2(),
-            self.corner_radius,
-        );
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        let panel =
+            RoundedRect::from_origin_size(Point::ORIGIN, ctx.size().to_vec2(), self.corner_radius);
 
-        if let Err(e) = paint_ctx.save() {
+        if let Err(e) = ctx.save() {
             log::error!("{}", e);
             return;
         }
 
-        paint_ctx.clip(panel);
+        ctx.clip(panel);
 
         if let Some(background) = self.background.as_mut() {
-            background.paint(paint_ctx, data, env);
+            background.paint(ctx, data, env);
         }
 
-        if let Err(e) = paint_ctx.restore() {
+        if let Err(e) = ctx.restore() {
             log::error!("{}", e);
         }
 
         if let Some(border) = &self.border {
-            paint_ctx.stroke(panel, &border.color.resolve(env), border.width.resolve(env));
+            ctx.stroke(panel, &border.color.resolve(env), border.width.resolve(env));
         };
 
-        self.inner.paint(paint_ctx, data, env);
+        self.inner.paint(ctx, data, env);
     }
 }

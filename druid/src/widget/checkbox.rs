@@ -94,7 +94,7 @@ impl Widget<bool> for Checkbox {
         ))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &bool, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
 
         let rect =
@@ -110,15 +110,15 @@ impl Widget<bool> for Checkbox {
             ),
         );
 
-        paint_ctx.fill(rect, &background_gradient);
+        ctx.fill(rect, &background_gradient);
 
-        let border_color = if paint_ctx.is_hot() {
+        let border_color = if ctx.is_hot() {
             env.get(theme::BORDER_LIGHT)
         } else {
             env.get(theme::BORDER_DARK)
         };
 
-        paint_ctx.stroke(rect, &border_color, 1.);
+        ctx.stroke(rect, &border_color, 1.);
 
         if *data {
             // Paint the checkmark
@@ -131,10 +131,10 @@ impl Widget<bool> for Checkbox {
             style.set_line_cap(LineCap::Round);
             style.set_line_join(LineJoin::Round);
 
-            paint_ctx.stroke_styled(path, &env.get(theme::LABEL_COLOR), 2., &style);
+            ctx.stroke_styled(path, &env.get(theme::LABEL_COLOR), 2., &style);
         }
 
         // Paint the text label
-        self.child_label.paint_with_offset(paint_ctx, data, env);
+        self.child_label.paint_with_offset(ctx, data, env);
     }
 }

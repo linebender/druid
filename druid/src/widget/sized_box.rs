@@ -136,9 +136,9 @@ impl<T: Data> Widget<T> for SizedBox<T> {
         }
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
-            inner.paint(paint_ctx, data, env);
+            inner.paint(ctx, data, env);
         }
     }
 

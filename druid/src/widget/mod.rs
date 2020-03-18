@@ -238,7 +238,7 @@ pub trait Widget<T> {
     ///
     /// [`PaintCtx`]: ../struct.PaintCtx.html
     /// [`RenderContext`]: ../trait.RenderContext.html
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env);
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env);
 
     #[doc(hidden)]
     /// Get the identity of the widget; this is basically only implemented by
@@ -300,8 +300,8 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
         self.deref_mut().layout(ctx, bc, data, env)
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.deref_mut().paint(paint_ctx, data, env);
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.deref_mut().paint(ctx, data, env);
     }
 
     fn id(&self) -> Option<WidgetId> {

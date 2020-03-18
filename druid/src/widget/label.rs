@@ -213,16 +213,16 @@ impl<T: Data> Widget<T> for Label<T> {
         ))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
         let font_size = self.size.resolve(env);
-        let text_layout = self.get_layout(paint_ctx.text(), env);
+        let text_layout = self.get_layout(ctx.text(), env);
         let line_height = font_size * LINE_HEIGHT_FACTOR;
 
         // Find the origin for the text
         let origin = Point::new(LABEL_X_PADDING, line_height * BASELINE_GUESS_FACTOR);
         let color = self.color.resolve(env);
 
-        paint_ctx.draw_text(&text_layout, origin, &color);
+        ctx.draw_text(&text_layout, origin, &color);
     }
 }
 

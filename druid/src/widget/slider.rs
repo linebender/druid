@@ -133,9 +133,9 @@ impl Widget<f64> for Slider {
         bc.constrain((width, height))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &f64, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = self.normalize(*data);
-        let rect = Rect::from_origin_size(Point::ORIGIN, paint_ctx.size());
+        let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let track_thickness = 4.;
 
@@ -155,12 +155,12 @@ impl Widget<f64> for Slider {
             ),
         );
 
-        paint_ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), 2.0);
+        ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), 2.0);
 
-        paint_ctx.fill(background_rect, &background_gradient);
+        ctx.fill(background_rect, &background_gradient);
 
         //Get ready to paint the knob
-        let is_active = paint_ctx.is_active();
+        let is_active = ctx.is_active();
         let is_hovered = self.knob_hovered;
 
         let knob_position = (rect.width() - knob_size) * clamped + knob_size / 2.;
@@ -197,9 +197,9 @@ impl Widget<f64> for Slider {
             env.get(theme::FOREGROUND_DARK)
         };
 
-        paint_ctx.stroke(knob_circle, &border_color, 2.);
+        ctx.stroke(knob_circle, &border_color, 2.);
 
         //Actually paint the knob
-        paint_ctx.fill(knob_circle, &knob_gradient);
+        ctx.fill(knob_circle, &knob_gradient);
     }
 }
