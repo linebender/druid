@@ -695,8 +695,6 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     s.captured_mouse_buttons = 0;
-                } else {
-                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
                 Some(0)
             }
