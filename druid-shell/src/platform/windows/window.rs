@@ -167,6 +167,10 @@ struct WndState {
     /// The `char` of the last `WM_CHAR` event, if there has not already been
     /// a `WM_KEYUP` event.
     stashed_char: Option<char>,
+    // Stores a bit mask of all mouse buttons that are currently holding mouse
+    // capture. When the first mouse button is down on our window we enter
+    // capture, and we hold it until the last mouse button is up.
+    captured_mouse_buttons: u32,
     //TODO: track surrogate orphan
 }
 
@@ -255,6 +259,24 @@ impl WndState {
             // Note: maybe add WindowHandle as arg to idle handler so we don't need this.
             let handle2 = handle.clone();
             handle.add_idle_callback(move |_| handle2.invalidate());
+        }
+    }
+
+    fn enter_mouse_capture(&mut self, hwnd: HWND, button: MouseButton) {
+        if self.captured_mouse_buttons == 0 {
+            unsafe {
+                SetCapture(hwnd);
+            }
+        }
+        self.captured_mouse_buttons |= 1 << (button as u32);
+    }
+
+    fn exit_mouse_capture(&mut self, button: MouseButton) {
+        self.captured_mouse_buttons &= !(1 << (button as u32));
+        if self.captured_mouse_buttons == 0 {
+            unsafe {
+                ReleaseCapture();
+            }
         }
     }
 }
@@ -630,9 +652,11 @@ impl WndProc for MyWndProc {
                         count,
                     };
                     if count > 0 {
+                        s.enter_mouse_capture(hwnd, button);
                         s.handler.mouse_down(&event);
                     } else {
                         s.handler.mouse_up(&event);
+                        s.exit_mouse_capture(button);
                     }
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
@@ -666,6 +690,15 @@ impl WndProc for MyWndProc {
                     s.handler.timer(token);
                 }
                 Some(1)
+            }
+            WM_CAPTURECHANGED => {
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    s.captured_mouse_buttons = 0;
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
+                Some(0)
             }
             XI_RUN_IDLE => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
@@ -788,6 +821,7 @@ impl WindowBuilder {
                 dpi,
                 stashed_key_code: KeyCode::Unknown(0),
                 stashed_char: None,
+                captured_mouse_buttons: 0,
             };
             win.wndproc.connect(&handle, state);
 
