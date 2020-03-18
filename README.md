@@ -73,7 +73,7 @@ user-provided handler with them.
 While druid-shell is being developed with the druid toolkit in mind, it is
 intended to be general enough that it could be reused by other projects
 interested in experimenting with Rust GUI. The druid-shell crate includes a
-couple [non-druid examples].
+couple of [non-druid examples].
 
 ### piet
 
