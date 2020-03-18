@@ -15,7 +15,7 @@
 //! A button widget.
 
 use crate::theme;
-use crate::widget::{Label, LabelText, Painter, WidgetExt};
+use crate::widget::{Label, LabelText};
 use crate::{
     Affine, BoxConstraints, Data, Env, Event, EventCtx, Insets, LayoutCtx, LifeCycle, LifeCycleCtx,
     LinearGradient, PaintCtx, Point, Rect, RenderContext, Size, UnitPoint, UpdateCtx, Widget,
@@ -46,55 +46,6 @@ impl<T: Data> Button<T> {
             label_size: Size::ZERO,
             action: Box::new(action),
         }
-    }
-
-    pub fn click_based_button(
-        text: impl Into<LabelText<T>>,
-        action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
-    ) -> impl Widget<T> {
-        let button_background = Painter::new(|ctx, _, env| {
-            let is_active = ctx.is_active();
-            let is_hot = ctx.is_hot();
-            let size = ctx.size();
-
-            let rounded_rect = size
-                .to_rect()
-                .to_rounded_rect(env.get(theme::BUTTON_BORDER_RADIUS));
-
-            let bg_gradient = if is_active {
-                LinearGradient::new(
-                    UnitPoint::TOP,
-                    UnitPoint::BOTTOM,
-                    (env.get(theme::BUTTON_LIGHT), env.get(theme::BUTTON_DARK)),
-                )
-            } else {
-                LinearGradient::new(
-                    UnitPoint::TOP,
-                    UnitPoint::BOTTOM,
-                    (env.get(theme::BUTTON_DARK), env.get(theme::BUTTON_LIGHT)),
-                )
-            };
-
-            let border_color = if is_hot {
-                env.get(theme::BORDER_LIGHT)
-            } else {
-                env.get(theme::BORDER_DARK)
-            };
-
-            ctx.fill(rounded_rect, &bg_gradient);
-
-            ctx.stroke(
-                rounded_rect,
-                &border_color,
-                env.get(theme::BUTTON_BORDER_WIDTH),
-            );
-        });
-
-        Label::new(text)
-            .padding(LABEL_INSETS)
-            .background(button_background)
-            .rounded(4.) // This should be theme::BUTTON_BORDER_RADIUS
-            .on_click(action)
     }
 
     /// A function that can be passed to `Button::new`, for buttons with no action.
