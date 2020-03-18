@@ -158,12 +158,20 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         ControllerHost::new(self, controller)
     }
 
+    /// Control the events of this widget with a [`Click`] widget. The closure
+    /// provided will be called when the widget is clicked.
+    ///
+    /// The child widget will also be updated on [`LifeCycle::HotChanged`] and
+    /// mouse down, which can be useful for painting based on `ctx.is_active()`
+    /// and `ctx.is_hot()`.
+    ///
+    /// [`Click`]: struct.Click.html
+    /// [`LifeCycle::HotChanged`]: enum.LifeCycle.html#variant.HotChanged
     fn on_click(
         self,
         f: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
     ) -> ControllerHost<Self, Click<T>> {
-        let click = Click::new(f);
-        ControllerHost::new(self, click)
+        ControllerHost::new(self, Click::new(f))
     }
 
     /// Draw the [`layout`] `Rect`s of  this widget and its children.

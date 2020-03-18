@@ -12,16 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A clickable widget.
+//! A clickable [`Controller`] widget.
+//!
+//! [`Controller`]: struct.Controller.html
 
 use crate::widget::Controller;
 use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, Widget};
 
+/// A clickable [`Controller`] widget. Pass this and a child widget to a
+/// [`ControllerHost`] to make the child interactive. More conveniently, this is
+/// available as an `on_click` method via [`WidgetExt`]'.
+///
+/// The child widget will also be updated on [`LifeCycle::HotChanged`] and
+/// mouse down, which can be useful for painting based on `ctx.is_active()`
+/// and `ctx.is_hot()`.
+///
+/// [`Controller`]: struct.Controller.html
+/// [`ControllerHost`]: struct.ControllerHost.html
+/// [`WidgetExt`]: widget/trait.WidgetExt.html
+/// [`LifeCycle::HotChanged`]: enum.LifeCycle.html#variant.HotChanged
 pub struct Click<T> {
+    /// A closure that will be invoked when the child widget is clicked.
     action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
 }
 
 impl<T: Data> Click<T> {
+    /// Create a new clickable [`Controller`] widget.
     pub fn new(action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static) -> Self {
         Click {
             action: Box::new(action),
