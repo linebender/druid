@@ -191,10 +191,8 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         let percent_visible = viewport.height() / self.child_size.height;
         let percent_scrolled = self.scroll_offset.y / (self.child_size.height - viewport.height());
 
-        let mut length = (percent_visible * viewport.height()).ceil();
-        if length < SCROLLBAR_MIN_SIZE {
-            length = SCROLLBAR_MIN_SIZE;
-        }
+        let length = (percent_visible * viewport.height()).ceil();
+        let length = length.max(SCROLLBAR_MIN_SIZE);
 
         let vertical_padding = bar_pad + bar_pad + bar_width;
 
@@ -218,10 +216,8 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         let percent_visible = viewport.width() / self.child_size.width;
         let percent_scrolled = self.scroll_offset.x / (self.child_size.width - viewport.width());
 
-        let mut length = (percent_visible * viewport.width()).ceil();
-        if length < SCROLLBAR_MIN_SIZE {
-            length = SCROLLBAR_MIN_SIZE;
-        }
+        let length = (percent_visible * viewport.width()).ceil();
+        let length = length.max(SCROLLBAR_MIN_SIZE);
 
         let horizontal_padding = bar_pad + bar_pad + bar_width;
 
