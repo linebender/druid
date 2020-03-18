@@ -118,7 +118,7 @@ use crate::{
 /// [`WidgetExt::with_id`]: ../trait.WidgetExt.html#tymethod.with_id
 /// [`IdentityWrapper`]: struct.IdentityWrapper.html
 // this is NonZeroU64 because we regularly store Option<WidgetId>
-#[derive(Clone, Copy, Debug, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct WidgetId(NonZeroU64);
 
 /// The trait implemented by all widgets.
