@@ -189,33 +189,25 @@ impl ImageData {
     }
 
     /// Convert ImageData into Piet draw instructions
-    fn to_piet(
-        &self,
-        offset_matrix: Affine,
-        ctx: &mut PaintCtx,
-        interpolation: InterpolationMode,
-    ) {
-        ctx
-            .with_save(|ctx| {
-                ctx.transform(offset_matrix);
+    fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, interpolation: InterpolationMode) {
+        ctx.with_save(|ctx| {
+            ctx.transform(offset_matrix);
 
-                let im = ctx
-                    .make_image(
-                        self.x_pixels as usize,
-                        self.y_pixels as usize,
-                        &self.pixels,
-                        self.format,
-                    )
-                    .unwrap();
-                let rec = Rect::from_origin_size(
-                    (0.0, 0.0),
-                    (self.x_pixels as f64, self.y_pixels as f64),
-                );
-                ctx.draw_image(&im, rec, interpolation);
+            let im = ctx
+                .make_image(
+                    self.x_pixels as usize,
+                    self.y_pixels as usize,
+                    &self.pixels,
+                    self.format,
+                )
+                .unwrap();
+            let rec =
+                Rect::from_origin_size((0.0, 0.0), (self.x_pixels as f64, self.y_pixels as f64));
+            ctx.draw_image(&im, rec, interpolation);
 
-                Ok(())
-            })
-            .unwrap();
+            Ok(())
+        })
+        .unwrap();
     }
 }
 

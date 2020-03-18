@@ -135,11 +135,8 @@ impl<T: Data> Widget<T> for Container<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let panel = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            ctx.size().to_vec2(),
-            self.corner_radius,
-        );
+        let panel =
+            RoundedRect::from_origin_size(Point::ORIGIN, ctx.size().to_vec2(), self.corner_radius);
 
         if let Err(e) = ctx.save() {
             log::error!("{}", e);

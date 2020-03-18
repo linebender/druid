@@ -111,8 +111,7 @@ impl Default for Stepper {
 
 impl Widget<f64> for Stepper {
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &f64, env: &Env) {
-        let rounded_rect =
-            RoundedRect::from_origin_size(Point::ORIGIN, ctx.size().to_vec2(), 4.);
+        let rounded_rect = RoundedRect::from_origin_size(Point::ORIGIN, ctx.size().to_vec2(), 4.);
 
         let height = ctx.size().height;
         let width = env.get(theme::BASIC_WIDGET_HEIGHT);
