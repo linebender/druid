@@ -109,7 +109,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         ))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
 
         let circle = Circle::new((size / 2., size / 2.), 7.);
@@ -124,24 +124,24 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
             ),
         );
 
-        paint_ctx.fill(circle, &background_gradient);
+        ctx.fill(circle, &background_gradient);
 
-        let border_color = if paint_ctx.is_hot() {
+        let border_color = if ctx.is_hot() {
             env.get(theme::BORDER_LIGHT)
         } else {
             env.get(theme::BORDER_DARK)
         };
 
-        paint_ctx.stroke(circle, &border_color, 1.);
+        ctx.stroke(circle, &border_color, 1.);
 
         // Check if data enum matches our variant
         if *data == self.variant {
             let inner_circle = Circle::new((size / 2., size / 2.), 2.);
 
-            paint_ctx.fill(inner_circle, &env.get(theme::LABEL_COLOR));
+            ctx.fill(inner_circle, &env.get(theme::LABEL_COLOR));
         }
 
         // Paint the text label
-        self.child_label.paint_with_offset(paint_ctx, data, env);
+        self.child_label.paint_with_offset(ctx, data, env);
     }
 }

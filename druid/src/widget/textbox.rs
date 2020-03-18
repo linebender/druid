@@ -360,7 +360,7 @@ impl Widget<String> for TextBox {
         size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &String, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &String, env: &Env) {
         // Guard against changes in data following `event`
         let content = if data.is_empty() {
             &self.placeholder
@@ -378,7 +378,7 @@ impl Widget<String> for TextBox {
         let placeholder_color = env.get(theme::PLACEHOLDER_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
 
-        let has_focus = paint_ctx.has_focus();
+        let has_focus = ctx.has_focus();
 
         let border_color = if has_focus {
             env.get(theme::PRIMARY_LIGHT)
@@ -393,10 +393,10 @@ impl Widget<String> for TextBox {
             env.get(theme::TEXTBOX_BORDER_RADIUS),
         );
 
-        paint_ctx.fill(clip_rect, &background_color);
+        ctx.fill(clip_rect, &background_color);
 
         // Render text, selection, and cursor inside a clip
-        paint_ctx
+        ctx
             .with_save(|rc| {
                 rc.clip(clip_rect);
 
@@ -450,7 +450,7 @@ impl Widget<String> for TextBox {
             .unwrap();
 
         // Paint the border
-        paint_ctx.stroke(clip_rect, &border_color, BORDER_WIDTH);
+        ctx.stroke(clip_rect, &border_color, BORDER_WIDTH);
     }
 }
 

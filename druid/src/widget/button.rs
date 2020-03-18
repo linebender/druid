@@ -112,10 +112,10 @@ impl<T: Data> Widget<T> for Button<T> {
         ))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let is_active = paint_ctx.is_active();
-        let is_hot = paint_ctx.is_hot();
-        let size = paint_ctx.size();
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        let is_active = ctx.is_active();
+        let is_hot = ctx.is_hot();
+        let size = ctx.size();
 
         let rounded_rect = Rect::from_origin_size(Point::ORIGIN, size)
             .to_rounded_rect(env.get(theme::BUTTON_BORDER_RADIUS));
@@ -140,25 +140,25 @@ impl<T: Data> Widget<T> for Button<T> {
             env.get(theme::BORDER_DARK)
         };
 
-        paint_ctx.stroke(
+        ctx.stroke(
             rounded_rect,
             &border_color,
             env.get(theme::BUTTON_BORDER_WIDTH),
         );
 
-        paint_ctx.fill(rounded_rect, &bg_gradient);
+        ctx.fill(rounded_rect, &bg_gradient);
 
         let label_offset = (size.to_vec2() - self.label_size.to_vec2()) / 2.0;
 
-        if let Err(e) = paint_ctx.save() {
+        if let Err(e) = ctx.save() {
             log::error!("saving render context failed: {:?}", e);
             return;
         }
 
-        paint_ctx.transform(Affine::translate(label_offset));
-        self.label.paint(paint_ctx, data, env);
+        ctx.transform(Affine::translate(label_offset));
+        self.label.paint(ctx, data, env);
 
-        if let Err(e) = paint_ctx.restore() {
+        if let Err(e) = ctx.restore() {
             log::error!("restoring render context failed: {:?}", e);
         }
     }

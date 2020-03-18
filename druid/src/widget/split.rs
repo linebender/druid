@@ -141,8 +141,8 @@ impl<T> Split<T> {
             }
         }
     }
-    fn get_edges(&mut self, paint_ctx: &PaintCtx) -> (f64, f64) {
-        let size = paint_ctx.size();
+    fn get_edges(&mut self, ctx: &PaintCtx) -> (f64, f64) {
+        let size = ctx.size();
         match self.split_direction {
             Axis::Vertical => {
                 let reduced_width = size.width - self.splitter_size;
@@ -165,12 +165,12 @@ impl<T> Split<T> {
             env.get(theme::BORDER_DARK)
         }
     }
-    fn paint_solid(&mut self, paint_ctx: &mut PaintCtx, env: &Env) {
-        let size = paint_ctx.size();
+    fn paint_solid(&mut self, ctx: &mut PaintCtx, env: &Env) {
+        let size = ctx.size();
         //third, because we're putting the lines at roughly third points.
         //small, because we floor, to give the extra pixel (roughly) to the middle.
         let small_third = (self.splitter_size / 3.0).floor();
-        let (edge1, edge2) = self.get_edges(paint_ctx);
+        let (edge1, edge2) = self.get_edges(ctx);
         let rect = match self.split_direction {
             Axis::Vertical => Rect::from_points(
                 Point::new(edge1 + small_third, 0.0),
@@ -182,14 +182,14 @@ impl<T> Split<T> {
             ),
         };
         let splitter_color = self.get_color(env);
-        paint_ctx.fill(rect, &splitter_color);
+        ctx.fill(rect, &splitter_color);
     }
-    fn paint_stroked(&mut self, paint_ctx: &mut PaintCtx, env: &Env) {
-        let size = paint_ctx.size();
+    fn paint_stroked(&mut self, ctx: &mut PaintCtx, env: &Env) {
+        let size = ctx.size();
         //third, because we're putting the lines at roughly third points.
         //small, because we floor, to give the extra pixel (roughly) to the middle.
         let small_third = (self.splitter_size / 3.0).floor();
-        let (edge1, edge2) = self.get_edges(paint_ctx);
+        let (edge1, edge2) = self.get_edges(ctx);
         let (line1, line2) = match self.split_direction {
             Axis::Vertical => (
                 Line::new(
@@ -213,8 +213,8 @@ impl<T> Split<T> {
             ),
         };
         let splitter_color = self.get_color(env);
-        paint_ctx.stroke(line1, &splitter_color, 1.0);
-        paint_ctx.stroke(line2, &splitter_color, 1.0);
+        ctx.stroke(line1, &splitter_color, 1.0);
+        ctx.stroke(line2, &splitter_color, 1.0);
     }
 }
 impl<T: Data> Widget<T> for Split<T> {
@@ -389,14 +389,14 @@ impl<T: Data> Widget<T> for Split<T> {
         my_size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if self.solid {
-            self.paint_solid(paint_ctx, env);
+            self.paint_solid(ctx, env);
         } else {
-            self.paint_stroked(paint_ctx, env);
+            self.paint_stroked(ctx, env);
         }
-        self.child1.paint_with_offset(paint_ctx, &data, env);
-        self.child2.paint_with_offset(paint_ctx, &data, env);
+        self.child1.paint_with_offset(ctx, &data, env);
+        self.child2.paint_with_offset(ctx, &data, env);
     }
 }
 

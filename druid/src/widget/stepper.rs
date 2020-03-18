@@ -110,16 +110,16 @@ impl Default for Stepper {
 }
 
 impl Widget<f64> for Stepper {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &f64, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &f64, env: &Env) {
         let rounded_rect =
-            RoundedRect::from_origin_size(Point::ORIGIN, paint_ctx.size().to_vec2(), 4.);
+            RoundedRect::from_origin_size(Point::ORIGIN, ctx.size().to_vec2(), 4.);
 
-        let height = paint_ctx.size().height;
+        let height = ctx.size().height;
         let width = env.get(theme::BASIC_WIDGET_HEIGHT);
         let button_size = Size::new(width, height / 2.);
 
-        paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), 2.0);
-        paint_ctx.clip(rounded_rect);
+        ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), 2.0);
+        ctx.clip(rounded_rect);
 
         // draw buttons for increase/decrease
         let increase_button_origin = Point::ORIGIN;
@@ -143,15 +143,15 @@ impl Widget<f64> for Stepper {
 
         // draw buttons that are currently triggered as active
         if self.increase_active {
-            paint_ctx.fill(increase_button_rect, &active_gradient);
+            ctx.fill(increase_button_rect, &active_gradient);
         } else {
-            paint_ctx.fill(increase_button_rect, &inactive_gradient);
+            ctx.fill(increase_button_rect, &inactive_gradient);
         };
 
         if self.decrease_active {
-            paint_ctx.fill(decrease_button_rect, &active_gradient);
+            ctx.fill(decrease_button_rect, &active_gradient);
         } else {
-            paint_ctx.fill(decrease_button_rect, &inactive_gradient);
+            ctx.fill(decrease_button_rect, &inactive_gradient);
         };
 
         // draw up and down triangles
@@ -166,7 +166,7 @@ impl Widget<f64> for Stepper {
         arrows.line_to(Point::new(width / 2., height - 4.));
         arrows.close_path();
 
-        paint_ctx.fill(arrows, &env.get(theme::LABEL_COLOR));
+        ctx.fill(arrows, &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(

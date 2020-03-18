@@ -92,11 +92,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         self.child.layout(layout_ctx, &bc, data, &new_env)
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);
 
-        self.child.paint(paint_ctx, data, &new_env);
+        self.child.paint(ctx, data, &new_env);
     }
 
     fn id(&self) -> Option<WidgetId> {

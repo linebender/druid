@@ -132,8 +132,8 @@ impl<T: Data> Widget<T> for Painter<T> {
     fn layout(&mut self, _ctx: &mut LayoutCtx, bc: &BoxConstraints, _: &T, _: &Env) -> Size {
         bc.max()
     }
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        (self.0)(paint_ctx, data, env)
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        (self.0)(ctx, data, env)
     }
 }
 
