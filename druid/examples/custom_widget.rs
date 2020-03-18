@@ -16,12 +16,8 @@
 
 use druid::kurbo::BezPath;
 use druid::piet::{FontBuilder, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
-
-use druid::{
-    Affine, AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget,
-    WindowDesc,
-};
+use druid::widget::prelude::*;
+use druid::{Affine, AppLauncher, Color, LocalizedString, Point, Rect, WindowDesc};
 
 struct CustomWidget;
 
