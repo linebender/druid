@@ -346,10 +346,18 @@ impl WindowBuilder {
                 let mut handler = state.handler.borrow_mut();
                 match scroll.get_direction() {
                     ScrollDirection::Up => {
-                        handler.wheel(Vec2::from((0.0, -120.0)), modifiers);
+                        if modifiers.shift {
+                            handler.wheel(Vec2::from((-120.0, 0.0)), modifiers);
+                        } else {
+                            handler.wheel(Vec2::from((0.0, -120.0)), modifiers);
+                        }
                     }
                     ScrollDirection::Down => {
-                        handler.wheel(Vec2::from((0.0, 120.0)), modifiers);
+                        if modifiers.shift {
+                            handler.wheel(Vec2::from((120.0, 0.0)), modifiers);
+                        } else {
+                            handler.wheel(Vec2::from((0.0, 120.0)), modifiers);
+                        }
                     }
                     ScrollDirection::Left => {
                         handler.wheel(Vec2::from((-120.0, 0.0)), modifiers);
@@ -362,6 +370,10 @@ impl WindowBuilder {
                         let (mut delta_x, mut delta_y) = scroll.get_delta();
                         delta_x *= 120.;
                         delta_y *= 120.;
+                        if modifiers.shift {
+                            delta_x += delta_y;
+                            delta_y = 0.;
+                        }
                         handler.wheel(Vec2::from((delta_x, delta_y)), modifiers)
                     }
                     e => {
