@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, CrossAxisAlignment, Flex, Label, TextBox, WidgetExt};
+use druid::widget::{Align, Flex, Label, TextBox, WidgetExt};
 use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WindowDesc};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
@@ -52,8 +52,6 @@ fn build_root_widget() -> impl Widget<HelloState> {
 
     // arrange the two widgets vertically, with some padding
     let layout = Flex::column()
-        // center the items horizontally in the container
-        .cross_axis_alignment(CrossAxisAlignment::Center)
         .with_child(label, 0.0)
         .with_spacer(VERTICAL_WIDGET_SPACING)
         .with_child(textbox, 0.0);

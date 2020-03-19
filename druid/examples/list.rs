@@ -17,7 +17,7 @@
 use std::sync::Arc;
 
 use druid::lens::{self, LensExt};
-use druid::widget::{Button, Flex, Label, List, Scroll, SizedBox, WidgetExt};
+use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, Scroll, SizedBox, WidgetExt};
 use druid::{AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -54,11 +54,12 @@ fn ui_builder() -> impl Widget<AppData> {
             let value = data.right.len() + 1;
             Arc::make_mut(&mut data.right).push(value as u32);
         })
-        .fix_height(30.0),
+        .fix_height(30.0)
+        .expand_width(),
         0.0,
     );
 
-    let mut lists = Flex::row();
+    let mut lists = Flex::row().cross_axis_alignment(CrossAxisAlignment::Start);
 
     // Build a simple list
     lists.add_child(

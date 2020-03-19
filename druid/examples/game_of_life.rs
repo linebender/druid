@@ -17,7 +17,7 @@
 use std::ops::{Index, IndexMut};
 use std::time::{Duration, Instant};
 
-use druid::widget::{Button, CrossAxisAlignment, Flex, Label, Slider, WidgetExt};
+use druid::widget::{Button, Flex, Label, Slider, WidgetExt};
 use druid::{
     AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
     LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size,
@@ -410,14 +410,12 @@ fn make_widget() -> impl Widget<AppData> {
                             0.,
                         )
                         .with_child(Slider::new().lens(AppData::speed).padding((0., 0.)), 1.)
-                        .cross_axis_alignment(CrossAxisAlignment::Center)
                         .padding(8.0),
                     0.,
                 )
                 .background(BG),
             0.,
         )
-        .cross_axis_alignment(CrossAxisAlignment::Center)
 }
 
 fn main() {

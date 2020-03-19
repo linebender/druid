@@ -145,7 +145,7 @@ impl<T: Data> Flex<T> {
         Flex {
             direction: Axis::Horizontal,
             children: Vec::new(),
-            cross_alignment: CrossAxisAlignment::Start,
+            cross_alignment: CrossAxisAlignment::Center,
             main_alignment: MainAxisAlignment::Start,
             fill_major_axis: false,
         }
@@ -158,7 +158,7 @@ impl<T: Data> Flex<T> {
         Flex {
             direction: Axis::Vertical,
             children: Vec::new(),
-            cross_alignment: CrossAxisAlignment::Start,
+            cross_alignment: CrossAxisAlignment::Center,
             main_alignment: MainAxisAlignment::Start,
             fill_major_axis: false,
         }
