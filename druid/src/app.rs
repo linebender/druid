@@ -181,7 +181,9 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Set the minimal window size, similar to [`window_size`]
+    /// Set the minimum window size.
+    ///
+    /// To  set the initial window size, see [`window_size`].
     ///
     /// [`window_size`]: struct.WindowDesc.html#method.window_size
     pub fn with_min_size(mut self, size: impl Into<Size>) -> Self {
