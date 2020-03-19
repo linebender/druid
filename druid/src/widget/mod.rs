@@ -17,6 +17,7 @@
 mod align;
 mod button;
 mod checkbox;
+mod click;
 mod common;
 mod container;
 mod controller;
@@ -53,6 +54,7 @@ pub use self::image::{Image, ImageData};
 pub use align::Align;
 pub use button::Button;
 pub use checkbox::Checkbox;
+pub use click::Click;
 pub use common::FillStrat;
 pub use container::Container;
 pub use controller::{Controller, ControllerHost};
