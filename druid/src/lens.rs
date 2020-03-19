@@ -293,6 +293,75 @@ where
     }
 }
 
+/// A wrapper for widgets that don't use data, i.e. `Widget<()>`.
+///
+/// You can think of it like a [`LensWrap`] with a [`Lens`] that
+/// always focuses to `()` for every source type.
+///
+/// Wrapping such dataless widgets in `UnitWrap` will allow you
+/// to conveniently use them in [`Flex`] layouts for example.
+///
+/// Keep in mind that because the data will always be `()`,
+/// the [`update`] method of the wrapped widget will never be called.
+///
+/// [`LensWrap`]: struct.LensWrap.html
+/// [`Lens`]: trait.Lens.html
+/// [`Flex`]: ../widget/struct.Flex.html
+/// [`update`]: ../widget/trait.Widget.html#tymethod.update
+pub struct UnitWrap<W>
+where
+    W: Widget<()>,
+{
+    inner: W,
+}
+
+impl<W> UnitWrap<W>
+where
+    W: Widget<()>,
+{
+    /// Wrap a `Widget<()>` with a `UnitWrap` for use in cases
+    /// where `Widget<T: Data>` for any value of `T` can be used.
+    pub fn new(inner: W) -> UnitWrap<W> {
+        UnitWrap { inner }
+    }
+}
+
+impl<T, W> Widget<T> for UnitWrap<W>
+where
+    T: Data,
+    W: Widget<()>,
+{
+    #[inline]
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, env: &Env) {
+        self.inner.event(ctx, event, &mut (), env);
+    }
+
+    #[inline]
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &T, env: &Env) {
+        self.inner.lifecycle(ctx, event, &(), env);
+    }
+
+    #[inline]
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {
+        // The inner Widget data is always `()` and will never change.
+    }
+
+    #[inline]
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
+        self.inner.layout(ctx, bc, &(), env)
+    }
+
+    #[inline]
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
+        self.inner.paint(ctx, &(), env);
+    }
+
+    #[inline]
+    fn id(&self) -> Option<WidgetId> {
+        self.inner.id()
+    }
+}
+
 /// Lens accessing a member of some type using accessor functions
 ///
 /// See also the `lens` macro.

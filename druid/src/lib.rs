@@ -150,7 +150,7 @@ pub use data::Data;
 pub use env::{Env, Key, KeyOrValue, Value, ValueType};
 pub use event::{Event, LifeCycle, WheelEvent};
 pub use ext_event::{ExtEventError, ExtEventSink};
-pub use lens::{Lens, LensExt, LensWrap};
+pub use lens::{Lens, LensExt, LensWrap, UnitWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;

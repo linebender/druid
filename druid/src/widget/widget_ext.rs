@@ -18,7 +18,7 @@ use super::{
     Align, BackgroundBrush, Container, Controller, ControllerHost, EnvScope, IdentityWrapper,
     Padding, Parse, SizedBox, WidgetId,
 };
-use crate::{Color, Data, Env, Insets, KeyOrValue, Lens, LensWrap, UnitPoint, Widget};
+use crate::{Color, Data, Env, Insets, KeyOrValue, Lens, LensWrap, UnitPoint, UnitWrap, Widget};
 
 /// A trait that provides extra methods for combining `Widget`s.
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
@@ -178,10 +178,20 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a [`LensWrap`] widget for the provided [`Lens`].
     ///
     ///
-    /// [`LensWrap`]: ../struct.LensWrap.html
-    /// [`Lens`]: ../trait.Lens.html
+    /// [`LensWrap`]: ../lens/struct.LensWrap.html
+    /// [`Lens`]: ../lens/trait.Lens.html
     fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<T, L, Self> {
         LensWrap::new(self, lens)
+    }
+
+    /// Wrap a `Widget<()>` in a [`UnitWrap`] widget.
+    ///
+    /// [`UnitWrap`]: ../lens/struct.UnitWrap.html
+    fn unit(self) -> UnitWrap<Self>
+    where
+        Self: Widget<()>,
+    {
+        UnitWrap::new(self)
     }
 
     /// Parse a `Widget<String>`'s contents
