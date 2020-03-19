@@ -278,6 +278,7 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
         Stepper::new()
             .with_range(0.0, 1.0)
             .with_step(0.1)
+            .with_wraparound(true)
             .lens(DemoState::volume),
         0.0,
     );
