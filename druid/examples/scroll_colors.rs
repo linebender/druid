@@ -30,11 +30,8 @@ fn build_app() -> impl Widget<u32> {
             let row_progress = j as f64 / rows as f64;
 
             row.add_child(
-                Container::new(SizedBox::empty().width(50.0).height(50.0)).background(Color::rgb(
-                    1.0 * col_progress,
-                    1.0 * row_progress,
-                    1.0,
-                )),
+                Container::new(SizedBox::empty().width(200.0).height(200.0))
+                    .background(Color::rgb(1.0 * col_progress, 1.0 * row_progress, 1.0)),
                 0.0,
             );
         }
