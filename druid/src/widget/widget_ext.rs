@@ -133,7 +133,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// type.
     ///
     /// [`Container`]: struct.Container.html
-    /// [`Key`]: struct.Key.html
+    /// [`Key`]: ../struct.Key.html
     fn border(
         self,
         color: impl Into<KeyOrValue<Color>>,
@@ -145,7 +145,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a [`EnvScope`] widget, modifying the parent
     /// [`Env`] with the provided closure.
     ///
-    /// [`EnvScope`]: struct.Container.html
+    /// [`EnvScope`]: struct.EnvScope.html
     /// [`Env`]: ../struct.Env.html
     fn env_scope(self, f: impl Fn(&mut Env, &T) + 'static) -> EnvScope<T, Self> {
         EnvScope::new(f, self)
@@ -153,7 +153,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
 
     /// Wrap this widget with the provided [`Controller`].
     ///
-    /// [`Controller`]: struct.Controller.html
+    /// [`Controller`]: trait.Controller.html
     fn controller<C: Controller<T, Self>>(self, controller: C) -> ControllerHost<Self, C> {
         ControllerHost::new(self, controller)
     }
@@ -178,8 +178,8 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a [`LensWrap`] widget for the provided [`Lens`].
     ///
     ///
-    /// [`LensWrap`]: ../struct.LensWrap.html
-    /// [`Lens`]: ../trait.Lens.html
+    /// [`LensWrap`]: ../lens/struct.LensWrap.html
+    /// [`Lens`]: ../lens/trait.Lens.html
     fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<T, L, Self> {
         LensWrap::new(self, lens)
     }
