@@ -202,9 +202,7 @@ pub trait Widget<T> {
     /// for repaint.
     ///
     /// The previous value of the data is provided in case the widget wants to
-    /// compute a fine-grained delta. Before any paint operation, this method
-    /// will be called with `None` for `old_data`. Thus, this method can also be
-    /// used to build resources that will be retained for painting.
+    /// compute a fine-grained delta.
     ///
     /// [`request_paint`]: ../struct.UpdateCtx.html#method.request_paint
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env);
