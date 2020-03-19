@@ -87,7 +87,7 @@ impl AppDelegate<State> for Delegate {
     fn event(
         &mut self,
         ctx: &mut DelegateCtx,
-        _window_id: WindowId,
+        window_id: WindowId,
         event: Event,
         _data: &mut State,
         _env: &Env,
@@ -96,7 +96,7 @@ impl AppDelegate<State> for Delegate {
             Event::MouseDown(ref mouse) if mouse.button.is_right() => {
                 let menu = ContextMenu::new(make_context_menu::<State>(), mouse.pos);
                 let cmd = Command::new(druid::commands::SHOW_CONTEXT_MENU, menu);
-                ctx.submit_command(cmd, None);
+                ctx.submit_command(cmd, Target::Window(window_id));
                 None
             }
             other => Some(other),
