@@ -200,9 +200,9 @@ fn build_calc() -> impl Widget<CalcState> {
 }
 
 fn main() {
-    let window = WindowDesc::new(build_calc)
-        .title(LocalizedString::new("calc-demo-window-title").with_placeholder("Simple Calculator"))
-        .with_min_size((250.0, 350.0));
+    let window = WindowDesc::new(build_calc).title(
+        LocalizedString::new("calc-demo-window-title").with_placeholder("Simple Calculator"),
+    );
     let calc_state = CalcState {
         value: "0".to_string(),
         operand: 0.0,
