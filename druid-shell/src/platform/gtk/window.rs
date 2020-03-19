@@ -175,13 +175,6 @@ impl WindowBuilder {
             (self.size.height * dpi_scale) as i32,
         );
 
-        if let Some(min_size) = self.min_size {
-            window.set_size_request(
-                (min_size.width * dpi_scale) as i32,
-                (min_size.height * dpi_scale) as i32,
-            );
-        }
-
         let accel_group = AccelGroup::new();
         window.add_accel_group(&accel_group);
 
@@ -236,6 +229,13 @@ impl WindowBuilder {
 
             Inhibit(true)
         });
+
+        if let Some(min_size) = self.min_size {
+            drawing_area.set_size_request(
+                (min_size.width * dpi_scale) as i32,
+                (min_size.height * dpi_scale) as i32,
+            );
+        }
 
         let last_size = Cell::new((0, 0));
 
