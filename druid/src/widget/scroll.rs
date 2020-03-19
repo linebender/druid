@@ -72,14 +72,14 @@ enum BarHeldState {
     Horizontal(f64),
 }
 
-struct ScrollBarsState {
+struct ScrollbarsState {
     opacity: f64,
     timer_id: TimerToken,
     hovered: BarHoveredState,
     held: BarHeldState,
 }
 
-impl Default for ScrollBarsState {
+impl Default for ScrollbarsState {
     fn default() -> Self {
         Self {
             opacity: 0.0,
@@ -90,7 +90,7 @@ impl Default for ScrollBarsState {
     }
 }
 
-impl ScrollBarsState {
+impl ScrollbarsState {
     /// true if either scrollbar is currently held down/being dragged
     fn are_held(&self) -> bool {
         match self.held {
@@ -111,7 +111,7 @@ pub struct Scroll<T, W> {
     child_size: Size,
     scroll_offset: Vec2,
     direction: ScrollDirection,
-    scroll_bars: ScrollBarsState,
+    scrollbars: ScrollbarsState,
 }
 
 impl<T, W: Widget<T>> Scroll<T, W> {
@@ -126,7 +126,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
             child_size: Default::default(),
             scroll_offset: Vec2::new(0.0, 0.0),
             direction: ScrollDirection::All,
-            scroll_bars: ScrollBarsState::default(),
+            scrollbars: ScrollbarsState::default(),
         }
     }
 
@@ -172,10 +172,10 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// Makes the scrollbars visible, and resets the fade timer.
     pub fn reset_scrollbar_fade(&mut self, ctx: &mut EventCtx, env: &Env) {
         // Display scroll bars and schedule their disappearance
-        self.scroll_bars.opacity = env.get(theme::SCROLL_BAR_MAX_OPACITY);
-        let fade_delay = env.get(theme::SCROLL_BAR_FADE_DELAY);
+        self.scrollbars.opacity = env.get(theme::SCROLLBAR_MAX_OPACITY);
+        let fade_delay = env.get(theme::SCROLLBAR_FADE_DELAY);
         let deadline = Instant::now() + Duration::from_millis(fade_delay);
-        self.scroll_bars.timer_id = ctx.request_timer(deadline);
+        self.scrollbars.timer_id = ctx.request_timer(deadline);
     }
 
     /// Returns the current scroll offset.
@@ -184,8 +184,8 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     }
 
     fn calc_vertical_bar_bounds(&self, viewport: Rect, env: &Env) -> Rect {
-        let bar_width = env.get(theme::SCROLL_BAR_WIDTH);
-        let bar_pad = env.get(theme::SCROLL_BAR_PAD);
+        let bar_width = env.get(theme::SCROLLBAR_WIDTH);
+        let bar_pad = env.get(theme::SCROLLBAR_PAD);
 
         let percent_visible = viewport.height() / self.child_size.height;
         let percent_scrolled = self.scroll_offset.y / (self.child_size.height - viewport.height());
@@ -209,8 +209,8 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     }
 
     fn calc_horizontal_bar_bounds(&self, viewport: Rect, env: &Env) -> Rect {
-        let bar_width = env.get(theme::SCROLL_BAR_WIDTH);
-        let bar_pad = env.get(theme::SCROLL_BAR_PAD);
+        let bar_width = env.get(theme::SCROLLBAR_WIDTH);
+        let bar_pad = env.get(theme::SCROLLBAR_PAD);
 
         let percent_visible = viewport.width() / self.child_size.width;
         let percent_scrolled = self.scroll_offset.x / (self.child_size.width - viewport.width());
@@ -235,21 +235,21 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 
     /// Draw scroll bars.
     fn draw_bars(&self, ctx: &mut PaintCtx, viewport: Rect, env: &Env) {
-        if self.scroll_bars.opacity <= 0.0 {
+        if self.scrollbars.opacity <= 0.0 {
             return;
         }
 
         let brush = ctx.render_ctx.solid_brush(
-            env.get(theme::SCROLL_BAR_COLOR)
-                .with_alpha(self.scroll_bars.opacity),
+            env.get(theme::SCROLLBAR_COLOR)
+                .with_alpha(self.scrollbars.opacity),
         );
         let border_brush = ctx.render_ctx.solid_brush(
-            env.get(theme::SCROLL_BAR_BORDER_COLOR)
-                .with_alpha(self.scroll_bars.opacity),
+            env.get(theme::SCROLLBAR_BORDER_COLOR)
+                .with_alpha(self.scrollbars.opacity),
         );
 
-        let radius = env.get(theme::SCROLL_BAR_RADIUS);
-        let edge_width = env.get(theme::SCROLL_BAR_EDGE_WIDTH);
+        let radius = env.get(theme::SCROLLBAR_RADIUS);
+        let edge_width = env.get(theme::SCROLLBAR_EDGE_WIDTH);
 
         // Vertical bar
         if viewport.height() < self.child_size.height {
@@ -296,7 +296,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         let size = ctx.size();
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
 
-        let scroll_bar_is_hovered = match event {
+        let scrollbar_is_hovered = match event {
             Event::MouseMoved(e) | Event::MouseUp(e) | Event::MouseDown(e) => {
                 let offset_pos = e.pos + self.scroll_offset;
                 self.point_hits_vertical_bar(viewport, offset_pos, &env)
@@ -305,11 +305,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             _ => false,
         };
 
-        if self.scroll_bars.are_held() {
+        if self.scrollbars.are_held() {
             // if we're dragging a scrollbar
             match event {
                 Event::MouseMoved(event) => {
-                    match self.scroll_bars.held {
+                    match self.scrollbars.held {
                         BarHeldState::Vertical(offset) => {
                             let scale_y = viewport.height() / self.child_size.height;
                             let bounds = self.calc_vertical_bar_bounds(viewport, &env);
@@ -329,29 +329,29 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     ctx.request_paint();
                 }
                 Event::MouseUp(_) => {
-                    self.scroll_bars.held = BarHeldState::None;
+                    self.scrollbars.held = BarHeldState::None;
                     ctx.set_active(false);
 
-                    if !scroll_bar_is_hovered {
-                        self.scroll_bars.hovered = BarHoveredState::None;
+                    if !scrollbar_is_hovered {
+                        self.scrollbars.hovered = BarHoveredState::None;
                         self.reset_scrollbar_fade(ctx, &env);
                     }
                 }
                 _ => (), // other events are a noop
             }
-        } else if scroll_bar_is_hovered {
+        } else if scrollbar_is_hovered {
             // if we're over a scrollbar but not dragging
             match event {
                 Event::MouseMoved(event) => {
                     let offset_pos = event.pos + self.scroll_offset;
                     if self.point_hits_vertical_bar(viewport, offset_pos, &env) {
-                        self.scroll_bars.hovered = BarHoveredState::Vertical;
+                        self.scrollbars.hovered = BarHoveredState::Vertical;
                     } else {
-                        self.scroll_bars.hovered = BarHoveredState::Horizontal;
+                        self.scrollbars.hovered = BarHoveredState::Horizontal;
                     }
 
-                    self.scroll_bars.opacity = env.get(theme::SCROLL_BAR_MAX_OPACITY);
-                    self.scroll_bars.timer_id = TimerToken::INVALID; // Cancel any fade out in progress
+                    self.scrollbars.opacity = env.get(theme::SCROLLBAR_MAX_OPACITY);
+                    self.scrollbars.timer_id = TimerToken::INVALID; // Cancel any fade out in progress
                     ctx.request_paint();
                 }
                 Event::MouseDown(event) => {
@@ -359,12 +359,12 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
                     if self.point_hits_vertical_bar(viewport, pos, &env) {
                         ctx.set_active(true);
-                        self.scroll_bars.held = BarHeldState::Vertical(
+                        self.scrollbars.held = BarHeldState::Vertical(
                             pos.y - self.calc_vertical_bar_bounds(viewport, &env).y0,
                         );
                     } else if self.point_hits_horizontal_bar(viewport, pos, &env) {
                         ctx.set_active(true);
-                        self.scroll_bars.held = BarHeldState::Horizontal(
+                        self.scrollbars.held = BarHeldState::Horizontal(
                             pos.x - self.calc_horizontal_bar_bounds(viewport, &env).x0,
                         );
                     }
@@ -383,17 +383,17 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             match event {
                 Event::MouseMoved(_) => {
                     // if we have just stopped hovering
-                    if self.scroll_bars.hovered.is_hovered() && !scroll_bar_is_hovered {
-                        self.scroll_bars.hovered = BarHoveredState::None;
+                    if self.scrollbars.hovered.is_hovered() && !scrollbar_is_hovered {
+                        self.scrollbars.hovered = BarHoveredState::None;
                         self.reset_scrollbar_fade(ctx, &env);
                     }
                 }
                 // Show the scrollbars any time our size changes
                 Event::Size(_) => self.reset_scrollbar_fade(ctx, &env),
-                Event::Timer(id) if *id == self.scroll_bars.timer_id => {
+                Event::Timer(id) if *id == self.scrollbars.timer_id => {
                     // Schedule scroll bars animation
                     ctx.request_anim_frame();
-                    self.scroll_bars.timer_id = TimerToken::INVALID;
+                    self.scrollbars.timer_id = TimerToken::INVALID;
                 }
                 _ => (),
             }
@@ -414,11 +414,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         // Guard by the timer id being invalid, otherwise the scroll bars would fade
         // immediately if some other widgeet started animating.
         if let LifeCycle::AnimFrame(interval) = event {
-            if self.scroll_bars.timer_id == TimerToken::INVALID {
+            if self.scrollbars.timer_id == TimerToken::INVALID {
                 // Animate scroll bars opacity
                 let diff = 2.0 * (*interval as f64) * 1e-9;
-                self.scroll_bars.opacity -= diff;
-                if self.scroll_bars.opacity > 0.0 {
+                self.scrollbars.opacity -= diff;
+                if self.scrollbars.opacity > 0.0 {
                     ctx.request_anim_frame();
                 }
             }
