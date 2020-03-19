@@ -166,7 +166,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// and `ctx.is_hot()`.
     ///
     /// [`Click`]: struct.Click.html
-    /// [`LifeCycle::HotChanged`]: enum.LifeCycle.html#variant.HotChanged
+    /// [`LifeCycle::HotChanged`]: ../enum.LifeCycle.html#variant.HotChanged
     fn on_click(
         self,
         f: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,

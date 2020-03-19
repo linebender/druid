@@ -23,14 +23,18 @@ use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, Widget};
 /// [`ControllerHost`] to make the child interactive. More conveniently, this is
 /// available as an `on_click` method via [`WidgetExt`]'.
 ///
+/// This is an alternative to the standard [`Button`] widget, for when you want
+/// to make an arbitrary widget clickable.
+///
 /// The child widget will also be updated on [`LifeCycle::HotChanged`] and
 /// mouse down, which can be useful for painting based on `ctx.is_active()`
 /// and `ctx.is_hot()`.
 ///
 /// [`Controller`]: struct.Controller.html
 /// [`ControllerHost`]: struct.ControllerHost.html
-/// [`WidgetExt`]: widget/trait.WidgetExt.html
-/// [`LifeCycle::HotChanged`]: enum.LifeCycle.html#variant.HotChanged
+/// [`WidgetExt`]: trait.WidgetExt.html
+/// [`Button`]: struct.Button.html
+/// [`LifeCycle::HotChanged`]: ../enum.LifeCycle.html#variant.HotChanged
 pub struct Click<T> {
     /// A closure that will be invoked when the child widget is clicked.
     action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
