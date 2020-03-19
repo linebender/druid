@@ -55,7 +55,7 @@ fn ui_builder() -> impl Widget<AppData> {
             Arc::make_mut(&mut data.right).push(value as u32);
         })
         .fix_height(30.0)
-        .expand_width()
+        .expand_width(),
     );
 
     let mut lists = Flex::row().cross_axis_alignment(CrossAxisAlignment::Start);

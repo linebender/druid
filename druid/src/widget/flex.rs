@@ -38,9 +38,48 @@ use crate::{
 /// and freely.
 ///
 /// If you would like a child to be forced to use up all of the flex space
-/// passed to it, you can place it in  a `SizedBox` set to `expand` in the
+/// passed to it, you can place it in a [`SizedBox`] set to `expand` in the
 /// appropriate axis. There are convenience methods for this available on
 /// [`WidgetExt`]: [`expand_width`] and [`expand_height`].
+///
+/// # Flex or non-flex?
+///
+/// When should your children be flexible? With other things being equal,
+/// a flexible child has lower layout priority than a non-flexible child.
+/// Imagine, for instance, we have a row that is 30px wide, and we have
+/// two children, both of which want to be 20px wide. If child #1 is non-flex
+/// and child #2 is flex, the first widget will take up its 20px, and the second
+/// widget will be constrained to 10px.
+///
+/// If, instead, both widgets are flex, they will each be given equal space,
+/// and both will end up taking up 15px.
+///
+/// If both are non-flex they will both take up 20px, and will overflow the
+/// container.
+///
+/// ```no_compile
+///  -------non-flex----- -flex-----
+/// |       child #1     | child #2 |
+///
+///
+///  ----flex------- ----flex-------
+/// |    child #1   |    child #2   |
+///
+/// ```
+///
+/// In general, if you are using widgets that are opinionated about their size
+/// (such as most control widgets, which are designed to lay out nicely together,
+/// or text widgets that are sized to fit their text) you should make them
+/// non-flexible.
+///
+/// If you are trying to divide space evenly, or if you want a particular item
+/// to have access to all left over space, then you should make it flexible.
+///
+/// **note**: by default, a widget will not necessarily use all the space that
+/// is available to it. For instance, the [`TextBox`] widget has a default
+/// width, and will choose this width if possible, even if more space is
+/// available to it. If you want to force a widget to use all available space,
+/// you should expand it, with [`expand_width`] or [`expand_height`].
 ///
 ///
 /// # Options
@@ -97,6 +136,8 @@ use crate::{
 /// [`WidgetExt`]: trait.WidgetExt.html
 /// [`expand_height`]: trait.WidgetExt.html#method.expand_height
 /// [`expand_width`]: trait.WidgetExt.html#method.expand_width
+/// [`TextBox`]: struct.TextBox.html
+/// [`SizedBox`]: struct.SizedBox.html
 pub struct Flex<T> {
     direction: Axis,
     cross_alignment: CrossAxisAlignment,
@@ -124,10 +165,10 @@ struct Spacer {
 /// `Into<FlexParams>`.
 ///
 /// If you need to set additional paramaters, such as a custom [`CrossAxisAlignment`],
-/// you can construct `FlexParams`  directly. By default, the child has the
+/// you can construct `FlexParams` directly. By default, the child has the
 /// same `CrossAxisAlignment` as the container.
 ///
-/// For an overview  of the flex layout algorithm, see the [`Flex`] docs.
+/// For an overview of the flex layout algorithm, see the [`Flex`] docs.
 ///
 /// # Examples
 /// ```
@@ -172,7 +213,7 @@ pub enum CrossAxisAlignment {
     Start,
     /// Widgets are centered in the container.
     Center,
-    /// Bottom  or trailing.
+    /// Bottom or trailing.
     ///
     /// In a vertical container, widgets are bottom aligned. In a horiziontal
     /// container, their trailing edges are aligned.
@@ -212,7 +253,7 @@ impl FlexParams {
     ///
     /// You likely only need to create these manually if you need to specify
     /// a custom alignment; if you only need to use a custom `flex_factor` you
-    /// can pass an `f64`  to any of the functions that take `FlexParams`.
+    /// can pass an `f64` to any of the functions that take `FlexParams`.
     ///
     /// By default, the widget uses the alignment of its parent [`Flex`] container.
     ///
@@ -345,6 +386,12 @@ impl<T: Data> Flex<T> {
 
     /// Builder-style method to add a flexible child to the container.
     ///
+    /// This method is used when you need more control over the behaviour
+    /// of the widget you are adding. In the general case, this likely
+    /// means giving that child a 'flex factor', but it could also mean
+    /// giving the child a custom [`CrossAxisAlignment`], or a combination
+    /// of the two.
+    ///
     /// This function takes a child widget and [`FlexParams`]; importantly
     /// you can pass in a float as your [`FlexParams`] in most cases.
     ///
@@ -357,11 +404,12 @@ impl<T: Data> Flex<T> {
     ///
     /// let my_row = Flex::row()
     ///     .with_flex_child(Slider::new(), 1.0)
-    ///     .with_flex_child(Slider::new(), FlexParams::new(1.0, CrossAxisAlignment::Center));
+    ///     .with_flex_child(Slider::new(), FlexParams::new(1.0, CrossAxisAlignment::End));
     /// ```
     ///
     /// [`FlexParams`]: struct.FlexParams.html
     /// [`add_flex_child`]: #method.add_flex_child
+    /// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
     pub fn with_flex_child(
         mut self,
         child: impl Widget<T> + 'static,
@@ -414,10 +462,16 @@ impl<T: Data> Flex<T> {
 
     /// Add a flexible child widget.
     ///
+    /// This method is used when you need more control over the behaviour
+    /// of the widget you are adding. In the general case, this likely
+    /// means giving that child a 'flex factor', but it could also mean
+    /// giving the child a custom [`CrossAxisAlignment`], or a combination
+    /// of the two.
+    ///
     /// This function takes a child widget and [`FlexParams`]; importantly
     /// you can pass in a float as your [`FlexParams`] in most cases.
     ///
-    /// For the non-builder varient, see [`add_flex_child`].
+    /// For the builder-style varient, see [`with_flex_child`].
     ///
     /// # Examples
     ///
@@ -426,11 +480,11 @@ impl<T: Data> Flex<T> {
     ///
     /// let mut my_row = Flex::row();
     /// my_row.add_flex_child(Slider::new(), 1.0);
-    /// my_row.add_flex_child(Slider::new(), FlexParams::new(1.0, CrossAxisAlignment::Center));
+    /// my_row.add_flex_child(Slider::new(), FlexParams::new(1.0, CrossAxisAlignment::End));
     /// ```
     ///
     /// [`FlexParams`]: struct.FlexParams.html
-    /// [`add_flex_child`]: #method.add_flex_child
+    /// [`with_flex_child`]: #method.with_flex_child
     pub fn add_flex_child(
         &mut self,
         child: impl Widget<T> + 'static,
