@@ -222,9 +222,8 @@ fn make_spacer_select() -> impl Widget<Params> {
                 )
                 .with_child(
                     Stepper::new()
-                        .max(50.0)
-                        .min(2.0)
-                        .step(2.0)
+                        .with_range(2.0, 50.0)
+                        .with_step(2.0)
                         .lens(Params::spacer_size),
                     0.0,
                 )
@@ -277,9 +276,8 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
     space_if_needed(&mut flex, state);
     flex.add_child(
         Stepper::new()
-            .min(0.0)
-            .max(1.0)
-            .step(0.1)
+            .with_range(0.0, 1.0)
+            .with_step(0.1)
             .lens(DemoState::volume),
         0.0,
     );

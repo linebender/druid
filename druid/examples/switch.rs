@@ -31,7 +31,10 @@ fn build_widget() -> impl Widget<DemoState> {
     row.add_child(Padding::new(5.0, switch), 0.0);
 
     let stepper = LensWrap::new(
-        Stepper::new().max(10.0).min(0.0).step(0.5).wrap(false),
+        Stepper::new()
+            .with_range(0.0, 10.0)
+            .with_step(0.5)
+            .with_wraparound(false),
         DemoState::stepper_value,
     );
 

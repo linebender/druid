@@ -57,26 +57,27 @@ impl Stepper {
         }
     }
 
-    /// Set the stepper's maximum value.
-    pub fn max(mut self, max: f64) -> Self {
+    /// Set the range covered by this slider.
+    ///
+    /// The default range is `std::f64::MIN..std::f64::MAX`.
+    pub fn with_range(mut self, min: f64, max: f64) -> Self {
+        self.min = min;
         self.max = max;
         self
     }
 
-    /// Set the stepper's minimum value.
-    pub fn min(mut self, min: f64) -> Self {
-        self.min = min;
-        self
-    }
-
     /// Set the steppers amount by which the value increases or decreases.
-    pub fn step(mut self, step: f64) -> Self {
+    ///
+    /// The default step is `1.0`.
+    pub fn with_step(mut self, step: f64) -> Self {
         self.step = step;
         self
     }
 
     /// Set whether the stepper should wrap around the minimum/maximum values.
-    pub fn wrap(mut self, wrap: bool) -> Self {
+    ///
+    /// The default is `false`.
+    pub fn with_wraparound(mut self, wrap: bool) -> Self {
         self.wrap = wrap;
         self
     }
