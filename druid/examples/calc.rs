@@ -145,14 +145,14 @@ fn digit_button(digit: u8) -> impl Widget<CalcState> {
     let painter = Painter::new(|ctx, _, env| {
         let bounds = ctx.size().to_rect();
 
-        ctx.fill(bounds, &env.get(theme::SECONDARY_DARK));
+        ctx.fill(bounds, &env.get(theme::BACKGROUND_LIGHT));
 
         if ctx.is_hot() {
             ctx.stroke(bounds.inset(-0.5), &Color::WHITE, 1.0);
         }
 
         if ctx.is_active() {
-            ctx.fill(bounds, &env.get(theme::SECONDARY_LIGHT));
+            ctx.fill(bounds, &Color::rgb8(0x71, 0x71, 0x71));
         }
     });
 
@@ -186,7 +186,9 @@ fn build_calc() -> impl Widget<CalcState> {
         .lens(CalcState::value)
         .padding(5.0);
     Flex::column()
+        .with_flex_spacer(0.2)
         .with_child(display, 0.0)
+        .with_flex_spacer(0.2)
         .cross_axis_alignment(CrossAxisAlignment::End)
         .with_child(
             flex_row(
