@@ -40,7 +40,7 @@
 //! For many more examples, see [`druid/examples`].
 //!
 //! ```no_run
-//! use druid::widget::{Align, CrossAxisAlignment, Flex, Label, TextBox, WidgetExt};
+//! use druid::widget::{Align, Flex, Label, TextBox, WidgetExt};
 //! use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WindowDesc};
 //!
 //! const VERTICAL_WIDGET_SPACING: f64 = 20.0;
@@ -80,8 +80,6 @@
 //!
 //!     // arrange the two widgets vertically, with some padding
 //!     let layout = Flex::column()
-//!         // center the items horizontally in the container
-//!         .cross_axis_alignment(CrossAxisAlignment::Center)
 //!         .with_child(label, 0.0)
 //!         .with_spacer(VERTICAL_WIDGET_SPACING)
 //!         .with_child(textbox, 0.0);

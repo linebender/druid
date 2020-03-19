@@ -46,16 +46,17 @@ fn row_column() {
     let widget = Flex::row()
         .with_child(
             Flex::column()
-                .with_child(SizedBox::empty().with_id(id1), 1.0)
-                .with_child(SizedBox::empty().with_id(id2), 1.0),
+                .with_child(SizedBox::empty().expand().with_id(id1), 1.0)
+                .with_child(SizedBox::empty().expand().with_id(id2), 1.0),
             1.0,
         )
         .with_child(
             Flex::column()
-                .with_child(SizedBox::empty().with_id(id3), 1.0)
-                .with_child(SizedBox::empty().with_id(id4), 1.0)
-                .with_child(SizedBox::empty().with_id(id5), 1.0)
-                .with_child(SizedBox::empty().with_id(id6), 1.0),
+                .with_child(SizedBox::empty().expand().with_id(id3), 1.0)
+                .with_child(SizedBox::empty().expand().with_id(id4), 1.0)
+                .with_child(SizedBox::empty().expand().with_id(id5), 1.0)
+                .with_child(SizedBox::empty().expand().with_id(id6), 1.0)
+                .expand_width(),
             1.0,
         );
 
