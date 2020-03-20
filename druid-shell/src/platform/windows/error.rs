@@ -17,7 +17,6 @@
 use std::fmt;
 
 use super::util::FromWide;
-use std::mem::transmute;
 use std::ptr::{null, null_mut};
 use winapi::shared::minwindef::{DWORD, HLOCAL};
 use winapi::shared::ntdef::LPWSTR;
@@ -40,7 +39,6 @@ pub enum Error {
     NullHwnd,
 }
 
-#[allow(clippy::crosspointer_transmute)]
 fn hresult_description(hr: HRESULT) -> Option<String> {
     unsafe {
         let mut message_buffer: LPWSTR = std::ptr::null_mut();
@@ -52,7 +50,7 @@ fn hresult_description(hr: HRESULT) -> Option<String> {
             null(),
             hr as DWORD,
             0,
-            transmute(&mut message_buffer as *const LPWSTR),
+            &mut message_buffer as *mut LPWSTR as LPWSTR,
             0,
             null_mut(),
         );
