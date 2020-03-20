@@ -17,12 +17,9 @@
 
 use druid::kurbo::Circle;
 use druid::piet::RadialGradient;
+use druid::widget::prelude::*;
 use druid::widget::{Flex, Padding, Scroll};
-use druid::{
-    AppLauncher, BoxConstraints, Data, Env, Event, EventCtx, Insets, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Size, UpdateCtx, Widget,
-    WindowDesc,
-};
+use druid::{AppLauncher, Data, Insets, LocalizedString, Rect, WindowDesc};
 
 fn main() {
     let window = WindowDesc::new(build_widget)
