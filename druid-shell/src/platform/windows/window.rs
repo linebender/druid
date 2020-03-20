@@ -75,6 +75,7 @@ pub struct WindowBuilder {
     resizable: bool,
     show_titlebar: bool,
     size: Size,
+    min_size: Option<Size>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -706,6 +707,7 @@ impl WindowBuilder {
             show_titlebar: true,
             present_strategy: Default::default(),
             size: Size::new(500.0, 400.0),
+            min_size: None,
         }
     }
 
@@ -716,6 +718,11 @@ impl WindowBuilder {
 
     pub fn set_size(&mut self, size: Size) {
         self.size = size;
+    }
+
+    pub fn set_min_size(&mut self, size: Size) {
+        // TODO: Use this in `self.build`
+        self.min_size = Some(size);
     }
 
     pub fn resizable(&mut self, resizable: bool) {
