@@ -1,4 +1,7 @@
 # Get started with Druid
+*this is outdated, and should be replaced with a walkthrough of getting a simple
+app built and running*.
+
 This chapter will walk you through setting up a simple druid application from start to finish.
 
 ## Set up a Druid project

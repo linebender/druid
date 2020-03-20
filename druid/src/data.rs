@@ -91,6 +91,7 @@ pub use druid_derive::Data;
 ///
 /// [`Data::same`]: trait.Data.html#tymethod.same
 pub trait Data: Clone + 'static {
+    //// ANCHOR: same_fn
     /// Determine whether two values are the same.
     ///
     /// This is intended to always be a fast operation. If it returns
@@ -102,6 +103,7 @@ pub trait Data: Clone + 'static {
     /// `PartialEq`, for example two floating point NaN values should
     /// be considered equal when they have the same bit representation.
     fn same(&self, other: &Self) -> bool;
+    //// ANCHOR_END: same_fn
 }
 
 /// An impl of `Data` suitable for simple types.
