@@ -15,7 +15,6 @@
 //! An SVG widget.
 
 use std::error::Error;
-use std::marker::PhantomData;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -30,20 +29,18 @@ use crate::{
 };
 
 /// A widget that renders a SVG
-pub struct Svg<T> {
+pub struct Svg {
     svg_data: SvgData,
-    phantom: PhantomData<T>,
     fill: FillStrat,
 }
 
-impl<T: Data> Svg<T> {
+impl Svg {
     /// Create an SVG-drawing widget from SvgData.
     ///
     /// The SVG will scale to fit its box constraints.
     pub fn new(svg_data: SvgData) -> Self {
         Svg {
             svg_data,
-            phantom: Default::default(),
             fill: FillStrat::default(),
         }
     }
@@ -77,7 +74,7 @@ impl<T: Data> Svg<T> {
     }
 }
 
-impl<T: Data> Widget<T> for Svg<T> {
+impl<T: Data> Widget<T> for Svg {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
