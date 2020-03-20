@@ -40,6 +40,7 @@ pub enum Error {
     NullHwnd,
 }
 
+#[allow(clippy::crosspointer_transmute)]
 fn hresult_description(hr: HRESULT) -> Option<String> {
     unsafe {
         let mut message_buffer: LPWSTR = std::ptr::null_mut();
