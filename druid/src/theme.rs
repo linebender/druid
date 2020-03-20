@@ -107,7 +107,7 @@ pub fn init() -> Env {
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
-        env = env.adding(FONT_NAME, "sans-serif");
+        env = env.adding(FONT_NAME, "DejaVu Sans");
     }
     env
 }
