@@ -76,38 +76,30 @@ impl Stepper {
 
     /// Set whether the stepper should wrap around the minimum/maximum values.
     ///
-    /// When wraparound is enabled incrementing above max behaves like this:
-    /// - if the previous value is < max it becomes max
-    /// - if the previous value is = max it becomes min
-    /// Same logic applies for decrementing
-    ///
     /// The default is `false`.
     pub fn with_wraparound(mut self, wrap: bool) -> Self {
         self.wrap = wrap;
         self
     }
 
-    fn increment(&mut self, data: &mut f64) {
-        let next = *data + self.step;
-        let was_greater = *data + EPSILON >= self.max;
-        let is_greater = next + EPSILON > self.max;
-        *data = match (self.wrap, was_greater, is_greater) {
-            (true, true, true) => self.min,
-            (true, false, true) => self.max,
-            (false, _, true) => self.max,
-            _ => next,
-        }
-    }
+    fn change_value(&mut self, _ctx: &mut EventCtx, data: &mut f64, _env: &Env) {
+        // increase/decrease value depending on which button is currently active
+        let delta = if self.increase_active {
+            self.step
+        } else if self.decrease_active {
+            -1. * self.step
+        } else {
+            0.0
+        };
 
-    fn decrement(&mut self, data: &mut f64) {
-        let next = *data - self.step;
-        let was_less = *data - EPSILON <= self.min;
-        let is_less = next - EPSILON < self.min;
-        *data = match (self.wrap, was_less, is_less) {
-            (true, true, true) => self.max,
-            (true, false, true) => self.min,
-            (false, _, true) => self.min,
-            _ => next,
+        *data = (*data + delta).max(self.min).min(self.max);
+
+        if self.wrap {
+            if (*data - self.min).abs() < EPSILON {
+                *data = self.max
+            } else {
+                *data = self.min
+            }
         }
     }
 }
@@ -197,18 +189,13 @@ impl Widget<f64> for Stepper {
             Event::MouseDown(mouse) => {
                 ctx.set_active(true);
 
-                // ignore double clicks
-                if mouse.count > 1 {
-                    return;
-                }
-
                 if mouse.pos.y > height / 2. {
                     self.decrease_active = true;
-                    self.decrement(data);
                 } else {
                     self.increase_active = true;
-                    self.increment(data);
                 }
+
+                self.change_value(ctx, data, env);
 
                 let delay = Instant::now() + STEPPER_REPEAT_DELAY;
                 self.timer_id = ctx.request_timer(delay);
@@ -225,12 +212,7 @@ impl Widget<f64> for Stepper {
                 ctx.request_paint();
             }
             Event::Timer(id) if *id == self.timer_id => {
-                if self.increase_active {
-                    self.increment(data);
-                }
-                if self.decrease_active {
-                    self.decrement(data);
-                }
+                self.change_value(ctx, data, env);
                 let delay = Instant::now() + STEPPER_REPEAT;
                 self.timer_id = ctx.request_timer(delay);
             }
