@@ -33,6 +33,7 @@ use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
 use winapi::um::d2d1::*;
+use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::unknwnbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
@@ -68,7 +69,6 @@ extern "system" {
 /// Builder abstraction for creating new windows.
 pub struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
-    dwStyle: DWORD,
     title: String,
     menu: Option<Menu>,
     present_strategy: PresentStrategy,
@@ -699,7 +699,6 @@ impl WindowBuilder {
     pub fn new() -> WindowBuilder {
         WindowBuilder {
             handler: None,
-            dwStyle: WS_OVERLAPPEDWINDOW,
             title: String::new(),
             menu: None,
             resizable: true,
@@ -719,7 +718,6 @@ impl WindowBuilder {
     }
 
     pub fn resizable(&mut self, resizable: bool) {
-        // TODO: Use this in `self.build`
         self.resizable = resizable;
     }
 
@@ -796,6 +794,12 @@ impl WindowBuilder {
                 }
                 None => (0 as HMENU, None),
             };
+
+            let mut dwStyle = WS_OVERLAPPEDWINDOW;
+            if !self.resizable {
+                dwStyle &= !(WS_THICKFRAME | WS_MAXIMIZEBOX);
+            }
+
             let mut dwExStyle = 0;
             if self.present_strategy == PresentStrategy::Flip {
                 dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
@@ -804,7 +808,7 @@ impl WindowBuilder {
                 dwExStyle,
                 class_name.as_ptr(),
                 self.title.to_wide().as_ptr(),
-                self.dwStyle,
+                dwStyle,
                 CW_USEDEFAULT,
                 CW_USEDEFAULT,
                 width,
@@ -1075,8 +1079,34 @@ impl WindowHandle {
     // TODO: Implement this
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
 
-    // TODO: Implement this
-    pub fn resizable(&self, _resizable: bool) {}
+    pub fn resizable(&self, resizable: bool) {
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                let mut style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+                if style == 0 {
+                    warn!(
+                        "failed to get window style: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                    return;
+                }
+
+                if resizable {
+                    style |= (WS_THICKFRAME | WS_MAXIMIZEBOX) as WindowLongPtr;
+                } else {
+                    style &= !(WS_THICKFRAME | WS_MAXIMIZEBOX) as WindowLongPtr;
+                }
+
+                if SetWindowLongPtrW(hwnd, GWL_STYLE, style) == 0 {
+                    warn!(
+                        "failed to set the window style: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                }
+            }
+        }
+    }
 
     pub fn set_menu(&self, menu: Menu) {
         let accels = menu.accels();
