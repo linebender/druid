@@ -14,7 +14,7 @@ jobs:
         run: brew install cairo
 
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: get revisions
         id: get_revs
@@ -28,7 +28,7 @@ jobs:
         if: steps.get_revs.outputs.fetch != ''
 
       - name: checkout base
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
         with:
           ref: ${{ steps.get_revs.outputs.base }}
 
@@ -58,7 +58,7 @@ jobs:
             target/release/examples/custom_widget
 
       - name: checkout head
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
         with:
           clean: false # avoid rebuilding artifacts unnecessarily
           ref: ${{ steps.get_revs.outputs.head }}
