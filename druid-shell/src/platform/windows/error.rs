@@ -19,7 +19,7 @@ use std::fmt;
 use super::util::FromWide;
 use std::mem::transmute;
 use std::ptr::{null, null_mut};
-use winapi::shared::minwindef::HLOCAL;
+use winapi::shared::minwindef::{DWORD, HLOCAL};
 use winapi::shared::ntdef::LPWSTR;
 use winapi::shared::winerror::HRESULT;
 use winapi::um::winbase::{
@@ -50,7 +50,7 @@ fn hresult_description(hr: HRESULT) -> Option<String> {
                 | FORMAT_MESSAGE_IGNORE_INSERTS
                 | FORMAT_MESSAGE_MAX_WIDTH_MASK,
             null(),
-            hr as u32,
+            hr as DWORD,
             0,
             transmute(&mut message_buffer as *const LPWSTR),
             0,
