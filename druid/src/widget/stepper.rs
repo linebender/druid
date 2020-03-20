@@ -197,11 +197,6 @@ impl Widget<f64> for Stepper {
             Event::MouseDown(mouse) => {
                 ctx.set_active(true);
 
-                // ignore double clicks
-                if mouse.count > 1 {
-                    return;
-                }
-
                 if mouse.pos.y > height / 2. {
                     self.decrease_active = true;
                     self.decrement(data);
