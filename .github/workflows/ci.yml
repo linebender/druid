@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     name: rustfmt
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -35,7 +35,7 @@ jobs:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     name: cargo test stable
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: install cairo
         run: brew install cairo
@@ -109,7 +109,7 @@ jobs:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     name: cargo test nightly
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: install cairo
         run: brew install cairo
@@ -141,7 +141,7 @@ jobs:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: install cairo
         run: brew install cairo
