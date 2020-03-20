@@ -16,7 +16,16 @@
 
 use std::fmt;
 
+use super::util::FromWide;
+use std::mem::transmute;
+use std::ptr::{null, null_mut};
+use winapi::shared::minwindef::HLOCAL;
+use winapi::shared::ntdef::LPWSTR;
 use winapi::shared::winerror::HRESULT;
+use winapi::um::winbase::{
+    FormatMessageW, LocalFree, FORMAT_MESSAGE_ALLOCATE_BUFFER, FORMAT_MESSAGE_FROM_SYSTEM,
+    FORMAT_MESSAGE_IGNORE_INSERTS, FORMAT_MESSAGE_MAX_WIDTH_MASK,
+};
 
 /// Error codes. At the moment, this is little more than HRESULT, but that
 /// might change.
@@ -31,10 +40,41 @@ pub enum Error {
     NullHwnd,
 }
 
+fn hresult_description(hr: HRESULT) -> Option<String> {
+    unsafe {
+        let mut message_buffer: LPWSTR = std::ptr::null_mut();
+        let format_result = FormatMessageW(
+            FORMAT_MESSAGE_FROM_SYSTEM
+                | FORMAT_MESSAGE_ALLOCATE_BUFFER
+                | FORMAT_MESSAGE_IGNORE_INSERTS
+                | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+            null(),
+            hr as u32,
+            0,
+            transmute(&mut message_buffer as *const LPWSTR),
+            0,
+            null_mut(),
+        );
+        if format_result == 0 || message_buffer.is_null() {
+            return None;
+        }
+
+        let result = message_buffer.from_wide();
+        LocalFree(message_buffer as HLOCAL);
+        result
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
-            Error::Hr(hr) => write!(f, "HRESULT 0x{:x}", hr),
+            Error::Hr(hr) => {
+                write!(f, "HRESULT 0x{:x}", hr)?;
+                if let Some(description) = hresult_description(hr) {
+                    write!(f, ": {}", description)?;
+                }
+                Ok(())
+            }
             Error::D2Error => write!(f, "Direct2D error"),
             Error::OldWindows => write!(f, "Attempted newer API on older Windows"),
             Error::NullHwnd => write!(f, "Window handle is Null"),
