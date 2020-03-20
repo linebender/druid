@@ -21,12 +21,7 @@ use std::path::Path;
 
 use image;
 
-use crate::{
-    piet::{ImageFormat, InterpolationMode},
-    widget::common::FillStrat,
-    Affine, BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    Rect, RenderContext, Size, UpdateCtx, Widget,
-};
+use crate::{piet::{ImageFormat, InterpolationMode}, widget::common::FillStrat, Affine, BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Rect, RenderContext, Size, UpdateCtx, Widget, Data};
 
 /// A widget that renders an Image
 pub struct Image {
@@ -70,7 +65,7 @@ impl Image {
     }
 }
 
-impl Widget<u32> for Image {
+impl<T: Data> Widget<T> for Image {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut u32, _env: &Env) {}
 
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &u32, _env: &Env) {}
@@ -93,13 +88,7 @@ impl Widget<u32> for Image {
         }
     }
 
-<<<<<<< HEAD
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
-=======
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
-        // dbg!(paint_ctx.size());
-        // dbg!(self.image_data.get_size());
->>>>>>> accomodate the image example
         let offset_matrix = self
             .fill
             .affine_to_fill(ctx.size(), self.image_data.get_size());
