@@ -16,7 +16,7 @@
 
 use crate::kurbo::{Circle, Point, Rect, Size};
 use crate::theme;
-use crate::widget::{Flex, Label, LabelText, Padding};
+use crate::widget::{CrossAxisAlignment, Flex, Label, LabelText, Padding};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
     PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget, WidgetExt, WidgetPod,
@@ -31,7 +31,7 @@ impl RadioGroup {
     pub fn new<T: Data + PartialEq>(
         variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T)>,
     ) -> impl Widget<T> {
-        let mut col = Flex::column();
+        let mut col = Flex::column().cross_axis_alignment(CrossAxisAlignment::Start);
         for (label, variant) in variants.into_iter() {
             let radio = Radio::new(label, variant);
             col.add_child(Padding::new(5.0, radio));
