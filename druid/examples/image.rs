@@ -32,7 +32,7 @@ fn main() {
     };
 
     fn ui_builder() -> impl Widget<u32> {
-        let png_data = ImageData::from_file("examples/PicWithAlpha.png").unwrap();
+        let png_data = ImageData::from_file("PicWithAlpha.png").unwrap();
 
         let mut col = Flex::column();
 
