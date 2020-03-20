@@ -17,10 +17,8 @@
 use std::f64::consts::PI;
 
 use druid::kurbo::{Circle, Line};
-use druid::{
-    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    LocalizedString, PaintCtx, Point, RenderContext, Size, UpdateCtx, Vec2, Widget, WindowDesc,
-};
+use druid::widget::prelude::*;
+use druid::{AppLauncher, Color, LocalizedString, Point, Vec2, WindowDesc};
 
 struct AnimWidget {
     t: f64,

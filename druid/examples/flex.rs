@@ -14,14 +14,13 @@
 
 //! Demonstrates alignment of children in the flex container.
 
+use druid::widget::prelude::*;
 use druid::widget::{
     Button, Checkbox, CrossAxisAlignment, Flex, Label, MainAxisAlignment, ProgressBar, RadioGroup,
     SizedBox, Slider, Stepper, Switch, TextBox, WidgetExt,
 };
 use druid::{
-    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LensExt,
-    LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, PlatformError, Size, UpdateCtx, Widget,
-    WidgetId, WindowDesc,
+    AppLauncher, Color, Data, Lens, LensExt, LocalizedString, PlatformError, WidgetId, WindowDesc,
 };
 
 const DEFAULT_SPACER_SIZE: f64 = 8.;

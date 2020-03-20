@@ -18,12 +18,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use druid::kurbo::RoundedRect;
+use druid::widget::prelude::*;
 use druid::widget::WidgetExt;
-use druid::{
-    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size, UpdateCtx,
-    Widget, WindowDesc,
-};
+use druid::{AppLauncher, Color, Data, LocalizedString, Rect, Selector, WindowDesc};
 
 const SET_COLOR: Selector = Selector::new("event-example.set-color");
 

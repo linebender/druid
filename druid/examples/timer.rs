@@ -17,10 +17,8 @@
 use std::time::{Duration, Instant};
 
 use druid::kurbo::Line;
-use druid::{
-    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    LocalizedString, PaintCtx, RenderContext, Size, TimerToken, UpdateCtx, Widget, WindowDesc,
-};
+use druid::widget::prelude::*;
+use druid::{AppLauncher, Color, LocalizedString, TimerToken, WindowDesc};
 
 struct TimerWidget {
     timer_id: TimerToken,
