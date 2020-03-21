@@ -130,7 +130,7 @@ fn op_button_label(op: char, label: String) -> impl Widget<CalcState> {
     });
 
     Label::new(label)
-        .text_size(24.)
+        .with_text_size(24.)
         .center()
         .background(painter)
         .expand()
@@ -157,7 +157,7 @@ fn digit_button(digit: u8) -> impl Widget<CalcState> {
     });
 
     Label::new(format!("{}", digit))
-        .text_size(24.)
+        .with_text_size(24.)
         .center()
         .background(painter)
         .expand()
@@ -182,7 +182,7 @@ fn flex_row<T: Data>(
 
 fn build_calc() -> impl Widget<CalcState> {
     let display = Label::new(|data: &String, _env: &_| data.clone())
-        .text_size(32.0)
+        .with_text_size(32.0)
         .lens(CalcState::value)
         .padding(5.0);
     Flex::column()
