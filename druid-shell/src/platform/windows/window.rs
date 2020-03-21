@@ -161,7 +161,7 @@ struct WndState {
     render_target: Option<DeviceContext>,
     dcomp_state: Option<DCompState>,
     dpi: f32,
-    min_size: Option<kurbo::Size>,
+    min_size: Option<Size>,
     /// The `KeyCode` of the last `WM_KEYDOWN` event. We stash this so we can
     /// include it when handling `WM_CHAR` events.
     stashed_key_code: KeyCode,
