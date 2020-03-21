@@ -28,6 +28,25 @@ jobs:
           command: fmt
           args: --all -- --check
 
+  test-mdbook:
+      runs-on: windows-2019
+      name: test mdbook examples
+      steps:
+        - uses: actions/checkout@v2
+
+        - name: install stable toolchain
+          uses: actions-rs/toolchain@v1
+          with:
+            toolchain: stable
+            profile: minimal
+            override: true
+
+        - name: cargo test
+          uses: actions-rs/cargo@v1
+          with:
+            command: test
+            args: --manifest-path=docs/book_examples/Cargo.toml
+
   test-stable:
     runs-on: ${{ matrix.os }}
     strategy:
