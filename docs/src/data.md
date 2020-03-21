@@ -2,12 +2,14 @@
 
 The heart of a `druid` application is your application model. Your model drives
 your UI. When you mutate your model, druid compares the old and new version,
-and propogates the change to the components ('widgets') of your application that
-are effected by the change.
+and propagates the change to the components ('widgets') of your application that
+are affected by the change.
 
 For this to work, your model must implement the `Clone` and `Data` traits. It
-is important that your model be cheap to clone; we encourage the use of `Arc`
-pointers to allow cheap cloning of more expensive types.
+is important that your model be cheap to clone; we encourage the use of
+reference counted pointers to allow cheap cloning of more expensive types. `Arc`
+and `Rc` have blanket `Data` impls, so if you have a type that does not
+implement `Data`, you can always just wrap it in one of those smart pointers.
 
 The `Data` trait has a single method:
 

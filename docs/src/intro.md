@@ -4,7 +4,7 @@ Druid is a framework for building simple graphical applications.
 
 'Druid' is composed of a number of related projects. [`druid-shell`] is a
 low-level library that provides a common abstraction for interacting with the
-current os & window manager. [`piet`] is an abstraction for doing 2D graphics;
+current OS & window manager. [`piet`] is an abstraction for doing 2D graphics;
 [`kurbo`] is a library for 2D geometry; and [`druid`] itself is an opinionated set of
 high-level APIs for building cross-platform desktop applications.
 
