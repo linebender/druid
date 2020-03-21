@@ -275,7 +275,12 @@ impl WndState {
         self.captured_mouse_buttons &= !(1 << (button as u32));
         if self.captured_mouse_buttons == 0 {
             unsafe {
-                ReleaseCapture();
+                if ReleaseCapture() == FALSE {
+                    warn!(
+                        "failed to release mouse capture: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                }
             }
         }
     }
