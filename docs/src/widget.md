@@ -1,10 +1,10 @@
-# Widgets overview
+# Widgets and the `Widget` trait
 
 The `Widget` trait represents components of your UI. Druid includes a set of
 built-in widgets, and you can also write your own. You combine the built-in
 and custom widgets to create a *widget tree*; you will start with some single
 *root widget*, which will (generally) have children, which may themselves have
-children, and so on. `Widget` has a generic paramater `T` that represents
+children, and so on. `Widget` has a generic parameter `T` that represents
 the [`Data`] handled by that widget. Some widgets (such as layout widgets)
 may be entirely agnostic about what sort of `Data` they encounter, while other
 widgets (such as a slider) may expect a single type (such as `f64`).
@@ -16,16 +16,17 @@ At a high level, druid works like this:
 
 - **event**: an `Event` arrives from the operating system, such as a key press,
 a mouse movement, or a timer firing. This event is delivered to your root
-widget's [`event`] method. This method is provided **mutable** access to your
+widget's `event` method. This method is provided **mutable** access to your
 application model; this is the only place where your model can change. Depending
-on the type of `Event` and the implementation of your [`event`] method, this
+on the type of `Event` and the implementation of your `event` method, this
 event is then delivered recursively down the tree until it is handled.
 - **update**: After this call returns, the framework checks to see if the data was mutated.
-  If so, it calls your root widget's [`update`] method, passing in both the new
+  If so, it calls your root widget's `update` method, passing in both the new
   data as well as the previous data. Your widget can then update any internal
-  state (if required) or can request a [`layout`] or a [`paint`] call if the
+  state (data that the widget uses that is not part of the application model,
+  such as appearance data) and can request a `layout` or a `paint` call if
   its appearance is no longer valid.
-- After [`update`] returns, the framework checks to see if any widgets in a
+- After `update` returns, the framework checks to see if any widgets in a
   given window have indicated that they need layout or paint. If so, the
   framework will call the following methods:
 - **layout**: This is where the framework determines where to position each
@@ -38,7 +39,7 @@ API.
 - In addition to these four methods, there is also **lifecycle**, which is
   called in response to various changes to framework state; it is not called
   predictably during event handling, but only when extra information (such
-  as if a widget has gained focuse) happens as a consequence of other events.
+  as if a widget has gained focus) happens as a consequence of other events.
 
 For more information on implementing these methods, see [Creating custom
 widgets].
@@ -65,8 +66,8 @@ write,
 ```rust
 use druid::widget::Align;
 
-fn align_left<T>(widget: impl Widget<T>) -> impl Widget<T> {
-    Align::left(widget)
+fn align_center<T>(widget: impl Widget<T>) -> impl Widget<T> {
+    Align::center(widget)
 }
 ```
 
@@ -81,7 +82,7 @@ itself.
 use druid::widget::Stepper;
 
 fn main() {
-    // a Stepper with defualt paramaters
+    // a Stepper with default paramaters
     let stepper1 = Stepper::new();
 
     // A Stepper that operates over a custom range
@@ -98,10 +99,17 @@ fn main() {
 
 Additionally, there are a large number of helper methods available on all
 widgets, as part of the `WidgetExt` trait. These builder-style methods take one
-widget and wrap it in another:
+widget and wrap it in another. The following two functions produce the same
+output:
 
 ```rust
 use druid::widget::{Stepper, WidgetExt};
+
+fn explicit() {
+    let stepper = Stepper::new().with_rang(10.0, 50.0);
+    let padding = Padding::new(stepper, 8.0);
+    let padded_and_center_aligned_stepper = Align::center(padding);
+}
 
 fn main() {
     let padded_and_center_aligned_stepper = Stepper::new()
@@ -125,11 +133,6 @@ fn main() {
 }
 ```
 
-[`event`]: #event
-[`lifecycle`]: #lifecycle
-[`update`]: #update
-[`layout`]: #layout
-[`paint`]: #paint
 [`Data`]: ./data.md
 [`Lens`]: ./lens.md
 [box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html

@@ -1,7 +1,7 @@
-# Lenses
+# Lenses and the `Lens` trait
 
-Lets say we're building a todo list application, and we are designing the widget
-that will represent a single todo item. Or data model looks like this:
+Let's say we're building a todo list application, and we are designing the widget
+that will represent a single todo item. Our data model looks like this:
 
 ```rust
 /// A single todo item.
@@ -13,10 +13,10 @@ struct TodoItem {
 }
 ```
 
-And we would like our widget to display the title of the item, and then below
+We would like our widget to display the title of the item, and then below
 that to display two checkmarks that toggle the 'completed' and 'urgent' bools.
-`Checkbox` is a struct that implements `Widget<bool>`. How do we use it with
-`TodoItem`? By using a `Lens`.
+`Checkbox` (a widget included in druid) implements `Widget<bool>`.
+How do we use it with `TodoItem`? By using a `Lens`.
 
 ## Conceptual
 
@@ -27,12 +27,12 @@ have a `TodoItem`, but you *want* a `bool`.
 A simplified version of the `Lens` trait might look like this:
 
 ```rust
-trait SimpleLens<T, U> {
-    fn focus(&self, data: &T) -> U;
+trait SimpleLens<In, Out> {
+    fn focus(&self, data: &In) -> Out;
 }
 ```
 
-That is, this type takes an instance of `T`, and returns an instance of `U`.
+That is, this type takes an instance of `In`, and returns an instance of `Out`.
 
 For instance, imagine we wanted a lens to focus onto the `completed` state of
 our `TodoItem`. With our simple trait, we might do:
@@ -196,10 +196,10 @@ As your application gets more complicated, it will become likely that you want
 to use fancier sorts of lensing, and `map` and company can start to get out
 of hand; when that happens, you can always implement a lens by hand.
 
-### getting something from a collection
+### Getting something from a collection
 
-Let say your application is a contact book, and you would like a lens that
-focuses on a specific contact. A simplified version of our data looks like this:
+Your application is a contact book, and you would like a lens that
+focuses on a specific contact. You might write something like this:
 
 ```rust
 #[derive(Clone, Data)]
@@ -244,7 +244,7 @@ impl Lens<Contacts, Option<Contact>> for ContactIdLens {
 }
 ```
 
-### doing a conversion
+### Doing a conversion
 
 What if you have a distance in miles that you would like to display in
 kilometres?

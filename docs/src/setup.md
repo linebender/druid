@@ -7,7 +7,7 @@ This tutorial will first walk you through setting up the dependencies for develo
 application, then it will show you how to set up a basic application, build it and run it.
 
 ## Setting up Druid dependencies
-In addition to including the druid library in your project 
+In addition to including the druid library in your project
 
 ### macOS
 On macOS, druid requires [cairo]; if you use homebrew, `brew install cairo`
@@ -17,12 +17,12 @@ should be sufficient. Removing this dependency is on the roadmap.
 On Linux, druid requires gtk+3.
 
 On Ubuntu this can be installed with
-```
+```no_compile
 sudo apt-get install libgtk-3-dev
 ```
 
-On Fedora 
-```
+On Fedora
+```no_compile
 sudo dnf install gtk3-devel glib2-devel
 ```
 
@@ -30,13 +30,15 @@ See [gtk-rs dependencies] for more installation instructions.
 
 ## Starting a project
 Starting a project is as easy as creating an empty application with
-```
+```no_compile
 cargo new my-application
-``` 
-and adding the druid dependency to your Cargo.toml
 ```
+and adding the druid dependency to your Cargo.toml
+```no_compile
 [dependencies]
-druid = "0.4.0"
+druid = "0.5.0"
+// or:
+druid = { git = "https://github.com/xi-editor/druid.git", branch = "master" }
 ```
 
 [cairo]: https://www.cairographics.org
