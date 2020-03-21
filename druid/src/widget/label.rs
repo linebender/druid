@@ -106,19 +106,6 @@ impl<T: Data> Label<T> {
         Label::new(text)
     }
 
-    /// Set a new text.
-    ///
-    /// Takes an already resolved string as input.
-    ///
-    /// If you're looking for full [`LabelText`] support,
-    /// then you need to create a new [`Label`].
-    ///
-    /// [`Label`]: #method.new
-    /// [`LabelText`]: enum.LabelText.html
-    pub fn set_text(&mut self, text: impl Into<String>) {
-        self.text = LabelText::Specific(text.into());
-    }
-
     /// Set text alignment.
     #[deprecated(since = "0.5.0", note = "Use an Align widget instead")]
     pub fn text_align(self, _align: UnitPoint) -> Self {
@@ -130,7 +117,7 @@ impl<T: Data> Label<T> {
     /// The argument can be either a `Color` or a [`Key<Color>`].
     ///
     /// [`Key<Color>`]: struct.Key.html
-    pub fn text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
+    pub fn with_text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
         self.color = color.into();
         self
     }
@@ -140,9 +127,22 @@ impl<T: Data> Label<T> {
     /// The argument can be either an `f64` or a [`Key<f64>`].
     ///
     /// [`Key<f64>`]: struct.Key.html
-    pub fn text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
+    pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
         self.size = size.into();
         self
+    }
+
+    /// Set a new text.
+    ///
+    /// Takes an already resolved string as input.
+    ///
+    /// If you're looking for full [`LabelText`] support,
+    /// then you need to create a new [`Label`].
+    ///
+    /// [`Label`]: #method.new
+    /// [`LabelText`]: enum.LabelText.html
+    pub fn set_text(&mut self, text: impl Into<String>) {
+        self.text = LabelText::Specific(text.into());
     }
 
     /// Set the text color.
