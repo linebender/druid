@@ -161,6 +161,7 @@ struct WndState {
     render_target: Option<DeviceContext>,
     dcomp_state: Option<DCompState>,
     dpi: f32,
+    min_size: Option<Size>,
     /// The `KeyCode` of the last `WM_KEYDOWN` event. We stash this so we can
     /// include it when handling `WM_CHAR` events.
     stashed_key_code: KeyCode,
@@ -703,6 +704,21 @@ impl WndProc for MyWndProc {
                 }
                 Some(0)
             }
+            WM_GETMINMAXINFO => {
+                let min_max_info = unsafe { &mut *(lparam as *mut MINMAXINFO) };
+                if let Ok(s) = self.state.try_borrow() {
+                    let s = s.as_ref().unwrap();
+                    if let Some(min_size) = s.min_size {
+                        min_max_info.ptMinTrackSize.x =
+                            (min_size.width * (f64::from(s.dpi) / 96.0)) as i32;
+                        min_max_info.ptMinTrackSize.y =
+                            (min_size.height * (f64::from(s.dpi) / 96.0)) as i32;
+                    }
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
+                Some(0)
+            }
             XI_RUN_IDLE => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
@@ -756,7 +772,6 @@ impl WindowBuilder {
     }
 
     pub fn set_min_size(&mut self, size: Size) {
-        // TODO: Use this in `self.build`
         self.min_size = Some(size);
     }
 
@@ -822,6 +837,7 @@ impl WindowBuilder {
                 render_target: None,
                 dcomp_state: None,
                 dpi,
+                min_size: self.min_size,
                 stashed_key_code: KeyCode::Unknown(0),
                 stashed_char: None,
                 captured_mouse_buttons: 0,
