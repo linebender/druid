@@ -18,10 +18,10 @@ use std::ops::{Index, IndexMut};
 use std::time::{Duration, Instant};
 
 use druid::widget::prelude::*;
-use druid::widget::{Button, Flex, Label, Slider, WidgetExt};
+use druid::widget::{Button, Flex, Label, Slider};
 use druid::{
     AppLauncher, Color, Data, Lens, LocalizedString, MouseButton, Point, Rect, TimerToken,
-    WindowDesc,
+    WidgetExt, WindowDesc,
 };
 use std::sync::Arc;
 

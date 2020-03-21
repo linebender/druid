@@ -17,10 +17,10 @@
 use crate::kurbo::{BezPath, Point, Rect, RoundedRect, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
-use crate::widget::{Label, LabelText, WidgetExt};
+use crate::widget::{Label, LabelText};
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
-    Widget, WidgetPod,
+    Widget, WidgetExt, WidgetPod,
 };
 
 /// A checkbox that toggles a `bool`.

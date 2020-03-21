@@ -14,8 +14,8 @@
 
 //! This example demonstrates the `ViewSwitcher` widget
 
-use druid::widget::{Button, Flex, Label, Split, TextBox, ViewSwitcher, WidgetExt};
-use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WindowDesc};
+use druid::widget::{Button, Flex, Label, Split, TextBox, ViewSwitcher};
+use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct AppState {

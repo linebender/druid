@@ -16,10 +16,10 @@
 
 use crate::kurbo::{Circle, Point, Rect, Size};
 use crate::theme;
-use crate::widget::{Flex, Label, LabelText, Padding, WidgetExt};
+use crate::widget::{Flex, Label, LabelText, Padding};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
-    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget, WidgetPod,
+    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget, WidgetExt, WidgetPod,
 };
 
 /// A group of radio buttons

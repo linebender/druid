@@ -15,10 +15,10 @@
 //! This example shows how to construct a basic layout.
 
 use druid::kurbo::Circle;
-use druid::widget::{Flex, Label, Painter, WidgetExt};
+use druid::widget::{Flex, Label, Painter};
 use druid::{
     AppLauncher, Color, LinearGradient, LocalizedString, PlatformError, RenderContext, UnitPoint,
-    Widget, WindowDesc,
+    Widget, WidgetExt, WindowDesc,
 };
 
 const DARK_GREY: Color = Color::grey8(0x3a);

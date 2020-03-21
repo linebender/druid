@@ -19,8 +19,7 @@ use std::time::{Duration, Instant};
 
 use druid::kurbo::RoundedRect;
 use druid::widget::prelude::*;
-use druid::widget::WidgetExt;
-use druid::{AppLauncher, Color, Data, LocalizedString, Rect, Selector, WindowDesc};
+use druid::{AppLauncher, Color, Data, LocalizedString, Rect, Selector, WidgetExt, WindowDesc};
 
 const SET_COLOR: Selector = Selector::new("event-example.set-color");
 

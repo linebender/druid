@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Checkbox, Either, Flex, Label, Slider, WidgetExt};
-use druid::{AppLauncher, Data, Lens, LocalizedString, Widget, WindowDesc};
+use druid::widget::{Checkbox, Either, Flex, Label, Slider};
+use druid::{AppLauncher, Data, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 #[derive(Clone, Default, Data, Lens)]
 struct AppState {

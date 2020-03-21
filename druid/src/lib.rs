@@ -40,8 +40,8 @@
 //! For many more examples, see [`druid/examples`].
 //!
 //! ```no_run
-//! use druid::widget::{Align, Flex, Label, TextBox, WidgetExt};
-//! use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WindowDesc};
+//! use druid::widget::{Align, Flex, Label, TextBox};
+//! use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WindowDesc, WidgetExt};
 //!
 //! const VERTICAL_WIDGET_SPACING: f64 = 20.0;
 //! const TEXT_BOX_WIDTH: f64 = 200.0;
@@ -152,7 +152,7 @@ pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
-pub use widget::{Widget, WidgetId};
+pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
 

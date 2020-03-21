@@ -30,11 +30,11 @@
 use std::time::{Duration, Instant};
 
 use druid::kurbo::RoundedRect;
-use druid::widget::{Button, CrossAxisAlignment, Flex, WidgetExt, WidgetId};
+use druid::widget::{Button, CrossAxisAlignment, Flex, WidgetId};
 use druid::{
     AppLauncher, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, LayoutCtx, Lens,
     LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size,
-    TimerToken, UpdateCtx, Widget, WindowDesc,
+    TimerToken, UpdateCtx, Widget, WidgetExt, WindowDesc,
 };
 
 const CYCLE_DURATION: Duration = Duration::from_millis(100);
