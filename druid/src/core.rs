@@ -650,8 +650,8 @@ impl BaseState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::widget::{Flex, Scroll, Split, TextBox, WidgetExt};
-    use crate::WindowId;
+    use crate::widget::{Flex, Scroll, Split, TextBox};
+    use crate::{WidgetExt, WindowId};
 
     const ID_1: WidgetId = WidgetId::reserved(0);
     const ID_2: WidgetId = WidgetId::reserved(1);

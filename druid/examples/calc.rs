@@ -15,10 +15,11 @@
 //! Simple calculator.
 
 use druid::{
-    theme, AppLauncher, Color, Data, Lens, LocalizedString, RenderContext, Widget, WindowDesc,
+    theme, AppLauncher, Color, Data, Lens, LocalizedString, RenderContext, Widget, WidgetExt,
+    WindowDesc,
 };
 
-use druid::widget::{CrossAxisAlignment, Flex, Label, Painter, WidgetExt};
+use druid::widget::{CrossAxisAlignment, Flex, Label, Painter};
 
 #[derive(Clone, Data, Lens)]
 struct CalcState {

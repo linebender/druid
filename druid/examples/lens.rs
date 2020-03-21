@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use druid::widget::Slider;
-use druid::widget::{CrossAxisAlignment, Flex, Label, TextBox, WidgetExt};
-use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WindowDesc};
+use druid::widget::{CrossAxisAlignment, Flex, Label, TextBox};
+use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 fn main() {
     let main_window = WindowDesc::new(ui_builder)

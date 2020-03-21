@@ -17,10 +17,11 @@
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
-use crate::widget::WidgetExt;
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
-use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
+use crate::{
+    theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget, WidgetExt,
+};
 
 /// A function that modifies the initial environment.
 type EnvSetupFn<T> = dyn FnOnce(&mut Env, &T);

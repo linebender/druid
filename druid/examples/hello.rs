@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, Flex, Label, TextBox, WidgetExt};
-use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WindowDesc};
+use druid::widget::{Align, Flex, Label, TextBox};
+use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
 const TEXT_BOX_WIDTH: f64 = 200.0;

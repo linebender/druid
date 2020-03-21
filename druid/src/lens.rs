@@ -22,7 +22,7 @@
 //!
 //! [`TextBox`]: ../widget/struct.TextBox.html
 //! ```
-//! use druid::{Data, Lens, Widget, widget::{TextBox, Flex, WidgetExt}};
+//! use druid::{Data, Lens, Widget, WidgetExt, widget::{TextBox, Flex}};
 //!
 //! #[derive(Clone, Debug, Data, Lens)]
 //! struct MyState {
