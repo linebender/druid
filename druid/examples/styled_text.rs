@@ -68,8 +68,8 @@ fn ui_builder() -> impl Widget<AppData> {
     // text_size gets a custom key which we set with the env_scope wrapper.
     let styled_label =
         Label::new(|data: &AppData, _env: &_| format!("Size {:.1}: {}", data.size, data.text))
-            .text_color(theme::PRIMARY_LIGHT)
-            .text_size(MY_CUSTOM_TEXT_SIZE)
+            .with_text_color(theme::PRIMARY_LIGHT)
+            .with_text_size(MY_CUSTOM_TEXT_SIZE)
             .background(my_painter)
             .on_click(|_, data, _| {
                 data.size *= 1.1;
