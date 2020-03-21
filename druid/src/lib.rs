@@ -102,6 +102,9 @@
 #![allow(clippy::new_ret_no_self, clippy::needless_doctest_main)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+// Allows to use macros from druid_derive in this crate
+extern crate self as druid;
+
 use druid_shell as shell;
 pub use druid_shell::{kurbo, piet};
 
