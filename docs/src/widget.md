@@ -51,24 +51,13 @@ widgets generally do not control their own alignment or padding; if you have
 a button, and you would like it to have 8px of horizontal padding and 4px of
 vertical padding, you can just do,
 
-```rust
-use druid::widget::{Button, Padding};
-
-fn padded_button<T>() -> impl Widget<T> {
-    let button = Button::new("Humour me", Button::NOOP);
-    let padded = Padding::new(button, (4.0, 8.0));
-    padded
-}
+```rust,noplaypen
+{{#include ../book_examples/src/widget_md.rs:padded_button}}
 ```
-to force the button to be aligned center-left if it is given extra space you can
-write,
+to force the button to be center-aligned if it is given extra space you can write,
 
-```rust
-use druid::widget::Align;
-
-fn align_center<T>(widget: impl Widget<T>) -> impl Widget<T> {
-    Align::center(widget)
-}
+```rust,noplaypen
+{{#include ../book_examples/src/widget_md.rs:align_center}}
 ```
 
 ## Builder methods and `WidgetExt`
@@ -78,23 +67,8 @@ Widgets are generally constructed using builder-style methods. Unlike the normal
 built from the builder type; instead the builder methods are on the widget
 itself.
 
-```rust
-use druid::widget::Stepper;
-
-fn main() {
-    // a Stepper with default paramaters
-    let stepper1 = Stepper::new();
-
-    // A Stepper that operates over a custom range
-    let stepper2 = Stepper::new().with_range(10.0, 50.0);
-
-    // A Stepper with a custom range *and* a custom step size, that
-    // wraps around past its min and max values:
-    let stepper3 = Stepper::new()
-        .with_range(10.0, 50.0)
-        .with_step(2.5)
-        .with_wraparound(true);
-}
+```rust,noplaypen
+{{#include ../book_examples/src/widget_md.rs:stepper_builder}}
 ```
 
 Additionally, there are a large number of helper methods available on all
@@ -102,35 +76,21 @@ widgets, as part of the `WidgetExt` trait. These builder-style methods take one
 widget and wrap it in another. The following two functions produce the same
 output:
 
-```rust
-use druid::widget::{Stepper, WidgetExt};
+**Exlicit**:
+```rust,noplaypen
+{{#include ../book_examples/src/widget_md.rs:padded_stepper_raw}}
+```
 
-fn explicit() {
-    let stepper = Stepper::new().with_rang(10.0, 50.0);
-    let padding = Padding::new(stepper, 8.0);
-    let padded_and_center_aligned_stepper = Align::center(padding);
-}
-
-fn main() {
-    let padded_and_center_aligned_stepper = Stepper::new()
-        .with_range(10.0, 50.0)
-        .padding(8.0)
-        .center();
-}
+**WidgetExt**:
+```rust,noplaypen
+{{#include ../book_examples/src/widget_md.rs:padded_stepper_widgetext}}
 ```
 
 These builder-style methods also exist on containers. For instance, to create
 a stack of three labels, you can do:
 
-```rust
-use druid::widget::{Label, Flex};
-
-fn main() {
-    let vstack = Flex::column()
-        .with_child(Label::new("Number One"))
-        .with_child(Label::new("Number Two"))
-        .with_child(Label::new("Some Other Number"));
-}
+```rust,noplaypen
+{{#include ../book_examples/src/widget_md.rs:flex_builder}}
 ```
 
 [`Data`]: ./data.md

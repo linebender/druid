@@ -29,35 +29,5 @@ as well as `Option`, `Result`, and various tuples whose members implement
 Here is an example of using `Data` to implement a simple data model.
 
 ```rust
-# #[derive(Clone, PartialEq)]
-# struct DateTime(std::time::Instant);
-# use std::sync::Arc;
-#[derive(Clone, Data)]
-/// The main model for a todo list application.
-struct TodoList {
-    items: Arc<Vec<TodoItem>>,
-}
-
-#[derive(Clone, Data)]
-/// A single todo item.
-struct TodoItem {
-    category: Category,
-    // `Data` is implemented for any `Arc`.
-    due_date: Option<Arc<DateTime>>,
-    // you can specify a custom comparison fn
-    // (anything with the signature (&T, &T) -> bool)
-    #[druid(same_fn = "PartialEq::eq")]
-    added_date: DateTime,
-    title: String,
-    note: Option<String>,
-    completed: bool,
-}
-
-#[derive(Clone, Data, PartialEq)]
-/// The three types of tasks in the world.
-enum Category {
-    Work,
-    Play,
-    Revolution,
-}
+{{#include ../book_examples/src/data_md.rs:derive}}
 ```

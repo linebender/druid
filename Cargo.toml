@@ -5,3 +5,4 @@ members = [
     "druid-derive",
 ]
 
+exclude = ["docs/book_examples"]
