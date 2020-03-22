@@ -41,7 +41,9 @@ fn main() {
             LocalizedString::new("multiwin-demo-window-title").with_placeholder("Many windows!"),
         );
     AppLauncher::with_window(main_window)
-        .delegate(Delegate{ windows: Vec::new()})
+        .delegate(Delegate {
+            windows: Vec::new(),
+        })
         .launch(State::default())
         .expect("launch failed");
 }
