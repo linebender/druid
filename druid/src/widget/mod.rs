@@ -252,6 +252,11 @@ pub trait Widget<T> {
     fn id(&self) -> Option<WidgetId> {
         None
     }
+
+    /// Get the (verbose) type name of the widget for debugging purposes.
+    fn type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
 }
 
 impl WidgetId {
