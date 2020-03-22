@@ -28,6 +28,29 @@ jobs:
           command: fmt
           args: --all -- --check
 
+  mdbook-build:
+    runs-on: ubuntu-latest
+    name: mdbook build
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: install mdbook
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --vers "^0.3" mdbook
+
+      - name: mdbook build
+        run: mdbook build
+        working-directory: ./docs
+
   test-stable:
     runs-on: ${{ matrix.os }}
     strategy:
