@@ -5,8 +5,7 @@ use druid::widget::{Button, Padding, Widget};
 
 fn padded_button<T: Data>() -> impl Widget<T> {
     let button = Button::new("Humour me", Button::noop);
-    let padded = Padding::new((4.0, 8.0), button);
-    padded
+    Padding::new((4.0, 8.0), button)
 }
 // ANCHOR_END: padded_button
 

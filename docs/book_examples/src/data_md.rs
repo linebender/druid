@@ -1,4 +1,3 @@
-
 #[derive(Clone, PartialEq)]
 struct DateTime(std::time::Instant);
 

@@ -153,7 +153,7 @@ impl Lens<Contacts, Option<Contact>> for ContactIdLens {
 // ANCHOR: conversion
 struct MilesToKm;
 
-const KM_PER_MILE: f64 = 1.609344;
+const KM_PER_MILE: f64 = 1.609_344;
 
 impl Lens<f64, f64> for MilesToKm {
     fn with<R, F: FnOnce(&f64) -> R>(&self, data: &f64, f: F) -> R {
