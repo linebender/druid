@@ -65,9 +65,14 @@ impl BoxConstraints {
         }
     }
 
-    /// Clamp a given size so that fits within the constraints.
+    /// Clamp a given size so that it fits within the constraints.
+    ///
+    /// The given size is also [rounded away from zero],
+    /// so that the layout is aligned to pixels.
+    ///
+    /// [rounded away from zero]: struct.Size.html#method.expand
     pub fn constrain(&self, size: impl Into<Size>) -> Size {
-        size.into().clamp(self.min, self.max)
+        size.into().expand().clamp(self.min, self.max)
     }
 
     /// Returns the max size of these constraints.
