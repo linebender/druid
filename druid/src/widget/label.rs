@@ -106,6 +106,32 @@ impl<T: Data> Label<T> {
         Label::new(text)
     }
 
+    /// Set text alignment.
+    #[deprecated(since = "0.5.0", note = "Use an Align widget instead")]
+    pub fn with_text_align(self, _align: UnitPoint) -> Self {
+        self
+    }
+
+    /// Builder-style method for setting the text color.
+    ///
+    /// The argument can be either a `Color` or a [`Key<Color>`].
+    ///
+    /// [`Key<Color>`]: struct.Key.html
+    pub fn with_text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
+        self.color = color.into();
+        self
+    }
+
+    /// Builder-style method for setting the text size.
+    ///
+    /// The argument can be either an `f64` or a [`Key<f64>`].
+    ///
+    /// [`Key<f64>`]: struct.Key.html
+    pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
+        self.size = size.into();
+        self
+    }
+
     /// Set a new text.
     ///
     /// Takes an already resolved string as input.
@@ -117,32 +143,6 @@ impl<T: Data> Label<T> {
     /// [`LabelText`]: enum.LabelText.html
     pub fn set_text(&mut self, text: impl Into<String>) {
         self.text = LabelText::Specific(text.into());
-    }
-
-    /// Set text alignment.
-    #[deprecated(since = "0.5.0", note = "Use an Align widget instead")]
-    pub fn text_align(self, _align: UnitPoint) -> Self {
-        self
-    }
-
-    /// Builder-style method for setting the text color.
-    ///
-    /// The argument can be either a `Color` or a [`Key<Color>`].
-    ///
-    /// [`Key<Color>`]: struct.Key.html
-    pub fn text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
-        self.color = color.into();
-        self
-    }
-
-    /// Builder-style method for setting the text size.
-    ///
-    /// The argument can be either an `f64` or a [`Key<f64>`].
-    ///
-    /// [`Key<f64>`]: struct.Key.html
-    pub fn text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
-        self.size = size.into();
-        self
     }
 
     /// Set the text color.
