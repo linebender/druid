@@ -38,7 +38,7 @@ fn build_app() -> impl Widget<u32> {
                 Align::centered(Label::new("Bottom Split")),
             )
             .split_point(0.4)
-            .splitter_size(7.0),
+            .splitter_size(3.0),
         )
         .border(Color::WHITE, 1.0),
     );
@@ -62,12 +62,14 @@ fn build_app() -> impl Widget<u32> {
             Split::horizontal(
                 Split::horizontal(fixed_vertical, fixed_horizontal)
                     .split_point(0.33)
-                    .splitter_size(5.0)
+                    .splitter_size(3.0)
+                    .min_splitter_area(3.0)
                     .draggable(true),
                 draggable_vertical,
             )
             .split_point(0.75)
             .splitter_size(5.0)
+            .min_splitter_area(11.0)
             .draggable(true),
         )
         .border(Color::WHITE, 1.0),
