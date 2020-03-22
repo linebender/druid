@@ -152,10 +152,20 @@ impl<T: Data> Widget<T> for SizedBox<T> {
         bc.debug_check("SizedBox");
 
         let child_bc = self.child_constraints(bc);
-        match self.inner.as_mut() {
+        let size = match self.inner.as_mut() {
             Some(inner) => inner.layout(ctx, &child_bc, data, env),
             None => bc.constrain((self.width.unwrap_or(0.0), self.height.unwrap_or(0.0))),
+        };
+
+        if size.width.is_infinite() {
+            log::warn!("SizedBox is returning an infinite width.");
         }
+
+        if size.height.is_infinite() {
+            log::warn!("SizedBox is returning an infinite height.");
+        }
+
+        size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
