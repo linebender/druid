@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div id="sidebar-scrollbox" class="sidebar-scrollbox">
-                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction to Druid</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html" class="active"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="drawing.html"><strong aria-hidden="true">4.</strong> Draw the user interface</a></li><li class="expanded "><a href="user_input.html"><strong aria-hidden="true">5.</strong> Handling user input</a></li><li class="expanded "><a href="state.html"><strong aria-hidden="true">6.</strong> Handling state</a></li><li class="expanded "><a href="widgets.html"><strong aria-hidden="true">7.</strong> Create custom widgets</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">8.</strong> More information</a></li></ol>
+                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html" class="active"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env (TODO)</a></li><li class="expanded "><a href="localization.html"><strong aria-hidden="true">8.</strong> Localization (TODO)</a></li><li class="expanded "><a href="command.html"><strong aria-hidden="true">9.</strong> Command (TODO)</a></li><li class="expanded "><a href="custom_widgets.html"><strong aria-hidden="true">10.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">11.</strong> More information</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -149,6 +149,8 @@
                 <div id="content" class="content">
                     <main>
                         <h1><a class="header" href="#get-started-with-druid" id="get-started-with-druid">Get started with Druid</a></h1>
+<p><em>this is outdated, and should be replaced with a walkthrough of getting a simple
+app built and running</em>.</p>
 <p>This chapter will walk you through setting up a simple druid application from start to finish.</p>
 <h2><a class="header" href="#set-up-a-druid-project" id="set-up-a-druid-project">Set up a Druid project</a></h2>
 <p>Setting up a project is a simple as creating a new Rust project;</p>
@@ -183,7 +185,7 @@ We solve both these problems by passing in a widget-tree with one single widget 
         .with_child(
             Flex::column()
                 .with_child(Label::new(&quot;top left&quot;), 1.0)
-                .with_child(Label::new(&quot;bottom left&quot;), 1.0), 
+                .with_child(Label::new(&quot;bottom left&quot;), 1.0),
             1.0)
         .with_child(
             Flex::column()
@@ -192,7 +194,7 @@ We solve both these problems by passing in a widget-tree with one single widget 
             1.0)
 }
 </code></pre>
-<p>This looks nice but the labels on the left are drawn right against the window edge, so we needs some padding. Lets say we also want to center the two bottom labels. Unlike many other UI frameworks, widgets in Druid don't have padding or alignment properties themselves. Widgets are kept as simple as possible. </p>
+<p>This looks nice but the labels on the left are drawn right against the window edge, so we needs some padding. Lets say we also want to center the two bottom labels. Unlike many other UI frameworks, widgets in Druid don't have padding or alignment properties themselves. Widgets are kept as simple as possible.</p>
 <p>Features like padding or alignment are implemented in separate widgets. To add padding you simply wrap the labels in a <code>Padding</code> widget. Centering widgets is done using the <code>Align</code> widget set to <code>centered</code>.</p>
 <pre><code class="language-rust noplaypen">fn build_ui() -&gt; impl Widget&lt;()&gt; {
     Padding::new(
@@ -201,7 +203,7 @@ We solve both these problems by passing in a widget-tree with one single widget 
             .with_child(
                 Flex::column()
                     .with_child(Label::new(&quot;top left&quot;), 1.0)
-                    .with_child(Align::centered(Label::new(&quot;bottom left&quot;)), 1.0), 
+                    .with_child(Align::centered(Label::new(&quot;bottom left&quot;)), 1.0),
                 1.0)
             .with_child(
                 Flex::column()
@@ -234,7 +236,7 @@ For this we need to define what our application's state looks like.</p>
                         
 
                         
-                            <a rel="next" href="drawing.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="data.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -252,7 +254,7 @@ For this we need to define what our application's state looks like.</p>
                 
 
                 
-                    <a href="drawing.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="data.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

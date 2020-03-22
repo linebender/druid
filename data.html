@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Create custom widgets - Druid</title>
+        <title>Data trait - Druid</title>
         
 
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div id="sidebar-scrollbox" class="sidebar-scrollbox">
-                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction to Druid</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="drawing.html"><strong aria-hidden="true">4.</strong> Draw the user interface</a></li><li class="expanded "><a href="user_input.html"><strong aria-hidden="true">5.</strong> Handling user input</a></li><li class="expanded "><a href="state.html"><strong aria-hidden="true">6.</strong> Handling state</a></li><li class="expanded "><a href="widgets.html" class="active"><strong aria-hidden="true">7.</strong> Create custom widgets</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">8.</strong> More information</a></li></ol>
+                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="data.html" class="active"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env (TODO)</a></li><li class="expanded "><a href="localization.html"><strong aria-hidden="true">8.</strong> Localization (TODO)</a></li><li class="expanded "><a href="command.html"><strong aria-hidden="true">9.</strong> Command (TODO)</a></li><li class="expanded "><a href="custom_widgets.html"><strong aria-hidden="true">10.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">11.</strong> More information</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -148,21 +148,86 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#create-custom-widgets" id="create-custom-widgets">Create custom widgets</a></h1>
-<p>This chapter will describe how to create a custom widget</p>
+                        <h1><a class="header" href="#model-data-and-the-data-trait" id="model-data-and-the-data-trait">Model data and the <code>Data</code> trait</a></h1>
+<p>The heart of a <code>druid</code> application is your application model. Your model drives
+your UI. When you mutate your model, druid compares the old and new version,
+and propagates the change to the components ('widgets') of your application that
+are affected by the change.</p>
+<p>For this to work, your model must implement the <code>Clone</code> and <code>Data</code> traits. It
+is important that your model be cheap to clone; we encourage the use of
+reference counted pointers to allow cheap cloning of more expensive types. <code>Arc</code>
+and <code>Rc</code> have blanket <code>Data</code> impls, so if you have a type that does not
+implement <code>Data</code>, you can always just wrap it in one of those smart pointers.</p>
+<p>The <code>Data</code> trait has a single method:</p>
+<pre><code class="language-rust no_run noplaypen">    /// Determine whether two values are the same.
+    ///
+    /// This is intended to always be a fast operation. If it returns
+    /// `true`, the two values *must* be equal, but two equal values
+    /// need not be considered the same here, as will often be the
+    /// case when two copies are separately allocated.
+    ///
+    /// Note that &quot;equal&quot; above has a slightly different meaning than
+    /// `PartialEq`, for example two floating point NaN values should
+    /// be considered equal when they have the same bit representation.
+    fn same(&amp;self, other: &amp;Self) -&gt; bool;
+</code></pre>
+<h4><a class="header" href="#derive" id="derive">Derive</a></h4>
+<p><code>Data</code> can be derived. This is recursive; it requires <code>Data</code> to be implemented
+for all members. For 'C style' enums (enums where no variant has any fields)
+this also requires an implementation of <code>PartialEq</code>. <code>Data</code> is implemented for
+a number of <code>std</code> types, including all primitive types, <code>String</code>, <code>Arc</code>, <code>Rc</code>,
+as well as <code>Option</code>, <code>Result</code>, and various tuples whose members implement
+<code>Data</code>.</p>
+<p>Here is an example of using <code>Data</code> to implement a simple data model.</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span><span class="boring">#[derive(Clone, PartialEq)]
+</span><span class="boring">struct DateTime(std::time::Instant);
+</span><span class="boring">use std::sync::Arc;
+</span>#[derive(Clone, Data)]
+/// The main model for a todo list application.
+struct TodoList {
+    items: Arc&lt;Vec&lt;TodoItem&gt;&gt;,
+}
+
+#[derive(Clone, Data)]
+/// A single todo item.
+struct TodoItem {
+    category: Category,
+    // `Data` is implemented for any `Arc`.
+    due_date: Option&lt;Arc&lt;DateTime&gt;&gt;,
+    // you can specify a custom comparison fn
+    // (anything with the signature (&amp;T, &amp;T) -&gt; bool)
+    #[druid(same_fn = &quot;PartialEq::eq&quot;)]
+    added_date: DateTime,
+    title: String,
+    note: Option&lt;String&gt;,
+    completed: bool,
+}
+
+#[derive(Clone, Data, PartialEq)]
+/// The three types of tasks in the world.
+enum Category {
+    Work,
+    Play,
+    Revolution,
+}
+<span class="boring">}
+</span></code></pre></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="state.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="get_started.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="more_information.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="widget.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -174,13 +239,13 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="state.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="get_started.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="more_information.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="widget.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

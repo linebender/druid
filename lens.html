@@ -1,0 +1,488 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Lens trait - Druid</title>
+        
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div id="sidebar-scrollbox" class="sidebar-scrollbox">
+                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="expanded "><a href="lens.html" class="active"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env (TODO)</a></li><li class="expanded "><a href="localization.html"><strong aria-hidden="true">8.</strong> Localization (TODO)</a></li><li class="expanded "><a href="command.html"><strong aria-hidden="true">9.</strong> Command (TODO)</a></li><li class="expanded "><a href="custom_widgets.html"><strong aria-hidden="true">10.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">11.</strong> More information</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div id="menu-bar-sticky-container">
+                        <div class="left-buttons">
+                            <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                                <i class="fa fa-bars"></i>
+                            </button>
+                            <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                                <i class="fa fa-paint-brush"></i>
+                            </button>
+                            <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            </ul>
+                            
+                            <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                                <i class="fa fa-search"></i>
+                            </button>
+                            
+                        </div>
+
+                        <h1 class="menu-title">Druid</h1>
+
+                        <div class="right-buttons">
+                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                                <i id="print-button" class="fa fa-print"></i>
+                            </a>
+                            
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#lenses-and-the-lens-trait" id="lenses-and-the-lens-trait">Lenses and the <code>Lens</code> trait</a></h1>
+<p>Let's say we're building a todo list application, and we are designing the widget
+that will represent a single todo item. Our data model looks like this:</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>/// A single todo item.
+#[derive(Clone, Data)]
+struct TodoItem {
+    title: String,
+    completed: bool,
+    urgent: bool,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>We would like our widget to display the title of the item, and then below
+that to display two checkmarks that toggle the 'completed' and 'urgent' bools.
+<code>Checkbox</code> (a widget included in druid) implements <code>Widget&lt;bool&gt;</code>.
+How do we use it with <code>TodoItem</code>? By using a <code>Lens</code>.</p>
+<h2><a class="header" href="#conceptual" id="conceptual">Conceptual</a></h2>
+<p>You can think of a lens as a way of &quot;focusing in&quot; on one part of the data. You
+have a <code>TodoItem</code>, but you <em>want</em> a <code>bool</code>.</p>
+<p><code>Lens</code> is a trait for types that perform this &quot;focusing in&quot; (aka <em>lensing</em>).
+A simplified version of the <code>Lens</code> trait might look like this:</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>trait SimpleLens&lt;In, Out&gt; {
+    fn focus(&amp;self, data: &amp;In) -&gt; Out;
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>That is, this type takes an instance of <code>In</code>, and returns an instance of <code>Out</code>.</p>
+<p>For instance, imagine we wanted a lens to focus onto the <code>completed</code> state of
+our <code>TodoItem</code>. With our simple trait, we might do:</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>/// This is the type of the lens itself; in this case it has no state.
+struct CompletedLens;
+
+impl SimpleLens&lt;TodoItem, bool&gt; for CompletedLens {
+    fn focus(&amp;self, data: &amp;TodoItem) -&gt; bool {
+        data.completed
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<blockquote>
+<p><strong>Note</strong>: <code>Lens</code> isn't that helpful on its own; in druid it is generally used alongside
+<code>LensWrap</code>, which is a special widget that uses a <code>Lens</code> to change the <code>Data</code>
+type of its child. Lets say we have a <code>Checkbox</code>, but our data is a <code>TodoItem</code>:
+we can do, <code>LensWrap::new(my_checkbox, CompletedLens)</code> in order to bridge the
+gap.</p>
+</blockquote>
+<p>Our example is missing out on an important feature of lenses, though, which is that
+they allow mutations that occur on the <em>lensed</em> data to propagate back to the
+source. For this to work, lenses actually work with closures. The real signature
+of <code>Lens</code> looks more like this (names changed for clarity):</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>pub trait Lens&lt;In, Out&gt; {
+    /// Get non-mut access to the field.
+    fn with&lt;R, F: FnOnce(&amp;Out) -&gt; R&gt;(&amp;self, data: &amp;In, f: F) -&gt; R;
+    /// Get mut access to the field.
+    fn with_mut&lt;R, F: FnOnce(&amp;mut Out) -&gt; R&gt;(&amp;self, data: &amp;mut In, f: F) -&gt; R;
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>Here <code>In</code> refers to the input to the <code>Lens</code> and <code>Out</code> is the output. <code>F</code> is a
+closure that can return a result, <code>R</code>.</p>
+<p>Now, instead of just being passed <code>Out</code> directly from the function, we pass the
+function a closure that will <em>itself</em> be passed an <code>Out</code>; if our closure returns
+a result, that will be given back to us.</p>
+<p>This is unnecessary in the case of non-mutable access, but it is important for
+mutable access, because in many circumstances (such as when using an <code>Rc</code> or
+<code>Arc</code>) accessing a field mutably is expensive even if you don't do any mutation.</p>
+<p>In any case, the real implemntation of our lens would look like,</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>struct CompletedLens;
+
+impl Lens&lt;TodoItem, bool&gt; for CompletedLens {
+    fn with&lt;R, F: FnOnce(&amp;bool) -&gt; R&gt;(&amp;self, data: &amp;TodoItem, f: F) -&gt; R {
+        f(&amp;data.completed)
+    }
+
+    fn with_mut&lt;R, F: FnOnce(&amp;mut bool) -&gt; R&gt;(&amp;self, data: &amp;mut TodoItem, f: F) -&gt; R {
+        f(&amp;mut data.completed)
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>That seems pretty simple and fairly annoying to write, which is why you
+generally don't have to.</p>
+<h2><a class="header" href="#deriving-lenses" id="deriving-lenses">Deriving lenses</a></h2>
+<p>For simple field access, you can <code>derive</code> the <code>Lens</code> trait.</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>/// A single todo item.
+#[derive(Clone, Data, Lens)]
+struct TodoItem {
+    title: String,
+    completed: bool,
+    urgent: bool,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>This handles the boilerplate of writing a lens for each field. It also does
+something slightly sneaky: it exposes the generated lenses through the type
+itself, as associated constants. What this means is that if you want to use the
+lens that gives you the <code>completed</code> field, you can access it via
+<code>TodoItem::completed</code>. The generated code basically looks something like:</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>struct GeneratedLens_AppData_title;
+struct GeneratedLens_AppData_completed;
+struct GeneratedLens_AppData_urgent;
+
+impl TodoItem {
+    const title = GeneratedLens_AppData_title;
+    const completed = GeneratedLens_AppData_completed;
+    const urgent = GeneratedLens_AppData_urgent;
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>One consequence of this is that if your type has a method with the same name as
+one of its fields, <code>derive</code> will fail. To get around this, you can specify a
+custom name for a field's lens:</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>#[derive(Lens)]
+struct Item {
+    #[druid(lens_name = &quot;count_lens&quot;)]
+    count: usize,
+}
+
+// this now works
+impl Item {
+    fn count(&amp;self) -&gt; usize { self.count }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#using-lenses" id="using-lenses">Using lenses</a></h2>
+<p>The easiest way to use a lens is with the <code>lens</code> method that is provided through
+the <code>WigetExt</code> trait; this is a convenient way to wrap a widget in a <code>LensWrap</code>
+with a given lens.</p>
+<p>Let's build the UI for our todo list item:</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>use druid::widget::{Checkbox, Flex, Label, WidgetExt};
+use druid::{Data, Lens, Widget};
+
+#[derive(Clone, Data, Lens)]
+struct TodoItem {
+    title: String,
+    completed: bool,
+    urgent: bool,
+}
+
+fn make_todo_item() -&gt; impl Widget&lt;TodoItem&gt; {
+    // A label that generates its text based on the data
+    let title = Label::dynamic(|text, _| text.to_string()).lens(TodoItem::title);
+    let completed = Checkbox::new().lens(TodoItem::completed);
+    let urgent = Checkbox::new().lens(TodoItem::urgent);
+
+    Flex::column()
+        // label on top
+        .with_child(title)
+        // two checkboxes below
+        .with_child(Flex::row().with_child(completed).with_child(urgent))
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#advanced-lenses" id="advanced-lenses">Advanced lenses</a></h2>
+<p>Field access is a very simple (and common, and <em>useful</em>) case, but lenses can do much more than that.</p>
+<h3><a class="header" href="#lensext-and-combinators" id="lensext-and-combinators"><code>LensExt</code> and combinators</a></h3>
+<p>Similar to the <code>WidgetExt</code> trait, we offer a <code>LensExt</code> trait that provides
+various functions for composing lenses. These are similar to the various methods
+on iterator; you can <code>map</code> from one lens to another, you can index into a
+collection, or you can efficiently access data in an <code>Arc</code> without unnecessary
+mutation; see the main crate documentation for more.</p>
+<p>As your application gets more complicated, it will become likely that you want
+to use fancier sorts of lensing, and <code>map</code> and company can start to get out
+of hand; when that happens, you can always implement a lens by hand.</p>
+<h3><a class="header" href="#getting-something-from-a-collection" id="getting-something-from-a-collection">Getting something from a collection</a></h3>
+<p>Your application is a contact book, and you would like a lens that
+focuses on a specific contact. You might write something like this:</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>#[derive(Clone, Data)]
+struct Contact {
+    // fields
+}
+
+type ContactId = u64;
+
+#[derive(Clone, Data)]
+struct Contacts {
+    inner: Arc&lt;HashMap&lt;ContactId, Contact&gt;&gt;,
+}
+
+// Lets write a lens that returns a specific contact based on its id, if it exists.
+
+struct ContactIdLens(ContactId);
+
+impl Lens&lt;Contacts, Option&lt;Contact&gt;&gt; for ContactIdLens {
+    fn with&lt;R, F: FnOnce(&amp;Option&lt;Contact&gt;) -&gt; R&gt;(&amp;self, data: &amp;Contacts, f: F) -&gt; R {
+        let contact = data.inner.get(&amp;self.0).cloned();
+        f(&amp;contact)
+    }
+
+    fn with_mut&lt;R, F: FnOnce(&amp;mut Option&lt;Contact&gt;) -&gt; R&gt;(&amp;self, data: &amp;mut Contacts, f: F) -&gt; R {
+        // get an immutable copy
+        let mut contact = data.inner.get(&amp;self.0).cloned();
+        let result = f(&amp;mut contact);
+        // only actually mutate the collection if our result is mutated;
+        if !data.inner.get(&amp;self.0).same(&amp;contact.as_ref()) {
+            let contacts = Arc::make_mut(&amp;mut data.inner);
+            // if we're none, we were deleted, and remove from the map; else replace
+            match contact {
+                Some(contact) =&gt; contacts.insert(self.0, contact),
+                None =&gt; {
+                    contacts.remove(self.0);
+                }
+            }
+        }
+        result
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h3><a class="header" href="#doing-a-conversion" id="doing-a-conversion">Doing a conversion</a></h3>
+<p>What if you have a distance in miles that you would like to display in
+kilometres?</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>struct MilesToKm;
+
+const KM_PER_MILE: f64 = 1.609344;
+
+impl Lens&lt;f64, f64&gt; for MilesToKm {
+    fn with&lt;R, F: FnOnce(&amp;f64) -&gt; R&gt;(&amp;self, data: &amp;f64, f: F) -&gt; R {
+        let kms = *data * KM_PER_MILE;
+        f(&amp;kms)
+    }
+
+    fn with_mut&lt;R, F: FnOnce(&amp;mut f64) -&gt; R&gt;(&amp;self, data: &amp;mut f64, f: F) -&gt; R {
+        let mut kms = *data * KM_PER_MILE;
+        let kms_2 = kms;
+        let result = f(&amp;mut kms);
+        // avoid doing the conversion if unchanged, it might be lossy?
+        if !kms.same(&amp;kms_2) {
+            let miles = kms * KM_PER_MILE.recip();
+            *data = miles;
+        }
+        result
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="widget.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="env.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a href="widget.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a href="env.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+        
+        
+        <script type="text/javascript">
+            window.playpen_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

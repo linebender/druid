@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Introduction to Druid - Druid</title>
+        <title>Overview - Druid</title>
         
 
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div id="sidebar-scrollbox" class="sidebar-scrollbox">
-                <ol class="chapter"><li class="expanded "><a href="intro.html" class="active"><strong aria-hidden="true">1.</strong> Introduction to Druid</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="drawing.html"><strong aria-hidden="true">4.</strong> Draw the user interface</a></li><li class="expanded "><a href="user_input.html"><strong aria-hidden="true">5.</strong> Handling user input</a></li><li class="expanded "><a href="state.html"><strong aria-hidden="true">6.</strong> Handling state</a></li><li class="expanded "><a href="widgets.html"><strong aria-hidden="true">7.</strong> Create custom widgets</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">8.</strong> More information</a></li></ol>
+                <ol class="chapter"><li class="expanded "><a href="intro.html" class="active"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env (TODO)</a></li><li class="expanded "><a href="localization.html"><strong aria-hidden="true">8.</strong> Localization (TODO)</a></li><li class="expanded "><a href="command.html"><strong aria-hidden="true">9.</strong> Command (TODO)</a></li><li class="expanded "><a href="custom_widgets.html"><strong aria-hidden="true">10.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">11.</strong> More information</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -148,9 +148,29 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#introduction-to-druid" id="introduction-to-druid">Introduction to Druid</a></h1>
-<p>A simple explanation of what Druid is and why you want to use it (this could also be copied to 
-the crates.io page)</p>
+                        <h1><a class="header" href="#druid" id="druid">Druid</a></h1>
+<p>Druid is a framework for building simple graphical applications.</p>
+<p>'Druid' is composed of a number of related projects. <a href="https://docs.rs/druid-shell"><code>druid-shell</code></a> is a
+low-level library that provides a common abstraction for interacting with the
+current OS &amp; window manager. <a href="https://docs.rs/piet"><code>piet</code></a> is an abstraction for doing 2D graphics;
+<a href="https://docs.rs/kurbo"><code>kurbo</code></a> is a library for 2D geometry; and <a href="https://docs.rs/druid"><code>druid</code></a> itself is an opinionated set of
+high-level APIs for building cross-platform desktop applications.</p>
+<p>Druid is <em>data oriented</em>. It shares many ideas (and is directly inspired by)
+contemporary declarative UI frameworks such as <a href="https://flutter.dev">Flutter</a>, <a href="https://developer.android.com/jetpack/compose">Jetpack Compose</a>,
+and <a href="https://developer.apple.com/documentation/swiftui">SwiftUI</a>, while also attempting to be conceptually simple and largely
+<em>non-magical</em>. A programmer familiar with Rust should be able to understand how
+druid works without special difficulty.</p>
+<h2><a class="header" href="#goals-and-status" id="goals-and-status">Goals and Status</a></h2>
+<p>The current goal of druid is to make it easy to write a program in Rust that
+can present a GUI and accept user input. Running your program should be as
+simple as <code>cargo run</code>.</p>
+<h2><a class="header" href="#key-concepts" id="key-concepts">Key Concepts</a></h2>
+<ul>
+<li><strong><a href="./data.html">the <code>Data</code> trait</a></strong>: How you represent your application model.</li>
+<li><strong><a href="./widget.html">the <code>Widget</code> trait</a></strong>: How you represent your UI.</li>
+<li><strong><a href="./lens.html">the <code>Lens</code> trait</a></strong>: How you associate parts of your model with parts of
+your UI.</li>
+</ul>
 
                     </main>
 

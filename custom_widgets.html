@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Draw the user interface - Druid</title>
+        <title>Widgets in depth (TODO) - Druid</title>
         
 
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div id="sidebar-scrollbox" class="sidebar-scrollbox">
-                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction to Druid</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="drawing.html" class="active"><strong aria-hidden="true">4.</strong> Draw the user interface</a></li><li class="expanded "><a href="user_input.html"><strong aria-hidden="true">5.</strong> Handling user input</a></li><li class="expanded "><a href="state.html"><strong aria-hidden="true">6.</strong> Handling state</a></li><li class="expanded "><a href="widgets.html"><strong aria-hidden="true">7.</strong> Create custom widgets</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">8.</strong> More information</a></li></ol>
+                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env (TODO)</a></li><li class="expanded "><a href="localization.html"><strong aria-hidden="true">8.</strong> Localization (TODO)</a></li><li class="expanded "><a href="command.html"><strong aria-hidden="true">9.</strong> Command (TODO)</a></li><li class="expanded "><a href="custom_widgets.html" class="active"><strong aria-hidden="true">10.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">11.</strong> More information</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -148,21 +148,29 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#draw-the-user-interface" id="draw-the-user-interface">Draw the user interface</a></h1>
-<p>This chapter will describe how to build up your user interface</p>
+                        <h1><a class="header" href="#create-custom-widgets" id="create-custom-widgets">Create custom widgets</a></h1>
+<pre><code>- controller, painter
+- how to do layout
+- container widgets
+- widgetpod &amp; architecture
+- commands and widgetid
+- focus / active / hot
+- request paint &amp; request layout
+- changing widgets at runtime
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="get_started.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="command.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="user_input.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="more_information.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -174,13 +182,13 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="get_started.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="command.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="user_input.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="more_information.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

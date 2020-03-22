@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Set up Druid - Druid</title>
+        <title>Widget trait - Druid</title>
         
 
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div id="sidebar-scrollbox" class="sidebar-scrollbox">
-                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="expanded "><a href="setup.html" class="active"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env (TODO)</a></li><li class="expanded "><a href="localization.html"><strong aria-hidden="true">8.</strong> Localization (TODO)</a></li><li class="expanded "><a href="command.html"><strong aria-hidden="true">9.</strong> Command (TODO)</a></li><li class="expanded "><a href="custom_widgets.html"><strong aria-hidden="true">10.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">11.</strong> More information</a></li></ol>
+                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="expanded "><a href="widget.html" class="active"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env (TODO)</a></li><li class="expanded "><a href="localization.html"><strong aria-hidden="true">8.</strong> Localization (TODO)</a></li><li class="expanded "><a href="command.html"><strong aria-hidden="true">9.</strong> Command (TODO)</a></li><li class="expanded "><a href="custom_widgets.html"><strong aria-hidden="true">10.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">11.</strong> More information</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -148,49 +148,144 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#set-up-druid" id="set-up-druid">Set up Druid</a></h1>
-<p>This tutorial assumes basic familliarity with Rust and a working setup with the basic tooling like
-Rustup and Cargo. This tutorial will use stable Rust (v1.39.0 at the time of writing) and the latest
-released version of Druid.</p>
-<p>This tutorial will first walk you through setting up the dependencies for developing a Druid
-application, then it will show you how to set up a basic application, build it and run it.</p>
-<h2><a class="header" href="#setting-up-druid-dependencies" id="setting-up-druid-dependencies">Setting up Druid dependencies</a></h2>
-<p>In addition to including the druid library in your project</p>
-<h3><a class="header" href="#macos" id="macos">macOS</a></h3>
-<p>On macOS, druid requires <a href="https://www.cairographics.org">cairo</a>; if you use homebrew, <code>brew install cairo</code>
-should be sufficient. Removing this dependency is on the roadmap.</p>
-<h3><a class="header" href="#linux" id="linux">Linux</a></h3>
-<p>On Linux, druid requires gtk+3.</p>
-<p>On Ubuntu this can be installed with</p>
-<pre><code class="language-no_compile">sudo apt-get install libgtk-3-dev
-</code></pre>
-<p>On Fedora</p>
-<pre><code class="language-no_compile">sudo dnf install gtk3-devel glib2-devel
-</code></pre>
-<p>See <a href="http://gtk-rs.org/docs/requirements.html">gtk-rs dependencies</a> for more installation instructions.</p>
-<h2><a class="header" href="#starting-a-project" id="starting-a-project">Starting a project</a></h2>
-<p>Starting a project is as easy as creating an empty application with</p>
-<pre><code class="language-no_compile">cargo new my-application
-</code></pre>
-<p>and adding the druid dependency to your Cargo.toml</p>
-<pre><code class="language-no_compile">[dependencies]
-druid = &quot;0.5.0&quot;
-// or:
-druid = { git = &quot;https://github.com/xi-editor/druid.git&quot;, branch = &quot;master&quot; }
-</code></pre>
+                        <h1><a class="header" href="#widgets-and-the-widget-trait" id="widgets-and-the-widget-trait">Widgets and the <code>Widget</code> trait</a></h1>
+<p>The <code>Widget</code> trait represents components of your UI. Druid includes a set of
+built-in widgets, and you can also write your own. You combine the built-in
+and custom widgets to create a <em>widget tree</em>; you will start with some single
+<em>root widget</em>, which will (generally) have children, which may themselves have
+children, and so on. <code>Widget</code> has a generic parameter <code>T</code> that represents
+the <a href="./data.html"><code>Data</code></a> handled by that widget. Some widgets (such as layout widgets)
+may be entirely agnostic about what sort of <code>Data</code> they encounter, while other
+widgets (such as a slider) may expect a single type (such as <code>f64</code>).</p>
+<blockquote>
+<p><strong>Note</strong>: For more information on how different parts of your <a href="./data.html"><code>Data</code></a> are exposed
+to different widgets, see <a href="./lens.html"><code>Lens</code></a>.</p>
+</blockquote>
+<p>At a high level, druid works like this:</p>
+<ul>
+<li><strong>event</strong>: an <code>Event</code> arrives from the operating system, such as a key press,
+a mouse movement, or a timer firing. This event is delivered to your root
+widget's <code>event</code> method. This method is provided <strong>mutable</strong> access to your
+application model; this is the only place where your model can change. Depending
+on the type of <code>Event</code> and the implementation of your <code>event</code> method, this
+event is then delivered recursively down the tree until it is handled.</li>
+<li><strong>update</strong>: After this call returns, the framework checks to see if the data was mutated.
+If so, it calls your root widget's <code>update</code> method, passing in both the new
+data as well as the previous data. Your widget can then update any internal
+state (data that the widget uses that is not part of the application model,
+such as appearance data) and can request a <code>layout</code> or a <code>paint</code> call if
+its appearance is no longer valid.</li>
+<li>After <code>update</code> returns, the framework checks to see if any widgets in a
+given window have indicated that they need layout or paint. If so, the
+framework will call the following methods:</li>
+<li><strong>layout</strong>: This is where the framework determines where to position each
+widget on the screen. Druid uses a layout system heavily inspired by Flutter's
+<a href="https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html">box layout model</a>: widgets are passed constraints, in the form of a minimum
+and a maximum allowed size, and they return a size in that range.</li>
+<li><strong>paint</strong>: After <code>layout</code>, the framework calls your widget's <code>paint</code> method.
+This is where your widget draws itself, using a familiar imperative 2D graphics
+API.</li>
+<li>In addition to these four methods, there is also <strong>lifecycle</strong>, which is
+called in response to various changes to framework state; it is not called
+predictably during event handling, but only when extra information (such
+as if a widget has gained focus) happens as a consequence of other events.</li>
+</ul>
+<p>For more information on implementing these methods, see <a href="./custom_widgets.html">Creating custom
+widgets</a>.</p>
+<h2><a class="header" href="#modularity-and-composition" id="modularity-and-composition">Modularity and composition</a></h2>
+<p>Widgets are intended to be modular and composable, not monolithic. For instance,
+widgets generally do not control their own alignment or padding; if you have
+a button, and you would like it to have 8px of horizontal padding and 4px of
+vertical padding, you can just do,</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>use druid::widget::{Button, Padding};
+
+fn padded_button&lt;T&gt;() -&gt; impl Widget&lt;T&gt; {
+    let button = Button::new(&quot;Humour me&quot;, Button::NOOP);
+    let padded = Padding::new(button, (4.0, 8.0));
+    padded
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>to force the button to be aligned center-left if it is given extra space you can
+write,</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>use druid::widget::Align;
+
+fn align_center&lt;T&gt;(widget: impl Widget&lt;T&gt;) -&gt; impl Widget&lt;T&gt; {
+    Align::center(widget)
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#builder-methods-and-widgetext" id="builder-methods-and-widgetext">Builder methods and <code>WidgetExt</code></a></h2>
+<p>Widgets are generally constructed using builder-style methods. Unlike the normal
+<a href="https://doc.rust-lang.org/1.0.0/style/ownership/builders.html">builder pattern</a>, we generally do not separate the type that is
+built from the builder type; instead the builder methods are on the widget
+itself.</p>
+<pre><pre class="playpen"><code class="language-rust">use druid::widget::Stepper;
+
+fn main() {
+    // a Stepper with default paramaters
+    let stepper1 = Stepper::new();
+
+    // A Stepper that operates over a custom range
+    let stepper2 = Stepper::new().with_range(10.0, 50.0);
+
+    // A Stepper with a custom range *and* a custom step size, that
+    // wraps around past its min and max values:
+    let stepper3 = Stepper::new()
+        .with_range(10.0, 50.0)
+        .with_step(2.5)
+        .with_wraparound(true);
+}
+</code></pre></pre>
+<p>Additionally, there are a large number of helper methods available on all
+widgets, as part of the <code>WidgetExt</code> trait. These builder-style methods take one
+widget and wrap it in another. The following two functions produce the same
+output:</p>
+<pre><pre class="playpen"><code class="language-rust">use druid::widget::{Stepper, WidgetExt};
+
+fn explicit() {
+    let stepper = Stepper::new().with_rang(10.0, 50.0);
+    let padding = Padding::new(stepper, 8.0);
+    let padded_and_center_aligned_stepper = Align::center(padding);
+}
+
+fn main() {
+    let padded_and_center_aligned_stepper = Stepper::new()
+        .with_range(10.0, 50.0)
+        .padding(8.0)
+        .center();
+}
+</code></pre></pre>
+<p>These builder-style methods also exist on containers. For instance, to create
+a stack of three labels, you can do:</p>
+<pre><pre class="playpen"><code class="language-rust">use druid::widget::{Label, Flex};
+
+fn main() {
+    let vstack = Flex::column()
+        .with_child(Label::new(&quot;Number One&quot;))
+        .with_child(Label::new(&quot;Number Two&quot;))
+        .with_child(Label::new(&quot;Some Other Number&quot;));
+}
+</code></pre></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="intro.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="data.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="get_started.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="lens.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -202,13 +297,13 @@ druid = { git = &quot;https://github.com/xi-editor/druid.git&quot;, branch = &qu
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="intro.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="data.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="get_started.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="lens.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
