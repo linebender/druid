@@ -102,6 +102,14 @@ impl BoxConstraints {
             log::warn!("Bad BoxConstraints passed to {}:", name);
             log::warn!("{:?}", self);
         }
+
+        if self.min.width.is_infinite() {
+            log::warn!("Infinite minimum width constraint passed to {}:", name);
+        }
+
+        if self.min.height.is_infinite() {
+            log::warn!("Infinite minimum height constraint passed to {}:", name);
+        }
     }
 
     /// Shrink min and max constraints by size
