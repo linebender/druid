@@ -204,7 +204,7 @@ pub(crate) enum Axis {
 ///
 /// If a widget is smaller than the container on the minor axis, this determines
 /// where it is positioned.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Data)]
 pub enum CrossAxisAlignment {
     /// Top or leading.
     ///
@@ -224,7 +224,7 @@ pub enum CrossAxisAlignment {
 ///
 /// If there is surplus space on the main axis after laying out children, this
 /// enum represents how children are laid out in this space.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Data)]
 pub enum MainAxisAlignment {
     /// Top or leading.
     ///
@@ -697,20 +697,6 @@ impl Spacing {
     fn assert_finite(self) -> Self {
         assert!(self.pre.is_finite() && self.between.is_finite() && self.post.is_finite());
         self
-    }
-}
-
-// we have these impls mostly for our 'flex' example, but I could imagine
-// them being broadly useful?
-impl Data for MainAxisAlignment {
-    fn same(&self, other: &MainAxisAlignment) -> bool {
-        self == other
-    }
-}
-
-impl Data for CrossAxisAlignment {
-    fn same(&self, other: &CrossAxisAlignment) -> bool {
-        self == other
     }
 }
 
