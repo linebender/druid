@@ -48,13 +48,13 @@ widgets].
 
 Widgets are intended to be modular and composable, not monolithic. For instance,
 widgets generally do not control their own alignment or padding; if you have
-a button, and you would like it to have 8px of horizontal padding and 4px of
+a label, and you would like it to have 8px of horizontal padding and 4px of
 vertical padding, you can just do,
 
 ```rust,noplaypen
-{{#include ../book_examples/src/widget_md.rs:padded_button}}
+{{#include ../book_examples/src/widget_md.rs:padded_label}}
 ```
-to force the button to be center-aligned if it is given extra space you can write,
+to force the label to be center-aligned if it is given extra space you can write,
 
 ```rust,noplaypen
 {{#include ../book_examples/src/widget_md.rs:align_center}}
@@ -76,7 +76,7 @@ widgets, as part of the `WidgetExt` trait. These builder-style methods take one
 widget and wrap it in another. The following two functions produce the same
 output:
 
-**Exlicit**:
+**Explicit**:
 ```rust,noplaypen
 {{#include ../book_examples/src/widget_md.rs:padded_stepper_raw}}
 ```

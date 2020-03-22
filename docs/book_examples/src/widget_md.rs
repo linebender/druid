@@ -1,19 +1,18 @@
-use druid::Data;
+// ANCHOR: padded_label
+use druid::widget::{Label, Padding};
 
-// ANCHOR: padded_button
-use druid::widget::{Button, Padding, Widget};
-
-fn padded_button<T: Data>() -> impl Widget<T> {
-    let button = Button::new("Humour me", Button::noop);
-    Padding::new((4.0, 8.0), button)
+fn padded_label() {
+    let label: Label<()> = Label::new("Humour me");
+    let padded = Padding::new((4.0, 8.0), label);
 }
-// ANCHOR_END: padded_button
+// ANCHOR_END: padded_label
 
 // ANCHOR: align_center
 use druid::widget::Align;
 
-fn align_center<T: Data>(widget: impl Widget<T> + 'static) -> impl Widget<T> {
-    Align::centered(widget)
+fn align_center() {
+    let label: Label<()> = Label::new("Center me");
+    let centered = Align::centered(label);
 }
 // ANCHOR_END: align_center
 
@@ -21,7 +20,7 @@ fn align_center<T: Data>(widget: impl Widget<T> + 'static) -> impl Widget<T> {
 use druid::widget::Stepper;
 
 fn steppers() {
-    // a Stepper with default paramaters
+    // A Stepper with default parameters
     let stepper1 = Stepper::new();
 
     // A Stepper that operates over a custom range
@@ -62,7 +61,7 @@ fn padded_stepper() {
 }
 
 // ANCHOR: flex_builder
-use druid::widget::{Flex, Label};
+use druid::widget::Flex;
 
 fn flex_builder() -> Flex<()> {
     Flex::column()
