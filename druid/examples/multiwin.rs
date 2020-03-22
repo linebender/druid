@@ -72,12 +72,21 @@ fn ui_builder() -> impl Widget<State> {
         ctx.set_menu(make_menu::<State>(data));
     });
 
+    let inc_button1 = Button::<State>::new("Add menu item via delegate", |ctx, data, _env| {
+        data.menu_count += 1;
+        ctx.submit_command(MENU_INCREMENT_ACTION, ctx.window_id())
+    });
+    let dec_button1 = Button::<State>::new("Remove menu item via delegate", |ctx, data, _env| {
+        data.menu_count = data.menu_count.saturating_sub(1);
+        ctx.submit_command(MENU_DECREMENT_ACTION, ctx.window_id())
+    });
+
     let mut col = Flex::column();
     col.add_flex_child(Align::centered(Padding::new(5.0, label)), 1.0);
-    let mut row = Flex::row();
-    row.add_child(Padding::new(5.0, inc_button));
-    row.add_child(Padding::new(5.0, dec_button));
-    col.add_flex_child(Align::centered(row), 1.0);
+    col.add_child(Padding::new(5.0, inc_button));
+    col.add_child(Padding::new(5.0, dec_button));
+    col.add_child(Padding::new(5.0, inc_button1));
+    col.add_child(Padding::new(5.0, dec_button1));
     col
 }
 
