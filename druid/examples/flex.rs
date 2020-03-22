@@ -169,6 +169,7 @@ fn make_control_row() -> impl Widget<AppState> {
                 .with_child(Checkbox::new("Fix minor axis size").lens(Params::fix_minor_axis))
                 .with_spacer(10.)
                 .with_child(Checkbox::new("Fix major axis size").lens(Params::fix_major_axis))
+                .cross_axis_alignment(CrossAxisAlignment::Start)
                 .padding(5.0),
         )
         .border(Color::grey(0.6), 2.0)

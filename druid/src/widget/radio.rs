@@ -16,10 +16,10 @@
 
 use crate::kurbo::{Circle, Point, Rect, Size};
 use crate::theme;
-use crate::widget::{Flex, Label, LabelText, Padding};
+use crate::widget::{Flex, Label, LabelText, Padding, CrossAxisAlignment};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
-    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget, WidgetExt, WidgetPod,
+    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget, WidgetExt, WidgetPod
 };
 
 /// A group of radio buttons
@@ -30,13 +30,13 @@ impl RadioGroup {
     /// Given a vector of `(label_text, enum_variant)` tuples, create a group of Radio buttons
     pub fn new<T: Data + PartialEq>(
         variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T)>,
-    ) -> impl Widget<T> {
+    ) -> Flex<T> {
         let mut col = Flex::column();
         for (label, variant) in variants.into_iter() {
             let radio = Radio::new(label, variant);
             col.add_child(Padding::new(5.0, radio));
         }
-        col
+        col.cross_axis_alignment(CrossAxisAlignment::Start)
     }
 }
 
