@@ -19,8 +19,14 @@ use druid::{
     WindowDesc,
 };
 
-use druid::{widget::{CrossAxisAlignment, Flex, Label, Painter, Padding, MainAxisAlignment}, UnitPoint,};
-use druid::{Point, piet::{FixedLinearGradient, GradientStop}};
+use druid::{
+    piet::{FixedLinearGradient, GradientStop},
+    Point,
+};
+use druid::{
+    widget::{CrossAxisAlignment, Flex, Label, MainAxisAlignment, Padding, Painter},
+    UnitPoint,
+};
 
 #[derive(Clone, Data, Lens)]
 struct CalcState {
@@ -183,7 +189,6 @@ fn flex_row3<T: Data>(
         .with_flex_child(Padding::new(1., w3), 1.0)
 }
 
-
 fn flex_row4<T: Data>(
     w1: impl Widget<T> + 'static,
     w2: impl Widget<T> + 'static,
@@ -200,13 +205,19 @@ fn flex_row4<T: Data>(
 fn build_calc() -> impl Widget<CalcState> {
     let display_painter = Painter::new(|ctx, _, env| {
         let bounds = ctx.size().to_rect();
-        if let Ok(brush) = ctx.gradient(FixedLinearGradient{ 
-            start: Point::new(0.,0.), 
-            end: Point::new(100.,100.), 
+        if let Ok(brush) = ctx.gradient(FixedLinearGradient {
+            start: Point::new(0., 0.),
+            end: Point::new(100., 100.),
             stops: vec![
-                GradientStop{pos: 0.0, color: Color::from_rgba32_u32(0x227788ff)},
-                GradientStop{pos: 1.0, color: Color::from_rgba32_u32(0x115566ff)},
-                ]
+                GradientStop {
+                    pos: 0.0,
+                    color: Color::from_rgba32_u32(0x225553ff),
+                },
+                GradientStop {
+                    pos: 1.0,
+                    color: Color::from_rgba32_u32(0x113333ff),
+                },
+            ],
         }) {
             ctx.fill(bounds, &brush);
         }
@@ -215,12 +226,14 @@ fn build_calc() -> impl Widget<CalcState> {
         .text_size(32.0)
         .lens(CalcState::value)
         .padding(5.0);
-    let display_row = Padding::new(5., Flex::row()
-        .with_flex_child(display, 0.0)
-        .main_axis_alignment(MainAxisAlignment::End)
-        // .cross_axis_alignment(CrossAxisAlignment::End)
-        .expand_width()
-        .background(display_painter));
+    let display_row = Padding::new(
+        5.,
+        Flex::row()
+            .with_flex_child(display, 0.0)
+            .main_axis_alignment(MainAxisAlignment::End)
+            .expand_width()
+            .background(display_painter),
+    );
     Flex::column()
         .with_flex_spacer(0.1)
         .with_child(display_row)
