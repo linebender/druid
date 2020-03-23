@@ -25,7 +25,7 @@ use druid::{
 };
 use druid::{
     widget::{CrossAxisAlignment, Flex, Label, MainAxisAlignment, Padding, Painter},
-    UnitPoint,
+    Insets, UnitPoint,
 };
 
 #[derive(Clone, Data, Lens)]
@@ -179,10 +179,11 @@ fn flex_row3<T: Data>(
     w2: impl Widget<T> + 'static,
     w3: impl Widget<T> + 'static,
 ) -> impl Widget<T> {
+    let insets = Insets::new(1., 1., 0., 0.);
     Flex::row()
-        .with_flex_child(Padding::new(1., w1), 2.0)
-        .with_flex_child(Padding::new(1., w2), 1.0)
-        .with_flex_child(Padding::new(1., w3), 1.0)
+        .with_flex_child(Padding::new(insets.clone(), w1), 2.0)
+        .with_flex_child(Padding::new(insets.clone(), w2), 1.0)
+        .with_flex_child(Padding::new(insets, w3), 1.0)
 }
 
 fn flex_row4<T: Data>(
@@ -191,11 +192,12 @@ fn flex_row4<T: Data>(
     w3: impl Widget<T> + 'static,
     w4: impl Widget<T> + 'static,
 ) -> impl Widget<T> {
+    let insets = Insets::new(1., 1., 0., 0.);
     Flex::row()
-        .with_flex_child(Padding::new(1., w1), 1.0)
-        .with_flex_child(Padding::new(1., w2), 1.0)
-        .with_flex_child(Padding::new(1., w3), 1.0)
-        .with_flex_child(Padding::new(1., w4), 1.0)
+        .with_flex_child(Padding::new(insets.clone(), w1), 1.0)
+        .with_flex_child(Padding::new(insets.clone(), w2), 1.0)
+        .with_flex_child(Padding::new(insets.clone(), w3), 1.0)
+        .with_flex_child(Padding::new(insets, w4), 1.0)
 }
 
 fn build_calc() -> impl Widget<CalcState> {
@@ -243,7 +245,6 @@ fn build_calc() -> impl Widget<CalcState> {
             ),
             1.0,
         )
-        .with_spacer(1.0)
         .with_flex_child(
             flex_row4(
                 digit_button(7),
@@ -253,7 +254,6 @@ fn build_calc() -> impl Widget<CalcState> {
             ),
             1.0,
         )
-        .with_spacer(1.0)
         .with_flex_child(
             flex_row4(
                 digit_button(4),
@@ -263,7 +263,6 @@ fn build_calc() -> impl Widget<CalcState> {
             ),
             1.0,
         )
-        .with_spacer(1.0)
         .with_flex_child(
             flex_row4(
                 digit_button(1),
@@ -273,7 +272,6 @@ fn build_calc() -> impl Widget<CalcState> {
             ),
             1.0,
         )
-        .with_spacer(1.0)
         .with_flex_child(
             flex_row4(
                 op_button('±'),
