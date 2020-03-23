@@ -26,9 +26,6 @@ use crate::{
     PaintCtx, Target, UpdateCtx, Widget, WidgetId,
 };
 
-/// Convenience type for dynamic boxed widget.
-pub type BoxedWidget<T> = WidgetPod<T, Box<dyn Widget<T>>>;
-
 /// Our queue type
 pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
 
@@ -607,7 +604,7 @@ impl<T, W: Widget<T> + 'static> WidgetPod<T, W> {
     ///
     /// Convert a `WidgetPod` containing a widget of a specific concrete type
     /// into a dynamically boxed widget.
-    pub fn boxed(self) -> BoxedWidget<T> {
+    pub fn boxed(self) -> WidgetPod<T, Box<dyn Widget<T>>> {
         WidgetPod::new(Box::new(self.inner))
     }
 }

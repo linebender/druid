@@ -141,7 +141,7 @@ pub use shell::{
     SysMods, Text, TimerToken, WindowHandle,
 };
 
-pub use crate::core::{BoxedWidget, WidgetPod};
+pub use crate::core::WidgetPod;
 pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
