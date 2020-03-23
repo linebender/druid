@@ -131,14 +131,10 @@ impl ImageData {
 
     /// Load an image from a DynamicImage from the image crate
     pub fn from_dynamic_image(image_data: image::DynamicImage) -> ImageData {
-        match image_data.color() {
-            image::ColorType::RGBA(_) | image::ColorType::BGRA(_) | image::ColorType::GrayA(_) => {
-                Self::from_dynamic_image_with_alpha(image_data)
-            }
-            image::ColorType::RGB(_)
-            | image::ColorType::Gray(_)
-            | image::ColorType::Palette(_)
-            | image::ColorType::BGR(_) => Self::from_dynamic_image_without_alpha(image_data),
+        if has_alpha_channel(&image_data) {
+            Self::from_dynamic_image_with_alpha(image_data)
+        } else {
+            Self::from_dynamic_image_without_alpha(image_data)
         }
     }
 
@@ -200,6 +196,14 @@ impl ImageData {
                 .unwrap();
             ctx.draw_image(&im, size.to_rect(), interpolation);
         })
+    }
+}
+
+fn has_alpha_channel(image: &image::DynamicImage) -> bool {
+    use image::ColorType::*;
+    match image.color() {
+        La8 | Rgba8 | La16 | Rgba16 | Bgra8 => true,
+        _ => false,
     }
 }
 
