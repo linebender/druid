@@ -1,11 +1,39 @@
+// Copyright 2020 The xi-editor Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use crate::{widget::prelude::*, Data};
 
+/// A widget that allows writing parts of the ui in an immediate-mode style.
+///
+/// The primary usecase for this is displaying data that doesn't fit into druids model, such as
+/// enums you have no control over.
+///
+/// Whenever the state represented by the `Immediate` changes,
+/// it will reconstruct its content for the new data.
+///
+/// While this is not the most efficient thing to do, it is very simple and performs perfectly fine
+/// for small or rarely changed data.
+///
+/// Note that this is more like a last resort when the data to be represented is in a for druid particularly
+/// unfitting format.
 pub struct Immediate<D, W: Widget<()>> {
     constructor: Box<dyn Fn(&D) -> W>,
     content: Option<W>,
 }
 
 impl<D, W: Widget<()>> Immediate<D, W> {
+    /// Takes a constructor for a stateless widget
     pub fn new(constructor: impl Fn(&D) -> W + 'static) -> Self {
         Self {
             constructor: Box::new(constructor),
