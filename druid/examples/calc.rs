@@ -99,10 +99,6 @@ impl CalcState {
                     self.value.push('.');
                 }
             }
-            'c' => {
-                self.value = "0".to_string();
-                self.in_num = false;
-            }
             'C' => {
                 self.value = "0".to_string();
                 self.operator = 'C';
@@ -241,8 +237,7 @@ fn build_calc() -> impl Widget<CalcState> {
         .cross_axis_alignment(CrossAxisAlignment::End)
         .with_flex_child(
             flex_row3(
-                op_button_label('c', "CE".to_string()),
-                // op_button('C'),
+                op_button_label('C', "AC".to_string()),
                 op_button('⌫'),
                 op_button('÷'),
             ),
