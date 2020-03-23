@@ -40,7 +40,6 @@ enum CodepointState {
 
 fn backspace_word_offset(text: &impl EditableText, start: usize) -> usize {
     let mut state = CodepointState::Start;
-    let mut state0 = CodepointState::Start;
     let mut delete_code_point_count = 0;
     let mut delete_from_whitespace = false;
     let mut cursor = text
