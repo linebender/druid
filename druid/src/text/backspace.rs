@@ -52,7 +52,7 @@ fn backspace_word_offset(text: &impl EditableText, start: usize) -> usize {
                 delete_code_point_count += 1;
                 if code_point == '\n' {
                     state = CodepointState::Lf;
-                } else if is_whitespace(&code_point) {
+                } else if is_whitespace(code_point) {
                     delete_from_whitespace = true;
                     state = CodepointState::BeforeWhitespace;
                 } else {
@@ -67,14 +67,14 @@ fn backspace_word_offset(text: &impl EditableText, start: usize) -> usize {
                 state = CodepointState::Finished;
             }
             CodepointState::BeforeWhitespace => {
-                if is_whitespace(&code_point) && delete_from_whitespace {
+                if is_whitespace(code_point) && delete_from_whitespace {
                     delete_code_point_count += 1;
                 } else {
                     state = CodepointState::Finished
                 }
             }
             CodepointState::BeforeNonSpace => {
-                if is_whitespace(&code_point) {
+                if is_whitespace(code_point) {
                     delete_code_point_count += 1;
                     state = CodepointState::Finished;
                 } else {
@@ -278,6 +278,6 @@ const UNICODE_SPACES: [char; 20] = [
     '\u{202F}', '\u{205F}', '\u{3000}', '\u{FEFF}',
 ];
 
-pub fn is_whitespace(c: &char) -> bool {
-    UNICODE_SPACES.contains(c)
+pub fn is_whitespace(c: char) -> bool {
+    UNICODE_SPACES.contains(&c)
 }
