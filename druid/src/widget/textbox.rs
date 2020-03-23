@@ -502,8 +502,8 @@ mod tests {
 
         widget.insert(&mut data, "\u{0073}\u{006F}\u{0337}\u{0073}");
 
-        widget.delete_backward(&mut data);
-        widget.delete_backward(&mut data);
+        widget.delete_backward(&mut data, false);
+        widget.delete_backward(&mut data, false);
 
         assert_eq!(data, String::from("\u{0073}\u{006F}"))
     }
@@ -513,19 +513,55 @@ mod tests {
     fn backspace_devanagari() {
         let mut widget = TextBox::new();
         let mut data = "".to_string();
-
         widget.insert(&mut data, "हिन्दी");
-        widget.delete_backward(&mut data);
+        widget.delete_backward(&mut data, false);
         assert_eq!(data, String::from("हिन्द"));
-        widget.delete_backward(&mut data);
+        widget.delete_backward(&mut data, false);
         assert_eq!(data, String::from("हिन्"));
-        widget.delete_backward(&mut data);
+        widget.delete_backward(&mut data, false);
         assert_eq!(data, String::from("हिन"));
-        widget.delete_backward(&mut data);
+        widget.delete_backward(&mut data, false);
         assert_eq!(data, String::from("हि"));
-        widget.delete_backward(&mut data);
+        widget.delete_backward(&mut data, false);
         assert_eq!(data, String::from("ह"));
-        widget.delete_backward(&mut data);
+        widget.delete_backward(&mut data, false);
+        assert_eq!(data, String::from(""));
+    }
+    #[test]
+    fn backspace_chinese() {
+        let mut widget = TextBox::new();
+        let mut data = "".to_string();
+        widget.insert(&mut data, "己所不欲，勿施于人");
+        widget.delete_backward(&mut data, false);
+        assert_eq!(data, String::from("己所不欲，勿施于"));
+        widget.delete_backward(&mut data, false);
+        assert_eq!(data, String::from("己所不欲，勿施"));
+        widget.delete_backward(&mut data, false);
+        assert_eq!(data, String::from("己所不欲，勿"));
+        widget.delete_backward(&mut data, false);
+        assert_eq!(data, String::from("己所不欲，"));
+        widget.delete_backward(&mut data, false);
+        assert_eq!(data, String::from("己所不欲"));
+        widget.delete_backward(&mut data, false);
+        assert_eq!(data, String::from("己所不"));
+        widget.delete_backward(&mut data, false);
+        assert_eq!(data, String::from("己所"));
+        widget.delete_backward(&mut data, false);
+        assert_eq!(data, String::from("己"));
+        widget.delete_backward(&mut data, false);
+        assert_eq!(data, String::from(""));
+    }
+
+    #[test]
+    fn backspace_chinese_word() {
+        let mut widget = TextBox::new();
+        let mut data = "".to_string();
+        widget.insert(&mut data, "己所不欲 勿施于人 ");
+        widget.delete_backward(&mut data, true);
+        assert_eq!(data, String::from("己所不欲 勿施于人"));
+        widget.delete_backward(&mut data, true);
+        assert_eq!(data, String::from("己所不欲"));
+        widget.delete_backward(&mut data, true);
         assert_eq!(data, String::from(""));
     }
 }
