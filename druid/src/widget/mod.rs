@@ -318,4 +318,8 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
     fn id(&self) -> Option<WidgetId> {
         self.deref().id()
     }
+
+    fn type_name(&self) -> &'static str {
+        self.deref().type_name()
+    }
 }
