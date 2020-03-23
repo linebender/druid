@@ -199,7 +199,7 @@ fn flex_row4<T: Data>(
 }
 
 fn build_calc() -> impl Widget<CalcState> {
-    let display_painter = Painter::new(|ctx, _, env| {
+    let display_painter = Painter::new(|ctx, _, _env| {
         let bounds = ctx.size().to_rect();
         if let Ok(brush) = ctx.gradient(FixedLinearGradient {
             start: Point::new(0., 0.),
