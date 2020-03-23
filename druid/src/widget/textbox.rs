@@ -27,7 +27,10 @@ use crate::piet::{
 };
 use crate::theme;
 
-use crate::text::{movement, offset_for_delete_backwards, EditableText, Movement, Selection};
+use crate::text::{
+    movement, offset_for_delete_backwards, offset_for_delete_word_backwards, EditableText,
+    Movement, Selection,
+};
 
 const BORDER_WIDTH: f64 = 1.;
 const PADDING_TOP: f64 = 5.;
@@ -126,10 +129,14 @@ impl TextBox {
 
     /// Delete to previous grapheme if in caret mode.
     /// Otherwise just delete everything inside the selection.
-    fn delete_backward(&mut self, text: &mut String) {
+    fn delete_backward(&mut self, text: &mut String, by_word: bool) {
         if self.selection.is_caret() {
             let cursor = self.cursor();
-            let new_cursor = offset_for_delete_backwards(&self.selection, text);
+            let new_cursor = if by_word {
+                offset_for_delete_word_backwards(&self.selection, text)
+            } else {
+                offset_for_delete_backwards(&self.selection, text)
+            };
             text.edit(new_cursor..cursor, "");
             self.caret_to(text, new_cursor);
         } else {
@@ -243,7 +250,7 @@ impl Widget<String> for TextBox {
                     Application::clipboard().put_string(text);
                 }
                 if !self.selection.is_caret() && cmd.selector == crate::commands::CUT {
-                    self.delete_backward(data);
+                    self.delete_backward(data, false);
                 }
                 ctx.set_handled();
             }
@@ -295,7 +302,11 @@ impl Widget<String> for TextBox {
                     }
                     // Backspace
                     k_e if (HotKey::new(None, KeyCode::Backspace)).matches(k_e) => {
-                        self.delete_backward(data);
+                        self.delete_backward(data, false);
+                        self.reset_cursor_blink(ctx);
+                    }
+                    k_e if (HotKey::new(SysMods::Cmd, KeyCode::Backspace)).matches(k_e) => {
+                        self.delete_backward(data, true);
                         self.reset_cursor_blink(ctx);
                     }
                     // Delete
@@ -304,10 +315,10 @@ impl Widget<String> for TextBox {
                             // Never touch the characters before the cursor.
                             if data.next_grapheme_offset(self.cursor()).is_some() {
                                 self.move_selection(Movement::Right, data, false);
-                                self.delete_backward(data);
+                                self.delete_backward(data, false);
                             }
                         } else {
-                            self.delete_backward(data);
+                            self.delete_backward(data, false);
                         }
                         self.reset_cursor_blink(ctx);
                     }

@@ -24,4 +24,4 @@ pub mod movement;
 pub use self::movement::{movement, Movement};
 
 pub mod backspace;
-pub use self::backspace::offset_for_delete_backwards;
+pub use self::backspace::{offset_for_delete_backwards, offset_for_delete_word_backwards};
