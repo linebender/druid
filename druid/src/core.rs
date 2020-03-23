@@ -328,6 +328,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ) -> Size {
         layout_ctx.paint_insets = Insets::ZERO;
         let size = self.inner.layout(layout_ctx, bc, data, &env);
+
+        if size.width.is_infinite() {
+            let name = self.widget().type_name();
+            log::warn!("Widget `{}` has an infinite width.", name);
+        }
+
+        if size.height.is_infinite() {
+            let name = self.widget().type_name();
+            log::warn!("Widget `{}` has an infinite height.", name);
+        }
+
         self.state.paint_insets = layout_ctx.paint_insets;
         self.state.needs_layout = false;
         size

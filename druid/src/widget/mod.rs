@@ -252,6 +252,13 @@ pub trait Widget<T> {
     fn id(&self) -> Option<WidgetId> {
         None
     }
+
+    #[doc(hidden)]
+    /// Get the (verbose) type name of the widget for debugging purposes.
+    /// You should not override this method.
+    fn type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
 }
 
 impl WidgetId {
@@ -312,5 +319,9 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 
     fn id(&self) -> Option<WidgetId> {
         self.deref().id()
+    }
+
+    fn type_name(&self) -> &'static str {
+        self.deref().type_name()
     }
 }

@@ -552,6 +552,15 @@ impl<T: Data> Widget<T> for Flex<T> {
                     .direction
                     .constraints(&loosened_bc, 0., std::f64::INFINITY);
                 let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
+
+                if child_size.width.is_infinite() {
+                    log::warn!("A non-Flex child has an infinite width.");
+                }
+
+                if child_size.height.is_infinite() {
+                    log::warn!("A non-Flex child has an infinite height.");
+                }
+
                 minor = minor.max(self.direction.minor(child_size));
                 total_non_flex += self.direction.major(child_size);
                 // Stash size.
@@ -573,6 +582,7 @@ impl<T: Data> Widget<T> for Flex<T> {
 
                 let child_bc = self.direction.constraints(&loosened_bc, min_major, major);
                 let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
+
                 flex_used += self.direction.major(child_size);
                 minor = minor.max(self.direction.minor(child_size));
                 // Stash size.
