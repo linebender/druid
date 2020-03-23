@@ -253,7 +253,9 @@ pub trait Widget<T> {
         None
     }
 
+    #[doc(hidden)]
     /// Get the (verbose) type name of the widget for debugging purposes.
+    /// You should not override this method.
     fn type_name(&self) -> &'static str {
         std::any::type_name::<Self>()
     }
