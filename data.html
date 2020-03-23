@@ -182,10 +182,10 @@ as well as <code>Option</code>, <code>Result</code>, and various tuples whose me
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]
 </span><span class="boring">fn main() {
-</span><span class="boring">#[derive(Clone, PartialEq)]
-</span><span class="boring">struct DateTime(std::time::Instant);
-</span><span class="boring">use std::sync::Arc;
-</span>#[derive(Clone, Data)]
+</span>use druid::Data;
+use std::sync::Arc;
+
+#[derive(Clone, Data)]
 /// The main model for a todo list application.
 struct TodoList {
     items: Arc&lt;Vec&lt;TodoItem&gt;&gt;,

@@ -313,10 +313,10 @@ as well as <code>Option</code>, <code>Result</code>, and various tuples whose me
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]
 </span><span class="boring">fn main() {
-</span><span class="boring">#[derive(Clone, PartialEq)]
-</span><span class="boring">struct DateTime(std::time::Instant);
-</span><span class="boring">use std::sync::Arc;
-</span>#[derive(Clone, Data)]
+</span>use druid::Data;
+use std::sync::Arc;
+
+#[derive(Clone, Data)]
 /// The main model for a todo list application.
 struct TodoList {
     items: Arc&lt;Vec&lt;TodoItem&gt;&gt;,
@@ -393,41 +393,32 @@ widgets</a>.</p>
 <h2><a class="header" href="#modularity-and-composition" id="modularity-and-composition">Modularity and composition</a></h2>
 <p>Widgets are intended to be modular and composable, not monolithic. For instance,
 widgets generally do not control their own alignment or padding; if you have
-a button, and you would like it to have 8px of horizontal padding and 4px of
+a label, and you would like it to have 8px of horizontal padding and 4px of
 vertical padding, you can just do,</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>use druid::widget::{Button, Padding};
+<pre><code class="language-rust noplaypen">use druid::widget::{Label, Padding};
 
-fn padded_button&lt;T&gt;() -&gt; impl Widget&lt;T&gt; {
-    let button = Button::new(&quot;Humour me&quot;, Button::NOOP);
-    let padded = Padding::new(button, (4.0, 8.0));
-    padded
+fn padded_label() {
+    let label: Label&lt;()&gt; = Label::new(&quot;Humour me&quot;);
+    let padded = Padding::new((4.0, 8.0), label);
 }
-<span class="boring">}
-</span></code></pre></pre>
-<p>to force the button to be aligned center-left if it is given extra space you can
-write,</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>use druid::widget::Align;
+</code></pre>
+<p>to force the label to be center-aligned if it is given extra space you can write,</p>
+<pre><code class="language-rust noplaypen">use druid::widget::Align;
 
-fn align_center&lt;T&gt;(widget: impl Widget&lt;T&gt;) -&gt; impl Widget&lt;T&gt; {
-    Align::center(widget)
+fn align_center() {
+    let label: Label&lt;()&gt; = Label::new(&quot;Center me&quot;);
+    let centered = Align::centered(label);
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h2><a class="header" href="#builder-methods-and-widgetext" id="builder-methods-and-widgetext">Builder methods and <code>WidgetExt</code></a></h2>
 <p>Widgets are generally constructed using builder-style methods. Unlike the normal
 <a href="https://doc.rust-lang.org/1.0.0/style/ownership/builders.html">builder pattern</a>, we generally do not separate the type that is
 built from the builder type; instead the builder methods are on the widget
 itself.</p>
-<pre><pre class="playpen"><code class="language-rust">use druid::widget::Stepper;
+<pre><code class="language-rust noplaypen">use druid::widget::Stepper;
 
-fn main() {
-    // a Stepper with default paramaters
+fn steppers() {
+    // A Stepper with default parameters
     let stepper1 = Stepper::new();
 
     // A Stepper that operates over a custom range
@@ -440,52 +431,50 @@ fn main() {
         .with_step(2.5)
         .with_wraparound(true);
 }
-</code></pre></pre>
+</code></pre>
 <p>Additionally, there are a large number of helper methods available on all
 widgets, as part of the <code>WidgetExt</code> trait. These builder-style methods take one
 widget and wrap it in another. The following two functions produce the same
 output:</p>
-<pre><pre class="playpen"><code class="language-rust">use druid::widget::{Stepper, WidgetExt};
+<p><strong>Explicit</strong>:</p>
+<pre><code class="language-rust noplaypen">use druid::widget::{Align, Padding, Stepper};
 
-fn explicit() {
-    let stepper = Stepper::new().with_rang(10.0, 50.0);
-    let padding = Padding::new(stepper, 8.0);
-    let padded_and_center_aligned_stepper = Align::center(padding);
+fn padded_stepper() {
+    let stepper = Stepper::new().with_range(10.0, 50.0);
+    let padding = Padding::new(8.0, stepper);
+    let padded_and_center_aligned_stepper = Align::centered(padding);
 }
+</code></pre>
+<p><strong>WidgetExt</strong>:</p>
+<pre><code class="language-rust noplaypen">use druid::widget::{Stepper, WidgetExt};
 
-fn main() {
-    let padded_and_center_aligned_stepper = Stepper::new()
-        .with_range(10.0, 50.0)
-        .padding(8.0)
-        .center();
+fn padded_stepper() {
+    let padded_and_center_aligned_stepper =
+        Stepper::new().with_range(10.0, 50.0).padding(8.0).center();
 }
-</code></pre></pre>
+</code></pre>
 <p>These builder-style methods also exist on containers. For instance, to create
 a stack of three labels, you can do:</p>
-<pre><pre class="playpen"><code class="language-rust">use druid::widget::{Label, Flex};
+<pre><code class="language-rust noplaypen">use druid::widget::Flex;
 
-fn main() {
-    let vstack = Flex::column()
+fn flex_builder() -&gt; Flex&lt;()&gt; {
+    Flex::column()
         .with_child(Label::new(&quot;Number One&quot;))
         .with_child(Label::new(&quot;Number Two&quot;))
-        .with_child(Label::new(&quot;Some Other Number&quot;));
+        .with_child(Label::new(&quot;Some Other Number&quot;))
 }
-</code></pre></pre>
+</code></pre>
 <h1><a class="header" href="#lenses-and-the-lens-trait" id="lenses-and-the-lens-trait">Lenses and the <code>Lens</code> trait</a></h1>
 <p>Let's say we're building a todo list application, and we are designing the widget
 that will represent a single todo item. Our data model looks like this:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>/// A single todo item.
+<pre><code class="language-rust noplaypen">/// A single todo item.
 #[derive(Clone, Data)]
 struct TodoItem {
     title: String,
     completed: bool,
     urgent: bool,
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>We would like our widget to display the title of the item, and then below
 that to display two checkmarks that toggle the 'completed' and 'urgent' bools.
 <code>Checkbox</code> (a widget included in druid) implements <code>Widget&lt;bool&gt;</code>.
@@ -495,21 +484,14 @@ How do we use it with <code>TodoItem</code>? By using a <code>Lens</code>.</p>
 have a <code>TodoItem</code>, but you <em>want</em> a <code>bool</code>.</p>
 <p><code>Lens</code> is a trait for types that perform this &quot;focusing in&quot; (aka <em>lensing</em>).
 A simplified version of the <code>Lens</code> trait might look like this:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>trait SimpleLens&lt;In, Out&gt; {
+<pre><code class="language-rust noplaypen">trait SimpleLens&lt;In, Out&gt; {
     fn focus(&amp;self, data: &amp;In) -&gt; Out;
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>That is, this type takes an instance of <code>In</code>, and returns an instance of <code>Out</code>.</p>
 <p>For instance, imagine we wanted a lens to focus onto the <code>completed</code> state of
 our <code>TodoItem</code>. With our simple trait, we might do:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>/// This is the type of the lens itself; in this case it has no state.
+<pre><code class="language-rust noplaypen">/// This is the type of the lens itself; in this case it has no state.
 struct CompletedLens;
 
 impl SimpleLens&lt;TodoItem, bool&gt; for CompletedLens {
@@ -517,8 +499,7 @@ impl SimpleLens&lt;TodoItem, bool&gt; for CompletedLens {
         data.completed
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <blockquote>
 <p><strong>Note</strong>: <code>Lens</code> isn't that helpful on its own; in druid it is generally used alongside
 <code>LensWrap</code>, which is a special widget that uses a <code>Lens</code> to change the <code>Data</code>
@@ -530,17 +511,13 @@ gap.</p>
 they allow mutations that occur on the <em>lensed</em> data to propagate back to the
 source. For this to work, lenses actually work with closures. The real signature
 of <code>Lens</code> looks more like this (names changed for clarity):</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>pub trait Lens&lt;In, Out&gt; {
+<pre><code class="language-rust noplaypen">pub trait Lens&lt;In, Out&gt; {
     /// Get non-mut access to the field.
     fn with&lt;R, F: FnOnce(&amp;Out) -&gt; R&gt;(&amp;self, data: &amp;In, f: F) -&gt; R;
     /// Get mut access to the field.
     fn with_mut&lt;R, F: FnOnce(&amp;mut Out) -&gt; R&gt;(&amp;self, data: &amp;mut In, f: F) -&gt; R;
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>Here <code>In</code> refers to the input to the <code>Lens</code> and <code>Out</code> is the output. <code>F</code> is a
 closure that can return a result, <code>R</code>.</p>
 <p>Now, instead of just being passed <code>Out</code> directly from the function, we pass the
@@ -549,11 +526,8 @@ a result, that will be given back to us.</p>
 <p>This is unnecessary in the case of non-mutable access, but it is important for
 mutable access, because in many circumstances (such as when using an <code>Rc</code> or
 <code>Arc</code>) accessing a field mutably is expensive even if you don't do any mutation.</p>
-<p>In any case, the real implemntation of our lens would look like,</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>struct CompletedLens;
+<p>In any case, the real implementation of our lens would look like,</p>
+<pre><code class="language-rust noplaypen">struct CompletedLens;
 
 impl Lens&lt;TodoItem, bool&gt; for CompletedLens {
     fn with&lt;R, F: FnOnce(&amp;bool) -&gt; R&gt;(&amp;self, data: &amp;TodoItem, f: F) -&gt; R {
@@ -564,33 +538,25 @@ impl Lens&lt;TodoItem, bool&gt; for CompletedLens {
         f(&amp;mut data.completed)
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>That seems pretty simple and fairly annoying to write, which is why you
 generally don't have to.</p>
 <h2><a class="header" href="#deriving-lenses" id="deriving-lenses">Deriving lenses</a></h2>
 <p>For simple field access, you can <code>derive</code> the <code>Lens</code> trait.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>/// A single todo item.
+<pre><code class="language-rust noplaypen">/// A single todo item.
 #[derive(Clone, Data, Lens)]
 struct TodoItem {
     title: String,
     completed: bool,
     urgent: bool,
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>This handles the boilerplate of writing a lens for each field. It also does
 something slightly sneaky: it exposes the generated lenses through the type
 itself, as associated constants. What this means is that if you want to use the
 lens that gives you the <code>completed</code> field, you can access it via
 <code>TodoItem::completed</code>. The generated code basically looks something like:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>struct GeneratedLens_AppData_title;
+<pre><code class="language-rust noplaypen">struct GeneratedLens_AppData_title;
 struct GeneratedLens_AppData_completed;
 struct GeneratedLens_AppData_urgent;
 
@@ -599,15 +565,11 @@ impl TodoItem {
     const completed = GeneratedLens_AppData_completed;
     const urgent = GeneratedLens_AppData_urgent;
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>One consequence of this is that if your type has a method with the same name as
 one of its fields, <code>derive</code> will fail. To get around this, you can specify a
 custom name for a field's lens:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>#[derive(Lens)]
+<pre><code class="language-rust noplaypen">#[derive(Lens)]
 struct Item {
     #[druid(lens_name = &quot;count_lens&quot;)]
     count: usize,
@@ -615,33 +577,23 @@ struct Item {
 
 // this now works
 impl Item {
-    fn count(&amp;self) -&gt; usize { self.count }
+    fn count(&amp;self) -&gt; usize {
+        self.count
+    }
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h2><a class="header" href="#using-lenses" id="using-lenses">Using lenses</a></h2>
 <p>The easiest way to use a lens is with the <code>lens</code> method that is provided through
 the <code>WigetExt</code> trait; this is a convenient way to wrap a widget in a <code>LensWrap</code>
 with a given lens.</p>
 <p>Let's build the UI for our todo list item:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>use druid::widget::{Checkbox, Flex, Label, WidgetExt};
-use druid::{Data, Lens, Widget};
-
-#[derive(Clone, Data, Lens)]
-struct TodoItem {
-    title: String,
-    completed: bool,
-    urgent: bool,
-}
+<pre><code class="language-rust noplaypen">use druid::widget::{Checkbox, Flex, Label, Widget, WidgetExt};
 
 fn make_todo_item() -&gt; impl Widget&lt;TodoItem&gt; {
     // A label that generates its text based on the data
-    let title = Label::dynamic(|text, _| text.to_string()).lens(TodoItem::title);
-    let completed = Checkbox::new().lens(TodoItem::completed);
-    let urgent = Checkbox::new().lens(TodoItem::urgent);
+    let title = Label::dynamic(|text: &amp;String, _| text.to_string()).lens(TodoItem::title);
+    let completed = Checkbox::new(&quot;Completed:&quot;).lens(TodoItem::completed);
+    let urgent = Checkbox::new(&quot;Urgent:&quot;).lens(TodoItem::urgent);
 
     Flex::column()
         // label on top
@@ -649,8 +601,7 @@ fn make_todo_item() -&gt; impl Widget&lt;TodoItem&gt; {
         // two checkboxes below
         .with_child(Flex::row().with_child(completed).with_child(urgent))
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h2><a class="header" href="#advanced-lenses" id="advanced-lenses">Advanced lenses</a></h2>
 <p>Field access is a very simple (and common, and <em>useful</em>) case, but lenses can do much more than that.</p>
 <h3><a class="header" href="#lensext-and-combinators" id="lensext-and-combinators"><code>LensExt</code> and combinators</a></h3>
@@ -665,10 +616,7 @@ of hand; when that happens, you can always implement a lens by hand.</p>
 <h3><a class="header" href="#getting-something-from-a-collection" id="getting-something-from-a-collection">Getting something from a collection</a></h3>
 <p>Your application is a contact book, and you would like a lens that
 focuses on a specific contact. You might write something like this:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>#[derive(Clone, Data)]
+<pre><code class="language-rust noplaypen">#[derive(Clone, Data)]
 struct Contact {
     // fields
 }
@@ -695,30 +643,30 @@ impl Lens&lt;Contacts, Option&lt;Contact&gt;&gt; for ContactIdLens {
         let mut contact = data.inner.get(&amp;self.0).cloned();
         let result = f(&amp;mut contact);
         // only actually mutate the collection if our result is mutated;
-        if !data.inner.get(&amp;self.0).same(&amp;contact.as_ref()) {
+        let changed = match (contact.as_ref(), data.inner.get(&amp;self.0)) {
+            (Some(one), Some(two)) =&gt; !one.same(two),
+            (None, None) =&gt; false,
+            _ =&gt; true,
+        };
+        if changed {
+            //if !data.inner.get(&amp;self.0).same(&amp;contact.as_ref()) {
             let contacts = Arc::make_mut(&amp;mut data.inner);
             // if we're none, we were deleted, and remove from the map; else replace
             match contact {
                 Some(contact) =&gt; contacts.insert(self.0, contact),
-                None =&gt; {
-                    contacts.remove(self.0);
-                }
-            }
+                None =&gt; contacts.remove(&amp;self.0),
+            };
         }
         result
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h3><a class="header" href="#doing-a-conversion" id="doing-a-conversion">Doing a conversion</a></h3>
 <p>What if you have a distance in miles that you would like to display in
 kilometres?</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>struct MilesToKm;
+<pre><code class="language-rust noplaypen">struct MilesToKm;
 
-const KM_PER_MILE: f64 = 1.609344;
+const KM_PER_MILE: f64 = 1.609_344;
 
 impl Lens&lt;f64, f64&gt; for MilesToKm {
     fn with&lt;R, F: FnOnce(&amp;f64) -&gt; R&gt;(&amp;self, data: &amp;f64, f: F) -&gt; R {
@@ -738,8 +686,7 @@ impl Lens&lt;f64, f64&gt; for MilesToKm {
         result
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <h1><a class="header" href="#lenses" id="lenses">Lenses</a></h1>
 <h1><a class="header" href="#localization-todo" id="localization-todo">Localization (TODO)</a></h1>
 <h1><a class="header" href="#command-todo" id="command-todo">Command (TODO)</a></h1>
