@@ -58,7 +58,6 @@ druid's existing functionality and widgets.
 ## Screenshots
 
 #### Linux
-
 [![calc.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/calc.png)](./druid/examples/calc.rs)
 [![custom_widget.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/custom_widget.png)](./druid/examples/custom_widget.rs)
 [![hello.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/hello.png)](./druid/examples/hello.rs)
@@ -252,12 +251,12 @@ instructions.
 Druid is only one of many ongoing [Rust-native GUI experiments]. To mention a
 few:
 
-- [Azul](https://github.com/maps4print/azul)
-- [Conrod](https://github.com/PistonDevelopers/conrod)
-- [Iced](https://github.com/hecrj/iced)
-- [Makepad](https://github.com/makepad/makepad)
-- [Moxie](https://github.com/anp/moxie)
-- [Reclutch](https://github.com/jazzfool/reclutch)
+* [Azul](https://github.com/maps4print/azul)
+* [Conrod](https://github.com/PistonDevelopers/conrod)
+* [Iced](https://github.com/hecrj/iced)
+* [Makepad](https://github.com/makepad/makepad)
+* [Moxie](https://github.com/anp/moxie)
+* [Reclutch](https://github.com/jazzfool/reclutch)
 
 ## Contributions
 
@@ -272,18 +271,18 @@ chat instance], in the #druid channel.
 The main authors are Raph Levien and Colin Rofls, with much support from an
 active and friendly community.
 
-[runebender]: https://github.com/linebender/runebender
+[Runebender]: https://github.com/linebender/runebender
 [the examples folder]: ./druid/examples
 [piet library]: https://github.com/linebender/piet
 [custom_widget]: ./druid/examples/custom_widget.rs
 [basic utility and layout widgets]: ./druid/src/widget
-[flutter's box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
+[Flutter's box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
 [value types]: https://sinusoid.es/lager/model.html#id2
 [cairo]: https://www.cairographics.org
 [gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html
-[rust-native gui experiments]: https://areweguiyet.com
-[contributing.md]: ./CONTRIBUTING.md
-[zulip chat instance]: https://xi.zulipchat.com
+[Rust-native GUI experiments]: https://areweguiyet.com
+[CONTRIBUTING.md]: ./CONTRIBUTING.md
+[Zulip chat instance]: https://xi.zulipchat.com
 [non-druid examples]: ./druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
 [EventCtx]: https://docs.rs/druid/0.4.0/druid/struct.EventCtx.html
