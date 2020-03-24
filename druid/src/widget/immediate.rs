@@ -26,7 +26,7 @@ use crate::{widget::prelude::*, Data};
 /// for small or rarely changed data.
 ///
 /// You should only use `Immediate` if your data format can't be reasonably used with other widgets.
-pub struct Immediate<D, W: Widget<()>> {
+pub struct Immediate<D, W> {
     constructor: Box<dyn Fn(&D) -> W>,
     content: Option<W>,
 }
@@ -70,11 +70,10 @@ impl<D: Data, W: Widget<()>> Widget<D> for Immediate<D, W> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &D, env: &Env) -> Size {
-        if let Some(content) = &mut self.content {
-            content.layout(ctx, bc, &(), env)
-        } else {
-            Size::ZERO
-        }
+        self.content
+            .as_mut()
+            .map(|c| c.layout(ctx, bc, &(), env))
+            .unwrap_or_default()
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &D, env: &Env) {
