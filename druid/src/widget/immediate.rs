@@ -16,7 +16,7 @@ use crate::{widget::prelude::*, Data};
 
 /// A widget that allows writing parts of the ui in an immediate-mode style.
 ///
-/// The primary usecase for this is displaying data that doesn't fit into druids model, such as
+/// The primary use case for this is displaying data that doesn't fit into druid's model, such as
 /// enums you have no control over.
 ///
 /// Whenever the state represented by the `Immediate` changes,
@@ -25,8 +25,7 @@ use crate::{widget::prelude::*, Data};
 /// While this is not the most efficient thing to do, it is very simple and performs perfectly fine
 /// for small or rarely changed data.
 ///
-/// Note that this is more like a last resort when the data to be represented is in a for druid particularly
-/// unfitting format.
+/// You should only use `Immediate` if your data format can't be reasonably used with other widgets.
 pub struct Immediate<D, W: Widget<()>> {
     constructor: Box<dyn Fn(&D) -> W>,
     content: Option<W>,
