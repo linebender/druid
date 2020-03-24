@@ -14,10 +14,9 @@
 
 //! A button widget.
 use crate::theme;
-use crate::widget::{Label, LabelText, Painter};
+use crate::widget::{Flex, Label, LabelText, MainAxisAlignment, Painter};
 use crate::{
-    Affine, BoxConstraints, Data, Env, Event, EventCtx, Insets, LayoutCtx, LifeCycle, LifeCycleCtx,
-    LinearGradient, PaintCtx, Point, Rect, RenderContext, Size, UnitPoint, UpdateCtx, Widget,
+    Data, Env, EventCtx, Insets, LinearGradient, Point, Rect, RenderContext, UnitPoint, Widget,
     WidgetExt,
 };
 
@@ -39,7 +38,9 @@ impl<T: Data> Button<T> {
         action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
     ) -> impl Widget<T> {
         let painter = Self::painter();
-        CenteredLabel::new(text)
+        Flex::row()
+            .with_child(Label::new(text))
+            .main_axis_alignment(MainAxisAlignment::Center)
             .padding(LABEL_INSETS)
             .background(painter)
             .on_click(action)
@@ -92,55 +93,4 @@ impl<T: Data> Button<T> {
     /// let button = Button::<u32>::new("hello", Button::noop);
     /// ```
     pub fn noop(_: &mut EventCtx, _: &mut T, _: &Env) {}
-}
-
-struct CenteredLabel<T> {
-    label: Label<T>,
-    label_size: Size,
-}
-
-impl<T: Data> CenteredLabel<T> {
-    pub fn new(text: impl Into<LabelText<T>>) -> CenteredLabel<T> {
-        CenteredLabel {
-            label: Label::new(text),
-            label_size: Size::ZERO,
-        }
-    }
-}
-
-impl<T: Data> Widget<T> for CenteredLabel<T> {
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        if let LifeCycle::HotChanged(_) = event {
-            ctx.request_paint();
-        }
-        self.label.lifecycle(ctx, event, data, env)
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        self.label.update(ctx, old_data, data, env)
-    }
-
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
-        bc.debug_check("CenteredLabel");
-        let label_bc = bc.loosen();
-        self.label_size = self.label.layout(layout_ctx, &label_bc, data, env);
-        bc.constrain(self.label_size)
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let label_offset = (ctx.size().to_vec2() - self.label_size.to_vec2()) / 2.0;
-
-        ctx.with_save(|ctx| {
-            ctx.transform(Affine::translate(label_offset));
-            self.label.paint(ctx, data, env);
-        });
-    }
 }
