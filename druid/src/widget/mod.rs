@@ -90,33 +90,24 @@ pub use widget_ext::WidgetExt;
 /// The types required to implement a `Widget`.
 ///
 /// # Structs
-/// [`BoxConstraints`](../../struct.BoxConstraints.html)
-///
-/// [`Env`](../../struct.Env.html)
-///
-/// [`EventCtx`](../../struct.EventCtx.html)
-///
-/// [`LayoutCtx`](../../struct.LayoutCtx.html)
-///
-/// [`LifeCycleCtx`](../../struct.LifeCycleCtx.html)
-///
-/// [`PaintCtx`](../../struct.PaintCtx.html)
-///
-/// [`Size`](../../struct.Size.html)
-///
-/// [`UpdateCtx`](../../struct.UpdateCtx.html)
-///
-/// [`WidgetId`](../../struct.WidgetId.html)
+/// [`BoxConstraints`](../../struct.BoxConstraints.html)\
+/// [`Env`](../../struct.Env.html)\
+/// [`EventCtx`](../../struct.EventCtx.html)\
+/// [`LayoutCtx`](../../struct.LayoutCtx.html)\
+/// [`LifeCycleCtx`](../../struct.LifeCycleCtx.html)\
+/// [`PaintCtx`](../../struct.PaintCtx.html)\
+/// [`Size`](../../struct.Size.html)\
+/// [`UpdateCtx`](../../struct.UpdateCtx.html)\
+/// [`WidgetId`](../../struct.WidgetId.html)\
 ///
 /// # Enums
-/// [`Event`](../../enum.Event.html)
-///
-/// [`LifeCycle`](../../enum.LifeCycle.html)
+/// [`Event`](../../enum.Event.html)\
+/// [`LifeCycle`](../../enum.LifeCycle.html)\
 ///
 /// # Traits
-/// [`RenderContext`](../../trait.RenderContext.html)
-///
+/// [`RenderContext`](../../trait.RenderContext.html)\
 /// [`Widget`](../../trait.Widget.html)
+// NOTE: \ at the end works as a line break, but skip on last line!
 pub mod prelude {
     #[doc(hidden)]
     pub use crate::{
