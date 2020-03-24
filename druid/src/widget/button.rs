@@ -50,9 +50,10 @@ impl<T: Data> Button<T> {
             let is_active = ctx.is_active();
             let is_hot = ctx.is_hot();
             let size = ctx.size();
+            let border_width = env.get(theme::BUTTON_BORDER_WIDTH);
 
             let rounded_rect = Rect::from_origin_size(Point::ORIGIN, size)
-                .inset(-1.0)
+                .inset(border_width / -2.0)
                 .to_rounded_rect(env.get(theme::BUTTON_BORDER_RADIUS));
 
             let bg_gradient = if is_active {
@@ -75,11 +76,7 @@ impl<T: Data> Button<T> {
                 env.get(theme::BORDER_DARK)
             };
 
-            ctx.stroke(
-                rounded_rect,
-                &border_color,
-                env.get(theme::BUTTON_BORDER_WIDTH),
-            );
+            ctx.stroke(rounded_rect, &border_color, border_width);
 
             ctx.fill(rounded_rect, &bg_gradient);
         })
