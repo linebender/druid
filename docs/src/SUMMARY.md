@@ -1,6 +1,5 @@
 # Summary
 - [Overview](./intro.md)
-- [Set up Druid](./setup.md)
 - [Get started with Druid](./get_started.md)
 - [Data trait](./data.md)
 - [Widget trait](./widget.md)

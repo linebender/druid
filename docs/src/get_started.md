@@ -2,7 +2,10 @@
 *this is outdated, and should be replaced with a walkthrough of getting a simple
 app built and running*.
 
-This chapter will walk you through setting up a simple druid application from start to finish.
+This will walk you through setting up a simple druid application from start to finish.
+
+This assumes you have installed all necessary dependencies; see [the main README]
+for instructions.
 
 ## Set up a Druid project
 Setting up a project is a simple as creating a new Rust project;
@@ -10,10 +13,13 @@ Setting up a project is a simple as creating a new Rust project;
 > cargo new druid-example
 ```
 
-And then adding druid as a dependency to Cargo.toml
+Add druid as a dependency to your `Cargo.toml`.
+
 ```toml
 [dependencies]
-druid = "0.4.0"
+druid = "0.5.0"
+# or:
+druid = { git = "https://github.com/xi-editor/druid.git", branch = "master" }
 ```
 
 To show a minimal window with a label replace `main.rs` with this;
@@ -98,3 +104,5 @@ For this we need to define what our application's state looks like.
 ## Putting it all together
 
 ...
+
+[the main README]: https://github.com/xi-editor/druid#using-druid
