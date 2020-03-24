@@ -33,7 +33,7 @@ impl<'a> DelegateCtx<'a> {
     /// the [`update()`] method is called.
     ///
     /// [`Command`]: struct.Command.html
-    /// [`update()`]: widget/trait.Widget.html#tymethod.update
+    /// [`update()`]: trait.Widget.html#tymethod.update
     pub fn submit_command(
         &mut self,
         command: impl Into<Command>,
@@ -62,7 +62,7 @@ pub trait AppDelegate<T: Data> {
     /// be the event that was passed in, a different event, or no event. In all cases,
     /// the [`update()`] method will be called as usual.
     ///
-    /// [`update()`]: widget/trait.Widget.html#tymethod.update
+    /// [`update()`]: trait.Widget.html#tymethod.update
     fn event(
         &mut self,
         ctx: &mut DelegateCtx,

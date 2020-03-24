@@ -89,9 +89,9 @@
 //! }
 //! ```
 //!
-//! [`Widget`]: widget/trait.Widget.html
+//! [`Widget`]: trait.Widget.html
 //! [`Data`]: trait.Data.html
-//! [`Lens`]: lens/trait.Lens.html
+//! [`Lens`]: trait.Lens.html
 //! [`widget`]: ./widget/index.html
 //! [`Event`]: enum.Event.html
 //! [`druid-shell`]: https://docs.rs/druid-shell
@@ -104,8 +104,10 @@
 
 // Allows to use macros from druid_derive in this crate
 extern crate self as druid;
+pub use druid_derive::Lens;
 
 use druid_shell as shell;
+#[doc(inline)]
 pub use druid_shell::{kurbo, piet};
 
 mod app;
@@ -146,7 +148,7 @@ pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
 pub use command::{sys as commands, Command, Selector, Target};
-pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx};
+pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, Region, UpdateCtx};
 pub use data::Data;
 pub use env::{Env, Key, KeyOrValue, Value, ValueType};
 pub use event::{Event, LifeCycle, WheelEvent};

@@ -29,7 +29,7 @@ use log;
 /// Further, a container widget should compute appropriate constraints
 /// for each of its child widgets, and pass those down when recursing.
 ///
-/// [`layout`]: widget/trait.Widget.html#tymethod.layout
+/// [`layout`]: trait.Widget.html#tymethod.layout
 /// [Flutter BoxConstraints]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
 #[derive(Clone, Copy, Debug)]
 pub struct BoxConstraints {

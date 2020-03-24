@@ -58,10 +58,10 @@ use crate::{
 /// }
 /// ```
 ///
-/// [`Widget`]: trait.Widget.html
+/// [`Widget`]: ../trait.Widget.html
 /// [`TextBox`]: struct.TextBox.html
 /// [`ControllerHost`]: struct.ControllerHost.html
-/// [`WidgetExt::controller`]: trait.WidgetExt.html#tymethod.controller
+/// [`WidgetExt::controller`]: ../trait.WidgetExt.html#tymethod.controller
 pub trait Controller<T, W: Widget<T>> {
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         child.event(ctx, event, data, env)
@@ -85,7 +85,7 @@ pub trait Controller<T, W: Widget<T>> {
 
 /// A [`Widget`] that manages a child and a [`Controller`].
 ///
-/// [`Widget`]: trait.Widget.html
+/// [`Widget`]: ../trait.Widget.html
 /// [`Controller`]: trait.Controller.html
 pub struct ControllerHost<W, C> {
     widget: W,
