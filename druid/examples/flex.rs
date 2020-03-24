@@ -234,11 +234,13 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
     let mut flex = flex.with_child(TextBox::new().lens(DemoState::input_text));
     space_if_needed(&mut flex, state);
 
-    flex.add_child(Button::new("Clear", |_ctx, data: &mut DemoState, _env| {
-        data.input_text.clear();
-        data.enabled = false;
-        data.volume = 0.0;
-    }));
+    flex.add_child(
+        Button::new("Clear").on_click(|_ctx, data: &mut DemoState, _env| {
+            data.input_text.clear();
+            data.enabled = false;
+            data.volume = 0.0;
+        }),
+    );
 
     space_if_needed(&mut flex, state);
 

@@ -33,7 +33,7 @@ fn build_app() -> impl Widget<u32> {
     // Spacing element that will fill all available space in between label
     // and a button. Notice that weight is non-zero.
     header.add_flex_spacer(1.0);
-    header.add_child(Button::new("Two", Button::noop).padding(20.));
+    header.add_child(Button::new("Two").padding(20.));
     col.add_child(
         header
             .fix_height(100.0)
@@ -46,7 +46,7 @@ fn build_app() -> impl Widget<u32> {
         let weight = if i == 2 { 3.0 } else { 1.0 };
         // call `expand_height` to force the buttons to use all their provided flex
         col.add_flex_child(
-            Button::new(format!("Button #{}", i), Button::noop).expand_height(),
+            Button::new(format!("Button #{}", i)).expand_height(),
             weight,
         );
     }

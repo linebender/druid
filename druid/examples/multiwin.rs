@@ -17,8 +17,8 @@
 use druid::widget::{Align, Button, Flex, Label, Padding};
 use druid::{
     commands as sys_cmds, AppDelegate, AppLauncher, Command, ContextMenu, Data, DelegateCtx, Env,
-    Event, EventCtx, LocalizedString, MenuDesc, MenuItem, Selector, Target, Widget, WindowDesc,
-    WindowId,
+    Event, EventCtx, LocalizedString, MenuDesc, MenuItem, Selector, Target, Widget, WidgetExt,
+    WindowDesc, WindowId,
 };
 
 use log::info;
@@ -63,11 +63,11 @@ fn ui_builder() -> impl Widget<State> {
     let text = LocalizedString::new("hello-counter")
         .with_arg("count", |data: &State, _env| data.menu_count.into());
     let label = Label::new(text);
-    let inc_button = Button::<State>::new("Add menu item", |ctx, data, _env| {
+    let inc_button = Button::<State>::new("Add menu item").on_click(|ctx, data, _env| {
         data.menu_count += 1;
         ctx.set_menu(make_menu::<State>(data));
     });
-    let dec_button = Button::<State>::new("Remove menu item", |ctx, data, _env| {
+    let dec_button = Button::<State>::new("Remove menu item").on_click(|ctx, data, _env| {
         data.menu_count = data.menu_count.saturating_sub(1);
         ctx.set_menu(make_menu::<State>(data));
     });

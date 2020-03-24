@@ -43,7 +43,7 @@ fn ui_builder() -> impl Widget<u32> {
     let label = Label::new(text)
         .padding(5.0)
         .center();
-    let button = Button::new("increment", |_ctx, data, _env| *data += 1)
+    let button = Button::new("increment").on_click(|_ctx, data, _env| *data += 1)
         .padding(5.0);
 
     Flex::column()
@@ -58,6 +58,7 @@ druid's existing functionality and widgets.
 ## Screenshots
 
 #### Linux
+
 [![calc.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/calc.png)](./druid/examples/calc.rs)
 [![custom_widget.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/custom_widget.png)](./druid/examples/custom_widget.rs)
 [![hello.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/hello.png)](./druid/examples/hello.rs)
@@ -157,8 +158,7 @@ implement your own. You can also compose widgets into new widgets:
 fn build_widget() -> impl Widget<u32> {
     let mut col = Flex::column();
     for i in 0..30 {
-        let button = Button::new(format!("Button {}", i), Button::noop)
-            .padding(5.0);
+        let button = Button::new(format!("Button {}", i).padding(5.0);
         col.add_child(button, 0.0);
     }
     Scroll::new(col)
@@ -252,12 +252,12 @@ instructions.
 Druid is only one of many ongoing [Rust-native GUI experiments]. To mention a
 few:
 
-* [Azul](https://github.com/maps4print/azul)
-* [Conrod](https://github.com/PistonDevelopers/conrod)
-* [Iced](https://github.com/hecrj/iced)
-* [Makepad](https://github.com/makepad/makepad)
-* [Moxie](https://github.com/anp/moxie)
-* [Reclutch](https://github.com/jazzfool/reclutch)
+- [Azul](https://github.com/maps4print/azul)
+- [Conrod](https://github.com/PistonDevelopers/conrod)
+- [Iced](https://github.com/hecrj/iced)
+- [Makepad](https://github.com/makepad/makepad)
+- [Moxie](https://github.com/anp/moxie)
+- [Reclutch](https://github.com/jazzfool/reclutch)
 
 ## Contributions
 
@@ -272,18 +272,18 @@ chat instance], in the #druid channel.
 The main authors are Raph Levien and Colin Rofls, with much support from an
 active and friendly community.
 
-[Runebender]: https://github.com/linebender/runebender
+[runebender]: https://github.com/linebender/runebender
 [the examples folder]: ./druid/examples
 [piet library]: https://github.com/linebender/piet
 [custom_widget]: ./druid/examples/custom_widget.rs
 [basic utility and layout widgets]: ./druid/src/widget
-[Flutter's box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
+[flutter's box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
 [value types]: https://sinusoid.es/lager/model.html#id2
 [cairo]: https://www.cairographics.org
 [gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html
-[Rust-native GUI experiments]: https://areweguiyet.com
-[CONTRIBUTING.md]: ./CONTRIBUTING.md
-[Zulip chat instance]: https://xi.zulipchat.com
+[rust-native gui experiments]: https://areweguiyet.com
+[contributing.md]: ./CONTRIBUTING.md
+[zulip chat instance]: https://xi.zulipchat.com
 [non-druid examples]: ./druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
 [EventCtx]: https://docs.rs/druid/0.4.0/druid/struct.EventCtx.html

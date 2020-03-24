@@ -16,8 +16,7 @@
 use crate::theme;
 use crate::widget::{Flex, Label, LabelText, MainAxisAlignment, Painter};
 use crate::{
-    Data, Env, EventCtx, Insets, LinearGradient, Point, Rect, RenderContext, UnitPoint, Widget,
-    WidgetExt,
+    Data, Insets, LinearGradient, Point, Rect, RenderContext, UnitPoint, Widget, WidgetExt,
 };
 
 // the minimum padding added to a button.
@@ -31,19 +30,45 @@ pub struct Button<T> {
 }
 
 impl<T: Data> Button<T> {
-    /// Create a new button. The closure provided will be called when the button
-    /// is clicked.
-    pub fn new(
-        text: impl Into<LabelText<T>>,
-        action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
-    ) -> impl Widget<T> {
+    /// Create a new button with a text label.
+    ///
+    /// Use the `.on_click` method to provide a closure to be called when the
+    /// button is clicked.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use druid::widget::{Button, WidgetExt};
+    ///
+    /// let button = Button::new("Increment").on_click(|_ctx, data: &mut u32, _env| {
+    ///     *data += 1;
+    /// });
+    /// ```
+    pub fn new(text: impl Into<LabelText<T>>) -> impl Widget<T> {
         let painter = Self::painter();
         Flex::row()
             .with_child(Label::new(text))
             .main_axis_alignment(MainAxisAlignment::Center)
             .padding(LABEL_INSETS)
             .background(painter)
-            .on_click(action)
+            // TODO: this is a hacky way to make sure the Painter is updated
+            // on HotChanged and active.
+            .on_click(|_, _, _| {})
+    }
+
+    /// Create a new button with a child widget for a label.
+    ///
+    /// The widget will receive padding and a styled background and border.If
+    /// you want a clickable widget without the styling, consider just using
+    /// `.on_click` without the Button.
+    pub fn with_child(child: impl Widget<T> + 'static) -> impl Widget<T> {
+        let painter = Self::painter();
+        child
+            .padding(LABEL_INSETS)
+            .background(painter)
+            // TODO: this is a hacky way to make sure the Painter is updated
+            // on HotChanged and active.
+            .on_click(|_, _, _| {})
     }
 
     fn painter() -> Painter<T> {
@@ -82,15 +107,4 @@ impl<T: Data> Button<T> {
             ctx.fill(rounded_rect, &bg_gradient);
         })
     }
-
-    /// A function that can be passed to `Button::new`, for buttons with no action.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use druid::widget::Button;
-    ///
-    /// let button = Button::<u32>::new("hello", Button::noop);
-    /// ```
-    pub fn noop(_: &mut EventCtx, _: &mut T, _: &Env) {}
 }
