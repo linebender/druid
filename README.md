@@ -17,13 +17,15 @@ font editor.
 We have been doing periodic releases of druid on crates.io, but it is under
 active development and its API might change.
 
+For an overview of some key concepts, see the (work in progress) [druid book].
+
 ## Example
 
 Here's a simple counter example app.
 
 ```rust
-use druid::widget::{Align, Button, Flex, Label, Padding, WidgetExt};
-use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
+use druid::widget::{Button, Flex, Label};
+use druid::{AppLauncher, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 fn main() {
     let main_window = WindowDesc::new(ui_builder);
@@ -45,8 +47,8 @@ fn ui_builder() -> impl Widget<u32> {
         .padding(5.0);
 
     Flex::column()
-    .with_child(label, 1.0)
-    .with_child(button, 1.0)
+    .with_child(label)
+    .with_child(button)
 }
 ```
 
@@ -292,3 +294,4 @@ active and friendly community.
 [Widget trait]: https://docs.rs/druid/0.4.0/druid/trait.Widget.html
 [Data trait]: https://docs.rs/druid/0.4.0/druid/trait.Data.html
 [Lens datatype]: https://docs.rs/druid/0.4.0/druid/trait.Lens.html
+[druid book]: https://xi-editor.io/druid/intro.html
