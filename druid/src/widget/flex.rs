@@ -128,14 +128,14 @@ use crate::{
 /// my_row.add_flex_child(Slider::new(), 1.0);
 /// ```
 ///
-/// [`layout`]: trait.Widget.html#tymethod.layout
+/// [`layout`]: ../trait.Widget.html#tymethod.layout
 /// [`MainAxisAlignment`]: enum.MainAxisAlignment.html
 /// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
 /// [`must_fill_main_axis`]: struct.Flex.html#method.must_fill_main_axis
 /// [`FlexParams`]: struct.FlexParams.html
-/// [`WidgetExt`]: trait.WidgetExt.html
-/// [`expand_height`]: trait.WidgetExt.html#method.expand_height
-/// [`expand_width`]: trait.WidgetExt.html#method.expand_width
+/// [`WidgetExt`]: ../trait.WidgetExt.html
+/// [`expand_height`]: ../trait.WidgetExt.html#method.expand_height
+/// [`expand_width`]: ../trait.WidgetExt.html#method.expand_width
 /// [`TextBox`]: struct.TextBox.html
 /// [`SizedBox`]: struct.SizedBox.html
 pub struct Flex<T> {

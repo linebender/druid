@@ -42,7 +42,7 @@ use crate::{Command, Target, WidgetId};
 /// This enum is expected to grow considerably, as there are many, many
 /// different kinds of events that are relevant in a GUI.
 ///
-/// [`event`]: widget/trait.Widget.html#tymethod.event
+/// [`event`]: trait.Widget.html#tymethod.event
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -124,7 +124,7 @@ pub enum Event {
     /// [`Widget`]s, at runtime, with [`EventCtx::submit_command`].
     ///
     /// [`Command`]: struct.Command.html
-    /// [`Widget`]: widget/trait.Widget.html
+    /// [`Widget`]: trait.Widget.html
     /// [`EventCtx::submit_command`]: struct.EventCtx.html#method.submit_command
     Command(Command),
     /// A command still in the process of being dispatched. This is an internal

@@ -71,7 +71,7 @@ use crate::{
 /// });
 /// ```
 ///
-/// [`paint`]: trait.Widget.html#tymethod.paint
+/// [`paint`]: ../trait.Widget.html#tymethod.paint
 /// [`Data`]: ../trait.Data.html
 /// [`request_paint`]: ../EventCtx.html#method.request_paint
 /// [`Controller`]: trait.Controller.html
@@ -82,9 +82,9 @@ pub struct Painter<T>(Box<dyn FnMut(&mut PaintCtx, &T, &Env)>);
 /// This represents anything that can be painted inside a widgets [`paint`]
 /// method; that is, it may have access to the [`Data`] and the [`Env`].
 ///
-/// [`paint`]: widget/trait.Widget.html#tymethod.paint
-/// [`Data`]: trait.Data.html
-/// [`Env`]: struct.Env.html
+/// [`paint`]: ../trait.Widget.html#tymethod.paint
+/// [`Data`]: ../trait.Data.html
+/// [`Env`]: ../struct.Env.html
 #[non_exhaustive]
 pub enum BackgroundBrush<T> {
     Color(Color),
@@ -98,7 +98,7 @@ pub enum BackgroundBrush<T> {
 impl<T> Painter<T> {
     /// Create a new `Painter` with the provided [`paint`] fn.
     ///
-    /// [`paint`]: trait.Widget.html#tymethod.paint
+    /// [`paint`]: ../trait.Widget.html#tymethod.paint
     pub fn new(f: impl FnMut(&mut PaintCtx, &T, &Env) + 'static) -> Self {
         Painter(Box::new(f))
     }

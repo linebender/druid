@@ -32,7 +32,7 @@ use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, Widget};
 ///
 /// [`Controller`]: struct.Controller.html
 /// [`ControllerHost`]: struct.ControllerHost.html
-/// [`WidgetExt`]: trait.WidgetExt.html
+/// [`WidgetExt`]: ../trait.WidgetExt.html
 /// [`Button`]: struct.Button.html
 /// [`LifeCycle::HotChanged`]: ../enum.LifeCycle.html#variant.HotChanged
 pub struct Click<T> {

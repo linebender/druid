@@ -54,7 +54,7 @@ pub struct EventCtx<'a> {
 /// specific lifecycle events; for instance [`register_child`]
 /// should only be called while handling [`LifeCycle::WidgetAdded`].
 ///
-/// [`lifecycle`]: widget/trait.Widget.html#tymethod.lifecycle
+/// [`lifecycle`]: trait.Widget.html#tymethod.lifecycle
 /// [`register_child`]: #method.register_child
 /// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
 pub struct LifeCycleCtx<'a> {
@@ -133,7 +133,7 @@ impl<'a> EventCtx<'a> {
 
     /// Request a [`paint`] pass.
     ///
-    /// [`paint`]: widget/trait.Widget.html#tymethod.paint
+    /// [`paint`]: trait.Widget.html#tymethod.paint
     pub fn request_paint(&mut self) {
         self.base_state.needs_inval = true;
     }
@@ -147,7 +147,7 @@ impl<'a> EventCtx<'a> {
     /// (such as if it would like to change the layout of children in
     /// response to some event) it must call this method.
     ///
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn request_layout(&mut self) {
         self.base_state.needs_layout = true;
         self.base_state.needs_inval = true;
@@ -327,7 +327,7 @@ impl<'a> EventCtx<'a> {
     /// Generally it will be the same as the size returned by the child widget's
     /// [`layout`] method.
     ///
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn size(&self) -> Size {
         self.base_state.size()
     }
@@ -339,7 +339,7 @@ impl<'a> EventCtx<'a> {
     /// the [`update`] method is called.
     ///
     /// [`Command`]: struct.Command.html
-    /// [`update`]: widget/trait.Widget.html#tymethod.update
+    /// [`update`]: trait.Widget.html#tymethod.update
     pub fn submit_command(
         &mut self,
         command: impl Into<Command>,
@@ -376,7 +376,7 @@ impl<'a> LifeCycleCtx<'a> {
 
     /// Request a [`paint`] pass.
     ///
-    /// [`paint`]: widget/trait.Widget.html#tymethod.paint
+    /// [`paint`]: trait.Widget.html#tymethod.paint
     pub fn request_paint(&mut self) {
         self.base_state.needs_inval = true;
     }
@@ -430,7 +430,7 @@ impl<'a> LifeCycleCtx<'a> {
     /// the [`update`] method is called.
     ///
     /// [`Command`]: struct.Command.html
-    /// [`update`]: widget/trait.Widget.html#tymethod.update
+    /// [`update`]: trait.Widget.html#tymethod.update
     pub fn submit_command(
         &mut self,
         command: impl Into<Command>,

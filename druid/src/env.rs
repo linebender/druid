@@ -117,7 +117,7 @@ impl Env {
     ///
     /// Set by the `debug_paint_layout()` method on [`WidgetExt`]'.
     ///
-    /// [`WidgetExt`]: widget/trait.WidgetExt.html
+    /// [`WidgetExt`]: trait.WidgetExt.html
     pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("druid.built-in.debug-paint");
 
     /// A key used to tell widgets to print additional debug information.
@@ -140,7 +140,7 @@ impl Env {
     /// }
     /// ```
     ///
-    /// [`WidgetExt::debug_widget`]: widget/trait.WidgetExt.html#method.debug_widget
+    /// [`WidgetExt::debug_widget`]: trait.WidgetExt.html#method.debug_widget
     pub const DEBUG_WIDGET: Key<bool> = Key::new("druid.built-in.debug-widget");
 
     /// Gets a value from the environment, expecting it to be present.

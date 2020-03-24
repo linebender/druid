@@ -40,7 +40,7 @@ pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
 /// needs to propagate, and to provide the previous data so that a
 /// widget can process a diff between the old value and the new.
 ///
-/// [`update`]: widget/trait.Widget.html#tymethod.update
+/// [`update`]: trait.Widget.html#tymethod.update
 pub struct WidgetPod<T, W> {
     state: BaseState,
     old_data: Option<T>,
@@ -61,7 +61,7 @@ pub struct WidgetPod<T, W> {
 /// that, widgets will generally not interact with it directly,
 /// but it is an important part of the [`WidgetPod`] struct.
 ///
-/// [`paint`]: widget/trait.Widget.html#tymethod.paint
+/// [`paint`]: trait.Widget.html#tymethod.paint
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Clone)]
 pub(crate) struct BaseState {
@@ -218,7 +218,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`Insets`]: struct.Insets.html
     /// [`set_paint_insets`]: struct.LayoutCtx.html#method.set_paint_insets
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn paint_insets(&self) -> Insets {
         self.state.paint_insets
     }
@@ -231,7 +231,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// propogate a child's desired paint rect, if it extends beyond the bounds
     /// of the parent's layout rect.
     ///
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     /// [`Insets`]: struct.Insets.html
     pub fn compute_parent_paint_insets(&self, parent_size: Size) -> Insets {
         let parent_bounds = Rect::ZERO.with_size(parent_size);
@@ -249,8 +249,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Note that this method does not apply the offset of the layout rect.
     /// If that is desired, use [`paint_with_offset`] instead.
     ///
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
-    /// [`paint`]: widget/trait.Widget.html#tymethod.paint
+    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`paint`]: trait.Widget.html#tymethod.paint
     /// [`paint_with_offset`]: #method.paint_with_offset
     pub fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut inner_ctx = PaintCtx {
@@ -315,7 +315,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Generally called by container widgets as part of their [`layout`]
     /// method.
     ///
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn layout(
         &mut self,
         layout_ctx: &mut LayoutCtx,
@@ -348,7 +348,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// flow logic resides, particularly whether to continue propagating
     /// the event.
     ///
-    /// [`event`]: widget/trait.Widget.html#tymethod.event
+    /// [`event`]: trait.Widget.html#tymethod.event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.old_data.is_none() {
             log::error!(
@@ -571,7 +571,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Generally called by container widgets as part of their [`update`]
     /// method.
     ///
-    /// [`update`]: widget/trait.Widget.html#tymethod.update
+    /// [`update`]: trait.Widget.html#tymethod.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
         match (self.old_data.as_ref(), self.env.as_ref()) {
             (Some(d), Some(e)) if d.same(data) && e.same(env) => return,

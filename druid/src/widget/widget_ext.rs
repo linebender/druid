@@ -24,64 +24,64 @@ use crate::{Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LensWrap, Unit
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a [`Padding`] widget with the given [`Insets`].
     ///
-    /// [`Padding`]: struct.Padding.html
-    /// [`Insets`]: https://docs.rs/kurbo/0.5.4/kurbo/struct.Insets.html
+    /// [`Padding`]: widget/struct.Padding.html
+    /// [`Insets`]: kurbo/struct.Insets.html
     fn padding(self, insets: impl Into<Insets>) -> Padding<T> {
         Padding::new(insets, self)
     }
 
     /// Wrap this widget in an [`Align`] widget, configured to center it.
     ///
-    /// [`Align`]: struct.Align.html
+    /// [`Align`]: widget/struct.Align.html
     fn center(self) -> Align<T> {
         Align::centered(self)
     }
 
     /// Wrap this widget in an [`Align`] widget, configured to align left.
     ///
-    /// [`Align`]: struct.Align.html
+    /// [`Align`]: widget/struct.Align.html
     fn align_left(self) -> Align<T> {
         Align::left(self)
     }
 
     /// Wrap this widget in an [`Align`] widget, configured to align right.
     ///
-    /// [`Align`]: struct.Align.html
+    /// [`Align`]: widget/struct.Align.html
     fn align_right(self) -> Align<T> {
         Align::right(self)
     }
 
     /// Wrap this widget in an [`Align`] widget, configured to align vertically.
     ///
-    /// [`Align`]: struct.Align.html
+    /// [`Align`]: widget/struct.Align.html
     fn align_vertical(self, align: UnitPoint) -> Align<T> {
         Align::vertical(align, self)
     }
 
     /// Wrap this widget in an [`Align`] widget, configured to align horizontally.
     ///
-    /// [`Align`]: struct.Align.html
+    /// [`Align`]: widget/struct.Align.html
     fn align_horizontal(self, align: UnitPoint) -> Align<T> {
         Align::horizontal(align, self)
     }
 
     /// Wrap this widget in a [`SizedBox`] with an explicit width.
     ///
-    /// [`SizedBox`]: struct.SizedBox.html
+    /// [`SizedBox`]: widget/struct.SizedBox.html
     fn fix_width(self, width: f64) -> SizedBox<T> {
         SizedBox::new(self).width(width)
     }
 
     /// Wrap this widget in a [`SizedBox`] with an explicit width.
     ///
-    /// [`SizedBox`]: struct.SizedBox.html
+    /// [`SizedBox`]: widget/struct.SizedBox.html
     fn fix_height(self, height: f64) -> SizedBox<T> {
         SizedBox::new(self).height(height)
     }
 
     /// Wrap this widget in an [`SizedBox`] with an explicit width and height
     ///
-    /// [`SizedBox`]: struct.SizedBox.html
+    /// [`SizedBox`]: widget/struct.SizedBox.html
     fn fix_size(self, width: f64, height: f64) -> SizedBox<T> {
         SizedBox::new(self).width(width).height(height)
     }
@@ -94,7 +94,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// [`expand_height`]: #method.expand_height
     /// [`expand_width`]: #method.expand_width
-    /// [`SizedBox`]: struct.SizedBox.html
+    /// [`SizedBox`]: widget/struct.SizedBox.html
     fn expand(self) -> SizedBox<T> {
         SizedBox::new(self).expand()
     }
@@ -103,7 +103,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// This will force the child to use all available space on the x-axis.
     ///
-    /// [`SizedBox`]: struct.SizedBox.html
+    /// [`SizedBox`]: widget/struct.SizedBox.html
     fn expand_width(self) -> SizedBox<T> {
         SizedBox::new(self).expand_width()
     }
@@ -112,7 +112,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// This will force the child to use all available space on the y-axis.
     ///
-    /// [`SizedBox`]: struct.SizedBox.html
+    /// [`SizedBox`]: widget/struct.SizedBox.html
     fn expand_height(self) -> SizedBox<T> {
         SizedBox::new(self).expand_height()
     }
@@ -121,8 +121,8 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// See [`Container::background`] for more information.
     ///
-    /// [`Container`]: struct.Container.html
-    /// [`Container::background`]: struct.Container.html#method.background
+    /// [`Container`]: widget/struct.Container.html
+    /// [`Container::background`]: widget/struct.Container.html#method.background
     fn background(self, brush: impl Into<BackgroundBrush<T>>) -> Container<T> {
         Container::new(self).background(brush)
     }
@@ -132,8 +132,8 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Arguments can be either concrete values, or a [`Key`] of the respective
     /// type.
     ///
-    /// [`Container`]: struct.Container.html
-    /// [`Key`]: ../struct.Key.html
+    /// [`Container`]: widget/struct.Container.html
+    /// [`Key`]: struct.Key.html
     fn border(
         self,
         color: impl Into<KeyOrValue<Color>>,
@@ -145,15 +145,15 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a [`EnvScope`] widget, modifying the parent
     /// [`Env`] with the provided closure.
     ///
-    /// [`EnvScope`]: struct.EnvScope.html
-    /// [`Env`]: ../struct.Env.html
+    /// [`EnvScope`]: widget/struct.EnvScope.html
+    /// [`Env`]: struct.Env.html
     fn env_scope(self, f: impl Fn(&mut Env, &T) + 'static) -> EnvScope<T, Self> {
         EnvScope::new(f, self)
     }
 
     /// Wrap this widget with the provided [`Controller`].
     ///
-    /// [`Controller`]: trait.Controller.html
+    /// [`Controller`]: widget/trait.Controller.html
     fn controller<C: Controller<T, Self>>(self, controller: C) -> ControllerHost<Self, C> {
         ControllerHost::new(self, controller)
     }
@@ -165,8 +165,8 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// mouse down, which can be useful for painting based on `ctx.is_active()`
     /// and `ctx.is_hot()`.
     ///
-    /// [`Click`]: struct.Click.html
-    /// [`LifeCycle::HotChanged`]: ../enum.LifeCycle.html#variant.HotChanged
+    /// [`Click`]: widget/struct.Click.html
+    /// [`LifeCycle::HotChanged`]: enum.LifeCycle.html#variant.HotChanged
     fn on_click(
         self,
         f: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
@@ -186,7 +186,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// This does nothing by default, but you can use this variable while
     /// debugging to only print messages from particular instances of a widget.
     ///
-    /// [`DEBUG_WIDGET`]: ../struct.Env.html#associatedconstant.DEBUG_WIDGET
+    /// [`DEBUG_WIDGET`]: struct.Env.html#associatedconstant.DEBUG_WIDGET
     fn debug_widget(self) -> EnvScope<T, Self> {
         EnvScope::new(|env, _| env.set(Env::DEBUG_WIDGET, true), self)
     }
@@ -194,8 +194,8 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a [`LensWrap`] widget for the provided [`Lens`].
     ///
     ///
-    /// [`LensWrap`]: ../lens/struct.LensWrap.html
-    /// [`Lens`]: ../lens/trait.Lens.html
+    /// [`LensWrap`]: struct.LensWrap.html
+    /// [`Lens`]: trait.Lens.html
     fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<T, L, Self> {
         LensWrap::new(self, lens)
     }
