@@ -23,13 +23,8 @@ use crate::{
 /// A container that lays out its children along the z-axis, first child at bottom, last child on top.
 #[derive(Default)]
 pub struct Stack<T> {
-    children: Vec<BoxedWidget<T>>,
+    children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
 }
-
-// struct ChildWidget {
-//     widget: BoxedWidget<T>,
-//     interactive: bool,
-// }
 
 impl<T: Data> Stack<T> {
     /// Create a new stack layout.
@@ -59,10 +54,24 @@ impl<T: Data> Stack<T> {
 
 impl<T: Data> Widget<T> for Stack<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        for child in &mut self.children.iter_mut().rev() {
-            child.event(ctx, event, data, env);
-            if ctx.is_handled() {
-                break;
+        match event {
+            Event::MouseDown(e) | Event::MouseUp(e) | Event::MouseMoved(e) => {
+                if let Some(active_child) = self
+                    .children
+                    .iter_mut()
+                    .rev()
+                    .find(|child| child.layout_rect().contains(e.pos))
+                {
+                    active_child.event(ctx, event, data, env);
+                }
+            }
+            _ => {
+                for child in &mut self.children.iter_mut().rev() {
+                    child.event(ctx, event, data, env);
+                    if ctx.is_handled() {
+                        break;
+                    }
+                }
             }
         }
     }
@@ -88,8 +97,8 @@ impl<T: Data> Widget<T> for Stack<T> {
     ) -> Size {
         bc.debug_check("Stack");
         let loosened_bc = bc.loosen();
-        let mut max_width: f64 = 0.;
-        let mut max_height: f64 = 0.;
+        let mut max_width = 0.0f64;
+        let mut max_height = 0.0f64;
         for child in &mut self.children {
             let child_size: Size = child.layout(layout_ctx, &loosened_bc, data, env);
             max_width = max_width.max(child_size.width);
