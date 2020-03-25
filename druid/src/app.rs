@@ -85,6 +85,7 @@ impl<T: Data> AppLauncher<T> {
     ///
     /// Meant for use during development only.
     pub fn use_simple_logger(self) -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
         simple_logger::init().ok();
         self
     }
