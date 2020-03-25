@@ -17,8 +17,8 @@
 use druid::widget::{Align, Button, Flex, Label, Padding};
 use druid::{
     commands as sys_cmds, AppDelegate, AppLauncher, Command, ContextMenu, Data, DelegateCtx, Env,
-    Event, EventCtx, LocalizedString, MenuDesc, MenuItem, Selector, Target, Widget, WidgetExt,
-    WindowDesc, WindowId,
+    Event, EventCtx, LocalizedString, MenuDesc, MenuItem, Selector, Target, Widget, WindowDesc,
+    WindowId,
 };
 
 use log::info;

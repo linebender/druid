@@ -14,10 +14,11 @@
 
 //! A button widget.
 use crate::theme;
-use crate::widget::{Flex, Label, LabelText, MainAxisAlignment, Painter};
-use crate::{
-    Data, Insets, LinearGradient, Point, Rect, RenderContext, UnitPoint, Widget, WidgetExt,
+use crate::widget::prelude::*;
+use crate::widget::{
+    Click, Container, ControllerHost, Flex, Label, LabelText, MainAxisAlignment, Padding, Painter,
 };
+use crate::{Data, Insets, LinearGradient, Point, Rect, RenderContext, UnitPoint, Widget};
 
 // the minimum padding added to a button.
 // NOTE: these values are chosen to match the existing look of TextBox; these
@@ -26,7 +27,7 @@ const LABEL_INSETS: Insets = Insets::uniform_xy(8., 4.);
 
 /// A button with a text label.
 pub struct Button<T> {
-    phantom: std::marker::PhantomData<T>,
+    child: Box<dyn Widget<T>>,
 }
 
 impl<T: Data> Button<T> {
@@ -38,37 +39,40 @@ impl<T: Data> Button<T> {
     /// # Examples
     ///
     /// ```
-    /// use druid::widget::{Button, WidgetExt};
+    /// use druid::widget::{Button};
     ///
     /// let button = Button::new("Increment").on_click(|_ctx, data: &mut u32, _env| {
     ///     *data += 1;
     /// });
     /// ```
-    pub fn new(text: impl Into<LabelText<T>>) -> impl Widget<T> {
-        let painter = Self::painter();
-        Flex::row()
-            .with_child(Label::new(text))
-            .main_axis_alignment(MainAxisAlignment::Center)
-            .padding(LABEL_INSETS)
-            .background(painter)
-            // TODO: this is a hacky way to make sure the Painter is updated
-            // on HotChanged and active.
-            .on_click(|_, _, _| {})
+    pub fn new(text: impl Into<LabelText<T>>) -> Button<T> {
+        Button::with_child(
+            Flex::row()
+                .with_child(Label::new(text))
+                .main_axis_alignment(MainAxisAlignment::Center),
+        )
     }
 
-    /// Create a new button with a child widget for a label.
+    /// Create a new button that wraps a child widget.
     ///
-    /// The widget will receive padding and a styled background and border.If
+    /// The widget will receive padding and a styled background and border. If
     /// you want a clickable widget without the styling, consider just using
-    /// `.on_click` without the Button.
-    pub fn with_child(child: impl Widget<T> + 'static) -> impl Widget<T> {
+    /// `.on_click` from [`WidgetExt`] without the Button.
+    ///
+    /// [`WidgetExt`]: trait.WidgetExt.html#method.on_click
+    pub fn with_child(child: impl Widget<T> + 'static) -> Button<T> {
         let painter = Self::painter();
-        child
-            .padding(LABEL_INSETS)
-            .background(painter)
-            // TODO: this is a hacky way to make sure the Painter is updated
-            // on HotChanged and active.
-            .on_click(|_, _, _| {})
+        Button {
+            child: Box::new(Container::new(Padding::new(LABEL_INSETS, child)).background(painter)),
+        }
+    }
+
+    /// Provide a closure to be called when this button is clicked.
+    pub fn on_click(
+        self,
+        f: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
+    ) -> ControllerHost<Self, Click<T>> {
+        ControllerHost::new(self, Click::new(f))
     }
 
     fn painter() -> Painter<T> {
@@ -106,5 +110,45 @@ impl<T: Data> Button<T> {
 
             ctx.fill(rounded_rect, &bg_gradient);
         })
+    }
+}
+
+impl<T: Data> Widget<T> for Button<T> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        match event {
+            Event::MouseDown(_) => {
+                ctx.set_active(true);
+                ctx.request_paint();
+            }
+            Event::MouseUp(_) => {
+                if ctx.is_active() {
+                    ctx.set_active(false);
+                    ctx.request_paint();
+                }
+            }
+            _ => (),
+        }
+
+        self.child.event(ctx, event, data, env)
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        if let LifeCycle::HotChanged(_) = event {
+            ctx.request_paint();
+        }
+        self.child.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+        self.child.update(ctx, old_data, data, env)
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+        bc.debug_check("Button");
+        self.child.layout(ctx, bc, data, env)
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.child.paint(ctx, data, env)
     }
 }
