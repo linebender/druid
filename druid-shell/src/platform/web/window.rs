@@ -199,7 +199,7 @@ fn setup_resize_callback(window_state: &Rc<WindowState>) {
         state.canvas.set_height(physical_height);
         state.handler.borrow_mut().size(physical_width, physical_height);
     }) as Box<dyn FnMut(_)>);
-    window_state.canvas
+    window_state.window
         .add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
         .unwrap();
     closure.forget();
@@ -395,7 +395,6 @@ impl WindowHandle {
             let state = s.clone();
             s.request_animation_frame(move || {
                 let want_anim_frame = state.render();
-                log::debug!("want_anim_frame: {}", want_anim_frame);
                 if want_anim_frame {
                     handle.render_soon();
                 }
