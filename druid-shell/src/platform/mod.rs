@@ -27,5 +27,8 @@ cfg_if::cfg_if! {
     } else if #[cfg(any(feature = "use_gtk", target_os = "linux"))] {
         mod gtk;
         pub use self::gtk::*;
+    } else if #[cfg(target_arch = "wasm32")] {
+        mod web;
+        pub use web::*;
     }
 }

@@ -19,7 +19,7 @@ use crate::{
     TimerToken, UpdateCtx, Widget,
 };
 use std::f64::EPSILON;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::kurbo::{BezPath, Rect, RoundedRect};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};

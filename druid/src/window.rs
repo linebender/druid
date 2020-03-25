@@ -15,7 +15,9 @@
 //! Management of multiple windows.
 
 use std::mem;
-use std::time::Instant;
+
+// Automatically defaults to std::time::Instant on non Wasm platforms
+use instant::Instant;
 
 use crate::kurbo::{Insets, Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
