@@ -19,28 +19,3 @@
 use crate::keycodes::KeyCode;
 
 pub type RawKeyCode = u32;
-
-//// TODO: Verify if scancodes are indeed OS specific even from wasm.
-//mod hardware {
-//    cfg_if::cfg_if! {
-//        if #[cfg(all(target_os = "windows", not(feature = "use_gtk")))] {
-//            pub use super::windows::keycodes::*;
-//        } else if #[cfg(all(target_os = "macos", not(feature = "use_gtk")))] {
-//            pub use super::mac::keycodes::*;
-//        } else if #[cfg(any(feature = "use_gtk", target_os = "linux"))] {
-//            pub use super::gtk::keycodes::*;
-//        }
-//    }
-//}
-//
-//impl From<KeyCode> for u32 {
-//    fn from(src: KeyCode) -> u32 {
-//        hardware::RawKeyCode::from(src) as u32
-//    }
-//}
-//
-//impl From<u32> for KeyCode {
-//    fn from(src: u32) -> KeyCode {
-//        KeyCode::from(src as hardware::RawKeyCode)
-//    }
-//}

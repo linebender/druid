@@ -24,7 +24,7 @@ use instant::Instant;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-use crate::kurbo::{Size, Point};
+use crate::kurbo::{Size, Point, Vec2};
 
 use crate::piet::RenderContext;
 
@@ -41,6 +41,8 @@ use log::{error, warn};
 use super::util::init_log;
 
 type Result<T> = std::result::Result<T, Error>;
+
+const NOMINAL_DPI: f32 = 96.0;
 
 /// Builder abstraction for creating new windows.
 pub struct WindowBuilder {
@@ -69,7 +71,6 @@ enum IdleKind {
 }
 
 struct WindowState {
-    dpi: Cell<f32>,
     dpr: Cell<f64>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     handler: RefCell<Box<dyn WinHandler>>,
@@ -126,71 +127,83 @@ impl WindowState {
 
 }
 
-fn setup_mouse_down_callback(window_state: &Rc<WindowState>) {
-    let state = window_state.clone();
-    let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+fn setup_mouse_down_callback(ws: &Rc<WindowState>) {
+    let state = ws.clone();
+    register_canvas_event_listener(ws, "mousedown", move |event: web_sys::MouseEvent| {
         let button = mouse_button(event.button()).unwrap();
-        let dpr = state.dpr.get();
         let event = MouseEvent {
             pos: Point::new(
-                dpr * event.offset_x() as f64,
-                dpr * event.offset_y() as f64),
-            mods: KeyModifiers::default(),
+                event.offset_x() as f64,
+                event.offset_y() as f64),
+            mods: get_modifiers(&event),
             button,
             count: 1,
         };
         state.handler.borrow_mut().mouse_down(&event);
-    }) as Box<dyn FnMut(_)>);
-    window_state.canvas
-        .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())
-        .unwrap();
-    closure.forget();
+    });
 }
 
-fn setup_mouse_move_callback(window_state: &Rc<WindowState>) {
-    let state = window_state.clone();
-    let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+fn setup_mouse_move_callback(ws: &Rc<WindowState>) {
+    let state = ws.clone();
+    register_canvas_event_listener(ws, "mousemove", move |event: web_sys::MouseEvent| {
         let button = mouse_button(event.button()).unwrap();
-        let dpr = state.dpr.get();
         let event = MouseEvent {
             pos: Point::new(
-                dpr * event.offset_x() as f64,
-                dpr * event.offset_y() as f64),
-            mods: KeyModifiers::default(),
+                event.offset_x() as f64,
+                event.offset_y() as f64),
+            mods: get_modifiers(&event),
             button,
             count: 1,
         };
 	state.handler.borrow_mut().mouse_move(&event);
-    }) as Box<dyn FnMut(_)>);
-    window_state.canvas
-        .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())
-        .unwrap();
-    closure.forget();
+    });
 }
 
-fn setup_mouse_up_callback(window_state: &Rc<WindowState>) {
-    let state = window_state.clone();
-    let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+fn setup_mouse_up_callback(ws: &Rc<WindowState>) {
+    let state = ws.clone();
+    register_canvas_event_listener(ws, "mouseup", move |event: web_sys::MouseEvent| {
         let button = mouse_button(event.button()).unwrap();
-        let dpr = state.dpr.get();
         let event = MouseEvent {
             pos: Point::new(
-                     dpr * event.offset_x() as f64,
-                     dpr * event.offset_y() as f64),
-            mods: KeyModifiers::default(),
+                     event.offset_x() as f64,
+                     event.offset_y() as f64),
+            mods: get_modifiers(&event),
             button,
             count: 0,
         };
         state.handler.borrow_mut().mouse_up(&event);
-    }) as Box<dyn FnMut(_)>);
-    window_state.canvas
-        .add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref()).unwrap();
-    closure.forget();
+    });
 }
 
-fn setup_resize_callback(window_state: &Rc<WindowState>) {
-    let state = window_state.clone();
-    let closure = Closure::wrap(Box::new(move |_: web_sys::UiEvent| {
+fn setup_scroll_callback(ws: &Rc<WindowState>) {
+    let state = ws.clone();
+    register_canvas_event_listener(ws, "wheel", move |event: web_sys::WheelEvent| {
+        let delta_mode = event.delta_mode();
+
+        let dx = event.delta_x();
+        let dy = event.delta_y();
+        let height = state.canvas.height() as f64;
+        let width = state.canvas.width() as f64;
+
+        let modifiers = get_modifiers(&event);
+        let mut handler = state.handler.borrow_mut();
+
+        // The value 35.0 was manually picked to produce similar behavior to mac/linux.
+        match delta_mode {
+            web_sys::WheelEvent::DOM_DELTA_PIXEL => 
+                handler.wheel(Vec2::from((dx, dy)), modifiers),
+            web_sys::WheelEvent::DOM_DELTA_LINE => 
+                handler.wheel(Vec2::from((35.0 * dx, 35.0 * dy)), modifiers),
+            web_sys::WheelEvent::DOM_DELTA_PAGE => 
+                handler.wheel(Vec2::from((width * dx, height * dy)), modifiers),
+            _ => warn!("Invalid deltaMode in WheelEvent: {}", delta_mode),
+        }
+    });
+}
+
+fn setup_resize_callback(ws: &Rc<WindowState>) {
+    let state = ws.clone();
+    register_window_event_listener(ws, "resize", move |_: web_sys::UiEvent| {
         let (css_width, css_height, dpr) = state.get_window_size_and_dpr();
         let physical_width = (dpr * css_width) as u32;
         let physical_height = (dpr * css_height) as u32;
@@ -198,9 +211,29 @@ fn setup_resize_callback(window_state: &Rc<WindowState>) {
         state.canvas.set_width(physical_width);
         state.canvas.set_height(physical_height);
         state.handler.borrow_mut().size(physical_width, physical_height);
-    }) as Box<dyn FnMut(_)>);
+    });
+}
+
+/// A helper function to register a window event listener with `addEventListener`.
+fn register_window_event_listener<F, E>(window_state: &Rc<WindowState>, event_type: &str, f: F)
+    where F: 'static + FnMut(E),
+          E: 'static + wasm_bindgen::convert::FromWasmAbi
+{
+    let closure = Closure::wrap(Box::new(f) as Box<dyn FnMut(_)>);
     window_state.window
-        .add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
+        .add_event_listener_with_callback(event_type, closure.as_ref().unchecked_ref())
+        .unwrap();
+    closure.forget();
+}
+
+/// A helper function to register a canvas event listener with `addEventListener`.
+fn register_canvas_event_listener<F, E>(window_state: &Rc<WindowState>, event_type: &str, f: F)
+    where F: 'static + FnMut(E),
+          E: 'static + wasm_bindgen::convert::FromWasmAbi
+{
+    let closure = Closure::wrap(Box::new(f) as Box<dyn FnMut(_)>);
+    window_state.canvas
+        .add_event_listener_with_callback(event_type, closure.as_ref().unchecked_ref())
         .unwrap();
     closure.forget();
 }
@@ -210,6 +243,7 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
     setup_mouse_move_callback(window_state);
     setup_mouse_up_callback(window_state);
     setup_resize_callback(window_state);
+    setup_scroll_callback(window_state);
 }
 
 impl WindowBuilder {
@@ -275,15 +309,15 @@ impl WindowBuilder {
         let new_w = (old_w as f64 * dpr) as u32;
         let new_h = (old_h as f64 * dpr) as u32;
 
-        canvas.set_width(new_w);
-        canvas.set_height(new_h);
+        canvas.set_width(new_w as u32);
+        canvas.set_height(new_h as u32);
+        let _ = context.scale(dpr, dpr);
+
         set_cursor(&canvas, &self.cursor);
-        //let _ = context.scale(dpr, dpr);
 
         let handler = self.handler.unwrap();
 
         let window = Rc::new(WindowState {
-            dpi: Cell::new(96.0),
             dpr: Cell::new(dpr),
             idle_queue: Default::default(),
             handler: RefCell::new(handler),
@@ -420,32 +454,30 @@ impl WindowHandle {
 
     /// Get the dpi of the window.
     pub fn get_dpi(&self) -> f32 {
-        if let Some(w) = self.0.upgrade() {
-            w.dpi.get()
-        } else {
-            96.0
-        }
+        self.0.upgrade()
+            .map(|w| NOMINAL_DPI * w.dpr.get() as f32)
+            .unwrap_or(NOMINAL_DPI)
     }
 
     /// Convert a dimension in px units to physical pixels (rounding).
     pub fn px_to_pixels(&self, x: f32) -> i32 {
-        (x * self.get_dpi() * (1.0 / 96.0)).round() as i32
+        (x * self.get_dpi() / NOMINAL_DPI).round() as i32
     }
 
     /// Convert a point in px units to physical pixels (rounding).
     pub fn px_to_pixels_xy(&self, x: f32, y: f32) -> (i32, i32) {
-        let scale = self.get_dpi() * (1.0 / 96.0);
+        let scale = self.get_dpi() / NOMINAL_DPI;
         ((x * scale).round() as i32, (y * scale).round() as i32)
     }
 
     /// Convert a dimension in physical pixels to px units.
     pub fn pixels_to_px<T: Into<f64>>(&self, x: T) -> f32 {
-        (x.into() as f32) * 96.0 / self.get_dpi()
+        (x.into() as f32) * NOMINAL_DPI / self.get_dpi()
     }
 
     /// Convert a point in physical pixels to px units.
     pub fn pixels_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f32, f32) {
-        let scale = 96.0 / self.get_dpi();
+        let scale = NOMINAL_DPI / self.get_dpi();
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
 
@@ -507,6 +539,15 @@ fn mouse_button(button: i16) -> Option<MouseButton> {
         1 => Some(MouseButton::Middle),
         2 => Some(MouseButton::Right),
         _ => None
+    }
+}
+
+fn get_modifiers(event: &web_sys::MouseEvent) -> KeyModifiers {
+    KeyModifiers {
+        shift: event.shift_key(),
+        alt: event.alt_key(),
+        ctrl: event.ctrl_key(),
+        meta: event.meta_key(),
     }
 }
 
