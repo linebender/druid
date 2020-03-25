@@ -544,7 +544,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         let loosened_bc = bc.loosen();
 
         // Measure non-flex children.
-        let mut total_non_flex = 0.0;
+        let mut major_non_flex = 0.0;
         let mut minor = self.direction.minor(bc.min());
         for child in &mut self.children {
             if child.params.flex == 0.0 {
@@ -561,8 +561,8 @@ impl<T: Data> Widget<T> for Flex<T> {
                     log::warn!("A non-Flex child has an infinite height.");
                 }
 
+                major_non_flex += self.direction.major(child_size);
                 minor = minor.max(self.direction.minor(child_size));
-                total_non_flex += self.direction.major(child_size);
                 // Stash size.
                 let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
                 child.widget.set_layout_rect(rect);
@@ -570,9 +570,9 @@ impl<T: Data> Widget<T> for Flex<T> {
         }
 
         let total_major = self.direction.major(bc.max());
-        let remaining = (total_major - total_non_flex).max(0.0);
+        let remaining = (total_major - major_non_flex).max(0.0);
         let flex_sum: f64 = self.children.iter().map(|child| child.params.flex).sum();
-        let mut flex_used: f64 = 0.0;
+        let mut major_flex: f64 = 0.0;
 
         // Measure flex children.
         for child in &mut self.children {
@@ -583,7 +583,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 let child_bc = self.direction.constraints(&loosened_bc, min_major, major);
                 let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
 
-                flex_used += self.direction.major(child_size);
+                major_flex += self.direction.major(child_size);
                 minor = minor.max(self.direction.minor(child_size));
                 // Stash size.
                 let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
@@ -593,11 +593,11 @@ impl<T: Data> Widget<T> for Flex<T> {
 
         // figure out if we have extra space on major axis, and if so how to use it
         let extra = if self.fill_major_axis {
-            (remaining - flex_used).max(0.0)
+            (remaining - major_flex).max(0.0)
         } else {
             // if we are *not* expected to fill our available space this usually
             // means we don't have any extra, unless dictated by our constraints.
-            (self.direction.major(bc.min()) - (total_non_flex + flex_used)).max(0.0)
+            (self.direction.major(bc.min()) - (major_non_flex + major_flex)).max(0.0)
         };
 
         let spacing = self.main_alignment.spacing(extra, self.children.len());
