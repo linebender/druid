@@ -14,10 +14,10 @@
 
 //! A widget that arranges its children on top of one another.
 
-use crate::kurbo::{Point, Rect, Size};
+use crate::kurbo::Size;
 use crate::{
-    BoxConstraints, BoxedWidget, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    UpdateCtx, Widget, WidgetPod,
 };
 
 /// A container that lays out its children along the z-axis, first child at bottom, last child on top.
@@ -104,13 +104,10 @@ impl<T: Data> Widget<T> for Stack<T> {
             max_width = max_width.max(child_size.width);
             max_height = max_height.max(child_size.height);
             // Stash size.
-            let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
+            let rect = child_size.to_rect();
             child.set_layout_rect(rect);
         }
-        Size {
-            width: max_width,
-            height: max_height,
-        }
+        Size::new(max_width, max_height)
     }
 
     fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
