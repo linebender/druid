@@ -533,13 +533,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         }
     }
 
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Flex");
         // Even if given fractional size constraints,
         // we will only operate on integers to remain aligned to pixels.
@@ -555,7 +549,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 let child_bc = self
                     .direction
                     .constraints(&loosened_bc, 0., std::f64::INFINITY);
-                let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
+                let child_size = child.widget.layout(ctx, &child_bc, data, env);
 
                 if child_size.width.is_infinite() {
                     log::warn!("A non-Flex child has an infinite width.");
@@ -590,7 +584,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 let child_bc = self
                     .direction
                     .constraints(&loosened_bc, min_major, actual_major);
-                let child_size = child.widget.layout(layout_ctx, &child_bc, data, env);
+                let child_size = child.widget.layout(ctx, &child_bc, data, env);
 
                 major_flex += self.direction.major(child_size).expand();
                 minor = minor.max(self.direction.minor(child_size).expand());
@@ -648,7 +642,7 @@ impl<T: Data> Widget<T> for Flex<T> {
 
         let my_bounds = Rect::ZERO.with_size(my_size);
         let insets = child_paint_rect - my_bounds;
-        layout_ctx.set_paint_insets(insets);
+        ctx.set_paint_insets(insets);
         my_size
     }
 
