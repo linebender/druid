@@ -41,12 +41,12 @@ pub struct KeyEvent {
 impl KeyEvent {
     /// Create a new `KeyEvent` struct. This accepts either &str or char for the last
     /// two arguments.
-    pub(crate) fn new(
+    pub(crate) fn new<'a>(
         key_code: impl Into<KeyCode>,
         is_repeat: bool,
         mods: KeyModifiers,
-        text: impl Into<StrOrChar>,
-        unmodified_text: impl Into<StrOrChar>,
+        text: impl Into<StrOrChar<'a>>,
+        unmodified_text: impl Into<StrOrChar<'a>>,
     ) -> Self {
         let text = match text.into() {
             StrOrChar::Char(c) => c.into(),
@@ -176,25 +176,25 @@ impl From<char> for TinyStr {
 
 /// A type we use in the constructor of `KeyEvent`, specifically to avoid exposing
 /// internals.
-pub enum StrOrChar {
+pub enum StrOrChar<'a> {
     Char(char),
-    Str(&'static str),
+    Str(&'a str),
 }
 
-impl From<&'static str> for StrOrChar {
-    fn from(src: &'static str) -> Self {
+impl<'a> From<&'a str> for StrOrChar<'a> {
+    fn from(src: &'a str) -> Self {
         StrOrChar::Str(src)
     }
 }
 
-impl From<char> for StrOrChar {
-    fn from(src: char) -> StrOrChar {
+impl From<char> for StrOrChar<'static> {
+    fn from(src: char) -> StrOrChar<'static> {
         StrOrChar::Char(src)
     }
 }
 
-impl From<Option<char>> for StrOrChar {
-    fn from(src: Option<char>) -> StrOrChar {
+impl From<Option<char>> for StrOrChar<'static> {
+    fn from(src: Option<char>) -> StrOrChar<'static> {
         match src {
             Some(c) => StrOrChar::Char(c),
             None => StrOrChar::Str(""),
