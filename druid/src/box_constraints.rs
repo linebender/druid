@@ -117,6 +117,11 @@ impl BoxConstraints {
         }
     }
 
+    /// Shrink min and max constraints to integers.
+    pub fn trunc(&self) -> BoxConstraints {
+        BoxConstraints::new(self.min.trunc(), self.max.trunc())
+    }
+
     /// Shrink min and max constraints by size
     pub fn shrink(&self, diff: impl Into<Size>) -> BoxConstraints {
         let diff = diff.into();
