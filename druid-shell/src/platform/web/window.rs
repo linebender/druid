@@ -36,9 +36,24 @@ use crate::common_util::IdleCallback;
 use crate::KeyModifiers;
 use crate::window::{WinHandler, IdleToken, Text, TimerToken};
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
+use crate::keycodes::KeyCode;
+use crate::keyboard;
 
 use log::{error, warn};
 use super::util::init_log;
+
+// This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
+// to query modifier key states.
+macro_rules! get_modifiers {
+    ($event:ident) => {
+        KeyModifiers {
+            shift: $event.shift_key(),
+            alt: $event.alt_key(),
+            ctrl: $event.ctrl_key(),
+            meta: $event.meta_key(),
+        }
+    }
+}
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -135,7 +150,7 @@ fn setup_mouse_down_callback(ws: &Rc<WindowState>) {
             pos: Point::new(
                 event.offset_x() as f64,
                 event.offset_y() as f64),
-            mods: get_modifiers(&event),
+            mods: get_modifiers!(event),
             button,
             count: 1,
         };
@@ -151,7 +166,7 @@ fn setup_mouse_move_callback(ws: &Rc<WindowState>) {
             pos: Point::new(
                 event.offset_x() as f64,
                 event.offset_y() as f64),
-            mods: get_modifiers(&event),
+            mods: get_modifiers!(event),
             button,
             count: 1,
         };
@@ -167,7 +182,7 @@ fn setup_mouse_up_callback(ws: &Rc<WindowState>) {
             pos: Point::new(
                      event.offset_x() as f64,
                      event.offset_y() as f64),
-            mods: get_modifiers(&event),
+            mods: get_modifiers!(event),
             button,
             count: 0,
         };
@@ -185,7 +200,7 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
         let height = state.canvas.height() as f64;
         let width = state.canvas.width() as f64;
 
-        let modifiers = get_modifiers(&event);
+        let modifiers = get_modifiers!(event);
         let mut handler = state.handler.borrow_mut();
 
         // The value 35.0 was manually picked to produce similar behavior to mac/linux.
@@ -212,6 +227,42 @@ fn setup_resize_callback(ws: &Rc<WindowState>) {
         state.canvas.set_height(physical_height);
         state.handler.borrow_mut().size(physical_width, physical_height);
     });
+}
+
+fn setup_keyup_callback(ws: &Rc<WindowState>) {
+    let state = ws.clone();
+    register_window_event_listener(ws, "keyup", move |event: web_sys::KeyboardEvent| {
+        let code = KeyCode::from((event.key_code(), event.location()));
+        let mods = get_modifiers!(event);
+        let text = key_to_text(event.key());
+        let repeat = event.repeat();
+        let event = keyboard::KeyEvent::new(code, repeat, mods, text.as_str(), text.as_str());
+        state.handler.borrow_mut().key_up(event);
+    });
+}
+
+fn setup_keydown_callback(ws: &Rc<WindowState>) {
+    let state = ws.clone();
+    register_window_event_listener(ws, "keydown", move |event: web_sys::KeyboardEvent| {
+        let code = KeyCode::from((event.key_code(), event.location()));
+        let mods = get_modifiers!(event);
+        let text = key_to_text(event.key());
+        let repeat = event.repeat();
+        let event = keyboard::KeyEvent::new(code, repeat, mods, text.as_str(), text.as_str());
+        state.handler.borrow_mut().key_down(event);
+    });
+}
+
+/// A helper to convert the key string to the text it is supposed to represent.
+fn key_to_text(key: String) -> String {
+    if key.len() == 1 {
+        return key;
+    }
+
+    match key.as_str() {
+        "Enter" => "\n",
+        _ => "",
+    }.to_string()
 }
 
 /// A helper function to register a window event listener with `addEventListener`.
@@ -244,6 +295,8 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
     setup_mouse_up_callback(window_state);
     setup_resize_callback(window_state);
     setup_scroll_callback(window_state);
+    setup_keyup_callback(window_state);
+    setup_keydown_callback(window_state);
 }
 
 impl WindowBuilder {
@@ -539,15 +592,6 @@ fn mouse_button(button: i16) -> Option<MouseButton> {
         1 => Some(MouseButton::Middle),
         2 => Some(MouseButton::Right),
         _ => None
-    }
-}
-
-fn get_modifiers(event: &web_sys::MouseEvent) -> KeyModifiers {
-    KeyModifiers {
-        shift: event.shift_key(),
-        alt: event.alt_key(),
-        ctrl: event.ctrl_key(),
-        meta: event.meta_key(),
     }
 }
 
