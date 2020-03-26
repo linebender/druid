@@ -120,11 +120,11 @@ impl WindowState {
     }
 
     fn get_width(&self) -> u32 {
-        (self.canvas.offset_width() as f64 * self.dpr.get()) as u32
+        self.canvas.offset_width() as u32
     }
 
     fn get_height(&self) -> u32 {
-        (self.canvas.offset_height() as f64 * self.dpr.get()) as u32
+        self.canvas.offset_height() as u32
     }
 
     fn request_animation_frame(&self, f: impl FnOnce() + 'static) -> Result<i32> {
@@ -225,6 +225,8 @@ fn setup_resize_callback(ws: &Rc<WindowState>) {
         state.dpr.replace(dpr);
         state.canvas.set_width(physical_width);
         state.canvas.set_height(physical_height);
+        let _ = state.context.scale(dpr, dpr);
+        state.canvas.offset_width(), state.canvas.offset_height());
         state.handler.borrow_mut().size(physical_width, physical_height);
     });
 }
