@@ -28,7 +28,7 @@ fn main() {
     use log::error;
 
     use druid::{
-        widget::{Button, FillStrat, Flex, Svg, SvgData, WidgetExt},
+        widget::{FillStrat, Flex, Svg, SvgData, WidgetExt},
         AppLauncher, LocalizedString, Widget, WindowDesc,
     };
 
@@ -54,14 +54,7 @@ fn main() {
 
         col.add_flex_child(Svg::new(tiger_svg.clone()).fix_width(60.0).center(), 1.0);
         col.add_flex_child(Svg::new(tiger_svg.clone()).fill_mode(FillStrat::Fill), 1.0);
-        col.add_flex_child(Svg::new(tiger_svg.clone()), 1.0);
-        col.add_flex_child(
-            Button::with_child(Svg::new(tiger_svg))
-                .fix_width(100.0)
-                .fix_height(100.0)
-                .center(),
-            1.0,
-        );
-        col
+        col.add_flex_child(Svg::new(tiger_svg), 1.0);
+        col.debug_paint_layout()
     }
 }
