@@ -39,7 +39,7 @@ impl<T: Data> Button<T> {
     /// # Examples
     ///
     /// ```
-    /// use druid::widget::{Button};
+    /// use druid::widget::Button;
     ///
     /// let button = Button::new("Increment").on_click(|_ctx, data: &mut u32, _env| {
     ///     *data += 1;
