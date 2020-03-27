@@ -44,10 +44,11 @@ fn make_ui() -> impl Widget<AppState> {
     for i in 0..6 {
         switcher_column.add_spacer(80.);
         switcher_column.add_child(
-            Button::<u32>::new(format!("View {}", i), move |_event, data, _env| {
-                *data = i;
-            })
-            .lens(AppState::current_view),
+            Button::new(format!("View {}", i))
+                .on_click(move |_event, data: &mut u32, _env| {
+                    *data = i;
+                })
+                .lens(AppState::current_view),
         );
     }
 
@@ -55,20 +56,21 @@ fn make_ui() -> impl Widget<AppState> {
         |data: &AppState, _env| data.current_view,
         |selector, _data, _env| match selector {
             0 => Box::new(Label::new("Simple Label").center()),
-            1 => Box::new(Button::new("Simple Button", |_event, _data, _env| {
-                println!("Simple button clicked!");
-            })),
-            2 => Box::new(Button::new(
-                "Another Simple Button",
-                |_event, _data, _env| {
+            1 => Box::new(
+                Button::new("Simple Button").on_click(|_event, _data, _env| {
+                    println!("Simple button clicked!");
+                }),
+            ),
+            2 => Box::new(
+                Button::new("Another Simple Button").on_click(|_event, _data, _env| {
                     println!("Another simple button clicked!");
-                },
-            )),
+                }),
+            ),
             3 => Box::new(
                 Flex::column()
                     .with_flex_child(Label::new("Here is a label").center(), 1.0)
                     .with_flex_child(
-                        Button::new("Button", |_event, _data, _env| {
+                        Button::new("Button").on_click(|_event, _data, _env| {
                             println!("Complex button clicked!");
                         }),
                         1.0,

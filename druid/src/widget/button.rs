@@ -13,13 +13,11 @@
 // limitations under the License.
 
 //! A button widget.
-
 use crate::theme;
-use crate::widget::{Label, LabelText};
-use crate::{
-    Affine, BoxConstraints, Data, Env, Event, EventCtx, Insets, LayoutCtx, LifeCycle, LifeCycleCtx,
-    LinearGradient, PaintCtx, Point, Rect, RenderContext, Size, UnitPoint, UpdateCtx, Widget,
-};
+use crate::widget::prelude::*;
+use crate::widget::{Click, ControllerHost, Label, LabelText};
+
+use crate::{Affine, Data, Insets, LinearGradient, Point, Rect, RenderContext, UnitPoint, Widget};
 
 // the minimum padding added to a button.
 // NOTE: these values are chosen to match the existing look of TextBox; these
@@ -30,38 +28,41 @@ const LABEL_INSETS: Insets = Insets::uniform_xy(8., 2.);
 pub struct Button<T> {
     label: Label<T>,
     label_size: Size,
-    /// A closure that will be invoked when the button is clicked.
-    action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,
 }
 
 impl<T: Data> Button<T> {
-    /// Create a new button. The closure provided will be called when the button
-    /// is clicked.
-    pub fn new(
-        text: impl Into<LabelText<T>>,
-        action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
-    ) -> Button<T> {
-        Button {
-            label: Label::new(text),
-            label_size: Size::ZERO,
-            action: Box::new(action),
-        }
-    }
-
-    /// A function that can be passed to `Button::new`, for buttons with no action.
+    /// Create a new button with a text label.
+    ///
+    /// Use the `.on_click` method to provide a closure to be called when the
+    /// button is clicked.
     ///
     /// # Examples
     ///
     /// ```
     /// use druid::widget::Button;
     ///
-    /// let button = Button::<u32>::new("hello", Button::noop);
+    /// let button = Button::new("Increment").on_click(|_ctx, data: &mut u32, _env| {
+    ///     *data += 1;
+    /// });
     /// ```
-    pub fn noop(_: &mut EventCtx, _: &mut T, _: &Env) {}
+    pub fn new(text: impl Into<LabelText<T>>) -> Button<T> {
+        Button {
+            label: Label::new(text),
+            label_size: Size::ZERO,
+        }
+    }
+
+    /// Provide a closure to be called when this button is clicked.
+    pub fn on_click(
+        self,
+        f: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
+    ) -> ControllerHost<Self, Click<T>> {
+        ControllerHost::new(self, Click::new(f))
+    }
 }
 
 impl<T: Data> Widget<T> for Button<T> {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
@@ -71,9 +72,6 @@ impl<T: Data> Widget<T> for Button<T> {
                 if ctx.is_active() {
                     ctx.set_active(false);
                     ctx.request_paint();
-                    if ctx.is_hot() {
-                        (self.action)(ctx, data, env);
-                    }
                 }
             }
             _ => (),
@@ -124,13 +122,13 @@ impl<T: Data> Widget<T> for Button<T> {
             LinearGradient::new(
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
-                (env.get(theme::BUTTON_LIGHT), env.get(theme::BUTTON_DARK)),
+                (env.get(theme::BUTTON_DARK), env.get(theme::BUTTON_LIGHT)),
             )
         } else {
             LinearGradient::new(
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
-                (env.get(theme::BUTTON_DARK), env.get(theme::BUTTON_LIGHT)),
+                (env.get(theme::BUTTON_LIGHT), env.get(theme::BUTTON_DARK)),
             )
         };
 

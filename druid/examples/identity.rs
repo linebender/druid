@@ -169,13 +169,16 @@ fn make_ui() -> impl Widget<OurData> {
                 .cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_flex_child(ColorWell::new(false).with_id(ID_ONE), 1.0)
                 .with_spacer(10.0)
-                .with_child(Button::<OurData>::new("freeze", move |ctx, data, _env| {
-                    ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), ID_ONE)
-                }))
+                .with_child(
+                    Button::<OurData>::new("freeze").on_click(move |ctx, data, _env| {
+                        ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), ID_ONE)
+                    }),
+                )
                 .with_spacer(10.0)
-                .with_child(Button::<OurData>::new("unfreeze", move |ctx, _, _env| {
-                    ctx.submit_command(UNFREEZE_COLOR, ID_ONE)
-                })),
+                .with_child(
+                    Button::<OurData>::new("unfreeze")
+                        .on_click(move |ctx, _, _env| ctx.submit_command(UNFREEZE_COLOR, ID_ONE)),
+                ),
             0.5,
         )
         .with_spacer(10.0)
@@ -184,13 +187,16 @@ fn make_ui() -> impl Widget<OurData> {
                 .cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_flex_child(ColorWell::new(false).with_id(id_two), 1.)
                 .with_spacer(10.0)
-                .with_child(Button::<OurData>::new("freeze", move |ctx, data, _env| {
-                    ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_two)
-                }))
+                .with_child(
+                    Button::<OurData>::new("freeze").on_click(move |ctx, data, _env| {
+                        ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_two)
+                    }),
+                )
                 .with_spacer(10.0)
-                .with_child(Button::<OurData>::new("unfreeze", move |ctx, _, _env| {
-                    ctx.submit_command(UNFREEZE_COLOR, id_two)
-                })),
+                .with_child(
+                    Button::<OurData>::new("unfreeze")
+                        .on_click(move |ctx, _, _env| ctx.submit_command(UNFREEZE_COLOR, id_two)),
+                ),
             0.5,
         )
         .with_spacer(10.0)
@@ -199,13 +205,16 @@ fn make_ui() -> impl Widget<OurData> {
                 .cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_flex_child(ColorWell::new(false).with_id(id_three), 1.)
                 .with_spacer(10.0)
-                .with_child(Button::<OurData>::new("freeze", move |ctx, data, _env| {
-                    ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_three)
-                }))
+                .with_child(
+                    Button::<OurData>::new("freeze").on_click(move |ctx, data, _env| {
+                        ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_three)
+                    }),
+                )
                 .with_spacer(10.0)
-                .with_child(Button::<OurData>::new("unfreeze", move |ctx, _, _env| {
-                    ctx.submit_command(UNFREEZE_COLOR, id_three)
-                })),
+                .with_child(
+                    Button::<OurData>::new("unfreeze")
+                        .on_click(move |ctx, _, _env| ctx.submit_command(UNFREEZE_COLOR, id_three)),
+                ),
             0.5,
         )
         .padding(10.)

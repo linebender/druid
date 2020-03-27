@@ -37,7 +37,7 @@ fn propogate_hot() {
 
     let widget = Split::vertical(
         SizedBox::empty().with_id(empty),
-        Button::new("hot", |_, _, _| {})
+        Button::new("hot")
             .record(&button_rec)
             .with_id(button)
             .padding(50.)
