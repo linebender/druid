@@ -43,7 +43,7 @@ fn ui_builder() -> impl Widget<u32> {
     let label = Label::new(text)
         .padding(5.0)
         .center();
-    let button = Button::new("increment", |_ctx, data, _env| *data += 1)
+    let button = Button::new("increment").on_click(|_ctx, data, _env| *data += 1)
         .padding(5.0);
 
     Flex::column()
@@ -157,8 +157,7 @@ implement your own. You can also compose widgets into new widgets:
 fn build_widget() -> impl Widget<u32> {
     let mut col = Flex::column();
     for i in 0..30 {
-        let button = Button::new(format!("Button {}", i), Button::noop)
-            .padding(5.0);
+        let button = Button::new(format!("Button {}", i).padding(5.0);
         col.add_child(button, 0.0);
     }
     Scroll::new(col)
