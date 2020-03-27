@@ -123,7 +123,6 @@ impl WindowBuilder {
     }
 
     pub fn set_min_size(&mut self, size: Size) {
-        // TODO: Use this in `self.build`
         self.min_size = Some(size);
     }
 
@@ -166,6 +165,16 @@ impl WindowBuilder {
                 NSBackingStoreBuffered,
                 NO,
             );
+
+            if let Some(min_size) = self.min_size {
+                let frame = NSWindow::frame(window);
+                let content_height = window.contentRectForFrameRect_(frame).size.height;
+                let window_height = frame.size.height;
+                let title_bar_height = window_height - content_height;
+                // setMinSize_ does not take into account the height of the title bar.
+                let size = NSSize::new(min_size.width, min_size.height + title_bar_height);
+                window.setMinSize_(size);
+            }
 
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
