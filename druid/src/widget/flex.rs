@@ -535,15 +535,12 @@ impl<T: Data> Widget<T> for Flex<T> {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Flex");
-        // Even if given fractional size constraints,
-        // we will only operate on integers to remain aligned to pixels.
-        let int_bc = bc.trunc();
         // we loosen our constraints when passing to children.
-        let loosened_bc = int_bc.loosen();
+        let loosened_bc = bc.loosen();
 
         // Measure non-flex children.
         let mut major_non_flex = 0.0;
-        let mut minor = self.direction.minor(int_bc.min());
+        let mut minor = self.direction.minor(bc.min());
         for child in &mut self.children {
             if child.params.flex == 0.0 {
                 let child_bc = self
@@ -567,7 +564,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             }
         }
 
-        let total_major = self.direction.major(int_bc.max());
+        let total_major = self.direction.major(bc.max());
         let remaining = (total_major - major_non_flex).max(0.0);
         let mut remainder: f64 = 0.0;
         let flex_sum: f64 = self.children.iter().map(|child| child.params.flex).sum();
@@ -600,7 +597,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         } else {
             // if we are *not* expected to fill our available space this usually
             // means we don't have any extra, unless dictated by our constraints.
-            (self.direction.major(int_bc.min()) - (major_non_flex + major_flex)).max(0.0)
+            (self.direction.major(bc.min()) - (major_non_flex + major_flex)).max(0.0)
         };
 
         let spacing = self.main_alignment.spacing(extra, self.children.len());
@@ -746,7 +743,7 @@ impl MainAxisAlignment {
                     let equal_space = extra / count as f64;
                     let mut remainder = 0.;
                     let mut half = 0.;
-                    let mut spaces = Vec::with_capacity(count / 2 + 1);
+                    let mut spaces = Vec::with_capacity(n + 1);
                     for i in 0..count {
                         let desired_space = equal_space + remainder;
                         let actual_space = desired_space.round();
