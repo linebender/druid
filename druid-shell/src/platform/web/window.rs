@@ -226,7 +226,6 @@ fn setup_resize_callback(ws: &Rc<WindowState>) {
         state.canvas.set_width(physical_width);
         state.canvas.set_height(physical_height);
         let _ = state.context.scale(dpr, dpr);
-        state.canvas.offset_width(), state.canvas.offset_height());
         state.handler.borrow_mut().size(physical_width, physical_height);
     });
 }
