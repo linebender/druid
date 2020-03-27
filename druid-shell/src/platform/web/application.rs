@@ -25,11 +25,9 @@ impl Application {
         Application
     }
 
-    pub fn run(&mut self) {
-    }
+    pub fn run(&mut self) {}
 
-    pub fn quit() {
-    }
+    pub fn quit() {}
 
     pub fn clipboard() -> Clipboard {
         Clipboard

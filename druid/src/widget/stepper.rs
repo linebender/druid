@@ -18,8 +18,8 @@ use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
     TimerToken, UpdateCtx, Widget,
 };
-use std::f64::EPSILON;
 use instant::{Duration, Instant};
+use std::f64::EPSILON;
 
 use crate::kurbo::{BezPath, Rect, RoundedRect};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};

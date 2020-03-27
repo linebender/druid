@@ -248,4 +248,3 @@ map_keys! {
     //(KeyEvent::DOM_VK_PA1, (_)) => KeyCode::PA1,
     //(KeyEvent::DOM_VK_WIN_OEM_CLEAR, (_)) => KeyCode::WIN_OEM_CLEAR,
 }
-

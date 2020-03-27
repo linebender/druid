@@ -14,33 +14,33 @@
 
 //! Web window creation and management.
 
+use instant::Instant;
 use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::ffi::OsString;
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
-use instant::Instant;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-use crate::kurbo::{Size, Point, Vec2};
+use crate::kurbo::{Point, Size, Vec2};
 
 use crate::piet::RenderContext;
 
-use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
-use super::menu::Menu;
 use super::error::Error;
+use super::menu::Menu;
 use crate::common_util::IdleCallback;
+use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 
-use crate::KeyModifiers;
-use crate::window::{WinHandler, IdleToken, Text, TimerToken};
-use crate::mouse::{Cursor, MouseButton, MouseEvent};
-use crate::keycodes::KeyCode;
 use crate::keyboard;
+use crate::keycodes::KeyCode;
+use crate::mouse::{Cursor, MouseButton, MouseEvent};
+use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::KeyModifiers;
 
-use log::{error, warn};
 use super::util::init_log;
+use log::{error, warn};
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
@@ -52,7 +52,7 @@ macro_rules! get_modifiers {
             ctrl: $event.ctrl_key(),
             meta: $event.meta_key(),
         }
-    }
+    };
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -96,7 +96,8 @@ struct WindowState {
 
 impl WindowState {
     fn render(&self) -> bool {
-        self.context.clear_rect(0.0, 0.0, self.get_width() as f64, self.get_height() as f64);
+        self.context
+            .clear_rect(0.0, 0.0, self.get_width() as f64, self.get_height() as f64);
         let mut piet_ctx = piet_common::Piet::new(self.context.clone(), self.window.clone());
         let want_anim_frame = self.handler.borrow_mut().paint(&mut piet_ctx);
         if let Err(e) = piet_ctx.finish() {
@@ -128,7 +129,9 @@ impl WindowState {
     }
 
     fn request_animation_frame(&self, f: impl FnOnce() + 'static) -> Result<i32> {
-        Ok(self.window.request_animation_frame(Closure::once_into_js(f).as_ref().unchecked_ref())?)
+        Ok(self
+            .window
+            .request_animation_frame(Closure::once_into_js(f).as_ref().unchecked_ref())?)
     }
 
     /// Returns the window size in css units
@@ -139,7 +142,6 @@ impl WindowState {
         let dpr = w.device_pixel_ratio();
         (width, height, dpr)
     }
-
 }
 
 fn setup_mouse_down_callback(ws: &Rc<WindowState>) {
@@ -147,9 +149,7 @@ fn setup_mouse_down_callback(ws: &Rc<WindowState>) {
     register_canvas_event_listener(ws, "mousedown", move |event: web_sys::MouseEvent| {
         let button = mouse_button(event.button()).unwrap();
         let event = MouseEvent {
-            pos: Point::new(
-                event.offset_x() as f64,
-                event.offset_y() as f64),
+            pos: Point::new(event.offset_x() as f64, event.offset_y() as f64),
             mods: get_modifiers!(event),
             button,
             count: 1,
@@ -163,14 +163,12 @@ fn setup_mouse_move_callback(ws: &Rc<WindowState>) {
     register_canvas_event_listener(ws, "mousemove", move |event: web_sys::MouseEvent| {
         let button = mouse_button(event.button()).unwrap();
         let event = MouseEvent {
-            pos: Point::new(
-                event.offset_x() as f64,
-                event.offset_y() as f64),
+            pos: Point::new(event.offset_x() as f64, event.offset_y() as f64),
             mods: get_modifiers!(event),
             button,
             count: 1,
         };
-	state.handler.borrow_mut().mouse_move(&event);
+        state.handler.borrow_mut().mouse_move(&event);
     });
 }
 
@@ -179,9 +177,7 @@ fn setup_mouse_up_callback(ws: &Rc<WindowState>) {
     register_canvas_event_listener(ws, "mouseup", move |event: web_sys::MouseEvent| {
         let button = mouse_button(event.button()).unwrap();
         let event = MouseEvent {
-            pos: Point::new(
-                     event.offset_x() as f64,
-                     event.offset_y() as f64),
+            pos: Point::new(event.offset_x() as f64, event.offset_y() as f64),
             mods: get_modifiers!(event),
             button,
             count: 0,
@@ -205,12 +201,13 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
 
         // The value 35.0 was manually picked to produce similar behavior to mac/linux.
         match delta_mode {
-            web_sys::WheelEvent::DOM_DELTA_PIXEL => 
-                handler.wheel(Vec2::from((dx, dy)), modifiers),
-            web_sys::WheelEvent::DOM_DELTA_LINE => 
-                handler.wheel(Vec2::from((35.0 * dx, 35.0 * dy)), modifiers),
-            web_sys::WheelEvent::DOM_DELTA_PAGE => 
-                handler.wheel(Vec2::from((width * dx, height * dy)), modifiers),
+            web_sys::WheelEvent::DOM_DELTA_PIXEL => handler.wheel(Vec2::from((dx, dy)), modifiers),
+            web_sys::WheelEvent::DOM_DELTA_LINE => {
+                handler.wheel(Vec2::from((35.0 * dx, 35.0 * dy)), modifiers)
+            }
+            web_sys::WheelEvent::DOM_DELTA_PAGE => {
+                handler.wheel(Vec2::from((width * dx, height * dy)), modifiers)
+            }
             _ => warn!("Invalid deltaMode in WheelEvent: {}", delta_mode),
         }
     });
@@ -226,7 +223,10 @@ fn setup_resize_callback(ws: &Rc<WindowState>) {
         state.canvas.set_width(physical_width);
         state.canvas.set_height(physical_height);
         let _ = state.context.scale(dpr, dpr);
-        state.handler.borrow_mut().size(physical_width, physical_height);
+        state
+            .handler
+            .borrow_mut()
+            .size(physical_width, physical_height);
     });
 }
 
@@ -263,16 +263,19 @@ fn key_to_text(key: String) -> String {
     match key.as_str() {
         "Enter" => "\n",
         _ => "",
-    }.to_string()
+    }
+    .to_string()
 }
 
 /// A helper function to register a window event listener with `addEventListener`.
 fn register_window_event_listener<F, E>(window_state: &Rc<WindowState>, event_type: &str, f: F)
-    where F: 'static + FnMut(E),
-          E: 'static + wasm_bindgen::convert::FromWasmAbi
+where
+    F: 'static + FnMut(E),
+    E: 'static + wasm_bindgen::convert::FromWasmAbi,
 {
     let closure = Closure::wrap(Box::new(f) as Box<dyn FnMut(_)>);
-    window_state.window
+    window_state
+        .window
         .add_event_listener_with_callback(event_type, closure.as_ref().unchecked_ref())
         .unwrap();
     closure.forget();
@@ -280,11 +283,13 @@ fn register_window_event_listener<F, E>(window_state: &Rc<WindowState>, event_ty
 
 /// A helper function to register a canvas event listener with `addEventListener`.
 fn register_canvas_event_listener<F, E>(window_state: &Rc<WindowState>, event_type: &str, f: F)
-    where F: 'static + FnMut(E),
-          E: 'static + wasm_bindgen::convert::FromWasmAbi
+where
+    F: 'static + FnMut(E),
+    E: 'static + wasm_bindgen::convert::FromWasmAbi,
 {
     let closure = Closure::wrap(Box::new(f) as Box<dyn FnMut(_)>);
-    window_state.canvas
+    window_state
+        .canvas
         .add_event_listener_with_callback(event_type, closure.as_ref().unchecked_ref())
         .unwrap();
     closure.forget();
@@ -384,9 +389,11 @@ impl WindowBuilder {
 
         // Register the size with the window handler.
         let wh = window.clone();
-        window.request_animation_frame(move || {
-            wh.handler.borrow_mut().size(new_w, new_h);
-        }).expect("Failed to request animation frame");
+        window
+            .request_animation_frame(move || {
+                wh.handler.borrow_mut().size(new_w, new_h);
+            })
+            .expect("Failed to request animation frame");
 
         let handle = WindowHandle(Rc::downgrade(&window));
 
@@ -422,18 +429,17 @@ impl WindowHandle {
     }
 
     pub fn text(&self) -> Text {
-        let s = self.0.upgrade().unwrap_or_else(|| {
-            panic!("Failed to produce a text context")
-        });
+        let s = self
+            .0
+            .upgrade()
+            .unwrap_or_else(|| panic!("Failed to produce a text context"));
 
         Text::new(s.context.clone(), s.window.clone())
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
         use std::convert::TryFrom;
-        let interval = deadline
-            .duration_since(Instant::now())
-            .as_millis();
+        let interval = deadline.duration_since(Instant::now()).as_millis();
         let interval = match i32::try_from(interval) {
             Ok(iv) => iv,
             Err(_) => {
@@ -451,8 +457,12 @@ impl WindowHandle {
                     handler_borrow.timer(token);
                 }
             };
-            state.window.set_timeout_with_callback_and_timeout_and_arguments_0(
-                Closure::once_into_js(f).as_ref().unchecked_ref(), interval)
+            state
+                .window
+                .set_timeout_with_callback_and_timeout_and_arguments_0(
+                    Closure::once_into_js(f).as_ref().unchecked_ref(),
+                    interval,
+                )
                 .expect("Failed to call setTimeout with a callback");
         }
         token
@@ -476,7 +486,6 @@ impl WindowHandle {
             .map(|s| FileInfo { path: s.into() })
     }
 
-
     fn render_soon(&self) {
         if let Some(s) = self.0.upgrade() {
             let handle = self.clone();
@@ -486,7 +495,8 @@ impl WindowHandle {
                 if want_anim_frame {
                     handle.render_soon();
                 }
-            }).expect("Failed to request animation frame");
+            })
+            .expect("Failed to request animation frame");
         }
     }
 
@@ -508,7 +518,8 @@ impl WindowHandle {
 
     /// Get the dpi of the window.
     pub fn get_dpi(&self) -> f32 {
-        self.0.upgrade()
+        self.0
+            .upgrade()
             .map(|w| NOMINAL_DPI * w.dpr.get() as f32)
             .unwrap_or(NOMINAL_DPI)
     }
@@ -534,7 +545,6 @@ impl WindowHandle {
         let scale = NOMINAL_DPI / self.get_dpi();
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
-
 
     pub fn set_menu(&self, _menu: Menu) {
         warn!("set_menu unimplemented for web");
@@ -565,9 +575,11 @@ impl IdleHandle {
         if queue.len() == 1 {
             if let Some(window_state) = self.state.upgrade() {
                 let state = window_state.clone();
-                window_state.request_animation_frame(move || {
-                    state.process_idle_queue();
-                }).expect("request_animation_frame failed");
+                window_state
+                    .request_animation_frame(move || {
+                        state.process_idle_queue();
+                    })
+                    .expect("request_animation_frame failed");
             }
         }
     }
@@ -579,9 +591,11 @@ impl IdleHandle {
         if queue.len() == 1 {
             if let Some(window_state) = self.state.upgrade() {
                 let state = window_state.clone();
-                window_state.request_animation_frame(move || {
-                    state.process_idle_queue();
-                }).expect("request_animation_frame failed");
+                window_state
+                    .request_animation_frame(move || {
+                        state.process_idle_queue();
+                    })
+                    .expect("request_animation_frame failed");
             }
         }
     }
@@ -592,7 +606,7 @@ fn mouse_button(button: i16) -> Option<MouseButton> {
         0 => Some(MouseButton::Left),
         1 => Some(MouseButton::Middle),
         2 => Some(MouseButton::Right),
-        _ => None
+        _ => None,
     }
 }
 
@@ -600,15 +614,16 @@ fn set_cursor(canvas: &web_sys::HtmlCanvasElement, cursor: &Cursor) {
     canvas
         .style()
         .set_property(
-        "cursor",
-        match cursor {
-            Cursor::Arrow => "default",
-            Cursor::IBeam => "text",
-            Cursor::Crosshair => "crosshair",
-            Cursor::OpenHand => "grab",
-            Cursor::NotAllowed => "not-allowed",
-            Cursor::ResizeLeftRight => "ew-resize",
-            Cursor::ResizeUpDown => "ns-resize",
-        }
-    ).unwrap_or_else(|_| warn!("Failed to set cursor"));
+            "cursor",
+            match cursor {
+                Cursor::Arrow => "default",
+                Cursor::IBeam => "text",
+                Cursor::Crosshair => "crosshair",
+                Cursor::OpenHand => "grab",
+                Cursor::NotAllowed => "not-allowed",
+                Cursor::ResizeLeftRight => "ew-resize",
+                Cursor::ResizeUpDown => "ns-resize",
+            },
+        )
+        .unwrap_or_else(|_| warn!("Failed to set cursor"));
 }

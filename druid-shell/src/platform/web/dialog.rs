@@ -34,4 +34,3 @@ impl FileDialogOptions {
 
     // TODO: more options as needed
 }
-

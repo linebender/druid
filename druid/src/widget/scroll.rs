@@ -14,8 +14,8 @@
 
 //! A container that scrolls its contents.
 
-use std::f64::INFINITY;
 use instant::{Duration, Instant};
+use std::f64::INFINITY;
 
 use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
 use crate::theme;

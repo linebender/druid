@@ -14,8 +14,8 @@
 
 //! The context types that are passed into various widget methods.
 
-use std::ops::{Deref, DerefMut};
 use instant::Instant;
+use std::ops::{Deref, DerefMut};
 
 use log;
 
