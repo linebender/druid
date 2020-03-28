@@ -600,11 +600,11 @@ impl<T: Data> Widget<T> for Flex<T> {
             (self.direction.major(bc.min()) - (major_non_flex + major_flex)).max(0.0)
         };
 
-        let spacing = self.main_alignment.spacing(extra, self.children.len());
+        let mut spacing = Spacing::new(self.main_alignment, extra, self.children.len());
         // Finalize layout, assigning positions to each child.
-        let mut major = *spacing.get(0).unwrap_or(&0.);
+        let mut major = spacing.next().unwrap_or(0.);
         let mut child_paint_rect = Rect::ZERO;
-        for (i, child) in self.children.iter_mut().enumerate() {
+        for child in &mut self.children {
             let rect = child.widget.layout_rect();
             let extra_minor = minor - self.direction.minor(rect.size());
             let alignment = child.params.alignment.unwrap_or(self.cross_alignment);
@@ -614,7 +614,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             child.widget.set_layout_rect(rect.with_origin(pos));
             child_paint_rect = child_paint_rect.union(child.widget.paint_rect());
             major += self.direction.major(rect.size()).expand();
-            major += *spacing.get(i + 1).unwrap_or(&0.);
+            major += spacing.next().unwrap_or(0.);
         }
 
         if flex_sum > 0.0 && total_major.is_infinite() {
@@ -663,103 +663,98 @@ impl CrossAxisAlignment {
     }
 }
 
-impl MainAxisAlignment {
+struct Spacing {
+    alignment: MainAxisAlignment,
+    extra: f64,
+    n_children: usize,
+    index: usize,
+    equal_space: f64,
+    remainder: f64,
+}
+
+impl Spacing {
     /// Given the provided extra space and children count,
-    /// this returns a `Vec<f64>` of spacing,
+    /// this returns an iterator of `f64` spacing,
     /// where the first element is the spacing before any children
     /// and all subsequent elements are the spacing after children.
-    ///
-    /// If the extra space is infinite then it returns an empty `Vec<f64>`.
-    fn spacing(self, extra: f64, n_children: usize) -> Vec<f64> {
-        if extra.is_infinite() {
-            return Vec::new();
+    fn new(alignment: MainAxisAlignment, extra: f64, n_children: usize) -> Spacing {
+        let extra = if extra.is_finite() { extra } else { 0. };
+        let equal_space = if n_children > 0 {
+            match alignment {
+                MainAxisAlignment::Center => extra / 2.,
+                MainAxisAlignment::SpaceBetween => extra / (n_children - 1).max(1) as f64,
+                MainAxisAlignment::SpaceEvenly => extra / (n_children + 1) as f64,
+                MainAxisAlignment::SpaceAround => extra / (2 * n_children) as f64,
+                _ => 0.,
+            }
+        } else {
+            0.
+        };
+        Spacing {
+            alignment,
+            extra,
+            n_children,
+            index: 0,
+            equal_space,
+            remainder: 0.,
         }
-        match self {
-            MainAxisAlignment::Start => match n_children {
-                0 => vec![extra],
-                n => {
-                    let mut spaces = vec![0.; n + 1];
-                    spaces[n] = extra;
-                    spaces
-                }
-            },
-            MainAxisAlignment::End => match n_children {
-                0 => vec![extra],
-                n => {
-                    let mut spaces = vec![0.; n + 1];
-                    spaces[0] = extra;
-                    spaces
-                }
-            },
-            MainAxisAlignment::Center => match n_children {
-                0 => vec![extra],
-                n => {
-                    let mut spaces = vec![0.; n + 1];
-                    spaces[0] = (extra / 2.0).round();
-                    spaces[n] = extra - spaces[0];
-                    spaces
-                }
-            },
-            MainAxisAlignment::SpaceBetween => match n_children {
-                0 => vec![extra],
-                1 => vec![0., extra],
-                2 => vec![0., extra, 0.],
-                n => {
-                    let count = n - 1;
-                    let equal_space = extra / count as f64;
-                    let mut remainder = 0.;
-                    let mut spaces = Vec::with_capacity(count + 2);
-                    spaces.push(0.);
-                    for _ in 0..count {
-                        let desired_space = equal_space + remainder;
-                        let actual_space = desired_space.round();
-                        remainder = desired_space - actual_space;
-                        spaces.push(actual_space);
-                    }
-                    spaces.push(0.);
-                    spaces
-                }
-            },
-            MainAxisAlignment::SpaceEvenly => match n_children {
-                0 => vec![extra],
-                n => {
-                    let count = n + 1;
-                    let equal_space = extra / count as f64;
-                    let mut remainder = 0.;
-                    let mut spaces = Vec::with_capacity(count);
-                    for _ in 0..count {
-                        let desired_space = equal_space + remainder;
-                        let actual_space = desired_space.round();
-                        remainder = desired_space - actual_space;
-                        spaces.push(actual_space);
-                    }
-                    spaces
-                }
-            },
-            MainAxisAlignment::SpaceAround => match n_children {
-                0 => vec![extra],
-                n => {
-                    let count = 2 * n;
-                    let equal_space = extra / count as f64;
-                    let mut remainder = 0.;
-                    let mut half = 0.;
-                    let mut spaces = Vec::with_capacity(n + 1);
-                    for i in 0..count {
-                        let desired_space = equal_space + remainder;
-                        let actual_space = desired_space.round();
-                        remainder = desired_space - actual_space;
-                        if i == 0 || i == count - 1 {
-                            spaces.push(actual_space);
-                        } else if i % 2 == 1 {
-                            half = actual_space;
+    }
+
+    fn next_space(&mut self) -> f64 {
+        let desired_space = self.equal_space + self.remainder;
+        let actual_space = desired_space.round();
+        self.remainder = desired_space - actual_space;
+        actual_space
+    }
+}
+
+impl Iterator for Spacing {
+    type Item = f64;
+
+    fn next(&mut self) -> Option<f64> {
+        if self.index > self.n_children {
+            return None;
+        }
+        let result = {
+            if self.n_children == 0 {
+                self.extra
+            } else {
+                #[allow(clippy::match_bool)]
+                match self.alignment {
+                    MainAxisAlignment::Start => match self.index == self.n_children {
+                        true => self.extra,
+                        false => 0.,
+                    },
+                    MainAxisAlignment::End => match self.index == 0 {
+                        true => self.extra,
+                        false => 0.,
+                    },
+                    MainAxisAlignment::Center => match self.index {
+                        0 => self.next_space(),
+                        i if i == self.n_children => self.next_space(),
+                        _ => 0.,
+                    },
+                    MainAxisAlignment::SpaceBetween => match self.index {
+                        0 => 0.,
+                        i if i != self.n_children => self.next_space(),
+                        _ => match self.n_children {
+                            1 => self.next_space(),
+                            _ => 0.,
+                        },
+                    },
+                    MainAxisAlignment::SpaceEvenly => self.next_space(),
+                    MainAxisAlignment::SpaceAround => {
+                        if self.index == 0 || self.index == self.n_children {
+                            self.next_space()
                         } else {
-                            spaces.push(half + actual_space);
+                            self.next_space() + self.next_space()
                         }
                     }
-                    spaces
                 }
-            },
-        }
+            }
+        };
+        self.index += 1;
+        Some(result)
     }
 }
 
@@ -792,65 +787,67 @@ mod tests {
         // The following alignment strategy is based on how
         // Chrome 80 handles it with CSS flex.
 
+        let vec = |a, e, n| -> Vec<f64> { Spacing::new(a, e, n).collect() };
+
         let a = MainAxisAlignment::Start;
-        assert_eq!(a.spacing(10., 0), vec![10.]);
-        assert_eq!(a.spacing(10., 1), vec![0., 10.]);
-        assert_eq!(a.spacing(10., 2), vec![0., 0., 10.]);
-        assert_eq!(a.spacing(10., 3), vec![0., 0., 0., 10.]);
+        assert_eq!(vec(a, 10., 0), vec![10.]);
+        assert_eq!(vec(a, 10., 1), vec![0., 10.]);
+        assert_eq!(vec(a, 10., 2), vec![0., 0., 10.]);
+        assert_eq!(vec(a, 10., 3), vec![0., 0., 0., 10.]);
 
         let a = MainAxisAlignment::End;
-        assert_eq!(a.spacing(10., 0), vec![10.]);
-        assert_eq!(a.spacing(10., 1), vec![10., 0.]);
-        assert_eq!(a.spacing(10., 2), vec![10., 0., 0.]);
-        assert_eq!(a.spacing(10., 3), vec![10., 0., 0., 0.]);
+        assert_eq!(vec(a, 10., 0), vec![10.]);
+        assert_eq!(vec(a, 10., 1), vec![10., 0.]);
+        assert_eq!(vec(a, 10., 2), vec![10., 0., 0.]);
+        assert_eq!(vec(a, 10., 3), vec![10., 0., 0., 0.]);
 
         let a = MainAxisAlignment::Center;
-        assert_eq!(a.spacing(10., 0), vec![10.]);
-        assert_eq!(a.spacing(10., 1), vec![5., 5.]);
-        assert_eq!(a.spacing(10., 2), vec![5., 0., 5.]);
-        assert_eq!(a.spacing(10., 3), vec![5., 0., 0., 5.]);
-        assert_eq!(a.spacing(1., 0), vec![1.]);
-        assert_eq!(a.spacing(3., 1), vec![2., 1.]);
-        assert_eq!(a.spacing(5., 2), vec![3., 0., 2.]);
-        assert_eq!(a.spacing(17., 3), vec![9., 0., 0., 8.]);
+        assert_eq!(vec(a, 10., 0), vec![10.]);
+        assert_eq!(vec(a, 10., 1), vec![5., 5.]);
+        assert_eq!(vec(a, 10., 2), vec![5., 0., 5.]);
+        assert_eq!(vec(a, 10., 3), vec![5., 0., 0., 5.]);
+        assert_eq!(vec(a, 1., 0), vec![1.]);
+        assert_eq!(vec(a, 3., 1), vec![2., 1.]);
+        assert_eq!(vec(a, 5., 2), vec![3., 0., 2.]);
+        assert_eq!(vec(a, 17., 3), vec![9., 0., 0., 8.]);
 
         let a = MainAxisAlignment::SpaceBetween;
-        assert_eq!(a.spacing(10., 0), vec![10.]);
-        assert_eq!(a.spacing(10., 1), vec![0., 10.]);
-        assert_eq!(a.spacing(10., 2), vec![0., 10., 0.]);
-        assert_eq!(a.spacing(10., 3), vec![0., 5., 5., 0.]);
-        assert_eq!(a.spacing(33., 5), vec![0., 8., 9., 8., 8., 0.]);
-        assert_eq!(a.spacing(34., 5), vec![0., 9., 8., 9., 8., 0.]);
-        assert_eq!(a.spacing(35., 5), vec![0., 9., 9., 8., 9., 0.]);
-        assert_eq!(a.spacing(36., 5), vec![0., 9., 9., 9., 9., 0.]);
-        assert_eq!(a.spacing(37., 5), vec![0., 9., 10., 9., 9., 0.]);
-        assert_eq!(a.spacing(38., 5), vec![0., 10., 9., 10., 9., 0.]);
-        assert_eq!(a.spacing(39., 5), vec![0., 10., 10., 9., 10., 0.]);
+        assert_eq!(vec(a, 10., 0), vec![10.]);
+        assert_eq!(vec(a, 10., 1), vec![0., 10.]);
+        assert_eq!(vec(a, 10., 2), vec![0., 10., 0.]);
+        assert_eq!(vec(a, 10., 3), vec![0., 5., 5., 0.]);
+        assert_eq!(vec(a, 33., 5), vec![0., 8., 9., 8., 8., 0.]);
+        assert_eq!(vec(a, 34., 5), vec![0., 9., 8., 9., 8., 0.]);
+        assert_eq!(vec(a, 35., 5), vec![0., 9., 9., 8., 9., 0.]);
+        assert_eq!(vec(a, 36., 5), vec![0., 9., 9., 9., 9., 0.]);
+        assert_eq!(vec(a, 37., 5), vec![0., 9., 10., 9., 9., 0.]);
+        assert_eq!(vec(a, 38., 5), vec![0., 10., 9., 10., 9., 0.]);
+        assert_eq!(vec(a, 39., 5), vec![0., 10., 10., 9., 10., 0.]);
 
         let a = MainAxisAlignment::SpaceEvenly;
-        assert_eq!(a.spacing(10., 0), vec![10.]);
-        assert_eq!(a.spacing(10., 1), vec![5., 5.]);
-        assert_eq!(a.spacing(10., 2), vec![3., 4., 3.]);
-        assert_eq!(a.spacing(10., 3), vec![3., 2., 3., 2.]);
-        assert_eq!(a.spacing(33., 5), vec![6., 5., 6., 5., 6., 5.]);
-        assert_eq!(a.spacing(34., 5), vec![6., 5., 6., 6., 5., 6.]);
-        assert_eq!(a.spacing(35., 5), vec![6., 6., 5., 6., 6., 6.]);
-        assert_eq!(a.spacing(36., 5), vec![6., 6., 6., 6., 6., 6.]);
-        assert_eq!(a.spacing(37., 5), vec![6., 6., 7., 6., 6., 6.]);
-        assert_eq!(a.spacing(38., 5), vec![6., 7., 6., 6., 7., 6.]);
-        assert_eq!(a.spacing(39., 5), vec![7., 6., 7., 6., 7., 6.]);
+        assert_eq!(vec(a, 10., 0), vec![10.]);
+        assert_eq!(vec(a, 10., 1), vec![5., 5.]);
+        assert_eq!(vec(a, 10., 2), vec![3., 4., 3.]);
+        assert_eq!(vec(a, 10., 3), vec![3., 2., 3., 2.]);
+        assert_eq!(vec(a, 33., 5), vec![6., 5., 6., 5., 6., 5.]);
+        assert_eq!(vec(a, 34., 5), vec![6., 5., 6., 6., 5., 6.]);
+        assert_eq!(vec(a, 35., 5), vec![6., 6., 5., 6., 6., 6.]);
+        assert_eq!(vec(a, 36., 5), vec![6., 6., 6., 6., 6., 6.]);
+        assert_eq!(vec(a, 37., 5), vec![6., 6., 7., 6., 6., 6.]);
+        assert_eq!(vec(a, 38., 5), vec![6., 7., 6., 6., 7., 6.]);
+        assert_eq!(vec(a, 39., 5), vec![7., 6., 7., 6., 7., 6.]);
 
         let a = MainAxisAlignment::SpaceAround;
-        assert_eq!(a.spacing(10., 0), vec![10.]);
-        assert_eq!(a.spacing(10., 1), vec![5., 5.]);
-        assert_eq!(a.spacing(10., 2), vec![3., 5., 2.]);
-        assert_eq!(a.spacing(10., 3), vec![2., 3., 3., 2.]);
-        assert_eq!(a.spacing(33., 5), vec![3., 7., 6., 7., 7., 3.]);
-        assert_eq!(a.spacing(34., 5), vec![3., 7., 7., 7., 7., 3.]);
-        assert_eq!(a.spacing(35., 5), vec![4., 7., 7., 7., 7., 3.]);
-        assert_eq!(a.spacing(36., 5), vec![4., 7., 7., 7., 7., 4.]);
-        assert_eq!(a.spacing(37., 5), vec![4., 7., 8., 7., 7., 4.]);
-        assert_eq!(a.spacing(38., 5), vec![4., 7., 8., 8., 7., 4.]);
-        assert_eq!(a.spacing(39., 5), vec![4., 8., 7., 8., 8., 4.]);
+        assert_eq!(vec(a, 10., 0), vec![10.]);
+        assert_eq!(vec(a, 10., 1), vec![5., 5.]);
+        assert_eq!(vec(a, 10., 2), vec![3., 5., 2.]);
+        assert_eq!(vec(a, 10., 3), vec![2., 3., 3., 2.]);
+        assert_eq!(vec(a, 33., 5), vec![3., 7., 6., 7., 7., 3.]);
+        assert_eq!(vec(a, 34., 5), vec![3., 7., 7., 7., 7., 3.]);
+        assert_eq!(vec(a, 35., 5), vec![4., 7., 7., 7., 7., 3.]);
+        assert_eq!(vec(a, 36., 5), vec![4., 7., 7., 7., 7., 4.]);
+        assert_eq!(vec(a, 37., 5), vec![4., 7., 8., 7., 7., 4.]);
+        assert_eq!(vec(a, 38., 5), vec![4., 7., 8., 8., 7., 4.]);
+        assert_eq!(vec(a, 39., 5), vec![4., 8., 7., 8., 8., 4.]);
     }
 }
