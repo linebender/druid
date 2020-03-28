@@ -154,17 +154,6 @@ impl Field {
                     Meta::List(meta) => {
                         for nested in meta.nested.iter() {
                             match nested {
-                                NestedMeta::Meta(Meta::Path(path))
-                                    if path.is_ident(IGNORE_ATTR_PATH) =>
-                                {
-                                    if ignore {
-                                        return Err(Error::new(
-                                            nested.span(),
-                                            "Duplicate attribute",
-                                        ));
-                                    }
-                                    ignore = true;
-                                }
                                 NestedMeta::Meta(Meta::NameValue(meta))
                                     if meta.path.is_ident(LENS_NAME_OVERRIDE_ATTR_PATH) =>
                                 {
