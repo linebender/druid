@@ -72,7 +72,7 @@ impl Lens<TodoItem, bool> for CompletedLens {
 // ANCHOR: lens_name
 #[derive(Lens)]
 struct Item {
-    #[druid(lens_name = "count_lens")]
+    #[lens(name = "count_lens")]
     count: usize,
 }
 

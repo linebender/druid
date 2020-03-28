@@ -5,7 +5,7 @@ fn derive_lens() {
     #[derive(Clone, Lens, Debug)]
     struct Foo {
         text: String,
-        #[druid(lens_name = "lens_number")]
+        #[lens(name = "lens_number")]
         number: f64,
     }
 

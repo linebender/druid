@@ -45,7 +45,7 @@ const UNFREEZE_COLOR: Selector = Selector::new("identity-example.unfreeze-color"
 /// Honestly: it's just a color in fancy clothing.
 #[derive(Debug, Clone, Data, Lens)]
 struct OurData {
-    #[druid(same_fn = "color_eq")]
+    #[data(same_fn = "color_eq")]
     color: Color,
 }
 

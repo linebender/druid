@@ -54,7 +54,7 @@ pub use druid_derive::Data;
 /// If the type you are implementing `Data` on contains some fields that are
 /// not relevant to the `Data` impl, you can ignore them with this attribute.
 ///
-/// - **`#[druid(same_fn = "path")]`**
+/// - **`#[data(same_fn = "path")]`**
 ///
 /// Use a specific function to compute `same`ness.
 ///
@@ -74,11 +74,11 @@ pub use druid_derive::Data;
 /// #[derive(Clone, Data)]
 /// struct PathEntry {
 ///     // There's no Data impl for PathBuf, but no problem
-///     #[druid(same_fn = "PartialEq::eq")]
+///     #[data(same_fn = "PartialEq::eq")]
 ///     path: PathBuf,
 ///     priority: usize,
 ///     // This field is not part of our data model.
-///     #[druid(ignore)]
+///     #[data(ignore)]
 ///     last_read: Instant,
 /// }
 /// ```

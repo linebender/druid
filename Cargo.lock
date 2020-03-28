@@ -345,7 +345,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "druid"
 version = "0.5.0"
 dependencies = [
- "druid-derive 0.2.0",
+ "druid-derive 0.3.0",
  "druid-shell 0.5.0",
  "fluent-bundle 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-langneg 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -362,7 +362,7 @@ dependencies = [
 
 [[package]]
 name = "druid-derive"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "druid 0.5.0",
  "proc-macro2 1.0.9 (registry+https://github.com/rust-lang/crates.io-index)",

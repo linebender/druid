@@ -27,7 +27,7 @@ const SET_COLOR: Selector = Selector::new("event-example.set-color");
 struct ColorWell;
 
 #[derive(Debug, Clone, Data)]
-struct MyColor(#[druid(same_fn = "color_eq")] Color);
+struct MyColor(#[data(same_fn = "color_eq")] Color);
 
 fn color_eq(one: &Color, two: &Color) -> bool {
     one.as_rgba_u32() == two.as_rgba_u32()
