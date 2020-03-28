@@ -24,7 +24,7 @@ use proc_macro::TokenStream;
 use syn::parse_macro_input;
 
 /// Generates implementations of the `Data` trait.
-#[proc_macro_derive(Data, attributes(druid))]
+#[proc_macro_derive(Data, attributes(data))]
 pub fn derive_data(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
     data::derive_data_impl(input)
@@ -36,7 +36,7 @@ pub fn derive_data(input: TokenStream) -> TokenStream {
 ///
 /// An associated constant is defined on the struct for each field,
 /// having the same name as the field.
-#[proc_macro_derive(Lens, attributes(druid))]
+#[proc_macro_derive(Lens, attributes(lens))]
 pub fn derive_lens(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
     lens::derive_lens_impl(input)
