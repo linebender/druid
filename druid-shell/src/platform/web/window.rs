@@ -249,6 +249,10 @@ fn setup_keydown_callback(ws: &Rc<WindowState>) {
         let mods = get_modifiers!(event);
         let text = key_to_text(event.key());
         let repeat = event.repeat();
+        if let KeyCode::Backspace = code {
+            // Prevent the browser from going back a page by default.
+            event.prevent_default();
+        }
         let event = keyboard::KeyEvent::new(code, repeat, mods, text.as_str(), text.as_str());
         state.handler.borrow_mut().key_down(event);
     });
