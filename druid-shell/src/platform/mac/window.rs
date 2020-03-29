@@ -123,7 +123,6 @@ impl WindowBuilder {
     }
 
     pub fn set_min_size(&mut self, size: Size) {
-        // TODO: Use this in `self.build`
         self.min_size = Some(size);
     }
 
@@ -166,6 +165,11 @@ impl WindowBuilder {
                 NSBackingStoreBuffered,
                 NO,
             );
+
+            if let Some(min_size) = self.min_size {
+                let size = NSSize::new(min_size.width, min_size.height);
+                window.setContentMinSize_(size);
+            }
 
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
