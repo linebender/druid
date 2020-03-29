@@ -167,18 +167,8 @@ impl WindowBuilder {
             );
 
             if let Some(min_size) = self.min_size {
-                let frame = NSWindow::frame(window);
-                let content_dimensions = window.contentRectForFrameRect_(frame).size;
-                let excess_height = frame.size.height - content_dimensions.height;
-                let excess_width = frame.size.width - content_dimensions.width;
-
-                // setMinSize_ restricts the size of the window including padding.
-                let size = NSSize::new(
-                    min_size.width + excess_width,
-                    min_size.height + excess_height,
-                );
-
-                window.setMinSize_(size);
+                let size = NSSize::new(min_size.width, min_size.height);
+                window.setContentMinSize_(size);
             }
 
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
