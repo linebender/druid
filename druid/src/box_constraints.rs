@@ -29,8 +29,12 @@ use log;
 /// Further, a container widget should compute appropriate constraints
 /// for each of its child widgets, and pass those down when recursing.
 ///
+/// The constraints are always [rounded away from zero] to integers
+/// to enable pixel perfect layout.
+///
 /// [`layout`]: trait.Widget.html#tymethod.layout
 /// [Flutter BoxConstraints]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
+/// [rounded away from zero]: struct.Size.html#method.expand
 #[derive(Clone, Copy, Debug)]
 pub struct BoxConstraints {
     min: Size,
@@ -41,14 +45,28 @@ impl BoxConstraints {
     /// Create a new box constraints object.
     ///
     /// Create constraints based on minimum and maximum size.
+    ///
+    /// The given sizes are also [rounded away from zero],
+    /// so that the layout is aligned to integers.
+    ///
+    /// [rounded away from zero]: struct.Size.html#method.expand
     pub fn new(min: Size, max: Size) -> BoxConstraints {
-        BoxConstraints { min, max }
+        BoxConstraints {
+            min: min.expand(),
+            max: max.expand(),
+        }
     }
 
     /// Create a "tight" box constraints object.
     ///
     /// A "tight" constraint can only be satisfied by a single size.
+    ///
+    /// The given size is also [rounded away from zero],
+    /// so that the layout is aligned to integers.
+    ///
+    /// [rounded away from zero]: struct.Size.html#method.expand
     pub fn tight(size: Size) -> BoxConstraints {
+        let size = size.expand();
         BoxConstraints {
             min: size,
             max: size,
@@ -68,7 +86,7 @@ impl BoxConstraints {
     /// Clamp a given size so that it fits within the constraints.
     ///
     /// The given size is also [rounded away from zero],
-    /// so that the layout is aligned to pixels.
+    /// so that the layout is aligned to integers.
     ///
     /// [rounded away from zero]: struct.Size.html#method.expand
     pub fn constrain(&self, size: impl Into<Size>) -> Size {
@@ -102,7 +120,9 @@ impl BoxConstraints {
         if !(0.0 <= self.min.width
             && self.min.width <= self.max.width
             && 0.0 <= self.min.height
-            && self.min.height <= self.max.height)
+            && self.min.height <= self.max.height
+            && self.min.expand() == self.min
+            && self.max.expand() == self.max)
         {
             log::warn!("Bad BoxConstraints passed to {}:", name);
             log::warn!("{:?}", self);
@@ -118,8 +138,13 @@ impl BoxConstraints {
     }
 
     /// Shrink min and max constraints by size
+    ///
+    /// The given size is also [rounded away from zero],
+    /// so that the layout is aligned to integers.
+    ///
+    /// [rounded away from zero]: struct.Size.html#method.expand
     pub fn shrink(&self, diff: impl Into<Size>) -> BoxConstraints {
-        let diff = diff.into();
+        let diff = diff.into().expand();
         let min = Size::new(
             (self.min().width - diff.width).max(0.),
             (self.min().height - diff.height).max(0.),
