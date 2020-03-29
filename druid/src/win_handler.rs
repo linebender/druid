@@ -487,7 +487,8 @@ impl<T: Data> AppState<T> {
             Some(cmd) => self.inner.borrow_mut().append_command(target, cmd),
             None => log::warn!("No command for menu id {}", cmd_id),
         }
-        self.process_commands()
+        self.process_commands();
+        self.inner.borrow_mut().do_update();
     }
 
     /// Handle a command. Top level commands (e.g. for creating and destroying
