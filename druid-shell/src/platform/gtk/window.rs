@@ -423,6 +423,11 @@ impl WindowBuilder {
         }));
 
         vbox.pack_end(&drawing_area, true, true, 0);
+        drawing_area.realize();
+        drawing_area
+            .get_window()
+            .expect("realize didn't create window")
+            .set_event_compression(false);
 
         win_state
             .handler
