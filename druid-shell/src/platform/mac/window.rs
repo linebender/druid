@@ -693,8 +693,20 @@ impl WindowHandle {
     // TODO: Implement this
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
 
-    // TODO: Implement this
-    pub fn resizable(&self, _resizable: bool) {}
+    pub fn resizable(&self, resizable: bool) {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let mut style_mask: NSWindowStyleMask = window.styleMask();
+
+            if resizable {
+                style_mask |= NSWindowStyleMask::NSResizableWindowMask;
+            } else {
+                style_mask &= !NSWindowStyleMask::NSResizableWindowMask;
+            }
+
+            window.setStyleMask_(style_mask);
+        }
+    }
 
     pub fn set_menu(&self, menu: Menu) {
         unsafe {
