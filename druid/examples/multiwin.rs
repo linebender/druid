@@ -181,7 +181,7 @@ fn make_menu<T: Data>(state: &State) -> MenuDesc<T> {
     if state.menu_count != 0 {
         base = base.append(
             MenuDesc::new(LocalizedString::new("Custom")).append_iter(|| {
-                (1..state.menu_count+1).map(|i| {
+                (1..state.menu_count + 1).map(|i| {
                     MenuItem::new(
                         LocalizedString::new("hello-counter")
                             .with_arg("count", move |_, _| i.into()),
