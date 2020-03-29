@@ -138,10 +138,14 @@ impl WindowBuilder {
 
         conn.flush();
 
-        let xwindow = XWindow::new(window_id, self.handler.unwrap(), self.size);
+        let mut handler = self.handler.unwrap();
+        let handle = WindowHandle::new(window_id);
+        handler.connect(&(handle.clone()).into());
+
+        let xwindow = XWindow::new(window_id, handler, self.size);
         Application::add_xwindow(window_id, xwindow);
 
-        Ok(WindowHandle::new(window_id))
+        Ok(handle)
     }
 }
 
@@ -149,12 +153,31 @@ impl WindowBuilder {
 pub(crate) struct XWindow {
     window_id: u32,
     handler: Box<dyn WinHandler>,
-    cairo_context: cairo::Context,
     refresh_rate: Option<f64>,
+    size: Size,
 }
 
 impl XWindow {
     pub fn new(window_id: u32, window_handler: Box<dyn WinHandler>, size: Size) -> XWindow {
+        let conn = Application::get_connection();
+        let setup = conn.get_setup();
+        let screen_num = Application::get_screen_num();
+        // TODO(x11/errors): Don't unwrap for screen or visual_type?
+        let screen = setup.roots().nth(screen_num as usize).unwrap();
+        let mut visual_type = get_visual_from_screen(&screen).unwrap();
+
+        // Figure out the refresh rate of the current screen
+        let refresh_rate = util::refresh_rate(&conn, window_id);
+
+        XWindow {
+            window_id,
+            handler: window_handler,
+            refresh_rate,
+            size,
+        }
+    }
+
+    pub fn render(&mut self) {
         let conn = Application::get_connection();
         let setup = conn.get_setup();
         let screen_num = Application::get_screen_num();
@@ -169,7 +192,7 @@ impl XWindow {
                 conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t
             )
         };
-        let cairo_drawable = cairo::XCBDrawable(window_id);
+        let cairo_drawable = cairo::XCBDrawable(self.window_id);
         let cairo_visual_type = unsafe {
             cairo::XCBVisualType::from_raw_none(
                 &mut visual_type.base as *mut _ as *mut cairo_sys::xcb_visualtype_t,
@@ -179,29 +202,15 @@ impl XWindow {
             &cairo_xcb_connection,
             &cairo_drawable,
             &cairo_visual_type,
-            size.width as i32,
-            size.height as i32,
+            self.size.width as i32,
+            self.size.height as i32,
         )
-        .expect("couldn't create a cairo surface");
-        let cairo_ctx = cairo::Context::new(&cairo_surface);
+            .expect("couldn't create a cairo surface");
+        let mut cairo_context = cairo::Context::new(&cairo_surface);
 
-        // Figure out the refresh rate of the current screen
-        let refresh_rate = util::refresh_rate(&conn, window_id);
-
-        XWindow {
-            window_id,
-            handler: window_handler,
-            cairo_context: cairo_ctx,
-            refresh_rate,
-        }
-    }
-
-    pub fn render(&mut self) {
-        let conn = Application::get_connection();
-
-        self.cairo_context.set_source_rgb(0.0, 0.0, 0.0);
-        self.cairo_context.paint();
-        let mut piet_ctx = Piet::new(&mut self.cairo_context);
+        cairo_context.set_source_rgb(0.0, 0.0, 0.0);
+        cairo_context.paint();
+        let mut piet_ctx = Piet::new(&mut cairo_context);
         let anim = self.handler.paint(&mut piet_ctx);
         if let Err(e) = piet_ctx.finish() {
             // TODO(x11/errors): hook up to error or something?
@@ -381,8 +390,8 @@ impl WindowHandle {
 
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
         // TODO(x11/idle_handles): implement WindowHandle::get_idle_handle
-        log::warn!("WindowHandle::get_idle_handle is currently unimplemented for X11 platforms.");
-        None
+        //log::warn!("WindowHandle::get_idle_handle is currently unimplemented for X11 platforms.");
+        Some(IdleHandle)
     }
 
     pub fn get_dpi(&self) -> f32 {
