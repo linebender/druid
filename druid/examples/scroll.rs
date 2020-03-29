@@ -33,7 +33,11 @@ fn main() {
 fn build_widget() -> impl Widget<u32> {
     let mut col = Flex::column();
     for i in 0..30 {
-        col.add_child(Padding::new(3.0, OverPainter(i)));
+        let mut row = Flex::row();
+        for j in 0..10 {
+            row.add_child(Padding::new(3.0, OverPainter(i * j)));
+        }
+        col.add_child(row);
     }
     Scroll::new(col)
 }
