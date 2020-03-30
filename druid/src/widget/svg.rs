@@ -238,3 +238,120 @@ fn color_from_usvg(paint: &usvg::Paint, opacity: usvg::Opacity) -> Color {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn translate() {
+        use crate::tests::harness::Harness;
+
+        let svg_data = SvgData::from_str(
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2'>
+        <g>
+            <g>
+                <rect width='1' height='1'/>
+            </g>
+        </g>
+        <g transform=\"translate(1, 1)\">
+            <g>
+                <rect width='1' height='1'/>
+            </g>
+        </g>
+    </svg>",
+        )
+        .unwrap();
+
+        let svg_widget = Svg::new(svg_data);
+
+        Harness::create_with_render(
+            true,
+            svg_widget,
+            Size::new(400., 600.),
+            |harness| {
+                harness.send_initial_events();
+                harness.just_layout();
+                harness.paint();
+            },
+            |target| {
+                let raw_pixels = target.into_raw();
+                assert_eq!(raw_pixels.len(), 400 * 600 * 4);
+
+                // Being a tall widget with a square image the top and bottom rows will be
+                // the padding color and the middle rows will not have any padding.
+
+                // Check that the middle row 400 pix wide is 200 black then 200 white.
+                let expecting: Vec<u8> = [
+                    vec![41, 41, 41, 255].repeat(200),
+                    vec![0, 0, 0, 255].repeat(200),
+                ]
+                .concat();
+                assert_eq!(raw_pixels[400 * 300 * 4..400 * 301 * 4], expecting[..]);
+
+                // Check that all of the last 100 rows are all the background color.
+                let expecting: Vec<u8> = vec![41, 41, 41, 255].repeat(400 * 100);
+                assert_eq!(
+                    raw_pixels[400 * 600 * 4 - 4 * 400 * 100..400 * 600 * 4],
+                    expecting[..]
+                );
+            },
+        )
+    }
+
+    #[test]
+    fn scale() {
+        use crate::tests::harness::Harness;
+
+        let svg_data = SvgData::from_str(
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2'>
+        <g>
+            <g>
+                <rect width='1' height='1'/>
+            </g>
+        </g>
+        <g transform=\"translate(1, 1)\">
+            <g transform=\"scale(1, 2)\">
+                <rect width='1' height='0.5'/>
+            </g>
+        </g>
+    </svg>",
+        )
+        .unwrap();
+
+        let svg_widget = Svg::new(svg_data);
+
+        Harness::create_with_render(
+            true,
+            svg_widget,
+            Size::new(400., 600.),
+            |harness| {
+                harness.send_initial_events();
+                harness.just_layout();
+                harness.paint();
+            },
+            |target| {
+                let raw_pixels = target.into_raw();
+                assert_eq!(raw_pixels.len(), 400 * 600 * 4);
+
+                // Being a tall widget with a square image the top and bottom rows will be
+                // the padding color and the middle rows will not have any padding.
+
+                // Check that the middle row 400 pix wide is 200 black then 200 white.
+                let expecting: Vec<u8> = [
+                    vec![41, 41, 41, 255].repeat(200),
+                    vec![0, 0, 0, 255].repeat(200),
+                ]
+                .concat();
+                assert_eq!(raw_pixels[400 * 300 * 4..400 * 301 * 4], expecting[..]);
+
+                // Check that all of the last 100 rows are all the background color.
+                let expecting: Vec<u8> = vec![41, 41, 41, 255].repeat(400 * 100);
+                assert_eq!(
+                    raw_pixels[400 * 600 * 4 - 4 * 400 * 100..400 * 600 * 4],
+                    expecting[..]
+                );
+            },
+        )
+    }
+}
