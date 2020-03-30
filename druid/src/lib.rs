@@ -96,7 +96,7 @@
 //! [`Event`]: enum.Event.html
 //! [`druid-shell`]: https://docs.rs/druid-shell
 //! [`piet`]: https://docs.rs/piet
-//! [`druid/examples`]: https://github.com/xi-editor/druid/tree/v0.4.0/druid/examples
+//! [`druid/examples`]: https://github.com/xi-editor/druid/tree/v0.5.0/druid/examples
 
 #![deny(intra_doc_link_resolution_failure, unsafe_code)]
 #![allow(clippy::new_ret_no_self, clippy::needless_doctest_main)]
