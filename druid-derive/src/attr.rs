@@ -111,7 +111,7 @@ impl Field {
 
         for attr in field.attrs.iter() {
             if attr.path.is_ident(BASE_DRUID_DEPRECATED_ATTR_PATH) {
-                panic(
+                panic!(
                     "The 'druid' attribute has been replaced with separate \
                     'lens' and 'data' attributes.",
                 );
