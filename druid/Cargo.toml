@@ -50,3 +50,5 @@ console_log = "0.1.2"
 
 [dev-dependencies]
 float-cmp = { version = "0.6.0", default-features = false }
+tempfile = "3.1.0"
+piet-common = {version = "0.0.12", features = ["png"]}
