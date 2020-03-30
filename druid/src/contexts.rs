@@ -262,6 +262,13 @@ impl<'a> EventCtx<'a> {
         is_child || self.focus_widget == Some(self.widget_id())
     }
 
+    /// The (leaf) focus status of a widget. See [`has_focus`].
+    ///
+    /// [`has_focus`]: struct.EventCtx.html#method.has_focus
+    pub fn is_focused(&self) -> bool {
+        self.focus_widget == Some(self.widget_id())
+    }
+
     /// Request keyboard focus.
     ///
     /// See [`has_focus`] for more information.
@@ -553,10 +560,21 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
     /// Query the focus state of the widget.
     ///
     /// This is true only if this widget has focus.
-    pub fn has_focus(&self) -> bool {
+    pub fn is_focused(&self) -> bool {
         self.focus_widget
             .map(|id| id == self.base_state.id)
             .unwrap_or(false)
+    }
+
+    /// The focus status of a widget.
+    ///
+    /// See [`has_focus`](struct.EventCtx.html#method.has_focus).
+    pub fn has_focus(&self) -> bool {
+        let is_child = self
+            .focus_widget
+            .map(|id| self.base_state.children.contains(&id))
+            .unwrap_or(false);
+        is_child || self.focus_widget == Some(self.widget_id())
     }
 
     /// Returns the currently visible [`Region`].
