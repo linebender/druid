@@ -47,7 +47,7 @@ pub use druid_derive::Data;
 ///
 /// There are a number of field attributes available for use with `derive(Data)`.
 ///
-/// - **`#[druid(ignore)]`**
+/// - **`#[data(ignore)]`**
 ///
 /// Skip this field when computing `same`ness.
 ///
