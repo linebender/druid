@@ -435,18 +435,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
         let child_bc = BoxConstraints::new(Size::ZERO, self.direction.max_size(bc));
         let size = self.child.layout(ctx, &child_bc, data, env);
-
-        if size.width.is_infinite() {
-            log::warn!("Scroll widget's child has an infinite width.");
-        }
-
-        if size.height.is_infinite() {
-            log::warn!("Scroll widget's child has an infinite height.");
-        }
+        log_size_warnings(size);
 
         self.child_size = size;
-        self.child
-            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+        self.child.set_layout_rect(size.to_rect());
         let self_size = bc.constrain(self.child_size);
         let _ = self.scroll(Vec2::new(0.0, 0.0), self_size);
         self_size
@@ -463,5 +455,15 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
             self.draw_bars(ctx, viewport, env);
         });
+    }
+}
+
+fn log_size_warnings(size: Size) {
+    if size.width.is_infinite() {
+        log::warn!("Scroll widget's child has an infinite width.");
+    }
+
+    if size.height.is_infinite() {
+        log::warn!("Scroll widget's child has an infinite height.");
     }
 }
