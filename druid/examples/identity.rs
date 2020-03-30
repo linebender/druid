@@ -53,6 +53,26 @@ fn color_eq(one: &Color, two: &Color) -> bool {
     one.as_rgba_u32() == two.as_rgba_u32()
 }
 
+fn split_rgba(rgba: &Color) -> (f64, f64, f64, f64) {
+    let rgba = rgba.as_rgba_u32();
+    (
+        (rgba >> 24) as f64 / 255.0,
+        ((rgba >> 16) & 255) as f64 / 255.0,
+        ((rgba >> 8) & 255) as f64 / 255.0,
+        (rgba & 255) as f64 / 255.0,
+    )
+}
+
+fn color_average(one: &Color, two: &Color) -> Color {
+    let one = split_rgba(one);
+    let two = split_rgba(two);
+    Color::rgb8(
+        ((one.0 + two.0 * 19.0) / 20.0 * 255.0) as u8,
+        ((one.1 + two.1 * 19.0) / 20.0 * 255.0) as u8,
+        ((one.2 + two.2 * 19.0) / 20.0 * 255.0) as u8,
+    )
+}
+
 /// A widget that displays a color.
 ///
 /// For the purpose of this fairly contrived demo, this widget works in one of two ways:
@@ -96,7 +116,10 @@ impl Widget<OurData> for ColorWell {
                 let blue = bits & mask >> 2;
                 let blue = (blue >> 16 | blue >> 8 | blue) & 0xFF;
 
-                data.color = Color::rgb8(red as u8, green as u8, blue as u8);
+                data.color = color_average(
+                    &Color::rgb8(red as u8, green as u8, blue as u8),
+                    &data.color,
+                );
                 self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
                 ctx.request_paint();
             }

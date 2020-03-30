@@ -33,6 +33,26 @@ fn color_eq(one: &Color, two: &Color) -> bool {
     one.as_rgba_u32() == two.as_rgba_u32()
 }
 
+fn split_rgba(rgba: &Color) -> (f64, f64, f64, f64) {
+    let rgba = rgba.as_rgba_u32();
+    (
+        (rgba >> 24) as f64 / 255.0,
+        ((rgba >> 16) & 255) as f64 / 255.0,
+        ((rgba >> 8) & 255) as f64 / 255.0,
+        (rgba & 255) as f64 / 255.0,
+    )
+}
+
+fn color_average(one: &Color, two: &Color) -> Color {
+    let one = split_rgba(one);
+    let two = split_rgba(two);
+    Color::rgb8(
+        ((one.0 + two.0 * 19.0) / 20.0 * 255.0) as u8,
+        ((one.1 + two.1 * 19.0) / 20.0 * 255.0) as u8,
+        ((one.2 + two.2 * 19.0) / 20.0 * 255.0) as u8,
+    )
+}
+
 impl ColorWell {
     pub fn new() -> Self {
         ColorWell
@@ -81,6 +101,8 @@ fn main() {
     let start_time = Instant::now();
 
     thread::spawn(move || {
+        let mut last_color = Color::WHITE;
+
         loop {
             let time_since_start = Instant::now() - start_time;
             let bits = (time_since_start.as_nanos() % (0xFFFFFF)) as u32;
@@ -94,7 +116,9 @@ fn main() {
             let blue = bits & mask >> 2;
             let blue = (blue >> 16 | blue >> 8 | blue) & 0xFF;
 
-            let next_color = Color::rgb8(red as u8, green as u8, blue as u8);
+            let new_color = Color::rgb8(red as u8, green as u8, blue as u8);
+            let next_color = color_average(&new_color, &last_color);
+            last_color = next_color.clone();
 
             // if this fails we're shutting down
             if let Err(_) = event_sink.submit_command(SET_COLOR, next_color, None) {
