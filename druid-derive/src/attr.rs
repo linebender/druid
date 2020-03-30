@@ -111,11 +111,10 @@ impl Field {
 
         for attr in field.attrs.iter() {
             if attr.path.is_ident(BASE_DRUID_DEPRECATED_ATTR_PATH) {
-                return Err(Error::new(
-                    attr.path.span(),
+                panic(
                     "The 'druid' attribute has been replaced with separate \
                     'lens' and 'data' attributes.",
-                ));
+                );
             } else if attr.path.is_ident(BASE_DATA_ATTR_PATH) {
                 match attr.parse_meta()? {
                     Meta::List(meta) => {
