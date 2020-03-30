@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{widget::prelude::*, Data};
+use crate::{widget::prelude::*, Data, WidgetPod};
 
 /// A widget that allows writing parts of the ui in an immediate-mode style.
 ///
@@ -27,13 +27,13 @@ use crate::{widget::prelude::*, Data};
 ///
 /// You should only use `Immediate` if your data format can't be reasonably used with other widgets.
 pub struct Immediate<D, W> {
-    constructor: Box<dyn Fn(&D) -> W>,
-    content: Option<W>,
+    constructor: Box<dyn Fn(&D) -> Option<W>>,
+    content: Option<WidgetPod<(), W>>,
 }
 
 impl<D, W: Widget<()>> Immediate<D, W> {
     /// Takes a constructor for a stateless widget
-    pub fn new(constructor: impl Fn(&D) -> W + 'static) -> Self {
+    pub fn new(constructor: impl Fn(&D) -> Option<W> + 'static) -> Self {
         Self {
             constructor: Box::new(constructor),
             content: None,
@@ -50,7 +50,7 @@ impl<D: Data, W: Widget<()>> Widget<D> for Immediate<D, W> {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &D, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
-            self.content = Some((self.constructor)(data));
+            self.content = (self.constructor)(data).map(WidgetPod::new);
         }
         if let Some(content) = &mut self.content {
             content.lifecycle(ctx, event, &(), env);
@@ -59,12 +59,12 @@ impl<D: Data, W: Widget<()>> Widget<D> for Immediate<D, W> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &D, data: &D, env: &Env) {
         if !old_data.same(data) {
-            self.content = Some((self.constructor)(data));
+            self.content = (self.constructor)(data).map(WidgetPod::new);
             ctx.children_changed();
         } else {
             // This can happen when env changes, right?
             if let Some(content) = &mut self.content {
-                content.update(ctx, &(), &(), env);
+                content.update(ctx, &(), env);
             }
         }
     }
