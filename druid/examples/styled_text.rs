@@ -14,20 +14,36 @@
 
 //! Example of dynamic text styling
 
-use druid::widget::{Flex, Label, MainAxisAlignment, Painter, Parse, Stepper, TextBox};
+use druid::widget::{Checkbox, Flex, Label, MainAxisAlignment, Painter, Parse, Stepper, TextBox};
 use druid::{
     theme, AppLauncher, Color, Data, Key, Lens, LensExt, LensWrap, LocalizedString, PlatformError,
     RenderContext, Widget, WidgetExt, WindowDesc,
 };
+use std::fmt::Display;
 
 // This is a custom key we'll use with Env to set and get our text size.
 const MY_CUSTOM_TEXT_SIZE: Key<f64> = Key::new("styled_text.custom_text_size");
+const MY_CUSTOM_FONT: Key<&str> = Key::new("styled_text.custom_font");
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
     text: String,
     size: f64,
+    mono: bool,
 }
+
+impl Display for AppData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Size {:.1}{}: {}",
+            self.size,
+            if self.mono { " mono" } else { "" },
+            self.text
+        )
+    }
+}
+
 fn main() -> Result<(), PlatformError> {
     let main_window = WindowDesc::new(ui_builder).title(
         LocalizedString::new("styled-text-demo-window-title").with_placeholder("Type Styler"),
@@ -35,6 +51,7 @@ fn main() -> Result<(), PlatformError> {
     let data = AppData {
         text: "Here's some sample text".to_string(),
         size: 24.0,
+        mono: false,
     };
 
     AppLauncher::with_window(main_window)
@@ -57,26 +74,35 @@ fn ui_builder() -> impl Widget<AppData> {
     });
 
     // This is druid's default text style.
-    // It's set by theme::LABEL_COLOR and theme::TEXT_SIZE_NORMAL
+    // It's set by theme::LABEL_COLOR, theme::TEXT_SIZE_NORMAL, and theme::FONT_NAME
     let label =
         Label::new(|data: &String, _env: &_| format!("Default: {}", data)).lens(AppData::text);
 
-    // The text_color and text_size builder methods can override the defaults
-    // provided by the theme by passing in a Key or a concrete value.
+    // The text_color, text_size, and font builder methods can override the
+    // defaults provided by the theme by passing in a Key or a concrete value.
     //
-    // In this example, text_color receives a Key from the theme, while
-    // text_size gets a custom key which we set with the env_scope wrapper.
-    let styled_label =
-        Label::new(|data: &AppData, _env: &_| format!("Size {:.1}: {}", data.size, data.text))
-            .with_text_color(theme::PRIMARY_LIGHT)
-            .with_text_size(MY_CUSTOM_TEXT_SIZE)
-            .background(my_painter)
-            .on_click(|_, data, _| {
-                data.size *= 1.1;
-            })
-            .env_scope(|env: &mut druid::Env, data: &AppData| {
-                env.set(MY_CUSTOM_TEXT_SIZE, data.size);
-            });
+    // In this example, text_color receives a Key from the theme, text_size
+    // gets a custom key which we set with the env_scope wrapper, and the
+    // default font key (theme::FONT_NAME) is overridden in the env_scope
+    // wrapper. (Like text_color and text_size, the font can be set using the
+    // with_font builder method, but overriding here makes it easy to fall back
+    // to the default font)
+    let styled_label = Label::new(|data: &AppData, _env: &_| format!("{}", data))
+        .with_text_color(theme::PRIMARY_LIGHT)
+        .with_text_size(MY_CUSTOM_TEXT_SIZE)
+        .with_font(MY_CUSTOM_FONT)
+        .background(my_painter)
+        .on_click(|_, data, _| {
+            data.size *= 1.1;
+        })
+        .env_scope(|env: &mut druid::Env, data: &AppData| {
+            env.set(MY_CUSTOM_TEXT_SIZE, data.size);
+            if data.mono {
+                env.set(MY_CUSTOM_FONT, "monospace");
+            } else {
+                env.set(MY_CUSTOM_FONT, env.get(theme::FONT_NAME).to_string());
+            }
+        });
 
     let stepper = Stepper::new()
         .with_range(0.0, 100.0)
@@ -91,6 +117,8 @@ fn ui_builder() -> impl Widget<AppData> {
 
     let stepper_row = Flex::row().with_child(stepper_textbox).with_child(stepper);
 
+    let mono_checkbox = Checkbox::new("Monospace").lens(AppData::mono);
+
     let input = TextBox::new().fix_width(200.0).lens(AppData::text);
 
     Flex::column()
@@ -100,6 +128,8 @@ fn ui_builder() -> impl Widget<AppData> {
         .with_child(styled_label)
         .with_spacer(32.0)
         .with_child(stepper_row)
+        .with_spacer(8.0)
+        .with_child(mono_checkbox)
         .with_spacer(8.0)
         .with_child(input.padding(5.0))
 }
