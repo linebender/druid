@@ -255,7 +255,7 @@ one of its fields, <code>derive</code> will fail. To get around this, you can sp
 custom name for a field's lens:</p>
 <pre><code class="language-rust noplaypen">#[derive(Lens)]
 struct Item {
-    #[druid(lens_name = &quot;count_lens&quot;)]
+    #[lens(name = &quot;count_lens&quot;)]
     count: usize,
 }
 
