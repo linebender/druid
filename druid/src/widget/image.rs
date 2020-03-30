@@ -181,7 +181,7 @@ impl ImageData {
         Size::new(self.x_pixels as f64, self.y_pixels as f64)
     }
 
-    /// Convert ImageData into Piet draw instructions
+    /// Convert ImageData into Piet draw instructions.
     fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, interpolation: InterpolationMode) {
         ctx.with_save(|ctx| {
             ctx.transform(offset_matrix);
@@ -210,5 +210,143 @@ fn has_alpha_channel(image: &image::DynamicImage) -> bool {
 impl Default for ImageData {
     fn default() -> Self {
         ImageData::empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tall_paint() {
+        use crate::{tests::harness::Harness, WidgetId};
+
+        let _id_1 = WidgetId::next();
+        let image_data = ImageData {
+            pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            x_pixels: 2,
+            y_pixels: 2,
+            format: ImageFormat::Rgb,
+        };
+
+        let image_widget =
+            Image::new(image_data).interpolation_mode(InterpolationMode::NearestNeighbor);
+
+        Harness::create_with_render(
+            true,
+            image_widget,
+            Size::new(400., 600.),
+            |harness| {
+                harness.send_initial_events();
+                harness.just_layout();
+                harness.paint();
+            },
+            |target| {
+                let raw_pixels = target.into_raw();
+                assert_eq!(raw_pixels.len(), 400 * 600 * 4);
+
+                // Being a tall widget with a square image the top and bottom rows will be
+                // the padding color and the middle rows will not have any padding.
+
+                // Check that the middle row 400 pix wide is 200 black then 200 white.
+                let expecting: Vec<u8> = [
+                    vec![0, 0, 0, 255].repeat(200),
+                    vec![255, 255, 255, 255].repeat(200),
+                ]
+                .concat();
+                assert_eq!(raw_pixels[400 * 300 * 4..400 * 301 * 4], expecting[..]);
+
+                // Check that all of the last 100 rows are all the background color.
+                let expecting: Vec<u8> = vec![41, 41, 41, 255].repeat(400 * 100);
+                assert_eq!(
+                    raw_pixels[400 * 600 * 4 - 4 * 400 * 100..400 * 600 * 4],
+                    expecting[..]
+                );
+            },
+        )
+    }
+    #[test]
+    fn wide_paint() {
+        use crate::{tests::harness::Harness, WidgetId};
+        let _id_1 = WidgetId::next();
+        let image_data = ImageData {
+            pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            x_pixels: 2,
+            y_pixels: 2,
+            format: ImageFormat::Rgb,
+        };
+
+        let image_widget =
+            Image::new(image_data).interpolation_mode(InterpolationMode::NearestNeighbor);
+
+        Harness::create_with_render(
+            true,
+            image_widget,
+            Size::new(600., 400.),
+            |harness| {
+                harness.send_initial_events();
+                harness.just_layout();
+                harness.paint();
+            },
+            |target| {
+                let raw_pixels = target.into_raw();
+                assert_eq!(raw_pixels.len(), 400 * 600 * 4);
+
+                // Being a wide widget every row will have some padding at the start and end
+                // the last row will be like this too and there will be no padding rows at the end.
+
+                // A middle row of 600 pixels is 100 padding 200 black, 200 white and then 100 padding.
+                let expecting: Vec<u8> = [
+                    vec![41, 41, 41, 255].repeat(100),
+                    vec![255, 255, 255, 255].repeat(200),
+                    vec![0, 0, 0, 255].repeat(200),
+                    vec![41, 41, 41, 255].repeat(100),
+                ]
+                .concat();
+                assert_eq!(raw_pixels[199 * 600 * 4..200 * 600 * 4], expecting[..]);
+
+                // The final row of 600 pixels is 100 padding 200 black, 200 white and then 100 padding.
+                let expecting: Vec<u8> = [
+                    vec![41, 41, 41, 255].repeat(100),
+                    vec![0, 0, 0, 255].repeat(200),
+                    vec![255, 255, 255, 255].repeat(200),
+                    vec![41, 41, 41, 255].repeat(100),
+                ]
+                .concat();
+                assert_eq!(raw_pixels[399 * 600 * 4..400 * 600 * 4], expecting[..]);
+            },
+        );
+    }
+    #[test]
+    fn into_png() {
+        use crate::{
+            tests::{harness::Harness, temp_dir_for_test},
+            WidgetId,
+        };
+        let _id_1 = WidgetId::next();
+        let image_data = ImageData {
+            pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            x_pixels: 2,
+            y_pixels: 2,
+            format: ImageFormat::Rgb,
+        };
+
+        let image_widget =
+            Image::new(image_data).interpolation_mode(InterpolationMode::NearestNeighbor);
+
+        Harness::create_with_render(
+            true,
+            image_widget,
+            Size::new(600., 400.),
+            |harness| {
+                harness.send_initial_events();
+                harness.just_layout();
+                harness.paint();
+            },
+            |target| {
+                let tmp_dir = temp_dir_for_test();
+                target.into_png(tmp_dir.join("image.png")).unwrap();
+            },
+        );
     }
 }
