@@ -56,7 +56,7 @@ impl TextBox {
         Self {
             width: 0.0,
             hscroll_offset: 0.,
-            selection: Selection::caret(0),
+            selection: Selection::new(),
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
             placeholder: String::new(),

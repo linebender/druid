@@ -30,6 +30,7 @@ log = "0.4.8"
 usvg = {version = "0.9.0", optional = true}
 fnv = "1.0.3"
 xi-unicode = "0.2.0"
+xi-rope = "0.3.0"
 image = {version = "0.23.2", optional = true}
 
 [dependencies.simple_logger]

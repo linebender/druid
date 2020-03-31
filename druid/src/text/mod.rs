@@ -21,10 +21,24 @@ pub mod selection;
 pub use self::selection::Selection;
 
 pub mod movement;
-pub use self::movement::{movement, Movement};
+pub use self::movement::Movement;
 
 pub mod backspace;
 pub use self::backspace::offset_for_delete_backwards;
 
 mod text_input;
 pub use self::text_input::{BasicTextInput, EditAction, MouseAction, TextInput};
+
+pub mod view;
+
+pub mod word_boundaries;
+
+pub mod index_set;
+
+pub mod edit_types;
+
+pub mod config;
+
+pub mod lines;
+
+pub mod editor;
