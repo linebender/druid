@@ -143,7 +143,6 @@ impl<T: Data> Widget<T> for Align<T> {
 
 fn log_size_warnings(size: Size) {
     if size.width.is_infinite() {
-        println!("what");
         log::warn!("Align widget's child has an infinite width.");
     }
 
