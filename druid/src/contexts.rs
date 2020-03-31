@@ -561,9 +561,7 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
     ///
     /// This is true only if this widget has focus.
     pub fn is_focused(&self) -> bool {
-        self.focus_widget
-            .map(|id| id == self.base_state.id)
-            .unwrap_or(false)
+        self.focus_widget == Some(self.widget_id())
     }
 
     /// The focus status of a widget.
