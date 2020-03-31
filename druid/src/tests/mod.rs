@@ -14,17 +14,42 @@
 
 //! Additional unit tests that cross file or module boundaries.
 
-mod harness;
+pub(crate) mod harness;
 mod helpers;
 mod layout_tests;
 
 use std::cell::Cell;
+use std::env;
+use std::fs;
 use std::rc::Rc;
+use tempfile;
 
 use crate::widget::*;
 use crate::*;
 use harness::*;
 use helpers::*;
+
+/// This function creates a temporary directory and returns a PathBuf to it.
+///
+/// This directory will be created relative to the executable and will therefor
+/// be created in the target directory for tests when running with cargo. The
+/// directory will be cleaned up at the end of the PathBufs lifetime. This
+/// uses the `tempfile` crate.
+#[allow(dead_code)]
+pub fn temp_dir_for_test() -> std::path::PathBuf {
+    let current_exe_path = env::current_exe().unwrap();
+    let mut exe_dir = current_exe_path.parent().unwrap();
+    if exe_dir.ends_with("deps") {
+        exe_dir = exe_dir.parent().unwrap();
+    }
+    let test_dir = exe_dir.parent().unwrap().join("tests");
+    fs::create_dir_all(&test_dir).unwrap();
+    tempfile::Builder::new()
+        .prefix("TempDir")
+        .tempdir_in(test_dir)
+        .unwrap()
+        .into_path()
+}
 
 /// test that the first widget to request focus during an event gets it.
 #[test]
