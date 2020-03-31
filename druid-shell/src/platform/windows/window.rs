@@ -566,8 +566,12 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     let delta_y = HIWORD(wparam as u32) as i16 as f64;
-                    let delta = Vec2::new(0.0, -delta_y);
                     let mods = get_mod_state();
+                    let delta = if mods.shift {
+                        Vec2::new(-delta_y, 0.)
+                    } else {
+                        Vec2::new(0., -delta_y)
+                    };
                     s.handler.wheel(delta, mods);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
