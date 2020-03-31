@@ -63,6 +63,7 @@ pub struct Key<T> {
 // Also consider Box<Any> (though this would also impact debug).
 /// A dynamic type representing all values that can be stored in an environment.
 #[derive(Clone)]
+// ANCHOR: value_type
 pub enum Value {
     Point(Point),
     Size(Size),
@@ -73,6 +74,7 @@ pub enum Value {
     UnsignedInt(u64),
     String(String),
 }
+// ANCHOR_END: value_type
 
 /// Either a concrete `T` or a [`Key<T>`] that can be resolved in the [`Env`].
 ///
