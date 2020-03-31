@@ -441,14 +441,31 @@ impl<'a, T: ValueType<'a>> KeyOrValue<T> {
     }
 }
 
-impl<T: Into<Value>> From<T> for KeyOrValue<T> {
-    fn from(value: T) -> KeyOrValue<T> {
+impl<'a, V: Into<Value>, T: ValueType<'a, Owned = V>> From<V> for KeyOrValue<T> {
+    fn from(value: V) -> KeyOrValue<T> {
         KeyOrValue::Concrete(value.into())
     }
 }
 
-impl<T: Into<Value>> From<Key<T>> for KeyOrValue<T> {
+impl<'a, T: ValueType<'a>> From<Key<T>> for KeyOrValue<T> {
     fn from(key: Key<T>) -> KeyOrValue<T> {
         KeyOrValue::Key(key)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn string_key_or_value() {
+        const MY_KEY: Key<&str> = Key::new("test.my-string-key");
+        let env = Env::default().adding(MY_KEY, "Owned".to_string());
+        assert_eq!(env.get(MY_KEY), "Owned");
+
+        let key: KeyOrValue<&str> = MY_KEY.into();
+        let value: KeyOrValue<&str> = "Owned".to_string().into();
+
+        assert_eq!(key.resolve(&env), value.resolve(&env));
     }
 }
