@@ -5,7 +5,7 @@
 - [Data trait](./data.md)
 - [Widget trait](./widget.md)
 - [Lens trait](./lens.md)
-- [Env (TODO)](./env.md)
+- [Env](./env.md)
 - [Localization (TODO)](./localization.md)
 - [Command (TODO)](./command.md)
 - [Widgets in depth (TODO)](./custom_widgets.md)
