@@ -66,17 +66,29 @@ impl TextInput for BasicTextInput {
         let action = match event {
             // Select all (Ctrl+A || Cmd+A)
             k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => EditAction::SelectAll,
+            // Jump modify left (Ctrl+Alt+ArrowLeft || Cmd+Alt+ArrowLeft)
+            k_e if (HotKey::new(SysMods::CmdShift, KeyCode::ArrowLeft)).matches(k_e)
+                || HotKey::new(None, KeyCode::Home).matches(k_e) =>
+            {
+                EditAction::ModifySelection(Movement::LeftWord)
+            }
+            // Jump modify right (Ctrl+Alt+ArrowRight || Cmd+Alt+ArrowRight)
+            k_e if (HotKey::new(SysMods::CmdShift, KeyCode::ArrowRight)).matches(k_e)
+                || HotKey::new(None, KeyCode::End).matches(k_e) =>
+            {
+                EditAction::ModifySelection(Movement::RightWord)
+            }
             // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
             k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft)).matches(k_e)
                 || HotKey::new(None, KeyCode::Home).matches(k_e) =>
             {
-                EditAction::Move(Movement::LeftOfLine)
+                EditAction::Move(Movement::LeftWord)
             }
             // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
             k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowRight)).matches(k_e)
                 || HotKey::new(None, KeyCode::End).matches(k_e) =>
             {
-                EditAction::Move(Movement::RightOfLine)
+                EditAction::Move(Movement::RightWord)
             }
             // Select left (Shift+ArrowLeft)
             k_e if (HotKey::new(SysMods::Shift, KeyCode::ArrowLeft)).matches(k_e) => {

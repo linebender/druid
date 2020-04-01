@@ -96,14 +96,10 @@ impl From<EditAction> for EventDomain {
                     multi: false,
                 },
             }),
-            // TODO change
             EditAction::Drag(action) => EventDomain::View(ViewEvent::Gesture {
                 line: action.row as u64,
                 col: action.column as u64,
-                ty: GestureType::Select {
-                    granularity: SelectionGranularity::Point,
-                    multi: false,
-                },
+                ty: GestureType::Drag,
             }),
             EditAction::Delete => EventDomain::Buffer(BufferEvent::Delete {
                 movement: Movement::Right,
