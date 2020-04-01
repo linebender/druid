@@ -21,7 +21,7 @@ use xi_rope::{Cursor, DeltaBuilder, Interval, LinesMetric, Rope, RopeDelta};
 use super::config::BufferItems;
 use super::edit_types::BufferEvent;
 use super::movement::{region_movement, Movement};
-use super::selection::{SelRegion, Selection};
+use super::selection::{InsertDrift, SelRegion, Selection};
 use super::view::View;
 use super::word_boundaries::WordCursor;
 
@@ -39,6 +39,8 @@ enum IndentDirection {
 pub struct Editor {
     /// The contents of the buffer.
     text: Rope,
+    last_text: Rope,
+    deltas: Vec<RopeDelta>,
 }
 
 impl Editor {
@@ -49,7 +51,12 @@ impl Editor {
 
     /// Creates a new `Editor`, loading text into a new buffer.
     pub fn with_text<T: Into<Rope>>(text: T) -> Editor {
-        Editor { text: text.into() }
+        let text: Rope = text.into();
+        Editor {
+            text: text.clone(),
+            last_text: text,
+            deltas: Vec::new(),
+        }
     }
 
     pub(crate) fn get_buffer(&self) -> &Rope {
@@ -97,6 +104,34 @@ impl Editor {
     /// `commit_delta` call.
     fn add_delta(&mut self, delta: RopeDelta) {
         self.text = delta.apply(&self.text);
+        self.deltas.push(delta);
+    }
+
+    /// Commits the current delta. If the buffer has changed, returns
+    /// a 3-tuple containing the delta representing the changes, the previous
+    /// buffer, and an `InsertDrift` enum describing the correct selection update
+    /// behaviour.
+    pub(crate) fn commit_delta(&mut self) -> Option<(RopeDelta, Rope, InsertDrift)> {
+        if self.deltas.is_empty() {
+            return None;
+        }
+        assert_eq!(self.deltas.len(), 1);
+
+        let last_text = self.last_text.clone();
+        self.last_text = self.text.clone();
+
+        // Transpose can rotate characters inside of a selection; this is why it's an Inside edit.
+        // Surround adds characters on either side of a selection, that's why it's an Outside edit.
+        // let drift = match self.this_edit_type {
+        //     EditType::Transpose => InsertDrift::Inside,
+        //     EditType::Surround => InsertDrift::Outside,
+        //     _ => InsertDrift::Default,
+        // };
+
+        let delta = self.deltas.pop().unwrap();
+        assert_eq!(self.deltas.len(), 0);
+
+        Some((delta, last_text, InsertDrift::Default))
     }
 
     fn delete_backward(&mut self, view: &View, config: &BufferItems) {
@@ -502,6 +537,10 @@ impl Editor {
             DuplicateLine => self.duplicate_line(view, config),
             IncreaseNumber => self.change_number(view, |s| s.checked_add(1)),
             DecreaseNumber => self.change_number(view, |s| s.checked_sub(1)),
+        }
+
+        if let Some((delta, last_text, drift)) = self.commit_delta() {
+            view.after_edit(&self.text, &last_text, &delta, drift);
         }
     }
 }
