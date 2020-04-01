@@ -95,13 +95,13 @@ fn main() {
 
         loop {
             let time_since_start = (Instant::now() - start_time).as_nanos();
-            let previous = split_rgba(&last_color);
+            let (r, g, b, _) = split_rgba(&last_color);
 
             // there is no logic here; it's a very silly way of mutating the color.
             let new_color = match (time_since_start % 2, time_since_start % 3) {
-                (0, _) => Color::rgb8(previous.0.wrapping_add(10), previous.1, previous.2),
-                (_, 0) => Color::rgb8(previous.0, previous.1.wrapping_add(10), previous.2),
-                (_, _) => Color::rgb8(previous.0, previous.1, previous.2.wrapping_add(10)),
+                (0, _) => Color::rgb8(r.wrapping_add(10), g, b),
+                (_, 0) => Color::rgb8(r, g.wrapping_add(10), b),
+                (_, _) => Color::rgb8(r, g, b.wrapping_add(10)),
             };
 
             last_color = new_color.clone();

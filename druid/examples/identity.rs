@@ -96,13 +96,13 @@ impl Widget<OurData> for ColorWell {
         match event {
             Event::Timer(t) if t == &self.token => {
                 let time_since_start = (Instant::now() - self.start).as_nanos();
-                let previous = split_rgba(&data.color);
+                let (r, g, b, _) = split_rgba(&data.color);
 
                 // there is no logic here; it's a very silly way of mutating the color.
                 data.color = match (time_since_start % 2, time_since_start % 3) {
-                    (0, _) => Color::rgb8(previous.0.wrapping_add(10), previous.1, previous.2),
-                    (_, 0) => Color::rgb8(previous.0, previous.1.wrapping_add(10), previous.2),
-                    (_, _) => Color::rgb8(previous.0, previous.1, previous.2.wrapping_add(10)),
+                    (0, _) => Color::rgb8(r.wrapping_add(10), g, b),
+                    (_, 0) => Color::rgb8(r, g.wrapping_add(10), b),
+                    (_, _) => Color::rgb8(r, g, b.wrapping_add(10)),
                 };
 
                 self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
