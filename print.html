@@ -213,7 +213,7 @@ app built and running</em>.</p>
 </code></pre>
 <p>And then adding druid as a dependency to Cargo.toml</p>
 <pre><code class="language-toml">[dependencies]
-druid = &quot;0.4.0&quot;
+druid = &quot;0.5.0&quot;
 </code></pre>
 <p>To show a minimal window with a label replace <code>main.rs</code> with this;</p>
 <pre><code class="language-rust noplaypen">use druid::{AppLauncher, WindowDesc, Widget};
@@ -688,7 +688,7 @@ impl Lens&lt;f64, f64&gt; for MilesToKm {
 }
 </code></pre>
 <h1><a class="header" href="#the-env" id="the-env">The <code>Env</code></a></h1>
-<p>The <a href="https://docs.rs/druid/0.4.0/druid/struct.Env.html"><code>Env</code></a> represents the environment; it is intended as a way of managing
+<p>The <a href="https://docs.rs/druid/0.5.0/druid/struct.Env.html"><code>Env</code></a> represents the environment; it is intended as a way of managing
 and accessing state about your specific application, such as color schemes,
 localized strings, and other resources.</p>
 <p>The <code>Env</code> is created when the application is launched, and is passed down to all
@@ -700,7 +700,7 @@ widget.</p>
 <h2><a class="header" href="#keys-values-and-themes" id="keys-values-and-themes"><code>Key</code>s, <code>Value</code>s, and themes</a></h2>
 <p>The most prominent role of <code>Env</code> is to store a set of typed keys and values. The
 <code>Env</code> can only store a few types of things; these are represented by the
-<a href="https://docs.rs/druid/0.4.0/druid/struct.Value.html"><code>Value</code></a> type, which looks like this:</p>
+<a href="https://docs.rs/druid/0.5.0/druid/struct.Value.html"><code>Value</code></a> type, which looks like this:</p>
 <pre><code class="language-rust noplaypen">pub enum Value {
     Point(Point),
     Size(Size),
@@ -712,7 +712,7 @@ widget.</p>
     String(String),
 }
 </code></pre>
-<p>The only way to get an item out of the <code>Env</code> is with a <a href="https://docs.rs/druid/0.4.0/druid/struct.Key.html"><code>Key</code></a>. A <a href="https://docs.rs/druid/0.4.0/druid/struct.Key.html"><code>Key</code></a> is
+<p>The only way to get an item out of the <code>Env</code> is with a <a href="https://docs.rs/druid/0.5.0/druid/struct.Key.html"><code>Key</code></a>. A <a href="https://docs.rs/druid/0.5.0/druid/struct.Key.html"><code>Key</code></a> is
 a combination of a string identifier and a type.</p>
 <p>You can think of this as strict types, enforced at runtime. This is less scary
 than it sounds, assuming the user follows a few simple guidelines. That said, <strong>It is the
@@ -733,7 +733,7 @@ const GOOD_NAME: Key&lt;f64&gt; = Key::new(&quot;com.example.my-app.main-view-he
 <li>
 <p><strong><code>Key</code>s must always be set before they are used.</strong> In practice this means
 that most keys are set when your application launches, using
-<a href="https://docs.rs/druid/0.4.0/druid/struct.AppLauncher.html#method.configure_env"><code>AppLauncher::configure_env</code></a>. Once a key has been added to the <code>Env</code>, it
+<a href="https://docs.rs/druid/0.5.0/druid/struct.AppLauncher.html#method.configure_env"><code>AppLauncher::configure_env</code></a>. Once a key has been added to the <code>Env</code>, it
 cannot be deleted, although it can be overwritten.</p>
 </li>
 <li>
@@ -744,7 +744,7 @@ replace it with any other type.</p>
 </ol>
 <p>Assuming these rules are followed, <code>Env</code> should just work.</p>
 <h3><a class="header" href="#keyorvalue" id="keyorvalue">KeyOrValue</a></h3>
-<p>Druid includes a <a href="https://docs.rs/druid/0.4.0/druid/enum.KeyOrValue.html"><code>KeyOrValue</code></a> type that is used for setting certain properties
+<p>Druid includes a <a href="https://docs.rs/druid/0.5.0/druid/enum.KeyOrValue.html"><code>KeyOrValue</code></a> type that is used for setting certain properties
 of widgets. This is a type that can be <em>either</em> a concrete instance of some
 type, <em>or</em> a <code>Key</code> that can be used to get that type from the <code>Env</code>.</p>
 <pre><code class="language-rust noplaypen">const IMPORTANT_LABEL_COLOR: Key&lt;Color&gt; = Key::new(&quot;my-app.important-label-color&quot;);
@@ -757,8 +757,8 @@ fn make_labels() {
 </code></pre>
 <h3><a class="header" href="#envscope" id="envscope">EnvScope</a></h3>
 <p>You may override values in the environment for a given widget (and all of its
-children) by using the <a href="https://docs.rs/druid/0.4.0/druid/widget/struct.EnvScope.html"><code>EnvScope</code></a> widget. This is easiest when combined with
-the <a href="https://docs.rs/druid/0.4.0/druid/trait.WidgetExt.html#method.env_scope"><code>env_scope</code></a> method on <a href="https://docs.rs/druid/0.4.0/druid/trait.WidgetExt.html"><code>WidgetExt</code></a>:</p>
+children) by using the <a href="https://docs.rs/druid/0.5.0/druid/widget/struct.EnvScope.html"><code>EnvScope</code></a> widget. This is easiest when combined with
+the <a href="https://docs.rs/druid/0.5.0/druid/trait.WidgetExt.html#method.env_scope"><code>env_scope</code></a> method on <a href="https://docs.rs/druid/0.5.0/druid/trait.WidgetExt.html"><code>WidgetExt</code></a>:</p>
 <pre><code class="language-rust noplaypen">fn scoped_label() {
     let my_label = Label::&lt;()&gt;::new(&quot;Warning!&quot;).env_scope(|env, _| {
         env.set(druid::theme::LABEL_COLOR, Color::BLACK);
@@ -769,8 +769,8 @@ the <a href="https://docs.rs/druid/0.4.0/druid/trait.WidgetExt.html#method.env_s
 <h2><a class="header" href="#localization" id="localization">Localization</a></h2>
 <p><em>localization is currently half-baked</em></p>
 <p>The <code>Env</code> contains the localization resources for the current locale. A
-<a href="https://docs.rs/druid/0.4.0/druid/struct.LocalizedString.html"><code>LocalizedString</code></a> can be resolved to a given string in the current locale by
-calling its <a href="https://docs.rs/druid/0.4.0/druid/struct.LocalizedString.html#method.resolve"><code>resolve</code></a> method.</p>
+<a href="https://docs.rs/druid/0.5.0/druid/struct.LocalizedString.html"><code>LocalizedString</code></a> can be resolved to a given string in the current locale by
+calling its <a href="https://docs.rs/druid/0.5.0/druid/struct.LocalizedString.html#method.resolve"><code>resolve</code></a> method.</p>
 <p>In general, you should not need to worry about localization directly. See the
 <a href="./localization.html">localization</a> chapter for an overview of localization in druid.</p>
 <h1><a class="header" href="#localization-todo" id="localization-todo">Localization (TODO)</a></h1>
