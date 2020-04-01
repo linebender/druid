@@ -53,23 +53,13 @@ fn color_eq(one: &Color, two: &Color) -> bool {
     one.as_rgba_u32() == two.as_rgba_u32()
 }
 
-fn split_rgba(rgba: &Color) -> (f64, f64, f64, f64) {
+fn split_rgba(rgba: &Color) -> (u8, u8, u8, u8) {
     let rgba = rgba.as_rgba_u32();
     (
-        (rgba >> 24) as f64 / 255.0,
-        ((rgba >> 16) & 255) as f64 / 255.0,
-        ((rgba >> 8) & 255) as f64 / 255.0,
-        (rgba & 255) as f64 / 255.0,
-    )
-}
-
-fn color_average(one: &Color, two: &Color) -> Color {
-    let one = split_rgba(one);
-    let two = split_rgba(two);
-    Color::rgb8(
-        ((one.0 + two.0 * 19.0) / 20.0 * 255.0) as u8,
-        ((one.1 + two.1 * 19.0) / 20.0 * 255.0) as u8,
-        ((one.2 + two.2 * 19.0) / 20.0 * 255.0) as u8,
+        (rgba >> 24 & 255) as u8,
+        ((rgba >> 16) & 255) as u8,
+        ((rgba >> 8) & 255) as u8,
+        (rgba & 255) as u8,
     )
 }
 
@@ -105,21 +95,16 @@ impl Widget<OurData> for ColorWell {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut OurData, _env: &Env) {
         match event {
             Event::Timer(t) if t == &self.token => {
-                let time_since_start = Instant::now() - self.start;
-                // there is no logic here; it's a very silly way of creating a color.
-                let bits = (time_since_start.as_nanos() % (0xFFFFFF)) as u32;
-                let mask = 0x924924;
-                let red = bits & mask;
-                let red = (red >> 16 | red >> 8 | red) & 0xFF;
-                let green = bits & mask >> 1;
-                let green = (green >> 16 | green >> 8 | green) & 0xFF;
-                let blue = bits & mask >> 2;
-                let blue = (blue >> 16 | blue >> 8 | blue) & 0xFF;
+                let time_since_start = (Instant::now() - self.start).as_nanos();
+                let previous = split_rgba(&data.color);
 
-                data.color = color_average(
-                    &Color::rgb8(red as u8, green as u8, blue as u8),
-                    &data.color,
-                );
+                // there is no logic here; it's a very silly way of mutating the color.
+                data.color = match (time_since_start % 2, time_since_start % 3) {
+                    (0, _) => Color::rgb8(previous.0.wrapping_add(10), previous.1, previous.2),
+                    (_, 0) => Color::rgb8(previous.0, previous.1.wrapping_add(10), previous.2),
+                    (_, _) => Color::rgb8(previous.0, previous.1, previous.2.wrapping_add(10)),
+                };
+
                 self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
                 ctx.request_paint();
             }
