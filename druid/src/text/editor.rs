@@ -96,42 +96,8 @@ impl Editor {
     /// breaks are to be considered invalid after this method, until the
     /// `commit_delta` call.
     fn add_delta(&mut self, delta: RopeDelta) {
-        delta.apply(&self.text);
+        self.text = delta.apply(&self.text);
     }
-
-    /// Commits the current delta. If the buffer has changed, returns
-    /// a 3-tuple containing the delta representing the changes, the previous
-    /// buffer, and an `InsertDrift` enum describing the correct selection update
-    /// behaviour.
-    // pub(crate) fn commit_delta(&mut self) -> Option<(RopeDelta, Rope, InsertDrift)> {
-    //     let _t = trace_block("Editor::commit_delta", &["core"]);
-
-    //     if self.engine.get_head_rev_id() == self.last_rev_id {
-    //         return None;
-    //     }
-
-    //     let last_token = self.last_rev_id.token();
-    //     let delta = self
-    //         .engine
-    //         .try_delta_rev_head(last_token)
-    //         .expect("last_rev not found");
-    //     // TODO (performance): it's probably quicker to stash last_text
-    //     // rather than resynthesize it.
-    //     let last_text = self.engine.get_rev(last_token).expect("last_rev not found");
-
-    //     // Transpose can rotate characters inside of a selection; this is why it's an Inside edit.
-    //     // Surround adds characters on either side of a selection, that's why it's an Outside edit.
-    //     let drift = match self.this_edit_type {
-    //         EditType::Transpose => InsertDrift::Inside,
-    //         EditType::Surround => InsertDrift::Outside,
-    //         _ => InsertDrift::Default,
-    //     };
-    //     self.layers.update_all(&delta);
-
-    //     self.last_rev_id = self.engine.get_head_rev_id();
-    //     self.sync_state_changed();
-    //     Some((delta, last_text, drift))
-    // }
 
     fn delete_backward(&mut self, view: &View, config: &BufferItems) {
         // TODO: this function is workable but probably overall code complexity
@@ -533,8 +499,6 @@ impl Editor {
             Insert(chars) => self.do_insert(view, config, &chars),
             Paste(chars) => self.do_paste(view, &chars),
             Yank => self.yank(view, kill_ring),
-            // ReplaceNext => self.replace(view, false),
-            // ReplaceAll => self.replace(view, true),
             DuplicateLine => self.duplicate_line(view, config),
             IncreaseNumber => self.change_number(view, |s| s.checked_add(1)),
             DecreaseNumber => self.change_number(view, |s| s.checked_sub(1)),

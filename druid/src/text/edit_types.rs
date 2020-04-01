@@ -19,6 +19,7 @@
 //! the editor or view as appropriate.
 
 use super::movement::Movement;
+use super::text_input::EditAction;
 
 /// Events that only modify view state
 #[derive(Debug, PartialEq, Clone)]
@@ -76,6 +77,45 @@ impl From<BufferEvent> for EventDomain {
 impl From<ViewEvent> for EventDomain {
     fn from(src: ViewEvent) -> EventDomain {
         EventDomain::View(src)
+    }
+}
+
+impl From<EditAction> for EventDomain {
+    fn from(edit_action: EditAction) -> Self {
+        match edit_action {
+            EditAction::Move(mvmt) => EventDomain::View(ViewEvent::Move(mvmt)),
+            EditAction::ModifySelection(mvmt) => {
+                EventDomain::View(ViewEvent::ModifySelection(mvmt))
+            }
+            EditAction::SelectAll => EventDomain::View(ViewEvent::SelectAll),
+            EditAction::Click(action) => EventDomain::View(ViewEvent::Gesture {
+                line: action.row as u64,
+                col: action.column as u64,
+                ty: GestureType::Select {
+                    granularity: SelectionGranularity::Point,
+                    multi: false,
+                },
+            }),
+            // TODO change
+            EditAction::Drag(action) => EventDomain::View(ViewEvent::Gesture {
+                line: action.row as u64,
+                col: action.column as u64,
+                ty: GestureType::Select {
+                    granularity: SelectionGranularity::Point,
+                    multi: false,
+                },
+            }),
+            EditAction::Delete => EventDomain::Buffer(BufferEvent::Delete {
+                movement: Movement::Right,
+                kill: false,
+            }),
+            EditAction::Backspace => EventDomain::Buffer(BufferEvent::Delete {
+                movement: Movement::Left,
+                kill: false,
+            }),
+            EditAction::Insert(s) => EventDomain::Buffer(BufferEvent::Insert(s)),
+            EditAction::Paste(s) => EventDomain::Buffer(BufferEvent::Paste(s)),
+        }
     }
 }
 

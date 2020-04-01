@@ -27,9 +27,16 @@ use crate::piet::{
 };
 use crate::theme;
 
+use crate::text::{BasicTextInput, EditAction, EditableText, MouseAction, TextInput};
+
 use crate::text::{
-    movement, offset_for_delete_backwards, BasicTextInput, EditAction, EditableText, MouseAction,
-    Movement, Selection, TextInput,
+    config::DEFAULT_CONFIG,
+    edit_types::{BufferEvent, EventDomain},
+    editor::Editor,
+    selection::SelRegion,
+    simple_selection::SimpleSelection,
+    view::View,
+    Selection,
 };
 
 const BORDER_WIDTH: f64 = 1.;
@@ -42,12 +49,12 @@ const RESET_BLINK: Selector = Selector::new("druid-builtin.reset-textbox-blink")
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
 pub struct TextBox {
-    placeholder: String,
     width: f64,
     hscroll_offset: f64,
-    selection: Selection,
+    selection: SimpleSelection,
     cursor_timer: TimerToken,
     cursor_on: bool,
+    placeholder: String,
 }
 
 impl TextBox {
@@ -56,7 +63,7 @@ impl TextBox {
         Self {
             width: 0.0,
             hscroll_offset: 0.,
-            selection: Selection::new(),
+            selection: SimpleSelection::caret(0),
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
             placeholder: String::new(),
@@ -91,25 +98,11 @@ impl TextBox {
             .unwrap()
     }
 
-    /// Insert text at the cursor position.
-    /// Replaces selected text if there's a selection.
-    fn insert(&mut self, src: &mut String, new: &str) {
-        // EditableText's edit method will panic if selection is greater than
-        // src length, hence we try to constrain it.
-        //
-        // This is especially needed when data was modified externally.
-        // TODO: perhaps this belongs in update?
-        let selection = self.selection.constrain_to(src);
-
-        src.edit(selection.range(), new);
-        self.selection = Selection::caret(selection.min() + new.len());
-    }
-
     /// Set the selection to be a caret at the given offset, if that's a valid
     /// codepoint boundary.
     fn caret_to(&mut self, text: &mut String, to: usize) {
         match text.cursor(to) {
-            Some(_) => self.selection = Selection::caret(to),
+            Some(_) => self.selection = SimpleSelection::caret(to),
             None => log::error!("You can't move the cursor there."),
         }
     }
@@ -121,55 +114,32 @@ impl TextBox {
     }
 
     fn do_edit_action(&mut self, edit_action: EditAction, text: &mut String) {
-        match edit_action {
-            EditAction::Insert(chars) | EditAction::Paste(chars) => self.insert(text, &chars),
-            EditAction::Backspace => self.delete_backward(text),
-            EditAction::Delete => self.delete_forward(text),
-            EditAction::Move(movement) => self.move_selection(movement, text, false),
-            EditAction::ModifySelection(movement) => self.move_selection(movement, text, true),
-            EditAction::SelectAll => self.selection.all(text),
-            EditAction::Click(action) => {
-                if action.mods.shift {
-                    self.selection.end = action.column;
-                } else {
-                    self.caret_to(text, action.column);
-                }
-            }
-            EditAction::Drag(action) => self.selection.end = action.column,
-        }
-    }
+        let selection = self.selection.constrain_to(text);
 
-    /// Edit a selection using a `Movement`.
-    fn move_selection(&mut self, mvmnt: Movement, text: &mut String, modify: bool) {
-        // This movement function should ensure all movements are legit.
-        // If they aren't, that's a problem with the movement function.
-        self.selection = movement(mvmnt, self.selection, text, modify);
-    }
+        let mut editor = Editor::with_text(text.clone());
+        let mut view = View::new();
+        view.set_selection(
+            editor.get_buffer(),
+            Selection::new_simple(SelRegion::new(selection.start, selection.end)),
+        );
 
-    /// Delete to previous grapheme if in caret mode.
-    /// Otherwise just delete everything inside the selection.
-    fn delete_backward(&mut self, text: &mut String) {
-        if self.selection.is_caret() {
-            let cursor = self.cursor();
-            let new_cursor = offset_for_delete_backwards(&self.selection, text);
-            text.edit(new_cursor..cursor, "");
-            self.caret_to(text, new_cursor);
-        } else {
-            text.edit(self.selection.range(), "");
-            self.caret_to(text, self.selection.min());
+        let action: EventDomain = edit_action.into();
+        match action {
+            EventDomain::View(evt) => view.do_edit(editor.get_buffer(), evt),
+            EventDomain::Buffer(evt) => editor.do_edit(
+                &mut view,
+                &mut xi_rope::Rope::default(),
+                &DEFAULT_CONFIG,
+                evt,
+            ),
         }
-    }
 
-    fn delete_forward(&mut self, text: &mut String) {
-        if self.selection.is_caret() {
-            // Never touch the characters before the cursor.
-            if text.next_grapheme_offset(self.cursor()).is_some() {
-                self.move_selection(Movement::Right, text, false);
-                self.delete_backward(text);
-            }
-        } else {
-            self.delete_backward(text);
-        }
+        let sel_regions = view.sel_regions();
+        assert_eq!(sel_regions.len(), 1);
+        self.selection = SimpleSelection::new(sel_regions[0].start, sel_regions[0].end);
+
+        let result = editor.get_buffer().to_string();
+        *text = result;
     }
 
     /// For a given point, returns the corresponding offset (in bytes) of
@@ -456,68 +426,5 @@ impl Widget<String> for TextBox {
 impl Default for TextBox {
     fn default() -> Self {
         TextBox::new()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Test that when data is mutated externally widget
-    /// can still be used to insert characters.
-    #[test]
-    fn data_can_be_changed_externally() {
-        let mut widget = TextBox::new();
-        let mut data = "".to_string();
-
-        // First insert some chars
-        widget.insert(&mut data, "o");
-        widget.insert(&mut data, "n");
-        widget.insert(&mut data, "e");
-
-        assert_eq!("one", data);
-        assert_eq!(3, widget.selection.start);
-        assert_eq!(3, widget.selection.end);
-
-        // Modify data externally (e.g data was changed in the parent widget)
-        data = "".to_string();
-
-        // Insert again
-        widget.insert(&mut data, "a");
-    }
-
-    /// Test backspace on the combo character o̷
-    #[test]
-    fn backspace_combining() {
-        let mut widget = TextBox::new();
-        let mut data = "".to_string();
-
-        widget.insert(&mut data, "\u{0073}\u{006F}\u{0337}\u{0073}");
-
-        widget.delete_backward(&mut data);
-        widget.delete_backward(&mut data);
-
-        assert_eq!(data, String::from("\u{0073}\u{006F}"))
-    }
-
-    /// Devanagari codepoints are 3 utf-8 code units each.
-    #[test]
-    fn backspace_devanagari() {
-        let mut widget = TextBox::new();
-        let mut data = "".to_string();
-
-        widget.insert(&mut data, "हिन्दी");
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from("हिन्द"));
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from("हिन्"));
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from("हिन"));
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from("हि"));
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from("ह"));
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from(""));
     }
 }

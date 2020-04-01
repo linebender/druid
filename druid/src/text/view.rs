@@ -66,6 +66,7 @@ impl View {
             Move(movement) => self.do_move(text, movement, false),
             ModifySelection(movement) => self.do_move(text, movement, true),
             SelectAll => self.select_all(text),
+            Scroll(_) => unimplemented!(),
             AddSelectionAbove => self.add_selection_by_movement(text, Movement::UpExactPosition),
             AddSelectionBelow => self.add_selection_by_movement(text, Movement::DownExactPosition),
             Gesture { line, col, ty } => self.do_gesture(text, line, col, ty),

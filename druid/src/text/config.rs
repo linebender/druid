@@ -19,13 +19,13 @@ pub struct BufferItems {
     pub tab_size: usize,
     pub translate_tabs_to_spaces: bool,
     pub use_tab_stops: bool,
-    pub font_face: String,
-    pub font_size: f32,
-    pub auto_indent: bool,
-    pub scroll_past_end: bool,
-    pub wrap_width: usize,
-    pub word_wrap: bool,
-    pub autodetect_whitespace: bool,
     pub surrounding_pairs: Vec<(String, String)>,
-    pub save_with_newline: bool,
 }
+
+pub const DEFAULT_CONFIG: &'static BufferItems = &BufferItems {
+    line_ending: String::new(),
+    tab_size: 4,
+    translate_tabs_to_spaces: false,
+    use_tab_stops: false,
+    surrounding_pairs: Vec::new(),
+};

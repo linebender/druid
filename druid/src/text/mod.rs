@@ -42,3 +42,5 @@ pub mod config;
 pub mod lines;
 
 pub mod editor;
+
+pub mod simple_selection;

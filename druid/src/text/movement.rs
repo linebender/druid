@@ -38,10 +38,6 @@ pub enum Movement {
     Up,
     /// Move down one visible line.
     Down,
-    /// Move up one viewport height.
-    UpPage,
-    /// Move down one viewport height.
-    DownPage,
     /// Move up to the next line that can preserve the cursor position.
     UpExactPosition,
     /// Move down to the next line that can preserve the cursor position.
