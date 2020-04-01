@@ -104,6 +104,9 @@ impl<T: Data> Widget<T> for Align<T> {
         bc.debug_check("Align");
 
         let size = self.child.layout(layout_ctx, &bc.loosen(), data, env);
+
+        log_size_warnings(size);
+
         let mut my_size = size;
         if bc.is_width_bounded() {
             my_size.width = bc.max().width;
@@ -135,5 +138,15 @@ impl<T: Data> Widget<T> for Align<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint_with_offset(ctx, data, env);
+    }
+}
+
+fn log_size_warnings(size: Size) {
+    if size.width.is_infinite() {
+        log::warn!("Align widget's child has an infinite width.");
+    }
+
+    if size.height.is_infinite() {
+        log::warn!("Align widget's child has an infinite height.");
     }
 }
