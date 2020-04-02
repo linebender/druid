@@ -135,19 +135,23 @@ impl<T: Data> Widget<T> for Container<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        if let Some(background) = self.background.as_mut() {
-            let panel = ctx.size().to_rounded_rect(self.corner_radius);
-
-            ctx.with_save(|ctx| {
-                ctx.clip(panel);
-                background.paint(ctx, data, env);
-            });
-        }
-
         let border_width = match &self.border {
             Some(border) => border.width.resolve(env),
             None => 0.0,
         };
+
+        let inset_panel = ctx
+            .size()
+            .to_rect()
+            .inset(-1.0 * border_width)
+            .to_rounded_rect(self.corner_radius);
+
+        if let Some(background) = self.background.as_mut() {
+            ctx.with_save(|ctx| {
+                ctx.clip(inset_panel);
+                background.paint(ctx, data, env);
+            });
+        }
 
         if let Some(border) = &self.border {
             let border_rect = ctx
@@ -158,17 +162,9 @@ impl<T: Data> Widget<T> for Container<T> {
             ctx.stroke(border_rect, &border.color.resolve(env), border_width);
         };
 
-        // Since we're painting this after the border we need to inset by the
-        // border width
         if self.corner_radius > 0.0 {
-            let panel = ctx
-                .size()
-                .to_rect()
-                .inset(-1.0 * border_width)
-                .to_rounded_rect(self.corner_radius);
-
             ctx.with_save(|ctx| {
-                ctx.clip(panel);
+                ctx.clip(inset_panel);
                 self.inner.paint_with_offset(ctx, data, env);
             });
         } else {
