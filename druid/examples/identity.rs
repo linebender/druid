@@ -53,6 +53,16 @@ fn color_eq(one: &Color, two: &Color) -> bool {
     one.as_rgba_u32() == two.as_rgba_u32()
 }
 
+fn split_rgba(rgba: &Color) -> (u8, u8, u8, u8) {
+    let rgba = rgba.as_rgba_u32();
+    (
+        (rgba >> 24 & 255) as u8,
+        ((rgba >> 16) & 255) as u8,
+        ((rgba >> 8) & 255) as u8,
+        (rgba & 255) as u8,
+    )
+}
+
 /// A widget that displays a color.
 ///
 /// For the purpose of this fairly contrived demo, this widget works in one of two ways:
@@ -85,18 +95,16 @@ impl Widget<OurData> for ColorWell {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut OurData, _env: &Env) {
         match event {
             Event::Timer(t) if t == &self.token => {
-                let time_since_start = Instant::now() - self.start;
-                // there is no logic here; it's a very silly way of creating a color.
-                let bits = (time_since_start.as_nanos() % (0xFFFFFF)) as u32;
-                let mask = 0x924924;
-                let red = bits & mask;
-                let red = (red >> 16 | red >> 8 | red) & 0xFF;
-                let green = bits & mask >> 1;
-                let green = (green >> 16 | green >> 8 | green) & 0xFF;
-                let blue = bits & mask >> 2;
-                let blue = (blue >> 16 | blue >> 8 | blue) & 0xFF;
+                let time_since_start = (Instant::now() - self.start).as_nanos();
+                let (r, g, b, _) = split_rgba(&data.color);
 
-                data.color = Color::rgb8(red as u8, green as u8, blue as u8);
+                // there is no logic here; it's a very silly way of mutating the color.
+                data.color = match (time_since_start % 2, time_since_start % 3) {
+                    (0, _) => Color::rgb8(r.wrapping_add(10), g, b),
+                    (_, 0) => Color::rgb8(r, g.wrapping_add(10), b),
+                    (_, _) => Color::rgb8(r, g, b.wrapping_add(10)),
+                };
+
                 self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
                 ctx.request_paint();
             }
