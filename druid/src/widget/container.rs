@@ -144,8 +144,12 @@ impl<T: Data> Widget<T> for Container<T> {
             });
         }
 
+        let border_width = match &self.border {
+            Some(border) => border.width.resolve(env),
+            None => 0.0,
+        };
+
         if let Some(border) = &self.border {
-            let border_width = border.width.resolve(env);
             let border_rect = ctx
                 .size()
                 .to_rect()
@@ -154,6 +158,21 @@ impl<T: Data> Widget<T> for Container<T> {
             ctx.stroke(border_rect, &border.color.resolve(env), border_width);
         };
 
-        self.inner.paint_with_offset(ctx, data, env);
+        // Since we're painting this after the border we need to inset by the
+        // border width
+        if self.corner_radius > 0.0 {
+            let panel = ctx
+                .size()
+                .to_rect()
+                .inset(-1.0 * border_width)
+                .to_rounded_rect(self.corner_radius);
+
+            ctx.with_save(|ctx| {
+                ctx.clip(panel);
+                self.inner.paint_with_offset(ctx, data, env);
+            });
+        } else {
+            self.inner.paint_with_offset(ctx, data, env);
+        }
     }
 }
