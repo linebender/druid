@@ -36,7 +36,7 @@ use crate::text::{
     selection::SelRegion,
     simple_selection::SimpleSelection,
     view::View,
-    Selection,
+    Movement, Selection,
 };
 
 const BORDER_WIDTH: f64 = 1.;
@@ -254,7 +254,7 @@ impl Widget<String> for TextBox {
                     Application::clipboard().put_string(text);
                 }
                 if !self.selection.is_caret() && cmd.selector == crate::commands::CUT {
-                    edit_action = Some(EditAction::Delete);
+                    edit_action = Some(EditAction::Delete(Movement::Right));
                 }
                 ctx.set_handled();
             }

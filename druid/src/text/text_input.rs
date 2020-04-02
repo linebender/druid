@@ -31,8 +31,7 @@ pub enum EditAction {
     SelectAll,
     Click(MouseAction),
     Drag(MouseAction),
-    Delete,
-    Backspace,
+    Delete(Movement),
     Insert(String),
     Paste(String),
 }
@@ -106,10 +105,22 @@ impl TextInput for BasicTextInput {
             k_e if (HotKey::new(None, KeyCode::ArrowRight)).matches(k_e) => {
                 EditAction::Move(Movement::Right)
             }
+            // Ctrl + Backspace
+            k_e if (HotKey::new(SysMods::Cmd, KeyCode::Backspace)).matches(k_e) => {
+                EditAction::Delete(Movement::LeftWord)
+            }
             // Backspace
-            k_e if (HotKey::new(None, KeyCode::Backspace)).matches(k_e) => EditAction::Backspace,
+            k_e if (HotKey::new(None, KeyCode::Backspace)).matches(k_e) => {
+                EditAction::Delete(Movement::Left)
+            }
+            // Ctrl + Backspace
+            k_e if (HotKey::new(SysMods::Cmd, KeyCode::Delete)).matches(k_e) => {
+                EditAction::Delete(Movement::RightWord)
+            }
             // Delete
-            k_e if (HotKey::new(None, KeyCode::Delete)).matches(k_e) => EditAction::Delete,
+            k_e if (HotKey::new(None, KeyCode::Delete)).matches(k_e) => {
+                EditAction::Delete(Movement::Right)
+            }
             // Actual typing
             k_e if k_e.key_code.is_printable() => {
                 if let Some(chars) = k_e.text() {

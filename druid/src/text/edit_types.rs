@@ -101,12 +101,8 @@ impl From<EditAction> for EventDomain {
                 col: action.column as u64,
                 ty: GestureType::Drag,
             }),
-            EditAction::Delete => EventDomain::Buffer(BufferEvent::Delete {
-                movement: Movement::Right,
-                kill: false,
-            }),
-            EditAction::Backspace => EventDomain::Buffer(BufferEvent::Delete {
-                movement: Movement::Left,
+            EditAction::Delete(mvmt) => EventDomain::Buffer(BufferEvent::Delete {
+                movement: mvmt,
                 kill: false,
             }),
             EditAction::Insert(s) => EventDomain::Buffer(BufferEvent::Insert(s)),
