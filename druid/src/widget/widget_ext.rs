@@ -244,6 +244,7 @@ impl<T: Data> SizedBox<T> {
 }
 
 // if two things are modifying an env one after another, just combine the modifications
+#[doc(hidden)]
 impl<T: Data, W> EnvScope<T, W> {
     pub fn env_scope(self, f2: impl Fn(&mut Env, &T) + 'static) -> EnvScope<T, W> {
         let EnvScope { f, child } = self;
