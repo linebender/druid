@@ -472,9 +472,7 @@ impl WindowHandle {
     /// Close the window.
     pub fn close(&self) {
         if let Some(state) = self.state.upgrade() {
-            with_application(|app| {
-                app.remove_window(&state.window);
-            });
+            state.window.close();
         }
     }
 
