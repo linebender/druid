@@ -31,7 +31,7 @@ impl<T, W> EnvScope<T, W> {
     ///
     /// Accepts a closure that sets Env values.
     ///
-    /// This is available as [`WidgetExt::env_scope`] for convenience
+    /// This is available as [`WidgetExt::env_scope`] for convenience.
     ///
     /// # Examples
     /// ```
