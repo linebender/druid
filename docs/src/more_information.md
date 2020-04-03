@@ -9,6 +9,7 @@ These three projects provide the basis that Druid works on
 - [Skribo](https://github.com/linebender/skribo) A Rust library for low-level text layout
 
 ## Projects using Druid
+- [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
 - *pull requests welcome*
 
 ## Projects that work with Druid (widgets etc)
