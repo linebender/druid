@@ -35,6 +35,18 @@ use crate::{Color, Data, Point, Rect, Size};
 /// example of the latter is setting a value for enabled/disabled status
 /// so that an entire subtree can be disabled ("grayed out") with one
 /// setting.
+///
+/// [`EnvScope`] can be used to override parts of `Env` for its descendants.
+///
+/// # Important
+/// It is the programmer's responsibility to ensure that the environment
+/// is used correctly. See [`Key`] for an example.
+/// - [`Key`]s should be `const`s with unique names
+/// - [`Key`]s must always be set before they are used.
+/// - Values can only be overwritten by values of the same type.
+///
+/// [`EnvScope`]: widget/struct.EnvScope.html
+/// [`Key`]: struct.Key.html
 #[derive(Clone)]
 pub struct Env(Arc<EnvImpl>);
 
@@ -50,6 +62,27 @@ struct EnvImpl {
 /// This lets you retrieve values of a given type. The parameter
 /// implements [`ValueType`]. For "expensive" types, this is a reference,
 /// so the type for a string is `Key<&str>`.
+///
+/// # Examples
+///
+/// ```
+///# use druid::{Key, Color, WindowDesc, AppLauncher, widget::Label};
+/// const IMPORTANT_LABEL_COLOR: Key<Color> = Key::new("my-app.important-label-color");
+///
+/// fn important_label() -> Label<()> {
+///     Label::new("Warning!").with_text_color(IMPORTANT_LABEL_COLOR)
+/// }
+///
+/// fn main() {
+///     let main_window = WindowDesc::new(important_label);
+///
+///     AppLauncher::with_window(main_window)
+///         .configure_env(|env, _state| {
+///             // The `Key` must be set before it is used.
+///             env.set(IMPORTANT_LABEL_COLOR, Color::rgb(1.0, 0.0, 0.0));
+///         });
+/// }
+/// ```
 ///
 /// [`ValueType`]: trait.ValueType.html
 /// [`Env`]: struct.Env.html
