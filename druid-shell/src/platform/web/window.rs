@@ -14,12 +14,13 @@
 
 //! Web window creation and management.
 
-use instant::Instant;
 use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::ffi::OsString;
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
+
+use instant::Instant;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -29,6 +30,7 @@ use crate::kurbo::{Point, Size, Vec2};
 use crate::piet::RenderContext;
 
 use super::error::Error;
+use super::keycodes::key_to_text;
 use super::menu::Menu;
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
@@ -40,7 +42,6 @@ use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use crate::KeyModifiers;
 
 use super::util::init_log;
-use log::{error, warn};
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
@@ -101,11 +102,11 @@ impl WindowState {
         let mut piet_ctx = piet_common::Piet::new(self.context.clone(), self.window.clone());
         let want_anim_frame = self.handler.borrow_mut().paint(&mut piet_ctx);
         if let Err(e) = piet_ctx.finish() {
-            error!("piet error on render: {:?}", e);
+            log::error!("piet error on render: {:?}", e);
         }
         let res = piet_ctx.finish();
         if let Err(e) = res {
-            error!("EndDraw error: {:?}", e);
+            log::error!("EndDraw error: {:?}", e);
         }
         want_anim_frame
     }
@@ -208,7 +209,7 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
             web_sys::WheelEvent::DOM_DELTA_PAGE => {
                 handler.wheel(Vec2::from((width * dx, height * dy)), modifiers)
             }
-            _ => warn!("Invalid deltaMode in WheelEvent: {}", delta_mode),
+            _ => log::warn!("Invalid deltaMode in WheelEvent: {}", delta_mode),
         }
     });
 }
@@ -235,9 +236,10 @@ fn setup_keyup_callback(ws: &Rc<WindowState>) {
     register_window_event_listener(ws, "keyup", move |event: web_sys::KeyboardEvent| {
         let code = KeyCode::from((event.key_code(), event.location()));
         let mods = get_modifiers!(event);
-        let text = key_to_text(event.key());
+        let key = event.key();
+        let text = key_to_text(key.as_str());
         let repeat = event.repeat();
-        let event = keyboard::KeyEvent::new(code, repeat, mods, text.as_str(), text.as_str());
+        let event = keyboard::KeyEvent::new(code, repeat, mods, text, text);
         state.handler.borrow_mut().key_up(event);
     });
 }
@@ -247,28 +249,16 @@ fn setup_keydown_callback(ws: &Rc<WindowState>) {
     register_window_event_listener(ws, "keydown", move |event: web_sys::KeyboardEvent| {
         let code = KeyCode::from((event.key_code(), event.location()));
         let mods = get_modifiers!(event);
-        let text = key_to_text(event.key());
+        let key = event.key();
+        let text = key_to_text(key.as_str());
         let repeat = event.repeat();
         if let KeyCode::Backspace = code {
             // Prevent the browser from going back a page by default.
             event.prevent_default();
         }
-        let event = keyboard::KeyEvent::new(code, repeat, mods, text.as_str(), text.as_str());
+        let event = keyboard::KeyEvent::new(code, repeat, mods, text, text);
         state.handler.borrow_mut().key_down(event);
     });
-}
-
-/// A helper to convert the key string to the text it is supposed to represent.
-fn key_to_text(key: String) -> String {
-    if key.len() == 1 {
-        return key;
-    }
-
-    match key.as_str() {
-        "Enter" => "\n",
-        _ => "",
-    }
-    .to_string()
 }
 
 /// A helper function to register a window event listener with `addEventListener`.
@@ -413,11 +403,11 @@ impl WindowHandle {
     }
 
     pub fn resizable(&self, _resizable: bool) {
-        warn!("resizable unimplemented for web");
+        log::warn!("resizable unimplemented for web");
     }
 
     pub fn show_titlebar(&self, _show_titlebar: bool) {
-        warn!("show_titlebar unimplemented for web");
+        log::warn!("show_titlebar unimplemented for web");
     }
 
     pub fn close(&self) {
@@ -425,7 +415,7 @@ impl WindowHandle {
     }
 
     pub fn bring_to_front_and_focus(&self) {
-        warn!("bring_to_frontand_focus unimplemented for web");
+        log::warn!("bring_to_frontand_focus unimplemented for web");
     }
 
     pub fn invalidate(&self) {
@@ -551,11 +541,11 @@ impl WindowHandle {
     }
 
     pub fn set_menu(&self, _menu: Menu) {
-        warn!("set_menu unimplemented for web");
+        log::warn!("set_menu unimplemented for web");
     }
 
     pub fn show_context_menu(&self, _menu: Menu, _pos: Point) {
-        warn!("show_context_menu unimplemented for web");
+        log::warn!("show_context_menu unimplemented for web");
     }
 
     pub fn set_title(&self, title: impl Into<String>) {
@@ -629,5 +619,5 @@ fn set_cursor(canvas: &web_sys::HtmlCanvasElement, cursor: &Cursor) {
                 Cursor::ResizeUpDown => "ns-resize",
             },
         )
-        .unwrap_or_else(|_| warn!("Failed to set cursor"));
+        .unwrap_or_else(|_| log::warn!("Failed to set cursor"));
 }

@@ -14,10 +14,9 @@
 
 //! The context types that are passed into various widget methods.
 
-use instant::Instant;
 use std::ops::{Deref, DerefMut};
 
-use log;
+use instant::Instant;
 
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
