@@ -91,8 +91,7 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        //TODO ahem
-        "en-US".into()
+        glib::get_language_names()[0].as_str().into()
     }
 }
 
