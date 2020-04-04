@@ -20,5 +20,4 @@ pub mod dialog;
 pub mod error;
 pub mod keycodes;
 pub mod menu;
-pub mod util;
 pub mod window;

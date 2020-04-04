@@ -45,3 +45,6 @@ version = "0.6.0"
 [dependencies.druid-derive]
 path = "../druid-derive"
 version = "0.4.0"
+
+[target.'cfg(target_arch="wasm32")'.dependencies]
+console_log = "0.1.2"

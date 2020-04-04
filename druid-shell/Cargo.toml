@@ -68,4 +68,3 @@ features = ["v3_20"]
 wasm-bindgen = "0.2.59"
 js-sys = "0.3.36"
 web-sys = { version = "0.3.36", features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent"] }
-console_log = "0.1.2"

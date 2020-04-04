@@ -41,8 +41,6 @@ use crate::mouse::{Cursor, MouseButton, MouseEvent};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use crate::KeyModifiers;
 
-use super::util::init_log;
-
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
 macro_rules! get_modifiers {
@@ -339,9 +337,6 @@ impl WindowBuilder {
     }
 
     pub fn build(self) -> Result<WindowHandle> {
-        // Initialize logging to the browser console.
-        init_log();
-
         let window = web_sys::window().ok_or_else(|| Error::NoWindow)?;
         let canvas = window
             .document()
