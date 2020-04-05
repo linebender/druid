@@ -59,13 +59,13 @@ fn main() -> Result<()> {
 
             let html_dir = crate_dir.join("html");
             if !html_dir.exists() {
-                fs::create_dir(&html_dir).unwrap_or_else(|| {
+                fs::create_dir(&html_dir).unwrap_or_else(|_| {
                     panic!("Failed to create output html directory: {:?}", &html_dir)
                 });
             }
 
             fs::write(html_dir.join(example).with_extension("html"), html)
-                .unwrap_or_else(|| panic!("Failed to create {}.html", example_str));
+                .unwrap_or_else(|_| panic!("Failed to create {}.html", example_str));
         }
     }
     Ok(())
