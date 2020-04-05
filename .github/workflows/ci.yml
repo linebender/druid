@@ -246,7 +246,7 @@ jobs:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
 
-    name: wasm build
+    name: cargo test stable (wasm32)
     steps:
       - uses: actions/checkout@v2
 
@@ -266,7 +266,19 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/examples/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+          args: --all --target wasm32-unknown-unknown -- -D warnings
+
+      - name: cargo test druid-shell (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid-shell/Cargo.toml --target wasm32-unknown-unknown
+
+      - name: cargo test druid (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid/Cargo.toml --target wasm32-unknown-unknown
 
       - name: wasm-pack build examples
         run: wasm-pack build --target web druid/examples/wasm
