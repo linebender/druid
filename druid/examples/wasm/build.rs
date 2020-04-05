@@ -107,7 +107,7 @@ fn main() -> Result<()> {
     }
 
     // Write out the contents of the examples.rs module.
-    //fs::write(src_dir.join("examples.rs"), example_rs)?;
+    fs::write(src_dir.join("examples.rs"), example_rs)?;
 
     Ok(())
 }
