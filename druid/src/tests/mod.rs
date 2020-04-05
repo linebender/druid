@@ -35,7 +35,7 @@ fn propogate_hot() {
     let padding_rec = Recording::default();
     let button_rec = Recording::default();
 
-    let widget = Split::vertical(
+    let widget = Split::horizontal(
         SizedBox::empty().with_id(empty),
         Button::new("hot")
             .record(&button_rec)
@@ -150,7 +150,7 @@ fn take_focus() {
 
     let left = make_focus_taker(left_focus.clone()).with_id(id_1);
     let right = make_focus_taker(right_focus.clone()).with_id(id_2);
-    let app = Split::vertical(left, right).padding(5.0);
+    let app = Split::horizontal(left, right).padding(5.0);
     let data = true;
 
     Harness::create(data, app, |harness| {
@@ -195,10 +195,10 @@ fn adding_child_lifecycle() {
     let record_new_child2 = record_new_child.clone();
 
     let replacer = ReplaceChild::new(TextBox::new(), move || {
-        Split::vertical(TextBox::new(), TextBox::new().record(&record_new_child2))
+        Split::horizontal(TextBox::new(), TextBox::new().record(&record_new_child2))
     });
 
-    let widget = Split::vertical(Label::new("hi").record(&record), replacer);
+    let widget = Split::horizontal(Label::new("hi").record(&record), replacer);
 
     Harness::create(String::new(), widget, |harness| {
         harness.send_initial_events();
@@ -225,10 +225,10 @@ fn participate_in_autofocus() {
     // this widget starts with a single child, and will replace them with a split
     // when we send it a command.
     let replacer = ReplaceChild::new(TextBox::new().with_id(id_4), move || {
-        Split::vertical(TextBox::new().with_id(id_5), TextBox::new().with_id(id_6))
+        Split::horizontal(TextBox::new().with_id(id_5), TextBox::new().with_id(id_6))
     });
 
-    let widget = Split::vertical(
+    let widget = Split::horizontal(
         Flex::row()
             .with_flex_child(TextBox::new().with_id(id_1), 1.0)
             .with_flex_child(TextBox::new().with_id(id_2), 1.0)
@@ -263,7 +263,7 @@ fn participate_in_autofocus() {
 fn child_tracking() {
     let (id_1, id_2, id_3, id_4) = widget_id4();
 
-    let widget = Split::vertical(
+    let widget = Split::horizontal(
         SizedBox::empty().with_id(id_1),
         SizedBox::empty().with_id(id_2),
     )
@@ -293,11 +293,11 @@ fn register_after_adding_child() {
     let id_7 = WidgetId::next();
 
     let replacer = ReplaceChild::new(TextBox::new().with_id(id_1), move || {
-        Split::vertical(TextBox::new().with_id(id_2), TextBox::new().with_id(id_3)).with_id(id_7)
+        Split::horizontal(TextBox::new().with_id(id_2), TextBox::new().with_id(id_3)).with_id(id_7)
     })
     .with_id(id_6);
 
-    let widget = Split::vertical(Label::new("hi").with_id(id_4), replacer).with_id(id_5);
+    let widget = Split::horizontal(Label::new("hi").with_id(id_4), replacer).with_id(id_5);
 
     Harness::create(String::new(), widget, |harness| {
         harness.send_initial_events();

@@ -19,10 +19,10 @@ use druid::widget::{Align, Container, Label, Padding, Split};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
-    let fixed_vertical = Padding::new(
+    let fixed_horizontal = Padding::new(
         10.0,
         Container::new(
-            Split::vertical(
+            Split::horizontal(
                 Align::centered(Label::new("Left Split")),
                 Align::centered(Label::new("Right Split")),
             )
@@ -30,29 +30,15 @@ fn build_app() -> impl Widget<u32> {
         )
         .border(Color::WHITE, 1.0),
     );
-    let fixed_horizontal = Padding::new(
+    let fixed_vertical = Padding::new(
         10.0,
         Container::new(
-            Split::horizontal(
+            Split::vertical(
                 Align::centered(Label::new("Top Split")),
                 Align::centered(Label::new("Bottom Split")),
             )
             .split_point(0.4)
-            .splitter_size(3.0),
-        )
-        .border(Color::WHITE, 1.0),
-    );
-    let draggable_vertical = Padding::new(
-        10.0,
-        Container::new(
-            Split::vertical(
-                Align::centered(Label::new("Split A")),
-                Align::centered(Label::new("Split B")),
-            )
-            .split_point(0.5)
-            .draggable(true)
-            .fill_splitter_handle(true)
-            .min_size(60.0),
+            .bar_size(3.0),
         )
         .border(Color::WHITE, 1.0),
     );
@@ -60,21 +46,35 @@ fn build_app() -> impl Widget<u32> {
         10.0,
         Container::new(
             Split::horizontal(
-                Split::horizontal(fixed_vertical, fixed_horizontal)
+                Align::centered(Label::new("Split A")),
+                Align::centered(Label::new("Split B")),
+            )
+            .split_point(0.5)
+            .draggable(true)
+            .solid_bar(true)
+            .min_size(60.0),
+        )
+        .border(Color::WHITE, 1.0),
+    );
+    let draggable_vertical = Padding::new(
+        10.0,
+        Container::new(
+            Split::vertical(
+                Split::vertical(fixed_horizontal, fixed_vertical)
                     .split_point(0.33)
-                    .splitter_size(3.0)
-                    .min_splitter_area(3.0)
+                    .bar_size(3.0)
+                    .min_bar_area(3.0)
                     .draggable(true),
-                draggable_vertical,
+                draggable_horizontal,
             )
             .split_point(0.75)
-            .splitter_size(5.0)
-            .min_splitter_area(11.0)
+            .bar_size(5.0)
+            .min_bar_area(11.0)
             .draggable(true),
         )
         .border(Color::WHITE, 1.0),
     );
-    draggable_horizontal
+    draggable_vertical
 }
 
 fn main() {

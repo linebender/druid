@@ -668,7 +668,7 @@ mod tests {
     #[test]
     fn register_children() {
         fn make_widgets() -> impl Widget<Option<u32>> {
-            Split::vertical(
+            Split::horizontal(
                 Flex::<Option<u32>>::row()
                     .with_child(TextBox::new().with_id(ID_1).parse())
                     .with_child(TextBox::new().with_id(ID_2).parse())
