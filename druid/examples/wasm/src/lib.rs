@@ -20,7 +20,6 @@ macro_rules! impl_example {
     ($wasm_fn:ident, $example:ident) => {
         #[wasm_bindgen]
         pub fn $wasm_fn() {
-            #[cfg(feature = "console_error_panic_hook")]
             std::panic::set_hook(Box::new(console_error_panic_hook::hook));
             examples::$example::main();
         }
