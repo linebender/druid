@@ -61,11 +61,14 @@ impl Application {
         loop {
             if let Some(ev) = conn.wait_for_event() {
                 let ev_type = ev.response_type() & !0x80;
-                //NOTE: I don't think we should be doing this here, but I'm trying to keep
-                //the code mostly unchanged. My personal feeling is that the best approach
-                //is to dispatch events to the window as early as possible, that is to say
-                //I would send the *raw* events to the window and then let the window figure
-                //out how to handle them. - @cmyr
+                // NOTE: I don't think we should be doing this here, but I'm trying to keep
+                // the code mostly unchanged. My personal feeling is that the best approach
+                // is to dispatch events to the window as early as possible, that is to say
+                // I would send the *raw* events to the window and then let the window figure
+                // out how to handle them. - @cmyr
+                //
+                // Can't get which window to send the raw event to without first parsing the event
+                // and getting the window ID out of it :)  - @crsaracco
                 match ev_type {
                     xcb::EXPOSE => {
                         let expose: &xcb::ExposeEvent = unsafe { xcb::cast_event(&ev) };

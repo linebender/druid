@@ -155,7 +155,6 @@ pub(crate) struct XWindow {
     window_id: u32,
     handler: Box<dyn WinHandler>,
     refresh_rate: Option<f64>,
-    size: Size,
 }
 
 impl XWindow {
@@ -174,17 +173,11 @@ impl XWindow {
             window_id,
             handler: window_handler,
             refresh_rate,
-            size,
         };
         // Let the window handler know the size of the window
-        xwindow.communicate_size();
+        xwindow.communicate_size(size);
 
         xwindow
-    }
-
-    fn communicate_size(&mut self) {
-        // TODO(x11/dpi_scaling): detect DPI and scale size
-        self.handler.size(self.size.width as u32, self.size.height as u32);
     }
 
     pub fn render(&mut self) {
@@ -194,6 +187,12 @@ impl XWindow {
         // TODO(x11/errors): Don't unwrap for screen or visual_type?
         let screen = setup.roots().nth(screen_num as usize).unwrap();
         let mut visual_type = get_visual_from_screen(&screen).unwrap();
+
+        // Figure out the window's current size
+        let geometry_cookie = xcb::get_geometry(&conn, self.window_id);
+        let reply = geometry_cookie.get_reply().unwrap();
+        let size = Size::new(reply.width() as f64, reply.height() as f64);
+        self.communicate_size(size);
 
         // Create a draw surface
         // TODO(x11/render_improvements): We have to re-create this draw surface if the window size changes.
@@ -212,8 +211,8 @@ impl XWindow {
             &cairo_xcb_connection,
             &cairo_drawable,
             &cairo_visual_type,
-            self.size.width as i32,
-            self.size.height as i32,
+            size.width as i32,
+            size.height as i32,
         )
             .expect("couldn't create a cairo surface");
         let mut cairo_context = cairo::Context::new(&cairo_surface);
@@ -268,6 +267,11 @@ impl XWindow {
 
     pub fn mouse_move(&mut self, mouse_event: &MouseEvent) {
         self.handler.mouse_move(mouse_event);
+    }
+
+    fn communicate_size(&mut self, size: Size) {
+        // TODO(x11/dpi_scaling): detect DPI and scale size
+        self.handler.size(size.width as u32, size.height as u32);
     }
 }
 
