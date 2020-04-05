@@ -120,7 +120,8 @@ impl Application {
                         })
                     }
                     xcb::BUTTON_RELEASE => {
-                        let button_release: &xcb::ButtonReleaseEvent = unsafe { xcb::cast_event(&ev) };
+                        let button_release: &xcb::ButtonReleaseEvent =
+                            unsafe { xcb::cast_event(&ev) };
                         let window_id = button_release.event();
                         let mouse_event = MouseEvent {
                             pos: Point::new(

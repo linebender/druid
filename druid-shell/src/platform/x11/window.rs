@@ -160,15 +160,9 @@ pub(crate) struct XWindow {
 impl XWindow {
     pub fn new(window_id: u32, window_handler: Box<dyn WinHandler>, size: Size) -> XWindow {
         let conn = Application::get_connection();
-        let setup = conn.get_setup();
-        let screen_num = Application::get_screen_num();
-        // TODO(x11/errors): Don't unwrap for screen or visual_type?
-        let screen = setup.roots().nth(screen_num as usize).unwrap();
-        let mut visual_type = get_visual_from_screen(&screen).unwrap();
 
         // Figure out the refresh rate of the current screen
         let refresh_rate = util::refresh_rate(&conn, window_id);
-
         let mut xwindow = XWindow {
             window_id,
             handler: window_handler,
@@ -214,7 +208,7 @@ impl XWindow {
             size.width as i32,
             size.height as i32,
         )
-            .expect("couldn't create a cairo surface");
+        .expect("couldn't create a cairo surface");
         let mut cairo_context = cairo::Context::new(&cairo_surface);
 
         cairo_context.set_source_rgb(0.0, 0.0, 0.0);
