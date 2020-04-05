@@ -17,15 +17,18 @@ use wasm_bindgen::prelude::*;
 mod examples;
 
 macro_rules! impl_example {
-    ($wasm_fn:ident, $example:ident) => {
+    ($wasm_fn:ident, $expr:expr) => {
         #[wasm_bindgen]
         pub fn $wasm_fn() {
             std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-            examples::$example::main();
+            $expr;
         }
     };
     ($fn:ident) => {
-        impl_example!($fn, $fn);
+        impl_example!($fn, examples::$fn::main());
+    };
+    ($fn:ident.unwrap()) => {
+        impl_example!($fn, examples::$fn::main().unwrap());
     };
 }
 
@@ -34,7 +37,7 @@ impl_example!(calc);
 impl_example!(custom_widget);
 impl_example!(either);
 //impl_example!(ext_event); // No thread support on wasm
-impl_example!(flex);
+impl_example!(flex.unwrap());
 impl_example!(game_of_life);
 impl_example!(hello);
 impl_example!(identity);
@@ -43,13 +46,13 @@ impl_example!(layout);
 impl_example!(lens);
 impl_example!(list);
 impl_example!(multiwin);
-impl_example!(panels);
+impl_example!(panels.unwrap());
 impl_example!(parse);
 impl_example!(scroll_colors);
 impl_example!(scroll);
 impl_example!(split_demo);
-impl_example!(styled_text);
+impl_example!(styled_text.unwrap());
 //impl_example!(svg); // usvg doesn't compile on usvg at the time of this writing
-impl_example!(switch_demo, switch);
+impl_example!(switch_demo, examples::switch::main());
 impl_example!(timer);
 impl_example!(view_switcher);
