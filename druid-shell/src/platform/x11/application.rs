@@ -56,6 +56,7 @@ impl Application {
         XCB_CONNECTION.screen_num()
     }
 
+    // TODO(x11/events): handle mouse scroll events
     pub fn run(&mut self) {
         let conn = XCB_CONNECTION.connection_cloned();
         loop {
@@ -162,7 +163,7 @@ impl Application {
                         WINDOW_MAP.with(|map| {
                             let mut windows = map.borrow_mut();
                             if let Some(w) = windows.get_mut(&window_id) {
-                                w.mouse_up(&mouse_event);
+                                w.mouse_move(&mouse_event);
                             }
                         })
                     }

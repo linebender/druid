@@ -440,4 +440,5 @@ fn request_redraw(window_id: u32) {
         xcb::EVENT_MASK_EXPOSURE,
         &expose_event,
     );
+    conn.flush();
 }
