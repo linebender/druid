@@ -115,6 +115,54 @@ impl Application {
                             }
                         })
                     }
+                    xcb::BUTTON_RELEASE => {
+                        let button_release: &xcb::ButtonReleaseEvent = unsafe { xcb::cast_event(&ev) };
+                        let window_id = button_release.event();
+                        let mouse_event = MouseEvent {
+                            pos: Point::new(
+                                button_release.event_x() as f64,
+                                button_release.event_y() as f64,
+                            ),
+                            mods: KeyModifiers {
+                                shift: false,
+                                alt: false,
+                                ctrl: false,
+                                meta: false,
+                            },
+                            count: 0,
+                            button: MouseButton::Left,
+                        };
+                        WINDOW_MAP.with(|map| {
+                            let mut windows = map.borrow_mut();
+                            if let Some(w) = windows.get_mut(&window_id) {
+                                w.mouse_up(&mouse_event);
+                            }
+                        })
+                    }
+                    xcb::MOTION_NOTIFY => {
+                        let mouse_move: &xcb::MotionNotifyEvent = unsafe { xcb::cast_event(&ev) };
+                        let window_id = mouse_move.event();
+                        let mouse_event = MouseEvent {
+                            pos: Point::new(
+                                mouse_move.event_x() as f64,
+                                mouse_move.event_y() as f64,
+                            ),
+                            mods: KeyModifiers {
+                                shift: false,
+                                alt: false,
+                                ctrl: false,
+                                meta: false,
+                            },
+                            count: 0,
+                            button: MouseButton::Left,
+                        };
+                        WINDOW_MAP.with(|map| {
+                            let mut windows = map.borrow_mut();
+                            if let Some(w) = windows.get_mut(&window_id) {
+                                w.mouse_up(&mouse_event);
+                            }
+                        })
+                    }
                     _ => {}
                 }
             }

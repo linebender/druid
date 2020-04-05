@@ -90,7 +90,8 @@ impl WindowBuilder {
                     | xcb::EVENT_MASK_KEY_PRESS
                     | xcb::EVENT_MASK_KEY_RELEASE
                     | xcb::EVENT_MASK_BUTTON_PRESS
-                    | xcb::EVENT_MASK_BUTTON_RELEASE,
+                    | xcb::EVENT_MASK_BUTTON_RELEASE
+                    | xcb::EVENT_MASK_POINTER_MOTION,
             ),
         ];
 
@@ -259,6 +260,14 @@ impl XWindow {
 
     pub fn mouse_down(&mut self, mouse_event: &MouseEvent) {
         self.handler.mouse_down(mouse_event);
+    }
+
+    pub fn mouse_up(&mut self, mouse_event: &MouseEvent) {
+        self.handler.mouse_up(mouse_event);
+    }
+
+    pub fn mouse_move(&mut self, mouse_event: &MouseEvent) {
+        self.handler.mouse_move(mouse_event);
     }
 }
 
