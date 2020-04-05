@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![allow(clippy::unreadable_literal)]
+
 //! Game of life
 
 use std::ops::{Index, IndexMut};
@@ -474,7 +476,7 @@ impl PartialEq for Grid {
                 return false;
             }
         }
-        return true;
+        true
     }
 }
 
