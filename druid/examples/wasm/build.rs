@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::{env, fs};
 
 /// Examples known to not work with WASM are skipped. Ideally this list will eventually be empty.
-const EXCEPTIONS: &[&'static str] = &[
+const EXCEPTIONS: &[&str] = &[
     "svg",       // usvg doesn't currently build with WASM.
     "ext_event", // WASM doesn't currently support spawning threads.
 ];
