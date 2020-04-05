@@ -169,12 +169,21 @@ impl XWindow {
         // Figure out the refresh rate of the current screen
         let refresh_rate = util::refresh_rate(&conn, window_id);
 
-        XWindow {
+        let mut xwindow = XWindow {
             window_id,
             handler: window_handler,
             refresh_rate,
             size,
-        }
+        };
+        // Let the window handler know the size of the window
+        xwindow.communicate_size();
+
+        xwindow
+    }
+
+    fn communicate_size(&mut self) {
+        // TODO(x11/dpi_scaling): detect DPI and scale size
+        self.handler.size(self.size.width as u32, self.size.height as u32);
     }
 
     pub fn render(&mut self) {
