@@ -257,21 +257,19 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: wasm32-unknown-unknown
           components: clippy
           profile: minimal
           override: true
 
-      - name: cargo clippy (wasm)
+      - name: cargo clippy (wasm32)
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/examples/wasm/Cargo.toml -- -D warnings
+          args: --manifest-path=druid/examples/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 
       - name: wasm-pack build examples
-        uses: actions-rs/wasm-pack@v1
-        with:
-          command: build
-          args: --target web
+        run: wasm-pack build --target web druid/examples/wasm
 
       - name: Run rustc -D warnings in druid/examples/wasm
         uses: actions-rs/cargo@v1
