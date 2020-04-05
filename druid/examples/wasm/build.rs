@@ -1,0 +1,72 @@
+use std::io::Result;
+use std::path::PathBuf;
+use std::{env, fs};
+
+fn main() -> Result<()> {
+    let crate_dir = PathBuf::from(&env::var("CARGO_MANIFEST_DIR").unwrap());
+
+    // Get a list of examples
+    let examples_dir = crate_dir.join("src").join("examples");
+
+    for entry in examples_dir.read_dir()? {
+        let path = entry?.path();
+        if let Some(r) = path.extension() {
+            if r != "rs" {
+                continue;
+            }
+        } else {
+            continue;
+        }
+
+        if let Some(example) = path.file_stem() {
+            let example_str = example.to_string_lossy();
+            // Create an html document for each example.
+            let html = format!(
+                r#"
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8">
+                <title>Druid WASM example - {name}</title>
+                <style>
+                    html, body, canvas {{
+                        margin: 0px;
+                        padding: 0px;
+                        width: 100%;
+                        height: 100%;
+                        overflow: hidden;
+                    }}
+                </style>
+            </head>
+            <body>
+                <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
+                <canvas id="canvas"></canvas>
+                <script type="module">
+                    import init, {{ {name} }} from '../pkg/druid_wasm_examples.js';
+
+                    async function run() {{
+                        await init();
+                        {name}();
+                    }}
+
+                    run();
+                </script>
+            </body>
+        </html>
+        "#,
+                name = example_str
+            );
+
+            let html_dir = crate_dir.join("html");
+            if !html_dir.exists() {
+                fs::create_dir(&html_dir).unwrap_or_else(|| {
+                    panic!("Failed to create output html directory: {:?}", &html_dir)
+                });
+            }
+
+            fs::write(html_dir.join(example).with_extension("html"), html)
+                .unwrap_or_else(|| panic!("Failed to create {}.html", example_str));
+        }
+    }
+    Ok(())
+}
