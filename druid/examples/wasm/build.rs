@@ -4,9 +4,17 @@ use std::{env, fs};
 
 fn main() -> Result<()> {
     let crate_dir = PathBuf::from(&env::var("CARGO_MANIFEST_DIR").unwrap());
+    let examples_dir = crate_dir.join("src").join("examples");
+    
+    let parent_dir = crate_dir.parent().unwrap();
+
+    // Create a symlink (platform specific) to the examples directory.
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(parent_dir, &examples_dir).ok();
+    #[cfg(windows)]
+    std::os::windows::fs::symlink_dir(parent_dir, &examples_dir).ok();
 
     // Get a list of examples
-    let examples_dir = crate_dir.join("src").join("examples");
 
     for entry in examples_dir.read_dir()? {
         let path = entry?.path();
