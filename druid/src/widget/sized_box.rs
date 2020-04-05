@@ -69,11 +69,58 @@ impl<T> SizedBox<T> {
     }
 
     /// Expand container to fit the parent.
-    /// It is equivalent to setting width and height to Infinity.
+    ///
+    /// Only call this method if you want your widget to occupy all available
+    /// space. If you only care about expanding in one of width or height, use
+    /// [`expand_width`] or [`expand_height`] instead.
+    ///
+    /// [`expand_height`]: #method.expand_height
+    /// [`expand_width`]: #method.expand_width
     pub fn expand(mut self) -> Self {
         self.width = Some(INFINITY);
         self.height = Some(INFINITY);
         self
+    }
+
+    /// Expand the container on the x-axis.
+    ///
+    /// This will force the child to have maximum width.
+    pub fn expand_width(mut self) -> Self {
+        self.width = Some(INFINITY);
+        self
+    }
+
+    /// Expand the container on the y-axis.
+    ///
+    /// This will force the child to have maximum height.
+    pub fn expand_height(mut self) -> Self {
+        self.height = Some(INFINITY);
+        self
+    }
+
+    fn child_constraints(&self, bc: &BoxConstraints) -> BoxConstraints {
+        // if we don't have a width/height, we don't change that axis.
+        // if we have a width/height, we clamp it on that axis.
+        let (min_width, max_width) = match self.width {
+            Some(width) => {
+                let w = width.max(bc.min().width).min(bc.max().width);
+                (w, w)
+            }
+            None => (bc.min().width, bc.max().width),
+        };
+
+        let (min_height, max_height) = match self.height {
+            Some(height) => {
+                let h = height.max(bc.min().height).min(bc.max().height);
+                (h, h)
+            }
+            None => (bc.min().height, bc.max().height),
+        };
+
+        BoxConstraints::new(
+            Size::new(min_width, min_height),
+            Size::new(max_width, max_height),
+        )
     }
 
     #[cfg(test)]
@@ -104,42 +151,53 @@ impl<T: Data> Widget<T> for SizedBox<T> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("SizedBox");
 
-        match self.inner {
-            Some(ref mut inner) => {
-                let (min_width, max_width) = match self.width {
-                    Some(width) => {
-                        let w = width.max(bc.min().width).min(bc.max().width);
-                        (w, w)
-                    }
-                    None => (bc.min().width, bc.max().width),
-                };
-
-                let (min_height, max_height) = match self.height {
-                    Some(height) => {
-                        let h = height.max(bc.min().height).min(bc.max().height);
-                        (h, h)
-                    }
-                    None => (bc.min().height, bc.max().height),
-                };
-
-                let child_bc = BoxConstraints::new(
-                    Size::new(min_width, min_height),
-                    Size::new(max_width, max_height),
-                );
-
-                inner.layout(ctx, &child_bc, data, env)
-            }
+        let child_bc = self.child_constraints(bc);
+        let size = match self.inner.as_mut() {
+            Some(inner) => inner.layout(ctx, &child_bc, data, env),
             None => bc.constrain((self.width.unwrap_or(0.0), self.height.unwrap_or(0.0))),
+        };
+
+        if size.width.is_infinite() {
+            log::warn!("SizedBox is returning an infinite width.");
         }
+
+        if size.height.is_infinite() {
+            log::warn!("SizedBox is returning an infinite height.");
+        }
+
+        size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
-            inner.paint(paint_ctx, data, env);
+            inner.paint(ctx, data, env);
         }
     }
 
     fn id(&self) -> Option<WidgetId> {
         self.inner.as_ref().and_then(|inner| inner.id())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::widget::Label;
+
+    #[test]
+    fn expand() {
+        let expand = SizedBox::<()>::new(Label::new("hello!")).expand();
+        let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
+        let child_bc = expand.child_constraints(&bc);
+        assert_eq!(child_bc.min(), Size::new(400., 400.,));
+    }
+
+    #[test]
+    fn no_width() {
+        let expand = SizedBox::<()>::new(Label::new("hello!")).height(200.);
+        let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
+        let child_bc = expand.child_constraints(&bc);
+        assert_eq!(child_bc.min(), Size::new(0., 200.,));
+        assert_eq!(child_bc.max(), Size::new(400., 200.,));
     }
 }

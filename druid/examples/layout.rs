@@ -14,8 +14,8 @@
 
 //! This example shows how to construct a basic layout.
 
-use druid::widget::{Button, Flex, Label, SizedBox, WidgetExt};
-use druid::{AppLauncher, Color, LocalizedString, Widget, WindowDesc};
+use druid::widget::{Button, Flex, Label};
+use druid::{AppLauncher, Color, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     // Begin construction of vertical layout
@@ -25,28 +25,30 @@ fn build_app() -> impl Widget<u32> {
     let mut header = Flex::row();
     header.add_child(
         Label::new("One")
-            .center()
             .fix_width(60.0)
             .background(Color::rgb8(0x77, 0x77, 0))
-            .border(Color::WHITE, 3.0),
-        0.0,
+            .border(Color::WHITE, 3.0)
+            .center(),
     );
     // Spacing element that will fill all available space in between label
     // and a button. Notice that weight is non-zero.
-    header.add_child(SizedBox::empty().expand(), 1.0);
-    header.add_child(Button::new("Two", Button::noop).padding(20.), 0.0);
+    header.add_flex_spacer(1.0);
+    header.add_child(Button::new("Two").padding(20.));
     col.add_child(
         header
             .fix_height(100.0)
             .background(Color::rgb8(0, 0x77, 0x88)),
-        0.0,
     );
 
     for i in 0..5 {
         // Give a larger weight to one of the buttons for it to
         // occupy more space.
         let weight = if i == 2 { 3.0 } else { 1.0 };
-        col.add_child(Button::new(format!("Button #{}", i), Button::noop), weight);
+        // call `expand_height` to force the buttons to use all their provided flex
+        col.add_flex_child(
+            Button::new(format!("Button #{}", i)).expand_height(),
+            weight,
+        );
     }
 
     col.debug_paint_layout()

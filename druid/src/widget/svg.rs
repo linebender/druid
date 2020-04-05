@@ -15,7 +15,6 @@
 //! An SVG widget.
 
 use std::error::Error;
-use std::marker::PhantomData;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -30,20 +29,18 @@ use crate::{
 };
 
 /// A widget that renders a SVG
-pub struct Svg<T> {
+pub struct Svg {
     svg_data: SvgData,
-    phantom: PhantomData<T>,
     fill: FillStrat,
 }
 
-impl<T: Data> Svg<T> {
+impl Svg {
     /// Create an SVG-drawing widget from SvgData.
     ///
     /// The SVG will scale to fit its box constraints.
     pub fn new(svg_data: SvgData) -> Self {
         Svg {
             svg_data,
-            phantom: Default::default(),
             fill: FillStrat::default(),
         }
     }
@@ -72,12 +69,12 @@ impl<T: Data> Svg<T> {
     }
 
     /// Modify the widget's `FillStrat`.
-    pub fn set_fill(&mut self, newfil: FillStrat) {
+    pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
     }
 }
 
-impl<T: Data> Widget<T> for Svg<T> {
+impl<T: Data> Widget<T> for Svg {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
@@ -99,15 +96,15 @@ impl<T: Data> Widget<T> for Svg<T> {
             bc.constrain(self.get_size())
         }
     }
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, _env: &Env) {
-        let offset_matrix = self.fill.affine_to_fill(paint_ctx.size(), self.get_size());
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
+        let offset_matrix = self.fill.affine_to_fill(ctx.size(), self.get_size());
 
-        let clip_rect = Rect::ZERO.with_size(paint_ctx.size());
+        let clip_rect = Rect::ZERO.with_size(ctx.size());
 
         // The SvgData's to_piet function dose not clip to the svg's size
         // CairoRenderContext is very like druids but with some extra goodies like clip
-        paint_ctx.clip(clip_rect);
-        self.svg_data.to_piet(offset_matrix, paint_ctx);
+        ctx.clip(clip_rect);
+        self.svg_data.to_piet(offset_matrix, ctx);
     }
 }
 
@@ -139,7 +136,7 @@ impl SvgData {
     }
 
     /// Convert SvgData into Piet draw instructions
-    pub fn to_piet(&self, offset_matrix: Affine, paint_ctx: &mut PaintCtx) {
+    pub fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx) {
         let root = self.tree.root();
         for n in root.children() {
             match *n.borrow() {
@@ -182,7 +179,7 @@ impl SvgData {
                     match &p.fill {
                         Some(fill) => {
                             let brush = color_from_usvg(&fill.paint, fill.opacity);
-                            paint_ctx.fill(path.clone(), &brush);
+                            ctx.fill(path.clone(), &brush);
                         }
                         None => {}
                     }
@@ -190,7 +187,7 @@ impl SvgData {
                     match &p.stroke {
                         Some(stroke) => {
                             let brush = color_from_usvg(&stroke.paint, stroke.opacity);
-                            paint_ctx.stroke(path.clone(), &brush, stroke.width.value());
+                            ctx.stroke(path.clone(), &brush, stroke.width.value());
                         }
                         None => {}
                     }

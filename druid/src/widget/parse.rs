@@ -33,9 +33,14 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
         &mut self,
         ctx: &mut LifeCycleCtx,
         event: &LifeCycle,
-        _data: &Option<T>,
+        data: &Option<T>,
         env: &Env,
     ) {
+        if let LifeCycle::WidgetAdded = event {
+            if let Some(data) = data {
+                self.state = data.to_string();
+            }
+        }
         self.widget.lifecycle(ctx, event, &self.state, env)
     }
 

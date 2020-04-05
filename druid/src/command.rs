@@ -31,7 +31,7 @@ pub struct Selector(&'static str);
 
 /// An arbitrary command.
 ///
-/// A `Command` consists of a `Selector`, that indicates what the command is,
+/// A `Command` consists of a [`Selector`], that indicates what the command is,
 /// and an optional argument, that can be used to pass arbitrary data.
 ///
 ///
@@ -56,6 +56,10 @@ pub struct Selector(&'static str);
 ///
 /// assert_eq!(command.get_object(), Ok(&vec![1, 3, 10, 12]));
 /// ```
+///
+/// [`Command::new`]: #method.new
+/// [`Command::get_object`]: #method.get_object
+/// [`Selector`]: struct.Selector.html
 #[derive(Debug, Clone)]
 pub struct Command {
     /// The command's `Selector`.
@@ -94,9 +98,11 @@ pub enum Target {
     Widget(WidgetId),
 }
 
-/// [`Command`]s with special meaning, defined by druid.
+/// Commands with special meaning, defined by druid.
 ///
-/// [`Command`]: struct.Command.html
+/// See [`Command`] for more info.
+///
+/// [`Command`]: ../struct.Command.html
 pub mod sys {
     use super::Selector;
 
@@ -146,27 +152,29 @@ pub mod sys {
     pub const NEW_FILE: Selector = Selector::new("druid-builtin.menu-file-new");
 
     /// System command. A file picker dialog will be shown to the user, and an
-    /// `OPEN_FILE` command will be sent if a file is chosen.
+    /// [`OPEN_FILE`] command will be sent if a file is chosen.
     ///
     /// The argument should be a [`FileDialogOptions`] struct.
     ///
-    /// [`FileDialogOptions`]: struct.FileDialogOptions.html
+    /// [`OPEN_FILE`]: constant.OPEN_FILE.html
+    /// [`FileDialogOptions`]: ../struct.FileDialogOptions.html
     pub const SHOW_OPEN_PANEL: Selector = Selector::new("druid-builtin.menu-file-open");
 
     /// Open a file.
     ///
     /// The argument must be a [`FileInfo`] object for the file to be opened.
     ///
-    /// [`FileInfo`]: struct.FileInfo.html
+    /// [`FileInfo`]: ../struct.FileInfo.html
     pub const OPEN_FILE: Selector = Selector::new("druid-builtin.open-file-path");
 
     /// Special command. When issued, the system will show the 'save as' panel,
-    /// and if a path is selected the system will issue a `SAVE_FILE` command
+    /// and if a path is selected the system will issue a [`SAVE_FILE`] command
     /// with the selected path as the argument.
     ///
     /// The argument should be a [`FileDialogOptions`] object.
     ///
-    /// [`FileDialogOptions`]: struct.FileDialogOptions.html
+    /// [`SAVE_FILE`]: constant.SAVE_FILE.html
+    /// [`FileDialogOptions`]: ../struct.FileDialogOptions.html
     pub const SHOW_SAVE_PANEL: Selector = Selector::new("druid-builtin.menu-file-save-as");
 
     /// Save the current file.
@@ -223,9 +231,9 @@ impl Command {
     ///
     /// Unlike those created with `Command::new`, one-shot commands cannot
     /// be reused; their argument is consumed when it is accessed, via
-    /// [`Command::take_object`].
+    /// [`take_object`].
     ///
-    /// [`Command::take_object`]: #method.take_object
+    /// [`take_object`]: #method.take_object
     pub fn one_shot(selector: Selector, arg: impl Any) -> Self {
         Command {
             selector,
@@ -243,9 +251,9 @@ impl Command {
     /// Return a reference to this `Command`'s object, if it has one.
     ///
     /// This only works for 'reusable' commands; it does not work for commands
-    /// created with [`Command::one_shot`]
+    /// created with [`one_shot`].
     ///
-    /// [`Command::one_shot`]: #method.one_shot
+    /// [`one_shot`]: #method.one_shot
     pub fn get_object<T: Any>(&self) -> Result<&T, ArgumentError> {
         match self.object.as_ref() {
             Some(Arg::Reusable(o)) => o.downcast_ref().ok_or(ArgumentError::IncorrectType),

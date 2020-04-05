@@ -19,7 +19,6 @@ use crate::piet::{
     FontBuilder, LinearGradient, RenderContext, Text, TextLayout, TextLayoutBuilder, UnitPoint,
 };
 use crate::theme;
-use crate::widget::Align;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
     Widget,
@@ -28,7 +27,7 @@ use crate::{
 const SWITCH_PADDING: f64 = 3.;
 const SWITCH_WIDTH_RATIO: f64 = 2.75;
 
-/// A switch that toggles a boolean.
+/// A switch that toggles a `bool`.
 #[derive(Debug, Clone, Default)]
 pub struct Switch {
     knob_pos: Point,
@@ -38,8 +37,9 @@ pub struct Switch {
 }
 
 impl Switch {
-    pub fn new() -> impl Widget<bool> {
-        Align::vertical(UnitPoint::CENTER, Self::default())
+    /// Create a new `Switch`.
+    pub fn new() -> Switch {
+        Self::default()
     }
 
     fn knob_hit_test(&self, knob_width: f64, mouse_pos: Point) -> bool {
@@ -47,13 +47,13 @@ impl Switch {
         knob_circle.winding(mouse_pos) > 0
     }
 
-    fn paint_labels(&mut self, paint_ctx: &mut PaintCtx, env: &Env, switch_width: f64) {
+    fn paint_labels(&mut self, ctx: &mut PaintCtx, env: &Env, switch_width: f64) {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let knob_size = switch_height - 2. * SWITCH_PADDING;
 
-        let font = paint_ctx
+        let font = ctx
             .text()
             .new_font_by_name(font_name, font_size)
             .build()
@@ -61,23 +61,15 @@ impl Switch {
 
         // off/on labels
         // TODO: use LocalizedString
-        let on_label_layout = paint_ctx
-            .text()
-            .new_text_layout(&font, "ON")
-            .build()
-            .unwrap();
+        let on_label_layout = ctx.text().new_text_layout(&font, "ON").build().unwrap();
 
-        let off_label_layout = paint_ctx
-            .text()
-            .new_text_layout(&font, "OFF")
-            .build()
-            .unwrap();
+        let off_label_layout = ctx.text().new_text_layout(&font, "OFF").build().unwrap();
 
         // position off/on labels
         let mut on_label_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
             Point::ORIGIN,
             Size::new(
-                (paint_ctx.size().width - on_label_layout.width()).max(0.0),
+                (ctx.size().width - on_label_layout.width()).max(0.0),
                 switch_height + (font_size * 1.2) / 2.,
             ),
         ));
@@ -85,7 +77,7 @@ impl Switch {
         let mut off_label_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
             Point::ORIGIN,
             Size::new(
-                (paint_ctx.size().width - off_label_layout.width()).max(0.0),
+                (ctx.size().width - off_label_layout.width()).max(0.0),
                 switch_height + (font_size * 1.2) / 2.,
             ),
         ));
@@ -100,12 +92,12 @@ impl Switch {
             - knob_size / 2.
             - SWITCH_PADDING;
 
-        paint_ctx.draw_text(
+        ctx.draw_text(
             &on_label_layout,
             on_label_origin,
             &env.get(theme::LABEL_COLOR),
         );
-        paint_ctx.draw_text(
+        ctx.draw_text(
             &off_label_layout,
             off_label_origin,
             &env.get(theme::LABEL_COLOR),
@@ -191,12 +183,11 @@ impl Widget<bool> for Switch {
         _data: &bool,
         env: &Env,
     ) -> Size {
-        let width =
-            (2. * SWITCH_PADDING + env.get(theme::BORDERED_WIDGET_HEIGHT)) * SWITCH_WIDTH_RATIO;
+        let width = env.get(theme::BORDERED_WIDGET_HEIGHT) * SWITCH_WIDTH_RATIO;
         bc.constrain(Size::new(width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &bool, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let switch_width = switch_height * SWITCH_WIDTH_RATIO;
         let knob_size = switch_height - 2. * SWITCH_PADDING;
@@ -243,13 +234,13 @@ impl Widget<bool> for Switch {
             ),
         );
 
-        paint_ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), 2.0);
-        paint_ctx.fill(background_rect, &background_gradient_on_state);
-        paint_ctx.fill(background_rect, &background_gradient_off_state);
-        paint_ctx.clip(background_rect);
+        ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), 2.0);
+        ctx.fill(background_rect, &background_gradient_on_state);
+        ctx.fill(background_rect, &background_gradient_off_state);
+        ctx.clip(background_rect);
 
         // paint the knob
-        let is_active = paint_ctx.is_active();
+        let is_active = ctx.is_active();
         let is_hovered = self.knob_hovered;
 
         let normal_knob_gradient = LinearGradient::new(
@@ -282,10 +273,10 @@ impl Widget<bool> for Switch {
             env.get(theme::FOREGROUND_DARK)
         };
 
-        paint_ctx.stroke(knob_circle, &border_color, 2.);
-        paint_ctx.fill(knob_circle, &knob_gradient);
+        ctx.stroke(knob_circle, &border_color, 2.);
+        ctx.fill(knob_circle, &knob_gradient);
 
         // paint on/off label
-        self.paint_labels(paint_ctx, env, switch_width);
+        self.paint_labels(ctx, env, switch_width);
     }
 }

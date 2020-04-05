@@ -69,7 +69,6 @@ impl<T: Data> Widget<T> for Either<T> {
         if current != self.current {
             self.current = current;
             ctx.request_layout();
-            ctx.request_paint();
         }
         if self.current {
             self.true_branch.update(ctx, data, env);
@@ -100,11 +99,11 @@ impl<T: Data> Widget<T> for Either<T> {
         }
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if self.current {
-            self.true_branch.paint(paint_ctx, data, env);
+            self.true_branch.paint(ctx, data, env);
         } else {
-            self.false_branch.paint(paint_ctx, data, env);
+            self.false_branch.paint(ctx, data, env);
         }
     }
 }

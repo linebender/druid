@@ -35,9 +35,6 @@ pub struct Application;
 
 impl Application {
     pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
-        gtk::init().expect("GTK initialization failed");
-        util::assert_main_thread();
-
         // TODO: we should give control over the application ID to the user
         let application = GtkApplication::new(
             Some("com.github.xi-editor.druid"),
@@ -83,7 +80,7 @@ impl Application {
                 }
                 Some(_) => {
                     // we still have an active window, close the run loop
-                    gtk::main_quit();
+                    app.quit();
                 }
             }
         });
@@ -94,8 +91,7 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        //TODO ahem
-        "en-US".into()
+        glib::get_language_names()[0].as_str().into()
     }
 }
 

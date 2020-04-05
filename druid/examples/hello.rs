@@ -12,27 +12,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, Button, Flex, Label, Padding};
-use druid::{AppLauncher, LocalizedString, PlatformError, Widget, WindowDesc};
+use druid::widget::{Align, Flex, Label, TextBox};
+use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
-fn main() -> Result<(), PlatformError> {
-    let main_window = WindowDesc::new(ui_builder)
-        .title(LocalizedString::new("hello-demo-window-title").with_placeholder("Hello World!"));
-    let data = 0_u32;
-    AppLauncher::with_window(main_window)
-        .use_simple_logger()
-        .launch(data)?;
+const VERTICAL_WIDGET_SPACING: f64 = 20.0;
+const TEXT_BOX_WIDTH: f64 = 200.0;
+const WINDOW_TITLE: LocalizedString<HelloState> = LocalizedString::new("Hello World!");
 
-    Ok(())
+#[derive(Clone, Data, Lens)]
+struct HelloState {
+    name: String,
 }
 
-fn ui_builder() -> impl Widget<u32> {
-    let text =
-        LocalizedString::new("hello-counter").with_arg("count", |data: &u32, _env| (*data).into());
-    let label = Label::new(text);
-    let button = Button::new("increment", |_ctx, data, _env| *data += 1);
+fn main() {
+    // describe the main window
+    let main_window = WindowDesc::new(build_root_widget)
+        .title(WINDOW_TITLE)
+        .window_size((400.0, 400.0));
 
-    Flex::column()
-        .with_child(Align::centered(Padding::new(5.0, label)), 1.0)
-        .with_child(Padding::new(5.0, button), 1.0)
+    // create the initial app state
+    let initial_state = HelloState {
+        name: "World".into(),
+    };
+
+    // start the application
+    AppLauncher::with_window(main_window)
+        .launch(initial_state)
+        .expect("Failed to launch application");
+}
+
+fn build_root_widget() -> impl Widget<HelloState> {
+    // a label that will determine its text based on the current app data.
+    let label = Label::new(|data: &HelloState, _env: &Env| format!("Hello {}!", data.name));
+    // a textbox that modifies `name`.
+    let textbox = TextBox::new()
+        .with_placeholder("Who are we greeting?")
+        .fix_width(TEXT_BOX_WIDTH)
+        .lens(HelloState::name);
+
+    // arrange the two widgets vertically, with some padding
+    let layout = Flex::column()
+        .with_child(label)
+        .with_spacer(VERTICAL_WIDGET_SPACING)
+        .with_child(textbox);
+
+    // center the two widgets in the available space
+    Align::centered(layout)
 }

@@ -17,13 +17,15 @@ font editor.
 We have been doing periodic releases of druid on crates.io, but it is under
 active development and its API might change.
 
+For an overview of some key concepts, see the (work in progress) [druid book].
+
 ## Example
 
 Here's a simple counter example app.
 
 ```rust
-use druid::widget::{Align, Button, Flex, Label, Padding, WidgetExt};
-use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
+use druid::widget::{Button, Flex, Label};
+use druid::{AppLauncher, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 fn main() {
     let main_window = WindowDesc::new(ui_builder);
@@ -41,12 +43,12 @@ fn ui_builder() -> impl Widget<u32> {
     let label = Label::new(text)
         .padding(5.0)
         .center();
-    let button = Button::new("increment", |_ctx, data, _env| *data += 1)
+    let button = Button::new("increment").on_click(|_ctx, data, _env| *data += 1)
         .padding(5.0);
 
     Flex::column()
-    .with_child(label, 1.0)
-    .with_child(button, 1.0)
+    .with_child(label)
+    .with_child(button)
 }
 ```
 
@@ -73,7 +75,7 @@ user-provided handler with them.
 While druid-shell is being developed with the druid toolkit in mind, it is
 intended to be general enough that it could be reused by other projects
 interested in experimenting with Rust GUI. The druid-shell crate includes a
-couple [non-druid examples].
+couple of [non-druid examples].
 
 ### piet
 
@@ -87,23 +89,23 @@ use druid::kurbo::{BezPath, Point, Rect};
 use druid::piet::Color;
 
 // Create an arbitrary bezier path
-// (paint_ctx.size() returns the size of the layout rect we're painting in)
+// (ctx.size() returns the size of the layout rect we're painting in)
 let mut path = BezPath::new();
 path.move_to(Point::ORIGIN);
 path.quad_to(
     (80.0, 90.0),
-    (paint_ctx.size().width, paint_ctx.size().height),
+    (ctx.size().width, ctx.size().height),
 );
 // Create a color
 let stroke_color = Color::rgb8(0x00, 0x80, 0x00);
 // Stroke the path with thickness 1.0
-paint_ctx.stroke(path, &stroke_color, 1.0);
+ctx.stroke(path, &stroke_color, 1.0);
 
 // Rectangles: the path for practical people
 let rect = Rect::from_origin_size((10., 10.), (100., 100.));
 // Note the Color:rgba8 which includes an alpha channel (7F in this case)
 let fill_color = Color::rgba8(0x00, 0x00, 0x00, 0x7F);
-paint_ctx.fill(rect, &fill_color);
+ctx.fill(rect, &fill_color);
 ```
 
 ### widgets
@@ -142,7 +144,7 @@ impl<T: Data> Widget<T> for Button<T> {
       ...
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
       ...
     }
 }
@@ -155,8 +157,7 @@ implement your own. You can also compose widgets into new widgets:
 fn build_widget() -> impl Widget<u32> {
     let mut col = Flex::column();
     for i in 0..30 {
-        let button = Button::new(format!("Button {}", i), Button::noop)
-            .padding(5.0);
+        let button = Button::new(format!("Button {}", i).padding(5.0);
         col.add_child(button, 0.0);
     }
     Scroll::new(col)
@@ -223,14 +224,14 @@ a lone dependency (it re-exports all the parts of druid-shell, piet, and kurbo
 that you'll need):
 
 ```toml
-druid = "0.4.0"
+druid = "0.5.0"
 ```
 
 Since druid is currently in fast-evolving state, you might prefer to drink from
 the firehose:
 
 ```toml
-druid = { git = "https://github.com/xi-editor/druid.git", version = "0.4" }
+druid = { git = "https://github.com/xi-editor/druid.git", version = "0.5" }
 ```
 
 ### Platform notes
@@ -288,11 +289,12 @@ active and friendly community.
 [Zulip chat instance]: https://xi.zulipchat.com
 [non-druid examples]: ./druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
-[EventCtx]: https://docs.rs/druid/0.4.0/druid/struct.EventCtx.html
+[EventCtx]: https://docs.rs/druid/0.5.0/druid/struct.EventCtx.html
 [LifeCycleCtx]: https://docs.rs/druid/0.5.0/druid/struct.EventCtx.html
-[LayoutCtx]: https://docs.rs/druid/0.4.0/druid/struct.LayoutCtx.html
-[PaintCtx]: https://docs.rs/druid/0.4.0/druid/struct.PaintCtx.html
-[UpdateCtx]: https://docs.rs/druid/0.4.0/druid/struct.UpdateCtx.html
-[Widget trait]: https://docs.rs/druid/0.4.0/druid/trait.Widget.html
-[Data trait]: https://docs.rs/druid/0.4.0/druid/trait.Data.html
-[Lens datatype]: https://docs.rs/druid/0.4.0/druid/trait.Lens.html
+[LayoutCtx]: https://docs.rs/druid/0.5.0/druid/struct.LayoutCtx.html
+[PaintCtx]: https://docs.rs/druid/0.5.0/druid/struct.PaintCtx.html
+[UpdateCtx]: https://docs.rs/druid/0.5.0/druid/struct.UpdateCtx.html
+[Widget trait]: https://docs.rs/druid/0.5.0/druid/trait.Widget.html
+[Data trait]: https://docs.rs/druid/0.5.0/druid/trait.Data.html
+[Lens datatype]: https://docs.rs/druid/0.5.0/druid/trait.Lens.html
+[druid book]: https://xi-editor.io/druid/intro.html

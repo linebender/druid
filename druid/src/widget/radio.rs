@@ -16,10 +16,10 @@
 
 use crate::kurbo::{Circle, Point, Rect, Size};
 use crate::theme;
-use crate::widget::{Align, Flex, Label, LabelText, Padding};
+use crate::widget::{CrossAxisAlignment, Flex, Label, LabelText, Padding};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
-    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget, WidgetPod,
+    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget, WidgetExt, WidgetPod,
 };
 
 /// A group of radio buttons
@@ -31,10 +31,10 @@ impl RadioGroup {
     pub fn new<T: Data + PartialEq>(
         variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T)>,
     ) -> impl Widget<T> {
-        let mut col = Flex::column();
+        let mut col = Flex::column().cross_axis_alignment(CrossAxisAlignment::Start);
         for (label, variant) in variants.into_iter() {
             let radio = Radio::new(label, variant);
-            col.add_child(Padding::new(5.0, radio), 0.0);
+            col.add_child(Padding::new(5.0, radio));
         }
         col
     }
@@ -46,14 +46,13 @@ pub struct Radio<T> {
     child_label: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T: Data + PartialEq> Radio<T> {
+impl<T: Data> Radio<T> {
     /// Create a lone Radio button from label text and an enum variant
-    pub fn new(label: impl Into<LabelText<T>>, variant: T) -> impl Widget<T> {
-        let radio = Self {
+    pub fn new(label: impl Into<LabelText<T>>, variant: T) -> Radio<T> {
+        Radio {
             variant,
-            child_label: WidgetPod::new(Label::new(label)).boxed(),
-        };
-        Align::vertical(UnitPoint::LEFT, radio)
+            child_label: WidgetPod::new(Label::new(label).boxed()),
+        }
     }
 }
 
@@ -110,7 +109,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         ))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
 
         let circle = Circle::new((size / 2., size / 2.), 7.);
@@ -125,24 +124,24 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
             ),
         );
 
-        paint_ctx.fill(circle, &background_gradient);
+        ctx.fill(circle, &background_gradient);
 
-        let border_color = if paint_ctx.is_hot() {
+        let border_color = if ctx.is_hot() {
             env.get(theme::BORDER_LIGHT)
         } else {
             env.get(theme::BORDER_DARK)
         };
 
-        paint_ctx.stroke(circle, &border_color, 1.);
+        ctx.stroke(circle, &border_color, 1.);
 
         // Check if data enum matches our variant
         if *data == self.variant {
             let inner_circle = Circle::new((size / 2., size / 2.), 2.);
 
-            paint_ctx.fill(inner_circle, &env.get(theme::LABEL_COLOR));
+            ctx.fill(inner_circle, &env.get(theme::LABEL_COLOR));
         }
 
         // Paint the text label
-        self.child_label.paint_with_offset(paint_ctx, data, env);
+        self.child_label.paint_with_offset(ctx, data, env);
     }
 }

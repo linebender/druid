@@ -139,6 +139,7 @@ impl HotKey {
 #[derive(Debug, Clone, Copy)]
 pub enum SysMods {
     None,
+    Shift,
     /// Command on macOS, and Ctrl on windows/linux
     Cmd,
     /// Command + Alt on macOS, Ctrl + Alt on windows/linux
@@ -241,6 +242,7 @@ impl From<SysMods> for RawMods {
         #[cfg(target_os = "macos")]
         match src {
             SysMods::None => RawMods::None,
+            SysMods::Shift => RawMods::Shift,
             SysMods::Cmd => RawMods::Meta,
             SysMods::AltCmd => RawMods::AltMeta,
             SysMods::CmdShift => RawMods::MetaShift,
@@ -249,6 +251,7 @@ impl From<SysMods> for RawMods {
         #[cfg(not(target_os = "macos"))]
         match src {
             SysMods::None => RawMods::None,
+            SysMods::Shift => RawMods::Shift,
             SysMods::Cmd => RawMods::Ctrl,
             SysMods::AltCmd => RawMods::AltCtrl,
             SysMods::CmdShift => RawMods::CtrlShift,

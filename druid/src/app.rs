@@ -17,10 +17,11 @@
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
-use crate::widget::WidgetExt;
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
-use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
+use crate::{
+    theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget, WidgetExt,
+};
 
 /// A function that modifies the initial environment.
 type EnvSetupFn<T> = dyn FnOnce(&mut Env, &T);
@@ -41,6 +42,7 @@ pub struct WindowDesc<T> {
     pub(crate) root: Box<dyn Widget<T>>,
     pub(crate) title: LocalizedString<T>,
     pub(crate) size: Option<Size>,
+    pub(crate) min_size: Option<Size>,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) resizable: bool,
     pub(crate) show_titlebar: bool,
@@ -73,7 +75,7 @@ impl<T: Data> AppLauncher<T> {
 
     /// Set the [`AppDelegate`].
     ///
-    /// [`AppDelegate`]: struct.AppDelegate.html
+    /// [`AppDelegate`]: trait.AppDelegate.html
     pub fn delegate(mut self, delegate: impl AppDelegate<T> + 'static) -> Self {
         self.delegate = Some(Box::new(delegate));
         self
@@ -145,6 +147,7 @@ impl<T: Data> WindowDesc<T> {
             root: root().boxed(),
             title: LocalizedString::new("app-name"),
             size: None,
+            min_size: None,
             menu: MenuDesc::platform_default(),
             resizable: true,
             show_titlebar: true,
@@ -179,6 +182,16 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    /// Set the minimum window size.
+    ///
+    /// To  set the initial window size, see [`window_size`].
+    ///
+    /// [`window_size`]: struct.WindowDesc.html#method.window_size
+    pub fn with_min_size(mut self, size: impl Into<Size>) -> Self {
+        self.min_size = Some(size.into());
+        self
+    }
+
     pub fn resizable(mut self, resizable: bool) -> Self {
         self.resizable = resizable;
         self
@@ -210,6 +223,9 @@ impl<T: Data> WindowDesc<T> {
         builder.set_handler(Box::new(handler));
         if let Some(size) = self.size {
             builder.set_size(size);
+        }
+        if let Some(min_size) = self.min_size {
+            builder.set_min_size(min_size);
         }
 
         builder.set_title(self.title.localized_str());

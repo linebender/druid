@@ -33,6 +33,7 @@ use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
 use winapi::um::d2d1::*;
+use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::unknwnbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
@@ -68,13 +69,13 @@ extern "system" {
 /// Builder abstraction for creating new windows.
 pub struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
-    dwStyle: DWORD,
     title: String,
     menu: Option<Menu>,
     present_strategy: PresentStrategy,
     resizable: bool,
     show_titlebar: bool,
     size: Size,
+    min_size: Option<Size>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -160,12 +161,17 @@ struct WndState {
     render_target: Option<DeviceContext>,
     dcomp_state: Option<DCompState>,
     dpi: f32,
+    min_size: Option<Size>,
     /// The `KeyCode` of the last `WM_KEYDOWN` event. We stash this so we can
     /// include it when handling `WM_CHAR` events.
     stashed_key_code: KeyCode,
     /// The `char` of the last `WM_CHAR` event, if there has not already been
     /// a `WM_KEYUP` event.
     stashed_char: Option<char>,
+    // Stores a bit mask of all mouse buttons that are currently holding mouse
+    // capture. When the first mouse button is down on our window we enter
+    // capture, and we hold it until the last mouse button is up.
+    captured_mouse_buttons: u32,
     //TODO: track surrogate orphan
 }
 
@@ -254,6 +260,29 @@ impl WndState {
             // Note: maybe add WindowHandle as arg to idle handler so we don't need this.
             let handle2 = handle.clone();
             handle.add_idle_callback(move |_| handle2.invalidate());
+        }
+    }
+
+    fn enter_mouse_capture(&mut self, hwnd: HWND, button: MouseButton) {
+        if self.captured_mouse_buttons == 0 {
+            unsafe {
+                SetCapture(hwnd);
+            }
+        }
+        self.captured_mouse_buttons |= 1 << (button as u32);
+    }
+
+    fn exit_mouse_capture(&mut self, button: MouseButton) {
+        self.captured_mouse_buttons &= !(1 << (button as u32));
+        if self.captured_mouse_buttons == 0 {
+            unsafe {
+                if ReleaseCapture() == FALSE {
+                    warn!(
+                        "failed to release mouse capture: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                }
+            }
         }
     }
 }
@@ -537,8 +566,12 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     let delta_y = HIWORD(wparam as u32) as i16 as f64;
-                    let delta = Vec2::new(0.0, -delta_y);
                     let mods = get_mod_state();
+                    let delta = if mods.shift {
+                        Vec2::new(-delta_y, 0.)
+                    } else {
+                        Vec2::new(0., -delta_y)
+                    };
                     s.handler.wheel(delta, mods);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
@@ -629,9 +662,11 @@ impl WndProc for MyWndProc {
                         count,
                     };
                     if count > 0 {
+                        s.enter_mouse_capture(hwnd, button);
                         s.handler.mouse_down(&event);
                     } else {
                         s.handler.mouse_up(&event);
+                        s.exit_mouse_capture(button);
                     }
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
@@ -666,6 +701,28 @@ impl WndProc for MyWndProc {
                 }
                 Some(1)
             }
+            WM_CAPTURECHANGED => {
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    s.captured_mouse_buttons = 0;
+                }
+                Some(0)
+            }
+            WM_GETMINMAXINFO => {
+                let min_max_info = unsafe { &mut *(lparam as *mut MINMAXINFO) };
+                if let Ok(s) = self.state.try_borrow() {
+                    let s = s.as_ref().unwrap();
+                    if let Some(min_size) = s.min_size {
+                        min_max_info.ptMinTrackSize.x =
+                            (min_size.width * (f64::from(s.dpi) / 96.0)) as i32;
+                        min_max_info.ptMinTrackSize.y =
+                            (min_size.height * (f64::from(s.dpi) / 96.0)) as i32;
+                    }
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
+                Some(0)
+            }
             XI_RUN_IDLE => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
@@ -699,13 +756,13 @@ impl WindowBuilder {
     pub fn new() -> WindowBuilder {
         WindowBuilder {
             handler: None,
-            dwStyle: WS_OVERLAPPEDWINDOW,
             title: String::new(),
             menu: None,
             resizable: true,
             show_titlebar: true,
             present_strategy: Default::default(),
             size: Size::new(500.0, 400.0),
+            min_size: None,
         }
     }
 
@@ -718,8 +775,11 @@ impl WindowBuilder {
         self.size = size;
     }
 
+    pub fn set_min_size(&mut self, size: Size) {
+        self.min_size = Some(size);
+    }
+
     pub fn resizable(&mut self, resizable: bool) {
-        // TODO: Use this in `self.build`
         self.resizable = resizable;
     }
 
@@ -781,8 +841,10 @@ impl WindowBuilder {
                 render_target: None,
                 dcomp_state: None,
                 dpi,
+                min_size: self.min_size,
                 stashed_key_code: KeyCode::Unknown(0),
                 stashed_char: None,
+                captured_mouse_buttons: 0,
             };
             win.wndproc.connect(&handle, state);
 
@@ -796,6 +858,12 @@ impl WindowBuilder {
                 }
                 None => (0 as HMENU, None),
             };
+
+            let mut dwStyle = WS_OVERLAPPEDWINDOW;
+            if !self.resizable {
+                dwStyle &= !(WS_THICKFRAME | WS_MAXIMIZEBOX);
+            }
+
             let mut dwExStyle = 0;
             if self.present_strategy == PresentStrategy::Flip {
                 dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
@@ -804,7 +872,7 @@ impl WindowBuilder {
                 dwExStyle,
                 class_name.as_ptr(),
                 self.title.to_wide().as_ptr(),
-                self.dwStyle,
+                dwStyle,
                 CW_USEDEFAULT,
                 CW_USEDEFAULT,
                 width,
@@ -1075,8 +1143,34 @@ impl WindowHandle {
     // TODO: Implement this
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
 
-    // TODO: Implement this
-    pub fn resizable(&self, _resizable: bool) {}
+    pub fn resizable(&self, resizable: bool) {
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                let mut style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+                if style == 0 {
+                    warn!(
+                        "failed to get window style: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                    return;
+                }
+
+                if resizable {
+                    style |= (WS_THICKFRAME | WS_MAXIMIZEBOX) as WindowLongPtr;
+                } else {
+                    style &= !(WS_THICKFRAME | WS_MAXIMIZEBOX) as WindowLongPtr;
+                }
+
+                if SetWindowLongPtrW(hwnd, GWL_STYLE, style) == 0 {
+                    warn!(
+                        "failed to set the window style: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                }
+            }
+        }
+    }
 
     pub fn set_menu(&self, menu: Menu) {
         let accels = menu.accels();

@@ -47,14 +47,14 @@ pub use druid_derive::Data;
 ///
 /// There are a number of field attributes available for use with `derive(Data)`.
 ///
-/// - **`#[druid(ignore)]`**
+/// - **`#[data(ignore)]`**
 ///
 /// Skip this field when computing `same`ness.
 ///
 /// If the type you are implementing `Data` on contains some fields that are
 /// not relevant to the `Data` impl, you can ignore them with this attribute.
 ///
-/// - **`#[druid(same_fn = "path")]`**
+/// - **`#[data(same_fn = "path")]`**
 ///
 /// Use a specific function to compute `same`ness.
 ///
@@ -74,11 +74,11 @@ pub use druid_derive::Data;
 /// #[derive(Clone, Data)]
 /// struct PathEntry {
 ///     // There's no Data impl for PathBuf, but no problem
-///     #[druid(same_fn = "PartialEq::eq")]
+///     #[data(same_fn = "PartialEq::eq")]
 ///     path: PathBuf,
 ///     priority: usize,
 ///     // This field is not part of our data model.
-///     #[druid(ignore)]
+///     #[data(ignore)]
 ///     last_read: Instant,
 /// }
 /// ```
@@ -91,6 +91,7 @@ pub use druid_derive::Data;
 ///
 /// [`Data::same`]: trait.Data.html#tymethod.same
 pub trait Data: Clone + 'static {
+    //// ANCHOR: same_fn
     /// Determine whether two values are the same.
     ///
     /// This is intended to always be a fast operation. If it returns
@@ -102,6 +103,7 @@ pub trait Data: Clone + 'static {
     /// `PartialEq`, for example two floating point NaN values should
     /// be considered equal when they have the same bit representation.
     fn same(&self, other: &Self) -> bool;
+    //// ANCHOR_END: same_fn
 }
 
 /// An impl of `Data` suitable for simple types.

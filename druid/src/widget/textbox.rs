@@ -18,18 +18,19 @@ use std::time::{Duration, Instant};
 
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
-    LifeCycle, LifeCycleCtx, PaintCtx, RawMods, Selector, SysMods, TimerToken, UpdateCtx, Widget,
+    LifeCycle, LifeCycleCtx, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
 use crate::piet::{
     FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
-    UnitPoint,
 };
 use crate::theme;
-use crate::widget::Align;
 
-use crate::text::{movement, offset_for_delete_backwards, EditableText, Movement, Selection};
+use crate::text::{
+    movement, offset_for_delete_backwards, BasicTextInput, EditAction, EditableText, MouseAction,
+    Movement, Selection, TextInput,
+};
 
 const BORDER_WIDTH: f64 = 1.;
 const PADDING_TOP: f64 = 5.;
@@ -51,19 +52,7 @@ pub struct TextBox {
 
 impl TextBox {
     /// Create a new TextBox widget
-    pub fn new() -> impl Widget<String> {
-        Align::vertical(UnitPoint::CENTER, Self::raw())
-    }
-
-    /// Create a new TextBox widget with placeholder
-    pub fn with_placeholder<T: Into<String>>(placeholder: T) -> impl Widget<String> {
-        let mut textbox = Self::raw();
-        textbox.placeholder = placeholder.into();
-        Align::vertical(UnitPoint::CENTER, textbox)
-    }
-
-    /// Create a new TextBox widget with no Align wrapper
-    pub fn raw() -> TextBox {
+    pub fn new() -> TextBox {
         Self {
             width: 0.0,
             hscroll_offset: 0.,
@@ -72,6 +61,18 @@ impl TextBox {
             cursor_on: false,
             placeholder: String::new(),
         }
+    }
+
+    /// Builder-style method to set the `TextBox`'s placeholder text.
+    pub fn with_placeholder(mut self, placeholder: impl Into<String>) -> Self {
+        self.placeholder = placeholder.into();
+        self
+    }
+
+    #[deprecated(since = "0.5.0", note = "Use TextBox::new instead")]
+    #[doc(hidden)]
+    pub fn raw() -> TextBox {
+        Self::new()
     }
 
     /// Calculate the PietTextLayout from the given text, font, and font size
@@ -119,6 +120,25 @@ impl TextBox {
         self.selection.end
     }
 
+    fn do_edit_action(&mut self, edit_action: EditAction, text: &mut String) {
+        match edit_action {
+            EditAction::Insert(chars) | EditAction::Paste(chars) => self.insert(text, &chars),
+            EditAction::Backspace => self.delete_backward(text),
+            EditAction::Delete => self.delete_forward(text),
+            EditAction::Move(movement) => self.move_selection(movement, text, false),
+            EditAction::ModifySelection(movement) => self.move_selection(movement, text, true),
+            EditAction::SelectAll => self.selection.all(text),
+            EditAction::Click(action) => {
+                if action.mods.shift {
+                    self.selection.end = action.column;
+                } else {
+                    self.caret_to(text, action.column);
+                }
+            }
+            EditAction::Drag(action) => self.selection.end = action.column,
+        }
+    }
+
     /// Edit a selection using a `Movement`.
     fn move_selection(&mut self, mvmnt: Movement, text: &mut String, modify: bool) {
         // This movement function should ensure all movements are legit.
@@ -137,6 +157,18 @@ impl TextBox {
         } else {
             text.edit(self.selection.range(), "");
             self.caret_to(text, self.selection.min());
+        }
+    }
+
+    fn delete_forward(&mut self, text: &mut String) {
+        if self.selection.is_caret() {
+            // Never touch the characters before the cursor.
+            if text.next_grapheme_offset(self.cursor()).is_some() {
+                self.move_selection(Movement::Right, text, false);
+                self.delete_backward(text);
+            }
+        } else {
+            self.delete_backward(text);
         }
     }
 
@@ -196,29 +228,36 @@ impl TextBox {
 }
 
 impl Widget<String> for TextBox {
-    #[allow(clippy::cognitive_complexity)]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
         // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);
 
         let mut text_layout = self.get_layout(&mut ctx.text(), &data, env);
+        let mut edit_action = None;
+
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
                 ctx.set_active(true);
-                let cursor_off = self.offset_for_point(mouse.pos, &text_layout);
-                if mouse.mods.shift {
-                    self.selection.end = cursor_off;
-                } else {
-                    self.caret_to(data, cursor_off);
-                }
+
+                let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
+                edit_action = Some(EditAction::Click(MouseAction {
+                    row: 0,
+                    column: cursor_offset,
+                    mods: mouse.mods,
+                }));
+
                 ctx.request_paint();
-                self.reset_cursor_blink(ctx);
             }
             Event::MouseMoved(mouse) => {
                 ctx.set_cursor(&Cursor::IBeam);
                 if ctx.is_active() {
-                    self.selection.end = self.offset_for_point(mouse.pos, &text_layout);
+                    let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
+                    edit_action = Some(EditAction::Drag(MouseAction {
+                        row: 0,
+                        column: cursor_offset,
+                        mods: mouse.mods,
+                    }));
                     ctx.request_paint();
                 }
             }
@@ -245,92 +284,54 @@ impl Widget<String> for TextBox {
                     Application::clipboard().put_string(text);
                 }
                 if !self.selection.is_caret() && cmd.selector == crate::commands::CUT {
-                    self.delete_backward(data);
+                    edit_action = Some(EditAction::Delete);
                 }
                 ctx.set_handled();
             }
             Event::Command(cmd) if cmd.selector == RESET_BLINK => self.reset_cursor_blink(ctx),
             Event::Paste(ref item) => {
                 if let Some(string) = item.get_string() {
-                    self.insert(data, &string);
-                    self.reset_cursor_blink(ctx);
+                    edit_action = Some(EditAction::Paste(string));
+                    ctx.request_paint();
                 }
             }
-            //TODO: move this to a 'handle_key' function, remove the #allow above
             Event::KeyDown(key_event) => {
-                match key_event {
-                    // Select all (Ctrl+A || Cmd+A)
-                    k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => {
-                        self.selection.all(data);
-                    }
-                    // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
-                    k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft)).matches(k_e)
-                        || HotKey::new(None, KeyCode::Home).matches(k_e) =>
-                    {
-                        self.move_selection(Movement::LeftOfLine, data, false);
-                        self.reset_cursor_blink(ctx);
-                    }
-                    // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
-                    k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowRight)).matches(k_e)
-                        || HotKey::new(None, KeyCode::End).matches(k_e) =>
-                    {
-                        self.move_selection(Movement::RightOfLine, data, false);
-                        self.reset_cursor_blink(ctx);
-                    }
-                    // Select left (Shift+ArrowLeft)
-                    k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowLeft)).matches(k_e) => {
-                        self.move_selection(Movement::Left, data, true);
-                    }
-                    // Select right (Shift+ArrowRight)
-                    k_e if (HotKey::new(RawMods::Shift, KeyCode::ArrowRight)).matches(k_e) => {
-                        self.move_selection(Movement::Right, data, true);
-                    }
-                    // Move left (ArrowLeft)
-                    k_e if (HotKey::new(None, KeyCode::ArrowLeft)).matches(k_e) => {
-                        self.move_selection(Movement::Left, data, false);
-                        self.reset_cursor_blink(ctx);
-                    }
-                    // Move right (ArrowRight)
-                    k_e if (HotKey::new(None, KeyCode::ArrowRight)).matches(k_e) => {
-                        self.move_selection(Movement::Right, data, false);
-                        self.reset_cursor_blink(ctx);
-                    }
-                    // Backspace
-                    k_e if (HotKey::new(None, KeyCode::Backspace)).matches(k_e) => {
-                        self.delete_backward(data);
-                        self.reset_cursor_blink(ctx);
-                    }
-                    // Delete
-                    k_e if (HotKey::new(None, KeyCode::Delete)).matches(k_e) => {
-                        if self.selection.is_caret() {
-                            // Never touch the characters before the cursor.
-                            if data.next_grapheme_offset(self.cursor()).is_some() {
-                                self.move_selection(Movement::Right, data, false);
-                                self.delete_backward(data);
-                            }
-                        } else {
-                            self.delete_backward(data);
-                        }
-                        self.reset_cursor_blink(ctx);
-                    }
+                let event_handled = match key_event {
                     // Tab and shift+tab
-                    k_e if HotKey::new(None, KeyCode::Tab).matches(k_e) => ctx.focus_next(),
-                    k_e if HotKey::new(RawMods::Shift, KeyCode::Tab).matches(k_e) => {
-                        ctx.focus_prev()
+                    k_e if HotKey::new(None, KeyCode::Tab).matches(k_e) => {
+                        ctx.focus_next();
+                        true
                     }
-                    // Actual typing
-                    k_e if k_e.key_code.is_printable() => {
-                        let incoming_text = k_e.text().unwrap_or("");
-                        self.insert(data, incoming_text);
-                        self.reset_cursor_blink(ctx);
+                    k_e if HotKey::new(SysMods::Shift, KeyCode::Tab).matches(k_e) => {
+                        ctx.focus_prev();
+                        true
                     }
-                    _ => {}
+                    _ => false,
+                };
+
+                if !event_handled {
+                    edit_action = BasicTextInput::new().handle_event(key_event);
                 }
-                text_layout = self.get_layout(&mut ctx.text(), &data, env);
-                self.update_hscroll(&text_layout);
+
                 ctx.request_paint();
             }
             _ => (),
+        }
+
+        if let Some(edit_action) = edit_action {
+            let is_select_all = if let EditAction::SelectAll = &edit_action {
+                true
+            } else {
+                false
+            };
+
+            self.do_edit_action(edit_action, data);
+            self.reset_cursor_blink(ctx);
+
+            if !is_select_all {
+                text_layout = self.get_layout(&mut ctx.text(), &data, env);
+                self.update_hscroll(&text_layout);
+            }
         }
     }
 
@@ -354,18 +355,15 @@ impl Widget<String> for TextBox {
         _data: &String,
         env: &Env,
     ) -> Size {
-        let default_width = 100.0;
+        let width = env.get(theme::WIDE_WIDGET_WIDTH);
+        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
-        if bc.is_width_bounded() {
-            self.width = bc.max().width;
-        } else {
-            self.width = default_width;
-        }
-
-        bc.constrain((self.width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
+        let size = bc.constrain((width, height));
+        self.width = size.width;
+        size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &String, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &String, env: &Env) {
         // Guard against changes in data following `event`
         let content = if data.is_empty() {
             &self.placeholder
@@ -383,7 +381,7 @@ impl Widget<String> for TextBox {
         let placeholder_color = env.get(theme::PLACEHOLDER_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
 
-        let has_focus = paint_ctx.has_focus();
+        let has_focus = ctx.has_focus();
 
         let border_color = if has_focus {
             env.get(theme::PRIMARY_LIGHT)
@@ -398,64 +396,66 @@ impl Widget<String> for TextBox {
             env.get(theme::TEXTBOX_BORDER_RADIUS),
         );
 
-        paint_ctx.fill(clip_rect, &background_color);
+        ctx.fill(clip_rect, &background_color);
 
         // Render text, selection, and cursor inside a clip
-        paint_ctx
-            .with_save(|rc| {
-                rc.clip(clip_rect);
+        ctx.with_save(|rc| {
+            rc.clip(clip_rect);
 
-                // Calculate layout
-                let text_layout = self.get_layout(rc.text(), &content, env);
+            // Calculate layout
+            let text_layout = self.get_layout(rc.text(), &content, env);
 
-                // Shift everything inside the clip by the hscroll_offset
-                rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
+            // Shift everything inside the clip by the hscroll_offset
+            rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
 
-                // Draw selection rect
-                if !self.selection.is_caret() {
-                    let (left, right) = (self.selection.min(), self.selection.max());
-                    let left_offset = self.x_for_offset(&text_layout, left);
-                    let right_offset = self.x_for_offset(&text_layout, right);
+            // Draw selection rect
+            if !self.selection.is_caret() {
+                let (left, right) = (self.selection.min(), self.selection.max());
+                let left_offset = self.x_for_offset(&text_layout, left);
+                let right_offset = self.x_for_offset(&text_layout, right);
 
-                    let selection_width = right_offset - left_offset;
+                let selection_width = right_offset - left_offset;
 
-                    let selection_pos =
-                        Point::new(left_offset + PADDING_LEFT - 1., PADDING_TOP - 2.);
+                let selection_pos = Point::new(left_offset + PADDING_LEFT - 1., PADDING_TOP - 2.);
 
-                    let selection_rect = RoundedRect::from_origin_size(
-                        selection_pos,
-                        Size::new(selection_width + 2., font_size + 4.).to_vec2(),
-                        1.,
-                    );
-                    rc.fill(selection_rect, &selection_color);
-                }
+                let selection_rect = RoundedRect::from_origin_size(
+                    selection_pos,
+                    Size::new(selection_width + 2., font_size + 4.).to_vec2(),
+                    1.,
+                );
+                rc.fill(selection_rect, &selection_color);
+            }
 
-                // Layout, measure, and draw text
-                let text_height = font_size * 0.8;
-                let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
-                let color = if data.is_empty() {
-                    &placeholder_color
-                } else {
-                    &text_color
-                };
+            // Layout, measure, and draw text
+            let text_height = font_size * 0.8;
+            let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
+            let color = if data.is_empty() {
+                &placeholder_color
+            } else {
+                &text_color
+            };
 
-                rc.draw_text(&text_layout, text_pos, color);
+            rc.draw_text(&text_layout, text_pos, color);
 
-                // Paint the cursor if focused and there's no selection
-                if has_focus && self.cursor_on && self.selection.is_caret() {
-                    let cursor_x = self.x_for_offset(&text_layout, self.cursor());
-                    let xy = text_pos + Vec2::new(cursor_x, 2. - font_size);
-                    let x2y2 = xy + Vec2::new(0., font_size + 2.);
-                    let line = Line::new(xy, x2y2);
+            // Paint the cursor if focused and there's no selection
+            if has_focus && self.cursor_on && self.selection.is_caret() {
+                let cursor_x = self.x_for_offset(&text_layout, self.cursor());
+                let xy = text_pos + Vec2::new(cursor_x, 2. - font_size);
+                let x2y2 = xy + Vec2::new(0., font_size + 2.);
+                let line = Line::new(xy, x2y2);
 
-                    rc.stroke(line, &cursor_color, 1.);
-                }
-                Ok(())
-            })
-            .unwrap();
+                rc.stroke(line, &cursor_color, 1.);
+            }
+        });
 
         // Paint the border
-        paint_ctx.stroke(clip_rect, &border_color, BORDER_WIDTH);
+        ctx.stroke(clip_rect, &border_color, BORDER_WIDTH);
+    }
+}
+
+impl Default for TextBox {
+    fn default() -> Self {
+        TextBox::new()
     }
 }
 
@@ -467,7 +467,7 @@ mod tests {
     /// can still be used to insert characters.
     #[test]
     fn data_can_be_changed_externally() {
-        let mut widget = TextBox::raw();
+        let mut widget = TextBox::new();
         let mut data = "".to_string();
 
         // First insert some chars
@@ -489,7 +489,7 @@ mod tests {
     /// Test backspace on the combo character o̷
     #[test]
     fn backspace_combining() {
-        let mut widget = TextBox::raw();
+        let mut widget = TextBox::new();
         let mut data = "".to_string();
 
         widget.insert(&mut data, "\u{0073}\u{006F}\u{0337}\u{0073}");
@@ -503,7 +503,7 @@ mod tests {
     /// Devanagari codepoints are 3 utf-8 code units each.
     #[test]
     fn backspace_devanagari() {
-        let mut widget = TextBox::raw();
+        let mut widget = TextBox::new();
         let mut data = "".to_string();
 
         widget.insert(&mut data, "हिन्दी");

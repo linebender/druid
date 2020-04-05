@@ -15,13 +15,18 @@
 //! parsing #[druid(attributes)]
 
 use proc_macro2::{Ident, Literal, Span, TokenStream, TokenTree};
-use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 use syn::{Error, ExprPath, Meta, NestedMeta};
 
-const BASE_ATTR_PATH: &str = "druid";
+use quote::{quote, quote_spanned};
+
+//show error to tell users of old API that it doesn't work anymore
+const BASE_DRUID_DEPRECATED_ATTR_PATH: &str = "druid";
+const BASE_DATA_ATTR_PATH: &str = "data";
+const BASE_LENS_ATTR_PATH: &str = "lens";
 const IGNORE_ATTR_PATH: &str = "ignore";
-const SAME_FN_ATTR_PATH: &str = "same_fn";
+const DATA_SAME_FN_ATTR_PATH: &str = "same_fn";
+const LENS_NAME_OVERRIDE_ATTR_PATH: &str = "name";
 
 /// The fields for a struct or an enum variant.
 #[derive(Debug)]
@@ -30,7 +35,7 @@ pub struct Fields {
     fields: Vec<Field>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldKind {
     Named,
     // this also covers Unit; we determine 'unit-ness' based on the number
@@ -44,12 +49,25 @@ pub enum FieldIdent {
     Unnamed(usize),
 }
 
+impl FieldIdent {
+    pub fn unwrap_named(&self) -> syn::Ident {
+        if let FieldIdent::Named(s) = self {
+            syn::Ident::new(&s, Span::call_site())
+        } else {
+            panic!("Unwrap named called on unnamed FieldIdent");
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Field {
     pub ident: FieldIdent,
+    pub ty: syn::Type,
+
     /// `true` if this field should be ignored.
     pub ignore: bool,
     pub same_fn: Option<ExprPath>,
+    pub lens_name_override: Option<Ident>,
     //TODO: more attrs here
 }
 
@@ -85,52 +103,89 @@ impl Field {
             None => FieldIdent::Unnamed(index),
         };
 
+        let ty = field.ty.clone();
+
         let mut ignore = false;
         let mut same_fn = None;
+        let mut lens_name_override = None;
 
-        for attr in field
-            .attrs
-            .iter()
-            .filter(|attr| attr.path.is_ident(BASE_ATTR_PATH))
-        {
-            match attr.parse_meta()? {
-                Meta::List(meta) => {
-                    for nested in meta.nested.iter() {
-                        match nested {
-                            NestedMeta::Meta(Meta::Path(path))
-                                if path.is_ident(IGNORE_ATTR_PATH) =>
-                            {
-                                if ignore {
-                                    return Err(Error::new(nested.span(), "Duplicate attribute"));
+        for attr in field.attrs.iter() {
+            if attr.path.is_ident(BASE_DRUID_DEPRECATED_ATTR_PATH) {
+                panic!(
+                    "The 'druid' attribute has been replaced with separate \
+                    'lens' and 'data' attributes.",
+                );
+            } else if attr.path.is_ident(BASE_DATA_ATTR_PATH) {
+                match attr.parse_meta()? {
+                    Meta::List(meta) => {
+                        for nested in meta.nested.iter() {
+                            match nested {
+                                NestedMeta::Meta(Meta::Path(path))
+                                    if path.is_ident(IGNORE_ATTR_PATH) =>
+                                {
+                                    if ignore {
+                                        return Err(Error::new(
+                                            nested.span(),
+                                            "Duplicate attribute",
+                                        ));
+                                    }
+                                    ignore = true;
                                 }
-                                ignore = true;
-                            }
-                            NestedMeta::Meta(Meta::NameValue(meta))
-                                if meta.path.is_ident(SAME_FN_ATTR_PATH) =>
-                            {
-                                if same_fn.is_some() {
-                                    return Err(Error::new(meta.span(), "Duplicate attribute"));
-                                }
+                                NestedMeta::Meta(Meta::NameValue(meta))
+                                    if meta.path.is_ident(DATA_SAME_FN_ATTR_PATH) =>
+                                {
+                                    if same_fn.is_some() {
+                                        return Err(Error::new(meta.span(), "Duplicate attribute"));
+                                    }
 
-                                let path = parse_lit_into_expr_path(&meta.lit)?;
-                                same_fn = Some(path);
+                                    let path = parse_lit_into_expr_path(&meta.lit)?;
+                                    same_fn = Some(path);
+                                }
+                                other => return Err(Error::new(other.span(), "Unknown attribute")),
                             }
-                            other => return Err(Error::new(other.span(), "Unknown attribute")),
                         }
                     }
+                    other => {
+                        return Err(Error::new(
+                            other.span(),
+                            "Expected attribute list (the form #[data(one, two)])",
+                        ));
+                    }
                 }
-                other => {
-                    return Err(Error::new(
-                        other.span(),
-                        "Expected attribute list (the form #[druid(one, two)])",
-                    ))
+            } else if attr.path.is_ident(BASE_LENS_ATTR_PATH) {
+                match attr.parse_meta()? {
+                    Meta::List(meta) => {
+                        for nested in meta.nested.iter() {
+                            match nested {
+                                NestedMeta::Meta(Meta::NameValue(meta))
+                                    if meta.path.is_ident(LENS_NAME_OVERRIDE_ATTR_PATH) =>
+                                {
+                                    if lens_name_override.is_some() {
+                                        return Err(Error::new(meta.span(), "Duplicate attribute"));
+                                    }
+
+                                    let ident = parse_lit_into_ident(&meta.lit)?;
+                                    lens_name_override = Some(ident);
+                                }
+                                other => return Err(Error::new(other.span(), "Unknown attribute")),
+                            }
+                        }
+                    }
+                    other => {
+                        return Err(Error::new(
+                            other.span(),
+                            "Expected attribute list (the form #[data(one, two)])",
+                        ));
+                    }
                 }
             }
         }
         Ok(Field {
             ident,
+            ty,
             ignore,
             same_fn,
+            lens_name_override,
         })
     }
 
@@ -172,4 +227,17 @@ fn parse_lit_into_expr_path(lit: &syn::Lit) -> Result<ExprPath, Error> {
 
     let tokens = syn::parse_str(&string.value())?;
     syn::parse2(tokens)
+}
+
+fn parse_lit_into_ident(lit: &syn::Lit) -> Result<Ident, Error> {
+    let ident = if let syn::Lit::Str(lit) = lit {
+        Ident::new(&lit.value(), lit.span())
+    } else {
+        return Err(Error::new(
+            lit.span(),
+            "expected str, found... something else",
+        ));
+    };
+
+    Ok(ident)
 }

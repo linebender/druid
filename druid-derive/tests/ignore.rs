@@ -7,7 +7,7 @@ fn simple_ignore() {
     #[derive(Clone, Data)]
     struct Point {
         x: f64,
-        #[druid(ignore)]
+        #[data(ignore)]
         y: f64,
     }
     let p1 = Point { x: 0.0, y: 1.0 };
@@ -22,7 +22,7 @@ fn ignore_item_without_data_impl() {
     #[derive(Clone, Data)]
     struct CoolStruct {
         len: usize,
-        #[druid(ignore)]
+        #[data(ignore)]
         path: PathBuf,
     }
 }
@@ -30,7 +30,7 @@ fn ignore_item_without_data_impl() {
 #[test]
 fn tuple_struct() {
     #[derive(Clone, Data)]
-    struct Tup(usize, #[druid(ignore)] usize);
+    struct Tup(usize, #[data(ignore)] usize);
 
     let one = Tup(1, 1);
     let two = Tup(1, 5);
@@ -43,10 +43,10 @@ fn enums() {
     enum Hmm {
         Named {
             one: usize,
-            #[druid(ignore)]
+            #[data(ignore)]
             two: usize,
         },
-        Tuple(#[druid(ignore)] usize, usize),
+        Tuple(#[data(ignore)] usize, usize),
     }
 
     let name_one = Hmm::Named { one: 5, two: 4 };

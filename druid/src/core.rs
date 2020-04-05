@@ -19,15 +19,12 @@ use std::collections::VecDeque;
 use log;
 
 use crate::bloom::Bloom;
-use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size};
+use crate::kurbo::{Affine, Insets, Rect, Shape, Size};
 use crate::piet::RenderContext;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
     PaintCtx, Target, UpdateCtx, Widget, WidgetId,
 };
-
-/// Convenience type for dynamic boxed widget.
-pub type BoxedWidget<T> = WidgetPod<T, Box<dyn Widget<T>>>;
 
 /// Our queue type
 pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
@@ -43,7 +40,7 @@ pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
 /// needs to propagate, and to provide the previous data so that a
 /// widget can process a diff between the old value and the new.
 ///
-/// [`update`]: widget/trait.Widget.html#tymethod.update
+/// [`update`]: trait.Widget.html#tymethod.update
 pub struct WidgetPod<T, W> {
     state: BaseState,
     old_data: Option<T>,
@@ -64,7 +61,7 @@ pub struct WidgetPod<T, W> {
 /// that, widgets will generally not interact with it directly,
 /// but it is an important part of the [`WidgetPod`] struct.
 ///
-/// [`paint`]: widget/trait.Widget.html#tymethod.paint
+/// [`paint`]: trait.Widget.html#tymethod.paint
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Clone)]
 pub(crate) struct BaseState {
@@ -152,6 +149,9 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     }
 
     /// Query the "hot" state of the widget.
+    ///
+    /// See [`EventCtx::is_hot`](struct.EventCtx.html#method.is_hot) for
+    /// additional information.
     pub fn is_hot(&self) -> bool {
         self.state.is_hot
     }
@@ -218,7 +218,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`Insets`]: struct.Insets.html
     /// [`set_paint_insets`]: struct.LayoutCtx.html#method.set_paint_insets
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn paint_insets(&self) -> Insets {
         self.state.paint_insets
     }
@@ -231,7 +231,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// propogate a child's desired paint rect, if it extends beyond the bounds
     /// of the parent's layout rect.
     ///
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     /// [`Insets`]: struct.Insets.html
     pub fn compute_parent_paint_insets(&self, parent_size: Size) -> Insets {
         let parent_bounds = Rect::ZERO.with_size(parent_size);
@@ -249,26 +249,27 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Note that this method does not apply the offset of the layout rect.
     /// If that is desired, use [`paint_with_offset`] instead.
     ///
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
-    /// [`paint`]: widget/trait.Widget.html#tymethod.paint
+    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`paint`]: trait.Widget.html#tymethod.paint
     /// [`paint_with_offset`]: #method.paint_with_offset
-    pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let mut ctx = PaintCtx {
-            render_ctx: paint_ctx.render_ctx,
-            window_id: paint_ctx.window_id,
+    pub fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        let mut inner_ctx = PaintCtx {
+            render_ctx: ctx.render_ctx,
+            window_id: ctx.window_id,
             z_ops: Vec::new(),
-            region: paint_ctx.region.clone(),
+            region: ctx.region.clone(),
             base_state: &self.state,
-            focus_widget: paint_ctx.focus_widget,
+            focus_widget: ctx.focus_widget,
         };
-        self.inner.paint(&mut ctx, data, &env);
-        paint_ctx.z_ops.append(&mut ctx.z_ops);
+        self.inner.paint(&mut inner_ctx, data, &env);
+        ctx.z_ops.append(&mut inner_ctx.z_ops);
 
         if env.get(Env::DEBUG_PAINT) {
-            let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
+            const BORDER_WIDTH: f64 = 1.0;
+            let rect = inner_ctx.size().to_rect().inset(BORDER_WIDTH / -2.0);
             let id = self.id().to_raw();
             let color = env.get_debug_color(id);
-            ctx.stroke(rect, &color, 1.0);
+            inner_ctx.stroke(rect, &color, BORDER_WIDTH);
         }
 
         self.state.needs_inval = false;
@@ -279,43 +280,34 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// This will recursively paint widgets, stopping if a widget's layout
     /// rect is outside of the currently visible region.
     // Discussion: should this be `paint` and the other `paint_raw`?
-    pub fn paint_with_offset(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.paint_with_offset_impl(paint_ctx, data, env, false)
+    pub fn paint_with_offset(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.paint_with_offset_impl(ctx, data, env, false)
     }
 
     /// Paint the widget, even if its layout rect is outside of the currently
     /// visible region.
-    pub fn paint_with_offset_always(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.paint_with_offset_impl(paint_ctx, data, env, true)
+    pub fn paint_with_offset_always(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.paint_with_offset_impl(ctx, data, env, true)
     }
 
     /// Shared implementation that can skip drawing non-visible content.
     fn paint_with_offset_impl(
         &mut self,
-        paint_ctx: &mut PaintCtx,
+        ctx: &mut PaintCtx,
         data: &T,
         env: &Env,
         paint_if_not_visible: bool,
     ) {
-        if !paint_if_not_visible && !paint_ctx.region().intersects(self.state.paint_rect()) {
+        if !paint_if_not_visible && !ctx.region().intersects(self.state.paint_rect()) {
             return;
         }
 
-        if let Err(e) = paint_ctx.save() {
-            log::error!("saving render context failed: {:?}", e);
-            return;
-        }
-
-        let layout_origin = self.state.layout_rect.origin().to_vec2();
-        paint_ctx.transform(Affine::translate(layout_origin));
-
-        let visible = paint_ctx.region().to_rect() - layout_origin;
-
-        paint_ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, &env));
-
-        if let Err(e) = paint_ctx.restore() {
-            log::error!("restoring render context failed: {:?}", e);
-        }
+        ctx.with_save(|ctx| {
+            let layout_origin = self.state.layout_rect.origin().to_vec2();
+            ctx.transform(Affine::translate(layout_origin));
+            let visible = ctx.region().to_rect() - layout_origin;
+            ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, &env));
+        });
     }
 
     /// Compute layout of a widget.
@@ -323,7 +315,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Generally called by container widgets as part of their [`layout`]
     /// method.
     ///
-    /// [`layout`]: trait.Widget.html#method.layout
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn layout(
         &mut self,
         layout_ctx: &mut LayoutCtx,
@@ -333,6 +325,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ) -> Size {
         layout_ctx.paint_insets = Insets::ZERO;
         let size = self.inner.layout(layout_ctx, bc, data, &env);
+
+        if size.width.is_infinite() {
+            let name = self.widget().type_name();
+            log::warn!("Widget `{}` has an infinite width.", name);
+        }
+
+        if size.height.is_infinite() {
+            let name = self.widget().type_name();
+            log::warn!("Widget `{}` has an infinite height.", name);
+        }
+
         self.state.paint_insets = layout_ctx.paint_insets;
         self.state.needs_layout = false;
         size
@@ -345,12 +348,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// flow logic resides, particularly whether to continue propagating
     /// the event.
     ///
-    /// [`event`]: trait.Widget.html#method.event
+    /// [`event`]: trait.Widget.html#tymethod.event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.old_data.is_none() {
             log::error!(
                 "widget {:?} is receiving an event without having first \
-                 recieved WidgetAdded.",
+                 received WidgetAdded.",
                 ctx.widget_id()
             );
         }
@@ -473,17 +476,29 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 r
             }
             LifeCycle::WidgetAdded => {
-                // if this is called, it means widgets were added. That might be
-                // be us; if we don't have old_data we set it now.
+                assert!(self.old_data.is_none());
+
+                self.old_data = Some(data.clone());
+                self.env = Some(env.clone());
+
+                true
+            }
+            LifeCycle::RouteWidgetAdded => {
+                // if this is called either we were just created, in
+                // which case we need to change lifecycle event to
+                // WidgetAdded or in case we were already created
+                // we just pass this event down
                 if self.old_data.is_none() {
-                    self.old_data = Some(data.clone());
-                    self.env = Some(env.clone());
+                    self.lifecycle(ctx, &LifeCycle::WidgetAdded, data, env);
+                    return;
+                } else {
+                    if self.state.children_changed {
+                        self.state.children.clear();
+                        self.state.focus_chain.clear();
+                    }
+
+                    self.state.children_changed
                 }
-                if self.state.children_changed {
-                    self.state.children.clear();
-                    self.state.focus_chain.clear();
-                }
-                self.state.children_changed
             }
             LifeCycle::HotChanged(_) => false,
             LifeCycle::RouteFocusChanged { old, new } => {
@@ -539,12 +554,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         ctx.base_state.merge_up(&self.state);
 
-        // we only want to update child state after this specific event.
-        if let LifeCycle::WidgetAdded = event {
-            self.state.children_changed = false;
-            ctx.base_state.children = ctx.base_state.children.union(self.state.children);
-            ctx.base_state.focus_chain.extend(&self.state.focus_chain);
-            ctx.register_child(self.id());
+        // we need to (re)register children in case of one of the following events
+        match event {
+            LifeCycle::WidgetAdded | LifeCycle::RouteWidgetAdded => {
+                self.state.children_changed = false;
+                ctx.base_state.children = ctx.base_state.children.union(self.state.children);
+                ctx.base_state.focus_chain.extend(&self.state.focus_chain);
+                ctx.register_child(self.id());
+            }
+            _ => (),
         }
     }
 
@@ -553,7 +571,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Generally called by container widgets as part of their [`update`]
     /// method.
     ///
-    /// [`update`]: trait.Widget.html#method.update
+    /// [`update`]: trait.Widget.html#tymethod.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
         match (self.old_data.as_ref(), self.env.as_ref()) {
             (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
@@ -586,7 +604,7 @@ impl<T, W: Widget<T> + 'static> WidgetPod<T, W> {
     ///
     /// Convert a `WidgetPod` containing a widget of a specific concrete type
     /// into a dynamically boxed widget.
-    pub fn boxed(self) -> BoxedWidget<T> {
+    pub fn boxed(self) -> WidgetPod<T, Box<dyn Widget<T>>> {
         WidgetPod::new(Box::new(self.inner))
     }
 }
@@ -640,8 +658,8 @@ impl BaseState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::widget::{Flex, Scroll, Split, TextBox, WidgetExt};
-    use crate::WindowId;
+    use crate::widget::{Flex, Scroll, Split, TextBox};
+    use crate::{WidgetExt, WindowId};
 
     const ID_1: WidgetId = WidgetId::reserved(0);
     const ID_2: WidgetId = WidgetId::reserved(1);
@@ -652,10 +670,10 @@ mod tests {
         fn make_widgets() -> impl Widget<Option<u32>> {
             Split::vertical(
                 Flex::<Option<u32>>::row()
-                    .with_child(TextBox::raw().with_id(ID_1).parse(), 1.0)
-                    .with_child(TextBox::raw().with_id(ID_2).parse(), 1.0)
-                    .with_child(TextBox::raw().with_id(ID_3).parse(), 1.0),
-                Scroll::new(TextBox::raw().parse()),
+                    .with_child(TextBox::new().with_id(ID_1).parse())
+                    .with_child(TextBox::new().with_id(ID_2).parse())
+                    .with_child(TextBox::new().with_id(ID_3).parse()),
+                Scroll::new(TextBox::new().parse()),
             )
         }
 

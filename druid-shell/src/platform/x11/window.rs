@@ -36,6 +36,7 @@ pub struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     size: Size,
+    min_size: Size,
 }
 
 impl WindowBuilder {
@@ -44,6 +45,7 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             size: Size::new(500.0, 400.0),
+            min_size: Size::new(0.0, 0.0),
         }
     }
 
@@ -53,6 +55,11 @@ impl WindowBuilder {
 
     pub fn set_size(&mut self, size: Size) {
         self.size = size;
+    }
+
+    pub fn set_min_size(&mut self, min_size: Size) {
+        log::warn!("WindowBuilder::set_min_size is implemented, but the setting is currently unused for X11 platforms.");
+        self.min_size = min_size;
     }
 
     pub fn resizable(&mut self, _resizable: bool) {

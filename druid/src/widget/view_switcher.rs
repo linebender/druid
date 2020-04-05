@@ -22,9 +22,12 @@ use crate::{
 /// A widget that can switch dynamically between one of many views depending
 /// on application state.
 
+type ChildPicker<T, U> = dyn Fn(&T, &Env) -> U;
+type ChildBuilder<T, U> = dyn Fn(&U, &T, &Env) -> Box<dyn Widget<T>>;
+
 pub struct ViewSwitcher<T, U> {
-    child_picker: Box<dyn Fn(&T, &Env) -> U>,
-    child_builder: Box<dyn Fn(&U, &Env) -> Box<dyn Widget<T>>>,
+    child_picker: Box<ChildPicker<T, U>>,
+    child_builder: Box<ChildBuilder<T, U>>,
     active_child: Option<WidgetPod<T, Box<dyn Widget<T>>>>,
     active_child_id: Option<U>,
 }
@@ -41,7 +44,7 @@ impl<T: Data, U: PartialEq> ViewSwitcher<T, U> {
     /// the value passed to it.
     pub fn new(
         child_picker: impl Fn(&T, &Env) -> U + 'static,
-        child_builder: impl Fn(&U, &Env) -> Box<dyn Widget<T>> + 'static,
+        child_builder: impl Fn(&U, &T, &Env) -> Box<dyn Widget<T>> + 'static,
     ) -> Self {
         Self {
             child_picker: Box::new(child_picker),
@@ -62,7 +65,7 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
             let child_id = (self.child_picker)(data, env);
-            self.active_child = Some(WidgetPod::new((self.child_builder)(&child_id, env)));
+            self.active_child = Some(WidgetPod::new((self.child_builder)(&child_id, data, env)));
             self.active_child_id = Some(child_id);
         }
         if let Some(child) = self.active_child.as_mut() {
@@ -70,16 +73,16 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         let child_id = (self.child_picker)(data, env);
         if Some(&child_id) != self.active_child_id.as_ref() {
-            self.active_child = Some(WidgetPod::new((self.child_builder)(&child_id, env)));
+            self.active_child = Some(WidgetPod::new((self.child_builder)(&child_id, data, env)));
             self.active_child_id = Some(child_id);
             ctx.children_changed();
         }
 
-        if !old_data.same(data) {
-            ctx.request_paint();
+        if let Some(child) = self.active_child.as_mut() {
+            child.update(ctx, data, env);
         }
     }
 

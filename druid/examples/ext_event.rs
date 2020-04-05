@@ -18,12 +18,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use druid::kurbo::RoundedRect;
-use druid::widget::WidgetExt;
-use druid::{
-    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size, UpdateCtx,
-    Widget, WindowDesc,
-};
+use druid::widget::prelude::*;
+use druid::{AppLauncher, Color, Data, LocalizedString, Rect, Selector, WidgetExt, WindowDesc};
 
 const SET_COLOR: Selector = Selector::new("event-example.set-color");
 
@@ -31,10 +27,20 @@ const SET_COLOR: Selector = Selector::new("event-example.set-color");
 struct ColorWell;
 
 #[derive(Debug, Clone, Data)]
-struct MyColor(#[druid(same_fn = "color_eq")] Color);
+struct MyColor(#[data(same_fn = "color_eq")] Color);
 
 fn color_eq(one: &Color, two: &Color) -> bool {
     one.as_rgba_u32() == two.as_rgba_u32()
+}
+
+fn split_rgba(rgba: &Color) -> (u8, u8, u8, u8) {
+    let rgba = rgba.as_rgba_u32();
+    (
+        (rgba >> 24 & 255) as u8,
+        ((rgba >> 16) & 255) as u8,
+        ((rgba >> 8) & 255) as u8,
+        (rgba & 255) as u8,
+    )
 }
 
 impl ColorWell {
@@ -85,23 +91,23 @@ fn main() {
     let start_time = Instant::now();
 
     thread::spawn(move || {
+        let mut last_color = Color::WHITE;
+
         loop {
-            let time_since_start = Instant::now() - start_time;
-            let bits = (time_since_start.as_nanos() % (0xFFFFFF)) as u32;
+            let time_since_start = (Instant::now() - start_time).as_nanos();
+            let (r, g, b, _) = split_rgba(&last_color);
 
-            // there is no logic here; it's a very silly way of creating a color.
-            let mask = 0x924924;
-            let red = bits & mask;
-            let red = (red >> 16 | red >> 8 | red) & 0xFF;
-            let green = bits & mask >> 1;
-            let green = (green >> 16 | green >> 8 | green) & 0xFF;
-            let blue = bits & mask >> 2;
-            let blue = (blue >> 16 | blue >> 8 | blue) & 0xFF;
+            // there is no logic here; it's a very silly way of mutating the color.
+            let new_color = match (time_since_start % 2, time_since_start % 3) {
+                (0, _) => Color::rgb8(r.wrapping_add(10), g, b),
+                (_, 0) => Color::rgb8(r, g.wrapping_add(10), b),
+                (_, _) => Color::rgb8(r, g, b.wrapping_add(10)),
+            };
 
-            let next_color = Color::rgb8(red as u8, green as u8, blue as u8);
+            last_color = new_color.clone();
 
             // if this fails we're shutting down
-            if let Err(_) = event_sink.submit_command(SET_COLOR, next_color, None) {
+            if let Err(_) = event_sink.submit_command(SET_COLOR, new_color, None) {
                 break;
             }
             thread::sleep(Duration::from_millis(150));

@@ -14,7 +14,7 @@
 
 use std::any::Any;
 
-use time::Time;
+use time::Instant;
 
 use piet_common::kurbo::{Line, Rect};
 use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
@@ -27,7 +27,8 @@ const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 struct PerfTest {
     handle: WindowHandle,
     size: (f64, f64),
-    last_time: f64,
+    start_time: Instant,
+    last_time: Instant,
 }
 
 impl WinHandler for PerfTest {
@@ -42,7 +43,7 @@ impl WinHandler for PerfTest {
 
         piet.stroke(Line::new((0.0, height), (width, 0.0)), &FG_COLOR, 1.0);
 
-        let current_ns = Time::now().nanosecond();
+        let current_ns = (Instant::now() - self.start_time).whole_nanoseconds();
         let th = ::std::f64::consts::PI * (current_ns as f64) * 2e-9;
         let dx = 100.0 * th.sin();
         let dy = 100.0 * th.cos();
@@ -58,9 +59,8 @@ impl WinHandler for PerfTest {
             .build()
             .unwrap();
 
-        let now = Time::now();
-        let now = now.second() as f64 + 1e-9 * now.nanosecond() as f64;
-        let msg = format!("{:3.1}ms", 1e3 * (now - self.last_time));
+        let now = Instant::now();
+        let msg = format!("{}ms", (now - self.last_time).whole_milliseconds());
         self.last_time = now;
         let layout = piet.text().new_text_layout(&font, &msg).build().unwrap();
         piet.draw_text(&layout, (10.0, 210.0), &FG_COLOR);
@@ -113,7 +113,8 @@ fn main() {
     let perf_test = PerfTest {
         size: Default::default(),
         handle: Default::default(),
-        last_time: 0.0,
+        start_time: time::Instant::now(),
+        last_time: time::Instant::now(),
     };
     builder.set_handler(Box::new(perf_test));
     builder.set_title("Performance tester");

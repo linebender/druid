@@ -160,6 +160,8 @@ pub enum LifeCycle {
     /// [`WidgetPod`]: struct.WidgetPod.html
     /// [`LifeCycleCtx::register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
     WidgetAdded,
+    /// Used internally by the framework to route WidgetAdded to the required widgets.
+    RouteWidgetAdded,
     /// Called at the beginning of a new animation frame.
     ///
     /// On the first frame when transitioning from idle to animating, `interval`
@@ -172,7 +174,7 @@ pub enum LifeCycle {
     /// when the mouse moves over a widget, that widget will receive
     /// `LifeCycle::HotChanged` before it receives `Event::MouseMoved`.
     ///
-    /// See [`is_hot`](struct.BaseState.html#method.is_hot) for
+    /// See [`is_hot`](struct.EventCtx.html#method.is_hot) for
     /// discussion about the hot status.
     HotChanged(bool),
     /// Internal: used by the framework to route the `FocusChanged` event.
@@ -187,7 +189,7 @@ pub enum LifeCycle {
     /// This will always be called immediately after an event where a widget
     /// has requested focus.
     ///
-    /// See [`has_focus`](struct.BaseState.html#method.has_focus) for
+    /// See [`has_focus`](struct.EventCtx.html#method.has_focus) for
     /// discussion about the focus status.
     FocusChanged(bool),
     /// Testing only: request the `BaseState` of a specific widget.

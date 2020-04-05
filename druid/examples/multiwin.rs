@@ -63,21 +63,21 @@ fn ui_builder() -> impl Widget<State> {
     let text = LocalizedString::new("hello-counter")
         .with_arg("count", |data: &State, _env| data.menu_count.into());
     let label = Label::new(text);
-    let inc_button = Button::<State>::new("Add menu item", |ctx, data, _env| {
+    let inc_button = Button::<State>::new("Add menu item").on_click(|ctx, data, _env| {
         data.menu_count += 1;
         ctx.set_menu(make_menu::<State>(data));
     });
-    let dec_button = Button::<State>::new("Remove menu item", |ctx, data, _env| {
+    let dec_button = Button::<State>::new("Remove menu item").on_click(|ctx, data, _env| {
         data.menu_count = data.menu_count.saturating_sub(1);
         ctx.set_menu(make_menu::<State>(data));
     });
 
     let mut col = Flex::column();
-    col.add_child(Align::centered(Padding::new(5.0, label)), 1.0);
+    col.add_flex_child(Align::centered(Padding::new(5.0, label)), 1.0);
     let mut row = Flex::row();
-    row.add_child(Padding::new(5.0, inc_button), 1.0);
-    row.add_child(Padding::new(5.0, dec_button), 1.0);
-    col.add_child(row, 1.0);
+    row.add_child(Padding::new(5.0, inc_button));
+    row.add_child(Padding::new(5.0, dec_button));
+    col.add_flex_child(Align::centered(row), 1.0);
     col
 }
 
@@ -87,7 +87,7 @@ impl AppDelegate<State> for Delegate {
     fn event(
         &mut self,
         ctx: &mut DelegateCtx,
-        _window_id: WindowId,
+        window_id: WindowId,
         event: Event,
         _data: &mut State,
         _env: &Env,
@@ -96,7 +96,7 @@ impl AppDelegate<State> for Delegate {
             Event::MouseDown(ref mouse) if mouse.button.is_right() => {
                 let menu = ContextMenu::new(make_context_menu::<State>(), mouse.pos);
                 let cmd = Command::new(druid::commands::SHOW_CONTEXT_MENU, menu);
-                ctx.submit_command(cmd, None);
+                ctx.submit_command(cmd, Target::Window(window_id));
                 None
             }
             other => Some(other),
@@ -181,7 +181,7 @@ fn make_menu<T: Data>(state: &State) -> MenuDesc<T> {
     if state.menu_count != 0 {
         base = base.append(
             MenuDesc::new(LocalizedString::new("Custom")).append_iter(|| {
-                (0..state.menu_count).map(|i| {
+                (1..state.menu_count + 1).map(|i| {
                     MenuItem::new(
                         LocalizedString::new("hello-counter")
                             .with_arg("count", move |_, _| i.into()),

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, Flex, Label, Padding, Parse, TextBox};
+use druid::widget::{Align, Flex, Label, Parse, TextBox};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn main() {
@@ -33,7 +33,8 @@ fn ui_builder() -> impl Widget<Option<u32>> {
     let input = Parse::new(TextBox::new());
 
     let mut col = Flex::column();
-    col.add_child(Align::centered(Padding::new(5.0, label)), 1.0);
-    col.add_child(Padding::new(5.0, input), 1.0);
-    col
+    col.add_child(label);
+    col.add_spacer(8.0);
+    col.add_child(input);
+    Align::centered(col)
 }

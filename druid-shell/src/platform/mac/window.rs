@@ -76,6 +76,7 @@ pub(crate) struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     size: Size,
+    min_size: Option<Size>,
     resizable: bool,
     show_titlebar: bool,
 }
@@ -107,6 +108,7 @@ impl WindowBuilder {
             title: String::new(),
             menu: None,
             size: Size::new(500.0, 400.0),
+            min_size: None,
             resizable: true,
             show_titlebar: true,
         }
@@ -120,8 +122,11 @@ impl WindowBuilder {
         self.size = size;
     }
 
+    pub fn set_min_size(&mut self, size: Size) {
+        self.min_size = Some(size);
+    }
+
     pub fn resizable(&mut self, resizable: bool) {
-        // TODO: Use this in `self.build`
         self.resizable = resizable;
     }
 
@@ -141,10 +146,14 @@ impl WindowBuilder {
     pub fn build(self) -> Result<WindowHandle, Error> {
         assert_main_thread();
         unsafe {
-            let style_mask = NSWindowStyleMask::NSTitledWindowMask
+            let mut style_mask = NSWindowStyleMask::NSTitledWindowMask
                 | NSWindowStyleMask::NSClosableWindowMask
-                | NSWindowStyleMask::NSMiniaturizableWindowMask
-                | NSWindowStyleMask::NSResizableWindowMask;
+                | NSWindowStyleMask::NSMiniaturizableWindowMask;
+
+            if self.resizable {
+                style_mask |= NSWindowStyleMask::NSResizableWindowMask;
+            }
+
             let rect = NSRect::new(
                 NSPoint::new(0., 0.),
                 NSSize::new(self.size.width, self.size.height),
@@ -156,6 +165,11 @@ impl WindowBuilder {
                 NSBackingStoreBuffered,
                 NO,
             );
+
+            if let Some(min_size) = self.min_size {
+                let size = NSSize::new(min_size.width, min_size.height);
+                window.setContentMinSize_(size);
+            }
 
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
@@ -679,8 +693,20 @@ impl WindowHandle {
     // TODO: Implement this
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
 
-    // TODO: Implement this
-    pub fn resizable(&self, _resizable: bool) {}
+    pub fn resizable(&self, resizable: bool) {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let mut style_mask: NSWindowStyleMask = window.styleMask();
+
+            if resizable {
+                style_mask |= NSWindowStyleMask::NSResizableWindowMask;
+            } else {
+                style_mask &= !NSWindowStyleMask::NSResizableWindowMask;
+            }
+
+            window.setStyleMask_(style_mask);
+        }
+    }
 
     pub fn set_menu(&self, menu: Menu) {
         unsafe {

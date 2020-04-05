@@ -16,23 +16,43 @@
 
 use crate::kurbo::{Circle, Point, Rect, RoundedRect, Shape, Size};
 use crate::theme;
-use crate::widget::Align;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
     PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
 };
 
 /// A slider, allowing interactive update of a numeric value.
+///
+/// This slider implements `Widget<f64>`, and works on values clamped
+/// in the range `min..max`.
 #[derive(Debug, Clone, Default)]
 pub struct Slider {
+    min: f64,
+    max: f64,
     knob_pos: Point,
     knob_hovered: bool,
     x_offset: f64,
 }
 
 impl Slider {
-    pub fn new() -> impl Widget<f64> {
-        Align::vertical(UnitPoint::CENTER, Self::default())
+    /// Create a new `Slider`.
+    pub fn new() -> Slider {
+        Slider {
+            min: 0.,
+            max: 1.,
+            knob_pos: Default::default(),
+            knob_hovered: Default::default(),
+            x_offset: Default::default(),
+        }
+    }
+
+    /// Builder-style method to set the range covered by this slider.
+    ///
+    /// The default range is `0.0..1.0`.
+    pub fn with_range(mut self, min: f64, max: f64) -> Self {
+        self.min = min;
+        self.max = max;
+        self
     }
 }
 
@@ -43,9 +63,14 @@ impl Slider {
     }
 
     fn calculate_value(&self, mouse_x: f64, knob_width: f64, slider_width: f64) -> f64 {
-        ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
+        let scalar = ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
             .max(0.0)
-            .min(1.0)
+            .min(1.0);
+        self.min + scalar * (self.max - self.min)
+    }
+
+    fn normalize(&self, data: f64) -> f64 {
+        (data.max(self.min).min(self.max) - self.min) / (self.max - self.min)
     }
 }
 
@@ -75,15 +100,15 @@ impl Widget<f64> for Slider {
             Event::MouseMoved(mouse) => {
                 if ctx.is_active() {
                     *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
+                    ctx.request_paint();
                 }
                 if ctx.is_hot() {
-                    if self.knob_hit_test(knob_size, mouse.pos) {
-                        self.knob_hovered = true
-                    } else {
-                        self.knob_hovered = false
+                    let knob_hover = self.knob_hit_test(knob_size, mouse.pos);
+                    if knob_hover != self.knob_hovered {
+                        self.knob_hovered = knob_hover;
+                        ctx.request_paint();
                     }
                 }
-                ctx.request_paint();
             }
             _ => (),
         }
@@ -103,25 +128,14 @@ impl Widget<f64> for Slider {
         env: &Env,
     ) -> Size {
         bc.debug_check("Slider");
-
-        let default_width = 100.0;
-
-        if bc.is_width_bounded() {
-            bc.constrain(Size::new(
-                bc.max().width,
-                env.get(theme::BASIC_WIDGET_HEIGHT),
-            ))
-        } else {
-            bc.constrain(Size::new(
-                default_width,
-                env.get(theme::BASIC_WIDGET_HEIGHT),
-            ))
-        }
+        let height = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let width = env.get(theme::WIDE_WIDGET_WIDTH);
+        bc.constrain((width, height))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &f64, env: &Env) {
-        let clamped = data.max(0.0).min(1.0);
-        let rect = Rect::from_origin_size(Point::ORIGIN, paint_ctx.size());
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
+        let clamped = self.normalize(*data);
+        let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let track_thickness = 4.;
 
@@ -141,12 +155,12 @@ impl Widget<f64> for Slider {
             ),
         );
 
-        paint_ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), 2.0);
+        ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), 2.0);
 
-        paint_ctx.fill(background_rect, &background_gradient);
+        ctx.fill(background_rect, &background_gradient);
 
         //Get ready to paint the knob
-        let is_active = paint_ctx.is_active();
+        let is_active = ctx.is_active();
         let is_hovered = self.knob_hovered;
 
         let knob_position = (rect.width() - knob_size) * clamped + knob_size / 2.;
@@ -183,9 +197,9 @@ impl Widget<f64> for Slider {
             env.get(theme::FOREGROUND_DARK)
         };
 
-        paint_ctx.stroke(knob_circle, &border_color, 2.);
+        ctx.stroke(knob_circle, &border_color, 2.);
 
         //Actually paint the knob
-        paint_ctx.fill(knob_circle, &knob_gradient);
+        ctx.fill(knob_circle, &knob_gradient);
     }
 }

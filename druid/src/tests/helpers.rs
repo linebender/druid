@@ -20,7 +20,6 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use crate::widget::WidgetExt;
 use crate::*;
 
 // taken from the matches crate; useful for the Recorder widget.

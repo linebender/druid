@@ -126,7 +126,7 @@ impl<T: Data> Window<T> {
         };
 
         if let Event::WindowConnected = event {
-            self.lifecycle(queue, &LifeCycle::WidgetAdded, data, env);
+            self.lifecycle(queue, &LifeCycle::RouteWidgetAdded, data, env);
         }
 
         let mut base_state = BaseState::new(self.root.id());
@@ -160,9 +160,9 @@ impl<T: Data> Window<T> {
         }
 
         // If children are changed during the handling of an event,
-        // we need to send WidgetAdded now, so that they are ready for update/layout.
+        // we need to send RouteWidgetAdded now, so that they are ready for update/layout.
         if base_state.children_changed {
-            self.lifecycle(queue, &LifeCycle::WidgetAdded, data, env);
+            self.lifecycle(queue, &LifeCycle::RouteWidgetAdded, data, env);
         }
 
         is_handled
@@ -226,7 +226,7 @@ impl<T: Data> Window<T> {
         env: &Env,
     ) {
         if self.root.state().children_changed {
-            self.lifecycle(queue, &LifeCycle::WidgetAdded, data, env);
+            self.lifecycle(queue, &LifeCycle::RouteWidgetAdded, data, env);
         }
         if self.root.state().needs_inval {
             self.handle.invalidate();
@@ -283,7 +283,7 @@ impl<T: Data> Window<T> {
 
     fn paint(&mut self, piet: &mut Piet, data: &T, env: &Env) {
         let base_state = BaseState::new(self.root.id());
-        let mut paint_ctx = PaintCtx {
+        let mut ctx = PaintCtx {
             render_ctx: piet,
             base_state: &base_state,
             window_id: self.id,
@@ -292,24 +292,17 @@ impl<T: Data> Window<T> {
             region: Rect::ZERO.into(),
         };
         let visible = Rect::from_origin_size(Point::ZERO, self.size);
-        paint_ctx.with_child_ctx(visible, |ctx| self.root.paint(ctx, data, env));
+        ctx.with_child_ctx(visible, |ctx| self.root.paint(ctx, data, env));
 
-        let mut z_ops = mem::take(&mut paint_ctx.z_ops);
+        let mut z_ops = mem::take(&mut ctx.z_ops);
         z_ops.sort_by_key(|k| k.z_index);
 
         for z_op in z_ops.into_iter() {
-            paint_ctx.with_child_ctx(visible, |ctx| {
-                if let Err(e) = ctx.render_ctx.save() {
-                    log::error!("saving render context failed: {:?}", e);
-                    return;
-                }
-
-                ctx.render_ctx.transform(z_op.transform);
-                (z_op.paint_func)(ctx);
-
-                if let Err(e) = ctx.render_ctx.restore() {
-                    log::error!("restoring render context failed: {:?}", e);
-                }
+            ctx.with_child_ctx(visible, |ctx| {
+                ctx.with_save(|ctx| {
+                    ctx.render_ctx.transform(z_op.transform);
+                    (z_op.paint_func)(ctx);
+                });
             });
         }
     }

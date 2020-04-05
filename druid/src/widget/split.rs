@@ -17,14 +17,16 @@
 use crate::kurbo::{Line, Point, Rect, Size};
 use crate::widget::flex::Axis;
 use crate::{
-    theme, BoxConstraints, Cursor, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
+    theme, BoxConstraints, Color, Cursor, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
+    LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
 };
 
 ///A container containing two other widgets, splitting the area either horizontally or vertically.
 pub struct Split<T> {
     split_direction: Axis,
+    solid: bool,
     draggable: bool,
+    min_size: f64,
     split_point: f64,
     splitter_size: f64,
     child1: WidgetPod<T, Box<dyn Widget<T>>>,
@@ -40,6 +42,8 @@ impl<T> Split<T> {
     ) -> Self {
         Split {
             split_direction,
+            min_size: 0.0,
+            solid: false,
             split_point: 0.5,
             splitter_size: 10.0,
             draggable: false,
@@ -65,6 +69,15 @@ impl<T> Split<T> {
         self.split_point = split_point;
         self
     }
+    /// Builder-style method to set the minimum size for both sides of the split.
+    ///
+    /// The value must be greater than or equal to `0.0`.
+    pub fn min_size(mut self, min_size: f64) -> Self {
+        assert!(min_size >= 0.0);
+        self.min_size = min_size;
+
+        self
+    }
     /// Set the width of the splitter bar, in pixels
     /// The value must be positive or zero
     pub fn splitter_size(mut self, splitter_size: f64) -> Self {
@@ -80,6 +93,13 @@ impl<T> Split<T> {
         self.draggable = draggable;
         self
     }
+    /// Builder-style method to set whether the splitter handle is drawn as a solid rectangle.
+    ///
+    /// If this is `false` (the default), it will be drawn as two parallel lines.
+    pub fn fill_splitter_handle(mut self, solid: bool) -> Self {
+        self.solid = solid;
+        self
+    }
     fn splitter_hit_test(&self, size: Size, mouse_pos: Point) -> bool {
         match self.split_direction {
             Axis::Vertical => {
@@ -92,35 +112,109 @@ impl<T> Split<T> {
             }
         }
     }
+    fn calculate_limits(&self, size: Size) -> (f64, f64) {
+        // Since the Axis::Direction tells us the direction of the splitter itself
+        // we need the minor axis to get the size of the 'splitted' direction
+        let size_in_splitted_direction = self.split_direction.minor(size);
+
+        let min_offset = (self.splitter_size * 0.5).min(5.0);
+        let mut min_limit = self.min_size.max(min_offset);
+        let mut max_limit = (size_in_splitted_direction - self.min_size.max(min_offset)).max(0.0);
+
+        if min_limit > max_limit {
+            min_limit = 0.5 * (min_limit + max_limit);
+            max_limit = min_limit;
+        }
+
+        (min_limit, max_limit)
+    }
+
     fn update_splitter(&mut self, size: Size, mouse_pos: Point) {
         self.split_point = match self.split_direction {
             Axis::Vertical => {
-                let max_limit = size.width - (self.splitter_size * 0.5).min(5.0);
-                let min_limit = (self.splitter_size * 0.5).min(5.0);
-                let max_split = max_limit / size.width;
-                let min_split = min_limit / size.width;
-                if mouse_pos.x > max_limit {
-                    max_split
-                } else if mouse_pos.x < min_limit {
-                    min_split
-                } else {
-                    mouse_pos.x / size.width
-                }
+                let (min_limit, max_limit) = self.calculate_limits(size);
+                clamp(mouse_pos.x, min_limit, max_limit) / size.width
             }
             Axis::Horizontal => {
-                let max_limit = size.height - (self.splitter_size * 0.5).min(5.0);
-                let min_limit = (self.splitter_size * 0.5).min(5.0);
-                let max_split = max_limit / size.height;
-                let min_split = min_limit / size.height;
-                if mouse_pos.y > max_limit {
-                    max_split
-                } else if mouse_pos.y < min_limit {
-                    min_split
-                } else {
-                    mouse_pos.y / size.height
-                }
+                let (min_limit, max_limit) = self.calculate_limits(size);
+                clamp(mouse_pos.y, min_limit, max_limit) / size.height
             }
         }
+    }
+    fn get_edges(&mut self, ctx: &PaintCtx) -> (f64, f64) {
+        let size = ctx.size();
+        match self.split_direction {
+            Axis::Vertical => {
+                let reduced_width = size.width - self.splitter_size;
+                let edge1 = reduced_width * self.split_point;
+                let edge2 = edge1 + self.splitter_size;
+                (edge1, edge2)
+            }
+            Axis::Horizontal => {
+                let reduced_height = size.height - self.splitter_size;
+                let edge1 = reduced_height * self.split_point;
+                let edge2 = edge1 + self.splitter_size;
+                (edge1, edge2)
+            }
+        }
+    }
+    fn get_color(&self, env: &Env) -> Color {
+        if self.draggable {
+            env.get(theme::BORDER_LIGHT)
+        } else {
+            env.get(theme::BORDER_DARK)
+        }
+    }
+    fn paint_solid(&mut self, ctx: &mut PaintCtx, env: &Env) {
+        let size = ctx.size();
+        //third, because we're putting the lines at roughly third points.
+        //small, because we floor, to give the extra pixel (roughly) to the middle.
+        let small_third = (self.splitter_size / 3.0).floor();
+        let (edge1, edge2) = self.get_edges(ctx);
+        let rect = match self.split_direction {
+            Axis::Vertical => Rect::from_points(
+                Point::new(edge1 + small_third, 0.0),
+                Point::new(edge2 - small_third, size.height),
+            ),
+            Axis::Horizontal => Rect::from_points(
+                Point::new(0.0, edge1 + small_third),
+                Point::new(size.width, edge2 - small_third),
+            ),
+        };
+        let splitter_color = self.get_color(env);
+        ctx.fill(rect, &splitter_color);
+    }
+    fn paint_stroked(&mut self, ctx: &mut PaintCtx, env: &Env) {
+        let size = ctx.size();
+        //third, because we're putting the lines at roughly third points.
+        //small, because we floor, to give the extra pixel (roughly) to the middle.
+        let small_third = (self.splitter_size / 3.0).floor();
+        let (edge1, edge2) = self.get_edges(ctx);
+        let (line1, line2) = match self.split_direction {
+            Axis::Vertical => (
+                Line::new(
+                    Point::new(edge1 + small_third, 0.0),
+                    Point::new(edge1 + small_third, size.height),
+                ),
+                Line::new(
+                    Point::new(edge2 - small_third, 0.0),
+                    Point::new(edge2 - small_third, size.height),
+                ),
+            ),
+            Axis::Horizontal => (
+                Line::new(
+                    Point::new(0.0, edge1 + small_third),
+                    Point::new(size.width, edge1 + small_third),
+                ),
+                Line::new(
+                    Point::new(0.0, edge2 - small_third),
+                    Point::new(size.width, edge2 - small_third),
+                ),
+            ),
+        };
+        let splitter_color = self.get_color(env);
+        ctx.stroke(line1, &splitter_color, 1.0);
+        ctx.stroke(line2, &splitter_color, 1.0);
     }
 }
 impl<T: Data> Widget<T> for Split<T> {
@@ -156,7 +250,6 @@ impl<T: Data> Widget<T> for Split<T> {
                     if ctx.is_active() {
                         self.update_splitter(ctx.size(), mouse.pos);
                         ctx.request_layout();
-                        ctx.request_paint();
                     }
 
                     if ctx.is_hot() && self.splitter_hit_test(ctx.size(), mouse.pos)
@@ -193,6 +286,7 @@ impl<T: Data> Widget<T> for Split<T> {
         bc.debug_check("Split");
 
         let mut my_size = bc.max();
+
         let reduced_width = my_size.width - self.splitter_size;
         let reduced_height = my_size.height - self.splitter_size;
         let (child1_bc, child2_bc) = match self.split_direction {
@@ -264,55 +358,56 @@ impl<T: Data> Widget<T> for Split<T> {
         let paint_rect = self.child1.paint_rect().union(self.child2.paint_rect());
         let insets = paint_rect - Rect::ZERO.with_size(my_size);
         ctx.set_paint_insets(insets);
+
+        // Update our splits to hold our constraints if needed
+        let (min_limit, max_limit) = self.calculate_limits(my_size);
+        self.split_point = match self.split_direction {
+            Axis::Vertical => {
+                if my_size.width <= std::f64::EPSILON {
+                    0.5
+                } else {
+                    clamp(
+                        self.split_point,
+                        min_limit / my_size.width,
+                        max_limit / my_size.width,
+                    )
+                }
+            }
+            Axis::Horizontal => {
+                if my_size.height <= std::f64::EPSILON {
+                    0.5
+                } else {
+                    clamp(
+                        self.split_point,
+                        min_limit / my_size.height,
+                        max_limit / my_size.height,
+                    )
+                }
+            }
+        };
+
         my_size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let size = paint_ctx.size();
-        //third, because we're putting the lines at roughly third points.
-        //small, because we floor, to give the extra pixel (roughly) to the middle.
-        let small_third = (self.splitter_size / 3.0).floor();
-        let (line1, line2) = match self.split_direction {
-            Axis::Vertical => {
-                let reduced_width = size.width - self.splitter_size;
-                let edge1 = reduced_width * self.split_point;
-                let edge2 = edge1 + self.splitter_size;
-                (
-                    Line::new(
-                        Point::new(edge1 + small_third, 0.0),
-                        Point::new(edge1 + small_third, size.height),
-                    ),
-                    Line::new(
-                        Point::new(edge2 - small_third, 0.0),
-                        Point::new(edge2 - small_third, size.height),
-                    ),
-                )
-            }
-            Axis::Horizontal => {
-                let reduced_height = size.height - self.splitter_size;
-                let edge1 = reduced_height * self.split_point;
-                let edge2 = edge1 + self.splitter_size;
-                (
-                    Line::new(
-                        Point::new(0.0, edge1 + small_third),
-                        Point::new(size.width, edge1 + small_third),
-                    ),
-                    Line::new(
-                        Point::new(0.0, edge2 - small_third),
-                        Point::new(size.width, edge2 - small_third),
-                    ),
-                )
-            }
-        };
-        let line_color = if self.draggable {
-            env.get(theme::BORDER_LIGHT)
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        if self.solid {
+            self.paint_solid(ctx, env);
         } else {
-            env.get(theme::BORDER_DARK)
-        };
-        paint_ctx.stroke(line1, &line_color, 1.0);
-        paint_ctx.stroke(line2, &line_color, 1.0);
-
-        self.child1.paint_with_offset(paint_ctx, &data, env);
-        self.child2.paint_with_offset(paint_ctx, &data, env);
+            self.paint_stroked(ctx, env);
+        }
+        self.child1.paint_with_offset(ctx, &data, env);
+        self.child2.paint_with_offset(ctx, &data, env);
     }
+}
+
+// Move to std lib clamp as soon as https://github.com/rust-lang/rust/issues/44095 lands
+fn clamp(mut x: f64, min: f64, max: f64) -> f64 {
+    assert!(min <= max);
+    if x < min {
+        x = min;
+    }
+    if x > max {
+        x = max;
+    }
+    x
 }

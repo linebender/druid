@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use super::attr::{FieldKind, Fields};
 use quote::quote;
 use syn::{spanned::Spanned, Data};
 
@@ -34,18 +35,21 @@ pub(crate) fn derive_lens_impl(
 fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn::Error> {
     let ty = &input.ident;
 
-    let fields = if let syn::Data::Struct(syn::DataStruct {
-        fields: syn::Fields::Named(syn::FieldsNamed { ref named, .. }),
-        ..
-    }) = input.data
-    {
-        named
+    let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
+        Fields::parse_ast(fields)?
     } else {
         return Err(syn::Error::new(
             input.span(),
             "Lens implementations can only be derived from structs with named fields",
         ));
     };
+
+    if fields.kind != FieldKind::Named {
+        return Err(syn::Error::new(
+            input.span(),
+            "Lens implementations can only be derived from structs with named fields",
+        ));
+    }
 
     let twizzled_name = if is_camel_case(&ty.to_string()) {
         let temp_name = format!("{}_derived_lenses", to_snake_case(&ty.to_string()));
@@ -59,7 +63,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
 
     // Define lens types for each field
     let defs = fields.iter().map(|f| {
-        let field_name = &f.ident;
+        let field_name = &f.ident.unwrap_named();
 
         quote! {
             /// Lens for the field on #ty
@@ -70,7 +74,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     });
 
     let impls = fields.iter().map(|f| {
-        let field_name = &f.ident;
+        let field_name = &f.ident.unwrap_named();
         let field_ty = &f.ty;
 
         quote! {
@@ -87,10 +91,12 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     });
 
     let associated_items = fields.iter().map(|f| {
-        let field_name = &f.ident;
+        let field_name = &f.ident.unwrap_named();
+        let lens_field_name = f.lens_name_override.as_ref().unwrap_or(&field_name);
+
         quote! {
             /// Lens for the corresponding field
-            pub const #field_name: #twizzled_name::#field_name = #twizzled_name::#field_name;
+            pub const #lens_field_name: #twizzled_name::#field_name = #twizzled_name::#field_name;
         }
     });
 

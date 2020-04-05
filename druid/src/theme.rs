@@ -41,19 +41,23 @@ pub const CURSOR_COLOR: Key<Color> = Key::new("cursor_color");
 
 pub const FONT_NAME: Key<&str> = Key::new("font_name");
 pub const TEXT_SIZE_NORMAL: Key<f64> = Key::new("text_size_normal");
+pub const TEXT_SIZE_LARGE: Key<f64> = Key::new("text_size_large");
 pub const BASIC_WIDGET_HEIGHT: Key<f64> = Key::new("basic_widget_height");
+
+/// The default minimum width for a 'wide' widget; a textbox, slider, progress bar, etc.
+pub const WIDE_WIDGET_WIDTH: Key<f64> = Key::new("druid.widgets.long-widget-width");
 pub const BORDERED_WIDGET_HEIGHT: Key<f64> = Key::new("bordered_widget_height");
 
 pub const TEXTBOX_BORDER_RADIUS: Key<f64> = Key::new("textbox_radius");
 
-pub const SCROLL_BAR_COLOR: Key<Color> = Key::new("scroll_bar_color");
-pub const SCROLL_BAR_BORDER_COLOR: Key<Color> = Key::new("scroll_bar_border_color");
-pub const SCROLL_BAR_MAX_OPACITY: Key<f64> = Key::new("scroll_bar_max_opacity");
-pub const SCROLL_BAR_FADE_DELAY: Key<u64> = Key::new("scroll_bar_fade_time");
-pub const SCROLL_BAR_WIDTH: Key<f64> = Key::new("scroll_bar_width");
-pub const SCROLL_BAR_PAD: Key<f64> = Key::new("scroll_bar_pad");
-pub const SCROLL_BAR_RADIUS: Key<f64> = Key::new("scroll_bar_radius");
-pub const SCROLL_BAR_EDGE_WIDTH: Key<f64> = Key::new("scroll_bar_edge_width");
+pub const SCROLLBAR_COLOR: Key<Color> = Key::new("scrollbar_color");
+pub const SCROLLBAR_BORDER_COLOR: Key<Color> = Key::new("scrollbar_border_color");
+pub const SCROLLBAR_MAX_OPACITY: Key<f64> = Key::new("scrollbar_max_opacity");
+pub const SCROLLBAR_FADE_DELAY: Key<u64> = Key::new("scrollbar_fade_time");
+pub const SCROLLBAR_WIDTH: Key<f64> = Key::new("scrollbar_width");
+pub const SCROLLBAR_PAD: Key<f64> = Key::new("scrollbar_pad");
+pub const SCROLLBAR_RADIUS: Key<f64> = Key::new("scrollbar_radius");
+pub const SCROLLBAR_EDGE_WIDTH: Key<f64> = Key::new("scrollbar_edge_width");
 
 /// An initial theme.
 pub fn init() -> Env {
@@ -77,17 +81,19 @@ pub fn init() -> Env {
         .adding(SELECTION_COLOR, Color::rgb8(0xf3, 0x00, 0x21))
         .adding(CURSOR_COLOR, Color::WHITE)
         .adding(TEXT_SIZE_NORMAL, 15.0)
+        .adding(TEXT_SIZE_LARGE, 24.0)
         .adding(BASIC_WIDGET_HEIGHT, 18.0)
+        .adding(WIDE_WIDGET_WIDTH, 100.)
         .adding(BORDERED_WIDGET_HEIGHT, 24.0)
         .adding(TEXTBOX_BORDER_RADIUS, 2.)
-        .adding(SCROLL_BAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))
-        .adding(SCROLL_BAR_BORDER_COLOR, Color::rgb8(0x77, 0x77, 0x77))
-        .adding(SCROLL_BAR_MAX_OPACITY, 0.7)
-        .adding(SCROLL_BAR_FADE_DELAY, 1500u64)
-        .adding(SCROLL_BAR_WIDTH, 8.)
-        .adding(SCROLL_BAR_PAD, 2.)
-        .adding(SCROLL_BAR_RADIUS, 5.)
-        .adding(SCROLL_BAR_EDGE_WIDTH, 1.);
+        .adding(SCROLLBAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))
+        .adding(SCROLLBAR_BORDER_COLOR, Color::rgb8(0x77, 0x77, 0x77))
+        .adding(SCROLLBAR_MAX_OPACITY, 0.7)
+        .adding(SCROLLBAR_FADE_DELAY, 1500u64)
+        .adding(SCROLLBAR_WIDTH, 8.)
+        .adding(SCROLLBAR_PAD, 2.)
+        .adding(SCROLLBAR_RADIUS, 5.)
+        .adding(SCROLLBAR_EDGE_WIDTH, 1.);
 
     #[cfg(target_os = "windows")]
     {

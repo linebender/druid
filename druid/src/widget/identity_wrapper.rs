@@ -50,8 +50,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<W> {
         self.inner.layout(ctx, bc, data, env)
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.inner.paint(paint_ctx, data, env);
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.inner.paint(ctx, data, env);
     }
 
     fn id(&self) -> Option<WidgetId> {
