@@ -239,3 +239,42 @@ jobs:
         with:
           command: rustc
           args: --manifest-path=druid-shell/Cargo.toml  --features=x11 -- -D warnings
+
+  test-stable-wasm:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-latest, windows-2019, ubuntu-latest]
+
+    name: wasm build
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install deps
+        run: cargo install wasm-pack
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+          profile: minimal
+          override: true
+
+      - name: cargo clippy (wasm)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid/examples/wasm/Cargo.toml -- -D warnings
+
+      - name: wasm-pack build examples
+        uses: actions-rs/wasm-pack@v1
+        with:
+          command: build
+          args: --target web
+
+      - name: Run rustc -D warnings in druid/examples/wasm
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=druid/examples/wasm/Cargo.toml -- -D warnings
