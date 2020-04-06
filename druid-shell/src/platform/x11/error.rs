@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2020 The xi-editor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Platform specific implementations.
+//! Errors at the application shell level.
 
-cfg_if::cfg_if! {
-    if #[cfg(all(target_os = "windows", not(feature = "use_gtk")))] {
-        mod windows;
-        pub use windows::*;
-    } else if #[cfg(all(target_os = "macos", not(feature = "use_gtk")))] {
-        mod mac;
-        pub use mac::*;
-    } else if #[cfg(all(feature = "x11", target_os = "linux"))] {
-        mod x11;
-        pub use x11::*;
-    } else if #[cfg(any(feature = "use_gtk", target_os = "linux"))] {
-        mod gtk;
-        pub use self::gtk::*;
+use std::fmt;
+
+#[derive(Debug, Clone)]
+pub enum Error {
+    // TODO(x11/errors): enumerate `Error`s for X11
+    NoError,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        // TODO(x11/errors): implement Error::fmt
+        log::warn!("Error::fmt is currently unimplemented for X11 platforms.");
+        write!(f, "X11 Error")
     }
 }

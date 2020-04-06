@@ -130,7 +130,7 @@ impl<T: Data> AppLauncher<T> {
 }
 
 impl<T: Data> WindowDesc<T> {
-    /// Create a new `WindowDesc`, taking a funciton that will generate the root
+    /// Create a new `WindowDesc`, taking a function that will generate the root
     /// [`Widget`] for this window.
     ///
     /// It is possible that a `WindowDesc` can be reused to launch multiple windows.

@@ -67,6 +67,7 @@ impl WinHandler for HelloState {
         let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
         let id = self.handle.request_timer(deadline);
         println!("keydown: {:?}, timer id = {:?}", event, id);
+
         false
     }
 
@@ -133,8 +134,9 @@ fn main() {
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
-    let window = builder.build().unwrap();
 
+    let window = builder.build().unwrap();
     window.show();
+
     app.run();
 }

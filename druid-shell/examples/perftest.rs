@@ -121,5 +121,6 @@ fn main() {
 
     let window = builder.build().unwrap();
     window.show();
+
     app.run();
 }

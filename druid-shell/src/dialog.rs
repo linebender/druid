@@ -23,6 +23,7 @@ pub struct FileInfo {
 }
 
 /// Type of file dialog.
+#[cfg(not(feature = "x11"))]
 pub enum FileDialogType {
     /// File open dialog.
     Open,
