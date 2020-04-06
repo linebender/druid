@@ -113,7 +113,7 @@ impl Field {
             if attr.path.is_ident(BASE_DRUID_DEPRECATED_ATTR_PATH) {
                 panic!(
                     "The 'druid' attribute has been replaced with separate \
-                    'lens' and 'data' attributes.",
+                     'lens' and 'data' attributes.",
                 );
             } else if attr.path.is_ident(BASE_DATA_ATTR_PATH) {
                 match attr.parse_meta()? {
