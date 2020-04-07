@@ -24,22 +24,6 @@
 pub use kurbo;
 pub use piet_common as piet;
 
-#[cfg(target_os = "windows")]
-#[macro_use]
-extern crate winapi;
-
-#[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
-#[macro_use]
-extern crate objc;
-
-#[cfg(not(any(feature = "use_gtk", target_os = "linux")))]
-#[macro_use]
-extern crate lazy_static;
-
-#[cfg(all(target_os = "linux", feature = "x11"))]
-#[macro_use]
-extern crate lazy_static;
-
 mod application;
 mod clipboard;
 mod common_util;

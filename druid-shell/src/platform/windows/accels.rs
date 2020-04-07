@@ -14,6 +14,7 @@
 
 //! Wrappers for Windows of Accelerate Table.
 
+use lazy_static::lazy_static;
 use winapi::ctypes::c_int;
 use winapi::shared::windef::*;
 use winapi::um::winuser::*;

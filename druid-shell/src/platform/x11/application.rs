@@ -24,6 +24,8 @@ use crate::application::AppHandler;
 use crate::kurbo::Point;
 use crate::{KeyCode, KeyModifiers, MouseButton, MouseEvent};
 
+use lazy_static::lazy_static;
+
 struct XcbConnection {
     connection: Arc<xcb::Connection>,
     screen_num: i32,

@@ -20,6 +20,7 @@ use std::ffi::OsString;
 
 use cocoa::base::{id, nil, YES};
 use cocoa::foundation::{NSArray, NSInteger};
+use objc::{class, msg_send, sel, sel_impl};
 
 use super::util::{from_nsstring, make_nsstring};
 use crate::dialog::{FileDialogOptions, FileDialogType};

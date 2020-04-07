@@ -25,8 +25,10 @@ use crate::application::AppHandler;
 use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicyRegular};
 use cocoa::base::{id, nil, YES};
 use cocoa::foundation::NSAutoreleasePool;
+use lazy_static::lazy_static;
 use objc::declare::ClassDecl;
 use objc::runtime::{Class, Object, Sel};
+use objc::{class, msg_send, sel, sel_impl};
 
 static APP_HANDLER_IVAR: &str = "druidAppHandler";
 

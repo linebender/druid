@@ -23,6 +23,7 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::ptr;
 use std::slice;
 
+use lazy_static::lazy_static;
 use winapi::ctypes::c_void;
 use winapi::shared::guiddef::REFIID;
 use winapi::shared::minwindef::{HMODULE, UINT};
