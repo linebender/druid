@@ -201,7 +201,7 @@ jobs:
     runs-on: ubuntu-latest
     name: cargo test stable (x11)
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: install deps
         run: |
