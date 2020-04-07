@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, Flex, Label, TextBox};
+use druid::widget::{Align, EditableLabel, Flex, Label, TextBox};
 use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
@@ -22,6 +22,7 @@ const WINDOW_TITLE: LocalizedString<HelloState> = LocalizedString::new("Hello Wo
 #[derive(Clone, Data, Lens)]
 struct HelloState {
     name: String,
+    size: f64,
 }
 
 fn main() {
@@ -33,6 +34,7 @@ fn main() {
     // create the initial app state
     let initial_state = HelloState {
         name: "World".into(),
+        size: 42.,
     };
 
     // start the application
@@ -43,16 +45,21 @@ fn main() {
 
 fn build_root_widget() -> impl Widget<HelloState> {
     // a label that will determine its text based on the current app data.
-    let label = Label::new(|data: &HelloState, _env: &Env| format!("Hello {}!", data.name));
+    let label =
+        Label::new(|data: &HelloState, _env: &Env| format!("Hello {} #{}!", data.name, data.size));
     // a textbox that modifies `name`.
     let textbox = TextBox::new()
         .with_placeholder("Who are we greeting?")
         .fix_width(TEXT_BOX_WIDTH)
         .lens(HelloState::name);
 
+    let edit_label = EditableLabel::parse().lens(HelloState::size);
+
     // arrange the two widgets vertically, with some padding
     let layout = Flex::column()
         .with_child(label)
+        .with_spacer(VERTICAL_WIDGET_SPACING)
+        .with_child(edit_label)
         .with_spacer(VERTICAL_WIDGET_SPACING)
         .with_child(textbox);
 

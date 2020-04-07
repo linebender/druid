@@ -51,6 +51,9 @@ pub struct TextBox {
 }
 
 impl TextBox {
+    /// Perform an `EditAction`. The payload *must* be an `EditAction`.
+    pub const PERFORM_EDIT: Selector = Selector::new("druid-builtin.textbox.perform-edit");
+
     /// Create a new TextBox widget
     pub fn new() -> TextBox {
         Self {
@@ -237,7 +240,9 @@ impl Widget<String> for TextBox {
 
         match event {
             Event::MouseDown(mouse) => {
-                ctx.request_focus();
+                if !ctx.has_focus() {
+                    ctx.request_focus();
+                }
                 ctx.set_active(true);
 
                 let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
@@ -289,6 +294,12 @@ impl Widget<String> for TextBox {
                 ctx.set_handled();
             }
             Event::Command(cmd) if cmd.selector == RESET_BLINK => self.reset_cursor_blink(ctx),
+            Event::Command(cmd) if cmd.selector == TextBox::PERFORM_EDIT => {
+                let edit = cmd
+                    .get_object::<EditAction>()
+                    .expect("PERFORM_EDIT contained non-edit payload");
+                self.do_edit_action(edit.to_owned(), data);
+            }
             Event::Paste(ref item) => {
                 if let Some(string) = item.get_string() {
                     edit_action = Some(EditAction::Paste(string));
