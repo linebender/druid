@@ -22,6 +22,10 @@
 
 #![allow(non_upper_case_globals)]
 
+use std::convert::TryInto;
+use std::ffi::OsString;
+use std::ptr::null_mut;
+
 use winapi::shared::minwindef::*;
 use winapi::shared::ntdef::LPWSTR;
 use winapi::shared::windef::*;
@@ -36,10 +40,6 @@ use wio::com::ComPtr;
 use super::error::Error;
 use super::util::{as_result, FromWide, ToWide};
 use crate::dialog::{FileDialogOptions, FileDialogType, FileSpec};
-use std::ffi::OsString;
-use std::ptr::null_mut;
-
-use std::convert::TryInto;
 
 // TODO: remove these when they get added to winapi
 DEFINE_GUID! {CLSID_FileOpenDialog,

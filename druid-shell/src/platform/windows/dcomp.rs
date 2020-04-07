@@ -21,6 +21,9 @@
 use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::ptr::{null, null_mut};
+
+use log::error;
+
 use winapi::shared::dxgi::IDXGIDevice;
 use winapi::shared::dxgi1_2::DXGI_ALPHA_MODE_IGNORE;
 use winapi::shared::dxgiformat::DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -37,8 +40,6 @@ use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winnt::HRESULT;
 use winapi::Interface;
 use wio::com::ComPtr;
-
-use log::error;
 
 use super::util::OPTIONAL_FUNCTIONS;
 

@@ -14,8 +14,9 @@
 
 //! Keyboard event types and helpers
 
-use super::keycodes::KeyCode;
 use std::fmt;
+
+use super::keycodes::KeyCode;
 
 /// A keyboard event, generated on every key press and key release.
 #[derive(Debug, Clone, Copy)]

@@ -14,13 +14,13 @@
 
 //! Wrappers for Windows of Accelerate Table.
 
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
 use lazy_static::lazy_static;
 use winapi::ctypes::c_int;
 use winapi::shared::windef::*;
 use winapi::um::winuser::*;
-
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 // NOTE:
 // https://docs.microsoft.com/en-us/windows/win32/wsw/thread-safety
