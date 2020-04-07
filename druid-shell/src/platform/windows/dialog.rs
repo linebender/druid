@@ -31,6 +31,7 @@ use winapi::um::shobjidl::*;
 use winapi::um::shobjidl_core::*;
 use winapi::um::shtypes::COMDLG_FILTERSPEC;
 use winapi::Interface;
+use winapi::DEFINE_GUID;
 use wio::com::ComPtr;
 
 use super::error::Error;
