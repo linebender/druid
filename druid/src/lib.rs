@@ -127,7 +127,7 @@ mod menu;
 mod mouse;
 #[cfg(test)]
 mod tests;
-mod text;
+pub mod text;
 pub mod theme;
 pub mod widget;
 mod win_handler;
