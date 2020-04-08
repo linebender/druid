@@ -83,7 +83,7 @@ fn make_ui() -> impl Widget<AppState> {
                     ),
             ),
             4 => Box::new(
-                Split::vertical(
+                Split::columns(
                     Label::new("Left split").center(),
                     Label::new("Right split").center(),
                 )
