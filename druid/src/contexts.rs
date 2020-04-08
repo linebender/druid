@@ -238,7 +238,7 @@ impl<'a> EventCtx<'a> {
         self.is_handled
     }
 
-    /// The focus status of a widget.
+    /// The (tree) focus status of a widget.
     ///
     /// Focus means that the widget receives keyboard events.
     ///
@@ -251,20 +251,21 @@ impl<'a> EventCtx<'a> {
     /// hierarchy, all ancestors of that leaf widget are also invoked with
     /// `FocusChanged(true)`.
     ///
-    /// Discussion question: is "is_focused" a better name?
+    /// Discussion question: is "may_have_focus" a better name?
     ///
     /// [`request_focus`]: struct.EventCtx.html#method.request_focus
     pub fn has_focus(&self) -> bool {
+        // The bloom filter we're checking can return false positives.
         let is_child = self
             .focus_widget
-            .map(|id| self.base_state.children.contains(&id))
+            .map(|id| self.base_state.children.may_contain(&id))
             .unwrap_or(false);
         is_child || self.focus_widget == Some(self.widget_id())
     }
 
-    /// The (leaf) focus status of a widget. See [`has_focus`].
+    /// The (leaf) focus status of a widget.
     ///
-    /// [`has_focus`]: struct.EventCtx.html#method.has_focus
+    /// See [`has_focus`](struct.EventCtx.html#method.has_focus).
     pub fn is_focused(&self) -> bool {
         self.focus_widget == Some(self.widget_id())
     }
@@ -282,7 +283,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// This should only be called by a widget that currently has focus.
     pub fn focus_next(&mut self) {
-        if self.focus_widget == Some(self.widget_id()) {
+        if self.is_focused() {
             self.base_state.request_focus = Some(FocusChange::Next);
         } else {
             log::warn!("focus_next can only be called by the currently focused widget");
@@ -293,7 +294,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// This should only be called by a widget that currently has focus.
     pub fn focus_prev(&mut self) {
-        if self.focus_widget == Some(self.widget_id()) {
+        if self.is_focused() {
             self.base_state.request_focus = Some(FocusChange::Previous);
         } else {
             log::warn!("focus_prev can only be called by the currently focused widget");
@@ -304,7 +305,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// This should only be called by a widget that currently has focus.
     pub fn resign_focus(&mut self) {
-        if self.focus_widget == Some(self.widget_id()) {
+        if self.is_focused() {
             self.base_state.request_focus = Some(FocusChange::Resign);
         } else {
             log::warn!("resign_focus can only be called by the currently focused widget");
@@ -414,6 +415,8 @@ impl<'a> LifeCycleCtx<'a> {
     }
 
     /// Register this widget to be eligile to accept focus automatically.
+    ///
+    /// This should only be called in response to a `LifeCycle::WidgetAdded` event.
     pub fn register_for_focus(&mut self) {
         self.base_state.focus_chain.push(self.widget_id());
     }
@@ -557,22 +560,23 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
         self.base_state.size()
     }
 
-    /// Query the focus state of the widget.
-    ///
-    /// This is true only if this widget has focus.
-    pub fn is_focused(&self) -> bool {
-        self.focus_widget == Some(self.widget_id())
-    }
-
-    /// The focus status of a widget.
+    /// The (tree) focus status of a widget.
     ///
     /// See [`has_focus`](struct.EventCtx.html#method.has_focus).
     pub fn has_focus(&self) -> bool {
+        // The bloom filter we're checking can return false positives.
         let is_child = self
             .focus_widget
-            .map(|id| self.base_state.children.contains(&id))
+            .map(|id| self.base_state.children.may_contain(&id))
             .unwrap_or(false);
         is_child || self.focus_widget == Some(self.widget_id())
+    }
+
+    /// The (leaf) focus status of a widget.
+    ///
+    /// See [`has_focus`](struct.EventCtx.html#method.has_focus).
+    pub fn is_focused(&self) -> bool {
+        self.focus_widget == Some(self.widget_id())
     }
 
     /// Returns the currently visible [`Region`].

@@ -71,10 +71,12 @@ impl<T: ?Sized + Hash> Bloom<T> {
         self.entry_count += 1;
     }
 
-    /// Return whether an item exists in the filter.
+    /// Returns `true` if the item may have been added to the filter.
     ///
     /// This can return false positives, but never false negatives.
-    pub fn contains(&self, item: &T) -> bool {
+    /// Thus `true` means that the item may have been added - or not,
+    /// while `false` means that the item has definitely not been added.
+    pub fn may_contain(&self, item: &T) -> bool {
         let mask = self.make_bit_mask(item);
         self.bits & mask == mask
     }
@@ -134,11 +136,11 @@ mod tests {
         let mut bloom = Bloom::default();
         for i in 0..100 {
             bloom.add(&i);
-            assert!(bloom.contains(&i));
+            assert!(bloom.may_contain(&i));
         }
         bloom.clear();
         for i in 0..100 {
-            assert!(!bloom.contains(&i));
+            assert!(!bloom.may_contain(&i));
         }
     }
 
@@ -147,18 +149,18 @@ mod tests {
         let mut bloom1 = Bloom::default();
         bloom1.add(&0);
         bloom1.add(&1);
-        assert!(!bloom1.contains(&2));
-        assert!(!bloom1.contains(&3));
+        assert!(!bloom1.may_contain(&2));
+        assert!(!bloom1.may_contain(&3));
         let mut bloom2 = Bloom::default();
         bloom2.add(&2);
         bloom2.add(&3);
-        assert!(!bloom2.contains(&0));
-        assert!(!bloom2.contains(&1));
+        assert!(!bloom2.may_contain(&0));
+        assert!(!bloom2.may_contain(&1));
 
         let bloom3 = bloom1.union(bloom2);
-        assert!(bloom3.contains(&0));
-        assert!(bloom3.contains(&1));
-        assert!(bloom3.contains(&2));
-        assert!(bloom3.contains(&3));
+        assert!(bloom3.may_contain(&0));
+        assert!(bloom3.may_contain(&1));
+        assert!(bloom3.may_contain(&2));
+        assert!(bloom3.may_contain(&3));
     }
 }
