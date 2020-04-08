@@ -23,7 +23,7 @@ fn simple_layout() {
 
     let id_1 = WidgetId::next();
 
-    let widget = Split::horizontal(Label::new("hi"), Label::new("there"))
+    let widget = Split::columns(Label::new("hi"), Label::new("there"))
         .fix_size(BOX_WIDTH, BOX_WIDTH)
         .padding(10.0)
         .with_id(id_1)

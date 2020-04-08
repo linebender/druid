@@ -37,6 +37,9 @@ pub struct Split<T> {
 
 impl<T> Split<T> {
     /// Create a new split panel, with the specified axis being split in two.
+    ///
+    /// Horizontal split axis means that the children are left and right.
+    /// Vertical split axis means that the children are up and down.
     fn new(
         split_axis: Axis,
         child1: impl Widget<T> + 'static,
@@ -58,13 +61,13 @@ impl<T> Split<T> {
 
     /// Create a new split panel, with the horizontal axis split in two by a vertical bar.
     /// The children are laid out left and right.
-    pub fn horizontal(child1: impl Widget<T> + 'static, child2: impl Widget<T> + 'static) -> Self {
+    pub fn columns(child1: impl Widget<T> + 'static, child2: impl Widget<T> + 'static) -> Self {
         Self::new(Axis::Horizontal, child1, child2)
     }
 
     /// Create a new split panel, with the vertical axis split in two by a horizontal bar.
     /// The children are laid out up and down.
-    pub fn vertical(child1: impl Widget<T> + 'static, child2: impl Widget<T> + 'static) -> Self {
+    pub fn rows(child1: impl Widget<T> + 'static, child2: impl Widget<T> + 'static) -> Self {
         Self::new(Axis::Vertical, child1, child2)
     }
 
