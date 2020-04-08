@@ -18,6 +18,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use lazy_static::lazy_static;
+
 use super::clipboard::Clipboard;
 use super::window::XWindow;
 use crate::application::AppHandler;

@@ -18,6 +18,7 @@ use std::ffi::c_void;
 
 use cocoa::base::{id, nil, BOOL, YES};
 use cocoa::foundation::{NSAutoreleasePool, NSString, NSUInteger};
+use objc::{class, msg_send, sel, sel_impl};
 
 /// Panic if not on the main thread.assert_main_thread()
 ///

@@ -17,6 +17,7 @@
 use cocoa::appkit::{NSEventModifierFlags, NSMenu, NSMenuItem};
 use cocoa::base::{id, nil, NO};
 use cocoa::foundation::NSAutoreleasePool;
+use objc::{msg_send, sel, sel_impl};
 
 use super::util::make_nsstring;
 use crate::common_util::strip_access_key;

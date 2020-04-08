@@ -16,9 +16,9 @@
 
 use std::ffi::OsString;
 
-use crate::dialog::{FileDialogOptions, FileDialogType};
 use gtk::{FileChooserAction, FileChooserExt, NativeDialogExt, ResponseType, Window};
 
+use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::Error;
 
 pub(crate) fn get_file_dialog_path(
