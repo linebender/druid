@@ -23,7 +23,7 @@ use crate::kurbo::{Affine, Insets, Rect, Shape, Size};
 use crate::piet::RenderContext;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Target, UpdateCtx, Widget, WidgetId,
+    PaintCtx, Target, UpdateCtx, Widget, WidgetId, WidgetPath,
 };
 
 /// Our queue type
@@ -95,19 +95,19 @@ pub(crate) struct BaseState {
     /// likely not worth the complexity.
     pub(crate) request_timer: bool,
 
-    pub(crate) focus_chain: Vec<WidgetId>,
+    pub(crate) focus_chain: Vec<WidgetPath>,
     pub(crate) request_focus: Option<FocusChange>,
     pub(crate) children: Bloom<WidgetId>,
     pub(crate) children_changed: bool,
 }
 
 /// Methods by which a widget can attempt to change focus state.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(crate) enum FocusChange {
     /// The focused widget is giving up focus.
     Resign,
     /// A specific widget wants focus
-    Focus(WidgetId),
+    Focus(WidgetPath),
     /// Focus should pass to the next focusable widget
     Next,
     /// Focus should pass to the previous focusable widget
@@ -167,6 +167,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     }
 
     /// Get the identity of the widget.
+    #[inline]
     pub fn id(&self) -> WidgetId {
         self.state.id
     }
@@ -259,7 +260,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             z_ops: Vec::new(),
             region: ctx.region.clone(),
             base_state: &self.state,
-            focus_widget: ctx.focus_widget,
+            focus_path: ctx.focus_path,
         };
         self.inner.paint(&mut inner_ctx, data, &env);
         ctx.z_ops.append(&mut inner_ctx.z_ops);
@@ -369,13 +370,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut child_ctx = EventCtx {
             cursor: ctx.cursor,
             command_queue: ctx.command_queue,
-            window: &ctx.window,
+            window: ctx.window,
             window_id: ctx.window_id,
             base_state: &mut self.state,
             had_active,
             is_handled: false,
             is_root: false,
-            focus_widget: ctx.focus_widget,
+            focus_path: ctx.focus_path,
         };
         let rect = child_ctx.base_state.layout_rect;
         // Note: could also represent this as `Option<Event>`.
@@ -446,7 +447,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Target::Window(_) => Event::Command(cmd.clone()),
                 Target::Widget(id) if *id == child_ctx.widget_id() => Event::Command(cmd.clone()),
                 Target::Widget(id) => {
-                    recurse = child_ctx.base_state.children.contains(id);
+                    // Recurse when the target widget could be our descendant.
+                    // The bloom filter we're checking can return false positives.
+                    recurse = child_ctx.base_state.children.may_contain(id);
                     Event::TargetedCommand(*target, cmd.clone())
                 }
                 Target::Global => panic!("Target::Global should be converted before WidgetPod"),
@@ -496,7 +499,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         self.state.children.clear();
                         self.state.focus_chain.clear();
                     }
-
                     self.state.children_changed
                 }
             }
@@ -504,12 +506,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             LifeCycle::RouteFocusChanged { old, new } => {
                 self.state.request_focus = None;
 
-                let this_changed = if *old == Some(self.state.id) {
-                    Some(false)
-                } else if *new == Some(self.state.id) {
-                    Some(true)
-                } else {
-                    None
+                let this_changed = match (old, new) {
+                    (Some(old), _) if old.has_target(self.state.id) => Some(false),
+                    (_, Some(new)) if new.has_target(self.state.id) => Some(true),
+                    _ => None,
                 };
 
                 if let Some(change) = this_changed {
@@ -517,9 +517,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     self.inner.lifecycle(ctx, &event, data, env);
                     false
                 } else {
-                    old.map(|id| self.state.children.contains(&id))
-                        .or_else(|| new.map(|id| self.state.children.contains(&id)))
-                        .unwrap_or(false)
+                    match (old, new) {
+                        (Some(old), _) if old.contains(self.state.id) => true,
+                        (_, Some(new)) if new.contains(self.state.id) => true,
+                        _ => false,
+                    }
                 }
             }
             LifeCycle::FocusChanged(_) => {
@@ -532,7 +534,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     state_cell.set(self.state.clone());
                     false
                 } else {
-                    self.state.children.contains(&widget)
+                    // Recurse when the target widget could be our descendant.
+                    // The bloom filter we're checking can return false positives.
+                    self.state.children.may_contain(&widget)
                 }
             }
             #[cfg(test)]
@@ -542,13 +546,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
         };
 
-        let mut child_ctx = LifeCycleCtx {
-            command_queue: ctx.command_queue,
-            base_state: &mut self.state,
-            window_id: ctx.window_id,
-        };
-
         if recurse {
+            let mut child_ctx = LifeCycleCtx {
+                command_queue: ctx.command_queue,
+                base_state: &mut self.state,
+                window_id: ctx.window_id,
+            };
             self.inner.lifecycle(&mut child_ctx, event, data, env);
         }
 
@@ -559,7 +562,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             LifeCycle::WidgetAdded | LifeCycle::RouteWidgetAdded => {
                 self.state.children_changed = false;
                 ctx.base_state.children = ctx.base_state.children.union(self.state.children);
-                ctx.base_state.focus_chain.extend(&self.state.focus_chain);
+                ctx.base_state.focus_chain.extend(
+                    self.state
+                        .focus_chain
+                        .iter()
+                        .map(|path| path.with_parent(self.id())),
+                );
                 ctx.register_child(self.id());
             }
             _ => (),
@@ -637,7 +645,15 @@ impl BaseState {
         self.request_timer |= child_state.request_timer;
         self.has_active |= child_state.has_active;
         self.children_changed |= child_state.children_changed;
-        self.request_focus = self.request_focus.or(child_state.request_focus);
+        if self.request_focus.is_none() {
+            self.request_focus = match &child_state.request_focus {
+                Some(FocusChange::Focus(path)) => {
+                    Some(FocusChange::Focus(path.with_parent(self.id)))
+                }
+                Some(v) => Some(v.clone()),
+                None => None,
+            };
+        }
     }
 
     #[inline]
@@ -691,9 +707,9 @@ mod tests {
         let env = Env::default();
 
         widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &None, &env);
-        assert!(ctx.base_state.children.contains(&ID_1));
-        assert!(ctx.base_state.children.contains(&ID_2));
-        assert!(ctx.base_state.children.contains(&ID_3));
+        assert!(ctx.base_state.children.may_contain(&ID_1));
+        assert!(ctx.base_state.children.may_contain(&ID_2));
+        assert!(ctx.base_state.children.may_contain(&ID_3));
         assert_eq!(ctx.base_state.children.entry_count(), 7);
     }
 }

@@ -161,13 +161,13 @@ fn take_focus() {
 
         // this is sent to all widgets; the first widget to request focus should get it
         harness.submit_command(TAKE_FOCUS, None);
-        assert_eq!(harness.window().focus, Some(id_1));
+        assert_eq!(harness.window().focus_path.as_ref().unwrap().target(), id_1);
         assert_eq!(left_focus.get(), Some(true));
         assert_eq!(right_focus.get(), None);
 
         // this is sent to a specific widget; it should get focus
         harness.submit_command(TAKE_FOCUS, id_2);
-        assert_eq!(harness.window().focus, Some(id_2));
+        assert_eq!(harness.window().focus_path.as_ref().unwrap().target(), id_2);
         assert_eq!(left_focus.get(), Some(false));
         assert_eq!(right_focus.get(), Some(true));
     })
@@ -243,16 +243,27 @@ fn participate_in_autofocus() {
 
         harness.send_initial_events();
         // verify that we start out with four widgets registered for focus
-        assert_eq!(harness.window().focus_chain(), &[id_1, id_2, id_3, id_4]);
+        for (path, id) in harness
+            .window()
+            .focus_chain()
+            .iter()
+            .zip(&[id_1, id_2, id_3, id_4])
+        {
+            assert_eq!(path.target(), *id);
+        }
 
         // tell the replacer widget to swap its children
         harness.submit_command(REPLACE_CHILD, None);
 
         // verify that the two new children are registered for focus.
-        assert_eq!(
-            harness.window().focus_chain(),
-            &[id_1, id_2, id_3, id_5, id_6]
-        );
+        for (path, id) in harness
+            .window()
+            .focus_chain()
+            .iter()
+            .zip(&[id_1, id_2, id_3, id_5, id_6])
+        {
+            assert_eq!(path.target(), *id);
+        }
 
         // verify that no widgets still report that their children changed:
         harness.inspect_state(|state| assert!(!state.children_changed))
@@ -275,13 +286,13 @@ fn child_tracking() {
         harness.send_initial_events();
         let root = harness.get_state(id_4);
         assert_eq!(root.children.entry_count(), 3);
-        assert!(root.children.contains(&id_1));
-        assert!(root.children.contains(&id_2));
-        assert!(root.children.contains(&id_3));
+        assert!(root.children.may_contain(&id_1));
+        assert!(root.children.may_contain(&id_2));
+        assert!(root.children.may_contain(&id_3));
 
         let split = harness.get_state(id_3);
-        assert!(split.children.contains(&id_1));
-        assert!(split.children.contains(&id_2));
+        assert!(split.children.may_contain(&id_1));
+        assert!(split.children.may_contain(&id_2));
         assert_eq!(split.children.entry_count(), 2);
     });
 }
@@ -302,18 +313,18 @@ fn register_after_adding_child() {
     Harness::create(String::new(), widget, |harness| {
         harness.send_initial_events();
 
-        assert!(harness.get_state(id_5).children.contains(&id_6));
-        assert!(harness.get_state(id_5).children.contains(&id_1));
-        assert!(harness.get_state(id_5).children.contains(&id_4));
+        assert!(harness.get_state(id_5).children.may_contain(&id_6));
+        assert!(harness.get_state(id_5).children.may_contain(&id_1));
+        assert!(harness.get_state(id_5).children.may_contain(&id_4));
         assert_eq!(harness.get_state(id_5).children.entry_count(), 3);
 
         harness.submit_command(REPLACE_CHILD, None);
 
-        assert!(harness.get_state(id_5).children.contains(&id_6));
-        assert!(harness.get_state(id_5).children.contains(&id_4));
-        assert!(harness.get_state(id_5).children.contains(&id_7));
-        assert!(harness.get_state(id_5).children.contains(&id_2));
-        assert!(harness.get_state(id_5).children.contains(&id_3));
+        assert!(harness.get_state(id_5).children.may_contain(&id_6));
+        assert!(harness.get_state(id_5).children.may_contain(&id_4));
+        assert!(harness.get_state(id_5).children.may_contain(&id_7));
+        assert!(harness.get_state(id_5).children.may_contain(&id_2));
+        assert!(harness.get_state(id_5).children.may_contain(&id_3));
         assert_eq!(harness.get_state(id_5).children.entry_count(), 5);
     })
 }

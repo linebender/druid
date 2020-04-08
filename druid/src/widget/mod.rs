@@ -83,7 +83,7 @@ pub use switch::Switch;
 pub use textbox::TextBox;
 pub use view_switcher::ViewSwitcher;
 #[doc(hidden)]
-pub use widget::{Widget, WidgetId};
+pub use widget::{Widget, WidgetId, WidgetPath};
 #[doc(hidden)]
 pub use widget_ext::WidgetExt;
 

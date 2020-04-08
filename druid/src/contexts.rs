@@ -23,8 +23,8 @@ use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::{
-    Affine, Command, Cursor, Insets, Rect, Size, Target, Text, TimerToken, WidgetId, WindowHandle,
-    WindowId,
+    Affine, Command, Cursor, Insets, Rect, Size, Target, Text, TimerToken, WidgetId, WidgetPath,
+    WindowHandle, WindowId,
 };
 
 /// A mutable context provided to event handling methods of widgets.
@@ -42,7 +42,7 @@ pub struct EventCtx<'a> {
     pub(crate) window_id: WindowId,
     pub(crate) window: &'a WindowHandle,
     pub(crate) base_state: &'a mut BaseState,
-    pub(crate) focus_widget: Option<WidgetId>,
+    pub(crate) focus_path: Option<&'a WidgetPath>,
     pub(crate) had_active: bool,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
@@ -113,7 +113,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
     /// The currently visible region.
     pub(crate) region: Region,
     pub(crate) base_state: &'a BaseState,
-    pub(crate) focus_widget: Option<WidgetId>,
+    pub(crate) focus_path: Option<&'a WidgetPath>,
 }
 
 /// A region of a widget, generally used to describe what needs to be drawn.
@@ -238,7 +238,7 @@ impl<'a> EventCtx<'a> {
         self.is_handled
     }
 
-    /// The focus status of a widget.
+    /// The (tree) focus status of a widget.
     ///
     /// Focus means that the widget receives keyboard events.
     ///
@@ -251,22 +251,22 @@ impl<'a> EventCtx<'a> {
     /// hierarchy, all ancestors of that leaf widget are also invoked with
     /// `FocusChanged(true)`.
     ///
-    /// Discussion question: is "is_focused" a better name?
+    /// Discussion question: is "in_focused_path" a better name?
     ///
     /// [`request_focus`]: struct.EventCtx.html#method.request_focus
     pub fn has_focus(&self) -> bool {
-        let is_child = self
-            .focus_widget
-            .map(|id| self.base_state.children.contains(&id))
-            .unwrap_or(false);
-        is_child || self.focus_widget == Some(self.widget_id())
+        self.focus_path
+            .map(|path| path.contains(self.widget_id()))
+            .unwrap_or(false)
     }
 
-    /// The (leaf) focus status of a widget. See [`has_focus`].
+    /// The (leaf) focus status of a widget.
     ///
-    /// [`has_focus`]: struct.EventCtx.html#method.has_focus
+    /// See [`has_focus`](struct.EventCtx.html#method.has_focus).
     pub fn is_focused(&self) -> bool {
-        self.focus_widget == Some(self.widget_id())
+        self.focus_path
+            .map(|path| path.has_target(self.widget_id()))
+            .unwrap_or(false)
     }
 
     /// Request keyboard focus.
@@ -275,14 +275,15 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`has_focus`]: struct.EventCtx.html#method.has_focus
     pub fn request_focus(&mut self) {
-        self.base_state.request_focus = Some(FocusChange::Focus(self.widget_id()));
+        let path = WidgetPath::new(self.widget_id());
+        self.base_state.request_focus = Some(FocusChange::Focus(path));
     }
 
     /// Transfer focus to the next focusable widget.
     ///
     /// This should only be called by a widget that currently has focus.
     pub fn focus_next(&mut self) {
-        if self.focus_widget == Some(self.widget_id()) {
+        if self.is_focused() {
             self.base_state.request_focus = Some(FocusChange::Next);
         } else {
             log::warn!("focus_next can only be called by the currently focused widget");
@@ -293,7 +294,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// This should only be called by a widget that currently has focus.
     pub fn focus_prev(&mut self) {
-        if self.focus_widget == Some(self.widget_id()) {
+        if self.is_focused() {
             self.base_state.request_focus = Some(FocusChange::Previous);
         } else {
             log::warn!("focus_prev can only be called by the currently focused widget");
@@ -304,7 +305,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// This should only be called by a widget that currently has focus.
     pub fn resign_focus(&mut self) {
-        if self.focus_widget == Some(self.widget_id()) {
+        if self.is_focused() {
             self.base_state.request_focus = Some(FocusChange::Resign);
         } else {
             log::warn!("resign_focus can only be called by the currently focused widget");
@@ -414,8 +415,11 @@ impl<'a> LifeCycleCtx<'a> {
     }
 
     /// Register this widget to be eligile to accept focus automatically.
+    ///
+    /// This should only be called in response to a `LifeCycle::WidgetAdded` event.
     pub fn register_for_focus(&mut self) {
-        self.base_state.focus_chain.push(self.widget_id());
+        let path = WidgetPath::new(self.widget_id());
+        self.base_state.focus_chain.push(path);
     }
 
     /// Indicate that your children have changed.
@@ -557,22 +561,24 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
         self.base_state.size()
     }
 
-    /// Query the focus state of the widget.
-    ///
-    /// This is true only if this widget has focus.
-    pub fn is_focused(&self) -> bool {
-        self.focus_widget == Some(self.widget_id())
-    }
-
-    /// The focus status of a widget.
+    /// The (tree) focus status of a widget.
     ///
     /// See [`has_focus`](struct.EventCtx.html#method.has_focus).
     pub fn has_focus(&self) -> bool {
-        let is_child = self
-            .focus_widget
-            .map(|id| self.base_state.children.contains(&id))
-            .unwrap_or(false);
-        is_child || self.focus_widget == Some(self.widget_id())
+        self.focus_path
+            .as_ref()
+            .map(|path| path.contains(self.widget_id()))
+            .unwrap_or(false)
+    }
+
+    /// The (leaf) focus status of a widget.
+    ///
+    /// See [`has_focus`](struct.EventCtx.html#method.has_focus).
+    pub fn is_focused(&self) -> bool {
+        self.focus_path
+            .as_ref()
+            .map(|path| path.has_target(self.widget_id()))
+            .unwrap_or(false)
     }
 
     /// Returns the currently visible [`Region`].
@@ -594,7 +600,7 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
             base_state: self.base_state,
             z_ops: Vec::new(),
             window_id: self.window_id,
-            focus_widget: self.focus_widget,
+            focus_path: self.focus_path,
             region: region.into(),
         };
         f(&mut child_ctx);

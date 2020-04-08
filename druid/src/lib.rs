@@ -157,7 +157,7 @@ pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
-pub use widget::{Widget, WidgetExt, WidgetId};
+pub use widget::{Widget, WidgetExt, WidgetId, WidgetPath};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
 

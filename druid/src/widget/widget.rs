@@ -17,7 +17,7 @@ use std::ops::{Deref, DerefMut};
 
 use super::prelude::*;
 
-/// A unique identifier for a single [`Widget`].
+/// A unique identifier for a chain of [`Widget`]s.
 ///
 /// `WidgetId`s are generated automatically for all widgets that participate
 /// in layout. More specifically, each [`WidgetPod`] has a unique `WidgetId`.
@@ -29,6 +29,14 @@ use super::prelude::*;
 /// A widget can retrieve its id via methods on the various contexts, such as
 /// [`LifeCycleCtx::widget_id`].
 ///
+/// The `WidgetId` does not necessarily identify only a single [`Widget`] in the
+/// strictest sense. Container widgets (e.g. [`WidgetPod`]) can use the same `WidgetId`
+/// as their children and they will be treated as one for the purpose of events.
+///
+/// The `WidgetId` sharing is only valid for an unbroken chain of widgets.
+/// Only the direct parent of a child can use its child's `WidgetId`.
+/// It is invalid to share a `WidgetId` with a widget in any other spot in the hierarchy.
+///
 /// ## Explicit `WidgetId`s.
 ///
 /// Sometimes, you may want to know a widget's id when constructing the widget.
@@ -36,8 +44,8 @@ use super::prelude::*;
 /// widget, or by using the [`WidgetExt::with_id`] convenience method.
 ///
 /// If you set a `WidgetId` directly, you are resposible for ensuring that it
-/// is unique in time. That is: only one widget can exist with a given id at a
-/// given time.
+/// is unique in time. That is: only one widget chain can exist with a given id
+/// at a given time.
 ///
 /// [`Widget`]: trait.Widget.html
 /// [`EventCtx::submit_command`]: struct.EventCtx.html#method.submit_command
@@ -49,6 +57,21 @@ use super::prelude::*;
 // this is NonZeroU64 because we regularly store Option<WidgetId>
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct WidgetId(NonZeroU64);
+
+/// A path through the widget tree to a target [`Widget`].
+///
+/// A path consists of exactly one target [`WidgetId`] and zero or more
+/// ancestor [`WidgetId`]s that must be traveresed to reach the target.
+///
+/// These paths are used internally to route events when an event must
+/// be guaranteed to take a certain path.
+///
+/// A `WidgetPath` is guaranteed to never be empty and have at least the target.
+///
+/// [`Widget`]: trait.Widget.html
+/// [`WidgetId`]: struct.WidgetId.html
+#[derive(Hash, PartialEq, Eq)]
+pub struct WidgetPath(Vec<WidgetId>);
 
 /// The trait implemented by all widgets.
 ///
@@ -217,6 +240,117 @@ impl WidgetId {
     }
 }
 
+impl WidgetPath {
+    /// Create a new `WidgetPath`.
+    ///
+    /// The provided `target` will be the only node and also the target.
+    ///
+    /// To add ancestors use the [`with_parent`] builder method to create a new path.
+    ///
+    /// To change the target use the [`with_child`] builder method to create a new path.
+    ///
+    /// [`with_parent`]: #method.with_parent
+    /// [`with_child`]: #method.with_child
+    pub fn new(target: WidgetId) -> Self {
+        Self(vec![target])
+    }
+
+    /// Add a new `parent` and return the new `WidgetPath`.
+    ///
+    /// Repeated calls with the same [`WidgetId`] will still return
+    /// a new `WidgetPath` but it will be equal in value to the current one.
+    ///
+    /// [`WidgetId`]: struct.WidgetId.html
+    #[allow(unsafe_code)]
+    pub fn with_parent(&self, parent: WidgetId) -> Self {
+        if self.0.first() == Some(&parent) {
+            self.clone()
+        } else {
+            let new_len = self.0.len() + 1;
+            let mut new = Vec::with_capacity(new_len);
+            unsafe {
+                new.set_len(new_len);
+            }
+            new[0] = parent;
+            new[1..].copy_from_slice(&self.0);
+            Self(new)
+        }
+    }
+
+    /// Add a new `child` and return the new `WidgetPath`.
+    ///
+    /// The specified `child` will be the new target of the new `WidgetPath`.
+    ///
+    /// Repeated calls with the same [`WidgetId`] will still return
+    /// a new `WidgetPath` but it will be equal in value to the current one.
+    ///
+    /// [`WidgetId`]: struct.WidgetId.html
+    #[allow(unsafe_code)]
+    pub fn with_child(&self, child: WidgetId) -> Self {
+        if self.0.last() == Some(&child) {
+            self.clone()
+        } else {
+            let len = self.0.len();
+            let new_len = len + 1;
+            let mut new = Vec::with_capacity(new_len);
+            unsafe {
+                new.set_len(new_len);
+            }
+            new[..len].copy_from_slice(&self.0);
+            new[len] = child;
+            Self(new)
+        }
+    }
+
+    /// Get the current target [`WidgetId`] of this `WidgetPath`.
+    ///
+    /// [`WidgetId`]: struct.WidgetId.html
+    pub fn target(&self) -> WidgetId {
+        // The unwrap won't panic because the vector is guaranteed
+        // to have at least one entry.
+        *self.0.last().unwrap()
+    }
+
+    /// Returns `true` if the provided `target` is this `WidgetPath`'s target.
+    ///
+    /// [`WidgetId`]: struct.WidgetId.html
+    pub fn has_target(&self, target: WidgetId) -> bool {
+        self.target() == target
+    }
+
+    /// Returns `true` if the provided `node` is part of this `WidgetPath`.
+    ///
+    /// [`WidgetId`]: struct.WidgetId.html
+    pub fn contains(&self, node: WidgetId) -> bool {
+        self.0.contains(&node)
+    }
+}
+
+impl Clone for WidgetPath {
+    #[allow(unsafe_code)]
+    fn clone(&self) -> Self {
+        let len = self.0.len();
+        let mut new = Vec::with_capacity(len);
+        unsafe {
+            new.set_len(len);
+        }
+        new.copy_from_slice(&self.0);
+        Self(new)
+    }
+}
+
+impl std::fmt::Debug for WidgetPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let path = self
+            .0
+            .iter()
+            .map(|id| format!("{}", id.0))
+            .collect::<Vec<String>>()
+            .join("/");
+        write!(f, "WidgetPath({})", path)
+    }
+}
+
 impl<T> Widget<T> for Box<dyn Widget<T>> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.deref_mut().event(ctx, event, data, env)
@@ -244,5 +378,48 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 
     fn type_name(&self) -> &'static str {
         self.deref().type_name()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn widget_path() {
+        let id = WidgetId::next();
+        let mut wp = WidgetPath::new(id);
+        assert_eq!(wp.target(), id);
+        assert!(wp.has_target(id));
+        assert!(wp.contains(id));
+
+        let mut ids = Vec::new();
+        for _ in 0..5 {
+            let add_id = WidgetId::next();
+            ids.push(add_id);
+            wp = wp.with_parent(add_id).with_parent(add_id);
+            assert_eq!(wp.target(), id);
+            assert!(wp.has_target(id));
+            assert!(wp.contains(id));
+            for id in &ids {
+                assert!(wp.contains(*id));
+            }
+        }
+
+        let new_id = WidgetId::next();
+        wp = wp.with_child(new_id).with_child(new_id);
+        assert_eq!(wp.target(), new_id);
+        assert!(wp.has_target(new_id));
+        assert!(wp.contains(new_id));
+        assert!(wp.contains(id)); // Old target
+        for id in &ids {
+            assert!(wp.contains(*id));
+        }
+
+        let mut check = Vec::new();
+        check.extend(ids.iter().rev());
+        check.push(id);
+        check.push(new_id);
+        assert_eq!(&wp.0, &check);
     }
 }

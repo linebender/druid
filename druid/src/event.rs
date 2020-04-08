@@ -19,7 +19,9 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 use druid_shell::{Clipboard, KeyEvent, KeyModifiers, TimerToken};
 
 use crate::mouse::MouseEvent;
-use crate::{Command, Target, WidgetId};
+#[cfg(test)]
+use crate::WidgetId;
+use crate::{Command, Target, WidgetPath};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -179,10 +181,10 @@ pub enum LifeCycle {
     HotChanged(bool),
     /// Internal: used by the framework to route the `FocusChanged` event.
     RouteFocusChanged {
-        /// the widget that is losing focus, if any
-        old: Option<WidgetId>,
-        /// the widget that is gaining focus, if any
-        new: Option<WidgetId>,
+        /// the widget path that is losing focus, if any
+        old: Option<WidgetPath>,
+        /// the widget path that is gaining focus, if any
+        new: Option<WidgetPath>,
     },
     /// Called when the focus status changes.
     ///

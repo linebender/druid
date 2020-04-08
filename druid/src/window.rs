@@ -25,7 +25,8 @@ use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetId, WidgetPod, WindowDesc,
+    LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetId, WidgetPath, WidgetPod,
+    WindowDesc,
 };
 
 /// A unique identifier for a window.
@@ -41,7 +42,7 @@ pub struct Window<T> {
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) context_menu: Option<MenuDesc<T>>,
     pub(crate) last_anim: Option<Instant>,
-    pub(crate) focus: Option<WidgetId>,
+    pub(crate) focus_path: Option<WidgetPath>,
     pub(crate) handle: WindowHandle,
     // delegate?
 }
@@ -56,7 +57,7 @@ impl<T> Window<T> {
             menu: desc.menu,
             context_menu: None,
             last_anim: None,
-            focus: None,
+            focus_path: None,
             handle,
         }
     }
@@ -68,12 +69,16 @@ impl<T: Data> Window<T> {
         self.last_anim.is_some()
     }
 
-    pub(crate) fn focus_chain(&self) -> &[WidgetId] {
+    pub(crate) fn focus_chain(&self) -> &[WidgetPath] {
         &self.root.state().focus_chain
     }
 
+    /// Returns `true` if the provided widget may be in this window,
+    /// but it may also be a false positive.
+    /// However when this returns `false` the widget is definitely not in this window.
     pub(crate) fn may_contain_widget(&self, widget_id: WidgetId) -> bool {
-        self.root.state().children.contains(&widget_id)
+        // The bloom filter we're checking can return false positives.
+        self.root.state().children.may_contain(&widget_id)
     }
 
     pub(crate) fn set_menu(&mut self, mut menu: MenuDesc<T>, data: &T, env: &Env) {
@@ -140,7 +145,7 @@ impl<T: Data> Window<T> {
                 had_active: self.root.has_active(),
                 window: &self.handle,
                 window_id: self.id,
-                focus_widget: self.focus,
+                focus_path: self.focus_path.as_ref(),
             };
 
             self.root.event(&mut ctx, &event, data, env);
@@ -148,11 +153,14 @@ impl<T: Data> Window<T> {
         };
 
         if let Some(focus_req) = base_state.request_focus.take() {
-            let old = self.focus;
             let new = self.widget_for_focus_request(focus_req);
+            let old = mem::take(&mut self.focus_path);
             let event = LifeCycle::RouteFocusChanged { old, new };
             self.lifecycle(queue, &event, data, env);
-            self.focus = new;
+            self.focus_path = match event {
+                LifeCycle::RouteFocusChanged { new, .. } => new,
+                _ => None,
+            };
         }
 
         if let Some(cursor) = cursor {
@@ -283,12 +291,13 @@ impl<T: Data> Window<T> {
 
     fn paint(&mut self, piet: &mut Piet, data: &T, env: &Env) {
         let base_state = BaseState::new(self.root.id());
+        let focus_path = self.focus_path.clone();
         let mut ctx = PaintCtx {
             render_ctx: piet,
             base_state: &base_state,
             window_id: self.id,
             z_ops: Vec::new(),
-            focus_widget: self.focus,
+            focus_path: focus_path.as_ref(),
             region: Rect::ZERO.into(),
         };
         let visible = Rect::from_origin_size(Point::ZERO, self.size);
@@ -320,26 +329,41 @@ impl<T: Data> Window<T> {
             .or_else(|| self.menu.as_ref().and_then(|m| m.command_for_id(cmd_id)))
     }
 
-    fn widget_for_focus_request(&self, focus: FocusChange) -> Option<WidgetId> {
+    fn widget_for_focus_request(&self, focus: FocusChange) -> Option<WidgetPath> {
         match focus {
             FocusChange::Resign => None,
-            FocusChange::Focus(id) => Some(id),
-            FocusChange::Next => self
-                .focus
-                .and_then(|id| self.focus_chain().iter().position(|i| i == &id))
-                .map(|idx| {
-                    let next_idx = (idx + 1) % self.focus_chain().len();
-                    self.focus_chain()[next_idx]
-                }),
-            FocusChange::Previous => self
-                .focus
-                .and_then(|id| self.focus_chain().iter().position(|i| i == &id))
-                .map(|idx| {
-                    let len = self.focus_chain().len();
-                    let prev_idx = (idx + len - 1) % len;
-                    self.focus_chain()[prev_idx]
-                }),
+            FocusChange::Focus(path) => Some(path),
+            FocusChange::Next => self.widget_from_focus_chain(true),
+            FocusChange::Previous => self.widget_from_focus_chain(false),
         }
+    }
+
+    fn widget_from_focus_chain(&self, forward: bool) -> Option<WidgetPath> {
+        self.focus_path.as_ref().and_then(|focus_path| {
+            // Get the currently focused widget's id
+            let id = focus_path.target();
+            self.focus_chain()
+                .iter()
+                // Find where this widget is in the focus chain
+                .position(|path| path.has_target(id))
+                .map(|idx| {
+                    // Return the path that's next to it in the focus chain
+                    let len = self.focus_chain().len();
+                    let new_idx = if forward {
+                        (idx + 1) % len
+                    } else {
+                        (idx + len - 1) % len
+                    };
+                    self.focus_chain()[new_idx].with_parent(self.root.id())
+                })
+                .or_else(|| {
+                    // If the currently focused widget isn't in the focus chain,
+                    // then we'll just return the first entry of the chain, if any.
+                    self.focus_chain()
+                        .first()
+                        .map(|path| path.with_parent(self.root.id()))
+                })
+        })
     }
 }
 
