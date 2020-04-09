@@ -86,6 +86,10 @@ pub(crate) struct BaseState {
     /// Any descendant is active.
     has_active: bool,
 
+    /// In the focused path, starting from window and ending at the focused widget.
+    /// Descendants of the focused widget are not in the focused path.
+    pub(crate) has_focus: bool,
+
     /// Any descendant has requested an animation frame.
     pub(crate) request_anim: bool,
 
@@ -514,19 +518,25 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 };
 
                 if let Some(change) = this_changed {
+                    self.state.has_focus = change;
                     let event = LifeCycle::FocusChanged(change);
                     self.inner.lifecycle(ctx, &event, data, env);
                     false
                 } else {
+                    self.state.has_focus = false;
                     // Recurse when the target widgets could be our descendants.
                     // The bloom filter we're checking can return false positives.
-                    old.map(|id| self.state.children.may_contain(&id))
-                        .or_else(|| new.map(|id| self.state.children.may_contain(&id)))
-                        .unwrap_or(false)
+                    match (old, new) {
+                        (Some(old), _) if self.state.children.may_contain(old) => true,
+                        (_, Some(new)) if self.state.children.may_contain(new) => true,
+                        _ => false,
+                    }
                 }
             }
             LifeCycle::FocusChanged(_) => {
-                self.state.request_focus = None;
+                // We are a descendant of a widget that has/had focus
+                self.state.has_focus = false; // Descendants don't inherit focus
+                self.state.request_focus = None; // Clear the handled request
                 true
             }
             #[cfg(test)]
@@ -624,6 +634,7 @@ impl BaseState {
             needs_layout: false,
             is_active: false,
             has_active: false,
+            has_focus: false,
             request_anim: false,
             request_timer: false,
             request_focus: None,
@@ -640,6 +651,7 @@ impl BaseState {
         self.request_anim |= child_state.request_anim;
         self.request_timer |= child_state.request_timer;
         self.has_active |= child_state.has_active;
+        self.has_focus |= child_state.has_focus;
         self.children_changed |= child_state.children_changed;
         self.request_focus = self.request_focus.or(child_state.request_focus);
     }
