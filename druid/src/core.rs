@@ -518,9 +518,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 };
 
                 if let Some(change) = this_changed {
-                    self.state.has_focus = change;
-                    let event = LifeCycle::FocusChanged(change);
-                    self.inner.lifecycle(ctx, &event, data, env);
+                    // Only send FocusChanged in case there's actual change
+                    if old != new {
+                        self.state.has_focus = change;
+                        let event = LifeCycle::FocusChanged(change);
+                        self.inner.lifecycle(ctx, &event, data, env);
+                    }
                     false
                 } else {
                     self.state.has_focus = false;
