@@ -607,7 +607,7 @@ impl WndProc for MyWndProc {
                     let y = HIWORD(lparam as u32) as i16 as i32;
 
                     // When the mouse first enters the window client rect we need to register for the
-                    // WM_MOUSELEAVE event. Note that WM_MOUSEMOVE is called even when the change
+                    // WM_MOUSELEAVE event. Note that WM_MOUSEMOVE is also called even when the
                     // window under the cursor changes without moving the mouse, for example when
                     // our window is first opened under the mouse cursor.
                     if !s.has_mouse_focus && is_point_in_client_rect(hwnd, x, y) {
