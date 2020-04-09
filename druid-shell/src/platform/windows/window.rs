@@ -619,7 +619,12 @@ impl WndProc for MyWndProc {
                             dwHoverTime: HOVER_DEFAULT,
                         };
                         unsafe {
-                            TrackMouseEvent(&mut desc);
+                            if TrackMouseEvent(&mut desc) == FALSE {
+                                warn!(
+                                    "failed to TrackMouseEvent: {}",
+                                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                );
+                            }
                         }
                     }
 
