@@ -173,6 +173,8 @@ struct WndState {
     // capture. When the first mouse button is down on our window we enter
     // capture, and we hold it until the last mouse button is up.
     captured_mouse_buttons: u32,
+    // Is this window the topmost window under the mouse cursor
+    has_mouse_focus: bool,
     //TODO: track surrogate orphan
 }
 
@@ -226,6 +228,22 @@ fn get_mod_state() -> KeyModifiers {
             mod_state.shift = true;
         }
         mod_state
+    }
+}
+
+fn is_point_in_client_rect(hwnd: HWND, x: i32, y: i32) -> bool {
+    unsafe {
+        let mut client_rect = mem::MaybeUninit::uninit();
+        if GetClientRect(hwnd, client_rect.as_mut_ptr()) == FALSE {
+            warn!(
+                "failed to get client rect: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+            return false;
+        }
+        let client_rect = client_rect.assume_init();
+        let mouse_point = POINT { x, y };
+        PtInRect(&client_rect, mouse_point) != FALSE
     }
 }
 
@@ -587,6 +605,24 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     let x = LOWORD(lparam as u32) as i16 as i32;
                     let y = HIWORD(lparam as u32) as i16 as i32;
+
+                    // When the mouse first enters the window client rect we need to register for the
+                    // WM_MOUSELEAVE event. Note that WM_MOUSEMOVE is called even when the change
+                    // window under the cursor changes without moving the mouse, for example when
+                    // our window is first opened under the mouse cursor.
+                    if !s.has_mouse_focus && is_point_in_client_rect(hwnd, x, y) {
+                        s.has_mouse_focus = true;
+                        let mut desc = TRACKMOUSEEVENT {
+                            cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as DWORD,
+                            dwFlags: TME_LEAVE,
+                            hwndTrack: hwnd,
+                            dwHoverTime: HOVER_DEFAULT,
+                        };
+                        unsafe {
+                            TrackMouseEvent(&mut desc);
+                        }
+                    }
+
                     let (px, py) = self.handle.borrow().pixels_to_px_xy(x, y);
                     let pos = Point::new(px as f64, py as f64);
                     let mods = get_mod_state();
@@ -607,6 +643,16 @@ impl WndProc for MyWndProc {
                         count: 0,
                     };
                     s.handler.mouse_move(&event);
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
+                Some(0)
+            }
+            WM_MOUSELEAVE => {
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    s.has_mouse_focus = false;
+                    s.handler.mouse_leave();
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -846,6 +892,7 @@ impl WindowBuilder {
                 stashed_key_code: KeyCode::Unknown(0),
                 stashed_char: None,
                 captured_mouse_buttons: 0,
+                has_mouse_focus: false,
             };
             win.wndproc.connect(&handle, state);
 
