@@ -86,9 +86,9 @@ pub enum Event {
     MouseMove(MouseEvent),
     /// Called when the mouse has left the application area.
     ///
-    /// The `MouseLeft` event is propagated to the active widget, if
+    /// The `MouseLeave` event is propagated to the active widget, if
     /// there is one, otherwise to hot widgets (see `HotChanged`).
-    MouseLeft,
+    MouseLeave,
     /// Called when a key is pressed.
     ///
     /// Note: the intent is for each physical key press to correspond to

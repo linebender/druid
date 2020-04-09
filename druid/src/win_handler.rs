@@ -641,7 +641,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
     fn mouse_leave(&mut self) {
         self.app_state
-            .do_window_event(Event::MouseLeft, self.window_id);
+            .do_window_event(Event::MouseLeave, self.window_id);
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
