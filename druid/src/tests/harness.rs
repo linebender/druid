@@ -87,6 +87,7 @@ impl<T: Data> Harness<'_, T> {
             window_size: DEFAULT_SIZE,
         };
         f(&mut harness);
+        harness.piet.finish().expect("piet finish failed");
     }
 
     /// Set the size without sending a resize event; intended to be used

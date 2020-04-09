@@ -1,6 +1,6 @@
 [package]
 name = "druid-shell"
-version = "0.5.0"
+version = "0.6.0"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Platform abstracting application shell used for druid toolkit."
@@ -17,7 +17,7 @@ x11 = ["xcb", "cairo-sys-rs"]
 default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
-piet-common = "0.0.11"
+piet-common = "0.0.12"
 log = "0.4.8"
 lazy_static = "1.0"
 time = "0.2.7"

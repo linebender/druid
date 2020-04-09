@@ -88,7 +88,11 @@ impl Widget<String> for CustomWidget {
             .build()
             .unwrap();
         // Here's where we actually use the UI state
-        let layout = ctx.text().new_text_layout(&font, data).build().unwrap();
+        let layout = ctx
+            .text()
+            .new_text_layout(&font, data, std::f64::INFINITY)
+            .build()
+            .unwrap();
 
         // Let's rotate our text slightly. First we save our current (default) context:
         ctx.with_save(|ctx| {
