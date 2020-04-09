@@ -84,6 +84,11 @@ pub enum Event {
     ///
     /// [`set_cursor`]: struct.EventCtx.html#method.set_cursor
     MouseMove(MouseEvent),
+    /// Called when the mouse has left the application area.
+    ///
+    /// The `MouseLeft` event is propagated to the active widget, if
+    /// there is one, otherwise to hot widgets (see `HotChanged`).
+    MouseLeft,
     /// Called when a key is pressed.
     ///
     /// Note: the intent is for each physical key press to correspond to
