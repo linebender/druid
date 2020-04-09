@@ -106,6 +106,7 @@ pub enum PresentStrategy {
     FlipRedirect,
 }
 
+#[derive(Clone)]
 pub struct WindowHandle {
     dwrite_factory: DwriteFactory,
     state: Weak<WindowState>,
@@ -743,15 +744,6 @@ impl WndProc for MyWndProc {
     }
 }
 
-// Note: there's a clone method in 0.3.0-alpha4. We work around
-// the lack in 0.1.2 by calling the low-level unsafe operations.
-fn clone_dwrite(dwrite: &DwriteFactory) -> DwriteFactory {
-    unsafe {
-        (*dwrite.get_raw()).AddRef();
-        DwriteFactory::from_raw(dwrite.get_raw())
-    }
-}
-
 impl WindowBuilder {
     pub fn new() -> WindowBuilder {
         WindowBuilder {
@@ -803,7 +795,7 @@ impl WindowBuilder {
 
             let class_name = super::util::CLASS_NAME.to_wide();
             let dwrite_factory = DwriteFactory::new().unwrap();
-            let dw_clone = clone_dwrite(&dwrite_factory);
+            let dw_clone = dwrite_factory.clone();
             let wndproc = MyWndProc {
                 handle: Default::default(),
                 d2d_factory: D2DFactory::new().unwrap(),
@@ -1078,17 +1070,6 @@ impl Cursor {
             Cursor::NotAllowed => IDC_NO,
             Cursor::ResizeLeftRight => IDC_SIZEWE,
             Cursor::ResizeUpDown => IDC_SIZENS,
-        }
-    }
-}
-
-// TODO: when upgrading to directwrite 0.3, just derive Clone instead.
-impl Clone for WindowHandle {
-    fn clone(&self) -> WindowHandle {
-        let dwrite_factory = clone_dwrite(&self.dwrite_factory);
-        WindowHandle {
-            dwrite_factory,
-            state: self.state.clone(),
         }
     }
 }
