@@ -89,7 +89,7 @@ impl TextBox {
             .unwrap();
 
         piet_text
-            .new_text_layout(&font, &text.to_string())
+            .new_text_layout(&font, &text.to_string(), std::f64::INFINITY)
             .build()
             .unwrap()
     }
@@ -313,6 +313,12 @@ impl Widget<String> for TextBox {
                     }
                     k_e if HotKey::new(SysMods::Shift, KeyCode::Tab).matches(k_e) => {
                         ctx.focus_prev();
+                        true
+                    }
+                    k_e if HotKey::new(None, KeyCode::Return).matches(k_e) => {
+                        // 'enter' should do something, maybe?
+                        // but for now we are suppressing it, because we don't want
+                        // newlines.
                         true
                     }
                     _ => false,

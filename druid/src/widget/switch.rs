@@ -61,9 +61,17 @@ impl Switch {
 
         // off/on labels
         // TODO: use LocalizedString
-        let on_label_layout = ctx.text().new_text_layout(&font, "ON").build().unwrap();
+        let on_label_layout = ctx
+            .text()
+            .new_text_layout(&font, "ON", std::f64::INFINITY)
+            .build()
+            .unwrap();
 
-        let off_label_layout = ctx.text().new_text_layout(&font, "OFF").build().unwrap();
+        let off_label_layout = ctx
+            .text()
+            .new_text_layout(&font, "OFF", std::f64::INFINITY)
+            .build()
+            .unwrap();
 
         // position off/on labels
         let mut on_label_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
