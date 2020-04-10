@@ -613,7 +613,7 @@ impl WndProc for MyWndProc {
                     if !s.has_mouse_focus && is_point_in_client_rect(hwnd, x, y) {
                         s.has_mouse_focus = true;
                         let mut desc = TRACKMOUSEEVENT {
-                            cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as DWORD,
+                            cbSize: mem::size_of::<TRACKMOUSEEVENT>() as DWORD,
                             dwFlags: TME_LEAVE,
                             hwndTrack: hwnd,
                             dwHoverTime: HOVER_DEFAULT,
