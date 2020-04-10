@@ -14,8 +14,8 @@
 
 //! An example of a timer.
 
-use std::time::Duration;
 use instant::Instant;
+use std::time::Duration;
 
 use druid::kurbo::Line;
 use druid::widget::prelude::*;

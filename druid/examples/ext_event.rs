@@ -14,9 +14,9 @@
 
 //! An example of sending commands from another thread.
 
+use instant::Instant;
 use std::thread;
 use std::time::Duration;
-use instant::Instant;
 
 use druid::kurbo::RoundedRect;
 use druid::widget::prelude::*;

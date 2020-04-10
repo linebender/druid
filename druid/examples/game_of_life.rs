@@ -16,9 +16,9 @@
 
 //! Game of life
 
+use instant::Instant;
 use std::ops::{Index, IndexMut};
 use std::time::Duration;
-use instant::Instant;
 
 use druid::widget::prelude::*;
 use druid::widget::{Button, Flex, Label, Slider};
