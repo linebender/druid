@@ -46,11 +46,6 @@ use super::prelude::*;
 /// [`LifeCycleCtx::widget_id`]: struct.LifeCycleCtx.html#method.widget_id
 /// [`WidgetExt::with_id`]: trait.WidgetExt.html#method.with_id
 /// [`IdentityWrapper`]: widget/struct.IdentityWrapper.html
-//
-// The widget id does not necessarily identify only a single widget
-// in the strictest sense. Internally WidgetPod uses its child's id,
-// and the window base state uses the root widget's id.
-//
 // this is NonZeroU64 because we regularly store Option<WidgetId>
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct WidgetId(NonZeroU64);
