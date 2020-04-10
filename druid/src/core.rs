@@ -537,10 +537,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
             }
             LifeCycle::FocusChanged(_) => {
-                // We are a descendant of a widget that has/had focus
-                self.state.has_focus = false; // Descendants don't inherit focus
-                self.state.request_focus = None; // Clear the handled request
-                true
+                // We are a descendant of a widget that has/had focus.
+                // Descendants don't inherit focus, so don't recurse.
+                false
             }
             #[cfg(test)]
             LifeCycle::DebugRequestState { widget, state_cell } => {
