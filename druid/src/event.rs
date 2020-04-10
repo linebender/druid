@@ -186,11 +186,13 @@ pub enum LifeCycle {
     },
     /// Called when the focus status changes.
     ///
-    /// This will always be called immediately after an event where a widget
-    /// has requested focus.
+    /// This will always be called immediately after a new widget gains focus.
+    /// The newly focused widget will receive this with `true` and the widget
+    /// that lost focus will receive this with `false`.
     ///
-    /// See [`has_focus`](struct.EventCtx.html#method.has_focus) for
-    /// discussion about the focus status.
+    /// See [`EventCtx::is_focused`] for more information about focus.
+    ///
+    /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     FocusChanged(bool),
     /// Testing only: request the `BaseState` of a specific widget.
     ///
