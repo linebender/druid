@@ -280,11 +280,16 @@ impl<'a> EventCtx<'a> {
 
     /// Request keyboard focus.
     ///
+    /// Calling this when the widget is already focused does nothing.
+    ///
     /// See [`is_focused`] for more information about focus.
     ///
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn request_focus(&mut self) {
-        self.base_state.request_focus = Some(FocusChange::Focus(self.widget_id()));
+        let id = self.widget_id();
+        if self.focus_widget != Some(id) {
+            self.base_state.request_focus = Some(FocusChange::Focus(id));
+        }
     }
 
     /// Transfer focus to the next focusable widget.

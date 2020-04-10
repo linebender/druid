@@ -240,9 +240,7 @@ impl Widget<String> for TextBox {
 
         match event {
             Event::MouseDown(mouse) => {
-                if !ctx.is_focused() {
-                    ctx.request_focus();
-                }
+                ctx.request_focus();
                 ctx.set_active(true);
 
                 let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
