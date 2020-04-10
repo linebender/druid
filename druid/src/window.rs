@@ -111,7 +111,7 @@ impl<T: Data> Window<T> {
         env: &Env,
     ) -> bool {
         let mut cursor = match event {
-            Event::MouseMoved(..) => Some(Cursor::Arrow),
+            Event::MouseMove(..) => Some(Cursor::Arrow),
             _ => None,
         };
 

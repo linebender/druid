@@ -297,7 +297,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
 
         let scrollbar_is_hovered = match event {
-            Event::MouseMoved(e) | Event::MouseUp(e) | Event::MouseDown(e) => {
+            Event::MouseMove(e) | Event::MouseUp(e) | Event::MouseDown(e) => {
                 let offset_pos = e.pos + self.scroll_offset;
                 self.point_hits_vertical_bar(viewport, offset_pos, &env)
                     || self.point_hits_horizontal_bar(viewport, offset_pos, &env)
@@ -308,7 +308,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         if self.scrollbars.are_held() {
             // if we're dragging a scrollbar
             match event {
-                Event::MouseMoved(event) => {
+                Event::MouseMove(event) => {
                     match self.scrollbars.held {
                         BarHeldState::Vertical(offset) => {
                             let scale_y = viewport.height() / self.child_size.height;
@@ -342,7 +342,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         } else if scrollbar_is_hovered {
             // if we're over a scrollbar but not dragging
             match event {
-                Event::MouseMoved(event) => {
+                Event::MouseMove(event) => {
                     let offset_pos = event.pos + self.scroll_offset;
                     if self.point_hits_vertical_bar(viewport, offset_pos, &env) {
                         self.scrollbars.hovered = BarHoveredState::Vertical;
@@ -381,7 +381,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             };
 
             match event {
-                Event::MouseMoved(_) => {
+                Event::MouseMove(_) => {
                     // if we have just stopped hovering
                     if self.scrollbars.hovered.is_hovered() && !scrollbar_is_hovered {
                         self.scrollbars.hovered = BarHoveredState::None;

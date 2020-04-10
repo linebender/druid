@@ -73,17 +73,17 @@ pub enum Event {
     MouseUp(MouseEvent),
     /// Called when the mouse is moved.
     ///
-    /// The `MouseMoved` event is propagated to the active widget, if
+    /// The `MouseMove` event is propagated to the active widget, if
     /// there is one, otherwise to hot widgets (see `HotChanged`).
     ///
-    /// The `MouseMoved` event is also the primary mechanism for widgets
+    /// The `MouseMove` event is also the primary mechanism for widgets
     /// to set a cursor, for example to an I-bar inside a text widget. A
     /// simple tactic is for the widget to unconditionally call
-    /// [`set_cursor`] in the MouseMoved handler, as `MouseMove` is only
+    /// [`set_cursor`] in the MouseMove handler, as `MouseMove` is only
     /// propagated to active or hot widgets.
     ///
     /// [`set_cursor`]: struct.EventCtx.html#method.set_cursor
-    MouseMoved(MouseEvent),
+    MouseMove(MouseEvent),
     /// Called when a key is pressed.
     ///
     /// Note: the intent is for each physical key press to correspond to
@@ -172,7 +172,7 @@ pub enum LifeCycle {
     ///
     /// This will always be called _before_ the event that triggered it; that is,
     /// when the mouse moves over a widget, that widget will receive
-    /// `LifeCycle::HotChanged` before it receives `Event::MouseMoved`.
+    /// `LifeCycle::HotChanged` before it receives `Event::MouseMove`.
     ///
     /// See [`is_hot`](struct.EventCtx.html#method.is_hot) for
     /// discussion about the hot status.
@@ -259,11 +259,11 @@ impl Event {
                     None
                 }
             }
-            Event::MouseMoved(mouse_event) => {
+            Event::MouseMove(mouse_event) => {
                 if force || viewport.winding(mouse_event.pos) != 0 {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos += offset;
-                    Some(Event::MouseMoved(mouse_event))
+                    Some(Event::MouseMove(mouse_event))
                 } else {
                     None
                 }

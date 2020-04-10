@@ -173,11 +173,11 @@ impl<'a> EventCtx<'a> {
     /// only has the effect of the last one (ie no need to worry about
     /// flashing).
     ///
-    /// This method is expected to be called mostly from the [`MouseMoved`]
+    /// This method is expected to be called mostly from the [`MouseMove`]
     /// event handler, but can also be called in response to other events,
     /// for example pressing a key to change the behavior of a widget.
     ///
-    /// [`MouseMoved`]: enum.Event.html#variant.MouseDown
+    /// [`MouseMove`]: enum.Event.html#variant.MouseDown
     pub fn set_cursor(&mut self, cursor: &Cursor) {
         *self.cursor = Some(cursor.clone());
     }

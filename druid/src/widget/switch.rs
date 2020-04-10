@@ -134,7 +134,7 @@ impl Widget<bool> for Switch {
                 self.animation_in_progress = true;
                 ctx.request_anim_frame();
             }
-            Event::MouseMoved(mouse) => {
+            Event::MouseMove(mouse) => {
                 if ctx.is_active() {
                     self.knob_pos.x = mouse.pos.x.min(on_pos).max(off_pos);
                     self.knob_dragged = true;

@@ -262,7 +262,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                     data.drawing = false;
                 }
             }
-            Event::MouseMoved(e) => {
+            Event::MouseMove(e) => {
                 if data.drawing {
                     let grid_pos_opt = self.grid_pos(e.pos);
                     grid_pos_opt.iter().for_each(|pos| data.grid[*pos] = true);

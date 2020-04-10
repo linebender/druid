@@ -254,7 +254,7 @@ impl Widget<String> for TextBox {
 
                 ctx.request_paint();
             }
-            Event::MouseMoved(mouse) => {
+            Event::MouseMove(mouse) => {
                 ctx.set_cursor(&Cursor::IBeam);
                 if ctx.is_active() {
                     let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
