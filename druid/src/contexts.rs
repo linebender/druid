@@ -177,7 +177,7 @@ impl<'a> EventCtx<'a> {
     /// event handler, but can also be called in response to other events,
     /// for example pressing a key to change the behavior of a widget.
     ///
-    /// [`MouseMove`]: enum.Event.html#variant.MouseDown
+    /// [`MouseMove`]: enum.Event.html#variant.MouseMove
     pub fn set_cursor(&mut self, cursor: &Cursor) {
         *self.cursor = Some(cursor.clone());
     }
