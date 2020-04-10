@@ -351,8 +351,12 @@ impl<T: Data> Window<T> {
                 })
                 .or_else(|| {
                     // If the currently focused widget isn't in the focus chain,
-                    // then we'll just return the first entry of the chain, if any.
-                    self.focus_chain().first().copied()
+                    // then we'll just return the first/last entry of the chain, if any.
+                    if forward {
+                        self.focus_chain().first().copied()
+                    } else {
+                        self.focus_chain().last().copied()
+                    }
                 })
         })
     }
