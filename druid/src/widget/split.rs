@@ -294,7 +294,7 @@ impl<T: Data> Widget<T> for Split<T> {
                         ctx.request_paint();
                     }
                 }
-                Event::MouseMoved(mouse) => {
+                Event::MouseMove(mouse) => {
                     if ctx.is_active() {
                         self.update_split_point(ctx.size(), mouse.pos);
                         ctx.request_layout();

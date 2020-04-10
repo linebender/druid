@@ -635,7 +635,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn mouse_move(&mut self, event: &MouseEvent) {
-        let event = Event::MouseMoved(event.clone().into());
+        let event = Event::MouseMove(event.clone().into());
         self.app_state.do_window_event(event, self.window_id);
     }
 
