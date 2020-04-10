@@ -17,7 +17,8 @@
 //! Game of life
 
 use std::ops::{Index, IndexMut};
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use instant::Instant;
 
 use druid::widget::prelude::*;
 use druid::widget::{Button, Flex, Label, Slider};
@@ -415,7 +416,7 @@ fn make_widget() -> impl Widget<AppData> {
         )
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(make_widget)
         .window_size(Size {
             width: 800.0,

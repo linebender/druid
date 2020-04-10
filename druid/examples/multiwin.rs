@@ -33,7 +33,7 @@ struct State {
     selected: usize,
 }
 
-fn main() {
+pub fn main() {
     simple_logger::init().unwrap();
     let main_window = WindowDesc::new(ui_builder)
         .menu(make_menu(&State::default()))

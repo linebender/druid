@@ -15,7 +15,8 @@
 //! An example of sending commands from another thread.
 
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use instant::Instant;
 
 use druid::kurbo::RoundedRect;
 use druid::widget::prelude::*;
@@ -80,7 +81,7 @@ impl Widget<MyColor> for ColorWell {
     }
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(make_ui).title(
         LocalizedString::new("identity-demo-window-title").with_placeholder("External Event Demo"),
     );

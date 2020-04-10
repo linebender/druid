@@ -28,7 +28,7 @@ struct AppData {
     text: String,
     size: f64,
 }
-fn main() -> Result<(), PlatformError> {
+pub fn main() -> Result<(), PlatformError> {
     let main_window = WindowDesc::new(ui_builder).title(
         LocalizedString::new("styled-text-demo-window-title").with_placeholder("Type Styler"),
     );

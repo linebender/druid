@@ -299,7 +299,7 @@ fn make_ui() -> impl Widget<AppState> {
         .padding(10.0)
 }
 
-fn main() -> Result<(), PlatformError> {
+pub fn main() -> Result<(), PlatformError> {
     let main_window = WindowDesc::new(make_ui)
         .window_size((620., 600.00))
         .with_min_size((620., 265.00))

@@ -19,13 +19,13 @@
 //!
 
 #[cfg(not(feature = "image"))]
-fn main() {
+pub fn main() {
     eprintln!("This examples requires the \"image\" feature to be enabled:");
     eprintln!("cargo run --example image --features \"image\"");
 }
 
 #[cfg(feature = "image")]
-fn main() {
+pub fn main() {
     use druid::{
         widget::{FillStrat, Flex, Image, ImageData, WidgetExt},
         AppLauncher, Color, Widget, WindowDesc,

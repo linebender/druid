@@ -116,7 +116,7 @@ impl Widget<String> for CustomWidget {
     }
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(|| CustomWidget {}).title(
         LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Fancy Colors"),
     );
