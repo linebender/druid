@@ -611,7 +611,6 @@ impl WndProc for MyWndProc {
                     // window under the cursor changes without moving the mouse, for example when
                     // our window is first opened under the mouse cursor.
                     if !s.has_mouse_focus && is_point_in_client_rect(hwnd, x, y) {
-                        s.has_mouse_focus = true;
                         let mut desc = TRACKMOUSEEVENT {
                             cbSize: mem::size_of::<TRACKMOUSEEVENT>() as DWORD,
                             dwFlags: TME_LEAVE,
@@ -619,7 +618,9 @@ impl WndProc for MyWndProc {
                             dwHoverTime: HOVER_DEFAULT,
                         };
                         unsafe {
-                            if TrackMouseEvent(&mut desc) == FALSE {
+                            if TrackMouseEvent(&mut desc) != FALSE {
+                                s.has_mouse_focus = true;
+                            } else {
                                 warn!(
                                     "failed to TrackMouseEvent: {}",
                                     Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
