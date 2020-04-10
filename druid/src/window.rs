@@ -72,8 +72,12 @@ impl<T: Data> Window<T> {
         &self.root.state().focus_chain
     }
 
+    /// Returns `true` if the provided widget may be in this window,
+    /// but it may also be a false positive.
+    /// However when this returns `false` the widget is definitely not in this window.
     pub(crate) fn may_contain_widget(&self, widget_id: WidgetId) -> bool {
-        self.root.state().children.contains(&widget_id)
+        // The bloom filter we're checking can return false positives.
+        self.root.state().children.may_contain(&widget_id)
     }
 
     pub(crate) fn set_menu(&mut self, mut menu: MenuDesc<T>, data: &T, env: &Env) {

@@ -55,7 +55,7 @@ impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
 ///
 /// This can be used safely from multiple threads.
 ///
-/// The counter will overflow if `next()` iscalled 2^64 - 2 times.
+/// The counter will overflow if `next()` is called 2^64 - 2 times.
 /// If this is possible for your application, and reuse would be undesirable,
 /// use something else.
 pub struct Counter(AtomicU64);

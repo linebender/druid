@@ -369,7 +369,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut child_ctx = EventCtx {
             cursor: ctx.cursor,
             command_queue: ctx.command_queue,
-            window: &ctx.window,
+            window: ctx.window,
             window_id: ctx.window_id,
             base_state: &mut self.state,
             had_active,
@@ -446,7 +446,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Target::Window(_) => Event::Command(cmd.clone()),
                 Target::Widget(id) if *id == child_ctx.widget_id() => Event::Command(cmd.clone()),
                 Target::Widget(id) => {
-                    recurse = child_ctx.base_state.children.contains(id);
+                    // Recurse when the target widget could be our descendant.
+                    // The bloom filter we're checking can return false positives.
+                    recurse = child_ctx.base_state.children.may_contain(id);
                     Event::TargetedCommand(*target, cmd.clone())
                 }
                 Target::Global => panic!("Target::Global should be converted before WidgetPod"),
@@ -496,7 +498,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         self.state.children.clear();
                         self.state.focus_chain.clear();
                     }
-
                     self.state.children_changed
                 }
             }
@@ -517,8 +518,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     self.inner.lifecycle(ctx, &event, data, env);
                     false
                 } else {
-                    old.map(|id| self.state.children.contains(&id))
-                        .or_else(|| new.map(|id| self.state.children.contains(&id)))
+                    // Recurse when the target widgets could be our descendants.
+                    // The bloom filter we're checking can return false positives.
+                    old.map(|id| self.state.children.may_contain(&id))
+                        .or_else(|| new.map(|id| self.state.children.may_contain(&id)))
                         .unwrap_or(false)
                 }
             }
@@ -532,7 +535,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     state_cell.set(self.state.clone());
                     false
                 } else {
-                    self.state.children.contains(&widget)
+                    // Recurse when the target widget could be our descendant.
+                    // The bloom filter we're checking can return false positives.
+                    self.state.children.may_contain(&widget)
                 }
             }
             #[cfg(test)]
@@ -542,13 +547,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
         };
 
-        let mut child_ctx = LifeCycleCtx {
-            command_queue: ctx.command_queue,
-            base_state: &mut self.state,
-            window_id: ctx.window_id,
-        };
-
         if recurse {
+            let mut child_ctx = LifeCycleCtx {
+                command_queue: ctx.command_queue,
+                base_state: &mut self.state,
+                window_id: ctx.window_id,
+            };
             self.inner.lifecycle(&mut child_ctx, event, data, env);
         }
 
@@ -691,9 +695,9 @@ mod tests {
         let env = Env::default();
 
         widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &None, &env);
-        assert!(ctx.base_state.children.contains(&ID_1));
-        assert!(ctx.base_state.children.contains(&ID_2));
-        assert!(ctx.base_state.children.contains(&ID_3));
+        assert!(ctx.base_state.children.may_contain(&ID_1));
+        assert!(ctx.base_state.children.may_contain(&ID_2));
+        assert!(ctx.base_state.children.may_contain(&ID_3));
         assert_eq!(ctx.base_state.children.entry_count(), 7);
     }
 }

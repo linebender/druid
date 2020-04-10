@@ -240,7 +240,7 @@ impl Widget<String> for TextBox {
 
         match event {
             Event::MouseDown(mouse) => {
-                if !ctx.has_focus() {
+                if !ctx.is_focused() {
                     ctx.request_focus();
                 }
                 ctx.set_active(true);
@@ -281,7 +281,7 @@ impl Widget<String> for TextBox {
                 }
             }
             Event::Command(ref cmd)
-                if ctx.has_focus()
+                if ctx.is_focused()
                     && (cmd.selector == crate::commands::COPY
                         || cmd.selector == crate::commands::CUT) =>
             {
@@ -392,9 +392,9 @@ impl Widget<String> for TextBox {
         let placeholder_color = env.get(theme::PLACEHOLDER_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
 
-        let has_focus = ctx.has_focus();
+        let is_focused = ctx.is_focused();
 
-        let border_color = if has_focus {
+        let border_color = if is_focused {
             env.get(theme::PRIMARY_LIGHT)
         } else {
             env.get(theme::BORDER_DARK)
@@ -449,7 +449,7 @@ impl Widget<String> for TextBox {
             rc.draw_text(&text_layout, text_pos, color);
 
             // Paint the cursor if focused and there's no selection
-            if has_focus && self.cursor_on && self.selection.is_caret() {
+            if is_focused && self.cursor_on && self.selection.is_caret() {
                 let cursor_x = self.x_for_offset(&text_layout, self.cursor());
                 let xy = text_pos + Vec2::new(cursor_x, 2. - font_size);
                 let x2y2 = xy + Vec2::new(0., font_size + 2.);
