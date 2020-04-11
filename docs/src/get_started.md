@@ -18,15 +18,14 @@ druid = "0.5.0"
 
 To show a minimal window with a label replace `main.rs` with this;
 ```rust, noplaypen
-use druid::{AppLauncher, WindowDesc, Widget};
+use druid::{AppLauncher, WindowDesc, Widget, PlatformError};
 use druid::widget::Label;
-use druid::shell::Error;
 
 fn build_ui() -> impl Widget<()> {
     Label::new("Hello world")
 }
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<(), PlatformError> {
     AppLauncher::with_window(WindowDesc::new(build_ui)).launch(())?;
     Ok(())
 }
