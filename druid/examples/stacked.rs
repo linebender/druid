@@ -20,21 +20,9 @@ fn main() {
 
     fn build_app() -> impl Widget<u8> {
         Stack::new()
-            .with_child(
-                Button::new("Button 1")
-                    .fix_height(600.)
-                    .fix_width(600.),
-            )
-            .with_child(
-                Button::new("Button 1")
-                    .fix_height(150.)
-                    .fix_width(150.),
-            )
-            .with_child(
-                Button::new("Button 1")
-                    .fix_height(50.)
-                    .fix_width(100.),
-            )
+            .with_child(Button::new("Button 1").fix_height(600.).fix_width(600.))
+            .with_child(Button::new("Button 1").fix_height(150.).fix_width(150.))
+            .with_child(Button::new("Button 1").fix_height(50.).fix_width(100.))
             .with_child(Button::new("Button 2"))
     }
 
