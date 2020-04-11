@@ -55,7 +55,7 @@ impl<T: Data> Stack<T> {
 impl<T: Data> Widget<T> for Stack<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
-            Event::MouseDown(e) | Event::MouseUp(e) | Event::MouseMoved(e) => {
+            Event::MouseDown(e) | Event::MouseUp(e) | Event::MouseMove(e) => {
                 if let Some(active_child) = self
                     .children
                     .iter_mut()
