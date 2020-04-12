@@ -66,7 +66,10 @@ pub struct WidgetPod<T, W> {
 #[derive(Clone)]
 pub(crate) struct BaseState {
     pub(crate) id: WidgetId,
-    pub(crate) layout_rect: Rect,
+    /// The frame of this widget in its parents coordinate space.
+    /// This should always be set; it is only an `Option` so that we
+    /// can more easily track (and help debug) if it hasn't been set.
+    layout_rect: Option<Rect>,
     /// The insets applied to the layout rect to generate the paint rect.
     /// In general, these will be zero; the exception is for things like
     /// drop shadows or overflowing text.
@@ -176,20 +179,20 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// Intended to be called on child widget in container's `layout`
     /// implementation.
     pub fn set_layout_rect(&mut self, layout_rect: Rect) {
-        self.state.layout_rect = layout_rect;
+        self.state.layout_rect = Some(layout_rect);
     }
 
     #[deprecated(since = "0.5.0", note = "use layout_rect() instead")]
     #[doc(hidden)]
     pub fn get_layout_rect(&self) -> Rect {
-        self.state.layout_rect
+        self.layout_rect()
     }
 
     /// The layout rectangle.
     ///
     /// This will be same value as set by `set_layout_rect`.
     pub fn layout_rect(&self) -> Rect {
-        self.state.layout_rect
+        self.state.layout_rect.unwrap_or_default()
     }
 
     /// Get the widget's paint [`Rect`].
@@ -303,7 +306,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         ctx.with_save(|ctx| {
-            let layout_origin = self.state.layout_rect.origin().to_vec2();
+            let layout_origin = self.layout_rect().origin().to_vec2();
             ctx.transform(Affine::translate(layout_origin));
             let visible = ctx.region().to_rect() - layout_origin;
             ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, &env));
@@ -358,6 +361,18 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             );
         }
 
+        // log if we seem not to be laid out when we should be
+        if !matches!(event, Event::WindowConnected | Event::Size(_))
+            && self.state.layout_rect.is_none()
+        {
+            log::warn!(
+                "Widget '{}' received an event ({:?}) without having been laid out. \
+                This likely indicates a missed call to set_layout_rect.",
+                self.inner.type_name(),
+                event,
+            );
+        }
+
         // TODO: factor as much logic as possible into monomorphic functions.
         if ctx.is_handled {
             // This function is called by containers to propagate an event from
@@ -377,7 +392,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             is_root: false,
             focus_widget: ctx.focus_widget,
         };
-        let rect = child_ctx.base_state.layout_rect;
+
+        let rect = child_ctx.base_state.layout_rect.unwrap_or_default();
+
         // Note: could also represent this as `Option<Event>`.
         let mut recurse = true;
         let mut hot_changed = None;
@@ -617,7 +634,7 @@ impl BaseState {
     pub(crate) fn new(id: WidgetId) -> BaseState {
         BaseState {
             id,
-            layout_rect: Rect::ZERO,
+            layout_rect: None,
             paint_insets: Insets::ZERO,
             needs_inval: false,
             is_hot: false,
@@ -646,7 +663,7 @@ impl BaseState {
 
     #[inline]
     pub(crate) fn size(&self) -> Size {
-        self.layout_rect.size()
+        self.layout_rect.unwrap_or_default().size()
     }
 
     /// The paint region for this widget.
@@ -655,7 +672,12 @@ impl BaseState {
     ///
     /// [`WidgetPod::paint_rect`]: struct.WidgetPod.html#method.paint_rect
     pub(crate) fn paint_rect(&self) -> Rect {
-        self.layout_rect + self.paint_insets
+        self.layout_rect.unwrap_or_default() + self.paint_insets
+    }
+
+    #[cfg(test)]
+    pub(crate) fn layout_rect(&self) -> Rect {
+        self.layout_rect.unwrap_or_default()
     }
 }
 
