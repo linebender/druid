@@ -357,7 +357,7 @@ impl<'a> EventCtx<'a> {
         timer_token
     }
 
-    pub fn remove_timer(&mut self, timer_token: &TimerToken) {
+    pub fn remove_timer(&mut self, timer_token: TimerToken) {
         self.base_state.remove_timer(timer_token);
     }
 
