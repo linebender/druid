@@ -282,6 +282,7 @@ impl<T: Data> Window<T> {
     }
 
     /// only expose `layout` for testing; normally it is called as part of `do_paint`
+    #[cfg(not(target_arch = "wasm32"))]
     #[cfg(test)]
     pub(crate) fn just_layout(&mut self, piet: &mut Piet, data: &T, env: &Env) {
         self.layout(piet, data, env)
