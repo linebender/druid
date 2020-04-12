@@ -34,6 +34,7 @@ struct State {
 }
 
 pub fn main() {
+    #[cfg(not(target_arch = "wasm32"))]
     simple_logger::init().unwrap();
     let main_window = WindowDesc::new(ui_builder)
         .menu(make_menu(&State::default()))
