@@ -328,22 +328,37 @@ impl<T: Data> Window<T> {
         match focus {
             FocusChange::Resign => None,
             FocusChange::Focus(id) => Some(id),
-            FocusChange::Next => self
-                .focus
-                .and_then(|id| self.focus_chain().iter().position(|i| i == &id))
-                .map(|idx| {
-                    let next_idx = (idx + 1) % self.focus_chain().len();
-                    self.focus_chain()[next_idx]
-                }),
-            FocusChange::Previous => self
-                .focus
-                .and_then(|id| self.focus_chain().iter().position(|i| i == &id))
-                .map(|idx| {
-                    let len = self.focus_chain().len();
-                    let prev_idx = (idx + len - 1) % len;
-                    self.focus_chain()[prev_idx]
-                }),
+            FocusChange::Next => self.widget_from_focus_chain(true),
+            FocusChange::Previous => self.widget_from_focus_chain(false),
         }
+    }
+
+    fn widget_from_focus_chain(&self, forward: bool) -> Option<WidgetId> {
+        self.focus.and_then(|focus| {
+            self.focus_chain()
+                .iter()
+                // Find where the focused widget is in the focus chain
+                .position(|id| id == &focus)
+                .map(|idx| {
+                    // Return the id that's next to it in the focus chain
+                    let len = self.focus_chain().len();
+                    let new_idx = if forward {
+                        (idx + 1) % len
+                    } else {
+                        (idx + len - 1) % len
+                    };
+                    self.focus_chain()[new_idx]
+                })
+                .or_else(|| {
+                    // If the currently focused widget isn't in the focus chain,
+                    // then we'll just return the first/last entry of the chain, if any.
+                    if forward {
+                        self.focus_chain().first().copied()
+                    } else {
+                        self.focus_chain().last().copied()
+                    }
+                })
+        })
     }
 }
 

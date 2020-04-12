@@ -270,12 +270,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn has_focus(&self) -> bool {
-        // The bloom filter we're checking can return false positives.
-        let is_child = self
-            .focus_widget
-            .map(|id| self.base_state.children.may_contain(&id))
-            .unwrap_or(false);
-        is_child || self.focus_widget == Some(self.widget_id())
+        self.base_state.has_focus
     }
 
     /// Request keyboard focus.
@@ -613,12 +608,7 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
     /// [`is_focused`]: #method.is_focused
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn has_focus(&self) -> bool {
-        // The bloom filter we're checking can return false positives.
-        let is_child = self
-            .focus_widget
-            .map(|id| self.base_state.children.may_contain(&id))
-            .unwrap_or(false);
-        is_child || self.focus_widget == Some(self.widget_id())
+        self.base_state.has_focus
     }
 
     /// Returns the currently visible [`Region`].
