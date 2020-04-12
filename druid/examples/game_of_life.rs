@@ -56,7 +56,7 @@ struct ColorScheme {
 }
 
 impl GridPos {
-    pub fn above(&self) -> Option<GridPos> {
+    pub fn above(self) -> Option<GridPos> {
         if self.row == 0 {
             None
         } else {
@@ -66,7 +66,7 @@ impl GridPos {
             })
         }
     }
-    pub fn below(&self) -> Option<GridPos> {
+    pub fn below(self) -> Option<GridPos> {
         if self.row == GRID_SIZE - 1 {
             None
         } else {
@@ -76,7 +76,7 @@ impl GridPos {
             })
         }
     }
-    pub fn left(&self) -> Option<GridPos> {
+    pub fn left(self) -> Option<GridPos> {
         if self.col == 0 {
             None
         } else {
@@ -86,7 +86,7 @@ impl GridPos {
             })
         }
     }
-    pub fn right(&self) -> Option<GridPos> {
+    pub fn right(self) -> Option<GridPos> {
         if self.col == GRID_SIZE - 1 {
             None
         } else {
@@ -97,17 +97,17 @@ impl GridPos {
         }
     }
     #[allow(dead_code)]
-    pub fn above_left(&self) -> Option<GridPos> {
+    pub fn above_left(self) -> Option<GridPos> {
         self.above().and_then(|pos| pos.left())
     }
-    pub fn above_right(&self) -> Option<GridPos> {
+    pub fn above_right(self) -> Option<GridPos> {
         self.above().and_then(|pos| pos.right())
     }
     #[allow(dead_code)]
-    pub fn below_left(&self) -> Option<GridPos> {
+    pub fn below_left(self) -> Option<GridPos> {
         self.below().and_then(|pos| pos.left())
     }
-    pub fn below_right(&self) -> Option<GridPos> {
+    pub fn below_right(self) -> Option<GridPos> {
         self.below().and_then(|pos| pos.right())
     }
 }
