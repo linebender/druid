@@ -99,6 +99,7 @@ pub(crate) struct BaseState {
     pub(crate) request_focus: Option<FocusChange>,
     pub(crate) children: Bloom<WidgetId>,
     pub(crate) children_changed: bool,
+    /// Associate timers with widgets that requested them.
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
 }
 
