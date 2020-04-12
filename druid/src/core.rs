@@ -14,7 +14,7 @@
 
 //! The fundamental druid types.
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use log;
 
@@ -23,7 +23,7 @@ use crate::kurbo::{Affine, Insets, Rect, Shape, Size};
 use crate::piet::RenderContext;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Target, UpdateCtx, Widget, WidgetId,
+    PaintCtx, Target, TimerToken, UpdateCtx, Widget, WidgetId,
 };
 
 /// Our queue type
@@ -99,6 +99,7 @@ pub(crate) struct BaseState {
     pub(crate) request_focus: Option<FocusChange>,
     pub(crate) children: Bloom<WidgetId>,
     pub(crate) children_changed: bool,
+    pub(crate) timers: HashMap<TimerToken, WidgetId>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -376,6 +377,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             is_handled: false,
             is_root: false,
             focus_widget: ctx.focus_widget,
+            timers: &ctx.timers,
         };
         let rect = child_ctx.base_state.layout_rect;
         // Note: could also represent this as `Option<Event>`.
@@ -438,7 +440,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Event::Zoom(*zoom)
             }
             Event::Timer(id) => {
-                recurse = child_ctx.base_state.request_timer;
+                if let Some(widget_id) = child_ctx.timers.get(id) {
+                    if *widget_id != child_ctx.base_state.id {
+                        recurse = child_ctx.base_state.children.may_contain(widget_id);
+                    }
+                } else {
+                    log::error!("Timer Token must be in timers map.");
+                    recurse = false;
+                }
                 Event::Timer(*id)
             }
             Event::Command(cmd) => Event::Command(cmd.clone()),
@@ -467,6 +476,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         };
 
         ctx.base_state.merge_up(&child_ctx.base_state);
+        // Clear current widget's timers after merging with parent.
+        child_ctx.base_state.timers.clear();
         ctx.is_handled |= child_ctx.is_handled;
     }
 
@@ -630,7 +641,16 @@ impl BaseState {
             focus_chain: Vec::new(),
             children: Bloom::new(),
             children_changed: false,
+            timers: HashMap::new(),
         }
+    }
+
+    pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {
+        self.timers.insert(timer_token, self.id);
+    }
+
+    pub(crate) fn remove_timer(&mut self, timer_token: &TimerToken) {
+        self.timers.remove(timer_token);
     }
 
     /// Update to incorporate state changes from a child.
@@ -642,6 +662,7 @@ impl BaseState {
         self.has_active |= child_state.has_active;
         self.children_changed |= child_state.children_changed;
         self.request_focus = self.request_focus.or(child_state.request_focus);
+        self.timers.extend(&child_state.timers);
     }
 
     #[inline]

@@ -26,6 +26,7 @@ use crate::{
     Affine, Command, Cursor, Insets, Rect, Size, Target, Text, TimerToken, WidgetId, WindowHandle,
     WindowId,
 };
+use std::collections::HashMap;
 
 /// A mutable context provided to event handling methods of widgets.
 ///
@@ -46,6 +47,8 @@ pub struct EventCtx<'a> {
     pub(crate) had_active: bool,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
+    /// Map of TimerTokens and WidgetIds that requested them.
+    pub(crate) timers: &'a HashMap<TimerToken, WidgetId>,
 }
 
 /// A mutable context provided to the [`lifecycle`] method on widgets.
@@ -349,7 +352,13 @@ impl<'a> EventCtx<'a> {
     /// request with the event.
     pub fn request_timer(&mut self, deadline: Instant) -> TimerToken {
         self.base_state.request_timer = true;
-        self.window.request_timer(deadline)
+        let timer_token = self.window.request_timer(deadline);
+        self.base_state.add_timer(timer_token);
+        timer_token
+    }
+
+    pub fn remove_timer(&mut self, timer_token: &TimerToken) {
+        self.base_state.remove_timer(timer_token);
     }
 
     /// The layout size.
