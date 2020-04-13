@@ -464,12 +464,14 @@ impl WindowHandle {
     }
 
     pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        log::warn!("open_file_sync is currently unimplemented for web.");
         self.file_dialog(FileDialogType::Open, options)
             .ok()
             .map(|s| FileInfo { path: s.into() })
     }
 
     pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
+        log::warn!("save_as_sync is currently unimplemented for web.");
         self.file_dialog(FileDialogType::Save, options)
             .ok()
             .map(|s| FileInfo { path: s.into() })
