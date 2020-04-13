@@ -279,15 +279,16 @@ impl WindowBuilder {
 
         drawing_area.connect_button_press_event(clone!(handle => move |_widget, button| {
             if let Some(state) = handle.state.upgrade() {
-
-                state.handler.borrow_mut().mouse_down(
-                    &MouseEvent {
-                        pos: Point::from(button.get_position()),
-                        count: get_mouse_click_count(button.get_event_type()),
-                        mods: get_modifiers(button.get_state()),
-                        button: get_mouse_button(button.get_button()),
-                    },
-                );
+                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                    handler.mouse_down(
+                        &MouseEvent {
+                            pos: Point::from(button.get_position()),
+                            count: get_mouse_click_count(button.get_event_type()),
+                            mods: get_modifiers(button.get_state()),
+                            button: get_mouse_button(button.get_button()),
+                        },
+                    );
+                }
             }
 
             Inhibit(true)
@@ -295,15 +296,16 @@ impl WindowBuilder {
 
         drawing_area.connect_button_release_event(clone!(handle => move |_widget, button| {
             if let Some(state) = handle.state.upgrade() {
-
-                state.handler.borrow_mut().mouse_up(
-                    &MouseEvent {
-                        pos: Point::from(button.get_position()),
-                        mods: get_modifiers(button.get_state()),
-                        count: 0,
-                        button: get_mouse_button(button.get_button()),
-                    },
-                );
+                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                    handler.mouse_up(
+                        &MouseEvent {
+                            pos: Point::from(button.get_position()),
+                            mods: get_modifiers(button.get_state()),
+                            count: 0,
+                            button: get_mouse_button(button.get_button()),
+                        },
+                    );
+                }
             }
 
             Inhibit(true)
@@ -320,10 +322,9 @@ impl WindowBuilder {
                     button: get_mouse_button_from_modifiers(motion.get_state()),
                 };
 
-                state
-                    .handler
-                    .borrow_mut()
-                    .mouse_move(&mouse_event);
+                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                    handler.mouse_move(&mouse_event);
+                }
             }
 
             Inhibit(true)
@@ -340,10 +341,9 @@ impl WindowBuilder {
                     button: get_mouse_button_from_modifiers(crossing.get_state()),
                 };
 
-                state
-                    .handler
-                    .borrow_mut()
-                    .mouse_move(&mouse_event);
+                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                    handler.mouse_move(&mouse_event);
+                }
             }
 
             Inhibit(true)
@@ -351,49 +351,50 @@ impl WindowBuilder {
 
         drawing_area.connect_scroll_event(clone!(handle => move |_widget, scroll| {
             if let Some(state) = handle.state.upgrade() {
+                if let Ok(mut handler) = state.handler.try_borrow_mut() {
 
-                let modifiers = get_modifiers(scroll.get_state());
+                    let modifiers = get_modifiers(scroll.get_state());
 
-                // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
-                // They claim that one "tick" on a scroll wheel should be 120 units.
-                let mut handler = state.handler.borrow_mut();
-                match scroll.get_direction() {
-                    ScrollDirection::Up => {
-                        if modifiers.shift {
+                    // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
+                    // They claim that one "tick" on a scroll wheel should be 120 units.
+                    match scroll.get_direction() {
+                        ScrollDirection::Up => {
+                            if modifiers.shift {
+                                handler.wheel(Vec2::from((-120.0, 0.0)), modifiers);
+                            } else {
+                                handler.wheel(Vec2::from((0.0, -120.0)), modifiers);
+                            }
+                        }
+                        ScrollDirection::Down => {
+                            if modifiers.shift {
+                                handler.wheel(Vec2::from((120.0, 0.0)), modifiers);
+                            } else {
+                                handler.wheel(Vec2::from((0.0, 120.0)), modifiers);
+                            }
+                        }
+                        ScrollDirection::Left => {
                             handler.wheel(Vec2::from((-120.0, 0.0)), modifiers);
-                        } else {
-                            handler.wheel(Vec2::from((0.0, -120.0)), modifiers);
                         }
-                    }
-                    ScrollDirection::Down => {
-                        if modifiers.shift {
+                        ScrollDirection::Right => {
                             handler.wheel(Vec2::from((120.0, 0.0)), modifiers);
-                        } else {
-                            handler.wheel(Vec2::from((0.0, 120.0)), modifiers);
                         }
-                    }
-                    ScrollDirection::Left => {
-                        handler.wheel(Vec2::from((-120.0, 0.0)), modifiers);
-                    }
-                    ScrollDirection::Right => {
-                        handler.wheel(Vec2::from((120.0, 0.0)), modifiers);
-                    }
-                    ScrollDirection::Smooth => {
-                        //TODO: Look at how gtk's scroll containers implements it
-                        let (mut delta_x, mut delta_y) = scroll.get_delta();
-                        delta_x *= 120.;
-                        delta_y *= 120.;
-                        if modifiers.shift {
-                            delta_x += delta_y;
-                            delta_y = 0.;
+                        ScrollDirection::Smooth => {
+                            //TODO: Look at how gtk's scroll containers implements it
+                            let (mut delta_x, mut delta_y) = scroll.get_delta();
+                            delta_x *= 120.;
+                            delta_y *= 120.;
+                            if modifiers.shift {
+                                delta_x += delta_y;
+                                delta_y = 0.;
+                            }
+                            handler.wheel(Vec2::from((delta_x, delta_y)), modifiers)
                         }
-                        handler.wheel(Vec2::from((delta_x, delta_y)), modifiers)
-                    }
-                    e => {
-                        eprintln!(
-                            "Warning: the Druid widget got some whacky scroll direction {:?}",
-                            e
-                        );
+                        e => {
+                            eprintln!(
+                                "Warning: the Druid widget got some whacky scroll direction {:?}",
+                                e
+                            );
+                        }
                     }
                 }
             }
@@ -409,8 +410,9 @@ impl WindowBuilder {
 
                 *current_keyval = Some(key.get_keyval());
 
-                let key_event = make_key_event(key, repeat);
-                state.handler.borrow_mut().key_down(key_event);
+                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                    handler.key_down(make_key_event(key, repeat));
+                }
             }
 
             Inhibit(true)
@@ -421,8 +423,9 @@ impl WindowBuilder {
 
                 *(state.current_keyval.borrow_mut()) = None;
 
-                let key_event = make_key_event(key, false);
-                state.handler.borrow_mut().key_up(key_event);
+                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                    handler.key_down(make_key_event(key, false));
+                }
             }
 
             Inhibit(true)
@@ -616,6 +619,7 @@ impl WindowHandle {
             window.add_accel_group(&accel_group);
 
             let menu = menu.into_gtk_menu(&self, &accel_group);
+            menu.set_property_attach_widget(Some(window));
             menu.show_all();
             menu.popup_easy(3, gtk::get_current_event_time());
         }
