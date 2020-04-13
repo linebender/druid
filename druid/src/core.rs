@@ -73,7 +73,7 @@ pub(crate) struct BaseState {
     /// The insets applied to the layout rect to generate the paint rect.
     /// In general, these will be zero; the exception is for things like
     /// drop shadows or overflowing text.
-    paint_insets: Insets,
+    pub(crate) paint_insets: Insets,
 
     // TODO: consider using bitflags for the booleans.
 
@@ -182,8 +182,25 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// Intended to be called on child widget in container's `layout`
     /// implementation.
-    pub fn set_layout_rect(&mut self, layout_rect: Rect) {
+    pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, layout_rect: Rect) {
         self.state.layout_rect = Some(layout_rect);
+
+        let had_hot = self.state.is_hot;
+        self.state.is_hot = match ctx.mouse_pos {
+            Some(pos) => layout_rect.winding(pos) != 0,
+            None => false,
+        };
+        if had_hot != self.state.is_hot {
+            let hot_changed_event = LifeCycle::HotChanged(self.state.is_hot);
+            let mut child_ctx = LifeCycleCtx {
+                command_queue: ctx.command_queue,
+                base_state: &mut self.state,
+                window_id: ctx.window_id,
+            };
+            self.inner
+                .lifecycle(&mut child_ctx, &hot_changed_event, data, &env);
+            ctx.base_state.merge_up(&child_ctx.base_state);
+        }
     }
 
     #[deprecated(since = "0.5.0", note = "use layout_rect() instead")]
@@ -325,26 +342,36 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn layout(
         &mut self,
-        layout_ctx: &mut LayoutCtx,
+        ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         data: &T,
         env: &Env,
     ) -> Size {
-        layout_ctx.paint_insets = Insets::ZERO;
-        let size = self.inner.layout(layout_ctx, bc, data, &env);
+        self.state.needs_layout = false;
+
+        let child_mouse_pos = match ctx.mouse_pos {
+            Some(pos) => Some(pos - self.layout_rect().origin().to_vec2()),
+            None => None,
+        };
+        let mut child_ctx = LayoutCtx {
+            command_queue: ctx.command_queue,
+            base_state: &mut self.state,
+            window_id: ctx.window_id,
+            text_factory: ctx.text_factory,
+            mouse_pos: child_mouse_pos,
+        };
+        let size = self.inner.layout(&mut child_ctx, bc, data, &env);
+
+        ctx.base_state.merge_up(&child_ctx.base_state);
 
         if size.width.is_infinite() {
             let name = self.widget().type_name();
             log::warn!("Widget `{}` has an infinite width.", name);
         }
-
         if size.height.is_infinite() {
             let name = self.widget().type_name();
             log::warn!("Widget `{}` has an infinite height.", name);
         }
-
-        self.state.paint_insets = layout_ctx.paint_insets;
-        self.state.needs_layout = false;
         size
     }
 

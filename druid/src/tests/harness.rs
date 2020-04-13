@@ -205,15 +205,16 @@ impl<T: Data> Inner<T> {
 
     fn lifecycle(&mut self, event: LifeCycle) {
         self.window
-            .lifecycle(&mut self.cmds, &event, &self.data, &self.env);
+            .lifecycle(&mut self.cmds, &event, &self.data, &self.env, false);
     }
 
     fn update(&mut self) {
-        self.window.update(&self.data, &self.env);
+        self.window.update(&mut self.cmds, &self.data, &self.env);
     }
 
     fn layout(&mut self, piet: &mut Piet) {
-        self.window.just_layout(piet, &self.data, &self.env);
+        self.window
+            .just_layout(piet, &mut self.cmds, &self.data, &self.env);
     }
 
     #[allow(dead_code)]

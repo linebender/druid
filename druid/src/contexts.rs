@@ -23,8 +23,8 @@ use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::{
-    Affine, Command, Cursor, Insets, Rect, Size, Target, Text, TimerToken, WidgetId, WindowHandle,
-    WindowId,
+    Affine, Command, Cursor, Insets, Point, Rect, Size, Target, Text, TimerToken, WidgetId,
+    WindowHandle, WindowId,
 };
 
 /// A mutable context provided to event handling methods of widgets.
@@ -85,9 +85,11 @@ pub struct UpdateCtx<'a> {
 /// creating text layout objects, which are likely to be useful
 /// during widget layout.
 pub struct LayoutCtx<'a, 'b: 'a> {
+    pub(crate) command_queue: &'a mut CommandQueue,
+    pub(crate) base_state: &'a mut BaseState,
     pub(crate) text_factory: &'a mut Text<'b>,
-    pub(crate) paint_insets: Insets,
     pub(crate) window_id: WindowId,
+    pub(crate) mouse_pos: Option<Point>,
 }
 
 /// Z-order paint operations with transformations.
@@ -551,7 +553,7 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
     /// [`Insets`]: struct.Insets.html
     /// [`WidgetPod::paint_insets`]: struct.WidgetPod.html#method.paint_insets
     pub fn set_paint_insets(&mut self, insets: impl Into<Insets>) {
-        self.paint_insets = insets.into().nonnegative();
+        self.base_state.paint_insets = insets.into().nonnegative();
     }
 }
 

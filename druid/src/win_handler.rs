@@ -362,7 +362,7 @@ impl<T: Data> Inner<T> {
     fn do_update(&mut self) {
         // we send `update` to all windows, not just the active one:
         for window in self.windows.iter_mut() {
-            window.update(&self.data, &self.env);
+            window.update(&mut self.command_queue, &self.data, &self.env);
         }
         self.invalidate_and_finalize();
     }
@@ -373,7 +373,7 @@ impl<T: Data> Inner<T> {
     /// including for lifecycle events.
     fn invalidate_and_finalize(&mut self) {
         for win in self.windows.iter_mut() {
-            win.invalidate_and_finalize(&mut self.command_queue, &self.data, &self.env);
+            win.invalidate_and_finalize();
         }
     }
 
