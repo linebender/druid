@@ -650,10 +650,6 @@ impl BaseState {
         self.timers.insert(timer_token, self.id);
     }
 
-    pub(crate) fn remove_timer(&mut self, timer_token: TimerToken) {
-        self.timers.remove(&timer_token);
-    }
-
     /// Update to incorporate state changes from a child.
     fn merge_up(&mut self, child_state: &BaseState) {
         self.needs_inval |= child_state.needs_inval;
