@@ -333,6 +333,9 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn mouse_up(&mut self, event: &MouseEvent) {}
 
+    /// Called when the mouse cursor has left the application window
+    fn mouse_leave(&mut self) {}
+
     /// Called on timer event.
     ///
     /// This is called at (approximately) the requested deadline by a

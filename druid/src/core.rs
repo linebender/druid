@@ -438,6 +438,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseMove(mouse_event)
             }
+            Event::MouseLeave => {
+                let had_hot = child_ctx.base_state.is_hot;
+                child_ctx.base_state.is_hot = false;
+                if had_hot {
+                    hot_changed = Some(false);
+                }
+                recurse = had_active || had_hot;
+                Event::MouseLeave
+            }
             Event::KeyDown(e) => {
                 recurse = child_ctx.has_focus();
                 Event::KeyDown(*e)
