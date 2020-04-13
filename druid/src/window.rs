@@ -24,9 +24,9 @@ use crate::shell::{Counter, Cursor, WindowHandle};
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget,
-    WidgetId, WidgetPod, WindowDesc,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalLifeCycle, LayoutCtx, LifeCycle,
+    LifeCycleCtx, LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetId, WidgetPod,
+    WindowDesc,
 };
 
 /// A unique identifier for a window.
@@ -121,11 +121,11 @@ impl<T: Data> Window<T> {
         };
 
         let event = match event {
-            Event::Internal(InternalEvent::Size(size)) => {
+            Event::WindowSize(size) => {
                 let dpi = f64::from(self.handle.get_dpi());
                 let scale = 96.0 / dpi;
                 self.size = Size::new(size.width * scale, size.height * scale);
-                Event::Internal(InternalEvent::Size(self.size))
+                Event::WindowSize(self.size)
             }
             other => other,
         };

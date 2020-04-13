@@ -366,7 +366,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         // log if we seem not to be laid out when we should be
-        if !matches!(event, Event::WindowConnected | Event::Internal(InternalEvent::Size(_)))
+        if !matches!(event, Event::WindowConnected | Event::WindowSize(_))
             && self.state.layout_rect.is_none()
         {
             log::warn!(
@@ -404,11 +404,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut hot_changed = None;
         let child_event = match event {
             Event::Internal(internal) => match internal {
-                InternalEvent::Size(size) => {
-                    child_ctx.request_layout();
-                    recurse = ctx.is_root;
-                    Event::Internal(InternalEvent::Size(*size))
-                }
                 InternalEvent::MouseLeave => {
                     let had_hot = child_ctx.base_state.is_hot;
                     child_ctx.base_state.is_hot = false;
@@ -437,6 +432,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
             },
             Event::WindowConnected => Event::WindowConnected,
+            Event::WindowSize(size) => {
+                child_ctx.request_layout();
+                recurse = ctx.is_root;
+                Event::WindowSize(*size)
+            }
             Event::MouseDown(mouse_event) => {
                 let had_hot = child_ctx.base_state.is_hot;
                 let now_hot = rect.winding(mouse_event.pos) != 0;

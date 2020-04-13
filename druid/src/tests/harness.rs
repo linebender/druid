@@ -150,7 +150,7 @@ impl<T: Data> Harness<'_, T> {
     // should we do this automatically? Also these will change regularly?
     pub fn send_initial_events(&mut self) {
         self.event(Event::WindowConnected);
-        self.event(Event::Internal(InternalEvent::Size(self.window_size)));
+        self.event(Event::WindowSize(self.window_size));
     }
 
     /// Send an event to the widget.

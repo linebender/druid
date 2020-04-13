@@ -616,10 +616,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn size(&mut self, width: u32, height: u32) {
-        let event = Event::Internal(InternalEvent::Size(Size::new(
-            f64::from(width),
-            f64::from(height),
-        )));
+        let event = Event::WindowSize(Size::new(f64::from(width), f64::from(height)));
         self.app_state.do_window_event(event, self.window_id);
     }
 

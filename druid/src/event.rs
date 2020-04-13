@@ -56,6 +56,13 @@ pub enum Event {
     ///
     /// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
     WindowConnected,
+    /// Called on the root widget when the window size changes.
+    ///
+    /// Discussion: it's not obvious this should be propagated to user
+    /// widgets. It *is* propagated through the RootWidget and handled
+    /// in the WindowPod, but after that it might be considered better
+    /// to just handle it in `layout`.
+    WindowSize(Size),
     /// Called when a mouse button is pressed.
     MouseDown(MouseEvent),
     /// Called when a mouse button is released.
@@ -133,8 +140,6 @@ pub enum Event {
 /// [`Event`]: enum.Event.html
 #[derive(Debug, Clone)]
 pub enum InternalEvent {
-    /// Sent to the root widget when the window size changes.
-    Size(Size),
     /// Sent in some cases when the mouse has left the window.
     ///
     /// This is used in cases when the platform no longer sends mouse events,
