@@ -70,9 +70,7 @@ pub struct WindowBuilder {
 pub struct WindowHandle(Weak<WindowState>);
 
 /// A handle that can get used to schedule an idle handler. Note that
-/// this handle is thread safe. If the handle is used after the hwnd
-/// has been destroyed, probably not much will go wrong (the XI_RUN_IDLE
-/// message may be sent to a stray window).
+/// this handle is thread safe.
 #[derive(Clone)]
 pub struct IdleHandle {
     state: Weak<WindowState>,
