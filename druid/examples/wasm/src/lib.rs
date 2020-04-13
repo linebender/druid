@@ -14,7 +14,10 @@
 
 use wasm_bindgen::prelude::*;
 
-mod examples;
+// This line includes an automatically generated (in build.rs) examples module.
+// This particular mechanism is chosen to avoid any kinds of modifications to committed files at
+// build time, keeping the source tree clean from build artifacts.
+include!("examples.in");
 
 macro_rules! impl_example {
     ($wasm_fn:ident, $expr:expr) => {
