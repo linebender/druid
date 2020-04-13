@@ -182,15 +182,15 @@ We solve both these problems by passing in a widget-tree with one single widget 
 <p>To see how this works we will divide our window in four. We'll have two rows and two columns with a single label in each of the quadrants. We can lay-out our labels using the <code>Flex</code> widget.</p>
 <pre><code class="language-rust noplaypen">fn build_ui() -&gt; impl Widget&lt;()&gt; {
     Flex::row()
-        .with_child(
+        .with_flex_child(
             Flex::column()
-                .with_child(Label::new(&quot;top left&quot;), 1.0)
-                .with_child(Label::new(&quot;bottom left&quot;), 1.0),
+                .with_flex_child(Label::new(&quot;top left&quot;), 1.0)
+                .with_flex_child(Label::new(&quot;bottom left&quot;), 1.0),
             1.0)
-        .with_child(
+        .with_flex_child(
             Flex::column()
-                .with_child(Label::new(&quot;top right&quot;), 1.0)
-                .with_child(Label::new(&quot;bottom right&quot;), 1.0),
+                .with_flex_child(Label::new(&quot;top right&quot;), 1.0)
+                .with_flex_child(Label::new(&quot;bottom right&quot;), 1.0),
             1.0)
 }
 </code></pre>
@@ -200,15 +200,15 @@ We solve both these problems by passing in a widget-tree with one single widget 
     Padding::new(
         10.0,
         Flex::row()
-            .with_child(
+            .with_flex_child(
                 Flex::column()
-                    .with_child(Label::new(&quot;top left&quot;), 1.0)
-                    .with_child(Align::centered(Label::new(&quot;bottom left&quot;)), 1.0),
+                    .with_flex_child(Label::new(&quot;top left&quot;), 1.0)
+                    .with_flex_child(Align::centered(Label::new(&quot;bottom left&quot;)), 1.0),
                 1.0)
             .with_child(
                 Flex::column()
-                    .with_child(Label::new(&quot;top right&quot;), 1.0)
-                    .with_child(Align::centered(Label::new(&quot;bottom right&quot;)), 1.0),
+                    .with_flex_child(Label::new(&quot;top right&quot;), 1.0)
+                    .with_flex_child(Align::centered(Label::new(&quot;bottom right&quot;)), 1.0),
                 1.0))
 }
 </code></pre>
