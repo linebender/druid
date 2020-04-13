@@ -21,7 +21,6 @@ pub struct Application;
 
 impl Application {
     pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
-        // TODO: Implement this
         Application
     }
 
