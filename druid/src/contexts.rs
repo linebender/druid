@@ -158,6 +158,8 @@ impl<'a> EventCtx<'a> {
     /// Widgets must call this method after adding a new child.
     pub fn children_changed(&mut self) {
         self.base_state.children_changed = true;
+        self.base_state.needs_layout = true;
+        self.base_state.needs_inval = true;
     }
 
     /// Get an object which can create text layouts.
@@ -451,6 +453,8 @@ impl<'a> LifeCycleCtx<'a> {
     /// Widgets must call this method after adding a new child.
     pub fn children_changed(&mut self) {
         self.base_state.children_changed = true;
+        self.base_state.needs_layout = true;
+        self.base_state.needs_inval = true;
     }
 
     /// Request an animation frame.
@@ -504,6 +508,8 @@ impl<'a> UpdateCtx<'a> {
     /// Widgets must call this method after adding a new child.
     pub fn children_changed(&mut self) {
         self.base_state.children_changed = true;
+        self.base_state.needs_layout = true;
+        self.base_state.needs_inval = true;
     }
 
     /// Get an object which can create text layouts.
