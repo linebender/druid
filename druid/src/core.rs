@@ -22,8 +22,8 @@ use crate::bloom::Bloom;
 use crate::kurbo::{Affine, Insets, Rect, Shape, Size};
 use crate::piet::RenderContext;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Target, UpdateCtx, Widget, WidgetId,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
+    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Target, UpdateCtx, Widget, WidgetId,
 };
 
 /// Our queue type
@@ -366,7 +366,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         // log if we seem not to be laid out when we should be
-        if !matches!(event, Event::WindowConnected | Event::Size(_))
+        if !matches!(event, Event::WindowConnected | Event::Internal(InternalEvent::Size(_)))
             && self.state.layout_rect.is_none()
         {
             log::warn!(
@@ -403,12 +403,40 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut recurse = true;
         let mut hot_changed = None;
         let child_event = match event {
+            Event::Internal(internal) => match internal {
+                InternalEvent::Size(size) => {
+                    child_ctx.request_layout();
+                    recurse = ctx.is_root;
+                    Event::Internal(InternalEvent::Size(*size))
+                }
+                InternalEvent::MouseLeave => {
+                    let had_hot = child_ctx.base_state.is_hot;
+                    child_ctx.base_state.is_hot = false;
+                    if had_hot {
+                        hot_changed = Some(false);
+                    }
+                    recurse = had_active || had_hot;
+                    Event::Internal(InternalEvent::MouseLeave)
+                }
+                InternalEvent::TargetedCommand(target, cmd) => {
+                    match target {
+                        Target::Window(_) => Event::Command(cmd.clone()),
+                        Target::Widget(id) if *id == child_ctx.widget_id() => {
+                            Event::Command(cmd.clone())
+                        }
+                        Target::Widget(id) => {
+                            // Recurse when the target widget could be our descendant.
+                            // The bloom filter we're checking can return false positives.
+                            recurse = child_ctx.base_state.children.may_contain(id);
+                            Event::Internal(InternalEvent::TargetedCommand(*target, cmd.clone()))
+                        }
+                        Target::Global => {
+                            panic!("Target::Global should be converted before WidgetPod")
+                        }
+                    }
+                }
+            },
             Event::WindowConnected => Event::WindowConnected,
-            Event::Size(size) => {
-                child_ctx.request_layout();
-                recurse = ctx.is_root;
-                Event::Size(*size)
-            }
             Event::MouseDown(mouse_event) => {
                 let had_hot = child_ctx.base_state.is_hot;
                 let now_hot = rect.winding(mouse_event.pos) != 0;
@@ -438,15 +466,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseMove(mouse_event)
             }
-            Event::MouseLeave => {
-                let had_hot = child_ctx.base_state.is_hot;
-                child_ctx.base_state.is_hot = false;
-                if had_hot {
-                    hot_changed = Some(false);
-                }
-                recurse = had_active || had_hot;
-                Event::MouseLeave
-            }
             Event::KeyDown(e) => {
                 recurse = child_ctx.has_focus();
                 Event::KeyDown(*e)
@@ -472,17 +491,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Event::Timer(*id)
             }
             Event::Command(cmd) => Event::Command(cmd.clone()),
-            Event::TargetedCommand(target, cmd) => match target {
-                Target::Window(_) => Event::Command(cmd.clone()),
-                Target::Widget(id) if *id == child_ctx.widget_id() => Event::Command(cmd.clone()),
-                Target::Widget(id) => {
-                    // Recurse when the target widget could be our descendant.
-                    // The bloom filter we're checking can return false positives.
-                    recurse = child_ctx.base_state.children.may_contain(id);
-                    Event::TargetedCommand(*target, cmd.clone())
-                }
-                Target::Global => panic!("Target::Global should be converted before WidgetPod"),
-            },
         };
         if let Some(is_hot) = hot_changed {
             let hot_changed_event = LifeCycle::HotChanged(is_hot);
@@ -502,6 +510,70 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         let recurse = match event {
+            LifeCycle::Internal(internal) => match internal {
+                InternalLifeCycle::RouteWidgetAdded => {
+                    // if this is called either we were just created, in
+                    // which case we need to change lifecycle event to
+                    // WidgetAdded or in case we were already created
+                    // we just pass this event down
+                    if self.old_data.is_none() {
+                        self.lifecycle(ctx, &LifeCycle::WidgetAdded, data, env);
+                        return;
+                    } else {
+                        if self.state.children_changed {
+                            self.state.children.clear();
+                            self.state.focus_chain.clear();
+                        }
+                        self.state.children_changed
+                    }
+                }
+                InternalLifeCycle::RouteFocusChanged { old, new } => {
+                    self.state.request_focus = None;
+
+                    let this_changed = if *old == Some(self.state.id) {
+                        Some(false)
+                    } else if *new == Some(self.state.id) {
+                        Some(true)
+                    } else {
+                        None
+                    };
+
+                    if let Some(change) = this_changed {
+                        // Only send FocusChanged in case there's actual change
+                        if old != new {
+                            self.state.has_focus = change;
+                            let event = LifeCycle::FocusChanged(change);
+                            self.inner.lifecycle(ctx, &event, data, env);
+                        }
+                        false
+                    } else {
+                        self.state.has_focus = false;
+                        // Recurse when the target widgets could be our descendants.
+                        // The bloom filter we're checking can return false positives.
+                        match (old, new) {
+                            (Some(old), _) if self.state.children.may_contain(old) => true,
+                            (_, Some(new)) if self.state.children.may_contain(new) => true,
+                            _ => false,
+                        }
+                    }
+                }
+                #[cfg(test)]
+                InternalLifeCycle::DebugRequestState { widget, state_cell } => {
+                    if *widget == self.id() {
+                        state_cell.set(self.state.clone());
+                        false
+                    } else {
+                        // Recurse when the target widget could be our descendant.
+                        // The bloom filter we're checking can return false positives.
+                        self.state.children.may_contain(&widget)
+                    }
+                }
+                #[cfg(test)]
+                InternalLifeCycle::DebugInspectState(f) => {
+                    f.call(&self.state);
+                    true
+                }
+            },
             LifeCycle::AnimFrame(_) => {
                 let r = self.state.request_anim;
                 self.state.request_anim = false;
@@ -515,73 +587,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
                 true
             }
-            LifeCycle::RouteWidgetAdded => {
-                // if this is called either we were just created, in
-                // which case we need to change lifecycle event to
-                // WidgetAdded or in case we were already created
-                // we just pass this event down
-                if self.old_data.is_none() {
-                    self.lifecycle(ctx, &LifeCycle::WidgetAdded, data, env);
-                    return;
-                } else {
-                    if self.state.children_changed {
-                        self.state.children.clear();
-                        self.state.focus_chain.clear();
-                    }
-                    self.state.children_changed
-                }
-            }
             LifeCycle::HotChanged(_) => false,
-            LifeCycle::RouteFocusChanged { old, new } => {
-                self.state.request_focus = None;
-
-                let this_changed = if *old == Some(self.state.id) {
-                    Some(false)
-                } else if *new == Some(self.state.id) {
-                    Some(true)
-                } else {
-                    None
-                };
-
-                if let Some(change) = this_changed {
-                    // Only send FocusChanged in case there's actual change
-                    if old != new {
-                        self.state.has_focus = change;
-                        let event = LifeCycle::FocusChanged(change);
-                        self.inner.lifecycle(ctx, &event, data, env);
-                    }
-                    false
-                } else {
-                    self.state.has_focus = false;
-                    // Recurse when the target widgets could be our descendants.
-                    // The bloom filter we're checking can return false positives.
-                    match (old, new) {
-                        (Some(old), _) if self.state.children.may_contain(old) => true,
-                        (_, Some(new)) if self.state.children.may_contain(new) => true,
-                        _ => false,
-                    }
-                }
-            }
             LifeCycle::FocusChanged(_) => {
                 // We are a descendant of a widget that has/had focus.
                 // Descendants don't inherit focus, so don't recurse.
                 false
-            }
-            #[cfg(test)]
-            LifeCycle::DebugRequestState { widget, state_cell } => {
-                if *widget == self.id() {
-                    state_cell.set(self.state.clone());
-                    false
-                } else {
-                    // Recurse when the target widget could be our descendant.
-                    // The bloom filter we're checking can return false positives.
-                    self.state.children.may_contain(&widget)
-                }
-            }
-            #[cfg(test)]
-            LifeCycle::DebugInspectState(f) => {
-                f.call(&self.state);
-                true
             }
         };
 
@@ -598,7 +608,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         // we need to (re)register children in case of one of the following events
         match event {
-            LifeCycle::WidgetAdded | LifeCycle::RouteWidgetAdded => {
+            LifeCycle::WidgetAdded | LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded) => {
                 self.state.children_changed = false;
                 ctx.base_state.children = ctx.base_state.children.union(self.state.children);
                 ctx.base_state.focus_chain.extend(&self.state.focus_chain);

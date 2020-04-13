@@ -388,8 +388,6 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                         self.reset_scrollbar_fade(ctx, &env);
                     }
                 }
-                // Show the scrollbars any time our size changes
-                Event::Size(_) => self.reset_scrollbar_fade(ctx, &env),
                 Event::Timer(id) if *id == self.scrollbars.timer_id => {
                     // Schedule scroll bars animation
                     ctx.request_anim_frame();

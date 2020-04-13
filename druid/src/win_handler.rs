@@ -31,8 +31,8 @@ use crate::ext_event::ExtEventHost;
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, KeyEvent, KeyModifiers, MenuDesc, Target, TimerToken, WheelEvent,
-    WindowDesc, WindowId,
+    Command, Data, Env, Event, InternalEvent, KeyEvent, KeyModifiers, MenuDesc, Target, TimerToken,
+    WheelEvent, WindowDesc, WindowId,
 };
 
 use crate::command::sys as sys_cmd;
@@ -300,7 +300,8 @@ impl<T: Data> Inner<T> {
             // this widget, breaking if the event is handled.
             Target::Widget(id) => {
                 for w in self.windows.iter_mut().filter(|w| w.may_contain_widget(id)) {
-                    let event = Event::TargetedCommand(id.into(), cmd.clone());
+                    let event =
+                        Event::Internal(InternalEvent::TargetedCommand(id.into(), cmd.clone()));
                     if w.event(&mut self.command_queue, event, &mut self.data, &self.env) {
                         break;
                     }
@@ -319,7 +320,7 @@ impl<T: Data> Inner<T> {
 
     fn do_window_event(&mut self, source_id: WindowId, event: Event) -> bool {
         match event {
-            Event::Command(..) | Event::TargetedCommand(..) => {
+            Event::Command(..) | Event::Internal(InternalEvent::TargetedCommand(..)) => {
                 panic!("commands should be dispatched via dispatch_cmd");
             }
             _ => (),
@@ -615,7 +616,10 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn size(&mut self, width: u32, height: u32) {
-        let event = Event::Size(Size::new(f64::from(width), f64::from(height)));
+        let event = Event::Internal(InternalEvent::Size(Size::new(
+            f64::from(width),
+            f64::from(height),
+        )));
         self.app_state.do_window_event(event, self.window_id);
     }
 
@@ -641,7 +645,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
     fn mouse_leave(&mut self) {
         self.app_state
-            .do_window_event(Event::MouseLeave, self.window_id);
+            .do_window_event(Event::Internal(InternalEvent::MouseLeave), self.window_id);
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {

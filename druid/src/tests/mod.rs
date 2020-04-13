@@ -181,7 +181,10 @@ fn simple_lifecyle() {
         harness.send_initial_events();
         assert_matches!(record.next(), Record::L(LifeCycle::WidgetAdded));
         assert_matches!(record.next(), Record::E(Event::WindowConnected));
-        assert_matches!(record.next(), Record::E(Event::Size(_)));
+        assert_matches!(
+            record.next(),
+            Record::E(Event::Internal(InternalEvent::Size(_)))
+        );
         assert!(record.is_empty());
     })
 }
