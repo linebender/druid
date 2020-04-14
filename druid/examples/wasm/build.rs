@@ -45,13 +45,21 @@ mod examples {
         if let Some(example) = path.file_stem() {
             let example_str = example.to_string_lossy();
 
-            // Skip examples that are known to not work.
+            // Skip examples that are known to not work with wasm.
             if EXCEPTIONS.contains(&example_str.as_ref()) {
                 continue;
             }
 
             // Record the valid example module we found to add to the generated examples.in
             examples_in.push_str(&format!("    pub mod {};\n", example_str));
+
+            // The "switch" example name would conflict with JavaScript's switch statement. So we
+            // rename it here to switch_demo.
+            let js_entry_fn_name = if &example_str == "switch" {
+                "switch_demo".to_string()
+            } else {
+                example_str.to_string()
+            };
 
             // Create an html document for each example.
             let html = format!(
@@ -86,7 +94,7 @@ mod examples {
         </script>
     </body>
 </html>"#,
-                name = example_str
+                name = js_entry_fn_name
             );
 
             // Write out the html file into a designated html directory located in crate root.
