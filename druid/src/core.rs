@@ -198,7 +198,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
                 window_id: ctx.window_id,
             };
             self.inner
-                .lifecycle(&mut child_ctx, &hot_changed_event, data, &env);
+                .lifecycle(&mut child_ctx, &hot_changed_event, data, env);
             ctx.base_state.merge_up(&child_ctx.base_state);
         }
     }
@@ -285,7 +285,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             base_state: &self.state,
             focus_widget: ctx.focus_widget,
         };
-        self.inner.paint(&mut inner_ctx, data, &env);
+        self.inner.paint(&mut inner_ctx, data, env);
         ctx.z_ops.append(&mut inner_ctx.z_ops);
 
         if env.get(Env::DEBUG_PAINT) {
@@ -330,7 +330,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let layout_origin = self.layout_rect().origin().to_vec2();
             ctx.transform(Affine::translate(layout_origin));
             let visible = ctx.region().to_rect() - layout_origin;
-            ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, &env));
+            ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, env));
         });
     }
 
@@ -360,7 +360,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             text_factory: ctx.text_factory,
             mouse_pos: child_mouse_pos,
         };
-        let size = self.inner.layout(&mut child_ctx, bc, data, &env);
+        let size = self.inner.layout(&mut child_ctx, bc, data, env);
 
         ctx.base_state.merge_up(&child_ctx.base_state);
 
@@ -523,11 +523,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let hot_changed_event = LifeCycle::HotChanged(is_hot);
             let mut lc_ctx = child_ctx.make_lifecycle_ctx();
             self.inner
-                .lifecycle(&mut lc_ctx, &hot_changed_event, data, &env);
+                .lifecycle(&mut lc_ctx, &hot_changed_event, data, env);
         }
         if recurse {
             child_ctx.base_state.has_active = false;
-            self.inner.event(&mut child_ctx, &child_event, data, &env);
+            self.inner.event(&mut child_ctx, &child_event, data, env);
             child_ctx.base_state.has_active |= child_ctx.base_state.is_active;
         };
 
