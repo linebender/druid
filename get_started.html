@@ -161,15 +161,14 @@ app built and running</em>.</p>
 druid = &quot;0.5.0&quot;
 </code></pre>
 <p>To show a minimal window with a label replace <code>main.rs</code> with this;</p>
-<pre><code class="language-rust noplaypen">use druid::{AppLauncher, WindowDesc, Widget};
+<pre><code class="language-rust noplaypen">use druid::{AppLauncher, WindowDesc, Widget, PlatformError};
 use druid::widget::Label;
-use druid::shell::Error;
 
 fn build_ui() -&gt; impl Widget&lt;()&gt; {
     Label::new(&quot;Hello world&quot;)
 }
 
-fn main() -&gt; Result&lt;(), Error&gt; {
+fn main() -&gt; Result&lt;(), PlatformError&gt; {
     AppLauncher::with_window(WindowDesc::new(build_ui)).launch(())?;
     Ok(())
 }
