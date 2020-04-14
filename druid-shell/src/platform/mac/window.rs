@@ -232,6 +232,13 @@ lazy_static! {
         extern "C" fn acceptsFirstResponder(_this: &Object, _sel: Sel) -> BOOL {
             YES
         }
+        decl.add_method(
+            sel!(acceptsFirstMouse:),
+            acceptsFirstMouse as extern "C" fn(&Object, Sel, id) -> BOOL,
+        );
+        extern "C" fn acceptsFirstMouse(_this: &Object, _sel: Sel, _nsevent: id) -> BOOL {
+            YES
+        }
         decl.add_method(sel!(dealloc), dealloc as extern "C" fn(&Object, Sel));
         extern "C" fn dealloc(this: &Object, _sel: Sel) {
             info!("view is dealloc'ed");
