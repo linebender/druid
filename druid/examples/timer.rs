@@ -111,9 +111,9 @@ impl Widget<u32> for SimpleBox {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &u32, env: &Env) {
         let mut background = if ctx.is_hot() {
-            BackgroundBrush::Color(Color::rgb(255, 0, 0))
+            BackgroundBrush::Color(Color::rgb8(200, 55, 55))
         } else {
-            BackgroundBrush::Color(Color::rgb(0, 255, 255))
+            BackgroundBrush::Color(Color::rgb8(30, 210, 170))
         };
         background.paint(ctx, data, env);
     }
