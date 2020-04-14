@@ -44,6 +44,7 @@ use crate::keyboard;
 use crate::mouse::{Cursor, MouseButton, MouseEvent};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use crate::Error;
+use log::{info, warn};
 
 /// Taken from https://gtk-rs.org/docs-src/tutorial/closures
 /// It is used to reduce the boilerplate of setting up gtk callbacks
@@ -270,6 +271,8 @@ impl WindowBuilder {
                     if anim {
                         widget.queue_draw();
                     }
+                } else {
+                    warn!("Drawing was skipped because the handler was already borrowed");
                 }
 
             }
@@ -288,6 +291,8 @@ impl WindowBuilder {
                             button: get_mouse_button(button.get_button()),
                         },
                     );
+                } else {
+                    info!("GTK event was dropped because the handler was already borrowed");
                 }
             }
 
@@ -305,6 +310,8 @@ impl WindowBuilder {
                             button: get_mouse_button(button.get_button()),
                         },
                     );
+                } else {
+                    info!("GTK event was dropped because the handler was already borrowed");
                 }
             }
 
@@ -324,6 +331,8 @@ impl WindowBuilder {
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
                     handler.mouse_move(&mouse_event);
+                } else {
+                    info!("GTK event was dropped because the handler was already borrowed");
                 }
             }
 
@@ -343,6 +352,8 @@ impl WindowBuilder {
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
                     handler.mouse_move(&mouse_event);
+                } else {
+                    info!("GTK event was dropped because the handler was already borrowed");
                 }
             }
 
@@ -396,6 +407,8 @@ impl WindowBuilder {
                             );
                         }
                     }
+                } else {
+                    info!("GTK event was dropped because the handler was already borrowed");
                 }
             }
 
@@ -412,6 +425,8 @@ impl WindowBuilder {
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
                     handler.key_down(make_key_event(key, repeat));
+                } else {
+                    info!("GTK event was dropped because the handler was already borrowed");
                 }
             }
 
@@ -425,6 +440,8 @@ impl WindowBuilder {
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
                     handler.key_down(make_key_event(key, false));
+                } else {
+                    info!("GTK event was dropped because the handler was already borrowed");
                 }
             }
 
@@ -482,7 +499,7 @@ impl WindowHandle {
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
         //FIXME: implementation goes here
-        log::warn!("bring_to_front_and_focus not yet implemented for gtk");
+        warn!("bring_to_front_and_focus not yet implemented for gtk");
     }
 
     // Request invalidation of the entire window contents.
@@ -504,7 +521,7 @@ impl WindowHandle {
         let interval = match u32::try_from(interval) {
             Ok(iv) => iv,
             Err(_) => {
-                log::warn!("timer duration exceeds gtk max of 2^32 millis");
+                warn!("timer duration exceeds gtk max of 2^32 millis");
                 u32::max_value()
             }
         };
