@@ -34,11 +34,14 @@ set size, you must pass it explicit contraints, such as by wrapping it in a
 
 One other useful thing about `Painter` is that it can be used as the background
 of a [`Container`] widget. If we wanted to have a label that used our swatch
-as a background, we could do (using the [`background`] method on [`WidgetExt`]):
+as a background, we could do:
 
 ```rust,noplaypen
 {{#include ../book_examples/src/custom_widgets_md.rs:background_label}}
 ```
+
+(This uses the [`background`] method on [`WidgetExt`] to embed our label in a
+container.)
 
 ### Controller
 
@@ -56,10 +59,8 @@ There's one other difference to the `Controller` methods; it is explicitly
 passed a mutable reference to its child in each method, so that it can modify it
 or forward events as needed.
 
-As an arbitrary example, here is how you might use a `Controller` to change the
-behaviour of the `Backspace` key for a textbox, so that every other time it is
-pressed it doesn't do anything. (This is a bad example, feel free to write a
-better one!):
+As an arbitrary example, here is how you might use a `Controller` to make a
+textbox fire some action (say doing a search) 300ms after the last keypress:
 
 ```rust,noplaypen
 {{#include ../book_examples/src/custom_widgets_md.rs:annoying_textbox}}

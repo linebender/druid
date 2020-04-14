@@ -1,5 +1,9 @@
 use druid::widget::{Controller, Label, Painter, SizedBox, TextBox};
-use druid::{Color, Env, Event, EventCtx, KeyCode, PaintCtx, RenderContext, Widget, WidgetExt};
+use druid::{
+    Color, Env, Event, EventCtx, KeyCode, PaintCtx, RenderContext, Selector, TimerToken, Widget,
+    WidgetExt,
+};
+use std::time::{Duration, Instant};
 
 const CORNER_RADIUS: f64 = 4.0;
 const STROKE_WIDTH: f64 = 2.0;
@@ -32,12 +36,25 @@ fn background_label() -> impl Widget<Color> {
 // ANCHOR_END: background_label
 
 // ANCHOR: annoying_textbox
-#[derive(Default)]
-struct AnnoyingController {
-    suppress_next: bool,
+const ACTION: Selector = Selector::new("hello.textbox-action");
+const DELAY: Duration = Duration::from_millis(300);
+
+struct TextBoxActionController {
+    timer: Option<TimerToken>,
 }
 
-impl Controller<String, TextBox> for AnnoyingController {
+impl TextBoxActionController {
+    pub fn new() -> Self {
+        TextBoxActionController { timer: None }
+    }
+
+    // Fire ACTION after 300 ms
+    fn deadline() -> Instant {
+        Instant::now() + DELAY
+    }
+}
+
+impl Controller<String, TextBox> for TextBoxActionController {
     fn event(
         &mut self,
         child: &mut TextBox,
@@ -46,15 +63,19 @@ impl Controller<String, TextBox> for AnnoyingController {
         data: &mut String,
         env: &Env,
     ) {
-        if matches!(event, Event::KeyDown(k) if k.key_code == KeyCode::Backspace) {
-            self.suppress_next = !self.suppress_next;
-            if self.suppress_next {
-                return;
+        match event {
+            Event::KeyDown(k) if k.key_code == KeyCode::Return => {
+                ctx.submit_command(ACTION, None);
             }
+            Event::KeyUp(k) if k.key_code != KeyCode::Return => {
+                self.timer = Some(ctx.request_timer(Self::deadline()));
+                child.event(ctx, event, data, env);
+            }
+            Event::Timer(token) if Some(*token) == self.timer => {
+                ctx.submit_command(ACTION, None);
+            }
+            _ => child.event(ctx, event, data, env),
         }
-
-        // if we want our child to receive this event, we must send it explicitly.
-        child.event(ctx, event, data, env);
     }
 }
 // ANCHOR_END: annoying_textbox
