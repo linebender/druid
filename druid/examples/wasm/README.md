@@ -24,10 +24,10 @@ This step has two main functions:
 To preview the build in a web browser, run
 
 ```
-> http -d html
+> http
 ```
 
-which should start serving the specified folder.
+which should start serving the crate root folder containing `index.html`.
 
 Finally, point your browser to the appropriate localhost url (usually http://localhost:8000) and you
 should see a list of HTML documents -- one for each example.
