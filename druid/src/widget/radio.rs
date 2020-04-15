@@ -86,22 +86,20 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         ctx.request_paint();
     }
 
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Radio");
 
-        let label_size = self.child_label.layout(layout_ctx, &bc, data, env);
+        let label_size = self.child_label.layout(ctx, &bc, data, env);
         let padding = 5.0;
         let label_x_offset = env.get(theme::BASIC_WIDGET_HEIGHT) + padding;
         let origin = Point::new(label_x_offset, 0.0);
 
-        self.child_label
-            .set_layout_rect(Rect::from_origin_size(origin, label_size));
+        self.child_label.set_layout_rect(
+            ctx,
+            data,
+            env,
+            Rect::from_origin_size(origin, label_size),
+        );
 
         bc.constrain(Size::new(
             label_x_offset + label_size.width,

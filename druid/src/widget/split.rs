@@ -427,8 +427,8 @@ impl<T: Data> Widget<T> for Split<T> {
                 )
             }
         };
-        self.child1.set_layout_rect(child1_rect);
-        self.child2.set_layout_rect(child2_rect);
+        self.child1.set_layout_rect(ctx, data, env, child1_rect);
+        self.child2.set_layout_rect(ctx, data, env, child2_rect);
 
         let paint_rect = self.child1.paint_rect().union(self.child2.paint_rect());
         let insets = paint_rect - Rect::ZERO.with_size(my_size);

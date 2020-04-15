@@ -17,16 +17,16 @@
 use std::mem;
 use std::time::Instant;
 
-use crate::kurbo::{Insets, Point, Rect, Size};
+use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::shell::{Counter, Cursor, WindowHandle};
 
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalLifeCycle, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetId, WidgetPod,
-    WindowDesc,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
+    LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget,
+    WidgetId, WidgetPod, WindowDesc,
 };
 
 /// A unique identifier for a window.
@@ -42,6 +42,7 @@ pub struct Window<T> {
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) context_menu: Option<MenuDesc<T>>,
     pub(crate) last_anim: Option<Instant>,
+    pub(crate) last_mouse_pos: Option<Point>,
     pub(crate) focus: Option<WidgetId>,
     pub(crate) handle: WindowHandle,
     // delegate?
@@ -57,6 +58,7 @@ impl<T> Window<T> {
             menu: desc.menu,
             context_menu: None,
             last_anim: None,
+            last_mouse_pos: None,
             focus: None,
             handle,
         }
@@ -108,6 +110,37 @@ impl<T: Data> Window<T> {
         }
     }
 
+    fn post_event_processing(
+        &mut self,
+        queue: &mut CommandQueue,
+        data: &T,
+        env: &Env,
+        process_commands: bool,
+    ) {
+        let base_state = self.root.state();
+        // If children are changed during the handling of an event,
+        // we need to send RouteWidgetAdded now, so that they are ready for update/layout.
+        if base_state.children_changed {
+            self.lifecycle(
+                queue,
+                &LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded),
+                data,
+                env,
+                false,
+            );
+        }
+        // If there are any commands and they should be processed
+        if process_commands && !queue.is_empty() {
+            // Ask the handler to call us back on idle
+            // so we can process them in a new event/update pass.
+            if let Some(mut handle) = self.handle.get_idle_handle() {
+                handle.schedule_idle(RUN_COMMANDS_TOKEN);
+            } else {
+                log::error!("failed to get idle handle");
+            }
+        }
+    }
+
     pub(crate) fn event(
         &mut self,
         queue: &mut CommandQueue,
@@ -115,6 +148,14 @@ impl<T: Data> Window<T> {
         data: &mut T,
         env: &Env,
     ) -> bool {
+        match &event {
+            Event::MouseDown(e) | Event::MouseUp(e) | Event::MouseMove(e) => {
+                self.last_mouse_pos = Some(e.pos)
+            }
+            Event::Internal(InternalEvent::MouseLeave) => self.last_mouse_pos = None,
+            _ => (),
+        }
+
         let mut cursor = match event {
             Event::MouseMove(..) => Some(Cursor::Arrow),
             _ => None,
@@ -136,6 +177,7 @@ impl<T: Data> Window<T> {
                 &LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded),
                 data,
                 env,
+                false,
             );
         }
 
@@ -147,7 +189,6 @@ impl<T: Data> Window<T> {
                 base_state: &mut base_state,
                 is_handled: false,
                 is_root: true,
-                had_active: self.root.has_active(),
                 window: &self.handle,
                 window_id: self.id,
                 focus_widget: self.focus,
@@ -161,7 +202,7 @@ impl<T: Data> Window<T> {
             let old = self.focus;
             let new = self.widget_for_focus_request(focus_req);
             let event = LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged { old, new });
-            self.lifecycle(queue, &event, data, env);
+            self.lifecycle(queue, &event, data, env, false);
             self.focus = new;
         }
 
@@ -169,16 +210,7 @@ impl<T: Data> Window<T> {
             self.handle.set_cursor(&cursor);
         }
 
-        // If children are changed during the handling of an event,
-        // we need to send RouteWidgetAdded now, so that they are ready for update/layout.
-        if base_state.children_changed {
-            self.lifecycle(
-                queue,
-                &LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded),
-                data,
-                env,
-            );
-        }
+        self.post_event_processing(queue, data, env, false);
 
         is_handled
     }
@@ -189,6 +221,7 @@ impl<T: Data> Window<T> {
         event: &LifeCycle,
         data: &T,
         env: &Env,
+        process_commands: bool,
     ) {
         let mut base_state = BaseState::new(self.root.id());
         let mut ctx = LifeCycleCtx {
@@ -198,10 +231,12 @@ impl<T: Data> Window<T> {
         };
 
         if let LifeCycle::AnimFrame(_) = event {
-            return self.do_anim_frame(&mut ctx, data, env);
+            self.do_anim_frame(&mut ctx, data, env)
+        } else {
+            self.root.lifecycle(&mut ctx, event, data, env);
         }
 
-        self.root.lifecycle(&mut ctx, event, data, env);
+        self.post_event_processing(queue, data, env, process_commands);
     }
 
     /// AnimFrame has special logic, so we implement it separately.
@@ -221,7 +256,7 @@ impl<T: Data> Window<T> {
         }
     }
 
-    pub(crate) fn update(&mut self, data: &T, env: &Env) {
+    pub(crate) fn update(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         self.update_title(data, env);
 
         let mut base_state = BaseState::new(self.root.id());
@@ -232,22 +267,10 @@ impl<T: Data> Window<T> {
         };
 
         self.root.update(&mut update_ctx, data, env);
+        self.post_event_processing(queue, data, env, false);
     }
 
-    pub(crate) fn invalidate_and_finalize(
-        &mut self,
-        queue: &mut CommandQueue,
-        data: &T,
-        env: &Env,
-    ) {
-        if self.root.state().children_changed {
-            self.lifecycle(
-                queue,
-                &LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded),
-                data,
-                env,
-            );
-        }
+    pub(crate) fn invalidate_and_finalize(&mut self) {
         if self.root.state().needs_inval {
             self.handle.invalidate();
         }
@@ -263,42 +286,46 @@ impl<T: Data> Window<T> {
         env: &Env,
     ) {
         // FIXME: only do AnimFrame if root has requested_anim?
-        self.lifecycle(queue, &LifeCycle::AnimFrame(0), data, env);
+        self.lifecycle(queue, &LifeCycle::AnimFrame(0), data, env, true);
 
         if self.root.state().needs_layout {
-            self.layout(piet, data, env);
+            self.layout(piet, queue, data, env);
         }
 
         piet.clear(env.get(crate::theme::WINDOW_BACKGROUND_COLOR));
         self.paint(piet, data, env);
-
-        // If commands were submitted during anim frame, ask the handler
-        // to call us back on idle so we can process them in a new event/update pass.
-        if !queue.is_empty() {
-            if let Some(mut handle) = self.handle.get_idle_handle() {
-                handle.schedule_idle(RUN_COMMANDS_TOKEN);
-            } else {
-                log::error!("failed to get idle handle");
-            }
-        }
     }
 
-    fn layout(&mut self, piet: &mut Piet, data: &T, env: &Env) {
+    fn layout(&mut self, piet: &mut Piet, queue: &mut CommandQueue, data: &T, env: &Env) {
+        let mut base_state = BaseState::new(self.root.id());
         let mut layout_ctx = LayoutCtx {
+            command_queue: queue,
+            base_state: &mut base_state,
             text_factory: piet.text(),
             window_id: self.id,
-            paint_insets: Insets::ZERO,
+            mouse_pos: self.last_mouse_pos,
         };
         let bc = BoxConstraints::tight(self.size);
         let size = self.root.layout(&mut layout_ctx, &bc, data, env);
-        self.root
-            .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+        self.root.set_layout_rect(
+            &mut layout_ctx,
+            data,
+            env,
+            Rect::from_origin_size(Point::ORIGIN, size),
+        );
+        self.post_event_processing(queue, data, env, true);
     }
 
     /// only expose `layout` for testing; normally it is called as part of `do_paint`
     #[cfg(test)]
-    pub(crate) fn just_layout(&mut self, piet: &mut Piet, data: &T, env: &Env) {
-        self.layout(piet, data, env)
+    pub(crate) fn just_layout(
+        &mut self,
+        piet: &mut Piet,
+        queue: &mut CommandQueue,
+        data: &T,
+        env: &Env,
+    ) {
+        self.layout(piet, queue, data, env)
     }
 
     fn paint(&mut self, piet: &mut Piet, data: &T, env: &Env) {

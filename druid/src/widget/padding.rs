@@ -85,27 +85,21 @@ impl<T: Data> Widget<T> for Padding<T> {
         self.child.update(ctx, data, env);
     }
 
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Padding");
 
         let hpad = self.left + self.right;
         let vpad = self.top + self.bottom;
 
         let child_bc = bc.shrink((hpad, vpad));
-        let size = self.child.layout(layout_ctx, &child_bc, data, env);
+        let size = self.child.layout(ctx, &child_bc, data, env);
         let origin = Point::new(self.left, self.top);
         self.child
-            .set_layout_rect(Rect::from_origin_size(origin, size));
+            .set_layout_rect(ctx, data, env, Rect::from_origin_size(origin, size));
 
         let my_size = Size::new(size.width + hpad, size.height + vpad);
         let my_insets = self.child.compute_parent_paint_insets(my_size);
-        layout_ctx.set_paint_insets(my_insets);
+        ctx.set_paint_insets(my_insets);
         my_size
     }
 
