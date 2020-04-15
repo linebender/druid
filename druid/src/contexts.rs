@@ -43,7 +43,6 @@ pub struct EventCtx<'a> {
     pub(crate) window: &'a WindowHandle,
     pub(crate) base_state: &'a mut BaseState,
     pub(crate) focus_widget: Option<WidgetId>,
-    pub(crate) had_active: bool,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
 }
@@ -387,14 +386,6 @@ impl<'a> EventCtx<'a> {
     /// get the `WidgetId` of the current widget.
     pub fn widget_id(&self) -> WidgetId {
         self.base_state.id
-    }
-
-    pub(crate) fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
-        LifeCycleCtx {
-            command_queue: self.command_queue,
-            base_state: self.base_state,
-            window_id: self.window_id,
-        }
     }
 }
 

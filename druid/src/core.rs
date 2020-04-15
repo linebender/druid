@@ -19,11 +19,11 @@ use std::collections::VecDeque;
 use log;
 
 use crate::bloom::Bloom;
-use crate::kurbo::{Affine, Insets, Rect, Shape, Size};
+use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size};
 use crate::piet::RenderContext;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Target, UpdateCtx, Widget, WidgetId,
+    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Target, UpdateCtx, Widget, WidgetId, WindowId,
 };
 
 /// Our queue type
@@ -185,21 +185,17 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, layout_rect: Rect) {
         self.state.layout_rect = Some(layout_rect);
 
-        let had_hot = self.state.is_hot;
-        self.state.is_hot = match ctx.mouse_pos {
-            Some(pos) => layout_rect.winding(pos) != 0,
-            None => false,
-        };
-        if had_hot != self.state.is_hot {
-            let hot_changed_event = LifeCycle::HotChanged(self.state.is_hot);
-            let mut child_ctx = LifeCycleCtx {
-                command_queue: ctx.command_queue,
-                base_state: &mut self.state,
-                window_id: ctx.window_id,
-            };
-            self.inner
-                .lifecycle(&mut child_ctx, &hot_changed_event, data, env);
-            ctx.base_state.merge_up(&child_ctx.base_state);
+        if WidgetPod::set_hot_state(
+            &mut self.inner,
+            ctx.command_queue,
+            &mut self.state,
+            ctx.window_id,
+            layout_rect,
+            ctx.mouse_pos,
+            data,
+            env,
+        ) {
+            ctx.base_state.merge_up(&self.state);
         }
     }
 
@@ -261,6 +257,41 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         let parent_bounds = Rect::ZERO.with_size(parent_size);
         let union_pant_rect = self.paint_rect().union(parent_bounds);
         union_pant_rect - parent_bounds
+    }
+
+    /// Determines if the provided `mouse_pos` is inside `rect`
+    /// and if so updates the hot state and sends `LifeCycle::HotChanged`.
+    ///
+    /// Returns `true` if the hot state changed.
+    ///
+    /// The provided `child_state` should be merged up if this returns `true`.
+    #[allow(clippy::too_many_arguments)]
+    fn set_hot_state(
+        child: &mut W,
+        command_queue: &mut CommandQueue,
+        child_state: &mut BaseState,
+        window_id: WindowId,
+        rect: Rect,
+        mouse_pos: Option<Point>,
+        data: &T,
+        env: &Env,
+    ) -> bool {
+        let had_hot = child_state.is_hot;
+        child_state.is_hot = match mouse_pos {
+            Some(pos) => rect.winding(pos) != 0,
+            None => false,
+        };
+        if had_hot != child_state.is_hot {
+            let hot_changed_event = LifeCycle::HotChanged(child_state.is_hot);
+            let mut child_ctx = LifeCycleCtx {
+                command_queue,
+                base_state: child_state,
+                window_id,
+            };
+            child.lifecycle(&mut child_ctx, &hot_changed_event, data, env);
+            return true;
+        }
+        false
     }
 }
 
@@ -418,7 +449,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             window: ctx.window,
             window_id: ctx.window_id,
             base_state: &mut self.state,
-            had_active,
             is_handled: false,
             is_root: false,
             focus_widget: ctx.focus_widget,
@@ -428,16 +458,20 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         // Note: could also represent this as `Option<Event>`.
         let mut recurse = true;
-        let mut hot_changed = None;
         let child_event = match event {
             Event::Internal(internal) => match internal {
                 InternalEvent::MouseLeave => {
-                    let had_hot = child_ctx.base_state.is_hot;
-                    child_ctx.base_state.is_hot = false;
-                    if had_hot {
-                        hot_changed = Some(false);
-                    }
-                    recurse = had_active || had_hot;
+                    let hot_changed = WidgetPod::set_hot_state(
+                        &mut self.inner,
+                        child_ctx.command_queue,
+                        child_ctx.base_state,
+                        child_ctx.window_id,
+                        rect,
+                        None,
+                        data,
+                        env,
+                    );
+                    recurse = had_active || hot_changed;
                     Event::Internal(InternalEvent::MouseLeave)
                 }
                 InternalEvent::TargetedCommand(target, cmd) => {
@@ -465,30 +499,49 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Event::WindowSize(*size)
             }
             Event::MouseDown(mouse_event) => {
-                let had_hot = child_ctx.base_state.is_hot;
-                let now_hot = rect.winding(mouse_event.pos) != 0;
-                if (!had_hot) && now_hot {
-                    child_ctx.base_state.is_hot = true;
-                    hot_changed = Some(true);
-                }
-                recurse = had_active || !ctx.had_active && now_hot;
+                WidgetPod::set_hot_state(
+                    &mut self.inner,
+                    child_ctx.command_queue,
+                    child_ctx.base_state,
+                    child_ctx.window_id,
+                    rect,
+                    Some(mouse_event.pos),
+                    data,
+                    env,
+                );
+                recurse = had_active || child_ctx.base_state.is_hot;
                 let mut mouse_event = mouse_event.clone();
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseDown(mouse_event)
             }
             Event::MouseUp(mouse_event) => {
-                recurse = had_active || !ctx.had_active && rect.winding(mouse_event.pos) != 0;
+                WidgetPod::set_hot_state(
+                    &mut self.inner,
+                    child_ctx.command_queue,
+                    child_ctx.base_state,
+                    child_ctx.window_id,
+                    rect,
+                    Some(mouse_event.pos),
+                    data,
+                    env,
+                );
+                recurse = had_active || child_ctx.base_state.is_hot;
                 let mut mouse_event = mouse_event.clone();
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseUp(mouse_event)
             }
             Event::MouseMove(mouse_event) => {
-                let had_hot = child_ctx.base_state.is_hot;
-                child_ctx.base_state.is_hot = rect.winding(mouse_event.pos) != 0;
-                if had_hot != child_ctx.base_state.is_hot {
-                    hot_changed = Some(child_ctx.base_state.is_hot);
-                }
-                recurse = had_active || had_hot || child_ctx.base_state.is_hot;
+                let hot_changed = WidgetPod::set_hot_state(
+                    &mut self.inner,
+                    child_ctx.command_queue,
+                    child_ctx.base_state,
+                    child_ctx.window_id,
+                    rect,
+                    Some(mouse_event.pos),
+                    data,
+                    env,
+                );
+                recurse = had_active || child_ctx.base_state.is_hot || hot_changed;
                 let mut mouse_event = mouse_event.clone();
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseMove(mouse_event)
@@ -519,12 +572,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
             Event::Command(cmd) => Event::Command(cmd.clone()),
         };
-        if let Some(is_hot) = hot_changed {
-            let hot_changed_event = LifeCycle::HotChanged(is_hot);
-            let mut lc_ctx = child_ctx.make_lifecycle_ctx();
-            self.inner
-                .lifecycle(&mut lc_ctx, &hot_changed_event, data, env);
-        }
         if recurse {
             child_ctx.base_state.has_active = false;
             self.inner.event(&mut child_ctx, &child_event, data, env);

@@ -149,7 +149,9 @@ impl<T: Data> Window<T> {
         env: &Env,
     ) -> bool {
         match &event {
-            Event::MouseMove(e) => self.last_mouse_pos = Some(e.pos),
+            Event::MouseDown(e) | Event::MouseUp(e) | Event::MouseMove(e) => {
+                self.last_mouse_pos = Some(e.pos)
+            }
             Event::Internal(InternalEvent::MouseLeave) => self.last_mouse_pos = None,
             _ => (),
         }
@@ -187,7 +189,6 @@ impl<T: Data> Window<T> {
                 base_state: &mut base_state,
                 is_handled: false,
                 is_root: true,
-                had_active: self.root.has_active(),
                 window: &self.handle,
                 window_id: self.id,
                 focus_widget: self.focus,
