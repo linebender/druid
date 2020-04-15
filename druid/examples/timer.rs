@@ -93,7 +93,7 @@ impl Widget<u32> for SimpleBox {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &u32, _env: &Env) {
         if let LifeCycle::HotChanged(_) = event {
-             ctx.request_paint();
+            ctx.request_paint();
         }
     }
 
