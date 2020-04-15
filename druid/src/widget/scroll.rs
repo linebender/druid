@@ -15,8 +15,7 @@
 //! A container that scrolls its contents.
 
 use std::f64::INFINITY;
-
-use instant::{Duration, Instant};
+use std::time::Duration;
 
 use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
 use crate::theme;
@@ -175,7 +174,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         // Display scroll bars and schedule their disappearance
         self.scrollbars.opacity = env.get(theme::SCROLLBAR_MAX_OPACITY);
         let fade_delay = env.get(theme::SCROLLBAR_FADE_DELAY);
-        let deadline = Instant::now() + Duration::from_millis(fade_delay);
+        let deadline = Duration::from_millis(fade_delay);
         self.scrollbars.timer_id = ctx.request_timer(deadline);
     }
 

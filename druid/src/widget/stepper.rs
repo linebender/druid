@@ -15,8 +15,7 @@
 //! A stepper widget.
 
 use std::f64::EPSILON;
-
-use instant::{Duration, Instant};
+use std::time::Duration;
 
 use crate::kurbo::{BezPath, Rect, RoundedRect};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
@@ -206,8 +205,7 @@ impl Widget<f64> for Stepper {
                     self.increment(data);
                 }
 
-                let delay = Instant::now() + STEPPER_REPEAT_DELAY;
-                self.timer_id = ctx.request_timer(delay);
+                self.timer_id = ctx.request_timer(STEPPER_REPEAT_DELAY);
 
                 ctx.request_paint();
             }
@@ -227,8 +225,7 @@ impl Widget<f64> for Stepper {
                 if self.decrease_active {
                     self.decrement(data);
                 }
-                let delay = Instant::now() + STEPPER_REPEAT;
-                self.timer_id = ctx.request_timer(delay);
+                self.timer_id = ctx.request_timer(STEPPER_REPEAT);
             }
             _ => (),
         }

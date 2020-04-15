@@ -106,12 +106,12 @@ impl Widget<OurData> for ColorWell {
                     (_, _) => Color::rgb8(r, g, b.wrapping_add(10)),
                 };
 
-                self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
+                self.token = ctx.request_timer(CYCLE_DURATION);
                 ctx.request_paint();
             }
 
             Event::WindowConnected if self.randomize => {
-                self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
+                self.token = ctx.request_timer(CYCLE_DURATION);
             }
 
             Event::Command(cmd) if cmd.selector == FREEZE_COLOR => {
