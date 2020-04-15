@@ -91,10 +91,9 @@ struct SimpleBox;
 impl Widget<u32> for SimpleBox {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut u32, _env: &Env) {}
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &u32, _env: &Env) {
-        match _event {
-            LifeCycle::HotChanged(_) => ctx.request_paint(),
-            _ => (),
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &u32, _env: &Env) {
+        if let LifeCycle::HotChanged(_) = event {
+             ctx.request_paint();
         }
     }
 
