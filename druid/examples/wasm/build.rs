@@ -77,7 +77,7 @@ mod examples {
             // Add an entry to the index.html file.
             let index_entry = format!(
                 "<li><a href=\"./html/{name}.html\">{name}</a></li>",
-                name = js_entry_fn_name
+                name = example_str
             );
 
             index_html.push_str(&index_entry);
