@@ -1,5 +1,3 @@
-#![windows_subsystem = "windows"]
-
 use druid::ExtEventSink;
 use druid::Selector;
 
