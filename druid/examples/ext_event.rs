@@ -108,7 +108,10 @@ pub fn main() {
             last_color = new_color.clone();
 
             // if this fails we're shutting down
-            if let Err(_) = event_sink.submit_command(SET_COLOR, new_color, None) {
+            if event_sink
+                .submit_command(SET_COLOR, new_color, None)
+                .is_err()
+            {
                 break;
             }
             thread::sleep(Duration::from_millis(150));

@@ -785,6 +785,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn test_main_axis_alignment_spacing() {
         // The following alignment strategy is based on how
         // Chrome 80 handles it with CSS flex.

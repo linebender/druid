@@ -57,6 +57,7 @@ fn propogate_hot() {
             button: MouseButton::Left,
         }
     }
+    #[allow(clippy::cognitive_complexity)]
     Harness::create((), widget, |harness| {
         harness.send_initial_events();
         harness.just_layout();

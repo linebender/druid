@@ -190,7 +190,7 @@ impl<S, T: Data> Widget<T> for ModularWidget<S, T> {
         layout
             .as_mut()
             .map(|f| f(state, ctx, bc, data, env))
-            .unwrap_or(Size::new(100., 100.))
+            .unwrap_or_else(|| Size::new(100., 100.))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
