@@ -14,7 +14,8 @@
 
 //! An example of a timer.
 
-use std::time::{Duration, Instant};
+use instant::Instant;
+use std::time::Duration;
 
 use druid::widget::prelude::*;
 use druid::widget::BackgroundBrush;
@@ -119,7 +120,7 @@ impl Widget<u32> for SimpleBox {
     }
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(|| TimerWidget {
         timer_id: TimerToken::INVALID,
         simple_box: WidgetPod::new(SimpleBox),

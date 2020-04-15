@@ -14,7 +14,7 @@
 
 //! A textbox widget.
 
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,

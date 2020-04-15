@@ -63,7 +63,7 @@ fn build_widget() -> impl Widget<DemoState> {
     col.center()
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(build_widget)
         .title(LocalizedString::new("switch-demo-window-title").with_placeholder("Switch Demo"));
     AppLauncher::with_window(window)

@@ -31,6 +31,7 @@ usvg = {version = "0.9.0", optional = true}
 fnv = "1.0.3"
 xi-unicode = "0.2.0"
 image = {version = "0.23.2", optional = true}
+instant = { version = "0.1", features = [ "wasm-bindgen" ] }
 
 [dependencies.simple_logger]
 version = "1.6.0"
@@ -43,3 +44,6 @@ version = "0.6.0"
 [dependencies.druid-derive]
 path = "../druid-derive"
 version = "0.4.0"
+
+[target.'cfg(target_arch="wasm32")'.dependencies]
+console_log = "0.1.2"

@@ -21,7 +21,7 @@ struct AppState {
     value: f64,
 }
 
-fn main() {
+pub fn main() {
     let main_window = WindowDesc::new(ui_builder).title(
         LocalizedString::new("either-demo-window-title")
             .with_placeholder("Switcheroo")

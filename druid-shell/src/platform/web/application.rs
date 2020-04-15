@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2020 The xi-editor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Platform specific implementations.
+//! Web implementation of features at the application scope.
 
-cfg_if::cfg_if! {
-    if #[cfg(target_os = "windows")] {
-        mod windows;
-        pub use windows::*;
-    } else if #[cfg(target_os = "macos")] {
-        mod mac;
-        pub use mac::*;
-    } else if #[cfg(all(feature = "x11", target_os = "linux"))] {
-        mod x11;
-        pub use x11::*;
-    } else if #[cfg(target_os = "linux")] {
-        mod gtk;
-        pub use self::gtk::*;
-    } else if #[cfg(target_arch = "wasm32")] {
-        mod web;
-        pub use web::*;
+use super::clipboard::Clipboard;
+use crate::application::AppHandler;
+
+pub struct Application;
+
+impl Application {
+    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
+        Application
+    }
+
+    pub fn run(&mut self) {}
+
+    pub fn quit() {}
+
+    pub fn clipboard() -> Clipboard {
+        Clipboard
+    }
+
+    pub fn get_locale() -> String {
+        //TODO ahem
+        "en-US".into()
     }
 }

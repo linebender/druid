@@ -15,7 +15,9 @@
 //! Management of multiple windows.
 
 use std::mem;
-use std::time::Instant;
+
+// Automatically defaults to std::time::Instant on non Wasm platforms
+use instant::Instant;
 
 use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
@@ -317,6 +319,7 @@ impl<T: Data> Window<T> {
     }
 
     /// only expose `layout` for testing; normally it is called as part of `do_paint`
+    #[cfg(not(target_arch = "wasm32"))]
     #[cfg(test)]
     pub(crate) fn just_layout(
         &mut self,

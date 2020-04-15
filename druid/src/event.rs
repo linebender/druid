@@ -351,6 +351,7 @@ mod state_cell {
     }
 
     impl StateCheckFn {
+        #[cfg(not(target_arch = "wasm32"))]
         pub(crate) fn new(f: impl Fn(&BaseState) + 'static) -> Self {
             StateCheckFn(Rc::new(f))
         }

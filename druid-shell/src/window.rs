@@ -157,7 +157,7 @@ impl WindowHandle {
     /// requiring precision.
     ///
     /// [`WinHandler::timer()`]: trait.WinHandler.html#tymethod.timer
-    pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
+    pub fn request_timer(&self, deadline: instant::Instant) -> TimerToken {
         self.0.request_timer(deadline)
     }
 

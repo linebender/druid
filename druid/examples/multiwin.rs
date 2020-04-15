@@ -33,7 +33,8 @@ struct State {
     selected: usize,
 }
 
-fn main() {
+pub fn main() {
+    #[cfg(not(target_arch = "wasm32"))]
     simple_logger::init().unwrap();
     let main_window = WindowDesc::new(ui_builder)
         .menu(make_menu(&State::default()))
@@ -130,7 +131,7 @@ impl AppDelegate<State> for Delegate {
             // wouldn't it be nice if a menu (like a button) could just mutate state
             // directly if desired?
             (Target::Window(id), &MENU_INCREMENT_ACTION) => {
-                data.menu_count = data.menu_count + 1;
+                data.menu_count += 1;
                 let menu = make_menu::<State>(data);
                 let cmd = Command::new(druid::commands::SET_MENU, menu);
                 ctx.submit_command(cmd, *id);

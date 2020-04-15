@@ -41,7 +41,7 @@ fn build_app() -> impl Widget<u32> {
     Scroll::new(col)
 }
 
-fn main() {
+pub fn main() {
     let main_window = WindowDesc::new(build_app).title(
         LocalizedString::new("scroll-colors-demo-window-title").with_placeholder("Rainbows!"),
     );
