@@ -15,8 +15,7 @@
 //! The context types that are passed into various widget methods.
 
 use std::ops::{Deref, DerefMut};
-
-use instant::Instant;
+use std::time::Duration;
 
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
@@ -344,7 +343,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// The return value is a token, which can be used to associate the
     /// request with the event.
-    pub fn request_timer(&mut self, deadline: Instant) -> TimerToken {
+    pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
         self.base_state.request_timer = true;
         self.window.request_timer(deadline)
     }

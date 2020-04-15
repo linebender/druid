@@ -3,7 +3,7 @@ use druid::{
     Color, Env, Event, EventCtx, KeyCode, PaintCtx, RenderContext, Selector, TimerToken, Widget,
     WidgetExt,
 };
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 const CORNER_RADIUS: f64 = 4.0;
 const STROKE_WIDTH: f64 = 2.0;
@@ -63,7 +63,7 @@ impl Controller<String, TextBox> for TextBoxActionController {
                 ctx.submit_command(ACTION, None);
             }
             Event::KeyUp(k) if k.key_code != KeyCode::Return => {
-                self.timer = Some(ctx.request_timer(Instant::now() + DELAY));
+                self.timer = Some(ctx.request_timer(DELAY));
                 child.event(ctx, event, data, env);
             }
             Event::Timer(token) if Some(*token) == self.timer => {

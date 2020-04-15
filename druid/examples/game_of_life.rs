@@ -16,7 +16,6 @@
 
 //! Game of life
 
-use instant::Instant;
 use std::ops::{Index, IndexMut};
 use std::time::Duration;
 
@@ -237,7 +236,7 @@ impl Widget<AppData> for GameOfLifeWidget {
         match event {
             Event::WindowConnected => {
                 ctx.request_paint();
-                let deadline = Instant::now() + Duration::from_millis(data.iter_interval() as u64);
+                let deadline = Duration::from_millis(data.iter_interval() as u64);
                 self.timer_id = ctx.request_timer(deadline);
             }
             Event::Timer(id) => {
@@ -246,8 +245,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                         data.grid.evolve();
                         ctx.request_paint();
                     }
-                    let deadline =
-                        Instant::now() + Duration::from_millis(data.iter_interval() as u64);
+                    let deadline = Duration::from_millis(data.iter_interval() as u64);
                     self.timer_id = ctx.request_timer(deadline);
                 }
             }

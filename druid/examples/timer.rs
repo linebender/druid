@@ -14,14 +14,13 @@
 
 //! An example of a timer.
 
-use instant::Instant;
 use std::time::Duration;
 
 use druid::widget::prelude::*;
 use druid::widget::BackgroundBrush;
 use druid::{AppLauncher, Color, LocalizedString, Point, Rect, TimerToken, WidgetPod, WindowDesc};
 
-static TIMER_INTERVAL: u64 = 10;
+static TIMER_INTERVAL: Duration = Duration::from_millis(10);
 
 struct TimerWidget {
     timer_id: TimerToken,
@@ -50,15 +49,13 @@ impl Widget<u32> for TimerWidget {
         match event {
             Event::WindowConnected => {
                 // Start the timer when the application launches
-                let deadline = Instant::now() + Duration::from_millis(TIMER_INTERVAL);
-                self.timer_id = ctx.request_timer(deadline);
+                self.timer_id = ctx.request_timer(TIMER_INTERVAL);
             }
             Event::Timer(id) => {
                 if *id == self.timer_id {
                     self.adjust_box_pos(ctx.size());
                     ctx.request_layout();
-                    let deadline = Instant::now() + Duration::from_millis(TIMER_INTERVAL);
-                    self.timer_id = ctx.request_timer(deadline);
+                    self.timer_id = ctx.request_timer(TIMER_INTERVAL);
                 }
             }
             _ => (),
@@ -91,10 +88,9 @@ struct SimpleBox;
 impl Widget<u32> for SimpleBox {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut u32, _env: &Env) {}
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &u32, _env: &Env) {
-        match _event {
-            LifeCycle::HotChanged(_) => ctx.request_paint(),
-            _ => (),
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &u32, _env: &Env) {
+        if matches!(event, LifeCycle::HotChanged(_)) {
+            ctx.request_paint();
         }
     }
 
