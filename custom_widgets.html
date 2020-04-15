@@ -149,15 +149,118 @@
                 <div id="content" class="content">
                     <main>
                         <h1><a class="header" href="#create-custom-widgets" id="create-custom-widgets">Create custom widgets</a></h1>
-<pre><code>- controller, painter
-- how to do layout
-- container widgets
-- widgetpod &amp; architecture
-- commands and widgetid
-- focus / active / hot
-- request paint &amp; request layout
-- changing widgets at runtime
+<p>The <code>Widget</code> trait is the heart of druid, and in any serious application you
+will eventually need to create and use custom <code>Widget</code>s.</p>
+<h2><a class="header" href="#painter-and-controller" id="painter-and-controller"><code>Painter</code> and <code>Controller</code></a></h2>
+<p>There are two helper widgets in druid that let you customize widget behaviour
+without needing to implement the full widget trait: <a href="https://docs.rs/druid/0.5.0/druid/widget/struct.Painter.html"><code>Painter</code></a> and
+<a href="https://docs.rs/druid/0.5.0/druid/widget/trait.Controller.html"><code>Controller</code></a>.</p>
+<h3><a class="header" href="#painter" id="painter">Painter</a></h3>
+<p>The <a href="https://docs.rs/druid/0.5.0/druid/widget/struct.Painter.html"><code>Painter</code></a> widget lets you draw arbitrary custom content, but cannot
+respond to events or otherwise contain update logic. Its general use is to
+either provide a custom background to some other widget, or to implement
+something like an icon or another graphical element that will be contained in
+some other widget.</p>
+<p>For instance, if we had some color data and we wanted to display it as a swatch
+with rounded corners, we could use a <code>Painter</code>:</p>
+<pre><code class="language-rust noplaypen">fn make_color_swatch() -&gt; Painter&lt;Color&gt; {
+    Painter::new(|ctx: &amp;mut PaintCtx, data: &amp;Color, env: &amp;Env| {
+        let bounds = ctx.size().to_rect();
+        let rounded = bounds.to_rounded_rect(CORNER_RADIUS);
+        ctx.fill(rounded, data);
+        ctx.stroke(rounded, &amp;env.get(druid::theme::PRIMARY_DARK), STROKE_WIDTH);
+    })
+}
 </code></pre>
+<p><code>Painter</code> uses all the space that is available to it; if you want to give it a
+set size, you must pass it explicit contraints, such as by wrapping it in a
+<a href="https://docs.rs/druid/0.5.0/druid/widget/struct.SizedBox.html"><code>SizedBox</code></a>:</p>
+<pre><code class="language-rust noplaypen">fn sized_swatch() -&gt; impl Widget&lt;Color&gt; {
+    SizedBox::new(make_color_swatch()).width(20.0).height(20.0)
+}
+</code></pre>
+<p>One other useful thing about <code>Painter</code> is that it can be used as the background
+of a <a href="https://docs.rs/druid/0.5.0/druid/widget/struct.Container.html"><code>Container</code></a> widget. If we wanted to have a label that used our swatch
+as a background, we could do:</p>
+<pre><code class="language-rust noplaypen">fn background_label() -&gt; impl Widget&lt;Color&gt; {
+    Label::dynamic(|color: &amp;Color, _| {
+        let (r, g, b, _) = color.as_rgba_u8();
+        format!(&quot;#{:X}{:X}{:X}&quot;, r, g, b)
+    })
+    .background(make_color_swatch())
+}
+</code></pre>
+<p>(This uses the <a href="https://docs.rs/druid/0.5.0/druid/trait.WidgetExt.html#background"><code>background</code></a> method on <a href="https://docs.rs/druid/0.5.0/druid/trait.WidgetExt.html"><code>WidgetExt</code></a> to embed our label in a
+container.)</p>
+<h3><a class="header" href="#controller" id="controller">Controller</a></h3>
+<p>The <a href="https://docs.rs/druid/0.5.0/druid/widget/trait.Controller.html"><code>Controller</code></a> trait is sort of the inverse of <code>Painter</code>; it is a way to
+make widgets that handle events, but don't do any layout or drawing. The idea
+here is that you can use some <code>Controller</code> type to customize the behaviour of
+some set of children.</p>
+<p>The <a href="https://docs.rs/druid/0.5.0/druid/widget/trait.Controller.html"><code>Controller</code></a> trait has <code>event</code>, <code>update</code>, and <code>lifecycle</code> methods, just
+like <a href="./widget.html"><code>Widget</code></a>; it does not have <code>paint</code> or <code>layout</code> methods. Also unlike
+<a href="./widget.html"><code>Widget</code></a>, all of its methods are optional; you can override only the method
+that you need.</p>
+<p>There's one other difference to the <code>Controller</code> methods; it is explicitly
+passed a mutable reference to its child in each method, so that it can modify it
+or forward events as needed.</p>
+<p>As an arbitrary example, here is how you might use a <code>Controller</code> to make a
+textbox fire some action (say doing a search) 300ms after the last keypress:</p>
+<pre><code class="language-rust noplaypen">const ACTION: Selector = Selector::new(&quot;hello.textbox-action&quot;);
+const DELAY: Duration = Duration::from_millis(300);
+
+struct TextBoxActionController {
+    timer: Option&lt;TimerToken&gt;,
+}
+
+impl TextBoxActionController {
+    pub fn new() -&gt; Self {
+        TextBoxActionController { timer: None }
+    }
+}
+
+impl Controller&lt;String, TextBox&gt; for TextBoxActionController {
+    fn event(
+        &amp;mut self,
+        child: &amp;mut TextBox,
+        ctx: &amp;mut EventCtx,
+        event: &amp;Event,
+        data: &amp;mut String,
+        env: &amp;Env,
+    ) {
+        match event {
+            Event::KeyDown(k) if k.key_code == KeyCode::Return =&gt; {
+                ctx.submit_command(ACTION, None);
+            }
+            Event::KeyUp(k) if k.key_code != KeyCode::Return =&gt; {
+                self.timer = Some(ctx.request_timer(Instant::now() + DELAY));
+                child.event(ctx, event, data, env);
+            }
+            Event::Timer(token) if Some(*token) == self.timer =&gt; {
+                ctx.submit_command(ACTION, None);
+            }
+            _ =&gt; child.event(ctx, event, data, env),
+        }
+    }
+}
+</code></pre>
+<h2><a class="header" href="#todo" id="todo">todo</a></h2>
+<p>v controller, painter</p>
+<ul>
+<li>how to do layout
+<ul>
+<li>how constraints work</li>
+<li>child widget, set_layout_rect</li>
+<li>paint bounds</li>
+</ul>
+</li>
+<li>container widgets</li>
+<li>widgetpod &amp; architecture</li>
+<li>commands and widgetid</li>
+<li>focus / active / hot</li>
+<li>request paint &amp; request layout</li>
+<li>changing widgets at runtime</li>
+</ul>
 
                     </main>
 
