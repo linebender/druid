@@ -82,19 +82,19 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/Cargo.toml --features=svg,image -- -D warnings
+          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image -- -D warnings
 
       - name: cargo clippy (druid-shell)
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets -- -D warnings
 
       - name: cargo clippy (druid-derive)
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-derive/Cargo.toml -- -D warnings
+          args: --manifest-path=druid-derive/Cargo.toml --all-targets -- -D warnings
 
       - name: cargo test (druid)
         uses: actions-rs/cargo@v1
@@ -220,7 +220,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --features=x11 -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=x11 -- -D warnings
 
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
@@ -276,7 +276,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --all --target wasm32-unknown-unknown -- -D warnings
+          args: --all --all-targets --target wasm32-unknown-unknown -- -D warnings
 
       - name: cargo test compile druid-shell (wasm32)
         uses: actions-rs/cargo@v1

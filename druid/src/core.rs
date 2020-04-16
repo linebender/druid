@@ -783,6 +783,7 @@ impl BaseState {
     }
 
     #[cfg(test)]
+    #[allow(dead_code)]
     pub(crate) fn layout_rect(&self) -> Rect {
         self.layout_rect.unwrap_or_default()
     }
