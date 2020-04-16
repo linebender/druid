@@ -714,6 +714,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             window: ctx.window,
             base_state: &mut self.state,
             window_id: ctx.window_id,
+            command_queue: ctx.command_queue,
         };
 
         self.inner
