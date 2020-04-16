@@ -264,6 +264,7 @@ impl<T: Data> Window<T> {
         let mut base_state = BaseState::new(self.root.id());
         let mut update_ctx = UpdateCtx {
             base_state: &mut base_state,
+            command_queue: queue,
             window: &self.handle,
             window_id: self.id,
         };

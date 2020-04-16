@@ -72,6 +72,7 @@ pub struct UpdateCtx<'a> {
     // invalidations, which would mean a structure very much like
     // `EventCtx` (and possibly using the same structure). But for
     // now keep it super-simple.
+    pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) window_id: WindowId,
     pub(crate) base_state: &'a mut BaseState,
 }
@@ -501,6 +502,23 @@ impl<'a> UpdateCtx<'a> {
         self.base_state.children_changed = true;
         self.base_state.needs_layout = true;
         self.base_state.needs_inval = true;
+    }
+
+    /// Submit a [`Command`] to be run after layout and paint finish.
+    ///
+    /// **Note:**
+    ///
+    /// Commands submited during an `update` call are handled *after* update,
+    /// layout, and paint have completed; this will trigger a new event cycle.
+    ///
+    /// [`Command`]: struct.Command.html
+    pub fn submit_command(
+        &mut self,
+        command: impl Into<Command>,
+        target: impl Into<Option<Target>>,
+    ) {
+        let target = target.into().unwrap_or_else(|| self.window_id.into());
+        self.command_queue.push_back((target, command.into()))
     }
 
     /// Get an object which can create text layouts.
