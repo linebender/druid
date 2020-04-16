@@ -32,6 +32,19 @@ mod examples {
 "#
     .to_string();
 
+    let mut index_html = r#"
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Druid WASM examples - index</title>
+    </head>
+    <body>
+        <h1>Druid WASM examples</h1>
+        <ul>
+"#
+    .to_string();
+
     for entry in examples_dir.read_dir()? {
         let path = entry?.path();
         if let Some(r) = path.extension() {
@@ -61,6 +74,14 @@ mod examples {
                 example_str.to_string()
             };
 
+            // Add an entry to the index.html file.
+            let index_entry = format!(
+                "<li><a href=\"./html/{name}.html\">{name}</a></li>",
+                name = example_str
+            );
+
+            index_html.push_str(&index_entry);
+
             // Create an html document for each example.
             let html = format!(
                 r#"
@@ -68,7 +89,7 @@ mod examples {
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <title>Druid WASM example - {name}</title>
+        <title>Druid WASM examples - {name}</title>
         <style>
             html, body, canvas {{
                 margin: 0px;
@@ -112,8 +133,13 @@ mod examples {
 
     examples_in.push_str("}");
 
+    index_html.push_str("</ul></body></html>");
+
     // Write out the contents of the examples.in module.
     fs::write(src_dir.join("examples.in"), examples_in)?;
+
+    // Write out the index.html file
+    fs::write(crate_dir.join("index.html"), index_html)?;
 
     Ok(())
 }
