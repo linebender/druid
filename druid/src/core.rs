@@ -19,11 +19,12 @@ use std::collections::VecDeque;
 use log;
 
 use crate::bloom::Bloom;
-use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size};
+use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::piet::RenderContext;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Target, UpdateCtx, Widget, WidgetId, WindowId,
+    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, UpdateCtx, Widget, WidgetId,
+    WindowId,
 };
 
 /// Our queue type
@@ -75,11 +76,15 @@ pub(crate) struct BaseState {
     /// drop shadows or overflowing text.
     pub(crate) paint_insets: Insets,
 
+    // The region that needs to be repainted, relative to the widget's bounds.
+    pub(crate) invalid: Region,
+
+    // The part of this widget that is visible on the screen is offset by this
+    // much. This will be non-zero for widgets that are children of `Scroll`, or
+    // similar, and it is used for propagating invalid regions.
+    pub(crate) viewport_offset: Vec2,
+
     // TODO: consider using bitflags for the booleans.
-
-    // This should become an invalidation rect.
-    pub(crate) needs_inval: bool,
-
     pub(crate) is_hot: bool,
 
     pub(crate) is_active: bool,
@@ -212,6 +217,28 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         self.state.layout_rect.unwrap_or_default()
     }
 
+    /// Set the viewport offset.
+    ///
+    /// This is relevant only for children of a scroll view (or similar). It must
+    /// be set by the parent widget whenever it modifies the position of its child
+    /// while painting it and propagating events. As a rule of thumb, you need this
+    /// if and only if you `Affine::translate` the paint context before painting
+    /// your child. For an example, see the implentation of [`Scroll`].
+    ///
+    /// [`Scroll`]: widget/struct.Scroll.html
+    pub fn set_viewport_offset(&mut self, offset: Vec2) {
+        self.state.viewport_offset = offset;
+    }
+
+    /// The viewport offset.
+    ///
+    /// This will be the same value as set by [`set_viewport_offset`].
+    ///
+    /// [`set_viewport_offset`]: #method.viewport_offset
+    pub fn viewport_offset(&self) -> Vec2 {
+        self.state.viewport_offset
+    }
+
     /// Get the widget's paint [`Rect`].
     ///
     /// This is the [`Rect`] that widget has indicated it needs to paint in.
@@ -308,6 +335,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// [`paint`]: trait.Widget.html#tymethod.paint
     /// [`paint_with_offset`]: #method.paint_with_offset
     pub fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        let mut child_region = ctx.region.clone();
+        child_region -= self.state.layout_rect().origin().to_vec2();
+        child_region.intersect_with(self.state.paint_rect());
         let mut inner_ctx = PaintCtx {
             render_ctx: ctx.render_ctx,
             window_id: ctx.window_id,
@@ -327,7 +357,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             inner_ctx.stroke(rect, &color, BORDER_WIDTH);
         }
 
-        self.state.needs_inval = false;
+        self.state.invalid = Region::EMPTY;
     }
 
     /// Paint the widget, translating it by the origin of its layout rectangle.
@@ -742,7 +772,8 @@ impl BaseState {
             id,
             layout_rect: None,
             paint_insets: Insets::ZERO,
-            needs_inval: false,
+            invalid: Region::EMPTY,
+            viewport_offset: Vec2::ZERO,
             is_hot: false,
             needs_layout: false,
             is_active: false,
@@ -759,7 +790,15 @@ impl BaseState {
 
     /// Update to incorporate state changes from a child.
     fn merge_up(&mut self, child_state: &BaseState) {
-        self.needs_inval |= child_state.needs_inval;
+        let mut child_region = child_state.invalid.clone();
+        child_region += child_state.layout_rect().origin().to_vec2() - child_state.viewport_offset;
+        let clip = self
+            .layout_rect()
+            .with_origin(Point::ORIGIN)
+            .inset(self.paint_insets);
+        child_region.intersect_with(clip);
+        self.invalid.merge_with(child_region);
+
         self.needs_layout |= child_state.needs_layout;
         self.request_anim |= child_state.request_anim;
         self.request_timer |= child_state.request_timer;
@@ -783,8 +822,6 @@ impl BaseState {
         self.layout_rect.unwrap_or_default() + self.paint_insets
     }
 
-    #[cfg(test)]
-    #[allow(dead_code)]
     pub(crate) fn layout_rect(&self) -> Rect {
         self.layout_rect.unwrap_or_default()
     }

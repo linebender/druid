@@ -43,7 +43,7 @@ use piet_common::dwrite::DwriteFactory;
 
 use crate::platform::windows::HwndRenderTarget;
 
-use crate::kurbo::{Point, Size, Vec2};
+use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
 use super::accels::register_accel;
@@ -258,13 +258,19 @@ impl WndState {
     }
 
     // Renders but does not present.
-    fn render(&mut self, d2d: &D2DFactory, dw: &DwriteFactory, handle: &RefCell<WindowHandle>) {
+    fn render(
+        &mut self,
+        d2d: &D2DFactory,
+        dw: &DwriteFactory,
+        handle: &RefCell<WindowHandle>,
+        invalid_rect: Rect,
+    ) {
         let rt = self.render_target.as_mut().unwrap();
         rt.begin_draw();
         let anim;
         {
             let mut piet_ctx = Piet::new(d2d, dw, rt);
-            anim = self.handler.paint(&mut piet_ctx);
+            anim = self.handler.paint(&mut piet_ctx, invalid_rect);
             if let Err(e) = piet_ctx.finish() {
                 error!("piet error on render: {:?}", e);
             }
@@ -357,13 +363,20 @@ impl WndProc for MyWndProc {
             }
             WM_PAINT => unsafe {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let mut rect: RECT = mem::zeroed();
+                    GetUpdateRect(hwnd, &mut rect, 0);
                     let s = s.as_mut().unwrap();
                     if s.render_target.is_none() {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                     }
                     s.handler.rebuild_resources();
-                    s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                    s.render(
+                        &self.d2d_factory,
+                        &self.dwrite_factory,
+                        &self.handle,
+                        self.handle.borrow().rect_to_px(rect),
+                    );
                     if let Some(ref mut ds) = s.dcomp_state {
                         if !ds.sizing {
                             (*ds.swap_chain).Present(1, 0);
@@ -380,11 +393,21 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
+                        let mut rect: RECT = mem::zeroed();
+                        if GetClientRect(hwnd, &mut rect) == 0 {
+                            warn!("GetClientRect failed.");
+                            return None;
+                        }
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                         {
                             s.handler.rebuild_resources();
-                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                            s.render(
+                                &self.d2d_factory,
+                                &self.dwrite_factory,
+                                &self.handle,
+                                self.handle.borrow().rect_to_px(rect),
+                            );
                         }
 
                         if let Some(ref mut ds) = s.dcomp_state {
@@ -419,7 +442,12 @@ impl WndProc for MyWndProc {
                         if SUCCEEDED(res) {
                             s.handler.rebuild_resources();
                             s.rebuild_render_target(&self.d2d_factory);
-                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                            s.render(
+                                &self.d2d_factory,
+                                &self.dwrite_factory,
+                                &self.handle,
+                                self.handle.borrow().rect_to_px(rect),
+                            );
                             (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
                         } else {
                             error!("ResizeBuffers failed: 0x{:x}", res);
@@ -454,8 +482,6 @@ impl WndProc for MyWndProc {
                     if use_hwnd {
                         if let Some(ref mut rt) = s.render_target {
                             if let Some(hrt) = cast_to_hwnd(rt) {
-                                let width = LOWORD(lparam as u32) as u32;
-                                let height = HIWORD(lparam as u32) as u32;
                                 let size = D2D1_SIZE_U { width, height };
                                 let _ = hrt.ptr.Resize(&size);
                             }
@@ -474,8 +500,10 @@ impl WndProc for MyWndProc {
                             );
                         }
                         if SUCCEEDED(res) {
+                            let (w, h) = self.handle.borrow().pixels_to_px_xy(width, height);
+                            let rect = Rect::from_origin_size(Point::ORIGIN, (w as f64, h as f64));
                             s.rebuild_render_target(&self.d2d_factory);
-                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle, rect);
                             if let Some(ref mut dcomp_state) = s.dcomp_state {
                                 (*dcomp_state.swap_chain).Present(0, 0);
                                 let _ = dcomp_state.dcomp_device.commit();
@@ -1171,6 +1199,16 @@ impl WindowHandle {
         }
     }
 
+    pub fn invalidate_rect(&self, rect: Rect) {
+        let r = self.px_to_rect(rect);
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                InvalidateRect(hwnd, &r as *const _, FALSE);
+            }
+        }
+    }
+
     /// Set the title for this menu.
     pub fn set_title(&self, title: &str) {
         if let Some(w) = self.state.upgrade() {
@@ -1354,6 +1392,23 @@ impl WindowHandle {
     pub fn pixels_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f32, f32) {
         let scale = 96.0 / self.get_dpi();
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
+    }
+
+    /// Convert a rectangle from physical pixels to px units.
+    pub fn rect_to_px(&self, rect: RECT) -> Rect {
+        let (x0, y0) = self.pixels_to_px_xy(rect.left, rect.top);
+        let (x1, y1) = self.pixels_to_px_xy(rect.right, rect.bottom);
+        Rect::new(x0 as f64, y0 as f64, x1 as f64, y1 as f64)
+    }
+
+    pub fn px_to_rect(&self, rect: Rect) -> RECT {
+        let scale = self.get_dpi() as f64 / 96.0;
+        RECT {
+            left: (rect.x0 * scale).floor() as i32,
+            top: (rect.y0 * scale).floor() as i32,
+            right: (rect.x1 * scale).ceil() as i32,
+            bottom: (rect.y1 * scale).ceil() as i32,
+        }
     }
 
     /// Allocate a timer slot.

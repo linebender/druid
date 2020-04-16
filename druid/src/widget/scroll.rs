@@ -163,6 +163,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         offset.y = offset.y.min(self.child_size.height - size.height).max(0.0);
         if (offset - self.scroll_offset).hypot2() > 1e-12 {
             self.scroll_offset = offset;
+            self.child.set_viewport_offset(offset);
             true
         } else {
             false
@@ -381,7 +382,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             let force_event = self.child.is_hot() || self.child.is_active();
             let child_event = event.transform_scroll(self.scroll_offset, viewport, force_event);
             if let Some(child_event) = child_event {
-                self.child.event(ctx, &child_event, data, env)
+                self.child.event(ctx, &child_event, data, env);
             };
 
             match event {

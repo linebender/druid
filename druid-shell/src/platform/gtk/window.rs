@@ -30,7 +30,7 @@ use gio::ApplicationExt;
 use gtk::prelude::*;
 use gtk::{AccelGroup, ApplicationWindow};
 
-use crate::kurbo::{Point, Size, Vec2};
+use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
 use super::application::with_application;
@@ -242,14 +242,11 @@ impl WindowBuilder {
         drawing_area.connect_draw(clone!(handle => move |widget, context| {
             if let Some(state) = handle.state.upgrade() {
 
-                let extents = context.clip_extents();
+                let extents = widget.get_allocation();
                 let dpi_scale = state.window.get_window()
                     .map(|w| w.get_display().get_default_screen().get_resolution())
                     .unwrap_or(96.0) / 96.0;
-                let size = (
-                    ((extents.2 - extents.0) * dpi_scale) as u32,
-                    ((extents.3 - extents.1) * dpi_scale) as u32,
-                );
+                let size = ((extents.width as f64 * dpi_scale) as u32, (extents.height as f64 * dpi_scale) as u32);
 
                 if last_size.get() != size {
                     last_size.set(size);
@@ -258,11 +255,13 @@ impl WindowBuilder {
 
                 // For some reason piet needs a mutable context, so give it one I guess.
                 let mut context = context.clone();
+                let (x0, y0, x1, y1) = context.clip_extents();
                 let mut piet_context = Piet::new(&mut context);
 
                 if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
+                    let invalid_rect = Rect::new(x0 * dpi_scale, y0 * dpi_scale, x1 * dpi_scale, y1 * dpi_scale);
                     let anim = handler_borrow
-                        .paint(&mut piet_context);
+                        .paint(&mut piet_context, invalid_rect);
                     if let Err(e) = piet_context.finish() {
                         eprintln!("piet error on render: {:?}", e);
                     }
@@ -505,6 +504,26 @@ impl WindowHandle {
     pub fn invalidate(&self) {
         if let Some(state) = self.state.upgrade() {
             state.window.queue_draw();
+        }
+    }
+
+    /// Request invalidation of one rectangle.
+    pub fn invalidate_rect(&self, rect: Rect) {
+        let dpi_scale = self.get_dpi() as f64 / 96.0;
+        let rect = Rect::from_origin_size(
+            (rect.x0 * dpi_scale, rect.y0 * dpi_scale),
+            rect.size() * dpi_scale,
+        );
+
+        // GTK+ takes rects with integer coordinates, and non-negative width/height.
+        let r = rect.abs().expand();
+        if let Some(state) = self.state.upgrade() {
+            state.window.queue_draw_area(
+                r.x0 as i32,
+                r.y0 as i32,
+                r.width() as i32,
+                r.height() as i32,
+            );
         }
     }
 

@@ -21,7 +21,7 @@ use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
 use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::kurbo::{Point, Size, Vec2};
+use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
@@ -129,6 +129,11 @@ impl WindowHandle {
     /// Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
         self.0.invalidate()
+    }
+
+    /// Request invalidation of a region of the window.
+    pub fn invalidate_rect(&self, rect: Rect) {
+        self.0.invalidate_rect(rect);
     }
 
     /// Set the title for this menu.
@@ -278,8 +283,9 @@ pub trait WinHandler {
 
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
-    /// should be scheduled for the next animation frame.
-    fn paint(&mut self, piet: &mut piet_common::Piet) -> bool;
+    /// should be scheduled for the next animation frame. `invalid_rect` is the
+    /// rectangle that needs to be repainted.
+    fn paint(&mut self, piet: &mut piet_common::Piet, invalid_rect: Rect) -> bool;
 
     /// Called when the resources need to be rebuilt.
     ///

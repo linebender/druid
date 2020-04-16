@@ -274,8 +274,13 @@ impl<T: Data> Window<T> {
     }
 
     pub(crate) fn invalidate_and_finalize(&mut self) {
-        if self.root.state().needs_inval {
+        if self.root.state().needs_layout {
             self.handle.invalidate();
+        } else {
+            let invalid = &self.root.state().invalid;
+            if !invalid.is_empty() {
+                self.handle.invalidate_rect(invalid.to_rect());
+            }
         }
     }
 
@@ -284,6 +289,7 @@ impl<T: Data> Window<T> {
     pub(crate) fn do_paint(
         &mut self,
         piet: &mut Piet,
+        invalid_rect: Rect,
         queue: &mut CommandQueue,
         data: &T,
         env: &Env,
@@ -296,7 +302,7 @@ impl<T: Data> Window<T> {
         }
 
         piet.clear(env.get(crate::theme::WINDOW_BACKGROUND_COLOR));
-        self.paint(piet, data, env);
+        self.paint(piet, invalid_rect, data, env);
     }
 
     fn layout(&mut self, piet: &mut Piet, queue: &mut CommandQueue, data: &T, env: &Env) {
@@ -332,7 +338,7 @@ impl<T: Data> Window<T> {
         self.layout(piet, queue, data, env)
     }
 
-    fn paint(&mut self, piet: &mut Piet, data: &T, env: &Env) {
+    fn paint(&mut self, piet: &mut Piet, invalid_rect: Rect, data: &T, env: &Env) {
         let base_state = BaseState::new(self.root.id());
         let mut ctx = PaintCtx {
             render_ctx: piet,
@@ -340,7 +346,7 @@ impl<T: Data> Window<T> {
             window_id: self.id,
             z_ops: Vec::new(),
             focus_widget: self.focus,
-            region: Rect::ZERO.into(),
+            region: invalid_rect.into(),
         };
         let visible = Rect::from_origin_size(Point::ZERO, self.size);
         ctx.with_child_ctx(visible, |ctx| self.root.paint(ctx, data, env));

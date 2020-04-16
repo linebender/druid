@@ -23,7 +23,7 @@ use lazy_static::lazy_static;
 use super::clipboard::Clipboard;
 use super::window::XWindow;
 use crate::application::AppHandler;
-use crate::kurbo::Point;
+use crate::kurbo::{Point, Rect};
 use crate::{KeyCode, KeyModifiers, MouseButton, MouseEvent};
 
 struct XcbConnection {
@@ -76,10 +76,16 @@ impl Application {
                     xcb::EXPOSE => {
                         let expose: &xcb::ExposeEvent = unsafe { xcb::cast_event(&ev) };
                         let window_id = expose.window();
+                        // TODO(x11/dpi_scaling): when dpi scaling is
+                        // implemented, it needs to be used here too
+                        let rect = Rect::from_origin_size(
+                            (expose.x() as f64, expose.y() as f64),
+                            (expose.width() as f64, expose.height() as f64),
+                        );
                         WINDOW_MAP.with(|map| {
                             let mut windows = map.borrow_mut();
                             if let Some(w) = windows.get_mut(&window_id) {
-                                w.render();
+                                w.render(rect);
                             }
                         })
                     }
