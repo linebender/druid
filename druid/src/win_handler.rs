@@ -19,7 +19,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use crate::kurbo::{Size, Vec2};
+use crate::kurbo::{Rect, Size, Vec2};
 use crate::piet::Piet;
 use crate::shell::{
     Application, FileDialogOptions, IdleToken, MouseEvent, WinHandler, WindowHandle,
@@ -269,9 +269,9 @@ impl<T: Data> Inner<T> {
     }
 
     /// Returns `true` if an animation frame was requested.
-    fn paint(&mut self, window_id: WindowId, piet: &mut Piet) -> bool {
+    fn paint(&mut self, window_id: WindowId, piet: &mut Piet, rect: Rect) -> bool {
         if let Some(win) = self.windows.get_mut(window_id) {
-            win.do_paint(piet, &mut self.command_queue, &self.data, &self.env);
+            win.do_paint(piet, rect, &mut self.command_queue, &self.data, &self.env);
             win.wants_animation_frame()
         } else {
             false
@@ -436,8 +436,8 @@ impl<T: Data> AppState<T> {
         result
     }
 
-    fn paint_window(&mut self, window_id: WindowId, piet: &mut Piet) -> bool {
-        self.inner.borrow_mut().paint(window_id, piet)
+    fn paint_window(&mut self, window_id: WindowId, piet: &mut Piet, rect: Rect) -> bool {
+        self.inner.borrow_mut().paint(window_id, piet, rect)
     }
 
     fn idle(&mut self, token: IdleToken) {
@@ -611,8 +611,8 @@ impl<T: Data> WinHandler for DruidHandler<T> {
         self.app_state.do_window_event(event, self.window_id);
     }
 
-    fn paint(&mut self, piet: &mut Piet) -> bool {
-        self.app_state.paint_window(self.window_id, piet)
+    fn paint(&mut self, piet: &mut Piet, rect: Rect) -> bool {
+        self.app_state.paint_window(self.window_id, piet, rect)
     }
 
     fn size(&mut self, width: u32, height: u32) {

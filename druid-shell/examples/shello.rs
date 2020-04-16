@@ -36,7 +36,7 @@ impl WinHandler for HelloState {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut piet_common::Piet) -> bool {
+    fn paint(&mut self, piet: &mut piet_common::Piet, _: Rect) -> bool {
         let (width, height) = self.size;
         let rect = Rect::new(0.0, 0.0, width, height);
         piet.fill(rect, &BG_COLOR);

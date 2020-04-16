@@ -28,6 +28,7 @@ mod identity_wrapper;
 #[cfg(feature = "image")]
 #[cfg_attr(docsrs, doc(cfg(feature = "image")))]
 mod image;
+mod invalidation;
 mod label;
 mod list;
 mod padding;
@@ -64,6 +65,7 @@ pub use either::Either;
 pub use env_scope::EnvScope;
 pub use flex::{CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
 pub use identity_wrapper::IdentityWrapper;
+pub use invalidation::DebugInvalidation;
 pub use label::{Label, LabelText};
 pub use list::{List, ListIter};
 pub use padding::Padding;

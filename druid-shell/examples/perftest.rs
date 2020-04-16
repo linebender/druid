@@ -36,7 +36,7 @@ impl WinHandler for PerfTest {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut Piet) -> bool {
+    fn paint(&mut self, piet: &mut Piet, _: Rect) -> bool {
         let (width, height) = self.size;
         let rect = Rect::new(0.0, 0.0, width, height);
         piet.fill(rect, &BG_COLOR);
