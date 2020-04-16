@@ -49,4 +49,4 @@ version = "0.4.0"
 console_log = "0.1.2"
 
 [dev-dependencies]
-float-cmp = "0.6.0"
+float-cmp = { version = "0.6.0", default-features = false }
