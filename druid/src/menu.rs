@@ -541,7 +541,7 @@ pub mod sys {
             pub fn open<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-open"),
-                    commands::OPEN_FILE,
+                    commands::SHOW_OPEN_PANEL,
                 )
                 .hotkey(RawMods::Ctrl, "o")
             }
