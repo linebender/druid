@@ -8,6 +8,28 @@ const EXCEPTIONS: &[&str] = &[
     "ext_event", // WASM doesn't currently support spawning threads.
 ];
 
+/// Create a platform specific link from `src` to the `dst` directory.
+fn link_dir(src: &std::path::Path, dst: &std::path::Path) {
+    // First delete any existing link, as it might be stale.
+    // Especially a Windows junction, because a junction is an absolute path reference,
+    // which becomes invalid if one of our ancestor directories gets renamed/moved.
+    let err = fs::remove_dir(dst).err(); // Safe as it errors when directory isn't empty
+    match err {
+        None => (),
+        Some(err) if err.kind() == std::io::ErrorKind::NotFound => (),
+        Some(err) => panic!("Failed to remove directory: {}", err),
+    }
+    // Perform platform specific linking
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(parent_dir, &examples_dir).expect("failed to create symlink");
+    #[cfg(windows)]
+    link_dir_windows(src, dst);
+    // Make sure the directory exists now
+    if !dst.exists() {
+        panic!("Failed to create a link");
+    }
+}
+
 #[cfg(windows)]
 fn link_dir_windows(src: &std::path::Path, dst: &std::path::Path) {
     // Attempt to create a symlink, which will work with either
@@ -16,17 +38,8 @@ fn link_dir_windows(src: &std::path::Path, dst: &std::path::Path) {
     if std::os::windows::fs::symlink_dir(src, dst).is_ok() {
         return;
     }
-    // Otherwise fall back to creating a junction instead.
-    // First we have to delete any previous junction,
-    // because a junction is an absolute path reference
-    // that becomes invalid if one of our ancestor directories gets renamed/moved.
-    let err = fs::remove_dir(dst).err();
-    match err {
-        None => (),
-        Some(err) if err.kind() == std::io::ErrorKind::NotFound => (),
-        Some(err) => panic!("Failed to remove directory: {}", err),
-    }
-    // Then use Command Prompt's inbuilt 'mklink' command to create the junction for us.
+    // Otherwise fall back to creating a junction instead,
+    // by using Command Prompt's inbuilt 'mklink' command.
     std::process::Command::new("cmd")
         .arg("/C") // Run a command and exit
         .arg("mklink")
@@ -35,10 +48,6 @@ fn link_dir_windows(src: &std::path::Path, dst: &std::path::Path) {
         .arg(src.as_os_str())
         .output()
         .expect("failed to execute process");
-    // Make sure the directory exists now
-    if !dst.exists() {
-        panic!("Failed to create a junction");
-    }
 }
 
 fn main() -> Result<()> {
@@ -48,11 +57,8 @@ fn main() -> Result<()> {
 
     let parent_dir = crate_dir.parent().unwrap();
 
-    // Create a symlink (platform specific) to the examples directory.
-    #[cfg(unix)]
-    std::os::unix::fs::symlink(parent_dir, &examples_dir).expect("failed to create symlink");
-    #[cfg(windows)]
-    link_dir_windows(parent_dir, &examples_dir);
+    // Create a platform specific link to the examples directory.
+    link_dir(parent_dir, &examples_dir);
 
     // Generate example module and the necessary html documents.
 
