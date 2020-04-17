@@ -239,6 +239,7 @@ fn color_from_usvg(paint: &usvg::Paint, opacity: usvg::Opacity) -> Color {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
     use super::*;
