@@ -8,6 +8,39 @@ const EXCEPTIONS: &[&str] = &[
     "ext_event", // WASM doesn't currently support spawning threads.
 ];
 
+#[cfg(windows)]
+fn link_dir_windows(src: &std::path::Path, dst: &std::path::Path) {
+    // Attempt to create a symlink, which will work with either
+    // * Admininstrator privileges
+    // * New enough Windows with developer mode enabled
+    if std::os::windows::fs::symlink_dir(src, dst).is_ok() {
+        return;
+    }
+    // Otherwise fall back to creating a junction instead.
+    // First we have to delete any previous junction,
+    // because a junction is an absolute path reference
+    // that becomes invalid if one of our ancestor directories gets renamed/moved.
+    let err = fs::remove_dir(dst).err();
+    match err {
+        None => (),
+        Some(err) if err.kind() == std::io::ErrorKind::NotFound => (),
+        Some(err) => panic!("Failed to remove directory: {}", err),
+    }
+    // Then use Command Prompt's inbuilt 'mklink' command to create the junction for us.
+    std::process::Command::new("cmd")
+        .arg("/C") // Run a command and exit
+        .arg("mklink")
+        .arg("/J") // Junction
+        .arg(dst.as_os_str())
+        .arg(src.as_os_str())
+        .output()
+        .expect("failed to execute process");
+    // Make sure the directory exists now
+    if !dst.exists() {
+        panic!("Failed to create a junction");
+    }
+}
+
 fn main() -> Result<()> {
     let crate_dir = PathBuf::from(&env::var("CARGO_MANIFEST_DIR").unwrap());
     let src_dir = crate_dir.join("src");
@@ -17,9 +50,9 @@ fn main() -> Result<()> {
 
     // Create a symlink (platform specific) to the examples directory.
     #[cfg(unix)]
-    std::os::unix::fs::symlink(parent_dir, &examples_dir).ok();
+    std::os::unix::fs::symlink(parent_dir, &examples_dir).expect("failed to create symlink");
     #[cfg(windows)]
-    std::os::windows::fs::symlink_dir(parent_dir, &examples_dir).ok();
+    link_dir_windows(parent_dir, &examples_dir);
 
     // Generate example module and the necessary html documents.
 
