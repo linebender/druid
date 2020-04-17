@@ -21,7 +21,7 @@ fn link_dir(src: &std::path::Path, dst: &std::path::Path) {
     }
     // Perform platform specific linking
     #[cfg(unix)]
-    std::os::unix::fs::symlink(parent_dir, &examples_dir).expect("failed to create symlink");
+    std::os::unix::fs::symlink(src, dst).expect("failed to create symlink");
     #[cfg(windows)]
     link_dir_windows(src, dst);
     // Make sure the directory exists now
