@@ -18,7 +18,7 @@ use druid::widget::prelude::*;
 use druid::widget::{Align, BackgroundBrush, Button, Flex, Label, Padding};
 use druid::{
     commands as sys_cmds, AppDelegate, AppLauncher, Color, Command, ContextMenu, Data, DelegateCtx,
-    LocalizedString, MenuDesc, MenuItem, Selector, Target, WidgetPod, WindowDesc, WindowId,
+    LocalizedString, MenuDesc, MenuItem, Selector, Target, WindowDesc, WindowId,
 };
 
 use log::info;
@@ -85,14 +85,12 @@ fn ui_builder() -> impl Widget<State> {
 }
 
 struct Glow<W> {
-    inner: WidgetPod<State, W>,
+    inner: W,
 }
 
-impl<W: Widget<State>> Glow<W> {
+impl<W> Glow<W> {
     pub fn new(inner: W) -> Glow<W> {
-        Glow {
-            inner: WidgetPod::new(inner),
-        }
+        Glow { inner }
     }
 }
 
@@ -112,7 +110,7 @@ impl<W: Widget<State>> Widget<State> for Glow<W> {
         if old_data.glow_hot != data.glow_hot {
             ctx.request_paint();
         }
-        self.inner.update(ctx, data, env);
+        self.inner.update(ctx, old_data, data, env);
     }
 
     fn layout(
@@ -122,9 +120,7 @@ impl<W: Widget<State>> Widget<State> for Glow<W> {
         data: &State,
         env: &Env,
     ) -> Size {
-        let size = self.inner.layout(ctx, bc, data, env);
-        self.inner.set_layout_rect(ctx, data, env, size.to_rect());
-        size
+        self.inner.layout(ctx, bc, data, env)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &State, env: &Env) {
