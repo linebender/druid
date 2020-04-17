@@ -39,10 +39,19 @@ thread_local! {
     static WINDOW_MAP: RefCell<HashMap<u32, XWindow>> = RefCell::new(HashMap::new());
 }
 
+#[derive(Clone)]
+pub struct AppState;
+
 pub struct Application;
 
+impl AppState {
+    pub(crate) fn new() -> AppState {
+        AppState
+    }
+}
+
 impl Application {
-    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
+    pub fn new(_state: AppState, _handler: Option<Box<dyn AppHandler>>) -> Application {
         Application
     }
 

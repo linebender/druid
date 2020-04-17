@@ -27,7 +27,7 @@ use crate::mouse::{Cursor, MouseEvent};
 use crate::piet::{Piet, RenderContext};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
-use super::application::Application;
+use super::application::{AppState, Application};
 use super::error::Error;
 use super::menu::Menu;
 use super::util;
@@ -40,7 +40,7 @@ pub struct WindowBuilder {
 }
 
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
+    pub fn new(_app_state: AppState) -> WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),

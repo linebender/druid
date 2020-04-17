@@ -122,6 +122,9 @@ pub mod sys {
     /// should be the id of the window to close.
     pub const CLOSE_WINDOW: Selector = Selector::new("druid-builtin.close-window");
 
+    /// Close all windows.
+    pub const CLOSE_ALL_WINDOWS: Selector = Selector::new("druid-builtin.close-all-windows");
+
     /// The selector for a command to bring a window to the front, and give it focus.
     ///
     /// The command's argument should be the id of the target window.

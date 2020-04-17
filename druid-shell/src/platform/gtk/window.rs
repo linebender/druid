@@ -33,7 +33,7 @@ use gtk::{AccelGroup, ApplicationWindow};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
-use super::application::with_application;
+use super::application::{with_application, AppState};
 use super::dialog;
 use super::menu::Menu;
 use super::util::assert_main_thread;
@@ -111,7 +111,7 @@ pub(crate) struct WindowState {
 }
 
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
+    pub fn new(_app_state: AppState) -> WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),

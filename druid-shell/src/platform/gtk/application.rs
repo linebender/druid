@@ -31,10 +31,19 @@ thread_local!(
     static GTK_APPLICATION: RefCell<Option<GtkApplication>> = RefCell::new(None);
 );
 
+#[derive(Clone)]
+pub struct AppState;
+
 pub struct Application;
 
+impl AppState {
+    pub(crate) fn new() -> AppState {
+        AppState
+    }
+}
+
 impl Application {
-    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
+    pub fn new(_state: AppState, _handler: Option<Box<dyn AppHandler>>) -> Application {
         // TODO: we should give control over the application ID to the user
         let application = GtkApplication::new(
             Some("com.github.xi-editor.druid"),

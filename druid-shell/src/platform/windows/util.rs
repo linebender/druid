@@ -22,11 +22,12 @@ use std::mem;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::ptr;
 use std::slice;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use lazy_static::lazy_static;
 use winapi::ctypes::c_void;
 use winapi::shared::guiddef::REFIID;
-use winapi::shared::minwindef::{HMODULE, UINT};
+use winapi::shared::minwindef::{DWORD, HMODULE, UINT};
 use winapi::shared::ntdef::{HRESULT, LPWSTR};
 use winapi::shared::windef::HMONITOR;
 use winapi::shared::winerror::SUCCEEDED;
@@ -34,15 +35,68 @@ use winapi::um::fileapi::{CreateFileA, GetFileType, OPEN_EXISTING};
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::libloaderapi::{GetModuleHandleW, GetProcAddress, LoadLibraryW};
 use winapi::um::processenv::{GetStdHandle, SetStdHandle};
+use winapi::um::processthreadsapi::GetCurrentThreadId;
 use winapi::um::shellscalingapi::{MONITOR_DPI_TYPE, PROCESS_DPI_AWARENESS};
 use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winbase::{FILE_TYPE_UNKNOWN, STD_ERROR_HANDLE, STD_OUTPUT_HANDLE};
 use winapi::um::wincon::{AttachConsole, ATTACH_PARENT_PROCESS};
 use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
 
-use log::error;
-
 use super::error::Error;
+
+static MAIN_THREAD_ID: AtomicU32 = AtomicU32::new(0);
+
+#[inline]
+fn current_thread_id() -> DWORD {
+    unsafe { GetCurrentThreadId() }
+}
+
+pub fn assert_main_thread() {
+    let thread_id = current_thread_id();
+    let main_thread_id = MAIN_THREAD_ID.load(Ordering::Acquire);
+    if thread_id != main_thread_id {
+        panic!(
+            "Main thread assertion failed {} != {}",
+            thread_id, main_thread_id
+        );
+    }
+}
+
+pub fn claim_main_thread() {
+    let thread_id = current_thread_id();
+    let old_thread_id = MAIN_THREAD_ID.compare_and_swap(0, thread_id, Ordering::AcqRel);
+    if old_thread_id != 0 {
+        panic!(
+            "The main thread status has already been claimed by thread {}",
+            thread_id
+        );
+    }
+}
+
+pub fn release_main_thread() {
+    let thread_id = current_thread_id();
+    let old_thread_id = MAIN_THREAD_ID.compare_and_swap(thread_id, 0, Ordering::AcqRel);
+    if old_thread_id == 0 {
+        log::warn!("The main thread status was already vacant.");
+    } else if old_thread_id != thread_id {
+        panic!(
+            "The main thread status is owned by another thread {}",
+            thread_id
+        );
+    }
+}
+
+#[allow(dead_code)]
+pub fn main_thread_id() -> Option<DWORD> {
+    let thread_id = MAIN_THREAD_ID.load(Ordering::Acquire);
+    // Although not explicitly documented, zero is an invalid thread id.
+    // It can be deducted from the behavior of GetThreadId / SetWindowsHookExA.
+    // https://devblogs.microsoft.com/oldnewthing/20040223-00/?p=40503
+    match thread_id {
+        0 => None,
+        id => Some(id),
+    }
+}
 
 pub fn as_result(hr: HRESULT) -> Result<(), Error> {
     if SUCCEEDED(hr) {
@@ -144,9 +198,10 @@ fn load_optional_functions() -> OptionalFunctions {
             let function_ptr = unsafe { GetProcAddress($lib, cstr.as_ptr()) };
 
             if function_ptr.is_null() {
-                error!(
+                log::error!(
                     "Could not load `{}`. Windows {} or later is needed",
-                    name, $min_windows_version
+                    name,
+                    $min_windows_version
                 );
             } else {
                 let function = unsafe { mem::transmute::<_, $function>(function_ptr) };
@@ -180,14 +235,14 @@ fn load_optional_functions() -> OptionalFunctions {
     let mut CreateDXGIFactory2 = None;
 
     if shcore.is_null() {
-        error!("No shcore.dll");
+        log::error!("No shcore.dll");
     } else {
         load_function!(shcore, SetProcessDpiAwareness, "8.1");
         load_function!(shcore, GetDpiForMonitor, "8.1");
     }
 
     if user32.is_null() {
-        error!("No user32.dll");
+        log::error!("No user32.dll");
     } else {
         load_function!(user32, GetDpiForSystem, "10");
     }

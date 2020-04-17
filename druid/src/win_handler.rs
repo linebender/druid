@@ -22,7 +22,8 @@ use std::rc::Rc;
 use crate::kurbo::{Rect, Size, Vec2};
 use crate::piet::Piet;
 use crate::shell::{
-    Application, FileDialogOptions, IdleToken, MouseEvent, WinHandler, WindowHandle,
+    AppState as PlatformState, Application, FileDialogOptions, IdleToken, MouseEvent, WinHandler,
+    WindowHandle,
 };
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
@@ -72,6 +73,7 @@ pub(crate) struct AppState<T> {
 }
 
 struct Inner<T> {
+    platform_state: PlatformState,
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: CommandQueue,
     ext_event_host: ExtEventHost,
@@ -118,6 +120,10 @@ impl<T> Windows<T> {
     fn get_mut(&mut self, id: WindowId) -> Option<&mut Window<T>> {
         self.windows.get_mut(&id)
     }
+
+    fn count(&self) -> usize {
+        self.windows.len() + self.pending.len()
+    }
 }
 
 impl<T> AppHandler<T> {
@@ -128,12 +134,14 @@ impl<T> AppHandler<T> {
 
 impl<T> AppState<T> {
     pub(crate) fn new(
+        platform_state: PlatformState,
         data: T,
         env: Env,
         delegate: Option<Box<dyn AppDelegate<T>>>,
         ext_event_host: ExtEventHost,
     ) -> Self {
         let inner = Rc::new(RefCell::new(Inner {
+            platform_state,
             delegate,
             command_queue: VecDeque::new(),
             root_menu: None,
@@ -144,6 +152,10 @@ impl<T> AppState<T> {
         }));
 
         AppState { inner }
+    }
+
+    pub(crate) fn platform_state(&self) -> PlatformState {
+        self.inner.borrow().platform_state.clone()
     }
 }
 
@@ -220,7 +232,11 @@ impl<T: Data> Inner<T> {
             if self.windows.windows.is_empty() {
                 // on mac we need to keep the menu around
                 self.root_menu = win.menu.take();
-                //FIXME: on windows we need to shutdown the app here?
+                // If there are even no pending windows, we quit the run loop.
+                if self.windows.count() == 0 {
+                    #[cfg(target_os = "windows")]
+                    Application::quit();
+                }
             }
         }
 
@@ -258,6 +274,13 @@ impl<T: Data> Inner<T> {
     /// our handlers `destroy()` method, at which point we can do our cleanup.
     fn request_close_window(&mut self, window_id: WindowId) {
         if let Some(win) = self.windows.get_mut(window_id) {
+            win.handle.close();
+        }
+    }
+
+    /// Requests the platform to close all windows.
+    fn request_close_all_windows(&mut self) {
+        for win in self.windows.iter_mut() {
             win.handle.close();
         }
     }
@@ -502,7 +525,7 @@ impl<T: Data> AppState<T> {
     fn handle_cmd(&mut self, target: Target, cmd: Command) {
         use Target as T;
         match (target, &cmd.selector) {
-            // these are handled the same no matter where they  come from
+            // these are handled the same no matter where they come from
             (_, &sys_cmd::QUIT_APP) => self.quit(),
             (_, &sys_cmd::HIDE_APPLICATION) => self.hide_app(),
             (_, &sys_cmd::HIDE_OTHERS) => self.hide_others(),
@@ -511,8 +534,9 @@ impl<T: Data> AppState<T> {
                     log::error!("failed to create window: '{}'", e);
                 }
             }
+            (_, &sys_cmd::CLOSE_ALL_WINDOWS) => self.request_close_all_windows(),
             // these should come from a window
-            // FIXME: we need to be  able to open a file without a window handle
+            // FIXME: we need to be able to open a file without a window handle
             (T::Window(id), &sys_cmd::SHOW_OPEN_PANEL) => self.show_open_panel(cmd, id),
             (T::Window(id), &sys_cmd::SHOW_SAVE_PANEL) => self.show_save_panel(cmd, id),
             (T::Window(id), &sys_cmd::CLOSE_WINDOW) => self.request_close_window(cmd, id),
@@ -572,6 +596,10 @@ impl<T: Data> AppState<T> {
     fn request_close_window(&mut self, cmd: Command, window_id: WindowId) {
         let id = cmd.get_object().unwrap_or(&window_id);
         self.inner.borrow_mut().request_close_window(*id);
+    }
+
+    fn request_close_all_windows(&mut self) {
+        self.inner.borrow_mut().request_close_all_windows();
     }
 
     fn show_window(&mut self, cmd: Command) {

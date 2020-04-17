@@ -41,6 +41,7 @@ use log::{error, info};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
+use super::application::AppState;
 use super::dialog;
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
@@ -104,7 +105,7 @@ struct ViewState {
 }
 
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
+    pub fn new(_app_state: AppState) -> WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),

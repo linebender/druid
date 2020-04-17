@@ -17,10 +17,19 @@
 use super::clipboard::Clipboard;
 use crate::application::AppHandler;
 
+#[derive(Clone)]
+pub struct AppState;
+
 pub struct Application;
 
+impl AppState {
+    pub(crate) fn new() -> AppState {
+        AppState
+    }
+}
+
 impl Application {
-    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
+    pub fn new(_state: AppState, _handler: Option<Box<dyn AppHandler>>) -> Application {
         Application
     }
 

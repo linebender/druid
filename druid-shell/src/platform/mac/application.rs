@@ -32,12 +32,21 @@ use crate::application::AppHandler;
 
 static APP_HANDLER_IVAR: &str = "druidAppHandler";
 
+#[derive(Clone)]
+pub struct AppState;
+
 pub struct Application {
     ns_app: id,
 }
 
+impl AppState {
+    pub(crate) fn new() -> AppState {
+        AppState
+    }
+}
+
 impl Application {
-    pub fn new(handler: Option<Box<dyn AppHandler>>) -> Application {
+    pub fn new(_state: AppState, handler: Option<Box<dyn AppHandler>>) -> Application {
         util::assert_main_thread();
         unsafe {
             let _pool = NSAutoreleasePool::new(nil);

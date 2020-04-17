@@ -14,6 +14,8 @@
 
 //! The top-level application type.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use crate::clipboard::Clipboard;
 use crate::platform::application as platform;
 
@@ -36,14 +38,43 @@ pub trait AppHandler {
     fn command(&mut self, id: u32) {}
 }
 
+/// The top level application state.
+///
+/// This helps the application track all the state that it has created,
+/// which it later needs to clean up.
+#[derive(Clone)]
+pub struct AppState(pub(crate) platform::AppState);
+
+impl AppState {
+    /// Create a new `AppState` instance.
+    pub fn new() -> AppState {
+        AppState(platform::AppState::new())
+    }
+}
+
 //TODO: we may want to make the user create an instance of this (Application::global()?)
 //but for now I'd like to keep changes minimal.
 /// The top level application object.
 pub struct Application(platform::Application);
 
+// Used to ensure only one Application instance is ever created.
+// This may change in the future.
+// For more information see https://github.com/xi-editor/druid/issues/771
+static APPLICATION_CREATED: AtomicBool = AtomicBool::new(false);
+
 impl Application {
-    pub fn new(handler: Option<Box<dyn AppHandler>>) -> Application {
-        Application(platform::Application::new(handler))
+    /// Create a new `Application`.
+    ///
+    /// It takes the application `state` and a `handler` which will be used to inform of events.
+    ///
+    /// Right now only one application can be created. See [druid#771] for discussion.
+    ///
+    /// [druid#771]: https://github.com/xi-editor/druid/issues/771
+    pub fn new(state: AppState, handler: Option<Box<dyn AppHandler>>) -> Application {
+        if APPLICATION_CREATED.compare_and_swap(false, true, Ordering::AcqRel) {
+            panic!("The Application instance has already been created.");
+        }
+        Application(platform::Application::new(state.0, handler))
     }
 
     /// Start the runloop.

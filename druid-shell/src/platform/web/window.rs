@@ -29,6 +29,7 @@ use crate::kurbo::{Point, Rect, Size, Vec2};
 
 use crate::piet::RenderContext;
 
+use super::application::AppState;
 use super::error::Error;
 use super::keycodes::key_to_text;
 use super::menu::Menu;
@@ -291,7 +292,7 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
 }
 
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
+    pub fn new(_app_state: AppState) -> WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),
