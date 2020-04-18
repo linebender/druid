@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::io::Result;
-use std::path::PathBuf;
+use std::io::{ErrorKind, Result};
+use std::path::{Path, PathBuf};
 use std::{env, fs};
 
 /// Examples known to not work with WASM are skipped. Ideally this list will eventually be empty.
@@ -23,29 +23,35 @@ const EXCEPTIONS: &[&str] = &[
 ];
 
 /// Create a platform specific link from `src` to the `dst` directory.
-fn link_dir(src: &std::path::Path, dst: &std::path::Path) {
-    // First delete any existing link, as it might be stale.
-    // Especially a Windows junction, because a junction is an absolute path reference,
-    // which becomes invalid if one of our ancestor directories gets renamed/moved.
-    let err = fs::remove_dir(dst).err(); // Safe as it errors when directory isn't empty
-    match err {
-        None => (),
-        Some(err) if err.kind() == std::io::ErrorKind::NotFound => (),
-        Some(err) => panic!("Failed to remove directory: {}", err),
-    }
-    // Perform platform specific linking
+#[inline]
+fn link_dir(src: &Path, dst: &Path) {
     #[cfg(unix)]
-    std::os::unix::fs::symlink(src, dst).expect("failed to create symlink");
+    link_dir_unix(src, dst);
     #[cfg(windows)]
     link_dir_windows(src, dst);
-    // Make sure the directory exists now
-    if !dst.exists() {
-        panic!("Failed to create a link");
+}
+
+#[cfg(unix)]
+fn link_dir_unix(src: &Path, dst: &Path) {
+    let err = std::os::unix::fs::symlink(src, dst).err();
+    match err {
+        None => (),
+        Some(err) if err.kind() == ErrorKind::AlreadyExists => (),
+        Some(err) => panic!("Failed to create symlink: {}", err),
     }
 }
 
 #[cfg(windows)]
-fn link_dir_windows(src: &std::path::Path, dst: &std::path::Path) {
+fn link_dir_windows(src: &Path, dst: &Path) {
+    // First we have to delete any previous link,
+    // especially because a junction is an absolute path reference
+    // that becomes invalid if one of our ancestor directories gets renamed/moved.
+    let err = fs::remove_dir(dst).err(); // Safe as it errors when directory isn't empty
+    match err {
+        None => (),
+        Some(err) if err.kind() == ErrorKind::NotFound => (),
+        Some(err) => panic!("Failed to remove directory: {}", err),
+    }
     // Attempt to create a symlink, which will work with either
     // * Admininstrator privileges
     // * New enough Windows with developer mode enabled
@@ -62,6 +68,10 @@ fn link_dir_windows(src: &std::path::Path, dst: &std::path::Path) {
         .arg(src.as_os_str())
         .output()
         .expect("failed to execute process");
+    // Make sure the directory exists now
+    if !dst.exists() {
+        panic!("Failed to create a link");
+    }
 }
 
 fn main() -> Result<()> {
