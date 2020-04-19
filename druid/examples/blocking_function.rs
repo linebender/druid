@@ -99,7 +99,7 @@ fn ui_builder() -> impl Widget<AppState> {
 }
 fn main() {
     let main_window =
-        WindowDesc::new(|| ui_builder()).title(LocalizedString::new("Blocking functions"));
+        WindowDesc::new(ui_builder).title(LocalizedString::new("Blocking functions"));
     let app = AppLauncher::with_window(main_window);
     let delegate = Delegate {
         eventsink: app.get_external_handle(),
