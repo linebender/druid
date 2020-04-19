@@ -1,15 +1,35 @@
-use druid::ExtEventSink;
-use druid::Selector;
+// Copyright 2019 The xi-editor Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! An example of a blocking function running in another thread.
+
 
 use std::{thread, time};
 
-use druid::AppDelegate;
-use druid::DelegateCtx;
-use druid::Target;
+use druid::{
+	AppLauncher, Widget, WindowDesc, Selector, AppDelegate,
+	ExtEventSink, Command, Data, Env, Lens, LocalizedString,
+	DelegateCtx, Target, WidgetExt
+};
 
-use druid::{AppLauncher, Widget, WindowDesc};
-use druid::{Command, Data, Env, Lens, LocalizedString};
-pub struct Delegate {
+use druid::widget::{Button, Either, Flex, Label};
+
+const START_SLOW_FUNCTION: Selector = Selector::new("start_slow_function");
+
+const FINISH_SLOW_FUNCTION: Selector = Selector::new("finish_slow_function");
+
+struct Delegate {
     eventsink: ExtEventSink,
 }
 
@@ -19,12 +39,7 @@ struct AppState {
     value: u32,
 }
 
-use druid::widget::{Button, Either, Flex, Label};
-use druid::WidgetExt;
 
-pub const START_SLOW_FUNCTION: Selector = Selector::new("start_slow_function");
-
-pub const FINISH_SLOW_FUNCTION: Selector = Selector::new("finish_slow_function");
 
 // Pretend this is downloading a file, or doing heavy calculations...
 fn slow_function(number: u32) -> u32 {
