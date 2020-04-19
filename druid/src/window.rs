@@ -24,8 +24,9 @@ use crate::shell::{Counter, Cursor, WindowHandle};
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetId, WidgetPod, WindowDesc,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalLifeCycle, LayoutCtx, LifeCycle,
+    LifeCycleCtx, LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetId, WidgetPod,
+    WindowDesc,
 };
 
 /// A unique identifier for a window.
@@ -120,17 +121,22 @@ impl<T: Data> Window<T> {
         };
 
         let event = match event {
-            Event::Size(size) => {
+            Event::WindowSize(size) => {
                 let dpi = f64::from(self.handle.get_dpi());
                 let scale = 96.0 / dpi;
                 self.size = Size::new(size.width * scale, size.height * scale);
-                Event::Size(self.size)
+                Event::WindowSize(self.size)
             }
             other => other,
         };
 
         if let Event::WindowConnected = event {
-            self.lifecycle(queue, &LifeCycle::RouteWidgetAdded, data, env);
+            self.lifecycle(
+                queue,
+                &LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded),
+                data,
+                env,
+            );
         }
 
         let mut base_state = BaseState::new(self.root.id());
@@ -154,7 +160,7 @@ impl<T: Data> Window<T> {
         if let Some(focus_req) = base_state.request_focus.take() {
             let old = self.focus;
             let new = self.widget_for_focus_request(focus_req);
-            let event = LifeCycle::RouteFocusChanged { old, new };
+            let event = LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged { old, new });
             self.lifecycle(queue, &event, data, env);
             self.focus = new;
         }
@@ -166,7 +172,12 @@ impl<T: Data> Window<T> {
         // If children are changed during the handling of an event,
         // we need to send RouteWidgetAdded now, so that they are ready for update/layout.
         if base_state.children_changed {
-            self.lifecycle(queue, &LifeCycle::RouteWidgetAdded, data, env);
+            self.lifecycle(
+                queue,
+                &LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded),
+                data,
+                env,
+            );
         }
 
         is_handled
@@ -230,7 +241,12 @@ impl<T: Data> Window<T> {
         env: &Env,
     ) {
         if self.root.state().children_changed {
-            self.lifecycle(queue, &LifeCycle::RouteWidgetAdded, data, env);
+            self.lifecycle(
+                queue,
+                &LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded),
+                data,
+                env,
+            );
         }
         if self.root.state().needs_inval {
             self.handle.invalidate();

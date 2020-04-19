@@ -275,8 +275,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         let should_record = match event {
-            LifeCycle::DebugRequestState { .. } => false,
-            LifeCycle::DebugInspectState(_) => false,
+            LifeCycle::Internal(InternalLifeCycle::DebugRequestState { .. }) => false,
+            LifeCycle::Internal(InternalLifeCycle::DebugInspectState(_)) => false,
             _ => true,
         };
 
