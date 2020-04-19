@@ -218,6 +218,12 @@ impl<T: Data> Window<T> {
 
         self.post_event_processing(queue, data, env, false);
 
+        //In some platforms, timer tokens are reused. So it is necessary to remove token from
+        //window's timer before adding base state's timers to it.
+        if let Event::Timer(token) = event {
+            self.timers.remove(&token);
+        }
+
         //If at least one widget requested timer, collect those timers from widgets and add to window's timers map.
         if base_state.request_timer {
             self.timers.extend(base_state.timers);
