@@ -98,8 +98,7 @@ fn ui_builder() -> impl Widget<AppState> {
     Flex::column().with_child(label).with_child(either)
 }
 fn main() {
-    let main_window =
-        WindowDesc::new(ui_builder).title(LocalizedString::new("Blocking functions"));
+    let main_window = WindowDesc::new(ui_builder).title(LocalizedString::new("Blocking functions"));
     let app = AppLauncher::with_window(main_window);
     let delegate = Delegate {
         eventsink: app.get_external_handle(),
