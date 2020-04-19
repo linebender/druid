@@ -64,7 +64,9 @@ use crate::{
 /// const STROKE_WIDTH: f64 = 2.0;
 ///
 /// let colorwell: Painter<Color> = Painter::new(|ctx, data: &Color, env| {
-///     let bounds = ctx.size().to_rect();
+///     // Shrink the bounds a little, to ensure that our stroke remains within
+///     // the paint bounds.
+///     let bounds = ctx.size().to_rect().inset(-STROKE_WIDTH / 2.0);
 ///     let rounded = bounds.to_rounded_rect(CORNER_RADIUS);
 ///     ctx.fill(rounded, data);
 ///     ctx.stroke(rounded, &env.get(druid::theme::PRIMARY_DARK), STROKE_WIDTH);

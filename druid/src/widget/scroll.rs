@@ -253,7 +253,9 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 
         // Vertical bar
         if viewport.height() < self.child_size.height {
-            let bounds = self.calc_vertical_bar_bounds(viewport, env);
+            let bounds = self
+                .calc_vertical_bar_bounds(viewport, env)
+                .inset(-edge_width / 2.0);
             let rect = RoundedRect::from_rect(bounds, radius);
             ctx.render_ctx.fill(rect, &brush);
             ctx.render_ctx.stroke(rect, &border_brush, edge_width);
@@ -261,7 +263,9 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 
         // Horizontal bar
         if viewport.width() < self.child_size.width {
-            let bounds = self.calc_horizontal_bar_bounds(viewport, env);
+            let bounds = self
+                .calc_horizontal_bar_bounds(viewport, env)
+                .inset(-edge_width / 2.0);
             let rect = RoundedRect::from_rect(bounds, radius);
             ctx.render_ctx.fill(rect, &brush);
             ctx.render_ctx.stroke(rect, &border_brush, edge_width);

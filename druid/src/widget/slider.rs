@@ -14,7 +14,7 @@
 
 //! A slider widget.
 
-use crate::kurbo::{Circle, Point, Rect, RoundedRect, Shape, Size};
+use crate::kurbo::{Circle, Point, Rect, Shape, Size};
 use crate::theme;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
@@ -138,13 +138,16 @@ impl Widget<f64> for Slider {
         let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let track_thickness = 4.;
+        let border_width = 2.;
+        let knob_stroke_width = 2.;
 
         //Paint the background
         let background_width = rect.width() - knob_size;
         let background_origin = Point::new(knob_size / 2., (knob_size - track_thickness) / 2.);
         let background_size = Size::new(background_width, track_thickness);
-        let background_rect =
-            RoundedRect::from_origin_size(background_origin, background_size.to_vec2(), 2.);
+        let background_rect = Rect::from_origin_size(background_origin, background_size)
+            .inset(-border_width / 2.)
+            .to_rounded_rect(2.);
 
         let background_gradient = LinearGradient::new(
             UnitPoint::TOP,
@@ -155,7 +158,7 @@ impl Widget<f64> for Slider {
             ),
         );
 
-        ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), 2.0);
+        ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), border_width);
 
         ctx.fill(background_rect, &background_gradient);
 
@@ -165,7 +168,7 @@ impl Widget<f64> for Slider {
 
         let knob_position = (rect.width() - knob_size) * clamped + knob_size / 2.;
         self.knob_pos = Point::new(knob_position, knob_size / 2.);
-        let knob_circle = Circle::new(self.knob_pos, knob_size / 2.);
+        let knob_circle = Circle::new(self.knob_pos, (knob_size - knob_stroke_width) / 2.);
 
         let normal_knob_gradient = LinearGradient::new(
             UnitPoint::TOP,
@@ -197,7 +200,7 @@ impl Widget<f64> for Slider {
             env.get(theme::FOREGROUND_DARK)
         };
 
-        ctx.stroke(knob_circle, &border_color, 2.);
+        ctx.stroke(knob_circle, &border_color, knob_stroke_width);
 
         //Actually paint the knob
         ctx.fill(knob_circle, &knob_gradient);
