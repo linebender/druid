@@ -14,13 +14,11 @@
 
 //! An example of a blocking function running in another thread.
 
-
 use std::{thread, time};
 
 use druid::{
-	AppLauncher, Widget, WindowDesc, Selector, AppDelegate,
-	ExtEventSink, Command, Data, Env, Lens, LocalizedString,
-	DelegateCtx, Target, WidgetExt
+    AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, ExtEventSink, Lens, LocalizedString,
+    Selector, Target, Widget, WidgetExt, WindowDesc,
 };
 
 use druid::widget::{Button, Either, Flex, Label};
@@ -38,8 +36,6 @@ struct AppState {
     processing: bool,
     value: u32,
 }
-
-
 
 // Pretend this is downloading a file, or doing heavy calculations...
 fn slow_function(number: u32) -> u32 {
