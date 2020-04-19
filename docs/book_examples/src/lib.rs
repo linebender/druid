@@ -2,6 +2,7 @@
 
 #![allow(dead_code, unused_variables)]
 
+mod custom_widgets_md;
 mod data_md;
 mod env_md;
 mod lens_md;

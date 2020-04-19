@@ -13,8 +13,11 @@
 // limitations under the License.
 
 //! Tools and infrastructure for testing widgets.
+
+use std::path::Path;
+
 use crate::core::{BaseState, CommandQueue};
-use crate::piet::{BitmapTarget, Device, Piet};
+use crate::piet::{BitmapTarget, Device, Error, ImageFormat, Piet};
 use crate::*;
 
 pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
@@ -57,7 +60,24 @@ struct Inner<T> {
 /// A way to clean up resources when our target goes out of scope.
 // the inner type is an option so that we can take ownership in `drop` even
 // though self is `& mut`.
-struct TargetGuard<'a>(Option<BitmapTarget<'a>>);
+pub struct TargetGuard<'a>(Option<BitmapTarget<'a>>);
+
+impl<'a> TargetGuard<'a> {
+    /// Turns the TargetGuard into a array of pixels
+    #[allow(dead_code)]
+    pub fn into_raw(mut self) -> Vec<u8> {
+        let raw_target = self.0.take().unwrap();
+        let raw_pixels: Vec<u8> = raw_target.into_raw_pixels(ImageFormat::RgbaPremul).unwrap();
+        raw_pixels
+    }
+
+    /// Saves the TargetGuard into a png
+    #[allow(dead_code)]
+    pub fn into_png<P: AsRef<Path>>(mut self, path: P) -> Result<(), Error> {
+        let raw_target = self.0.take().unwrap();
+        raw_target.save_to_file(path)
+    }
+}
 
 impl<T: Data> Harness<'_, T> {
     /// Create a new `Harness` with the given data and a root widget,
@@ -65,29 +85,81 @@ impl<T: Data> Harness<'_, T> {
     ///
     /// For lifetime reasons™, we cannot just make a harness. It's complicated.
     /// I tried my best.
-    pub fn create(data: T, root: impl Widget<T> + 'static, mut f: impl FnMut(&mut Harness<T>)) {
+    ///
+    /// This function is a subset of [create_with_render](struct.Harness.html#create_with_render)
+    pub fn create_simple(
+        data: T,
+        root: impl Widget<T> + 'static,
+        harness_closure: impl FnMut(&mut Harness<T>),
+    ) {
+        Self::create_with_render(data, root, DEFAULT_SIZE, harness_closure, |_target| {})
+    }
+
+    /// Create a new `Harness` with the given data and a root widget,
+    /// and provide that harness to the `harness_closure` callback and then the
+    /// render_context to the `render_context_closure` callback.
+    ///
+    /// For lifetime reasons™, we cannot just make a harness. It's complicated.
+    /// I tried my best.
+    ///
+    /// The with_render version of `create` also has a callback that can be used
+    /// to save or inspect the painted widget
+    ///
+    /// # Usage
+    ///
+    /// The create functions are used to test a widget. The function takes a `root` widget
+    /// and a data structure and uses them to create a `Harness`. The Harness can then be interacted
+    /// with via the `harness_closure` callback. The the final render of
+    /// the widget can be inspected with the `render_context_closure` callback.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - A structure that matches the type of the widget and that will be
+    ///  passed to the `harness_closure` callback via the `Harness` structure.
+    ///
+    /// * `root` - The widget under test
+    ///
+    /// * `shape` - The shape of the render_context in the `Harness` structure
+    ///
+    /// * `harness_closure` - A closure used to interact with the widget under test through the
+    /// `Harness` structure.
+    ///
+    /// * `render_context_closure` - A closure used to inspect the final render_context via the `TargetGuard` structure.
+    ///
+    pub fn create_with_render(
+        data: T,
+        root: impl Widget<T> + 'static,
+        window_size: Size,
+        mut harness_closure: impl FnMut(&mut Harness<T>),
+        mut render_context_closure: impl FnMut(TargetGuard),
+    ) {
         let mut device = Device::new().expect("harness failed to get device");
-        let target = device.bitmap_target(400, 400, 2.).expect("bitmap_target");
+        let target = device
+            .bitmap_target(window_size.width as usize, window_size.height as usize, 1.0)
+            .expect("bitmap_target");
         let mut target = TargetGuard(Some(target));
-        let piet = target.0.as_mut().unwrap().render_context();
+        {
+            let piet = target.0.as_mut().unwrap().render_context();
 
-        let desc = WindowDesc::new(|| root);
-        let window = Window::new(WindowId::next(), Default::default(), desc);
+            let desc = WindowDesc::new(|| root);
+            let window = Window::new(WindowId::next(), Default::default(), desc);
 
-        let inner = Inner {
-            data,
-            env: theme::init(),
-            window,
-            cmds: Default::default(),
-        };
+            let inner = Inner {
+                data,
+                env: theme::init(),
+                window,
+                cmds: Default::default(),
+            };
 
-        let mut harness = Harness {
-            piet,
-            inner,
-            window_size: DEFAULT_SIZE,
-        };
-        f(&mut harness);
-        harness.piet.finish().expect("piet finish failed");
+            let mut harness = Harness {
+                piet,
+                inner,
+                window_size,
+            };
+            harness_closure(&mut harness);
+            harness.piet.finish().expect("piet finish failed");
+        }
+        render_context_closure(target)
     }
 
     /// Set the size without sending a resize event; intended to be used
@@ -122,7 +194,10 @@ impl<T: Data> Harness<'_, T> {
     pub(crate) fn try_get_state(&mut self, widget: WidgetId) -> Option<BaseState> {
         let cell = StateCell::default();
         let state_cell = cell.clone();
-        self.lifecycle(LifeCycle::DebugRequestState { widget, state_cell });
+        self.lifecycle(LifeCycle::Internal(InternalLifeCycle::DebugRequestState {
+            widget,
+            state_cell,
+        }));
         cell.take()
     }
 
@@ -131,13 +206,15 @@ impl<T: Data> Harness<'_, T> {
     /// The provided closure will be called on each widget.
     pub(crate) fn inspect_state(&mut self, f: impl Fn(&BaseState) + 'static) {
         let checkfn = StateCheckFn::new(f);
-        self.lifecycle(LifeCycle::DebugInspectState(checkfn))
+        self.lifecycle(LifeCycle::Internal(InternalLifeCycle::DebugInspectState(
+            checkfn,
+        )))
     }
 
     /// Send a command to a target.
     pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
         let target = target.into().unwrap_or_else(|| self.inner.window.id.into());
-        let event = Event::TargetedCommand(target, cmd.into());
+        let event = Event::Internal(InternalEvent::TargetedCommand(target, cmd.into()));
         self.event(event);
     }
 
@@ -145,7 +222,7 @@ impl<T: Data> Harness<'_, T> {
     // should we do this automatically? Also these will change regularly?
     pub fn send_initial_events(&mut self) {
         self.event(Event::WindowConnected);
-        self.event(Event::Size(self.window_size));
+        self.event(Event::WindowSize(self.window_size));
     }
 
     /// Send an event to the widget.
@@ -164,7 +241,9 @@ impl<T: Data> Harness<'_, T> {
         loop {
             let cmd = self.inner.cmds.pop_front();
             match cmd {
-                Some((target, cmd)) => self.event(Event::TargetedCommand(target, cmd)),
+                Some((target, cmd)) => {
+                    self.event(Event::Internal(InternalEvent::TargetedCommand(target, cmd)))
+                }
                 None => break,
             }
         }
@@ -198,15 +277,16 @@ impl<T: Data> Inner<T> {
 
     fn lifecycle(&mut self, event: LifeCycle) {
         self.window
-            .lifecycle(&mut self.cmds, &event, &self.data, &self.env);
+            .lifecycle(&mut self.cmds, &event, &self.data, &self.env, false);
     }
 
     fn update(&mut self) {
-        self.window.update(&self.data, &self.env);
+        self.window.update(&mut self.cmds, &self.data, &self.env);
     }
 
     fn layout(&mut self, piet: &mut Piet) {
-        self.window.just_layout(piet, &self.data, &self.env);
+        self.window
+            .just_layout(piet, &mut self.cmds, &self.data, &self.env);
     }
 
     #[allow(dead_code)]

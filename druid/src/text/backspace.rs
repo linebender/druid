@@ -193,6 +193,7 @@ fn backspace_offset(text: &impl EditableText, start: usize) -> usize {
 }
 
 /// Calculate resulting offset for a backwards delete.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn offset_for_delete_backwards(region: &Selection, text: &impl EditableText) -> usize {
     if !region.is_caret() {
         region.min()

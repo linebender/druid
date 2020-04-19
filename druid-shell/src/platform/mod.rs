@@ -15,17 +15,20 @@
 //! Platform specific implementations.
 
 cfg_if::cfg_if! {
-    if #[cfg(all(target_os = "windows", not(feature = "use_gtk")))] {
+    if #[cfg(target_os = "windows")] {
         mod windows;
         pub use windows::*;
-    } else if #[cfg(all(target_os = "macos", not(feature = "use_gtk")))] {
+    } else if #[cfg(target_os = "macos")] {
         mod mac;
         pub use mac::*;
     } else if #[cfg(all(feature = "x11", target_os = "linux"))] {
         mod x11;
         pub use x11::*;
-    } else if #[cfg(any(feature = "use_gtk", target_os = "linux"))] {
+    } else if #[cfg(target_os = "linux")] {
         mod gtk;
         pub use self::gtk::*;
+    } else if #[cfg(target_arch = "wasm32")] {
+        mod web;
+        pub use web::*;
     }
 }

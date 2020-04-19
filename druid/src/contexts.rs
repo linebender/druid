@@ -15,16 +15,14 @@
 //! The context types that are passed into various widget methods.
 
 use std::ops::{Deref, DerefMut};
-use std::time::Instant;
-
-use log;
+use std::time::Duration;
 
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::{
-    Affine, Command, Cursor, Insets, Rect, Size, Target, Text, TimerToken, WidgetId, WindowHandle,
-    WindowId,
+    Affine, Command, Cursor, Insets, Point, Rect, Size, Target, Text, TimerToken, WidgetId,
+    WindowHandle, WindowId,
 };
 use std::collections::HashMap;
 
@@ -44,7 +42,6 @@ pub struct EventCtx<'a> {
     pub(crate) window: &'a WindowHandle,
     pub(crate) base_state: &'a mut BaseState,
     pub(crate) focus_widget: Option<WidgetId>,
-    pub(crate) had_active: bool,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
     /// Map of TimerTokens and WidgetIds that requested them.
@@ -78,6 +75,7 @@ pub struct UpdateCtx<'a> {
     // invalidations, which would mean a structure very much like
     // `EventCtx` (and possibly using the same structure). But for
     // now keep it super-simple.
+    pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) window_id: WindowId,
     pub(crate) base_state: &'a mut BaseState,
 }
@@ -88,9 +86,11 @@ pub struct UpdateCtx<'a> {
 /// creating text layout objects, which are likely to be useful
 /// during widget layout.
 pub struct LayoutCtx<'a, 'b: 'a> {
+    pub(crate) command_queue: &'a mut CommandQueue,
+    pub(crate) base_state: &'a mut BaseState,
     pub(crate) text_factory: &'a mut Text<'b>,
-    pub(crate) paint_insets: Insets,
     pub(crate) window_id: WindowId,
+    pub(crate) mouse_pos: Option<Point>,
 }
 
 /// Z-order paint operations with transformations.
@@ -161,6 +161,8 @@ impl<'a> EventCtx<'a> {
     /// Widgets must call this method after adding a new child.
     pub fn children_changed(&mut self) {
         self.base_state.children_changed = true;
+        self.base_state.needs_layout = true;
+        self.base_state.needs_inval = true;
     }
 
     /// Get an object which can create text layouts.
@@ -273,12 +275,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn has_focus(&self) -> bool {
-        // The bloom filter we're checking can return false positives.
-        let is_child = self
-            .focus_widget
-            .map(|id| self.base_state.children.may_contain(&id))
-            .unwrap_or(false);
-        is_child || self.focus_widget == Some(self.widget_id())
+        self.base_state.has_focus
     }
 
     /// Request keyboard focus.
@@ -350,7 +347,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// The return value is a token, which can be used to associate the
     /// request with the event.
-    pub fn request_timer(&mut self, deadline: Instant) -> TimerToken {
+    pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
         self.base_state.request_timer = true;
         let timer_token = self.window.request_timer(deadline);
         self.base_state.add_timer(timer_token);
@@ -395,14 +392,6 @@ impl<'a> EventCtx<'a> {
     /// get the `WidgetId` of the current widget.
     pub fn widget_id(&self) -> WidgetId {
         self.base_state.id
-    }
-
-    pub(crate) fn make_lifecycle_ctx(&mut self) -> LifeCycleCtx {
-        LifeCycleCtx {
-            command_queue: self.command_queue,
-            base_state: self.base_state,
-            window_id: self.window_id,
-        }
     }
 }
 
@@ -461,6 +450,8 @@ impl<'a> LifeCycleCtx<'a> {
     /// Widgets must call this method after adding a new child.
     pub fn children_changed(&mut self) {
         self.base_state.children_changed = true;
+        self.base_state.needs_layout = true;
+        self.base_state.needs_inval = true;
     }
 
     /// Request an animation frame.
@@ -514,6 +505,25 @@ impl<'a> UpdateCtx<'a> {
     /// Widgets must call this method after adding a new child.
     pub fn children_changed(&mut self) {
         self.base_state.children_changed = true;
+        self.base_state.needs_layout = true;
+        self.base_state.needs_inval = true;
+    }
+
+    /// Submit a [`Command`] to be run after layout and paint finish.
+    ///
+    /// **Note:**
+    ///
+    /// Commands submited during an `update` call are handled *after* update,
+    /// layout, and paint have completed; this will trigger a new event cycle.
+    ///
+    /// [`Command`]: struct.Command.html
+    pub fn submit_command(
+        &mut self,
+        command: impl Into<Command>,
+        target: impl Into<Option<Target>>,
+    ) {
+        let target = target.into().unwrap_or_else(|| self.window_id.into());
+        self.command_queue.push_back((target, command.into()))
     }
 
     /// Get an object which can create text layouts.
@@ -561,7 +571,7 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
     /// [`Insets`]: struct.Insets.html
     /// [`WidgetPod::paint_insets`]: struct.WidgetPod.html#method.paint_insets
     pub fn set_paint_insets(&mut self, insets: impl Into<Insets>) {
-        self.paint_insets = insets.into().nonnegative();
+        self.base_state.paint_insets = insets.into().nonnegative();
     }
 }
 
@@ -618,12 +628,7 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
     /// [`is_focused`]: #method.is_focused
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn has_focus(&self) -> bool {
-        // The bloom filter we're checking can return false positives.
-        let is_child = self
-            .focus_widget
-            .map(|id| self.base_state.children.may_contain(&id))
-            .unwrap_or(false);
-        is_child || self.focus_widget == Some(self.widget_id())
+        self.base_state.has_focus
     }
 
     /// Returns the currently visible [`Region`].

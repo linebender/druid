@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![allow(clippy::unreadable_literal)]
+
 //! Game of life
 
 use std::ops::{Index, IndexMut};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use druid::widget::prelude::*;
 use druid::widget::{Button, Flex, Label, Slider};
@@ -53,7 +55,7 @@ struct ColorScheme {
 }
 
 impl GridPos {
-    pub fn above(&self) -> Option<GridPos> {
+    pub fn above(self) -> Option<GridPos> {
         if self.row == 0 {
             None
         } else {
@@ -63,7 +65,7 @@ impl GridPos {
             })
         }
     }
-    pub fn below(&self) -> Option<GridPos> {
+    pub fn below(self) -> Option<GridPos> {
         if self.row == GRID_SIZE - 1 {
             None
         } else {
@@ -73,7 +75,7 @@ impl GridPos {
             })
         }
     }
-    pub fn left(&self) -> Option<GridPos> {
+    pub fn left(self) -> Option<GridPos> {
         if self.col == 0 {
             None
         } else {
@@ -83,7 +85,7 @@ impl GridPos {
             })
         }
     }
-    pub fn right(&self) -> Option<GridPos> {
+    pub fn right(self) -> Option<GridPos> {
         if self.col == GRID_SIZE - 1 {
             None
         } else {
@@ -94,17 +96,17 @@ impl GridPos {
         }
     }
     #[allow(dead_code)]
-    pub fn above_left(&self) -> Option<GridPos> {
+    pub fn above_left(self) -> Option<GridPos> {
         self.above().and_then(|pos| pos.left())
     }
-    pub fn above_right(&self) -> Option<GridPos> {
+    pub fn above_right(self) -> Option<GridPos> {
         self.above().and_then(|pos| pos.right())
     }
     #[allow(dead_code)]
-    pub fn below_left(&self) -> Option<GridPos> {
+    pub fn below_left(self) -> Option<GridPos> {
         self.below().and_then(|pos| pos.left())
     }
-    pub fn below_right(&self) -> Option<GridPos> {
+    pub fn below_right(self) -> Option<GridPos> {
         self.below().and_then(|pos| pos.right())
     }
 }
@@ -234,7 +236,7 @@ impl Widget<AppData> for GameOfLifeWidget {
         match event {
             Event::WindowConnected => {
                 ctx.request_paint();
-                let deadline = Instant::now() + Duration::from_millis(data.iter_interval() as u64);
+                let deadline = Duration::from_millis(data.iter_interval() as u64);
                 self.timer_id = ctx.request_timer(deadline);
             }
             Event::Timer(id) => {
@@ -243,8 +245,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                         data.grid.evolve();
                         ctx.request_paint();
                     }
-                    let deadline =
-                        Instant::now() + Duration::from_millis(data.iter_interval() as u64);
+                    let deadline = Duration::from_millis(data.iter_interval() as u64);
                     self.timer_id = ctx.request_timer(deadline);
                 }
             }
@@ -413,7 +414,7 @@ fn make_widget() -> impl Widget<AppData> {
         )
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(make_widget)
         .window_size(Size {
             width: 800.0,
@@ -474,7 +475,7 @@ impl PartialEq for Grid {
                 return false;
             }
         }
-        return true;
+        true
     }
 }
 

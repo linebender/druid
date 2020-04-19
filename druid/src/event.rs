@@ -62,11 +62,7 @@ pub enum Event {
     /// widgets. It *is* propagated through the RootWidget and handled
     /// in the WindowPod, but after that it might be considered better
     /// to just handle it in `layout`.
-    ///
-    /// The propagation logic of "just the root" requires a little bit
-    /// of complexity and state in EventCtx, so if it's not useful it
-    /// should be removed.
-    Size(Size),
+    WindowSize(Size),
     /// Called when a mouse button is pressed.
     MouseDown(MouseEvent),
     /// Called when a mouse button is released.
@@ -127,9 +123,29 @@ pub enum Event {
     /// [`Widget`]: trait.Widget.html
     /// [`EventCtx::submit_command`]: struct.EventCtx.html#method.submit_command
     Command(Command),
-    /// A command still in the process of being dispatched. This is an internal
-    /// event and should generally not be handled directly by widgets, but is
-    /// important for containers to dispatch to their children.
+    /// Internal druid event.
+    ///
+    /// This should always be passed down to descendant [`WidgetPod`]s.
+    ///
+    /// [`WidgetPod`]: struct.WidgetPod.html
+    Internal(InternalEvent),
+}
+
+/// Internal events used by druid inside [`WidgetPod`].
+///
+/// These events are translated into regular [`Event`]s
+/// and should not be used directly.
+///
+/// [`WidgetPod`]: struct.WidgetPod.html
+/// [`Event`]: enum.Event.html
+#[derive(Debug, Clone)]
+pub enum InternalEvent {
+    /// Sent in some cases when the mouse has left the window.
+    ///
+    /// This is used in cases when the platform no longer sends mouse events,
+    /// but we know that we've stopped receiving the mouse events.
+    MouseLeave,
+    /// A command still in the process of being dispatched.
     TargetedCommand(Target, Command),
 }
 
@@ -160,8 +176,6 @@ pub enum LifeCycle {
     /// [`WidgetPod`]: struct.WidgetPod.html
     /// [`LifeCycleCtx::register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
     WidgetAdded,
-    /// Used internally by the framework to route WidgetAdded to the required widgets.
-    RouteWidgetAdded,
     /// Called at the beginning of a new animation frame.
     ///
     /// On the first frame when transitioning from idle to animating, `interval`
@@ -177,13 +191,6 @@ pub enum LifeCycle {
     /// See [`is_hot`](struct.EventCtx.html#method.is_hot) for
     /// discussion about the hot status.
     HotChanged(bool),
-    /// Internal: used by the framework to route the `FocusChanged` event.
-    RouteFocusChanged {
-        /// the widget that is losing focus, if any
-        old: Option<WidgetId>,
-        /// the widget that is gaining focus, if any
-        new: Option<WidgetId>,
-    },
     /// Called when the focus status changes.
     ///
     /// This will always be called immediately after a new widget gains focus.
@@ -194,6 +201,32 @@ pub enum LifeCycle {
     ///
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     FocusChanged(bool),
+    /// Internal druid lifecycle event.
+    ///
+    /// This should always be passed down to descendant [`WidgetPod`]s.
+    ///
+    /// [`WidgetPod`]: struct.WidgetPod.html
+    Internal(InternalLifeCycle),
+}
+
+/// Internal lifecycle events used by druid inside [`WidgetPod`].
+///
+/// These events are translated into regular [`LifeCycle`] events
+/// and should not be used directly.
+///
+/// [`WidgetPod`]: struct.WidgetPod.html
+/// [`LifeCycle`]: enum.LifeCycle.html
+#[derive(Debug, Clone)]
+pub enum InternalLifeCycle {
+    /// Used to route the `WidgetAdded` event to the required widgets.
+    RouteWidgetAdded,
+    /// Used to route the `FocusChanged` event.
+    RouteFocusChanged {
+        /// the widget that is losing focus, if any
+        old: Option<WidgetId>,
+        /// the widget that is gaining focus, if any
+        new: Option<WidgetId>,
+    },
     /// Testing only: request the `BaseState` of a specific widget.
     ///
     /// During testing, you may wish to verify that the state of a widget
@@ -318,6 +351,7 @@ mod state_cell {
     }
 
     impl StateCheckFn {
+        #[cfg(not(target_arch = "wasm32"))]
         pub(crate) fn new(f: impl Fn(&BaseState) + 'static) -> Self {
             StateCheckFn(Rc::new(f))
         }

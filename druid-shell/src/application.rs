@@ -61,13 +61,13 @@ impl Application {
     // TODO: do these two go in some kind of PlatformExt trait?
     /// Hide the application this window belongs to. (cmd+H)
     pub fn hide() {
-        #[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
+        #[cfg(target_os = "macos")]
         platform::Application::hide()
     }
 
     /// Hide all other applications. (cmd+opt+H)
     pub fn hide_others() {
-        #[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
+        #[cfg(target_os = "macos")]
         platform::Application::hide_others()
     }
 

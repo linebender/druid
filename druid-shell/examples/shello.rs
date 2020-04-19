@@ -64,7 +64,7 @@ impl WinHandler for HelloState {
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
-        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
+        let deadline = std::time::Duration::from_millis(500);
         let id = self.handle.request_timer(deadline);
         println!("keydown: {:?}, timer id = {:?}", event, id);
 

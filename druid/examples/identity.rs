@@ -27,7 +27,8 @@
 //! in your `Data` type) but this is an example, and I couldn't think of anything
 //! better. ¯\_(ツ)_/¯
 
-use std::time::{Duration, Instant};
+use instant::Instant;
+use std::time::Duration;
 
 use druid::kurbo::RoundedRect;
 use druid::widget::{Button, CrossAxisAlignment, Flex, WidgetId};
@@ -105,12 +106,12 @@ impl Widget<OurData> for ColorWell {
                     (_, _) => Color::rgb8(r, g, b.wrapping_add(10)),
                 };
 
-                self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
+                self.token = ctx.request_timer(CYCLE_DURATION);
                 ctx.request_paint();
             }
 
             Event::WindowConnected if self.randomize => {
-                self.token = ctx.request_timer(Instant::now() + CYCLE_DURATION);
+                self.token = ctx.request_timer(CYCLE_DURATION);
             }
 
             Event::Command(cmd) if cmd.selector == FREEZE_COLOR => {
@@ -147,7 +148,7 @@ impl Widget<OurData> for ColorWell {
     }
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(make_ui).title(
         LocalizedString::new("identity-demo-window-title").with_placeholder("Color Freezing Fun"),
     );

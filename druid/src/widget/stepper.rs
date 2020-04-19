@@ -14,15 +14,15 @@
 
 //! A stepper widget.
 
+use std::f64::EPSILON;
+use std::time::Duration;
+
+use crate::kurbo::{BezPath, Rect, RoundedRect};
+use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
     TimerToken, UpdateCtx, Widget,
 };
-use std::f64::EPSILON;
-use std::time::{Duration, Instant};
-
-use crate::kurbo::{BezPath, Rect, RoundedRect};
-use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 
 use crate::theme;
 use crate::Point;
@@ -205,8 +205,7 @@ impl Widget<f64> for Stepper {
                     self.increment(data);
                 }
 
-                let delay = Instant::now() + STEPPER_REPEAT_DELAY;
-                self.timer_id = ctx.request_timer(delay);
+                self.timer_id = ctx.request_timer(STEPPER_REPEAT_DELAY);
 
                 ctx.request_paint();
             }
@@ -226,8 +225,7 @@ impl Widget<f64> for Stepper {
                 if self.decrease_active {
                     self.decrement(data);
                 }
-                let delay = Instant::now() + STEPPER_REPEAT;
-                self.timer_id = ctx.request_timer(delay);
+                self.timer_id = ctx.request_timer(STEPPER_REPEAT);
             }
             _ => (),
         }
