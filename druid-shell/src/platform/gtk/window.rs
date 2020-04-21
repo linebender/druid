@@ -252,8 +252,12 @@ impl WindowBuilder {
                 );
 
                 if last_size.get() != size {
-                    last_size.set(size);
-                    state.handler.borrow_mut().size(size.0, size.1);
+                    if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
+                        last_size.set(size);
+                        handler_borrow.size(size.0, size.1);
+                    } else {
+                        log::warn!("Resizing was skipped because the handler was already borrowed");
+                    }
                 }
 
                 // For some reason piet needs a mutable context, so give it one I guess.
