@@ -348,14 +348,13 @@ impl<T: Data> Window<T> {
             focus_widget: self.focus,
             region: invalid_rect.into(),
         };
-        let visible = Rect::from_origin_size(Point::ZERO, self.size);
-        ctx.with_child_ctx(visible, |ctx| self.root.paint(ctx, data, env));
+        ctx.with_child_ctx(invalid_rect, |ctx| self.root.paint(ctx, data, env));
 
         let mut z_ops = mem::take(&mut ctx.z_ops);
         z_ops.sort_by_key(|k| k.z_index);
 
         for z_op in z_ops.into_iter() {
-            ctx.with_child_ctx(visible, |ctx| {
+            ctx.with_child_ctx(invalid_rect, |ctx| {
                 ctx.with_save(|ctx| {
                     ctx.render_ctx.transform(z_op.transform);
                     (z_op.paint_func)(ctx);
