@@ -16,8 +16,8 @@ use std::any::Any;
 
 use std::time::Instant;
 
-use piet_common::kurbo::{Point, Rect};
-use piet_common::{Color, Piet, RenderContext};
+use druid_shell::kurbo::{Point, Rect};
+use druid_shell::piet::{Color, Piet, RenderContext};
 
 use druid_shell::{Application, WinHandler, WindowBuilder, WindowHandle};
 
@@ -29,19 +29,10 @@ struct InvalidateTest {
     rect: Rect,
 }
 
-fn split_rgb(c: &Color) -> (u8, u8, u8) {
-    let rgba = c.as_rgba_u32();
-    (
-        (rgba >> 24 & 255) as u8,
-        (rgba >> 16 & 255) as u8,
-        (rgba >> 8 & 255) as u8,
-    )
-}
-
 impl InvalidateTest {
     fn update_color_and_rect(&mut self) {
         let time_since_start = (Instant::now() - self.start_time).as_nanos();
-        let (r, g, b) = split_rgb(&self.color);
+        let (r, g, b, _) = self.color.as_rgba_u8();
         self.color = match (time_since_start % 2, time_since_start % 3) {
             (0, _) => Color::rgb8(r.wrapping_add(10), g, b),
             (_, 0) => Color::rgb8(r, g.wrapping_add(10), b),
