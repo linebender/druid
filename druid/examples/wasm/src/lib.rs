@@ -19,6 +19,23 @@ use wasm_bindgen::prelude::*;
 // build time, keeping the source tree clean from build artifacts.
 include!("examples.in");
 
+// This macro constructs a `wasm_bindgen` entry point to the given example from the examples
+// directory.
+//
+// There are three ways to call this macro:
+//
+// 1. impl_example!(<example_name>);
+//    Creates the binding for an example whose main fn returns nothing (or unit).
+//
+// 2. impl_example!(<example_name>.unwrap());
+//    Creates the binding for an example whose main fn returns a Result which is immediately
+//    unwrapped.
+//
+// 3. impl_example!(<wasm_fn_name>, <path_to_example_main_fn>());
+//    Creates a wasm binding named <wasm_fn_name>, which calls into the Rust example fn given by
+//    <path_to_example_main_fn>. This can be used to make a different wasm binding name than the
+//    name of the original example itself (e.g. it is used for the `switch` example to avoid name
+//    collisions with the JavaScript `switch` statement).
 macro_rules! impl_example {
     ($wasm_fn:ident, $expr:expr) => {
         #[wasm_bindgen]
@@ -35,6 +52,8 @@ macro_rules! impl_example {
     };
 }
 
+// Below is a list of examples that can be built for WASM.
+// Please add the examples that cannot be built to the EXCEPTIONS list in build.rs.
 impl_example!(anim);
 impl_example!(calc);
 impl_example!(custom_widget);
