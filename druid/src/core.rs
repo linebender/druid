@@ -335,9 +335,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// [`paint`]: trait.Widget.html#tymethod.paint
     /// [`paint_with_offset`]: #method.paint_with_offset
     pub fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let mut child_region = ctx.region.clone();
-        child_region -= self.state.layout_rect().origin().to_vec2();
-        child_region.intersect_with(self.state.paint_rect());
         let mut inner_ctx = PaintCtx {
             render_ctx: ctx.render_ctx,
             window_id: ctx.window_id,
@@ -390,7 +387,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.with_save(|ctx| {
             let layout_origin = self.layout_rect().origin().to_vec2();
             ctx.transform(Affine::translate(layout_origin));
-            let visible = ctx.region().to_rect() - layout_origin;
+            let visible = ctx.region().to_rect().intersect(self.state.paint_rect()) - layout_origin;
             ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, env));
         });
     }
