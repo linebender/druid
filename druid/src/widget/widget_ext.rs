@@ -14,9 +14,10 @@
 
 //! Convenience methods for widgets.
 
+use super::invalidation::DebugInvalidation;
 use super::{
-    Align, BackgroundBrush, Click, Container, Controller, ControllerHost, DebugInvalidation,
-    EnvScope, IdentityWrapper, Padding, Parse, SizedBox, WidgetId,
+    Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
+    IdentityWrapper, Padding, Parse, SizedBox, WidgetId,
 };
 use crate::{Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LensWrap, UnitPoint, Widget};
 
