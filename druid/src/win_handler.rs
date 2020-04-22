@@ -272,7 +272,12 @@ impl<T: Data> Inner<T> {
     fn paint(&mut self, window_id: WindowId, piet: &mut Piet, rect: Rect) -> bool {
         if let Some(win) = self.windows.get_mut(window_id) {
             win.do_paint(piet, rect, &mut self.command_queue, &self.data, &self.env);
-            win.wants_animation_frame()
+            if win.wants_animation_frame() {
+                win.handle.invalidate();
+                true
+            } else {
+                false
+            }
         } else {
             false
         }
