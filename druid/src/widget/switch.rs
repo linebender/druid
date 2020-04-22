@@ -127,15 +127,15 @@ impl Widget<bool> for Switch {
                 ctx.request_paint();
             }
             Event::MouseUp(_) => {
-                ctx.set_active(false);
-
                 if self.knob_dragged {
                     // toggle value when dragging if knob has been moved far enough
                     *data = self.knob_pos.x > switch_width / 2.;
-                } else {
+                } else if ctx.is_active() {
                     // toggle value on click
                     *data = !*data;
                 }
+
+                ctx.set_active(false);
 
                 ctx.request_paint();
                 self.knob_dragged = false;
