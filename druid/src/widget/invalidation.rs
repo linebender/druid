@@ -54,9 +54,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for DebugInvalidation<T, W> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.inner.paint(ctx, data, env);
 
-        let color = env.get_debug_color(self.debug_color).with_alpha(0.5);
-        let rect = ctx.region().to_rect();
-        ctx.fill(rect, &color);
+        let color = env.get_debug_color(self.debug_color);
+        let stroke_width = 2.0;
+        let rect = ctx.region().to_rect().inset(-stroke_width / 2.0);
+        ctx.stroke(rect, &color, stroke_width);
         self.debug_color += 1;
     }
 
