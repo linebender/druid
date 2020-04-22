@@ -14,12 +14,12 @@
 
 use std::any::Any;
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use druid_shell::kurbo::{Point, Rect};
 use druid_shell::piet::{Color, Piet, RenderContext};
 
-use druid_shell::{Application, WinHandler, WindowBuilder, WindowHandle};
+use druid_shell::{Application, TimerToken, WinHandler, WindowBuilder, WindowHandle};
 
 struct InvalidateTest {
     handle: WindowHandle,
@@ -49,13 +49,17 @@ impl InvalidateTest {
 impl WinHandler for InvalidateTest {
     fn connect(&mut self, handle: &WindowHandle) {
         self.handle = handle.clone();
+        self.handle.request_timer(Duration::from_millis(60));
+    }
+
+    fn timer(&mut self, _id: TimerToken) {
+        self.update_color_and_rect();
+        self.handle.invalidate_rect(self.rect);
+        self.handle.request_timer(Duration::from_millis(60));
     }
 
     fn paint(&mut self, piet: &mut Piet, rect: Rect) -> bool {
-        self.update_color_and_rect();
         piet.fill(rect, &self.color);
-
-        self.handle.invalidate_rect(self.rect);
         false
     }
 
