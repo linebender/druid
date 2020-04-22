@@ -651,7 +651,7 @@ impl WindowHandle {
         );
         unsafe {
             // We could share impl with redraw, but we'd need to deal with nil.
-            let () = msg_send![*self.nsview.load(), setNeedsDisplay: rect];
+            let () = msg_send![*self.nsview.load(), setNeedsDisplayInRect: rect];
         }
     }
 
