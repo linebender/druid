@@ -93,11 +93,9 @@ struct WindowState {
 }
 
 impl WindowState {
-    fn render(&self, rect: Rect) -> bool {
-        self.context
-            .clear_rect(0.0, 0.0, self.get_width() as f64, self.get_height() as f64);
+    fn render(&self, invalid_rect: Rect) -> bool {
         let mut piet_ctx = piet_common::Piet::new(self.context.clone(), self.window.clone());
-        let want_anim_frame = self.handler.borrow_mut().paint(&mut piet_ctx, rect);
+        let want_anim_frame = self.handler.borrow_mut().paint(&mut piet_ctx, invalid_rect);
         if let Err(e) = piet_ctx.finish() {
             log::error!("piet error on render: {:?}", e);
         }
@@ -501,6 +499,7 @@ impl WindowHandle {
         if let Some(s) = self.0.upgrade() {
             let handle = self.clone();
             let rect = s.invalid_rect.get();
+            s.invalid_rect.set(Rect::ZERO);
             let state = s.clone();
             s.request_animation_frame(move || {
                 let want_anim_frame = state.render(rect);
