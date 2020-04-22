@@ -301,7 +301,10 @@ impl<T: Data> Window<T> {
             self.layout(piet, queue, data, env);
         }
 
-        piet.clear(env.get(crate::theme::WINDOW_BACKGROUND_COLOR));
+        piet.fill(
+            invalid_rect,
+            &env.get(crate::theme::WINDOW_BACKGROUND_COLOR),
+        );
         self.paint(piet, invalid_rect, data, env);
     }
 

@@ -474,6 +474,7 @@ impl<'a> LifeCycleCtx<'a> {
     /// Request an animation frame.
     pub fn request_anim_frame(&mut self) {
         self.base_state.request_anim = true;
+        self.request_paint();
     }
 
     /// Submit a [`Command`] to be run after this event is handled.
