@@ -24,11 +24,12 @@ use crate::piet::{Piet, RenderContext};
 use crate::shell::{Counter, Cursor, WindowHandle};
 
 use crate::core::{BaseState, CommandQueue, FocusChange};
+use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString, MenuDesc, PaintCtx, UpdateCtx, Widget,
-    WidgetId, WidgetPod, WindowDesc,
+    LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetId, WidgetPod,
+    WindowDesc,
 };
 
 /// A unique identifier for a window.
@@ -39,7 +40,7 @@ pub struct WindowId(u64);
 pub struct Window<T> {
     pub(crate) id: WindowId,
     pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
-    pub(crate) title: LocalizedString<T>,
+    pub(crate) title: LabelText<T>,
     size: Size,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) context_menu: Option<MenuDesc<T>>,
@@ -360,7 +361,7 @@ impl<T: Data> Window<T> {
 
     pub(crate) fn update_title(&mut self, data: &T, env: &Env) {
         if self.title.resolve(data, env) {
-            self.handle.set_title(self.title.localized_str());
+            self.handle.set_title(self.title.display_text());
         }
     }
 
