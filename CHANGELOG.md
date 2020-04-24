@@ -9,12 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `TextBox` can receive `EditAction` commands ([#814](https://github.com/xi-editor/druid/pull/814) by [@cmyr])
+- `TextBox` can receive `EditAction` commands
+  ([#814](https://github.com/xi-editor/druid/pull/814) by [@cmyr])
 
 ### Changed
 
 - `Split` constructors are now `Split::rows` and `columns`.
-  `Split` is now more accurate. ([#738](https://github.com/xi-editor/druid/pull/738) by [@xStorm])
+  `Split` is more accurate as well.
+  ([#738](https://github.com/xi-editor/druid/pull/738) by [@xStorm])
 
 ### Deprecated
 
@@ -22,19 +24,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Reduce the flashing in ext_event and identity examples. ([#782](https://github.com/xi-editor/druid/pull/782) by [@futurepaul])
+- Reduce the flashing in ext_event and identity examples.
+  ([#782](https://github.com/xi-editor/druid/pull/782) by [@futurepaul])
 
-- GTK uses the system locale. ([#798](https://github.com/xi-editor/druid/pull/798) by [@finnerale])
+- GTK uses the system locale.
+  ([#798](https://github.com/xi-editor/druid/pull/798) by [@finnerale])
 
-- GTK windows get actually closed. ([#797](https://github.com/xi-editor/druid/pull/797) by [@finnerale])
+- GTK windows get actually closed.
+  ([#797](https://github.com/xi-editor/druid/pull/797) by [@finnerale])
 
 ### Docs
 
-- `Env` got a new example and usage hints. ([#796](https://github.com/xi-editor/druid/pull/796) by [@finnerale])
+- `Env` got a new example and usage hints.
+  ([#796](https://github.com/xi-editor/druid/pull/796) by [@finnerale])
 
 ### Cleanups
 
-- Replace `#[macro_use]` with normal `use`. ([#808](https://github.com/xi-editor/druid/pull/808) by [@totsteps])
+- Replace `#[macro_use]` with normal `use`.
+  ([#808](https://github.com/xi-editor/druid/pull/808) by [@totsteps])
 
 ### Outside News
 
