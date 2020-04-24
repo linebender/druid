@@ -1200,6 +1200,9 @@ impl WindowHandle {
     }
 
     pub fn invalidate_rect(&self, rect: Rect) {
+        // FIXME: This is a temporary workaround for #875
+        self.invalidate();
+
         let r = self.px_to_rect(rect);
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
