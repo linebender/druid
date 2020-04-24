@@ -161,7 +161,7 @@ impl<T: Data> WindowDesc<T> {
 
     /// Set the title for this window. This is a [`LabelText`]; it can be either
     /// a `String`, a [`LocalizedString`], or a closure that computes a string;
-    /// it that will be kept up to date as the application's state changes.
+    /// it will be kept up to date as the application's state changes.
     ///
     /// [`LabelText`]: widget/enum.LocalizedString.html
     /// [`LocalizedString`]: struct.LocalizedString.html
