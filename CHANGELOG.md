@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `druid::text` module is public now. ([#816] by [@cmyr])
 
-- Basic X11 backend for druid-shell. ([#599] by [@crsarcco])
+- Basic X11 backend for druid-shell. ([#599] by [@crsaracco])
 
 ### Changed
 
