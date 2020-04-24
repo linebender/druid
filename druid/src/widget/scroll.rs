@@ -408,8 +408,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         }
 
         if !ctx.is_handled() {
-            if let Event::Wheel(wheel) = event {
-                if self.scroll(wheel.delta, size) {
+            if let Event::Wheel(mouse) = event {
+                if self.scroll(mouse.wheel_delta, size) {
                     ctx.request_paint();
                     ctx.set_handled();
                     self.reset_scrollbar_fade(ctx, env);

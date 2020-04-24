@@ -655,31 +655,54 @@ impl WndProc for MyWndProc {
                 Some(0)
             }
             //TODO: WM_SYSCOMMAND
-            WM_MOUSEWHEEL => {
+            WM_MOUSEWHEEL | WM_MOUSEHWHEEL => {
                 // TODO: apply mouse sensitivity based on
                 // SPI_GETWHEELSCROLLLINES setting.
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    let delta_y = HIWORD(wparam as u32) as i16 as f64;
+                    let system_delta = HIWORD(wparam as u32) as i16 as f64;
                     let mods = get_mod_state();
-                    let delta = if mods.shift {
-                        Vec2::new(-delta_y, 0.)
-                    } else {
-                        Vec2::new(0., -delta_y)
+                    let wheel_delta = match msg {
+                        WM_MOUSEWHEEL if mods.shift => Vec2::new(-system_delta, 0.),
+                        WM_MOUSEWHEEL => Vec2::new(0., -system_delta),
+                        WM_MOUSEHWHEEL => Vec2::new(system_delta, 0.),
+                        _ => unreachable!(),
                     };
-                    s.handler.wheel(delta, mods);
-                } else {
-                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
-                }
-                Some(0)
-            }
-            WM_MOUSEHWHEEL => {
-                if let Ok(mut s) = self.state.try_borrow_mut() {
-                    let s = s.as_mut().unwrap();
-                    let delta_x = HIWORD(wparam as u32) as i16 as f64;
-                    let delta = Vec2::new(delta_x, 0.0);
+
+                    let mut p = POINT {
+                        x: LOWORD(lparam as u32) as i16 as i32,
+                        y: HIWORD(lparam as u32) as i16 as i32,
+                    };
+                    unsafe {
+                        if ScreenToClient(hwnd, &mut p) == 0 {
+                            warn!(
+                                "ScreenToClient failed: {}",
+                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                            );
+                        }
+                    }
+
+                    let (px, py) = self.handle.borrow().pixels_to_px_xy(p.x, p.y);
+                    let pos = Point::new(px as f64, py as f64);
                     let mods = get_mod_state();
-                    s.handler.wheel(delta, mods);
+                    let button = match wparam {
+                        w if (w & 1) > 0 => MouseButton::Left,
+                        w if (w & 1 << 1) > 0 => MouseButton::Right,
+                        w if (w & 1 << 5) > 0 => MouseButton::Middle,
+                        w if (w & 1 << 6) > 0 => MouseButton::X1,
+                        w if (w & 1 << 7) > 0 => MouseButton::X2,
+                        //FIXME: I guess we probably do want `MouseButton::None`?
+                        //this feels bad, but also this gets discarded in druid anyway.
+                        _ => MouseButton::Left,
+                    };
+                    let event = MouseEvent {
+                        pos,
+                        mods,
+                        button,
+                        count: 0,
+                        wheel_delta,
+                    };
+                    s.handler.wheel(&event);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -729,6 +752,7 @@ impl WndProc for MyWndProc {
                         mods,
                         count: 0,
                         button: MouseButton::None,
+                        wheel_delta: Vec2::ZERO,
                     };
                     s.handler.mouse_move(&event);
                 } else {

@@ -19,7 +19,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use crate::kurbo::{Rect, Size, Vec2};
+use crate::kurbo::{Rect, Size};
 use crate::piet::Piet;
 use crate::shell::{
     Application, FileDialogOptions, IdleToken, MouseEvent, WinHandler, WindowHandle,
@@ -31,8 +31,8 @@ use crate::ext_event::ExtEventHost;
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, InternalEvent, KeyEvent, KeyModifiers, MenuDesc, Target, TimerToken,
-    WheelEvent, WindowDesc, WindowId,
+    Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, Target, TimerToken, WindowDesc,
+    WindowId,
 };
 
 use crate::command::sys as sys_cmd;
@@ -687,9 +687,9 @@ impl<T: Data> WinHandler for DruidHandler<T> {
             .do_window_event(Event::KeyUp(event), self.window_id);
     }
 
-    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers) {
-        let event = Event::Wheel(WheelEvent { delta, mods });
-        self.app_state.do_window_event(event, self.window_id);
+    fn wheel(&mut self, event: &MouseEvent) {
+        self.app_state
+            .do_window_event(Event::Wheel(event.clone().into()), self.window_id);
     }
 
     fn zoom(&mut self, delta: f64) {

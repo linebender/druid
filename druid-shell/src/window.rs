@@ -21,8 +21,8 @@ use crate::application::Application;
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
-use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::kurbo::{Point, Rect, Size, Vec2};
+use crate::keyboard::KeyEvent;
+use crate::kurbo::{Point, Rect, Size};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
@@ -326,7 +326,7 @@ pub trait WinHandler {
     ///
     /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
     #[allow(unused_variables)]
-    fn wheel(&mut self, delta: Vec2, mods: KeyModifiers) {}
+    fn wheel(&mut self, event: &MouseEvent) {}
 
     /// Called when a platform-defined zoom gesture occurs (such as pinching
     /// on the trackpad).
