@@ -182,7 +182,13 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         EnvScope::new(|env, _| env.set(Env::DEBUG_PAINT, true), self)
     }
 
-    /// Display the `WidgetId`s for this widget and its children.
+    /// Display the `WidgetId`s for this widget and its children, when hot.
+    ///
+    /// When this is `true`, widgets that are `hot` (are under the mouse cursor)
+    /// will display their ids in their bottom right corner.
+    ///
+    /// These ids may overlap; in this case the id of a child will obscure
+    /// the id of its parent.
     fn debug_widget_id(self) -> EnvScope<T, Self> {
         EnvScope::new(|env, _| env.set(Env::DEBUG_WIDGET_ID, true), self)
     }

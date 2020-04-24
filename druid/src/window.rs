@@ -373,6 +373,7 @@ impl<T: Data> Window<T> {
             z_ops: Vec::new(),
             focus_widget: self.focus,
             region: invalid_rect.into(),
+            depth: 0,
         };
         ctx.with_child_ctx(invalid_rect, |ctx| self.root.paint(ctx, data, env));
 
