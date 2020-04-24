@@ -16,8 +16,6 @@
 
 use std::collections::VecDeque;
 
-use log;
-
 use crate::bloom::Bloom;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::piet::RenderContext;

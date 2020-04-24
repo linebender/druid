@@ -15,7 +15,6 @@
 //! The fundamental druid types.
 
 use crate::kurbo::Size;
-use log;
 
 /// Constraints for layout.
 ///
