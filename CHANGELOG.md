@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Reduce the flashing in ext_event and identity examples [#782](https://github.com/xi-editor/druid/pull/782) by [@futurepaul]
+- Reduce the flashing in ext_event and identity examples ([#782](https://github.com/xi-editor/druid/pull/782) by [@futurepaul])
 
 ## [0.5] - 2020-04-01
 
