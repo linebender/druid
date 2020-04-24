@@ -18,9 +18,9 @@ use std::collections::{HashMap, VecDeque};
 
 use crate::bloom::Bloom;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
-use crate::piet::RenderContext;
+use crate::piet::{FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
+    BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
     LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget,
     WidgetId, WindowId,
 };
@@ -347,11 +347,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.z_ops.append(&mut inner_ctx.z_ops);
 
         if env.get(Env::DEBUG_PAINT) {
-            const BORDER_WIDTH: f64 = 1.0;
-            let rect = inner_ctx.size().to_rect().inset(BORDER_WIDTH / -2.0);
-            let id = self.id().to_raw();
-            let color = env.get_debug_color(id);
-            inner_ctx.stroke(rect, &color, BORDER_WIDTH);
+            self.debug_paint_layout_bounds(&mut inner_ctx, env);
+        }
+
+        if env.get(Env::DEBUG_WIDGET_ID) {
+            self.debug_paint_widget_ids(&mut inner_ctx, env);
         }
 
         self.state.invalid = Region::EMPTY;
@@ -390,6 +390,40 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let visible = ctx.region().to_rect().intersect(self.state.paint_rect()) - layout_origin;
             ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, env));
         });
+    }
+
+    fn debug_paint_widget_ids(&self, ctx: &mut PaintCtx, env: &Env) {
+        let font = ctx
+            .text()
+            .new_font_by_name(env.get(crate::theme::FONT_NAME), 10.0)
+            .build()
+            .unwrap();
+        let id_string = ctx.widget_id().to_raw().to_string();
+        let text = ctx
+            .text()
+            .new_text_layout(&font, &id_string, f64::INFINITY)
+            .build()
+            .unwrap();
+        let text_size = Size::new(text.width(), 10.0);
+        let origin = ctx.size().to_vec2() - text_size.to_vec2();
+        let origin = Point::new(origin.x.max(0.0), origin.y.max(0.0));
+
+        let text_pos = origin + Vec2::new(0., 8.0);
+        ctx.fill(Rect::from_origin_size(origin, text_size), &Color::WHITE);
+        ctx.stroke(
+            Rect::from_origin_size(origin, text_size),
+            &Color::rgb(1.0, 0., 0.),
+            1.0,
+        );
+        ctx.draw_text(&text, text_pos, &Color::BLACK);
+    }
+
+    fn debug_paint_layout_bounds(&self, ctx: &mut PaintCtx, env: &Env) {
+        const BORDER_WIDTH: f64 = 1.0;
+        let rect = ctx.size().to_rect().inset(BORDER_WIDTH / -2.0);
+        let id = self.id().to_raw();
+        let color = env.get_debug_color(id);
+        ctx.stroke(rect, &color, BORDER_WIDTH);
     }
 
     /// Compute layout of a widget.

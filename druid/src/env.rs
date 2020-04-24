@@ -155,6 +155,13 @@ impl Env {
     /// [`WidgetExt`]: trait.WidgetExt.html
     pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("druid.built-in.debug-paint");
 
+    /// State for whether or not to paint `WidgetId`s, for event debugging.
+    ///
+    /// Set by the `debug_widget_id()` method on [`WidgetExt`].
+    ///
+    /// [`WidgetExt`]: trait.WidgetExt.html
+    pub(crate) const DEBUG_WIDGET_ID: Key<bool> = Key::new("druid.built-in.debug-widget-id");
+
     /// A key used to tell widgets to print additional debug information.
     ///
     /// This does nothing by default; however you can check this key while
@@ -441,6 +448,7 @@ impl Default for Env {
 
         Env(Arc::new(inner))
             .adding(Env::DEBUG_PAINT, false)
+            .adding(Env::DEBUG_WIDGET_ID, false)
             .adding(Env::DEBUG_WIDGET, false)
     }
 }
