@@ -22,7 +22,6 @@ use std::cell::Cell;
 use std::env;
 use std::fs;
 use std::rc::Rc;
-use tempfile;
 
 use crate::widget::*;
 use crate::*;
