@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Highlights
+
+- Basic X11 backend for druid-shell. ([#599] by [@crsaracco])
+
 ### Added
 
 - `TextBox` can receive `EditAction` commands. ([#814] by [@cmyr])
