@@ -9,15 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `TextBox` can receive `EditAction` commands ([#814] by [@cmyr])
+- `TextBox` can receive `EditAction` commands. ([#814] by [@cmyr])
+
+- Added `Split::min_splitter_area(f64)` to add padding around the split bar. ([#738] by [@xStorm])
+
+- The `druid::text` module is public now. ([#816] by [@cmyr])
+
+- Basic X11 backend for druid-shell. ([#599] by [@crsarcco])
 
 ### Changed
 
-- `Split` constructors are now `Split::rows` and `columns`. ([#738] by [@xStorm])
+- `Split` constructors are now called `Split::rows` and `columns`. ([#738] by [@xStorm])
+
+- `Split::splitter_size` no longer includes padding. ([#738] by [@xStorm])
+
+- `Event::MouseMoved` has been renamed to `MouseMove`. ([#825] by [@teddemunnik])
 
 ### Deprecated
 
 ### Removed
+
+- The optional GTK feature for non-Linux platforms. ([#611] by [@pyroxymat])
 
 ### Fixed
 
@@ -27,12 +39,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - GTK windows get actually closed. ([#797] by [@finnerale])
 
+- Windows now respects the minimum window size. ([#727] by [@teddemunnik])
+
+- Windows now respects resizability. ([#712] by [@teddemunnik])
+
+- Mouse capturing on Windows. ([#695] by [@teddemunnik])
+
 ### Visual
 - Improved `Split` accuracy. ([#738] by [@xStorm])
 
 ### Docs
 
 - `Env` got a new example and usage hints. ([#796] by [@finnerale])
+
+- Usage of boom filters got documented. ([#818] by @xStorm)]
 
 ### Cleanups
 
@@ -42,6 +62,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A new project using druid: [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
 
+[#599]: https://github.com/xi-editor/druid/pull/599
+[#611]: https://github.com/xi-editor/druid/pull/611
+[#695]: https://github.com/xi-editor/druid/pull/695
+[#712]: https://github.com/xi-editor/druid/pull/712
+[#727]: https://github.com/xi-editor/druid/pull/727
 [#738]: https://github.com/xi-editor/druid/pull/738
 [#782]: https://github.com/xi-editor/druid/pull/782
 [#796]: https://github.com/xi-editor/druid/pull/796
@@ -49,11 +74,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#798]: https://github.com/xi-editor/druid/pull/798
 [#808]: https://github.com/xi-editor/druid/pull/808
 [#814]: https://github.com/xi-editor/druid/pull/814
+[#816]: https://github.com/xi-editor/druid/pull/816
+[#818]: https://github.com/xi-editor/druid/pull/818
+[#825]: https://github.com/xi-editor/druid/pull/825
 
 ## [0.5] - 2020-04-01
 
 Last release without a changelog :(
 
+
+[@pyroxymat]: https://github.com/pyroxymat
+
+[@crsaracco]: https://github.com/crsaracco
+
+[@teddemunnik]: https://github.com/teddemunnik
 
 [@xStorm]: https://github.com/xStorm
 
