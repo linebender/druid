@@ -608,6 +608,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        // in the case of an internal routing event, if we are at our target
+        // we may replace the routing event with the actual event
+        let mut substitute_event = None;
+
         let recurse = match event {
             LifeCycle::Internal(internal) => match internal {
                 InternalLifeCycle::RouteWidgetAdded => {
@@ -641,10 +645,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         // Only send FocusChanged in case there's actual change
                         if old != new {
                             self.state.has_focus = change;
-                            let event = LifeCycle::FocusChanged(change);
-                            self.inner.lifecycle(ctx, &event, data, env);
+                            substitute_event = Some(LifeCycle::FocusChanged(change));
+                            true
+                        } else {
+                            false
                         }
-                        false
                     } else {
                         self.state.has_focus = false;
                         // Recurse when the target widgets could be our descendants.
@@ -693,6 +698,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 false
             }
         };
+
+        // use the substitute event, if one exists
+        let event = substitute_event.as_ref().unwrap_or(event);
 
         if recurse {
             let mut child_ctx = LifeCycleCtx {
