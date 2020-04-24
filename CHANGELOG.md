@@ -60,7 +60,7 @@ While still incomplete this lays the foundation for running druid on Linux witho
 
 - `Env` got a new example and usage hints. ([#796] by [@finnerale])
 
-- Usage of bloom filters got documented. ([#818] by @xStorm)]
+- Usage of bloom filters got documented. ([#818] by [@xStorm])
 
 ### Cleanups
 
