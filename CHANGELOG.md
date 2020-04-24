@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Highlights
 
-- Basic X11 backend for druid-shell. ([#599] by [@crsaracco])
+#### Basic X11 backend for druid-shell. ([#599])
+
+[@crsaracco] has implemented basic support to run druid on bare-metal X11!
+
+While still incomplete this lays the foundation for running druid on Linux without relying on GTK.
 
 ### Added
 
