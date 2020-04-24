@@ -99,10 +99,6 @@ impl WindowState {
         if let Err(e) = piet_ctx.finish() {
             log::error!("piet error on render: {:?}", e);
         }
-        let res = piet_ctx.finish();
-        if let Err(e) = res {
-            log::error!("EndDraw error: {:?}", e);
-        }
         want_anim_frame
     }
 
