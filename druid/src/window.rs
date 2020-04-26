@@ -228,7 +228,7 @@ impl<T: Data> Window<T> {
 
         //In some platforms, timer tokens are reused. So it is necessary to remove token from
         //window's timer before adding base state's timers to it.
-        if let Event::Timer(token) = event {
+        if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
             self.timers.remove(&token);
         }
 
