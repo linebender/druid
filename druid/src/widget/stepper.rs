@@ -17,7 +17,7 @@
 use std::f64::EPSILON;
 use std::time::Duration;
 
-use crate::kurbo::{BezPath, Rect, RoundedRect};
+use crate::kurbo::{BezPath, Rect};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
@@ -120,13 +120,18 @@ impl Default for Stepper {
 
 impl Widget<f64> for Stepper {
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &f64, env: &Env) {
-        let rounded_rect = RoundedRect::from_origin_size(Point::ORIGIN, ctx.size().to_vec2(), 4.);
+        let stroke_width = 2.0;
+        let rounded_rect = ctx
+            .size()
+            .to_rect()
+            .inset(-stroke_width / 2.0)
+            .to_rounded_rect(4.0);
 
         let height = ctx.size().height;
         let width = env.get(theme::BASIC_WIDGET_HEIGHT);
         let button_size = Size::new(width, height / 2.);
 
-        ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), 2.0);
+        ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), stroke_width);
         ctx.clip(rounded_rect);
 
         // draw buttons for increase/decrease

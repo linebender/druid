@@ -25,7 +25,7 @@ use instant::Instant;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-use crate::kurbo::{Point, Size, Vec2};
+use crate::kurbo::{Point, Rect, Size, Vec2};
 
 use crate::piet::RenderContext;
 
@@ -89,20 +89,15 @@ struct WindowState {
     window: web_sys::Window,
     canvas: web_sys::HtmlCanvasElement,
     context: web_sys::CanvasRenderingContext2d,
+    invalid_rect: Cell<Rect>,
 }
 
 impl WindowState {
-    fn render(&self) -> bool {
-        self.context
-            .clear_rect(0.0, 0.0, self.get_width() as f64, self.get_height() as f64);
+    fn render(&self, invalid_rect: Rect) -> bool {
         let mut piet_ctx = piet_common::Piet::new(self.context.clone(), self.window.clone());
-        let want_anim_frame = self.handler.borrow_mut().paint(&mut piet_ctx);
+        let want_anim_frame = self.handler.borrow_mut().paint(&mut piet_ctx, invalid_rect);
         if let Err(e) = piet_ctx.finish() {
             log::error!("piet error on render: {:?}", e);
-        }
-        let res = piet_ctx.finish();
-        if let Err(e) = res {
-            log::error!("EndDraw error: {:?}", e);
         }
         want_anim_frame
     }
@@ -370,6 +365,7 @@ impl WindowBuilder {
             window,
             canvas,
             context,
+            invalid_rect: Cell::new(Rect::ZERO),
         });
 
         setup_web_callbacks(&window);
@@ -411,7 +407,27 @@ impl WindowHandle {
         log::warn!("bring_to_frontand_focus unimplemented for web");
     }
 
+    pub fn invalidate_rect(&self, rect: Rect) {
+        if let Some(s) = self.0.upgrade() {
+            let cur_rect = s.invalid_rect.get();
+            if cur_rect.width() == 0.0 || cur_rect.height() == 0.0 {
+                s.invalid_rect.set(rect);
+            } else if rect.width() != 0.0 && rect.height() != 0.0 {
+                s.invalid_rect.set(cur_rect.union(rect));
+            }
+        }
+        self.render_soon();
+    }
+
     pub fn invalidate(&self) {
+        if let Some(s) = self.0.upgrade() {
+            let rect = Rect::from_origin_size(
+                Point::ORIGIN,
+                // FIXME: does this need scaling? Not sure exactly where dpr enters...
+                (s.get_width() as f64, s.get_height() as f64),
+            );
+            s.invalid_rect.set(rect);
+        }
         self.render_soon();
     }
 
@@ -478,9 +494,11 @@ impl WindowHandle {
     fn render_soon(&self) {
         if let Some(s) = self.0.upgrade() {
             let handle = self.clone();
+            let rect = s.invalid_rect.get();
+            s.invalid_rect.set(Rect::ZERO);
             let state = s.clone();
             s.request_animation_frame(move || {
-                let want_anim_frame = state.render();
+                let want_anim_frame = state.render(rect);
                 if want_anim_frame {
                     handle.render_soon();
                 }

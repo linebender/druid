@@ -14,7 +14,7 @@
 
 //! A toggle switch widget.
 
-use crate::kurbo::{Circle, Point, Rect, RoundedRect, Shape, Size};
+use crate::kurbo::{Circle, Point, Rect, Shape, Size};
 use crate::piet::{
     FontBuilder, LinearGradient, RenderContext, Text, TextLayout, TextLayoutBuilder, UnitPoint,
 };
@@ -127,15 +127,15 @@ impl Widget<bool> for Switch {
                 ctx.request_paint();
             }
             Event::MouseUp(_) => {
-                ctx.set_active(false);
-
                 if self.knob_dragged {
                     // toggle value when dragging if knob has been moved far enough
                     *data = self.knob_pos.x > switch_width / 2.;
-                } else {
+                } else if ctx.is_active() {
                     // toggle value on click
                     *data = !*data;
                 }
+
+                ctx.set_active(false);
 
                 ctx.request_paint();
                 self.knob_dragged = false;
@@ -201,12 +201,12 @@ impl Widget<bool> for Switch {
         let knob_size = switch_height - 2. * SWITCH_PADDING;
         let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
         let off_pos = knob_size / 2. + SWITCH_PADDING;
+        let stroke_width = 2.0;
 
-        let background_rect = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(switch_width, switch_height).to_vec2(),
-            switch_height / 2.,
-        );
+        let background_rect = Size::new(switch_width, switch_height)
+            .to_rect()
+            .inset(-stroke_width / 2.0)
+            .to_rounded_rect(switch_height / 2.);
 
         // position knob
         if !self.animation_in_progress && !self.knob_dragged {
@@ -242,7 +242,7 @@ impl Widget<bool> for Switch {
             ),
         );
 
-        ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), 2.0);
+        ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), stroke_width);
         ctx.fill(background_rect, &background_gradient_on_state);
         ctx.fill(background_rect, &background_gradient_off_state);
         ctx.clip(background_rect);

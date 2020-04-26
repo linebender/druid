@@ -263,9 +263,13 @@ impl<T: Data> Harness<'_, T> {
         self.inner.layout(&mut self.piet)
     }
 
+    pub fn paint_rect(&mut self, invalid_rect: Rect) {
+        self.inner.paint_rect(&mut self.piet, invalid_rect)
+    }
+
     #[allow(dead_code)]
     pub fn paint(&mut self) {
-        self.inner.paint(&mut self.piet)
+        self.paint_rect(self.window_size.to_rect())
     }
 }
 
@@ -290,9 +294,9 @@ impl<T: Data> Inner<T> {
     }
 
     #[allow(dead_code)]
-    fn paint(&mut self, piet: &mut Piet) {
+    fn paint_rect(&mut self, piet: &mut Piet, invalid_rect: Rect) {
         self.window
-            .do_paint(piet, &mut self.cmds, &self.data, &self.env);
+            .do_paint(piet, invalid_rect, &mut self.cmds, &self.data, &self.env);
     }
 }
 

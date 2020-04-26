@@ -28,6 +28,7 @@ mod identity_wrapper;
 #[cfg(feature = "image")]
 #[cfg_attr(docsrs, doc(cfg(feature = "image")))]
 mod image;
+mod invalidation;
 mod label;
 mod list;
 mod padding;

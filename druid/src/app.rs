@@ -17,6 +17,7 @@
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
+use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
 use crate::{
@@ -40,7 +41,7 @@ pub struct AppLauncher<T> {
 /// window properties such as the title.
 pub struct WindowDesc<T> {
     pub(crate) root: Box<dyn Widget<T>>,
-    pub(crate) title: LocalizedString<T>,
+    pub(crate) title: LabelText<T>,
     pub(crate) size: Option<Size>,
     pub(crate) min_size: Option<Size>,
     pub(crate) menu: Option<MenuDesc<T>>,
@@ -148,7 +149,7 @@ impl<T: Data> WindowDesc<T> {
         // this just makes our API slightly cleaner; callers don't need to explicitly box.
         WindowDesc {
             root: root().boxed(),
-            title: LocalizedString::new("app-name"),
+            title: LocalizedString::new("app-name").into(),
             size: None,
             min_size: None,
             menu: MenuDesc::platform_default(),
@@ -158,12 +159,14 @@ impl<T: Data> WindowDesc<T> {
         }
     }
 
-    /// Set the title for this window. This is a [`LocalizedString`] that will
-    /// be kept up to date as the application's state changes.
+    /// Set the title for this window. This is a [`LabelText`]; it can be either
+    /// a `String`, a [`LocalizedString`], or a closure that computes a string;
+    /// it will be kept up to date as the application's state changes.
     ///
+    /// [`LabelText`]: widget/enum.LocalizedString.html
     /// [`LocalizedString`]: struct.LocalizedString.html
-    pub fn title(mut self, title: LocalizedString<T>) -> Self {
-        self.title = title;
+    pub fn title(mut self, title: impl Into<LabelText<T>>) -> Self {
+        self.title = title.into();
         self
     }
 
@@ -231,7 +234,7 @@ impl<T: Data> WindowDesc<T> {
             builder.set_min_size(min_size);
         }
 
-        builder.set_title(self.title.localized_str());
+        builder.set_title(self.title.display_text());
         if let Some(menu) = platform_menu {
             builder.set_menu(menu);
         }

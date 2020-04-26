@@ -33,3 +33,7 @@ Finally, point your browser to the appropriate localhost url (usually http://loc
 should see a list of HTML documents -- one for each example.
 
 When you make changes to the project, re-run `wasm-pack build --target web` and you can see the changes in your browser when you refresh -- no need to restart `http`.
+
+## New Examples
+
+New examples that can be built against the WASM target should have an associated `impl_example!(<example_name>)` entry added to `lib.rs`. Examples that don't support the WASM target should be specified in the `EXCEPTIONS` list defined at the top of the `build.rs` script.

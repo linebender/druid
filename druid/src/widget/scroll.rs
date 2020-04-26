@@ -163,6 +163,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         offset.y = offset.y.min(self.child_size.height - size.height).max(0.0);
         if (offset - self.scroll_offset).hypot2() > 1e-12 {
             self.scroll_offset = offset;
+            self.child.set_viewport_offset(offset);
             true
         } else {
             false
@@ -253,7 +254,9 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 
         // Vertical bar
         if viewport.height() < self.child_size.height {
-            let bounds = self.calc_vertical_bar_bounds(viewport, env);
+            let bounds = self
+                .calc_vertical_bar_bounds(viewport, env)
+                .inset(-edge_width / 2.0);
             let rect = RoundedRect::from_rect(bounds, radius);
             ctx.render_ctx.fill(rect, &brush);
             ctx.render_ctx.stroke(rect, &border_brush, edge_width);
@@ -261,7 +264,9 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 
         // Horizontal bar
         if viewport.width() < self.child_size.width {
-            let bounds = self.calc_horizontal_bar_bounds(viewport, env);
+            let bounds = self
+                .calc_horizontal_bar_bounds(viewport, env)
+                .inset(-edge_width / 2.0);
             let rect = RoundedRect::from_rect(bounds, radius);
             ctx.render_ctx.fill(rect, &brush);
             ctx.render_ctx.stroke(rect, &border_brush, edge_width);
@@ -377,7 +382,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             let force_event = self.child.is_hot() || self.child.is_active();
             let child_event = event.transform_scroll(self.scroll_offset, viewport, force_event);
             if let Some(child_event) = child_event {
-                self.child.event(ctx, &child_event, data, env)
+                self.child.event(ctx, &child_event, data, env);
             };
 
             match event {
@@ -448,7 +453,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             ctx.clip(viewport);
             ctx.transform(Affine::translate(-self.scroll_offset));
 
-            let visible = viewport.with_origin(self.scroll_offset.to_point());
+            let visible = ctx.region().to_rect() + self.scroll_offset;
             ctx.with_child_ctx(visible, |ctx| self.child.paint(ctx, data, env));
 
             self.draw_bars(ctx, viewport, env);

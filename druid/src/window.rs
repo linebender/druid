@@ -25,11 +25,12 @@ use crate::piet::{Piet, RenderContext};
 use crate::shell::{Counter, Cursor, WindowHandle};
 
 use crate::core::{BaseState, CommandQueue, FocusChange};
+use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString, MenuDesc, PaintCtx, TimerToken, UpdateCtx,
-    Widget, WidgetId, WidgetPod, WindowDesc,
+    LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken, UpdateCtx, Widget, WidgetId, WidgetPod,
+    WindowDesc,
 };
 
 /// A unique identifier for a window.
@@ -40,7 +41,7 @@ pub struct WindowId(u64);
 pub struct Window<T> {
     pub(crate) id: WindowId,
     pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
-    pub(crate) title: LocalizedString<T>,
+    pub(crate) title: LabelText<T>,
     size: Size,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) context_menu: Option<MenuDesc<T>>,
@@ -289,8 +290,13 @@ impl<T: Data> Window<T> {
     }
 
     pub(crate) fn invalidate_and_finalize(&mut self) {
-        if self.root.state().needs_inval {
+        if self.root.state().needs_layout {
             self.handle.invalidate();
+        } else {
+            let invalid = &self.root.state().invalid;
+            if !invalid.is_empty() {
+                self.handle.invalidate_rect(invalid.to_rect());
+            }
         }
     }
 
@@ -299,6 +305,7 @@ impl<T: Data> Window<T> {
     pub(crate) fn do_paint(
         &mut self,
         piet: &mut Piet,
+        invalid_rect: Rect,
         queue: &mut CommandQueue,
         data: &T,
         env: &Env,
@@ -310,8 +317,11 @@ impl<T: Data> Window<T> {
             self.layout(piet, queue, data, env);
         }
 
-        piet.clear(env.get(crate::theme::WINDOW_BACKGROUND_COLOR));
-        self.paint(piet, data, env);
+        piet.fill(
+            invalid_rect,
+            &env.get(crate::theme::WINDOW_BACKGROUND_COLOR),
+        );
+        self.paint(piet, invalid_rect, data, env);
     }
 
     fn layout(&mut self, piet: &mut Piet, queue: &mut CommandQueue, data: &T, env: &Env) {
@@ -347,7 +357,7 @@ impl<T: Data> Window<T> {
         self.layout(piet, queue, data, env)
     }
 
-    fn paint(&mut self, piet: &mut Piet, data: &T, env: &Env) {
+    fn paint(&mut self, piet: &mut Piet, invalid_rect: Rect, data: &T, env: &Env) {
         let base_state = BaseState::new(self.root.id());
         let mut ctx = PaintCtx {
             render_ctx: piet,
@@ -355,16 +365,15 @@ impl<T: Data> Window<T> {
             window_id: self.id,
             z_ops: Vec::new(),
             focus_widget: self.focus,
-            region: Rect::ZERO.into(),
+            region: invalid_rect.into(),
         };
-        let visible = Rect::from_origin_size(Point::ZERO, self.size);
-        ctx.with_child_ctx(visible, |ctx| self.root.paint(ctx, data, env));
+        ctx.with_child_ctx(invalid_rect, |ctx| self.root.paint(ctx, data, env));
 
         let mut z_ops = mem::take(&mut ctx.z_ops);
         z_ops.sort_by_key(|k| k.z_index);
 
         for z_op in z_ops.into_iter() {
-            ctx.with_child_ctx(visible, |ctx| {
+            ctx.with_child_ctx(invalid_rect, |ctx| {
                 ctx.with_save(|ctx| {
                     ctx.render_ctx.transform(z_op.transform);
                     (z_op.paint_func)(ctx);
@@ -375,7 +384,7 @@ impl<T: Data> Window<T> {
 
     pub(crate) fn update_title(&mut self, data: &T, env: &Env) {
         if self.title.resolve(data, env) {
-            self.handle.set_title(self.title.localized_str());
+            self.handle.set_title(self.title.display_text());
         }
     }
 

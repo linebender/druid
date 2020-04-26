@@ -30,7 +30,13 @@ const BASELINE_GUESS_FACTOR: f64 = 0.8;
 // added padding between the edges of the widget and the text.
 const LABEL_X_PADDING: f64 = 2.0;
 
-/// The text for the label
+/// The text for the label.
+///
+/// This can be one of three things; either a `String`, a [`LocalizedString`],
+/// or a closure with the signature, `Fn(&T, &Env) -> String`, where `T` is
+/// the `Data` at this point in the tree.
+///
+/// [`LocalizedString`]: ../struct.LocalizedString.html
 pub enum LabelText<T> {
     /// Localized string that will be resolved through `Env`.
     Localized(LocalizedString<T>),
