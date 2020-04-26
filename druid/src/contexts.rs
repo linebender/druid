@@ -44,8 +44,6 @@ pub struct EventCtx<'a> {
     pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
-    /// Map of TimerTokens and WidgetIds that requested them.
-    pub(crate) timers: &'a HashMap<TimerToken, WidgetId>,
 }
 
 /// A mutable context provided to the [`lifecycle`] method on widgets.

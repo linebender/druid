@@ -479,7 +479,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             is_handled: false,
             is_root: false,
             focus_widget: ctx.focus_widget,
-            timers: &ctx.timers,
         };
 
         let rect = child_ctx.base_state.layout_rect.unwrap_or_default();
@@ -517,6 +516,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         Target::Global => {
                             panic!("Target::Global should be converted before WidgetPod")
                         }
+                    }
+                }
+                InternalEvent::RouteTimer(token, widget_id) => {
+                    let widget_id = *widget_id;
+                    if widget_id != child_ctx.base_state.id {
+                        recurse = child_ctx.base_state.children.may_contain(&widget_id);
+                        Event::Internal(InternalEvent::RouteTimer(*token, widget_id))
+                    } else {
+                        Event::Timer(*token)
                     }
                 }
             },
@@ -595,15 +603,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Event::Zoom(*zoom)
             }
             Event::Timer(id) => {
-                if let Some(widget_id) = child_ctx.timers.get(id) {
-                    if *widget_id != child_ctx.base_state.id {
-                        recurse = child_ctx.base_state.children.may_contain(widget_id);
-                    }
-                } else {
-                    log::error!("Timer Token must be in timers map.");
-                    recurse = false;
-                }
-                Event::Timer(*id)
+                panic!("We cannot be here");
             }
             Event::Command(cmd) => Event::Command(cmd.clone()),
         };

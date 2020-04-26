@@ -173,6 +173,14 @@ impl<T: Data> Window<T> {
                 let scale = 96.0 / dpi;
                 self.size = Size::new(size.width * scale, size.height * scale);
                 Event::WindowSize(self.size)
+            },
+            Event::Timer(token) => {
+                if let Some(widget_id) = self.timers.get(&token) {
+                    Event::Internal(InternalEvent::RouteTimer(token, *widget_id))
+                } else {
+                    log::error!("No widget found for timer {:?}", token);
+                    return false;
+                }
             }
             other => other,
         };
@@ -198,7 +206,6 @@ impl<T: Data> Window<T> {
                 window: &self.handle,
                 window_id: self.id,
                 focus_widget: self.focus,
-                timers: &self.timers,
             };
 
             self.root.event(&mut ctx, &event, data, env);
