@@ -24,7 +24,6 @@ use crate::{
     Affine, Command, Cursor, Insets, Point, Rect, Size, Target, Text, TimerToken, Vec2, WidgetId,
     WindowHandle, WindowId,
 };
-use std::collections::HashMap;
 
 /// A mutable context provided to event handling methods of widgets.
 ///
