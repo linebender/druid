@@ -21,8 +21,8 @@ use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::piet::RenderContext;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget, WidgetId,
-    WindowId,
+    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget,
+    WidgetId, WindowId,
 };
 
 /// Our queue type
@@ -602,9 +602,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 recurse = had_active || child_ctx.base_state.is_hot;
                 Event::Zoom(*zoom)
             }
-            Event::Timer(token) => {
-                Event::Timer(*token)
-            }
+            Event::Timer(token) => Event::Timer(*token),
             Event::Command(cmd) => Event::Command(cmd.clone()),
         };
         if recurse {

@@ -29,8 +29,8 @@ use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken, UpdateCtx, Widget, WidgetId, WidgetPod,
-    WindowDesc,
+    LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken, UpdateCtx, Widget,
+    WidgetId, WidgetPod, WindowDesc,
 };
 
 /// A unique identifier for a window.
@@ -173,7 +173,7 @@ impl<T: Data> Window<T> {
                 let scale = 96.0 / dpi;
                 self.size = Size::new(size.width * scale, size.height * scale);
                 Event::WindowSize(self.size)
-            },
+            }
             Event::Timer(token) => {
                 if let Some(widget_id) = self.timers.get(&token) {
                     Event::Internal(InternalEvent::RouteTimer(token, *widget_id))
