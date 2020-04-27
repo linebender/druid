@@ -602,7 +602,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 recurse = had_active || child_ctx.base_state.is_hot;
                 Event::Zoom(*zoom)
             }
-            Event::Timer(token) => Event::Timer(*token),
+            Event::Timer(token) => {
+                recurse = false;
+                Event::Timer(*token)
+            }
             Event::Command(cmd) => Event::Command(cmd.clone()),
         };
         if recurse {
