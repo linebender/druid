@@ -125,9 +125,10 @@ pub mod lens;
 mod localization;
 mod menu;
 mod mouse;
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests;
-mod text;
+pub mod text;
 pub mod theme;
 pub mod widget;
 mod win_handler;
@@ -151,7 +152,7 @@ pub use command::{sys as commands, Command, Selector, Target};
 pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, Region, UpdateCtx};
 pub use data::Data;
 pub use env::{Env, Key, KeyOrValue, Value, ValueType};
-pub use event::{Event, LifeCycle, WheelEvent};
+pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle, WheelEvent};
 pub use ext_event::{ExtEventError, ExtEventSink};
 pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;
@@ -161,5 +162,6 @@ pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
 
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 pub(crate) use event::{StateCell, StateCheckFn};

@@ -31,7 +31,6 @@ struct AppData {
     size: f64,
     mono: bool,
 }
-
 impl Display for AppData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -44,7 +43,7 @@ impl Display for AppData {
     }
 }
 
-fn main() -> Result<(), PlatformError> {
+pub fn main() -> Result<(), PlatformError> {
     let main_window = WindowDesc::new(ui_builder).title(
         LocalizedString::new("styled-text-demo-window-title").with_placeholder("Type Styler"),
     );

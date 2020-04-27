@@ -560,7 +560,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 minor = minor.max(self.direction.minor(child_size).expand());
                 // Stash size.
                 let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
-                child.widget.set_layout_rect(rect);
+                child.widget.set_layout_rect(ctx, data, env, rect);
             }
         }
 
@@ -587,7 +587,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 minor = minor.max(self.direction.minor(child_size).expand());
                 // Stash size.
                 let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
-                child.widget.set_layout_rect(rect);
+                child.widget.set_layout_rect(ctx, data, env, rect);
             }
         }
 
@@ -611,7 +611,9 @@ impl<T: Data> Widget<T> for Flex<T> {
             let align_minor = alignment.align(extra_minor);
             let pos: Point = self.direction.pack(major, align_minor).into();
 
-            child.widget.set_layout_rect(rect.with_origin(pos));
+            child
+                .widget
+                .set_layout_rect(ctx, data, env, rect.with_origin(pos));
             child_paint_rect = child_paint_rect.union(child.widget.paint_rect());
             major += self.direction.major(rect.size()).expand();
             major += spacing.next().unwrap_or(0.);
@@ -783,6 +785,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn test_main_axis_alignment_spacing() {
         // The following alignment strategy is based on how
         // Chrome 80 handles it with CSS flex.

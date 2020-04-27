@@ -23,7 +23,7 @@ struct AppState {
     current_text: String,
 }
 
-fn main() {
+pub fn main() {
     let main_window = WindowDesc::new(make_ui).title(LocalizedString::new("View Switcher"));
     let data = AppState {
         current_view: 0,
@@ -83,7 +83,7 @@ fn make_ui() -> impl Widget<AppState> {
                     ),
             ),
             4 => Box::new(
-                Split::vertical(
+                Split::columns(
                     Label::new("Left split").center(),
                     Label::new("Right split").center(),
                 )

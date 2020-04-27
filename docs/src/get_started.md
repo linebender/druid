@@ -18,15 +18,14 @@ druid = "0.5.0"
 
 To show a minimal window with a label replace `main.rs` with this;
 ```rust, noplaypen
-use druid::{AppLauncher, WindowDesc, Widget};
+use druid::{AppLauncher, WindowDesc, Widget, PlatformError};
 use druid::widget::Label;
-use druid::shell::Error;
 
 fn build_ui() -> impl Widget<()> {
     Label::new("Hello world")
 }
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<(), PlatformError> {
     AppLauncher::with_window(WindowDesc::new(build_ui)).launch(())?;
     Ok(())
 }
@@ -44,15 +43,15 @@ To see how this works we will divide our window in four. We'll have two rows and
 ```rust, noplaypen
 fn build_ui() -> impl Widget<()> {
     Flex::row()
-        .with_child(
+        .with_flex_child(
             Flex::column()
-                .with_child(Label::new("top left"), 1.0)
-                .with_child(Label::new("bottom left"), 1.0),
+                .with_flex_child(Label::new("top left"), 1.0)
+                .with_flex_child(Label::new("bottom left"), 1.0),
             1.0)
-        .with_child(
+        .with_flex_child(
             Flex::column()
-                .with_child(Label::new("top right"), 1.0)
-                .with_child(Label::new("bottom right"), 1.0),
+                .with_flex_child(Label::new("top right"), 1.0)
+                .with_flex_child(Label::new("bottom right"), 1.0),
             1.0)
 }
 ```
@@ -66,15 +65,15 @@ fn build_ui() -> impl Widget<()> {
     Padding::new(
         10.0,
         Flex::row()
-            .with_child(
+            .with_flex_child(
                 Flex::column()
-                    .with_child(Label::new("top left"), 1.0)
-                    .with_child(Align::centered(Label::new("bottom left")), 1.0),
+                    .with_flex_child(Label::new("top left"), 1.0)
+                    .with_flex_child(Align::centered(Label::new("bottom left")), 1.0),
                 1.0)
             .with_child(
                 Flex::column()
-                    .with_child(Label::new("top right"), 1.0)
-                    .with_child(Align::centered(Label::new("bottom right")), 1.0),
+                    .with_flex_child(Label::new("top right"), 1.0)
+                    .with_flex_child(Align::centered(Label::new("bottom right")), 1.0),
                 1.0))
 }
 ```

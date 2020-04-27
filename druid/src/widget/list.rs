@@ -183,13 +183,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         }
     }
 
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         let mut width = bc.min().width;
         let mut y = 0.0;
 
@@ -206,9 +200,9 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
                 Size::new(bc.min().width, 0.0),
                 Size::new(bc.max().width, std::f64::INFINITY),
             );
-            let child_size = child.layout(layout_ctx, &child_bc, child_data, env);
+            let child_size = child.layout(ctx, &child_bc, child_data, env);
             let rect = Rect::from_origin_size(Point::new(0.0, y), child_size);
-            child.set_layout_rect(rect);
+            child.set_layout_rect(ctx, child_data, env, rect);
             paint_rect = paint_rect.union(child.paint_rect());
             width = width.max(child_size.width);
             y += child_size.height;
@@ -216,7 +210,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
 
         let my_size = bc.constrain(Size::new(width, y));
         let insets = paint_rect - Rect::ZERO.with_size(my_size);
-        layout_ctx.set_paint_insets(insets);
+        ctx.set_paint_insets(insets);
         my_size
     }
 

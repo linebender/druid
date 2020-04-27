@@ -242,7 +242,7 @@ fn build_calc() -> impl Widget<CalcState> {
         )
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(build_calc)
         .window_size((223., 300.))
         .resizable(false)

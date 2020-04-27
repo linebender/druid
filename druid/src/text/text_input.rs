@@ -53,6 +53,7 @@ pub trait TextInput {
 
 /// Handles key events and returns actions that are applicable to
 /// single line textboxes
+#[derive(Default)]
 pub struct BasicTextInput {}
 
 impl BasicTextInput {

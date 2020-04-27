@@ -19,10 +19,10 @@ use druid::widget::{Align, Container, Label, Padding, Split};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
-    let fixed_vertical = Padding::new(
+    let fixed_cols = Padding::new(
         10.0,
         Container::new(
-            Split::vertical(
+            Split::columns(
                 Align::centered(Label::new("Left Split")),
                 Align::centered(Label::new("Right Split")),
             )
@@ -30,52 +30,53 @@ fn build_app() -> impl Widget<u32> {
         )
         .border(Color::WHITE, 1.0),
     );
-    let fixed_horizontal = Padding::new(
+    let fixed_rows = Padding::new(
         10.0,
         Container::new(
-            Split::horizontal(
+            Split::rows(
                 Align::centered(Label::new("Top Split")),
                 Align::centered(Label::new("Bottom Split")),
             )
             .split_point(0.4)
-            .splitter_size(7.0),
+            .bar_size(3.0),
         )
         .border(Color::WHITE, 1.0),
     );
-    let draggable_vertical = Padding::new(
+    let draggable_cols = Padding::new(
         10.0,
         Container::new(
-            Split::vertical(
+            Split::columns(
                 Align::centered(Label::new("Split A")),
                 Align::centered(Label::new("Split B")),
             )
             .split_point(0.5)
             .draggable(true)
-            .fill_splitter_handle(true)
+            .solid_bar(true)
             .min_size(60.0),
         )
         .border(Color::WHITE, 1.0),
     );
-    let draggable_horizontal = Padding::new(
+    Padding::new(
         10.0,
         Container::new(
-            Split::horizontal(
-                Split::horizontal(fixed_vertical, fixed_horizontal)
+            Split::rows(
+                Split::rows(fixed_cols, fixed_rows)
                     .split_point(0.33)
-                    .splitter_size(5.0)
+                    .bar_size(3.0)
+                    .min_bar_area(3.0)
                     .draggable(true),
-                draggable_vertical,
+                draggable_cols,
             )
             .split_point(0.75)
-            .splitter_size(5.0)
+            .bar_size(5.0)
+            .min_bar_area(11.0)
             .draggable(true),
         )
         .border(Color::WHITE, 1.0),
-    );
-    draggable_horizontal
+    )
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(build_app)
         .title(LocalizedString::new("split-demo-window-title").with_placeholder("Split Demo"));
     AppLauncher::with_window(window)

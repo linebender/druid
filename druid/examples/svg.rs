@@ -18,13 +18,13 @@
 //! `cargo run --example svg --features "svg"`
 
 #[cfg(not(feature = "svg"))]
-fn main() {
+pub fn main() {
     eprintln!("This examples requires the \"svg\" feature to be enabled:");
     eprintln!("cargo run --example svg --features \"svg\"");
 }
 
 #[cfg(feature = "svg")]
-fn main() {
+pub fn main() {
     use log::error;
 
     use druid::{

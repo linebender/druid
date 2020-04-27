@@ -15,12 +15,13 @@
 //! Platform independent window types.
 
 use std::any::Any;
+use std::time::Duration;
 
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
 use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::kurbo::{Point, Size, Vec2};
+use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
@@ -130,6 +131,11 @@ impl WindowHandle {
         self.0.invalidate()
     }
 
+    /// Request invalidation of a region of the window.
+    pub fn invalidate_rect(&self, rect: Rect) {
+        self.0.invalidate_rect(rect);
+    }
+
     /// Set the title for this menu.
     pub fn set_title(&self, title: &str) {
         self.0.set_title(title)
@@ -157,8 +163,8 @@ impl WindowHandle {
     /// requiring precision.
     ///
     /// [`WinHandler::timer()`]: trait.WinHandler.html#tymethod.timer
-    pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
-        self.0.request_timer(deadline)
+    pub fn request_timer(&self, deadline: Duration) -> TimerToken {
+        self.0.request_timer(instant::Instant::now() + deadline)
     }
 
     /// Set the cursor icon.
@@ -277,8 +283,9 @@ pub trait WinHandler {
 
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
-    /// should be scheduled for the next animation frame.
-    fn paint(&mut self, piet: &mut piet_common::Piet) -> bool;
+    /// should be scheduled for the next animation frame. `invalid_rect` is the
+    /// rectangle that needs to be repainted.
+    fn paint(&mut self, piet: &mut piet_common::Piet, invalid_rect: Rect) -> bool;
 
     /// Called when the resources need to be rebuilt.
     ///
@@ -332,6 +339,9 @@ pub trait WinHandler {
     /// Called on mouse button up.
     #[allow(unused_variables)]
     fn mouse_up(&mut self, event: &MouseEvent) {}
+
+    /// Called when the mouse cursor has left the application window
+    fn mouse_leave(&mut self) {}
 
     /// Called on timer event.
     ///

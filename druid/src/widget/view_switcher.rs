@@ -86,17 +86,11 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
         }
     }
 
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         match self.active_child {
             Some(ref mut child) => {
-                let size = child.layout(layout_ctx, bc, data, env);
-                child.set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
+                let size = child.layout(ctx, bc, data, env);
+                child.set_layout_rect(ctx, data, env, Rect::from_origin_size(Point::ORIGIN, size));
                 size
             }
             None => bc.max(),

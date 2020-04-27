@@ -36,7 +36,7 @@ impl WinHandler for HelloState {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut piet_common::Piet) -> bool {
+    fn paint(&mut self, piet: &mut piet_common::Piet, _: Rect) -> bool {
         let (width, height) = self.size;
         let rect = Rect::new(0.0, 0.0, width, height);
         piet.fill(rect, &BG_COLOR);
@@ -64,9 +64,10 @@ impl WinHandler for HelloState {
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
-        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
+        let deadline = std::time::Duration::from_millis(500);
         let id = self.handle.request_timer(deadline);
         println!("keydown: {:?}, timer id = {:?}", event, id);
+
         false
     }
 
@@ -133,8 +134,9 @@ fn main() {
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
-    let window = builder.build().unwrap();
 
+    let window = builder.build().unwrap();
     window.show();
+
     app.run();
 }

@@ -88,7 +88,11 @@ impl Widget<String> for CustomWidget {
             .build()
             .unwrap();
         // Here's where we actually use the UI state
-        let layout = ctx.text().new_text_layout(&font, data).build().unwrap();
+        let layout = ctx
+            .text()
+            .new_text_layout(&font, data, std::f64::INFINITY)
+            .build()
+            .unwrap();
 
         // Let's rotate our text slightly. First we save our current (default) context:
         ctx.with_save(|ctx| {
@@ -112,7 +116,7 @@ impl Widget<String> for CustomWidget {
     }
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(|| CustomWidget {}).title(
         LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Fancy Colors"),
     );
@@ -127,7 +131,7 @@ fn make_image_data(width: usize, height: usize) -> Vec<u8> {
     for y in 0..height {
         for x in 0..width {
             let ix = (y * width + x) * 4;
-            result[ix + 0] = x as u8;
+            result[ix] = x as u8;
             result[ix + 1] = y as u8;
             result[ix + 2] = !(x as u8);
             result[ix + 3] = 127;

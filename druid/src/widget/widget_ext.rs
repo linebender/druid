@@ -14,6 +14,7 @@
 
 //! Convenience methods for widgets.
 
+use super::invalidation::DebugInvalidation;
 use super::{
     Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, Padding, Parse, SizedBox, WidgetId,
@@ -179,6 +180,12 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`layout`]: trait.Widget.html#tymethod.layout
     fn debug_paint_layout(self) -> EnvScope<T, Self> {
         EnvScope::new(|env, _| env.set(Env::DEBUG_PAINT, true), self)
+    }
+
+    /// Draw a color-changing rectangle over this widget, allowing you to see the
+    /// invalidation regions.
+    fn debug_invalidation(self) -> DebugInvalidation<T, Self> {
+        DebugInvalidation::new(self)
     }
 
     /// Set the [`DEBUG_WIDGET`] env variable for this widget (and its descendants).

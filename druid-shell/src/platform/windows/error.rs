@@ -15,9 +15,8 @@
 //! Errors at the application shell level.
 
 use std::fmt;
-
-use super::util::FromWide;
 use std::ptr::{null, null_mut};
+
 use winapi::shared::minwindef::{DWORD, HLOCAL};
 use winapi::shared::ntdef::LPWSTR;
 use winapi::shared::winerror::HRESULT;
@@ -25,6 +24,8 @@ use winapi::um::winbase::{
     FormatMessageW, LocalFree, FORMAT_MESSAGE_ALLOCATE_BUFFER, FORMAT_MESSAGE_FROM_SYSTEM,
     FORMAT_MESSAGE_IGNORE_INSERTS, FORMAT_MESSAGE_MAX_WIDTH_MASK,
 };
+
+use super::util::FromWide;
 
 /// Error codes. At the moment, this is little more than HRESULT, but that
 /// might change.

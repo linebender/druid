@@ -122,7 +122,7 @@ impl<T: Data> Widget<T> for Container<T> {
         let size = self.inner.layout(ctx, &child_bc, data, env);
         let origin = Point::new(border_width, border_width);
         self.inner
-            .set_layout_rect(Rect::from_origin_size(origin, size));
+            .set_layout_rect(ctx, data, env, Rect::from_origin_size(origin, size));
 
         let my_size = Size::new(
             size.width + 2.0 * border_width,

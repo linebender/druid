@@ -14,17 +14,41 @@
 
 //! Additional unit tests that cross file or module boundaries.
 
-mod harness;
+pub(crate) mod harness;
 mod helpers;
 mod layout_tests;
 
 use std::cell::Cell;
+use std::env;
+use std::fs;
 use std::rc::Rc;
 
 use crate::widget::*;
 use crate::*;
 use harness::*;
 use helpers::*;
+
+/// This function creates a temporary directory and returns a PathBuf to it.
+///
+/// This directory will be created relative to the executable and will therefor
+/// be created in the target directory for tests when running with cargo. The
+/// directory will be cleaned up at the end of the PathBufs lifetime. This
+/// uses the `tempfile` crate.
+#[allow(dead_code)]
+pub fn temp_dir_for_test() -> std::path::PathBuf {
+    let current_exe_path = env::current_exe().unwrap();
+    let mut exe_dir = current_exe_path.parent().unwrap();
+    if exe_dir.ends_with("deps") {
+        exe_dir = exe_dir.parent().unwrap();
+    }
+    let test_dir = exe_dir.parent().unwrap().join("tests");
+    fs::create_dir_all(&test_dir).unwrap();
+    tempfile::Builder::new()
+        .prefix("TempDir")
+        .tempdir_in(test_dir)
+        .unwrap()
+        .into_path()
+}
 
 /// test that the first widget to request focus during an event gets it.
 #[test]
@@ -35,7 +59,7 @@ fn propogate_hot() {
     let padding_rec = Recording::default();
     let button_rec = Recording::default();
 
-    let widget = Split::vertical(
+    let widget = Split::columns(
         SizedBox::empty().with_id(empty),
         Button::new("hot")
             .record(&button_rec)
@@ -57,7 +81,8 @@ fn propogate_hot() {
             button: MouseButton::Left,
         }
     }
-    Harness::create((), widget, |harness| {
+    #[allow(clippy::cognitive_complexity)]
+    Harness::create_simple((), widget, |harness| {
         harness.send_initial_events();
         harness.just_layout();
 
@@ -72,50 +97,50 @@ fn propogate_hot() {
         // and verifying both the widget's `is_hot` status and also that
         // each widget received the expected HotChanged messages.
 
-        harness.event(Event::MouseMoved(make_mouse(10., 10.)));
+        harness.event(Event::MouseMove(make_mouse(10., 10.)));
         assert!(harness.get_state(root).is_hot);
         assert!(harness.get_state(empty).is_hot);
         assert!(!harness.get_state(pad).is_hot);
 
         assert_matches!(root_rec.next(), Record::L(LifeCycle::HotChanged(true)));
-        assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(root_rec.next(), Record::E(Event::MouseMove(_)));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMoved(make_mouse(210., 10.)));
+        harness.event(Event::MouseMove(make_mouse(210., 10.)));
 
         assert!(harness.get_state(root).is_hot);
         assert!(!harness.get_state(empty).is_hot);
         assert!(!harness.get_state(button).is_hot);
         assert!(harness.get_state(pad).is_hot);
 
-        assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(root_rec.next(), Record::E(Event::MouseMove(_)));
         assert_matches!(padding_rec.next(), Record::L(LifeCycle::HotChanged(true)));
-        assert_matches!(padding_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(padding_rec.next(), Record::E(Event::MouseMove(_)));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMoved(make_mouse(260., 60.)));
+        harness.event(Event::MouseMove(make_mouse(260., 60.)));
         assert!(harness.get_state(root).is_hot);
         assert!(!harness.get_state(empty).is_hot);
         assert!(harness.get_state(button).is_hot);
         assert!(harness.get_state(pad).is_hot);
 
-        assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
-        assert_matches!(padding_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(root_rec.next(), Record::E(Event::MouseMove(_)));
+        assert_matches!(padding_rec.next(), Record::E(Event::MouseMove(_)));
         assert_matches!(button_rec.next(), Record::L(LifeCycle::HotChanged(true)));
-        assert_matches!(button_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(button_rec.next(), Record::E(Event::MouseMove(_)));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMoved(make_mouse(10., 10.)));
+        harness.event(Event::MouseMove(make_mouse(10., 10.)));
         assert!(harness.get_state(root).is_hot);
         assert!(harness.get_state(empty).is_hot);
         assert!(!harness.get_state(button).is_hot);
         assert!(!harness.get_state(pad).is_hot);
 
-        assert_matches!(root_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(root_rec.next(), Record::E(Event::MouseMove(_)));
         assert_matches!(padding_rec.next(), Record::L(LifeCycle::HotChanged(false)));
-        assert_matches!(padding_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(padding_rec.next(), Record::E(Event::MouseMove(_)));
         assert_matches!(button_rec.next(), Record::L(LifeCycle::HotChanged(false)));
-        assert_matches!(button_rec.next(), Record::E(Event::MouseMoved(_)));
+        assert_matches!(button_rec.next(), Record::E(Event::MouseMove(_)));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
     });
 }
@@ -150,10 +175,10 @@ fn take_focus() {
 
     let left = make_focus_taker(left_focus.clone()).with_id(id_1);
     let right = make_focus_taker(right_focus.clone()).with_id(id_2);
-    let app = Split::vertical(left, right).padding(5.0);
+    let app = Split::columns(left, right).padding(5.0);
     let data = true;
 
-    Harness::create(data, app, |harness| {
+    Harness::create_simple(data, app, |harness| {
         harness.send_initial_events();
         // nobody should have focus
         assert!(left_focus.get().is_none());
@@ -177,11 +202,11 @@ fn take_focus() {
 fn simple_lifecyle() {
     let record = Recording::default();
     let widget = SizedBox::empty().record(&record);
-    Harness::create(true, widget, |harness| {
+    Harness::create_simple(true, widget, |harness| {
         harness.send_initial_events();
         assert_matches!(record.next(), Record::L(LifeCycle::WidgetAdded));
         assert_matches!(record.next(), Record::E(Event::WindowConnected));
-        assert_matches!(record.next(), Record::E(Event::Size(_)));
+        assert_matches!(record.next(), Record::E(Event::WindowSize(_)));
         assert!(record.is_empty());
     })
 }
@@ -195,12 +220,12 @@ fn adding_child_lifecycle() {
     let record_new_child2 = record_new_child.clone();
 
     let replacer = ReplaceChild::new(TextBox::new(), move || {
-        Split::vertical(TextBox::new(), TextBox::new().record(&record_new_child2))
+        Split::columns(TextBox::new(), TextBox::new().record(&record_new_child2))
     });
 
-    let widget = Split::vertical(Label::new("hi").record(&record), replacer);
+    let widget = Split::columns(Label::new("hi").record(&record), replacer);
 
-    Harness::create(String::new(), widget, |harness| {
+    Harness::create_simple(String::new(), widget, |harness| {
         harness.send_initial_events();
 
         assert_matches!(record.next(), Record::L(LifeCycle::WidgetAdded));
@@ -225,10 +250,10 @@ fn participate_in_autofocus() {
     // this widget starts with a single child, and will replace them with a split
     // when we send it a command.
     let replacer = ReplaceChild::new(TextBox::new().with_id(id_4), move || {
-        Split::vertical(TextBox::new().with_id(id_5), TextBox::new().with_id(id_6))
+        Split::columns(TextBox::new().with_id(id_5), TextBox::new().with_id(id_6))
     });
 
-    let widget = Split::vertical(
+    let widget = Split::columns(
         Flex::row()
             .with_flex_child(TextBox::new().with_id(id_1), 1.0)
             .with_flex_child(TextBox::new().with_id(id_2), 1.0)
@@ -236,7 +261,7 @@ fn participate_in_autofocus() {
         replacer,
     );
 
-    Harness::create("my test text".to_string(), widget, |harness| {
+    Harness::create_simple("my test text".to_string(), widget, |harness| {
         // verify that all widgets are marked as having children_changed
         // (this should always be true for a new widget)
         harness.inspect_state(|state| assert!(state.children_changed));
@@ -263,7 +288,7 @@ fn participate_in_autofocus() {
 fn child_tracking() {
     let (id_1, id_2, id_3, id_4) = widget_id4();
 
-    let widget = Split::vertical(
+    let widget = Split::columns(
         SizedBox::empty().with_id(id_1),
         SizedBox::empty().with_id(id_2),
     )
@@ -271,17 +296,17 @@ fn child_tracking() {
     .padding(5.0)
     .with_id(id_4);
 
-    Harness::create(true, widget, |harness| {
+    Harness::create_simple(true, widget, |harness| {
         harness.send_initial_events();
         let root = harness.get_state(id_4);
         assert_eq!(root.children.entry_count(), 3);
-        assert!(root.children.contains(&id_1));
-        assert!(root.children.contains(&id_2));
-        assert!(root.children.contains(&id_3));
+        assert!(root.children.may_contain(&id_1));
+        assert!(root.children.may_contain(&id_2));
+        assert!(root.children.may_contain(&id_3));
 
         let split = harness.get_state(id_3);
-        assert!(split.children.contains(&id_1));
-        assert!(split.children.contains(&id_2));
+        assert!(split.children.may_contain(&id_1));
+        assert!(split.children.may_contain(&id_2));
         assert_eq!(split.children.entry_count(), 2);
     });
 }
@@ -293,27 +318,27 @@ fn register_after_adding_child() {
     let id_7 = WidgetId::next();
 
     let replacer = ReplaceChild::new(TextBox::new().with_id(id_1), move || {
-        Split::vertical(TextBox::new().with_id(id_2), TextBox::new().with_id(id_3)).with_id(id_7)
+        Split::columns(TextBox::new().with_id(id_2), TextBox::new().with_id(id_3)).with_id(id_7)
     })
     .with_id(id_6);
 
-    let widget = Split::vertical(Label::new("hi").with_id(id_4), replacer).with_id(id_5);
+    let widget = Split::columns(Label::new("hi").with_id(id_4), replacer).with_id(id_5);
 
-    Harness::create(String::new(), widget, |harness| {
+    Harness::create_simple(String::new(), widget, |harness| {
         harness.send_initial_events();
 
-        assert!(harness.get_state(id_5).children.contains(&id_6));
-        assert!(harness.get_state(id_5).children.contains(&id_1));
-        assert!(harness.get_state(id_5).children.contains(&id_4));
+        assert!(harness.get_state(id_5).children.may_contain(&id_6));
+        assert!(harness.get_state(id_5).children.may_contain(&id_1));
+        assert!(harness.get_state(id_5).children.may_contain(&id_4));
         assert_eq!(harness.get_state(id_5).children.entry_count(), 3);
 
         harness.submit_command(REPLACE_CHILD, None);
 
-        assert!(harness.get_state(id_5).children.contains(&id_6));
-        assert!(harness.get_state(id_5).children.contains(&id_4));
-        assert!(harness.get_state(id_5).children.contains(&id_7));
-        assert!(harness.get_state(id_5).children.contains(&id_2));
-        assert!(harness.get_state(id_5).children.contains(&id_3));
+        assert!(harness.get_state(id_5).children.may_contain(&id_6));
+        assert!(harness.get_state(id_5).children.may_contain(&id_4));
+        assert!(harness.get_state(id_5).children.may_contain(&id_7));
+        assert!(harness.get_state(id_5).children.may_contain(&id_2));
+        assert!(harness.get_state(id_5).children.may_contain(&id_3));
         assert_eq!(harness.get_state(id_5).children.entry_count(), 5);
     })
 }
