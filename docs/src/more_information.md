@@ -10,6 +10,7 @@ These three projects provide the basis that Druid works on
 
 ## Projects using Druid
 - [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
+- [jack-mixer](https://github.com/derekdreery/jack-mixer) A jack client that provides mixing, levels and a 3-band eq.
 - *pull requests welcome*
 
 ## Projects that work with Druid (widgets etc)
