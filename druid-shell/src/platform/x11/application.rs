@@ -20,11 +20,13 @@ use std::sync::Arc;
 
 use lazy_static::lazy_static;
 
-use super::clipboard::Clipboard;
-use super::window::XWindow;
 use crate::application::AppHandler;
 use crate::kurbo::{Point, Rect};
 use crate::{KeyCode, KeyModifiers, MouseButton, MouseEvent};
+
+use super::clipboard::Clipboard;
+use super::error::Error;
+use super::window::XWindow;
 
 struct XcbConnection {
     connection: Arc<xcb::Connection>,
@@ -39,11 +41,12 @@ thread_local! {
     static WINDOW_MAP: RefCell<HashMap<u32, XWindow>> = RefCell::new(HashMap::new());
 }
 
-pub struct Application;
+#[derive(Clone)]
+pub(crate) struct Application;
 
 impl Application {
-    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
-        Application
+    pub fn new() -> Result<Application, Error> {
+        Ok(Application)
     }
 
     pub(crate) fn add_xwindow(id: u32, xwindow: XWindow) {
@@ -59,7 +62,7 @@ impl Application {
     }
 
     // TODO(x11/events): handle mouse scroll events
-    pub fn run(&mut self) {
+    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         let conn = XCB_CONNECTION.connection_cloned();
         loop {
             if let Some(ev) = conn.wait_for_event() {
@@ -182,11 +185,11 @@ impl Application {
         }
     }
 
-    pub fn quit() {
+    pub fn quit(&self) {
         // No-op.
     }
 
-    pub fn clipboard() -> Clipboard {
+    pub fn clipboard(&self) -> Clipboard {
         // TODO(x11/clipboard): implement Application::clipboard
         log::warn!("Application::clipboard is currently unimplemented for X11 platforms.");
         Clipboard {}

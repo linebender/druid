@@ -107,7 +107,7 @@ impl WinHandler for PerfTest {
     }
 
     fn destroy(&mut self) {
-        Application::quit()
+        Application::global().quit()
     }
 
     fn as_any(&mut self) -> &mut dyn Any {
@@ -116,8 +116,8 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
-    let mut app = Application::new(None);
-    let mut builder = WindowBuilder::new();
+    let app = Application::new().unwrap();
+    let mut builder = WindowBuilder::new(app.clone());
     let perf_test = PerfTest {
         size: Default::default(),
         handle: Default::default(),
@@ -130,5 +130,5 @@ fn main() {
     let window = builder.build().unwrap();
     window.show();
 
-    app.run();
+    app.run(None);
 }

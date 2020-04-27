@@ -35,6 +35,7 @@ mod keycodes;
 mod menu;
 mod mouse;
 mod platform;
+mod util;
 mod window;
 
 pub use application::{AppHandler, Application};

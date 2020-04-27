@@ -32,7 +32,7 @@ use super::error::Error;
 use super::menu::Menu;
 use super::util;
 
-pub struct WindowBuilder {
+pub(crate) struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     size: Size,
@@ -40,7 +40,7 @@ pub struct WindowBuilder {
 }
 
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
+    pub fn new(_app: Application) -> WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),
@@ -289,7 +289,7 @@ fn get_visual_from_screen(screen: &xcb::Screen<'_>) -> Option<xcb::xproto::Visua
 }
 
 #[derive(Clone)]
-pub struct IdleHandle;
+pub(crate) struct IdleHandle;
 
 impl IdleHandle {
     pub fn add_idle_callback<F>(&self, _callback: F)
@@ -307,7 +307,7 @@ impl IdleHandle {
 }
 
 #[derive(Clone, Default)]
-pub struct WindowHandle {
+pub(crate) struct WindowHandle {
     window_id: u32,
 }
 

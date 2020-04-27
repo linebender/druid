@@ -17,6 +17,7 @@
 use std::any::Any;
 use std::time::Duration;
 
+use crate::application::Application;
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
@@ -211,9 +212,13 @@ impl WindowHandle {
 pub struct WindowBuilder(platform::WindowBuilder);
 
 impl WindowBuilder {
-    /// Create a new `WindowBuilder`
-    pub fn new() -> WindowBuilder {
-        WindowBuilder(platform::WindowBuilder::new())
+    /// Create a new `WindowBuilder`.
+    ///
+    /// Takes the [`Application`] that this window is for.
+    ///
+    /// [`Application`]: struct.Application.html
+    pub fn new(app: Application) -> WindowBuilder {
+        WindowBuilder(platform::WindowBuilder::new(app.platform_app))
     }
 
     /// Set the [`WinHandler`]. This is the object that will receive

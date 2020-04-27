@@ -14,21 +14,24 @@
 
 //! Web implementation of features at the application scope.
 
-use super::clipboard::Clipboard;
 use crate::application::AppHandler;
 
-pub struct Application;
+use super::clipboard::Clipboard;
+use super::error::Error;
+
+#[derive(Clone)]
+pub(crate) struct Application;
 
 impl Application {
-    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
-        Application
+    pub fn new() -> Result<Application, Error> {
+        Ok(Application)
     }
 
-    pub fn run(&mut self) {}
+    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {}
 
-    pub fn quit() {}
+    pub fn quit(&self) {}
 
-    pub fn clipboard() -> Clipboard {
+    pub fn clipboard(&self) -> Clipboard {
         Clipboard
     }
 

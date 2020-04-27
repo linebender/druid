@@ -47,6 +47,7 @@ use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
 use super::accels::register_accel;
+use super::application::Application;
 use super::dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use super::dialog::get_file_dialog_path;
 use super::error::Error;
@@ -67,7 +68,8 @@ extern "system" {
 }
 
 /// Builder abstraction for creating new windows.
-pub struct WindowBuilder {
+pub(crate) struct WindowBuilder {
+    app: Application,
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     menu: Option<Menu>,
@@ -114,7 +116,7 @@ pub struct WindowHandle {
 
 /// A handle that can get used to schedule an idle handler. Note that
 /// this handle is thread safe. If the handle is used after the hwnd
-/// has been destroyed, probably not much will go wrong (the XI_RUN_IDLE
+/// has been destroyed, probably not much will go wrong (the DS_RUN_IDLE
 /// message may be sent to a stray window).
 #[derive(Clone)]
 pub struct IdleHandle {
@@ -142,6 +144,8 @@ struct WindowState {
 trait WndProc {
     fn connect(&self, handle: &WindowHandle, state: WndState);
 
+    fn cleanup(&self, hwnd: HWND);
+
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
         -> Option<LRESULT>;
 }
@@ -149,6 +153,7 @@ trait WndProc {
 // State and logic for the winapi window procedure entry point. Note that this level
 // implements policies such as the use of Direct2D for painting.
 struct MyWndProc {
+    app: Application,
     handle: RefCell<WindowHandle>,
     d2d_factory: D2DFactory,
     dwrite_factory: DwriteFactory,
@@ -190,9 +195,9 @@ struct DCompState {
 }
 
 /// Message indicating there are idle tasks to run.
-const XI_RUN_IDLE: UINT = WM_USER;
+const DS_RUN_IDLE: UINT = WM_USER;
 
-/// Message relaying a request to destroy the window
+/// Message relaying a request to destroy the window.
 ///
 /// Calling `DestroyWindow` from inside the handler is problematic
 /// because it will recursively cause a `WM_DESTROY` message to be
@@ -202,7 +207,7 @@ const XI_RUN_IDLE: UINT = WM_USER;
 /// As a solution, instead of immediately calling `DestroyWindow`, we
 /// send this message to request destroying the window, so that at the
 /// time it is handled, we can successfully borrow the handler.
-const XI_REQUEST_DESTROY: UINT = WM_USER + 1;
+pub(crate) const DS_REQUEST_DESTROY: UINT = WM_USER + 1;
 
 impl Default for PresentStrategy {
     fn default() -> PresentStrategy {
@@ -320,6 +325,10 @@ impl WndProc for MyWndProc {
     fn connect(&self, handle: &WindowHandle, state: WndState) {
         *self.handle.borrow_mut() = handle.clone();
         *self.state.borrow_mut() = Some(state);
+    }
+
+    fn cleanup(&self, hwnd: HWND) {
+        self.app.remove_window(hwnd);
     }
 
     #[allow(clippy::cognitive_complexity)]
@@ -761,7 +770,7 @@ impl WndProc for MyWndProc {
 
                 Some(0)
             }
-            XI_REQUEST_DESTROY => {
+            DS_REQUEST_DESTROY => {
                 unsafe {
                     DestroyWindow(hwnd);
                 }
@@ -774,7 +783,7 @@ impl WndProc for MyWndProc {
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
-                None
+                Some(0)
             }
             WM_TIMER => {
                 let id = wparam;
@@ -813,7 +822,7 @@ impl WndProc for MyWndProc {
                 }
                 Some(0)
             }
-            XI_RUN_IDLE => {
+            DS_RUN_IDLE => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     let queue = self.handle.borrow().take_idle_queue();
@@ -834,8 +843,9 @@ impl WndProc for MyWndProc {
 }
 
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
+    pub fn new(app: Application) -> WindowBuilder {
         WindowBuilder {
+            app,
             handler: None,
             title: String::new(),
             menu: None,
@@ -879,13 +889,11 @@ impl WindowBuilder {
 
     pub fn build(self) -> Result<WindowHandle, Error> {
         unsafe {
-            // Maybe separate registration in build api? Probably only need to
-            // register once even for multiple window creation.
-
             let class_name = super::util::CLASS_NAME.to_wide();
             let dwrite_factory = DwriteFactory::new().unwrap();
             let dw_clone = dwrite_factory.clone();
             let wndproc = MyWndProc {
+                app: self.app.clone(),
                 handle: Default::default(),
                 d2d_factory: D2DFactory::new().unwrap(),
                 dwrite_factory: dw_clone,
@@ -967,6 +975,7 @@ impl WindowBuilder {
             if hwnd.is_null() {
                 return Err(Error::NullHwnd);
             }
+            self.app.add_window(hwnd);
 
             if let Some(accels) = accels {
                 register_accel(hwnd, &accels);
@@ -1108,6 +1117,7 @@ pub(crate) unsafe extern "system" fn win_proc_dispatch(
     };
 
     if msg == WM_NCDESTROY && !window_ptr.is_null() {
+        (*window_ptr).wndproc.cleanup(hwnd);
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
         mem::drop(Rc::from_raw(window_ptr));
     }
@@ -1179,7 +1189,7 @@ impl WindowHandle {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
-                PostMessageW(hwnd, XI_REQUEST_DESTROY, 0, 0);
+                PostMessageW(hwnd, DS_REQUEST_DESTROY, 0, 0);
             }
         }
     }
@@ -1446,7 +1456,7 @@ impl IdleHandle {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {
             unsafe {
-                PostMessageW(self.hwnd, XI_RUN_IDLE, 0, 0);
+                PostMessageW(self.hwnd, DS_RUN_IDLE, 0, 0);
             }
         }
         queue.push(IdleKind::Callback(Box::new(callback)));
@@ -1456,7 +1466,7 @@ impl IdleHandle {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {
             unsafe {
-                PostMessageW(self.hwnd, XI_RUN_IDLE, 0, 0);
+                PostMessageW(self.hwnd, DS_RUN_IDLE, 0, 0);
             }
         }
         queue.push(IdleKind::Token(token));
