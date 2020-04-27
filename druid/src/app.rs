@@ -16,9 +16,7 @@
 
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
-use crate::shell::{
-    AppState as PlatformState, Application, Error as PlatformError, WindowBuilder, WindowHandle,
-};
+use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
 use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
@@ -116,28 +114,28 @@ impl<T: Data> AppLauncher<T> {
     /// Returns an error if a window cannot be instantiated. This is usually
     /// a fatal error.
     pub fn launch(mut self, data: T) -> Result<(), PlatformError> {
+        let app = Application::new();
+
         let mut env = theme::init();
         if let Some(f) = self.env_setup.take() {
             f(&mut env, &data);
         }
 
-        let platform_state = PlatformState::new();
         let mut state = AppState::new(
-            platform_state.clone(),
+            app.clone(),
             data,
             env,
             self.delegate.take(),
             self.ext_event_host,
         );
-        let handler = AppHandler::new(state.clone());
 
-        let mut app = Application::new(platform_state, Some(Box::new(handler)));
         for desc in self.windows {
             let window = desc.build_native(&mut state)?;
             window.show();
         }
 
-        app.run();
+        let handler = AppHandler::new(state);
+        app.run(Some(Box::new(handler)));
         Ok(())
     }
 }
@@ -230,7 +228,7 @@ impl<T: Data> WindowDesc<T> {
 
         let handler = DruidHandler::new_shared(state.clone(), self.id);
 
-        let mut builder = WindowBuilder::new(state.platform_state());
+        let mut builder = WindowBuilder::new(state.app());
 
         builder.resizable(self.resizable);
         builder.show_titlebar(self.show_titlebar);

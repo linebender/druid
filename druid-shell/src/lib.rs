@@ -35,9 +35,10 @@ mod keycodes;
 mod menu;
 mod mouse;
 mod platform;
+mod util;
 mod window;
 
-pub use application::{AppHandler, AppState, Application};
+pub use application::{AppHandler, Application};
 pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
 pub use common_util::Counter;
 pub use dialog::{FileDialogOptions, FileInfo, FileSpec};

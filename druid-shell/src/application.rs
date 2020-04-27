@@ -14,10 +14,13 @@
 
 //! The top-level application type.
 
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::clipboard::Clipboard;
 use crate::platform::application as platform;
+use crate::util;
 
 /// A top-level handler that is not associated with any window.
 ///
@@ -38,73 +41,148 @@ pub trait AppHandler {
     fn command(&mut self, id: u32) {}
 }
 
-/// The top level application state.
+/// The top level application object.
 ///
-/// This helps the application track all the state that it has created,
-/// which it later needs to clean up.
+/// This can be thought of as a reference and it can be safely cloned.
 #[derive(Clone)]
-pub struct AppState(pub(crate) platform::AppState);
-
-impl AppState {
-    /// Create a new `AppState` instance.
-    pub fn new() -> AppState {
-        AppState(platform::AppState::new())
-    }
+pub struct Application {
+    state: Rc<RefCell<State>>,
+    pub(crate) platform_app: platform::Application,
 }
 
-//TODO: we may want to make the user create an instance of this (Application::global()?)
-//but for now I'd like to keep changes minimal.
-/// The top level application object.
-pub struct Application(platform::Application);
+/// Platform-independent `Application` state.
+struct State {
+    running: bool,
+}
 
-// Used to ensure only one Application instance is ever created.
-// This may change in the future.
-// For more information see https://github.com/xi-editor/druid/issues/771
+/// Used to ensure only one Application instance is ever created.
 static APPLICATION_CREATED: AtomicBool = AtomicBool::new(false);
+
+thread_local! {
+    /// A reference object to the current `Application`, if any.
+    static GLOBAL_APP: RefCell<Option<Application>> = RefCell::new(None);
+}
 
 impl Application {
     /// Create a new `Application`.
     ///
-    /// It takes the application `state` and a `handler` which will be used to inform of events.
+    /// # Panics
     ///
-    /// Right now only one application can be created. See [druid#771] for discussion.
+    /// Panics if an `Application` has already been created.
+    ///
+    /// This may change in the future. See [druid#771] for discussion.
     ///
     /// [druid#771]: https://github.com/xi-editor/druid/issues/771
-    pub fn new(state: AppState, handler: Option<Box<dyn AppHandler>>) -> Application {
+    pub fn new() -> Application {
         if APPLICATION_CREATED.compare_and_swap(false, true, Ordering::AcqRel) {
             panic!("The Application instance has already been created.");
         }
-        Application(platform::Application::new(state.0, handler))
+        util::claim_main_thread();
+        let state = Rc::new(RefCell::new(State { running: false }));
+        let app = Application {
+            state,
+            platform_app: platform::Application::new(),
+        };
+        GLOBAL_APP.with(|global_app| {
+            *global_app.borrow_mut() = Some(app.clone());
+        });
+        app
     }
 
-    /// Start the runloop.
+    /// Get the current globally active `Application`.
     ///
-    /// This will block the current thread until the program has finished executing.
-    pub fn run(&mut self) {
-        self.0.run()
+    /// A globally active `Application` exists
+    /// after [`new`] is called and until [`run`] returns.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there is no globally active `Application`.
+    /// For a non-panicking function use [`try_global`].
+    ///
+    /// This function will also panic if called from a non-main thread.
+    ///
+    /// [`new`]: #method.new
+    /// [`run`]: #method.run
+    /// [`try_global`]: #method.try_global
+    #[inline]
+    pub fn global() -> Application {
+        // Main thread assertion takes place in try_global()
+        Application::try_global().expect("There is no globally active Application")
     }
 
-    /// Terminate the application.
-    pub fn quit() {
-        platform::Application::quit()
+    /// Get the current globally active `Application`.
+    ///
+    /// A globally active `Application` exists
+    /// after [`new`] is called and until [`run`] returns.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called from a non-main thread.
+    ///
+    /// [`new`]: #method.new
+    /// [`run`]: #method.run
+    pub fn try_global() -> Option<Application> {
+        util::assert_main_thread();
+        GLOBAL_APP.with(|global_app| global_app.borrow().clone())
+    }
+
+    /// Start the `Application` runloop.
+    ///
+    /// The provided `handler` will be used to inform of events.
+    ///
+    /// This will consume the `Application` and block the current thread
+    /// until the `Application` has finished executing.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `Application` is already running.
+    pub fn run(self, handler: Option<Box<dyn AppHandler>>) {
+        // Make sure this application hasn't run() yet.
+        if let Ok(mut state) = self.state.try_borrow_mut() {
+            if state.running {
+                panic!("Application is already running");
+            }
+            state.running = true;
+        } else {
+            panic!("Application state already borrowed");
+        }
+
+        // Run the platform application
+        self.platform_app.run(handler);
+
+        // This application is no longer active, so clear the global reference
+        GLOBAL_APP.with(|global_app| {
+            *global_app.borrow_mut() = None;
+        });
+        // .. and release the main thread
+        util::release_main_thread();
+    }
+
+    /// Quit the `Application`.
+    ///
+    /// This will cause [`run`] to return control back to the calling function.
+    ///
+    /// [`run`]: #method.run
+    pub fn quit(&self) {
+        self.platform_app.quit()
     }
 
     // TODO: do these two go in some kind of PlatformExt trait?
     /// Hide the application this window belongs to. (cmd+H)
-    pub fn hide() {
+    pub fn hide(&self) {
         #[cfg(target_os = "macos")]
-        platform::Application::hide()
+        self.platform_app.hide()
     }
 
     /// Hide all other applications. (cmd+opt+H)
-    pub fn hide_others() {
+    pub fn hide_others(&self) {
         #[cfg(target_os = "macos")]
-        platform::Application::hide_others()
+        self.platform_app.hide_others()
     }
 
     /// Returns a handle to the system clipboard.
-    pub fn clipboard() -> Clipboard {
-        platform::Application::clipboard().into()
+    pub fn clipboard(&self) -> Clipboard {
+        self.platform_app.clipboard().into()
     }
 
     /// Returns the current locale string.

@@ -29,7 +29,7 @@ use crate::kurbo::{Point, Rect, Size, Vec2};
 
 use crate::piet::RenderContext;
 
-use super::application::AppState;
+use super::application::Application;
 use super::error::Error;
 use super::keycodes::key_to_text;
 use super::menu::Menu;
@@ -60,7 +60,7 @@ type Result<T> = std::result::Result<T, Error>;
 const NOMINAL_DPI: f32 = 96.0;
 
 /// Builder abstraction for creating new windows.
-pub struct WindowBuilder {
+pub(crate) struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     cursor: Cursor,
@@ -292,7 +292,7 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
 }
 
 impl WindowBuilder {
-    pub fn new(_app_state: AppState) -> WindowBuilder {
+    pub fn new(_app: Application) -> WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),

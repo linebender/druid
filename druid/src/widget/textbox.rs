@@ -283,7 +283,7 @@ impl Widget<String> for TextBox {
                         || cmd.selector == crate::commands::CUT) =>
             {
                 if let Some(text) = data.slice(self.selection.range()) {
-                    Application::clipboard().put_string(text);
+                    Application::global().clipboard().put_string(text);
                 }
                 if !self.selection.is_caret() && cmd.selector == crate::commands::CUT {
                     edit_action = Some(EditAction::Delete);

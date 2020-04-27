@@ -22,8 +22,7 @@ use std::rc::Rc;
 use crate::kurbo::{Rect, Size, Vec2};
 use crate::piet::Piet;
 use crate::shell::{
-    AppState as PlatformState, Application, FileDialogOptions, IdleToken, MouseEvent, WinHandler,
-    WindowHandle,
+    Application, FileDialogOptions, IdleToken, MouseEvent, WinHandler, WindowHandle,
 };
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
@@ -73,7 +72,7 @@ pub(crate) struct AppState<T> {
 }
 
 struct Inner<T> {
-    platform_state: PlatformState,
+    app: Application,
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: CommandQueue,
     ext_event_host: ExtEventHost,
@@ -134,14 +133,14 @@ impl<T> AppHandler<T> {
 
 impl<T> AppState<T> {
     pub(crate) fn new(
-        platform_state: PlatformState,
+        app: Application,
         data: T,
         env: Env,
         delegate: Option<Box<dyn AppDelegate<T>>>,
         ext_event_host: ExtEventHost,
     ) -> Self {
         let inner = Rc::new(RefCell::new(Inner {
-            platform_state,
+            app,
             delegate,
             command_queue: VecDeque::new(),
             root_menu: None,
@@ -154,8 +153,8 @@ impl<T> AppState<T> {
         AppState { inner }
     }
 
-    pub(crate) fn platform_state(&self) -> PlatformState {
-        self.inner.borrow().platform_state.clone()
+    pub(crate) fn app(&self) -> Application {
+        self.inner.borrow().app.clone()
     }
 }
 
@@ -235,7 +234,7 @@ impl<T: Data> Inner<T> {
                 // If there are even no pending windows, we quit the run loop.
                 if self.windows.count() == 0 {
                     #[cfg(target_os = "windows")]
-                    Application::quit();
+                    self.app.quit();
                 }
             }
         }
@@ -610,22 +609,22 @@ impl<T: Data> AppState<T> {
     }
 
     fn do_paste(&mut self, window_id: WindowId) {
-        let event = Event::Paste(Application::clipboard());
+        let event = Event::Paste(self.inner.borrow().app.clipboard());
         self.inner.borrow_mut().do_window_event(window_id, event);
     }
 
     fn quit(&self) {
-        Application::quit()
+        self.inner.borrow().app.quit()
     }
 
     fn hide_app(&self) {
         #[cfg(target_os = "macos")]
-        Application::hide()
+        self.inner.borrow().app.hide()
     }
 
     fn hide_others(&mut self) {
         #[cfg(target_os = "macos")]
-        Application::hide_others()
+        self.inner.borrow().app.hide_others()
     }
 }
 

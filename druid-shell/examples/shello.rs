@@ -18,8 +18,8 @@ use druid_shell::kurbo::{Line, Rect, Vec2};
 use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
-    AppState, Application, Cursor, FileDialogOptions, FileSpec, HotKey, KeyEvent, KeyModifiers,
-    Menu, MouseEvent, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    Application, Cursor, FileDialogOptions, FileSpec, HotKey, KeyEvent, KeyModifiers, Menu,
+    MouseEvent, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
@@ -48,7 +48,7 @@ impl WinHandler for HelloState {
         match id {
             0x100 => {
                 self.handle.close();
-                Application::quit();
+                Application::global().quit()
             }
             0x101 => {
                 let options = FileDialogOptions::new().show_hidden().allowed_types(vec![
@@ -101,7 +101,7 @@ impl WinHandler for HelloState {
     }
 
     fn destroy(&mut self) {
-        Application::quit()
+        Application::global().quit()
     }
 
     fn as_any(&mut self) -> &mut dyn Any {
@@ -129,9 +129,8 @@ fn main() {
     menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
-    let state = AppState::new();
-    let mut app = Application::new(state.clone(), None);
-    let mut builder = WindowBuilder::new(state);
+    let app = Application::new();
+    let mut builder = WindowBuilder::new(app.clone());
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
@@ -139,5 +138,5 @@ fn main() {
     let window = builder.build().unwrap();
     window.show();
 
-    app.run();
+    app.run(None);
 }

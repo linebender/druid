@@ -40,18 +40,10 @@ thread_local! {
 }
 
 #[derive(Clone)]
-pub struct AppState;
-
-pub struct Application;
-
-impl AppState {
-    pub(crate) fn new() -> AppState {
-        AppState
-    }
-}
+pub(crate) struct Application;
 
 impl Application {
-    pub fn new(_state: AppState, _handler: Option<Box<dyn AppHandler>>) -> Application {
+    pub fn new() -> Application {
         Application
     }
 
@@ -68,7 +60,7 @@ impl Application {
     }
 
     // TODO(x11/events): handle mouse scroll events
-    pub fn run(&mut self) {
+    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         let conn = XCB_CONNECTION.connection_cloned();
         loop {
             if let Some(ev) = conn.wait_for_event() {
@@ -191,11 +183,11 @@ impl Application {
         }
     }
 
-    pub fn quit() {
+    pub fn quit(&self) {
         // No-op.
     }
 
-    pub fn clipboard() -> Clipboard {
+    pub fn clipboard(&self) -> Clipboard {
         // TODO(x11/clipboard): implement Application::clipboard
         log::warn!("Application::clipboard is currently unimplemented for X11 platforms.");
         Clipboard {}

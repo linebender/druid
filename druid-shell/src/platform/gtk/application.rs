@@ -32,18 +32,10 @@ thread_local!(
 );
 
 #[derive(Clone)]
-pub struct AppState;
-
-pub struct Application;
-
-impl AppState {
-    pub(crate) fn new() -> AppState {
-        AppState
-    }
-}
+pub(crate) struct Application;
 
 impl Application {
-    pub fn new(_state: AppState, _handler: Option<Box<dyn AppHandler>>) -> Application {
+    pub fn new() -> Application {
         // TODO: we should give control over the application ID to the user
         let application = GtkApplication::new(
             Some("com.github.xi-editor.druid"),
@@ -68,7 +60,7 @@ impl Application {
         Application
     }
 
-    pub fn run(&mut self) {
+    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         util::assert_main_thread();
 
         // TODO: should we pass the command line arguments?
@@ -80,7 +72,7 @@ impl Application {
         });
     }
 
-    pub fn quit() {
+    pub fn quit(&self) {
         util::assert_main_thread();
         with_application(|app| {
             match app.get_active_window() {
@@ -95,7 +87,7 @@ impl Application {
         });
     }
 
-    pub fn clipboard() -> Clipboard {
+    pub fn clipboard(&self) -> Clipboard {
         Clipboard
     }
 

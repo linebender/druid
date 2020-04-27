@@ -19,7 +19,7 @@ use time::Instant;
 use piet_common::kurbo::{Line, Rect};
 use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
-use druid_shell::{AppState, Application, KeyEvent, WinHandler, WindowBuilder, WindowHandle};
+use druid_shell::{Application, KeyEvent, WinHandler, WindowBuilder, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
@@ -107,7 +107,7 @@ impl WinHandler for PerfTest {
     }
 
     fn destroy(&mut self) {
-        Application::quit()
+        Application::global().quit()
     }
 
     fn as_any(&mut self) -> &mut dyn Any {
@@ -116,9 +116,8 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
-    let state = AppState::new();
-    let mut app = Application::new(state.clone(), None);
-    let mut builder = WindowBuilder::new(state);
+    let app = Application::new();
+    let mut builder = WindowBuilder::new(app.clone());
     let perf_test = PerfTest {
         size: Default::default(),
         handle: Default::default(),
@@ -131,5 +130,5 @@ fn main() {
     let window = builder.build().unwrap();
     window.show();
 
-    app.run();
+    app.run(None);
 }

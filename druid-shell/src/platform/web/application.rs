@@ -18,26 +18,18 @@ use super::clipboard::Clipboard;
 use crate::application::AppHandler;
 
 #[derive(Clone)]
-pub struct AppState;
-
-pub struct Application;
-
-impl AppState {
-    pub(crate) fn new() -> AppState {
-        AppState
-    }
-}
+pub(crate) struct Application;
 
 impl Application {
-    pub fn new(_state: AppState, _handler: Option<Box<dyn AppHandler>>) -> Application {
+    pub fn new() -> Application {
         Application
     }
 
-    pub fn run(&mut self) {}
+    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {}
 
-    pub fn quit() {}
+    pub fn quit(&self) {}
 
-    pub fn clipboard() -> Clipboard {
+    pub fn clipboard(&self) -> Clipboard {
         Clipboard
     }
 

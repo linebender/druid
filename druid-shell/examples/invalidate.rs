@@ -84,8 +84,8 @@ impl WinHandler for InvalidateTest {
 }
 
 fn main() {
-    let mut app = Application::new(None);
-    let mut builder = WindowBuilder::new();
+    let app = Application::new();
+    let mut builder = WindowBuilder::new(app.clone());
     let inv_test = InvalidateTest {
         size: Default::default(),
         handle: Default::default(),
@@ -98,5 +98,5 @@ fn main() {
 
     let window = builder.build().unwrap();
     window.show();
-    app.run();
+    app.run(None);
 }

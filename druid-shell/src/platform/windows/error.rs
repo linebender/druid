@@ -38,8 +38,6 @@ pub enum Error {
     OldWindows,
     /// The `hwnd` pointer was null.
     NullHwnd,
-    /// The main app message window already exists.
-    AppWindowExists,
 }
 
 fn hresult_description(hr: HRESULT) -> Option<String> {
@@ -80,7 +78,6 @@ impl fmt::Display for Error {
             Error::D2Error => write!(f, "Direct2D error"),
             Error::OldWindows => write!(f, "Attempted newer API on older Windows"),
             Error::NullHwnd => write!(f, "Window handle is Null"),
-            Error::AppWindowExists => write!(f, "The main message window already exists"),
         }
     }
 }
