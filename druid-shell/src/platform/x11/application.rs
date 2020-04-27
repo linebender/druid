@@ -20,11 +20,13 @@ use std::sync::Arc;
 
 use lazy_static::lazy_static;
 
-use super::clipboard::Clipboard;
-use super::window::XWindow;
 use crate::application::AppHandler;
 use crate::kurbo::{Point, Rect};
 use crate::{KeyCode, KeyModifiers, MouseButton, MouseEvent};
+
+use super::clipboard::Clipboard;
+use super::error::Error;
+use super::window::XWindow;
 
 struct XcbConnection {
     connection: Arc<xcb::Connection>,
@@ -43,8 +45,8 @@ thread_local! {
 pub(crate) struct Application;
 
 impl Application {
-    pub fn new() -> Application {
-        Application
+    pub fn new() -> Result<Application, Error> {
+        Ok(Application)
     }
 
     pub(crate) fn add_xwindow(id: u32, xwindow: XWindow) {

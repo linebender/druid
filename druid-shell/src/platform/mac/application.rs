@@ -28,9 +28,11 @@ use objc::declare::ClassDecl;
 use objc::runtime::{Class, Object, Sel};
 use objc::{class, msg_send, sel, sel_impl};
 
-use super::clipboard::Clipboard;
-use super::util;
 use crate::application::AppHandler;
+
+use super::clipboard::Clipboard;
+use super::error::Error;
+use super::util;
 
 static APP_HANDLER_IVAR: &str = "druidAppHandler";
 
@@ -45,7 +47,7 @@ struct State {
 }
 
 impl Application {
-    pub fn new() -> Application {
+    pub fn new() -> Result<Application, Error> {
         // macOS demands that we run not just on one thread,
         // but specifically the first thread of the app.
         util::assert_main_thread();
@@ -57,7 +59,7 @@ impl Application {
 
             let state = Rc::new(RefCell::new(State { quitting: false }));
 
-            Application { ns_app, state }
+            Ok(Application { ns_app, state })
         }
     }
 

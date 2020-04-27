@@ -52,17 +52,18 @@ struct State {
 }
 
 impl Application {
-    pub fn new() -> Application {
-        Application::init();
+    pub fn new() -> Result<Application, Error> {
+        Application::init()?;
         let state = Rc::new(RefCell::new(State {
             quitting: false,
             windows: HashSet::new(),
         }));
-        Application { state }
+        Ok(Application { state })
     }
 
     /// Initialize the app. At the moment, this is mostly needed for hi-dpi.
-    fn init() {
+    fn init() -> Result<(), Error> {
+        // TODO: Report back an error instead of panicking
         util::attach_console();
         if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
             // This function is only supported on windows 10
@@ -70,7 +71,6 @@ impl Application {
                 func(PROCESS_SYSTEM_DPI_AWARE); // TODO: per monitor (much harder)
             }
         }
-
         unsafe {
             let class_name = CLASS_NAME.to_wide();
             let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
@@ -92,6 +92,7 @@ impl Application {
                 panic!("Error registering class");
             }
         }
+        Ok(())
     }
 
     pub fn add_window(&self, hwnd: HWND) -> bool {

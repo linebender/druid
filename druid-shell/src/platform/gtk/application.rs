@@ -20,9 +20,11 @@ use gio::prelude::ApplicationExtManual;
 use gio::{ApplicationExt, ApplicationFlags, Cancellable};
 use gtk::{Application as GtkApplication, GtkApplicationExt};
 
-use super::clipboard::Clipboard;
-use super::util;
 use crate::application::AppHandler;
+
+use super::clipboard::Clipboard;
+use super::error::Error;
+use super::util;
 
 // XXX: The application needs to be global because WindowBuilder::build wants
 // to construct an ApplicationWindow, which needs the application, but
@@ -35,7 +37,7 @@ thread_local!(
 pub(crate) struct Application;
 
 impl Application {
-    pub fn new() -> Application {
+    pub fn new() -> Result<Application, Error> {
         // TODO: we should give control over the application ID to the user
         let application = GtkApplication::new(
             Some("com.github.xi-editor.druid"),
@@ -57,7 +59,7 @@ impl Application {
             .expect("Could not register GTK application");
 
         GTK_APPLICATION.with(move |x| *x.borrow_mut() = Some(application));
-        Application
+        Ok(Application)
     }
 
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {

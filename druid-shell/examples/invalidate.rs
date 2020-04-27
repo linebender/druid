@@ -84,7 +84,7 @@ impl WinHandler for InvalidateTest {
 }
 
 fn main() {
-    let app = Application::new();
+    let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
     let inv_test = InvalidateTest {
         size: Default::default(),

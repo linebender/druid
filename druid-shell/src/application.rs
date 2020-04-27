@@ -19,6 +19,7 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::clipboard::Clipboard;
+use crate::error::Error;
 use crate::platform::application as platform;
 use crate::util;
 
@@ -46,8 +47,8 @@ pub trait AppHandler {
 /// This can be thought of as a reference and it can be safely cloned.
 #[derive(Clone)]
 pub struct Application {
-    state: Rc<RefCell<State>>,
     pub(crate) platform_app: platform::Application,
+    state: Rc<RefCell<State>>,
 }
 
 /// Platform-independent `Application` state.
@@ -66,27 +67,31 @@ thread_local! {
 impl Application {
     /// Create a new `Application`.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if an `Application` has already been created.
+    /// Errors if an `Application` has already been created.
     ///
     /// This may change in the future. See [druid#771] for discussion.
     ///
     /// [druid#771]: https://github.com/xi-editor/druid/issues/771
-    pub fn new() -> Application {
+    pub fn new() -> Result<Application, Error> {
         if APPLICATION_CREATED.compare_and_swap(false, true, Ordering::AcqRel) {
-            panic!("The Application instance has already been created.");
+            return Err(Error::ApplicationAlreadyExists);
         }
         util::claim_main_thread();
+        let platform_app = match platform::Application::new() {
+            Ok(app) => app,
+            Err(err) => return Err(Error::Platform(err)),
+        };
         let state = Rc::new(RefCell::new(State { running: false }));
         let app = Application {
+            platform_app,
             state,
-            platform_app: platform::Application::new(),
         };
         GLOBAL_APP.with(|global_app| {
             *global_app.borrow_mut() = Some(app.clone());
         });
-        app
+        Ok(app)
     }
 
     /// Get the current globally active `Application`.
