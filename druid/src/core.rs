@@ -14,15 +14,15 @@
 
 //! The fundamental druid types.
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use crate::bloom::Bloom;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::piet::RenderContext;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, UpdateCtx, Widget, WidgetId,
-    WindowId,
+    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget,
+    WidgetId, WindowId,
 };
 
 /// Our queue type
@@ -109,6 +109,8 @@ pub(crate) struct BaseState {
     pub(crate) request_focus: Option<FocusChange>,
     pub(crate) children: Bloom<WidgetId>,
     pub(crate) children_changed: bool,
+    /// Associate timers with widgets that requested them.
+    pub(crate) timers: HashMap<TimerToken, WidgetId>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -516,6 +518,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         }
                     }
                 }
+                InternalEvent::RouteTimer(token, widget_id) => {
+                    let widget_id = *widget_id;
+                    if widget_id != child_ctx.base_state.id {
+                        recurse = child_ctx.base_state.children.may_contain(&widget_id);
+                        Event::Internal(InternalEvent::RouteTimer(*token, widget_id))
+                    } else {
+                        Event::Timer(*token)
+                    }
+                }
             },
             Event::WindowConnected => Event::WindowConnected,
             Event::WindowSize(size) => {
@@ -591,9 +602,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 recurse = had_active || child_ctx.base_state.is_hot;
                 Event::Zoom(*zoom)
             }
-            Event::Timer(id) => {
-                recurse = child_ctx.base_state.request_timer;
-                Event::Timer(*id)
+            Event::Timer(token) => {
+                recurse = false;
+                Event::Timer(*token)
             }
             Event::Command(cmd) => Event::Command(cmd.clone()),
         };
@@ -604,6 +615,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         };
 
         ctx.base_state.merge_up(&child_ctx.base_state);
+        // Clear current widget's timers after merging with parent.
+        child_ctx.base_state.timers.clear();
         ctx.is_handled |= child_ctx.is_handled;
     }
 
@@ -788,7 +801,12 @@ impl BaseState {
             focus_chain: Vec::new(),
             children: Bloom::new(),
             children_changed: false,
+            timers: HashMap::new(),
         }
+    }
+
+    pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {
+        self.timers.insert(timer_token, self.id);
     }
 
     /// Update to incorporate state changes from a child.
@@ -809,6 +827,7 @@ impl BaseState {
         self.has_focus |= child_state.has_focus;
         self.children_changed |= child_state.children_changed;
         self.request_focus = self.request_focus.or(child_state.request_focus);
+        self.timers.extend(&child_state.timers);
     }
 
     #[inline]

@@ -14,6 +14,7 @@
 
 //! Management of multiple windows.
 
+use std::collections::HashMap;
 use std::mem;
 
 // Automatically defaults to std::time::Instant on non Wasm platforms
@@ -28,8 +29,8 @@ use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, UpdateCtx, Widget, WidgetId, WidgetPod,
-    WindowDesc,
+    LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken, UpdateCtx, Widget,
+    WidgetId, WidgetPod, WindowDesc,
 };
 
 /// A unique identifier for a window.
@@ -48,6 +49,7 @@ pub struct Window<T> {
     pub(crate) last_mouse_pos: Option<Point>,
     pub(crate) focus: Option<WidgetId>,
     pub(crate) handle: WindowHandle,
+    pub(crate) timers: HashMap<TimerToken, WidgetId>,
     // delegate?
 }
 
@@ -64,6 +66,7 @@ impl<T> Window<T> {
             last_mouse_pos: None,
             focus: None,
             handle,
+            timers: HashMap::new(),
         }
     }
 }
@@ -171,6 +174,14 @@ impl<T: Data> Window<T> {
                 self.size = Size::new(size.width * scale, size.height * scale);
                 Event::WindowSize(self.size)
             }
+            Event::Timer(token) => {
+                if let Some(widget_id) = self.timers.get(&token) {
+                    Event::Internal(InternalEvent::RouteTimer(token, *widget_id))
+                } else {
+                    log::error!("No widget found for timer {:?}", token);
+                    return false;
+                }
+            }
             other => other,
         };
 
@@ -214,6 +225,17 @@ impl<T: Data> Window<T> {
         }
 
         self.post_event_processing(queue, data, env, false);
+
+        //In some platforms, timer tokens are reused. So it is necessary to remove the token from
+        //the window's timer map before adding new tokens to it.
+        if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
+            self.timers.remove(&token);
+        }
+
+        //If at least one widget requested a timer, add all the requested timers to window's timers map.
+        if base_state.request_timer {
+            self.timers.extend(base_state.timers);
+        }
 
         is_handled
     }

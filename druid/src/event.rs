@@ -147,6 +147,8 @@ pub enum InternalEvent {
     MouseLeave,
     /// A command still in the process of being dispatched.
     TargetedCommand(Target, Command),
+    /// Used for routing timer events.
+    RouteTimer(TimerToken, WidgetId),
 }
 
 /// Application life cycle events.

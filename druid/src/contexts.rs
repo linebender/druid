@@ -357,7 +357,9 @@ impl<'a> EventCtx<'a> {
     /// request with the event.
     pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
         self.base_state.request_timer = true;
-        self.window.request_timer(deadline)
+        let timer_token = self.window.request_timer(deadline);
+        self.base_state.add_timer(timer_token);
+        timer_token
     }
 
     /// The layout size.
