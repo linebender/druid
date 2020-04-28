@@ -182,6 +182,7 @@ Last release without a changelog :(
 [@elrnv]: https://github.com/elrnv
 [@tedsta]: https://github.com/tedsta
 [@kindlychung]: https://github.com/kindlychung
+[@jneem]: https://github.com/jneem
 [@fishrockz]: https://github.com/fishrockz
 [@thecodewarrior]: https://github.com/thecodewarrior
 [@sjoshid]: https://github.com/sjoshid
