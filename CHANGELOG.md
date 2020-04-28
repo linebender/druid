@@ -63,6 +63,8 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 
 ### Deprecated
 
+- Nothing
+
 ### Removed
 
 - The optional GTK feature for non-Linux platforms. ([#611] by [@pyroxymat])
