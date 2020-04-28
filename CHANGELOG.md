@@ -33,6 +33,8 @@ While still incomplete this lays the foundation for running druid on Linux witho
 
 - `Event::MouseMoved` has been renamed to `MouseMove`. ([#825] by [@teddemunnik])
 
+- `has_focus` no longer returns false positives. ([#819] by [@xStorm])
+
 ### Deprecated
 
 ### Removed
@@ -53,6 +55,10 @@ While still incomplete this lays the foundation for running druid on Linux witho
 
 - Mouse capturing on Windows. ([#695] by [@teddemunnik])
 
+- Focus cycling now works even starting from non-registered-for-focus widgets. ([#819] by [@xStorm])
+
+- `Event::FocusChanged` gets propagated to focus gaining widgets. ([#819] by [@xStorm])
+
 ### Visual
 - Improved `Split` accuracy. ([#738] by [@xStorm])
 
@@ -70,6 +76,7 @@ While still incomplete this lays the foundation for running druid on Linux witho
 
 - A new project using druid: [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
 
+[#819]: https://github.com/xi-editor/druid/pull/819
 [#599]: https://github.com/xi-editor/druid/pull/599
 [#611]: https://github.com/xi-editor/druid/pull/611
 [#695]: https://github.com/xi-editor/druid/pull/695
