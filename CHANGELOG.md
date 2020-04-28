@@ -19,19 +19,19 @@ While still incomplete this lays the foundation for running druid on Linux witho
 
 - `TextBox` can receive `EditAction` commands. ([#814] by [@cmyr])
 
-- Added `Split::min_splitter_area(f64)` to add padding around the split bar. ([#738] by [@xStorm])
+- `Split::min_splitter_area(f64)` to add padding around the split bar. ([#738] by [@xStorm])
 
-- The `druid::text` module is public now. ([#816] by [@cmyr])
+- Published `druid::text` module. ([#816] by [@cmyr])
 
 - Basic X11 backend for druid-shell. ([#599] by [@crsaracco])
 
 ### Changed
 
-- `Split` constructors are now called `Split::rows` and `columns`. ([#738] by [@xStorm])
+- Renamed `Split` constructors to `Split::rows` and `columns`. ([#738] by [@xStorm])
 
 - `Split::splitter_size` no longer includes padding. ([#738] by [@xStorm])
 
-- `Event::MouseMoved` has been renamed to `MouseMove`. ([#825] by [@teddemunnik])
+- Renamed `Event::MouseMoved` to `MouseMove`. ([#825] by [@teddemunnik])
 
 - `has_focus` no longer returns false positives. ([#819] by [@xStorm])
 
@@ -45,19 +45,19 @@ While still incomplete this lays the foundation for running druid on Linux witho
 
 - Reduce the flashing in ext_event and identity examples. ([#782] by [@futurepaul])
 
-- GTK uses the system locale. ([#798] by [@finnerale])
+- GTK: Use the system locale. ([#798] by [@finnerale])
 
-- GTK windows get actually closed. ([#797] by [@finnerale])
+- GTK: Actually close windows ([#797] by [@finnerale])
 
-- Windows now respects the minimum window size. ([#727] by [@teddemunnik])
+- Windows: Respect the minimum window size. ([#727] by [@teddemunnik])
 
-- Windows now respects resizability. ([#712] by [@teddemunnik])
+- Windows: Respect resizability. ([#712] by [@teddemunnik])
 
-- Mouse capturing on Windows. ([#695] by [@teddemunnik])
+- Windows: Capture mouse for drag actions. ([#695] by [@teddemunnik])
 
-- Focus cycling now works even starting from non-registered-for-focus widgets. ([#819] by [@xStorm])
+- Start focus cycling from non-registered-for-focus widgets. ([#819] by [@xStorm])
 
-- `Event::FocusChanged` gets propagated to focus gaining widgets. ([#819] by [@xStorm])
+- Propagate `Event::FocusChanged` to focus gaining widgets as well. ([#819] by [@xStorm])
 
 ### Visual
 - Improved `Split` accuracy. ([#738] by [@xStorm])
