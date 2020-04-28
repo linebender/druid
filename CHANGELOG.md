@@ -164,6 +164,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#850]: https://github.com/xi-editor/druid/pull/850
 [#851]: https://github.com/xi-editor/druid/pull/851
 [#855]: https://github.com/xi-editor/druid/pull/855
+[#857]: https://github.com/xi-editor/druid/pull/857
 [#861]: https://github.com/xi-editor/druid/pull/861
 [#869]: https://github.com/xi-editor/druid/pull/869
 [#878]: https://github.com/xi-editor/druid/pull/878
