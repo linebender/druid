@@ -31,7 +31,7 @@ struct InvalidateTest {
 
 impl InvalidateTest {
     fn update_color_and_rect(&mut self) {
-        let time_since_start = (Instant::now() - self.start_time).as_nanos();
+        let time_since_start = (Instant::now() - self.start_time).as_millis();
         let (r, g, b, _) = self.color.as_rgba_u8();
         self.color = match (time_since_start % 2, time_since_start % 3) {
             (0, _) => Color::rgb8(r.wrapping_add(10), g, b),

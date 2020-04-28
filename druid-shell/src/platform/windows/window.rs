@@ -275,6 +275,9 @@ impl WndState {
         let anim;
         {
             let mut piet_ctx = Piet::new(d2d, dw, rt);
+            // The documentation on DXGI_PRESENT_PARAMETERS says we "must not update any
+            // pixel outside of the dirty rectangles."
+            piet_ctx.clip(invalid_rect);
             anim = self.handler.paint(&mut piet_ctx, invalid_rect);
             if let Err(e) = piet_ctx.finish() {
                 error!("piet error on render: {:?}", e);
@@ -387,8 +390,14 @@ impl WndProc for MyWndProc {
                         self.handle.borrow().rect_to_px(rect),
                     );
                     if let Some(ref mut ds) = s.dcomp_state {
+                        let params = DXGI_PRESENT_PARAMETERS {
+                            DirtyRectsCount: 1,
+                            pDirtyRects: &mut rect,
+                            pScrollRect: null_mut(),
+                            pScrollOffset: null_mut(),
+                        };
                         if !ds.sizing {
-                            (*ds.swap_chain).Present(1, 0);
+                            (*ds.swap_chain).Present1(1, 0, &params);
                             let _ = ds.dcomp_device.commit();
                         }
                     }
@@ -1210,9 +1219,6 @@ impl WindowHandle {
     }
 
     pub fn invalidate_rect(&self, rect: Rect) {
-        // FIXME: This is a temporary workaround for #875
-        self.invalidate();
-
         let r = self.px_to_rect(rect);
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
