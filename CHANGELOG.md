@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 While still incomplete this lays the foundation for running druid on Linux without relying on GTK.
 
+#### Mostly complete Wasm backend for druid-shell. ([#759])
+
+[@elrnv] continued the work of [@tedsta] and implemented a mostly complete Wasm backend and enabled all druid example to [run in the browser](https://elrnv.github.io/druid-wasm-examples/).
+
+While some features like the clipboard, menus or file dialogs are not yet available, all fundamental features are there.
+
 ### Added
 
 - `TextBox` can receive `EditAction` commands. ([#814] by [@cmyr])
@@ -24,6 +30,20 @@ While still incomplete this lays the foundation for running druid on Linux witho
 - Published `druid::text` module. ([#816] by [@cmyr])
 
 - Basic X11 backend for druid-shell. ([#599] by [@crsaracco])
+
+- `InternalEvent::MouseLeave` signalling the cursor leaved the window. ([#821] by [@teddemunnik])
+
+- `children_changed` now always includes layout and paint request. ([#839] by [@xStorm])
+
+- Mostly complete Wasm backend for druid-shell. ([#759] by [@elrnv])
+
+- `UpdateCtx::submit_command`. ([#855] by [@cmyr])
+
+- `request_paint_rect` for partial invalidation. ([#817] by [@jneem])
+
+- Window title can be any `LabelText` (such as a simple `String`). ([#869] by [@cmyr])
+
+- `Label::with_font` and `set_font`. ([#785] by [@thecodewarrior])
 
 ### Changed
 
@@ -35,6 +55,12 @@ While still incomplete this lays the foundation for running druid on Linux witho
 
 - `has_focus` no longer returns false positives. ([#819] by [@xStorm])
 
+- `Event::Internal(InternalEvent)` now bundles all internal events. ([#833] by [@xStorm])
+
+- `WidgetPod::set_layout_rect` now requires `LayoutCtx`, data and `Env`. ([#841] by [@xStorm])
+
+- `request_timer` now uses `Duration` instead of `Instant`. ([#847] by [@finnerale])
+
 ### Deprecated
 
 ### Removed
@@ -42,8 +68,6 @@ While still incomplete this lays the foundation for running druid on Linux witho
 - The optional GTK feature for non-Linux platforms. ([#611] by [@pyroxymat])
 
 ### Fixed
-
-- Reduce the flashing in ext_event and identity examples. ([#782] by [@futurepaul])
 
 - GTK: Use the system locale. ([#798] by [@finnerale])
 
@@ -59,65 +83,110 @@ While still incomplete this lays the foundation for running druid on Linux witho
 
 - Propagate `Event::FocusChanged` to focus gaining widgets as well. ([#819] by [@xStorm])
 
+- GTK: Prevent crashing on pop-ups. ([#837] by [@finnerale])
+
+- Keep hot state  consistent with mouse position. ([#841] by [@xStorm])
+
+- Open file menu item works again. ([#851] by [@kindlychung])
+
+- Supply correct `LifeCycleCtx` to `Event::FocusChanged`. ([#878] by [@cmyr])
+
+- Windows: Termiate app when all windows have closed. ([#763] by [@xStorm])
+
 ### Visual
+
 - Improved `Split` accuracy. ([#738] by [@xStorm])
 
+- Build-in widgets no longer stroke outside their `paint_rect`. ([#861] by [@jneem])
+
 ### Docs
+
+- Reduce the flashing in ext_event and identity examples. ([#782] by [@futurepaul])
 
 - `Env` got a new example and usage hints. ([#796] by [@finnerale])
 
 - Usage of bloom filters got documented. ([#818] by [@xStorm])
 
+- Book chapters about `Painter` and `Controller` were added. ([#832] by [@cmyr])
+
+- Added hot glow option to multiwin example. ([#845] by [@xStorm])
+
 ### Cleanups
 
 - Replace `#[macro_use]` with normal `use`. ([#808] by [@totsteps])
 
+- Clippy checks are now enabled for all targets. ([#850] by [@xStorm])
+
+- Added rendering tests. ([#784] by [@fishrockz])
+
+- CI testing has been revamped. ([#857] by [@xStorm])
+
+- Associate timers with widget ids. ([#831] by [@sjoshid])
+
 ### Outside News
 
-- A new project using druid: [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
+- Two new projects using druid:
+    - [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
+    - [jack-mixer](https://github.com/derekdreery/jack-mixer) A jack client that provides mixing, levels and a 3-band eq.
 
-[#819]: https://github.com/xi-editor/druid/pull/819
 [#599]: https://github.com/xi-editor/druid/pull/599
 [#611]: https://github.com/xi-editor/druid/pull/611
 [#695]: https://github.com/xi-editor/druid/pull/695
 [#712]: https://github.com/xi-editor/druid/pull/712
 [#727]: https://github.com/xi-editor/druid/pull/727
 [#738]: https://github.com/xi-editor/druid/pull/738
+[#759]: https://github.com/xi-editor/druid/pull/759
+[#763]: https://github.com/xi-editor/druid/pull/763
 [#782]: https://github.com/xi-editor/druid/pull/782
+[#784]: https://github.com/xi-editor/druid/pull/784
+[#785]: https://github.com/xi-editor/druid/pull/785
 [#796]: https://github.com/xi-editor/druid/pull/796
 [#797]: https://github.com/xi-editor/druid/pull/797
 [#798]: https://github.com/xi-editor/druid/pull/798
 [#808]: https://github.com/xi-editor/druid/pull/808
 [#814]: https://github.com/xi-editor/druid/pull/814
 [#816]: https://github.com/xi-editor/druid/pull/816
+[#817]: https://github.com/xi-editor/druid/pull/817
 [#818]: https://github.com/xi-editor/druid/pull/818
+[#819]: https://github.com/xi-editor/druid/pull/819
+[#821]: https://github.com/xi-editor/druid/pull/821
 [#825]: https://github.com/xi-editor/druid/pull/825
+[#831]: https://github.com/xi-editor/druid/pull/831
+[#832]: https://github.com/xi-editor/druid/pull/832
+[#833]: https://github.com/xi-editor/druid/pull/833
+[#837]: https://github.com/xi-editor/druid/pull/837
+[#839]: https://github.com/xi-editor/druid/pull/839
+[#841]: https://github.com/xi-editor/druid/pull/841
+[#845]: https://github.com/xi-editor/druid/pull/845
+[#847]: https://github.com/xi-editor/druid/pull/847
+[#850]: https://github.com/xi-editor/druid/pull/850
+[#851]: https://github.com/xi-editor/druid/pull/851
+[#855]: https://github.com/xi-editor/druid/pull/855
+[#861]: https://github.com/xi-editor/druid/pull/861
+[#869]: https://github.com/xi-editor/druid/pull/869
+[#878]: https://github.com/xi-editor/druid/pull/878
 
 ## [0.5] - 2020-04-01
 
 Last release without a changelog :(
 
 
-[@pyroxymat]: https://github.com/pyroxymat
-
-[@crsaracco]: https://github.com/crsaracco
-
-[@teddemunnik]: https://github.com/teddemunnik
-
-[@xStorm]: https://github.com/xStorm
-
-[@cmyr]: https://github.com/cmyr
-
-[@totsteps]: https://github.com/totsteps
-
-[@finnerale]: https://github.com/finnerale
-
 [@futurepaul]: https://github.com/futurepaul
-
-
+[@finnerale]: https://github.com/finnerale
+[@totsteps]: https://github.com/totsteps
+[@cmyr]: https://github.com/cmyr
+[@xStorm]: https://github.com/xStorm
+[@teddemunnik]: https://github.com/teddemunnik
+[@crsaracco]: https://github.com/crsaracco
+[@pyroxymat]: https://github.com/pyroxymat
+[@elrnv]: https://github.com/elrnv
+[@tedsta]: https://github.com/tedsta
+[@kindlychung]: https://github.com/kindlychung
+[@fishrockz]: https://github.com/fishrockz
+[@thecodewarrior]: https://github.com/thecodewarrior
+[@sjoshid]: https://github.com/sjoshid
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
-
 [0.5]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0
 
 
