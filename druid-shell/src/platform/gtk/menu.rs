@@ -127,7 +127,7 @@ impl Menu {
 }
 
 fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: HotKey) {
-    let wc = match menu_key.key {
+    let gdk_keyval = match menu_key.key {
         KeyCompare::Code(key_code) => key_code.into(),
         KeyCompare::Text(text) => text.chars().next().unwrap() as u32,
     };
@@ -135,7 +135,7 @@ fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: 
     item.add_accelerator(
         "activate",
         accel_group,
-        gdk::unicode_to_keyval(wc),
+        gdk_keyval,
         modifiers_to_gdk_modifier_type(menu_key.mods),
         gtk::AccelFlags::VISIBLE,
     );
