@@ -12,19 +12,17 @@ While still incomplete this lays the foundation for running druid on Linux witho
 
 #### Mostly complete Wasm backend for druid-shell. ([#759])
 
-[@elrnv] continued the work of [@tedsta] and implemented a mostly complete Wasm backend and enabled all druid example to [run in the browser](https://elrnv.github.io/druid-wasm-examples/).
+[@elrnv] continued the work of [@tedsta] and implemented a mostly complete Wasm backend and enabled all druid examples to [run in the browser](https://elrnv.github.io/druid-wasm-examples/).
 
 While some features like the clipboard, menus or file dialogs are not yet available, all fundamental features are there.
 
 ### Added
 
 - `TextBox` can receive `EditAction` commands. ([#814] by [@cmyr])
-- `Split::min_splitter_area(f64)` to add padding around the split bar. ([#738] by [@xStrom])
+- `Split::min_splitter_area(f64)` to add padding around the splitter bar. ([#738] by [@xStrom])
 - Published `druid::text` module. ([#816] by [@cmyr])
-- Basic X11 backend for druid-shell. ([#599] by [@crsaracco])
-- `InternalEvent::MouseLeave` signalling the cursor leaved the window. ([#821] by [@teddemunnik])
+- `InternalEvent::MouseLeave` signalling the cursor left the window. ([#821] by [@teddemunnik])
 - `children_changed` now always includes layout and paint request. ([#839] by [@xStrom])
-- Mostly complete Wasm backend for druid-shell. ([#759] by [@elrnv])
 - `UpdateCtx::submit_command`. ([#855] by [@cmyr])
 - `request_paint_rect` for partial invalidation. ([#817] by [@jneem])
 - Window title can be any `LabelText` (such as a simple `String`). ([#869] by [@cmyr])
@@ -39,6 +37,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `Event::Internal(InternalEvent)` now bundles all internal events. ([#833] by [@xStrom])
 - `WidgetPod::set_layout_rect` now requires `LayoutCtx`, data and `Env`. ([#841] by [@xStrom])
 - `request_timer` now uses `Duration` instead of `Instant`. ([#847] by [@finnerale])
+- Global `Application` associated functions are now instance methods instead, e.g. `Application::global().quit()` instead of the old `Application::quit()`. ([#763] by [@xStrom])
 
 ### Deprecated
 
@@ -58,15 +57,16 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Start focus cycling from non-registered-for-focus widgets. ([#819] by [@xStrom])
 - Propagate `Event::FocusChanged` to focus gaining widgets as well. ([#819] by [@xStrom])
 - GTK: Prevent crashing on pop-ups. ([#837] by [@finnerale])
-- Keep hot state  consistent with mouse position. ([#841] by [@xStrom])
+- Keep hot state consistent with mouse position. ([#841] by [@xStrom])
 - Open file menu item works again. ([#851] by [@kindlychung])
 - Supply correct `LifeCycleCtx` to `Event::FocusChanged`. ([#878] by [@cmyr])
 - Windows: Termiate app when all windows have closed. ([#763] by [@xStrom])
+- macOS: `Application::quit` now quits the run loop instead of killing the process. ([#763] by [@xStrom])
 
 ### Visual
 
 - Improved `Split` accuracy. ([#738] by [@xStrom])
-- Build-in widgets no longer stroke outside their `paint_rect`. ([#861] by [@jneem])
+- Built-in widgets no longer stroke outside their `paint_rect`. ([#861] by [@jneem])
 
 ### Docs
 
@@ -83,7 +83,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Added rendering tests. ([#784] by [@fishrockz])
 - CI testing has been revamped. ([#857] by [@xStrom])
 - Associate timers with widget ids. ([#831] by [@sjoshid])
-- Add a changelog. ([#889] by [@finnerale])
+- Added a changelog containing development since the 0.5 release. ([#889] by [@finnerale])
 
 ### Outside News
 
