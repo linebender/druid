@@ -125,6 +125,8 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 
 - Associate timers with widget ids. ([#831] by [@sjoshid])
 
+- Add a changelog. ([#889] by [@finnerale])
+
 ### Outside News
 
 - There are two new projects using druid:
@@ -168,6 +170,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#861]: https://github.com/xi-editor/druid/pull/861
 [#869]: https://github.com/xi-editor/druid/pull/869
 [#878]: https://github.com/xi-editor/druid/pull/878
+[#889]: https://github.com/xi-editor/druid/pull/899
 
 ## [0.5] - 2020-04-01
 
