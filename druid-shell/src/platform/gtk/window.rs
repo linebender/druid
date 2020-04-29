@@ -28,7 +28,7 @@ use std::time::Instant;
 use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt};
 use gio::ApplicationExt;
 use gtk::prelude::*;
-use gtk::{AccelGroup, ApplicationWindow};
+use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
@@ -105,6 +105,7 @@ enum IdleKind {
 
 pub(crate) struct WindowState {
     window: ApplicationWindow,
+    drawing_area: DrawingArea,
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     current_keyval: RefCell<Option<u32>>,
@@ -180,9 +181,11 @@ impl WindowBuilder {
 
         let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
         window.add(&vbox);
+        let drawing_area = gtk::DrawingArea::new();
 
         let win_state = Arc::new(WindowState {
             window,
+            drawing_area,
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
             current_keyval: RefCell::new(None),
@@ -206,9 +209,7 @@ impl WindowBuilder {
             vbox.pack_start(&menu, false, false, 0);
         }
 
-        let drawing_area = gtk::DrawingArea::new();
-
-        drawing_area.set_events(
+        win_state.drawing_area.set_events(
             EventMask::EXPOSURE_MASK
                 | EventMask::POINTER_MOTION_MASK
                 | EventMask::LEAVE_NOTIFY_MASK
@@ -221,17 +222,19 @@ impl WindowBuilder {
                 | EventMask::SMOOTH_SCROLL_MASK,
         );
 
-        drawing_area.set_can_focus(true);
-        drawing_area.grab_focus();
+        win_state.drawing_area.set_can_focus(true);
+        win_state.drawing_area.grab_focus();
 
-        drawing_area.connect_enter_notify_event(|widget, _| {
-            widget.grab_focus();
+        win_state
+            .drawing_area
+            .connect_enter_notify_event(|widget, _| {
+                widget.grab_focus();
 
-            Inhibit(true)
-        });
+                Inhibit(true)
+            });
 
         if let Some(min_size) = self.min_size {
-            drawing_area.set_size_request(
+            win_state.drawing_area.set_size_request(
                 (min_size.width * dpi_scale) as i32,
                 (min_size.height * dpi_scale) as i32,
             );
@@ -239,7 +242,7 @@ impl WindowBuilder {
 
         let last_size = Cell::new((0, 0));
 
-        drawing_area.connect_draw(clone!(handle => move |widget, context| {
+        win_state.drawing_area.connect_draw(clone!(handle => move |widget, context| {
             if let Some(state) = handle.state.upgrade() {
 
                 let extents = widget.get_allocation();
@@ -282,7 +285,7 @@ impl WindowBuilder {
             Inhibit(false)
         }));
 
-        drawing_area.connect_button_press_event(clone!(handle => move |_widget, button| {
+        win_state.drawing_area.connect_button_press_event(clone!(handle => move |_widget, button| {
             if let Some(state) = handle.state.upgrade() {
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
                     handler.mouse_down(
@@ -301,7 +304,7 @@ impl WindowBuilder {
             Inhibit(true)
         }));
 
-        drawing_area.connect_button_release_event(clone!(handle => move |_widget, button| {
+        win_state.drawing_area.connect_button_release_event(clone!(handle => move |_widget, button| {
             if let Some(state) = handle.state.upgrade() {
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
                     handler.mouse_up(
@@ -320,7 +323,7 @@ impl WindowBuilder {
             Inhibit(true)
         }));
 
-        drawing_area.connect_motion_notify_event(clone!(handle => move |_widget, motion| {
+        win_state.drawing_area.connect_motion_notify_event(clone!(handle => move |_widget, motion| {
             if let Some(state) = handle.state.upgrade() {
 
                 let pos = Point::from(motion.get_position());
@@ -341,7 +344,7 @@ impl WindowBuilder {
             Inhibit(true)
         }));
 
-        drawing_area.connect_leave_notify_event(clone!(handle => move |_widget, crossing| {
+        win_state.drawing_area.connect_leave_notify_event(clone!(handle => move |_widget, crossing| {
             if let Some(state) = handle.state.upgrade() {
 
                 let pos = Point::from(crossing.get_position());
@@ -362,7 +365,7 @@ impl WindowBuilder {
             Inhibit(true)
         }));
 
-        drawing_area.connect_scroll_event(clone!(handle => move |_widget, scroll| {
+        win_state.drawing_area.connect_scroll_event(clone!(handle => move |_widget, scroll| {
             if let Some(state) = handle.state.upgrade() {
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
 
@@ -417,7 +420,7 @@ impl WindowBuilder {
             Inhibit(true)
         }));
 
-        drawing_area.connect_key_press_event(clone!(handle => move |_widget, key| {
+        win_state.drawing_area.connect_key_press_event(clone!(handle => move |_widget, key| {
             if let Some(state) = handle.state.upgrade() {
 
                 let mut current_keyval = state.current_keyval.borrow_mut();
@@ -435,7 +438,7 @@ impl WindowBuilder {
             Inhibit(true)
         }));
 
-        drawing_area.connect_key_release_event(clone!(handle => move |_widget, key| {
+        win_state.drawing_area.connect_key_release_event(clone!(handle => move |_widget, key| {
             if let Some(state) = handle.state.upgrade() {
 
                 *(state.current_keyval.borrow_mut()) = None;
@@ -450,15 +453,18 @@ impl WindowBuilder {
             Inhibit(true)
         }));
 
-        drawing_area.connect_destroy(clone!(handle => move |_widget| {
-            if let Some(state) = handle.state.upgrade() {
-                state.handler.borrow_mut().destroy();
-            }
-        }));
+        win_state
+            .drawing_area
+            .connect_destroy(clone!(handle => move |_widget| {
+                if let Some(state) = handle.state.upgrade() {
+                    state.handler.borrow_mut().destroy();
+                }
+            }));
 
-        vbox.pack_end(&drawing_area, true, true, 0);
-        drawing_area.realize();
-        drawing_area
+        vbox.pack_end(&win_state.drawing_area, true, true, 0);
+        win_state.drawing_area.realize();
+        win_state
+            .drawing_area
             .get_window()
             .expect("realize didn't create window")
             .set_event_compression(false);
@@ -511,7 +517,7 @@ impl WindowHandle {
         }
     }
 
-    /// Request invalidation of one rectangle.
+    /// Request invalidation of one rectangle, which is given relative to the drawing area.
     pub fn invalidate_rect(&self, rect: Rect) {
         let dpi_scale = self.get_dpi() as f64 / 96.0;
         let rect = Rect::from_origin_size(
@@ -521,10 +527,12 @@ impl WindowHandle {
 
         // GTK+ takes rects with integer coordinates, and non-negative width/height.
         let r = rect.abs().expand();
+
         if let Some(state) = self.state.upgrade() {
+            let origin = state.drawing_area.get_allocation();
             state.window.queue_draw_area(
-                r.x0 as i32,
-                r.y0 as i32,
+                r.x0 as i32 + origin.x,
+                r.y0 as i32 + origin.y,
                 r.width() as i32,
                 r.height() as i32,
             );
