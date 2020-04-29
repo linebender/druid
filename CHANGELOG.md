@@ -75,6 +75,8 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Usage of bloom filters got documented. ([#818] by [@xStrom])
 - Book chapters about `Painter` and `Controller` were added. ([#832] by [@cmyr])
 - Added hot glow option to multiwin example. ([#845] by [@xStrom])
+- Added new example for blocking functions. ([#840] by [@mastfissh])
+- Added a changelog containing development since the 0.5 release. ([#889] by [@finnerale])
 
 ### Maintenance
 
@@ -83,13 +85,13 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Added rendering tests. ([#784] by [@fishrockz])
 - CI testing has been revamped. ([#857] by [@xStrom])
 - Associate timers with widget ids. ([#831] by [@sjoshid])
-- Added a changelog containing development since the 0.5 release. ([#889] by [@finnerale])
 
 ### Outside News
 
 - There are two new projects using druid:
     - [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
     - [jack-mixer](https://github.com/derekdreery/jack-mixer) A jack client that provides mixing, levels and a 3-band eq.
+
 
 [#599]: https://github.com/xi-editor/druid/pull/599
 [#611]: https://github.com/xi-editor/druid/pull/611
@@ -118,6 +120,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#833]: https://github.com/xi-editor/druid/pull/833
 [#837]: https://github.com/xi-editor/druid/pull/837
 [#839]: https://github.com/xi-editor/druid/pull/839
+[#840]: https://github.com/xi-editor/druid/pull/840
 [#841]: https://github.com/xi-editor/druid/pull/841
 [#845]: https://github.com/xi-editor/druid/pull/845
 [#847]: https://github.com/xi-editor/druid/pull/847
@@ -150,8 +153,7 @@ Last release without a changelog :(
 [@fishrockz]: https://github.com/fishrockz
 [@thecodewarrior]: https://github.com/thecodewarrior
 [@sjoshid]: https://github.com/sjoshid
+[@mastfissh]: https://github.com/mastfissh
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
 [0.5]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0
-
-
