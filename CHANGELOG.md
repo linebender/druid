@@ -24,11 +24,11 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 ### Added
 
 - `TextBox` can receive `EditAction` commands. ([#814] by [@cmyr])
-- `Split::min_splitter_area(f64)` to add padding around the split bar. ([#738] by [@xStorm])
+- `Split::min_splitter_area(f64)` to add padding around the split bar. ([#738] by [@xStrom])
 - Published `druid::text` module. ([#816] by [@cmyr])
 - Basic X11 backend for druid-shell. ([#599] by [@crsaracco])
 - `InternalEvent::MouseLeave` signalling the cursor leaved the window. ([#821] by [@teddemunnik])
-- `children_changed` now always includes layout and paint request. ([#839] by [@xStorm])
+- `children_changed` now always includes layout and paint request. ([#839] by [@xStrom])
 - Mostly complete Wasm backend for druid-shell. ([#759] by [@elrnv])
 - `UpdateCtx::submit_command`. ([#855] by [@cmyr])
 - `request_paint_rect` for partial invalidation. ([#817] by [@jneem])
@@ -37,12 +37,12 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 
 ### Changed
 
-- Renamed `Split` constructors to `Split::rows` and `columns`. ([#738] by [@xStorm])
-- `Split::splitter_size` no longer includes padding. ([#738] by [@xStorm])
+- Renamed `Split` constructors to `Split::rows` and `columns`. ([#738] by [@xStrom])
+- `Split::splitter_size` no longer includes padding. ([#738] by [@xStrom])
 - Renamed `Event::MouseMoved` to `MouseMove`. ([#825] by [@teddemunnik])
-- `has_focus` no longer returns false positives. ([#819] by [@xStorm])
-- `Event::Internal(InternalEvent)` now bundles all internal events. ([#833] by [@xStorm])
-- `WidgetPod::set_layout_rect` now requires `LayoutCtx`, data and `Env`. ([#841] by [@xStorm])
+- `has_focus` no longer returns false positives. ([#819] by [@xStrom])
+- `Event::Internal(InternalEvent)` now bundles all internal events. ([#833] by [@xStrom])
+- `WidgetPod::set_layout_rect` now requires `LayoutCtx`, data and `Env`. ([#841] by [@xStrom])
 - `request_timer` now uses `Duration` instead of `Instant`. ([#847] by [@finnerale])
 
 ### Deprecated
@@ -60,33 +60,33 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Windows: Respect the minimum window size. ([#727] by [@teddemunnik])
 - Windows: Respect resizability. ([#712] by [@teddemunnik])
 - Windows: Capture mouse for drag actions. ([#695] by [@teddemunnik])
-- Start focus cycling from non-registered-for-focus widgets. ([#819] by [@xStorm])
-- Propagate `Event::FocusChanged` to focus gaining widgets as well. ([#819] by [@xStorm])
+- Start focus cycling from non-registered-for-focus widgets. ([#819] by [@xStrom])
+- Propagate `Event::FocusChanged` to focus gaining widgets as well. ([#819] by [@xStrom])
 - GTK: Prevent crashing on pop-ups. ([#837] by [@finnerale])
-- Keep hot state  consistent with mouse position. ([#841] by [@xStorm])
+- Keep hot state  consistent with mouse position. ([#841] by [@xStrom])
 - Open file menu item works again. ([#851] by [@kindlychung])
 - Supply correct `LifeCycleCtx` to `Event::FocusChanged`. ([#878] by [@cmyr])
-- Windows: Termiate app when all windows have closed. ([#763] by [@xStorm])
+- Windows: Termiate app when all windows have closed. ([#763] by [@xStrom])
 
 ### Visual
 
-- Improved `Split` accuracy. ([#738] by [@xStorm])
+- Improved `Split` accuracy. ([#738] by [@xStrom])
 - Build-in widgets no longer stroke outside their `paint_rect`. ([#861] by [@jneem])
 
 ### Docs
 
 - Reduce the flashing in ext_event and identity examples. ([#782] by [@futurepaul])
 - `Env` got a new example and usage hints. ([#796] by [@finnerale])
-- Usage of bloom filters got documented. ([#818] by [@xStorm])
+- Usage of bloom filters got documented. ([#818] by [@xStrom])
 - Book chapters about `Painter` and `Controller` were added. ([#832] by [@cmyr])
-- Added hot glow option to multiwin example. ([#845] by [@xStorm])
+- Added hot glow option to multiwin example. ([#845] by [@xStrom])
 
 ### Maintenance
 
 - Replace `#[macro_use]` with normal `use`. ([#808] by [@totsteps])
-- Clippy checks are now enabled for all targets. ([#850] by [@xStorm])
+- Clippy checks are now enabled for all targets. ([#850] by [@xStrom])
 - Added rendering tests. ([#784] by [@fishrockz])
-- CI testing has been revamped. ([#857] by [@xStorm])
+- CI testing has been revamped. ([#857] by [@xStrom])
 - Associate timers with widget ids. ([#831] by [@sjoshid])
 - Add a changelog. ([#889] by [@finnerale])
 
@@ -144,7 +144,7 @@ Last release without a changelog :(
 [@finnerale]: https://github.com/finnerale
 [@totsteps]: https://github.com/totsteps
 [@cmyr]: https://github.com/cmyr
-[@xStorm]: https://github.com/xStorm
+[@xStrom]: https://github.com/xStrom
 [@teddemunnik]: https://github.com/teddemunnik
 [@crsaracco]: https://github.com/crsaracco
 [@pyroxymat]: https://github.com/pyroxymat
