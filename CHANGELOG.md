@@ -113,7 +113,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 
 - Added hot glow option to multiwin example. ([#845] by [@xStorm])
 
-### Cleanups
+### Maintenance
 
 - Replace `#[macro_use]` with normal `use`. ([#808] by [@totsteps])
 
@@ -127,7 +127,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 
 ### Outside News
 
-- Two new projects using druid:
+- There are two new projects using druid:
     - [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
     - [jack-mixer](https://github.com/derekdreery/jack-mixer) A jack client that provides mixing, levels and a 3-band eq.
 
