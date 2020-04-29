@@ -18,8 +18,9 @@ use std::{env, fs};
 
 /// Examples known to not work with WASM are skipped. Ideally this list will eventually be empty.
 const EXCEPTIONS: &[&str] = &[
-    "svg",       // usvg doesn't currently build with WASM.
-    "ext_event", // WASM doesn't currently support spawning threads.
+    "svg",               // usvg doesn't currently build with WASM.
+    "ext_event",         // WASM doesn't currently support spawning threads.
+    "blocking_function", // WASM doesn't currently support spawning threads.
 ];
 
 /// Create a platform specific link from `src` to the `dst` directory.
