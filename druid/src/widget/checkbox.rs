@@ -14,22 +14,26 @@
 
 //! A checkbox widget.
 
-use crate::kurbo::{BezPath, Point, RoundedRect, Size};
+use crate::kurbo::{BezPath, Point, Rect, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
+use crate::widget::{Label, LabelText};
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
-    Widget,
+    Widget, WidgetExt, WidgetPod,
 };
 
 /// A checkbox that toggles a `bool`.
-#[derive(Debug, Clone, Default)]
-pub struct Checkbox;
+pub struct Checkbox {
+    child_label: WidgetPod<bool, Box<dyn Widget<bool>>>,
+}
 
 impl Checkbox {
-    /// Create a new `Checkbox`.
-    pub fn new() -> Checkbox {
-        Checkbox::default()
+    /// Create a new `Checkbox` with a label.
+    pub fn new(label: impl Into<LabelText<bool>>) -> Checkbox {
+        Checkbox {
+            child_label: WidgetPod::new(Label::new(label).boxed()),
+        }
     }
 }
 
@@ -67,26 +71,35 @@ impl Widget<bool> for Checkbox {
         ctx.request_paint();
     }
 
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &bool,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &bool, env: &Env) -> Size {
         bc.debug_check("Checkbox");
 
+        let label_size = self.child_label.layout(ctx, &bc, data, env);
+        let padding = 8.0;
+        let label_x_offset = env.get(theme::BASIC_WIDGET_HEIGHT) + padding;
+        let origin = Point::new(label_x_offset, 0.0);
+
+        self.child_label.set_layout_rect(
+            ctx,
+            data,
+            env,
+            Rect::from_origin_size(origin, label_size),
+        );
+
         bc.constrain(Size::new(
-            env.get(theme::BASIC_WIDGET_HEIGHT),
-            env.get(theme::BASIC_WIDGET_HEIGHT),
+            label_x_offset + label_size.width,
+            env.get(theme::BASIC_WIDGET_HEIGHT).max(label_size.height),
         ))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &bool, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let border_width = 1.;
 
-        let rect =
-            RoundedRect::from_origin_size(Point::ORIGIN, Size::new(size, size).to_vec2(), 2.);
+        let rect = Size::new(size, size)
+            .to_rect()
+            .inset(-border_width / 2.)
+            .to_rounded_rect(2.);
 
         //Paint the background
         let background_gradient = LinearGradient::new(
@@ -98,17 +111,18 @@ impl Widget<bool> for Checkbox {
             ),
         );
 
-        paint_ctx.fill(rect, &background_gradient);
+        ctx.fill(rect, &background_gradient);
 
-        let border_color = if paint_ctx.is_hot() {
+        let border_color = if ctx.is_hot() {
             env.get(theme::BORDER_LIGHT)
         } else {
             env.get(theme::BORDER_DARK)
         };
 
-        paint_ctx.stroke(rect, &border_color, 1.);
+        ctx.stroke(rect, &border_color, border_width);
 
         if *data {
+            // Paint the checkmark
             let mut path = BezPath::new();
             path.move_to((4.0, 9.0));
             path.line_to((8.0, 13.0));
@@ -118,7 +132,10 @@ impl Widget<bool> for Checkbox {
             style.set_line_cap(LineCap::Round);
             style.set_line_join(LineJoin::Round);
 
-            paint_ctx.stroke_styled(path, &env.get(theme::LABEL_COLOR), 2., &style);
+            ctx.stroke_styled(path, &env.get(theme::LABEL_COLOR), 2., &style);
         }
+
+        // Paint the text label
+        self.child_label.paint_with_offset(ctx, data, env);
     }
 }

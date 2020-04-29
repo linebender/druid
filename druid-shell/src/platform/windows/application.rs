@@ -14,59 +14,56 @@
 
 //! Windows implementation of features at the application scope.
 
+use std::cell::RefCell;
+use std::collections::HashSet;
 use std::mem;
 use std::ptr;
+use std::rc::Rc;
 
-use winapi::shared::minwindef::HINSTANCE;
+use winapi::shared::minwindef::{FALSE, HINSTANCE};
 use winapi::shared::ntdef::LPCWSTR;
-use winapi::shared::windef::HCURSOR;
+use winapi::shared::windef::{HCURSOR, HWND};
+use winapi::shared::winerror::HRESULT_FROM_WIN32;
+use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellscalingapi::PROCESS_SYSTEM_DPI_AWARE;
 use winapi::um::wingdi::CreateSolidBrush;
 use winapi::um::winuser::{
-    DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PostQuitMessage, RegisterClassW,
-    TranslateAcceleratorW, TranslateMessage, GA_ROOT, IDI_APPLICATION, MSG, WNDCLASSW,
+    DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PostMessageW, PostQuitMessage,
+    RegisterClassW, TranslateAcceleratorW, TranslateMessage, GA_ROOT, IDI_APPLICATION, MSG,
+    WNDCLASSW,
 };
 
 use crate::application::AppHandler;
 
 use super::accels;
 use super::clipboard::Clipboard;
+use super::error::Error;
 use super::util::{self, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
-use super::window::win_proc_dispatch;
+use super::window::{self, DS_REQUEST_DESTROY};
 
-pub struct Application;
+#[derive(Clone)]
+pub(crate) struct Application {
+    state: Rc<RefCell<State>>,
+}
+
+struct State {
+    quitting: bool,
+    windows: HashSet<HWND>,
+}
 
 impl Application {
-    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
-        Application::init();
-        Application
-    }
-
-    pub fn run(&mut self) {
-        unsafe {
-            // Handle windows messages
-            loop {
-                let mut msg = mem::MaybeUninit::uninit();
-                let res = GetMessageW(msg.as_mut_ptr(), ptr::null_mut(), 0, 0);
-                if res <= 0 {
-                    return;
-                }
-                let mut msg: MSG = msg.assume_init();
-                let accels = accels::find_accels(GetAncestor(msg.hwnd, GA_ROOT));
-                let translated = accels.map_or(false, |it| {
-                    TranslateAcceleratorW(msg.hwnd, it.handle(), &mut msg) != 0
-                });
-
-                if !translated {
-                    TranslateMessage(&msg);
-                    DispatchMessageW(&msg);
-                }
-            }
-        }
+    pub fn new() -> Result<Application, Error> {
+        Application::init()?;
+        let state = Rc::new(RefCell::new(State {
+            quitting: false,
+            windows: HashSet::new(),
+        }));
+        Ok(Application { state })
     }
 
     /// Initialize the app. At the moment, this is mostly needed for hi-dpi.
-    fn init() {
+    fn init() -> Result<(), Error> {
+        // TODO: Report back an error instead of panicking
         util::attach_console();
         if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
             // This function is only supported on windows 10
@@ -74,14 +71,13 @@ impl Application {
                 func(PROCESS_SYSTEM_DPI_AWARE); // TODO: per monitor (much harder)
             }
         }
-
         unsafe {
             let class_name = CLASS_NAME.to_wide();
             let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
             let brush = CreateSolidBrush(0xff_ff_ff);
             let wnd = WNDCLASSW {
                 style: 0,
-                lpfnWndProc: Some(win_proc_dispatch),
+                lpfnWndProc: Some(window::win_proc_dispatch),
                 cbClsExtra: 0,
                 cbWndExtra: 0,
                 hInstance: 0 as HINSTANCE,
@@ -96,15 +92,73 @@ impl Application {
                 panic!("Error registering class");
             }
         }
+        Ok(())
     }
 
-    pub fn quit() {
+    pub fn add_window(&self, hwnd: HWND) -> bool {
+        self.state.borrow_mut().windows.insert(hwnd)
+    }
+
+    pub fn remove_window(&self, hwnd: HWND) -> bool {
+        self.state.borrow_mut().windows.remove(&hwnd)
+    }
+
+    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         unsafe {
-            PostQuitMessage(0);
+            // Handle windows messages
+            loop {
+                let mut msg = mem::MaybeUninit::uninit();
+                let res = GetMessageW(msg.as_mut_ptr(), ptr::null_mut(), 0, 0);
+                if res <= 0 {
+                    if res == -1 {
+                        log::error!(
+                            "GetMessageW failed: {}",
+                            Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                        );
+                    }
+                    break;
+                }
+                let mut msg: MSG = msg.assume_init();
+                let accels = accels::find_accels(GetAncestor(msg.hwnd, GA_ROOT));
+                let translated = accels.map_or(false, |it| {
+                    TranslateAcceleratorW(msg.hwnd, it.handle(), &mut msg) != 0
+                });
+                if !translated {
+                    TranslateMessage(&msg);
+                    DispatchMessageW(&msg);
+                }
+            }
         }
     }
 
-    pub fn clipboard() -> Clipboard {
+    pub fn quit(&self) {
+        if let Ok(mut state) = self.state.try_borrow_mut() {
+            if !state.quitting {
+                state.quitting = true;
+                unsafe {
+                    // We want to queue up the destruction of all our windows.
+                    // Failure to do so will lead to resource leaks
+                    // and an eventual error code exit for the process.
+                    for hwnd in &state.windows {
+                        if PostMessageW(*hwnd, DS_REQUEST_DESTROY, 0, 0) == FALSE {
+                            log::warn!(
+                                "PostMessageW DS_REQUEST_DESTROY failed: {}",
+                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                            );
+                        }
+                    }
+                    // PostQuitMessage sets a quit request flag in the OS.
+                    // The actual WM_QUIT message is queued but won't be sent
+                    // until all other important events have been handled.
+                    PostQuitMessage(0);
+                }
+            }
+        } else {
+            log::warn!("Application state already borrowed");
+        }
+    }
+
+    pub fn clipboard(&self) -> Clipboard {
         Clipboard
     }
 

@@ -14,7 +14,7 @@
 
 //! A progress bar widget.
 
-use crate::kurbo::{Point, RoundedRect, Size};
+use crate::kurbo::{Point, Rect, Size};
 use crate::theme;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
@@ -57,21 +57,23 @@ impl Widget<f64> for ProgressBar {
         ))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &f64, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = data.max(0.0).min(1.0);
+        let stroke_width = 2.0;
 
-        let rounded_rect = RoundedRect::from_origin_size(
+        let rounded_rect = Rect::from_origin_size(
             Point::ORIGIN,
             (Size {
-                width: paint_ctx.size().width,
+                width: ctx.size().width,
                 height: env.get(theme::BASIC_WIDGET_HEIGHT),
             })
             .to_vec2(),
-            4.,
-        );
+        )
+        .inset(-stroke_width / 2.0)
+        .to_rounded_rect(4.0);
 
         //Paint the border
-        paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), 2.0);
+        ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), stroke_width);
 
         //Paint the background
         let background_gradient = LinearGradient::new(
@@ -82,24 +84,25 @@ impl Widget<f64> for ProgressBar {
                 env.get(theme::BACKGROUND_DARK),
             ),
         );
-        paint_ctx.fill(rounded_rect, &background_gradient);
+        ctx.fill(rounded_rect, &background_gradient);
 
         //Paint the bar
         let calculated_bar_width = clamped * rounded_rect.width();
-        let rounded_rect = RoundedRect::from_origin_size(
+        let rounded_rect = Rect::from_origin_size(
             Point::ORIGIN,
             (Size {
                 width: calculated_bar_width,
                 height: env.get(theme::BASIC_WIDGET_HEIGHT),
             })
             .to_vec2(),
-            env.get(theme::PROGRESS_BAR_RADIUS),
-        );
+        )
+        .inset(-stroke_width / 2.0)
+        .to_rounded_rect(env.get(theme::PROGRESS_BAR_RADIUS));
         let bar_gradient = LinearGradient::new(
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
             (env.get(theme::PRIMARY_LIGHT), env.get(theme::PRIMARY_DARK)),
         );
-        paint_ctx.fill(rounded_rect, &bar_gradient);
+        ctx.fill(rounded_rect, &bar_gradient);
     }
 }

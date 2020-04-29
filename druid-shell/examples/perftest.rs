@@ -36,7 +36,7 @@ impl WinHandler for PerfTest {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut Piet) -> bool {
+    fn paint(&mut self, piet: &mut Piet, _: Rect) -> bool {
         let (width, height) = self.size;
         let rect = Rect::new(0.0, 0.0, width, height);
         piet.fill(rect, &BG_COLOR);
@@ -62,11 +62,19 @@ impl WinHandler for PerfTest {
         let now = Instant::now();
         let msg = format!("{}ms", (now - self.last_time).whole_milliseconds());
         self.last_time = now;
-        let layout = piet.text().new_text_layout(&font, &msg).build().unwrap();
+        let layout = piet
+            .text()
+            .new_text_layout(&font, &msg, std::f64::INFINITY)
+            .build()
+            .unwrap();
         piet.draw_text(&layout, (10.0, 210.0), &FG_COLOR);
 
         let msg = "Hello DWrite! This is a somewhat longer string of text intended to provoke slightly longer draw times.";
-        let layout = piet.text().new_text_layout(&font, &msg).build().unwrap();
+        let layout = piet
+            .text()
+            .new_text_layout(&font, &msg, std::f64::INFINITY)
+            .build()
+            .unwrap();
         let dy = 15.0;
         let x0 = 210.0;
         let y0 = 10.0;
@@ -99,7 +107,7 @@ impl WinHandler for PerfTest {
     }
 
     fn destroy(&mut self) {
-        Application::quit()
+        Application::global().quit()
     }
 
     fn as_any(&mut self) -> &mut dyn Any {
@@ -108,8 +116,8 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
-    let mut app = Application::new(None);
-    let mut builder = WindowBuilder::new();
+    let app = Application::new().unwrap();
+    let mut builder = WindowBuilder::new(app.clone());
     let perf_test = PerfTest {
         size: Default::default(),
         handle: Default::default(),
@@ -121,5 +129,6 @@ fn main() {
 
     let window = builder.build().unwrap();
     window.show();
-    app.run();
+
+    app.run(None);
 }

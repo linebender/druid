@@ -14,9 +14,10 @@
 
 //! Timer state.
 
-use crate::window::TimerToken;
 use std::collections::BTreeSet;
 use std::time::Instant;
+
+use crate::window::TimerToken;
 
 pub struct TimerSlots {
     // Note: we can remove this when checked_duration_since lands.

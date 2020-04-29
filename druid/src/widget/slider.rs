@@ -14,7 +14,7 @@
 
 //! A slider widget.
 
-use crate::kurbo::{Circle, Point, Rect, RoundedRect, Shape, Size};
+use crate::kurbo::{Circle, Point, Rect, Shape, Size};
 use crate::theme;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
@@ -97,7 +97,7 @@ impl Widget<f64> for Slider {
                     ctx.request_paint();
                 }
             }
-            Event::MouseMoved(mouse) => {
+            Event::MouseMove(mouse) => {
                 if ctx.is_active() {
                     *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                     ctx.request_paint();
@@ -133,18 +133,21 @@ impl Widget<f64> for Slider {
         bc.constrain((width, height))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &f64, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = self.normalize(*data);
-        let rect = Rect::from_origin_size(Point::ORIGIN, paint_ctx.size());
+        let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let track_thickness = 4.;
+        let border_width = 2.;
+        let knob_stroke_width = 2.;
 
         //Paint the background
         let background_width = rect.width() - knob_size;
         let background_origin = Point::new(knob_size / 2., (knob_size - track_thickness) / 2.);
         let background_size = Size::new(background_width, track_thickness);
-        let background_rect =
-            RoundedRect::from_origin_size(background_origin, background_size.to_vec2(), 2.);
+        let background_rect = Rect::from_origin_size(background_origin, background_size)
+            .inset(-border_width / 2.)
+            .to_rounded_rect(2.);
 
         let background_gradient = LinearGradient::new(
             UnitPoint::TOP,
@@ -155,17 +158,17 @@ impl Widget<f64> for Slider {
             ),
         );
 
-        paint_ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), 2.0);
+        ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), border_width);
 
-        paint_ctx.fill(background_rect, &background_gradient);
+        ctx.fill(background_rect, &background_gradient);
 
         //Get ready to paint the knob
-        let is_active = paint_ctx.is_active();
+        let is_active = ctx.is_active();
         let is_hovered = self.knob_hovered;
 
         let knob_position = (rect.width() - knob_size) * clamped + knob_size / 2.;
         self.knob_pos = Point::new(knob_position, knob_size / 2.);
-        let knob_circle = Circle::new(self.knob_pos, knob_size / 2.);
+        let knob_circle = Circle::new(self.knob_pos, (knob_size - knob_stroke_width) / 2.);
 
         let normal_knob_gradient = LinearGradient::new(
             UnitPoint::TOP,
@@ -197,9 +200,9 @@ impl Widget<f64> for Slider {
             env.get(theme::FOREGROUND_DARK)
         };
 
-        paint_ctx.stroke(knob_circle, &border_color, 2.);
+        ctx.stroke(knob_circle, &border_color, knob_stroke_width);
 
         //Actually paint the knob
-        paint_ctx.fill(knob_circle, &knob_gradient);
+        ctx.fill(knob_circle, &knob_gradient);
     }
 }

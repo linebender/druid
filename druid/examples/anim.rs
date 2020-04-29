@@ -17,10 +17,8 @@
 use std::f64::consts::PI;
 
 use druid::kurbo::{Circle, Line};
-use druid::{
-    AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    LocalizedString, PaintCtx, Point, RenderContext, Size, UpdateCtx, Vec2, Widget, WindowDesc,
-};
+use druid::widget::prelude::*;
+use druid::{AppLauncher, Color, LocalizedString, Point, Vec2, WindowDesc};
 
 struct AnimWidget {
     t: f64,
@@ -28,12 +26,9 @@ struct AnimWidget {
 
 impl Widget<u32> for AnimWidget {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut u32, _env: &Env) {
-        match event {
-            Event::MouseDown(_) => {
-                self.t = 0.0;
-                ctx.request_anim_frame();
-            }
-            _ => (),
+        if let Event::MouseDown(_) = event {
+            self.t = 0.0;
+            ctx.request_anim_frame();
         }
     }
 
@@ -58,19 +53,19 @@ impl Widget<u32> for AnimWidget {
         bc.constrain((100.0, 100.0))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
         let t = self.t;
         let center = Point::new(50.0, 50.0);
-        paint_ctx.paint_with_z_index(1, move |ctx| {
+        ctx.paint_with_z_index(1, move |ctx| {
             let ambit = center + 45.0 * Vec2::from_angle((0.75 + t) * 2.0 * PI);
             ctx.stroke(Line::new(center, ambit), &Color::WHITE, 1.0);
         });
 
-        paint_ctx.fill(Circle::new(center, 50.0), &Color::BLACK);
+        ctx.fill(Circle::new(center, 50.0), &Color::BLACK);
     }
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(|| AnimWidget { t: 0.0 }).title(
         LocalizedString::new("anim-demo-window-title")
             .with_placeholder("You spin me right round..."),

@@ -23,6 +23,7 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::ptr;
 use std::slice;
 
+use lazy_static::lazy_static;
 use winapi::ctypes::c_void;
 use winapi::shared::guiddef::REFIID;
 use winapi::shared::minwindef::{HMODULE, UINT};
@@ -38,8 +39,6 @@ use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winbase::{FILE_TYPE_UNKNOWN, STD_ERROR_HANDLE, STD_OUTPUT_HANDLE};
 use winapi::um::wincon::{AttachConsole, ATTACH_PARENT_PROCESS};
 use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
-
-use log::error;
 
 use super::error::Error;
 
@@ -143,9 +142,10 @@ fn load_optional_functions() -> OptionalFunctions {
             let function_ptr = unsafe { GetProcAddress($lib, cstr.as_ptr()) };
 
             if function_ptr.is_null() {
-                error!(
+                log::error!(
                     "Could not load `{}`. Windows {} or later is needed",
-                    name, $min_windows_version
+                    name,
+                    $min_windows_version
                 );
             } else {
                 let function = unsafe { mem::transmute::<_, $function>(function_ptr) };
@@ -179,14 +179,14 @@ fn load_optional_functions() -> OptionalFunctions {
     let mut CreateDXGIFactory2 = None;
 
     if shcore.is_null() {
-        error!("No shcore.dll");
+        log::error!("No shcore.dll");
     } else {
         load_function!(shcore, SetProcessDpiAwareness, "8.1");
         load_function!(shcore, GetDpiForMonitor, "8.1");
     }
 
     if user32.is_null() {
-        error!("No user32.dll");
+        log::error!("No user32.dll");
     } else {
         load_function!(user32, GetDpiForSystem, "10");
     }

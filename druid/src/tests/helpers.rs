@@ -20,7 +20,6 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use crate::widget::WidgetExt;
 use crate::*;
 
 // taken from the matches crate; useful for the Recorder widget.
@@ -92,7 +91,7 @@ pub enum Record {
     /// A `LifeCycle` event.
     L(LifeCycle),
     Layout(Size),
-    Update(bool),
+    Update(Rect),
     Paint,
     // instead of always returning an Option<Record>, we have a none variant;
     // this would be code smell elsewhere but here I think it makes the tests
@@ -191,7 +190,7 @@ impl<S, T: Data> Widget<T> for ModularWidget<S, T> {
         layout
             .as_mut()
             .map(|f| f(state, ctx, bc, data, env))
-            .unwrap_or(Size::new(100., 100.))
+            .unwrap_or_else(|| Size::new(100., 100.))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
@@ -276,8 +275,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         let should_record = match event {
-            LifeCycle::DebugRequestState { .. } => false,
-            LifeCycle::DebugInspectState(_) => false,
+            LifeCycle::Internal(InternalLifeCycle::DebugRequestState { .. }) => false,
+            LifeCycle::Internal(InternalLifeCycle::DebugInspectState(_)) => false,
             _ => true,
         };
 
@@ -290,8 +289,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.inner.update(ctx, old_data, data, env);
-        let inval = ctx.base_state.needs_inval;
-        self.recording.push(Record::Update(inval));
+        self.recording
+            .push(Record::Update(ctx.base_state.invalid.to_rect()));
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {

@@ -17,10 +17,12 @@
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
-use crate::widget::WidgetExt;
+use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
-use crate::{theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget};
+use crate::{
+    theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget, WidgetExt,
+};
 
 /// A function that modifies the initial environment.
 type EnvSetupFn<T> = dyn FnOnce(&mut Env, &T);
@@ -39,8 +41,9 @@ pub struct AppLauncher<T> {
 /// window properties such as the title.
 pub struct WindowDesc<T> {
     pub(crate) root: Box<dyn Widget<T>>,
-    pub(crate) title: LocalizedString<T>,
+    pub(crate) title: LabelText<T>,
     pub(crate) size: Option<Size>,
+    pub(crate) min_size: Option<Size>,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) resizable: bool,
     pub(crate) show_titlebar: bool,
@@ -73,7 +76,7 @@ impl<T: Data> AppLauncher<T> {
 
     /// Set the [`AppDelegate`].
     ///
-    /// [`AppDelegate`]: struct.AppDelegate.html
+    /// [`AppDelegate`]: trait.AppDelegate.html
     pub fn delegate(mut self, delegate: impl AppDelegate<T> + 'static) -> Self {
         self.delegate = Some(Box::new(delegate));
         self
@@ -83,7 +86,10 @@ impl<T: Data> AppLauncher<T> {
     ///
     /// Meant for use during development only.
     pub fn use_simple_logger(self) -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
         simple_logger::init().ok();
+        #[cfg(target_arch = "wasm32")]
+        console_log::init_with_level(log::Level::Trace).ok();
         self
     }
 
@@ -108,27 +114,34 @@ impl<T: Data> AppLauncher<T> {
     /// Returns an error if a window cannot be instantiated. This is usually
     /// a fatal error.
     pub fn launch(mut self, data: T) -> Result<(), PlatformError> {
+        let app = Application::new()?;
+
         let mut env = theme::init();
         if let Some(f) = self.env_setup.take() {
             f(&mut env, &data);
         }
 
-        let mut state = AppState::new(data, env, self.delegate.take(), self.ext_event_host);
-        let handler = AppHandler::new(state.clone());
+        let mut state = AppState::new(
+            app.clone(),
+            data,
+            env,
+            self.delegate.take(),
+            self.ext_event_host,
+        );
 
-        let mut app = Application::new(Some(Box::new(handler)));
         for desc in self.windows {
             let window = desc.build_native(&mut state)?;
             window.show();
         }
 
-        app.run();
+        let handler = AppHandler::new(state);
+        app.run(Some(Box::new(handler)));
         Ok(())
     }
 }
 
 impl<T: Data> WindowDesc<T> {
-    /// Create a new `WindowDesc`, taking a funciton that will generate the root
+    /// Create a new `WindowDesc`, taking a function that will generate the root
     /// [`Widget`] for this window.
     ///
     /// It is possible that a `WindowDesc` can be reused to launch multiple windows.
@@ -143,8 +156,9 @@ impl<T: Data> WindowDesc<T> {
         // this just makes our API slightly cleaner; callers don't need to explicitly box.
         WindowDesc {
             root: root().boxed(),
-            title: LocalizedString::new("app-name"),
+            title: LocalizedString::new("app-name").into(),
             size: None,
+            min_size: None,
             menu: MenuDesc::platform_default(),
             resizable: true,
             show_titlebar: true,
@@ -152,12 +166,14 @@ impl<T: Data> WindowDesc<T> {
         }
     }
 
-    /// Set the title for this window. This is a [`LocalizedString`] that will
-    /// be kept up to date as the application's state changes.
+    /// Set the title for this window. This is a [`LabelText`]; it can be either
+    /// a `String`, a [`LocalizedString`], or a closure that computes a string;
+    /// it will be kept up to date as the application's state changes.
     ///
+    /// [`LabelText`]: widget/enum.LocalizedString.html
     /// [`LocalizedString`]: struct.LocalizedString.html
-    pub fn title(mut self, title: LocalizedString<T>) -> Self {
-        self.title = title;
+    pub fn title(mut self, title: impl Into<LabelText<T>>) -> Self {
+        self.title = title.into();
         self
     }
 
@@ -176,6 +192,16 @@ impl<T: Data> WindowDesc<T> {
     /// ```
     pub fn window_size(mut self, size: impl Into<Size>) -> Self {
         self.size = Some(size.into());
+        self
+    }
+
+    /// Set the minimum window size.
+    ///
+    /// To  set the initial window size, see [`window_size`].
+    ///
+    /// [`window_size`]: struct.WindowDesc.html#method.window_size
+    pub fn with_min_size(mut self, size: impl Into<Size>) -> Self {
+        self.min_size = Some(size.into());
         self
     }
 
@@ -202,7 +228,7 @@ impl<T: Data> WindowDesc<T> {
 
         let handler = DruidHandler::new_shared(state.clone(), self.id);
 
-        let mut builder = WindowBuilder::new();
+        let mut builder = WindowBuilder::new(state.app());
 
         builder.resizable(self.resizable);
         builder.show_titlebar(self.show_titlebar);
@@ -211,8 +237,11 @@ impl<T: Data> WindowDesc<T> {
         if let Some(size) = self.size {
             builder.set_size(size);
         }
+        if let Some(min_size) = self.min_size {
+            builder.set_min_size(min_size);
+        }
 
-        builder.set_title(self.title.localized_str());
+        builder.set_title(self.title.display_text());
         if let Some(menu) = platform_menu {
             builder.set_menu(menu);
         }

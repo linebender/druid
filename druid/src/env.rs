@@ -22,11 +22,8 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use crate::kurbo::{Point, Rect, Size};
-use crate::piet::{Color, LinearGradient};
-
 use crate::localization::L10nManager;
-use crate::Data;
+use crate::{Color, Data, Point, Rect, Size};
 
 /// An environment passed down through all widget traversals.
 ///
@@ -38,6 +35,18 @@ use crate::Data;
 /// example of the latter is setting a value for enabled/disabled status
 /// so that an entire subtree can be disabled ("grayed out") with one
 /// setting.
+///
+/// [`EnvScope`] can be used to override parts of `Env` for its descendants.
+///
+/// # Important
+/// It is the programmer's responsibility to ensure that the environment
+/// is used correctly. See [`Key`] for an example.
+/// - [`Key`]s should be `const`s with unique names
+/// - [`Key`]s must always be set before they are used.
+/// - Values can only be overwritten by values of the same type.
+///
+/// [`EnvScope`]: widget/struct.EnvScope.html
+/// [`Key`]: struct.Key.html
 #[derive(Clone)]
 pub struct Env(Arc<EnvImpl>);
 
@@ -54,6 +63,27 @@ struct EnvImpl {
 /// implements [`ValueType`]. For "expensive" types, this is a reference,
 /// so the type for a string is `Key<&str>`.
 ///
+/// # Examples
+///
+/// ```
+///# use druid::{Key, Color, WindowDesc, AppLauncher, widget::Label};
+/// const IMPORTANT_LABEL_COLOR: Key<Color> = Key::new("my-app.important-label-color");
+///
+/// fn important_label() -> Label<()> {
+///     Label::new("Warning!").with_text_color(IMPORTANT_LABEL_COLOR)
+/// }
+///
+/// fn main() {
+///     let main_window = WindowDesc::new(important_label);
+///
+///     AppLauncher::with_window(main_window)
+///         .configure_env(|env, _state| {
+///             // The `Key` must be set before it is used.
+///             env.set(IMPORTANT_LABEL_COLOR, Color::rgb(1.0, 0.0, 0.0));
+///         });
+/// }
+/// ```
+///
 /// [`ValueType`]: trait.ValueType.html
 /// [`Env`]: struct.Env.html
 pub struct Key<T> {
@@ -66,17 +96,18 @@ pub struct Key<T> {
 // Also consider Box<Any> (though this would also impact debug).
 /// A dynamic type representing all values that can be stored in an environment.
 #[derive(Clone)]
+// ANCHOR: value_type
 pub enum Value {
     Point(Point),
     Size(Size),
     Rect(Rect),
     Color(Color),
-    LinearGradient(Arc<LinearGradient>),
     Float(f64),
     Bool(bool),
     UnsignedInt(u64),
     String(String),
 }
+// ANCHOR_END: value_type
 
 /// Either a concrete `T` or a [`Key<T>`] that can be resolved in the [`Env`].
 ///
@@ -121,7 +152,7 @@ impl Env {
     ///
     /// Set by the `debug_paint_layout()` method on [`WidgetExt`]'.
     ///
-    /// [`WidgetExt`]: widget/trait.WidgetExt.html
+    /// [`WidgetExt`]: trait.WidgetExt.html
     pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("druid.built-in.debug-paint");
 
     /// A key used to tell widgets to print additional debug information.
@@ -144,7 +175,7 @@ impl Env {
     /// }
     /// ```
     ///
-    /// [`WidgetExt::debug_widget`]: widget/trait.WidgetExt.html#method.debug_widget
+    /// [`WidgetExt::debug_widget`]: trait.WidgetExt.html#method.debug_widget
     pub const DEBUG_WIDGET: Key<bool> = Key::new("druid.built-in.debug-widget");
 
     /// Gets a value from the environment, expecting it to be present.
@@ -263,7 +294,6 @@ impl Value {
             (Size(_), Size(_)) => true,
             (Rect(_), Rect(_)) => true,
             (Color(_), Color(_)) => true,
-            (LinearGradient(_), LinearGradient(_)) => true,
             (Float(_), Float(_)) => true,
             (Bool(_), Bool(_)) => true,
             (UnsignedInt(_), UnsignedInt(_)) => true,
@@ -280,7 +310,6 @@ impl Debug for Value {
             Value::Size(s) => write!(f, "Size {:?}", s),
             Value::Rect(r) => write!(f, "Rect {:?}", r),
             Value::Color(c) => write!(f, "Color {:?}", c),
-            Value::LinearGradient(g) => write!(f, "LinearGradient {:?}", g),
             Value::Float(x) => write!(f, "Float {}", x),
             Value::Bool(b) => write!(f, "Bool {}", b),
             Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
@@ -299,7 +328,6 @@ impl Data for Value {
             }
             (Size(s1), Size(s2)) => s1.width.same(&s2.width) && s1.height.same(&s2.height),
             (Color(c1), Color(c2)) => c1.as_rgba_u32() == c2.as_rgba_u32(),
-            (LinearGradient(g1), LinearGradient(g2)) => Arc::ptr_eq(g1, g2),
             (Float(f1), Float(f2)) => f1.same(&f2),
             (Bool(b1), Bool(b2)) => b1 == b2,
             (UnsignedInt(f1), UnsignedInt(f2)) => f1.same(&f2),
@@ -430,34 +458,6 @@ macro_rules! impl_value_type_borrowed {
     };
 }
 
-/// Use this macro for types that would be expensive to clone; they
-/// are stored as an `Arc<>`.
-macro_rules! impl_value_type_arc {
-    ($ty:ty, $var:ident) => {
-        impl<'a> ValueType<'a> for &'a $ty {
-            type Owned = $ty;
-            fn try_from_value(value: &'a Value) -> Result<Self, ValueTypeError> {
-                match value {
-                    Value::$var(f) => Ok(f),
-                    other => Err(ValueTypeError::new(any::type_name::<$ty>(), other.clone())),
-                }
-            }
-        }
-
-        impl Into<Value> for $ty {
-            fn into(self) -> Value {
-                Value::$var(Arc::new(self))
-            }
-        }
-
-        impl Into<Value> for Arc<$ty> {
-            fn into(self) -> Value {
-                Value::$var(self)
-            }
-        }
-    };
-}
-
 impl_value_type_owned!(f64, Float);
 impl_value_type_owned!(bool, Bool);
 impl_value_type_owned!(u64, UnsignedInt);
@@ -466,7 +466,6 @@ impl_value_type_owned!(Rect, Rect);
 impl_value_type_owned!(Point, Point);
 impl_value_type_owned!(Size, Size);
 impl_value_type_borrowed!(str, String, String);
-impl_value_type_arc!(LinearGradient, LinearGradient);
 
 impl<'a, T: ValueType<'a>> KeyOrValue<T> {
     pub fn resolve(&'a self, env: &'a Env) -> T {
@@ -477,14 +476,31 @@ impl<'a, T: ValueType<'a>> KeyOrValue<T> {
     }
 }
 
-impl<T: Into<Value>> From<T> for KeyOrValue<T> {
-    fn from(value: T) -> KeyOrValue<T> {
+impl<'a, V: Into<Value>, T: ValueType<'a, Owned = V>> From<V> for KeyOrValue<T> {
+    fn from(value: V) -> KeyOrValue<T> {
         KeyOrValue::Concrete(value.into())
     }
 }
 
-impl<T: Into<Value>> From<Key<T>> for KeyOrValue<T> {
+impl<'a, T: ValueType<'a>> From<Key<T>> for KeyOrValue<T> {
     fn from(key: Key<T>) -> KeyOrValue<T> {
         KeyOrValue::Key(key)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn string_key_or_value() {
+        const MY_KEY: Key<&str> = Key::new("test.my-string-key");
+        let env = Env::default().adding(MY_KEY, "Owned".to_string());
+        assert_eq!(env.get(MY_KEY), "Owned");
+
+        let key: KeyOrValue<&str> = MY_KEY.into();
+        let value: KeyOrValue<&str> = "Owned".to_string().into();
+
+        assert_eq!(key.resolve(&env), value.resolve(&env));
     }
 }

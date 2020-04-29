@@ -18,8 +18,9 @@ use std::ffi::c_void;
 
 use cocoa::base::{id, nil, BOOL, YES};
 use cocoa::foundation::{NSAutoreleasePool, NSString, NSUInteger};
+use objc::{class, msg_send, sel, sel_impl};
 
-/// Panic if not on the main thread.assert_main_thread()
+/// Panic if not on the main thread.
 ///
 /// Many Cocoa operations are only valid on the main thread, and (I think)
 /// undefined behavior is possible if invoked from other threads. If so,

@@ -29,16 +29,19 @@ use cocoa::appkit::{
 };
 use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSRect, NSSize, NSString};
+use lazy_static::lazy_static;
 use objc::declare::ClassDecl;
 use objc::rc::WeakPtr;
 use objc::runtime::{Class, Object, Sel};
+use objc::{class, msg_send, sel, sel_impl};
 
 use cairo::{Context, QuartzSurface};
 use log::{error, info};
 
-use crate::kurbo::{Point, Size, Vec2};
+use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
+use super::application::Application;
 use super::dialog;
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
@@ -76,6 +79,7 @@ pub(crate) struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     size: Size,
+    min_size: Option<Size>,
     resizable: bool,
     show_titlebar: bool,
 }
@@ -101,12 +105,13 @@ struct ViewState {
 }
 
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
+    pub fn new(_app: Application) -> WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),
             menu: None,
             size: Size::new(500.0, 400.0),
+            min_size: None,
             resizable: true,
             show_titlebar: true,
         }
@@ -120,8 +125,11 @@ impl WindowBuilder {
         self.size = size;
     }
 
+    pub fn set_min_size(&mut self, size: Size) {
+        self.min_size = Some(size);
+    }
+
     pub fn resizable(&mut self, resizable: bool) {
-        // TODO: Use this in `self.build`
         self.resizable = resizable;
     }
 
@@ -141,10 +149,14 @@ impl WindowBuilder {
     pub fn build(self) -> Result<WindowHandle, Error> {
         assert_main_thread();
         unsafe {
-            let style_mask = NSWindowStyleMask::NSTitledWindowMask
+            let mut style_mask = NSWindowStyleMask::NSTitledWindowMask
                 | NSWindowStyleMask::NSClosableWindowMask
-                | NSWindowStyleMask::NSMiniaturizableWindowMask
-                | NSWindowStyleMask::NSResizableWindowMask;
+                | NSWindowStyleMask::NSMiniaturizableWindowMask;
+
+            if self.resizable {
+                style_mask |= NSWindowStyleMask::NSResizableWindowMask;
+            }
+
             let rect = NSRect::new(
                 NSPoint::new(0., 0.),
                 NSSize::new(self.size.width, self.size.height),
@@ -156,6 +168,11 @@ impl WindowBuilder {
                 NSBackingStoreBuffered,
                 NO,
             );
+
+            if let Some(min_size) = self.min_size {
+                let size = NSSize::new(min_size.width, min_size.height);
+                window.setContentMinSize_(size);
+            }
 
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
@@ -487,6 +504,10 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let frame = NSView::frame(this as *mut _);
         let width = frame.size.width as u32;
         let height = frame.size.height as u32;
+        let rect = Rect::from_origin_size(
+            (dirtyRect.origin.x, dirtyRect.origin.y),
+            (dirtyRect.size.width, dirtyRect.size.height),
+        );
         let cairo_surface =
             QuartzSurface::create_for_cg_context(cgcontext, width, height).expect("cairo surface");
         let mut cairo_ctx = Context::new(&cairo_surface);
@@ -495,7 +516,7 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let mut piet_ctx = Piet::new(&mut cairo_ctx);
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let anim = (*view_state).handler.paint(&mut piet_ctx);
+        let anim = (*view_state).handler.paint(&mut piet_ctx, rect);
         if let Err(e) = piet_ctx.finish() {
             error!("{}", e)
         }
@@ -623,6 +644,18 @@ impl WindowHandle {
         }
     }
 
+    /// Request invalidation of one rectangle.
+    pub fn invalidate_rect(&self, rect: Rect) {
+        let rect = NSRect::new(
+            NSPoint::new(rect.x0, rect.y0),
+            NSSize::new(rect.width(), rect.height()),
+        );
+        unsafe {
+            // We could share impl with redraw, but we'd need to deal with nil.
+            let () = msg_send![*self.nsview.load(), setNeedsDisplayInRect: rect];
+        }
+    }
+
     pub fn set_cursor(&mut self, cursor: &Cursor) {
         unsafe {
             let nscursor = class!(NSCursor);
@@ -679,8 +712,20 @@ impl WindowHandle {
     // TODO: Implement this
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
 
-    // TODO: Implement this
-    pub fn resizable(&self, _resizable: bool) {}
+    pub fn resizable(&self, resizable: bool) {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let mut style_mask: NSWindowStyleMask = window.styleMask();
+
+            if resizable {
+                style_mask |= NSWindowStyleMask::NSResizableWindowMask;
+            } else {
+                style_mask &= !NSWindowStyleMask::NSResizableWindowMask;
+            }
+
+            window.setStyleMask_(style_mask);
+        }
+    }
 
     pub fn set_menu(&self, menu: Menu) {
         unsafe {

@@ -15,13 +15,10 @@
 //! An SVG widget.
 
 use std::error::Error;
-use std::marker::PhantomData;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use log::error;
-
-use usvg;
 
 use crate::{
     kurbo::BezPath, widget::common::FillStrat, Affine, BoxConstraints, Color, Data, Env, Event,
@@ -30,20 +27,18 @@ use crate::{
 };
 
 /// A widget that renders a SVG
-pub struct Svg<T> {
+pub struct Svg {
     svg_data: SvgData,
-    phantom: PhantomData<T>,
     fill: FillStrat,
 }
 
-impl<T: Data> Svg<T> {
+impl Svg {
     /// Create an SVG-drawing widget from SvgData.
     ///
     /// The SVG will scale to fit its box constraints.
     pub fn new(svg_data: SvgData) -> Self {
         Svg {
             svg_data,
-            phantom: Default::default(),
             fill: FillStrat::default(),
         }
     }
@@ -72,12 +67,12 @@ impl<T: Data> Svg<T> {
     }
 
     /// Modify the widget's `FillStrat`.
-    pub fn set_fill(&mut self, newfil: FillStrat) {
+    pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
     }
 }
 
-impl<T: Data> Widget<T> for Svg<T> {
+impl<T: Data> Widget<T> for Svg {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
@@ -99,15 +94,15 @@ impl<T: Data> Widget<T> for Svg<T> {
             bc.constrain(self.get_size())
         }
     }
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &T, _env: &Env) {
-        let offset_matrix = self.fill.affine_to_fill(paint_ctx.size(), self.get_size());
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
+        let offset_matrix = self.fill.affine_to_fill(ctx.size(), self.get_size());
 
-        let clip_rect = Rect::ZERO.with_size(paint_ctx.size());
+        let clip_rect = Rect::ZERO.with_size(ctx.size());
 
         // The SvgData's to_piet function dose not clip to the svg's size
         // CairoRenderContext is very like druids but with some extra goodies like clip
-        paint_ctx.clip(clip_rect);
-        self.svg_data.to_piet(offset_matrix, paint_ctx);
+        ctx.clip(clip_rect);
+        self.svg_data.to_piet(offset_matrix, ctx);
     }
 }
 
@@ -139,7 +134,7 @@ impl SvgData {
     }
 
     /// Convert SvgData into Piet draw instructions
-    pub fn to_piet(&self, offset_matrix: Affine, paint_ctx: &mut PaintCtx) {
+    pub fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx) {
         let root = self.tree.root();
         for n in root.children() {
             match *n.borrow() {
@@ -182,7 +177,7 @@ impl SvgData {
                     match &p.fill {
                         Some(fill) => {
                             let brush = color_from_usvg(&fill.paint, fill.opacity);
-                            paint_ctx.fill(path.clone(), &brush);
+                            ctx.fill(path.clone(), &brush);
                         }
                         None => {}
                     }
@@ -190,7 +185,7 @@ impl SvgData {
                     match &p.stroke {
                         Some(stroke) => {
                             let brush = color_from_usvg(&stroke.paint, stroke.opacity);
-                            paint_ctx.stroke(path.clone(), &brush, stroke.width.value());
+                            ctx.stroke(path.clone(), &brush, stroke.width.value());
                         }
                         None => {}
                     }
@@ -239,5 +234,123 @@ fn color_from_usvg(paint: &usvg::Paint, opacity: usvg::Opacity) -> Color {
             error!("We don't support Paint::Link yet, so here's some pink.");
             Color::rgb8(255, 192, 203)
         }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn translate() {
+        use crate::tests::harness::Harness;
+
+        let svg_data = SvgData::from_str(
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2'>
+        <g>
+            <g>
+                <rect width='1' height='1'/>
+            </g>
+        </g>
+        <g transform=\"translate(1, 1)\">
+            <g>
+                <rect width='1' height='1'/>
+            </g>
+        </g>
+    </svg>",
+        )
+        .unwrap();
+
+        let svg_widget = Svg::new(svg_data);
+
+        Harness::create_with_render(
+            true,
+            svg_widget,
+            Size::new(400., 600.),
+            |harness| {
+                harness.send_initial_events();
+                harness.just_layout();
+                harness.paint();
+            },
+            |target| {
+                let raw_pixels = target.into_raw();
+                assert_eq!(raw_pixels.len(), 400 * 600 * 4);
+
+                // Being a tall widget with a square image the top and bottom rows will be
+                // the padding color and the middle rows will not have any padding.
+
+                // Check that the middle row 400 pix wide is 200 black then 200 white.
+                let expecting: Vec<u8> = [
+                    vec![41, 41, 41, 255].repeat(200),
+                    vec![0, 0, 0, 255].repeat(200),
+                ]
+                .concat();
+                assert_eq!(raw_pixels[400 * 300 * 4..400 * 301 * 4], expecting[..]);
+
+                // Check that all of the last 100 rows are all the background color.
+                let expecting: Vec<u8> = vec![41, 41, 41, 255].repeat(400 * 100);
+                assert_eq!(
+                    raw_pixels[400 * 600 * 4 - 4 * 400 * 100..400 * 600 * 4],
+                    expecting[..]
+                );
+            },
+        )
+    }
+
+    #[test]
+    fn scale() {
+        use crate::tests::harness::Harness;
+
+        let svg_data = SvgData::from_str(
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2'>
+        <g>
+            <g>
+                <rect width='1' height='1'/>
+            </g>
+        </g>
+        <g transform=\"translate(1, 1)\">
+            <g transform=\"scale(1, 2)\">
+                <rect width='1' height='0.5'/>
+            </g>
+        </g>
+    </svg>",
+        )
+        .unwrap();
+
+        let svg_widget = Svg::new(svg_data);
+
+        Harness::create_with_render(
+            true,
+            svg_widget,
+            Size::new(400., 600.),
+            |harness| {
+                harness.send_initial_events();
+                harness.just_layout();
+                harness.paint();
+            },
+            |target| {
+                let raw_pixels = target.into_raw();
+                assert_eq!(raw_pixels.len(), 400 * 600 * 4);
+
+                // Being a tall widget with a square image the top and bottom rows will be
+                // the padding color and the middle rows will not have any padding.
+
+                // Check that the middle row 400 pix wide is 200 black then 200 white.
+                let expecting: Vec<u8> = [
+                    vec![41, 41, 41, 255].repeat(200),
+                    vec![0, 0, 0, 255].repeat(200),
+                ]
+                .concat();
+                assert_eq!(raw_pixels[400 * 300 * 4..400 * 301 * 4], expecting[..]);
+
+                // Check that all of the last 100 rows are all the background color.
+                let expecting: Vec<u8> = vec![41, 41, 41, 255].repeat(400 * 100);
+                assert_eq!(
+                    raw_pixels[400 * 600 * 4 - 4 * 400 * 100..400 * 600 * 4],
+                    expecting[..]
+                );
+            },
+        )
     }
 }

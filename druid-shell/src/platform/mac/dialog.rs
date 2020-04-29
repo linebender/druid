@@ -20,6 +20,7 @@ use std::ffi::OsString;
 
 use cocoa::base::{id, nil, YES};
 use cocoa::foundation::{NSArray, NSInteger};
+use objc::{class, msg_send, sel, sel_impl};
 
 use super::util::{from_nsstring, make_nsstring};
 use crate::dialog::{FileDialogOptions, FileDialogType};
@@ -40,6 +41,14 @@ pub(crate) fn get_file_dialog_path(
         // set options
         if options.show_hidden {
             let () = msg_send![panel, setShowsHiddenFiles: YES];
+        }
+
+        if options.select_directories {
+            let () = msg_send![panel, setCanChooseDirectories: YES];
+        }
+
+        if options.multi_selection {
+            let () = msg_send![panel, setAllowsMultipleSelection: YES];
         }
 
         // A vector of NSStrings. this must outlive `nsarray_allowed_types`.

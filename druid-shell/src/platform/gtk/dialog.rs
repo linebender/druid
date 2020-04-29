@@ -16,9 +16,9 @@
 
 use std::ffi::OsString;
 
-use crate::dialog::{FileDialogOptions, FileDialogType};
 use gtk::{FileChooserAction, FileChooserExt, NativeDialogExt, ResponseType, Window};
 
+use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::Error;
 
 pub(crate) fn get_file_dialog_path(
@@ -27,9 +27,11 @@ pub(crate) fn get_file_dialog_path(
     options: FileDialogOptions,
 ) -> Result<OsString, Error> {
     // TODO: support message localization
-    let (title, action) = match ty {
-        FileDialogType::Open => ("Open File", FileChooserAction::Open),
-        FileDialogType::Save => ("Save File", FileChooserAction::Save),
+
+    let (title, action) = match (ty, options.select_directories) {
+        (FileDialogType::Open, false) => ("Open File", FileChooserAction::Open),
+        (FileDialogType::Open, true) => ("Open Folder", FileChooserAction::SelectFolder),
+        (FileDialogType::Save, _) => ("Save File", FileChooserAction::Save),
     };
 
     let dialog = gtk::FileChooserNativeBuilder::new()
@@ -40,6 +42,8 @@ pub(crate) fn get_file_dialog_path(
     dialog.set_action(action);
 
     dialog.set_show_hidden(options.show_hidden);
+
+    dialog.set_select_multiple(options.multi_selection);
 
     let result = dialog.run();
 

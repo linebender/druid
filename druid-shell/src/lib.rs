@@ -21,20 +21,8 @@
 #![deny(intra_doc_link_resolution_failure)]
 #![allow(clippy::new_without_default)]
 
+pub use kurbo;
 pub use piet_common as piet;
-pub use piet_common::kurbo;
-
-#[cfg(target_os = "windows")]
-#[macro_use]
-extern crate winapi;
-
-#[cfg(all(target_os = "macos", not(feature = "use_gtk")))]
-#[macro_use]
-extern crate objc;
-
-#[cfg(not(any(feature = "use_gtk", target_os = "linux")))]
-#[macro_use]
-extern crate lazy_static;
 
 mod application;
 mod clipboard;
@@ -47,6 +35,7 @@ mod keycodes;
 mod menu;
 mod mouse;
 mod platform;
+mod util;
 mod window;
 
 pub use application::{AppHandler, Application};

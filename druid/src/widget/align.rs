@@ -94,16 +94,13 @@ impl<T: Data> Widget<T> for Align<T> {
         self.child.update(ctx, data, env);
     }
 
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Align");
 
-        let size = self.child.layout(layout_ctx, &bc.loosen(), data, env);
+        let size = self.child.layout(ctx, &bc.loosen(), data, env);
+
+        log_size_warnings(size);
+
         let mut my_size = size;
         if bc.is_width_bounded() {
             my_size.width = bc.max().width;
@@ -126,14 +123,24 @@ impl<T: Data> Widget<T> for Align<T> {
             .align
             .resolve(Rect::new(0., 0., extra_width, extra_height));
         self.child
-            .set_layout_rect(Rect::from_origin_size(origin, size));
+            .set_layout_rect(ctx, data, env, Rect::from_origin_size(origin, size));
 
         let my_insets = self.child.compute_parent_paint_insets(my_size);
-        layout_ctx.set_paint_insets(my_insets);
+        ctx.set_paint_insets(my_insets);
         my_size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.child.paint_with_offset(paint_ctx, data, env);
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.child.paint_with_offset(ctx, data, env);
+    }
+}
+
+fn log_size_warnings(size: Size) {
+    if size.width.is_infinite() {
+        log::warn!("Align widget's child has an infinite width.");
+    }
+
+    if size.height.is_infinite() {
+        log::warn!("Align widget's child has an infinite height.");
     }
 }

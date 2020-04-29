@@ -137,8 +137,8 @@ pub enum MenuEntry<T> {
 /// In addition, other properties can be set during construction, such as whether
 /// the item is selected (checked), or enabled, or if it has a hotkey.
 ///
-/// [`LocalizedString`]: ../struct.LocalizedString.html
-/// [`Command`]: ../struct.Command.html
+/// [`LocalizedString`]: struct.LocalizedString.html
+/// [`Command`]: struct.Command.html
 #[derive(Debug, Clone)]
 pub struct MenuItem<T> {
     title: LocalizedString<T>,
@@ -541,7 +541,7 @@ pub mod sys {
             pub fn open<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-open"),
-                    commands::OPEN_FILE,
+                    commands::SHOW_OPEN_PANEL,
                 )
                 .hotkey(RawMods::Ctrl, "o")
             }

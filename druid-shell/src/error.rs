@@ -20,8 +20,9 @@ use crate::platform::error as platform;
 
 /// Error codes. At the moment, this is little more than HRESULT, but that
 /// might change.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Error {
+    ApplicationAlreadyExists,
     Other(&'static str),
     Platform(platform::Error),
 }
@@ -29,6 +30,9 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
+            Error::ApplicationAlreadyExists => {
+                write!(f, "An application instance has already been created.")
+            }
             Error::Other(s) => write!(f, "{}", s),
             Error::Platform(p) => fmt::Display::fmt(&p, f),
         }

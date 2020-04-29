@@ -70,7 +70,7 @@ pub use crate::platform::clipboard as platform;
 /// ```no_run
 /// use druid_shell::{Application, Clipboard};
 ///
-/// let mut clipboard = Application::clipboard();
+/// let mut clipboard = Application::global().clipboard();
 /// clipboard.put_string("watch it there pal");
 /// if let Some(contents) = clipboard.get_string() {
 ///     assert_eq!("what it there pal", contents.as_str());
@@ -83,7 +83,7 @@ pub use crate::platform::clipboard as platform;
 ///  ```no_run
 /// use druid_shell::{Application, Clipboard, ClipboardFormat};
 ///
-/// let mut clipboard = Application::clipboard();
+/// let mut clipboard = Application::global().clipboard();
 ///
 /// let custom_type_id = "io.xieditor.path-clipboard-type";
 ///
@@ -104,7 +104,7 @@ pub use crate::platform::clipboard as platform;
 /// ```no_run
 /// use druid_shell::{Application, Clipboard, ClipboardFormat};
 ///
-/// let clipboard = Application::clipboard();
+/// let clipboard = Application::global().clipboard();
 ///
 /// let custom_type_id = "io.xieditor.path-clipboard-type";
 /// let supported_types = &[custom_type_id, ClipboardFormat::SVG, ClipboardFormat::PDF];
@@ -215,7 +215,7 @@ impl From<platform::Clipboard> for Clipboard {
 }
 
 cfg_if::cfg_if! {
-    if #[cfg(all(target_os = "macos", not(feature = "use_gtk")))] {
+    if #[cfg(target_os = "macos")] {
         impl ClipboardFormat {
             pub const PDF: &'static str = "com.adobe.pdf";
             pub const TEXT: &'static str = "public.utf8-plain-text";
@@ -224,7 +224,7 @@ cfg_if::cfg_if! {
     } else {
         impl ClipboardFormat {
             cfg_if::cfg_if! {
-                if #[cfg(any(feature = "use_gtk", target_os = "linux"))] {
+                if #[cfg(target_os = "linux")] {
                     // trial and error; this is the most supported string type for gtk?
                     pub const TEXT: &'static str = "UTF8_STRING";
                 } else {

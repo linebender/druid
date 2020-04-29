@@ -14,15 +14,15 @@
 
 //! A stepper widget.
 
+use std::f64::EPSILON;
+use std::time::Duration;
+
+use crate::kurbo::{BezPath, Rect};
+use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
     TimerToken, UpdateCtx, Widget,
 };
-use std::f64::EPSILON;
-use std::time::{Duration, Instant};
-
-use crate::kurbo::{BezPath, Rect, RoundedRect};
-use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 
 use crate::theme;
 use crate::Point;
@@ -57,48 +57,57 @@ impl Stepper {
         }
     }
 
-    /// Set the stepper's maximum value.
-    pub fn max(mut self, max: f64) -> Self {
+    /// Set the range covered by this slider.
+    ///
+    /// The default range is `std::f64::MIN..std::f64::MAX`.
+    pub fn with_range(mut self, min: f64, max: f64) -> Self {
+        self.min = min;
         self.max = max;
         self
     }
 
-    /// Set the stepper's minimum value.
-    pub fn min(mut self, min: f64) -> Self {
-        self.min = min;
-        self
-    }
-
     /// Set the steppers amount by which the value increases or decreases.
-    pub fn step(mut self, step: f64) -> Self {
+    ///
+    /// The default step is `1.0`.
+    pub fn with_step(mut self, step: f64) -> Self {
         self.step = step;
         self
     }
 
     /// Set whether the stepper should wrap around the minimum/maximum values.
-    pub fn wrap(mut self, wrap: bool) -> Self {
+    ///
+    /// When wraparound is enabled incrementing above max behaves like this:
+    /// - if the previous value is < max it becomes max
+    /// - if the previous value is = max it becomes min
+    /// Same logic applies for decrementing
+    ///
+    /// The default is `false`.
+    pub fn with_wraparound(mut self, wrap: bool) -> Self {
         self.wrap = wrap;
         self
     }
 
-    fn change_value(&mut self, _ctx: &mut EventCtx, data: &mut f64, _env: &Env) {
-        // increase/decrease value depending on which button is currently active
-        let delta = if self.increase_active {
-            self.step
-        } else if self.decrease_active {
-            -1. * self.step
-        } else {
-            0.0
-        };
+    fn increment(&mut self, data: &mut f64) {
+        let next = *data + self.step;
+        let was_greater = *data + EPSILON >= self.max;
+        let is_greater = next + EPSILON > self.max;
+        *data = match (self.wrap, was_greater, is_greater) {
+            (true, true, true) => self.min,
+            (true, false, true) => self.max,
+            (false, _, true) => self.max,
+            _ => next,
+        }
+    }
 
-        *data = (*data + delta).max(self.min).min(self.max);
-
-        if self.wrap {
-            if (*data - self.min).abs() < EPSILON {
-                *data = self.max
-            } else {
-                *data = self.min
-            }
+    fn decrement(&mut self, data: &mut f64) {
+        let next = *data - self.step;
+        let was_less = *data - EPSILON <= self.min;
+        let is_less = next - EPSILON < self.min;
+        *data = match (self.wrap, was_less, is_less) {
+            (true, true, true) => self.max,
+            (true, false, true) => self.min,
+            (false, _, true) => self.min,
+            _ => next,
         }
     }
 }
@@ -110,16 +119,20 @@ impl Default for Stepper {
 }
 
 impl Widget<f64> for Stepper {
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _data: &f64, env: &Env) {
-        let rounded_rect =
-            RoundedRect::from_origin_size(Point::ORIGIN, paint_ctx.size().to_vec2(), 4.);
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &f64, env: &Env) {
+        let stroke_width = 2.0;
+        let rounded_rect = ctx
+            .size()
+            .to_rect()
+            .inset(-stroke_width / 2.0)
+            .to_rounded_rect(4.0);
 
-        let height = paint_ctx.size().height;
+        let height = ctx.size().height;
         let width = env.get(theme::BASIC_WIDGET_HEIGHT);
         let button_size = Size::new(width, height / 2.);
 
-        paint_ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), 2.0);
-        paint_ctx.clip(rounded_rect);
+        ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), stroke_width);
+        ctx.clip(rounded_rect);
 
         // draw buttons for increase/decrease
         let increase_button_origin = Point::ORIGIN;
@@ -143,15 +156,15 @@ impl Widget<f64> for Stepper {
 
         // draw buttons that are currently triggered as active
         if self.increase_active {
-            paint_ctx.fill(increase_button_rect, &active_gradient);
+            ctx.fill(increase_button_rect, &active_gradient);
         } else {
-            paint_ctx.fill(increase_button_rect, &inactive_gradient);
+            ctx.fill(increase_button_rect, &inactive_gradient);
         };
 
         if self.decrease_active {
-            paint_ctx.fill(decrease_button_rect, &active_gradient);
+            ctx.fill(decrease_button_rect, &active_gradient);
         } else {
-            paint_ctx.fill(decrease_button_rect, &inactive_gradient);
+            ctx.fill(decrease_button_rect, &inactive_gradient);
         };
 
         // draw up and down triangles
@@ -166,7 +179,7 @@ impl Widget<f64> for Stepper {
         arrows.line_to(Point::new(width / 2., height - 4.));
         arrows.close_path();
 
-        paint_ctx.fill(arrows, &env.get(theme::LABEL_COLOR));
+        ctx.fill(arrows, &env.get(theme::LABEL_COLOR));
     }
 
     fn layout(
@@ -191,14 +204,13 @@ impl Widget<f64> for Stepper {
 
                 if mouse.pos.y > height / 2. {
                     self.decrease_active = true;
+                    self.decrement(data);
                 } else {
                     self.increase_active = true;
+                    self.increment(data);
                 }
 
-                self.change_value(ctx, data, env);
-
-                let delay = Instant::now() + STEPPER_REPEAT_DELAY;
-                self.timer_id = ctx.request_timer(delay);
+                self.timer_id = ctx.request_timer(STEPPER_REPEAT_DELAY);
 
                 ctx.request_paint();
             }
@@ -212,9 +224,13 @@ impl Widget<f64> for Stepper {
                 ctx.request_paint();
             }
             Event::Timer(id) if *id == self.timer_id => {
-                self.change_value(ctx, data, env);
-                let delay = Instant::now() + STEPPER_REPEAT;
-                self.timer_id = ctx.request_timer(delay);
+                if self.increase_active {
+                    self.increment(data);
+                }
+                if self.decrease_active {
+                    self.decrement(data);
+                }
+                self.timer_id = ctx.request_timer(STEPPER_REPEAT);
             }
             _ => (),
         }

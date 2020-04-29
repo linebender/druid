@@ -69,7 +69,6 @@ impl<T: Data> Widget<T> for Either<T> {
         if current != self.current {
             self.current = current;
             ctx.request_layout();
-            ctx.request_paint();
         }
         if self.current {
             self.true_branch.update(ctx, data, env);
@@ -78,33 +77,35 @@ impl<T: Data> Widget<T> for Either<T> {
         }
     }
 
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         if self.current {
-            let size = self.true_branch.layout(layout_ctx, bc, data, env);
-            self.true_branch
-                .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
-            layout_ctx.set_paint_insets(self.true_branch.paint_insets());
+            let size = self.true_branch.layout(ctx, bc, data, env);
+            self.true_branch.set_layout_rect(
+                ctx,
+                data,
+                env,
+                Rect::from_origin_size(Point::ORIGIN, size),
+            );
+            ctx.set_paint_insets(self.true_branch.paint_insets());
             size
         } else {
-            let size = self.false_branch.layout(layout_ctx, bc, data, env);
-            self.false_branch
-                .set_layout_rect(Rect::from_origin_size(Point::ORIGIN, size));
-            layout_ctx.set_paint_insets(self.true_branch.paint_insets());
+            let size = self.false_branch.layout(ctx, bc, data, env);
+            self.false_branch.set_layout_rect(
+                ctx,
+                data,
+                env,
+                Rect::from_origin_size(Point::ORIGIN, size),
+            );
+            ctx.set_paint_insets(self.true_branch.paint_insets());
             size
         }
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if self.current {
-            self.true_branch.paint(paint_ctx, data, env);
+            self.true_branch.paint(ctx, data, env);
         } else {
-            self.false_branch.paint(paint_ctx, data, env);
+            self.false_branch.paint(ctx, data, env);
         }
     }
 }

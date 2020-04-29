@@ -14,20 +14,16 @@
 
 //! The fundamental druid types.
 
-use std::collections::VecDeque;
-
-use log;
+use std::collections::{HashMap, VecDeque};
 
 use crate::bloom::Bloom;
-use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size};
+use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::piet::RenderContext;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Target, UpdateCtx, Widget, WidgetId,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
+    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget,
+    WidgetId, WindowId,
 };
-
-/// Convenience type for dynamic boxed widget.
-pub type BoxedWidget<T> = WidgetPod<T, Box<dyn Widget<T>>>;
 
 /// Our queue type
 pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
@@ -43,7 +39,7 @@ pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
 /// needs to propagate, and to provide the previous data so that a
 /// widget can process a diff between the old value and the new.
 ///
-/// [`update`]: widget/trait.Widget.html#tymethod.update
+/// [`update`]: trait.Widget.html#tymethod.update
 pub struct WidgetPod<T, W> {
     state: BaseState,
     old_data: Option<T>,
@@ -64,22 +60,29 @@ pub struct WidgetPod<T, W> {
 /// that, widgets will generally not interact with it directly,
 /// but it is an important part of the [`WidgetPod`] struct.
 ///
-/// [`paint`]: widget/trait.Widget.html#tymethod.paint
+/// [`paint`]: trait.Widget.html#tymethod.paint
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Clone)]
 pub(crate) struct BaseState {
     pub(crate) id: WidgetId,
-    pub(crate) layout_rect: Rect,
+    /// The frame of this widget in its parents coordinate space.
+    /// This should always be set; it is only an `Option` so that we
+    /// can more easily track (and help debug) if it hasn't been set.
+    layout_rect: Option<Rect>,
     /// The insets applied to the layout rect to generate the paint rect.
     /// In general, these will be zero; the exception is for things like
     /// drop shadows or overflowing text.
-    paint_insets: Insets,
+    pub(crate) paint_insets: Insets,
+
+    // The region that needs to be repainted, relative to the widget's bounds.
+    pub(crate) invalid: Region,
+
+    // The part of this widget that is visible on the screen is offset by this
+    // much. This will be non-zero for widgets that are children of `Scroll`, or
+    // similar, and it is used for propagating invalid regions.
+    pub(crate) viewport_offset: Vec2,
 
     // TODO: consider using bitflags for the booleans.
-
-    // This should become an invalidation rect.
-    pub(crate) needs_inval: bool,
-
     pub(crate) is_hot: bool,
 
     pub(crate) is_active: bool,
@@ -88,6 +91,10 @@ pub(crate) struct BaseState {
 
     /// Any descendant is active.
     has_active: bool,
+
+    /// In the focused path, starting from window and ending at the focused widget.
+    /// Descendants of the focused widget are not in the focused path.
+    pub(crate) has_focus: bool,
 
     /// Any descendant has requested an animation frame.
     pub(crate) request_anim: bool,
@@ -102,6 +109,8 @@ pub(crate) struct BaseState {
     pub(crate) request_focus: Option<FocusChange>,
     pub(crate) children: Bloom<WidgetId>,
     pub(crate) children_changed: bool,
+    /// Associate timers with widgets that requested them.
+    pub(crate) timers: HashMap<TimerToken, WidgetId>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -152,6 +161,9 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     }
 
     /// Query the "hot" state of the widget.
+    ///
+    /// See [`EventCtx::is_hot`](struct.EventCtx.html#method.is_hot) for
+    /// additional information.
     pub fn is_hot(&self) -> bool {
         self.state.is_hot
     }
@@ -175,21 +187,56 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// Intended to be called on child widget in container's `layout`
     /// implementation.
-    pub fn set_layout_rect(&mut self, layout_rect: Rect) {
-        self.state.layout_rect = layout_rect;
+    pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, layout_rect: Rect) {
+        self.state.layout_rect = Some(layout_rect);
+
+        if WidgetPod::set_hot_state(
+            &mut self.inner,
+            ctx.command_queue,
+            &mut self.state,
+            ctx.window_id,
+            layout_rect,
+            ctx.mouse_pos,
+            data,
+            env,
+        ) {
+            ctx.base_state.merge_up(&self.state);
+        }
     }
 
     #[deprecated(since = "0.5.0", note = "use layout_rect() instead")]
     #[doc(hidden)]
     pub fn get_layout_rect(&self) -> Rect {
-        self.state.layout_rect
+        self.layout_rect()
     }
 
     /// The layout rectangle.
     ///
     /// This will be same value as set by `set_layout_rect`.
     pub fn layout_rect(&self) -> Rect {
-        self.state.layout_rect
+        self.state.layout_rect.unwrap_or_default()
+    }
+
+    /// Set the viewport offset.
+    ///
+    /// This is relevant only for children of a scroll view (or similar). It must
+    /// be set by the parent widget whenever it modifies the position of its child
+    /// while painting it and propagating events. As a rule of thumb, you need this
+    /// if and only if you `Affine::translate` the paint context before painting
+    /// your child. For an example, see the implentation of [`Scroll`].
+    ///
+    /// [`Scroll`]: widget/struct.Scroll.html
+    pub fn set_viewport_offset(&mut self, offset: Vec2) {
+        self.state.viewport_offset = offset;
+    }
+
+    /// The viewport offset.
+    ///
+    /// This will be the same value as set by [`set_viewport_offset`].
+    ///
+    /// [`set_viewport_offset`]: #method.viewport_offset
+    pub fn viewport_offset(&self) -> Vec2 {
+        self.state.viewport_offset
     }
 
     /// Get the widget's paint [`Rect`].
@@ -218,7 +265,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`Insets`]: struct.Insets.html
     /// [`set_paint_insets`]: struct.LayoutCtx.html#method.set_paint_insets
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn paint_insets(&self) -> Insets {
         self.state.paint_insets
     }
@@ -231,12 +278,47 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// propogate a child's desired paint rect, if it extends beyond the bounds
     /// of the parent's layout rect.
     ///
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     /// [`Insets`]: struct.Insets.html
     pub fn compute_parent_paint_insets(&self, parent_size: Size) -> Insets {
         let parent_bounds = Rect::ZERO.with_size(parent_size);
         let union_pant_rect = self.paint_rect().union(parent_bounds);
         union_pant_rect - parent_bounds
+    }
+
+    /// Determines if the provided `mouse_pos` is inside `rect`
+    /// and if so updates the hot state and sends `LifeCycle::HotChanged`.
+    ///
+    /// Returns `true` if the hot state changed.
+    ///
+    /// The provided `child_state` should be merged up if this returns `true`.
+    #[allow(clippy::too_many_arguments)]
+    fn set_hot_state(
+        child: &mut W,
+        command_queue: &mut CommandQueue,
+        child_state: &mut BaseState,
+        window_id: WindowId,
+        rect: Rect,
+        mouse_pos: Option<Point>,
+        data: &T,
+        env: &Env,
+    ) -> bool {
+        let had_hot = child_state.is_hot;
+        child_state.is_hot = match mouse_pos {
+            Some(pos) => rect.winding(pos) != 0,
+            None => false,
+        };
+        if had_hot != child_state.is_hot {
+            let hot_changed_event = LifeCycle::HotChanged(child_state.is_hot);
+            let mut child_ctx = LifeCycleCtx {
+                command_queue,
+                base_state: child_state,
+                window_id,
+            };
+            child.lifecycle(&mut child_ctx, &hot_changed_event, data, env);
+            return true;
+        }
+        false
     }
 }
 
@@ -249,29 +331,30 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Note that this method does not apply the offset of the layout rect.
     /// If that is desired, use [`paint_with_offset`] instead.
     ///
-    /// [`layout`]: widget/trait.Widget.html#tymethod.layout
-    /// [`paint`]: widget/trait.Widget.html#tymethod.paint
+    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`paint`]: trait.Widget.html#tymethod.paint
     /// [`paint_with_offset`]: #method.paint_with_offset
-    pub fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let mut ctx = PaintCtx {
-            render_ctx: paint_ctx.render_ctx,
-            window_id: paint_ctx.window_id,
+    pub fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        let mut inner_ctx = PaintCtx {
+            render_ctx: ctx.render_ctx,
+            window_id: ctx.window_id,
             z_ops: Vec::new(),
-            region: paint_ctx.region.clone(),
+            region: ctx.region.clone(),
             base_state: &self.state,
-            focus_widget: paint_ctx.focus_widget,
+            focus_widget: ctx.focus_widget,
         };
-        self.inner.paint(&mut ctx, data, &env);
-        paint_ctx.z_ops.append(&mut ctx.z_ops);
+        self.inner.paint(&mut inner_ctx, data, env);
+        ctx.z_ops.append(&mut inner_ctx.z_ops);
 
         if env.get(Env::DEBUG_PAINT) {
-            let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
+            const BORDER_WIDTH: f64 = 1.0;
+            let rect = inner_ctx.size().to_rect().inset(BORDER_WIDTH / -2.0);
             let id = self.id().to_raw();
             let color = env.get_debug_color(id);
-            ctx.stroke(rect, &color, 1.0);
+            inner_ctx.stroke(rect, &color, BORDER_WIDTH);
         }
 
-        self.state.needs_inval = false;
+        self.state.invalid = Region::EMPTY;
     }
 
     /// Paint the widget, translating it by the origin of its layout rectangle.
@@ -279,43 +362,34 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// This will recursively paint widgets, stopping if a widget's layout
     /// rect is outside of the currently visible region.
     // Discussion: should this be `paint` and the other `paint_raw`?
-    pub fn paint_with_offset(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.paint_with_offset_impl(paint_ctx, data, env, false)
+    pub fn paint_with_offset(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.paint_with_offset_impl(ctx, data, env, false)
     }
 
     /// Paint the widget, even if its layout rect is outside of the currently
     /// visible region.
-    pub fn paint_with_offset_always(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.paint_with_offset_impl(paint_ctx, data, env, true)
+    pub fn paint_with_offset_always(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.paint_with_offset_impl(ctx, data, env, true)
     }
 
     /// Shared implementation that can skip drawing non-visible content.
     fn paint_with_offset_impl(
         &mut self,
-        paint_ctx: &mut PaintCtx,
+        ctx: &mut PaintCtx,
         data: &T,
         env: &Env,
         paint_if_not_visible: bool,
     ) {
-        if !paint_if_not_visible && !paint_ctx.region().intersects(self.state.paint_rect()) {
+        if !paint_if_not_visible && !ctx.region().intersects(self.state.paint_rect()) {
             return;
         }
 
-        if let Err(e) = paint_ctx.save() {
-            log::error!("saving render context failed: {:?}", e);
-            return;
-        }
-
-        let layout_origin = self.state.layout_rect.origin().to_vec2();
-        paint_ctx.transform(Affine::translate(layout_origin));
-
-        let visible = paint_ctx.region().to_rect() - layout_origin;
-
-        paint_ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, &env));
-
-        if let Err(e) = paint_ctx.restore() {
-            log::error!("restoring render context failed: {:?}", e);
-        }
+        ctx.with_save(|ctx| {
+            let layout_origin = self.layout_rect().origin().to_vec2();
+            ctx.transform(Affine::translate(layout_origin));
+            let visible = ctx.region().to_rect().intersect(self.state.paint_rect()) - layout_origin;
+            ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, env));
+        });
     }
 
     /// Compute layout of a widget.
@@ -323,18 +397,39 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Generally called by container widgets as part of their [`layout`]
     /// method.
     ///
-    /// [`layout`]: trait.Widget.html#method.layout
+    /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn layout(
         &mut self,
-        layout_ctx: &mut LayoutCtx,
+        ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         data: &T,
         env: &Env,
     ) -> Size {
-        layout_ctx.paint_insets = Insets::ZERO;
-        let size = self.inner.layout(layout_ctx, bc, data, &env);
-        self.state.paint_insets = layout_ctx.paint_insets;
         self.state.needs_layout = false;
+
+        let child_mouse_pos = match ctx.mouse_pos {
+            Some(pos) => Some(pos - self.layout_rect().origin().to_vec2()),
+            None => None,
+        };
+        let mut child_ctx = LayoutCtx {
+            command_queue: ctx.command_queue,
+            base_state: &mut self.state,
+            window_id: ctx.window_id,
+            text_factory: ctx.text_factory,
+            mouse_pos: child_mouse_pos,
+        };
+        let size = self.inner.layout(&mut child_ctx, bc, data, env);
+
+        ctx.base_state.merge_up(&child_ctx.base_state);
+
+        if size.width.is_infinite() {
+            let name = self.widget().type_name();
+            log::warn!("Widget `{}` has an infinite width.", name);
+        }
+        if size.height.is_infinite() {
+            let name = self.widget().type_name();
+            log::warn!("Widget `{}` has an infinite height.", name);
+        }
         size
     }
 
@@ -345,13 +440,25 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// flow logic resides, particularly whether to continue propagating
     /// the event.
     ///
-    /// [`event`]: trait.Widget.html#method.event
+    /// [`event`]: trait.Widget.html#tymethod.event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.old_data.is_none() {
             log::error!(
                 "widget {:?} is receiving an event without having first \
                  received WidgetAdded.",
                 ctx.widget_id()
+            );
+        }
+
+        // log if we seem not to be laid out when we should be
+        if !matches!(event, Event::WindowConnected | Event::WindowSize(_))
+            && self.state.layout_rect.is_none()
+        {
+            log::warn!(
+                "Widget '{}' received an event ({:?}) without having been laid out. \
+                This likely indicates a missed call to set_layout_rect.",
+                self.inner.type_name(),
+                event,
             );
         }
 
@@ -366,53 +473,114 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut child_ctx = EventCtx {
             cursor: ctx.cursor,
             command_queue: ctx.command_queue,
-            window: &ctx.window,
+            window: ctx.window,
             window_id: ctx.window_id,
             base_state: &mut self.state,
-            had_active,
             is_handled: false,
             is_root: false,
             focus_widget: ctx.focus_widget,
         };
-        let rect = child_ctx.base_state.layout_rect;
+
+        let rect = child_ctx.base_state.layout_rect.unwrap_or_default();
+
         // Note: could also represent this as `Option<Event>`.
         let mut recurse = true;
-        let mut hot_changed = None;
         let child_event = match event {
+            Event::Internal(internal) => match internal {
+                InternalEvent::MouseLeave => {
+                    let hot_changed = WidgetPod::set_hot_state(
+                        &mut self.inner,
+                        child_ctx.command_queue,
+                        child_ctx.base_state,
+                        child_ctx.window_id,
+                        rect,
+                        None,
+                        data,
+                        env,
+                    );
+                    recurse = had_active || hot_changed;
+                    Event::Internal(InternalEvent::MouseLeave)
+                }
+                InternalEvent::TargetedCommand(target, cmd) => {
+                    match target {
+                        Target::Window(_) => Event::Command(cmd.clone()),
+                        Target::Widget(id) if *id == child_ctx.widget_id() => {
+                            Event::Command(cmd.clone())
+                        }
+                        Target::Widget(id) => {
+                            // Recurse when the target widget could be our descendant.
+                            // The bloom filter we're checking can return false positives.
+                            recurse = child_ctx.base_state.children.may_contain(id);
+                            Event::Internal(InternalEvent::TargetedCommand(*target, cmd.clone()))
+                        }
+                        Target::Global => {
+                            panic!("Target::Global should be converted before WidgetPod")
+                        }
+                    }
+                }
+                InternalEvent::RouteTimer(token, widget_id) => {
+                    let widget_id = *widget_id;
+                    if widget_id != child_ctx.base_state.id {
+                        recurse = child_ctx.base_state.children.may_contain(&widget_id);
+                        Event::Internal(InternalEvent::RouteTimer(*token, widget_id))
+                    } else {
+                        Event::Timer(*token)
+                    }
+                }
+            },
             Event::WindowConnected => Event::WindowConnected,
-            Event::Size(size) => {
+            Event::WindowSize(size) => {
                 child_ctx.request_layout();
                 recurse = ctx.is_root;
-                Event::Size(*size)
+                Event::WindowSize(*size)
             }
             Event::MouseDown(mouse_event) => {
-                let had_hot = child_ctx.base_state.is_hot;
-                let now_hot = rect.winding(mouse_event.pos) != 0;
-                if (!had_hot) && now_hot {
-                    child_ctx.base_state.is_hot = true;
-                    hot_changed = Some(true);
-                }
-                recurse = had_active || !ctx.had_active && now_hot;
+                WidgetPod::set_hot_state(
+                    &mut self.inner,
+                    child_ctx.command_queue,
+                    child_ctx.base_state,
+                    child_ctx.window_id,
+                    rect,
+                    Some(mouse_event.pos),
+                    data,
+                    env,
+                );
+                recurse = had_active || child_ctx.base_state.is_hot;
                 let mut mouse_event = mouse_event.clone();
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseDown(mouse_event)
             }
             Event::MouseUp(mouse_event) => {
-                recurse = had_active || !ctx.had_active && rect.winding(mouse_event.pos) != 0;
+                WidgetPod::set_hot_state(
+                    &mut self.inner,
+                    child_ctx.command_queue,
+                    child_ctx.base_state,
+                    child_ctx.window_id,
+                    rect,
+                    Some(mouse_event.pos),
+                    data,
+                    env,
+                );
+                recurse = had_active || child_ctx.base_state.is_hot;
                 let mut mouse_event = mouse_event.clone();
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseUp(mouse_event)
             }
-            Event::MouseMoved(mouse_event) => {
-                let had_hot = child_ctx.base_state.is_hot;
-                child_ctx.base_state.is_hot = rect.winding(mouse_event.pos) != 0;
-                if had_hot != child_ctx.base_state.is_hot {
-                    hot_changed = Some(child_ctx.base_state.is_hot);
-                }
-                recurse = had_active || had_hot || child_ctx.base_state.is_hot;
+            Event::MouseMove(mouse_event) => {
+                let hot_changed = WidgetPod::set_hot_state(
+                    &mut self.inner,
+                    child_ctx.command_queue,
+                    child_ctx.base_state,
+                    child_ctx.window_id,
+                    rect,
+                    Some(mouse_event.pos),
+                    data,
+                    env,
+                );
+                recurse = had_active || child_ctx.base_state.is_hot || hot_changed;
                 let mut mouse_event = mouse_event.clone();
                 mouse_event.pos -= rect.origin().to_vec2();
-                Event::MouseMoved(mouse_event)
+                Event::MouseMove(mouse_event)
             }
             Event::KeyDown(e) => {
                 recurse = child_ctx.has_focus();
@@ -434,39 +602,95 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 recurse = had_active || child_ctx.base_state.is_hot;
                 Event::Zoom(*zoom)
             }
-            Event::Timer(id) => {
-                recurse = child_ctx.base_state.request_timer;
-                Event::Timer(*id)
+            Event::Timer(token) => {
+                recurse = false;
+                Event::Timer(*token)
             }
             Event::Command(cmd) => Event::Command(cmd.clone()),
-            Event::TargetedCommand(target, cmd) => match target {
-                Target::Window(_) => Event::Command(cmd.clone()),
-                Target::Widget(id) if *id == child_ctx.widget_id() => Event::Command(cmd.clone()),
-                Target::Widget(id) => {
-                    recurse = child_ctx.base_state.children.contains(id);
-                    Event::TargetedCommand(*target, cmd.clone())
-                }
-                Target::Global => panic!("Target::Global should be converted before WidgetPod"),
-            },
         };
-        if let Some(is_hot) = hot_changed {
-            let hot_changed_event = LifeCycle::HotChanged(is_hot);
-            let mut lc_ctx = child_ctx.make_lifecycle_ctx();
-            self.inner
-                .lifecycle(&mut lc_ctx, &hot_changed_event, data, &env);
-        }
         if recurse {
             child_ctx.base_state.has_active = false;
-            self.inner.event(&mut child_ctx, &child_event, data, &env);
+            self.inner.event(&mut child_ctx, &child_event, data, env);
             child_ctx.base_state.has_active |= child_ctx.base_state.is_active;
         };
 
         ctx.base_state.merge_up(&child_ctx.base_state);
+        // Clear current widget's timers after merging with parent.
+        child_ctx.base_state.timers.clear();
         ctx.is_handled |= child_ctx.is_handled;
     }
 
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        // in the case of an internal routing event, if we are at our target
+        // we may replace the routing event with the actual event
+        let mut substitute_event = None;
+
         let recurse = match event {
+            LifeCycle::Internal(internal) => match internal {
+                InternalLifeCycle::RouteWidgetAdded => {
+                    // if this is called either we were just created, in
+                    // which case we need to change lifecycle event to
+                    // WidgetAdded or in case we were already created
+                    // we just pass this event down
+                    if self.old_data.is_none() {
+                        self.lifecycle(ctx, &LifeCycle::WidgetAdded, data, env);
+                        return;
+                    } else {
+                        if self.state.children_changed {
+                            self.state.children.clear();
+                            self.state.focus_chain.clear();
+                        }
+                        self.state.children_changed
+                    }
+                }
+                InternalLifeCycle::RouteFocusChanged { old, new } => {
+                    self.state.request_focus = None;
+
+                    let this_changed = if *old == Some(self.state.id) {
+                        Some(false)
+                    } else if *new == Some(self.state.id) {
+                        Some(true)
+                    } else {
+                        None
+                    };
+
+                    if let Some(change) = this_changed {
+                        // Only send FocusChanged in case there's actual change
+                        if old != new {
+                            self.state.has_focus = change;
+                            substitute_event = Some(LifeCycle::FocusChanged(change));
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        self.state.has_focus = false;
+                        // Recurse when the target widgets could be our descendants.
+                        // The bloom filter we're checking can return false positives.
+                        match (old, new) {
+                            (Some(old), _) if self.state.children.may_contain(old) => true,
+                            (_, Some(new)) if self.state.children.may_contain(new) => true,
+                            _ => false,
+                        }
+                    }
+                }
+                #[cfg(test)]
+                InternalLifeCycle::DebugRequestState { widget, state_cell } => {
+                    if *widget == self.id() {
+                        state_cell.set(self.state.clone());
+                        false
+                    } else {
+                        // Recurse when the target widget could be our descendant.
+                        // The bloom filter we're checking can return false positives.
+                        self.state.children.may_contain(&widget)
+                    }
+                }
+                #[cfg(test)]
+                InternalLifeCycle::DebugInspectState(f) => {
+                    f.call(&self.state);
+                    true
+                }
+            },
             LifeCycle::AnimFrame(_) => {
                 let r = self.state.request_anim;
                 self.state.request_anim = false;
@@ -480,72 +704,23 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
                 true
             }
-            LifeCycle::RouteWidgetAdded => {
-                // if this is called either we were just created, in
-                // which case we need to change lifecycle event to
-                // WidgetAdded or in case we were already created
-                // we just pass this event down
-                if self.old_data.is_none() {
-                    self.lifecycle(ctx, &LifeCycle::WidgetAdded, data, env);
-                    return;
-                } else {
-                    if self.state.children_changed {
-                        self.state.children.clear();
-                        self.state.focus_chain.clear();
-                    }
-
-                    self.state.children_changed
-                }
-            }
             LifeCycle::HotChanged(_) => false,
-            LifeCycle::RouteFocusChanged { old, new } => {
-                self.state.request_focus = None;
-
-                let this_changed = if *old == Some(self.state.id) {
-                    Some(false)
-                } else if *new == Some(self.state.id) {
-                    Some(true)
-                } else {
-                    None
-                };
-
-                if let Some(change) = this_changed {
-                    let event = LifeCycle::FocusChanged(change);
-                    self.inner.lifecycle(ctx, &event, data, env);
-                    false
-                } else {
-                    old.map(|id| self.state.children.contains(&id))
-                        .or_else(|| new.map(|id| self.state.children.contains(&id)))
-                        .unwrap_or(false)
-                }
-            }
             LifeCycle::FocusChanged(_) => {
-                self.state.request_focus = None;
-                true
-            }
-            #[cfg(test)]
-            LifeCycle::DebugRequestState { widget, state_cell } => {
-                if *widget == self.id() {
-                    state_cell.set(self.state.clone());
-                    false
-                } else {
-                    self.state.children.contains(&widget)
-                }
-            }
-            #[cfg(test)]
-            LifeCycle::DebugInspectState(f) => {
-                f.call(&self.state);
-                true
+                // We are a descendant of a widget that has/had focus.
+                // Descendants don't inherit focus, so don't recurse.
+                false
             }
         };
 
-        let mut child_ctx = LifeCycleCtx {
-            command_queue: ctx.command_queue,
-            base_state: &mut self.state,
-            window_id: ctx.window_id,
-        };
+        // use the substitute event, if one exists
+        let event = substitute_event.as_ref().unwrap_or(event);
 
         if recurse {
+            let mut child_ctx = LifeCycleCtx {
+                command_queue: ctx.command_queue,
+                base_state: &mut self.state,
+                window_id: ctx.window_id,
+            };
             self.inner.lifecycle(&mut child_ctx, event, data, env);
         }
 
@@ -553,7 +728,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         // we need to (re)register children in case of one of the following events
         match event {
-            LifeCycle::WidgetAdded | LifeCycle::RouteWidgetAdded => {
+            LifeCycle::WidgetAdded | LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded) => {
                 self.state.children_changed = false;
                 ctx.base_state.children = ctx.base_state.children.union(self.state.children);
                 ctx.base_state.focus_chain.extend(&self.state.focus_chain);
@@ -568,7 +743,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Generally called by container widgets as part of their [`update`]
     /// method.
     ///
-    /// [`update`]: trait.Widget.html#method.update
+    /// [`update`]: trait.Widget.html#tymethod.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
         match (self.old_data.as_ref(), self.env.as_ref()) {
             (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
@@ -585,6 +760,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             window: ctx.window,
             base_state: &mut self.state,
             window_id: ctx.window_id,
+            command_queue: ctx.command_queue,
         };
 
         self.inner
@@ -601,7 +777,7 @@ impl<T, W: Widget<T> + 'static> WidgetPod<T, W> {
     ///
     /// Convert a `WidgetPod` containing a widget of a specific concrete type
     /// into a dynamically boxed widget.
-    pub fn boxed(self) -> BoxedWidget<T> {
+    pub fn boxed(self) -> WidgetPod<T, Box<dyn Widget<T>>> {
         WidgetPod::new(Box::new(self.inner))
     }
 }
@@ -610,36 +786,53 @@ impl BaseState {
     pub(crate) fn new(id: WidgetId) -> BaseState {
         BaseState {
             id,
-            layout_rect: Rect::ZERO,
+            layout_rect: None,
             paint_insets: Insets::ZERO,
-            needs_inval: false,
+            invalid: Region::EMPTY,
+            viewport_offset: Vec2::ZERO,
             is_hot: false,
             needs_layout: false,
             is_active: false,
             has_active: false,
+            has_focus: false,
             request_anim: false,
             request_timer: false,
             request_focus: None,
             focus_chain: Vec::new(),
             children: Bloom::new(),
             children_changed: false,
+            timers: HashMap::new(),
         }
+    }
+
+    pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {
+        self.timers.insert(timer_token, self.id);
     }
 
     /// Update to incorporate state changes from a child.
     fn merge_up(&mut self, child_state: &BaseState) {
-        self.needs_inval |= child_state.needs_inval;
+        let mut child_region = child_state.invalid.clone();
+        child_region += child_state.layout_rect().origin().to_vec2() - child_state.viewport_offset;
+        let clip = self
+            .layout_rect()
+            .with_origin(Point::ORIGIN)
+            .inset(self.paint_insets);
+        child_region.intersect_with(clip);
+        self.invalid.merge_with(child_region);
+
         self.needs_layout |= child_state.needs_layout;
         self.request_anim |= child_state.request_anim;
         self.request_timer |= child_state.request_timer;
         self.has_active |= child_state.has_active;
+        self.has_focus |= child_state.has_focus;
         self.children_changed |= child_state.children_changed;
         self.request_focus = self.request_focus.or(child_state.request_focus);
+        self.timers.extend(&child_state.timers);
     }
 
     #[inline]
     pub(crate) fn size(&self) -> Size {
-        self.layout_rect.size()
+        self.layout_rect.unwrap_or_default().size()
     }
 
     /// The paint region for this widget.
@@ -648,15 +841,19 @@ impl BaseState {
     ///
     /// [`WidgetPod::paint_rect`]: struct.WidgetPod.html#method.paint_rect
     pub(crate) fn paint_rect(&self) -> Rect {
-        self.layout_rect + self.paint_insets
+        self.layout_rect.unwrap_or_default() + self.paint_insets
+    }
+
+    pub(crate) fn layout_rect(&self) -> Rect {
+        self.layout_rect.unwrap_or_default()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::widget::{Flex, Scroll, Split, TextBox, WidgetExt};
-    use crate::WindowId;
+    use crate::widget::{Flex, Scroll, Split, TextBox};
+    use crate::{WidgetExt, WindowId};
 
     const ID_1: WidgetId = WidgetId::reserved(0);
     const ID_2: WidgetId = WidgetId::reserved(1);
@@ -665,11 +862,11 @@ mod tests {
     #[test]
     fn register_children() {
         fn make_widgets() -> impl Widget<Option<u32>> {
-            Split::vertical(
+            Split::columns(
                 Flex::<Option<u32>>::row()
-                    .with_child(TextBox::new().with_id(ID_1).parse(), 1.0)
-                    .with_child(TextBox::new().with_id(ID_2).parse(), 1.0)
-                    .with_child(TextBox::new().with_id(ID_3).parse(), 1.0),
+                    .with_child(TextBox::new().with_id(ID_1).parse())
+                    .with_child(TextBox::new().with_id(ID_2).parse())
+                    .with_child(TextBox::new().with_id(ID_3).parse()),
                 Scroll::new(TextBox::new().parse()),
             )
         }
@@ -688,9 +885,9 @@ mod tests {
         let env = Env::default();
 
         widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &None, &env);
-        assert!(ctx.base_state.children.contains(&ID_1));
-        assert!(ctx.base_state.children.contains(&ID_2));
-        assert!(ctx.base_state.children.contains(&ID_3));
+        assert!(ctx.base_state.children.may_contain(&ID_1));
+        assert!(ctx.base_state.children.may_contain(&ID_2));
+        assert!(ctx.base_state.children.may_contain(&ID_3));
         assert_eq!(ctx.base_state.children.entry_count(), 7);
     }
 }

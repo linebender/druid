@@ -16,12 +16,8 @@
 
 use druid::kurbo::BezPath;
 use druid::piet::{FontBuilder, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
-
-use druid::{
-    Affine, AppLauncher, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget,
-    WindowDesc,
-};
+use druid::widget::prelude::*;
+use druid::{Affine, AppLauncher, Color, LocalizedString, Point, Rect, WindowDesc};
 
 struct CustomWidget;
 
@@ -58,16 +54,16 @@ impl Widget<String> for CustomWidget {
     // The paint method gets called last, after an event flow.
     // It goes event -> update -> layout -> paint, and each method can influence the next.
     // Basically, anything that changes the appearance of a widget causes a paint.
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &String, _env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &String, _env: &Env) {
         // Let's draw a picture with Piet!
 
         // Clear the whole widget with the color of your choice
-        // (paint_ctx.size() returns the size of the layout rect we're painting in)
-        let size = paint_ctx.size();
+        // (ctx.size() returns the size of the layout rect we're painting in)
+        let size = ctx.size();
         let rect = Rect::from_origin_size(Point::ORIGIN, size);
-        paint_ctx.fill(rect, &Color::WHITE);
+        ctx.fill(rect, &Color::WHITE);
 
-        // Note: paint_ctx also has a `clear` method, but that clears the whole context,
+        // Note: ctx also has a `clear` method, but that clears the whole context,
         // and we only want to clear this widget's area.
 
         // Create an arbitrary bezier path
@@ -77,45 +73,42 @@ impl Widget<String> for CustomWidget {
         // Create a color
         let stroke_color = Color::rgb8(0, 128, 0);
         // Stroke the path with thickness 1.0
-        paint_ctx.stroke(path, &stroke_color, 1.0);
+        ctx.stroke(path, &stroke_color, 1.0);
 
         // Rectangles: the path for practical people
         let rect = Rect::from_origin_size((10., 10.), (100., 100.));
         // Note the Color:rgba8 which includes an alpha channel (7F in this case)
         let fill_color = Color::rgba8(0x00, 0x00, 0x00, 0x7F);
-        paint_ctx.fill(rect, &fill_color);
+        ctx.fill(rect, &fill_color);
 
         // Text is easy, if you ignore all these unwraps. Just pick a font and a size.
-        let font = paint_ctx
+        let font = ctx
             .text()
             .new_font_by_name("Segoe UI", 24.0)
             .build()
             .unwrap();
         // Here's where we actually use the UI state
-        let layout = paint_ctx
+        let layout = ctx
             .text()
-            .new_text_layout(&font, data)
+            .new_text_layout(&font, data, std::f64::INFINITY)
             .build()
             .unwrap();
 
         // Let's rotate our text slightly. First we save our current (default) context:
-        paint_ctx
-            .with_save(|rc| {
-                // Now we can rotate the context (or set a clip path, for instance):
-                rc.transform(Affine::rotate(0.1));
-                rc.draw_text(&layout, (80.0, 40.0), &fill_color);
-                Ok(())
-            })
-            .unwrap();
+        ctx.with_save(|ctx| {
+            // Now we can rotate the context (or set a clip path, for instance):
+            ctx.transform(Affine::rotate(0.1));
+            ctx.draw_text(&layout, (80.0, 40.0), &fill_color);
+        });
         // When we exit with_save, the original context's rotation is restored
 
         // Let's burn some CPU to make a (partially transparent) image buffer
         let image_data = make_image_data(256, 256);
-        let image = paint_ctx
+        let image = ctx
             .make_image(256, 256, &image_data, ImageFormat::RgbaSeparate)
             .unwrap();
         // The image is automatically scaled to fit the rect you pass to draw_image
-        paint_ctx.draw_image(
+        ctx.draw_image(
             &image,
             Rect::from_origin_size(Point::ORIGIN, size),
             InterpolationMode::Bilinear,
@@ -123,7 +116,7 @@ impl Widget<String> for CustomWidget {
     }
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(|| CustomWidget {}).title(
         LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Fancy Colors"),
     );
@@ -138,7 +131,7 @@ fn make_image_data(width: usize, height: usize) -> Vec<u8> {
     for y in 0..height {
         for x in 0..width {
             let ix = (y * width + x) * 4;
-            result[ix + 0] = x as u8;
+            result[ix] = x as u8;
             result[ix + 1] = y as u8;
             result[ix + 2] = !(x as u8);
             result[ix + 3] = 127;

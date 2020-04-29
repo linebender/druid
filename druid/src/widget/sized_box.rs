@@ -69,9 +69,31 @@ impl<T> SizedBox<T> {
     }
 
     /// Expand container to fit the parent.
-    /// It is equivalent to setting width and height to Infinity.
+    ///
+    /// Only call this method if you want your widget to occupy all available
+    /// space. If you only care about expanding in one of width or height, use
+    /// [`expand_width`] or [`expand_height`] instead.
+    ///
+    /// [`expand_height`]: #method.expand_height
+    /// [`expand_width`]: #method.expand_width
     pub fn expand(mut self) -> Self {
         self.width = Some(INFINITY);
+        self.height = Some(INFINITY);
+        self
+    }
+
+    /// Expand the container on the x-axis.
+    ///
+    /// This will force the child to have maximum width.
+    pub fn expand_width(mut self) -> Self {
+        self.width = Some(INFINITY);
+        self
+    }
+
+    /// Expand the container on the y-axis.
+    ///
+    /// This will force the child to have maximum height.
+    pub fn expand_height(mut self) -> Self {
         self.height = Some(INFINITY);
         self
     }
@@ -130,15 +152,25 @@ impl<T: Data> Widget<T> for SizedBox<T> {
         bc.debug_check("SizedBox");
 
         let child_bc = self.child_constraints(bc);
-        match self.inner.as_mut() {
+        let size = match self.inner.as_mut() {
             Some(inner) => inner.layout(ctx, &child_bc, data, env),
             None => bc.constrain((self.width.unwrap_or(0.0), self.height.unwrap_or(0.0))),
+        };
+
+        if size.width.is_infinite() {
+            log::warn!("SizedBox is returning an infinite width.");
         }
+
+        if size.height.is_infinite() {
+            log::warn!("SizedBox is returning an infinite height.");
+        }
+
+        size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
-            inner.paint(paint_ctx, data, env);
+            inner.paint(ctx, data, env);
         }
     }
 

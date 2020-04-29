@@ -319,11 +319,9 @@ impl<T> LocalizedString<T> {
             .unwrap_or(self.key)
     }
 
-    /// Add a named argument and a corresponding [`ArgClosure`]. This closure
+    /// Add a named argument and a corresponding closure. This closure
     /// is a function that will return a value for the given key from the current
     /// environment and data.
-    ///
-    /// [`ArgClosure`]: type.ArgClosure.html
     pub fn with_arg(
         mut self,
         key: &'static str,
@@ -413,18 +411,18 @@ mod tests {
             vec![en_ca.clone(), en_us.clone(), en_gb.clone()]
         );
         assert_eq!(
-            resmgr.resolve_locales(en_za.clone()),
-            vec![en_gb.clone(), en_us.clone(), en_ca.clone()]
+            resmgr.resolve_locales(en_za),
+            vec![en_gb, en_us.clone(), en_ca]
         );
         assert_eq!(
-            resmgr.resolve_locales(fr_ca.clone()),
+            resmgr.resolve_locales(fr_ca),
             vec![fr_fr.clone(), en_us.clone()]
         );
         assert_eq!(
             resmgr.resolve_locales(fr_fr.clone()),
-            vec![fr_fr.clone(), en_us.clone()]
+            vec![fr_fr, en_us.clone()]
         );
         assert_eq!(resmgr.resolve_locales(cn_hk), vec![en_us.clone()]);
-        assert_eq!(resmgr.resolve_locales(pt_pt), vec![en_us.clone()]);
+        assert_eq!(resmgr.resolve_locales(pt_pt), vec![en_us]);
     }
 }

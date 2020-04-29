@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Checkbox, Either, Flex, Label, Slider, WidgetExt};
-use druid::{AppLauncher, Data, Lens, LocalizedString, Widget, WindowDesc};
+use druid::widget::{Checkbox, Either, Flex, Label, Slider};
+use druid::{AppLauncher, Data, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 #[derive(Clone, Default, Data, Lens)]
 struct AppState {
@@ -21,7 +21,7 @@ struct AppState {
     value: f64,
 }
 
-fn main() {
+pub fn main() {
     let main_window = WindowDesc::new(ui_builder).title(
         LocalizedString::new("either-demo-window-title")
             .with_placeholder("Switcheroo")
@@ -38,12 +38,16 @@ fn ui_builder() -> impl Widget<AppState> {
     let label = Label::new("Click to reveal slider");
 
     let mut col = Flex::column();
-    col.add_child(Checkbox::new().lens(AppState::which).padding(5.0), 0.0);
+    col.add_child(
+        Checkbox::new("Toggle slider")
+            .lens(AppState::which)
+            .padding(5.0),
+    );
     let either = Either::new(
         |data, _env| data.which,
         Slider::new().lens(AppState::value).padding(5.0),
         label.padding(5.0),
     );
-    col.add_child(either, 0.0);
+    col.add_child(either);
     col
 }

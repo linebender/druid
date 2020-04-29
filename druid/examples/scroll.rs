@@ -17,14 +17,11 @@
 
 use druid::kurbo::Circle;
 use druid::piet::RadialGradient;
+use druid::widget::prelude::*;
 use druid::widget::{Flex, Padding, Scroll};
-use druid::{
-    AppLauncher, BoxConstraints, Data, Env, Event, EventCtx, Insets, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Size, UpdateCtx, Widget,
-    WindowDesc,
-};
+use druid::{AppLauncher, Data, Insets, LocalizedString, Rect, WindowDesc};
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(build_widget)
         .title(LocalizedString::new("scroll-demo-window-title").with_placeholder("Scroll demo"));
     AppLauncher::with_window(window)
@@ -36,7 +33,7 @@ fn main() {
 fn build_widget() -> impl Widget<u32> {
     let mut col = Flex::column();
     for i in 0..30 {
-        col.add_child(Padding::new(3.0, OverPainter(i)), 0.0);
+        col.add_child(Padding::new(3.0, OverPainter(i)));
     }
     Scroll::new(col)
 }
@@ -58,13 +55,13 @@ impl<T: Data> Widget<T> for OverPainter {
         bc.constrain(Size::new(100., 100.))
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, _: &T, env: &Env) {
-        let rect = Rect::ZERO.with_size(paint_ctx.size());
+    fn paint(&mut self, ctx: &mut PaintCtx, _: &T, env: &Env) {
+        let rect = Rect::ZERO.with_size(ctx.size());
         let color = env.get_debug_color(self.0);
         let radius = (rect + INSETS).size().height / 2.0;
         let circle = Circle::new(rect.center(), radius);
         let grad = RadialGradient::new(1.0, (color.clone(), color.clone().with_alpha(0.0)));
-        paint_ctx.fill(circle, &grad);
-        paint_ctx.stroke(rect, &color, 2.0);
+        ctx.fill(circle, &grad);
+        ctx.stroke(rect, &color, 2.0);
     }
 }

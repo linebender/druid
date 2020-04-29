@@ -13,14 +13,14 @@
 // limitations under the License.
 
 use druid::widget::Slider;
-use druid::widget::{Flex, TextBox, WidgetExt};
-use druid::{AppLauncher, Data, Lens, LocalizedString, Widget, WindowDesc};
+use druid::widget::{CrossAxisAlignment, Flex, Label, TextBox};
+use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
-fn main() {
+pub fn main() {
     let main_window = WindowDesc::new(ui_builder)
         .title(LocalizedString::new("lens-demo-window-title").with_placeholder("Lens Demo"));
     let data = MyComplexState {
-        term: String::new(),
+        term: "hello".into(),
         scale: 0.0,
     };
 
@@ -31,7 +31,7 @@ fn main() {
 
 #[derive(Clone, Debug, Data, Lens)]
 struct MyComplexState {
-    #[druid(lens_name = "term_lens")]
+    #[lens(name = "term_lens")]
     term: String,
     scale: f64,
 }
@@ -45,7 +45,18 @@ fn ui_builder() -> impl Widget<MyComplexState> {
     // via `.lens` we get it to be of type `Widget<MyComplexState>`
     let slider = Slider::new().lens(MyComplexState::scale);
 
+    let label = Label::new(|d: &MyComplexState, _: &Env| format!("{}: {:.2}", d.term, d.scale));
+
     Flex::column()
-        .with_child(searchbar.padding(32.0), 1.0)
-        .with_child(slider.padding(32.0), 1.0)
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .with_child(label)
+        .with_spacer(8.0)
+        .with_child(
+            Flex::row()
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_child(searchbar)
+                .with_spacer(8.0)
+                .with_child(slider),
+        )
+        .center()
 }

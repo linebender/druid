@@ -98,7 +98,9 @@ pub enum Target {
     Widget(WidgetId),
 }
 
-/// [`Command`]s with special meaning, defined by druid.
+/// Commands with special meaning, defined by druid.
+///
+/// See [`Command`] for more info.
 ///
 /// [`Command`]: ../struct.Command.html
 pub mod sys {
@@ -119,6 +121,9 @@ pub mod sys {
     /// The selector for a command to close a window. The command's argument
     /// should be the id of the window to close.
     pub const CLOSE_WINDOW: Selector = Selector::new("druid-builtin.close-window");
+
+    /// Close all windows.
+    pub const CLOSE_ALL_WINDOWS: Selector = Selector::new("druid-builtin.close-all-windows");
 
     /// The selector for a command to bring a window to the front, and give it focus.
     ///
@@ -150,27 +155,29 @@ pub mod sys {
     pub const NEW_FILE: Selector = Selector::new("druid-builtin.menu-file-new");
 
     /// System command. A file picker dialog will be shown to the user, and an
-    /// `OPEN_FILE` command will be sent if a file is chosen.
+    /// [`OPEN_FILE`] command will be sent if a file is chosen.
     ///
     /// The argument should be a [`FileDialogOptions`] struct.
     ///
-    /// [`FileDialogOptions`]: struct.FileDialogOptions.html
+    /// [`OPEN_FILE`]: constant.OPEN_FILE.html
+    /// [`FileDialogOptions`]: ../struct.FileDialogOptions.html
     pub const SHOW_OPEN_PANEL: Selector = Selector::new("druid-builtin.menu-file-open");
 
     /// Open a file.
     ///
     /// The argument must be a [`FileInfo`] object for the file to be opened.
     ///
-    /// [`FileInfo`]: struct.FileInfo.html
+    /// [`FileInfo`]: ../struct.FileInfo.html
     pub const OPEN_FILE: Selector = Selector::new("druid-builtin.open-file-path");
 
     /// Special command. When issued, the system will show the 'save as' panel,
-    /// and if a path is selected the system will issue a `SAVE_FILE` command
+    /// and if a path is selected the system will issue a [`SAVE_FILE`] command
     /// with the selected path as the argument.
     ///
     /// The argument should be a [`FileDialogOptions`] object.
     ///
-    /// [`FileDialogOptions`]: struct.FileDialogOptions.html
+    /// [`SAVE_FILE`]: constant.SAVE_FILE.html
+    /// [`FileDialogOptions`]: ../struct.FileDialogOptions.html
     pub const SHOW_SAVE_PANEL: Selector = Selector::new("druid-builtin.menu-file-save-as");
 
     /// Save the current file.

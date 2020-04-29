@@ -33,6 +33,7 @@ use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
 use winapi::um::d2d1::*;
+use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::unknwnbase::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
@@ -42,10 +43,11 @@ use piet_common::dwrite::DwriteFactory;
 
 use crate::platform::windows::HwndRenderTarget;
 
-use crate::kurbo::{Point, Size, Vec2};
+use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
 use super::accels::register_accel;
+use super::application::Application;
 use super::dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use super::dialog::get_file_dialog_path;
 use super::error::Error;
@@ -66,15 +68,16 @@ extern "system" {
 }
 
 /// Builder abstraction for creating new windows.
-pub struct WindowBuilder {
+pub(crate) struct WindowBuilder {
+    app: Application,
     handler: Option<Box<dyn WinHandler>>,
-    dwStyle: DWORD,
     title: String,
     menu: Option<Menu>,
     present_strategy: PresentStrategy,
     resizable: bool,
     show_titlebar: bool,
     size: Size,
+    min_size: Option<Size>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -105,6 +108,7 @@ pub enum PresentStrategy {
     FlipRedirect,
 }
 
+#[derive(Clone)]
 pub struct WindowHandle {
     dwrite_factory: DwriteFactory,
     state: Weak<WindowState>,
@@ -112,7 +116,7 @@ pub struct WindowHandle {
 
 /// A handle that can get used to schedule an idle handler. Note that
 /// this handle is thread safe. If the handle is used after the hwnd
-/// has been destroyed, probably not much will go wrong (the XI_RUN_IDLE
+/// has been destroyed, probably not much will go wrong (the DS_RUN_IDLE
 /// message may be sent to a stray window).
 #[derive(Clone)]
 pub struct IdleHandle {
@@ -140,6 +144,8 @@ struct WindowState {
 trait WndProc {
     fn connect(&self, handle: &WindowHandle, state: WndState);
 
+    fn cleanup(&self, hwnd: HWND);
+
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
         -> Option<LRESULT>;
 }
@@ -147,6 +153,7 @@ trait WndProc {
 // State and logic for the winapi window procedure entry point. Note that this level
 // implements policies such as the use of Direct2D for painting.
 struct MyWndProc {
+    app: Application,
     handle: RefCell<WindowHandle>,
     d2d_factory: D2DFactory,
     dwrite_factory: DwriteFactory,
@@ -160,12 +167,19 @@ struct WndState {
     render_target: Option<DeviceContext>,
     dcomp_state: Option<DCompState>,
     dpi: f32,
+    min_size: Option<Size>,
     /// The `KeyCode` of the last `WM_KEYDOWN` event. We stash this so we can
     /// include it when handling `WM_CHAR` events.
     stashed_key_code: KeyCode,
     /// The `char` of the last `WM_CHAR` event, if there has not already been
     /// a `WM_KEYUP` event.
     stashed_char: Option<char>,
+    // Stores a bit mask of all mouse buttons that are currently holding mouse
+    // capture. When the first mouse button is down on our window we enter
+    // capture, and we hold it until the last mouse button is up.
+    captured_mouse_buttons: u32,
+    // Is this window the topmost window under the mouse cursor
+    has_mouse_focus: bool,
     //TODO: track surrogate orphan
 }
 
@@ -181,9 +195,9 @@ struct DCompState {
 }
 
 /// Message indicating there are idle tasks to run.
-const XI_RUN_IDLE: UINT = WM_USER;
+const DS_RUN_IDLE: UINT = WM_USER;
 
-/// Message relaying a request to destroy the window
+/// Message relaying a request to destroy the window.
 ///
 /// Calling `DestroyWindow` from inside the handler is problematic
 /// because it will recursively cause a `WM_DESTROY` message to be
@@ -193,7 +207,7 @@ const XI_RUN_IDLE: UINT = WM_USER;
 /// As a solution, instead of immediately calling `DestroyWindow`, we
 /// send this message to request destroying the window, so that at the
 /// time it is handled, we can successfully borrow the handler.
-const XI_REQUEST_DESTROY: UINT = WM_USER + 1;
+pub(crate) const DS_REQUEST_DESTROY: UINT = WM_USER + 1;
 
 impl Default for PresentStrategy {
     fn default() -> PresentStrategy {
@@ -222,6 +236,22 @@ fn get_mod_state() -> KeyModifiers {
     }
 }
 
+fn is_point_in_client_rect(hwnd: HWND, x: i32, y: i32) -> bool {
+    unsafe {
+        let mut client_rect = mem::MaybeUninit::uninit();
+        if GetClientRect(hwnd, client_rect.as_mut_ptr()) == FALSE {
+            warn!(
+                "failed to get client rect: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+            return false;
+        }
+        let client_rect = client_rect.assume_init();
+        let mouse_point = POINT { x, y };
+        PtInRect(&client_rect, mouse_point) != FALSE
+    }
+}
+
 impl WndState {
     fn rebuild_render_target(&mut self, d2d: &D2DFactory) {
         unsafe {
@@ -233,13 +263,22 @@ impl WndState {
     }
 
     // Renders but does not present.
-    fn render(&mut self, d2d: &D2DFactory, dw: &DwriteFactory, handle: &RefCell<WindowHandle>) {
+    fn render(
+        &mut self,
+        d2d: &D2DFactory,
+        dw: &DwriteFactory,
+        handle: &RefCell<WindowHandle>,
+        invalid_rect: Rect,
+    ) {
         let rt = self.render_target.as_mut().unwrap();
         rt.begin_draw();
         let anim;
         {
             let mut piet_ctx = Piet::new(d2d, dw, rt);
-            anim = self.handler.paint(&mut piet_ctx);
+            // The documentation on DXGI_PRESENT_PARAMETERS says we "must not update any
+            // pixel outside of the dirty rectangles."
+            piet_ctx.clip(invalid_rect);
+            anim = self.handler.paint(&mut piet_ctx, invalid_rect);
             if let Err(e) = piet_ctx.finish() {
                 error!("piet error on render: {:?}", e);
             }
@@ -255,6 +294,20 @@ impl WndState {
             let handle2 = handle.clone();
             handle.add_idle_callback(move |_| handle2.invalidate());
         }
+    }
+
+    fn enter_mouse_capture(&mut self, hwnd: HWND, button: MouseButton) {
+        if self.captured_mouse_buttons == 0 {
+            unsafe {
+                SetCapture(hwnd);
+            }
+        }
+        self.captured_mouse_buttons |= 1 << (button as u32);
+    }
+
+    fn exit_mouse_capture(&mut self, button: MouseButton) -> bool {
+        self.captured_mouse_buttons &= !(1 << (button as u32));
+        self.captured_mouse_buttons == 0
     }
 }
 
@@ -275,6 +328,10 @@ impl WndProc for MyWndProc {
     fn connect(&self, handle: &WindowHandle, state: WndState) {
         *self.handle.borrow_mut() = handle.clone();
         *self.state.borrow_mut() = Some(state);
+    }
+
+    fn cleanup(&self, hwnd: HWND) {
+        self.app.remove_window(hwnd);
     }
 
     #[allow(clippy::cognitive_complexity)]
@@ -318,16 +375,29 @@ impl WndProc for MyWndProc {
             }
             WM_PAINT => unsafe {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let mut rect: RECT = mem::zeroed();
+                    GetUpdateRect(hwnd, &mut rect, 0);
                     let s = s.as_mut().unwrap();
                     if s.render_target.is_none() {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                     }
                     s.handler.rebuild_resources();
-                    s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                    s.render(
+                        &self.d2d_factory,
+                        &self.dwrite_factory,
+                        &self.handle,
+                        self.handle.borrow().rect_to_px(rect),
+                    );
                     if let Some(ref mut ds) = s.dcomp_state {
+                        let params = DXGI_PRESENT_PARAMETERS {
+                            DirtyRectsCount: 1,
+                            pDirtyRects: &mut rect,
+                            pScrollRect: null_mut(),
+                            pScrollOffset: null_mut(),
+                        };
                         if !ds.sizing {
-                            (*ds.swap_chain).Present(1, 0);
+                            (*ds.swap_chain).Present1(1, 0, &params);
                             let _ = ds.dcomp_device.commit();
                         }
                     }
@@ -341,11 +411,21 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
+                        let mut rect: RECT = mem::zeroed();
+                        if GetClientRect(hwnd, &mut rect) == 0 {
+                            warn!("GetClientRect failed.");
+                            return None;
+                        }
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                         {
                             s.handler.rebuild_resources();
-                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                            s.render(
+                                &self.d2d_factory,
+                                &self.dwrite_factory,
+                                &self.handle,
+                                self.handle.borrow().rect_to_px(rect),
+                            );
                         }
 
                         if let Some(ref mut ds) = s.dcomp_state {
@@ -380,7 +460,12 @@ impl WndProc for MyWndProc {
                         if SUCCEEDED(res) {
                             s.handler.rebuild_resources();
                             s.rebuild_render_target(&self.d2d_factory);
-                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                            s.render(
+                                &self.d2d_factory,
+                                &self.dwrite_factory,
+                                &self.handle,
+                                self.handle.borrow().rect_to_px(rect),
+                            );
                             (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
                         } else {
                             error!("ResizeBuffers failed: 0x{:x}", res);
@@ -415,8 +500,6 @@ impl WndProc for MyWndProc {
                     if use_hwnd {
                         if let Some(ref mut rt) = s.render_target {
                             if let Some(hrt) = cast_to_hwnd(rt) {
-                                let width = LOWORD(lparam as u32) as u32;
-                                let height = HIWORD(lparam as u32) as u32;
                                 let size = D2D1_SIZE_U { width, height };
                                 let _ = hrt.ptr.Resize(&size);
                             }
@@ -435,8 +518,10 @@ impl WndProc for MyWndProc {
                             );
                         }
                         if SUCCEEDED(res) {
+                            let (w, h) = self.handle.borrow().pixels_to_px_xy(width, height);
+                            let rect = Rect::from_origin_size(Point::ORIGIN, (w as f64, h as f64));
                             s.rebuild_render_target(&self.d2d_factory);
-                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle);
+                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle, rect);
                             if let Some(ref mut dcomp_state) = s.dcomp_state {
                                 (*dcomp_state.swap_chain).Present(0, 0);
                                 let _ = dcomp_state.dcomp_device.commit();
@@ -537,8 +622,12 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     let delta_y = HIWORD(wparam as u32) as i16 as f64;
-                    let delta = Vec2::new(0.0, -delta_y);
                     let mods = get_mod_state();
+                    let delta = if mods.shift {
+                        Vec2::new(-delta_y, 0.)
+                    } else {
+                        Vec2::new(0., -delta_y)
+                    };
                     s.handler.wheel(delta, mods);
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
@@ -562,6 +651,30 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     let x = LOWORD(lparam as u32) as i16 as i32;
                     let y = HIWORD(lparam as u32) as i16 as i32;
+
+                    // When the mouse first enters the window client rect we need to register for the
+                    // WM_MOUSELEAVE event. Note that WM_MOUSEMOVE is also called even when the
+                    // window under the cursor changes without moving the mouse, for example when
+                    // our window is first opened under the mouse cursor.
+                    if !s.has_mouse_focus && is_point_in_client_rect(hwnd, x, y) {
+                        let mut desc = TRACKMOUSEEVENT {
+                            cbSize: mem::size_of::<TRACKMOUSEEVENT>() as DWORD,
+                            dwFlags: TME_LEAVE,
+                            hwndTrack: hwnd,
+                            dwHoverTime: HOVER_DEFAULT,
+                        };
+                        unsafe {
+                            if TrackMouseEvent(&mut desc) != FALSE {
+                                s.has_mouse_focus = true;
+                            } else {
+                                warn!(
+                                    "failed to TrackMouseEvent: {}",
+                                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                );
+                            }
+                        }
+                    }
+
                     let (px, py) = self.handle.borrow().pixels_to_px_xy(x, y);
                     let pos = Point::new(px as f64, py as f64);
                     let mods = get_mod_state();
@@ -587,11 +700,22 @@ impl WndProc for MyWndProc {
                 }
                 Some(0)
             }
+            WM_MOUSELEAVE => {
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    s.has_mouse_focus = false;
+                    s.handler.mouse_leave();
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
+                Some(0)
+            }
             // TODO: not clear where double-click processing should happen. Currently disabled
             // because CS_DBLCLKS is not set
             WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MBUTTONDBLCLK
             | WM_MBUTTONDOWN | WM_MBUTTONUP | WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP
             | WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
+                let mut should_release_capture = false;
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     let button = match msg {
@@ -629,16 +753,33 @@ impl WndProc for MyWndProc {
                         count,
                     };
                     if count > 0 {
+                        s.enter_mouse_capture(hwnd, button);
                         s.handler.mouse_down(&event);
                     } else {
                         s.handler.mouse_up(&event);
+                        should_release_capture = s.exit_mouse_capture(button);
                     }
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
+
+                // ReleaseCapture() is deferred: it needs to be called without having a mutable
+                // reference to the window state, because it will generate a reentrant
+                // WM_CAPTURECHANGED event.
+                if should_release_capture {
+                    unsafe {
+                        if ReleaseCapture() == FALSE {
+                            warn!(
+                                "failed to release mouse capture: {}",
+                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                            );
+                        }
+                    }
+                }
+
                 Some(0)
             }
-            XI_REQUEST_DESTROY => {
+            DS_REQUEST_DESTROY => {
                 unsafe {
                     DestroyWindow(hwnd);
                 }
@@ -651,7 +792,7 @@ impl WndProc for MyWndProc {
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
-                None
+                Some(0)
             }
             WM_TIMER => {
                 let id = wparam;
@@ -666,7 +807,31 @@ impl WndProc for MyWndProc {
                 }
                 Some(1)
             }
-            XI_RUN_IDLE => {
+            WM_CAPTURECHANGED => {
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    s.captured_mouse_buttons = 0;
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
+                Some(0)
+            }
+            WM_GETMINMAXINFO => {
+                let min_max_info = unsafe { &mut *(lparam as *mut MINMAXINFO) };
+                if let Ok(s) = self.state.try_borrow() {
+                    let s = s.as_ref().unwrap();
+                    if let Some(min_size) = s.min_size {
+                        min_max_info.ptMinTrackSize.x =
+                            (min_size.width * (f64::from(s.dpi) / 96.0)) as i32;
+                        min_max_info.ptMinTrackSize.y =
+                            (min_size.height * (f64::from(s.dpi) / 96.0)) as i32;
+                    }
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
+                Some(0)
+            }
+            DS_RUN_IDLE => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     let queue = self.handle.borrow().take_idle_queue();
@@ -686,26 +851,18 @@ impl WndProc for MyWndProc {
     }
 }
 
-// Note: there's a clone method in 0.3.0-alpha4. We work around
-// the lack in 0.1.2 by calling the low-level unsafe operations.
-fn clone_dwrite(dwrite: &DwriteFactory) -> DwriteFactory {
-    unsafe {
-        (*dwrite.get_raw()).AddRef();
-        DwriteFactory::from_raw(dwrite.get_raw())
-    }
-}
-
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
+    pub fn new(app: Application) -> WindowBuilder {
         WindowBuilder {
+            app,
             handler: None,
-            dwStyle: WS_OVERLAPPEDWINDOW,
             title: String::new(),
             menu: None,
             resizable: true,
             show_titlebar: true,
             present_strategy: Default::default(),
             size: Size::new(500.0, 400.0),
+            min_size: None,
         }
     }
 
@@ -718,8 +875,11 @@ impl WindowBuilder {
         self.size = size;
     }
 
+    pub fn set_min_size(&mut self, size: Size) {
+        self.min_size = Some(size);
+    }
+
     pub fn resizable(&mut self, resizable: bool) {
-        // TODO: Use this in `self.build`
         self.resizable = resizable;
     }
 
@@ -738,13 +898,11 @@ impl WindowBuilder {
 
     pub fn build(self) -> Result<WindowHandle, Error> {
         unsafe {
-            // Maybe separate registration in build api? Probably only need to
-            // register once even for multiple window creation.
-
             let class_name = super::util::CLASS_NAME.to_wide();
             let dwrite_factory = DwriteFactory::new().unwrap();
-            let dw_clone = clone_dwrite(&dwrite_factory);
+            let dw_clone = dwrite_factory.clone();
             let wndproc = MyWndProc {
+                app: self.app.clone(),
                 handle: Default::default(),
                 d2d_factory: D2DFactory::new().unwrap(),
                 dwrite_factory: dw_clone,
@@ -781,8 +939,11 @@ impl WindowBuilder {
                 render_target: None,
                 dcomp_state: None,
                 dpi,
+                min_size: self.min_size,
                 stashed_key_code: KeyCode::Unknown(0),
                 stashed_char: None,
+                captured_mouse_buttons: 0,
+                has_mouse_focus: false,
             };
             win.wndproc.connect(&handle, state);
 
@@ -796,6 +957,12 @@ impl WindowBuilder {
                 }
                 None => (0 as HMENU, None),
             };
+
+            let mut dwStyle = WS_OVERLAPPEDWINDOW;
+            if !self.resizable {
+                dwStyle &= !(WS_THICKFRAME | WS_MAXIMIZEBOX);
+            }
+
             let mut dwExStyle = 0;
             if self.present_strategy == PresentStrategy::Flip {
                 dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
@@ -804,7 +971,7 @@ impl WindowBuilder {
                 dwExStyle,
                 class_name.as_ptr(),
                 self.title.to_wide().as_ptr(),
-                self.dwStyle,
+                dwStyle,
                 CW_USEDEFAULT,
                 CW_USEDEFAULT,
                 width,
@@ -817,6 +984,7 @@ impl WindowBuilder {
             if hwnd.is_null() {
                 return Err(Error::NullHwnd);
             }
+            self.app.add_window(hwnd);
 
             if let Some(accels) = accels {
                 register_accel(hwnd, &accels);
@@ -958,6 +1126,7 @@ pub(crate) unsafe extern "system" fn win_proc_dispatch(
     };
 
     if msg == WM_NCDESTROY && !window_ptr.is_null() {
+        (*window_ptr).wndproc.cleanup(hwnd);
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
         mem::drop(Rc::from_raw(window_ptr));
     }
@@ -1014,17 +1183,6 @@ impl Cursor {
     }
 }
 
-// TODO: when upgrading to directwrite 0.3, just derive Clone instead.
-impl Clone for WindowHandle {
-    fn clone(&self) -> WindowHandle {
-        let dwrite_factory = clone_dwrite(&self.dwrite_factory);
-        WindowHandle {
-            dwrite_factory,
-            state: self.state.clone(),
-        }
-    }
-}
-
 impl WindowHandle {
     pub fn show(&self) {
         if let Some(w) = self.state.upgrade() {
@@ -1040,7 +1198,7 @@ impl WindowHandle {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
-                PostMessageW(hwnd, XI_REQUEST_DESTROY, 0, 0);
+                PostMessageW(hwnd, DS_REQUEST_DESTROY, 0, 0);
             }
         }
     }
@@ -1060,6 +1218,16 @@ impl WindowHandle {
         }
     }
 
+    pub fn invalidate_rect(&self, rect: Rect) {
+        let r = self.px_to_rect(rect);
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                InvalidateRect(hwnd, &r as *const _, FALSE);
+            }
+        }
+    }
+
     /// Set the title for this menu.
     pub fn set_title(&self, title: &str) {
         if let Some(w) = self.state.upgrade() {
@@ -1075,8 +1243,34 @@ impl WindowHandle {
     // TODO: Implement this
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
 
-    // TODO: Implement this
-    pub fn resizable(&self, _resizable: bool) {}
+    pub fn resizable(&self, resizable: bool) {
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                let mut style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+                if style == 0 {
+                    warn!(
+                        "failed to get window style: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                    return;
+                }
+
+                if resizable {
+                    style |= (WS_THICKFRAME | WS_MAXIMIZEBOX) as WindowLongPtr;
+                } else {
+                    style &= !(WS_THICKFRAME | WS_MAXIMIZEBOX) as WindowLongPtr;
+                }
+
+                if SetWindowLongPtrW(hwnd, GWL_STYLE, style) == 0 {
+                    warn!(
+                        "failed to set the window style: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                }
+            }
+        }
+    }
 
     pub fn set_menu(&self, menu: Menu) {
         let accels = menu.accels();
@@ -1219,6 +1413,23 @@ impl WindowHandle {
         ((x.into() as f32) * scale, (y.into() as f32) * scale)
     }
 
+    /// Convert a rectangle from physical pixels to px units.
+    pub fn rect_to_px(&self, rect: RECT) -> Rect {
+        let (x0, y0) = self.pixels_to_px_xy(rect.left, rect.top);
+        let (x1, y1) = self.pixels_to_px_xy(rect.right, rect.bottom);
+        Rect::new(x0 as f64, y0 as f64, x1 as f64, y1 as f64)
+    }
+
+    pub fn px_to_rect(&self, rect: Rect) -> RECT {
+        let scale = self.get_dpi() as f64 / 96.0;
+        RECT {
+            left: (rect.x0 * scale).floor() as i32,
+            top: (rect.y0 * scale).floor() as i32,
+            right: (rect.x1 * scale).ceil() as i32,
+            bottom: (rect.y1 * scale).ceil() as i32,
+        }
+    }
+
     /// Allocate a timer slot.
     ///
     /// Returns an id and an elapsed time in ms
@@ -1254,7 +1465,7 @@ impl IdleHandle {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {
             unsafe {
-                PostMessageW(self.hwnd, XI_RUN_IDLE, 0, 0);
+                PostMessageW(self.hwnd, DS_RUN_IDLE, 0, 0);
             }
         }
         queue.push(IdleKind::Callback(Box::new(callback)));
@@ -1264,7 +1475,7 @@ impl IdleHandle {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {
             unsafe {
-                PostMessageW(self.hwnd, XI_RUN_IDLE, 0, 0);
+                PostMessageW(self.hwnd, DS_RUN_IDLE, 0, 0);
             }
         }
         queue.push(IdleKind::Token(token));

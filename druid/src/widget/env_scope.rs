@@ -27,18 +27,18 @@ pub struct EnvScope<T, W> {
 }
 
 impl<T, W> EnvScope<T, W> {
-    /// Create a widget that updates the environment for its child.
+    /// Create a widget that updates the environment for its descendants.
     ///
     /// Accepts a closure that sets Env values.
+    ///
+    /// This is available as [`WidgetExt::env_scope`] for convenience.
     ///
     /// # Examples
     /// ```
     /// # use druid::{theme, Widget};
     /// # use druid::piet::{Color};
     /// # use druid::widget::{Label, EnvScope};
-    ///
     /// # fn build_widget() -> impl Widget<String> {
-    ///
     /// EnvScope::new(
     ///     |env, data| {
     ///         env.set(theme::LABEL_COLOR, Color::WHITE);
@@ -48,6 +48,8 @@ impl<T, W> EnvScope<T, W> {
     ///
     /// # }
     /// ```
+    ///
+    /// [`WidgetExt::env_scope`]: ../trait.WidgetExt.html#method.env_scope
     pub fn new(f: impl Fn(&mut Env, &T) + 'static, child: W) -> EnvScope<T, W> {
         EnvScope {
             f: Box::new(f),
@@ -92,11 +94,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         self.child.layout(layout_ctx, &bc, data, &new_env)
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);
 
-        self.child.paint(paint_ctx, data, &new_env);
+        self.child.paint(ctx, data, &new_env);
     }
 
     fn id(&self) -> Option<WidgetId> {

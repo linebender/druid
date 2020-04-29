@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![allow(clippy::unreadable_literal)]
+
 //! Game of life
 
 use std::ops::{Index, IndexMut};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use druid::widget::{Button, CrossAxisAlignment, Flex, Label, Slider, WidgetExt};
+use druid::widget::prelude::*;
+use druid::widget::{Button, Flex, Label, Slider};
 use druid::{
-    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
-    LifeCycleCtx, LocalizedString, MouseButton, PaintCtx, Point, Rect, RenderContext, Size,
-    TimerToken, UpdateCtx, Widget, WindowDesc,
+    AppLauncher, Color, Data, Lens, LocalizedString, MouseButton, Point, Rect, TimerToken,
+    WidgetExt, WindowDesc,
 };
 use std::sync::Arc;
 
@@ -53,7 +55,7 @@ struct ColorScheme {
 }
 
 impl GridPos {
-    pub fn above(&self) -> Option<GridPos> {
+    pub fn above(self) -> Option<GridPos> {
         if self.row == 0 {
             None
         } else {
@@ -63,7 +65,7 @@ impl GridPos {
             })
         }
     }
-    pub fn below(&self) -> Option<GridPos> {
+    pub fn below(self) -> Option<GridPos> {
         if self.row == GRID_SIZE - 1 {
             None
         } else {
@@ -73,7 +75,7 @@ impl GridPos {
             })
         }
     }
-    pub fn left(&self) -> Option<GridPos> {
+    pub fn left(self) -> Option<GridPos> {
         if self.col == 0 {
             None
         } else {
@@ -83,7 +85,7 @@ impl GridPos {
             })
         }
     }
-    pub fn right(&self) -> Option<GridPos> {
+    pub fn right(self) -> Option<GridPos> {
         if self.col == GRID_SIZE - 1 {
             None
         } else {
@@ -94,17 +96,17 @@ impl GridPos {
         }
     }
     #[allow(dead_code)]
-    pub fn above_left(&self) -> Option<GridPos> {
+    pub fn above_left(self) -> Option<GridPos> {
         self.above().and_then(|pos| pos.left())
     }
-    pub fn above_right(&self) -> Option<GridPos> {
+    pub fn above_right(self) -> Option<GridPos> {
         self.above().and_then(|pos| pos.right())
     }
     #[allow(dead_code)]
-    pub fn below_left(&self) -> Option<GridPos> {
+    pub fn below_left(self) -> Option<GridPos> {
         self.below().and_then(|pos| pos.left())
     }
-    pub fn below_right(&self) -> Option<GridPos> {
+    pub fn below_right(self) -> Option<GridPos> {
         self.below().and_then(|pos| pos.right())
     }
 }
@@ -234,7 +236,7 @@ impl Widget<AppData> for GameOfLifeWidget {
         match event {
             Event::WindowConnected => {
                 ctx.request_paint();
-                let deadline = Instant::now() + Duration::from_millis(data.iter_interval() as u64);
+                let deadline = Duration::from_millis(data.iter_interval() as u64);
                 self.timer_id = ctx.request_timer(deadline);
             }
             Event::Timer(id) => {
@@ -243,8 +245,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                         data.grid.evolve();
                         ctx.request_paint();
                     }
-                    let deadline =
-                        Instant::now() + Duration::from_millis(data.iter_interval() as u64);
+                    let deadline = Duration::from_millis(data.iter_interval() as u64);
                     self.timer_id = ctx.request_timer(deadline);
                 }
             }
@@ -262,7 +263,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                     data.drawing = false;
                 }
             }
-            Event::MouseMoved(e) => {
+            Event::MouseMove(e) => {
                 if data.drawing {
                     let grid_pos_opt = self.grid_pos(e.pos);
                     grid_pos_opt.iter().for_each(|pos| data.grid[*pos] = true);
@@ -300,8 +301,8 @@ impl Widget<AppData> for GameOfLifeWidget {
         }
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &AppData, _env: &Env) {
-        let size: Size = paint_ctx.size();
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &AppData, _env: &Env) {
+        let size: Size = ctx.size();
         let w0 = size.width / GRID_SIZE as f64;
         let h0 = size.height / GRID_SIZE as f64;
         let cell_size = Size {
@@ -318,7 +319,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                         y: h0 * col as f64,
                     };
                     let rect = Rect::from_origin_size(point, cell_size);
-                    paint_ctx.fill(rect, &self.color_scheme[pos]);
+                    ctx.fill(rect, &self.color_scheme[pos]);
                 }
             }
         }
@@ -357,7 +358,7 @@ fn blinker(top: GridPos) -> Option<[GridPos; 3]> {
 
 fn make_widget() -> impl Widget<AppData> {
     Flex::column()
-        .with_child(
+        .with_flex_child(
             GameOfLifeWidget {
                 timer_id: TimerToken::INVALID,
                 cell_size: Size {
@@ -373,55 +374,47 @@ fn make_widget() -> impl Widget<AppData> {
                 .with_child(
                     // a row with two buttons
                     Flex::row()
-                        .with_child(
+                        .with_flex_child(
                             // pause / resume button
-                            Button::new(
-                                |data: &bool, _: &Env| match data {
-                                    true => "Resume".into(),
-                                    false => "Pause".into(),
-                                },
-                                |ctx, data: &mut bool, _: &Env| {
-                                    *data = !*data;
-                                    ctx.request_layout();
-                                    ctx.request_paint();
-                                },
-                            )
+                            Button::new(|data: &bool, _: &Env| match data {
+                                true => "Resume".into(),
+                                false => "Pause".into(),
+                            })
+                            .on_click(|ctx, data: &mut bool, _: &Env| {
+                                *data = !*data;
+                                ctx.request_layout();
+                            })
                             .lens(AppData::paused)
                             .padding((5., 5.)),
                             1.0,
                         )
-                        .with_child(
+                        .with_flex_child(
                             // clear button
-                            Button::new("Clear", |ctx, data: &mut Grid, _: &Env| {
-                                data.clear();
-                                ctx.request_paint();
-                            })
-                            .lens(AppData::grid)
-                            .padding((5., 5.)),
+                            Button::new("Clear")
+                                .on_click(|ctx, data: &mut Grid, _: &Env| {
+                                    data.clear();
+                                    ctx.request_paint();
+                                })
+                                .lens(AppData::grid)
+                                .padding((5., 5.)),
                             1.0,
                         )
                         .padding(8.0),
-                    0.,
                 )
                 .with_child(
                     Flex::row()
                         .with_child(
                             Label::new(|data: &AppData, _env: &_| format!("{:.2}FPS", data.fps()))
                                 .padding(3.0),
-                            0.,
                         )
-                        .with_child(Slider::new().lens(AppData::speed).padding((0., 0.)), 1.)
-                        .cross_axis_alignment(CrossAxisAlignment::Center)
+                        .with_flex_child(Slider::new().expand_width().lens(AppData::speed), 1.)
                         .padding(8.0),
-                    0.,
                 )
                 .background(BG),
-            0.,
         )
-        .cross_axis_alignment(CrossAxisAlignment::Center)
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(make_widget)
         .window_size(Size {
             width: 800.0,
@@ -482,7 +475,7 @@ impl PartialEq for Grid {
                 return false;
             }
         }
-        return true;
+        true
     }
 }
 

@@ -14,11 +14,11 @@
 
 //! Opening and closing windows and using window and context menus.
 
-use druid::widget::{Align, Button, Flex, Label, Padding};
+use druid::widget::prelude::*;
+use druid::widget::{Align, BackgroundBrush, Button, Flex, Label, Padding};
 use druid::{
-    commands as sys_cmds, AppDelegate, AppLauncher, Command, ContextMenu, Data, DelegateCtx, Env,
-    Event, EventCtx, LocalizedString, MenuDesc, MenuItem, Selector, Target, Widget, WindowDesc,
-    WindowId,
+    commands as sys_cmds, AppDelegate, AppLauncher, Color, Command, ContextMenu, Data, DelegateCtx,
+    LocalizedString, MenuDesc, MenuItem, Selector, Target, WindowDesc, WindowId,
 };
 
 use log::info;
@@ -26,14 +26,17 @@ use log::info;
 const MENU_COUNT_ACTION: Selector = Selector::new("menu-count-action");
 const MENU_INCREMENT_ACTION: Selector = Selector::new("menu-increment-action");
 const MENU_DECREMENT_ACTION: Selector = Selector::new("menu-decrement-action");
+const MENU_SWITCH_GLOW_ACTION: Selector = Selector::new("menu-switch-glow");
 
 #[derive(Debug, Clone, Default, Data)]
 struct State {
     menu_count: usize,
     selected: usize,
+    glow_hot: bool,
 }
 
-fn main() {
+pub fn main() {
+    #[cfg(not(target_arch = "wasm32"))]
     simple_logger::init().unwrap();
     let main_window = WindowDesc::new(ui_builder)
         .menu(make_menu(&State::default()))
@@ -63,22 +66,69 @@ fn ui_builder() -> impl Widget<State> {
     let text = LocalizedString::new("hello-counter")
         .with_arg("count", |data: &State, _env| data.menu_count.into());
     let label = Label::new(text);
-    let inc_button = Button::<State>::new("Add menu item", |ctx, data, _env| {
+    let inc_button = Button::<State>::new("Add menu item").on_click(|ctx, data, _env| {
         data.menu_count += 1;
         ctx.set_menu(make_menu::<State>(data));
     });
-    let dec_button = Button::<State>::new("Remove menu item", |ctx, data, _env| {
+    let dec_button = Button::<State>::new("Remove menu item").on_click(|ctx, data, _env| {
         data.menu_count = data.menu_count.saturating_sub(1);
         ctx.set_menu(make_menu::<State>(data));
     });
 
     let mut col = Flex::column();
-    col.add_child(Align::centered(Padding::new(5.0, label)), 1.0);
+    col.add_flex_child(Align::centered(Padding::new(5.0, label)), 1.0);
     let mut row = Flex::row();
-    row.add_child(Padding::new(5.0, inc_button), 1.0);
-    row.add_child(Padding::new(5.0, dec_button), 1.0);
-    col.add_child(row, 1.0);
-    col
+    row.add_child(Padding::new(5.0, inc_button));
+    row.add_child(Padding::new(5.0, dec_button));
+    col.add_flex_child(Align::centered(row), 1.0);
+    Glow::new(col)
+}
+
+struct Glow<W> {
+    inner: W,
+}
+
+impl<W> Glow<W> {
+    pub fn new(inner: W) -> Glow<W> {
+        Glow { inner }
+    }
+}
+
+impl<W: Widget<State>> Widget<State> for Glow<W> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut State, env: &Env) {
+        self.inner.event(ctx, event, data, env);
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &State, env: &Env) {
+        if let LifeCycle::HotChanged(_) = event {
+            ctx.request_paint();
+        }
+        self.inner.lifecycle(ctx, event, data, env);
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &State, data: &State, env: &Env) {
+        if old_data.glow_hot != data.glow_hot {
+            ctx.request_paint();
+        }
+        self.inner.update(ctx, old_data, data, env);
+    }
+
+    fn layout(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &State,
+        env: &Env,
+    ) -> Size {
+        self.inner.layout(ctx, bc, data, env)
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &State, env: &Env) {
+        if data.glow_hot && ctx.is_hot() {
+            BackgroundBrush::Color(Color::rgb8(200, 55, 55)).paint(ctx, data, env);
+        }
+        self.inner.paint(ctx, data, env);
+    }
 }
 
 struct Delegate;
@@ -87,7 +137,7 @@ impl AppDelegate<State> for Delegate {
     fn event(
         &mut self,
         ctx: &mut DelegateCtx,
-        _window_id: WindowId,
+        window_id: WindowId,
         event: Event,
         _data: &mut State,
         _env: &Env,
@@ -96,7 +146,7 @@ impl AppDelegate<State> for Delegate {
             Event::MouseDown(ref mouse) if mouse.button.is_right() => {
                 let menu = ContextMenu::new(make_context_menu::<State>(), mouse.pos);
                 let cmd = Command::new(druid::commands::SHOW_CONTEXT_MENU, menu);
-                ctx.submit_command(cmd, None);
+                ctx.submit_command(cmd, Target::Window(window_id));
                 None
             }
             other => Some(other),
@@ -130,7 +180,7 @@ impl AppDelegate<State> for Delegate {
             // wouldn't it be nice if a menu (like a button) could just mutate state
             // directly if desired?
             (Target::Window(id), &MENU_INCREMENT_ACTION) => {
-                data.menu_count = data.menu_count + 1;
+                data.menu_count += 1;
                 let menu = make_menu::<State>(data);
                 let cmd = Command::new(druid::commands::SET_MENU, menu);
                 ctx.submit_command(cmd, *id);
@@ -141,6 +191,10 @@ impl AppDelegate<State> for Delegate {
                 let menu = make_menu::<State>(data);
                 let cmd = Command::new(druid::commands::SET_MENU, menu);
                 ctx.submit_command(cmd, *id);
+                false
+            }
+            (_, &MENU_SWITCH_GLOW_ACTION) => {
+                data.glow_hot = !data.glow_hot;
                 false
             }
             _ => true,
@@ -181,7 +235,7 @@ fn make_menu<T: Data>(state: &State) -> MenuDesc<T> {
     if state.menu_count != 0 {
         base = base.append(
             MenuDesc::new(LocalizedString::new("Custom")).append_iter(|| {
-                (0..state.menu_count).map(|i| {
+                (1..state.menu_count + 1).map(|i| {
                     MenuItem::new(
                         LocalizedString::new("hello-counter")
                             .with_arg("count", move |_, _| i.into()),
@@ -205,5 +259,9 @@ fn make_context_menu<T: Data>() -> MenuDesc<T> {
         .append(MenuItem::new(
             LocalizedString::new("Decrement"),
             MENU_DECREMENT_ACTION,
+        ))
+        .append(MenuItem::new(
+            LocalizedString::new("Glow when hot"),
+            MENU_SWITCH_GLOW_ACTION,
         ))
 }

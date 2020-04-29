@@ -14,9 +14,10 @@
 
 //! Interactions with the system pasteboard on GTK+.
 
-use crate::clipboard::{ClipboardFormat, FormatId};
 use gdk::Atom;
 use gtk::{TargetEntry, TargetFlags};
+
+use crate::clipboard::{ClipboardFormat, FormatId};
 
 /// The system clipboard.
 #[derive(Debug, Clone)]

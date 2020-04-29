@@ -5,7 +5,7 @@ fn same_fn() {
     #[derive(Clone, Data)]
     struct Nanana {
         bits: f64,
-        #[druid(same_fn = "PartialEq::eq")]
+        #[data(same_fn = "PartialEq::eq")]
         peq: f64,
     }
 
@@ -42,10 +42,10 @@ fn enums() {
             bits: f64,
         },
         Two {
-            #[druid(same_fn = "same_sign")]
+            #[data(same_fn = "same_sign")]
             bits: f64,
         },
-        Tri(#[druid(same_fn = "same_sign")] f64),
+        Tri(#[data(same_fn = "same_sign")] f64),
     }
 
     let oneone = Hi::One {
@@ -66,7 +66,7 @@ fn enums() {
     let tritwo = Hi::Tri(-1.);
     assert!(!trione.same(&tritwo));
 }
-
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn same_sign(one: &f64, two: &f64) -> bool {
     one.signum() == two.signum()
 }

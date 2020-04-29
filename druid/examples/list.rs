@@ -17,8 +17,10 @@
 use std::sync::Arc;
 
 use druid::lens::{self, LensExt};
-use druid::widget::{Button, Flex, Label, List, Scroll, SizedBox, WidgetExt};
-use druid::{AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WindowDesc};
+use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, Scroll};
+use druid::{
+    AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc,
+};
 
 #[derive(Clone, Data, Lens)]
 struct AppData {
@@ -26,7 +28,7 @@ struct AppData {
     right: Arc<Vec<u32>>,
 }
 
-fn main() {
+pub fn main() {
     let main_window = WindowDesc::new(ui_builder)
         .title(LocalizedString::new("list-demo-window-title").with_placeholder("List Demo"));
     // Set our initial data
@@ -45,23 +47,24 @@ fn ui_builder() -> impl Widget<AppData> {
 
     // Build a button to add children to both lists
     root.add_child(
-        Button::new("Add", |_, data: &mut AppData, _| {
-            // Add child to left list
-            let value = data.left.len() + 1;
-            Arc::make_mut(&mut data.left).push(value as u32);
+        Button::new("Add")
+            .on_click(|_, data: &mut AppData, _| {
+                // Add child to left list
+                let value = data.left.len() + 1;
+                Arc::make_mut(&mut data.left).push(value as u32);
 
-            // Add child to right list
-            let value = data.right.len() + 1;
-            Arc::make_mut(&mut data.right).push(value as u32);
-        })
-        .fix_height(30.0),
-        0.0,
+                // Add child to right list
+                let value = data.right.len() + 1;
+                Arc::make_mut(&mut data.right).push(value as u32);
+            })
+            .fix_height(30.0)
+            .expand_width(),
     );
 
-    let mut lists = Flex::row();
+    let mut lists = Flex::row().cross_axis_alignment(CrossAxisAlignment::Start);
 
     // Build a simple list
-    lists.add_child(
+    lists.add_flex_child(
         Scroll::new(List::new(|| {
             Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
                 .align_vertical(UnitPoint::LEFT)
@@ -76,7 +79,7 @@ fn ui_builder() -> impl Widget<AppData> {
     );
 
     // Build a list with shared data
-    lists.add_child(
+    lists.add_flex_child(
         Scroll::new(List::new(|| {
             Flex::row()
                 .with_child(
@@ -84,21 +87,17 @@ fn ui_builder() -> impl Widget<AppData> {
                         format!("List item #{}", item)
                     })
                     .align_vertical(UnitPoint::LEFT),
-                    0.0,
                 )
-                .with_child(SizedBox::empty(), 1.0)
+                .with_flex_spacer(1.0)
                 .with_child(
-                    Button::new(
-                        "Delete",
-                        |_ctx, (shared, item): &mut (Arc<Vec<u32>>, u32), _env| {
+                    Button::new("Delete")
+                        .on_click(|_ctx, (shared, item): &mut (Arc<Vec<u32>>, u32), _env| {
                             // We have access to both child's data and shared data.
                             // Remove element from right list.
                             Arc::make_mut(shared).retain(|v| v != item);
-                        },
-                    )
-                    .fix_size(80.0, 20.0)
-                    .align_vertical(UnitPoint::CENTER),
-                    0.0,
+                        })
+                        .fix_size(80.0, 20.0)
+                        .align_vertical(UnitPoint::CENTER),
                 )
                 .padding(10.0)
                 .background(Color::rgb(0.5, 0.0, 0.5))
@@ -116,7 +115,7 @@ fn ui_builder() -> impl Widget<AppData> {
         1.0,
     );
 
-    root.add_child(lists, 1.0);
+    root.add_flex_child(lists, 1.0);
 
     // Mark the widget as needing its layout rects painted
     root.debug_paint_layout()

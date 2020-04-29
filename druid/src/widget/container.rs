@@ -14,20 +14,21 @@
 
 //! A widget that provides simple visual styling options to a child.
 
-use crate::shell::kurbo::{Point, Rect, RoundedRect, Size};
+use super::BackgroundBrush;
+use crate::shell::kurbo::{Point, Rect, Size};
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintBrush,
-    PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
+    BoxConstraints, Color, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
+    LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
 };
 
 struct BorderStyle {
-    width: f64,
-    brush: PaintBrush,
+    width: KeyOrValue<f64>,
+    color: KeyOrValue<Color>,
 }
 
 /// A widget that provides simple visual styling options to a child.
 pub struct Container<T> {
-    background: Option<PaintBrush>,
+    background: Option<BackgroundBrush<T>>,
     border: Option<BorderStyle>,
     corner_radius: f64,
 
@@ -45,17 +46,36 @@ impl<T: Data> Container<T> {
         }
     }
 
-    /// Paint background with a color or a gradient.
-    pub fn background(mut self, brush: impl Into<PaintBrush>) -> Self {
+    /// Set the background for this widget.
+    ///
+    /// This can be passed anything which can be represented by a [`BackgroundBrush`];
+    /// noteably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
+    /// any gradient, or a fully custom [`Painter`] widget.
+    ///
+    /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
+    /// [`Color`]: ../struct.Color.thml
+    /// [`Key<Color>`]: ../struct.Key.thml
+    /// [`Env`]: ../struct.Env.html
+    /// [`Painter`]: struct.Painter.html
+    pub fn background(mut self, brush: impl Into<BackgroundBrush<T>>) -> Self {
         self.background = Some(brush.into());
         self
     }
 
-    /// Paint a border around the widget with a color or a gradient.
-    pub fn border(mut self, brush: impl Into<PaintBrush>, width: f64) -> Self {
+    /// Paint a border around the widget with a color and width.
+    ///
+    /// Arguments can be either concrete values, or a [`Key`] of the respective
+    /// type.
+    ///
+    /// [`Key`]: struct.Key.html
+    pub fn border(
+        mut self,
+        color: impl Into<KeyOrValue<Color>>,
+        width: impl Into<KeyOrValue<f64>>,
+    ) -> Self {
         self.border = Some(BorderStyle {
-            width,
-            brush: brush.into(),
+            color: color.into(),
+            width: width.into(),
         });
         self
     }
@@ -94,15 +114,15 @@ impl<T: Data> Widget<T> for Container<T> {
         bc.debug_check("Container");
 
         // Shrink constraints by border offset
-        let border_width = match self.border {
-            Some(ref border) => border.width,
+        let border_width = match &self.border {
+            Some(border) => border.width.resolve(env),
             None => 0.0,
         };
         let child_bc = bc.shrink((2.0 * border_width, 2.0 * border_width));
         let size = self.inner.layout(ctx, &child_bc, data, env);
         let origin = Point::new(border_width, border_width);
         self.inner
-            .set_layout_rect(Rect::from_origin_size(origin, size));
+            .set_layout_rect(ctx, data, env, Rect::from_origin_size(origin, size));
 
         let my_size = Size::new(
             size.width + 2.0 * border_width,
@@ -114,21 +134,26 @@ impl<T: Data> Widget<T> for Container<T> {
         my_size
     }
 
-    fn paint(&mut self, paint_ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let panel = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            paint_ctx.size().to_vec2(),
-            self.corner_radius,
-        );
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        if let Some(background) = self.background.as_mut() {
+            let panel = ctx.size().to_rounded_rect(self.corner_radius);
+
+            ctx.with_save(|ctx| {
+                ctx.clip(panel);
+                background.paint(ctx, data, env);
+            });
+        }
 
         if let Some(border) = &self.border {
-            paint_ctx.stroke(panel, &border.brush, border.width);
+            let border_width = border.width.resolve(env);
+            let border_rect = ctx
+                .size()
+                .to_rect()
+                .inset(border_width / -2.0)
+                .to_rounded_rect(self.corner_radius);
+            ctx.stroke(border_rect, &border.color.resolve(env), border_width);
         };
 
-        if let Some(background) = &self.background {
-            paint_ctx.fill(panel, background);
-        };
-
-        self.inner.paint(paint_ctx, data, env);
+        self.inner.paint_with_offset(ctx, data, env);
     }
 }

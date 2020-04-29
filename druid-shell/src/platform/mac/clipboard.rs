@@ -17,6 +17,7 @@
 use cocoa::appkit::NSPasteboardTypeString;
 use cocoa::base::{id, nil, BOOL, YES};
 use cocoa::foundation::{NSArray, NSInteger, NSUInteger};
+use objc::{class, msg_send, sel, sel_impl};
 
 use super::util;
 use crate::clipboard::{ClipboardFormat, FormatId};

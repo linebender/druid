@@ -14,6 +14,8 @@
 
 //! Tests related to layout.
 
+use float_cmp::approx_eq;
+
 use super::*;
 
 #[test]
@@ -23,18 +25,19 @@ fn simple_layout() {
 
     let id_1 = WidgetId::next();
 
-    let widget = Split::vertical(Label::new("hi"), Label::new("there"))
+    let widget = Split::columns(Label::new("hi"), Label::new("there"))
         .fix_size(BOX_WIDTH, BOX_WIDTH)
         .padding(10.0)
         .with_id(id_1)
         .center();
 
-    Harness::create(true, widget, |harness| {
+    Harness::create_simple(true, widget, |harness| {
         harness.send_initial_events();
         harness.just_layout();
         let state = harness.get_state(id_1);
-        assert_eq!(
-            state.layout_rect.x0,
+        approx_eq!(
+            f64,
+            state.layout_rect().x0,
             ((DEFAULT_SIZE.width - BOX_WIDTH) / 2.) - PADDING
         );
     })
@@ -44,32 +47,34 @@ fn simple_layout() {
 fn row_column() {
     let (id1, id2, id3, id4, id5, id6) = widget_id6();
     let widget = Flex::row()
-        .with_child(
+        .must_fill_main_axis(true)
+        .with_flex_child(
             Flex::column()
-                .with_child(SizedBox::empty().with_id(id1), 1.0)
-                .with_child(SizedBox::empty().with_id(id2), 1.0),
+                .with_flex_child(SizedBox::empty().expand().with_id(id1), 1.0)
+                .with_flex_child(SizedBox::empty().expand().with_id(id2), 1.0),
             1.0,
         )
-        .with_child(
+        .with_flex_child(
             Flex::column()
-                .with_child(SizedBox::empty().with_id(id3), 1.0)
-                .with_child(SizedBox::empty().with_id(id4), 1.0)
-                .with_child(SizedBox::empty().with_id(id5), 1.0)
-                .with_child(SizedBox::empty().with_id(id6), 1.0),
+                .with_flex_child(SizedBox::empty().expand().with_id(id3), 1.0)
+                .with_flex_child(SizedBox::empty().expand().with_id(id4), 1.0)
+                .with_flex_child(SizedBox::empty().expand().with_id(id5), 1.0)
+                .with_flex_child(SizedBox::empty().expand().with_id(id6), 1.0)
+                .expand_width(),
             1.0,
         );
 
-    Harness::create((), widget, |harness| {
+    Harness::create_simple((), widget, |harness| {
         harness.send_initial_events();
         harness.just_layout();
         let state1 = harness.get_state(id1);
-        assert_eq!(state1.layout_rect.origin(), Point::ZERO);
+        assert_eq!(state1.layout_rect().origin(), Point::ZERO);
         let state2 = harness.get_state(id2);
-        assert_eq!(state2.layout_rect.origin(), Point::new(0., 200.));
+        assert_eq!(state2.layout_rect().origin(), Point::new(0., 200.));
         let state3 = harness.get_state(id3);
-        assert_eq!(state3.layout_rect.origin(), Point::ZERO);
+        assert_eq!(state3.layout_rect().origin(), Point::ZERO);
         let state5 = harness.get_state(id5);
-        assert_eq!(state5.layout_rect.origin(), Point::new(0., 200.));
+        assert_eq!(state5.layout_rect().origin(), Point::new(0., 200.));
     })
 }
 
@@ -90,29 +95,29 @@ fn simple_paint_rect() {
         .background(Color::BLACK)
         .center();
 
-    Harness::create((), widget, |harness| {
+    Harness::create_simple((), widget, |harness| {
         harness.send_initial_events();
         harness.just_layout();
 
         let state = harness.get_state(id1);
 
         // offset by padding
-        assert_eq!(state.layout_rect.origin(), Point::new(10., 10.,));
+        assert_eq!(state.layout_rect().origin(), Point::new(10., 10.,));
         // offset by padding, but then inset by paint insets
         assert_eq!(state.paint_rect().origin(), Point::new(10., -10.,));
         // layout size is fixed
-        assert_eq!(state.layout_rect.size(), Size::new(100., 100.,));
+        assert_eq!(state.layout_rect().size(), Size::new(100., 100.,));
         // paint size is modified by insets
         assert_eq!(state.paint_rect().size(), Size::new(100., 140.,));
 
         // now does the container widget correctly propogate the child's paint rect?
         let state = harness.get_state(id2);
 
-        assert_eq!(state.layout_rect.origin(), Point::ZERO);
+        assert_eq!(state.layout_rect().origin(), Point::ZERO);
         // offset by padding, but then inset by paint insets
         assert_eq!(state.paint_rect().origin(), Point::new(0., -10.,));
         // 100 + 10 on each side
-        assert_eq!(state.layout_rect.size(), Size::new(120., 120.,));
+        assert_eq!(state.layout_rect().size(), Size::new(120., 120.,));
         // paint size is modified by insets
         assert_eq!(state.paint_rect().size(), Size::new(120., 140.,));
     })
@@ -124,7 +129,7 @@ fn flex_paint_rect_overflow() {
     let id = WidgetId::next();
 
     let widget = Flex::row()
-        .with_child(
+        .with_flex_child(
             ModularWidget::new(())
                 .layout_fn(|_, ctx, bc, _, _| {
                     ctx.set_paint_insets(Insets::new(20., 0., 0., 0.));
@@ -133,7 +138,7 @@ fn flex_paint_rect_overflow() {
                 .expand(),
             1.0,
         )
-        .with_child(
+        .with_flex_child(
             ModularWidget::new(())
                 .layout_fn(|_, ctx, bc, _, _| {
                     ctx.set_paint_insets(Insets::new(0., 20., 0., 0.));
@@ -142,7 +147,7 @@ fn flex_paint_rect_overflow() {
                 .expand(),
             1.0,
         )
-        .with_child(
+        .with_flex_child(
             ModularWidget::new(())
                 .layout_fn(|_, ctx, bc, _, _| {
                     ctx.set_paint_insets(Insets::new(0., 0., 0., 20.));
@@ -151,7 +156,7 @@ fn flex_paint_rect_overflow() {
                 .expand(),
             1.0,
         )
-        .with_child(
+        .with_flex_child(
             ModularWidget::new(())
                 .layout_fn(|_, ctx, bc, _, _| {
                     ctx.set_paint_insets(Insets::new(0., 0., 20., 0.));
@@ -165,18 +170,18 @@ fn flex_paint_rect_overflow() {
         .padding(10.)
         .center();
 
-    Harness::create((), widget, |harness| {
+    Harness::create_simple((), widget, |harness| {
         harness.set_initial_size(Size::new(300., 300.));
         harness.send_initial_events();
         harness.just_layout();
 
         let state = harness.get_state(id);
-        assert_eq!(state.layout_rect.origin(), Point::new(10., 10.,));
+        assert_eq!(state.layout_rect().origin(), Point::new(10., 10.,));
         assert_eq!(state.paint_rect().origin(), Point::new(-10., -10.,));
 
         // each of our children insets 20. on a different side; their union
         // is a uniform 20. inset.
-        let expected_paint_rect = state.layout_rect + Insets::uniform(20.);
+        let expected_paint_rect = state.layout_rect() + Insets::uniform(20.);
         assert_eq!(state.paint_rect().size(), expected_paint_rect.size());
     })
 }
