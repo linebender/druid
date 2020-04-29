@@ -20,6 +20,7 @@ use std::{env, fs};
 const EXCEPTIONS: &[&str] = &[
     "svg",       // usvg doesn't currently build with WASM.
     "ext_event", // WASM doesn't currently support spawning threads.
+    "blocking_function", // WASM doesn't currently support spawning threads.
 ];
 
 /// Create a platform specific link from `src` to the `dst` directory.
