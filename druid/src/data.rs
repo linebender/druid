@@ -368,3 +368,29 @@ impl Data for piet::Color {
         self.as_rgba_u32().same(&other.as_rgba_u32())
     }
 }
+
+macro_rules! impl_Data {
+    () => {};
+    ($this:tt $($rest:tt)*) => {
+        impl<T: Data> Data for [T; $this] {
+            fn same(&self, other: &Self) -> bool {
+                self.iter().zip(other.iter()).all(|(a, b)| a.same(b))
+            }
+        }
+        impl_Data!($($rest)*);
+    }
+}
+
+impl_Data! { 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 32 64 128 } // etc
+
+#[cfg(test)]
+mod test {
+    use super::Data;
+
+    #[test]
+    fn array_data() {
+        let input = [1u8, 0, 0, 1, 0];
+        assert!(input.same(&[1u8, 0, 0, 1, 0]));
+        assert!(!input.same(&[1u8, 1, 0, 1, 0]));
+    }
+}
