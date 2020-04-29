@@ -23,7 +23,7 @@ struct AppState {
     current_text: String,
 }
 
-fn main() {
+pub fn main() {
     let main_window = WindowDesc::new(make_ui).title(LocalizedString::new("View Switcher"));
     let data = AppState {
         current_view: 0,

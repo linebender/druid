@@ -116,7 +116,7 @@ impl Widget<String> for CustomWidget {
     }
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(|| CustomWidget {}).title(
         LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Fancy Colors"),
     );
@@ -131,7 +131,7 @@ fn make_image_data(width: usize, height: usize) -> Vec<u8> {
     for y in 0..height {
         for x in 0..width {
             let ix = (y * width + x) * 4;
-            result[ix + 0] = x as u8;
+            result[ix] = x as u8;
             result[ix + 1] = y as u8;
             result[ix + 2] = !(x as u8);
             result[ix + 3] = 127;

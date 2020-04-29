@@ -129,9 +129,9 @@ impl From<RawKeyCode> for KeyCode {
     }
 }
 
-impl Into<StrOrChar> for KeyCode {
+impl Into<StrOrChar<'static>> for KeyCode {
     #[allow(clippy::just_underscores_and_digits, non_upper_case_globals)]
-    fn into(self) -> StrOrChar {
+    fn into(self) -> StrOrChar<'static> {
         match self {
             KeyCode::Numpad1 => StrOrChar::Char('1'),
             KeyCode::Numpad2 => StrOrChar::Char('2'),

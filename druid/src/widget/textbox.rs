@@ -14,7 +14,7 @@
 
 //! A textbox widget.
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
@@ -38,6 +38,7 @@ const PADDING_LEFT: f64 = 4.;
 
 // we send ourselves this when we want to reset blink, which must be done in event.
 const RESET_BLINK: Selector = Selector::new("druid-builtin.reset-textbox-blink");
+const CURSOR_BLINK_DRUATION: Duration = Duration::from_millis(500);
 
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
@@ -225,8 +226,7 @@ impl TextBox {
 
     fn reset_cursor_blink(&mut self, ctx: &mut EventCtx) {
         self.cursor_on = true;
-        let deadline = Instant::now() + Duration::from_millis(500);
-        self.cursor_timer = ctx.request_timer(deadline);
+        self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DRUATION);
     }
 }
 
@@ -274,8 +274,7 @@ impl Widget<String> for TextBox {
                 if *id == self.cursor_timer {
                     self.cursor_on = !self.cursor_on;
                     ctx.request_paint();
-                    let deadline = Instant::now() + Duration::from_millis(500);
-                    self.cursor_timer = ctx.request_timer(deadline);
+                    self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DRUATION);
                 }
             }
             Event::Command(ref cmd)
@@ -284,7 +283,7 @@ impl Widget<String> for TextBox {
                         || cmd.selector == crate::commands::CUT) =>
             {
                 if let Some(text) = data.slice(self.selection.range()) {
-                    Application::clipboard().put_string(text);
+                    Application::global().clipboard().put_string(text);
                 }
                 if !self.selection.is_caret() && cmd.selector == crate::commands::CUT {
                     edit_action = Some(EditAction::Delete);

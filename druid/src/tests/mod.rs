@@ -14,17 +14,41 @@
 
 //! Additional unit tests that cross file or module boundaries.
 
-mod harness;
+pub(crate) mod harness;
 mod helpers;
 mod layout_tests;
 
 use std::cell::Cell;
+use std::env;
+use std::fs;
 use std::rc::Rc;
 
 use crate::widget::*;
 use crate::*;
 use harness::*;
 use helpers::*;
+
+/// This function creates a temporary directory and returns a PathBuf to it.
+///
+/// This directory will be created relative to the executable and will therefor
+/// be created in the target directory for tests when running with cargo. The
+/// directory will be cleaned up at the end of the PathBufs lifetime. This
+/// uses the `tempfile` crate.
+#[allow(dead_code)]
+pub fn temp_dir_for_test() -> std::path::PathBuf {
+    let current_exe_path = env::current_exe().unwrap();
+    let mut exe_dir = current_exe_path.parent().unwrap();
+    if exe_dir.ends_with("deps") {
+        exe_dir = exe_dir.parent().unwrap();
+    }
+    let test_dir = exe_dir.parent().unwrap().join("tests");
+    fs::create_dir_all(&test_dir).unwrap();
+    tempfile::Builder::new()
+        .prefix("TempDir")
+        .tempdir_in(test_dir)
+        .unwrap()
+        .into_path()
+}
 
 /// test that the first widget to request focus during an event gets it.
 #[test]
@@ -57,7 +81,8 @@ fn propogate_hot() {
             button: MouseButton::Left,
         }
     }
-    Harness::create((), widget, |harness| {
+    #[allow(clippy::cognitive_complexity)]
+    Harness::create_simple((), widget, |harness| {
         harness.send_initial_events();
         harness.just_layout();
 
@@ -153,7 +178,7 @@ fn take_focus() {
     let app = Split::columns(left, right).padding(5.0);
     let data = true;
 
-    Harness::create(data, app, |harness| {
+    Harness::create_simple(data, app, |harness| {
         harness.send_initial_events();
         // nobody should have focus
         assert!(left_focus.get().is_none());
@@ -177,7 +202,7 @@ fn take_focus() {
 fn simple_lifecyle() {
     let record = Recording::default();
     let widget = SizedBox::empty().record(&record);
-    Harness::create(true, widget, |harness| {
+    Harness::create_simple(true, widget, |harness| {
         harness.send_initial_events();
         assert_matches!(record.next(), Record::L(LifeCycle::WidgetAdded));
         assert_matches!(record.next(), Record::E(Event::WindowConnected));
@@ -200,7 +225,7 @@ fn adding_child_lifecycle() {
 
     let widget = Split::columns(Label::new("hi").record(&record), replacer);
 
-    Harness::create(String::new(), widget, |harness| {
+    Harness::create_simple(String::new(), widget, |harness| {
         harness.send_initial_events();
 
         assert_matches!(record.next(), Record::L(LifeCycle::WidgetAdded));
@@ -236,7 +261,7 @@ fn participate_in_autofocus() {
         replacer,
     );
 
-    Harness::create("my test text".to_string(), widget, |harness| {
+    Harness::create_simple("my test text".to_string(), widget, |harness| {
         // verify that all widgets are marked as having children_changed
         // (this should always be true for a new widget)
         harness.inspect_state(|state| assert!(state.children_changed));
@@ -271,7 +296,7 @@ fn child_tracking() {
     .padding(5.0)
     .with_id(id_4);
 
-    Harness::create(true, widget, |harness| {
+    Harness::create_simple(true, widget, |harness| {
         harness.send_initial_events();
         let root = harness.get_state(id_4);
         assert_eq!(root.children.entry_count(), 3);
@@ -299,7 +324,7 @@ fn register_after_adding_child() {
 
     let widget = Split::columns(Label::new("hi").with_id(id_4), replacer).with_id(id_5);
 
-    Harness::create(String::new(), widget, |harness| {
+    Harness::create_simple(String::new(), widget, |harness| {
         harness.send_initial_events();
 
         assert!(harness.get_state(id_5).children.may_contain(&id_6));

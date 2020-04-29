@@ -258,7 +258,7 @@ mod tests {
     fn replace() {
         let mut a = String::from("hello world");
         a.edit(1..9, "era");
-        assert_eq!("herald", String::from(a));
+        assert_eq!("herald", a);
     }
 
     #[test]

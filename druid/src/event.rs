@@ -147,6 +147,8 @@ pub enum InternalEvent {
     MouseLeave,
     /// A command still in the process of being dispatched.
     TargetedCommand(Target, Command),
+    /// Used for routing timer events.
+    RouteTimer(TimerToken, WidgetId),
 }
 
 /// Application life cycle events.
@@ -351,6 +353,7 @@ mod state_cell {
     }
 
     impl StateCheckFn {
+        #[cfg(not(target_arch = "wasm32"))]
         pub(crate) fn new(f: impl Fn(&BaseState) + 'static) -> Self {
             StateCheckFn(Rc::new(f))
         }

@@ -24,7 +24,7 @@ struct HelloState {
     name: String,
 }
 
-fn main() {
+pub fn main() {
     // describe the main window
     let main_window = WindowDesc::new(build_root_widget)
         .title(WINDOW_TITLE)

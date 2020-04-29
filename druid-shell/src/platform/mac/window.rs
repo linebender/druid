@@ -38,9 +38,10 @@ use objc::{class, msg_send, sel, sel_impl};
 use cairo::{Context, QuartzSurface};
 use log::{error, info};
 
-use crate::kurbo::{Point, Size, Vec2};
+use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
+use super::application::Application;
 use super::dialog;
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
@@ -104,7 +105,7 @@ struct ViewState {
 }
 
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
+    pub fn new(_app: Application) -> WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),
@@ -503,6 +504,10 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let frame = NSView::frame(this as *mut _);
         let width = frame.size.width as u32;
         let height = frame.size.height as u32;
+        let rect = Rect::from_origin_size(
+            (dirtyRect.origin.x, dirtyRect.origin.y),
+            (dirtyRect.size.width, dirtyRect.size.height),
+        );
         let cairo_surface =
             QuartzSurface::create_for_cg_context(cgcontext, width, height).expect("cairo surface");
         let mut cairo_ctx = Context::new(&cairo_surface);
@@ -511,7 +516,7 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let mut piet_ctx = Piet::new(&mut cairo_ctx);
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let anim = (*view_state).handler.paint(&mut piet_ctx);
+        let anim = (*view_state).handler.paint(&mut piet_ctx, rect);
         if let Err(e) = piet_ctx.finish() {
             error!("{}", e)
         }
@@ -636,6 +641,18 @@ impl WindowHandle {
         unsafe {
             // We could share impl with redraw, but we'd need to deal with nil.
             let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
+        }
+    }
+
+    /// Request invalidation of one rectangle.
+    pub fn invalidate_rect(&self, rect: Rect) {
+        let rect = NSRect::new(
+            NSPoint::new(rect.x0, rect.y0),
+            NSSize::new(rect.width(), rect.height()),
+        );
+        unsafe {
+            // We could share impl with redraw, but we'd need to deal with nil.
+            let () = msg_send![*self.nsview.load(), setNeedsDisplayInRect: rect];
         }
     }
 

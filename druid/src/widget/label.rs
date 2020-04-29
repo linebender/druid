@@ -30,7 +30,13 @@ const BASELINE_GUESS_FACTOR: f64 = 0.8;
 // added padding between the edges of the widget and the text.
 const LABEL_X_PADDING: f64 = 2.0;
 
-/// The text for the label
+/// The text for the label.
+///
+/// This can be one of three things; either a `String`, a [`LocalizedString`],
+/// or a closure with the signature, `Fn(&T, &Env) -> String`, where `T` is
+/// the `Data` at this point in the tree.
+///
+/// [`LocalizedString`]: ../struct.LocalizedString.html
 pub enum LabelText<T> {
     /// Localized string that will be resolved through `Env`.
     Localized(LocalizedString<T>),
@@ -53,6 +59,7 @@ pub struct Label<T> {
     text: LabelText<T>,
     color: KeyOrValue<Color>,
     size: KeyOrValue<f64>,
+    font: KeyOrValue<&'static str>,
 }
 
 impl<T: Data> Label<T> {
@@ -78,6 +85,7 @@ impl<T: Data> Label<T> {
             text,
             color: theme::LABEL_COLOR.into(),
             size: theme::TEXT_SIZE_NORMAL.into(),
+            font: theme::FONT_NAME.into(),
         }
     }
 
@@ -116,7 +124,7 @@ impl<T: Data> Label<T> {
     ///
     /// The argument can be either a `Color` or a [`Key<Color>`].
     ///
-    /// [`Key<Color>`]: struct.Key.html
+    /// [`Key<Color>`]: ../struct.Key.html
     pub fn with_text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
         self.color = color.into();
         self
@@ -126,9 +134,19 @@ impl<T: Data> Label<T> {
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
     ///
-    /// [`Key<f64>`]: struct.Key.html
+    /// [`Key<f64>`]: ../struct.Key.html
     pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
         self.size = size.into();
+        self
+    }
+
+    /// Builder-style method for setting the font.
+    ///
+    /// The argument can be a `&str`, `String`, or [`Key<&str>`].
+    ///
+    /// [`Key<&str>`]: ../struct.Key.html
+    pub fn with_font(mut self, font: impl Into<KeyOrValue<&'static str>>) -> Self {
+        self.font = font.into();
         self
     }
 
@@ -154,7 +172,7 @@ impl<T: Data> Label<T> {
     ///
     /// The argument can be either a `Color` or a [`Key<Color>`].
     ///
-    /// [`Key<Color>`]: struct.Key.html
+    /// [`Key<Color>`]: ../struct.Key.html
     pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
         self.color = color.into();
     }
@@ -163,13 +181,22 @@ impl<T: Data> Label<T> {
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
     ///
-    /// [`Key<f64>`]: struct.Key.html
+    /// [`Key<f64>`]: ../struct.Key.html
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         self.size = size.into();
     }
 
+    /// Set the font.
+    ///
+    /// The argument can be a `&str`, `String`, or [`Key<&str>`].
+    ///
+    /// [`Key<&str>`]: ../struct.Key.html
+    pub fn set_font(&mut self, font: impl Into<KeyOrValue<&'static str>>) {
+        self.font = font.into();
+    }
+
     fn get_layout(&mut self, t: &mut PietText, env: &Env) -> PietTextLayout {
-        let font_name = env.get(theme::FONT_NAME);
+        let font_name = self.font.resolve(env);
         let font_size = self.size.resolve(env);
 
         // TODO: caching of both the format and the layout

@@ -125,6 +125,7 @@ pub mod lens;
 mod localization;
 mod menu;
 mod mouse;
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests;
 pub mod text;
@@ -161,5 +162,6 @@ pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
 
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 pub(crate) use event::{StateCell, StateCheckFn};

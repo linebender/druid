@@ -14,8 +14,9 @@
 
 //! An example of sending commands from another thread.
 
+use instant::Instant;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use druid::kurbo::RoundedRect;
 use druid::widget::prelude::*;
@@ -80,7 +81,7 @@ impl Widget<MyColor> for ColorWell {
     }
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(make_ui).title(
         LocalizedString::new("identity-demo-window-title").with_placeholder("External Event Demo"),
     );
@@ -107,7 +108,10 @@ fn main() {
             last_color = new_color.clone();
 
             // if this fails we're shutting down
-            if let Err(_) = event_sink.submit_command(SET_COLOR, new_color, None) {
+            if event_sink
+                .submit_command(SET_COLOR, new_color, None)
+                .is_err()
+            {
                 break;
             }
             thread::sleep(Duration::from_millis(150));

@@ -56,7 +56,7 @@ fn build_app() -> impl Widget<u32> {
         )
         .border(Color::WHITE, 1.0),
     );
-    let draggable_rows = Padding::new(
+    Padding::new(
         10.0,
         Container::new(
             Split::rows(
@@ -73,11 +73,10 @@ fn build_app() -> impl Widget<u32> {
             .draggable(true),
         )
         .border(Color::WHITE, 1.0),
-    );
-    draggable_rows
+    )
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(build_app)
         .title(LocalizedString::new("split-demo-window-title").with_placeholder("Split Demo"));
     AppLauncher::with_window(window)

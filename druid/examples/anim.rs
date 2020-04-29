@@ -26,12 +26,9 @@ struct AnimWidget {
 
 impl Widget<u32> for AnimWidget {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut u32, _env: &Env) {
-        match event {
-            Event::MouseDown(_) => {
-                self.t = 0.0;
-                ctx.request_anim_frame();
-            }
-            _ => (),
+        if let Event::MouseDown(_) = event {
+            self.t = 0.0;
+            ctx.request_anim_frame();
         }
     }
 
@@ -68,7 +65,7 @@ impl Widget<u32> for AnimWidget {
     }
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(|| AnimWidget { t: 0.0 }).title(
         LocalizedString::new("anim-demo-window-title")
             .with_placeholder("You spin me right round..."),

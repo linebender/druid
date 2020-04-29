@@ -36,7 +36,7 @@ impl WinHandler for HelloState {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut piet_common::Piet) -> bool {
+    fn paint(&mut self, piet: &mut piet_common::Piet, _: Rect) -> bool {
         let (width, height) = self.size;
         let rect = Rect::new(0.0, 0.0, width, height);
         piet.fill(rect, &BG_COLOR);
@@ -48,7 +48,7 @@ impl WinHandler for HelloState {
         match id {
             0x100 => {
                 self.handle.close();
-                Application::quit();
+                Application::global().quit()
             }
             0x101 => {
                 let options = FileDialogOptions::new().show_hidden().allowed_types(vec![
@@ -64,7 +64,7 @@ impl WinHandler for HelloState {
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
-        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
+        let deadline = std::time::Duration::from_millis(500);
         let id = self.handle.request_timer(deadline);
         println!("keydown: {:?}, timer id = {:?}", event, id);
 
@@ -101,7 +101,7 @@ impl WinHandler for HelloState {
     }
 
     fn destroy(&mut self) {
-        Application::quit()
+        Application::global().quit()
     }
 
     fn as_any(&mut self) -> &mut dyn Any {
@@ -129,8 +129,8 @@ fn main() {
     menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
-    let mut app = Application::new(None);
-    let mut builder = WindowBuilder::new();
+    let app = Application::new().unwrap();
+    let mut builder = WindowBuilder::new(app.clone());
     builder.set_handler(Box::new(HelloState::default()));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
@@ -138,5 +138,5 @@ fn main() {
     let window = builder.build().unwrap();
     window.show();
 
-    app.run();
+    app.run(None);
 }

@@ -16,65 +16,103 @@
 
 #![allow(non_upper_case_globals)]
 
+use std::cell::RefCell;
 use std::ffi::c_void;
+use std::rc::Rc;
 
 use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicyRegular};
-use cocoa::base::{id, nil, YES};
-use cocoa::foundation::NSAutoreleasePool;
+use cocoa::base::{id, nil, NO, YES};
+use cocoa::foundation::{NSArray, NSAutoreleasePool};
 use lazy_static::lazy_static;
 use objc::declare::ClassDecl;
 use objc::runtime::{Class, Object, Sel};
 use objc::{class, msg_send, sel, sel_impl};
 
-use super::clipboard::Clipboard;
-use super::util;
 use crate::application::AppHandler;
+
+use super::clipboard::Clipboard;
+use super::error::Error;
+use super::util;
 
 static APP_HANDLER_IVAR: &str = "druidAppHandler";
 
-pub struct Application {
+#[derive(Clone)]
+pub(crate) struct Application {
     ns_app: id,
+    state: Rc<RefCell<State>>,
+}
+
+struct State {
+    quitting: bool,
 }
 
 impl Application {
-    pub fn new(handler: Option<Box<dyn AppHandler>>) -> Application {
+    pub fn new() -> Result<Application, Error> {
+        // macOS demands that we run not just on one thread,
+        // but specifically the first thread of the app.
         util::assert_main_thread();
         unsafe {
             let _pool = NSAutoreleasePool::new(nil);
 
+            let ns_app = NSApp();
+            ns_app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
+
+            let state = Rc::new(RefCell::new(State { quitting: false }));
+
+            Ok(Application { ns_app, state })
+        }
+    }
+
+    pub fn run(self, handler: Option<Box<dyn AppHandler>>) {
+        unsafe {
+            // Initialize the application delegate
             let delegate: id = msg_send![APP_DELEGATE.0, alloc];
             let () = msg_send![delegate, init];
             let state = DelegateState { handler };
-            let handler_ptr = Box::into_raw(Box::new(state));
-            (*delegate).set_ivar(APP_HANDLER_IVAR, handler_ptr as *mut c_void);
-            let ns_app = NSApp();
-            let () = msg_send![ns_app, setDelegate: delegate];
-            ns_app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
-            Application { ns_app }
-        }
-    }
+            let state_ptr = Box::into_raw(Box::new(state));
+            (*delegate).set_ivar(APP_HANDLER_IVAR, state_ptr as *mut c_void);
+            let () = msg_send![self.ns_app, setDelegate: delegate];
 
-    pub fn run(&mut self) {
-        unsafe {
+            // Run the main app loop
             self.ns_app.run();
+
+            // Clean up the delegate
+            let () = msg_send![self.ns_app, setDelegate: nil];
+            Box::from_raw(state_ptr); // Causes it to drop & dealloc automatically
         }
     }
 
-    pub fn quit() {
-        unsafe {
-            let () = msg_send![NSApp(), terminate: nil];
+    pub fn quit(&self) {
+        if let Ok(mut state) = self.state.try_borrow_mut() {
+            if !state.quitting {
+                state.quitting = true;
+                unsafe {
+                    // We want to queue up the destruction of all our windows.
+                    // Failure to do so will lead to resource leaks.
+                    let windows: id = msg_send![self.ns_app, windows];
+                    for i in 0..windows.count() {
+                        let window: id = windows.objectAtIndex(i);
+                        let () = msg_send![window, performSelectorOnMainThread: sel!(close) withObject: nil waitUntilDone: NO];
+                    }
+                    // Stop sets a stop request flag in the OS.
+                    // The run loop is stopped after dealing with events.
+                    let () = msg_send![self.ns_app, stop: nil];
+                }
+            }
+        } else {
+            log::warn!("Application state already borrowed");
         }
     }
 
     /// Hide the application this window belongs to. (cmd+H)
-    pub fn hide() {
+    pub fn hide(&self) {
         unsafe {
-            let () = msg_send![NSApp(), hide: nil];
+            let () = msg_send![self.ns_app, hide: nil];
         }
     }
 
     /// Hide all other applications. (cmd+opt+H)
-    pub fn hide_others() {
+    pub fn hide_others(&self) {
         unsafe {
             let workspace = class!(NSWorkspace);
             let shared: id = msg_send![workspace, sharedWorkspace];
@@ -82,7 +120,7 @@ impl Application {
         }
     }
 
-    pub fn clipboard() -> Clipboard {
+    pub fn clipboard(&self) -> Clipboard {
         Clipboard
     }
 

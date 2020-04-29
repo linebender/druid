@@ -20,11 +20,13 @@ use std::sync::Arc;
 
 use lazy_static::lazy_static;
 
-use super::clipboard::Clipboard;
-use super::window::XWindow;
 use crate::application::AppHandler;
-use crate::kurbo::Point;
+use crate::kurbo::{Point, Rect};
 use crate::{KeyCode, KeyModifiers, MouseButton, MouseEvent};
+
+use super::clipboard::Clipboard;
+use super::error::Error;
+use super::window::XWindow;
 
 struct XcbConnection {
     connection: Arc<xcb::Connection>,
@@ -39,11 +41,12 @@ thread_local! {
     static WINDOW_MAP: RefCell<HashMap<u32, XWindow>> = RefCell::new(HashMap::new());
 }
 
-pub struct Application;
+#[derive(Clone)]
+pub(crate) struct Application;
 
 impl Application {
-    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
-        Application
+    pub fn new() -> Result<Application, Error> {
+        Ok(Application)
     }
 
     pub(crate) fn add_xwindow(id: u32, xwindow: XWindow) {
@@ -59,7 +62,7 @@ impl Application {
     }
 
     // TODO(x11/events): handle mouse scroll events
-    pub fn run(&mut self) {
+    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         let conn = XCB_CONNECTION.connection_cloned();
         loop {
             if let Some(ev) = conn.wait_for_event() {
@@ -76,10 +79,16 @@ impl Application {
                     xcb::EXPOSE => {
                         let expose: &xcb::ExposeEvent = unsafe { xcb::cast_event(&ev) };
                         let window_id = expose.window();
+                        // TODO(x11/dpi_scaling): when dpi scaling is
+                        // implemented, it needs to be used here too
+                        let rect = Rect::from_origin_size(
+                            (expose.x() as f64, expose.y() as f64),
+                            (expose.width() as f64, expose.height() as f64),
+                        );
                         WINDOW_MAP.with(|map| {
                             let mut windows = map.borrow_mut();
                             if let Some(w) = windows.get_mut(&window_id) {
-                                w.render();
+                                w.render(rect);
                             }
                         })
                     }
@@ -176,11 +185,11 @@ impl Application {
         }
     }
 
-    pub fn quit() {
+    pub fn quit(&self) {
         // No-op.
     }
 
-    pub fn clipboard() -> Clipboard {
+    pub fn clipboard(&self) -> Clipboard {
         // TODO(x11/clipboard): implement Application::clipboard
         log::warn!("Application::clipboard is currently unimplemented for X11 platforms.");
         Clipboard {}

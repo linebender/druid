@@ -4,4 +4,5 @@ members = [
     "druid-shell",
     "druid-derive",
     "docs/book_examples",
+    "druid/examples/wasm",
 ]

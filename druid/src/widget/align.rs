@@ -94,16 +94,10 @@ impl<T: Data> Widget<T> for Align<T> {
         self.child.update(ctx, data, env);
     }
 
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Align");
 
-        let size = self.child.layout(layout_ctx, &bc.loosen(), data, env);
+        let size = self.child.layout(ctx, &bc.loosen(), data, env);
 
         log_size_warnings(size);
 
@@ -129,10 +123,10 @@ impl<T: Data> Widget<T> for Align<T> {
             .align
             .resolve(Rect::new(0., 0., extra_width, extra_height));
         self.child
-            .set_layout_rect(Rect::from_origin_size(origin, size));
+            .set_layout_rect(ctx, data, env, Rect::from_origin_size(origin, size));
 
         let my_insets = self.child.compute_parent_paint_insets(my_size);
-        layout_ctx.set_paint_insets(my_insets);
+        ctx.set_paint_insets(my_insets);
         my_size
     }
 

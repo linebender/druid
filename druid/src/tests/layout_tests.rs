@@ -14,6 +14,8 @@
 
 //! Tests related to layout.
 
+use float_cmp::approx_eq;
+
 use super::*;
 
 #[test]
@@ -29,11 +31,12 @@ fn simple_layout() {
         .with_id(id_1)
         .center();
 
-    Harness::create(true, widget, |harness| {
+    Harness::create_simple(true, widget, |harness| {
         harness.send_initial_events();
         harness.just_layout();
         let state = harness.get_state(id_1);
-        assert_eq!(
+        approx_eq!(
+            f64,
             state.layout_rect().x0,
             ((DEFAULT_SIZE.width - BOX_WIDTH) / 2.) - PADDING
         );
@@ -61,7 +64,7 @@ fn row_column() {
             1.0,
         );
 
-    Harness::create((), widget, |harness| {
+    Harness::create_simple((), widget, |harness| {
         harness.send_initial_events();
         harness.just_layout();
         let state1 = harness.get_state(id1);
@@ -92,7 +95,7 @@ fn simple_paint_rect() {
         .background(Color::BLACK)
         .center();
 
-    Harness::create((), widget, |harness| {
+    Harness::create_simple((), widget, |harness| {
         harness.send_initial_events();
         harness.just_layout();
 
@@ -167,7 +170,7 @@ fn flex_paint_rect_overflow() {
         .padding(10.)
         .center();
 
-    Harness::create((), widget, |harness| {
+    Harness::create_simple((), widget, |harness| {
         harness.set_initial_size(Size::new(300., 300.));
         harness.send_initial_events();
         harness.just_layout();

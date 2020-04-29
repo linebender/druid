@@ -20,9 +20,11 @@ use gio::prelude::ApplicationExtManual;
 use gio::{ApplicationExt, ApplicationFlags, Cancellable};
 use gtk::{Application as GtkApplication, GtkApplicationExt};
 
-use super::clipboard::Clipboard;
-use super::util;
 use crate::application::AppHandler;
+
+use super::clipboard::Clipboard;
+use super::error::Error;
+use super::util;
 
 // XXX: The application needs to be global because WindowBuilder::build wants
 // to construct an ApplicationWindow, which needs the application, but
@@ -31,10 +33,11 @@ thread_local!(
     static GTK_APPLICATION: RefCell<Option<GtkApplication>> = RefCell::new(None);
 );
 
-pub struct Application;
+#[derive(Clone)]
+pub(crate) struct Application;
 
 impl Application {
-    pub fn new(_handler: Option<Box<dyn AppHandler>>) -> Application {
+    pub fn new() -> Result<Application, Error> {
         // TODO: we should give control over the application ID to the user
         let application = GtkApplication::new(
             Some("com.github.xi-editor.druid"),
@@ -56,10 +59,10 @@ impl Application {
             .expect("Could not register GTK application");
 
         GTK_APPLICATION.with(move |x| *x.borrow_mut() = Some(application));
-        Application
+        Ok(Application)
     }
 
-    pub fn run(&mut self) {
+    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         util::assert_main_thread();
 
         // TODO: should we pass the command line arguments?
@@ -71,7 +74,7 @@ impl Application {
         });
     }
 
-    pub fn quit() {
+    pub fn quit(&self) {
         util::assert_main_thread();
         with_application(|app| {
             match app.get_active_window() {
@@ -86,7 +89,7 @@ impl Application {
         });
     }
 
-    pub fn clipboard() -> Clipboard {
+    pub fn clipboard(&self) -> Clipboard {
         Clipboard
     }
 

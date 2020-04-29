@@ -22,7 +22,7 @@ use xcb::ffi::XCB_COPY_FROM_PARENT;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
-use crate::kurbo::{Point, Size};
+use crate::kurbo::{Point, Rect, Size};
 use crate::mouse::{Cursor, MouseEvent};
 use crate::piet::{Piet, RenderContext};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
@@ -32,7 +32,7 @@ use super::error::Error;
 use super::menu::Menu;
 use super::util;
 
-pub struct WindowBuilder {
+pub(crate) struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     size: Size,
@@ -40,7 +40,7 @@ pub struct WindowBuilder {
 }
 
 impl WindowBuilder {
-    pub fn new() -> WindowBuilder {
+    pub fn new(_app: Application) -> WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),
@@ -181,7 +181,7 @@ impl XWindow {
         xwindow
     }
 
-    pub fn render(&mut self) {
+    pub fn render(&mut self, invalid_rect: Rect) {
         let conn = Application::get_connection();
         let setup = conn.get_setup();
         let screen_num = Application::get_screen_num();
@@ -221,7 +221,7 @@ impl XWindow {
         cairo_context.set_source_rgb(0.0, 0.0, 0.0);
         cairo_context.paint();
         let mut piet_ctx = Piet::new(&mut cairo_context);
-        let anim = self.handler.paint(&mut piet_ctx);
+        let anim = self.handler.paint(&mut piet_ctx, invalid_rect);
         if let Err(e) = piet_ctx.finish() {
             // TODO(x11/errors): hook up to error or something?
             panic!("piet error on render: {:?}", e);
@@ -289,7 +289,7 @@ fn get_visual_from_screen(screen: &xcb::Screen<'_>) -> Option<xcb::xproto::Visua
 }
 
 #[derive(Clone)]
-pub struct IdleHandle;
+pub(crate) struct IdleHandle;
 
 impl IdleHandle {
     pub fn add_idle_callback<F>(&self, _callback: F)
@@ -307,7 +307,7 @@ impl IdleHandle {
 }
 
 #[derive(Clone, Default)]
-pub struct WindowHandle {
+pub(crate) struct WindowHandle {
     window_id: u32,
 }
 
@@ -356,6 +356,11 @@ impl WindowHandle {
     }
 
     pub fn invalidate(&self) {
+        request_redraw(self.window_id);
+    }
+
+    pub fn invalidate_rect(&self, _rect: Rect) {
+        // TODO(x11/render_improvements): set the bounds correctly.
         request_redraw(self.window_id);
     }
 

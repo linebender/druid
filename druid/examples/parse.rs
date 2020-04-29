@@ -15,7 +15,7 @@
 use druid::widget::{Align, Flex, Label, Parse, TextBox};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};
 
-fn main() {
+pub fn main() {
     let main_window = WindowDesc::new(ui_builder).title(
         LocalizedString::new("parse-demo-window-title").with_placeholder("Number Parsing Demo"),
     );
