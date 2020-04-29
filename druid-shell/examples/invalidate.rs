@@ -78,6 +78,10 @@ impl WinHandler for InvalidateTest {
         }
     }
 
+    fn destroy(&mut self) {
+        Application::global().quit()
+    }
+
     fn as_any(&mut self) -> &mut dyn Any {
         self
     }
