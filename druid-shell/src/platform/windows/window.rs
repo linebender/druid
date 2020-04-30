@@ -684,7 +684,12 @@ impl WndProc for MyWndProc {
 
                     let (px, py) = self.handle.borrow().pixels_to_px_xy(p.x, p.y);
                     let pos = Point::new(px as f64, py as f64);
-                    let mods = get_mod_state();
+                    let mods = KeyModifiers {
+                        shift: wparam & MK_SHIFT != 0,
+                        alt: get_mod_state_alt(),
+                        ctrl: wparam & MK_CONTROL != 0,
+                        meta: get_mod_state_win(),
+                    };
                     let buttons = get_buttons(wparam);
                     let event = MouseEvent {
                         pos,
