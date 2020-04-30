@@ -35,10 +35,10 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `Split::splitter_size` no longer includes padding. ([#738] by [@xStrom])
 - Renamed `Event::MouseMoved` to `MouseMove`. ([#825] by [@teddemunnik])
 - `has_focus` no longer returns false positives. ([#819] by [@xStrom])
-- `Event::Internal(InternalEvent)` now bundles all internal events. ([#833] by [@xStrom])
+- `Event::Internal(InternalEvent)` bundles all internal events. ([#833] by [@xStrom])
 - `WidgetPod::set_layout_rect` now requires `LayoutCtx`, data and `Env`. ([#841] by [@xStrom])
-- `request_timer` now uses `Duration` instead of `Instant`. ([#847] by [@finnerale])
-- Global `Application` associated functions are now instance methods instead, e.g. `Application::global().quit()` instead of the old `Application::quit()`. ([#763] by [@xStrom])
+- `request_timer` uses `Duration` instead of `Instant`. ([#847] by [@finnerale])
+- Global `Application` associated functions are instance methods instead, e.g. `Application::global().quit()` instead of the old `Application::quit()`. ([#763] by [@xStrom])
 - Timer events will only be delivered to the widgets that requested them. ([#831] by [@sjoshid])
 
 ### Deprecated
