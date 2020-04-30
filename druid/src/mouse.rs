@@ -15,9 +15,9 @@
 //! The mousey bits
 
 use crate::kurbo::Point;
-use crate::{KeyModifiers, MouseButton};
+use crate::{KeyModifiers, MouseButton, MouseButtons};
 
-/// The state of the mouse for a click, mouse-up, or move event.
+/// Information about the mouse click event.
 ///
 /// In `druid`, unlike in `druid_shell`, we treat the widget's coordinate
 /// space and the window's coordinate space separately.
@@ -27,13 +27,18 @@ pub struct MouseEvent {
     pub pos: Point,
     /// The position of the mouse in the coordinate space of the window.
     pub window_pos: Point,
-    /// Keyboard modifiers at the time of the mouse event.
+    /// Mouse buttons being held down during a move or after a click event.
+    /// Thus it will contain the `button` that triggered a mouse-down event,
+    /// and it will not contain the `button` that triggered a mouse-up event.
+    pub buttons: MouseButtons,
+    /// Keyboard modifiers at the time of the event.
     pub mods: KeyModifiers,
     /// The number of mouse clicks associated with this event. This will always
-    /// be `0` for a mouse-up event.
-    pub count: u32,
-    /// The currently pressed button in the case of a move or click event,
-    /// or the released button in the case of a mouse-up event.
+    /// be `0` for a mouse-up and mouse-move events.
+    pub count: u8,
+    /// The button that was pressed down in the case of mouse-down,
+    /// or the button that was released in the case of mouse-up.
+    /// This will always be `MouseButton::None` in the case of mouse-move.
     pub button: MouseButton,
 }
 
@@ -41,6 +46,7 @@ impl From<druid_shell::MouseEvent> for MouseEvent {
     fn from(src: druid_shell::MouseEvent) -> MouseEvent {
         let druid_shell::MouseEvent {
             pos,
+            buttons,
             mods,
             count,
             button,
@@ -48,6 +54,7 @@ impl From<druid_shell::MouseEvent> for MouseEvent {
         MouseEvent {
             pos,
             window_pos: pos,
+            buttons,
             mods,
             count,
             button,

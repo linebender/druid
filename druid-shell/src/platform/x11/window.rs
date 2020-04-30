@@ -424,7 +424,6 @@ impl WindowHandle {
 
     pub fn get_dpi(&self) -> f32 {
         // TODO(x11/dpi_scaling): figure out DPI scaling
-        log::warn!("WindowHandle::get_dpi is currently unimplemented for X11 platforms.");
         96.0
     }
 }

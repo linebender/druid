@@ -22,7 +22,7 @@ use lazy_static::lazy_static;
 
 use crate::application::AppHandler;
 use crate::kurbo::{Point, Rect};
-use crate::{KeyCode, KeyModifiers, MouseButton, MouseEvent};
+use crate::{KeyCode, KeyModifiers, MouseButton, MouseButtons, MouseEvent};
 
 use super::clipboard::Clipboard;
 use super::error::Error;
@@ -114,6 +114,8 @@ impl Application {
                                 button_press.event_x() as f64,
                                 button_press.event_y() as f64,
                             ),
+                            // TODO: Fill with held down buttons
+                            buttons: MouseButtons::new().with(MouseButton::Left),
                             mods: KeyModifiers {
                                 shift: false,
                                 alt: false,
@@ -139,6 +141,8 @@ impl Application {
                                 button_release.event_x() as f64,
                                 button_release.event_y() as f64,
                             ),
+                            // TODO: Fill with held down buttons
+                            buttons: MouseButtons::new(),
                             mods: KeyModifiers {
                                 shift: false,
                                 alt: false,
@@ -163,6 +167,8 @@ impl Application {
                                 mouse_move.event_x() as f64,
                                 mouse_move.event_y() as f64,
                             ),
+                            // TODO: Fill with held down buttons
+                            buttons: MouseButtons::new(),
                             mods: KeyModifiers {
                                 shift: false,
                                 alt: false,
@@ -170,7 +176,7 @@ impl Application {
                                 meta: false,
                             },
                             count: 0,
-                            button: MouseButton::Left,
+                            button: MouseButton::None,
                         };
                         WINDOW_MAP.with(|map| {
                             let mut windows = map.borrow_mut();

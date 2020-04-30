@@ -71,14 +71,15 @@ fn propogate_hot() {
     .record(&root_rec)
     .with_id(root);
 
-    fn make_mouse(x: f64, y: f64) -> MouseEvent {
+    fn move_mouse(x: f64, y: f64) -> MouseEvent {
         let pos = Point::new(x, y);
         MouseEvent {
             pos,
             window_pos: pos,
+            buttons: MouseButtons::default(),
             mods: KeyModifiers::default(),
             count: 0,
-            button: MouseButton::Left,
+            button: MouseButton::None,
         }
     }
     #[allow(clippy::cognitive_complexity)]
@@ -97,7 +98,7 @@ fn propogate_hot() {
         // and verifying both the widget's `is_hot` status and also that
         // each widget received the expected HotChanged messages.
 
-        harness.event(Event::MouseMove(make_mouse(10., 10.)));
+        harness.event(Event::MouseMove(move_mouse(10., 10.)));
         assert!(harness.get_state(root).is_hot);
         assert!(harness.get_state(empty).is_hot);
         assert!(!harness.get_state(pad).is_hot);
@@ -106,7 +107,7 @@ fn propogate_hot() {
         assert_matches!(root_rec.next(), Record::E(Event::MouseMove(_)));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMove(make_mouse(210., 10.)));
+        harness.event(Event::MouseMove(move_mouse(210., 10.)));
 
         assert!(harness.get_state(root).is_hot);
         assert!(!harness.get_state(empty).is_hot);
@@ -118,7 +119,7 @@ fn propogate_hot() {
         assert_matches!(padding_rec.next(), Record::E(Event::MouseMove(_)));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMove(make_mouse(260., 60.)));
+        harness.event(Event::MouseMove(move_mouse(260., 60.)));
         assert!(harness.get_state(root).is_hot);
         assert!(!harness.get_state(empty).is_hot);
         assert!(harness.get_state(button).is_hot);
@@ -130,7 +131,7 @@ fn propogate_hot() {
         assert_matches!(button_rec.next(), Record::E(Event::MouseMove(_)));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMove(make_mouse(10., 10.)));
+        harness.event(Event::MouseMove(move_mouse(10., 10.)));
         assert!(harness.get_state(root).is_hot);
         assert!(harness.get_state(empty).is_hot);
         assert!(!harness.get_state(button).is_hot);

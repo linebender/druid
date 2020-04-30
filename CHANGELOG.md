@@ -28,6 +28,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Window title can be any `LabelText` (such as a simple `String`). ([#869] by [@cmyr])
 - `Label::with_font` and `set_font`. ([#785] by [@thecodewarrior])
 - `InternalEvent::RouteTimer` to route timer events. ([#831] by [@sjoshid])
+- `MouseButtons` to `MouseEvent` to track which buttons are being held down during an event. ([#843] by [@xStrom])
 
 ### Changed
 
@@ -65,6 +66,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Supply correct `LifeCycleCtx` to `Event::FocusChanged`. ([#878] by [@cmyr])
 - Windows: Termiate app when all windows have closed. ([#763] by [@xStrom])
 - macOS: `Application::quit` now quits the run loop instead of killing the process. ([#763] by [@xStrom])
+- macOS/GTK/web: `MouseButton::X1` and `MouseButton::X2` clicks are now recognized. ([#843] by [@xStrom])
 
 ### Visual
 
@@ -123,6 +125,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#839]: https://github.com/xi-editor/druid/pull/839
 [#840]: https://github.com/xi-editor/druid/pull/840
 [#841]: https://github.com/xi-editor/druid/pull/841
+[#843]: https://github.com/xi-editor/druid/pull/843
 [#845]: https://github.com/xi-editor/druid/pull/845
 [#847]: https://github.com/xi-editor/druid/pull/847
 [#850]: https://github.com/xi-editor/druid/pull/850
