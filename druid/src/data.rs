@@ -369,7 +369,7 @@ impl Data for piet::Color {
     }
 }
 
-macro_rules! impl_Data {
+macro_rules! impl_data_for_array {
     () => {};
     ($this:tt $($rest:tt)*) => {
         impl<T: Data> Data for [T; $this] {
@@ -381,7 +381,7 @@ macro_rules! impl_Data {
     }
 }
 
-impl_Data! { 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 32 64 128 } // etc
+impl_data_for_array! { 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 }
 
 #[cfg(test)]
 mod test {
