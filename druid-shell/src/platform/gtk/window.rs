@@ -297,6 +297,7 @@ impl WindowBuilder {
                                 mods: get_modifiers(button_state),
                                 count: get_mouse_click_count(event.get_event_type()),
                                 button,
+                                wheel_delta: Vec2::ZERO
                             },
                         );
                     }
@@ -320,6 +321,7 @@ impl WindowBuilder {
                                 mods: get_modifiers(button_state),
                                 count: 0,
                                 button,
+                                wheel_delta: Vec2::ZERO
                             },
                         );
                     }
@@ -340,6 +342,7 @@ impl WindowBuilder {
                     mods: get_modifiers(motion_state),
                     count: 0,
                     button: MouseButton::None,
+                    wheel_delta: Vec2::ZERO
                 };
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
@@ -361,6 +364,7 @@ impl WindowBuilder {
                     mods: get_modifiers(crossing_state),
                     count: 0,
                     button: MouseButton::None,
+                    wheel_delta: Vec2::ZERO
                 };
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
@@ -377,48 +381,48 @@ impl WindowBuilder {
             if let Some(state) = handle.state.upgrade() {
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
 
-                    let modifiers = get_modifiers(scroll.get_state());
+                    let mods = get_modifiers(scroll.get_state());
 
                     // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
                     // They claim that one "tick" on a scroll wheel should be 120 units.
-                    match scroll.get_direction() {
-                        ScrollDirection::Up => {
-                            if modifiers.shift {
-                                handler.wheel(Vec2::from((-120.0, 0.0)), modifiers);
-                            } else {
-                                handler.wheel(Vec2::from((0.0, -120.0)), modifiers);
-                            }
-                        }
-                        ScrollDirection::Down => {
-                            if modifiers.shift {
-                                handler.wheel(Vec2::from((120.0, 0.0)), modifiers);
-                            } else {
-                                handler.wheel(Vec2::from((0.0, 120.0)), modifiers);
-                            }
-                        }
-                        ScrollDirection::Left => {
-                            handler.wheel(Vec2::from((-120.0, 0.0)), modifiers);
-                        }
-                        ScrollDirection::Right => {
-                            handler.wheel(Vec2::from((120.0, 0.0)), modifiers);
-                        }
+                    let wheel_delta = match scroll.get_direction() {
+                        ScrollDirection::Up if mods.shift => Some(Vec2::new(-120.0, 0.0)),
+                        ScrollDirection::Up => Some(Vec2::new(0.0, -120.0)),
+                        ScrollDirection::Down if mods.shift => Some(Vec2::new(120.0, 0.0)),
+                        ScrollDirection::Down => Some(Vec2::new(0.0, 120.0)),
+                        ScrollDirection::Left => Some(Vec2::new(-120.0, 0.0)),
+                        ScrollDirection::Right => Some(Vec2::new(120.0, 0.0)),
                         ScrollDirection::Smooth => {
                             //TODO: Look at how gtk's scroll containers implements it
                             let (mut delta_x, mut delta_y) = scroll.get_delta();
                             delta_x *= 120.;
                             delta_y *= 120.;
-                            if modifiers.shift {
+                            if mods.shift {
                                 delta_x += delta_y;
                                 delta_y = 0.;
                             }
-                            handler.wheel(Vec2::from((delta_x, delta_y)), modifiers)
+                            Some(Vec2::new(delta_x, delta_y))
                         }
                         e => {
                             eprintln!(
                                 "Warning: the Druid widget got some whacky scroll direction {:?}",
                                 e
                             );
+                            None
                         }
+                    };
+
+                    if let Some(wheel_delta) = wheel_delta{
+                        let mouse_event = MouseEvent{
+                            pos: Point::from(scroll.get_position()),
+                            buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
+                            mods,
+                            count: 0,
+                            button: MouseButton::None,
+                            wheel_delta
+                        };
+
+                        handler.wheel(&mouse_event);
                     }
                 } else {
                     log::info!("GTK event was dropped because the handler was already borrowed");
