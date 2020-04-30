@@ -27,6 +27,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `request_paint_rect` for partial invalidation. ([#817] by [@jneem])
 - Window title can be any `LabelText` (such as a simple `String`). ([#869] by [@cmyr])
 - `Label::with_font` and `set_font`. ([#785] by [@thecodewarrior])
+- `InternalEvent::RouteTimer` to route timer events. ([#831] by [@sjoshid])
 
 ### Changed
 
@@ -54,6 +55,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - GTK: Actually close windows ([#797] by [@finnerale])
 - Windows: Respect the minimum window size. ([#727] by [@teddemunnik])
 - Windows: Respect resizability. ([#712] by [@teddemunnik])
+- `Event::HotChanged(false)` will be emitted when the cursor leaves the window. ([#821] by [@teddemunnik])
 - Windows: Capture mouse for drag actions. ([#695] by [@teddemunnik])
 - Start focus cycling from non-registered-for-focus widgets. ([#819] by [@xStrom])
 - Propagate `Event::FocusChanged` to focus gaining widgets as well. ([#819] by [@xStrom])
