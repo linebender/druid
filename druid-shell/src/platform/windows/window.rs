@@ -685,22 +685,14 @@ impl WndProc for MyWndProc {
                     let (px, py) = self.handle.borrow().pixels_to_px_xy(p.x, p.y);
                     let pos = Point::new(px as f64, py as f64);
                     let mods = get_mod_state();
-                    let button = match wparam {
-                        w if (w & 1) > 0 => MouseButton::Left,
-                        w if (w & 1 << 1) > 0 => MouseButton::Right,
-                        w if (w & 1 << 5) > 0 => MouseButton::Middle,
-                        w if (w & 1 << 6) > 0 => MouseButton::X1,
-                        w if (w & 1 << 7) > 0 => MouseButton::X2,
-                        //FIXME: I guess we probably do want `MouseButton::None`?
-                        //this feels bad, but also this gets discarded in druid anyway.
-                        _ => MouseButton::Left,
-                    };
+                    let buttons = get_buttons(wparam);
                     let event = MouseEvent {
                         pos,
                         mods,
-                        button,
+                        button: MouseButton::None,
                         count: 0,
                         wheel_delta,
+                        buttons,
                     };
                     s.handler.wheel(&event);
                 } else {
@@ -819,6 +811,7 @@ impl WndProc for MyWndProc {
                             mods,
                             count,
                             button,
+                            wheel_delta: Vec2::ZERO,
                         };
                         if count > 0 {
                             s.enter_mouse_capture(hwnd, button);

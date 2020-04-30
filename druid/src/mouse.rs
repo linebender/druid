@@ -15,7 +15,7 @@
 //! The mousey bits
 
 use crate::kurbo::{Point, Vec2};
-use crate::{KeyModifiers, MouseButton};
+use crate::{KeyModifiers, MouseButton, MouseButtons};
 
 /// The state of the mouse for a click, mouse-up, move, or wheel event.
 ///
