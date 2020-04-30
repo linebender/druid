@@ -91,9 +91,8 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 ### Outside News
 
 - There are two new projects using druid:
-    - [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
-    - [jack-mixer](https://github.com/derekdreery/jack-mixer) A jack client that provides mixing, levels and a 3-band eq.
-
+  - [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
+  - [jack-mixer](https://github.com/derekdreery/jack-mixer) A jack client that provides mixing, levels and a 3-band eq.
 
 [#599]: https://github.com/xi-editor/druid/pull/599
 [#611]: https://github.com/xi-editor/druid/pull/611
@@ -138,7 +137,6 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 ## [0.5] - 2020-04-01
 
 Last release without a changelog :(
-
 
 [@futurepaul]: https://github.com/futurepaul
 [@finnerale]: https://github.com/finnerale
