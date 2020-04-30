@@ -18,14 +18,17 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 pub enum Error {
-    // TODO(x11/errors): enumerate `Error`s for X11
-    NoError,
+    // TODO: Replace String with xcb::ConnError once that gets Clone support
+    ConnectionError(String),
+    // TODO(x11/errors): Add more `Error`s for X11
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        // TODO(x11/errors): implement Error::fmt
-        log::warn!("Error::fmt is currently unimplemented for X11 platforms.");
-        write!(f, "X11 Error")
+        match self {
+            Error::ConnectionError(err) => write!(f, "Connection error: {}", err),
+        }
     }
 }
+
+impl std::error::Error for Error {}

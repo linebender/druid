@@ -16,6 +16,7 @@
 
 use std::any::Any;
 use std::convert::TryInto;
+use std::sync::Arc;
 
 use xcb::ffi::XCB_COPY_FROM_PARENT;
 
@@ -33,6 +34,7 @@ use super::menu::Menu;
 use super::util;
 
 pub(crate) struct WindowBuilder {
+    app: Application,
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     size: Size,
@@ -40,8 +42,9 @@ pub(crate) struct WindowBuilder {
 }
 
 impl WindowBuilder {
-    pub fn new(_app: Application) -> WindowBuilder {
+    pub fn new(app: Application) -> WindowBuilder {
         WindowBuilder {
+            app,
             handler: None,
             title: String::new(),
             size: Size::new(500.0, 400.0),
@@ -80,8 +83,8 @@ impl WindowBuilder {
 
     // TODO(x11/menus): make menus if requested
     pub fn build(self) -> Result<WindowHandle, Error> {
-        let conn = Application::get_connection();
-        let screen_num = Application::get_screen_num();
+        let conn = self.app.connection();
+        let screen_num = self.app.screen_num();
         let window_id = conn.generate_id();
         let setup = conn.get_setup();
         // TODO(x11/errors): Don't unwrap for screen or visual_type?
@@ -105,7 +108,7 @@ impl WindowBuilder {
         // Create the actual window
         xcb::create_window(
             // Connection to the X server
-            &conn,
+            conn,
             // Window depth
             XCB_COPY_FROM_PARENT.try_into().unwrap(),
             // The new window's ID
@@ -135,7 +138,7 @@ impl WindowBuilder {
 
         // Set window title
         xcb::change_property(
-            &conn,
+            conn,
             xcb::PROP_MODE_REPLACE as u8,
             window_id,
             xcb::ATOM_WM_NAME,
@@ -147,11 +150,11 @@ impl WindowBuilder {
         conn.flush();
 
         let mut handler = self.handler.unwrap();
-        let handle = WindowHandle::new(window_id);
+        let handle = WindowHandle::new(window_id, conn.clone());
         handler.connect(&(handle.clone()).into());
 
-        let xwindow = XWindow::new(window_id, handler, self.size);
-        Application::add_xwindow(window_id, xwindow);
+        let xwindow = XWindow::new(self.app.clone(), window_id, handler, self.size);
+        self.app.add_window(window_id, xwindow);
 
         Ok(handle)
     }
@@ -159,18 +162,23 @@ impl WindowBuilder {
 
 // X11-specific event handling and window drawing (etc.)
 pub(crate) struct XWindow {
+    app: Application,
     window_id: u32,
     handler: Box<dyn WinHandler>,
     refresh_rate: Option<f64>,
 }
 
 impl XWindow {
-    pub fn new(window_id: u32, window_handler: Box<dyn WinHandler>, size: Size) -> XWindow {
-        let conn = Application::get_connection();
-
+    pub fn new(
+        app: Application,
+        window_id: u32,
+        window_handler: Box<dyn WinHandler>,
+        size: Size,
+    ) -> XWindow {
         // Figure out the refresh rate of the current screen
-        let refresh_rate = util::refresh_rate(&conn, window_id);
+        let refresh_rate = util::refresh_rate(app.connection(), window_id);
         let mut xwindow = XWindow {
+            app,
             window_id,
             handler: window_handler,
             refresh_rate,
@@ -182,15 +190,14 @@ impl XWindow {
     }
 
     pub fn render(&mut self, invalid_rect: Rect) {
-        let conn = Application::get_connection();
-        let setup = conn.get_setup();
-        let screen_num = Application::get_screen_num();
+        let setup = self.app.connection().get_setup();
+        let screen_num = self.app.screen_num();
         // TODO(x11/errors): Don't unwrap for screen or visual_type?
         let screen = setup.roots().nth(screen_num as usize).unwrap();
         let mut visual_type = get_visual_from_screen(&screen).unwrap();
 
         // Figure out the window's current size
-        let geometry_cookie = xcb::get_geometry(&conn, self.window_id);
+        let geometry_cookie = xcb::get_geometry(self.app.connection(), self.window_id);
         let reply = geometry_cookie.get_reply().unwrap();
         let size = Size::new(reply.width() as f64, reply.height() as f64);
         self.communicate_size(size);
@@ -199,7 +206,7 @@ impl XWindow {
         // TODO(x11/render_improvements): We have to re-create this draw surface if the window size changes.
         let cairo_xcb_connection = unsafe {
             cairo::XCBConnection::from_raw_none(
-                conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t
+                self.app.connection().get_raw_conn() as *mut cairo_sys::xcb_connection_t
             )
         };
         let cairo_drawable = cairo::XCBDrawable(self.window_id);
@@ -234,9 +241,9 @@ impl XWindow {
             let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
             std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
 
-            request_redraw(self.window_id);
+            request_redraw(self.app.connection(), self.window_id);
         }
-        conn.flush();
+        self.app.connection().flush();
     }
 
     pub fn key_down(&mut self, key_code: KeyCode) {
@@ -309,23 +316,30 @@ impl IdleHandle {
 #[derive(Clone, Default)]
 pub(crate) struct WindowHandle {
     window_id: u32,
+    // In an Option because xcb::Connection does not implement Default
+    connection: Option<Arc<xcb::Connection>>,
 }
 
 impl WindowHandle {
-    fn new(window_id: u32) -> WindowHandle {
-        WindowHandle { window_id }
+    fn new(window_id: u32, connection: Arc<xcb::Connection>) -> WindowHandle {
+        WindowHandle {
+            window_id,
+            connection: Some(connection),
+        }
     }
 
     pub fn show(&self) {
-        let conn = Application::get_connection();
-        xcb::map_window(conn.as_ref(), self.window_id);
-        conn.as_ref().flush();
+        if let Some(conn) = self.connection.as_ref() {
+            xcb::map_window(conn, self.window_id);
+            conn.flush();
+        }
     }
 
     pub fn close(&self) {
-        // Hopefully there aren't any references to this window after this function is called.
-        let conn = Application::get_connection();
-        xcb::destroy_window(&conn, self.window_id);
+        if let Some(conn) = self.connection.as_ref() {
+            // Hopefully there aren't any references to this window after this function is called.
+            xcb::destroy_window(conn, self.window_id);
+        }
     }
 
     /// Set whether the window should be resizable
@@ -340,41 +354,47 @@ impl WindowHandle {
 
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
-        // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
-        let conn = Application::get_connection();
-        xcb::configure_window(
-            &conn,
-            self.window_id,
-            &[(xcb::CONFIG_WINDOW_STACK_MODE as u16, xcb::STACK_MODE_ABOVE)],
-        );
-        xcb::set_input_focus(
-            &conn,
-            xcb::INPUT_FOCUS_POINTER_ROOT as u8,
-            self.window_id,
-            xcb::CURRENT_TIME,
-        );
+        if let Some(conn) = self.connection.as_ref() {
+            // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
+            xcb::configure_window(
+                conn,
+                self.window_id,
+                &[(xcb::CONFIG_WINDOW_STACK_MODE as u16, xcb::STACK_MODE_ABOVE)],
+            );
+            xcb::set_input_focus(
+                conn,
+                xcb::INPUT_FOCUS_POINTER_ROOT as u8,
+                self.window_id,
+                xcb::CURRENT_TIME,
+            );
+        }
     }
 
     pub fn invalidate(&self) {
-        request_redraw(self.window_id);
+        if let Some(conn) = self.connection.as_ref() {
+            request_redraw(conn, self.window_id);
+        }
     }
 
     pub fn invalidate_rect(&self, _rect: Rect) {
-        // TODO(x11/render_improvements): set the bounds correctly.
-        request_redraw(self.window_id);
+        if let Some(conn) = self.connection.as_ref() {
+            // TODO(x11/render_improvements): set the bounds correctly.
+            request_redraw(conn, self.window_id);
+        }
     }
 
     pub fn set_title(&self, title: &str) {
-        let conn = Application::get_connection();
-        xcb::change_property(
-            &conn,
-            xcb::PROP_MODE_REPLACE as u8,
-            self.window_id,
-            xcb::ATOM_WM_NAME,
-            xcb::ATOM_STRING,
-            8,
-            title.as_bytes(),
-        );
+        if let Some(conn) = self.connection.as_ref() {
+            xcb::change_property(
+                conn,
+                xcb::PROP_MODE_REPLACE as u8,
+                self.window_id,
+                xcb::ATOM_WM_NAME,
+                xcb::ATOM_STRING,
+                8,
+                title.as_bytes(),
+            );
+        }
     }
 
     pub fn set_menu(&self, _menu: Menu) {
@@ -396,7 +416,7 @@ impl WindowHandle {
 
     pub fn set_cursor(&mut self, _cursor: &Cursor) {
         // TODO(x11/cursors): implement WindowHandle::set_cursor
-        log::warn!("WindowHandle::set_cursor is currently unimplemented for X11 platforms.");
+        //log::warn!("WindowHandle::set_cursor is currently unimplemented for X11 platforms.");
     }
 
     pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
@@ -428,9 +448,7 @@ impl WindowHandle {
     }
 }
 
-fn request_redraw(window_id: u32) {
-    let conn = Application::get_connection();
-
+fn request_redraw(connection: &Arc<xcb::Connection>, window_id: u32) {
     // TODO(x11/render_improvements): Set x, y, width, and height correctly.
     //     We redraw the entire surface on an ExposeEvent, so these args currently do nothing.
     // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
@@ -439,11 +457,11 @@ fn request_redraw(window_id: u32) {
         /*count=*/ 0,
     );
     xcb::send_event(
-        &conn,
+        &connection,
         false,
         window_id,
         xcb::EVENT_MASK_EXPOSURE,
         &expose_event,
     );
-    conn.flush();
+    connection.flush();
 }
