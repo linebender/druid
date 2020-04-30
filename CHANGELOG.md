@@ -134,9 +134,16 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#878]: https://github.com/xi-editor/druid/pull/878
 [#889]: https://github.com/xi-editor/druid/pull/899
 
-## [0.5] - 2020-04-01
+## [0.5.0] - 2020-04-01
 
 Last release without a changelog :(
+
+## [0.4.0] - 2019-12-28
+## [0.3.2] - 2019-11-05
+## [0.3.1] - 2019-11-04
+## 0.3.0 - 2019-11-02
+## 0.1.1 - 2018-11-02
+## 0.1.0 - 2018-11-02
 
 [@futurepaul]: https://github.com/futurepaul
 [@finnerale]: https://github.com/finnerale
@@ -156,4 +163,7 @@ Last release without a changelog :(
 [@mastfissh]: https://github.com/mastfissh
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
-[0.5]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0
+[0.5.0]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/xi-editor/druid/compare/v0.3.2...v0.4.0
+[0.3.2]: https://github.com/xi-editor/druid/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/xi-editor/druid/compare/v0.3.0...v0.3.1
