@@ -60,7 +60,7 @@ use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
-use crate::mouse::{Cursor, MouseButton, MouseEvent};
+use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 extern "system" {
@@ -174,10 +174,10 @@ struct WndState {
     /// The `char` of the last `WM_CHAR` event, if there has not already been
     /// a `WM_KEYUP` event.
     stashed_char: Option<char>,
-    // Stores a bit mask of all mouse buttons that are currently holding mouse
+    // Stores a set of all mouse buttons that are currently holding mouse
     // capture. When the first mouse button is down on our window we enter
     // capture, and we hold it until the last mouse button is up.
-    captured_mouse_buttons: u32,
+    captured_mouse_buttons: MouseButtons,
     // Is this window the topmost window under the mouse cursor
     has_mouse_focus: bool,
     //TODO: track surrogate orphan
@@ -220,20 +220,53 @@ impl Default for PresentStrategy {
 /// Must only be called while handling an input message.
 /// This queries the keyboard state at the time of message delivery.
 fn get_mod_state() -> KeyModifiers {
-    //FIXME: does not handle windows key
-    unsafe {
-        let mut mod_state = KeyModifiers::default();
-        if GetKeyState(VK_MENU) < 0 {
-            mod_state.alt = true;
-        }
-        if GetKeyState(VK_CONTROL) < 0 {
-            mod_state.ctrl = true;
-        }
-        if GetKeyState(VK_SHIFT) < 0 {
-            mod_state.shift = true;
-        }
-        mod_state
+    KeyModifiers {
+        shift: get_mod_state_shift(),
+        alt: get_mod_state_alt(),
+        ctrl: get_mod_state_ctrl(),
+        meta: get_mod_state_win(),
     }
+}
+
+#[inline]
+fn get_mod_state_shift() -> bool {
+    unsafe { GetKeyState(VK_SHIFT) < 0 }
+}
+
+#[inline]
+fn get_mod_state_alt() -> bool {
+    unsafe { GetKeyState(VK_MENU) < 0 }
+}
+
+#[inline]
+fn get_mod_state_ctrl() -> bool {
+    unsafe { GetKeyState(VK_CONTROL) < 0 }
+}
+
+#[inline]
+fn get_mod_state_win() -> bool {
+    unsafe { GetKeyState(VK_LWIN) < 0 || GetKeyState(VK_RWIN) < 0 }
+}
+
+/// Extract the buttons that are being held down from wparam in mouse events.
+fn get_buttons(wparam: WPARAM) -> MouseButtons {
+    let mut buttons = MouseButtons::new();
+    if wparam & MK_LBUTTON != 0 {
+        buttons.insert(MouseButton::Left);
+    }
+    if wparam & MK_RBUTTON != 0 {
+        buttons.insert(MouseButton::Right);
+    }
+    if wparam & MK_MBUTTON != 0 {
+        buttons.insert(MouseButton::Middle);
+    }
+    if wparam & MK_XBUTTON1 != 0 {
+        buttons.insert(MouseButton::X1);
+    }
+    if wparam & MK_XBUTTON2 != 0 {
+        buttons.insert(MouseButton::X2);
+    }
+    buttons
 }
 
 fn is_point_in_client_rect(hwnd: HWND, x: i32, y: i32) -> bool {
@@ -297,17 +330,17 @@ impl WndState {
     }
 
     fn enter_mouse_capture(&mut self, hwnd: HWND, button: MouseButton) {
-        if self.captured_mouse_buttons == 0 {
+        if self.captured_mouse_buttons.is_empty() {
             unsafe {
                 SetCapture(hwnd);
             }
         }
-        self.captured_mouse_buttons |= 1 << (button as u32);
+        self.captured_mouse_buttons.insert(button);
     }
 
     fn exit_mouse_capture(&mut self, button: MouseButton) -> bool {
-        self.captured_mouse_buttons &= !(1 << (button as u32));
-        self.captured_mouse_buttons == 0
+        self.captured_mouse_buttons.remove(button);
+        self.captured_mouse_buttons.is_empty()
     }
 }
 
@@ -677,22 +710,19 @@ impl WndProc for MyWndProc {
 
                     let (px, py) = self.handle.borrow().pixels_to_px_xy(x, y);
                     let pos = Point::new(px as f64, py as f64);
-                    let mods = get_mod_state();
-                    let button = match wparam {
-                        w if (w & 1) > 0 => MouseButton::Left,
-                        w if (w & 1 << 1) > 0 => MouseButton::Right,
-                        w if (w & 1 << 5) > 0 => MouseButton::Middle,
-                        w if (w & 1 << 6) > 0 => MouseButton::X1,
-                        w if (w & 1 << 7) > 0 => MouseButton::X2,
-                        //FIXME: I guess we probably do want `MouseButton::None`?
-                        //this feels bad, but also this gets discarded in druid anyway.
-                        _ => MouseButton::Left,
+                    let mods = KeyModifiers {
+                        shift: wparam & MK_SHIFT != 0,
+                        alt: get_mod_state_alt(),
+                        ctrl: wparam & MK_CONTROL != 0,
+                        meta: get_mod_state_win(),
                     };
+                    let buttons = get_buttons(wparam);
                     let event = MouseEvent {
                         pos,
+                        buttons,
                         mods,
-                        button,
                         count: 0,
+                        button: MouseButton::None,
                     };
                     s.handler.mouse_move(&event);
                 } else {
@@ -712,55 +742,64 @@ impl WndProc for MyWndProc {
             }
             // TODO: not clear where double-click processing should happen. Currently disabled
             // because CS_DBLCLKS is not set
-            WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MBUTTONDBLCLK
-            | WM_MBUTTONDOWN | WM_MBUTTONUP | WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP
+            WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_RBUTTONDBLCLK
+            | WM_RBUTTONDOWN | WM_RBUTTONUP | WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP
             | WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
                 let mut should_release_capture = false;
-                if let Ok(mut s) = self.state.try_borrow_mut() {
-                    let s = s.as_mut().unwrap();
-                    let button = match msg {
-                        WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => MouseButton::Left,
-                        WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP => MouseButton::Middle,
-                        WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => MouseButton::Right,
-                        WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
-                            match HIWORD(wparam as u32) {
-                                1 => MouseButton::X1,
-                                2 => MouseButton::X2,
-                                _ => {
-                                    warn!("unexpected X button event");
-                                    return None;
-                                }
+                if let Some(button) = match msg {
+                    WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => Some(MouseButton::Left),
+                    WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => Some(MouseButton::Right),
+                    WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP => Some(MouseButton::Middle),
+                    WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
+                        match HIWORD(wparam as u32) {
+                            XBUTTON1 => Some(MouseButton::X1),
+                            XBUTTON2 => Some(MouseButton::X2),
+                            w => {
+                                // Should never happen with current Windows
+                                log::warn!("Received an unknown XBUTTON event ({})", w);
+                                None
                             }
                         }
-                        _ => unreachable!(),
-                    };
-                    let count = match msg {
-                        WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN => 1,
-                        WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK
-                        | WM_XBUTTONDBLCLK => 2,
-                        WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP => 0,
-                        _ => unreachable!(),
-                    };
-                    let x = LOWORD(lparam as u32) as i16 as i32;
-                    let y = HIWORD(lparam as u32) as i16 as i32;
-                    let (px, py) = self.handle.borrow().pixels_to_px_xy(x, y);
-                    let pos = Point::new(px as f64, py as f64);
-                    let mods = get_mod_state();
-                    let event = MouseEvent {
-                        pos,
-                        mods,
-                        button,
-                        count,
-                    };
-                    if count > 0 {
-                        s.enter_mouse_capture(hwnd, button);
-                        s.handler.mouse_down(&event);
-                    } else {
-                        s.handler.mouse_up(&event);
-                        should_release_capture = s.exit_mouse_capture(button);
                     }
-                } else {
-                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                    _ => unreachable!(),
+                } {
+                    if let Ok(mut s) = self.state.try_borrow_mut() {
+                        let s = s.as_mut().unwrap();
+                        let count = match msg {
+                            WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN => 1,
+                            WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK
+                            | WM_XBUTTONDBLCLK => 2,
+                            WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP => 0,
+                            _ => unreachable!(),
+                        };
+                        let x = LOWORD(lparam as u32) as i16 as i32;
+                        let y = HIWORD(lparam as u32) as i16 as i32;
+                        let (px, py) = self.handle.borrow().pixels_to_px_xy(x, y);
+                        let pos = Point::new(px as f64, py as f64);
+                        let mods = KeyModifiers {
+                            shift: wparam & MK_SHIFT != 0,
+                            alt: get_mod_state_alt(),
+                            ctrl: wparam & MK_CONTROL != 0,
+                            meta: get_mod_state_win(),
+                        };
+                        let buttons = get_buttons(wparam);
+                        let event = MouseEvent {
+                            pos,
+                            buttons,
+                            mods,
+                            count,
+                            button,
+                        };
+                        if count > 0 {
+                            s.enter_mouse_capture(hwnd, button);
+                            s.handler.mouse_down(&event);
+                        } else {
+                            s.handler.mouse_up(&event);
+                            should_release_capture = s.exit_mouse_capture(button);
+                        }
+                    } else {
+                        self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                    }
                 }
 
                 // ReleaseCapture() is deferred: it needs to be called without having a mutable
@@ -810,7 +849,7 @@ impl WndProc for MyWndProc {
             WM_CAPTURECHANGED => {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    s.captured_mouse_buttons = 0;
+                    s.captured_mouse_buttons.clear();
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -942,7 +981,7 @@ impl WindowBuilder {
                 min_size: self.min_size,
                 stashed_key_code: KeyCode::Unknown(0),
                 stashed_char: None,
-                captured_mouse_buttons: 0,
+                captured_mouse_buttons: MouseButtons::new(),
                 has_mouse_focus: false,
             };
             win.wndproc.connect(&handle, state);

@@ -47,7 +47,7 @@ pub use hotkey::{HotKey, KeyCompare, RawMods, SysMods};
 pub use keyboard::{KeyEvent, KeyModifiers};
 pub use keycodes::KeyCode;
 pub use menu::Menu;
-pub use mouse::{Cursor, MouseButton, MouseEvent};
+pub use mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 pub use window::{
     IdleHandle, IdleToken, Text, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
