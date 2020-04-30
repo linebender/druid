@@ -15,7 +15,8 @@ Druid's current development is largely driven by its use in [Runebender], a new
 font editor.
 
 We have been doing periodic releases of druid on crates.io, but it is under
-active development and its API might change.
+active development and its API might change. All changes are documented
+in [the changelog](https://github.com/xi-editor/druid/blob/master/CHANGELOG.md).
 
 For an overview of some key concepts, see the (work in progress) [druid book].
 
