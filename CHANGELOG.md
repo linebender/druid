@@ -38,6 +38,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `WidgetPod::set_layout_rect` now requires `LayoutCtx`, data and `Env`. ([#841] by [@xStrom])
 - `request_timer` now uses `Duration` instead of `Instant`. ([#847] by [@finnerale])
 - Global `Application` associated functions are now instance methods instead, e.g. `Application::global().quit()` instead of the old `Application::quit()`. ([#763] by [@xStrom])
+- Timer events will only be delivered to the widgets that requested them. ([#831] by [@sjoshid])
 
 ### Deprecated
 
@@ -71,20 +72,19 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 ### Docs
 
 - Reduce the flashing in ext_event and identity examples. ([#782] by [@futurepaul])
-- `Env` got a new example and usage hints. ([#796] by [@finnerale])
-- Usage of bloom filters got documented. ([#818] by [@xStrom])
-- Book chapters about `Painter` and `Controller` were added. ([#832] by [@cmyr])
+- Added example and usage hints to `Env`. ([#796] by [@finnerale])
+- Added documentation about the usage of bloom filters. ([#818] by [@xStrom])
+- Added Book chapters about `Painter` and `Controller`. ([#832] by [@cmyr])
 - Added hot glow option to multiwin example. ([#845] by [@xStrom])
 - Added new example for blocking functions. ([#840] by [@mastfissh])
 - Added a changelog containing development since the 0.5 release. ([#889] by [@finnerale])
 
 ### Maintenance
 
-- Replace `#[macro_use]` with normal `use`. ([#808] by [@totsteps])
-- Clippy checks are now enabled for all targets. ([#850] by [@xStrom])
+- Replaced `#[macro_use]` with normal `use`. ([#808] by [@totsteps])
+- Enabled Clippy checks for all targets. ([#850] by [@xStrom])
 - Added rendering tests. ([#784] by [@fishrockz])
-- CI testing has been revamped. ([#857] by [@xStrom])
-- Associate timers with widget ids. ([#831] by [@sjoshid])
+- Revamped CI testing to optimize coverage and speed. ([#857] by [@xStrom])
 
 ### Outside News
 
