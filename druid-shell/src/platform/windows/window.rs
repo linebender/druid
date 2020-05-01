@@ -661,7 +661,12 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     let system_delta = HIWORD(wparam as u32) as i16 as f64;
-                    let mods = get_mod_state();
+                    let mods = KeyModifiers {
+                        shift: LOWORD(wparam as u32) as usize & MK_SHIFT != 0,
+                        alt: get_mod_state_alt(),
+                        ctrl: LOWORD(wparam as u32) as usize & MK_CONTROL != 0,
+                        meta: get_mod_state_win(),
+                    };
                     let wheel_delta = match msg {
                         WM_MOUSEWHEEL if mods.shift => Vec2::new(-system_delta, 0.),
                         WM_MOUSEWHEEL => Vec2::new(0., -system_delta),
@@ -674,23 +679,18 @@ impl WndProc for MyWndProc {
                         y: HIWORD(lparam as u32) as i16 as i32,
                     };
                     unsafe {
-                        if ScreenToClient(hwnd, &mut p) == 0 {
-                            warn!(
+                        if ScreenToClient(hwnd, &mut p) == FALSE {
+                            log::warn!(
                                 "ScreenToClient failed: {}",
                                 Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                             );
+                            return None;
                         }
                     }
 
                     let (px, py) = self.handle.borrow().pixels_to_px_xy(p.x, p.y);
                     let pos = Point::new(px as f64, py as f64);
-                    let mods = KeyModifiers {
-                        shift: wparam & MK_SHIFT != 0,
-                        alt: get_mod_state_alt(),
-                        ctrl: wparam & MK_CONTROL != 0,
-                        meta: get_mod_state_win(),
-                    };
-                    let buttons = get_buttons(wparam);
+                    let buttons = get_buttons(LOWORD(wparam as u32) as usize);
                     let event = MouseEvent {
                         pos,
                         mods,
