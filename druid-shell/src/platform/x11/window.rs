@@ -19,6 +19,7 @@ use std::cell::RefCell;
 use std::convert::TryInto;
 use std::rc::{Rc, Weak};
 
+use cairo::XCBSurface;
 use xcb::ffi::XCB_COPY_FROM_PARENT;
 
 use crate::dialog::{FileDialogOptions, FileInfo};
@@ -166,6 +167,7 @@ pub(crate) struct Window {
     id: u32,
     app: Application,
     handler: RefCell<Box<dyn WinHandler>>,
+    cairo_context: RefCell<cairo::Context>,
     refresh_rate: Option<f64>,
     state: RefCell<WindowState>,
 }
@@ -177,14 +179,43 @@ struct WindowState {
 
 impl Window {
     pub fn new(id: u32, app: Application, handler: Box<dyn WinHandler>, size: Size) -> Window {
+        // Create a draw surface
+        let setup = app.connection().get_setup();
+        let screen_num = app.screen_num();
+        // TODO(x11/errors): Don't unwrap for screen or visual_type?
+        let screen = setup.roots().nth(screen_num as usize).unwrap();
+        let mut visual_type = get_visual_from_screen(&screen).unwrap();
+        let cairo_xcb_connection = unsafe {
+            cairo::XCBConnection::from_raw_none(
+                app.connection().get_raw_conn() as *mut cairo_sys::xcb_connection_t
+            )
+        };
+        let cairo_drawable = cairo::XCBDrawable(id);
+        let cairo_visual_type = unsafe {
+            cairo::XCBVisualType::from_raw_none(
+                &mut visual_type.base as *mut _ as *mut cairo_sys::xcb_visualtype_t,
+            )
+        };
+        let cairo_surface = XCBSurface::create(
+            &cairo_xcb_connection,
+            &cairo_drawable,
+            &cairo_visual_type,
+            size.width as i32,
+            size.height as i32,
+        )
+        .expect("couldn't create a cairo surface");
+        let cairo_context = RefCell::new(cairo::Context::new(&cairo_surface));
+
         // Figure out the refresh rate of the current screen
         let refresh_rate = util::refresh_rate(app.connection(), id);
+
         let handler = RefCell::new(handler);
         let state = RefCell::new(WindowState { size });
         Window {
             id,
             app,
             handler,
+            cairo_context,
             refresh_rate,
             state,
         }
@@ -200,6 +231,20 @@ impl Window {
         }
     }
 
+    fn cairo_surface(&self) -> Result<XCBSurface, Error> {
+        match self.cairo_context.try_borrow() {
+            Ok(ctx) => match ctx.get_target().try_into() {
+                Ok(surface) => Ok(surface),
+                Err(err) => Err(Error::Generic(
+                    format!("try_into in Window::cairo_surface: {}", err),
+                )),
+            },
+            Err(_) => Err(Error::BorrowError(
+                "cairo context in Window::cairo_surface".into(),
+            )),
+        }
+    }
+
     fn set_size(&self, size: Size) {
         // TODO(x11/dpi_scaling): detect DPI and scale size
         let mut new_size = None;
@@ -212,6 +257,14 @@ impl Window {
             log::warn!("Window::set_size - state already borrowed");
         }
         if let Some(size) = new_size {
+            match self.cairo_surface() {
+                Ok(surface) => {
+                    if let Err(err) = surface.set_size(size.width as i32, size.height as i32) {
+                        log::error!("Failed to update cairo surface size to {:?}: {}", size, err);
+                    }
+                }
+                Err(err) => log::error!("Failed to get cairo surface: {}", err),
+            }
             if let Ok(mut handler) = self.handler.try_borrow_mut() {
                 handler.size(size.width as u32, size.height as u32);
             } else {
@@ -241,53 +294,26 @@ impl Window {
     }
 
     pub fn render(&self, invalid_rect: Rect) {
-        let setup = self.app.connection().get_setup();
-        let screen_num = self.app.screen_num();
-        // TODO(x11/errors): Don't unwrap for screen or visual_type?
-        let screen = setup.roots().nth(screen_num as usize).unwrap();
-        let mut visual_type = get_visual_from_screen(&screen).unwrap();
-
         // Figure out the window's current size
         let geometry_cookie = xcb::get_geometry(self.app.connection(), self.id);
         let reply = geometry_cookie.get_reply().unwrap();
         let size = Size::new(reply.width() as f64, reply.height() as f64);
         self.set_size(size);
 
-        // Create a draw surface
-        // TODO(x11/render_improvements): We have to re-create this draw surface if the window size changes.
-        let cairo_xcb_connection = unsafe {
-            cairo::XCBConnection::from_raw_none(
-                self.app.connection().get_raw_conn() as *mut cairo_sys::xcb_connection_t
-            )
-        };
-        let cairo_drawable = cairo::XCBDrawable(self.id);
-        let cairo_visual_type = unsafe {
-            cairo::XCBVisualType::from_raw_none(
-                &mut visual_type.base as *mut _ as *mut cairo_sys::xcb_visualtype_t,
-            )
-        };
-        let cairo_surface = cairo::XCBSurface::create(
-            &cairo_xcb_connection,
-            &cairo_drawable,
-            &cairo_visual_type,
-            size.width as i32,
-            size.height as i32,
-        )
-        .expect("couldn't create a cairo surface");
-        let mut cairo_context = cairo::Context::new(&cairo_surface);
-
-        cairo_context.set_source_rgb(0.0, 0.0, 0.0);
-        cairo_context.paint();
-        let mut piet_ctx = Piet::new(&mut cairo_context);
         let mut anim = false;
-        if let Ok(mut handler) = self.handler.try_borrow_mut() {
-            anim = handler.paint(&mut piet_ctx, invalid_rect);
+        if let Ok(mut cairo_ctx) = self.cairo_context.try_borrow_mut() {
+            let mut piet_ctx = Piet::new(&mut cairo_ctx);
+            if let Ok(mut handler) = self.handler.try_borrow_mut() {
+                anim = handler.paint(&mut piet_ctx, invalid_rect);
+            } else {
+                log::warn!("Window::render - handler already borrowed");
+            }
+            if let Err(e) = piet_ctx.finish() {
+                // TODO(x11/errors): hook up to error or something?
+                panic!("piet error on render: {:?}", e);
+            }
         } else {
-            log::warn!("Window::render - handler already borrowed");
-        }
-        if let Err(e) = piet_ctx.finish() {
-            // TODO(x11/errors): hook up to error or something?
-            panic!("piet error on render: {:?}", e);
+            log::warn!("Window::render - cairo context already borrowed");
         }
 
         if anim && self.refresh_rate.is_some() {

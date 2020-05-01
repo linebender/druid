@@ -18,15 +18,20 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 pub enum Error {
+    // Generic error
+    Generic(String),
     // TODO: Replace String with xcb::ConnError once that gets Clone support
     ConnectionError(String),
-    // TODO(x11/errors): Add more `Error`s for X11
+    // Runtime borrow failure
+    BorrowError(String),
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
+            Error::Generic(msg) => write!(f, "Error: {}", msg),
             Error::ConnectionError(err) => write!(f, "Connection error: {}", err),
+            Error::BorrowError(msg) => write!(f, "Borrow error: {}", msg),
         }
     }
 }
