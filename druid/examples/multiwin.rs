@@ -74,12 +74,16 @@ fn ui_builder() -> impl Widget<State> {
         data.menu_count = data.menu_count.saturating_sub(1);
         ctx.set_menu(make_menu::<State>(data));
     });
+    let new_button = Button::<State>::new("New window").on_click(|ctx, _data, _env| {
+        ctx.submit_command(sys_cmds::NEW_FILE, Target::Global);
+    });
 
     let mut col = Flex::column();
     col.add_flex_child(Align::centered(Padding::new(5.0, label)), 1.0);
     let mut row = Flex::row();
     row.add_child(Padding::new(5.0, inc_button));
     row.add_child(Padding::new(5.0, dec_button));
+    row.add_child(Padding::new(5.0, new_button));
     col.add_flex_child(Align::centered(row), 1.0);
     Glow::new(col)
 }
