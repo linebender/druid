@@ -154,6 +154,11 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         self.child.widget_mut()
     }
 
+    /// Returns the size of the child widget.
+    pub fn child_size(&self) -> Size {
+        self.child_size
+    }
+
     /// Update the scroll.
     ///
     /// Returns `true` if the scroll has been updated.
