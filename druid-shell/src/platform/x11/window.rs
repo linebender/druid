@@ -416,7 +416,6 @@ impl WindowHandle {
 
     pub fn set_cursor(&mut self, _cursor: &Cursor) {
         // TODO(x11/cursors): implement WindowHandle::set_cursor
-        //log::warn!("WindowHandle::set_cursor is currently unimplemented for X11 platforms.");
     }
 
     pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {

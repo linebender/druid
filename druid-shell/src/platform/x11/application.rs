@@ -65,10 +65,12 @@ impl Application {
         self.state.borrow_mut().windows.remove(&id);
     }
 
+    #[inline]
     pub(crate) fn connection(&self) -> &Arc<xcb::Connection> {
         &self.connection
     }
 
+    #[inline]
     pub(crate) fn screen_num(&self) -> i32 {
         self.screen_num
     }
