@@ -181,15 +181,13 @@ impl Window {
         let refresh_rate = util::refresh_rate(app.connection(), id);
         let handler = RefCell::new(handler);
         let state = RefCell::new(WindowState { size });
-        let window = Window {
+        Window {
             id,
             app,
             handler,
             refresh_rate,
             state,
-        };
-
-        window
+        }
     }
 
     pub fn connect(&self, handle: WindowHandle) {

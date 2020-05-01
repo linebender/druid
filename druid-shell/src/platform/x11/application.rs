@@ -72,7 +72,7 @@ impl Application {
 
     pub(crate) fn window(&self, id: u32) -> Option<Rc<Window>> {
         if let Ok(state) = self.state.try_borrow() {
-            state.windows.get(&id).map(|w| w.clone())
+            state.windows.get(&id).cloned()
         } else {
             log::warn!("Application::window - state already borrowed");
             None
