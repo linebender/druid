@@ -377,7 +377,7 @@ macro_rules! impl_data_for_array {
                 self.iter().zip(other.iter()).all(|(a, b)| a.same(b))
             }
         }
-        impl_Data!($($rest)*);
+        impl_data_for_array!($($rest)*);
     }
 }
 
