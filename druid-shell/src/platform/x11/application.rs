@@ -34,8 +34,6 @@ pub(crate) struct Application {
 }
 
 struct State {
-    // TODO: Figure out a better solution for window event passing,
-    //       because this approach has reentrancy issues with window creation etc.
     windows: HashMap<u32, Rc<Window>>,
 }
 

@@ -90,6 +90,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Added rendering tests. ([#784] by [@fishrockz])
 - Revamped CI testing to optimize coverage and speed. ([#857] by [@xStrom])
 - X11: Refactored `Application` to use the new structure. ([#894] by [@xStrom])
+- X11: Refactored `Window` to support some reentrancy and invalidation. ([#894] by [@xStrom])
 
 ### Outside News
 
