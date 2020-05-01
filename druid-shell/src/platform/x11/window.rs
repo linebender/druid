@@ -235,9 +235,10 @@ impl Window {
         match self.cairo_context.try_borrow() {
             Ok(ctx) => match ctx.get_target().try_into() {
                 Ok(surface) => Ok(surface),
-                Err(err) => Err(Error::Generic(
-                    format!("try_into in Window::cairo_surface: {}", err),
-                )),
+                Err(err) => Err(Error::Generic(format!(
+                    "try_into in Window::cairo_surface: {}",
+                    err
+                ))),
             },
             Err(_) => Err(Error::BorrowError(
                 "cairo context in Window::cairo_surface".into(),
