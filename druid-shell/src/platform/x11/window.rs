@@ -310,8 +310,7 @@ impl Window {
                 log::warn!("Window::render - handler already borrowed");
             }
             if let Err(e) = piet_ctx.finish() {
-                // TODO(x11/errors): hook up to error or something?
-                panic!("piet error on render: {:?}", e);
+                log::error!("piet finish failed: {}", e);
             }
         } else {
             log::warn!("Window::render - cairo context already borrowed");
