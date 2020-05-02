@@ -153,7 +153,7 @@ impl WindowBuilder {
 
         let handler = self.handler.unwrap();
         let window = Rc::new(Window::new(window_id, self.app.clone(), handler, self.size));
-        let handle = WindowHandle::new(Rc::downgrade(&window));
+        let handle = WindowHandle::new(window_id, Rc::downgrade(&window));
         window.connect(handle.clone());
 
         self.app.add_window(window_id, window);
@@ -486,65 +486,84 @@ impl IdleHandle {
 
 #[derive(Clone, Default)]
 pub(crate) struct WindowHandle {
+    id: u32,
     window: Weak<Window>,
 }
 
 impl WindowHandle {
-    fn new(window: Weak<Window>) -> WindowHandle {
-        WindowHandle { window }
+    fn new(id: u32, window: Weak<Window>) -> WindowHandle {
+        WindowHandle { id, window }
     }
 
     pub fn show(&self) {
         if let Some(w) = self.window.upgrade() {
             w.show();
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
         }
     }
 
     pub fn close(&self) {
         if let Some(w) = self.window.upgrade() {
             w.close();
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
         }
     }
 
     pub fn resizable(&self, resizable: bool) {
         if let Some(w) = self.window.upgrade() {
             w.resizable(resizable);
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
         }
     }
 
     pub fn show_titlebar(&self, show_titlebar: bool) {
         if let Some(w) = self.window.upgrade() {
             w.show_titlebar(show_titlebar);
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
         }
     }
 
     pub fn bring_to_front_and_focus(&self) {
         if let Some(w) = self.window.upgrade() {
             w.bring_to_front_and_focus();
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
         }
     }
 
     pub fn invalidate(&self) {
         if let Some(w) = self.window.upgrade() {
             w.invalidate();
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
         }
     }
 
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(w) = self.window.upgrade() {
             w.invalidate_rect(rect);
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
         }
     }
 
     pub fn set_title(&self, title: &str) {
         if let Some(w) = self.window.upgrade() {
             w.set_title(title);
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
         }
     }
 
     pub fn set_menu(&self, menu: Menu) {
         if let Some(w) = self.window.upgrade() {
             w.set_menu(menu);
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
         }
     }
 
@@ -592,6 +611,7 @@ impl WindowHandle {
         if let Some(w) = self.window.upgrade() {
             w.get_dpi()
         } else {
+            log::warn!("Window {} has already been dropped", self.id);
             96.0
         }
     }
