@@ -341,7 +341,6 @@ impl Window {
     }
 
     fn close(&self) {
-        // Hopefully there aren't any references to this window after this function is called.
         xcb::destroy_window(self.app.connection(), self.id);
     }
 
