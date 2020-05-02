@@ -67,6 +67,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Windows: Termiate app when all windows have closed. ([#763] by [@xStrom])
 - macOS: `Application::quit` now quits the run loop instead of killing the process. ([#763] by [@xStrom])
 - macOS/GTK/web: `MouseButton::X1` and `MouseButton::X2` clicks are now recognized. ([#843] by [@xStrom])
+- GTK: Support disabled menu items ([#897] by [@jneem])
 
 ### Visual
 
@@ -136,6 +137,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#869]: https://github.com/xi-editor/druid/pull/869
 [#878]: https://github.com/xi-editor/druid/pull/878
 [#889]: https://github.com/xi-editor/druid/pull/899
+[#897]: https://github.com/xi-editor/druid/pull/897
 
 ## [0.5.0] - 2020-04-01
 
