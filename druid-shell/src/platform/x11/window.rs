@@ -321,6 +321,10 @@ impl Window {
             // TODO(x11/render_improvements): Sleeping is a terrible way to schedule redraws.
             //     I think I'll end up having to write a redraw scheduler or something. :|
             //     Doing it this way for now to proof-of-concept it.
+            //
+            // Eventually we also need to make sure we respect V-Sync timings.
+            // A druid-shell test utility should probably be written to verify that.
+            // Inspiration can be taken from: https://www.vsynctester.com/we
             let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
             std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
 
