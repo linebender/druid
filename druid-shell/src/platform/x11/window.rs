@@ -304,14 +304,16 @@ impl Window {
         let mut anim = false;
         if let Ok(mut cairo_ctx) = self.cairo_context.try_borrow_mut() {
             let mut piet_ctx = Piet::new(&mut cairo_ctx);
+            piet_ctx.clip(invalid_rect);
             if let Ok(mut handler) = self.handler.try_borrow_mut() {
                 anim = handler.paint(&mut piet_ctx, invalid_rect);
             } else {
                 log::warn!("Window::render - handler already borrowed");
             }
             if let Err(e) = piet_ctx.finish() {
-                log::error!("piet finish failed: {}", e);
+                log::error!("Window::render - piet finish failed: {}", e);
             }
+            cairo_ctx.reset_clip();
         } else {
             log::warn!("Window::render - cairo context already borrowed");
         }
