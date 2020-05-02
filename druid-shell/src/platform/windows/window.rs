@@ -661,10 +661,11 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     let system_delta = HIWORD(wparam as u32) as i16 as f64;
+                    let down_state = LOWORD(wparam as u32) as usize;
                     let mods = KeyModifiers {
-                        shift: LOWORD(wparam as u32) as usize & MK_SHIFT != 0,
+                        shift: down_state & MK_SHIFT != 0,
                         alt: get_mod_state_alt(),
-                        ctrl: LOWORD(wparam as u32) as usize & MK_CONTROL != 0,
+                        ctrl: down_state & MK_CONTROL != 0,
                         meta: get_mod_state_win(),
                     };
                     let wheel_delta = match msg {
@@ -690,7 +691,7 @@ impl WndProc for MyWndProc {
 
                     let (px, py) = self.handle.borrow().pixels_to_px_xy(p.x, p.y);
                     let pos = Point::new(px as f64, py as f64);
-                    let buttons = get_buttons(LOWORD(wparam as u32) as usize);
+                    let buttons = get_buttons(down_state);
                     let event = MouseEvent {
                         pos,
                         mods,
