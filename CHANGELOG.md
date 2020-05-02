@@ -89,6 +89,8 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Enabled Clippy checks for all targets. ([#850] by [@xStrom])
 - Added rendering tests. ([#784] by [@fishrockz])
 - Revamped CI testing to optimize coverage and speed. ([#857] by [@xStrom])
+- X11: Refactored `Application` to use the new structure. ([#894] by [@xStrom])
+- X11: Refactored `Window` to support some reentrancy and invalidation. ([#894] by [@xStrom])
 
 ### Outside News
 
@@ -136,6 +138,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#869]: https://github.com/xi-editor/druid/pull/869
 [#878]: https://github.com/xi-editor/druid/pull/878
 [#889]: https://github.com/xi-editor/druid/pull/899
+[#894]: https://github.com/xi-editor/druid/pull/894
 
 ## [0.5.0] - 2020-04-01
 

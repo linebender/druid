@@ -15,15 +15,18 @@
 //! X11 window creation and window management.
 
 use std::any::Any;
+use std::cell::RefCell;
 use std::convert::TryInto;
+use std::rc::{Rc, Weak};
 
+use cairo::XCBSurface;
 use xcb::ffi::XCB_COPY_FROM_PARENT;
 
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::kurbo::{Point, Rect, Size};
-use crate::mouse::{Cursor, MouseEvent};
+use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, RenderContext};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
@@ -33,6 +36,7 @@ use super::menu::Menu;
 use super::util;
 
 pub(crate) struct WindowBuilder {
+    app: Application,
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     size: Size,
@@ -40,8 +44,9 @@ pub(crate) struct WindowBuilder {
 }
 
 impl WindowBuilder {
-    pub fn new(_app: Application) -> WindowBuilder {
+    pub fn new(app: Application) -> WindowBuilder {
         WindowBuilder {
+            app,
             handler: None,
             title: String::new(),
             size: Size::new(500.0, 400.0),
@@ -80,8 +85,8 @@ impl WindowBuilder {
 
     // TODO(x11/menus): make menus if requested
     pub fn build(self) -> Result<WindowHandle, Error> {
-        let conn = Application::get_connection();
-        let screen_num = Application::get_screen_num();
+        let conn = self.app.connection();
+        let screen_num = self.app.screen_num();
         let window_id = conn.generate_id();
         let setup = conn.get_setup();
         // TODO(x11/errors): Don't unwrap for screen or visual_type?
@@ -94,6 +99,7 @@ impl WindowBuilder {
             (
                 xcb::CW_EVENT_MASK,
                 xcb::EVENT_MASK_EXPOSURE
+                    | xcb::EVENT_MASK_STRUCTURE_NOTIFY
                     | xcb::EVENT_MASK_KEY_PRESS
                     | xcb::EVENT_MASK_KEY_RELEASE
                     | xcb::EVENT_MASK_BUTTON_PRESS
@@ -105,7 +111,7 @@ impl WindowBuilder {
         // Create the actual window
         xcb::create_window(
             // Connection to the X server
-            &conn,
+            conn,
             // Window depth
             XCB_COPY_FROM_PARENT.try_into().unwrap(),
             // The new window's ID
@@ -135,7 +141,7 @@ impl WindowBuilder {
 
         // Set window title
         xcb::change_property(
-            &conn,
+            conn,
             xcb::PROP_MODE_REPLACE as u8,
             window_id,
             xcb::ATOM_WM_NAME,
@@ -146,69 +152,52 @@ impl WindowBuilder {
 
         conn.flush();
 
-        let mut handler = self.handler.unwrap();
-        let handle = WindowHandle::new(window_id);
-        handler.connect(&(handle.clone()).into());
+        let handler = self.handler.unwrap();
+        let window = Rc::new(Window::new(window_id, self.app.clone(), handler, self.size));
+        let handle = WindowHandle::new(window_id, Rc::downgrade(&window));
+        window.connect(handle.clone());
 
-        let xwindow = XWindow::new(window_id, handler, self.size);
-        Application::add_xwindow(window_id, xwindow);
+        self.app.add_window(window_id, window);
 
         Ok(handle)
     }
 }
 
 // X11-specific event handling and window drawing (etc.)
-pub(crate) struct XWindow {
-    window_id: u32,
-    handler: Box<dyn WinHandler>,
+pub(crate) struct Window {
+    id: u32,
+    app: Application,
+    handler: RefCell<Box<dyn WinHandler>>,
+    cairo_context: RefCell<cairo::Context>,
     refresh_rate: Option<f64>,
+    state: RefCell<WindowState>,
 }
 
-impl XWindow {
-    pub fn new(window_id: u32, window_handler: Box<dyn WinHandler>, size: Size) -> XWindow {
-        let conn = Application::get_connection();
+/// The mutable state of the window.
+struct WindowState {
+    size: Size,
+}
 
-        // Figure out the refresh rate of the current screen
-        let refresh_rate = util::refresh_rate(&conn, window_id);
-        let mut xwindow = XWindow {
-            window_id,
-            handler: window_handler,
-            refresh_rate,
-        };
-        // Let the window handler know the size of the window
-        xwindow.communicate_size(size);
-
-        xwindow
-    }
-
-    pub fn render(&mut self, invalid_rect: Rect) {
-        let conn = Application::get_connection();
-        let setup = conn.get_setup();
-        let screen_num = Application::get_screen_num();
+impl Window {
+    fn new(id: u32, app: Application, handler: Box<dyn WinHandler>, size: Size) -> Window {
+        // Create a draw surface
+        let setup = app.connection().get_setup();
+        let screen_num = app.screen_num();
         // TODO(x11/errors): Don't unwrap for screen or visual_type?
         let screen = setup.roots().nth(screen_num as usize).unwrap();
         let mut visual_type = get_visual_from_screen(&screen).unwrap();
-
-        // Figure out the window's current size
-        let geometry_cookie = xcb::get_geometry(&conn, self.window_id);
-        let reply = geometry_cookie.get_reply().unwrap();
-        let size = Size::new(reply.width() as f64, reply.height() as f64);
-        self.communicate_size(size);
-
-        // Create a draw surface
-        // TODO(x11/render_improvements): We have to re-create this draw surface if the window size changes.
         let cairo_xcb_connection = unsafe {
             cairo::XCBConnection::from_raw_none(
-                conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t
+                app.connection().get_raw_conn() as *mut cairo_sys::xcb_connection_t
             )
         };
-        let cairo_drawable = cairo::XCBDrawable(self.window_id);
+        let cairo_drawable = cairo::XCBDrawable(id);
         let cairo_visual_type = unsafe {
             cairo::XCBVisualType::from_raw_none(
                 &mut visual_type.base as *mut _ as *mut cairo_sys::xcb_visualtype_t,
             )
         };
-        let cairo_surface = cairo::XCBSurface::create(
+        let cairo_surface = XCBSurface::create(
             &cairo_xcb_connection,
             &cairo_drawable,
             &cairo_visual_type,
@@ -216,31 +205,222 @@ impl XWindow {
             size.height as i32,
         )
         .expect("couldn't create a cairo surface");
-        let mut cairo_context = cairo::Context::new(&cairo_surface);
+        let cairo_context = RefCell::new(cairo::Context::new(&cairo_surface));
 
-        cairo_context.set_source_rgb(0.0, 0.0, 0.0);
-        cairo_context.paint();
-        let mut piet_ctx = Piet::new(&mut cairo_context);
-        let anim = self.handler.paint(&mut piet_ctx, invalid_rect);
-        if let Err(e) = piet_ctx.finish() {
-            // TODO(x11/errors): hook up to error or something?
-            panic!("piet error on render: {:?}", e);
+        // Figure out the refresh rate of the current screen
+        let refresh_rate = util::refresh_rate(app.connection(), id);
+
+        let handler = RefCell::new(handler);
+        let state = RefCell::new(WindowState { size });
+        Window {
+            id,
+            app,
+            handler,
+            cairo_context,
+            refresh_rate,
+            state,
+        }
+    }
+
+    fn connect(&self, handle: WindowHandle) {
+        let size = self.state.borrow().size;
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            handler.connect(&handle.into());
+            handler.size(size.width as u32, size.height as u32);
+        } else {
+            log::warn!("Window::connect - handler already borrowed");
+        }
+    }
+
+    fn cairo_surface(&self) -> Result<XCBSurface, Error> {
+        match self.cairo_context.try_borrow() {
+            Ok(ctx) => match ctx.get_target().try_into() {
+                Ok(surface) => Ok(surface),
+                Err(err) => Err(Error::Generic(format!(
+                    "try_into in Window::cairo_surface: {}",
+                    err
+                ))),
+            },
+            Err(_) => Err(Error::BorrowError(
+                "cairo context in Window::cairo_surface".into(),
+            )),
+        }
+    }
+
+    fn set_size(&self, size: Size) {
+        // TODO(x11/dpi_scaling): detect DPI and scale size
+        let mut new_size = None;
+        if let Ok(mut s) = self.state.try_borrow_mut() {
+            if s.size != size {
+                s.size = size;
+                new_size = Some(size);
+            }
+        } else {
+            log::warn!("Window::set_size - state already borrowed");
+        }
+        if let Some(size) = new_size {
+            match self.cairo_surface() {
+                Ok(surface) => {
+                    if let Err(err) = surface.set_size(size.width as i32, size.height as i32) {
+                        log::error!("Failed to update cairo surface size to {:?}: {}", size, err);
+                    }
+                }
+                Err(err) => log::error!("Failed to get cairo surface: {}", err),
+            }
+            if let Ok(mut handler) = self.handler.try_borrow_mut() {
+                handler.size(size.width as u32, size.height as u32);
+            } else {
+                log::warn!("Window::set_size - handler already borrowed");
+            }
+        }
+    }
+
+    fn request_redraw(&self, rect: Rect) {
+        // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
+        let expose_event = xcb::ExposeEvent::new(
+            self.id,
+            rect.x0 as u16,
+            rect.y0 as u16,
+            rect.width() as u16,
+            rect.height() as u16,
+            0,
+        );
+        xcb::send_event(
+            self.app.connection(),
+            false,
+            self.id,
+            xcb::EVENT_MASK_EXPOSURE,
+            &expose_event,
+        );
+        self.app.connection().flush();
+    }
+
+    fn render(&self, invalid_rect: Rect) {
+        // Figure out the window's current size
+        let geometry_cookie = xcb::get_geometry(self.app.connection(), self.id);
+        let reply = geometry_cookie.get_reply().unwrap();
+        let size = Size::new(reply.width() as f64, reply.height() as f64);
+        self.set_size(size);
+
+        let mut anim = false;
+        if let Ok(mut cairo_ctx) = self.cairo_context.try_borrow_mut() {
+            let mut piet_ctx = Piet::new(&mut cairo_ctx);
+            piet_ctx.clip(invalid_rect);
+            if let Ok(mut handler) = self.handler.try_borrow_mut() {
+                anim = handler.paint(&mut piet_ctx, invalid_rect);
+            } else {
+                log::warn!("Window::render - handler already borrowed");
+            }
+            if let Err(e) = piet_ctx.finish() {
+                log::error!("Window::render - piet finish failed: {}", e);
+            }
+            cairo_ctx.reset_clip();
+        } else {
+            log::warn!("Window::render - cairo context already borrowed");
         }
 
         if anim && self.refresh_rate.is_some() {
             // TODO(x11/render_improvements): Sleeping is a terrible way to schedule redraws.
             //     I think I'll end up having to write a redraw scheduler or something. :|
             //     Doing it this way for now to proof-of-concept it.
+            //
+            // Eventually we also need to make sure we respect V-Sync timings.
+            // A druid-shell test utility should probably be written to verify that.
+            // Inspiration can be taken from: https://www.vsynctester.com/we
             let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
             std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
 
-            request_redraw(self.window_id);
+            self.request_redraw(size.to_rect());
         }
-        conn.flush();
+        self.app.connection().flush();
     }
 
-    pub fn key_down(&mut self, key_code: KeyCode) {
-        self.handler.key_down(KeyEvent::new(
+    fn show(&self) {
+        xcb::map_window(self.app.connection(), self.id);
+        self.app.connection().flush();
+    }
+
+    fn close(&self) {
+        xcb::destroy_window(self.app.connection(), self.id);
+    }
+
+    /// Set whether the window should be resizable
+    fn resizable(&self, _resizable: bool) {
+        log::warn!("Window::resizeable is currently unimplemented for X11 platforms.");
+    }
+
+    /// Set whether the window should show titlebar
+    fn show_titlebar(&self, _show_titlebar: bool) {
+        log::warn!("Window::show_titlebar is currently unimplemented for X11 platforms.");
+    }
+
+    /// Bring this window to the front of the window stack and give it focus.
+    fn bring_to_front_and_focus(&self) {
+        // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
+        xcb::configure_window(
+            self.app.connection(),
+            self.id,
+            &[(xcb::CONFIG_WINDOW_STACK_MODE as u16, xcb::STACK_MODE_ABOVE)],
+        );
+        xcb::set_input_focus(
+            self.app.connection(),
+            xcb::INPUT_FOCUS_POINTER_ROOT as u8,
+            self.id,
+            xcb::CURRENT_TIME,
+        );
+    }
+
+    fn invalidate(&self) {
+        let mut size = None;
+        if let Ok(s) = self.state.try_borrow() {
+            size = Some(s.size);
+        } else {
+            log::warn!("Window::invalidate - state already borrowed");
+        }
+        if let Some(size) = size {
+            self.request_redraw(size.to_rect());
+        }
+    }
+
+    fn invalidate_rect(&self, rect: Rect) {
+        self.request_redraw(rect);
+    }
+
+    fn set_title(&self, title: &str) {
+        xcb::change_property(
+            self.app.connection(),
+            xcb::PROP_MODE_REPLACE as u8,
+            self.id,
+            xcb::ATOM_WM_NAME,
+            xcb::ATOM_STRING,
+            8,
+            title.as_bytes(),
+        );
+    }
+
+    fn set_menu(&self, _menu: Menu) {
+        // TODO(x11/menus): implement Window::set_menu (currently a no-op)
+    }
+
+    fn get_dpi(&self) -> f32 {
+        // TODO(x11/dpi_scaling): figure out DPI scaling
+        96.0
+    }
+
+    pub fn handle_expose(&self, expose: &xcb::ExposeEvent) {
+        // TODO(x11/dpi_scaling): when dpi scaling is
+        // implemented, it needs to be used here too
+        let rect = Rect::from_origin_size(
+            (expose.x() as f64, expose.y() as f64),
+            (expose.width() as f64, expose.height() as f64),
+        );
+        self.render(rect);
+    }
+
+    pub fn handle_key_press(&self, key_press: &xcb::KeyPressEvent) {
+        let key: u32 = key_press.detail() as u32;
+        let key_code: KeyCode = key.into();
+        let key_event = KeyEvent::new(
             key_code,
             false,
             KeyModifiers {
@@ -255,24 +435,89 @@ impl XWindow {
             },
             key_code,
             key_code,
-        ));
+        );
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            handler.key_down(key_event);
+        } else {
+            log::warn!("Window::handle_key_press - handler already borrowed");
+        }
     }
 
-    pub fn mouse_down(&mut self, mouse_event: &MouseEvent) {
-        self.handler.mouse_down(mouse_event);
+    pub fn handle_button_press(&self, button_press: &xcb::ButtonPressEvent) {
+        let mouse_event = MouseEvent {
+            pos: Point::new(button_press.event_x() as f64, button_press.event_y() as f64),
+            // TODO: Fill with held down buttons
+            buttons: MouseButtons::new().with(MouseButton::Left),
+            mods: KeyModifiers {
+                shift: false,
+                alt: false,
+                ctrl: false,
+                meta: false,
+            },
+            count: 1,
+            button: MouseButton::Left,
+        };
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            handler.mouse_down(&mouse_event);
+        } else {
+            log::warn!("Window::handle_button_press - handler already borrowed");
+        }
     }
 
-    pub fn mouse_up(&mut self, mouse_event: &MouseEvent) {
-        self.handler.mouse_up(mouse_event);
+    pub fn handle_button_release(&self, button_release: &xcb::ButtonReleaseEvent) {
+        let mouse_event = MouseEvent {
+            pos: Point::new(
+                button_release.event_x() as f64,
+                button_release.event_y() as f64,
+            ),
+            // TODO: Fill with held down buttons
+            buttons: MouseButtons::new(),
+            mods: KeyModifiers {
+                shift: false,
+                alt: false,
+                ctrl: false,
+                meta: false,
+            },
+            count: 0,
+            button: MouseButton::Left,
+        };
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            handler.mouse_up(&mouse_event);
+        } else {
+            log::warn!("Window::handle_button_release - handler already borrowed");
+        }
     }
 
-    pub fn mouse_move(&mut self, mouse_event: &MouseEvent) {
-        self.handler.mouse_move(mouse_event);
+    pub fn handle_motion_notify(&self, motion_notify: &xcb::MotionNotifyEvent) {
+        let mouse_event = MouseEvent {
+            pos: Point::new(
+                motion_notify.event_x() as f64,
+                motion_notify.event_y() as f64,
+            ),
+            // TODO: Fill with held down buttons
+            buttons: MouseButtons::new(),
+            mods: KeyModifiers {
+                shift: false,
+                alt: false,
+                ctrl: false,
+                meta: false,
+            },
+            count: 0,
+            button: MouseButton::None,
+        };
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            handler.mouse_move(&mouse_event);
+        } else {
+            log::warn!("Window::handle_motion_notify - handler already borrowed");
+        }
     }
 
-    fn communicate_size(&mut self, size: Size) {
-        // TODO(x11/dpi_scaling): detect DPI and scale size
-        self.handler.size(size.width as u32, size.height as u32);
+    pub fn handle_destroy_notify(&self, _destroy_notify: &xcb::DestroyNotifyEvent) {
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            handler.destroy();
+        } else {
+            log::warn!("Window::handle_destroy_notify - handler already borrowed");
+        }
     }
 }
 
@@ -308,77 +553,85 @@ impl IdleHandle {
 
 #[derive(Clone, Default)]
 pub(crate) struct WindowHandle {
-    window_id: u32,
+    id: u32,
+    window: Weak<Window>,
 }
 
 impl WindowHandle {
-    fn new(window_id: u32) -> WindowHandle {
-        WindowHandle { window_id }
+    fn new(id: u32, window: Weak<Window>) -> WindowHandle {
+        WindowHandle { id, window }
     }
 
     pub fn show(&self) {
-        let conn = Application::get_connection();
-        xcb::map_window(conn.as_ref(), self.window_id);
-        conn.as_ref().flush();
+        if let Some(w) = self.window.upgrade() {
+            w.show();
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
+        }
     }
 
     pub fn close(&self) {
-        // Hopefully there aren't any references to this window after this function is called.
-        let conn = Application::get_connection();
-        xcb::destroy_window(&conn, self.window_id);
+        if let Some(w) = self.window.upgrade() {
+            w.close();
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
+        }
     }
 
-    /// Set whether the window should be resizable
-    pub fn resizable(&self, _resizable: bool) {
-        log::warn!("WindowHandle::resizeable is currently unimplemented for X11 platforms.");
+    pub fn resizable(&self, resizable: bool) {
+        if let Some(w) = self.window.upgrade() {
+            w.resizable(resizable);
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
+        }
     }
 
-    /// Set whether the window should show titlebar
-    pub fn show_titlebar(&self, _show_titlebar: bool) {
-        log::warn!("WindowHandle::show_titlebar is currently unimplemented for X11 platforms.");
+    pub fn show_titlebar(&self, show_titlebar: bool) {
+        if let Some(w) = self.window.upgrade() {
+            w.show_titlebar(show_titlebar);
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
+        }
     }
 
-    /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
-        // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
-        let conn = Application::get_connection();
-        xcb::configure_window(
-            &conn,
-            self.window_id,
-            &[(xcb::CONFIG_WINDOW_STACK_MODE as u16, xcb::STACK_MODE_ABOVE)],
-        );
-        xcb::set_input_focus(
-            &conn,
-            xcb::INPUT_FOCUS_POINTER_ROOT as u8,
-            self.window_id,
-            xcb::CURRENT_TIME,
-        );
+        if let Some(w) = self.window.upgrade() {
+            w.bring_to_front_and_focus();
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
+        }
     }
 
     pub fn invalidate(&self) {
-        request_redraw(self.window_id);
+        if let Some(w) = self.window.upgrade() {
+            w.invalidate();
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
+        }
     }
 
-    pub fn invalidate_rect(&self, _rect: Rect) {
-        // TODO(x11/render_improvements): set the bounds correctly.
-        request_redraw(self.window_id);
+    pub fn invalidate_rect(&self, rect: Rect) {
+        if let Some(w) = self.window.upgrade() {
+            w.invalidate_rect(rect);
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
+        }
     }
 
     pub fn set_title(&self, title: &str) {
-        let conn = Application::get_connection();
-        xcb::change_property(
-            &conn,
-            xcb::PROP_MODE_REPLACE as u8,
-            self.window_id,
-            xcb::ATOM_WM_NAME,
-            xcb::ATOM_STRING,
-            8,
-            title.as_bytes(),
-        );
+        if let Some(w) = self.window.upgrade() {
+            w.set_title(title);
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
+        }
     }
 
-    pub fn set_menu(&self, _menu: Menu) {
-        // TODO(x11/menus): implement WindowHandle::set_menu (currently a no-op)
+    pub fn set_menu(&self, menu: Menu) {
+        if let Some(w) = self.window.upgrade() {
+            w.set_menu(menu);
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
+        }
     }
 
     pub fn text(&self) -> Text {
@@ -396,7 +649,6 @@ impl WindowHandle {
 
     pub fn set_cursor(&mut self, _cursor: &Cursor) {
         // TODO(x11/cursors): implement WindowHandle::set_cursor
-        log::warn!("WindowHandle::set_cursor is currently unimplemented for X11 platforms.");
     }
 
     pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
@@ -423,27 +675,11 @@ impl WindowHandle {
     }
 
     pub fn get_dpi(&self) -> f32 {
-        // TODO(x11/dpi_scaling): figure out DPI scaling
-        96.0
+        if let Some(w) = self.window.upgrade() {
+            w.get_dpi()
+        } else {
+            log::warn!("Window {} has already been dropped", self.id);
+            96.0
+        }
     }
-}
-
-fn request_redraw(window_id: u32) {
-    let conn = Application::get_connection();
-
-    // TODO(x11/render_improvements): Set x, y, width, and height correctly.
-    //     We redraw the entire surface on an ExposeEvent, so these args currently do nothing.
-    // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
-    let expose_event = xcb::ExposeEvent::new(
-        window_id, /*x=*/ 0, /*y=*/ 0, /*width=*/ 0, /*height=*/ 0,
-        /*count=*/ 0,
-    );
-    xcb::send_event(
-        &conn,
-        false,
-        window_id,
-        xcb::EVENT_MASK_EXPOSURE,
-        &expose_event,
-    );
-    conn.flush();
 }
