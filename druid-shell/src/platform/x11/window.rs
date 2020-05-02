@@ -26,7 +26,7 @@ use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::kurbo::{Point, Rect, Size};
-use crate::mouse::{Cursor, MouseEvent};
+use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, RenderContext};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
@@ -99,6 +99,7 @@ impl WindowBuilder {
             (
                 xcb::CW_EVENT_MASK,
                 xcb::EVENT_MASK_EXPOSURE
+                    | xcb::EVENT_MASK_STRUCTURE_NOTIFY
                     | xcb::EVENT_MASK_KEY_PRESS
                     | xcb::EVENT_MASK_KEY_RELEASE
                     | xcb::EVENT_MASK_BUTTON_PRESS
@@ -178,7 +179,7 @@ struct WindowState {
 }
 
 impl Window {
-    pub fn new(id: u32, app: Application, handler: Box<dyn WinHandler>, size: Size) -> Window {
+    fn new(id: u32, app: Application, handler: Box<dyn WinHandler>, size: Size) -> Window {
         // Create a draw surface
         let setup = app.connection().get_setup();
         let screen_num = app.screen_num();
@@ -221,7 +222,7 @@ impl Window {
         }
     }
 
-    pub fn connect(&self, handle: WindowHandle) {
+    fn connect(&self, handle: WindowHandle) {
         let size = self.state.borrow().size;
         if let Ok(mut handler) = self.handler.try_borrow_mut() {
             handler.connect(&handle.into());
@@ -294,7 +295,7 @@ impl Window {
         self.app.connection().flush();
     }
 
-    pub fn render(&self, invalid_rect: Rect) {
+    fn render(&self, invalid_rect: Rect) {
         // Figure out the window's current size
         let geometry_cookie = xcb::get_geometry(self.app.connection(), self.id);
         let reply = geometry_cookie.get_reply().unwrap();
@@ -334,75 +335,28 @@ impl Window {
         self.app.connection().flush();
     }
 
-    pub fn key_down(&self, key_code: KeyCode) {
-        if let Ok(mut handler) = self.handler.try_borrow_mut() {
-            handler.key_down(KeyEvent::new(
-                key_code,
-                false,
-                KeyModifiers {
-                    /// Shift.
-                    shift: false,
-                    /// Option on macOS.
-                    alt: false,
-                    /// Control.
-                    ctrl: false,
-                    /// Meta / Windows / Command
-                    meta: false,
-                },
-                key_code,
-                key_code,
-            ));
-        } else {
-            log::warn!("Window::key_down - handler already borrowed");
-        }
-    }
-
-    pub fn mouse_down(&self, mouse_event: &MouseEvent) {
-        if let Ok(mut handler) = self.handler.try_borrow_mut() {
-            handler.mouse_down(mouse_event);
-        } else {
-            log::warn!("Window::mouse_down - handler already borrowed");
-        }
-    }
-
-    pub fn mouse_up(&self, mouse_event: &MouseEvent) {
-        if let Ok(mut handler) = self.handler.try_borrow_mut() {
-            handler.mouse_up(mouse_event);
-        } else {
-            log::warn!("Window::mouse_up - handler already borrowed");
-        }
-    }
-
-    pub fn mouse_move(&self, mouse_event: &MouseEvent) {
-        if let Ok(mut handler) = self.handler.try_borrow_mut() {
-            handler.mouse_move(mouse_event);
-        } else {
-            log::warn!("Window::mouse_move - handler already borrowed");
-        }
-    }
-
-    pub fn show(&self) {
+    fn show(&self) {
         xcb::map_window(self.app.connection(), self.id);
         self.app.connection().flush();
     }
 
-    pub fn close(&self) {
+    fn close(&self) {
         // Hopefully there aren't any references to this window after this function is called.
         xcb::destroy_window(self.app.connection(), self.id);
     }
 
     /// Set whether the window should be resizable
-    pub fn resizable(&self, _resizable: bool) {
+    fn resizable(&self, _resizable: bool) {
         log::warn!("Window::resizeable is currently unimplemented for X11 platforms.");
     }
 
     /// Set whether the window should show titlebar
-    pub fn show_titlebar(&self, _show_titlebar: bool) {
+    fn show_titlebar(&self, _show_titlebar: bool) {
         log::warn!("Window::show_titlebar is currently unimplemented for X11 platforms.");
     }
 
     /// Bring this window to the front of the window stack and give it focus.
-    pub fn bring_to_front_and_focus(&self) {
+    fn bring_to_front_and_focus(&self) {
         // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
         xcb::configure_window(
             self.app.connection(),
@@ -417,7 +371,7 @@ impl Window {
         );
     }
 
-    pub fn invalidate(&self) {
+    fn invalidate(&self) {
         let mut size = None;
         if let Ok(s) = self.state.try_borrow() {
             size = Some(s.size);
@@ -429,11 +383,11 @@ impl Window {
         }
     }
 
-    pub fn invalidate_rect(&self, rect: Rect) {
+    fn invalidate_rect(&self, rect: Rect) {
         self.request_redraw(rect);
     }
 
-    pub fn set_title(&self, title: &str) {
+    fn set_title(&self, title: &str) {
         xcb::change_property(
             self.app.connection(),
             xcb::PROP_MODE_REPLACE as u8,
@@ -445,13 +399,126 @@ impl Window {
         );
     }
 
-    pub fn set_menu(&self, _menu: Menu) {
+    fn set_menu(&self, _menu: Menu) {
         // TODO(x11/menus): implement Window::set_menu (currently a no-op)
     }
 
-    pub fn get_dpi(&self) -> f32 {
+    fn get_dpi(&self) -> f32 {
         // TODO(x11/dpi_scaling): figure out DPI scaling
         96.0
+    }
+
+    pub fn handle_expose(&self, expose: &xcb::ExposeEvent) {
+        // TODO(x11/dpi_scaling): when dpi scaling is
+        // implemented, it needs to be used here too
+        let rect = Rect::from_origin_size(
+            (expose.x() as f64, expose.y() as f64),
+            (expose.width() as f64, expose.height() as f64),
+        );
+        self.render(rect);
+    }
+
+    pub fn handle_key_press(&self, key_press: &xcb::KeyPressEvent) {
+        let key: u32 = key_press.detail() as u32;
+        let key_code: KeyCode = key.into();
+        let key_event = KeyEvent::new(
+            key_code,
+            false,
+            KeyModifiers {
+                /// Shift.
+                shift: false,
+                /// Option on macOS.
+                alt: false,
+                /// Control.
+                ctrl: false,
+                /// Meta / Windows / Command
+                meta: false,
+            },
+            key_code,
+            key_code,
+        );
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            handler.key_down(key_event);
+        } else {
+            log::warn!("Window::handle_key_press - handler already borrowed");
+        }
+    }
+
+    pub fn handle_button_press(&self, button_press: &xcb::ButtonPressEvent) {
+        let mouse_event = MouseEvent {
+            pos: Point::new(button_press.event_x() as f64, button_press.event_y() as f64),
+            // TODO: Fill with held down buttons
+            buttons: MouseButtons::new().with(MouseButton::Left),
+            mods: KeyModifiers {
+                shift: false,
+                alt: false,
+                ctrl: false,
+                meta: false,
+            },
+            count: 1,
+            button: MouseButton::Left,
+        };
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            handler.mouse_down(&mouse_event);
+        } else {
+            log::warn!("Window::handle_button_press - handler already borrowed");
+        }
+    }
+
+    pub fn handle_button_release(&self, button_release: &xcb::ButtonReleaseEvent) {
+        let mouse_event = MouseEvent {
+            pos: Point::new(
+                button_release.event_x() as f64,
+                button_release.event_y() as f64,
+            ),
+            // TODO: Fill with held down buttons
+            buttons: MouseButtons::new(),
+            mods: KeyModifiers {
+                shift: false,
+                alt: false,
+                ctrl: false,
+                meta: false,
+            },
+            count: 0,
+            button: MouseButton::Left,
+        };
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            handler.mouse_up(&mouse_event);
+        } else {
+            log::warn!("Window::handle_button_release - handler already borrowed");
+        }
+    }
+
+    pub fn handle_motion_notify(&self, motion_notify: &xcb::MotionNotifyEvent) {
+        let mouse_event = MouseEvent {
+            pos: Point::new(
+                motion_notify.event_x() as f64,
+                motion_notify.event_y() as f64,
+            ),
+            // TODO: Fill with held down buttons
+            buttons: MouseButtons::new(),
+            mods: KeyModifiers {
+                shift: false,
+                alt: false,
+                ctrl: false,
+                meta: false,
+            },
+            count: 0,
+            button: MouseButton::None,
+        };
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            handler.mouse_move(&mouse_event);
+        } else {
+            log::warn!("Window::handle_motion_notify - handler already borrowed");
+        }
+    }
+
+    pub fn handle_destroy_notify(&self, _destroy_notify: &xcb::DestroyNotifyEvent) {
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            handler.destroy();
+        } else {
+            log::warn!("Window::handle_destroy_notify - handler already borrowed");
+        }
     }
 }
 
