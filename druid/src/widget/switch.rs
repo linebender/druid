@@ -181,6 +181,8 @@ impl Widget<bool> for Switch {
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &bool, data: &bool, _env: &Env) {
         if old_data != data {
             ctx.request_paint();
+            self.animation_in_progress = true;
+            ctx.request_anim_frame();
         }
     }
 
