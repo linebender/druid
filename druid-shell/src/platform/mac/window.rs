@@ -373,6 +373,7 @@ fn mouse_event(nsevent: id, view: id, count: u8, button: MouseButton) -> MouseEv
             mods: modifiers,
             count,
             button,
+            wheel_delta: Vec2::ZERO,
         }
     }
 }

@@ -148,6 +148,7 @@ fn setup_mouse_down_callback(ws: &Rc<WindowState>) {
                 mods: get_modifiers!(event),
                 count: 1,
                 button,
+                wheel_delta: Vec2::ZERO,
             };
             state.handler.borrow_mut().mouse_down(&event);
         }
@@ -165,6 +166,7 @@ fn setup_mouse_up_callback(ws: &Rc<WindowState>) {
                 mods: get_modifiers!(event),
                 count: 0,
                 button,
+                wheel_delta: Vec2::ZERO,
             };
             state.handler.borrow_mut().mouse_up(&event);
         }
@@ -181,6 +183,7 @@ fn setup_mouse_move_callback(ws: &Rc<WindowState>) {
             mods: get_modifiers!(event),
             count: 0,
             button: MouseButton::None,
+            wheel_delta: Vec2::ZERO,
         };
         state.handler.borrow_mut().mouse_move(&event);
     });

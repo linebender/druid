@@ -27,6 +27,7 @@ use crate::widget::*;
 use crate::*;
 use harness::*;
 use helpers::*;
+use kurbo::Vec2;
 
 /// This function creates a temporary directory and returns a PathBuf to it.
 ///
@@ -80,6 +81,7 @@ fn propogate_hot() {
             mods: KeyModifiers::default(),
             count: 0,
             button: MouseButton::None,
+            wheel_delta: Vec2::ZERO,
         }
     }
     #[allow(clippy::cognitive_complexity)]
