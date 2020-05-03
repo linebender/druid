@@ -31,7 +31,7 @@ impl fmt::Display for Error {
         match self {
             Error::Generic(msg) => write!(f, "Error: {}", msg),
             Error::ConnectionError(err) => write!(f, "Connection error: {}", err),
-            Error::BorrowError(msg) => write!(f, "Borrow error: {}", msg),
+            Error::BorrowError(msg) => write!(f, "Failed to borrow: {}", msg),
         }
     }
 }

@@ -233,7 +233,7 @@ impl<T: Data> Inner<T> {
                 self.root_menu = win.menu.take();
                 // If there are even no pending windows, we quit the run loop.
                 if self.windows.count() == 0 {
-                    #[cfg(target_os = "windows")]
+                    #[cfg(any(target_os = "windows", feature = "x11"))]
                     self.app.quit();
                 }
             }

@@ -70,6 +70,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - macOS/GTK/web: `MouseButton::X1` and `MouseButton::X2` clicks are now recognized. ([#843] by [@xStrom])
 - GTK: Support disabled menu items. ([#897] by [@jneem])
 - X11: Support individual window closing. ([#900] by [@xStrom])
+- X11: Support `Application::quit`. ([#900] by [@xStrom])
 
 ### Visual
 
