@@ -540,6 +540,23 @@ impl<'a> UpdateCtx<'a> {
         self.request_layout();
     }
 
+    /// Request an animation frame.
+    pub fn request_anim_frame(&mut self) {
+        self.base_state.request_anim = true;
+        self.request_paint();
+    }
+
+    /// Request a timer event.
+    ///
+    /// The return value is a token, which can be used to associate the
+    /// request with the event.
+    pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
+        self.base_state.request_timer = true;
+        let timer_token = self.window.request_timer(deadline);
+        self.base_state.add_timer(timer_token);
+        timer_token
+    }
+
     /// Submit a [`Command`] to be run after layout and paint finish.
     ///
     /// **Note:**

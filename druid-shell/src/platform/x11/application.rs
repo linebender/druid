@@ -16,174 +16,139 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::sync::Arc;
-
-use lazy_static::lazy_static;
+use std::rc::Rc;
 
 use crate::application::AppHandler;
-use crate::kurbo::{Point, Rect};
-use crate::{KeyCode, KeyModifiers, MouseButton, MouseButtons, MouseEvent};
 
 use super::clipboard::Clipboard;
 use super::error::Error;
-use super::window::XWindow;
-
-struct XcbConnection {
-    connection: Arc<xcb::Connection>,
-    screen_num: i32,
-}
-
-lazy_static! {
-    static ref XCB_CONNECTION: XcbConnection = XcbConnection::new();
-}
-
-thread_local! {
-    static WINDOW_MAP: RefCell<HashMap<u32, XWindow>> = RefCell::new(HashMap::new());
-}
+use super::window::Window;
 
 #[derive(Clone)]
-pub(crate) struct Application;
+pub(crate) struct Application {
+    connection: Rc<xcb::Connection>,
+    screen_num: i32, // Needs a container when no longer const
+    state: Rc<RefCell<State>>,
+}
+
+struct State {
+    windows: HashMap<u32, Rc<Window>>,
+}
 
 impl Application {
     pub fn new() -> Result<Application, Error> {
-        Ok(Application)
+        let (conn, screen_num) = match xcb::Connection::connect_with_xlib_display() {
+            Ok(conn) => conn,
+            Err(err) => return Err(Error::ConnectionError(err.to_string())),
+        };
+        let state = Rc::new(RefCell::new(State {
+            windows: HashMap::new(),
+        }));
+        Ok(Application {
+            connection: Rc::new(conn),
+            screen_num,
+            state,
+        })
     }
 
-    pub(crate) fn add_xwindow(id: u32, xwindow: XWindow) {
-        WINDOW_MAP.with(|map| map.borrow_mut().insert(id, xwindow));
+    pub(crate) fn add_window(&self, id: u32, window: Rc<Window>) {
+        if let Ok(mut state) = self.state.try_borrow_mut() {
+            state.windows.insert(id, window);
+        } else {
+            log::warn!("Application::add_window - state already borrowed");
+        }
     }
 
-    pub(crate) fn get_connection() -> Arc<xcb::Connection> {
-        XCB_CONNECTION.connection_cloned()
+    fn remove_window(&self, id: u32) {
+        if let Ok(mut state) = self.state.try_borrow_mut() {
+            state.windows.remove(&id);
+        } else {
+            log::warn!("Application::remove_window - state already borrowed");
+        }
     }
 
-    pub(crate) fn get_screen_num() -> i32 {
-        XCB_CONNECTION.screen_num()
+    fn window(&self, id: u32) -> Option<Rc<Window>> {
+        if let Ok(state) = self.state.try_borrow() {
+            state.windows.get(&id).cloned()
+        } else {
+            log::warn!("Application::window - state already borrowed");
+            None
+        }
+    }
+
+    #[inline]
+    pub(crate) fn connection(&self) -> &Rc<xcb::Connection> {
+        &self.connection
+    }
+
+    #[inline]
+    pub(crate) fn screen_num(&self) -> i32 {
+        self.screen_num
     }
 
     // TODO(x11/events): handle mouse scroll events
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
-        let conn = XCB_CONNECTION.connection_cloned();
         loop {
-            if let Some(ev) = conn.wait_for_event() {
+            if let Some(ev) = self.connection.wait_for_event() {
                 let ev_type = ev.response_type() & !0x80;
-                // NOTE: I don't think we should be doing this here, but I'm trying to keep
-                // the code mostly unchanged. My personal feeling is that the best approach
-                // is to dispatch events to the window as early as possible, that is to say
-                // I would send the *raw* events to the window and then let the window figure
-                // out how to handle them. - @cmyr
-                //
-                // Can't get which window to send the raw event to without first parsing the event
-                // and getting the window ID out of it :)  - @crsaracco
                 match ev_type {
                     xcb::EXPOSE => {
                         let expose: &xcb::ExposeEvent = unsafe { xcb::cast_event(&ev) };
                         let window_id = expose.window();
-                        // TODO(x11/dpi_scaling): when dpi scaling is
-                        // implemented, it needs to be used here too
-                        let rect = Rect::from_origin_size(
-                            (expose.x() as f64, expose.y() as f64),
-                            (expose.width() as f64, expose.height() as f64),
-                        );
-                        WINDOW_MAP.with(|map| {
-                            let mut windows = map.borrow_mut();
-                            if let Some(w) = windows.get_mut(&window_id) {
-                                w.render(rect);
-                            }
-                        })
+                        if let Some(w) = self.window(window_id) {
+                            w.handle_expose(expose);
+                        } else {
+                            log::warn!("EXPOSE - failed to get window");
+                        }
                     }
                     xcb::KEY_PRESS => {
                         let key_press: &xcb::KeyPressEvent = unsafe { xcb::cast_event(&ev) };
-                        let key: u32 = key_press.detail() as u32;
-                        let key_code: KeyCode = key.into();
-
                         let window_id = key_press.event();
-                        println!("window_id {}", window_id);
-                        WINDOW_MAP.with(|map| {
-                            let mut windows = map.borrow_mut();
-                            if let Some(w) = windows.get_mut(&window_id) {
-                                w.key_down(key_code);
-                            }
-                        })
+                        if let Some(w) = self.window(window_id) {
+                            w.handle_key_press(key_press);
+                        } else {
+                            log::warn!("KEY_PRESS - failed to get window");
+                        }
                     }
                     xcb::BUTTON_PRESS => {
                         let button_press: &xcb::ButtonPressEvent = unsafe { xcb::cast_event(&ev) };
                         let window_id = button_press.event();
-                        let mouse_event = MouseEvent {
-                            pos: Point::new(
-                                button_press.event_x() as f64,
-                                button_press.event_y() as f64,
-                            ),
-                            // TODO: Fill with held down buttons
-                            buttons: MouseButtons::new().with(MouseButton::Left),
-                            mods: KeyModifiers {
-                                shift: false,
-                                alt: false,
-                                ctrl: false,
-                                meta: false,
-                            },
-                            count: 0,
-                            button: MouseButton::Left,
-                        };
-                        WINDOW_MAP.with(|map| {
-                            let mut windows = map.borrow_mut();
-                            if let Some(w) = windows.get_mut(&window_id) {
-                                w.mouse_down(&mouse_event);
-                            }
-                        })
+                        if let Some(w) = self.window(window_id) {
+                            w.handle_button_press(button_press);
+                        } else {
+                            log::warn!("BUTTON_PRESS - failed to get window");
+                        }
                     }
                     xcb::BUTTON_RELEASE => {
                         let button_release: &xcb::ButtonReleaseEvent =
                             unsafe { xcb::cast_event(&ev) };
                         let window_id = button_release.event();
-                        let mouse_event = MouseEvent {
-                            pos: Point::new(
-                                button_release.event_x() as f64,
-                                button_release.event_y() as f64,
-                            ),
-                            // TODO: Fill with held down buttons
-                            buttons: MouseButtons::new(),
-                            mods: KeyModifiers {
-                                shift: false,
-                                alt: false,
-                                ctrl: false,
-                                meta: false,
-                            },
-                            count: 0,
-                            button: MouseButton::Left,
-                        };
-                        WINDOW_MAP.with(|map| {
-                            let mut windows = map.borrow_mut();
-                            if let Some(w) = windows.get_mut(&window_id) {
-                                w.mouse_up(&mouse_event);
-                            }
-                        })
+                        if let Some(w) = self.window(window_id) {
+                            w.handle_button_release(button_release);
+                        } else {
+                            log::warn!("BUTTON_RELEASE - failed to get window");
+                        }
                     }
                     xcb::MOTION_NOTIFY => {
-                        let mouse_move: &xcb::MotionNotifyEvent = unsafe { xcb::cast_event(&ev) };
-                        let window_id = mouse_move.event();
-                        let mouse_event = MouseEvent {
-                            pos: Point::new(
-                                mouse_move.event_x() as f64,
-                                mouse_move.event_y() as f64,
-                            ),
-                            // TODO: Fill with held down buttons
-                            buttons: MouseButtons::new(),
-                            mods: KeyModifiers {
-                                shift: false,
-                                alt: false,
-                                ctrl: false,
-                                meta: false,
-                            },
-                            count: 0,
-                            button: MouseButton::None,
-                        };
-                        WINDOW_MAP.with(|map| {
-                            let mut windows = map.borrow_mut();
-                            if let Some(w) = windows.get_mut(&window_id) {
-                                w.mouse_move(&mouse_event);
-                            }
-                        })
+                        let motion_notify: &xcb::MotionNotifyEvent =
+                            unsafe { xcb::cast_event(&ev) };
+                        let window_id = motion_notify.event();
+                        if let Some(w) = self.window(window_id) {
+                            w.handle_motion_notify(motion_notify);
+                        } else {
+                            log::warn!("MOTION_NOTIFY - failed to get window");
+                        }
+                    }
+                    xcb::DESTROY_NOTIFY => {
+                        let destroy_notify: &xcb::DestroyNotifyEvent =
+                            unsafe { xcb::cast_event(&ev) };
+                        let window_id = destroy_notify.window();
+                        if let Some(w) = self.window(window_id) {
+                            w.handle_destroy_notify(destroy_notify);
+                        } else {
+                            log::warn!("DESTROY_NOTIFY - failed to get window");
+                        }
+                        self.remove_window(window_id);
                     }
                     _ => {}
                 }
@@ -192,7 +157,7 @@ impl Application {
     }
 
     pub fn quit(&self) {
-        // No-op.
+        // TODO(x11/quit): implement Application::quit
     }
 
     pub fn clipboard(&self) -> Clipboard {
@@ -205,24 +170,5 @@ impl Application {
         // TODO(x11/locales): implement Application::get_locale
         log::warn!("Application::get_locale is currently unimplemented for X11 platforms. (defaulting to en-US)");
         "en-US".into()
-    }
-}
-
-impl XcbConnection {
-    fn new() -> Self {
-        let (conn, screen_num) = xcb::Connection::connect_with_xlib_display().unwrap();
-
-        Self {
-            connection: Arc::new(conn),
-            screen_num,
-        }
-    }
-
-    fn connection_cloned(&self) -> Arc<xcb::Connection> {
-        self.connection.clone()
-    }
-
-    fn screen_num(&self) -> i32 {
-        self.screen_num
     }
 }

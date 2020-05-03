@@ -30,6 +30,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `InternalEvent::RouteTimer` to route timer events. ([#831] by [@sjoshid])
 - `MouseButtons` to `MouseEvent` to track which buttons are being held down during an event. ([#843] by [@xStrom])
 - `Env` and `Key` gained methods for inspecting an `Env` at runtime ([#880] by [@Zarenor])
+- `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
 
 ### Changed
 
@@ -68,11 +69,13 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Windows: Termiate app when all windows have closed. ([#763] by [@xStrom])
 - macOS: `Application::quit` now quits the run loop instead of killing the process. ([#763] by [@xStrom])
 - macOS/GTK/web: `MouseButton::X1` and `MouseButton::X2` clicks are now recognized. ([#843] by [@xStrom])
+- GTK: Support disabled menu items ([#897] by [@jneem])
 
 ### Visual
 
 - Improved `Split` accuracy. ([#738] by [@xStrom])
 - Built-in widgets no longer stroke outside their `paint_rect`. ([#861] by [@jneem])
+- `Switch` toggles with animation when its data changes externally. ([#898] by [@finnerale])
 
 ### Docs
 
@@ -90,6 +93,8 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Enabled Clippy checks for all targets. ([#850] by [@xStrom])
 - Added rendering tests. ([#784] by [@fishrockz])
 - Revamped CI testing to optimize coverage and speed. ([#857] by [@xStrom])
+- X11: Refactored `Application` to use the new structure. ([#894] by [@xStrom])
+- X11: Refactored `Window` to support some reentrancy and invalidation. ([#894] by [@xStrom])
 
 ### Outside News
 
@@ -137,7 +142,10 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#869]: https://github.com/xi-editor/druid/pull/869
 [#878]: https://github.com/xi-editor/druid/pull/878
 [#880]: https://github.com/xi-editor/druid/pull/880
-[#889]: https://github.com/xi-editor/druid/pull/899
+[#889]: https://github.com/xi-editor/druid/pull/889
+[#894]: https://github.com/xi-editor/druid/pull/894
+[#897]: https://github.com/xi-editor/druid/pull/897
+[#898]: https://github.com/xi-editor/druid/pull/898
 
 ## [0.5.0] - 2020-04-01
 

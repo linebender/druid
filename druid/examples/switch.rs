@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use druid::widget::{
-    Flex, Label, MainAxisAlignment, Padding, Parse, Stepper, Switch, TextBox, WidgetExt,
+    Checkbox, Flex, Label, MainAxisAlignment, Padding, Parse, Stepper, Switch, TextBox, WidgetExt,
 };
 use druid::{AppLauncher, Data, Lens, LensExt, LensWrap, LocalizedString, Widget, WindowDesc};
 
@@ -27,10 +27,12 @@ fn build_widget() -> impl Widget<DemoState> {
     let mut col = Flex::column();
     let mut row = Flex::row();
     let switch = LensWrap::new(Switch::new(), DemoState::value);
+    let check_box = LensWrap::new(Checkbox::new(""), DemoState::value);
     let switch_label = Label::new("Setting label");
 
     row.add_child(Padding::new(5.0, switch_label));
     row.add_child(Padding::new(5.0, switch));
+    row.add_child(Padding::new(5.0, check_box));
 
     let stepper = LensWrap::new(
         Stepper::new()
