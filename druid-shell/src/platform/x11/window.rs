@@ -20,7 +20,13 @@ use std::convert::TryInto;
 use std::rc::{Rc, Weak};
 
 use cairo::XCBSurface;
-use xcb::ffi::XCB_COPY_FROM_PARENT;
+use xcb::{
+    Atom, Visualtype, ATOM_ATOM, ATOM_STRING, ATOM_WM_NAME, CONFIG_WINDOW_STACK_MODE,
+    COPY_FROM_PARENT, CURRENT_TIME, CW_BACK_PIXEL, CW_EVENT_MASK, EVENT_MASK_BUTTON_PRESS,
+    EVENT_MASK_BUTTON_RELEASE, EVENT_MASK_EXPOSURE, EVENT_MASK_KEY_PRESS, EVENT_MASK_KEY_RELEASE,
+    EVENT_MASK_POINTER_MOTION, EVENT_MASK_STRUCTURE_NOTIFY, INPUT_FOCUS_POINTER_ROOT,
+    PROP_MODE_REPLACE, STACK_MODE_ABOVE, WINDOW_CLASS_INPUT_OUTPUT,
+};
 
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
@@ -83,28 +89,99 @@ impl WindowBuilder {
         // TODO(x11/menus): implement WindowBuilder::set_menu (currently a no-op)
     }
 
+    fn atoms(&self, id: u32) -> Result<WindowAtoms, Error> {
+        let conn = self.app.connection();
+
+        let wm_protocols = match xcb::intern_atom(conn, false, "WM_PROTOCOLS").get_reply() {
+            Ok(reply) => reply.atom(),
+            Err(err) => {
+                return Err(Error::Generic(format!(
+                    "failed to get WM_PROTOCOLS: {}",
+                    err
+                )))
+            }
+        };
+
+        let wm_delete_window = match xcb::intern_atom(conn, false, "WM_DELETE_WINDOW").get_reply() {
+            Ok(reply) => reply.atom(),
+            Err(err) => {
+                return Err(Error::Generic(format!(
+                    "failed to get WM_DELETE_WINDOW: {}",
+                    err
+                )))
+            }
+        };
+
+        let protocols = [wm_delete_window];
+        // TODO(x11/errors): Check the response for errors?
+        xcb::change_property(
+            conn,
+            PROP_MODE_REPLACE as u8,
+            id,
+            wm_protocols,
+            ATOM_ATOM,
+            32,
+            &protocols,
+        );
+
+        Ok(WindowAtoms {
+            wm_protocols,
+            wm_delete_window,
+        })
+    }
+
+    fn cairo_context(
+        &self,
+        id: u32,
+        visual_type: &mut Visualtype,
+    ) -> Result<RefCell<cairo::Context>, Error> {
+        // Create a draw surface
+        let conn = self.app.connection();
+        let cairo_xcb_connection = unsafe {
+            cairo::XCBConnection::from_raw_none(
+                conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t
+            )
+        };
+        let cairo_drawable = cairo::XCBDrawable(id);
+        let cairo_visual_type = unsafe {
+            cairo::XCBVisualType::from_raw_none(
+                &mut visual_type.base as *mut _ as *mut cairo_sys::xcb_visualtype_t,
+            )
+        };
+        // TODO(x11/errors): Don't unwrap
+        let cairo_surface = XCBSurface::create(
+            &cairo_xcb_connection,
+            &cairo_drawable,
+            &cairo_visual_type,
+            self.size.width as i32,
+            self.size.height as i32,
+        )
+        .expect("couldn't create a cairo surface");
+        Ok(RefCell::new(cairo::Context::new(&cairo_surface)))
+    }
+
     // TODO(x11/menus): make menus if requested
     pub fn build(self) -> Result<WindowHandle, Error> {
         let conn = self.app.connection();
         let screen_num = self.app.screen_num();
-        let window_id = conn.generate_id();
+        let id = conn.generate_id();
         let setup = conn.get_setup();
         // TODO(x11/errors): Don't unwrap for screen or visual_type?
         let screen = setup.roots().nth(screen_num as usize).unwrap();
-        let visual_type = get_visual_from_screen(&screen).unwrap();
+        let mut visual_type = util::get_visual_from_screen(&screen).unwrap();
         let visual_id = visual_type.visual_id();
 
         let cw_values = [
-            (xcb::CW_BACK_PIXEL, screen.white_pixel()),
+            (CW_BACK_PIXEL, screen.white_pixel()),
             (
-                xcb::CW_EVENT_MASK,
-                xcb::EVENT_MASK_EXPOSURE
-                    | xcb::EVENT_MASK_STRUCTURE_NOTIFY
-                    | xcb::EVENT_MASK_KEY_PRESS
-                    | xcb::EVENT_MASK_KEY_RELEASE
-                    | xcb::EVENT_MASK_BUTTON_PRESS
-                    | xcb::EVENT_MASK_BUTTON_RELEASE
-                    | xcb::EVENT_MASK_POINTER_MOTION,
+                CW_EVENT_MASK,
+                EVENT_MASK_EXPOSURE
+                    | EVENT_MASK_STRUCTURE_NOTIFY
+                    | EVENT_MASK_KEY_PRESS
+                    | EVENT_MASK_KEY_RELEASE
+                    | EVENT_MASK_BUTTON_PRESS
+                    | EVENT_MASK_BUTTON_RELEASE
+                    | EVENT_MASK_POINTER_MOTION,
             ),
         ];
 
@@ -113,9 +190,9 @@ impl WindowBuilder {
             // Connection to the X server
             conn,
             // Window depth
-            XCB_COPY_FROM_PARENT.try_into().unwrap(),
+            COPY_FROM_PARENT.try_into().unwrap(),
             // The new window's ID
-            window_id,
+            id,
             // Parent window of this new window
             // TODO(#468): either `screen.root()` (no parent window) or pass parent here to attach
             screen.root(),
@@ -132,45 +209,56 @@ impl WindowBuilder {
             // Border width
             0,
             // Window class type
-            xcb::WINDOW_CLASS_INPUT_OUTPUT as u16,
+            WINDOW_CLASS_INPUT_OUTPUT as u16,
             // Visual ID
             visual_id,
             // Window properties mask
             &cw_values,
         );
 
-        // Set window title
-        xcb::change_property(
-            conn,
-            xcb::PROP_MODE_REPLACE as u8,
-            window_id,
-            xcb::ATOM_WM_NAME,
-            xcb::ATOM_STRING,
-            8,
-            self.title.as_bytes(),
-        );
+        // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
+        let atoms = self.atoms(id)?;
+        let cairo_context = self.cairo_context(id, &mut visual_type)?;
+        // Figure out the refresh rate of the current screen
+        let refresh_rate = util::refresh_rate(conn, id);
+        let state = RefCell::new(WindowState { size: self.size });
+        let handler = RefCell::new(self.handler.unwrap());
 
-        conn.flush();
+        let window = Rc::new(Window {
+            id,
+            app: self.app.clone(),
+            handler,
+            cairo_context,
+            refresh_rate,
+            atoms,
+            state,
+        });
+        window.set_title(&self.title);
 
-        let handler = self.handler.unwrap();
-        let window = Rc::new(Window::new(window_id, self.app.clone(), handler, self.size));
-        let handle = WindowHandle::new(window_id, Rc::downgrade(&window));
+        let handle = WindowHandle::new(id, Rc::downgrade(&window));
         window.connect(handle.clone());
 
-        self.app.add_window(window_id, window);
+        self.app.add_window(id, window);
 
         Ok(handle)
     }
 }
 
-// X11-specific event handling and window drawing (etc.)
+/// An X11 window.
 pub(crate) struct Window {
     id: u32,
     app: Application,
     handler: RefCell<Box<dyn WinHandler>>,
     cairo_context: RefCell<cairo::Context>,
     refresh_rate: Option<f64>,
+    atoms: WindowAtoms,
     state: RefCell<WindowState>,
+}
+
+/// All the Atom references the window needs.
+struct WindowAtoms {
+    wm_protocols: Atom,
+    wm_delete_window: Atom,
 }
 
 /// The mutable state of the window.
@@ -179,49 +267,6 @@ struct WindowState {
 }
 
 impl Window {
-    fn new(id: u32, app: Application, handler: Box<dyn WinHandler>, size: Size) -> Window {
-        // Create a draw surface
-        let setup = app.connection().get_setup();
-        let screen_num = app.screen_num();
-        // TODO(x11/errors): Don't unwrap for screen or visual_type?
-        let screen = setup.roots().nth(screen_num as usize).unwrap();
-        let mut visual_type = get_visual_from_screen(&screen).unwrap();
-        let cairo_xcb_connection = unsafe {
-            cairo::XCBConnection::from_raw_none(
-                app.connection().get_raw_conn() as *mut cairo_sys::xcb_connection_t
-            )
-        };
-        let cairo_drawable = cairo::XCBDrawable(id);
-        let cairo_visual_type = unsafe {
-            cairo::XCBVisualType::from_raw_none(
-                &mut visual_type.base as *mut _ as *mut cairo_sys::xcb_visualtype_t,
-            )
-        };
-        let cairo_surface = XCBSurface::create(
-            &cairo_xcb_connection,
-            &cairo_drawable,
-            &cairo_visual_type,
-            size.width as i32,
-            size.height as i32,
-        )
-        .expect("couldn't create a cairo surface");
-        let cairo_context = RefCell::new(cairo::Context::new(&cairo_surface));
-
-        // Figure out the refresh rate of the current screen
-        let refresh_rate = util::refresh_rate(app.connection(), id);
-
-        let handler = RefCell::new(handler);
-        let state = RefCell::new(WindowState { size });
-        Window {
-            id,
-            app,
-            handler,
-            cairo_context,
-            refresh_rate,
-            state,
-        }
-    }
-
     fn connect(&self, handle: WindowHandle) {
         let size = self.state.borrow().size;
         if let Ok(mut handler) = self.handler.try_borrow_mut() {
@@ -275,7 +320,7 @@ impl Window {
         }
     }
 
-    fn request_redraw(&self, rect: Rect) {
+    fn request_redraw(&self, rect: Rect, flush: bool) {
         // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
         let expose_event = xcb::ExposeEvent::new(
             self.id,
@@ -289,10 +334,12 @@ impl Window {
             self.app.connection(),
             false,
             self.id,
-            xcb::EVENT_MASK_EXPOSURE,
+            EVENT_MASK_EXPOSURE,
             &expose_event,
         );
-        self.app.connection().flush();
+        if flush {
+            self.app.connection().flush();
+        }
     }
 
     fn render(&self, invalid_rect: Rect) {
@@ -330,7 +377,7 @@ impl Window {
             let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
             std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
 
-            self.request_redraw(size.to_rect());
+            self.request_redraw(size.to_rect(), false);
         }
         self.app.connection().flush();
     }
@@ -342,6 +389,7 @@ impl Window {
 
     fn close(&self) {
         xcb::destroy_window(self.app.connection(), self.id);
+        self.app.connection().flush();
     }
 
     /// Set whether the window should be resizable
@@ -360,14 +408,15 @@ impl Window {
         xcb::configure_window(
             self.app.connection(),
             self.id,
-            &[(xcb::CONFIG_WINDOW_STACK_MODE as u16, xcb::STACK_MODE_ABOVE)],
+            &[(CONFIG_WINDOW_STACK_MODE as u16, STACK_MODE_ABOVE)],
         );
         xcb::set_input_focus(
             self.app.connection(),
-            xcb::INPUT_FOCUS_POINTER_ROOT as u8,
+            INPUT_FOCUS_POINTER_ROOT as u8,
             self.id,
-            xcb::CURRENT_TIME,
+            CURRENT_TIME,
         );
+        self.app.connection().flush();
     }
 
     fn invalidate(&self) {
@@ -378,24 +427,25 @@ impl Window {
             log::warn!("Window::invalidate - state already borrowed");
         }
         if let Some(size) = size {
-            self.request_redraw(size.to_rect());
+            self.request_redraw(size.to_rect(), true);
         }
     }
 
     fn invalidate_rect(&self, rect: Rect) {
-        self.request_redraw(rect);
+        self.request_redraw(rect, true);
     }
 
     fn set_title(&self, title: &str) {
         xcb::change_property(
             self.app.connection(),
-            xcb::PROP_MODE_REPLACE as u8,
+            PROP_MODE_REPLACE as u8,
             self.id,
-            xcb::ATOM_WM_NAME,
-            xcb::ATOM_STRING,
+            ATOM_WM_NAME,
+            ATOM_STRING,
             8,
             title.as_bytes(),
         );
+        self.app.connection().flush();
     }
 
     fn set_menu(&self, _menu: Menu) {
@@ -512,6 +562,16 @@ impl Window {
         }
     }
 
+    pub fn handle_client_message(&self, client_message: &xcb::ClientMessageEvent) {
+        // https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html#id2745388
+        if client_message.type_() == self.atoms.wm_protocols && client_message.format() == 32 {
+            let protocol = client_message.data().data32()[0];
+            if protocol == self.atoms.wm_delete_window {
+                self.close();
+            }
+        }
+    }
+
     pub fn handle_destroy_notify(&self, _destroy_notify: &xcb::DestroyNotifyEvent) {
         if let Ok(mut handler) = self.handler.try_borrow_mut() {
             handler.destroy();
@@ -519,18 +579,6 @@ impl Window {
             log::warn!("Window::handle_destroy_notify - handler already borrowed");
         }
     }
-}
-
-// Apparently you have to get the visualtype this way :|
-fn get_visual_from_screen(screen: &xcb::Screen<'_>) -> Option<xcb::xproto::Visualtype> {
-    for depth in screen.allowed_depths() {
-        for visual in depth.visuals() {
-            if visual.visual_id() == screen.root_visual() {
-                return Some(visual);
-            }
-        }
-    }
-    None
 }
 
 #[derive(Clone)]
