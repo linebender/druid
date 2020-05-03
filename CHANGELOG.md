@@ -29,6 +29,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `Label::with_font` and `set_font`. ([#785] by [@thecodewarrior])
 - `InternalEvent::RouteTimer` to route timer events. ([#831] by [@sjoshid])
 - `MouseButtons` to `MouseEvent` to track which buttons are being held down during an event. ([#843] by [@xStrom])
+- `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
 
 ### Changed
 
@@ -72,6 +73,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 
 - Improved `Split` accuracy. ([#738] by [@xStrom])
 - Built-in widgets no longer stroke outside their `paint_rect`. ([#861] by [@jneem])
+- `Switch` toggles with animation when its data changes externally. ([#898] by [@finnerale])
 
 ### Docs
 
@@ -139,6 +141,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#878]: https://github.com/xi-editor/druid/pull/878
 [#889]: https://github.com/xi-editor/druid/pull/899
 [#894]: https://github.com/xi-editor/druid/pull/894
+[#898]: https://github.com/xi-editor/druid/pull/898
 
 ## [0.5.0] - 2020-04-01
 
