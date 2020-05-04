@@ -213,6 +213,10 @@ impl Env {
     ///
     /// *WARNING:* This is not intended for general use, but only for inspecting an `Env` e.g.
     /// for debugging, theme editing, and theme loading.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the key is not found
     /// [`Value`]: enum.Value.html
     pub fn get_untyped(&self, key: impl Borrow<Key<()>>) -> &Value {
         let key = key.borrow();
