@@ -24,6 +24,7 @@ kurbo = "0.6.0"
 log = "0.4.8"
 lazy_static = "1.0"
 time = "0.2.7"
+float-cmp = { version = "0.6.0", default-features = false }
 cfg-if = "0.1.10"
 instant = { version = "0.1", features = ["wasm-bindgen"] }
 

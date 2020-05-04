@@ -26,6 +26,7 @@ use crate::kurbo::{Point, Rect, Size};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
+use crate::scale::Scale;
 
 // It's possible we'll want to make this type alias at a lower level,
 // see https://github.com/linebender/piet/pull/37 for more discussion.
@@ -199,12 +200,13 @@ impl WindowHandle {
         self.0.get_idle_handle().map(IdleHandle)
     }
 
-    /// Get the dpi of the window.
+    /// Get the [`Scale`] information of the window.
     ///
-    /// TODO: we want to migrate this from dpi (with 96 as nominal) to a scale
-    /// factor (with 1 as nominal).
-    pub fn get_dpi(&self) -> f32 {
-        self.0.get_dpi()
+    /// This information will be stale after the window is resized or the platform DPI changes.
+    ///
+    /// [`Scale`]: struct.Scale.html
+    pub fn get_scale(&self) -> Result<Scale, Error> {
+        self.0.get_scale()
     }
 }
 
@@ -281,10 +283,9 @@ pub trait WinHandler {
     /// wish to stash it.
     fn connect(&mut self, handle: &WindowHandle);
 
-    /// Called when the size of the window is changed. Note that size
-    /// is in physical pixels.
+    /// Called when the size of the window is changed.
     #[allow(unused_variables)]
-    fn size(&mut self, width: u32, height: u32) {}
+    fn size(&mut self, size: Size) {}
 
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
