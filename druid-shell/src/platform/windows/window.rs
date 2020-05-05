@@ -409,7 +409,7 @@ impl WndProc for MyWndProc {
             WM_PAINT => unsafe {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let mut rect: RECT = mem::zeroed();
-                    GetUpdateRect(hwnd, &mut rect, 0);
+                    GetUpdateRect(hwnd, &mut rect, FALSE);
                     let s = s.as_mut().unwrap();
                     if s.render_target.is_none() {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
@@ -445,8 +445,11 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
                         let mut rect: RECT = mem::zeroed();
-                        if GetClientRect(hwnd, &mut rect) == 0 {
-                            warn!("GetClientRect failed.");
+                        if GetClientRect(hwnd, &mut rect) == FALSE {
+                            log::warn!(
+                                "GetClientRect failed: {}",
+                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                            );
                             return None;
                         }
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
@@ -477,8 +480,11 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
                         let mut rect: RECT = mem::zeroed();
-                        if GetClientRect(hwnd, &mut rect) == 0 {
-                            warn!("GetClientRect failed.");
+                        if GetClientRect(hwnd, &mut rect) == FALSE {
+                            log::warn!(
+                                "GetClientRect failed: {}",
+                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                            );
                             return None;
                         }
                         let width = (rect.right - rect.left) as u32;
@@ -1258,11 +1264,16 @@ impl WindowHandle {
     }
 
     pub fn invalidate_rect(&self, rect: Rect) {
-        let r = self.px_to_rect(rect);
+        let rect = self.px_to_rect(rect);
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
-                InvalidateRect(hwnd, &r as *const _, FALSE);
+                if InvalidateRect(hwnd, &rect, FALSE) == FALSE {
+                    log::warn!(
+                        "InvalidateRect failed: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                }
             }
         }
     }
