@@ -22,8 +22,6 @@
 use std::mem;
 use std::ptr::null_mut;
 
-use log::{error, warn};
-
 use winapi::ctypes::c_void;
 use winapi::shared::dxgi::*;
 use winapi::shared::dxgi1_2::*;
@@ -49,7 +47,7 @@ pub(crate) unsafe fn create_render_target(
 ) -> Result<DeviceContext, Error> {
     let mut rect: RECT = mem::zeroed();
     if GetClientRect(hwnd, &mut rect) == 0 {
-        warn!("GetClientRect failed.");
+        log::warn!("GetClientRect failed.");
         Err(Error::D2Error)
     } else {
         let width = (rect.right - rect.left) as u32;
@@ -57,7 +55,7 @@ pub(crate) unsafe fn create_render_target(
         let res = HwndRenderTarget::create(d2d_factory, hwnd, width, height);
 
         if let Err(ref e) = res {
-            error!("Creating hwnd render target failed: {:?}", e);
+            log::error!("Creating hwnd render target failed: {:?}", e);
         }
         res.map(|hrt| cast_to_device_context(&hrt).expect("removethis"))
             .map_err(|_| Error::D2Error)
@@ -91,8 +89,6 @@ pub(crate) unsafe fn create_render_target_dxgi(
         usage: D2D1_RENDER_TARGET_USAGE_NONE,
         minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
     };
-
-    println!("Setting D2D dpi x/y to: {} {}", dpi_x, dpi_y);
 
     let mut render_target: *mut ID2D1RenderTarget = null_mut();
     let res =

@@ -28,7 +28,7 @@ use winapi::ctypes::c_void;
 use winapi::shared::guiddef::REFIID;
 use winapi::shared::minwindef::{HMODULE, UINT};
 use winapi::shared::ntdef::{HRESULT, LPWSTR};
-use winapi::shared::windef::{RECT, HMONITOR};
+use winapi::shared::windef::{HMONITOR, RECT};
 use winapi::shared::winerror::SUCCEEDED;
 use winapi::um::fileapi::{CreateFileA, GetFileType, OPEN_EXISTING};
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
@@ -105,6 +105,7 @@ impl FromWide for [u16] {
     }
 }
 
+/// Converts a `Rect` to a winapi `RECT`.
 #[inline]
 pub fn rect_to_recti(rect: Rect) -> RECT {
     RECT {
@@ -115,9 +116,15 @@ pub fn rect_to_recti(rect: Rect) -> RECT {
     }
 }
 
+/// Converts a winapi `RECT` to a `Rect`.
 #[inline]
 pub fn recti_to_rect(rect: RECT) -> Rect {
-    Rect::new(rect.left as f64, rect.top as f64, rect.right as f64, rect.bottom as f64)
+    Rect::new(
+        rect.left as f64,
+        rect.top as f64,
+        rect.right as f64,
+        rect.bottom as f64,
+    )
 }
 
 // Types for functions we want to load, which are only supported on newer windows versions

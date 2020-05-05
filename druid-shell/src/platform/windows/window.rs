@@ -56,13 +56,13 @@ use super::paint;
 use super::timers::TimerSlots;
 use super::util::{self, as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 
-use crate::scale::{self, Scale};
-use crate::error::Error as ShellError;
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
+use crate::error::Error as ShellError;
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::scale::{self, Scale};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 extern "system" {
@@ -356,6 +356,42 @@ impl MyWndProc {
             msg, hwnd, wparam, lparam
         );
     }
+
+    fn with_scale<F, T>(&self, func: F) -> T
+    where
+        F: FnOnce(&Scale) -> T,
+    {
+        func(
+            &self
+                .handle
+                // Right now there aren't any mutable borrows to this.
+                // TODO: Attempt to guarantee this by making mutable handle borrows useless.
+                .borrow()
+                .state
+                .upgrade()
+                .unwrap() // WindowState drops after WM_NCDESTROY, so it's always here.
+                .scale
+                .borrow(), // Fine as long as scale is accessed through this or briefly elsewhere.
+        )
+    }
+
+    fn with_scale_mut<F, T>(&self, func: F) -> T
+    where
+        F: FnOnce(&mut Scale) -> T,
+    {
+        func(
+            &mut self
+                .handle
+                // Right now there aren't any mutable borrows to this.
+                // TODO: Attempt to guarantee this by making mutable handle borrows useless.
+                .borrow()
+                .state
+                .upgrade()
+                .unwrap() // WindowState drops after WM_NCDESTROY, so it's always here.
+                .scale
+                .borrow_mut(), // Fine as long as scale is accessed through this or briefly elsewhere.
+        )
+    }
 }
 
 impl WndProc for MyWndProc {
@@ -417,10 +453,8 @@ impl WndProc for MyWndProc {
                         s.render_target = rt.ok();
                     }
                     s.handler.rebuild_resources();
-                    let rect_pt = {
-                        self.handle.borrow().state.upgrade().unwrap().scale.borrow()
-                            .px_to_pt_rect(util::recti_to_rect(rect))
-                    };
+                    let rect_pt =
+                        self.with_scale(|scale| scale.px_to_pt_rect(util::recti_to_rect(rect)));
                     s.render(
                         &self.d2d_factory,
                         &self.dwrite_factory,
@@ -449,28 +483,10 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
-                        let mut rect: RECT = mem::zeroed();
-                        if GetClientRect(hwnd, &mut rect) == FALSE {
-                            log::warn!(
-                                "GetClientRect failed: {}",
-                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                            );
-                            return None;
-                        }
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                         {
-                            let rect_pt = {
-                                let scale = self.handle.borrow().state.upgrade().unwrap().scale.borrow().clone();
-                                {
-                                    let size_px = scale.size_px();
-                                    let rect = util::recti_to_rect(rect);
-                                    if rect.x0 != 0. || rect.y0 != 0. || rect.x1 != size_px.width || rect.y1 != size_px.height  {
-                                        log::error!("Expected scale size {:?} but Windows gave {:?}", size_px.to_rect(), rect);
-                                    }
-                                }
-                                scale.size_px().to_rect()
-                            };
+                            let rect_pt = self.with_scale(|scale| scale.size_px().to_rect());
                             s.handler.rebuild_resources();
                             s.render(
                                 &self.d2d_factory,
@@ -495,24 +511,12 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
-                        let scale = self.handle.borrow().state.upgrade().unwrap().scale.borrow().clone();
-                        let mut rect: RECT = mem::zeroed();
-                        if GetClientRect(hwnd, &mut rect) == FALSE {
-                            log::warn!(
-                                "GetClientRect failed: {}",
-                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                            );
-                            return None;
-                        }
-                        let width = (rect.right - rect.left) as u32;
-                        let height = (rect.bottom - rect.top) as u32;
-                        if scale.size_px() != Size::new(width as f64, height as f64) {
-                            log::error!("Expected scale size {:?} but Windows gave {:?}", scale.size_px(), Size::new(width as f64, height as f64));
-                        }
+                        let scale = self.with_scale(|scale| scale.clone());
+                        let size_px = scale.size_px();
                         let res = (*s.dcomp_state.as_mut().unwrap().swap_chain).ResizeBuffers(
                             2,
-                            width,
-                            height,
+                            size_px.width as u32,
+                            size_px.height as u32,
                             DXGI_FORMAT_UNKNOWN,
                             0,
                         );
@@ -550,12 +554,8 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     let width = LOWORD(lparam as u32) as u32;
                     let height = HIWORD(lparam as u32) as u32;
-                    let (scale, size_pt) = {
-                        let size_pt = self.handle.borrow().state.upgrade().unwrap().scale.borrow_mut()
-                            .set_size_px((width as f64, height as f64));
-                        let scale = self.handle.borrow().state.upgrade().unwrap().scale.borrow().clone();
-                        (scale, size_pt)
-                    };
+                    let size_pt = self
+                        .with_scale_mut(|scale| scale.set_size_px((width as f64, height as f64)));
                     s.handler.size(size_pt);
                     let use_hwnd = if let Some(ref dcomp_state) = s.dcomp_state {
                         dcomp_state.sizing
@@ -569,7 +569,7 @@ impl WndProc for MyWndProc {
                                 let _ = hrt.ptr.Resize(&size);
                             }
                         }
-                        InvalidateRect(hwnd, null_mut(), FALSE);
+                        InvalidateRect(hwnd, null(), FALSE);
                     } else {
                         let res;
                         {
@@ -584,7 +584,9 @@ impl WndProc for MyWndProc {
                         }
                         if SUCCEEDED(res) {
                             let rect = size_pt.to_rect();
-                            s.rebuild_render_target(&self.d2d_factory, &scale);
+                            self.with_scale(|scale| {
+                                s.rebuild_render_target(&self.d2d_factory, &scale)
+                            });
                             s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle, rect);
                             if let Some(ref mut dcomp_state) = s.dcomp_state {
                                 (*dcomp_state.swap_chain).Present(0, 0);
@@ -761,10 +763,7 @@ impl WndProc for MyWndProc {
                         }
                     }
 
-                    let pos = {
-                        let scale = self.handle.borrow().state.upgrade().unwrap().scale.borrow().clone();
-                        scale.px_to_pt_point((x as f64, y as f64))
-                    };
+                    let pos = self.with_scale(|scale| scale.px_to_pt_point((x as f64, y as f64)));
                     let mods = KeyModifiers {
                         shift: wparam & MK_SHIFT != 0,
                         alt: get_mod_state_alt(),
@@ -831,10 +830,8 @@ impl WndProc for MyWndProc {
                         };
                         let x = LOWORD(lparam as u32) as i16 as i32;
                         let y = HIWORD(lparam as u32) as i16 as i32;
-                        let pos = {
-                            let scale = self.handle.borrow().state.upgrade().unwrap().scale.borrow().clone();
-                            scale.px_to_pt_point((x as f64, y as f64))
-                        };
+                        let pos =
+                            self.with_scale(|scale| scale.px_to_pt_point((x as f64, y as f64)));
                         let mods = KeyModifiers {
                             shift: wparam & MK_SHIFT != 0,
                             alt: get_mod_state_alt(),
@@ -920,12 +917,11 @@ impl WndProc for MyWndProc {
                 let min_max_info = unsafe { &mut *(lparam as *mut MINMAXINFO) };
                 if let Ok(s) = self.state.try_borrow() {
                     let s = s.as_ref().unwrap();
-                    if let Some(min_size) = s.min_size {
-                        let scale = self.handle.borrow().state.upgrade().unwrap().scale.borrow().clone();
-                        let mut scale = Scale::new(scale.dpi());
-                        let size_px = scale.set_size_pt(min_size);
-                        min_max_info.ptMinTrackSize.x = size_px.width as i32;
-                        min_max_info.ptMinTrackSize.y = size_px.height as i32;
+                    if let Some(min_size_pt) = s.min_size {
+                        let min_size_px = self
+                            .with_scale(|scale| Scale::new(scale.dpi()).set_size_pt(min_size_pt));
+                        min_max_info.ptMinTrackSize.x = min_size_px.width as i32;
+                        min_max_info.ptMinTrackSize.y = min_size_px.height as i32;
                     }
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
@@ -1311,18 +1307,32 @@ impl WindowHandle {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
-                InvalidateRect(hwnd, null(), FALSE);
+                if InvalidateRect(hwnd, null(), FALSE) == FALSE {
+                    log::warn!(
+                        "InvalidateRect failed: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                }
             }
         }
     }
 
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(w) = self.state.upgrade() {
+            let rect =
+                w.scale.try_borrow().ok().map(|scale| {
+                    util::rect_to_recti(scale::expand_rect(scale.pt_to_px_rect(rect)))
+                });
             let hwnd = w.hwnd.get();
-            let rect = scale::expand_rect(w.scale.borrow().pt_to_px_rect(rect));
-            let rect = util::rect_to_recti(rect);
             unsafe {
-                if InvalidateRect(hwnd, &rect, FALSE) == FALSE {
+                let result = match rect {
+                    Some(rect) => InvalidateRect(hwnd, &rect, FALSE),
+                    None => {
+                        log::warn!("Failed to get scale");
+                        InvalidateRect(hwnd, null(), FALSE)
+                    }
+                };
+                if result == FALSE {
                     log::warn!(
                         "InvalidateRect failed: {}",
                         Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
@@ -1401,7 +1411,10 @@ impl WindowHandle {
             let hwnd = w.hwnd.get();
             let pos = w.scale.borrow().pt_to_px_point(pos).round();
             unsafe {
-                let mut point = POINT { x: pos.x as i32, y: pos.y as i32 };
+                let mut point = POINT {
+                    x: pos.x as i32,
+                    y: pos.y as i32,
+                };
                 ClientToScreen(hwnd, &mut point);
                 if TrackPopupMenu(hmenu, TPM_LEFTALIGN, point.x, point.y, 0, hwnd, null()) == FALSE
                 {
