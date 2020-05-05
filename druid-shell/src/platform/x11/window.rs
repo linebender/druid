@@ -19,7 +19,7 @@ use std::cell::RefCell;
 use std::convert::TryInto;
 use std::rc::{Rc, Weak};
 
-use cairo::XCBSurface;
+use cairo::{XCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
 use xcb::{
     Atom, Visualtype, ATOM_ATOM, ATOM_STRING, ATOM_WM_NAME, CONFIG_WINDOW_STACK_MODE,
     COPY_FROM_PARENT, CURRENT_TIME, CW_BACK_PIXEL, CW_EVENT_MASK, EVENT_MASK_BUTTON_PRESS,
@@ -89,9 +89,16 @@ impl WindowBuilder {
         // TODO(x11/menus): implement WindowBuilder::set_menu (currently a no-op)
     }
 
-    fn atoms(&self, id: u32) -> Result<WindowAtoms, Error> {
+    /// Registers and returns all the atoms that the window will need.
+    fn atoms(&self, window_id: u32) -> Result<WindowAtoms, Error> {
         let conn = self.app.connection();
 
+        // WM_PROTOCOLS
+        //
+        // List of atoms that identify the communications protocols between
+        // the client and window manager in which the client is willing to participate.
+        //
+        // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#wm_protocols_property
         let wm_protocols = match xcb::intern_atom(conn, false, "WM_PROTOCOLS").get_reply() {
             Ok(reply) => reply.atom(),
             Err(err) => {
@@ -102,6 +109,15 @@ impl WindowBuilder {
             }
         };
 
+        // WM_DELETE_WINDOW
+        //
+        // Including this atom in the WM_PROTOCOLS property on each window makes sure that
+        // if the window manager respects WM_DELETE_WINDOW it will send us the event.
+        //
+        // The WM_DELETE_WINDOW event is sent when there is a request to close the window.
+        // Registering for but ignoring this event means that the window will remain open.
+        //
+        // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
         let wm_delete_window = match xcb::intern_atom(conn, false, "WM_DELETE_WINDOW").get_reply() {
             Ok(reply) => reply.atom(),
             Err(err) => {
@@ -112,12 +128,13 @@ impl WindowBuilder {
             }
         };
 
+        // Replace the window's WM_PROTOCOLS with the following.
         let protocols = [wm_delete_window];
         // TODO(x11/errors): Check the response for errors?
         xcb::change_property(
             conn,
             PROP_MODE_REPLACE as u8,
-            id,
+            window_id,
             wm_protocols,
             ATOM_ATOM,
             32,
@@ -130,34 +147,36 @@ impl WindowBuilder {
         })
     }
 
-    fn cairo_context(
+    /// Create a new cairo `Context`.
+    fn create_cairo_context(
         &self,
-        id: u32,
+        window_id: u32,
         visual_type: &mut Visualtype,
     ) -> Result<RefCell<cairo::Context>, Error> {
-        // Create a draw surface
         let conn = self.app.connection();
         let cairo_xcb_connection = unsafe {
-            cairo::XCBConnection::from_raw_none(
-                conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t
-            )
+            XCBConnection::from_raw_none(conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t)
         };
-        let cairo_drawable = cairo::XCBDrawable(id);
+        let cairo_drawable = XCBDrawable(window_id);
         let cairo_visual_type = unsafe {
-            cairo::XCBVisualType::from_raw_none(
+            XCBVisualType::from_raw_none(
                 &mut visual_type.base as *mut _ as *mut cairo_sys::xcb_visualtype_t,
             )
         };
-        // TODO(x11/errors): Don't unwrap
         let cairo_surface = XCBSurface::create(
             &cairo_xcb_connection,
             &cairo_drawable,
             &cairo_visual_type,
             self.size.width as i32,
             self.size.height as i32,
-        )
-        .expect("couldn't create a cairo surface");
-        Ok(RefCell::new(cairo::Context::new(&cairo_surface)))
+        );
+        match cairo_surface {
+            Ok(cairo_surface) => Ok(RefCell::new(cairo::Context::new(&cairo_surface))),
+            Err(err) => Err(Error::Generic(format!(
+                "Failed to create cairo surface: {}",
+                err
+            ))),
+        }
     }
 
     // TODO(x11/menus): make menus if requested
@@ -219,7 +238,7 @@ impl WindowBuilder {
 
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
         let atoms = self.atoms(id)?;
-        let cairo_context = self.cairo_context(id, &mut visual_type)?;
+        let cairo_context = self.create_cairo_context(id, &mut visual_type)?;
         // Figure out the refresh rate of the current screen
         let refresh_rate = util::refresh_rate(conn, id);
         let state = RefCell::new(WindowState { size: self.size });
@@ -354,7 +373,12 @@ impl Window {
         Ok(())
     }
 
-    fn request_redraw(&self, rect: Rect, flush: bool) {
+    /// Tell the X server to mark the specified `rect` as needing redraw.
+    ///
+    /// ### Connection
+    ///
+    /// Does not flush the connection.
+    fn request_redraw(&self, rect: Rect) {
         // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
         let expose_event = xcb::ExposeEvent::new(
             self.id,
@@ -371,13 +395,12 @@ impl Window {
             EVENT_MASK_EXPOSURE,
             &expose_event,
         );
-        if flush {
-            self.app.connection().flush();
-        }
     }
 
     fn render(&self, invalid_rect: Rect) -> Result<(), Error> {
-        // TODO(x11/errors): this function should return a proper error
+        // TODO(x11/errors): this function should return a an error
+        // instead of panicking or logging if the error isn't recoverable.
+
         // Figure out the window's current size
         let geometry_cookie = xcb::get_geometry(self.app.connection(), self.id);
         let reply = geometry_cookie.get_reply().unwrap();
@@ -412,7 +435,7 @@ impl Window {
             let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
             std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
 
-            self.request_redraw(size.to_rect(), false);
+            self.request_redraw(size.to_rect());
         }
         self.app.connection().flush();
         Ok(())
@@ -457,13 +480,14 @@ impl Window {
 
     fn invalidate(&self) {
         match self.size() {
-            Ok(size) => self.request_redraw(size.to_rect(), true),
+            Ok(size) => self.invalidate_rect(size.to_rect()),
             Err(err) => log::error!("Window::invalidate - failed to get size: {}", err),
         }
     }
 
     fn invalidate_rect(&self, rect: Rect) {
-        self.request_redraw(rect, true);
+        self.request_redraw(rect);
+        self.app.connection().flush();
     }
 
     fn set_title(&self, title: &str) {
@@ -624,6 +648,7 @@ impl Window {
         client_message: &xcb::ClientMessageEvent,
     ) -> Result<(), Error> {
         // https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html#id2745388
+        // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
         if client_message.type_() == self.atoms.wm_protocols && client_message.format() == 32 {
             let protocol = client_message.data().data32()[0];
             if protocol == self.atoms.wm_delete_window {
