@@ -37,7 +37,7 @@ use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::scale::Scale;
+use crate::scale::{self, Scale};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use crate::Error;
 
@@ -565,10 +565,7 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             if let Ok(scale) = state.scale.try_borrow() {
                 // GTK+ takes rects with non-negative integer width/height.
-                let r = scale.pt_to_px_rect(rect.abs());
-                // Calculate the smallest integer rect that is a superset of the requested rect.
-                let r = Rect::new(r.x0.floor(), r.y0.floor(), r.x1.ceil(), r.y1.ceil());
-
+                let r = scale.pt_to_px_rect(scale::expand_rect(rect.abs()));
                 let origin = state.drawing_area.get_allocation();
                 state.window.queue_draw_area(
                     r.x0 as i32 + origin.x,

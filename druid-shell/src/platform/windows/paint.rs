@@ -38,6 +38,7 @@ use winapi::Interface;
 use piet_common::d2d::D2DFactory;
 
 use crate::platform::windows::{DeviceContext, DxgiSurfaceRenderTarget, HwndRenderTarget};
+use crate::scale::Scale;
 
 use super::error::Error;
 use super::util::as_result;
@@ -69,7 +70,7 @@ pub(crate) unsafe fn create_render_target(
 pub(crate) unsafe fn create_render_target_dxgi(
     d2d_factory: &D2DFactory,
     swap_chain: *mut IDXGISwapChain1,
-    dpi: f32,
+    scale: &Scale,
 ) -> Result<DxgiSurfaceRenderTarget, Error> {
     let mut buffer: *mut IDXGISurface = null_mut();
     as_result((*swap_chain).GetBuffer(
@@ -77,17 +78,21 @@ pub(crate) unsafe fn create_render_target_dxgi(
         &IDXGISurface::uuidof(),
         &mut buffer as *mut _ as *mut *mut c_void,
     ))?;
+    let dpi_x = (96.0 * scale.scale_x()) as f32;
+    let dpi_y = (96.0 * scale.scale_y()) as f32;
     let props = D2D1_RENDER_TARGET_PROPERTIES {
         _type: D2D1_RENDER_TARGET_TYPE_DEFAULT,
         pixelFormat: D2D1_PIXEL_FORMAT {
             format: DXGI_FORMAT_B8G8R8A8_UNORM,
             alphaMode: D2D1_ALPHA_MODE_IGNORE,
         },
-        dpiX: dpi,
-        dpiY: dpi,
+        dpiX: dpi_x,
+        dpiY: dpi_y,
         usage: D2D1_RENDER_TARGET_USAGE_NONE,
         minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
     };
+
+    println!("Setting D2D dpi x/y to: {} {}", dpi_x, dpi_y);
 
     let mut render_target: *mut ID2D1RenderTarget = null_mut();
     let res =

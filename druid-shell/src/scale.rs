@@ -59,7 +59,8 @@ impl Scale {
     /// This updates the internal scaling state and returns the same size in pixels.
     ///
     /// The calculated size in pixels is rounded to integers.
-    pub fn set_size_pt(&mut self, size: Size) -> Size {
+    pub fn set_size_pt<T: Into<Size>>(&mut self, size: T) -> Size {
+        let size = size.into();
         self.size_px = (size * self.scale).round();
         self.size_pt = size;
         self.scale_x = self.size_px.width / self.size_pt.width;
@@ -72,7 +73,8 @@ impl Scale {
     /// This updates the internal scaling state and returns the same size in points.
     ///
     /// The calculated size in points is rounded to integers.
-    pub fn set_size_px(&mut self, size: Size) -> Size {
+    pub fn set_size_px<T: Into<Size>>(&mut self, size: T) -> Size {
+        let size = size.into();
         self.size_pt = div_size(size, self.scale).round();
         self.size_px = size;
         self.scale_x = self.size_px.width / self.size_pt.width;
@@ -227,8 +229,23 @@ impl std::fmt::Debug for Scale {
     }
 }
 
-// TODO: Remove this if kurbo::Size gets division support
+// TODO: Remove this if kurbo::Size gets division support via kurbo#108.
 #[inline]
 fn div_size(size: Size, rhs: f64) -> Size {
     Size::new(size.width / rhs, size.height / rhs)
+}
+
+// TODO: Replace usages of this with rect.expand() after kurbo#107 has landed.
+pub fn expand_rect(rect: Rect) -> Rect {
+    let (x0, x1) = if rect.x0 < rect.x1 {
+        (rect.x0.floor(), rect.x1.ceil())
+    } else {
+        (rect.x0.ceil(), rect.x1.floor())
+    };
+    let (y0, y1) = if rect.y0 < rect.y1 {
+        (rect.y0.floor(), rect.y1.ceil())
+    } else {
+        (rect.y0.ceil(), rect.y1.floor())
+    };
+    Rect::new(x0, y0, x1, y1)
 }
