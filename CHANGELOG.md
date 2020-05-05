@@ -29,6 +29,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `Label::with_font` and `set_font`. ([#785] by [@thecodewarrior])
 - `InternalEvent::RouteTimer` to route timer events. ([#831] by [@sjoshid])
 - `MouseButtons` to `MouseEvent` to track which buttons are being held down during an event. ([#843] by [@xStrom])
+- `Env` and `Key` gained methods for inspecting an `Env` at runtime ([#880] by [@Zarenor])
 - `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
 
 ### Changed
@@ -140,6 +141,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#861]: https://github.com/xi-editor/druid/pull/861
 [#869]: https://github.com/xi-editor/druid/pull/869
 [#878]: https://github.com/xi-editor/druid/pull/878
+[#880]: https://github.com/xi-editor/druid/pull/880
 [#889]: https://github.com/xi-editor/druid/pull/889
 [#894]: https://github.com/xi-editor/druid/pull/894
 [#897]: https://github.com/xi-editor/druid/pull/897
@@ -172,6 +174,7 @@ Last release without a changelog :(
 [@thecodewarrior]: https://github.com/thecodewarrior
 [@sjoshid]: https://github.com/sjoshid
 [@mastfissh]: https://github.com/mastfissh
+[@Zarenor]: https://github.com/Zarenor
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
 [0.5.0]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0

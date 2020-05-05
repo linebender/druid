@@ -208,6 +208,43 @@ impl Env {
             .map(|value| value.to_inner_unchecked())
     }
 
+    /// Gets a value from the environment, in its encapsulated [`Value`] form,
+    /// expecting the key to be present.
+    ///
+    /// *WARNING:* This is not intended for general use, but only for inspecting an `Env` e.g.
+    /// for debugging, theme editing, and theme loading.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the key is not found
+    /// [`Value`]: enum.Value.html
+    pub fn get_untyped(&self, key: impl Borrow<Key<()>>) -> &Value {
+        let key = key.borrow();
+        if let Some(value) = self.0.map.get(key.key) {
+            value
+        } else {
+            panic!("key for {} not found", key.key)
+        }
+    }
+
+    /// Gets a value from the environment, in its encapsulated [`Value`] form,
+    /// returning None if a value isn't found.
+    ///
+    /// *WARNING:* This is not intended for general use, but only for inspecting an `Env` e.g.
+    /// for debugging, theme editing, and theme loading.
+    /// [`Value`]: enum.Value.html
+    pub fn try_get_untyped(&self, key: impl Borrow<Key<()>>) -> Option<&Value> {
+        self.0.map.get(key.borrow().key)
+    }
+
+    /// Gets the entire contents of the `Env`, in key-value pairs.
+    ///
+    /// *WARNING:* This is not intended for general use, but only for inspecting an `Env` e.g.
+    /// for debugging, theme editing, and theme loading.
+    pub fn get_all(&self) -> impl ExactSizeIterator<Item = (&String, &Value)> {
+        self.0.map.iter()
+    }
+
     /// Adds a key/value, acting like a builder.
     pub fn adding<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) -> Env {
         let env = Arc::make_mut(&mut self.0);
@@ -267,6 +304,22 @@ impl<T> Key<T> {
     /// let color_key: Key<Color> = Key::new("a.very.nice.color");
     /// ```
     pub const fn new(key: &'static str) -> Self {
+        Key {
+            key,
+            value_type: PhantomData,
+        }
+    }
+}
+
+impl Key<()> {
+    /// Create an untyped `Key` with the given string value.
+    ///
+    /// *WARNING:* This is not for general usage - it's only useful
+    /// for inspecting the contents of an [`Env`]  - this is expected to be
+    /// used for debugging, loading, and manipulating themes.
+    ///
+    /// [`Env`]: struct.Env.html
+    pub const fn untyped(key: &'static str) -> Self {
         Key {
             key,
             value_type: PhantomData,
