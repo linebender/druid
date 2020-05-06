@@ -52,6 +52,7 @@ use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::scale::Scale;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use crate::Error;
 
@@ -204,7 +205,7 @@ impl WindowBuilder {
             (*view_state).handler.connect(&handle.clone().into());
             (*view_state)
                 .handler
-                .size(frame.size.width as u32, frame.size.height as u32);
+                .size(Size::new(frame.size.width, frame.size.height));
 
             Ok(handle)
         }
@@ -370,7 +371,7 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
         let view_state = &mut *(view_state as *mut ViewState);
         (*view_state)
             .handler
-            .size(size.width as u32, size.height as u32);
+            .size(Size::new(size.width, size.height));
         let superclass = msg_send![this, superclass];
         let () = msg_send![super(this, superclass), setFrameSize: size];
     }
@@ -825,13 +826,10 @@ impl WindowHandle {
         }
     }
 
-    /// Get the dpi of the window.
-    ///
-    /// TODO: we want to migrate this from dpi (with 96 as nominal) to a scale
-    /// factor (with 1 as nominal).
-    pub fn get_dpi(&self) -> f32 {
-        // TODO: get actual dpi
-        96.0
+    /// Get the `Scale` of the window.
+    pub fn get_scale(&self) -> Result<Scale, Error> {
+        // TODO: Get actual Scale
+        Ok(Scale::new(96.0, 96.0))
     }
 }
 
