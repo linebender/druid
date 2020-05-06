@@ -187,23 +187,36 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Set the initial window size.
+    /// Set the window's initial drawing area size in points.
     ///
-    /// You can pass in a tuple `(width, height)` or `kurbo::Size` e.g.
-    /// to create a window 1000px wide and 500px high
+    /// You can pass in a tuple `(width, height)` or a [`Size`],
+    /// e.g. to create a window with a drawing area 1000pt wide and 500pt high:
+    ///
     /// ```ignore
     /// window.window_size((1000.0, 500.0));
     /// ```
+    ///
+    /// The actual window size in pixels will depend on the platform DPI settings.
+    ///
+    /// This should be considered a request to the platform to set the size of the window.
+    /// The platform might increase the size a tiny bit due to DPI.
+    ///
+    /// [`Size`]: struct.Size.html
     pub fn window_size(mut self, size: impl Into<Size>) -> Self {
         self.size = Some(size.into());
         self
     }
 
-    /// Set the minimum window size.
+    /// Set the window's minimum drawing area size in points.
     ///
-    /// To  set the initial window size, see [`window_size`].
+    /// The actual minimum window size in pixels will depend on the platform DPI settings.
     ///
-    /// [`window_size`]: struct.WindowDesc.html#method.window_size
+    /// This should be considered a request to the platform to set the minimum size of the window.
+    /// The platform might increase the size a tiny bit due to DPI.
+    ///
+    /// To set the window's initial drawing area size use [`window_size`].
+    ///
+    /// [`window_size`]: #method.window_size
     pub fn with_min_size(mut self, size: impl Into<Size>) -> Self {
         self.min_size = Some(size.into());
         self

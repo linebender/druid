@@ -24,25 +24,38 @@ const SCALE_TARGET_DPI: f64 = 96.0;
 ///
 /// This holds the platform DPI, the platform area size in pixels,
 /// the logical area size in points, and the scale factors between them.
-/// 
+///
 /// To translate coordinates between pixels and points you should use one of the
 /// helper conversion methods of `Scale` or for manual conversion [`scale_x`] / [`scale_y`].
-/// 
-/// The platform DPI describes the ideal target however that is not always possible to achieve.
-/// The physical area size in pixels has to be in integers by definition.
-// TODO: Maybe re-architect the scale_x/scale_y stuff for better pixel alignment?
-/// 
+///
+/// The platform area size in pixels tends to be limited to integers and `Scale` works
+/// under that assumption.
+///  
+/// The logical area size in points is an unrounded conversion, which means that it is
+/// often not limited to integers. This allows for accurate calculations of
+/// the platform area pixel boundaries from the logcal area using the scale factors.
+///
+/// Even though the logcal area size can be fractional, the integer boundaries of that logical area
+/// will still match up with the platform area pixel boundaries as often as the scale factor allows.
+///
+/// `Scale` is designed for responsive applications, including responding to platform DPI changes.
+/// The platform DPI can change quickly, e.g. when moving a window from one monitor to another.
+///
+/// A clone of `Scale` will be stale as soon as the platform area size or the DPI changes.
+///
 /// [`scale_x`]: #method.scale_x
 /// [`scale_y`]: #method.scale_y
+// NOTE: Scale does not derive Copy because the data it contains can be short-lived.
+//       Forcing an explicit clone can help remind people of this, and avoids accidental copies.
 #[derive(Clone)]
 pub struct Scale {
-    /// The platform reported DPI.
-    dpi: f64,
-    /// The ideal scaling factor based on the DPI.
-    scale: f64,
-    /// The actual current scale factor on the x axis.
+    /// The platform reported DPI on the x axis.
+    dpi_x: f64,
+    /// The platform reported DPI on the y axis.
+    dpi_y: f64,
+    /// The scale factor on the x axis.
     scale_x: f64,
-    /// The actual current scale factor on the y axis.
+    /// The scale factor on the y axis.
     scale_y: f64,
     /// The size of the scaled area in points.
     size_pt: Size,
@@ -51,57 +64,61 @@ pub struct Scale {
 }
 
 impl Scale {
-    /// Create a new `Scale` state based on the specified `dpi`.
-    pub fn new(dpi: f64) -> Scale {
-        let scale = dpi / SCALE_TARGET_DPI;
+    /// Create a new `Scale` state based on the specified DPI.
+    pub fn new(dpi_x: f64, dpi_y: f64) -> Scale {
         Scale {
-            dpi,
-            scale,
-            scale_x: scale,
-            scale_y: scale,
+            dpi_x,
+            dpi_y,
+            scale_x: dpi_x / SCALE_TARGET_DPI,
+            scale_y: dpi_y / SCALE_TARGET_DPI,
             size_pt: Size::ZERO,
             size_px: Size::ZERO,
         }
     }
 
-    /// Set the size of the scaled area in points.
-    ///
-    /// This updates the internal scaling state and returns the same size in pixels.
-    ///
-    /// The calculated size in pixels is rounded to integers.
-    pub fn set_size_pt<T: Into<Size>>(&mut self, size: T) -> Size {
-        let size = size.into();
-        self.size_px = (size * self.scale).round();
-        self.size_pt = size;
-        self.scale_x = self.size_px.width / self.size_pt.width;
-        self.scale_y = self.size_px.height / self.size_pt.height;
-        self.size_px
-    }
-
     /// Set the size of the scaled area in pixels.
     ///
-    /// This updates the internal scaling state and returns the same size in points.
-    ///
-    /// The calculated size in points is rounded to integers.
+    /// This updates the internal state and returns the same size in points.
     pub fn set_size_px<T: Into<Size>>(&mut self, size: T) -> Size {
         let size = size.into();
-        self.size_pt = div_size(size, self.scale).round();
         self.size_px = size;
-        self.scale_x = self.size_px.width / self.size_pt.width;
-        self.scale_y = self.size_px.height / self.size_pt.height;
+        self.size_pt = self.px_to_pt_size(size);
         self.size_pt
     }
 
-    /// Returns the platform DPI associated with this `Scale`.
-    #[inline]
-    pub fn dpi(&self) -> f64 {
-        self.dpi
+    /// Set the size of the scaled area in pixels via conversion from points.
+    ///
+    /// This updates the internal state and returns the same size in pixels.
+    ///
+    /// The calculated size in pixels is rounded away from zero to integers.
+    /// That means that the scaled area size in points isn't always the same
+    /// as the `size` given to this method. To find out the new size in points use [`size_pt`].
+    ///
+    /// [`size_pt`]: #method.size_pt
+    pub fn set_size_pt<T: Into<Size>>(&mut self, size: T) -> Size {
+        let size = size.into();
+        self.size_px = self.pt_to_px_size(size).expand();
+        self.size_pt = self.px_to_pt_size(self.size_px);
+        self.size_px
     }
 
-    /// Returns `true` if the specified `dpi` is approximately equal to the `Scale` dpi.
+    /// Returns the x axis platform DPI associated with this `Scale`.
     #[inline]
-    pub fn dpi_approx_eq(&self, dpi: f64) -> bool {
-        self.dpi.approx_eq(dpi, (f64::EPSILON, 2))
+    pub fn dpi_x(&self) -> f64 {
+        self.dpi_x
+    }
+
+    /// Returns the y axis platform DPI associated with this `Scale`.
+    #[inline]
+    pub fn dpi_y(&self) -> f64 {
+        self.dpi_y
+    }
+
+    /// Returns `true` if the specified DPI is approximately equal to the `Scale` DPI.
+    #[inline]
+    pub fn dpi_approx_eq(&self, dpi_x: f64, dpi_y: f64) -> bool {
+        self.dpi_x.approx_eq(dpi_x, (f64::EPSILON, 2))
+            && self.dpi_y.approx_eq(dpi_y, (f64::EPSILON, 2))
     }
 
     /// Returns the x axis scale factor.
@@ -233,16 +250,10 @@ impl std::fmt::Debug for Scale {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "DPI {} => {} => ({}, {}) | {:?} => {:?}",
-            self.dpi, self.scale, self.scale_x, self.scale_y, self.size_pt, self.size_px
+            "DPI ({}, {}) => ({}, {}) | {:?} => {:?}",
+            self.dpi_x, self.dpi_y, self.scale_x, self.scale_y, self.size_px, self.size_pt,
         )
     }
-}
-
-// TODO: Remove this after kurbo::Size gets division support via kurbo#108.
-#[inline]
-fn div_size(size: Size, rhs: f64) -> Size {
-    Size::new(size.width / rhs, size.height / rhs)
 }
 
 // TODO: Replace usages of this with rect.expand() after kurbo#107 has landed.

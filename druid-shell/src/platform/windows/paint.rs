@@ -76,16 +76,14 @@ pub(crate) unsafe fn create_render_target_dxgi(
         &IDXGISurface::uuidof(),
         &mut buffer as *mut _ as *mut *mut c_void,
     ))?;
-    let dpi_x = (96.0 * scale.scale_x()) as f32;
-    let dpi_y = (96.0 * scale.scale_y()) as f32;
     let props = D2D1_RENDER_TARGET_PROPERTIES {
         _type: D2D1_RENDER_TARGET_TYPE_DEFAULT,
         pixelFormat: D2D1_PIXEL_FORMAT {
             format: DXGI_FORMAT_B8G8R8A8_UNORM,
             alphaMode: D2D1_ALPHA_MODE_IGNORE,
         },
-        dpiX: dpi_x,
-        dpiY: dpi_y,
+        dpiX: scale.dpi_x() as f32,
+        dpiY: scale.dpi_y() as f32,
         usage: D2D1_RENDER_TARGET_USAGE_NONE,
         minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
     };

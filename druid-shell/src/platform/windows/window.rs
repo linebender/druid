@@ -923,8 +923,9 @@ impl WndProc for MyWndProc {
                 if let Ok(s) = self.state.try_borrow() {
                     let s = s.as_ref().unwrap();
                     if let Some(min_size_pt) = s.min_size {
-                        let min_size_px = self
-                            .with_scale(|scale| Scale::new(scale.dpi()).set_size_pt(min_size_pt));
+                        let min_size_px = self.with_scale(|scale| {
+                            Scale::new(scale.dpi_x(), scale.dpi_y()).set_size_pt(min_size_pt)
+                        });
                         min_max_info.ptMinTrackSize.x = min_size_px.width as i32;
                         min_max_info.ptMinTrackSize.y = min_size_px.height as i32;
                     }
@@ -1021,7 +1022,7 @@ impl WindowBuilder {
                 // Probably GetDeviceCaps(..., LOGPIXELSX) is the best to do pre-10
                 96.0
             };
-            let mut scale = Scale::new(dpi);
+            let mut scale = Scale::new(dpi, dpi);
             let size_px = scale.set_size_pt(self.size);
 
             let window = WindowState {

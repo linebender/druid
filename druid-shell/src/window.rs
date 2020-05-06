@@ -202,7 +202,9 @@ impl WindowHandle {
 
     /// Get the [`Scale`] information of the window.
     ///
-    /// This information will be stale after the window is resized or the platform DPI changes.
+    /// The returned [`Scale`] is a clone and thus its information will be stale after the window
+    /// is resized or the platform DPI changes. A correctly behaving application should consider
+    /// the lifetime of this [`Scale`] brief, limited to approximately a single event cycle.
     ///
     /// [`Scale`]: struct.Scale.html
     pub fn get_scale(&self) -> Result<Scale, Error> {
@@ -231,12 +233,25 @@ impl WindowBuilder {
         self.0.set_handler(handler)
     }
 
-    /// Set the window's initial size.
+    /// Set the window's initial drawing area size in points.
+    ///
+    /// The actual window size in pixels will depend on the platform DPI settings.
+    ///
+    /// This should be considered a request to the platform to set the size of the window.
+    /// The platform might increase the size a tiny bit due to DPI.
+    /// To know the actual size of the window you should handle the [`WinHandler::size`] method.
+    ///
+    /// [`WinHandler::size`]: trait.WinHandler.html#method.size
     pub fn set_size(&mut self, size: Size) {
         self.0.set_size(size)
     }
 
-    /// Set the window's initial size.
+    /// Set the window's minimum drawing area size in points.
+    ///
+    /// The actual minimum window size in pixels will depend on the platform DPI settings.
+    ///
+    /// This should be considered a request to the platform to set the minimum size of the window.
+    /// The platform might increase the size a tiny bit due to DPI.
     pub fn set_min_size(&mut self, size: Size) {
         self.0.set_min_size(size)
     }
@@ -283,14 +298,16 @@ pub trait WinHandler {
     /// wish to stash it.
     fn connect(&mut self, handle: &WindowHandle);
 
-    /// Called when the size of the window is changed.
+    /// Called when the size of the window has changed.
+    ///
+    /// The `size` parameter is the new size in points.
     #[allow(unused_variables)]
     fn size(&mut self, size: Size) {}
 
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
     /// should be scheduled for the next animation frame. `invalid_rect` is the
-    /// rectangle that needs to be repainted.
+    /// rectangle in points that needs to be repainted.
     fn paint(&mut self, piet: &mut piet_common::Piet, invalid_rect: Rect) -> bool;
 
     /// Called when the resources need to be rebuilt.
