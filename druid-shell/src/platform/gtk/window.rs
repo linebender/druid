@@ -252,6 +252,8 @@ impl WindowBuilder {
                     if let Some(dpi) = state.window.get_window()
                         .map(|w| w.get_display().get_default_screen().get_resolution()) {
                         if !scale.dpi_approx_eq(dpi) {
+                            // This new Scale will also ensure a window size event for the handler,
+                            // because it defaults to zero size.
                             *scale = Scale::new(dpi);
                         }
                     }
@@ -260,11 +262,11 @@ impl WindowBuilder {
                     let extents = widget.get_allocation();
                     let size_px = Size::new(extents.width as f64, extents.height as f64);
                     if scale.size_px() != size_px {
+                        let size_pt = scale.set_size_px(size_px);
                         if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                                let size_pt = scale.set_size_px(size_px);
-                                handler_borrow.size(size_pt);
+                            handler_borrow.size(size_pt);
                         } else {
-                            log::warn!("Resizing was skipped because the handler was already borrowed");
+                            log::warn!("Failed to inform the handler of a resize because it was already borrowed");
                         }
                     }
 
@@ -564,8 +566,8 @@ impl WindowHandle {
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(state) = self.state.upgrade() {
             if let Ok(scale) = state.scale.try_borrow() {
-                // GTK+ takes rects with non-negative integer width/height.
-                let r = scale.pt_to_px_rect(scale::expand_rect(rect.abs()));
+                // GTK takes rects with non-negative integer width/height.
+                let r = scale::expand_rect(scale.pt_to_px_rect(rect.abs()));
                 let origin = state.drawing_area.get_allocation();
                 state.window.queue_draw_area(
                     r.x0 as i32 + origin.x,
@@ -641,7 +643,7 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             match state.scale.try_borrow() {
                 Ok(scale) => Ok(scale.clone()),
-                Err(_) => Err(Error::Other("Failed to borrow state")),
+                Err(_) => Err(Error::Other("Failed to borrow scale")),
             }
         } else {
             Err(Error::Other("WindowState already dropped"))

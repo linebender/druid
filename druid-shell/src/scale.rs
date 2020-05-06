@@ -24,6 +24,16 @@ const SCALE_TARGET_DPI: f64 = 96.0;
 ///
 /// This holds the platform DPI, the platform area size in pixels,
 /// the logical area size in points, and the scale factors between them.
+/// 
+/// To translate coordinates between pixels and points you should use one of the
+/// helper conversion methods of `Scale` or for manual conversion [`scale_x`] / [`scale_y`].
+/// 
+/// The platform DPI describes the ideal target however that is not always possible to achieve.
+/// The physical area size in pixels has to be in integers by definition.
+// TODO: Maybe re-architect the scale_x/scale_y stuff for better pixel alignment?
+/// 
+/// [`scale_x`]: #method.scale_x
+/// [`scale_y`]: #method.scale_y
 #[derive(Clone)]
 pub struct Scale {
     /// The platform reported DPI.
@@ -229,7 +239,7 @@ impl std::fmt::Debug for Scale {
     }
 }
 
-// TODO: Remove this if kurbo::Size gets division support via kurbo#108.
+// TODO: Remove this after kurbo::Size gets division support via kurbo#108.
 #[inline]
 fn div_size(size: Size, rhs: f64) -> Size {
     Size::new(size.width / rhs, size.height / rhs)
