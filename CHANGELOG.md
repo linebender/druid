@@ -128,6 +128,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - GTK: Refactored `Application` to use the new structure. ([#892] by [@xStrom])
 - X11: Refactored `Application` to use the new structure. ([#894] by [@xStrom])
 - X11: Refactored `Window` to support some reentrancy and invalidation. ([#894] by [@xStrom])
+- Refactored DPI scaling. ([#904] by [@xStrom])
 - Added docs generation testing for all features. ([#942] by [@xStrom])
 
 ### Outside News
@@ -186,6 +187,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#898]: https://github.com/xi-editor/druid/pull/898
 [#900]: https://github.com/xi-editor/druid/pull/900
 [#903]: https://github.com/xi-editor/druid/pull/903
+[#904]: https://github.com/xi-editor/druid/pull/904
 [#905]: https://github.com/xi-editor/druid/pull/905
 [#909]: https://github.com/xi-editor/druid/pull/909
 [#917]: https://github.com/xi-editor/druid/pull/917
