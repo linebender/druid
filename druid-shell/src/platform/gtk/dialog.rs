@@ -16,10 +16,19 @@
 
 use std::ffi::OsString;
 
-use gtk::{FileChooserAction, FileChooserExt, NativeDialogExt, ResponseType, Window};
+use gtk::{FileChooserAction, FileChooserExt, FileFilter, NativeDialogExt, ResponseType, Window};
 
-use crate::dialog::{FileDialogOptions, FileDialogType};
+use crate::dialog::{FileDialogOptions, FileDialogType, FileSpec};
 use crate::Error;
+
+fn file_filter(fs: &FileSpec) -> FileFilter {
+    let ret = FileFilter::new();
+    ret.set_name(Some(fs.name));
+    for ext in fs.extensions {
+        ret.add_pattern(&format!("*.{}", ext));
+    }
+    ret
+}
 
 pub(crate) fn get_file_dialog_path(
     window: &Window,
@@ -44,6 +53,15 @@ pub(crate) fn get_file_dialog_path(
     dialog.set_show_hidden(options.show_hidden);
 
     dialog.set_select_multiple(options.multi_selection);
+
+    if let Some(ref file_types) = options.allowed_types {
+        for f in file_types {
+            dialog.add_filter(&file_filter(f));
+        }
+    }
+    if let Some(ref default_file_type) = options.default_type {
+        dialog.set_filter(&file_filter(default_file_type));
+    }
 
     let result = dialog.run();
 
