@@ -14,8 +14,6 @@
 
 //! GTK implementation of features at the application scope.
 
-use std::cell::RefCell;
-
 use gio::prelude::ApplicationExtManual;
 use gio::{ApplicationExt, ApplicationFlags, Cancellable};
 use gtk::{Application as GtkApplication, GtkApplicationExt};
@@ -24,22 +22,16 @@ use crate::application::AppHandler;
 
 use super::clipboard::Clipboard;
 use super::error::Error;
-use super::util;
-
-// XXX: The application needs to be global because WindowBuilder::build wants
-// to construct an ApplicationWindow, which needs the application, but
-// WindowBuilder::build does not get the RunLoop
-thread_local!(
-    static GTK_APPLICATION: RefCell<Option<GtkApplication>> = RefCell::new(None);
-);
 
 #[derive(Clone)]
-pub(crate) struct Application;
+pub(crate) struct Application {
+    gtk_app: GtkApplication,
+}
 
 impl Application {
     pub fn new() -> Result<Application, Error> {
         // TODO: we should give control over the application ID to the user
-        let application = GtkApplication::new(
+        let gtk_app = match GtkApplication::new(
             Some("com.github.xi-editor.druid"),
             // TODO we set this to avoid connecting to an existing running instance
             // of "com.github.xi-editor.druid" after which we would never receive
@@ -47,46 +39,42 @@ impl Application {
             // Which shows another way once we have in place a mechanism for
             // communication with remote instances.
             ApplicationFlags::NON_UNIQUE,
-        )
-        .expect("Unable to create GTK application");
+        ) {
+            Ok(app) => app,
+            Err(err) => return Err(Error::BoolError(err)),
+        };
 
-        application.connect_activate(|_app| {
+        gtk_app.connect_activate(|_app| {
             log::info!("gtk: Activated application");
         });
 
-        application
-            .register(None as Option<&Cancellable>)
-            .expect("Could not register GTK application");
+        if let Err(err) = gtk_app.register(None as Option<&Cancellable>) {
+            return Err(Error::Error(err));
+        }
 
-        GTK_APPLICATION.with(move |x| *x.borrow_mut() = Some(application));
-        Ok(Application)
+        Ok(Application { gtk_app })
+    }
+
+    #[inline]
+    pub fn gtk_app(&self) -> &GtkApplication {
+        &self.gtk_app
     }
 
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
-        util::assert_main_thread();
-
         // TODO: should we pass the command line arguments?
-        GTK_APPLICATION.with(|x| {
-            x.borrow()
-                .as_ref()
-                .unwrap() // Safe because we initialized this in RunLoop::new
-                .run(&[])
-        });
+        self.gtk_app.run(&[]);
     }
 
     pub fn quit(&self) {
-        util::assert_main_thread();
-        with_application(|app| {
-            match app.get_active_window() {
-                None => {
-                    // no application is running, main is not running
-                }
-                Some(_) => {
-                    // we still have an active window, close the run loop
-                    app.quit();
-                }
+        match self.gtk_app.get_active_window() {
+            None => {
+                // no application is running, main is not running
             }
-        });
+            Some(_) => {
+                // we still have an active window, close the run loop
+                self.gtk_app.quit();
+            }
+        }
     }
 
     pub fn clipboard(&self) -> Clipboard {
@@ -96,19 +84,4 @@ impl Application {
     pub fn get_locale() -> String {
         glib::get_language_names()[0].as_str().into()
     }
-}
-
-#[inline]
-pub(crate) fn with_application<F, R>(f: F) -> R
-where
-    F: std::ops::FnOnce(GtkApplication) -> R,
-{
-    util::assert_main_thread();
-    GTK_APPLICATION.with(move |app| {
-        let app = app
-            .borrow()
-            .clone()
-            .expect("Tried to manipulate the application before RunLoop::new was called");
-        f(app)
-    })
 }

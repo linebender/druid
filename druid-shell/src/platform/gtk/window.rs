@@ -33,17 +33,17 @@ use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
-use super::application::{with_application, Application};
-use super::dialog;
-use super::menu::Menu;
-use super::util::assert_main_thread;
-
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use crate::Error;
+
+use super::application::Application;
+use super::dialog;
+use super::menu::Menu;
+use super::util;
 
 /// Taken from https://gtk-rs.org/docs-src/tutorial/closures
 /// It is used to reduce the boilerplate of setting up gtk callbacks
@@ -82,6 +82,7 @@ pub struct WindowHandle {
 
 /// Builder abstraction for creating new windows
 pub(crate) struct WindowBuilder {
+    app: Application,
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     menu: Option<Menu>,
@@ -112,8 +113,9 @@ pub(crate) struct WindowState {
 }
 
 impl WindowBuilder {
-    pub fn new(_app: Application) -> WindowBuilder {
+    pub fn new(app: Application) -> WindowBuilder {
         WindowBuilder {
+            app,
             handler: None,
             title: String::new(),
             menu: None,
@@ -153,13 +155,11 @@ impl WindowBuilder {
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
-        assert_main_thread();
-
         let handler = self
             .handler
             .expect("Tried to build a window without setting the handler");
 
-        let window = with_application(|app| ApplicationWindow::new(&app));
+        let window = ApplicationWindow::new(self.app.gtk_app());
 
         window.set_title(&self.title);
         window.set_resizable(self.resizable);
@@ -191,14 +191,14 @@ impl WindowBuilder {
             current_keyval: RefCell::new(None),
         });
 
-        with_application(|app| {
-            app.connect_shutdown(clone!(win_state => move |_| {
+        self.app
+            .gtk_app()
+            .connect_shutdown(clone!(win_state => move |_| {
                 // this ties a clone of Arc<WindowState> to the ApplicationWindow to keep it alive
                 // when the ApplicationWindow is destroyed, the last Arc is dropped
                 // and any Weak<WindowState> will be None on upgrade()
                 let _ = &win_state;
-            }))
-        });
+            }));
 
         let handle = WindowHandle {
             state: Arc::downgrade(&win_state),
@@ -742,7 +742,7 @@ impl IdleHandle {
 }
 
 fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
-    assert_main_thread();
+    util::assert_main_thread();
     let mut handler = state.handler.borrow_mut();
 
     let queue: Vec<_> = std::mem::replace(&mut state.idle_queue.lock().unwrap(), Vec::new());

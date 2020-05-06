@@ -95,6 +95,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Enabled Clippy checks for all targets. ([#850] by [@xStrom])
 - Added rendering tests. ([#784] by [@fishrockz])
 - Revamped CI testing to optimize coverage and speed. ([#857] by [@xStrom])
+- GTK: Refactored `Application` to use the new structure. ([#892] by [@xStrom])
 - X11: Refactored `Application` to use the new structure. ([#894] by [@xStrom])
 - X11: Refactored `Window` to support some reentrancy and invalidation. ([#894] by [@xStrom])
 
@@ -145,6 +146,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#878]: https://github.com/xi-editor/druid/pull/878
 [#880]: https://github.com/xi-editor/druid/pull/880
 [#889]: https://github.com/xi-editor/druid/pull/889
+[#892]: https://github.com/xi-editor/druid/pull/892
 [#894]: https://github.com/xi-editor/druid/pull/894
 [#897]: https://github.com/xi-editor/druid/pull/897
 [#898]: https://github.com/xi-editor/druid/pull/898

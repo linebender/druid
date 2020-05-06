@@ -14,14 +14,26 @@
 
 //! GTK platform errors.
 
-//TODO: add a platform error for GTK
+use std::fmt;
 
+use glib::{BoolError, Error as GLibError};
+
+/// GTK platform errors.
 #[derive(Debug, Clone)]
-pub struct Error;
+pub enum Error {
+    /// Generic GTK error.
+    Error(GLibError),
+    /// GTK error that has no information provided by GTK,
+    /// but may have extra information provided by gtk-rs.
+    BoolError(BoolError),
+}
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "GTK Error")
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            Error::Error(err) => write!(f, "GTK Error: {}", err),
+            Error::BoolError(err) => write!(f, "GTK BoolError: {}", err),
+        }
     }
 }
 
