@@ -14,10 +14,10 @@
 
 //! Miscellaneous utility functions for working with X11.
 
-use xcb::Window;
+use xcb::{Connection, Screen, Visualtype, Window};
 
 // See: https://github.com/rtbo/rust-xcb/blob/master/examples/randr_screen_modes.rs
-pub fn refresh_rate(conn: &xcb::Connection, window_id: Window) -> Option<f64> {
+pub fn refresh_rate(conn: &Connection, window_id: Window) -> Option<f64> {
     let cookie = xcb::randr::get_screen_resources(conn, window_id);
     let reply = cookie.get_reply().unwrap();
     let mut modes = reply.modes();
@@ -47,4 +47,16 @@ pub fn refresh_rate(conn: &xcb::Connection, window_id: Window) -> Option<f64> {
     })?;
 
     Some(refresh_rate)
+}
+
+// Apparently you have to get the visualtype this way :|
+pub fn get_visual_from_screen(screen: &Screen<'_>) -> Option<Visualtype> {
+    for depth in screen.allowed_depths() {
+        for visual in depth.visuals() {
+            if visual.visual_id() == screen.root_visual() {
+                return Some(visual);
+            }
+        }
+    }
+    None
 }

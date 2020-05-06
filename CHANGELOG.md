@@ -29,6 +29,8 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `Label::with_font` and `set_font`. ([#785] by [@thecodewarrior])
 - `InternalEvent::RouteTimer` to route timer events. ([#831] by [@sjoshid])
 - `MouseButtons` to `MouseEvent` to track which buttons are being held down during an event. ([#843] by [@xStrom])
+- `Env` and `Key` gained methods for inspecting an `Env` at runtime ([#880] by [@Zarenor])
+- `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
 
 ### Changed
 
@@ -53,7 +55,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 ### Fixed
 
 - GTK: Use the system locale. ([#798] by [@finnerale])
-- GTK: Actually close windows ([#797] by [@finnerale])
+- GTK: Actually close windows. ([#797] by [@finnerale])
 - Windows: Respect the minimum window size. ([#727] by [@teddemunnik])
 - Windows: Respect resizability. ([#712] by [@teddemunnik])
 - `Event::HotChanged(false)` will be emitted when the cursor leaves the window. ([#821] by [@teddemunnik])
@@ -67,11 +69,15 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Windows: Termiate app when all windows have closed. ([#763] by [@xStrom])
 - macOS: `Application::quit` now quits the run loop instead of killing the process. ([#763] by [@xStrom])
 - macOS/GTK/web: `MouseButton::X1` and `MouseButton::X2` clicks are now recognized. ([#843] by [@xStrom])
+- GTK: Support disabled menu items. ([#897] by [@jneem])
+- X11: Support individual window closing. ([#900] by [@xStrom])
+- X11: Support `Application::quit`. ([#900] by [@xStrom])
 
 ### Visual
 
 - Improved `Split` accuracy. ([#738] by [@xStrom])
 - Built-in widgets no longer stroke outside their `paint_rect`. ([#861] by [@jneem])
+- `Switch` toggles with animation when its data changes externally. ([#898] by [@finnerale])
 
 ### Docs
 
@@ -138,9 +144,13 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#861]: https://github.com/xi-editor/druid/pull/861
 [#869]: https://github.com/xi-editor/druid/pull/869
 [#878]: https://github.com/xi-editor/druid/pull/878
+[#880]: https://github.com/xi-editor/druid/pull/880
 [#889]: https://github.com/xi-editor/druid/pull/889
 [#892]: https://github.com/xi-editor/druid/pull/892
 [#894]: https://github.com/xi-editor/druid/pull/894
+[#897]: https://github.com/xi-editor/druid/pull/897
+[#898]: https://github.com/xi-editor/druid/pull/898
+[#900]: https://github.com/xi-editor/druid/pull/900
 
 ## [0.5.0] - 2020-04-01
 
@@ -169,6 +179,7 @@ Last release without a changelog :(
 [@thecodewarrior]: https://github.com/thecodewarrior
 [@sjoshid]: https://github.com/sjoshid
 [@mastfissh]: https://github.com/mastfissh
+[@Zarenor]: https://github.com/Zarenor
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
 [0.5.0]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0

@@ -16,7 +16,15 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::rc::Rc;
+
+use xcb::{
+    ButtonPressEvent, ButtonReleaseEvent, ClientMessageEvent, Connection, DestroyNotifyEvent,
+    ExposeEvent, KeyPressEvent, MotionNotifyEvent, BUTTON_PRESS, BUTTON_RELEASE, CLIENT_MESSAGE,
+    COPY_FROM_PARENT, CW_EVENT_MASK, DESTROY_NOTIFY, EVENT_MASK_STRUCTURE_NOTIFY, EXPOSE,
+    KEY_PRESS, MOTION_NOTIFY, WINDOW_CLASS_INPUT_ONLY,
+};
 
 use crate::application::AppHandler;
 
@@ -26,58 +34,147 @@ use super::window::Window;
 
 #[derive(Clone)]
 pub(crate) struct Application {
-    connection: Rc<xcb::Connection>,
+    /// The connection to the X server.
+    ///
+    /// This connection is associated with a single display.
+    /// The X server might also host other displays.
+    ///
+    /// A display is a collection of screens.
+    connection: Rc<Connection>,
+    /// The default screen of the connected display.
+    ///
+    /// The connected display may also have additional screens.
+    /// Moving windows between multiple screens is difficult and there is no support for it.
+    /// The application would have to create a clone of its window on multiple screens
+    /// and then fake the visual transfer.
+    ///
+    /// In practice multiple physical monitor drawing areas are present on a single screen.
+    /// This is achieved via various X server extensions (XRandR/Xinerama/TwinView),
+    /// with XRandR seeming like the best choice.
     screen_num: i32, // Needs a container when no longer const
+    /// The X11 window id of this `Application`.
+    ///
+    /// This is an input-only non-visual X11 window that is created first during initialization,
+    /// and it is destroyed last during `Application::finalize_quit`.
+    /// This window is useful for receiving application level events without any real windows.
+    ///
+    /// This is constant for the lifetime of the `Application`.
+    window_id: u32,
+    /// The mutable `Application` state.
     state: Rc<RefCell<State>>,
 }
 
+/// The mutable `Application` state.
 struct State {
+    /// Whether `Application::quit` has already been called.
+    quitting: bool,
+    /// A collection of all the `Application` windows.
     windows: HashMap<u32, Rc<Window>>,
 }
 
 impl Application {
     pub fn new() -> Result<Application, Error> {
-        let (conn, screen_num) = match xcb::Connection::connect_with_xlib_display() {
+        let (conn, screen_num) = match Connection::connect_with_xlib_display() {
             Ok(conn) => conn,
             Err(err) => return Err(Error::ConnectionError(err.to_string())),
         };
+        let connection = Rc::new(conn);
+        let window_id = Application::create_event_window(&connection, screen_num)?;
         let state = Rc::new(RefCell::new(State {
+            quitting: false,
             windows: HashMap::new(),
         }));
         Ok(Application {
-            connection: Rc::new(conn),
+            connection,
             screen_num,
+            window_id,
             state,
         })
     }
 
-    pub(crate) fn add_window(&self, id: u32, window: Rc<Window>) {
-        if let Ok(mut state) = self.state.try_borrow_mut() {
-            state.windows.insert(id, window);
-        } else {
-            log::warn!("Application::add_window - state already borrowed");
+    fn create_event_window(conn: &Rc<Connection>, screen_num: i32) -> Result<u32, Error> {
+        let id = conn.generate_id();
+        let setup = conn.get_setup();
+        // TODO(x11/errors): Don't unwrap for screen?
+        let screen = setup.roots().nth(screen_num as usize).unwrap();
+
+        let cw_values = [(CW_EVENT_MASK, EVENT_MASK_STRUCTURE_NOTIFY)];
+
+        // Create the actual window
+        // TODO(x11/errors): check that this actually succeeds?
+        xcb::create_window(
+            // Connection to the X server
+            conn,
+            // Window depth
+            COPY_FROM_PARENT.try_into().unwrap(),
+            // The new window's ID
+            id,
+            // Parent window of this new window
+            screen.root(),
+            // X-coordinate of the new window
+            0,
+            // Y-coordinate of the new window
+            0,
+            // Width of the new window
+            1,
+            // Height of the new window
+            1,
+            // Border width
+            0,
+            // Window class type
+            WINDOW_CLASS_INPUT_ONLY as u16,
+            // Visual ID
+            COPY_FROM_PARENT.try_into().unwrap(),
+            // Window properties mask
+            &cw_values,
+        );
+
+        Ok(id)
+    }
+
+    pub(crate) fn add_window(&self, id: u32, window: Rc<Window>) -> Result<(), Error> {
+        match self.state.try_borrow_mut() {
+            Ok(mut state) => {
+                state.windows.insert(id, window);
+                Ok(())
+            }
+            Err(err) => Err(Error::BorrowError(format!(
+                "Application::add_window state: {}",
+                err
+            ))),
         }
     }
 
-    fn remove_window(&self, id: u32) {
-        if let Ok(mut state) = self.state.try_borrow_mut() {
-            state.windows.remove(&id);
-        } else {
-            log::warn!("Application::remove_window - state already borrowed");
+    /// Remove the specified window from the `Application` and return the number of windows left.
+    fn remove_window(&self, id: u32) -> Result<usize, Error> {
+        match self.state.try_borrow_mut() {
+            Ok(mut state) => {
+                state.windows.remove(&id);
+                Ok(state.windows.len())
+            }
+            Err(err) => Err(Error::BorrowError(format!(
+                "Application::remove_window state: {}",
+                err
+            ))),
         }
     }
 
-    fn window(&self, id: u32) -> Option<Rc<Window>> {
-        if let Ok(state) = self.state.try_borrow() {
-            state.windows.get(&id).cloned()
-        } else {
-            log::warn!("Application::window - state already borrowed");
-            None
+    fn window(&self, id: u32) -> Result<Rc<Window>, Error> {
+        match self.state.try_borrow() {
+            Ok(state) => state
+                .windows
+                .get(&id)
+                .cloned()
+                .ok_or_else(|| Error::Generic(format!("No window with id {}", id))),
+            Err(err) => Err(Error::BorrowError(format!(
+                "Application::window state: {}",
+                err
+            ))),
         }
     }
 
     #[inline]
-    pub(crate) fn connection(&self) -> &Rc<xcb::Connection> {
+    pub(crate) fn connection(&self) -> &Rc<Connection> {
         &self.connection
     }
 
@@ -87,68 +184,136 @@ impl Application {
     }
 
     // TODO(x11/events): handle mouse scroll events
+    #[allow(clippy::cognitive_complexity)]
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         loop {
             if let Some(ev) = self.connection.wait_for_event() {
                 let ev_type = ev.response_type() & !0x80;
+                // NOTE: When adding handling for any of the following events,
+                //       there must be a check against self.window_id
+                //       to know if the event must be ignored.
+                //       Otherwise there will be a "failed to get window" error.
+                //
+                //       CIRCULATE_NOTIFY, CONFIGURE_NOTIFY, GRAVITY_NOTIFY
+                //       MAP_NOTIFY, REPARENT_NOTIFY, UNMAP_NOTIFY
                 match ev_type {
-                    xcb::EXPOSE => {
-                        let expose: &xcb::ExposeEvent = unsafe { xcb::cast_event(&ev) };
+                    EXPOSE => {
+                        let expose = unsafe { xcb::cast_event::<ExposeEvent>(&ev) };
                         let window_id = expose.window();
-                        if let Some(w) = self.window(window_id) {
-                            w.handle_expose(expose);
-                        } else {
-                            log::warn!("EXPOSE - failed to get window");
+                        match self.window(window_id) {
+                            Ok(w) => {
+                                if let Err(err) = w.handle_expose(expose) {
+                                    log::error!("EXPOSE - failed to handle: {}", err);
+                                }
+                            }
+                            Err(err) => log::error!("EXPOSE - failed to get window: {}", err),
                         }
                     }
-                    xcb::KEY_PRESS => {
-                        let key_press: &xcb::KeyPressEvent = unsafe { xcb::cast_event(&ev) };
+                    KEY_PRESS => {
+                        let key_press = unsafe { xcb::cast_event::<KeyPressEvent>(&ev) };
                         let window_id = key_press.event();
-                        if let Some(w) = self.window(window_id) {
-                            w.handle_key_press(key_press);
-                        } else {
-                            log::warn!("KEY_PRESS - failed to get window");
+                        match self.window(window_id) {
+                            Ok(w) => {
+                                if let Err(err) = w.handle_key_press(key_press) {
+                                    log::error!("KEY_PRESS - failed to handle: {}", err);
+                                }
+                            }
+                            Err(err) => log::error!("KEY_PRESS - failed to get window: {}", err),
                         }
                     }
-                    xcb::BUTTON_PRESS => {
-                        let button_press: &xcb::ButtonPressEvent = unsafe { xcb::cast_event(&ev) };
+                    BUTTON_PRESS => {
+                        let button_press = unsafe { xcb::cast_event::<ButtonPressEvent>(&ev) };
                         let window_id = button_press.event();
-                        if let Some(w) = self.window(window_id) {
-                            w.handle_button_press(button_press);
-                        } else {
-                            log::warn!("BUTTON_PRESS - failed to get window");
+                        match self.window(window_id) {
+                            Ok(w) => {
+                                if let Err(err) = w.handle_button_press(button_press) {
+                                    log::error!("BUTTON_PRESS - failed to handle: {}", err);
+                                }
+                            }
+                            Err(err) => log::error!("BUTTON_PRESS - failed to get window: {}", err),
                         }
                     }
-                    xcb::BUTTON_RELEASE => {
-                        let button_release: &xcb::ButtonReleaseEvent =
-                            unsafe { xcb::cast_event(&ev) };
+                    BUTTON_RELEASE => {
+                        let button_release = unsafe { xcb::cast_event::<ButtonReleaseEvent>(&ev) };
                         let window_id = button_release.event();
-                        if let Some(w) = self.window(window_id) {
-                            w.handle_button_release(button_release);
-                        } else {
-                            log::warn!("BUTTON_RELEASE - failed to get window");
+                        match self.window(window_id) {
+                            Ok(w) => {
+                                if let Err(err) = w.handle_button_release(button_release) {
+                                    log::error!("BUTTON_RELEASE - failed to handle: {}", err);
+                                }
+                            }
+                            Err(err) => {
+                                log::error!("BUTTON_RELEASE - failed to get window: {}", err)
+                            }
                         }
                     }
-                    xcb::MOTION_NOTIFY => {
-                        let motion_notify: &xcb::MotionNotifyEvent =
-                            unsafe { xcb::cast_event(&ev) };
+                    MOTION_NOTIFY => {
+                        let motion_notify = unsafe { xcb::cast_event::<MotionNotifyEvent>(&ev) };
                         let window_id = motion_notify.event();
-                        if let Some(w) = self.window(window_id) {
-                            w.handle_motion_notify(motion_notify);
-                        } else {
-                            log::warn!("MOTION_NOTIFY - failed to get window");
+                        match self.window(window_id) {
+                            Ok(w) => {
+                                if let Err(err) = w.handle_motion_notify(motion_notify) {
+                                    log::error!("MOTION_NOTIFY - failed to handle: {}", err);
+                                }
+                            }
+                            Err(err) => {
+                                log::error!("MOTION_NOTIFY - failed to get window: {}", err)
+                            }
                         }
                     }
-                    xcb::DESTROY_NOTIFY => {
-                        let destroy_notify: &xcb::DestroyNotifyEvent =
-                            unsafe { xcb::cast_event(&ev) };
-                        let window_id = destroy_notify.window();
-                        if let Some(w) = self.window(window_id) {
-                            w.handle_destroy_notify(destroy_notify);
-                        } else {
-                            log::warn!("DESTROY_NOTIFY - failed to get window");
+                    CLIENT_MESSAGE => {
+                        let client_message = unsafe { xcb::cast_event::<ClientMessageEvent>(&ev) };
+                        let window_id = client_message.window();
+                        match self.window(window_id) {
+                            Ok(w) => {
+                                if let Err(err) = w.handle_client_message(client_message) {
+                                    log::error!("CLIENT_MESSAGE - failed to handle: {}", err);
+                                }
+                            }
+                            Err(err) => {
+                                log::error!("CLIENT_MESSAGE - failed to get window: {}", err)
+                            }
                         }
-                        self.remove_window(window_id);
+                    }
+                    DESTROY_NOTIFY => {
+                        let destroy_notify = unsafe { xcb::cast_event::<DestroyNotifyEvent>(&ev) };
+                        let window_id = destroy_notify.window();
+                        if window_id == self.window_id {
+                            // The destruction of the Application window means that
+                            // we need to quit the run loop.
+                            break;
+                        }
+                        match self.window(window_id) {
+                            Ok(w) => {
+                                if let Err(err) = w.handle_destroy_notify(destroy_notify) {
+                                    log::error!("DESTROY_NOTIFY - failed to handle: {}", err);
+                                }
+                            }
+                            Err(err) => {
+                                log::error!("DESTROY_NOTIFY - failed to get window: {}", err)
+                            }
+                        }
+
+                        // Remove our reference to the Window and allow it to be dropped
+                        match self.remove_window(window_id) {
+                            Ok(windows_left) => {
+                                if windows_left == 0 {
+                                    // Check if we need to finalize a quit request
+                                    if let Ok(state) = self.state.try_borrow() {
+                                        if state.quitting {
+                                            self.finalize_quit();
+                                        }
+                                    } else {
+                                        log::error!(
+                                            "DESTROY_NOTIFY - failed to check for quit request"
+                                        );
+                                    }
+                                }
+                            }
+                            Err(err) => {
+                                log::error!("DESTROY_NOTIFY - failed to remove window: {}", err)
+                            }
+                        }
                     }
                     _ => {}
                 }
@@ -157,7 +322,29 @@ impl Application {
     }
 
     pub fn quit(&self) {
-        // TODO(x11/quit): implement Application::quit
+        if let Ok(mut state) = self.state.try_borrow_mut() {
+            if !state.quitting {
+                state.quitting = true;
+                if state.windows.is_empty() {
+                    // There are no windows left, so we can immediately finalize the quit.
+                    self.finalize_quit();
+                } else {
+                    // We need to queue up the destruction of all our windows.
+                    // Failure to do so will lead to resource leaks.
+                    for window in state.windows.values() {
+                        window.destroy();
+                    }
+                    self.connection.flush();
+                }
+            }
+        } else {
+            log::error!("Application state already borrowed");
+        }
+    }
+
+    fn finalize_quit(&self) {
+        xcb::destroy_window(&self.connection, self.window_id);
+        self.connection.flush();
     }
 
     pub fn clipboard(&self) -> Clipboard {
