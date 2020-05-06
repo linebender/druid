@@ -55,7 +55,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 ### Fixed
 
 - GTK: Use the system locale. ([#798] by [@finnerale])
-- GTK: Actually close windows ([#797] by [@finnerale])
+- GTK: Actually close windows. ([#797] by [@finnerale])
 - Windows: Respect the minimum window size. ([#727] by [@teddemunnik])
 - Windows: Respect resizability. ([#712] by [@teddemunnik])
 - `Event::HotChanged(false)` will be emitted when the cursor leaves the window. ([#821] by [@teddemunnik])
@@ -69,7 +69,9 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Windows: Termiate app when all windows have closed. ([#763] by [@xStrom])
 - macOS: `Application::quit` now quits the run loop instead of killing the process. ([#763] by [@xStrom])
 - macOS/GTK/web: `MouseButton::X1` and `MouseButton::X2` clicks are now recognized. ([#843] by [@xStrom])
-- GTK: Support disabled menu items ([#897] by [@jneem])
+- GTK: Support disabled menu items. ([#897] by [@jneem])
+- X11: Support individual window closing. ([#900] by [@xStrom])
+- X11: Support `Application::quit`. ([#900] by [@xStrom])
 
 ### Visual
 
@@ -146,6 +148,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#894]: https://github.com/xi-editor/druid/pull/894
 [#897]: https://github.com/xi-editor/druid/pull/897
 [#898]: https://github.com/xi-editor/druid/pull/898
+[#900]: https://github.com/xi-editor/druid/pull/900
 
 ## [0.5.0] - 2020-04-01
 
