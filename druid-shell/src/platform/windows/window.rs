@@ -486,7 +486,7 @@ impl WndProc for MyWndProc {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                         {
-                            let rect_pt = self.with_scale(|scale| scale.size_px().to_rect());
+                            let rect_pt = self.with_scale(|scale| scale.size_pt().to_rect());
                             s.handler.rebuild_resources();
                             s.render(
                                 &self.d2d_factory,
@@ -569,7 +569,12 @@ impl WndProc for MyWndProc {
                                 let _ = hrt.ptr.Resize(&size);
                             }
                         }
-                        InvalidateRect(hwnd, null(), FALSE);
+                        if InvalidateRect(hwnd, null(), FALSE) == FALSE {
+                            log::warn!(
+                                "InvalidateRect failed: {}",
+                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                            );
+                        }
                     } else {
                         let res;
                         {
@@ -585,7 +590,7 @@ impl WndProc for MyWndProc {
                         if SUCCEEDED(res) {
                             let rect = size_pt.to_rect();
                             self.with_scale(|scale| {
-                                s.rebuild_render_target(&self.d2d_factory, &scale)
+                                s.rebuild_render_target(&self.d2d_factory, scale)
                             });
                             s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle, rect);
                             if let Some(ref mut dcomp_state) = s.dcomp_state {
@@ -1007,12 +1012,12 @@ impl WindowBuilder {
                 present_strategy: self.present_strategy,
             };
 
-            // Simple scaling based on System Dpi (96 is equivalent to 100%)
+            // Simple scaling based on System DPI (96 is equivalent to 100%)
             let dpi = if let Some(func) = OPTIONAL_FUNCTIONS.GetDpiForSystem {
-                // Only supported on windows 10
+                // Only supported on Windows 10
                 func() as f64
             } else {
-                // TODO GetDpiForMonitor is supported on windows 8.1, try falling back to that here
+                // TODO GetDpiForMonitor is supported on Windows 8.1, try falling back to that here
                 // Probably GetDeviceCaps(..., LOGPIXELSX) is the best to do pre-10
                 96.0
             };
@@ -1504,7 +1509,7 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             match state.scale.try_borrow() {
                 Ok(scale) => Ok(scale.clone()),
-                Err(_) => Err(ShellError::Other("Failed to borrow state")),
+                Err(_) => Err(ShellError::Other("Failed to borrow scale")),
             }
         } else {
             Err(ShellError::Other("WindowState already dropped"))
@@ -1564,7 +1569,12 @@ impl IdleHandle {
 
     fn invalidate(&self) {
         unsafe {
-            InvalidateRect(self.hwnd, null(), FALSE);
+            if InvalidateRect(self.hwnd, null(), FALSE) == FALSE {
+                log::warn!(
+                    "InvalidateRect failed: {}",
+                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                );
+            }
         }
     }
 }
