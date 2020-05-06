@@ -15,9 +15,11 @@
 //! Custom commands.
 
 use std::any::Any;
-use std::sync::{Arc, Mutex};
+use std::{marker::PhantomData, sync::{Arc, Mutex}};
 
 use crate::{WidgetId, WindowId};
+
+pub type SelectorSymbol = &'static str;
 
 /// An identifier for a particular command.
 ///
@@ -27,7 +29,7 @@ use crate::{WidgetId, WindowId};
 ///
 /// [`druid::commands`]: commands/index.html
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Selector(&'static str);
+pub struct Selector<T>(SelectorSymbol, PhantomData<T>);
 
 /// An arbitrary command.
 ///
@@ -62,9 +64,8 @@ pub struct Selector(&'static str);
 /// [`Selector`]: struct.Selector.html
 #[derive(Debug, Clone)]
 pub struct Command {
-    /// The command's `Selector`.
-    pub selector: Selector,
-    object: Option<Arg>,
+    selector: SelectorSymbol,
+    object: Arg,
 }
 
 #[derive(Debug, Clone)]
@@ -76,8 +77,8 @@ enum Arg {
 /// Errors that can occur when attempting to retrieve the a command's argument.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArgumentError {
-    /// The command did not have an argument.
-    NoArgument,
+    /// The command represented a different selector.
+    WrongSelector,
     /// The argument was expected to be reusable and wasn't, or vice-versa.
     WrongVariant,
     /// The argument could not be downcast to the specified type.
@@ -105,54 +106,55 @@ pub enum Target {
 /// [`Command`]: ../struct.Command.html
 pub mod sys {
     use super::Selector;
+    use crate::{FileDialogOptions, WindowId, FileInfo, menu::{AppStateContextMenu, AppStateMenuDesc}};
 
     /// Quit the running application. This command is handled by the druid library.
-    pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
+    pub const QUIT_APP: Selector<()> = Selector::new("druid-builtin.quit-app");
 
     /// Hide the application. (mac only?)
-    pub const HIDE_APPLICATION: Selector = Selector::new("druid-builtin.menu-hide-application");
+    pub const HIDE_APPLICATION: Selector<()> = Selector::new("druid-builtin.menu-hide-application");
 
     /// Hide all other applications. (mac only?)
-    pub const HIDE_OTHERS: Selector = Selector::new("druid-builtin.menu-hide-others");
+    pub const HIDE_OTHERS: Selector<()> = Selector::new("druid-builtin.menu-hide-others");
 
     /// The selector for a command to create a new window.
-    pub const NEW_WINDOW: Selector = Selector::new("druid-builtin.new-window");
+    pub const NEW_WINDOW: Selector<()> = Selector::new("druid-builtin.new-window");
 
     /// The selector for a command to close a window. The command's argument
     /// should be the id of the window to close.
-    pub const CLOSE_WINDOW: Selector = Selector::new("druid-builtin.close-window");
+    pub const CLOSE_WINDOW: Selector<WindowId> = Selector::new("druid-builtin.close-window");
 
     /// Close all windows.
-    pub const CLOSE_ALL_WINDOWS: Selector = Selector::new("druid-builtin.close-all-windows");
+    pub const CLOSE_ALL_WINDOWS: Selector<()> = Selector::new("druid-builtin.close-all-windows");
 
     /// The selector for a command to bring a window to the front, and give it focus.
     ///
     /// The command's argument should be the id of the target window.
-    pub const SHOW_WINDOW: Selector = Selector::new("druid-builtin.show-window");
+    pub const SHOW_WINDOW: Selector<WindowId> = Selector::new("druid-builtin.show-window");
 
     /// Display a context (right-click) menu. The argument must be the [`ContextMenu`].
     /// object to be displayed.
     ///
     /// [`ContextMenu`]: ../struct.ContextMenu.html
-    pub const SHOW_CONTEXT_MENU: Selector = Selector::new("druid-builtin.show-context-menu");
+    pub const SHOW_CONTEXT_MENU: Selector<AppStateContextMenu> = Selector::new("druid-builtin.show-context-menu");
 
     /// The selector for a command to set the window's menu. The argument should
     /// be a [`MenuDesc`] object.
     ///
     /// [`MenuDesc`]: ../struct.MenuDesc.html
-    pub const SET_MENU: Selector = Selector::new("druid-builtin.set-menu");
+    pub const SET_MENU: Selector<AppStateMenuDesc> = Selector::new("druid-builtin.set-menu");
 
     /// Show the application preferences.
-    pub const SHOW_PREFERENCES: Selector = Selector::new("druid-builtin.menu-show-preferences");
+    pub const SHOW_PREFERENCES: Selector<()> = Selector::new("druid-builtin.menu-show-preferences");
 
     /// Show the application about window.
-    pub const SHOW_ABOUT: Selector = Selector::new("druid-builtin.menu-show-about");
+    pub const SHOW_ABOUT: Selector<()> = Selector::new("druid-builtin.menu-show-about");
 
     /// Show all applications.
-    pub const SHOW_ALL: Selector = Selector::new("druid-builtin.menu-show-all");
+    pub const SHOW_ALL: Selector<()> = Selector::new("druid-builtin.menu-show-all");
 
     /// Show the new file dialog.
-    pub const NEW_FILE: Selector = Selector::new("druid-builtin.menu-file-new");
+    pub const NEW_FILE: Selector<()> = Selector::new("druid-builtin.menu-file-new");
 
     /// System command. A file picker dialog will be shown to the user, and an
     /// [`OPEN_FILE`] command will be sent if a file is chosen.
@@ -161,14 +163,14 @@ pub mod sys {
     ///
     /// [`OPEN_FILE`]: constant.OPEN_FILE.html
     /// [`FileDialogOptions`]: ../struct.FileDialogOptions.html
-    pub const SHOW_OPEN_PANEL: Selector = Selector::new("druid-builtin.menu-file-open");
+    pub const SHOW_OPEN_PANEL: Selector<FileDialogOptions> = Selector::new("druid-builtin.menu-file-open");
 
     /// Open a file.
     ///
     /// The argument must be a [`FileInfo`] object for the file to be opened.
     ///
     /// [`FileInfo`]: ../struct.FileInfo.html
-    pub const OPEN_FILE: Selector = Selector::new("druid-builtin.open-file-path");
+    pub const OPEN_FILE: Selector<FileInfo> = Selector::new("druid-builtin.open-file-path");
 
     /// Special command. When issued, the system will show the 'save as' panel,
     /// and if a path is selected the system will issue a [`SAVE_FILE`] command
@@ -178,55 +180,61 @@ pub mod sys {
     ///
     /// [`SAVE_FILE`]: constant.SAVE_FILE.html
     /// [`FileDialogOptions`]: ../struct.FileDialogOptions.html
-    pub const SHOW_SAVE_PANEL: Selector = Selector::new("druid-builtin.menu-file-save-as");
+    pub const SHOW_SAVE_PANEL: Selector<FileDialogOptions> = Selector::new("druid-builtin.menu-file-save-as");
 
     /// Save the current file.
     ///
     /// The argument, if present, should be the path where the file should be saved.
-    pub const SAVE_FILE: Selector = Selector::new("druid-builtin.menu-file-save");
+    pub const SAVE_FILE: Selector<FileInfo> = Selector::new("druid-builtin.menu-file-save");
 
     /// Show the print-setup window.
-    pub const PRINT_SETUP: Selector = Selector::new("druid-builtin.menu-file-print-setup");
+    pub const PRINT_SETUP: Selector<()> = Selector::new("druid-builtin.menu-file-print-setup");
 
     /// Show the print dialog.
-    pub const PRINT: Selector = Selector::new("druid-builtin.menu-file-print");
+    pub const PRINT: Selector<()> = Selector::new("druid-builtin.menu-file-print");
 
     /// Show the print preview.
-    pub const PRINT_PREVIEW: Selector = Selector::new("druid-builtin.menu-file-print");
+    pub const PRINT_PREVIEW: Selector<()> = Selector::new("druid-builtin.menu-file-print");
 
     /// Cut the current selection.
-    pub const CUT: Selector = Selector::new("druid-builtin.menu-cut");
+    pub const CUT: Selector<()> = Selector::new("druid-builtin.menu-cut");
 
     /// Copy the current selection.
-    pub const COPY: Selector = Selector::new("druid-builtin.menu-copy");
+    pub const COPY: Selector<()> = Selector::new("druid-builtin.menu-copy");
 
     /// Paste.
-    pub const PASTE: Selector = Selector::new("druid-builtin.menu-paste");
+    pub const PASTE: Selector<()> = Selector::new("druid-builtin.menu-paste");
 
     /// Undo.
-    pub const UNDO: Selector = Selector::new("druid-builtin.menu-undo");
+    pub const UNDO: Selector<()> = Selector::new("druid-builtin.menu-undo");
 
     /// Redo.
-    pub const REDO: Selector = Selector::new("druid-builtin.menu-redo");
+    pub const REDO: Selector<()> = Selector::new("druid-builtin.menu-redo");
 }
 
-impl Selector {
+impl<T> Selector<T> {
     /// A selector that does nothing.
-    pub const NOOP: Selector = Selector::new("");
+    pub const fn noop() -> Selector<T> {
+        Selector::new("")
+    }
 
     /// Create a new `Selector` with the given string.
-    pub const fn new(s: &'static str) -> Selector {
-        Selector(s)
+    pub const fn new(s: &'static str) -> Selector<T> {
+        Selector(s, PhantomData)
+    }
+
+    pub(crate) const fn symbol(&self) -> SelectorSymbol {
+        self.0
     }
 }
 
 impl Command {
     /// Create a new `Command` with an argument. If you do not need
     /// an argument, `Selector` implements `Into<Command>`.
-    pub fn new(selector: Selector, arg: impl Any) -> Self {
+    pub fn new<T: 'static>(selector: Selector<T>, arg: T) -> Self {
         Command {
-            selector,
-            object: Some(Arg::Reusable(Arc::new(arg))),
+            selector: selector.symbol(),
+            object: Arg::Reusable(Arc::new(arg)),
         }
     }
 
@@ -237,18 +245,22 @@ impl Command {
     /// [`take_object`].
     ///
     /// [`take_object`]: #method.take_object
-    pub fn one_shot(selector: Selector, arg: impl Any) -> Self {
+    pub fn one_shot<T: 'static>(selector: Selector<T>, arg: T) -> Self {
         Command {
-            selector,
-            object: Some(Arg::OneShot(Arc::new(Mutex::new(Some(Box::new(arg)))))),
+            selector: selector.symbol(),
+            object: Arg::OneShot(Arc::new(Mutex::new(Some(Box::new(arg))))),
         }
     }
 
     /// Used to create a command from the types sent via an `ExtEventSink`.
-    pub(crate) fn from_ext(selector: Selector, object: Option<Box<dyn Any + Send>>) -> Self {
-        let object: Option<Box<dyn Any>> = object.map(|obj| obj as Box<dyn Any>);
-        let object = object.map(|o| Arg::Reusable(o.into()));
+    pub(crate) fn from_ext(selector: SelectorSymbol, object: Box<dyn Any + Send>) -> Self {
+        let object: Box<dyn Any> = object;
+        let object = Arg::Reusable(object.into());
         Command { selector, object }
+    }
+
+    pub fn is<T>(&self, selector: Selector<T>) -> bool {
+        self.selector == selector.symbol()
     }
 
     /// Return a reference to this `Command`'s object, if it has one.
@@ -257,21 +269,26 @@ impl Command {
     /// created with [`one_shot`].
     ///
     /// [`one_shot`]: #method.one_shot
-    pub fn get_object<T: Any>(&self) -> Result<&T, ArgumentError> {
-        match self.object.as_ref() {
-            Some(Arg::Reusable(o)) => o.downcast_ref().ok_or(ArgumentError::IncorrectType),
-            Some(Arg::OneShot(_)) => Err(ArgumentError::WrongVariant),
-            None => Err(ArgumentError::NoArgument),
+    pub fn get<T: 'static>(&self, selector: Selector<T>) -> Result<&T, ArgumentError> {
+        if self.selector != selector.symbol() {
+            return Err(ArgumentError::WrongSelector);
+        }
+        match self.object {
+            Arg::Reusable(o) => o.downcast_ref().ok_or(ArgumentError::IncorrectType),
+            Arg::OneShot(_) => Err(ArgumentError::WrongVariant),
         }
     }
 
     /// Attempt to take the object of a [`one-shot`] command.
     ///
     /// [`one-shot`]: #method.one_shot
-    pub fn take_object<T: Any>(&self) -> Result<Box<T>, ArgumentError> {
-        match self.object.as_ref() {
-            Some(Arg::Reusable(_)) => Err(ArgumentError::WrongVariant),
-            Some(Arg::OneShot(inner)) => {
+    pub fn take<T: 'static>(&self, selector: Selector<T>) -> Result<Box<T>, ArgumentError> {
+        if self.selector != selector.symbol() {
+            return Err(ArgumentError::WrongSelector);
+        }
+        match self.object {
+            Arg::Reusable(_) => Err(ArgumentError::WrongVariant),
+            Arg::OneShot(inner) => {
                 let obj = inner
                     .lock()
                     .unwrap()
@@ -285,30 +302,29 @@ impl Command {
                     }
                 }
             }
-            None => Err(ArgumentError::NoArgument),
         }
     }
 }
 
-impl From<Selector> for Command {
-    fn from(selector: Selector) -> Command {
+impl From<Selector<()>> for Command {
+    fn from(selector: Selector<()>) -> Command {
         Command {
-            selector,
-            object: None,
+            selector: selector.symbol(),
+            object: Arg::Reusable(Arc::new(())),
         }
     }
 }
 
-impl std::fmt::Display for Selector {
+impl<T> std::fmt::Display for Selector<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Selector('{}')", self.0)
+        write!(f, "Selector(\"{}\", {})", self.0, std::any::type_name::<T>())
     }
 }
 
 impl std::fmt::Display for ArgumentError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ArgumentError::NoArgument => write!(f, "Command has no argument"),
+            ArgumentError::WrongSelector => write!(f, "Command had wrong selector"),
             ArgumentError::IncorrectType => write!(f, "Downcast failed: wrong concrete type"),
             ArgumentError::Consumed => write!(f, "One-shot command arguemnt already consumed"),
             ArgumentError::WrongVariant => write!(
@@ -349,11 +365,12 @@ impl Into<Option<Target>> for WidgetId {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn get_object() {
-        let sel = Selector::new("my-selector");
+        let sel = Selector::<Vec<i32>>::new("my-selector");
         let objs = vec![0, 1, 2];
         let command = Command::new(sel, objs);
-        assert_eq!(command.get_object(), Ok(&vec![0, 1, 2]));
+        assert_eq!(command.get(sel), Ok(&vec![0, 1, 2]));
     }
 }

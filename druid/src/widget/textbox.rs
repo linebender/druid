@@ -37,7 +37,7 @@ const PADDING_TOP: f64 = 5.;
 const PADDING_LEFT: f64 = 4.;
 
 // we send ourselves this when we want to reset blink, which must be done in event.
-const RESET_BLINK: Selector = Selector::new("druid-builtin.reset-textbox-blink");
+const RESET_BLINK: Selector<()> = Selector::new("druid-builtin.reset-textbox-blink");
 const CURSOR_BLINK_DRUATION: Duration = Duration::from_millis(500);
 
 /// A widget that allows user text input.
@@ -53,7 +53,7 @@ pub struct TextBox {
 
 impl TextBox {
     /// Perform an `EditAction`. The payload *must* be an `EditAction`.
-    pub const PERFORM_EDIT: Selector = Selector::new("druid-builtin.textbox.perform-edit");
+    pub const PERFORM_EDIT: Selector<EditAction> = Selector::new("druid-builtin.textbox.perform-edit");
 
     /// Create a new TextBox widget
     pub fn new() -> TextBox {
@@ -281,22 +281,20 @@ impl Widget<String> for TextBox {
             }
             Event::Command(ref cmd)
                 if ctx.is_focused()
-                    && (cmd.selector == crate::commands::COPY
-                        || cmd.selector == crate::commands::CUT) =>
+                    && (cmd.is(crate::commands::COPY)
+                        || cmd.is(crate::commands::CUT)) =>
             {
                 if let Some(text) = data.slice(self.selection.range()) {
                     Application::global().clipboard().put_string(text);
                 }
-                if !self.selection.is_caret() && cmd.selector == crate::commands::CUT {
+                if !self.selection.is_caret() && cmd.is(crate::commands::CUT) {
                     edit_action = Some(EditAction::Delete);
                 }
                 ctx.set_handled();
             }
-            Event::Command(cmd) if cmd.selector == RESET_BLINK => self.reset_cursor_blink(ctx),
-            Event::Command(cmd) if cmd.selector == TextBox::PERFORM_EDIT => {
-                let edit = cmd
-                    .get_object::<EditAction>()
-                    .expect("PERFORM_EDIT contained non-edit payload");
+            Event::Command(cmd) if cmd.is(RESET_BLINK) => self.reset_cursor_blink(ctx),
+            Event::Command(cmd) if cmd.is(TextBox::PERFORM_EDIT) => {
+                let edit = cmd.get(TextBox::PERFORM_EDIT).unwrap();
                 self.do_edit_action(edit.to_owned(), data);
             }
             Event::Paste(ref item) => {

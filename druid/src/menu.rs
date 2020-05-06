@@ -105,7 +105,7 @@
 //! [`Selector`]: ../struct.Selector.html
 //! [`SET_MENU`]: ../struct.Selector.html#associatedconstant.SET_MENU
 
-use std::num::NonZeroU32;
+use std::{any::Any, num::NonZeroU32};
 
 use crate::kurbo::Point;
 use crate::shell::{HotKey, KeyCompare, Menu as PlatformMenu, RawMods, SysMods};
@@ -118,6 +118,27 @@ pub struct MenuDesc<T> {
     item: MenuItem<T>,
     //TODO: make me an RC if we're cloning regularly?
     items: Vec<MenuEntry<T>>,
+}
+
+/// A platform-agnostic description of an application, window, or context
+/// menu. The user has to guarantee that this represents a `MenuDesc<T>` where `T` is the users
+/// `AppState`.
+pub struct AppStateMenuDesc(Box<dyn Any>);
+
+impl<T: 'static> MenuDesc<T> {
+    /// This turns a typed `MenuDesc<T>` into an untyped `AppStateMenuDesc`.
+    /// Doing so allows sending `MenuDesc` through `Command`s.
+    /// It is up to you, to ensure that this `T` represents your application
+    /// state that you passed to `AppLauncher::launch`.
+    pub fn into_app_state_menu_desc(self) -> AppStateMenuDesc {
+        AppStateMenuDesc(Box::new(self))
+    }
+}
+
+impl AppStateMenuDesc {
+    pub(crate) fn realize<T: 'static>(&self) -> Option<&MenuDesc<T>> {
+        self.0.downcast_ref()
+    }
 }
 
 /// An item in a menu, which may be a normal item, a submenu, or a separator.
@@ -157,6 +178,27 @@ pub struct MenuItem<T> {
 pub struct ContextMenu<T> {
     pub(crate) menu: MenuDesc<T>,
     pub(crate) location: Point,
+}
+
+/// A platform-agnostic description of a context menu.
+/// The user has to guarantee that this represents a `ContextMenu<T>` where `T` is the users
+/// `AppState`.
+pub struct AppStateContextMenu(Box<dyn Any>);
+
+impl<T: 'static> ContextMenu<T> {
+    /// This turns a typed `ContextMenu<T>` into an untyped `AppStateContextMenu`.
+    /// Doing so allows sending `ContextMenu` through `Command`s.
+    /// It is up to you, to ensure that this `T` represents your application
+    /// state that you passed to `AppLauncher::launch`.
+    pub fn into_app_state_context_menu(self) -> AppStateContextMenu {
+        AppStateContextMenu(Box::new(self))
+    }
+}
+
+impl AppStateContextMenu {
+    pub(crate) fn realize<T: 'static>(&self) -> Option<&ContextMenu<T>> {
+        self.0.downcast_ref()
+    }
 }
 
 /// Uniquely identifies a menu item.
@@ -238,7 +280,7 @@ impl<T: Data> MenuDesc<T> {
 
     /// Create a new menu with the given title.
     pub fn new(title: LocalizedString<T>) -> Self {
-        let item = MenuItem::new(title, Selector::NOOP);
+        let item = MenuItem::new(title, Selector::noop());
         MenuDesc {
             item,
             items: Vec::new(),

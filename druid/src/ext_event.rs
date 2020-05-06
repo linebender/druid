@@ -20,9 +20,9 @@ use std::sync::{Arc, Mutex};
 
 use crate::shell::IdleHandle;
 use crate::win_handler::EXT_EVENT_IDLE_TOKEN;
-use crate::{Command, Selector, Target, WindowId};
+use crate::{Command, Selector, Target, WindowId, command::SelectorSymbol};
 
-pub(crate) type ExtCommand = (Selector, Option<Box<dyn Any + Send>>, Option<Target>);
+pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Option<Target>);
 
 /// A thing that can move into other threads and be used to submit commands back
 /// to the running application.
@@ -101,21 +101,21 @@ impl ExtEventSink {
     ///
     /// [`Command`]: struct.Command.html
     /// [`Selector`]: struct.Selector.html
-    pub fn submit_command<T: Any + Send>(
+    pub fn submit_command<T: Send + 'static>(
         &self,
-        sel: Selector,
-        obj: impl Into<Option<T>>,
+        sel: Selector<T>,
+        obj: T,
         target: impl Into<Option<Target>>,
     ) -> Result<(), ExtEventError> {
         let target = target.into();
-        let obj = obj.into().map(|o| Box::new(o) as Box<dyn Any + Send>);
+        let obj = Box::new(obj) as Box<dyn Any + Send>;
         if let Some(handle) = self.handle.lock().unwrap().as_mut() {
             handle.schedule_idle(EXT_EVENT_IDLE_TOKEN);
         }
         self.queue
             .lock()
             .map_err(|_| ExtEventError)?
-            .push_back((sel, obj, target));
+            .push_back((sel.symbol(), obj, target));
         Ok(())
     }
 }

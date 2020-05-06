@@ -39,7 +39,7 @@ pub type UpdateFn<S, T> = dyn FnMut(&mut S, &mut UpdateCtx, &T, &T, &Env);
 pub type LayoutFn<S, T> = dyn FnMut(&mut S, &mut LayoutCtx, &BoxConstraints, &T, &Env) -> Size;
 pub type PaintFn<S, T> = dyn FnMut(&mut S, &mut PaintCtx, &T, &Env);
 
-pub const REPLACE_CHILD: Selector = Selector::new("druid-test.replace-child");
+pub const REPLACE_CHILD: Selector<()> = Selector::new("druid-test.replace-child");
 
 /// A widget that can be constructed from individual functions, builder-style.
 ///
@@ -214,7 +214,7 @@ impl<T: Data> ReplaceChild<T> {
 impl<T: Data> Widget<T> for ReplaceChild<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Event::Command(cmd) = event {
-            if cmd.selector == REPLACE_CHILD {
+            if cmd.is(REPLACE_CHILD) {
                 self.inner = WidgetPod::new((self.replacer)());
                 ctx.children_changed();
                 return;

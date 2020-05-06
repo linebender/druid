@@ -523,31 +523,31 @@ impl<T: Data> AppState<T> {
     /// windows) have their logic here; other commands are passed to the window.
     fn handle_cmd(&mut self, target: Target, cmd: Command) {
         use Target as T;
-        match (target, &cmd.selector) {
+        match (target, cmd.selector_symbol()) {
             // these are handled the same no matter where they come from
-            (_, &sys_cmd::QUIT_APP) => self.quit(),
-            (_, &sys_cmd::HIDE_APPLICATION) => self.hide_app(),
-            (_, &sys_cmd::HIDE_OTHERS) => self.hide_others(),
-            (_, &sys_cmd::NEW_WINDOW) => {
+            (_, sys_cmd::QUIT_APP.symbol()) => self.quit(),
+            (_, sys_cmd::HIDE_APPLICATION) => self.hide_app(),
+            (_, sys_cmd::HIDE_OTHERS) => self.hide_others(),
+            (_, sys_cmd::NEW_WINDOW) => {
                 if let Err(e) = self.new_window(cmd) {
                     log::error!("failed to create window: '{}'", e);
                 }
             }
-            (_, &sys_cmd::CLOSE_ALL_WINDOWS) => self.request_close_all_windows(),
+            (_, sys_cmd::CLOSE_ALL_WINDOWS) => self.request_close_all_windows(),
             // these should come from a window
             // FIXME: we need to be able to open a file without a window handle
-            (T::Window(id), &sys_cmd::SHOW_OPEN_PANEL) => self.show_open_panel(cmd, id),
-            (T::Window(id), &sys_cmd::SHOW_SAVE_PANEL) => self.show_save_panel(cmd, id),
-            (T::Window(id), &sys_cmd::CLOSE_WINDOW) => self.request_close_window(cmd, id),
-            (T::Window(_), &sys_cmd::SHOW_WINDOW) => self.show_window(cmd),
-            (T::Window(id), &sys_cmd::PASTE) => self.do_paste(id),
+            (T::Window(id), sys_cmd::SHOW_OPEN_PANEL) => self.show_open_panel(cmd, id),
+            (T::Window(id), sys_cmd::SHOW_SAVE_PANEL) => self.show_save_panel(cmd, id),
+            (T::Window(id), sys_cmd::CLOSE_WINDOW) => self.request_close_window(cmd, id),
+            (T::Window(_), sys_cmd::SHOW_WINDOW) => self.show_window(cmd),
+            (T::Window(id), sys_cmd::PASTE) => self.do_paste(id),
             _sel => self.inner.borrow_mut().dispatch_cmd(target, cmd),
         }
     }
 
     fn show_open_panel(&mut self, cmd: Command, window_id: WindowId) {
         let options = cmd
-            .get_object::<FileDialogOptions>()
+            .get(sys_cmd::SHOW_OPEN_PANEL)
             .map(|opts| opts.to_owned())
             .unwrap_or_default();
         //FIXME: this is blocking; if we hold `borrow_mut` we are likely to cause
