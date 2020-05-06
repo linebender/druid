@@ -18,6 +18,10 @@ use wasm_bindgen::JsValue;
 
 #[derive(Debug, Clone)]
 pub enum Error {
+    /// Generic error
+    Generic(String),
+    /// Runtime borrow failure
+    BorrowError(String),
     NoWindow,
     NoDocument,
     Js(JsValue),
@@ -30,6 +34,8 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
+            Error::Generic(msg) => write!(f, "Error: {}", msg),
+            Error::BorrowError(msg) => write!(f, "Failed to borrow: {}", msg),
             Error::NoWindow => write!(f, "No global window found"),
             Error::NoDocument => write!(f, "No global document found"),
             Error::Js(err) => write!(f, "JavaScript error: {:?}", err.as_string()),

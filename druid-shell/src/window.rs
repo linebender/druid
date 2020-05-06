@@ -208,7 +208,7 @@ impl WindowHandle {
     ///
     /// [`Scale`]: struct.Scale.html
     pub fn get_scale(&self) -> Result<Scale, Error> {
-        self.0.get_scale()
+        self.0.get_scale().map_err(Into::into)
     }
 }
 

@@ -64,13 +64,29 @@ pub struct Scale {
 }
 
 impl Scale {
-    /// Create a new `Scale` state based on the specified DPI.
-    pub fn new(dpi_x: f64, dpi_y: f64) -> Scale {
+    /// Create a new `Scale` state based on the specified DPIs.
+    ///
+    /// Use this constructor if the platform provided DPI is the most accurate number.
+    pub fn from_dpi(dpi_x: f64, dpi_y: f64) -> Scale {
         Scale {
             dpi_x,
             dpi_y,
             scale_x: dpi_x / SCALE_TARGET_DPI,
             scale_y: dpi_y / SCALE_TARGET_DPI,
+            size_pt: Size::ZERO,
+            size_px: Size::ZERO,
+        }
+    }
+
+    /// Create a new `Scale` state based on the specified scale factors.
+    ///
+    /// Use this constructor if the platform provided scale factor is the most accurate number.
+    pub fn from_scale(scale_x: f64, scale_y: f64) -> Scale {
+        Scale {
+            dpi_x: SCALE_TARGET_DPI * scale_x,
+            dpi_y: SCALE_TARGET_DPI * scale_y,
+            scale_x,
+            scale_y,
             size_pt: Size::ZERO,
             size_px: Size::ZERO,
         }

@@ -58,7 +58,6 @@ use super::util::{self, as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
-use crate::error::Error as ShellError;
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
@@ -924,7 +923,7 @@ impl WndProc for MyWndProc {
                     let s = s.as_ref().unwrap();
                     if let Some(min_size_pt) = s.min_size {
                         let min_size_px = self.with_scale(|scale| {
-                            Scale::new(scale.dpi_x(), scale.dpi_y()).set_size_pt(min_size_pt)
+                            Scale::from_dpi(scale.dpi_x(), scale.dpi_y()).set_size_pt(min_size_pt)
                         });
                         min_max_info.ptMinTrackSize.x = min_size_px.width as i32;
                         min_max_info.ptMinTrackSize.y = min_size_px.height as i32;
@@ -1022,7 +1021,7 @@ impl WindowBuilder {
                 // Probably GetDeviceCaps(..., LOGPIXELSX) is the best to do pre-10
                 96.0
             };
-            let mut scale = Scale::new(dpi, dpi);
+            let mut scale = Scale::from_dpi(dpi, dpi);
             let size_px = scale.set_size_pt(self.size);
 
             let window = WindowState {
@@ -1506,14 +1505,14 @@ impl WindowHandle {
     }
 
     /// Get the `Scale` of the window.
-    pub fn get_scale(&self) -> Result<Scale, ShellError> {
+    pub fn get_scale(&self) -> Result<Scale, Error> {
         if let Some(state) = self.state.upgrade() {
             match state.scale.try_borrow() {
                 Ok(scale) => Ok(scale.clone()),
-                Err(_) => Err(ShellError::Other("Failed to borrow scale")),
+                Err(err) => Err(Error::BorrowError(format!("WindowHandle scale: {}", err))),
             }
         } else {
-            Err(ShellError::Other("WindowState already dropped"))
+            Err(Error::Generic("WindowState already dropped".into()))
         }
     }
 

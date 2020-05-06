@@ -35,6 +35,7 @@ use super::keycodes::key_to_text;
 use super::menu::Menu;
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
+use crate::scale::Scale;
 
 use crate::keyboard;
 use crate::keycodes::KeyCode;
@@ -56,8 +57,6 @@ macro_rules! get_modifiers {
 }
 
 type Result<T> = std::result::Result<T, Error>;
-
-const NOMINAL_DPI: f32 = 96.0;
 
 /// Builder abstraction for creating new windows.
 pub(crate) struct WindowBuilder {
@@ -84,7 +83,7 @@ enum IdleKind {
 }
 
 struct WindowState {
-    dpr: Cell<f64>,
+    scale: RefCell<Scale>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     handler: RefCell<Box<dyn WinHandler>>,
     window: web_sys::Window,
@@ -118,14 +117,6 @@ impl WindowState {
                 IdleKind::Token(tok) => self.handler.borrow_mut().idle(tok),
             }
         }
-    }
-
-    fn get_width(&self) -> u32 {
-        self.canvas.offset_width() as u32
-    }
-
-    fn get_height(&self) -> u32 {
-        self.canvas.offset_height() as u32
     }
 
     fn request_animation_frame(&self, f: impl FnOnce() + 'static) -> Result<i32> {
@@ -237,16 +228,19 @@ fn setup_resize_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_window_event_listener(ws, "resize", move |_: web_sys::UiEvent| {
         let (css_width, css_height, dpr) = state.get_window_size_and_dpr();
-        let physical_width = (dpr * css_width) as u32;
-        let physical_height = (dpr * css_height) as u32;
-        state.dpr.replace(dpr);
-        state.canvas.set_width(physical_width);
-        state.canvas.set_height(physical_height);
-        let _ = state.context.scale(dpr, dpr);
-        state
-            .handler
-            .borrow_mut()
-            .size(physical_width, physical_height);
+        let size_pt = state.scale.try_borrow_mut().map_or(None, |mut scale| {
+            *scale = Scale::from_scale(dpr, dpr);
+            let size_px = scale.set_size_pt(Size::new(css_width, css_height));
+            state.canvas.set_width(size_px.width as u32);
+            state.canvas.set_height(size_px.height as u32);
+            let _ = state.context.scale(scale.scale_x(), scale.scale_y());
+            Some(scale.size_pt())
+        });
+        if let Some(size_pt) = size_pt {
+            state.handler.borrow_mut().size(size_pt);
+        } else {
+            log::error!("Skipped resize event because couldn't borrow scale");
+        }
     });
 }
 
@@ -371,23 +365,27 @@ impl WindowBuilder {
             .ok_or(Error::NoContext)?
             .dyn_into::<web_sys::CanvasRenderingContext2d>()
             .map_err(|_| Error::JsCast)?;
-
-        let dpr = window.device_pixel_ratio();
-        let old_w = canvas.offset_width();
-        let old_h = canvas.offset_height();
-        let new_w = (old_w as f64 * dpr) as u32;
-        let new_h = (old_h as f64 * dpr) as u32;
-
-        canvas.set_width(new_w as u32);
-        canvas.set_height(new_h as u32);
-        let _ = context.scale(dpr, dpr);
+        // Create the Scale for resolution scaling
+        let mut scale = {
+            let dpr = window.device_pixel_ratio();
+            Scale::from_scale(dpr, dpr)
+        };
+        let size_px = {
+            // The initial size in points isn't necessarily the final size in points
+            let size_pt = Size::new(canvas.offset_width() as f64, canvas.offset_height() as f64);
+            scale.set_size_pt(size_pt)
+        };
+        canvas.set_width(size_px.width as u32);
+        canvas.set_height(size_px.height as u32);
+        let _ = context.scale(scale.scale_x(), scale.scale_y());
+        let size_pt = scale.size_pt();
 
         set_cursor(&canvas, &self.cursor);
 
         let handler = self.handler.unwrap();
 
         let window = Rc::new(WindowState {
-            dpr: Cell::new(dpr),
+            scale: RefCell::new(scale),
             idle_queue: Default::default(),
             handler: RefCell::new(handler),
             window,
@@ -402,7 +400,7 @@ impl WindowBuilder {
         let wh = window.clone();
         window
             .request_animation_frame(move || {
-                wh.handler.borrow_mut().size(new_w, new_h);
+                wh.handler.borrow_mut().size(size_pt);
             })
             .expect("Failed to request animation frame");
 
@@ -449,12 +447,11 @@ impl WindowHandle {
 
     pub fn invalidate(&self) {
         if let Some(s) = self.0.upgrade() {
-            let rect = Rect::from_origin_size(
-                Point::ORIGIN,
-                // FIXME: does this need scaling? Not sure exactly where dpr enters...
-                (s.get_width() as f64, s.get_height() as f64),
-            );
-            s.invalid_rect.set(rect);
+            if let Ok(scale) = s.scale.try_borrow() {
+                s.invalid_rect.set(scale.size_pt().to_rect());
+            } else {
+                log::error!("Failed to get scale");
+            }
         }
         self.render_soon();
     }
@@ -551,34 +548,16 @@ impl WindowHandle {
         })
     }
 
-    /// Get the dpi of the window.
-    pub fn get_dpi(&self) -> f32 {
-        self.0
-            .upgrade()
-            .map(|w| NOMINAL_DPI * w.dpr.get() as f32)
-            .unwrap_or(NOMINAL_DPI)
-    }
-
-    /// Convert a dimension in px units to physical pixels (rounding).
-    pub fn px_to_pixels(&self, x: f32) -> i32 {
-        (x * self.get_dpi() / NOMINAL_DPI).round() as i32
-    }
-
-    /// Convert a point in px units to physical pixels (rounding).
-    pub fn px_to_pixels_xy(&self, x: f32, y: f32) -> (i32, i32) {
-        let scale = self.get_dpi() / NOMINAL_DPI;
-        ((x * scale).round() as i32, (y * scale).round() as i32)
-    }
-
-    /// Convert a dimension in physical pixels to px units.
-    pub fn pixels_to_px<T: Into<f64>>(&self, x: T) -> f32 {
-        (x.into() as f32) * NOMINAL_DPI / self.get_dpi()
-    }
-
-    /// Convert a point in physical pixels to px units.
-    pub fn pixels_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f32, f32) {
-        let scale = NOMINAL_DPI / self.get_dpi();
-        ((x.into() as f32) * scale, (y.into() as f32) * scale)
+    /// Get the `Scale` of the window.
+    pub fn get_scale(&self) -> Result<Scale> {
+        if let Some(state) = self.0.upgrade() {
+            match state.scale.try_borrow() {
+                Ok(scale) => Ok(scale.clone()),
+                Err(err) => Err(Error::BorrowError(format!("WindowHandle scale: {}", err))),
+            }
+        } else {
+            Err(Error::Generic("WindowState already dropped".into()))
+        }
     }
 
     pub fn set_menu(&self, _menu: Menu) {
