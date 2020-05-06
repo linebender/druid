@@ -27,13 +27,9 @@ use winapi::um::winbase::{
 
 use super::util::FromWide;
 
-/// Windows platform errors.
+/// Windows platform error.
 #[derive(Debug, Clone)]
 pub enum Error {
-    /// Generic error
-    Generic(String),
-    /// Runtime borrow failure
-    BorrowError(String),
     /// Windows error code.
     Hr(HRESULT),
     // Maybe include the full error from the direct2d crate.
@@ -72,8 +68,6 @@ fn hresult_description(hr: HRESULT) -> Option<String> {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Error::Generic(msg) => write!(f, "Error: {}", msg),
-            Error::BorrowError(msg) => write!(f, "Failed to borrow: {}", msg),
             Error::Hr(hr) => {
                 write!(f, "HRESULT 0x{:x}", hr)?;
                 if let Some(description) = hresult_description(*hr) {

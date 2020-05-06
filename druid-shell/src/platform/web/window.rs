@@ -35,6 +35,7 @@ use super::keycodes::key_to_text;
 use super::menu::Menu;
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
+use crate::error::{BorrowError, Error as ShellError};
 use crate::scale::Scale;
 
 use crate::keyboard;
@@ -55,8 +56,6 @@ macro_rules! get_modifiers {
         }
     };
 }
-
-type Result<T> = std::result::Result<T, Error>;
 
 /// Builder abstraction for creating new windows.
 pub(crate) struct WindowBuilder {
@@ -119,7 +118,7 @@ impl WindowState {
         }
     }
 
-    fn request_animation_frame(&self, f: impl FnOnce() + 'static) -> Result<i32> {
+    fn request_animation_frame(&self, f: impl FnOnce() + 'static) -> Result<i32, Error> {
         Ok(self
             .window
             .request_animation_frame(Closure::once_into_js(f).as_ref().unchecked_ref())?)
@@ -351,7 +350,7 @@ impl WindowBuilder {
         self.menu = Some(menu);
     }
 
-    pub fn build(self) -> Result<WindowHandle> {
+    pub fn build(self) -> Result<WindowHandle, Error> {
         let window = web_sys::window().ok_or_else(|| Error::NoWindow)?;
         let canvas = window
             .document()
@@ -536,8 +535,8 @@ impl WindowHandle {
         &self,
         _ty: FileDialogType,
         _options: FileDialogOptions,
-    ) -> std::result::Result<OsString, crate::Error> {
-        Err(crate::Error::Platform(Error::Unimplemented))
+    ) -> Result<OsString, ShellError> {
+        Err(ShellError::Platform(Error::Unimplemented))
     }
 
     /// Get a handle that can be used to schedule an idle task.
@@ -549,14 +548,14 @@ impl WindowHandle {
     }
 
     /// Get the `Scale` of the window.
-    pub fn get_scale(&self) -> Result<Scale> {
+    pub fn get_scale(&self) -> Result<Scale, ShellError> {
         if let Some(state) = self.0.upgrade() {
             match state.scale.try_borrow() {
                 Ok(scale) => Ok(scale.clone()),
-                Err(err) => Err(Error::BorrowError(format!("WindowHandle scale: {}", err))),
+                Err(_) => Err(BorrowError::new("WindowHandle::get_scale", "scale", false).into()),
             }
         } else {
-            Err(Error::Generic("WindowState already dropped".into()))
+            Err(ShellError::WindowDropped)
         }
     }
 

@@ -35,11 +35,11 @@ use crate::piet::{Piet, RenderContext};
 
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
+use crate::error::{BorrowError, Error as ShellError};
 use crate::keyboard;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::scale::{self, Scale};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
-use crate::Error;
 
 use super::application::Application;
 use super::dialog;
@@ -156,7 +156,7 @@ impl WindowBuilder {
         self.menu = Some(menu);
     }
 
-    pub fn build(self) -> Result<WindowHandle, Error> {
+    pub fn build(self) -> Result<WindowHandle, ShellError> {
         let handler = self
             .handler
             .expect("Tried to build a window without setting the handler");
@@ -639,14 +639,14 @@ impl WindowHandle {
     }
 
     /// Get the `Scale` of the window.
-    pub fn get_scale(&self) -> Result<Scale, Error> {
+    pub fn get_scale(&self) -> Result<Scale, ShellError> {
         if let Some(state) = self.state.upgrade() {
             match state.scale.try_borrow() {
                 Ok(scale) => Ok(scale.clone()),
-                Err(_) => Err(Error::Other("Failed to borrow scale")),
+                Err(_) => Err(BorrowError::new("WindowHandle::get_scale", "scale", false).into()),
             }
         } else {
-            Err(Error::Other("WindowState already dropped"))
+            Err(ShellError::WindowDropped)
         }
     }
 
@@ -696,11 +696,11 @@ impl WindowHandle {
         &self,
         ty: FileDialogType,
         options: FileDialogOptions,
-    ) -> Result<OsString, Error> {
+    ) -> Result<OsString, ShellError> {
         if let Some(state) = self.state.upgrade() {
             dialog::get_file_dialog_path(state.window.upcast_ref(), ty, options)
         } else {
-            Err(Error::Other(
+            Err(ShellError::Other(
                 "Cannot upgrade state from weak pointer to arc",
             ))
         }

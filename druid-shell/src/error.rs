@@ -18,13 +18,19 @@ use std::fmt;
 
 use crate::platform::error as platform;
 
-/// Error codes. At the moment, this is little more than HRESULT, but that
-/// might change.
+/// Shell errors.
 #[derive(Debug, Clone)]
 pub enum Error {
+    /// The Application instance has already been created.
     ApplicationAlreadyExists,
-    Other(&'static str),
+    /// The window has already been destroyed.
+    WindowDropped,
+    /// Runtime borrow failure.
+    BorrowError(BorrowError),
+    /// Platform specific error.
     Platform(platform::Error),
+    /// Other miscellaneous error.
+    Other(&'static str),
 }
 
 impl fmt::Display for Error {
@@ -33,8 +39,10 @@ impl fmt::Display for Error {
             Error::ApplicationAlreadyExists => {
                 write!(f, "An application instance has already been created.")
             }
+            Error::WindowDropped => write!(f, "The window has already been destroyed."),
+            Error::BorrowError(err) => fmt::Display::fmt(err, f),
+            Error::Platform(err) => fmt::Display::fmt(err, f),
             Error::Other(s) => write!(f, "{}", s),
-            Error::Platform(p) => fmt::Display::fmt(&p, f),
         }
     }
 }
@@ -44,5 +52,51 @@ impl std::error::Error for Error {}
 impl From<platform::Error> for Error {
     fn from(src: platform::Error) -> Error {
         Error::Platform(src)
+    }
+}
+
+/// Runtime borrow failure.
+#[derive(Debug, Clone)]
+pub struct BorrowError {
+    location: &'static str,
+    target: &'static str,
+    mutable: bool,
+}
+
+impl BorrowError {
+    pub fn new(location: &'static str, target: &'static str, mutable: bool) -> BorrowError {
+        BorrowError {
+            location,
+            target,
+            mutable,
+        }
+    }
+}
+
+impl fmt::Display for BorrowError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        if self.mutable {
+            // Mutable borrow fails when any borrow exists
+            write!(
+                f,
+                "{} was already borrowed in {}",
+                self.target, self.location
+            )
+        } else {
+            // Regular borrow fails when a mutable borrow exists
+            write!(
+                f,
+                "{} was already mutably borrowed in {}",
+                self.target, self.location
+            )
+        }
+    }
+}
+
+impl std::error::Error for BorrowError {}
+
+impl From<BorrowError> for Error {
+    fn from(src: BorrowError) -> Error {
+        Error::BorrowError(src)
     }
 }

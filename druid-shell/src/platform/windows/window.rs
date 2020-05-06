@@ -58,6 +58,7 @@ use super::util::{self, as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
+use crate::error::{BorrowError, Error as ShellError};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
@@ -1505,14 +1506,14 @@ impl WindowHandle {
     }
 
     /// Get the `Scale` of the window.
-    pub fn get_scale(&self) -> Result<Scale, Error> {
+    pub fn get_scale(&self) -> Result<Scale, ShellError> {
         if let Some(state) = self.state.upgrade() {
             match state.scale.try_borrow() {
                 Ok(scale) => Ok(scale.clone()),
-                Err(err) => Err(Error::BorrowError(format!("WindowHandle scale: {}", err))),
+                Err(_) => Err(BorrowError::new("WindowHandle::get_scale", "scale", false).into()),
             }
         } else {
-            Err(Error::Generic("WindowState already dropped".into()))
+            Err(ShellError::WindowDropped)
         }
     }
 
