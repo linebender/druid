@@ -172,7 +172,7 @@ impl WindowBuilder {
             .get_display()
             .map(|c| c.get_default_screen().get_resolution() as f64)
             .unwrap_or(96.0);
-        let mut scale = Scale::new(dpi);
+        let mut scale = Scale::new(dpi, dpi);
         let size_px = scale.set_size_pt(self.size);
 
         window.set_default_size(size_px.width as i32, size_px.height as i32);
@@ -237,7 +237,7 @@ impl WindowBuilder {
 
         // Set the minimum size
         if let Some(size_pt) = self.min_size {
-            let mut scale = Scale::new(dpi);
+            let mut scale = Scale::new(dpi, dpi);
             let size_px = scale.set_size_pt(size_pt);
             win_state
                 .drawing_area
@@ -251,10 +251,10 @@ impl WindowBuilder {
                     // so that we can change our scale factor without restarting the application.
                     if let Some(dpi) = state.window.get_window()
                         .map(|w| w.get_display().get_default_screen().get_resolution()) {
-                        if !scale.dpi_approx_eq(dpi) {
+                        if !scale.dpi_approx_eq(dpi, dpi) {
                             // This new Scale will also ensure a window size event for the handler,
                             // because it defaults to zero size.
-                            *scale = Scale::new(dpi);
+                            *scale = Scale::new(dpi, dpi);
                         }
                     }
 

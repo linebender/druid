@@ -257,6 +257,7 @@ impl std::fmt::Debug for Scale {
 }
 
 // TODO: Replace usages of this with rect.expand() after kurbo#107 has landed.
+#[allow(dead_code)]
 pub fn expand_rect(rect: Rect) -> Rect {
     let (x0, x1) = if rect.x0 < rect.x1 {
         (rect.x0.floor(), rect.x1.ceil())
