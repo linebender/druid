@@ -16,13 +16,13 @@ x11 = ["xcb", "cairo-sys-rs"]
 default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
-piet-common = "0.0.12"
+piet-common = "0.1.0"
 log = "0.4.8"
 lazy_static = "1.0"
 time = "0.2.7"
 cfg-if = "0.1.10"
 # NOTE: if changing, ensure version is compatible with the version in piet
-kurbo = "0.5.11"
+kurbo = "0.6.0"
 # NOTE: This defaults to mimicking std::time on non-wasm targets
 instant = { version = "0.1", features = [ "wasm-bindgen" ] }
 
@@ -38,7 +38,7 @@ gtk-sys = { version = "0.9.0", optional = true }
 xcb = { version = "0.9.0", features = ["thread", "xlib_xcb", "randr"], optional = true }
 
 [dev-dependencies]
-piet-common = {version = "0.0.12", features = ["png"]}
+piet-common = {version = "0.1.0", features = ["png"]}
 
 [target.'cfg(target_os="windows")'.dependencies]
 wio = "0.2"
@@ -50,7 +50,8 @@ features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "wi
 [target.'cfg(target_os="macos")'.dependencies]
 cocoa = "0.20.0"
 objc = "0.2.5"
-cairo-rs = { version = "0.8.1", default_features = false }
+core-graphics = "0.19"
+foreign-types = "0.3.2"
 
 # TODO(x11/dependencies): only use feature "xcb" if using XCB
 [target.'cfg(target_os="linux")'.dependencies]
