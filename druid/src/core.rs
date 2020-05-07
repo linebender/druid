@@ -441,7 +441,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 let text_rect = Rect::from_origin_size(origin, text_size);
 
                 ctx.fill(text_rect, &border_color);
-                let (r, g, b, _) = border_color.as_rgba_u8();
+                let (r, g, b, _) = border_color.as_rgba8();
                 let avg = (r as u32 + g as u32 + b as u32) / 3;
                 let text_color = if avg < 128 {
                     Color::WHITE

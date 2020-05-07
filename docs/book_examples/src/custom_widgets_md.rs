@@ -28,7 +28,7 @@ fn sized_swatch() -> impl Widget<Color> {
 // ANCHOR: background_label
 fn background_label() -> impl Widget<Color> {
     Label::dynamic(|color: &Color, _| {
-        let (r, g, b, _) = color.as_rgba_u8();
+        let (r, g, b, _) = color.as_rgba8();
         format!("#{:X}{:X}{:X}", r, g, b)
     })
     .background(make_color_swatch())
