@@ -199,20 +199,26 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
         let height = state.canvas.height() as f64;
         let width = state.canvas.width() as f64;
 
-        let modifiers = get_modifiers!(event);
-        let mut handler = state.handler.borrow_mut();
-
         // The value 35.0 was manually picked to produce similar behavior to mac/linux.
-        match delta_mode {
-            web_sys::WheelEvent::DOM_DELTA_PIXEL => handler.wheel(Vec2::from((dx, dy)), modifiers),
-            web_sys::WheelEvent::DOM_DELTA_LINE => {
-                handler.wheel(Vec2::from((35.0 * dx, 35.0 * dy)), modifiers)
+        let wheel_delta = match delta_mode {
+            web_sys::WheelEvent::DOM_DELTA_PIXEL => Vec2::new(dx, dy),
+            web_sys::WheelEvent::DOM_DELTA_LINE => Vec2::new(35.0 * dx, 35.0 * dy),
+            web_sys::WheelEvent::DOM_DELTA_PAGE => Vec2::new(width * dx, height * dy),
+            _ => {
+                log::warn!("Invalid deltaMode in WheelEvent: {}", delta_mode);
+                return;
             }
-            web_sys::WheelEvent::DOM_DELTA_PAGE => {
-                handler.wheel(Vec2::from((width * dx, height * dy)), modifiers)
-            }
-            _ => log::warn!("Invalid deltaMode in WheelEvent: {}", delta_mode),
-        }
+        };
+
+        let event = MouseEvent {
+            pos: Point::new(event.offset_x() as f64, event.offset_y() as f64),
+            buttons: mouse_buttons(event.buttons()),
+            mods: get_modifiers!(event),
+            count: 0,
+            button: MouseButton::None,
+            wheel_delta,
+        };
+        state.handler.borrow_mut().wheel(&event);
     });
 }
 
