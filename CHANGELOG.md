@@ -43,6 +43,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `request_timer` uses `Duration` instead of `Instant`. ([#847] by [@finnerale])
 - Global `Application` associated functions are instance methods instead, e.g. `Application::global().quit()` instead of the old `Application::quit()`. ([#763] by [@xStrom])
 - Timer events will only be delivered to the widgets that requested them. ([#831] by [@sjoshid])
+- `Event::Wheel` now contains a `MouseEvent` structure. ([#895] by [@teddemunnik])
 
 ### Deprecated
 
