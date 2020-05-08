@@ -12,7 +12,6 @@
 *.sublime-project
 
 ## Vim
-.vim
 tags
 Session.vim
 Sessionx.vim
