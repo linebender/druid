@@ -97,6 +97,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Supply correct `LifeCycleCtx` to `Event::FocusChanged`. ([#878] by [@cmyr])
 - Windows: Terminate app when all windows have closed. ([#763] by [@xStrom])
 - macOS: `Application::quit` now quits the run loop instead of killing the process. ([#763] by [@xStrom])
+- macOS: `Event::HotChanged` is properly generated with multiple windows. ([#907] by [@xStrom])
 - macOS/GTK/web: `MouseButton::X1` and `MouseButton::X2` clicks are now recognized. ([#843] by [@xStrom])
 - GTK: Support disabled menu items. ([#897] by [@jneem])
 - X11: Support individual window closing. ([#900] by [@xStrom])
@@ -111,7 +112,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Focus request handling is now predictable with the last request overriding earlier ones. ([#948] by [@xStrom])
 - Wheel events now properly update hot state. ([#951] by [@xStrom])
 - X11: Support mouse scrolling. ([#961] by [@jneem])
-- Painter widget not repainting on data change in Container ([#991] by [@cmyr])
+- `Painter` now properly repaints on data change in `Container`. ([#991] by [@cmyr])
 
 ### Visual
 
@@ -126,7 +127,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Reduce the flashing in ext_event and identity examples. ([#782] by [@futurepaul])
 - Added example and usage hints to `Env`. ([#796] by [@finnerale])
 - Added documentation about the usage of bloom filters. ([#818] by [@xStrom])
-- Added Book chapters about `Painter` and `Controller`. ([#832] by [@cmyr])
+- Added book chapters about `Painter` and `Controller`. ([#832] by [@cmyr])
 - Added hot glow option to multiwin example. ([#845] by [@xStrom])
 - Added new example for blocking functions. ([#840] by [@mastfissh])
 - Added a changelog containing development since the 0.5 release. ([#889] by [@finnerale])
@@ -207,6 +208,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#903]: https://github.com/xi-editor/druid/pull/903
 [#904]: https://github.com/xi-editor/druid/pull/904
 [#905]: https://github.com/xi-editor/druid/pull/905
+[#907]: https://github.com/xi-editor/druid/pull/907
 [#909]: https://github.com/xi-editor/druid/pull/909
 [#915]: https://github.com/xi-editor/druid/pull/915
 [#916]: https://github.com/xi-editor/druid/pull/916
