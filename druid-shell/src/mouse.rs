@@ -34,6 +34,9 @@ pub struct MouseEvent {
     /// The number of mouse clicks associated with this event. This will always
     /// be `0` for a mouse-up and mouse-move events.
     pub count: u8,
+    /// Focus is `true` on macOS when the mouse-down event (or its companion mouse-up event)
+    /// with `MouseButton::Left` was the event that caused the window to gain focus.
+    pub focus: bool,
     /// The button that was pressed down in the case of mouse-down,
     /// or the button that was released in the case of mouse-up.
     /// This will always be `MouseButton::None` in the case of mouse-move.
