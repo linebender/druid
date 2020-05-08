@@ -630,11 +630,10 @@ pub mod sys {
 
             /// The 'Save...' menu item.
             /// For windows, this is the same as 'Save'.
-            /// TODO: find out why this exists.
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
-                    LocalizedString::new("common-menu-file-save"),
-                    Command::new(commands::SAVE_FILE, None),
+                    LocalizedString::new("common-menu-file-save-ellipsis"),
+                    Command::new(commands::SHOW_OPEN_PANEL, Default::default()),
                 )
                 .hotkey(RawMods::Ctrl, "s")
             }
