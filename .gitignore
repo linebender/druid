@@ -1,6 +1,23 @@
-target
+## Rust specific files
+/target/
 
 ## Intellij Idea project configuration files
 .idea/
+
 ## VScode project configuration files
 .vscode/
+
+## Sublime Text project configuration files
+*.sublime-workspace
+*.sublime-project
+
+## macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+## Windows system files
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+*.lnk
