@@ -32,6 +32,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `Env` and `Key` gained methods for inspecting an `Env` at runtime ([#880] by [@Zarenor])
 - `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
 - `UpdateCtx::size` and `LifeCycleCtx::size`. ([#917] by [@jneem])
+- `WidgetExt::debug_widget_id`, for displaying widget ids on hover. ([#876] by [@cmyr])
 
 ### Changed
 
@@ -147,6 +148,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#857]: https://github.com/xi-editor/druid/pull/857
 [#861]: https://github.com/xi-editor/druid/pull/861
 [#869]: https://github.com/xi-editor/druid/pull/869
+[#876]: https://github.com/xi-editor/druid/pull/876
 [#878]: https://github.com/xi-editor/druid/pull/878
 [#880]: https://github.com/xi-editor/druid/pull/880
 [#889]: https://github.com/xi-editor/druid/pull/889

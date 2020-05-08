@@ -360,15 +360,16 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         };
         self.inner.paint(&mut inner_ctx, data, env);
 
-        let debug_layout = env.get(Env::DEBUG_PAINT);
-        let debug_ids = env.get(Env::DEBUG_WIDGET_ID) && inner_ctx.is_hot();
-
-        if debug_layout {
-            self.debug_paint_layout_bounds(&mut inner_ctx, env);
-        }
+        let debug_ids = inner_ctx.is_hot() && env.get(Env::DEBUG_WIDGET_ID);
         if debug_ids {
+            // this also draws layout bounds
             self.debug_paint_widget_ids(&mut inner_ctx, env);
         }
+
+        if !debug_ids && env.get(Env::DEBUG_PAINT) {
+            self.debug_paint_layout_bounds(&mut inner_ctx, env);
+        }
+
         ctx.z_ops.append(&mut inner_ctx.z_ops);
         self.state.invalid = Region::EMPTY;
     }
