@@ -28,6 +28,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Window title can be any `LabelText` (such as a simple `String`). ([#869] by [@cmyr])
 - `Label::with_font` and `set_font`. ([#785] by [@thecodewarrior])
 - `InternalEvent::RouteTimer` to route timer events. ([#831] by [@sjoshid])
+- `MouseEvent` now has a `focus` field which is `true` with window focusing left clicks on macOS. ([#842] by [@xStrom])
 - `MouseButtons` to `MouseEvent` to track which buttons are being held down during an event. ([#843] by [@xStrom])
 - `Env` and `Key` gained methods for inspecting an `Env` at runtime ([#880] by [@Zarenor])
 - `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
@@ -135,6 +136,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#839]: https://github.com/xi-editor/druid/pull/839
 [#840]: https://github.com/xi-editor/druid/pull/840
 [#841]: https://github.com/xi-editor/druid/pull/841
+[#842]: https://github.com/xi-editor/druid/pull/842
 [#843]: https://github.com/xi-editor/druid/pull/843
 [#845]: https://github.com/xi-editor/druid/pull/845
 [#847]: https://github.com/xi-editor/druid/pull/847
