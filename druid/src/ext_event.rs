@@ -20,7 +20,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::shell::IdleHandle;
 use crate::win_handler::EXT_EVENT_IDLE_TOKEN;
-use crate::{Command, Selector, Target, WindowId, command::SelectorSymbol};
+use crate::{command::SelectorSymbol, Command, Selector, Target, WindowId};
 
 pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Option<Target>);
 

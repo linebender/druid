@@ -47,6 +47,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Timer events will only be delivered to the widgets that requested them. ([#831] by [@sjoshid])
 - `Event::Wheel` now contains a `MouseEvent` structure. ([#895] by [@teddemunnik])
 - `AppDelegate::command` now receives a `Target` instead of a `&Target`. ([#909] by [@xStrom])
+- `SHOW_WINDOW` and `OPEN_WINDOW` no longer require a `WindowId` as payload, but they must `Target` the correct window. ([#???] by [@finnerale])
 
 ### Deprecated
 

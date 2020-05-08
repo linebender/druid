@@ -21,9 +21,7 @@ use std::rc::Rc;
 
 use crate::kurbo::{Rect, Size};
 use crate::piet::Piet;
-use crate::shell::{
-    Application, FileDialogOptions, IdleToken, MouseEvent, WinHandler, WindowHandle,
-};
+use crate::shell::{Application, IdleToken, MouseEvent, WinHandler, WindowHandle};
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
@@ -313,9 +311,11 @@ impl<T: Data> Inner<T> {
         match target {
             Target::Window(id) => {
                 // first handle special window-level events
-                match cmd.selector {
-                    sys_cmd::SET_MENU => return self.set_menu(id, &cmd),
-                    sys_cmd::SHOW_CONTEXT_MENU => return self.show_context_menu(id, &cmd),
+                match () {
+                    _ if cmd.is(sys_cmd::SET_MENU) => return self.set_menu(id, &cmd),
+                    _ if cmd.is(sys_cmd::SHOW_CONTEXT_MENU) => {
+                        return self.show_context_menu(id, &cmd)
+                    }
                     _ => (),
                 }
                 if let Some(w) = self.windows.get_mut(id) {
@@ -368,20 +368,26 @@ impl<T: Data> Inner<T> {
 
     fn set_menu(&mut self, window_id: WindowId, cmd: &Command) {
         if let Some(win) = self.windows.get_mut(window_id) {
-            match cmd.get_object::<MenuDesc<T>>() {
-                Ok(menu) => win.set_menu(menu.to_owned(), &self.data, &self.env),
-                Err(e) => log::warn!("set-menu object error: '{}'", e),
+            match cmd.get(sys_cmd::SET_MENU) {
+                Ok(menu) => match menu.realize() {
+                    Ok(menu) => win.set_menu(menu.to_owned(), &self.data, &self.env),
+                    Err(e) => log::error!("set_menu: {}", e),
+                },
+                Err(e) => log::error!("set-menu object error: '{}'", e),
             }
         }
     }
 
     fn show_context_menu(&mut self, window_id: WindowId, cmd: &Command) {
         if let Some(win) = self.windows.get_mut(window_id) {
-            match cmd.get_object::<ContextMenu<T>>() {
-                Ok(ContextMenu { menu, location }) => {
-                    win.show_context_menu(menu.to_owned(), *location, &self.data, &self.env)
-                }
-                Err(e) => log::warn!("show-context-menu object error: '{}'", e),
+            match cmd.get(sys_cmd::SHOW_CONTEXT_MENU) {
+                Ok(menu) => match menu.realize() {
+                    Ok(ContextMenu { menu, location }) => {
+                        win.show_context_menu(menu.to_owned(), *location, &self.data, &self.env)
+                    }
+                    Err(e) => log::error!("show_context_menu: {}", e),
+                },
+                Err(e) => log::error!("show_context_menu argument error: {}", e),
             }
         }
     }
@@ -523,25 +529,31 @@ impl<T: Data> AppState<T> {
     /// windows) have their logic here; other commands are passed to the window.
     fn handle_cmd(&mut self, target: Target, cmd: Command) {
         use Target as T;
-        match (target, cmd.selector_symbol()) {
+        match target {
             // these are handled the same no matter where they come from
-            (_, sys_cmd::QUIT_APP.symbol()) => self.quit(),
-            (_, sys_cmd::HIDE_APPLICATION) => self.hide_app(),
-            (_, sys_cmd::HIDE_OTHERS) => self.hide_others(),
-            (_, sys_cmd::NEW_WINDOW) => {
+            _ if cmd.is(sys_cmd::QUIT_APP) => self.quit(),
+            _ if cmd.is(sys_cmd::HIDE_APPLICATION) => self.hide_app(),
+            _ if cmd.is(sys_cmd::HIDE_OTHERS) => self.hide_others(),
+            _ if cmd.is(sys_cmd::NEW_WINDOW) => {
                 if let Err(e) = self.new_window(cmd) {
                     log::error!("failed to create window: '{}'", e);
                 }
             }
-            (_, sys_cmd::CLOSE_ALL_WINDOWS) => self.request_close_all_windows(),
+            _ if cmd.is(sys_cmd::CLOSE_ALL_WINDOWS) => self.request_close_all_windows(),
             // these should come from a window
             // FIXME: we need to be able to open a file without a window handle
-            (T::Window(id), sys_cmd::SHOW_OPEN_PANEL) => self.show_open_panel(cmd, id),
-            (T::Window(id), sys_cmd::SHOW_SAVE_PANEL) => self.show_save_panel(cmd, id),
-            (T::Window(id), sys_cmd::CLOSE_WINDOW) => self.request_close_window(cmd, id),
-            (T::Window(_), sys_cmd::SHOW_WINDOW) => self.show_window(cmd),
-            (T::Window(id), sys_cmd::PASTE) => self.do_paste(id),
-            _sel => self.inner.borrow_mut().dispatch_cmd(target, cmd),
+            T::Window(id) if cmd.is(sys_cmd::SHOW_OPEN_PANEL) => self.show_open_panel(cmd, id),
+            T::Window(id) if cmd.is(sys_cmd::SHOW_SAVE_PANEL) => self.show_save_panel(cmd, id),
+            T::Window(id) if cmd.is(sys_cmd::CLOSE_WINDOW) => self.request_close_window(id),
+            T::Window(id) if cmd.is(sys_cmd::SHOW_WINDOW) => self.show_window(id),
+            T::Window(id) if cmd.is(sys_cmd::PASTE) => self.do_paste(id),
+            _ if cmd.is(sys_cmd::CLOSE_WINDOW) => {
+                log::warn!("CLOSE_WINDOW command must target a window.")
+            }
+            _ if cmd.is(sys_cmd::SHOW_WINDOW) => {
+                log::warn!("SHOW_WINDOW command must target a window.")
+            }
+            _ => self.inner.borrow_mut().dispatch_cmd(target, cmd),
         }
     }
 
@@ -569,7 +581,7 @@ impl<T: Data> AppState<T> {
 
     fn show_save_panel(&mut self, cmd: Command, window_id: WindowId) {
         let options = cmd
-            .get_object::<FileDialogOptions>()
+            .get(sys_cmd::SHOW_SAVE_PANEL)
             .map(|opts| opts.to_owned())
             .unwrap_or_default();
         let handle = self
@@ -580,32 +592,29 @@ impl<T: Data> AppState<T> {
             .map(|w| w.handle.clone());
         let result = handle.and_then(|mut handle| handle.save_as_sync(options));
         if let Some(info) = result {
-            let cmd = Command::new(sys_cmd::SAVE_FILE, info);
+            let cmd = Command::new(sys_cmd::SAVE_FILE, Some(info));
             self.inner.borrow_mut().dispatch_cmd(window_id.into(), cmd);
         }
     }
 
     fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
-        let desc = cmd.take_object::<WindowDesc<T>>()?;
+        let desc = cmd.take(sys_cmd::NEW_WINDOW)?;
+        let desc = desc.realize()?;
         let window = desc.build_native(self)?;
         window.show();
         Ok(())
     }
 
-    fn request_close_window(&mut self, cmd: Command, window_id: WindowId) {
-        let id = cmd.get_object().unwrap_or(&window_id);
-        self.inner.borrow_mut().request_close_window(*id);
+    fn request_close_window(&mut self, window_id: WindowId) {
+        self.inner.borrow_mut().request_close_window(window_id);
     }
 
     fn request_close_all_windows(&mut self) {
         self.inner.borrow_mut().request_close_all_windows();
     }
 
-    fn show_window(&mut self, cmd: Command) {
-        let id: WindowId = *cmd
-            .get_object()
-            .expect("show window selector missing window id");
-        self.inner.borrow_mut().show_window(id);
+    fn show_window(&mut self, window_id: WindowId) {
+        self.inner.borrow_mut().show_window(window_id);
     }
 
     fn do_paste(&mut self, window_id: WindowId) {

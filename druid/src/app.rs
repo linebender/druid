@@ -21,8 +21,10 @@ use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
 use crate::{
-    theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget, WidgetExt,
+    command::AppStateTypeError, theme, AppDelegate, Data, DruidHandler, Env, LocalizedString,
+    MenuDesc, Widget, WidgetExt,
 };
+use std::any::{self, Any};
 
 /// A function that modifies the initial environment.
 type EnvSetupFn<T> = dyn FnOnce(&mut Env, &T);
@@ -52,6 +54,43 @@ pub struct WindowDesc<T> {
     /// This can be used to track a window from when it is launched and when
     /// it actually connects.
     pub id: WindowId,
+}
+
+/// A description of a window to be instantiated. The user has to guarantee that this
+/// represents a `WindowDesc<T>` where `T` is the users `AppState`.
+///
+/// This includes a function that can build the root widget, as well as other
+/// window properties such as the title.
+pub struct AppStateWindowDesc {
+    inner: Box<dyn Any>,
+    type_name: &'static str,
+}
+
+impl<T: 'static> WindowDesc<T> {
+    /// This turns a typed `WindowDesc<T>` into an untyped `AppStateWindowDesc`.
+    /// Doing so allows sending `WindowDesc` through `Command`s.
+    /// It is up to you, to ensure that this `T` represents your application
+    /// state that you passed to `AppLauncher::launch`.
+    pub fn into_app_state_menu_desc(self) -> AppStateWindowDesc {
+        AppStateWindowDesc {
+            inner: Box::new(self),
+            type_name: any::type_name::<Self>(),
+        }
+    }
+}
+
+impl AppStateWindowDesc {
+    pub(crate) fn realize<T: 'static>(self) -> Result<WindowDesc<T>, AppStateTypeError> {
+        let inner: Result<Box<WindowDesc<T>>, _> = self.inner.downcast();
+        if let Some(inner) = inner.ok() {
+            Ok(*inner)
+        } else {
+            Err(AppStateTypeError::new(
+                any::type_name::<WindowDesc<T>>(),
+                self.type_name,
+            ))
+        }
+    }
 }
 
 impl<T: Data> AppLauncher<T> {

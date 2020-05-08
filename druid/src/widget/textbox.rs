@@ -53,7 +53,8 @@ pub struct TextBox {
 
 impl TextBox {
     /// Perform an `EditAction`. The payload *must* be an `EditAction`.
-    pub const PERFORM_EDIT: Selector<EditAction> = Selector::new("druid-builtin.textbox.perform-edit");
+    pub const PERFORM_EDIT: Selector<EditAction> =
+        Selector::new("druid-builtin.textbox.perform-edit");
 
     /// Create a new TextBox widget
     pub fn new() -> TextBox {
@@ -281,8 +282,7 @@ impl Widget<String> for TextBox {
             }
             Event::Command(ref cmd)
                 if ctx.is_focused()
-                    && (cmd.is(crate::commands::COPY)
-                        || cmd.is(crate::commands::CUT)) =>
+                    && (cmd.is(crate::commands::COPY) || cmd.is(crate::commands::CUT)) =>
             {
                 if let Some(text) = data.slice(self.selection.range()) {
                     Application::global().clipboard().put_string(text);

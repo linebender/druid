@@ -105,11 +105,16 @@
 //! [`Selector`]: ../struct.Selector.html
 //! [`SET_MENU`]: ../struct.Selector.html#associatedconstant.SET_MENU
 
-use std::{any::Any, num::NonZeroU32};
+use std::{
+    any::{self, Any},
+    num::NonZeroU32,
+};
 
 use crate::kurbo::Point;
 use crate::shell::{HotKey, KeyCompare, Menu as PlatformMenu, RawMods, SysMods};
-use crate::{commands, Command, Data, Env, KeyCode, LocalizedString, Selector};
+use crate::{
+    command::AppStateTypeError, commands, Command, Data, Env, KeyCode, LocalizedString, Selector,
+};
 
 /// A platform-agnostic description of an application, window, or context
 /// menu.
@@ -123,7 +128,10 @@ pub struct MenuDesc<T> {
 /// A platform-agnostic description of an application, window, or context
 /// menu. The user has to guarantee that this represents a `MenuDesc<T>` where `T` is the users
 /// `AppState`.
-pub struct AppStateMenuDesc(Box<dyn Any>);
+pub struct AppStateMenuDesc {
+    inner: Box<dyn Any>,
+    type_name: &'static str,
+}
 
 impl<T: 'static> MenuDesc<T> {
     /// This turns a typed `MenuDesc<T>` into an untyped `AppStateMenuDesc`.
@@ -131,13 +139,19 @@ impl<T: 'static> MenuDesc<T> {
     /// It is up to you, to ensure that this `T` represents your application
     /// state that you passed to `AppLauncher::launch`.
     pub fn into_app_state_menu_desc(self) -> AppStateMenuDesc {
-        AppStateMenuDesc(Box::new(self))
+        AppStateMenuDesc {
+            inner: Box::new(self),
+            type_name: any::type_name::<Self>(),
+        }
     }
 }
 
 impl AppStateMenuDesc {
-    pub(crate) fn realize<T: 'static>(&self) -> Option<&MenuDesc<T>> {
-        self.0.downcast_ref()
+    pub(crate) fn realize<T: 'static>(&self) -> Result<&MenuDesc<T>, AppStateTypeError> {
+        self.inner.downcast_ref().ok_or(AppStateTypeError::new(
+            any::type_name::<MenuDesc<T>>(),
+            self.type_name,
+        ))
     }
 }
 
@@ -183,7 +197,10 @@ pub struct ContextMenu<T> {
 /// A platform-agnostic description of a context menu.
 /// The user has to guarantee that this represents a `ContextMenu<T>` where `T` is the users
 /// `AppState`.
-pub struct AppStateContextMenu(Box<dyn Any>);
+pub struct AppStateContextMenu {
+    inner: Box<dyn Any>,
+    type_name: &'static str,
+}
 
 impl<T: 'static> ContextMenu<T> {
     /// This turns a typed `ContextMenu<T>` into an untyped `AppStateContextMenu`.
@@ -191,13 +208,19 @@ impl<T: 'static> ContextMenu<T> {
     /// It is up to you, to ensure that this `T` represents your application
     /// state that you passed to `AppLauncher::launch`.
     pub fn into_app_state_context_menu(self) -> AppStateContextMenu {
-        AppStateContextMenu(Box::new(self))
+        AppStateContextMenu {
+            inner: Box::new(self),
+            type_name: any::type_name::<Self>(),
+        }
     }
 }
 
 impl AppStateContextMenu {
-    pub(crate) fn realize<T: 'static>(&self) -> Option<&ContextMenu<T>> {
-        self.0.downcast_ref()
+    pub(crate) fn realize<T: 'static>(&self) -> Result<&ContextMenu<T>, AppStateTypeError> {
+        self.inner.downcast_ref().ok_or(AppStateTypeError::new(
+            any::type_name::<ContextMenu<T>>(),
+            self.type_name,
+        ))
     }
 }
 
@@ -583,7 +606,7 @@ pub mod sys {
             pub fn open<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-open"),
-                    commands::SHOW_OPEN_PANEL,
+                    Command::new(commands::SHOW_OPEN_PANEL, Default::default()),
                 )
                 .hotkey(RawMods::Ctrl, "o")
             }
@@ -600,16 +623,18 @@ pub mod sys {
             pub fn save<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    commands::SAVE_FILE,
+                    Command::new(commands::SAVE_FILE, None),
                 )
                 .hotkey(RawMods::Ctrl, "s")
             }
 
-            /// The 'Save' menu item.
+            /// The 'Save...' menu item.
+            /// For windows, this is the same as 'Save'.
+            /// TODO: find out why this exists.
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    commands::SAVE_FILE,
+                    Command::new(commands::SAVE_FILE, None),
                 )
                 .hotkey(RawMods::Ctrl, "s")
             }
@@ -618,7 +643,7 @@ pub mod sys {
             pub fn save_as<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-as"),
-                    commands::SHOW_SAVE_PANEL,
+                    Command::new(commands::SHOW_SAVE_PANEL, Default::default()),
                 )
                 .hotkey(RawMods::CtrlShift, "s")
             }
@@ -784,7 +809,7 @@ pub mod sys {
             pub fn open_file<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-open"),
-                    commands::OPEN_FILE,
+                    Command::new(commands::SHOW_OPEN_PANEL, Default::default()),
                 )
                 .hotkey(RawMods::Meta, "o")
             }
@@ -802,7 +827,7 @@ pub mod sys {
             pub fn save<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    commands::SAVE_FILE,
+                    Command::new(commands::SAVE_FILE, None),
                 )
                 .hotkey(RawMods::Meta, "s")
             }
@@ -813,7 +838,7 @@ pub mod sys {
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-ellipsis"),
-                    commands::SAVE_FILE,
+                    Command::new(commands::SHOW_SAVE_PANEL, Default::default()),
                 )
                 .hotkey(RawMods::Meta, "s")
             }
@@ -822,7 +847,7 @@ pub mod sys {
             pub fn save_as<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-as"),
-                    commands::SHOW_SAVE_PANEL,
+                    Command::new(commands::SHOW_SAVE_PANEL, Default::default()),
                 )
                 .hotkey(RawMods::MetaShift, "s")
             }

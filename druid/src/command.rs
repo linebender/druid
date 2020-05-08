@@ -15,7 +15,10 @@
 //! Custom commands.
 
 use std::any::Any;
-use std::{marker::PhantomData, sync::{Arc, Mutex}};
+use std::{
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
 
 use crate::{WidgetId, WindowId};
 
@@ -28,7 +31,7 @@ pub type SelectorSymbol = &'static str;
 /// [`druid::commands`] module.
 ///
 /// [`druid::commands`]: commands/index.html
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Selector<T>(SelectorSymbol, PhantomData<T>);
 
 /// An arbitrary command.
@@ -87,6 +90,30 @@ pub enum ArgumentError {
     Consumed,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AppStateTypeError {
+    expected: &'static str,
+    found: &'static str,
+}
+
+impl AppStateTypeError {
+    pub fn new(expected: &'static str, found: &'static str) -> Self {
+        Self { expected, found }
+    }
+}
+
+impl std::fmt::Display for AppStateTypeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "Promise to represent the app state was not meet. Expected {} but got {}.",
+            self.expected, self.found
+        )
+    }
+}
+
+impl std::error::Error for AppStateTypeError {}
+
 /// The target of a command.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Target {
@@ -106,7 +133,11 @@ pub enum Target {
 /// [`Command`]: ../struct.Command.html
 pub mod sys {
     use super::Selector;
-    use crate::{FileDialogOptions, WindowId, FileInfo, menu::{AppStateContextMenu, AppStateMenuDesc}};
+    use crate::{
+        app::AppStateWindowDesc,
+        menu::{AppStateContextMenu, AppStateMenuDesc},
+        FileDialogOptions, FileInfo,
+    };
 
     /// Quit the running application. This command is handled by the druid library.
     pub const QUIT_APP: Selector<()> = Selector::new("druid-builtin.quit-app");
@@ -118,25 +149,31 @@ pub mod sys {
     pub const HIDE_OTHERS: Selector<()> = Selector::new("druid-builtin.menu-hide-others");
 
     /// The selector for a command to create a new window.
-    pub const NEW_WINDOW: Selector<()> = Selector::new("druid-builtin.new-window");
+    pub const NEW_WINDOW: Selector<AppStateWindowDesc> = Selector::new("druid-builtin.new-window");
 
-    /// The selector for a command to close a window. The command's argument
-    /// should be the id of the window to close.
-    pub const CLOSE_WINDOW: Selector<WindowId> = Selector::new("druid-builtin.close-window");
+    /// The selector for a command to close a window.
+    ///
+    /// The command must target a specific window.
+    /// When calling `submit_command` on a `Widget`s context, passing `None` as target
+    /// will automatically target the window containing the widget.
+    pub const CLOSE_WINDOW: Selector<()> = Selector::new("druid-builtin.close-window");
 
     /// Close all windows.
     pub const CLOSE_ALL_WINDOWS: Selector<()> = Selector::new("druid-builtin.close-all-windows");
 
     /// The selector for a command to bring a window to the front, and give it focus.
     ///
-    /// The command's argument should be the id of the target window.
-    pub const SHOW_WINDOW: Selector<WindowId> = Selector::new("druid-builtin.show-window");
+    /// The command must target a specific window.
+    /// When calling `submit_command` on a `Widget`s context, passing `None` as target
+    /// will automatically target the window containing the widget.
+    pub const SHOW_WINDOW: Selector<()> = Selector::new("druid-builtin.show-window");
 
     /// Display a context (right-click) menu. The argument must be the [`ContextMenu`].
     /// object to be displayed.
     ///
     /// [`ContextMenu`]: ../struct.ContextMenu.html
-    pub const SHOW_CONTEXT_MENU: Selector<AppStateContextMenu> = Selector::new("druid-builtin.show-context-menu");
+    pub const SHOW_CONTEXT_MENU: Selector<AppStateContextMenu> =
+        Selector::new("druid-builtin.show-context-menu");
 
     /// The selector for a command to set the window's menu. The argument should
     /// be a [`MenuDesc`] object.
@@ -163,7 +200,8 @@ pub mod sys {
     ///
     /// [`OPEN_FILE`]: constant.OPEN_FILE.html
     /// [`FileDialogOptions`]: ../struct.FileDialogOptions.html
-    pub const SHOW_OPEN_PANEL: Selector<FileDialogOptions> = Selector::new("druid-builtin.menu-file-open");
+    pub const SHOW_OPEN_PANEL: Selector<FileDialogOptions> =
+        Selector::new("druid-builtin.menu-file-open");
 
     /// Open a file.
     ///
@@ -180,12 +218,13 @@ pub mod sys {
     ///
     /// [`SAVE_FILE`]: constant.SAVE_FILE.html
     /// [`FileDialogOptions`]: ../struct.FileDialogOptions.html
-    pub const SHOW_SAVE_PANEL: Selector<FileDialogOptions> = Selector::new("druid-builtin.menu-file-save-as");
+    pub const SHOW_SAVE_PANEL: Selector<FileDialogOptions> =
+        Selector::new("druid-builtin.menu-file-save-as");
 
     /// Save the current file.
     ///
     /// The argument, if present, should be the path where the file should be saved.
-    pub const SAVE_FILE: Selector<FileInfo> = Selector::new("druid-builtin.menu-file-save");
+    pub const SAVE_FILE: Selector<Option<FileInfo>> = Selector::new("druid-builtin.menu-file-save");
 
     /// Show the print-setup window.
     pub const PRINT_SETUP: Selector<()> = Selector::new("druid-builtin.menu-file-print-setup");
@@ -273,8 +312,8 @@ impl Command {
         if self.selector != selector.symbol() {
             return Err(ArgumentError::WrongSelector);
         }
-        match self.object {
-            Arg::Reusable(o) => o.downcast_ref().ok_or(ArgumentError::IncorrectType),
+        match &self.object {
+            Arg::Reusable(obj) => obj.downcast_ref().ok_or(ArgumentError::IncorrectType),
             Arg::OneShot(_) => Err(ArgumentError::WrongVariant),
         }
     }
@@ -286,7 +325,7 @@ impl Command {
         if self.selector != selector.symbol() {
             return Err(ArgumentError::WrongSelector);
         }
-        match self.object {
+        match &self.object {
             Arg::Reusable(_) => Err(ArgumentError::WrongVariant),
             Arg::OneShot(inner) => {
                 let obj = inner
@@ -317,7 +356,12 @@ impl From<Selector<()>> for Command {
 
 impl<T> std::fmt::Display for Selector<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Selector(\"{}\", {})", self.0, std::any::type_name::<T>())
+        write!(
+            f,
+            "Selector(\"{}\", {})",
+            self.0,
+            std::any::type_name::<T>()
+        )
     }
 }
 
@@ -368,9 +412,10 @@ mod tests {
 
     #[test]
     fn get_object() {
-        let sel = Selector::<Vec<i32>>::new("my-selector");
+        let sel: Selector<Vec<i32>> = Selector::new("my-selector");
         let objs = vec![0, 1, 2];
-        let command = Command::new(sel, objs);
+        // TODO: find out why this now wants a `.clone()` even tho `Selector` implements `Copy`.
+        let command = Command::new(sel.clone(), objs);
         assert_eq!(command.get(sel), Ok(&vec![0, 1, 2]));
     }
 }

@@ -23,9 +23,9 @@ use druid::{
 
 use druid::widget::{Button, Either, Flex, Label};
 
-const START_SLOW_FUNCTION: Selector = Selector::new("start_slow_function");
+const START_SLOW_FUNCTION: Selector<u32> = Selector::new("start_slow_function");
 
-const FINISH_SLOW_FUNCTION: Selector = Selector::new("finish_slow_function");
+const FINISH_SLOW_FUNCTION: Selector<u32> = Selector::new("finish_slow_function");
 
 struct Delegate {
     eventsink: ExtEventSink,
@@ -61,15 +61,15 @@ impl AppDelegate<AppState> for Delegate {
         data: &mut AppState,
         _env: &Env,
     ) -> bool {
-        match cmd.selector {
-            START_SLOW_FUNCTION => {
+        match () {
+            _ if cmd.is(START_SLOW_FUNCTION) => {
                 data.processing = true;
                 wrapped_slow_function(self.eventsink.clone(), data.value);
                 true
             }
-            FINISH_SLOW_FUNCTION => {
+            _ if cmd.is(FINISH_SLOW_FUNCTION) => {
                 data.processing = false;
-                let number = cmd.get_object::<u32>().expect("api violation");
+                let number = cmd.get(FINISH_SLOW_FUNCTION).unwrap();
                 data.value = *number;
                 true
             }

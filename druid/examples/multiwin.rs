@@ -23,10 +23,10 @@ use druid::{
 
 use log::info;
 
-const MENU_COUNT_ACTION: Selector = Selector::new("menu-count-action");
-const MENU_INCREMENT_ACTION: Selector = Selector::new("menu-increment-action");
-const MENU_DECREMENT_ACTION: Selector = Selector::new("menu-decrement-action");
-const MENU_SWITCH_GLOW_ACTION: Selector = Selector::new("menu-switch-glow");
+const MENU_COUNT_ACTION: Selector<usize> = Selector::new("menu-count-action");
+const MENU_INCREMENT_ACTION: Selector<()> = Selector::new("menu-increment-action");
+const MENU_DECREMENT_ACTION: Selector<()> = Selector::new("menu-decrement-action");
+const MENU_SWITCH_GLOW_ACTION: Selector<()> = Selector::new("menu-switch-glow");
 
 #[derive(Debug, Clone, Default, Data)]
 struct State {
@@ -56,7 +56,7 @@ trait EventCtxExt {
 
 impl EventCtxExt for EventCtx<'_> {
     fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>) {
-        let cmd = Command::new(druid::commands::SET_MENU, menu);
+        let cmd = Command::new(druid::commands::SET_MENU, menu.into_app_state_menu_desc());
         let target = self.window_id();
         self.submit_command(cmd, target);
     }
@@ -155,7 +155,10 @@ impl AppDelegate<State> for Delegate {
         match event {
             Event::MouseDown(ref mouse) if mouse.button.is_right() => {
                 let menu = ContextMenu::new(make_context_menu::<State>(), mouse.pos);
-                let cmd = Command::new(druid::commands::SHOW_CONTEXT_MENU, menu);
+                let cmd = Command::new(
+                    druid::commands::SHOW_CONTEXT_MENU,
+                    menu.into_app_state_context_menu(),
+                );
                 ctx.submit_command(cmd, Target::Window(window_id));
                 None
             }
@@ -171,39 +174,40 @@ impl AppDelegate<State> for Delegate {
         data: &mut State,
         _env: &Env,
     ) -> bool {
-        match (target, &cmd.selector) {
-            (_, &sys_cmds::NEW_FILE) => {
-                let new_win = WindowDesc::new(ui_builder)
+        match target {
+            _ if cmd.is(sys_cmds::NEW_FILE) => {
+                let new_win = WindowDesc::<State>::new(ui_builder)
                     .menu(make_menu(data))
                     .window_size((data.selected as f64 * 100.0 + 300.0, 500.0));
-                let command = Command::one_shot(sys_cmds::NEW_WINDOW, new_win);
+                let command =
+                    Command::one_shot(sys_cmds::NEW_WINDOW, new_win.into_app_state_menu_desc());
                 ctx.submit_command(command, Target::Global);
                 false
             }
-            (Target::Window(id), &MENU_COUNT_ACTION) => {
-                data.selected = *cmd.get_object().unwrap();
+            Target::Window(id) if cmd.is(MENU_COUNT_ACTION) => {
+                data.selected = *cmd.get(MENU_COUNT_ACTION).unwrap();
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu);
+                let cmd = Command::new(druid::commands::SET_MENU, menu.into_app_state_menu_desc());
                 ctx.submit_command(cmd, id);
                 false
             }
             // wouldn't it be nice if a menu (like a button) could just mutate state
             // directly if desired?
-            (Target::Window(id), &MENU_INCREMENT_ACTION) => {
+            Target::Window(id) if cmd.is(MENU_INCREMENT_ACTION) => {
                 data.menu_count += 1;
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu);
+                let cmd = Command::new(druid::commands::SET_MENU, menu.into_app_state_menu_desc());
                 ctx.submit_command(cmd, id);
                 false
             }
-            (Target::Window(id), &MENU_DECREMENT_ACTION) => {
+            Target::Window(id) if cmd.is(MENU_DECREMENT_ACTION) => {
                 data.menu_count = data.menu_count.saturating_sub(1);
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu);
+                let cmd = Command::new(druid::commands::SET_MENU, menu.into_app_state_menu_desc());
                 ctx.submit_command(cmd, id);
                 false
             }
-            (_, &MENU_SWITCH_GLOW_ACTION) => {
+            _ if cmd.is(MENU_SWITCH_GLOW_ACTION) => {
                 data.glow_hot = !data.glow_hot;
                 false
             }
@@ -220,6 +224,7 @@ impl AppDelegate<State> for Delegate {
     ) {
         info!("Window added, id: {:?}", id);
     }
+
     fn window_removed(
         &mut self,
         id: WindowId,

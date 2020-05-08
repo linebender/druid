@@ -22,7 +22,7 @@ use druid::kurbo::RoundedRect;
 use druid::widget::prelude::*;
 use druid::{AppLauncher, Color, Data, LocalizedString, Rect, Selector, WidgetExt, WindowDesc};
 
-const SET_COLOR: Selector = Selector::new("event-example.set-color");
+const SET_COLOR: Selector<Color> = Selector::new("event-example.set-color");
 
 /// A widget that displays a color.
 struct ColorWell;
@@ -53,8 +53,8 @@ impl ColorWell {
 impl Widget<MyColor> for ColorWell {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut MyColor, _env: &Env) {
         match event {
-            Event::Command(cmd) if cmd.selector == SET_COLOR => {
-                data.0 = cmd.get_object::<Color>().unwrap().clone();
+            Event::Command(cmd) if cmd.is(SET_COLOR) => {
+                data.0 = cmd.get(SET_COLOR).unwrap().clone();
                 ctx.request_paint();
             }
             _ => (),
