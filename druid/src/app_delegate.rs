@@ -91,7 +91,7 @@ pub trait AppDelegate<T: Data> {
     fn command(
         &mut self,
         ctx: &mut DelegateCtx,
-        target: &Target,
+        target: Target,
         cmd: &Command,
         data: &mut T,
         env: &Env,

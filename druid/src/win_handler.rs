@@ -204,7 +204,7 @@ impl<T: Data> Inner<T> {
         }
     }
 
-    fn delegate_cmd(&mut self, target: &Target, cmd: &Command) -> bool {
+    fn delegate_cmd(&mut self, target: Target, cmd: &Command) -> bool {
         self.with_delegate(|del, data, env, ctx| del.command(ctx, target, cmd, data, env))
             .unwrap_or(true)
     }
@@ -306,7 +306,7 @@ impl<T: Data> Inner<T> {
     }
 
     fn dispatch_cmd(&mut self, target: Target, cmd: Command) {
-        if !self.delegate_cmd(&target, &cmd) {
+        if !self.delegate_cmd(target, &cmd) {
             return;
         }
 
