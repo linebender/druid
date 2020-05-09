@@ -44,6 +44,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Global `Application` associated functions are instance methods instead, e.g. `Application::global().quit()` instead of the old `Application::quit()`. ([#763] by [@xStrom])
 - Timer events will only be delivered to the widgets that requested them. ([#831] by [@sjoshid])
 - `Event::Wheel` now contains a `MouseEvent` structure. ([#895] by [@teddemunnik])
+- `AppDelegate::command` now receives a `Target` instead of a `&Target`. ([#909] by [@xStrom])
 
 ### Deprecated
 
@@ -153,6 +154,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#897]: https://github.com/xi-editor/druid/pull/897
 [#898]: https://github.com/xi-editor/druid/pull/898
 [#900]: https://github.com/xi-editor/druid/pull/900
+[#909]: https://github.com/xi-editor/druid/pull/909
 
 ## [0.5.0] - 2020-04-01
 

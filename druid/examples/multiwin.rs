@@ -166,7 +166,7 @@ impl AppDelegate<State> for Delegate {
     fn command(
         &mut self,
         ctx: &mut DelegateCtx,
-        target: &Target,
+        target: Target,
         cmd: &Command,
         data: &mut State,
         _env: &Env,
@@ -184,7 +184,7 @@ impl AppDelegate<State> for Delegate {
                 data.selected = *cmd.get_object().unwrap();
                 let menu = make_menu::<State>(data);
                 let cmd = Command::new(druid::commands::SET_MENU, menu);
-                ctx.submit_command(cmd, *id);
+                ctx.submit_command(cmd, id);
                 false
             }
             // wouldn't it be nice if a menu (like a button) could just mutate state
@@ -193,14 +193,14 @@ impl AppDelegate<State> for Delegate {
                 data.menu_count += 1;
                 let menu = make_menu::<State>(data);
                 let cmd = Command::new(druid::commands::SET_MENU, menu);
-                ctx.submit_command(cmd, *id);
+                ctx.submit_command(cmd, id);
                 false
             }
             (Target::Window(id), &MENU_DECREMENT_ACTION) => {
                 data.menu_count = data.menu_count.saturating_sub(1);
                 let menu = make_menu::<State>(data);
                 let cmd = Command::new(druid::commands::SET_MENU, menu);
-                ctx.submit_command(cmd, *id);
+                ctx.submit_command(cmd, id);
                 false
             }
             (_, &MENU_SWITCH_GLOW_ACTION) => {

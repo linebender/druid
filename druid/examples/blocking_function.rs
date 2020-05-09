@@ -56,7 +56,7 @@ impl AppDelegate<AppState> for Delegate {
     fn command(
         &mut self,
         _ctx: &mut DelegateCtx,
-        _target: &Target,
+        _target: Target,
         cmd: &Command,
         data: &mut AppState,
         _env: &Env,
