@@ -61,20 +61,15 @@ impl AppDelegate<AppState> for Delegate {
         data: &mut AppState,
         _env: &Env,
     ) -> bool {
-        match () {
-            _ if cmd.is(START_SLOW_FUNCTION) => {
-                data.processing = true;
-                wrapped_slow_function(self.eventsink.clone(), data.value);
-                true
-            }
-            _ if cmd.is(FINISH_SLOW_FUNCTION) => {
-                data.processing = false;
-                let number = cmd.get(FINISH_SLOW_FUNCTION).unwrap();
-                data.value = *number;
-                true
-            }
-            _ => true,
+        if cmd.is(START_SLOW_FUNCTION) {
+            data.processing = true;
+            wrapped_slow_function(self.eventsink.clone(), data.value);
         }
+        if let Ok(number) = cmd.get(FINISH_SLOW_FUNCTION) {
+            data.processing = false;
+            data.value = *number;
+        }
+        true
     }
 }
 

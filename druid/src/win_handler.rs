@@ -311,12 +311,11 @@ impl<T: Data> Inner<T> {
         match target {
             Target::Window(id) => {
                 // first handle special window-level events
-                match () {
-                    _ if cmd.is(sys_cmd::SET_MENU) => return self.set_menu(id, &cmd),
-                    _ if cmd.is(sys_cmd::SHOW_CONTEXT_MENU) => {
-                        return self.show_context_menu(id, &cmd)
-                    }
-                    _ => (),
+                if cmd.is(sys_cmd::SET_MENU) {
+                    return self.set_menu(id, &cmd);
+                }
+                if cmd.is(sys_cmd::SHOW_CONTEXT_MENU) {
+                    return self.show_context_menu(id, &cmd);
                 }
                 if let Some(w) = self.windows.get_mut(id) {
                     let event = Event::Command(cmd);
