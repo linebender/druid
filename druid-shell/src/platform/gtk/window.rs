@@ -412,8 +412,7 @@ impl WindowBuilder {
 
         win_state.drawing_area.connect_scroll_event(clone!(handle => move |_widget, scroll| {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
-
+                if let Ok(scale) = state.scale.try_borrow() {
                     let mods = get_modifiers(scroll.get_state());
 
                     // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
@@ -456,10 +455,14 @@ impl WindowBuilder {
                             wheel_delta
                         };
 
-                        handler.wheel(&mouse_event);
+                        if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                            handler.wheel(&mouse_event);
+                        } else {
+                            log::info!("GTK event was dropped because the handler was already borrowed");
+                        }
                     }
                 } else {
-                    log::info!("GTK event was dropped because the handler was already borrowed");
+                    log::warn!("GTK event was dropped because the scale was already borrowed");
                 }
             }
 
