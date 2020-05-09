@@ -721,8 +721,8 @@ impl WndProc for MyWndProc {
                         }
                     }
 
-                    let (px, py) = self.handle.borrow().pixels_to_px_xy(p.x, p.y);
-                    let pos = Point::new(px as f64, py as f64);
+                    let pos =
+                        self.with_scale(|scale| scale.px_to_pt_point((p.x as f64, p.y as f64)));
                     let buttons = get_buttons(down_state);
                     let event = MouseEvent {
                         pos,

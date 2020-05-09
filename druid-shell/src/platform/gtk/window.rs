@@ -447,7 +447,7 @@ impl WindowBuilder {
 
                     if let Some(wheel_delta) = wheel_delta {
                         let mouse_event = MouseEvent {
-                            pos: Point::from(scroll.get_position()),
+                            pos: scale.px_to_pt_point(Point::from(scroll.get_position())),
                             buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
                             mods,
                             count: 0,
