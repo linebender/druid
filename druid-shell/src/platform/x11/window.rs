@@ -31,7 +31,7 @@ use xcb::{
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
 use crate::keycodes::KeyCode;
-use crate::kurbo::{Point, Rect, Size};
+use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, RenderContext};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
@@ -566,6 +566,7 @@ impl Window {
             },
             count: 1,
             button: MouseButton::Left,
+            wheel_delta: Vec2::ZERO,
         };
         match self.handler.try_borrow_mut() {
             Ok(mut handler) => {
@@ -598,6 +599,7 @@ impl Window {
             },
             count: 0,
             button: MouseButton::Left,
+            wheel_delta: Vec2::ZERO,
         };
         match self.handler.try_borrow_mut() {
             Ok(mut handler) => {
@@ -630,6 +632,7 @@ impl Window {
             },
             count: 0,
             button: MouseButton::None,
+            wheel_delta: Vec2::ZERO,
         };
         match self.handler.try_borrow_mut() {
             Ok(mut handler) => {

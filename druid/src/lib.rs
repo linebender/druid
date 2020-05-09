@@ -152,7 +152,7 @@ pub use command::{sys as commands, Command, Selector, Target};
 pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, Region, UpdateCtx};
 pub use data::Data;
 pub use env::{Env, Key, KeyOrValue, Value, ValueType};
-pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle, WheelEvent};
+pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle};
 pub use ext_event::{ExtEventError, ExtEventSink};
 pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;

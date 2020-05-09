@@ -360,7 +360,13 @@ extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
     }
 }
 
-fn mouse_event(nsevent: id, view: id, count: u8, button: MouseButton) -> MouseEvent {
+fn mouse_event(
+    nsevent: id,
+    view: id,
+    count: u8,
+    button: MouseButton,
+    wheel_delta: Vec2,
+) -> MouseEvent {
     unsafe {
         let point = nsevent.locationInWindow();
         let view_point = view.convertPoint_fromView_(point, nil);
@@ -373,6 +379,7 @@ fn mouse_event(nsevent: id, view: id, count: u8, button: MouseButton) -> MouseEv
             mods: modifiers,
             count,
             button,
+            wheel_delta,
         }
     }
 }
@@ -429,7 +436,7 @@ fn mouse_down(this: &mut Object, nsevent: id, button: MouseButton) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let count = nsevent.clickCount() as u8;
-        let event = mouse_event(nsevent, this as id, count, button);
+        let event = mouse_event(nsevent, this as id, count, button, Vec2::ZERO);
         (*view_state).handler.mouse_down(&event);
     }
 }
@@ -454,7 +461,7 @@ fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, 0, button);
+        let event = mouse_event(nsevent, this as id, 0, button, Vec2::ZERO);
         (*view_state).handler.mouse_up(&event);
     }
 }
@@ -463,7 +470,7 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, 0, MouseButton::None);
+        let event = mouse_event(nsevent, this as id, 0, MouseButton::None, Vec2::ZERO);
         (*view_state).handler.mouse_move(&event);
     }
 }
@@ -481,11 +488,9 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
                 (dx * 32.0, dy * 32.0)
             }
         };
-        let mods = nsevent.modifierFlags();
-        let mods = make_modifiers(mods);
 
-        let delta = Vec2::new(dx, dy);
-        (*view_state).handler.wheel(delta, mods);
+        let event = mouse_event(nsevent, this as id, 0, MouseButton::None, Vec2::new(dx, dy));
+        (*view_state).handler.wheel(&event);
     }
 }
 

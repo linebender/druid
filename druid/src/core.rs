@@ -596,7 +596,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
             Event::Wheel(wheel_event) => {
                 recurse = had_active || child_ctx.base_state.is_hot;
-                Event::Wheel(wheel_event.clone())
+                let mut wheel_event = wheel_event.clone();
+                wheel_event.pos -= rect.origin().to_vec2();
+                Event::Wheel(wheel_event)
             }
             Event::Zoom(zoom) => {
                 recurse = had_active || child_ctx.base_state.is_hot;

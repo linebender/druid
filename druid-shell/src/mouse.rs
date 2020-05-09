@@ -14,7 +14,7 @@
 
 //! Common types for representing mouse events and state
 
-use crate::kurbo::Point;
+use crate::kurbo::{Point, Vec2};
 
 use crate::keyboard::KeyModifiers;
 
@@ -38,6 +38,15 @@ pub struct MouseEvent {
     /// or the button that was released in the case of mouse-up.
     /// This will always be `MouseButton::None` in the case of mouse-move.
     pub button: MouseButton,
+    /// The wheel movement.
+    ///
+    /// The polarity is the amount to be added to the scroll position,
+    /// in other words the opposite of the direction the content should
+    /// move on scrolling. This polarity is consistent with the
+    /// deltaX and deltaY values in a web [WheelEvent].
+    ///
+    /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
+    pub wheel_delta: Vec2,
 }
 
 /// An indicator of which mouse button was pressed.

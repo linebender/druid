@@ -43,6 +43,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `request_timer` uses `Duration` instead of `Instant`. ([#847] by [@finnerale])
 - Global `Application` associated functions are instance methods instead, e.g. `Application::global().quit()` instead of the old `Application::quit()`. ([#763] by [@xStrom])
 - Timer events will only be delivered to the widgets that requested them. ([#831] by [@sjoshid])
+- `Event::Wheel` now contains a `MouseEvent` structure. ([#895] by [@teddemunnik])
 
 ### Deprecated
 
@@ -148,6 +149,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#889]: https://github.com/xi-editor/druid/pull/889
 [#892]: https://github.com/xi-editor/druid/pull/892
 [#894]: https://github.com/xi-editor/druid/pull/894
+[#895]: https://github.com/xi-editor/druid/pull/895
 [#897]: https://github.com/xi-editor/druid/pull/897
 [#898]: https://github.com/xi-editor/druid/pull/898
 [#900]: https://github.com/xi-editor/druid/pull/900

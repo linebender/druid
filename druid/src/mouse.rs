@@ -14,10 +14,10 @@
 
 //! The mousey bits
 
-use crate::kurbo::Point;
+use crate::kurbo::{Point, Vec2};
 use crate::{KeyModifiers, MouseButton, MouseButtons};
 
-/// Information about the mouse click event.
+/// The state of the mouse for a click, mouse-up, move, or wheel event.
 ///
 /// In `druid`, unlike in `druid_shell`, we treat the widget's coordinate
 /// space and the window's coordinate space separately.
@@ -40,6 +40,15 @@ pub struct MouseEvent {
     /// or the button that was released in the case of mouse-up.
     /// This will always be `MouseButton::None` in the case of mouse-move.
     pub button: MouseButton,
+    /// The wheel movement.
+    ///
+    /// The polarity is the amount to be added to the scroll position,
+    /// in other words the opposite of the direction the content should
+    /// move on scrolling. This polarity is consistent with the
+    /// deltaX and deltaY values in a web [WheelEvent].
+    ///
+    /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
+    pub wheel_delta: Vec2,
 }
 
 impl From<druid_shell::MouseEvent> for MouseEvent {
@@ -50,6 +59,7 @@ impl From<druid_shell::MouseEvent> for MouseEvent {
             mods,
             count,
             button,
+            wheel_delta,
         } = src;
         MouseEvent {
             pos,
@@ -58,6 +68,7 @@ impl From<druid_shell::MouseEvent> for MouseEvent {
             mods,
             count,
             button,
+            wheel_delta,
         }
     }
 }
