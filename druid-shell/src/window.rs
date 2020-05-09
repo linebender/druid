@@ -233,7 +233,7 @@ impl WindowBuilder {
         self.0.set_handler(handler)
     }
 
-    /// Set the window's initial drawing area size in points.
+    /// Set the window's initial drawing area size in display points.
     ///
     /// The actual window size in pixels will depend on the platform DPI settings.
     ///
@@ -246,7 +246,7 @@ impl WindowBuilder {
         self.0.set_size(size)
     }
 
-    /// Set the window's minimum drawing area size in points.
+    /// Set the window's minimum drawing area size in display points.
     ///
     /// The actual minimum window size in pixels will depend on the platform DPI settings.
     ///
@@ -300,14 +300,14 @@ pub trait WinHandler {
 
     /// Called when the size of the window has changed.
     ///
-    /// The `size` parameter is the new size in points.
+    /// The `size` parameter is the new size in display points.
     #[allow(unused_variables)]
     fn size(&mut self, size: Size) {}
 
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
     /// should be scheduled for the next animation frame. `invalid_rect` is the
-    /// rectangle in points that needs to be repainted.
+    /// rectangle in display points that needs to be repainted.
     fn paint(&mut self, piet: &mut piet_common::Piet, invalid_rect: Rect) -> bool;
 
     /// Called when the resources need to be rebuilt.

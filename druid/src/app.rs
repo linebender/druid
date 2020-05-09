@@ -187,10 +187,10 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Set the window's initial drawing area size in points.
+    /// Set the window's initial drawing area size in display points.
     ///
     /// You can pass in a tuple `(width, height)` or a [`Size`],
-    /// e.g. to create a window with a drawing area 1000pt wide and 500pt high:
+    /// e.g. to create a window with a drawing area 1000dp wide and 500dp high:
     ///
     /// ```ignore
     /// window.window_size((1000.0, 500.0));
@@ -207,7 +207,7 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Set the window's minimum drawing area size in points.
+    /// Set the window's minimum drawing area size in display points.
     ///
     /// The actual minimum window size in pixels will depend on the platform DPI settings.
     ///

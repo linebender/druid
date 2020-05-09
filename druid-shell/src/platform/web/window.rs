@@ -227,16 +227,16 @@ fn setup_resize_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_window_event_listener(ws, "resize", move |_: web_sys::UiEvent| {
         let (css_width, css_height, dpr) = state.get_window_size_and_dpr();
-        let size_pt = state.scale.try_borrow_mut().map_or(None, |mut scale| {
+        let size_dp = state.scale.try_borrow_mut().map_or(None, |mut scale| {
             *scale = Scale::from_scale(dpr, dpr);
-            let size_px = scale.set_size_pt(Size::new(css_width, css_height));
+            let size_px = scale.set_size_dp(Size::new(css_width, css_height));
             state.canvas.set_width(size_px.width as u32);
             state.canvas.set_height(size_px.height as u32);
             let _ = state.context.scale(scale.scale_x(), scale.scale_y());
-            Some(scale.size_pt())
+            Some(scale.size_dp())
         });
-        if let Some(size_pt) = size_pt {
-            state.handler.borrow_mut().size(size_pt);
+        if let Some(size_dp) = size_dp {
+            state.handler.borrow_mut().size(size_dp);
         } else {
             log::error!("Skipped resize event because couldn't borrow scale");
         }
@@ -370,14 +370,14 @@ impl WindowBuilder {
             Scale::from_scale(dpr, dpr)
         };
         let size_px = {
-            // The initial size in points isn't necessarily the final size in points
-            let size_pt = Size::new(canvas.offset_width() as f64, canvas.offset_height() as f64);
-            scale.set_size_pt(size_pt)
+            // The initial size in display points isn't necessarily the final size in display points
+            let size_dp = Size::new(canvas.offset_width() as f64, canvas.offset_height() as f64);
+            scale.set_size_dp(size_dp)
         };
         canvas.set_width(size_px.width as u32);
         canvas.set_height(size_px.height as u32);
         let _ = context.scale(scale.scale_x(), scale.scale_y());
-        let size_pt = scale.size_pt();
+        let size_dp = scale.size_dp();
 
         set_cursor(&canvas, &self.cursor);
 
@@ -399,7 +399,7 @@ impl WindowBuilder {
         let wh = window.clone();
         window
             .request_animation_frame(move || {
-                wh.handler.borrow_mut().size(size_pt);
+                wh.handler.borrow_mut().size(size_dp);
             })
             .expect("Failed to request animation frame");
 
@@ -447,7 +447,7 @@ impl WindowHandle {
     pub fn invalidate(&self) {
         if let Some(s) = self.0.upgrade() {
             if let Ok(scale) = s.scale.try_borrow() {
-                s.invalid_rect.set(scale.size_pt().to_rect());
+                s.invalid_rect.set(scale.size_dp().to_rect());
             } else {
                 log::error!("Failed to get scale");
             }

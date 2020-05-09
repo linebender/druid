@@ -453,13 +453,12 @@ impl WndProc for MyWndProc {
                         s.render_target = rt.ok();
                     }
                     s.handler.rebuild_resources();
-                    let rect_pt =
-                        self.with_scale(|scale| scale.px_to_pt_rect(util::recti_to_rect(rect)));
+                    let rect_dp = self.with_scale(|scale| scale.to_dp(&util::recti_to_rect(rect)));
                     s.render(
                         &self.d2d_factory,
                         &self.dwrite_factory,
                         &self.handle,
-                        rect_pt,
+                        rect_dp,
                     );
                     if let Some(ref mut ds) = s.dcomp_state {
                         let params = DXGI_PRESENT_PARAMETERS {
@@ -486,13 +485,13 @@ impl WndProc for MyWndProc {
                         let rt = paint::create_render_target(&self.d2d_factory, hwnd);
                         s.render_target = rt.ok();
                         {
-                            let rect_pt = self.with_scale(|scale| scale.size_pt().to_rect());
+                            let rect_dp = self.with_scale(|scale| scale.size_dp().to_rect());
                             s.handler.rebuild_resources();
                             s.render(
                                 &self.d2d_factory,
                                 &self.dwrite_factory,
                                 &self.handle,
-                                rect_pt,
+                                rect_dp,
                             );
                         }
 
@@ -527,7 +526,7 @@ impl WndProc for MyWndProc {
                                 &self.d2d_factory,
                                 &self.dwrite_factory,
                                 &self.handle,
-                                scale.size_pt().to_rect(),
+                                scale.size_dp().to_rect(),
                             );
                             (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
                         } else {
@@ -554,9 +553,9 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     let width = LOWORD(lparam as u32) as u32;
                     let height = HIWORD(lparam as u32) as u32;
-                    let size_pt = self
+                    let size_dp = self
                         .with_scale_mut(|scale| scale.set_size_px((width as f64, height as f64)));
-                    s.handler.size(size_pt);
+                    s.handler.size(size_dp);
                     let use_hwnd = if let Some(ref dcomp_state) = s.dcomp_state {
                         dcomp_state.sizing
                     } else {
@@ -588,11 +587,16 @@ impl WndProc for MyWndProc {
                             );
                         }
                         if SUCCEEDED(res) {
-                            let rect = size_pt.to_rect();
+                            let rect_dp = size_dp.to_rect();
                             self.with_scale(|scale| {
                                 s.rebuild_render_target(&self.d2d_factory, scale)
                             });
-                            s.render(&self.d2d_factory, &self.dwrite_factory, &self.handle, rect);
+                            s.render(
+                                &self.d2d_factory,
+                                &self.dwrite_factory,
+                                &self.handle,
+                                rect_dp,
+                            );
                             if let Some(ref mut dcomp_state) = s.dcomp_state {
                                 (*dcomp_state.swap_chain).Present(0, 0);
                                 let _ = dcomp_state.dcomp_device.commit();
@@ -722,7 +726,7 @@ impl WndProc for MyWndProc {
                     }
 
                     let pos =
-                        self.with_scale(|scale| scale.px_to_pt_point((p.x as f64, p.y as f64)));
+                        self.with_scale(|scale| scale.to_dp(&(p.x as f64, p.y as f64).into()));
                     let buttons = get_buttons(down_state);
                     let event = MouseEvent {
                         pos,
@@ -768,7 +772,7 @@ impl WndProc for MyWndProc {
                         }
                     }
 
-                    let pos = self.with_scale(|scale| scale.px_to_pt_point((x as f64, y as f64)));
+                    let pos = self.with_scale(|scale| scale.to_dp(&(x as f64, y as f64).into()));
                     let mods = KeyModifiers {
                         shift: wparam & MK_SHIFT != 0,
                         alt: get_mod_state_alt(),
@@ -836,7 +840,7 @@ impl WndProc for MyWndProc {
                         let x = LOWORD(lparam as u32) as i16 as i32;
                         let y = HIWORD(lparam as u32) as i16 as i32;
                         let pos =
-                            self.with_scale(|scale| scale.px_to_pt_point((x as f64, y as f64)));
+                            self.with_scale(|scale| scale.to_dp(&(x as f64, y as f64).into()));
                         let mods = KeyModifiers {
                             shift: wparam & MK_SHIFT != 0,
                             alt: get_mod_state_alt(),
@@ -922,9 +926,9 @@ impl WndProc for MyWndProc {
                 let min_max_info = unsafe { &mut *(lparam as *mut MINMAXINFO) };
                 if let Ok(s) = self.state.try_borrow() {
                     let s = s.as_ref().unwrap();
-                    if let Some(min_size_pt) = s.min_size {
+                    if let Some(min_size_dp) = s.min_size {
                         let min_size_px = self.with_scale(|scale| {
-                            Scale::from_dpi(scale.dpi_x(), scale.dpi_y()).set_size_pt(min_size_pt)
+                            Scale::from_dpi(scale.dpi_x(), scale.dpi_y()).set_size_dp(min_size_dp)
                         });
                         min_max_info.ptMinTrackSize.x = min_size_px.width as i32;
                         min_max_info.ptMinTrackSize.y = min_size_px.height as i32;
@@ -1023,7 +1027,7 @@ impl WindowBuilder {
                 96.0
             };
             let mut scale = Scale::from_dpi(dpi, dpi);
-            let size_px = scale.set_size_pt(self.size);
+            let size_px = scale.set_size_dp(self.size);
 
             let window = WindowState {
                 hwnd: Cell::new(0 as HWND),
@@ -1325,10 +1329,11 @@ impl WindowHandle {
 
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(w) = self.state.upgrade() {
-            let rect =
-                w.scale.try_borrow().ok().map(|scale| {
-                    util::rect_to_recti(scale::expand_rect(scale.pt_to_px_rect(rect)))
-                });
+            let rect = w
+                .scale
+                .try_borrow()
+                .ok()
+                .map(|scale| util::rect_to_recti(scale::expand_rect(scale.to_px(&rect))));
             let hwnd = w.hwnd.get();
             unsafe {
                 let result = match rect {
@@ -1415,7 +1420,7 @@ impl WindowHandle {
         let hmenu = menu.into_hmenu();
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
-            let pos = w.scale.borrow().pt_to_px_point(pos).round();
+            let pos = w.scale.borrow().to_px(&pos).round();
             unsafe {
                 let mut point = POINT {
                     x: pos.x as i32,

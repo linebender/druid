@@ -48,7 +48,7 @@ widgets].
 
 Widgets are intended to be modular and composable, not monolithic. For instance,
 widgets generally do not control their own alignment or padding; if you have
-a label, and you would like it to have 8pt of horizontal padding and 4pt of
+a label, and you would like it to have 8dp of horizontal padding and 4dp of
 vertical padding, you can just do,
 
 ```rust,noplaypen

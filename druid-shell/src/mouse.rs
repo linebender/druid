@@ -24,7 +24,7 @@ use crate::keyboard::KeyModifiers;
 /// receiving a move event before another mouse event.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MouseEvent {
-    /// The location of the mouse in points in relation to the current window.
+    /// The location of the mouse in display points in relation to the current window.
     pub pos: Point,
     /// Mouse buttons being held down during a move or after a click event.
     /// Thus it will contain the `button` that triggered a mouse-down event,

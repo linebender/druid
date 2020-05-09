@@ -23,15 +23,15 @@ const SCALE_TARGET_DPI: f64 = 96.0;
 /// Resolution scaling state.
 ///
 /// This holds the platform DPI, the platform area size in pixels,
-/// the logical area size in points, and the scale factors between them.
+/// the logical area size in display points, and the scale factors between them.
 ///
-/// To translate coordinates between pixels and points you should use one of the
+/// To translate coordinates between pixels and display points you should use one of the
 /// helper conversion methods of `Scale` or for manual conversion [`scale_x`] / [`scale_y`].
 ///
 /// The platform area size in pixels tends to be limited to integers and `Scale` works
 /// under that assumption.
 ///  
-/// The logical area size in points is an unrounded conversion, which means that it is
+/// The logical area size in display points is an unrounded conversion, which means that it is
 /// often not limited to integers. This allows for accurate calculations of
 /// the platform area pixel boundaries from the logcal area using the scale factors.
 ///
@@ -57,10 +57,26 @@ pub struct Scale {
     scale_x: f64,
     /// The scale factor on the y axis.
     scale_y: f64,
-    /// The size of the scaled area in points.
-    size_pt: Size,
+    /// The size of the scaled area in display points.
+    size_dp: Size,
     /// The size of the scaled area in pixels.
     size_px: Size,
+}
+
+/// The `Scalable` trait describes how coordinates should be translated
+/// from display points into pixels and vice versa using a [`Scale`].
+///
+/// [`Scale`]: struct.Scale.html
+pub trait Scalable {
+    /// Converts the scalable item from display points into pixels,
+    /// using the x axis scale factor for coordinates on the x axis
+    /// and the y axis scale factor for coordinates on the y axis.
+    fn to_px(&self, scale: &Scale) -> Self;
+
+    /// Converts the scalable item from pixels into display points,
+    /// using the x axis scale factor for coordinates on the x axis
+    /// and the y axis scale factor for coordinates on the y axis.
+    fn to_dp(&self, scale: &Scale) -> Self;
 }
 
 impl Scale {
@@ -73,7 +89,7 @@ impl Scale {
             dpi_y,
             scale_x: dpi_x / SCALE_TARGET_DPI,
             scale_y: dpi_y / SCALE_TARGET_DPI,
-            size_pt: Size::ZERO,
+            size_dp: Size::ZERO,
             size_px: Size::ZERO,
         }
     }
@@ -87,34 +103,34 @@ impl Scale {
             dpi_y: SCALE_TARGET_DPI * scale_y,
             scale_x,
             scale_y,
-            size_pt: Size::ZERO,
+            size_dp: Size::ZERO,
             size_px: Size::ZERO,
         }
     }
 
     /// Set the size of the scaled area in pixels.
     ///
-    /// This updates the internal state and returns the same size in points.
+    /// This updates the internal state and returns the same size in display points.
     pub fn set_size_px<T: Into<Size>>(&mut self, size: T) -> Size {
         let size = size.into();
         self.size_px = size;
-        self.size_pt = self.px_to_pt_size(size);
-        self.size_pt
+        self.size_dp = self.to_dp(&size);
+        self.size_dp
     }
 
-    /// Set the size of the scaled area in pixels via conversion from points.
+    /// Set the size of the scaled area in pixels via conversion from display points.
     ///
     /// This updates the internal state and returns the same size in pixels.
     ///
     /// The calculated size in pixels is rounded away from zero to integers.
-    /// That means that the scaled area size in points isn't always the same
-    /// as the `size` given to this method. To find out the new size in points use [`size_pt`].
+    /// That means that the scaled area size in display points isn't always the same
+    /// as the `size` given to this method. To find out the new size in points use [`size_dp`].
     ///
-    /// [`size_pt`]: #method.size_pt
-    pub fn set_size_pt<T: Into<Size>>(&mut self, size: T) -> Size {
+    /// [`size_dp`]: #method.size_dp
+    pub fn set_size_dp<T: Into<Size>>(&mut self, size: T) -> Size {
         let size = size.into();
-        self.size_px = self.pt_to_px_size(size).expand();
-        self.size_pt = self.px_to_pt_size(self.size_px);
+        self.size_px = self.to_px(&size).expand();
+        self.size_dp = self.to_dp(&self.size_px);
         self.size_px
     }
 
@@ -149,10 +165,10 @@ impl Scale {
         self.scale_y
     }
 
-    /// Returns the scaled area size in points.
+    /// Returns the scaled area size in display points.
     #[inline]
-    pub fn size_pt(&self) -> Size {
-        self.size_pt
+    pub fn size_dp(&self) -> Size {
+        self.size_dp
     }
 
     /// Returns the scaled area size in pixels.
@@ -161,104 +177,58 @@ impl Scale {
         self.size_px
     }
 
-    /// Converts from points into pixels, using the x axis scale factor.
+    /// Converts from display points into pixels, using the x axis scale factor.
     #[inline]
-    pub fn pt_to_px_x<T: Into<f64>>(&self, x: T) -> f64 {
+    pub fn dp_to_px_x<T: Into<f64>>(&self, x: T) -> f64 {
         x.into() * self.scale_x
     }
 
-    /// Converts from points into pixels, using the y axis scale factor.
+    /// Converts from display points into pixels, using the y axis scale factor.
     #[inline]
-    pub fn pt_to_px_y<T: Into<f64>>(&self, y: T) -> f64 {
+    pub fn dp_to_px_y<T: Into<f64>>(&self, y: T) -> f64 {
         y.into() * self.scale_y
     }
 
-    /// Converts from points into pixels,
+    /// Converts from display points into pixels,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    pub fn pt_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f64, f64) {
+    pub fn dp_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f64, f64) {
         (x.into() * self.scale_x, y.into() * self.scale_y)
     }
 
-    /// Converts a `Point` from points into pixels,
-    /// using the x axis scale factor for `Point::x` and the y axis scale factor for `Point::y`.
+    /// Converts the `item` from display points into pixels,
+    /// using the x axis scale factor for coordinates on the x axis
+    /// and the y axis scale factor for coordinates on the y axis.
     #[inline]
-    pub fn pt_to_px_point<T: Into<Point>>(&self, point: T) -> Point {
-        let point = point.into();
-        Point::new(point.x * self.scale_x, point.y * self.scale_y)
+    pub fn to_px<T: Scalable>(&self, item: &T) -> T {
+        item.to_px(self)
     }
 
-    /// Converts a `Rect` from points into pixels,
-    /// using the x axis scale factor for `Rect::x0` and `Rect::x1`
-    /// and the y axis scale factor for `Rect::y0` and `Rect::y1`.
+    /// Converts from pixels into display points, using the x axis scale factor.
     #[inline]
-    pub fn pt_to_px_rect<T: Into<Rect>>(&self, rect: T) -> Rect {
-        let rect = rect.into();
-        Rect::new(
-            rect.x0 * self.scale_x,
-            rect.y0 * self.scale_y,
-            rect.x1 * self.scale_x,
-            rect.y1 * self.scale_y,
-        )
-    }
-
-    /// Converts a `Size` from points into pixels,
-    /// using the x axis scale factor for `Size::width`
-    /// and the y axis scale factor for `Size::height`.
-    #[inline]
-    pub fn pt_to_px_size<T: Into<Size>>(&self, size: T) -> Size {
-        let size = size.into();
-        Size::new(size.width * self.scale_x, size.height * self.scale_y)
-    }
-
-    /// Converts from pixels into points, using the x axis scale factor.
-    #[inline]
-    pub fn px_to_pt_x<T: Into<f64>>(&self, x: T) -> f64 {
+    pub fn px_to_dp_x<T: Into<f64>>(&self, x: T) -> f64 {
         x.into() / self.scale_x
     }
 
-    /// Converts from pixels into points, using the y axis scale factor.
+    /// Converts from pixels into display points, using the y axis scale factor.
     #[inline]
-    pub fn px_to_pt_y<T: Into<f64>>(&self, y: T) -> f64 {
+    pub fn px_to_dp_y<T: Into<f64>>(&self, y: T) -> f64 {
         y.into() / self.scale_y
     }
 
-    /// Converts from pixels into points,
+    /// Converts from pixels into display points,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    pub fn px_to_pt_xy<T: Into<f64>>(&self, x: T, y: T) -> (f64, f64) {
+    pub fn px_to_dp_xy<T: Into<f64>>(&self, x: T, y: T) -> (f64, f64) {
         (x.into() / self.scale_x, y.into() / self.scale_y)
     }
 
-    /// Converts a `Point` from pixels into points,
-    /// using the x axis scale factor for `Point::x` and the y axis scale factor for `Point::y`.
+    /// Converts the `item` from pixels into display points,
+    /// using the x axis scale factor for coordinates on the x axis
+    /// and the y axis scale factor for coordinates on the y axis.
     #[inline]
-    pub fn px_to_pt_point<T: Into<Point>>(&self, point: T) -> Point {
-        let point = point.into();
-        Point::new(point.x / self.scale_x, point.y / self.scale_y)
-    }
-
-    /// Converts a `Rect` from pixels into points,
-    /// using the x axis scale factor for `Rect::x0` and `Rect::x1`
-    /// and the y axis scale factor for `Rect::y0` and `Rect::y1`.
-    #[inline]
-    pub fn px_to_pt_rect<T: Into<Rect>>(&self, rect: T) -> Rect {
-        let rect = rect.into();
-        Rect::new(
-            rect.x0 / self.scale_x,
-            rect.y0 / self.scale_y,
-            rect.x1 / self.scale_x,
-            rect.y1 / self.scale_y,
-        )
-    }
-
-    /// Converts a `Size` from pixels into points,
-    /// using the x axis scale factor for `Size::width`
-    /// and the y axis scale factor for `Size::height`.
-    #[inline]
-    pub fn px_to_pt_size<T: Into<Size>>(&self, size: T) -> Size {
-        let size = size.into();
-        Size::new(size.width / self.scale_x, size.height / self.scale_y)
+    pub fn to_dp<T: Scalable>(&self, item: &T) -> T {
+        item.to_dp(self)
     }
 }
 
@@ -267,13 +237,76 @@ impl std::fmt::Debug for Scale {
         write!(
             f,
             "DPI ({}, {}) => ({}, {}) | {:?} => {:?}",
-            self.dpi_x, self.dpi_y, self.scale_x, self.scale_y, self.size_px, self.size_pt,
+            self.dpi_x, self.dpi_y, self.scale_x, self.scale_y, self.size_px, self.size_dp,
+        )
+    }
+}
+
+impl Scalable for Point {
+    /// Converts a `Point` from display points into pixels,
+    /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
+    #[inline]
+    fn to_px(&self, scale: &Scale) -> Point {
+        Point::new(self.x * scale.scale_x, self.y * scale.scale_y)
+    }
+
+    /// Converts a `Point` from pixels into display points,
+    /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
+    #[inline]
+    fn to_dp(&self, scale: &Scale) -> Point {
+        Point::new(self.x / scale.scale_x, self.y / scale.scale_y)
+    }
+}
+
+impl Scalable for Size {
+    /// Converts a `Size` from display points into pixels,
+    /// using the x axis scale factor for `width`
+    /// and the y axis scale factor for `height`.
+    #[inline]
+    fn to_px(&self, scale: &Scale) -> Size {
+        Size::new(self.width * scale.scale_x, self.height * scale.scale_y)
+    }
+
+    /// Converts a `Size` from pixels into points,
+    /// using the x axis scale factor for `width`
+    /// and the y axis scale factor for `height`.
+    #[inline]
+    fn to_dp(&self, scale: &Scale) -> Size {
+        Size::new(self.width / scale.scale_x, self.height / scale.scale_y)
+    }
+}
+
+impl Scalable for Rect {
+    /// Converts a `Rect` from display points into pixels,
+    /// using the x axis scale factor for `x0` and `x1`
+    /// and the y axis scale factor for `y0` and `y1`.
+    #[inline]
+    fn to_px(&self, scale: &Scale) -> Rect {
+        Rect::new(
+            self.x0 * scale.scale_x,
+            self.y0 * scale.scale_y,
+            self.x1 * scale.scale_x,
+            self.y1 * scale.scale_y,
+        )
+    }
+
+    /// Converts a `Rect` from pixels into display points,
+    /// using the x axis scale factor for `x0` and `x1`
+    /// and the y axis scale factor for `y0` and `y1`.
+    #[inline]
+    fn to_dp(&self, scale: &Scale) -> Rect {
+        Rect::new(
+            self.x0 / scale.scale_x,
+            self.y0 / scale.scale_y,
+            self.x1 / scale.scale_x,
+            self.y1 / scale.scale_y,
         )
     }
 }
 
 // TODO: Replace usages of this with rect.expand() after kurbo#107 has landed.
 #[allow(dead_code)]
+#[doc(hidden)]
 pub fn expand_rect(rect: Rect) -> Rect {
     let (x0, x1) = if rect.x0 < rect.x1 {
         (rect.x0.floor(), rect.x1.ceil())

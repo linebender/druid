@@ -62,7 +62,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Timer events will only be delivered to the widgets that requested them. ([#831] by [@sjoshid])
 - `Event::Wheel` now contains a `MouseEvent` structure. ([#895] by [@teddemunnik])
 - The `WindowHandle::get_dpi` method got replaced by `WindowHandle::get_scale`. ([#904] by [@xStrom])
-- The `WinHandler::size` method now gets a `Size` in points. ([#904] by [@xStrom])
+- The `WinHandler::size` method now gets a `Size` in display points. ([#904] by [@xStrom])
 - `AppDelegate::command` now receives a `Target` instead of a `&Target`. ([#909] by [@xStrom])
 - `SHOW_WINDOW` and `CLOSE_WINDOW` commands now only use `Target` to determine the affected window. ([#928] by [@finnerale])
 - Replaced `NEW_WINDOW`, `SET_MENU` and `SHOW_CONTEXT_MENU` commands with methods on `EventCtx` and `DelegateCtx`. ([#931] by [@finnerale])

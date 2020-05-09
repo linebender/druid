@@ -173,7 +173,7 @@ impl WindowBuilder {
             .map(|c| c.get_default_screen().get_resolution() as f64)
             .unwrap_or(96.0);
         let mut scale = Scale::from_dpi(dpi, dpi);
-        let size_px = scale.set_size_pt(self.size);
+        let size_px = scale.set_size_dp(self.size);
 
         window.set_default_size(size_px.width as i32, size_px.height as i32);
 
@@ -236,9 +236,9 @@ impl WindowBuilder {
             });
 
         // Set the minimum size
-        if let Some(size_pt) = self.min_size {
+        if let Some(size_dp) = self.min_size {
             let mut scale = Scale::from_dpi(dpi, dpi);
-            let size_px = scale.set_size_pt(size_pt);
+            let size_px = scale.set_size_dp(size_dp);
             win_state
                 .drawing_area
                 .set_size_request(size_px.width as i32, size_px.height as i32);
@@ -262,9 +262,9 @@ impl WindowBuilder {
                     let extents = widget.get_allocation();
                     let size_px = Size::new(extents.width as f64, extents.height as f64);
                     if scale.size_px() != size_px {
-                        let size_pt = scale.set_size_px(size_px);
+                        let size_dp = scale.set_size_px(size_px);
                         if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                            handler_borrow.size(size_pt);
+                            handler_borrow.size(size_dp);
                         } else {
                             log::warn!("Failed to inform the handler of a resize because it was already borrowed");
                         }
@@ -306,7 +306,7 @@ impl WindowBuilder {
                             let button_state = event.get_state();
                             handler.mouse_down(
                                 &MouseEvent {
-                                    pos: scale.px_to_pt_point(Point::from(event.get_position())),
+                                    pos: scale.to_dp(&Point::from(event.get_position())),
                                     buttons: get_mouse_buttons_from_modifiers(button_state).with(button),
                                     mods: get_modifiers(button_state),
                                     count: get_mouse_click_count(event.get_event_type()),
@@ -335,7 +335,7 @@ impl WindowBuilder {
                             let button_state = event.get_state();
                             handler.mouse_up(
                                 &MouseEvent {
-                                    pos: scale.px_to_pt_point(Point::from(event.get_position())),
+                                    pos: scale.to_dp(&Point::from(event.get_position())),
                                     buttons: get_mouse_buttons_from_modifiers(button_state).without(button),
                                     mods: get_modifiers(button_state),
                                     count: 0,
@@ -361,7 +361,7 @@ impl WindowBuilder {
                 if let Ok(scale) = state.scale.try_borrow() {
                     let motion_state = motion.get_state();
                     let mouse_event = MouseEvent {
-                        pos: scale.px_to_pt_point(Point::from(motion.get_position())),
+                        pos: scale.to_dp(&Point::from(motion.get_position())),
                         buttons: get_mouse_buttons_from_modifiers(motion_state),
                         mods: get_modifiers(motion_state),
                         count: 0,
@@ -388,7 +388,7 @@ impl WindowBuilder {
                 if let Ok(scale) = state.scale.try_borrow() {
                     let crossing_state = crossing.get_state();
                     let mouse_event = MouseEvent {
-                        pos: scale.px_to_pt_point(Point::from(crossing.get_position())),
+                        pos: scale.to_dp(&Point::from(crossing.get_position())),
                         buttons: get_mouse_buttons_from_modifiers(crossing_state),
                         mods: get_modifiers(crossing_state),
                         count: 0,
@@ -447,7 +447,7 @@ impl WindowBuilder {
 
                     if let Some(wheel_delta) = wheel_delta {
                         let mouse_event = MouseEvent {
-                            pos: scale.px_to_pt_point(Point::from(scroll.get_position())),
+                            pos: scale.to_dp(&Point::from(scroll.get_position())),
                             buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
                             mods,
                             count: 0,
@@ -567,7 +567,7 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             if let Ok(scale) = state.scale.try_borrow() {
                 // GTK takes rects with non-negative integer width/height.
-                let r = scale::expand_rect(scale.pt_to_px_rect(rect.abs()));
+                let r = scale::expand_rect(scale.to_px(&rect.abs()));
                 let origin = state.drawing_area.get_allocation();
                 state.window.queue_draw_area(
                     r.x0 as i32 + origin.x,

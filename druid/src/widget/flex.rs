@@ -47,15 +47,15 @@ use crate::{
 ///
 /// When should your children be flexible? With other things being equal,
 /// a flexible child has lower layout priority than a non-flexible child.
-/// Imagine, for instance, we have a row that is 30pt wide, and we have
-/// two children, both of which want to be 20pt wide. If child #1 is non-flex
-/// and child #2 is flex, the first widget will take up its 20pt, and the second
-/// widget will be constrained to 10pt.
+/// Imagine, for instance, we have a row that is 30dp wide, and we have
+/// two children, both of which want to be 20dp wide. If child #1 is non-flex
+/// and child #2 is flex, the first widget will take up its 20dp, and the second
+/// widget will be constrained to 10dp.
 ///
 /// If, instead, both widgets are flex, they will each be given equal space,
-/// and both will end up taking up 15pt.
+/// and both will end up taking up 15dp.
 ///
-/// If both are non-flex they will both take up 20pt, and will overflow the
+/// If both are non-flex they will both take up 20dp, and will overflow the
 /// container.
 ///
 /// ```no_compile
