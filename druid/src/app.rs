@@ -82,7 +82,7 @@ impl<T: 'static> WindowDesc<T> {
 impl AppStateWindowDesc {
     pub(crate) fn realize<T: 'static>(self) -> Result<WindowDesc<T>, AppStateTypeError> {
         let inner: Result<Box<WindowDesc<T>>, _> = self.inner.downcast();
-        if let Some(inner) = inner.ok() {
+        if let Ok(inner) = inner {
             Ok(*inner)
         } else {
             Err(AppStateTypeError::new(
