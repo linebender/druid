@@ -148,10 +148,9 @@ impl<T: 'static> MenuDesc<T> {
 
 impl AppStateMenuDesc {
     pub(crate) fn realize<T: 'static>(&self) -> Result<&MenuDesc<T>, AppStateTypeError> {
-        self.inner.downcast_ref().ok_or_else(|| AppStateTypeError::new(
-            any::type_name::<MenuDesc<T>>(),
-            self.type_name,
-        ))
+        self.inner
+            .downcast_ref()
+            .ok_or_else(|| AppStateTypeError::new(any::type_name::<MenuDesc<T>>(), self.type_name))
     }
 }
 
@@ -217,10 +216,9 @@ impl<T: 'static> ContextMenu<T> {
 
 impl AppStateContextMenu {
     pub(crate) fn realize<T: 'static>(&self) -> Result<&ContextMenu<T>, AppStateTypeError> {
-        self.inner.downcast_ref().ok_or_else(|| AppStateTypeError::new(
-            any::type_name::<ContextMenu<T>>(),
-            self.type_name,
-        ))
+        self.inner.downcast_ref().ok_or_else(|| {
+            AppStateTypeError::new(any::type_name::<ContextMenu<T>>(), self.type_name)
+        })
     }
 }
 
