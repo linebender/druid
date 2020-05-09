@@ -218,6 +218,7 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
             buttons: mouse_buttons(event.buttons()),
             mods: get_modifiers!(event),
             count: 0,
+            focus: false,
             button: MouseButton::None,
             wheel_delta,
         };
