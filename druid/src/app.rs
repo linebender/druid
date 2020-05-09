@@ -66,7 +66,7 @@ pub struct AppStateWindowDesc {
     type_name: &'static str,
 }
 
-impl<T: 'static> WindowDesc<T> {
+impl<T: Any> WindowDesc<T> {
     /// This turns a typed `WindowDesc<T>` into an untyped `AppStateWindowDesc`.
     /// Doing so allows sending `WindowDesc` through `Command`s.
     /// It is up to you, to ensure that this `T` represents your application
@@ -80,7 +80,7 @@ impl<T: 'static> WindowDesc<T> {
 }
 
 impl AppStateWindowDesc {
-    pub(crate) fn realize<T: 'static>(self) -> Result<WindowDesc<T>, AppStateTypeError> {
+    pub(crate) fn realize<T: Any>(self) -> Result<WindowDesc<T>, AppStateTypeError> {
         let inner: Result<Box<WindowDesc<T>>, _> = self.inner.downcast();
         if let Ok(inner) = inner {
             Ok(*inner)

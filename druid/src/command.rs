@@ -280,7 +280,7 @@ impl<T> Selector<T> {
 impl Command {
     /// Create a new `Command` with an argument. If you do not need
     /// an argument, `Selector` implements `Into<Command>`.
-    pub fn new<T: 'static>(selector: Selector<T>, arg: T) -> Self {
+    pub fn new<T: Any>(selector: Selector<T>, arg: T) -> Self {
         Command {
             selector: selector.symbol(),
             object: Arg::Reusable(Arc::new(arg)),
@@ -294,7 +294,7 @@ impl Command {
     /// [`take_object`].
     ///
     /// [`take_object`]: #method.take_object
-    pub fn one_shot<T: 'static>(selector: Selector<T>, arg: T) -> Self {
+    pub fn one_shot<T: Any>(selector: Selector<T>, arg: T) -> Self {
         Command {
             selector: selector.symbol(),
             object: Arg::OneShot(Arc::new(Mutex::new(Some(Box::new(arg))))),
@@ -318,7 +318,7 @@ impl Command {
     /// created with [`one_shot`].
     ///
     /// [`one_shot`]: #method.one_shot
-    pub fn get<T: 'static>(&self, selector: Selector<T>) -> Result<&T, ArgumentError> {
+    pub fn get<T: Any>(&self, selector: Selector<T>) -> Result<&T, ArgumentError> {
         if self.selector != selector.symbol() {
             return Err(ArgumentError::WrongSelector);
         }
@@ -331,7 +331,7 @@ impl Command {
     /// Attempt to take the object of a [`one-shot`] command.
     ///
     /// [`one-shot`]: #method.one_shot
-    pub fn take<T: 'static>(&self, selector: Selector<T>) -> Result<Box<T>, ArgumentError> {
+    pub fn take<T: Any>(&self, selector: Selector<T>) -> Result<Box<T>, ArgumentError> {
         if self.selector != selector.symbol() {
             return Err(ArgumentError::WrongSelector);
         }

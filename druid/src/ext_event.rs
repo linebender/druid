@@ -101,7 +101,7 @@ impl ExtEventSink {
     ///
     /// [`Command`]: struct.Command.html
     /// [`Selector`]: struct.Selector.html
-    pub fn submit_command<T: Send + 'static>(
+    pub fn submit_command<T: Any + Send>(
         &self,
         sel: Selector<T>,
         obj: T,

@@ -133,7 +133,7 @@ pub struct AppStateMenuDesc {
     type_name: &'static str,
 }
 
-impl<T: 'static> MenuDesc<T> {
+impl<T: Any> MenuDesc<T> {
     /// This turns a typed `MenuDesc<T>` into an untyped `AppStateMenuDesc`.
     /// Doing so allows sending `MenuDesc` through `Command`s.
     /// It is up to you, to ensure that this `T` represents your application
@@ -147,7 +147,7 @@ impl<T: 'static> MenuDesc<T> {
 }
 
 impl AppStateMenuDesc {
-    pub(crate) fn realize<T: 'static>(&self) -> Result<&MenuDesc<T>, AppStateTypeError> {
+    pub(crate) fn realize<T: Any>(&self) -> Result<&MenuDesc<T>, AppStateTypeError> {
         self.inner
             .downcast_ref()
             .ok_or_else(|| AppStateTypeError::new(any::type_name::<MenuDesc<T>>(), self.type_name))
@@ -201,7 +201,7 @@ pub struct AppStateContextMenu {
     type_name: &'static str,
 }
 
-impl<T: 'static> ContextMenu<T> {
+impl<T: Any> ContextMenu<T> {
     /// This turns a typed `ContextMenu<T>` into an untyped `AppStateContextMenu`.
     /// Doing so allows sending `ContextMenu` through `Command`s.
     /// It is up to you, to ensure that this `T` represents your application
@@ -215,7 +215,7 @@ impl<T: 'static> ContextMenu<T> {
 }
 
 impl AppStateContextMenu {
-    pub(crate) fn realize<T: 'static>(&self) -> Result<&ContextMenu<T>, AppStateTypeError> {
+    pub(crate) fn realize<T: Any>(&self) -> Result<&ContextMenu<T>, AppStateTypeError> {
         self.inner.downcast_ref().ok_or_else(|| {
             AppStateTypeError::new(any::type_name::<ContextMenu<T>>(), self.type_name)
         })
