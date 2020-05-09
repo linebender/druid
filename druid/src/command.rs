@@ -22,6 +22,7 @@ use std::{
 
 use crate::{WidgetId, WindowId};
 
+/// An untyped identifier for a `Selector`.
 pub type SelectorSymbol = &'static str;
 
 /// An identifier for a particular command.
@@ -99,6 +100,9 @@ pub enum ArgumentError {
     Consumed,
 }
 
+/// This error can occure when wrongly promising that a type ereased
+/// variant of some generic item represents the application state.
+/// Examples are `MenuDesc<T>` and `AppStateMenuDesc`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AppStateTypeError {
     expected: &'static str,
@@ -106,7 +110,7 @@ pub struct AppStateTypeError {
 }
 
 impl AppStateTypeError {
-    pub fn new(expected: &'static str, found: &'static str) -> Self {
+    pub(crate) fn new(expected: &'static str, found: &'static str) -> Self {
         Self { expected, found }
     }
 }
@@ -177,15 +181,15 @@ pub mod sys {
     /// will automatically target the window containing the widget.
     pub const SHOW_WINDOW: Selector<()> = Selector::new("druid-builtin.show-window");
 
-    /// Display a context (right-click) menu. The argument must be the [`ContextMenu`].
-    /// object to be displayed.
+    /// Display a context (right-click) menu.
+    /// An `AppStateContextMenu` can be obtained using `ContextMenu::into_app_state_context_menu`.
     ///
     /// [`ContextMenu`]: ../struct.ContextMenu.html
     pub const SHOW_CONTEXT_MENU: Selector<AppStateContextMenu> =
         Selector::new("druid-builtin.show-context-menu");
 
-    /// The selector for a command to set the window's menu. The argument should
-    /// be a [`MenuDesc`] object.
+    /// The selector for a command to set the window's menu.
+    /// An `AppStateMenuDesc` can be obtained using `MenuDesc::into_app_state_menu_desc`.
     ///
     /// [`MenuDesc`]: ../struct.MenuDesc.html
     pub const SET_MENU: Selector<AppStateMenuDesc> = Selector::new("druid-builtin.set-menu");
@@ -205,32 +209,29 @@ pub mod sys {
     /// System command. A file picker dialog will be shown to the user, and an
     /// [`OPEN_FILE`] command will be sent if a file is chosen.
     ///
-    /// The argument should be a [`FileDialogOptions`] struct.
-    ///
     /// [`OPEN_FILE`]: constant.OPEN_FILE.html
     /// [`FileDialogOptions`]: ../struct.FileDialogOptions.html
     pub const SHOW_OPEN_PANEL: Selector<FileDialogOptions> =
         Selector::new("druid-builtin.menu-file-open");
 
-    /// Open a file.
-    ///
-    /// The argument must be a [`FileInfo`] object for the file to be opened.
+    /// Commands to open a file, must be handled by the application.
     ///
     /// [`FileInfo`]: ../struct.FileInfo.html
     pub const OPEN_FILE: Selector<FileInfo> = Selector::new("druid-builtin.open-file-path");
 
-    /// Special command. When issued, the system will show the 'save as' panel,
+    /// Special command. When issued by the application, the system will show the 'save as' panel,
     /// and if a path is selected the system will issue a [`SAVE_FILE`] command
     /// with the selected path as the argument.
-    ///
-    /// The argument should be a [`FileDialogOptions`] object.
     ///
     /// [`SAVE_FILE`]: constant.SAVE_FILE.html
     /// [`FileDialogOptions`]: ../struct.FileDialogOptions.html
     pub const SHOW_SAVE_PANEL: Selector<FileDialogOptions> =
         Selector::new("druid-builtin.menu-file-save-as");
 
-    /// Save the current file.
+    /// Commands to save a file, must be handled by the application.
+    ///
+    /// If it carries `Some`, then the application should save to that file and store the `FileInfo` for future use.
+    /// If it carries `None`, the appliaction should have recieved `Some` before and use the stored `FileInfo`.
     ///
     /// The argument, if present, should be the path where the file should be saved.
     pub const SAVE_FILE: Selector<Option<FileInfo>> = Selector::new("druid-builtin.menu-file-save");

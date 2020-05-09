@@ -627,7 +627,6 @@ pub mod sys {
             }
 
             /// The 'Save...' menu item.
-            /// For windows, this is the same as 'Save'.
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-ellipsis"),
