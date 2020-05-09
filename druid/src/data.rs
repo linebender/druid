@@ -178,6 +178,14 @@ impl<T: Data, U: Data> Data for Result<T, U> {
     }
 }
 
+impl<D: Data> Data for Vec<D> {
+    fn same(&self, other: &Self) -> bool {
+        self.iter()
+            .zip(other.iter())
+            .all(|(a, b)| a.same(b))
+    }
+}
+
 impl Data for () {
     fn same(&self, _other: &Self) -> bool {
         true
@@ -386,6 +394,13 @@ impl_data_for_array! { 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 }
 #[cfg(test)]
 mod test {
     use super::Data;
+
+    #[test]
+    fn vec_data() {
+        let input = vec![1u8, 0, 0, 1, 0];
+        assert!(input.same(&vec![1u8, 0, 0, 1, 0]));
+        assert!(!input.same(&vec![1u8, 1, 0, 1, 0]));
+    }
 
     #[test]
     fn array_data() {
