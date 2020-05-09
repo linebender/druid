@@ -56,12 +56,6 @@ jobs:
           override: true
 
       # Clippy packages in deeper-to-higher dependency order
-      - name: cargo clippy druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-derive/Cargo.toml --all-targets -- -D warnings
-
       - name: cargo clippy druid-shell
         uses: actions-rs/cargo@v1
         with:
@@ -74,6 +68,12 @@ jobs:
           command: clippy
           args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image -- -D warnings
 
+      - name: cargo clippy druid-derive
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid-derive/Cargo.toml --all-targets -- -D warnings
+
       - name: cargo clippy book examples
         uses: actions-rs/cargo@v1
         with:
@@ -81,12 +81,6 @@ jobs:
           args: --manifest-path=docs/book_examples/Cargo.toml --all-targets -- -D warnings
 
       # Test packages in deeper-to-higher dependency order
-      - name: cargo test druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-shell/Cargo.toml
-
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
         with:
@@ -98,6 +92,12 @@ jobs:
         with:
           command: test
           args: --manifest-path=druid/Cargo.toml --features=svg,image
+
+      - name: cargo test druid-derive
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid-derive/Cargo.toml
 
       - name: cargo test book examples
         uses: actions-rs/cargo@v1
@@ -165,12 +165,6 @@ jobs:
           override: true
 
       # Clippy wasm32 relevant packages in deeper-to-higher dependency order
-      - name: cargo clippy druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-derive/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
-
       - name: cargo clippy druid-shell
         uses: actions-rs/cargo@v1
         with:
@@ -184,6 +178,12 @@ jobs:
           # TODO: Add svg feature when it's no longer broken with wasm
           args: --manifest-path=druid/Cargo.toml --all-targets --features=image --target wasm32-unknown-unknown -- -D warnings
 
+      - name: cargo clippy druid-derive
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid-derive/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+
       - name: cargo clippy book examples
         uses: actions-rs/cargo@v1
         with:
@@ -192,12 +192,6 @@ jobs:
 
       # Test wasm32 relevant packages in deeper-to-higher dependency order
       # TODO: Find a way to make tests work. Until then the tests are merely compiled.
-      - name: cargo test compile druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-shell/Cargo.toml --no-run --target wasm32-unknown-unknown
-
       - name: cargo test compile druid-shell
         uses: actions-rs/cargo@v1
         with:
@@ -210,6 +204,12 @@ jobs:
           command: test
           # TODO: Add svg feature when it's no longer broken with wasm
           args: --manifest-path=druid/Cargo.toml --features=image --no-run --target wasm32-unknown-unknown
+
+      - name: cargo test compile druid-derive
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid-derive/Cargo.toml --no-run --target wasm32-unknown-unknown
 
       - name: cargo test compile book examples
         uses: actions-rs/cargo@v1
@@ -254,12 +254,6 @@ jobs:
           override: true
 
       # Test packages in deeper-to-higher dependency order
-      - name: cargo test druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-shell/Cargo.toml
-
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
         with:
@@ -271,6 +265,12 @@ jobs:
         with:
           command: test
           args: --manifest-path=druid/Cargo.toml --features=svg,image
+
+      - name: cargo test druid-derive
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid-derive/Cargo.toml
 
       - name: cargo test book examples
         uses: actions-rs/cargo@v1
