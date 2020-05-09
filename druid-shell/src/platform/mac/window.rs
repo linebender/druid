@@ -514,7 +514,14 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
             }
         };
 
-        let event = mouse_event(nsevent, this as id, 0, MouseButton::None, Vec2::new(dx, dy));
+        let event = mouse_event(
+            nsevent,
+            this as id,
+            0,
+            false,
+            MouseButton::None,
+            Vec2::new(dx, dy),
+        );
         (*view_state).handler.wheel(&event);
     }
 }
