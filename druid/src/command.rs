@@ -31,8 +31,17 @@ pub type SelectorSymbol = &'static str;
 /// [`druid::commands`] module.
 ///
 /// [`druid::commands`]: commands/index.html
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Selector<T>(SelectorSymbol, PhantomData<T>);
+
+// This has do be done explicitly, to avoid the Copy bound on `T`.
+// See https://doc.rust-lang.org/std/marker/trait.Copy.html#how-can-i-implement-copy .
+impl<T> Copy for Selector<T> {}
+impl<T> Clone for Selector<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 
 /// An arbitrary command.
 ///
@@ -415,7 +424,7 @@ mod tests {
         let sel: Selector<Vec<i32>> = Selector::new("my-selector");
         let objs = vec![0, 1, 2];
         // TODO: find out why this now wants a `.clone()` even tho `Selector` implements `Copy`.
-        let command = Command::new(sel.clone(), objs);
+        let command = Command::new(sel, objs);
         assert_eq!(command.get(sel), Ok(&vec![0, 1, 2]));
     }
 }
