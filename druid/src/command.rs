@@ -32,7 +32,7 @@ pub type SelectorSymbol = &'static str;
 ///
 /// [`druid::commands`]: commands/index.html
 #[derive(Debug, PartialEq, Eq)]
-pub struct Selector<T>(SelectorSymbol, PhantomData<T>);
+pub struct Selector<T>(SelectorSymbol, PhantomData<*const T>);
 
 // This has do be done explicitly, to avoid the Copy bound on `T`.
 // See https://doc.rust-lang.org/std/marker/trait.Copy.html#how-can-i-implement-copy .
