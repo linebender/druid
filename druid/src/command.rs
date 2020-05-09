@@ -68,7 +68,7 @@ impl<T> Clone for Selector<T> {
 /// let rows = vec![1, 3, 10, 12];
 /// let command = Command::new(selector, rows);
 ///
-/// assert_eq!(command.get_object(), Ok(&vec![1, 3, 10, 12]));
+/// assert_eq!(command.get(selector), Ok(&vec![1, 3, 10, 12]));
 /// ```
 ///
 /// [`Command::new`]: #method.new

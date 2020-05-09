@@ -333,7 +333,7 @@ impl<T: Data> MenuDesc<T> {
     /// use druid::{Command, LocalizedString, MenuDesc, MenuItem, Selector};
     ///
     /// let num_items: usize = 4;
-    /// const MENU_COUNT_ACTION: Selector = Selector::new("menu-count-action");
+    /// const MENU_COUNT_ACTION: Selector<u32> = Selector::new("menu-count-action");
     ///
     /// let my_menu: MenuDesc<u32> = MenuDesc::empty()
     ///     .append_iter(|| (0..num_items).map(|i| {
