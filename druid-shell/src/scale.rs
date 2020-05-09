@@ -16,7 +16,7 @@
 
 use float_cmp::ApproxEq;
 
-use crate::kurbo::{Point, Rect, Size};
+use crate::kurbo::{Insets, Line, Point, Rect, Size, Vec2};
 
 const SCALE_TARGET_DPI: f64 = 96.0;
 
@@ -242,6 +242,22 @@ impl std::fmt::Debug for Scale {
     }
 }
 
+impl Scalable for Vec2 {
+    /// Converts a `Vec2` from display points into pixels,
+    /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
+    #[inline]
+    fn to_px(&self, scale: &Scale) -> Vec2 {
+        Vec2::new(self.x * scale.scale_x, self.y * scale.scale_y)
+    }
+
+    /// Converts a `Vec2` from pixels into display points,
+    /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
+    #[inline]
+    fn to_dp(&self, scale: &Scale) -> Vec2 {
+        Vec2::new(self.x / scale.scale_x, self.y / scale.scale_y)
+    }
+}
+
 impl Scalable for Point {
     /// Converts a `Point` from display points into pixels,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
@@ -255,6 +271,22 @@ impl Scalable for Point {
     #[inline]
     fn to_dp(&self, scale: &Scale) -> Point {
         Point::new(self.x / scale.scale_x, self.y / scale.scale_y)
+    }
+}
+
+impl Scalable for Line {
+    /// Converts a `Line` from display points into pixels,
+    /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
+    #[inline]
+    fn to_px(&self, scale: &Scale) -> Line {
+        Line::new(self.p0.to_px(scale), self.p1.to_px(scale))
+    }
+
+    /// Converts a `Line` from pixels into display points,
+    /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
+    #[inline]
+    fn to_dp(&self, scale: &Scale) -> Line {
+        Line::new(self.p0.to_dp(scale), self.p1.to_dp(scale))
     }
 }
 
@@ -296,6 +328,34 @@ impl Scalable for Rect {
     #[inline]
     fn to_dp(&self, scale: &Scale) -> Rect {
         Rect::new(
+            self.x0 / scale.scale_x,
+            self.y0 / scale.scale_y,
+            self.x1 / scale.scale_x,
+            self.y1 / scale.scale_y,
+        )
+    }
+}
+
+impl Scalable for Insets {
+    /// Converts `Insets` from display points into pixels,
+    /// using the x axis scale factor for `x0` and `x1`
+    /// and the y axis scale factor for `y0` and `y1`.
+    #[inline]
+    fn to_px(&self, scale: &Scale) -> Insets {
+        Insets::new(
+            self.x0 * scale.scale_x,
+            self.y0 * scale.scale_y,
+            self.x1 * scale.scale_x,
+            self.y1 * scale.scale_y,
+        )
+    }
+
+    /// Converts `Insets` from pixels into display points,
+    /// using the x axis scale factor for `x0` and `x1`
+    /// and the y axis scale factor for `y0` and `y1`.
+    #[inline]
+    fn to_dp(&self, scale: &Scale) -> Insets {
+        Insets::new(
             self.x0 / scale.scale_x,
             self.y0 / scale.scale_y,
             self.x1 / scale.scale_x,
