@@ -32,10 +32,11 @@ pub fn main() {
 }
 
 fn ui_builder() -> impl Widget<String> {
+    let rs = FileSpec::new("Rust source", &["rs"]);
     let txt = FileSpec::new("Text file", &["txt"]);
     let other = FileSpec::new("Bogus file", &["foo", "bar", "baz"]);
     let save_dialog_options = FileDialogOptions::new()
-        .allowed_types(vec![txt, other])
+        .allowed_types(vec![rs, txt, other])
         .default_type(txt);
     let open_dialog_options = save_dialog_options.clone();
 
@@ -71,7 +72,7 @@ impl AppDelegate<String> for Delegate {
     fn command(
         &mut self,
         _ctx: &mut DelegateCtx,
-        _target: &Target,
+        _target: Target,
         cmd: &Command,
         data: &mut String,
         _env: &Env,
