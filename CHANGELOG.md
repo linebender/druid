@@ -74,6 +74,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - GTK: Support disabled menu items. ([#897] by [@jneem])
 - X11: Support individual window closing. ([#900] by [@xStrom])
 - X11: Support `Application::quit`. ([#900] by [@xStrom])
+- GTK: Support file filters in open/save dialogs. ([#903] by [@jneem])
 
 ### Visual
 
@@ -154,6 +155,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#897]: https://github.com/xi-editor/druid/pull/897
 [#898]: https://github.com/xi-editor/druid/pull/898
 [#900]: https://github.com/xi-editor/druid/pull/900
+[#903]: https://github.com/xi-editor/druid/pull/903
 [#909]: https://github.com/xi-editor/druid/pull/909
 
 ## [0.5.0] - 2020-04-01

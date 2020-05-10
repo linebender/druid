@@ -16,10 +16,19 @@
 
 use std::ffi::OsString;
 
-use gtk::{FileChooserAction, FileChooserExt, NativeDialogExt, ResponseType, Window};
+use gtk::{FileChooserAction, FileChooserExt, FileFilter, NativeDialogExt, ResponseType, Window};
 
-use crate::dialog::{FileDialogOptions, FileDialogType};
+use crate::dialog::{FileDialogOptions, FileDialogType, FileSpec};
 use crate::Error;
+
+fn file_filter(fs: &FileSpec) -> FileFilter {
+    let ret = FileFilter::new();
+    ret.set_name(Some(fs.name));
+    for ext in fs.extensions {
+        ret.add_pattern(&format!("*.{}", ext));
+    }
+    ret
+}
 
 pub(crate) fn get_file_dialog_path(
     window: &Window,
@@ -44,6 +53,36 @@ pub(crate) fn get_file_dialog_path(
     dialog.set_show_hidden(options.show_hidden);
 
     dialog.set_select_multiple(options.multi_selection);
+
+    let mut found_default_filter = false;
+    if let Some(file_types) = &options.allowed_types {
+        for f in file_types {
+            let filter = file_filter(f);
+            dialog.add_filter(&filter);
+
+            if let Some(default) = &options.default_type {
+                if default == f {
+                    // Note that we're providing the same FileFilter object to
+                    // add_filter and set_filter, because gtk checks them for
+                    // identity, not structural equality.
+                    dialog.set_filter(&filter);
+                    found_default_filter = true;
+                }
+            }
+        }
+    }
+
+    if let Some(default_file_type) = &options.default_type {
+        if options.allowed_types.is_some() && !found_default_filter {
+            // It's ok to set a default file filter without providing a list of
+            // allowed filters, but it's not ok (or at least, doesn't work in gtk)
+            // to provide a default filter that isn't in the (present) list
+            // of allowed filters.
+            log::warn!("default file type not found in allowed types");
+        } else if !found_default_filter {
+            dialog.set_filter(&file_filter(default_file_type));
+        }
+    }
 
     let result = dialog.run();
 
