@@ -225,7 +225,7 @@ jobs:
           args: --manifest-path=druid/examples/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 
       - name: wasm-pack build examples
-        run: wasm-pack build --target web druid/examples/wasm
+        run: wasm-pack build --dev --target web druid/examples/wasm
 
   test-nightly:
     runs-on: ${{ matrix.os }}
