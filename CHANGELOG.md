@@ -27,6 +27,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Docs
 
+- Added a book chapter about resolution independence. ([#913] by [@xStrom])
 - Fixed a link in `druid::command` documentation. ([#1008] by [@covercash2])
 
 ### Examples
@@ -279,6 +280,7 @@ Last release without a changelog :(
 [#905]: https://github.com/xi-editor/druid/pull/905
 [#907]: https://github.com/xi-editor/druid/pull/907
 [#909]: https://github.com/xi-editor/druid/pull/909
+[#913]: https://github.com/xi-editor/druid/pull/913
 [#915]: https://github.com/xi-editor/druid/pull/915
 [#916]: https://github.com/xi-editor/druid/pull/916
 [#917]: https://github.com/xi-editor/druid/pull/917

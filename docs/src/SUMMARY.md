@@ -6,6 +6,7 @@
 - [Widget trait](./widget.md)
 - [Lens trait](./lens.md)
 - [Env](./env.md)
+- [Resolution independence](./resolution_independence.md)
 - [Localization (TODO)](./localization.md)
 - [Command (TODO)](./command.md)
 - [Widgets in depth (TODO)](./custom_widgets.md)
