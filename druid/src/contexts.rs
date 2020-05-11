@@ -479,6 +479,19 @@ impl<'a> LifeCycleCtx<'a> {
         self.request_paint();
     }
 
+    /// The layout size.
+    ///
+    /// This is the layout size as ultimately determined by the parent
+    /// container, on the previous layout pass.
+    ///
+    /// Generally it will be the same as the size returned by the child widget's
+    /// [`layout`] method.
+    ///
+    /// [`layout`]: trait.Widget.html#tymethod.layout
+    pub fn size(&self) -> Size {
+        self.base_state.size()
+    }
+
     /// Submit a [`Command`] to be run after this event is handled.
     ///
     /// Commands are run in the order they are submitted; all commands
@@ -555,6 +568,19 @@ impl<'a> UpdateCtx<'a> {
         let timer_token = self.window.request_timer(deadline);
         self.base_state.add_timer(timer_token);
         timer_token
+    }
+
+    /// The layout size.
+    ///
+    /// This is the layout size as ultimately determined by the parent
+    /// container, on the previous layout pass.
+    ///
+    /// Generally it will be the same as the size returned by the child widget's
+    /// [`layout`] method.
+    ///
+    /// [`layout`]: trait.Widget.html#tymethod.layout
+    pub fn size(&self) -> Size {
+        self.base_state.size()
     }
 
     /// Submit a [`Command`] to be run after layout and paint finish.

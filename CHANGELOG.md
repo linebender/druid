@@ -31,6 +31,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `MouseButtons` to `MouseEvent` to track which buttons are being held down during an event. ([#843] by [@xStrom])
 - `Env` and `Key` gained methods for inspecting an `Env` at runtime ([#880] by [@Zarenor])
 - `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
+- `UpdateCtx::size` and `LifeCycleCtx::size`. ([#917] by [@jneem])
 
 ### Changed
 
@@ -157,6 +158,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#900]: https://github.com/xi-editor/druid/pull/900
 [#903]: https://github.com/xi-editor/druid/pull/903
 [#909]: https://github.com/xi-editor/druid/pull/909
+[#917]: https://github.com/xi-editor/druid/pull/917
 
 ## [0.5.0] - 2020-04-01
 
