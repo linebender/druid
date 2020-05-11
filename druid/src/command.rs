@@ -386,6 +386,7 @@ impl Command {
                     .unwrap()
                     .take()
                     .ok_or(ArgumentError::Consumed)?;
+                #[allow(clippy::match_wild_err_arm)]
                 match obj.downcast::<T>() {
                     Ok(obj) => Ok(obj),
                     Err(_) => {
