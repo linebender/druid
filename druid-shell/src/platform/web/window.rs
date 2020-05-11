@@ -196,14 +196,15 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
 
         let dx = event.delta_x();
         let dy = event.delta_y();
-        let height = state.canvas.height() as f64;
-        let width = state.canvas.width() as f64;
 
         // The value 35.0 was manually picked to produce similar behavior to mac/linux.
         let wheel_delta = match delta_mode {
             web_sys::WheelEvent::DOM_DELTA_PIXEL => Vec2::new(dx, dy),
             web_sys::WheelEvent::DOM_DELTA_LINE => Vec2::new(35.0 * dx, 35.0 * dy),
-            web_sys::WheelEvent::DOM_DELTA_PAGE => Vec2::new(width * dx, height * dy),
+            web_sys::WheelEvent::DOM_DELTA_PAGE => {
+                let size_dp = state.scale.borrow().size_dp();
+                Vec2::new(size_dp.width * dx, size_dp.height * dy)
+            }
             _ => {
                 log::warn!("Invalid deltaMode in WheelEvent: {}", delta_mode);
                 return;
