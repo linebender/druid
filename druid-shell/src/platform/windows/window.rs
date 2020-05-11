@@ -694,11 +694,12 @@ impl WndProc for MyWndProc {
                     let buttons = get_buttons(down_state);
                     let event = MouseEvent {
                         pos,
-                        mods,
-                        button: MouseButton::None,
-                        count: 0,
-                        wheel_delta,
                         buttons,
+                        mods,
+                        count: 0,
+                        focus: false,
+                        button: MouseButton::None,
+                        wheel_delta,
                     };
                     s.handler.wheel(&event);
                 } else {
@@ -749,6 +750,7 @@ impl WndProc for MyWndProc {
                         buttons,
                         mods,
                         count: 0,
+                        focus: false,
                         button: MouseButton::None,
                         wheel_delta: Vec2::ZERO,
                     };
@@ -816,6 +818,7 @@ impl WndProc for MyWndProc {
                             buttons,
                             mods,
                             count,
+                            focus: false,
                             button,
                             wheel_delta: Vec2::ZERO,
                         };

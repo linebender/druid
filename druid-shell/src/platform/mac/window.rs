@@ -104,6 +104,8 @@ struct ViewState {
     handler: Box<dyn WinHandler>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     last_mods: KeyModifiers,
+    /// Tracks window focusing left clicks
+    focus_click: bool,
 }
 
 impl WindowBuilder {
@@ -232,6 +234,19 @@ lazy_static! {
         extern "C" fn acceptsFirstResponder(_this: &Object, _sel: Sel) -> BOOL {
             YES
         }
+        // acceptsFirstMouse is called when a left mouse click would focus the window
+        decl.add_method(
+            sel!(acceptsFirstMouse:),
+            acceptsFirstMouse as extern "C" fn(&Object, Sel, id) -> BOOL,
+        );
+        extern "C" fn acceptsFirstMouse(this: &Object, _sel: Sel, _nsevent: id) -> BOOL {
+            unsafe {
+                let view_state: *mut c_void = *this.get_ivar("viewState");
+                let view_state = &mut *(view_state as *mut ViewState);
+                view_state.focus_click = true;
+            }
+            YES
+        }
         decl.add_method(sel!(dealloc), dealloc as extern "C" fn(&Object, Sel));
         extern "C" fn dealloc(this: &Object, _sel: Sel) {
             info!("view is dealloc'ed");
@@ -339,6 +354,7 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
             handler,
             idle_queue,
             last_mods: KeyModifiers::default(),
+            focus_click: false,
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
@@ -364,6 +380,7 @@ fn mouse_event(
     nsevent: id,
     view: id,
     count: u8,
+    focus: bool,
     button: MouseButton,
     wheel_delta: Vec2,
 ) -> MouseEvent {
@@ -378,6 +395,7 @@ fn mouse_event(
             buttons,
             mods: modifiers,
             count,
+            focus,
             button,
             wheel_delta,
         }
@@ -436,7 +454,8 @@ fn mouse_down(this: &mut Object, nsevent: id, button: MouseButton) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let count = nsevent.clickCount() as u8;
-        let event = mouse_event(nsevent, this as id, count, button, Vec2::ZERO);
+        let focus = view_state.focus_click && button == MouseButton::Left;
+        let event = mouse_event(nsevent, this as id, count, focus, button, Vec2::ZERO);
         (*view_state).handler.mouse_down(&event);
     }
 }
@@ -461,7 +480,13 @@ fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, 0, button, Vec2::ZERO);
+        let focus = if view_state.focus_click && button == MouseButton::Left {
+            view_state.focus_click = false;
+            true
+        } else {
+            false
+        };
+        let event = mouse_event(nsevent, this as id, 0, focus, button, Vec2::ZERO);
         (*view_state).handler.mouse_up(&event);
     }
 }
@@ -470,7 +495,7 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, 0, MouseButton::None, Vec2::ZERO);
+        let event = mouse_event(nsevent, this as id, 0, false, MouseButton::None, Vec2::ZERO);
         (*view_state).handler.mouse_move(&event);
     }
 }
@@ -489,7 +514,14 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
             }
         };
 
-        let event = mouse_event(nsevent, this as id, 0, MouseButton::None, Vec2::new(dx, dy));
+        let event = mouse_event(
+            nsevent,
+            this as id,
+            0,
+            false,
+            MouseButton::None,
+            Vec2::new(dx, dy),
+        );
         (*view_state).handler.wheel(&event);
     }
 }

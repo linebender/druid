@@ -80,6 +80,7 @@ fn propogate_hot() {
             buttons: MouseButtons::default(),
             mods: KeyModifiers::default(),
             count: 0,
+            focus: false,
             button: MouseButton::None,
             wheel_delta: Vec2::ZERO,
         }

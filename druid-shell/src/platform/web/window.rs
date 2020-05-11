@@ -147,6 +147,7 @@ fn setup_mouse_down_callback(ws: &Rc<WindowState>) {
                 buttons,
                 mods: get_modifiers!(event),
                 count: 1,
+                focus: false,
                 button,
                 wheel_delta: Vec2::ZERO,
             };
@@ -165,6 +166,7 @@ fn setup_mouse_up_callback(ws: &Rc<WindowState>) {
                 buttons,
                 mods: get_modifiers!(event),
                 count: 0,
+                focus: false,
                 button,
                 wheel_delta: Vec2::ZERO,
             };
@@ -182,6 +184,7 @@ fn setup_mouse_move_callback(ws: &Rc<WindowState>) {
             buttons,
             mods: get_modifiers!(event),
             count: 0,
+            focus: false,
             button: MouseButton::None,
             wheel_delta: Vec2::ZERO,
         };
@@ -215,6 +218,7 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
             buttons: mouse_buttons(event.buttons()),
             mods: get_modifiers!(event),
             count: 0,
+            focus: false,
             button: MouseButton::None,
             wheel_delta,
         };

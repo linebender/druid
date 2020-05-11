@@ -36,6 +36,15 @@ pub struct MouseEvent {
     /// The number of mouse clicks associated with this event. This will always
     /// be `0` for a mouse-up and mouse-move events.
     pub count: u8,
+    /// Focus is `true` on macOS when the mouse-down event (or its companion mouse-up event)
+    /// with `MouseButton::Left` was the event that caused the window to gain focus.
+    ///
+    /// This is primarily used in relation to text selection.
+    /// If there is some text selected in some text widget and it receives a click
+    /// with `focus` set to `true` then the widget should gain focus (i.e. start blinking a cursor)
+    /// but it should not change the text selection. Text selection should only be changed
+    /// when the click has `focus` set to `false`.
+    pub focus: bool,
     /// The button that was pressed down in the case of mouse-down,
     /// or the button that was released in the case of mouse-up.
     /// This will always be `MouseButton::None` in the case of mouse-move.
@@ -58,6 +67,7 @@ impl From<druid_shell::MouseEvent> for MouseEvent {
             buttons,
             mods,
             count,
+            focus,
             button,
             wheel_delta,
         } = src;
@@ -67,6 +77,7 @@ impl From<druid_shell::MouseEvent> for MouseEvent {
             buttons,
             mods,
             count,
+            focus,
             button,
             wheel_delta,
         }

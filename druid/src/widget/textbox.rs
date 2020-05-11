@@ -243,12 +243,14 @@ impl Widget<String> for TextBox {
                 ctx.request_focus();
                 ctx.set_active(true);
 
-                let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
-                edit_action = Some(EditAction::Click(MouseAction {
-                    row: 0,
-                    column: cursor_offset,
-                    mods: mouse.mods,
-                }));
+                if !mouse.focus {
+                    let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
+                    edit_action = Some(EditAction::Click(MouseAction {
+                        row: 0,
+                        column: cursor_offset,
+                        mods: mouse.mods,
+                    }));
+                }
 
                 ctx.request_paint();
             }

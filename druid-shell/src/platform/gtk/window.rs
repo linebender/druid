@@ -296,6 +296,7 @@ impl WindowBuilder {
                                 buttons: get_mouse_buttons_from_modifiers(button_state).with(button),
                                 mods: get_modifiers(button_state),
                                 count: get_mouse_click_count(event.get_event_type()),
+                                focus: false,
                                 button,
                                 wheel_delta: Vec2::ZERO
                             },
@@ -320,6 +321,7 @@ impl WindowBuilder {
                                 buttons: get_mouse_buttons_from_modifiers(button_state).without(button),
                                 mods: get_modifiers(button_state),
                                 count: 0,
+                                focus: false,
                                 button,
                                 wheel_delta: Vec2::ZERO
                             },
@@ -341,6 +343,7 @@ impl WindowBuilder {
                     buttons: get_mouse_buttons_from_modifiers(motion_state),
                     mods: get_modifiers(motion_state),
                     count: 0,
+                    focus: false,
                     button: MouseButton::None,
                     wheel_delta: Vec2::ZERO
                 };
@@ -363,6 +366,7 @@ impl WindowBuilder {
                     buttons: get_mouse_buttons_from_modifiers(crossing_state),
                     mods: get_modifiers(crossing_state),
                     count: 0,
+                    focus: false,
                     button: MouseButton::None,
                     wheel_delta: Vec2::ZERO
                 };
@@ -412,12 +416,13 @@ impl WindowBuilder {
                         }
                     };
 
-                    if let Some(wheel_delta) = wheel_delta{
-                        let mouse_event = MouseEvent{
+                    if let Some(wheel_delta) = wheel_delta {
+                        let mouse_event = MouseEvent {
                             pos: Point::from(scroll.get_position()),
                             buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
                             mods,
                             count: 0,
+                            focus: false,
                             button: MouseButton::None,
                             wheel_delta
                         };

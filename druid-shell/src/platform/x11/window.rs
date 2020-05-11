@@ -565,6 +565,7 @@ impl Window {
                 meta: false,
             },
             count: 1,
+            focus: false,
             button: MouseButton::Left,
             wheel_delta: Vec2::ZERO,
         };
@@ -598,6 +599,7 @@ impl Window {
                 meta: false,
             },
             count: 0,
+            focus: false,
             button: MouseButton::Left,
             wheel_delta: Vec2::ZERO,
         };
@@ -631,6 +633,7 @@ impl Window {
                 meta: false,
             },
             count: 0,
+            focus: false,
             button: MouseButton::None,
             wheel_delta: Vec2::ZERO,
         };
