@@ -44,6 +44,41 @@ impl<T> Clone for Selector<T> {
     }
 }
 
+/// An identifier for a particular command.
+///
+/// This should be a unique string identifier. Certain `Selector`s are defined
+/// by druid, and have special meaning to the framework; these are listed in the
+/// [`druid::commands`] module.
+///
+/// [`druid::commands`]: commands/index.html
+#[derive(Debug, PartialEq, Eq)]
+pub struct OneShotSelector<T>(SelectorSymbol, PhantomData<*const T>);
+
+// This has do be done explicitly, to avoid the Copy bound on `T`.
+// See https://doc.rust-lang.org/std/marker/trait.Copy.html#how-can-i-implement-copy .
+impl<T> Copy for OneShotSelector<T> {}
+impl<T> Clone for OneShotSelector<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+pub trait AnySelector {
+    fn symbol(self) -> SelectorSymbol;
+}
+
+impl<T> AnySelector for Selector<T> {
+    fn symbol(self) -> SelectorSymbol {
+        self.0
+    }
+}
+
+impl<T> AnySelector for OneShotSelector<T> {
+    fn symbol(self) -> SelectorSymbol {
+        self.0
+    }
+}
+
 /// An arbitrary command.
 ///
 /// A `Command` consists of a [`Selector`], that indicates what the command is,
@@ -69,7 +104,7 @@ impl<T> Clone for Selector<T> {
 /// let rows = vec![1, 3, 10, 12];
 /// let command = Command::new(selector, rows);
 ///
-/// assert_eq!(command.get(selector), Ok(&vec![1, 3, 10, 12]));
+/// assert_eq!(command.get(selector), Some(&vec![1, 3, 10, 12]));
 /// ```
 ///
 /// [`Command::new`]: #method.new
@@ -87,15 +122,11 @@ enum Arg {
     OneShot(Arc<Mutex<Option<Box<dyn Any>>>>),
 }
 
-/// Errors that can occur when attempting to retrieve the a command's argument.
+/// Errors that can occur when attempting to retrieve the a `OneShotCommand`s argument.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArgumentError {
     /// The command represented a different selector.
     WrongSelector,
-    /// The argument was expected to be reusable and wasn't, or vice-versa.
-    WrongVariant,
-    /// The argument could not be downcast to the specified type.
-    IncorrectType,
     /// The one-shot argument has already been taken.
     Consumed,
 }
@@ -145,7 +176,7 @@ pub enum Target {
 ///
 /// [`Command`]: ../struct.Command.html
 pub mod sys {
-    use super::Selector;
+    use super::{OneShotSelector, Selector};
     use crate::{
         app::AppStateWindowDesc,
         menu::{AppStateContextMenu, AppStateMenuDesc},
@@ -162,7 +193,8 @@ pub mod sys {
     pub const HIDE_OTHERS: Selector<()> = Selector::new("druid-builtin.menu-hide-others");
 
     /// The selector for a command to create a new window.
-    pub const NEW_WINDOW: Selector<AppStateWindowDesc> = Selector::new("druid-builtin.new-window");
+    pub const NEW_WINDOW: OneShotSelector<AppStateWindowDesc> =
+        OneShotSelector::new("druid-builtin.new-window");
 
     /// The selector for a command to close a window.
     ///
@@ -263,17 +295,25 @@ pub mod sys {
 
 impl<T> Selector<T> {
     /// A selector that does nothing.
-    pub const fn noop() -> Selector<T> {
+    pub const fn noop() -> Self {
         Selector::new("")
     }
 
     /// Create a new `Selector` with the given string.
-    pub const fn new(s: &'static str) -> Selector<T> {
+    pub const fn new(s: &'static str) -> Self {
         Selector(s, PhantomData)
     }
+}
 
-    pub(crate) const fn symbol(self) -> SelectorSymbol {
-        self.0
+impl<T> OneShotSelector<T> {
+    /// A selector that does nothing.
+    pub const fn noop() -> Self {
+        OneShotSelector::new("")
+    }
+
+    /// Create a new `Selector` with the given string.
+    pub const fn new(s: &'static str) -> Self {
+        OneShotSelector(s, PhantomData)
     }
 }
 
@@ -294,7 +334,7 @@ impl Command {
     /// [`take_object`].
     ///
     /// [`take_object`]: #method.take_object
-    pub fn one_shot<T: Any>(selector: Selector<T>, arg: T) -> Self {
+    pub fn one_shot<T: Any>(selector: OneShotSelector<T>, arg: T) -> Self {
         Command {
             selector: selector.symbol(),
             object: Arg::OneShot(Arc::new(Mutex::new(Some(Box::new(arg))))),
@@ -308,7 +348,7 @@ impl Command {
         Command { selector, object }
     }
 
-    pub fn is<T>(&self, selector: Selector<T>) -> bool {
+    pub fn is(&self, selector: impl AnySelector) -> bool {
         self.selector == selector.symbol()
     }
 
@@ -318,25 +358,28 @@ impl Command {
     /// created with [`one_shot`].
     ///
     /// [`one_shot`]: #method.one_shot
-    pub fn get<T: Any>(&self, selector: Selector<T>) -> Result<&T, ArgumentError> {
+    pub fn get<T: Any>(&self, selector: Selector<T>) -> Option<&T> {
         if self.selector != selector.symbol() {
-            return Err(ArgumentError::WrongSelector);
+            return None;
         }
         match &self.object {
-            Arg::Reusable(obj) => obj.downcast_ref().ok_or(ArgumentError::IncorrectType),
-            Arg::OneShot(_) => Err(ArgumentError::WrongVariant),
+            Arg::Reusable(obj) => Some(
+                obj.downcast_ref()
+                    .expect("Reusable command had wrong payload type."),
+            ),
+            Arg::OneShot(_) => panic!("Reusable command {} carried OneShot argument.", selector),
         }
     }
 
     /// Attempt to take the object of a [`one-shot`] command.
     ///
     /// [`one-shot`]: #method.one_shot
-    pub fn take<T: Any>(&self, selector: Selector<T>) -> Result<Box<T>, ArgumentError> {
+    pub fn take<T: Any>(&self, selector: OneShotSelector<T>) -> Result<Box<T>, ArgumentError> {
         if self.selector != selector.symbol() {
             return Err(ArgumentError::WrongSelector);
         }
         match &self.object {
-            Arg::Reusable(_) => Err(ArgumentError::WrongVariant),
+            Arg::Reusable(_) => panic!("OneShot command {} carried Reusable argument.", selector),
             Arg::OneShot(inner) => {
                 let obj = inner
                     .lock()
@@ -345,9 +388,8 @@ impl Command {
                     .ok_or(ArgumentError::Consumed)?;
                 match obj.downcast::<T>() {
                     Ok(obj) => Ok(obj),
-                    Err(obj) => {
-                        inner.lock().unwrap().replace(obj);
-                        Err(ArgumentError::IncorrectType)
+                    Err(_) => {
+                        panic!("OneShot command had wrong payload type.");
                     }
                 }
             }
@@ -375,17 +417,22 @@ impl<T> std::fmt::Display for Selector<T> {
     }
 }
 
+impl<T> std::fmt::Display for OneShotSelector<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "OneShotSelector(\"{}\", {})",
+            self.0,
+            std::any::type_name::<T>()
+        )
+    }
+}
+
 impl std::fmt::Display for ArgumentError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             ArgumentError::WrongSelector => write!(f, "Command had wrong selector"),
-            ArgumentError::IncorrectType => write!(f, "Downcast failed: wrong concrete type"),
             ArgumentError::Consumed => write!(f, "One-shot command arguemnt already consumed"),
-            ArgumentError::WrongVariant => write!(
-                f,
-                "Incorrect access method for argument type; \
-                 check Command::one_shot docs for more detail."
-            ),
         }
     }
 }
@@ -426,6 +473,6 @@ mod tests {
         let objs = vec![0, 1, 2];
         // TODO: find out why this now wants a `.clone()` even tho `Selector` implements `Copy`.
         let command = Command::new(sel, objs);
-        assert_eq!(command.get(sel), Ok(&vec![0, 1, 2]));
+        assert_eq!(command.get(sel), Some(&vec![0, 1, 2]));
     }
 }

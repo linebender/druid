@@ -115,7 +115,7 @@ impl Widget<OurData> for ColorWell {
             }
 
             Event::Command(cmd) if cmd.is(FREEZE_COLOR) => {
-                self.frozen = cmd.get(FREEZE_COLOR).ok().cloned();
+                self.frozen = cmd.get(FREEZE_COLOR).cloned();
             }
             Event::Command(cmd) if cmd.is(UNFREEZE_COLOR) => self.frozen = None,
             _ => (),

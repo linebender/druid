@@ -367,26 +367,24 @@ impl<T: Data> Inner<T> {
 
     fn set_menu(&mut self, window_id: WindowId, cmd: &Command) {
         if let Some(win) = self.windows.get_mut(window_id) {
-            match cmd.get(sys_cmd::SET_MENU) {
-                Ok(menu) => match menu.realize() {
+            if let Some(menu) = cmd.get(sys_cmd::SET_MENU) {
+                match menu.realize() {
                     Ok(menu) => win.set_menu(menu.to_owned(), &self.data, &self.env),
                     Err(e) => log::error!("set_menu: {}", e),
-                },
-                Err(e) => log::error!("set-menu object error: '{}'", e),
+                }
             }
         }
     }
 
     fn show_context_menu(&mut self, window_id: WindowId, cmd: &Command) {
         if let Some(win) = self.windows.get_mut(window_id) {
-            match cmd.get(sys_cmd::SHOW_CONTEXT_MENU) {
-                Ok(menu) => match menu.realize() {
+            if let Some(menu) = cmd.get(sys_cmd::SHOW_CONTEXT_MENU) {
+                match menu.realize() {
                     Ok(ContextMenu { menu, location }) => {
                         win.show_context_menu(menu.to_owned(), *location, &self.data, &self.env)
                     }
                     Err(e) => log::error!("show_context_menu: {}", e),
-                },
-                Err(e) => log::error!("show_context_menu argument error: {}", e),
+                }
             }
         }
     }

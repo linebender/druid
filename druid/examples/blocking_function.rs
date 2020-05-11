@@ -65,7 +65,7 @@ impl AppDelegate<AppState> for Delegate {
             data.processing = true;
             wrapped_slow_function(self.eventsink.clone(), data.value);
         }
-        if let Ok(number) = cmd.get(FINISH_SLOW_FUNCTION) {
+        if let Some(number) = cmd.get(FINISH_SLOW_FUNCTION) {
             data.processing = false;
             data.value = *number;
         }

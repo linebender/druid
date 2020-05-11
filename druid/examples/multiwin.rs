@@ -187,7 +187,7 @@ impl AppDelegate<State> for Delegate {
             Target::Window(id) if cmd.is(MENU_COUNT_ACTION) => {
                 data.selected = *cmd.get(MENU_COUNT_ACTION).unwrap();
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu.into_app_state_menu_desc());
+                let cmd = Command::new(sys_cmds::SET_MENU, menu.into_app_state_menu_desc());
                 ctx.submit_command(cmd, id);
                 false
             }
@@ -196,14 +196,14 @@ impl AppDelegate<State> for Delegate {
             Target::Window(id) if cmd.is(MENU_INCREMENT_ACTION) => {
                 data.menu_count += 1;
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu.into_app_state_menu_desc());
+                let cmd = Command::new(sys_cmds::SET_MENU, menu.into_app_state_menu_desc());
                 ctx.submit_command(cmd, id);
                 false
             }
             Target::Window(id) if cmd.is(MENU_DECREMENT_ACTION) => {
                 data.menu_count = data.menu_count.saturating_sub(1);
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu.into_app_state_menu_desc());
+                let cmd = Command::new(sys_cmds::SET_MENU, menu.into_app_state_menu_desc());
                 ctx.submit_command(cmd, id);
                 false
             }
