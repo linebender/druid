@@ -422,22 +422,27 @@ impl WndProc for MyWndProc {
         //println!("wndproc msg: {}", msg);
         match msg {
             WM_CREATE => {
-                let dcomp_state = unsafe {
-                    create_dcomp_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
-                        warn!("Creating swapchain failed, falling back to hwnd: {:?}", e);
-                        None
-                    })
-                };
-
-                self.state.borrow_mut().as_mut().unwrap().dcomp_state = dcomp_state;
                 if let Some(state) = self.handle.borrow().state.upgrade() {
                     state.hwnd.set(hwnd);
                 }
-                let handle = self.handle.borrow().to_owned();
                 if let Some(state) = self.state.borrow_mut().as_mut() {
+                    let dcomp_state = unsafe {
+                        create_dcomp_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
+                            warn!("Creating swapchain failed, falling back to hwnd: {:?}", e);
+                            None
+                        })
+                    };
+                    if dcomp_state.is_none() {
+                        unsafe {
+                            let rt = paint::create_render_target(&self.d2d_factory, hwnd);
+                            state.render_target = rt.ok();
+                        }
+                    }
+                    state.dcomp_state = dcomp_state;
+
+                    let handle = self.handle.borrow().to_owned();
                     state.handler.connect(&handle.into());
                 }
-
                 Some(0)
             }
             WM_ERASEBKGND => Some(0),
