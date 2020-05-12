@@ -190,12 +190,6 @@ impl<T: Data, U: Data> Data for Result<T, U> {
     }
 }
 
-impl<D: Data> Data for Vec<D> {
-    fn same(&self, other: &Self) -> bool {
-        self.iter().zip(other.iter()).all(|(a, b)| a.same(b))
-    }
-}
-
 impl Data for () {
     fn same(&self, _other: &Self) -> bool {
         true
