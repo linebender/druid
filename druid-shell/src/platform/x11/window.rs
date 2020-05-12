@@ -527,17 +527,9 @@ impl Window {
         let key_code: KeyCode = key.into();
         let key_event = KeyEvent::new(
             key_code,
+            // TODO: detect repeated keys
             false,
-            KeyModifiers {
-                /// Shift.
-                shift: false,
-                /// Option on macOS.
-                alt: false,
-                /// Control.
-                ctrl: false,
-                /// Meta / Windows / Command
-                meta: false,
-            },
+            key_mods(key_press.state()),
             key_code,
             key_code,
         );
@@ -554,19 +546,17 @@ impl Window {
     }
 
     pub fn handle_button_press(&self, button_press: &xcb::ButtonPressEvent) -> Result<(), Error> {
+        let button = mouse_button(button_press.detail());
         let mouse_event = MouseEvent {
             pos: Point::new(button_press.event_x() as f64, button_press.event_y() as f64),
-            // TODO: Fill with held down buttons
-            buttons: MouseButtons::new().with(MouseButton::Left),
-            mods: KeyModifiers {
-                shift: false,
-                alt: false,
-                ctrl: false,
-                meta: false,
-            },
+            // The xcb state field doesn't include the newly pressed button, but
+            // druid wants it to be included.
+            buttons: mouse_buttons(button_press.state()).with(button),
+            mods: key_mods(button_press.state()),
+            // TODO: detect the count
             count: 1,
             focus: false,
-            button: MouseButton::Left,
+            button,
             wheel_delta: Vec2::ZERO,
         };
         match self.handler.try_borrow_mut() {
@@ -585,22 +575,19 @@ impl Window {
         &self,
         button_release: &xcb::ButtonReleaseEvent,
     ) -> Result<(), Error> {
+        let button = mouse_button(button_release.detail());
         let mouse_event = MouseEvent {
             pos: Point::new(
                 button_release.event_x() as f64,
                 button_release.event_y() as f64,
             ),
-            // TODO: Fill with held down buttons
-            buttons: MouseButtons::new(),
-            mods: KeyModifiers {
-                shift: false,
-                alt: false,
-                ctrl: false,
-                meta: false,
-            },
+            // The xcb state includes the newly released button, but druid
+            // doesn't want it.
+            buttons: mouse_buttons(button_release.state()).without(button),
+            mods: key_mods(button_release.state()),
             count: 0,
             focus: false,
-            button: MouseButton::Left,
+            button,
             wheel_delta: Vec2::ZERO,
         };
         match self.handler.try_borrow_mut() {
@@ -624,14 +611,8 @@ impl Window {
                 motion_notify.event_x() as f64,
                 motion_notify.event_y() as f64,
             ),
-            // TODO: Fill with held down buttons
-            buttons: MouseButtons::new(),
-            mods: KeyModifiers {
-                shift: false,
-                alt: false,
-                ctrl: false,
-                meta: false,
-            },
+            buttons: mouse_buttons(motion_notify.state()),
+            mods: key_mods(motion_notify.state()),
             count: 0,
             focus: false,
             button: MouseButton::None,
@@ -679,6 +660,63 @@ impl Window {
             ))),
         }
     }
+}
+
+// Converts from, e.g., the `details` field of `xcb::xproto::ButtonPressEvent`
+fn mouse_button(button: u8) -> MouseButton {
+    match button {
+        1 => MouseButton::Left,
+        2 => MouseButton::Middle,
+        3 => MouseButton::Right,
+        // buttons 4 through 7 are for scrolling.
+        4..=7 => MouseButton::None,
+        8 => MouseButton::X1,
+        9 => MouseButton::X2,
+        _ => {
+            log::warn!("unknown mouse button code {}", button);
+            MouseButton::None
+        }
+    }
+}
+
+// Extracts the mouse buttons from, e.g., the `state` field of
+// `xcb::xproto::ButtonPressEvent`
+fn mouse_buttons(mods: u16) -> MouseButtons {
+    let mut buttons = MouseButtons::new();
+    let button_masks = &[
+        (xcb::xproto::BUTTON_MASK_1, MouseButton::Left),
+        (xcb::xproto::BUTTON_MASK_2, MouseButton::Middle),
+        (xcb::xproto::BUTTON_MASK_3, MouseButton::Right),
+        // TODO: determine the X1/X2 state, using our own caching if necessary.
+        // BUTTON_MASK_4/5 do not work: they are for scroll events.
+    ];
+    for (mask, button) in button_masks {
+        if mods & (*mask as u16) != 0 {
+            buttons.insert(*button);
+        }
+    }
+    buttons
+}
+
+// Extracts the keyboard modifiers from, e.g., the `state` field of
+// `xcb::xproto::ButtonPressEvent`
+fn key_mods(mods: u16) -> KeyModifiers {
+    let mut ret = KeyModifiers::default();
+    let mut key_masks = [
+        (xcb::xproto::MOD_MASK_SHIFT, &mut ret.shift),
+        (xcb::xproto::MOD_MASK_CONTROL, &mut ret.ctrl),
+        // X11's mod keys are configurable, but this seems
+        // like a reasonable default for US keyboards, at least,
+        // where the "windows" key seems to be MOD_MASK_4.
+        (xcb::xproto::MOD_MASK_1, &mut ret.alt),
+        (xcb::xproto::MOD_MASK_4, &mut ret.meta),
+    ];
+    for (mask, key) in &mut key_masks {
+        if mods & (*mask as u16) != 0 {
+            **key = true;
+        }
+    }
+    ret
 }
 
 #[derive(Clone)]
