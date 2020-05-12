@@ -18,9 +18,11 @@ use std::collections::{HashMap, VecDeque};
 
 use crate::bloom::Bloom;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
-use crate::piet::RenderContext;
+use crate::piet::{
+    FontBuilder, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
+};
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
+    BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
     LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget,
     WidgetId, WindowId,
 };
@@ -45,6 +47,8 @@ pub struct WidgetPod<T, W> {
     old_data: Option<T>,
     env: Option<Env>,
     inner: W,
+    // stashed layout so we don't recompute this when debugging
+    debug_widget_text: Option<PietTextLayout>,
 }
 
 /// Generic state for all widgets in the hierarchy.
@@ -141,6 +145,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             old_data: None,
             env: None,
             inner,
+            debug_widget_text: None,
         }
     }
 
@@ -316,6 +321,10 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
                 window_id,
             };
             child.lifecycle(&mut child_ctx, &hot_changed_event, data, env);
+            // if hot changes and we're showing widget ids, always repaint
+            if env.get(Env::DEBUG_WIDGET_ID) {
+                child_ctx.request_paint();
+            }
             return true;
         }
         false
@@ -335,6 +344,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// [`paint`]: trait.Widget.html#tymethod.paint
     /// [`paint_with_offset`]: #method.paint_with_offset
     pub fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        // we need to do this before we borrow from self
+        if env.get(Env::DEBUG_WIDGET_ID) {
+            self.make_widget_id_layout_if_needed(self.state.id, ctx, env);
+        }
+
         let mut inner_ctx = PaintCtx {
             render_ctx: ctx.render_ctx,
             window_id: ctx.window_id,
@@ -342,18 +356,21 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             region: ctx.region.clone(),
             base_state: &self.state,
             focus_widget: ctx.focus_widget,
+            depth: ctx.depth,
         };
         self.inner.paint(&mut inner_ctx, data, env);
-        ctx.z_ops.append(&mut inner_ctx.z_ops);
 
-        if env.get(Env::DEBUG_PAINT) {
-            const BORDER_WIDTH: f64 = 1.0;
-            let rect = inner_ctx.size().to_rect().inset(BORDER_WIDTH / -2.0);
-            let id = self.id().to_raw();
-            let color = env.get_debug_color(id);
-            inner_ctx.stroke(rect, &color, BORDER_WIDTH);
+        let debug_ids = inner_ctx.is_hot() && env.get(Env::DEBUG_WIDGET_ID);
+        if debug_ids {
+            // this also draws layout bounds
+            self.debug_paint_widget_ids(&mut inner_ctx, env);
         }
 
+        if !debug_ids && env.get(Env::DEBUG_PAINT) {
+            self.debug_paint_layout_bounds(&mut inner_ctx, env);
+        }
+
+        ctx.z_ops.append(&mut inner_ctx.z_ops);
         self.state.invalid = Region::EMPTY;
     }
 
@@ -390,6 +407,58 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let visible = ctx.region().to_rect().intersect(self.state.paint_rect()) - layout_origin;
             ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, env));
         });
+    }
+
+    fn make_widget_id_layout_if_needed(&mut self, id: WidgetId, ctx: &mut PaintCtx, env: &Env) {
+        if self.debug_widget_text.is_none() {
+            let font = ctx
+                .text()
+                .new_font_by_name(env.get(crate::theme::FONT_NAME), 10.0)
+                .build()
+                .unwrap();
+            let id_string = id.to_raw().to_string();
+            self.debug_widget_text = ctx
+                .text()
+                .new_text_layout(&font, &id_string, f64::INFINITY)
+                .build()
+                .ok();
+        }
+    }
+
+    fn debug_paint_widget_ids(&self, ctx: &mut PaintCtx, env: &Env) {
+        // we clone because we need to move it for paint_with_z_index
+        let text = self.debug_widget_text.clone();
+        if let Some(text) = text {
+            let text_size = Size::new(text.width(), 10.0);
+            let origin = ctx.size().to_vec2() - text_size.to_vec2();
+            let border_color = env.get_debug_color(ctx.widget_id().to_raw());
+            self.debug_paint_layout_bounds(ctx, env);
+
+            ctx.paint_with_z_index(ctx.depth(), move |ctx| {
+                let origin = Point::new(origin.x.max(0.0), origin.y.max(0.0));
+
+                let text_pos = origin + Vec2::new(0., 8.0);
+                let text_rect = Rect::from_origin_size(origin, text_size);
+
+                ctx.fill(text_rect, &border_color);
+                let (r, g, b, _) = border_color.as_rgba_u8();
+                let avg = (r as u32 + g as u32 + b as u32) / 3;
+                let text_color = if avg < 128 {
+                    Color::WHITE
+                } else {
+                    Color::BLACK
+                };
+                ctx.draw_text(&text, text_pos, &text_color);
+            })
+        }
+    }
+
+    fn debug_paint_layout_bounds(&self, ctx: &mut PaintCtx, env: &Env) {
+        const BORDER_WIDTH: f64 = 1.0;
+        let rect = ctx.size().to_rect().inset(BORDER_WIDTH / -2.0);
+        let id = self.id().to_raw();
+        let color = env.get_debug_color(id);
+        ctx.stroke(rect, &color, BORDER_WIDTH);
     }
 
     /// Compute layout of a widget.
@@ -712,6 +781,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
                 true
             }
+            //NOTE: this is not sent here, but from the special set_hot_state method
             LifeCycle::HotChanged(_) => false,
             LifeCycle::FocusChanged(_) => {
                 // We are a descendant of a widget that has/had focus.

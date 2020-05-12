@@ -114,6 +114,8 @@ pub struct PaintCtx<'a, 'b: 'a> {
     pub(crate) region: Region,
     pub(crate) base_state: &'a BaseState,
     pub(crate) focus_widget: Option<WidgetId>,
+    /// The approximate depth in the tree at the time of painting.
+    pub(crate) depth: u32,
 }
 
 /// A region of a widget, generally used to describe what needs to be drawn.
@@ -341,7 +343,10 @@ impl<'a> EventCtx<'a> {
         if self.is_focused() {
             self.base_state.request_focus = Some(FocusChange::Resign);
         } else {
-            log::warn!("resign_focus can only be called by the currently focused widget");
+            log::warn!(
+                "resign_focus can only be called by the currently focused widget ({:?})",
+                self.widget_id()
+            );
         }
     }
 
@@ -705,6 +710,20 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
         self.base_state.has_focus
     }
 
+    /// The depth in the tree of the currently painting widget.
+    ///
+    /// This may be used in combination with [`paint_with_z_index`] in order
+    /// to correctly order painting operations.
+    ///
+    /// The `depth` here may not be exact; it is only guaranteed that a child will
+    /// have a greater depth than its parent.
+    ///
+    /// [`paint_with_z_index`]: #method.paint_with_z_index
+    #[inline]
+    pub fn depth(&self) -> u32 {
+        self.depth
+    }
+
     /// Returns the currently visible [`Region`].
     ///
     /// [`Region`]: struct.Region.html
@@ -726,6 +745,7 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
             window_id: self.window_id,
             focus_widget: self.focus_widget,
             region: region.into(),
+            depth: self.depth + 1,
         };
         f(&mut child_ctx);
         self.z_ops.append(&mut child_ctx.z_ops);
