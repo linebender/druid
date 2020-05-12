@@ -39,7 +39,7 @@ pub type UpdateFn<S, T> = dyn FnMut(&mut S, &mut UpdateCtx, &T, &T, &Env);
 pub type LayoutFn<S, T> = dyn FnMut(&mut S, &mut LayoutCtx, &BoxConstraints, &T, &Env) -> Size;
 pub type PaintFn<S, T> = dyn FnMut(&mut S, &mut PaintCtx, &T, &Env);
 
-pub const REPLACE_CHILD: Selector<()> = Selector::new("druid-test.replace-child");
+pub const REPLACE_CHILD: Selector = Selector::new("druid-test.replace-child");
 
 /// A widget that can be constructed from individual functions, builder-style.
 ///

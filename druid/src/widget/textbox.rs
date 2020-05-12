@@ -37,7 +37,7 @@ const PADDING_TOP: f64 = 5.;
 const PADDING_LEFT: f64 = 4.;
 
 // we send ourselves this when we want to reset blink, which must be done in event.
-const RESET_BLINK: Selector<()> = Selector::new("druid-builtin.reset-textbox-blink");
+const RESET_BLINK: Selector = Selector::new("druid-builtin.reset-textbox-blink");
 const CURSOR_BLINK_DRUATION: Duration = Duration::from_millis(500);
 
 /// A widget that allows user text input.

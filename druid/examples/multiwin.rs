@@ -24,9 +24,9 @@ use druid::{
 use log::info;
 
 const MENU_COUNT_ACTION: Selector<usize> = Selector::new("menu-count-action");
-const MENU_INCREMENT_ACTION: Selector<()> = Selector::new("menu-increment-action");
-const MENU_DECREMENT_ACTION: Selector<()> = Selector::new("menu-decrement-action");
-const MENU_SWITCH_GLOW_ACTION: Selector<()> = Selector::new("menu-switch-glow");
+const MENU_INCREMENT_ACTION: Selector = Selector::new("menu-increment-action");
+const MENU_DECREMENT_ACTION: Selector = Selector::new("menu-decrement-action");
+const MENU_SWITCH_GLOW_ACTION: Selector = Selector::new("menu-switch-glow");
 
 #[derive(Debug, Clone, Default, Data)]
 struct State {

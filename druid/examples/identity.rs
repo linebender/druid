@@ -41,7 +41,7 @@ use druid::{
 const CYCLE_DURATION: Duration = Duration::from_millis(100);
 
 const FREEZE_COLOR: Selector<Color> = Selector::new("identity-example.freeze-color");
-const UNFREEZE_COLOR: Selector<()> = Selector::new("identity-example.unfreeze-color");
+const UNFREEZE_COLOR: Selector = Selector::new("identity-example.unfreeze-color");
 
 /// Honestly: it's just a color in fancy clothing.
 #[derive(Debug, Clone, Data, Lens)]

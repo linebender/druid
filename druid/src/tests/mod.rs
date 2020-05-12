@@ -150,7 +150,7 @@ fn propogate_hot() {
 }
 #[test]
 fn take_focus() {
-    const TAKE_FOCUS: Selector<()> = Selector::new("druid-tests.take-focus");
+    const TAKE_FOCUS: Selector = Selector::new("druid-tests.take-focus");
 
     /// A widget that takes focus when sent a particular command.
     /// The widget records focus change events into the inner cell.

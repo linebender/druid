@@ -33,7 +33,7 @@ pub type SelectorSymbol = &'static str;
 ///
 /// [`druid::commands`]: commands/index.html
 #[derive(Debug, PartialEq, Eq)]
-pub struct Selector<T>(SelectorSymbol, PhantomData<*const T>);
+pub struct Selector<T = ()>(SelectorSymbol, PhantomData<*const T>);
 
 // This has do be done explicitly, to avoid the Copy bound on `T`.
 // See https://doc.rust-lang.org/std/marker/trait.Copy.html#how-can-i-implement-copy .
@@ -184,13 +184,13 @@ pub mod sys {
     };
 
     /// Quit the running application. This command is handled by the druid library.
-    pub const QUIT_APP: Selector<()> = Selector::new("druid-builtin.quit-app");
+    pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
 
     /// Hide the application. (mac only?)
-    pub const HIDE_APPLICATION: Selector<()> = Selector::new("druid-builtin.menu-hide-application");
+    pub const HIDE_APPLICATION: Selector = Selector::new("druid-builtin.menu-hide-application");
 
     /// Hide all other applications. (mac only?)
-    pub const HIDE_OTHERS: Selector<()> = Selector::new("druid-builtin.menu-hide-others");
+    pub const HIDE_OTHERS: Selector = Selector::new("druid-builtin.menu-hide-others");
 
     /// The selector for a command to create a new window.
     pub const NEW_WINDOW: OneShotSelector<AppStateWindowDesc> =
@@ -201,17 +201,17 @@ pub mod sys {
     /// The command must target a specific window.
     /// When calling `submit_command` on a `Widget`s context, passing `None` as target
     /// will automatically target the window containing the widget.
-    pub const CLOSE_WINDOW: Selector<()> = Selector::new("druid-builtin.close-window");
+    pub const CLOSE_WINDOW: Selector = Selector::new("druid-builtin.close-window");
 
     /// Close all windows.
-    pub const CLOSE_ALL_WINDOWS: Selector<()> = Selector::new("druid-builtin.close-all-windows");
+    pub const CLOSE_ALL_WINDOWS: Selector = Selector::new("druid-builtin.close-all-windows");
 
     /// The selector for a command to bring a window to the front, and give it focus.
     ///
     /// The command must target a specific window.
     /// When calling `submit_command` on a `Widget`s context, passing `None` as target
     /// will automatically target the window containing the widget.
-    pub const SHOW_WINDOW: Selector<()> = Selector::new("druid-builtin.show-window");
+    pub const SHOW_WINDOW: Selector = Selector::new("druid-builtin.show-window");
 
     /// Display a context (right-click) menu.
     /// An `AppStateContextMenu` can be obtained using `ContextMenu::into_app_state_context_menu`.
@@ -227,16 +227,16 @@ pub mod sys {
     pub const SET_MENU: Selector<AppStateMenuDesc> = Selector::new("druid-builtin.set-menu");
 
     /// Show the application preferences.
-    pub const SHOW_PREFERENCES: Selector<()> = Selector::new("druid-builtin.menu-show-preferences");
+    pub const SHOW_PREFERENCES: Selector = Selector::new("druid-builtin.menu-show-preferences");
 
     /// Show the application about window.
-    pub const SHOW_ABOUT: Selector<()> = Selector::new("druid-builtin.menu-show-about");
+    pub const SHOW_ABOUT: Selector = Selector::new("druid-builtin.menu-show-about");
 
     /// Show all applications.
-    pub const SHOW_ALL: Selector<()> = Selector::new("druid-builtin.menu-show-all");
+    pub const SHOW_ALL: Selector = Selector::new("druid-builtin.menu-show-all");
 
     /// Show the new file dialog.
-    pub const NEW_FILE: Selector<()> = Selector::new("druid-builtin.menu-file-new");
+    pub const NEW_FILE: Selector = Selector::new("druid-builtin.menu-file-new");
 
     /// System command. A file picker dialog will be shown to the user, and an
     /// [`OPEN_FILE`] command will be sent if a file is chosen.
@@ -269,28 +269,28 @@ pub mod sys {
     pub const SAVE_FILE: Selector<Option<FileInfo>> = Selector::new("druid-builtin.menu-file-save");
 
     /// Show the print-setup window.
-    pub const PRINT_SETUP: Selector<()> = Selector::new("druid-builtin.menu-file-print-setup");
+    pub const PRINT_SETUP: Selector = Selector::new("druid-builtin.menu-file-print-setup");
 
     /// Show the print dialog.
-    pub const PRINT: Selector<()> = Selector::new("druid-builtin.menu-file-print");
+    pub const PRINT: Selector = Selector::new("druid-builtin.menu-file-print");
 
     /// Show the print preview.
-    pub const PRINT_PREVIEW: Selector<()> = Selector::new("druid-builtin.menu-file-print");
+    pub const PRINT_PREVIEW: Selector = Selector::new("druid-builtin.menu-file-print");
 
     /// Cut the current selection.
-    pub const CUT: Selector<()> = Selector::new("druid-builtin.menu-cut");
+    pub const CUT: Selector = Selector::new("druid-builtin.menu-cut");
 
     /// Copy the current selection.
-    pub const COPY: Selector<()> = Selector::new("druid-builtin.menu-copy");
+    pub const COPY: Selector = Selector::new("druid-builtin.menu-copy");
 
     /// Paste.
-    pub const PASTE: Selector<()> = Selector::new("druid-builtin.menu-paste");
+    pub const PASTE: Selector = Selector::new("druid-builtin.menu-paste");
 
     /// Undo.
-    pub const UNDO: Selector<()> = Selector::new("druid-builtin.menu-undo");
+    pub const UNDO: Selector = Selector::new("druid-builtin.menu-undo");
 
     /// Redo.
-    pub const REDO: Selector<()> = Selector::new("druid-builtin.menu-redo");
+    pub const REDO: Selector = Selector::new("druid-builtin.menu-redo");
 }
 
 impl<T> Selector<T> {

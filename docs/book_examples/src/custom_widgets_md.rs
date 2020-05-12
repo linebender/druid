@@ -36,7 +36,7 @@ fn background_label() -> impl Widget<Color> {
 // ANCHOR_END: background_label
 
 // ANCHOR: annoying_textbox
-const ACTION: Selector<()> = Selector::new("hello.textbox-action");
+const ACTION: Selector = Selector::new("hello.textbox-action");
 const DELAY: Duration = Duration::from_millis(300);
 
 struct TextBoxActionController {
