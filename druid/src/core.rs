@@ -736,19 +736,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         if old != new {
                             self.state.has_focus = change;
                             substitute_event = Some(LifeCycle::FocusChanged(change));
-                            true
-                        } else {
-                            false
                         }
                     } else {
                         self.state.has_focus = false;
-                        // Recurse when the target widgets could be our descendants.
-                        // The bloom filter we're checking can return false positives.
-                        match (old, new) {
-                            (Some(old), _) if self.state.children.may_contain(old) => true,
-                            (_, Some(new)) if self.state.children.may_contain(new) => true,
-                            _ => false,
-                        }
+                    }
+
+                    // Recurse when the target widgets could be our descendants.
+                    // The bloom filter we're checking can return false positives.
+                    match (old, new) {
+                        (Some(old), _) if self.state.children.may_contain(old) => true,
+                        (_, Some(new)) if self.state.children.may_contain(new) => true,
+                        _ => false,
                     }
                 }
                 #[cfg(test)]
@@ -790,15 +788,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
         };
 
-        // use the substitute event, if one exists
-        let event = substitute_event.as_ref().unwrap_or(event);
+        let mut child_ctx = LifeCycleCtx {
+            command_queue: ctx.command_queue,
+            base_state: &mut self.state,
+            window_id: ctx.window_id,
+        };
 
         if recurse {
-            let mut child_ctx = LifeCycleCtx {
-                command_queue: ctx.command_queue,
-                base_state: &mut self.state,
-                window_id: ctx.window_id,
-            };
+            self.inner.lifecycle(&mut child_ctx, event, data, env);
+        }
+
+        if let Some(event) = substitute_event.as_ref() {
             self.inner.lifecycle(&mut child_ctx, event, data, env);
         }
 
