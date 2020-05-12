@@ -376,16 +376,24 @@ impl<T: Data> Window<T> {
         };
         ctx.with_child_ctx(invalid_rect, |ctx| self.root.paint(ctx, data, env));
 
-        let mut z_ops = mem::take(&mut ctx.z_ops);
-        z_ops.sort_by_key(|k| k.z_index);
-
-        for z_op in z_ops.into_iter() {
-            ctx.with_child_ctx(invalid_rect, |ctx| {
-                ctx.with_save(|ctx| {
-                    ctx.render_ctx.transform(z_op.transform);
-                    (z_op.paint_func)(ctx);
+        if !ctx.z_ops.is_empty() {
+            let mut z_ops = mem::take(&mut ctx.z_ops);
+            z_ops.sort_by_key(|k| k.z_index);
+            // Some platforms perform work of their own on the piet context,
+            // so the root transform is not guaranteed to be empty and must be accounted for.
+            let inverse_root_transform = ctx.render_ctx.current_transform().inverse();
+            for z_op in z_ops.into_iter() {
+                ctx.with_child_ctx(invalid_rect, |ctx| {
+                    ctx.with_save(|ctx| {
+                        // We need to apply the inverse root transform,
+                        // because z_op.transform already contains that.
+                        // Without doing so the root transform will be applied twice.
+                        ctx.render_ctx.transform(inverse_root_transform);
+                        ctx.render_ctx.transform(z_op.transform);
+                        (z_op.paint_func)(ctx);
+                    });
                 });
-            });
+            }
         }
     }
 
