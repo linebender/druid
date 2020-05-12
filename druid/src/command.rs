@@ -122,7 +122,7 @@ enum Arg {
     OneShot(Arc<Mutex<Option<Box<dyn Any>>>>),
 }
 
-/// Errors that can occur when attempting to retrieve the a `OneShotCommand`s argument.
+/// Errors that can occur when attempting to retrieve the `OneShotCommand`s argument.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArgumentError {
     /// The command represented a different selector.
