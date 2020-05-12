@@ -131,7 +131,7 @@ pub enum ArgumentError {
     Consumed,
 }
 
-/// This error can occure when wrongly promising that a type ereased
+/// This error can occur when wrongly promising that a type erased
 /// variant of some generic item represents the application state.
 /// Examples are `MenuDesc<T>` and `AppStateMenuDesc`.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -263,9 +263,7 @@ pub mod sys {
     /// Commands to save a file, must be handled by the application.
     ///
     /// If it carries `Some`, then the application should save to that file and store the `FileInfo` for future use.
-    /// If it carries `None`, the appliaction should have recieved `Some` before and use the stored `FileInfo`.
-    ///
-    /// The argument, if present, should be the path where the file should be saved.
+    /// If it carries `None`, the application should have received `Some` before and use the stored `FileInfo`.
     pub const SAVE_FILE: Selector<Option<FileInfo>> = Selector::new("druid-builtin.menu-file-save");
 
     /// Show the print-setup window.
