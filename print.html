@@ -810,7 +810,7 @@ of a <a href="https://docs.rs/druid/0.5.0/druid/widget/struct.Container.html"><c
 as a background, we could do:</p>
 <pre><code class="language-rust noplaypen">fn background_label() -&gt; impl Widget&lt;Color&gt; {
     Label::dynamic(|color: &amp;Color, _| {
-        let (r, g, b, _) = color.as_rgba_u8();
+        let (r, g, b, _) = color.as_rgba8();
         format!(&quot;#{:X}{:X}{:X}&quot;, r, g, b)
     })
     .background(make_color_swatch())
