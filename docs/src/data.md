@@ -31,3 +31,17 @@ Here is an example of using `Data` to implement a simple data model.
 ```rust
 {{#include ../book_examples/src/data_md.rs:derive}}
 ```
+
+#### Collections
+
+`Data` is expected to be cheap to clone and cheap to compare, which can cause
+issues with collection types. For this reason, `Data` is not implemented for
+`std` types like `Vec` or `HashMap`. This is not a huge issue, however; you can
+always put these types inside an `Rc` or an `Arc`, or if you're dealing with
+larger collections you can build druid with the `im` feature, which brings in
+the [`im crate`], and adds a `Data` impl for the collections there. The [`im`
+crate] is a collection of immutable data structures that act a lot like the `std`
+collections, but can be cloned efficiently.
+
+
+[`im` crate]: https://docs.rs/im
