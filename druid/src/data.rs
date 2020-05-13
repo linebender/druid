@@ -65,6 +65,17 @@ pub use druid_derive::Data;
 /// This function must have a signature in the form, `fn<T>(&T, &T) -> bool`,
 /// where `T` is the type of the field.
 ///
+/// ## Collection types
+///
+/// `Data` is not implemented for `std` collection types, because comparing them
+/// can be expensive. To use collection types with druid, there are two easy options:
+/// either wrap the collection in an `Arc`, or build druid with the `im` feature,
+/// which adds `Data` implementations to the collections from the [`im` crate],
+/// a set of immutable data structures that fit nicely with druid.
+///
+/// If the `im` feature is used, the `im` crate is reexported from the root
+/// of the druid crate.
+///
 /// ### Example:
 ///
 /// ```
@@ -90,6 +101,7 @@ pub use druid_derive::Data;
 /// checks for equality. Therefore, such types must also implement `PartialEq`.
 ///
 /// [`Data::same`]: trait.Data.html#tymethod.same
+/// [`im` crate]: https://docs.rs/im
 pub trait Data: Clone + 'static {
     //// ANCHOR: same_fn
     /// Determine whether two values are the same.
@@ -375,6 +387,58 @@ impl Data for piet::Color {
     }
 }
 
+//FIXME Vector::ptr_eq is not currently reliable; this is a temporary impl?
+#[cfg(feature = "im")]
+impl<T: Data> Data for im::Vector<T> {
+    fn same(&self, other: &Self) -> bool {
+        // for reasons outlined in https://github.com/bodil/im-rs/issues/129,
+        // ptr_eq always returns false for small collections. This heuristic
+        // falls back to using equality for collections below some threshold.
+        // There may be a possibility of this returning false negatives, but
+        // not false positives; that's an acceptable outcome.
+
+        /* this is the impl I expected to use
+        const INLINE_LEN: usize = 48; // bytes available before first allocation;
+        let inline_capacity: usize = INLINE_LEN / std::mem::size_of::<T>();
+        if self.len() == other.len() && self.len() <= inline_capacity {
+            self.iter().zip(other.iter()).all(|(a, b)| a.same(b))
+        } else {
+            self.ptr_eq(other)
+        }
+        */
+
+        self.len() == other.len() && self.iter().zip(other.iter()).all(|(a, b)| a.same(b))
+    }
+}
+
+#[cfg(feature = "im")]
+impl<K: Clone + 'static, V: Data> Data for im::HashMap<K, V> {
+    fn same(&self, other: &Self) -> bool {
+        self.ptr_eq(other)
+    }
+}
+
+#[cfg(feature = "im")]
+impl<T: Data> Data for im::HashSet<T> {
+    fn same(&self, other: &Self) -> bool {
+        self.ptr_eq(other)
+    }
+}
+
+#[cfg(feature = "im")]
+impl<K: Clone + 'static, V: Data> Data for im::OrdMap<K, V> {
+    fn same(&self, other: &Self) -> bool {
+        self.ptr_eq(other)
+    }
+}
+
+#[cfg(feature = "im")]
+impl<T: Data> Data for im::OrdSet<T> {
+    fn same(&self, other: &Self) -> bool {
+        self.ptr_eq(other)
+    }
+}
+
 macro_rules! impl_data_for_array {
     () => {};
     ($this:tt $($rest:tt)*) => {
@@ -405,5 +469,25 @@ mod test {
         let input = [1u8, 0, 0, 1, 0];
         assert!(input.same(&[1u8, 0, 0, 1, 0]));
         assert!(!input.same(&[1u8, 1, 0, 1, 0]));
+    }
+
+    #[test]
+    #[cfg(feature = "im")]
+    fn im_data() {
+        for len in 8..256 {
+            let input = std::iter::repeat(0_u8).take(len).collect::<im::Vector<_>>();
+            let mut inp2 = input.clone();
+            assert!(input.same(&inp2));
+            inp2.set(len - 1, 98);
+            assert!(!input.same(&inp2));
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "im")]
+    fn im_vec_different_length() {
+        let one = std::iter::repeat(0_u8).take(9).collect::<im::Vector<_>>();
+        let two = std::iter::repeat(0_u8).take(10).collect::<im::Vector<_>>();
+        assert!(!one.same(&two));
     }
 }
