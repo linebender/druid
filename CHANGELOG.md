@@ -196,6 +196,7 @@ Last release without a changelog :(
 [@sjoshid]: https://github.com/sjoshid
 [@mastfissh]: https://github.com/mastfissh
 [@Zarenor]: https://github.com/Zarenor
+[@yrns]: https://github.com/yrns
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
 [0.5.0]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0

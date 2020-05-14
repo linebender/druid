@@ -213,9 +213,7 @@ fn focus_changed() {
                     if cmd.selector == TAKE_FOCUS {
                         ctx.request_focus();
                         // Stop propagating this command so children
-                        // aren't requesting focus too. The extra
-                        // focus requests would be lost when merged
-                        // up, anyway.
+                        // aren't requesting focus too.
                         ctx.set_handled();
                     }
                 }
