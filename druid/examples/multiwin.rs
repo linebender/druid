@@ -57,12 +57,10 @@ fn ui_builder() -> impl Widget<State> {
     let text = LocalizedString::new("hello-counter")
         .with_arg("count", |data: &State, _env| data.menu_count.into());
     let label = Label::new(text);
-    let inc_button = Button::<State>::new("Add menu item").on_click(|ctx, data, _env| {
-        ctx.submit_command(MENU_INCREMENT_ACTION, ctx.window_id())
-    });
-    let dec_button = Button::<State>::new("Remove menu item").on_click(|ctx, data, _env| {
-        ctx.submit_command(MENU_DECREMENT_ACTION, ctx.window_id())
-    });
+    let inc_button = Button::<State>::new("Add menu item")
+        .on_click(|ctx, data, _env| ctx.submit_command(MENU_INCREMENT_ACTION, ctx.window_id()));
+    let dec_button = Button::<State>::new("Remove menu item")
+        .on_click(|ctx, data, _env| ctx.submit_command(MENU_DECREMENT_ACTION, ctx.window_id()));
     let new_button = Button::<State>::new("New window").on_click(|ctx, _data, _env| {
         ctx.submit_command(sys_cmds::NEW_FILE, Target::Global);
     });
