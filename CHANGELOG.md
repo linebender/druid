@@ -80,7 +80,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - X11: Support `Application::quit`. ([#900] by [@xStrom])
 - GTK: Support file filters in open/save dialogs. ([#903] by [@jneem])
 - X11: Support key and mouse button state. ([#920] by [@jneem])
-- Routing `Event::FocusChanged` for descendant widgets. ([#925] by [@yrns])
+- Routing `LifeCycle::FocusChanged` to descendant widgets. ([#925] by [@yrns])
 
 ### Visual
 
