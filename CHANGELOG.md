@@ -80,6 +80,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - X11: Support `Application::quit`. ([#900] by [@xStrom])
 - GTK: Support file filters in open/save dialogs. ([#903] by [@jneem])
 - X11: Support key and mouse button state. ([#920] by [@jneem])
+- Routing `LifeCycle::FocusChanged` to descendant widgets. ([#925] by [@yrns])
 
 ### Visual
 
@@ -167,6 +168,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#917]: https://github.com/xi-editor/druid/pull/917
 [#920]: https://github.com/xi-editor/druid/pull/920
 [#924]: https://github.com/xi-editor/druid/pull/924
+[#925]: https://github.com/xi-editor/druid/pull/925
 
 ## [0.5.0] - 2020-04-01
 
@@ -196,6 +198,7 @@ Last release without a changelog :(
 [@sjoshid]: https://github.com/sjoshid
 [@mastfissh]: https://github.com/mastfissh
 [@Zarenor]: https://github.com/Zarenor
+[@yrns]: https://github.com/yrns
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
 [0.5.0]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0
