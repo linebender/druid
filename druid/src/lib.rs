@@ -110,6 +110,11 @@ use druid_shell as shell;
 #[doc(inline)]
 pub use druid_shell::{kurbo, piet};
 
+// the im crate provides immutable data structures that play well with druid
+#[cfg(feature = "im")]
+#[doc(inline)]
+pub use im;
+
 mod app;
 mod app_delegate;
 mod bloom;

@@ -66,7 +66,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image -- -D warnings
+          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im -- -D warnings
 
       - name: cargo clippy druid-derive
         uses: actions-rs/cargo@v1
@@ -91,7 +91,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --features=svg,image
+          args: --manifest-path=druid/Cargo.toml --features=svg,image,im
 
       - name: cargo test druid-derive
         uses: actions-rs/cargo@v1
@@ -176,7 +176,7 @@ jobs:
         with:
           command: clippy
           # TODO: Add svg feature when it's no longer broken with wasm
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=image --target wasm32-unknown-unknown -- -D warnings
+          args: --manifest-path=druid/Cargo.toml --all-targets --features=image,im --target wasm32-unknown-unknown -- -D warnings
 
       - name: cargo clippy druid-derive
         uses: actions-rs/cargo@v1
@@ -203,7 +203,7 @@ jobs:
         with:
           command: test
           # TODO: Add svg feature when it's no longer broken with wasm
-          args: --manifest-path=druid/Cargo.toml --features=image --no-run --target wasm32-unknown-unknown
+          args: --manifest-path=druid/Cargo.toml --features=image,im --no-run --target wasm32-unknown-unknown
 
       - name: cargo test compile druid-derive
         uses: actions-rs/cargo@v1
@@ -264,7 +264,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --features=svg,image
+          args: --manifest-path=druid/Cargo.toml --features=svg,image,im
 
       - name: cargo test druid-derive
         uses: actions-rs/cargo@v1

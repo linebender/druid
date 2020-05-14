@@ -31,14 +31,14 @@ use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{
     NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSString, NSUInteger,
 };
+use core_graphics::context::CGContextRef;
+use foreign_types::ForeignTypeRef;
 use lazy_static::lazy_static;
+use log::{error, info};
 use objc::declare::ClassDecl;
 use objc::rc::WeakPtr;
 use objc::runtime::{Class, Object, Sel};
 use objc::{class, msg_send, sel, sel_impl};
-
-use cairo::{Context, QuartzSurface};
-use log::{error, info};
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
@@ -574,23 +574,17 @@ extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
 extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
     unsafe {
         let context: id = msg_send![class![NSGraphicsContext], currentContext];
-        // TODO: probably should use a better type than void pointer, but it's not obvious what's best.
-        // cairo_sys::CGContextRef would be better documentation-wise, but it's a type alias.
-        let cgcontext: *mut c_void = msg_send![context, CGContext];
-        // TODO: use width and height from view size
-        let frame = NSView::frame(this as *mut _);
-        let width = frame.size.width as u32;
-        let height = frame.size.height as u32;
+        //FIXME: when core_graphics is at 0.20, we should be able to use
+        //core_graphics::sys::CGContextRef as our pointer type.
+        let cgcontext_ptr: *mut <CGContextRef as ForeignTypeRef>::CType =
+            msg_send![context, CGContext];
+        let cgcontext_ref = CGContextRef::from_ptr_mut(cgcontext_ptr);
+
         let rect = Rect::from_origin_size(
             (dirtyRect.origin.x, dirtyRect.origin.y),
             (dirtyRect.size.width, dirtyRect.size.height),
         );
-        let cairo_surface =
-            QuartzSurface::create_for_cg_context(cgcontext, width, height).expect("cairo surface");
-        let mut cairo_ctx = Context::new(&cairo_surface);
-        cairo_ctx.set_source_rgb(0.0, 0.5, 0.0);
-        cairo_ctx.paint();
-        let mut piet_ctx = Piet::new(&mut cairo_ctx);
+        let mut piet_ctx = Piet::new_y_down(cgcontext_ref);
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let anim = (*view_state).handler.paint(&mut piet_ctx, rect);
