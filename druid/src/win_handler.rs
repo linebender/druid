@@ -538,10 +538,12 @@ impl<T: Data> AppState<T> {
             // FIXME: we need to be able to open a file without a window handle
             (T::Window(id), &sys_cmd::SHOW_OPEN_PANEL) => self.show_open_panel(cmd, id),
             (T::Window(id), &sys_cmd::SHOW_SAVE_PANEL) => self.show_save_panel(cmd, id),
-            (T::Window(id), &sys_cmd::CLOSE_WINDOW) => self.request_close_window(cmd, id),
-            (T::Window(_), &sys_cmd::SHOW_WINDOW) => self.show_window(cmd),
+            (T::Window(id), &sys_cmd::CLOSE_WINDOW) => self.request_close_window(id),
+            (T::Window(id), &sys_cmd::SHOW_WINDOW) => self.show_window(id),
             (T::Window(id), &sys_cmd::PASTE) => self.do_paste(id),
-            _sel => self.inner.borrow_mut().dispatch_cmd(target, cmd),
+            (_, &sys_cmd::CLOSE_WINDOW) => log::warn!("CLOSE_WINDOW command must target a window."),
+            (_, &sys_cmd::SHOW_WINDOW) => log::warn!("SHOW_WINDOW command must target a window."),
+            _ => self.inner.borrow_mut().dispatch_cmd(target, cmd),
         }
     }
 
@@ -592,19 +594,15 @@ impl<T: Data> AppState<T> {
         Ok(())
     }
 
-    fn request_close_window(&mut self, cmd: Command, window_id: WindowId) {
-        let id = cmd.get_object().unwrap_or(&window_id);
-        self.inner.borrow_mut().request_close_window(*id);
+    fn request_close_window(&mut self, id: WindowId) {
+        self.inner.borrow_mut().request_close_window(id);
     }
 
     fn request_close_all_windows(&mut self) {
         self.inner.borrow_mut().request_close_all_windows();
     }
 
-    fn show_window(&mut self, cmd: Command) {
-        let id: WindowId = *cmd
-            .get_object()
-            .expect("show window selector missing window id");
+    fn show_window(&mut self, id: WindowId) {
         self.inner.borrow_mut().show_window(id);
     }
 
