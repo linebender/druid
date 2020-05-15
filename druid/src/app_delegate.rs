@@ -59,7 +59,7 @@ impl<'a> DelegateCtx<'a> {
                 Target::Global,
             );
         } else {
-            const MSG: &str = "All application windows must represent the same type of state.";
+            const MSG: &str = "WindowDesc<T> - T must match the application state.";
             if cfg!(debug_assertions) {
                 panic!(MSG);
             } else {
@@ -79,7 +79,7 @@ impl<'a> DelegateCtx<'a> {
                 Target::Window(window),
             );
         } else {
-            const MSG: &str = "Menus must represent the application state.";
+            const MSG: &str = "MenuDesc<T> - T must match the application state.";
             if cfg!(debug_assertions) {
                 panic!(MSG);
             } else {

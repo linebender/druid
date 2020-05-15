@@ -287,7 +287,7 @@ impl<'a> EventCtx<'a> {
                 Target::Global,
             );
         } else {
-            const MSG: &str = "All application windows must represent the same type of state.";
+            const MSG: &str = "WindowDesc<T> - T must match the application state.";
             if cfg!(debug_assertions) {
                 panic!(MSG);
             } else {
@@ -304,7 +304,7 @@ impl<'a> EventCtx<'a> {
         if self.state_types.check_menu_desc::<T>() {
             self.submit_command(Command::new(commands::SET_MENU, menu), Target::Window(self.window_id));
         } else {
-            const MSG: &str = "Menus must represent the application state.";
+            const MSG: &str = "MenuDesc<T> - T must match the application state.";
             if cfg!(debug_assertions) {
                 panic!(MSG);
             } else {
@@ -321,7 +321,7 @@ impl<'a> EventCtx<'a> {
         if self.state_types.check_context_menu::<T>() {
             self.submit_command(Command::new(commands::SHOW_CONTEXT_MENU, menu), Target::Window(self.window_id));
         } else {
-            const MSG: &str = "Context menus must represent the application state.";
+            const MSG: &str = "ContextMenu<T> - T must match the application state.";
             if cfg!(debug_assertions) {
                 panic!(MSG);
             } else {
