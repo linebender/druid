@@ -320,11 +320,38 @@ jobs:
           profile: minimal
           override: true
 
-      - name: check docs in druid/
+      # Doc packages in deeper-to-higher dependency order
+      - name: cargo doc druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --document-private-items
+          args: --manifest-path=druid-shell/Cargo.toml --document-private-items
+
+      - name: cargo doc druid
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=druid/Cargo.toml --features=svg,image,im --document-private-items
+
+      - name: cargo doc druid-derive
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=druid-derive/Cargo.toml --document-private-items
+
+      - name: cargo doc book examples
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=docs/book_examples/Cargo.toml --document-private-items
+
+      # On Linux also attempt docs for X11.
+      - name: cargo doc druid-shell (X11)
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=druid-shell/Cargo.toml --features=x11 --document-private-items
+        if: contains(matrix.os, 'ubuntu')
 
   mdbook-build:
     runs-on: ubuntu-latest
