@@ -563,7 +563,9 @@ pub mod sys {
                 .hotkey(RawMods::Ctrl, "s")
             }
 
-            /// The 'Save' menu item.
+            /// The 'Save...' menu item.
+            ///
+            /// This is used if we need to show a dialog to select save location.
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-ellipsis"),
