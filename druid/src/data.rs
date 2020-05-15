@@ -452,13 +452,6 @@ mod test {
     use super::Data;
 
     #[test]
-    fn vec_data() {
-        let input = vec![1u8, 0, 0, 1, 0];
-        assert!(input.same(&vec![1u8, 0, 0, 1, 0]));
-        assert!(!input.same(&vec![1u8, 1, 0, 1, 0]));
-    }
-
-    #[test]
     fn array_data() {
         let input = [1u8, 0, 0, 1, 0];
         assert!(input.same(&[1u8, 0, 0, 1, 0]));
