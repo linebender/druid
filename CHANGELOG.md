@@ -12,9 +12,19 @@ While still incomplete this lays the foundation for running druid on Linux witho
 
 #### Mostly complete Wasm backend for druid-shell. ([#759])
 
-[@elrnv] continued the work of [@tedsta] and implemented a mostly complete Wasm backend and enabled all druid examples to [run in the browser](https://elrnv.github.io/druid-wasm-examples/).
+[@elrnv] continued the work of [@tedsta] and implemented a mostly complete Wasm backend and enabled
+all druid examples to [run in the browser](https://elrnv.github.io/druid-wasm-examples/).
 
-While some features like the clipboard, menus or file dialogs are not yet available, all fundamental features are there.
+While some features like the clipboard, menus or file dialogs are not yet available,
+all fundamental features are there.
+
+#### Using Core Graphics on macOS. ([#905])
+
+[@cmyr] continued the work of [@jrmuizel] and implemented Core Graphics support for piet in
+[piet#176](https://github.com/linebender/piet/pull/176).
+
+Those changes made it into druid via [#905].
+This means that druid no longer requires cairo on macOS and uses Core Graphics instead.
 
 ### Added
 
@@ -34,7 +44,8 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
 - `UpdateCtx::size` and `LifeCycleCtx::size`. ([#917] by [@jneem])
 - `WidgetExt::debug_widget_id`, for displaying widget ids on hover. ([#876] by [@cmyr])
-- `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924])
+- `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924] by [@cmyr])
+- `im::Vector` support for the `List` widget. ([#940] by [@xStrom])
 
 ### Changed
 
@@ -83,6 +94,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - GTK: Support file filters in open/save dialogs. ([#903] by [@jneem])
 - X11: Support key and mouse button state. ([#920] by [@jneem])
 - Routing `LifeCycle::FocusChanged` to descendant widgets. ([#925] by [@yrns])
+- Built-in open and save menu items now show the correct label and submit the right commands. ([#930] by [@finnerale])
 
 ### Visual
 
@@ -99,6 +111,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Added hot glow option to multiwin example. ([#845] by [@xStrom])
 - Added new example for blocking functions. ([#840] by [@mastfissh])
 - Added a changelog containing development since the 0.5 release. ([#889] by [@finnerale])
+- Removed references to cairo on macOS. ([#943] by [@xStrom])
 
 ### Maintenance
 
@@ -109,6 +122,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - GTK: Refactored `Application` to use the new structure. ([#892] by [@xStrom])
 - X11: Refactored `Application` to use the new structure. ([#894] by [@xStrom])
 - X11: Refactored `Window` to support some reentrancy and invalidation. ([#894] by [@xStrom])
+- Added docs generation testing for all features. ([#942] by [@xStrom])
 
 ### Outside News
 
@@ -166,13 +180,18 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#898]: https://github.com/xi-editor/druid/pull/898
 [#900]: https://github.com/xi-editor/druid/pull/900
 [#903]: https://github.com/xi-editor/druid/pull/903
+[#905]: https://github.com/xi-editor/druid/pull/905
 [#909]: https://github.com/xi-editor/druid/pull/909
 [#917]: https://github.com/xi-editor/druid/pull/917
 [#920]: https://github.com/xi-editor/druid/pull/920
 [#924]: https://github.com/xi-editor/druid/pull/924
 [#925]: https://github.com/xi-editor/druid/pull/925
 [#928]: https://github.com/xi-editor/druid/pull/928
+[#930]: https://github.com/xi-editor/druid/pull/930
 [#931]: https://github.com/xi-editor/druid/pull/931
+[#940]: https://github.com/xi-editor/druid/pull/940
+[#942]: https://github.com/xi-editor/druid/pull/942
+[#943]: https://github.com/xi-editor/druid/pull/943
 
 ## [0.5.0] - 2020-04-01
 
@@ -203,6 +222,7 @@ Last release without a changelog :(
 [@mastfissh]: https://github.com/mastfissh
 [@Zarenor]: https://github.com/Zarenor
 [@yrns]: https://github.com/yrns
+[@jrmuizel]: https://github.com/jrmuizel
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
 [0.5.0]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0

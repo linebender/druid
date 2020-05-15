@@ -80,10 +80,11 @@ couple of [non-druid examples].
 
 ### piet
 
-Druid relies on the [piet library] for drawing and text layout. Piet is a 2D
-graphics abstraction with multiple backends: `piet-direct2d`, `piet-cairo`, and
-`piet-web` are currently available, and a GPU backend is planned. In terms of
-OS support, macOS and Linux use `piet-cairo`, and Windows uses `piet-direct2d`.
+Druid relies on the [piet library] for drawing and text layout. Piet is a 2D graphics
+abstraction with multiple backends: `piet-direct2d`, `piet-coregraphics`, `piet-cairo`,
+`piet-web`, and `piet-svg` are currently available, and a GPU backend is planned.
+In terms of druid platform support via piet, macOS uses `piet-coregraphics`,
+Linux uses `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
 
 ```rust
 use druid::kurbo::{BezPath, Point, Rect};
@@ -237,11 +238,6 @@ druid = { git = "https://github.com/xi-editor/druid.git", version = "0.5" }
 
 ### Platform notes
 
-#### macOS
-
-On macOS, druid requires [cairo]; if you use homebrew, `brew install cairo`
-should be sufficient. Removing this dependency is on the roadmap.
-
 #### Linux
 
 On Linux, druid requires gtk+3; see [gtk-rs dependencies] for installation
@@ -283,7 +279,6 @@ active and friendly community.
 [basic utility and layout widgets]: ./druid/src/widget
 [Flutter's box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
 [value types]: https://sinusoid.es/lager/model.html#id2
-[cairo]: https://www.cairographics.org
 [gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html
 [Rust-native GUI experiments]: https://areweguiyet.com
 [CONTRIBUTING.md]: ./CONTRIBUTING.md

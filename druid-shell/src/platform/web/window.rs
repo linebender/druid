@@ -96,9 +96,16 @@ struct WindowState {
 impl WindowState {
     fn render(&self, invalid_rect: Rect) -> bool {
         let mut piet_ctx = piet_common::Piet::new(self.context.clone(), self.window.clone());
-        let want_anim_frame = self.handler.borrow_mut().paint(&mut piet_ctx, invalid_rect);
-        if let Err(e) = piet_ctx.finish() {
+        let mut want_anim_frame = false;
+        if let Err(e) = piet_ctx.with_save(|mut ctx| {
+            ctx.clip(invalid_rect);
+            want_anim_frame = self.handler.borrow_mut().paint(&mut ctx, invalid_rect);
+            Ok(())
+        }) {
             log::error!("piet error on render: {:?}", e);
+        }
+        if let Err(e) = piet_ctx.finish() {
+            log::error!("piet error finishing render: {:?}", e);
         }
         want_anim_frame
     }
