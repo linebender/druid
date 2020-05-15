@@ -109,6 +109,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - GTK: Refactored `Application` to use the new structure. ([#892] by [@xStrom])
 - X11: Refactored `Application` to use the new structure. ([#894] by [@xStrom])
 - X11: Refactored `Window` to support some reentrancy and invalidation. ([#894] by [@xStrom])
+- Added docs generation testing for all features. ([#942] by [@xStrom])
 
 ### Outside News
 
@@ -173,6 +174,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#925]: https://github.com/xi-editor/druid/pull/925
 [#928]: https://github.com/xi-editor/druid/pull/928
 [#940]: https://github.com/xi-editor/druid/pull/940
+[#942]: https://github.com/xi-editor/druid/pull/942
 
 ## [0.5.0] - 2020-04-01
 
