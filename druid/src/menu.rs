@@ -519,8 +519,8 @@ pub mod sys {
                     .append(new())
                     .append(open())
                     .append(close())
-                    .append(save().disabled())
-                    .append(save_as().disabled())
+                    .append(save_ellipsis())
+                    .append(save_as())
                     // revert to saved?
                     .append(print().disabled())
                     .append(page_setup().disabled())
@@ -563,11 +563,13 @@ pub mod sys {
                 .hotkey(RawMods::Ctrl, "s")
             }
 
-            /// The 'Save' menu item.
+            /// The 'Save...' menu item.
+            ///
+            /// This is used if we need to show a dialog to select save location.
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
-                    LocalizedString::new("common-menu-file-save"),
-                    commands::SAVE_FILE,
+                    LocalizedString::new("common-menu-file-save-ellipsis"),
+                    commands::SHOW_SAVE_PANEL,
                 )
                 .hotkey(RawMods::Ctrl, "s")
             }
@@ -742,7 +744,7 @@ pub mod sys {
             pub fn open_file<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-open"),
-                    commands::OPEN_FILE,
+                    commands::SHOW_OPEN_PANEL,
                 )
                 .hotkey(RawMods::Meta, "o")
             }
@@ -771,7 +773,7 @@ pub mod sys {
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-ellipsis"),
-                    commands::SAVE_FILE,
+                    commands::SHOW_SAVE_PANEL,
                 )
                 .hotkey(RawMods::Meta, "s")
             }

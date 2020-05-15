@@ -93,6 +93,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - GTK: Support file filters in open/save dialogs. ([#903] by [@jneem])
 - X11: Support key and mouse button state. ([#920] by [@jneem])
 - Routing `LifeCycle::FocusChanged` to descendant widgets. ([#925] by [@yrns])
+- Built-in open and save menu items now show the correct label and submit the right commands. ([#930] by [@finnerale])
 
 ### Visual
 
@@ -185,6 +186,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#924]: https://github.com/xi-editor/druid/pull/924
 [#925]: https://github.com/xi-editor/druid/pull/925
 [#928]: https://github.com/xi-editor/druid/pull/928
+[#930]: https://github.com/xi-editor/druid/pull/930
 [#940]: https://github.com/xi-editor/druid/pull/940
 [#942]: https://github.com/xi-editor/druid/pull/942
 [#943]: https://github.com/xi-editor/druid/pull/943
