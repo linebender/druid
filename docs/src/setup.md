@@ -9,10 +9,6 @@ application, then it will show you how to set up a basic application, build it a
 ## Setting up Druid dependencies
 In addition to including the druid library in your project
 
-### macOS
-On macOS, druid requires [cairo]; if you use homebrew, `brew install cairo`
-should be sufficient. Removing this dependency is on the roadmap.
-
 ### Linux
 On Linux, druid requires gtk+3.
 
@@ -41,5 +37,4 @@ druid = "0.5.0"
 druid = { git = "https://github.com/xi-editor/druid.git", branch = "master" }
 ```
 
-[cairo]: https://www.cairographics.org
 [gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html
