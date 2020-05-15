@@ -14,8 +14,8 @@
 
 //! The context types that are passed into various widget methods.
 
-use std::ops::{Deref, DerefMut};
 use std::{
+    ops::{Deref, DerefMut},
     any::{Any, TypeId},
     time::Duration,
 };
@@ -277,7 +277,7 @@ impl<'a> EventCtx<'a> {
     }
 
     /// Create a new window.
-    /// `T` must represent the application state provided to [`AppLauncher::launch`].
+    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
@@ -296,8 +296,8 @@ impl<'a> EventCtx<'a> {
         }
     }
 
-    /// Set the menu of the window containing the event handling widget.
-    /// `T` must represent the application state provided to [`AppLauncher::launch`].
+    /// Set the menu of the window containing the current widget.
+    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
@@ -316,8 +316,8 @@ impl<'a> EventCtx<'a> {
         }
     }
 
-    /// Show the context menu in the window containing the event handling widget.
-    /// `T` must represent the application state provided to [`AppLauncher::launch`].
+    /// Show the context menu in the window containing the current widget.
+    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {

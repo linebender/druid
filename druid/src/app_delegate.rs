@@ -49,7 +49,7 @@ impl<'a> DelegateCtx<'a> {
     }
 
     /// Create a new window.
-    /// `T` must represent the application state provided to [`AppLauncher::launch`].
+    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
@@ -68,8 +68,8 @@ impl<'a> DelegateCtx<'a> {
         }
     }
 
-    /// Set the windows menu.
-    /// `T` must represent the application state provided to [`AppLauncher::launch`].
+    /// Set the window's menu.
+    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>, window: WindowId) {
