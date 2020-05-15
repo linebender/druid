@@ -15,8 +15,8 @@
 //! The context types that are passed into various widget methods.
 
 use std::{
-    ops::{Deref, DerefMut},
     any::{Any, TypeId},
+    ops::{Deref, DerefMut},
     time::Duration,
 };
 
@@ -31,9 +31,9 @@ use crate::{
 /// These allow type checking new windows and menus at runtime
 #[derive(Clone, Copy)]
 pub(crate) struct StateTypes {
-    window_desc: TypeId,
-    menu_desc: TypeId,
-    context_menu: TypeId,
+    pub window_desc: TypeId,
+    pub menu_desc: TypeId,
+    pub context_menu: TypeId,
 }
 
 /// A mutable context provided to event handling methods of widgets.
@@ -146,18 +146,6 @@ impl StateTypes {
             menu_desc: TypeId::of::<MenuDesc<T>>(),
             context_menu: TypeId::of::<ContextMenu<T>>(),
         }
-    }
-
-    pub fn check_window_desc<T: Any>(&self) -> bool {
-        self.window_desc == TypeId::of::<WindowDesc<T>>()
-    }
-
-    pub fn check_menu_desc<T: Any>(&self) -> bool {
-        self.menu_desc == TypeId::of::<MenuDesc<T>>()
-    }
-
-    pub fn check_context_menu<T: Any>(&self) -> bool {
-        self.context_menu == TypeId::of::<ContextMenu<T>>()
     }
 }
 
@@ -281,7 +269,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
-        if self.state_types.check_window_desc::<T>() {
+        if self.state_types.window_desc == TypeId::of::<WindowDesc<T>>() {
             self.submit_command(
                 Command::one_shot(commands::NEW_WINDOW, desc),
                 Target::Global,
@@ -301,7 +289,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        if self.state_types.check_menu_desc::<T>() {
+        if self.state_types.menu_desc == TypeId::of::<MenuDesc<T>>() {
             self.submit_command(
                 Command::new(commands::SET_MENU, menu),
                 Target::Window(self.window_id),
@@ -321,7 +309,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
-        if self.state_types.check_context_menu::<T>() {
+        if self.state_types.context_menu == TypeId::of::<ContextMenu<T>>() {
             self.submit_command(
                 Command::new(commands::SHOW_CONTEXT_MENU, menu),
                 Target::Window(self.window_id),

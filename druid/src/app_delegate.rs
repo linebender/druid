@@ -14,7 +14,10 @@
 
 //! Customizing application-level behaviour.
 
-use std::{any::Any, collections::VecDeque};
+use std::{
+    any::{Any, TypeId},
+    collections::VecDeque,
+};
 
 use crate::{
     commands, contexts::StateTypes, Command, Data, Env, Event, MenuDesc, Target, WindowDesc,
@@ -53,7 +56,7 @@ impl<'a> DelegateCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
-        if self.state_types.check_window_desc::<T>() {
+        if self.state_types.window_desc == TypeId::of::<WindowDesc<T>>() {
             self.submit_command(
                 Command::one_shot(commands::NEW_WINDOW, desc),
                 Target::Global,
@@ -73,7 +76,7 @@ impl<'a> DelegateCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>, window: WindowId) {
-        if self.state_types.check_menu_desc::<T>() {
+        if self.state_types.menu_desc == TypeId::of::<MenuDesc<T>>() {
             self.submit_command(
                 Command::new(commands::SET_MENU, menu),
                 Target::Window(window),
