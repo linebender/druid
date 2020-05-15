@@ -12,9 +12,18 @@ While still incomplete this lays the foundation for running druid on Linux witho
 
 #### Mostly complete Wasm backend for druid-shell. ([#759])
 
-[@elrnv] continued the work of [@tedsta] and implemented a mostly complete Wasm backend and enabled all druid examples to [run in the browser](https://elrnv.github.io/druid-wasm-examples/).
+[@elrnv] continued the work of [@tedsta] and implemented a mostly complete Wasm backend and enabled
+all druid examples to [run in the browser](https://elrnv.github.io/druid-wasm-examples/).
 
-While some features like the clipboard, menus or file dialogs are not yet available, all fundamental features are there.
+While some features like the clipboard, menus or file dialogs are not yet available,
+all fundamental features are there.
+
+#### Using Core Graphics on macOS. ([#905])
+
+[@cmyr] continued the work of [@jrmuizel] and implemented Core Graphics support for piet in
+[piet#176](https://github.com/linebender/piet/pull/176).
+
+Those changes made it into druid via [#905].
 
 ### Added
 
@@ -99,6 +108,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - Added hot glow option to multiwin example. ([#845] by [@xStrom])
 - Added new example for blocking functions. ([#840] by [@mastfissh])
 - Added a changelog containing development since the 0.5 release. ([#889] by [@finnerale])
+- Removed references to cairo on macOS. ([#943] by [@xStrom])
 
 ### Maintenance
 
@@ -167,6 +177,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#898]: https://github.com/xi-editor/druid/pull/898
 [#900]: https://github.com/xi-editor/druid/pull/900
 [#903]: https://github.com/xi-editor/druid/pull/903
+[#905]: https://github.com/xi-editor/druid/pull/905
 [#909]: https://github.com/xi-editor/druid/pull/909
 [#917]: https://github.com/xi-editor/druid/pull/917
 [#920]: https://github.com/xi-editor/druid/pull/920
@@ -175,6 +186,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#928]: https://github.com/xi-editor/druid/pull/928
 [#940]: https://github.com/xi-editor/druid/pull/940
 [#942]: https://github.com/xi-editor/druid/pull/942
+[#943]: https://github.com/xi-editor/druid/pull/943
 
 ## [0.5.0] - 2020-04-01
 
@@ -205,6 +217,7 @@ Last release without a changelog :(
 [@mastfissh]: https://github.com/mastfissh
 [@Zarenor]: https://github.com/Zarenor
 [@yrns]: https://github.com/yrns
+[@jrmuizel]: https://github.com/jrmuizel
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
 [0.5.0]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0
