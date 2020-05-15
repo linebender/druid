@@ -33,7 +33,7 @@ macro_rules! assert_matches {
      }
  }
 
-pub type EventFn<S, T> = dyn FnMut(&mut S, &mut EventCtx, &Event, &T, &Env);
+pub type EventFn<S, T> = dyn FnMut(&mut S, &mut EventCtx, &Event, &mut T, &Env);
 pub type LifeCycleFn<S, T> = dyn FnMut(&mut S, &mut LifeCycleCtx, &LifeCycle, &T, &Env);
 pub type UpdateFn<S, T> = dyn FnMut(&mut S, &mut UpdateCtx, &T, &T, &Env);
 pub type LayoutFn<S, T> = dyn FnMut(&mut S, &mut LayoutCtx, &BoxConstraints, &T, &Env) -> Size;
@@ -83,7 +83,7 @@ pub struct Recording(Rc<RefCell<VecDeque<Record>>>);
 
 /// A recording of a method call on a widget.
 ///
-/// Each member of the enum coorresponds to one of the methods on `Widget`.
+/// Each member of the enum corresponds to one of the methods on `Widget`.
 #[derive(Debug, Clone)]
 pub enum Record {
     /// An `Event`.
@@ -126,7 +126,7 @@ impl<S, T> ModularWidget<S, T> {
 
     pub fn event_fn(
         mut self,
-        f: impl FnMut(&mut S, &mut EventCtx, &Event, &T, &Env) + 'static,
+        f: impl FnMut(&mut S, &mut EventCtx, &Event, &mut T, &Env) + 'static,
     ) -> Self {
         self.event = Some(Box::new(f));
         self
@@ -260,6 +260,15 @@ impl Recording {
     /// This consumes the event.
     pub fn next(&self) -> Record {
         self.0.borrow_mut().pop_front().unwrap_or(Record::None)
+    }
+
+    /// Returns an iterator of events drained from the recording.
+    pub fn drain(&self) -> impl Iterator<Item = Record> {
+        self.0
+            .borrow_mut()
+            .drain(..)
+            .collect::<Vec<_>>()
+            .into_iter()
     }
 
     fn push(&self, event: Record) {

@@ -203,6 +203,87 @@ fn take_focus() {
 }
 
 #[test]
+fn focus_changed() {
+    const TAKE_FOCUS: Selector = Selector::new("druid-tests.take-focus");
+
+    fn make_focus_container(children: Vec<WidgetPod<(), Box<dyn Widget<()>>>>) -> impl Widget<()> {
+        ModularWidget::new(children)
+            .event_fn(|children, ctx, event, data, env| {
+                if let Event::Command(cmd) = event {
+                    if cmd.selector == TAKE_FOCUS {
+                        ctx.request_focus();
+                        // Stop propagating this command so children
+                        // aren't requesting focus too.
+                        ctx.set_handled();
+                    }
+                }
+                children
+                    .iter_mut()
+                    .for_each(|a| a.event(ctx, event, data, env));
+            })
+            .lifecycle_fn(|children, ctx, event, data, env| {
+                children
+                    .iter_mut()
+                    .for_each(|a| a.lifecycle(ctx, event, data, env));
+            })
+    }
+
+    let a_rec = Recording::default();
+    let b_rec = Recording::default();
+    let c_rec = Recording::default();
+
+    let (id_a, id_b, id_c) = widget_id3();
+
+    // a contains b which contains c
+    let c = make_focus_container(vec![]).record(&c_rec).with_id(id_c);
+    let b = make_focus_container(vec![WidgetPod::new(c).boxed()])
+        .record(&b_rec)
+        .with_id(id_b);
+    let a = make_focus_container(vec![WidgetPod::new(b).boxed()])
+        .record(&a_rec)
+        .with_id(id_a);
+
+    let f = |a| match a {
+        Record::L(LifeCycle::FocusChanged(c)) => Some(c),
+        _ => None,
+    };
+    let no_change = |a: &Recording| a.drain().filter_map(f).count() == 0;
+    let changed = |a: &Recording, b| a.drain().filter_map(f).eq(std::iter::once(b));
+
+    Harness::create_simple((), a, |harness| {
+        harness.send_initial_events();
+
+        // focus none -> a
+        harness.submit_command(TAKE_FOCUS, id_a);
+        assert_eq!(harness.window().focus, Some(id_a));
+        assert!(changed(&a_rec, true));
+        assert!(no_change(&b_rec));
+        assert!(no_change(&c_rec));
+
+        // focus a -> b
+        harness.submit_command(TAKE_FOCUS, id_b);
+        assert_eq!(harness.window().focus, Some(id_b));
+        assert!(changed(&a_rec, false));
+        assert!(changed(&b_rec, true));
+        assert!(no_change(&c_rec));
+
+        // focus b -> c
+        harness.submit_command(TAKE_FOCUS, id_c);
+        assert_eq!(harness.window().focus, Some(id_c));
+        assert!(no_change(&a_rec));
+        assert!(changed(&b_rec, false));
+        assert!(changed(&c_rec, true));
+
+        // focus c -> a
+        harness.submit_command(TAKE_FOCUS, id_a);
+        assert_eq!(harness.window().focus, Some(id_a));
+        assert!(changed(&a_rec, true));
+        assert!(no_change(&b_rec));
+        assert!(changed(&c_rec, false));
+    })
+}
+
+#[test]
 fn simple_lifecyle() {
     let record = Recording::default();
     let widget = SizedBox::empty().record(&record);
