@@ -15,7 +15,9 @@
 //! Opening and closing windows and using window and context menus.
 
 use druid::widget::prelude::*;
-use druid::widget::{Align, BackgroundBrush, Button, Flex, Label, Padding};
+use druid::widget::{
+    Align, BackgroundBrush, Button, Controller, ControllerHost, Flex, Label, Padding,
+};
 use druid::{
     commands as sys_cmds, AppDelegate, AppLauncher, Application, Color, Command, ContextMenu, Data,
     DelegateCtx, LocalizedString, MenuDesc, MenuItem, Selector, Target, WindowDesc, WindowId,
@@ -49,19 +51,6 @@ pub fn main() {
         .expect("launch failed");
 }
 
-// this is just an experiment for how we might reduce boilerplate.
-trait EventCtxExt {
-    fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>);
-}
-
-impl EventCtxExt for EventCtx<'_> {
-    fn set_menu<T: 'static>(&mut self, menu: MenuDesc<T>) {
-        let cmd = Command::new(druid::commands::SET_MENU, menu);
-        let target = self.window_id();
-        self.submit_command(cmd, target);
-    }
-}
-
 fn ui_builder() -> impl Widget<State> {
     let text = LocalizedString::new("hello-counter")
         .with_arg("count", |data: &State, _env| data.menu_count.into());
@@ -91,7 +80,8 @@ fn ui_builder() -> impl Widget<State> {
     row.add_child(Padding::new(5.0, new_button));
     row.add_child(Padding::new(5.0, quit_button));
     col.add_flex_child(Align::centered(row), 1.0);
-    Glow::new(col)
+    let content = ControllerHost::new(col, ContextMenuController);
+    Glow::new(content)
 }
 
 struct Glow<W> {
@@ -141,28 +131,23 @@ impl<W: Widget<State>> Widget<State> for Glow<W> {
     }
 }
 
-struct Delegate;
+struct ContextMenuController;
 
-impl AppDelegate<State> for Delegate {
-    fn event(
-        &mut self,
-        ctx: &mut DelegateCtx,
-        window_id: WindowId,
-        event: Event,
-        _data: &mut State,
-        _env: &Env,
-    ) -> Option<Event> {
+impl<T, W: Widget<T>> Controller<T, W> for ContextMenuController {
+    fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(ref mouse) if mouse.button.is_right() => {
                 let menu = ContextMenu::new(make_context_menu::<State>(), mouse.pos);
-                let cmd = Command::new(druid::commands::SHOW_CONTEXT_MENU, menu);
-                ctx.submit_command(cmd, Target::Window(window_id));
-                None
+                ctx.show_context_menu(menu);
             }
-            other => Some(other),
+            _ => child.event(ctx, event, data, env),
         }
     }
+}
 
+struct Delegate;
+
+impl AppDelegate<State> for Delegate {
     fn command(
         &mut self,
         ctx: &mut DelegateCtx,
@@ -173,18 +158,16 @@ impl AppDelegate<State> for Delegate {
     ) -> bool {
         match (target, &cmd.selector) {
             (_, &sys_cmds::NEW_FILE) => {
-                let new_win = WindowDesc::new(ui_builder)
+                let window = WindowDesc::new(ui_builder)
                     .menu(make_menu(data))
                     .window_size((data.selected as f64 * 100.0 + 300.0, 500.0));
-                let command = Command::one_shot(sys_cmds::NEW_WINDOW, new_win);
-                ctx.submit_command(command, Target::Global);
+                ctx.new_window(window);
                 false
             }
             (Target::Window(id), &MENU_COUNT_ACTION) => {
                 data.selected = *cmd.get_object().unwrap();
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu);
-                ctx.submit_command(cmd, id);
+                ctx.set_menu(menu, id);
                 false
             }
             // wouldn't it be nice if a menu (like a button) could just mutate state
@@ -192,15 +175,13 @@ impl AppDelegate<State> for Delegate {
             (Target::Window(id), &MENU_INCREMENT_ACTION) => {
                 data.menu_count += 1;
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu);
-                ctx.submit_command(cmd, id);
+                ctx.set_menu(menu, id);
                 false
             }
             (Target::Window(id), &MENU_DECREMENT_ACTION) => {
                 data.menu_count = data.menu_count.saturating_sub(1);
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu);
-                ctx.submit_command(cmd, id);
+                ctx.set_menu(menu, id);
                 false
             }
             (_, &MENU_SWITCH_GLOW_ACTION) => {

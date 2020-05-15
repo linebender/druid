@@ -35,7 +35,7 @@ use crate::{
     WindowId,
 };
 
-use crate::command::sys as sys_cmd;
+use crate::{command::sys as sys_cmd, contexts::StateTypes};
 
 pub(crate) const RUN_COMMANDS_TOKEN: IdleToken = IdleToken::new(1);
 
@@ -187,7 +187,10 @@ impl<T: Data> Inner<T> {
             ref env,
             ..
         } = self;
-        let mut ctx = DelegateCtx { command_queue };
+        let mut ctx = DelegateCtx {
+            command_queue,
+            state_types: StateTypes::new::<T>(),
+        };
         if let Some(delegate) = delegate {
             Some(f(delegate, data, env, &mut ctx))
         } else {

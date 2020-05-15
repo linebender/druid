@@ -28,9 +28,9 @@ use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken, UpdateCtx, Widget,
-    WidgetId, WidgetPod, WindowDesc,
+    contexts::StateTypes, BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken,
+    UpdateCtx, Widget, WidgetId, WidgetPod, WindowDesc,
 };
 
 /// A unique identifier for a window.
@@ -206,6 +206,7 @@ impl<T: Data> Window<T> {
                 window: &self.handle,
                 window_id: self.id,
                 focus_widget: self.focus,
+                state_types: StateTypes::new::<T>(),
             };
 
             self.root.event(&mut ctx, &event, data, env);

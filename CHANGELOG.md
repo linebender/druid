@@ -61,6 +61,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `Event::Wheel` now contains a `MouseEvent` structure. ([#895] by [@teddemunnik])
 - `AppDelegate::command` now receives a `Target` instead of a `&Target`. ([#909] by [@xStrom])
 - `SHOW_WINDOW` and `CLOSE_WINDOW` commands now only use `Target` to determine the affected window. ([#928] by [@finnerale])
+- Replaced `NEW_WINDOW`, `SET_MENU` and `SHOW_CONTEXT_MENU` commands with methods on `EventCtx` and `DelegateCtx`. ([#931] by [@finnerale])
 
 ### Deprecated
 
@@ -187,6 +188,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#925]: https://github.com/xi-editor/druid/pull/925
 [#928]: https://github.com/xi-editor/druid/pull/928
 [#930]: https://github.com/xi-editor/druid/pull/930
+[#931]: https://github.com/xi-editor/druid/pull/931
 [#940]: https://github.com/xi-editor/druid/pull/940
 [#942]: https://github.com/xi-editor/druid/pull/942
 [#943]: https://github.com/xi-editor/druid/pull/943
