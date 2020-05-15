@@ -93,16 +93,17 @@ impl<T: Data> ListIter<T> for Vector<T> {
     }
 }
 
+// S == shared data type
 #[cfg(feature = "im")]
-impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Vector<T>) {
-    fn for_each(&self, mut cb: impl FnMut(&(T1, T), usize)) {
+impl<S: Data, T: Data> ListIter<(S, T)> for (S, Vector<T>) {
+    fn for_each(&self, mut cb: impl FnMut(&(S, T), usize)) {
         for (i, item) in self.1.iter().enumerate() {
             let d = (self.0.to_owned(), item.to_owned());
             cb(&d, i);
         }
     }
 
-    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (T1, T), usize)) {
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (S, T), usize)) {
         for (i, item) in self.1.iter_mut().enumerate() {
             let mut d = (self.0.clone(), item.clone());
             cb(&mut d, i);
@@ -152,15 +153,16 @@ impl<T: Data> ListIter<T> for Arc<Vec<T>> {
     }
 }
 
-impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Arc<Vec<T>>) {
-    fn for_each(&self, mut cb: impl FnMut(&(T1, T), usize)) {
+// S == shared data type
+impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<Vec<T>>) {
+    fn for_each(&self, mut cb: impl FnMut(&(S, T), usize)) {
         for (i, item) in self.1.iter().enumerate() {
             let d = (self.0.clone(), item.to_owned());
             cb(&d, i);
         }
     }
 
-    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (T1, T), usize)) {
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (S, T), usize)) {
         let mut new_data = Vec::with_capacity(self.1.len());
         let mut any_shared_changed = false;
         let mut any_el_changed = false;
