@@ -302,7 +302,7 @@ impl<'a> EventCtx<'a> {
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
         if self.state_types.check_menu_desc::<T>() {
-            self.submit_command(Command::new(commands::SET_MENU, menu), None);
+            self.submit_command(Command::new(commands::SET_MENU, menu), Target::Window(self.window_id));
         } else {
             const MSG: &str = "Menus must represent the application state.";
             if cfg!(debug_assertions) {
@@ -319,7 +319,7 @@ impl<'a> EventCtx<'a> {
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
         if self.state_types.check_context_menu::<T>() {
-            self.submit_command(Command::new(commands::SHOW_CONTEXT_MENU, menu), None);
+            self.submit_command(Command::new(commands::SHOW_CONTEXT_MENU, menu), Target::Window(self.window_id));
         } else {
             const MSG: &str = "Context menus must represent the application state.";
             if cfg!(debug_assertions) {
