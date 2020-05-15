@@ -116,7 +116,7 @@ pub mod sys {
     pub const HIDE_OTHERS: Selector = Selector::new("druid-builtin.menu-hide-others");
 
     /// The selector for a command to create a new window.
-    pub const NEW_WINDOW: Selector = Selector::new("druid-builtin.new-window");
+    pub(crate) const NEW_WINDOW: Selector = Selector::new("druid-builtin.new-window");
 
     /// The selector for a command to close a window.
     ///
@@ -139,13 +139,13 @@ pub mod sys {
     /// object to be displayed.
     ///
     /// [`ContextMenu`]: ../struct.ContextMenu.html
-    pub const SHOW_CONTEXT_MENU: Selector = Selector::new("druid-builtin.show-context-menu");
+    pub(crate) const SHOW_CONTEXT_MENU: Selector = Selector::new("druid-builtin.show-context-menu");
 
     /// The selector for a command to set the window's menu. The argument should
     /// be a [`MenuDesc`] object.
     ///
     /// [`MenuDesc`]: ../struct.MenuDesc.html
-    pub const SET_MENU: Selector = Selector::new("druid-builtin.set-menu");
+    pub(crate) const SET_MENU: Selector = Selector::new("druid-builtin.set-menu");
 
     /// Show the application preferences.
     pub const SHOW_PREFERENCES: Selector = Selector::new("druid-builtin.menu-show-preferences");

@@ -15,15 +15,26 @@
 //! The context types that are passed into various widget methods.
 
 use std::ops::{Deref, DerefMut};
-use std::time::Duration;
+use std::{
+    any::{Any, TypeId},
+    time::Duration,
+};
 
 use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::{
-    Affine, Command, Cursor, Insets, Point, Rect, Size, Target, Text, TimerToken, Vec2, WidgetId,
-    WindowHandle, WindowId,
+    commands, Affine, Command, ContextMenu, Cursor, Insets, MenuDesc, Point, Rect, Size, Target,
+    Text, TimerToken, Vec2, WidgetId, WindowDesc, WindowHandle, WindowId,
 };
+
+/// These allow type checking new windows and menus at runtime
+#[derive(Clone, Copy)]
+pub(crate) struct StateTypes {
+    window_desc: TypeId,
+    menu_desc: TypeId,
+    context_menu: TypeId,
+}
 
 /// A mutable context provided to event handling methods of widgets.
 ///
@@ -43,6 +54,7 @@ pub struct EventCtx<'a> {
     pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
+    pub(crate) state_types: StateTypes,
 }
 
 /// A mutable context provided to the [`lifecycle`] method on widgets.
@@ -126,6 +138,28 @@ pub struct PaintCtx<'a, 'b: 'a> {
 /// is considered "empty", and all empty rectangles are treated the same.
 #[derive(Debug, Clone)]
 pub struct Region(Rect);
+
+impl StateTypes {
+    pub fn new<T: Any>() -> Self {
+        StateTypes {
+            window_desc: TypeId::of::<WindowDesc<T>>(),
+            menu_desc: TypeId::of::<MenuDesc<T>>(),
+            context_menu: TypeId::of::<ContextMenu<T>>(),
+        }
+    }
+
+    pub fn check_window_desc<T: Any>(&self) -> bool {
+        self.window_desc == TypeId::of::<WindowDesc<T>>()
+    }
+
+    pub fn check_menu_desc<T: Any>(&self) -> bool {
+        self.menu_desc == TypeId::of::<MenuDesc<T>>()
+    }
+
+    pub fn check_context_menu<T: Any>(&self) -> bool {
+        self.context_menu == TypeId::of::<ContextMenu<T>>()
+    }
+}
 
 impl<'a> EventCtx<'a> {
     #[deprecated(since = "0.5.0", note = "use request_paint instead")]
@@ -240,6 +274,60 @@ impl<'a> EventCtx<'a> {
     /// Returns a reference to the current `WindowHandle`.
     pub fn window(&self) -> &WindowHandle {
         &self.window
+    }
+
+    /// Create a new window.
+    /// `T` must represent the application state provided to [`AppLauncher::launch`].
+    ///
+    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
+        if self.state_types.check_window_desc::<T>() {
+            self.submit_command(
+                Command::one_shot(commands::NEW_WINDOW, desc),
+                Target::Global,
+            );
+        } else {
+            const MSG: &str = "All application windows must represent the same type of state.";
+            if cfg!(debug_assertions) {
+                panic!(MSG);
+            } else {
+                log::error!("EventCtx::new_window: {}", MSG)
+            }
+        }
+    }
+
+    /// Set the menu of the window containing the event handling widget.
+    /// `T` must represent the application state provided to [`AppLauncher::launch`].
+    ///
+    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
+        if self.state_types.check_menu_desc::<T>() {
+            self.submit_command(Command::new(commands::SET_MENU, menu), None);
+        } else {
+            const MSG: &str = "Menus must represent the application state.";
+            if cfg!(debug_assertions) {
+                panic!(MSG);
+            } else {
+                log::error!("EventCtx::set_menu: {}", MSG)
+            }
+        }
+    }
+
+    /// Show the context menu in the window containing the event handling widget.
+    /// `T` must represent the application state provided to [`AppLauncher::launch`].
+    ///
+    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
+        if self.state_types.check_context_menu::<T>() {
+            self.submit_command(Command::new(commands::SHOW_CONTEXT_MENU, menu), None);
+        } else {
+            const MSG: &str = "Context menus must represent the application state.";
+            if cfg!(debug_assertions) {
+                panic!(MSG);
+            } else {
+                log::error!("EventCtx::show_context_menu: {}", MSG)
+            }
+        }
     }
 
     /// Set the event as "handled", which stops its propagation to other

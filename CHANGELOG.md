@@ -50,6 +50,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `Event::Wheel` now contains a `MouseEvent` structure. ([#895] by [@teddemunnik])
 - `AppDelegate::command` now receives a `Target` instead of a `&Target`. ([#909] by [@xStrom])
 - `SHOW_WINDOW` and `CLOSE_WINDOW` commands now only use `Target` to determine the affected window. ([#928] by [@finnerale])
+- Replaced `NEW_WINDOW`, `SET_MENU` and `SHOW_CONTEXT_MENU` commands with methods on `EventCtx` and `DelegateCtx`. ([#931] by [@finnerale])
 
 ### Deprecated
 
@@ -171,6 +172,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#924]: https://github.com/xi-editor/druid/pull/924
 [#925]: https://github.com/xi-editor/druid/pull/925
 [#928]: https://github.com/xi-editor/druid/pull/928
+[#931]: https://github.com/xi-editor/druid/pull/931
 
 ## [0.5.0] - 2020-04-01
 

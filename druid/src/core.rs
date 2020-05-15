@@ -554,6 +554,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             is_handled: false,
             is_root: false,
             focus_widget: ctx.focus_widget,
+            state_types: ctx.state_types,
         };
 
         let rect = child_ctx.base_state.layout_rect.unwrap_or_default();
