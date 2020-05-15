@@ -17,6 +17,9 @@
 use std::cmp::Ordering;
 use std::sync::Arc;
 
+#[cfg(feature = "im")]
+use crate::im::Vector;
+
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
@@ -71,6 +74,53 @@ pub trait ListIter<T>: Data {
     fn data_len(&self) -> usize;
 }
 
+#[cfg(feature = "im")]
+impl<T: Data> ListIter<T> for Vector<T> {
+    fn for_each(&self, mut cb: impl FnMut(&T, usize)) {
+        for (i, item) in self.iter().enumerate() {
+            cb(item, i);
+        }
+    }
+
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut T, usize)) {
+        for (i, item) in self.iter_mut().enumerate() {
+            cb(item, i);
+        }
+    }
+
+    fn data_len(&self) -> usize {
+        self.len()
+    }
+}
+
+#[cfg(feature = "im")]
+impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Vector<T>) {
+    fn for_each(&self, mut cb: impl FnMut(&(T1, T), usize)) {
+        for (i, item) in self.1.iter().enumerate() {
+            let d = (self.0.to_owned(), item.to_owned());
+            cb(&d, i);
+        }
+    }
+
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (T1, T), usize)) {
+        for (i, item) in self.1.iter_mut().enumerate() {
+            let mut d = (self.0.clone(), item.clone());
+            cb(&mut d, i);
+
+            if !self.0.same(&d.0) {
+                self.0 = d.0;
+            }
+            if !item.same(&d.1) {
+                *item = d.1;
+            }
+        }
+    }
+
+    fn data_len(&self) -> usize {
+        self.1.len()
+    }
+}
+
 impl<T: Data> ListIter<T> for Arc<Vec<T>> {
     fn for_each(&self, mut cb: impl FnMut(&T, usize)) {
         for (i, item) in self.iter().enumerate() {
@@ -111,7 +161,6 @@ impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Arc<Vec<T>>) {
     }
 
     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (T1, T), usize)) {
-        let shared = self.0.to_owned();
         let mut new_data = Vec::with_capacity(self.1.len());
         let mut any_shared_changed = false;
         let mut any_el_changed = false;
@@ -120,7 +169,7 @@ impl<T1: Data, T: Data> ListIter<(T1, T)> for (T1, Arc<Vec<T>>) {
             let mut d = (self.0.clone(), item.to_owned());
             cb(&mut d, i);
 
-            if !any_shared_changed && !shared.same(&d.0) {
+            if !any_shared_changed && !self.0.same(&d.0) {
                 any_shared_changed = true;
             }
             if any_shared_changed {
