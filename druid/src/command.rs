@@ -118,8 +118,11 @@ pub mod sys {
     /// The selector for a command to create a new window.
     pub const NEW_WINDOW: Selector = Selector::new("druid-builtin.new-window");
 
-    /// The selector for a command to close a window. The command's argument
-    /// should be the id of the window to close.
+    /// The selector for a command to close a window.
+    ///
+    /// The command must target a specific window.
+    /// When calling `submit_command` on a `Widget`s context, passing `None` as target
+    /// will automatically target the window containing the widget.
     pub const CLOSE_WINDOW: Selector = Selector::new("druid-builtin.close-window");
 
     /// Close all windows.
@@ -127,7 +130,9 @@ pub mod sys {
 
     /// The selector for a command to bring a window to the front, and give it focus.
     ///
-    /// The command's argument should be the id of the target window.
+    /// The command must target a specific window.
+    /// When calling `submit_command` on a `Widget`s context, passing `None` as target
+    /// will automatically target the window containing the widget.
     pub const SHOW_WINDOW: Selector = Selector::new("druid-builtin.show-window");
 
     /// Display a context (right-click) menu. The argument must be the [`ContextMenu`].
