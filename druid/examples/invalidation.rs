@@ -79,7 +79,12 @@ impl Widget<Point> for CircleView {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &Point, _env: &Env) {
         ctx.with_save(|ctx| {
-            let rect = ctx.size().to_rect();
+            let rect = ctx.region().to_rect();
+            // Clip to the rect that was invalidated. This is usually not
+            // necessary, but if there's lots of drawing involved then there's a
+            // chance that clipping can be faster. Also, drawing outside the
+            // invalid region has backend-dependent behavior: for example, it
+            // has no effect on GTK but it does have an effect on wasm.
             ctx.clip(rect);
             ctx.fill(rect, &Color::WHITE);
             ctx.fill(Circle::new(*data, RADIUS), &Color::BLACK);
