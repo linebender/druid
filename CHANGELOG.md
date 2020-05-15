@@ -34,7 +34,8 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 - `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
 - `UpdateCtx::size` and `LifeCycleCtx::size`. ([#917] by [@jneem])
 - `WidgetExt::debug_widget_id`, for displaying widget ids on hover. ([#876] by [@cmyr])
-- `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924])
+- `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924] by [@cmyr])
+- `im::Vector` support for the `List` widget. ([#940] by [@xStrom])
 
 ### Changed
 
@@ -171,6 +172,7 @@ While some features like the clipboard, menus or file dialogs are not yet availa
 [#924]: https://github.com/xi-editor/druid/pull/924
 [#925]: https://github.com/xi-editor/druid/pull/925
 [#928]: https://github.com/xi-editor/druid/pull/928
+[#940]: https://github.com/xi-editor/druid/pull/940
 
 ## [0.5.0] - 2020-04-01
 
