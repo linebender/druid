@@ -24,6 +24,7 @@ all fundamental features are there.
 [piet#176](https://github.com/linebender/piet/pull/176).
 
 Those changes made it into druid via [#905].
+This means that druid no longer requires cairo on macOS and uses Core Graphics instead.
 
 ### Added
 
