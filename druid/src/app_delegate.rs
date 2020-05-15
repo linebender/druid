@@ -19,17 +19,14 @@ use std::{
     collections::VecDeque,
 };
 
-use crate::{
-    commands, contexts::StateTypes, Command, Data, Env, Event, MenuDesc, Target, WindowDesc,
-    WindowId,
-};
+use crate::{commands, Command, Data, Env, Event, MenuDesc, Target, WindowDesc, WindowId};
 
 /// A context passed in to [`AppDelegate`] functions.
 ///
 /// [`AppDelegate`]: trait.AppDelegate.html
 pub struct DelegateCtx<'a> {
     pub(crate) command_queue: &'a mut VecDeque<(Target, Command)>,
-    pub(crate) state_types: StateTypes,
+    pub(crate) app_data_type: TypeId,
 }
 
 impl<'a> DelegateCtx<'a> {
@@ -56,13 +53,13 @@ impl<'a> DelegateCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
-        if self.state_types.window_desc == TypeId::of::<WindowDesc<T>>() {
+        if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
                 Command::one_shot(commands::NEW_WINDOW, desc),
                 Target::Global,
             );
         } else {
-            const MSG: &str = "WindowDesc<T> - T must match the application state.";
+            const MSG: &str = "WindowDesc<T> - T must match the application data type.";
             if cfg!(debug_assertions) {
                 panic!(MSG);
             } else {
@@ -76,13 +73,13 @@ impl<'a> DelegateCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>, window: WindowId) {
-        if self.state_types.menu_desc == TypeId::of::<MenuDesc<T>>() {
+        if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
                 Command::new(commands::SET_MENU, menu),
                 Target::Window(window),
             );
         } else {
-            const MSG: &str = "MenuDesc<T> - T must match the application state.";
+            const MSG: &str = "MenuDesc<T> - T must match the application data type.";
             if cfg!(debug_assertions) {
                 panic!(MSG);
             } else {

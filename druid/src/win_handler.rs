@@ -14,7 +14,7 @@
 
 //! The implementation of the WinHandler trait (druid-shell integration).
 
-use std::any::Any;
+use std::any::{Any, TypeId};
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
@@ -35,7 +35,7 @@ use crate::{
     WindowId,
 };
 
-use crate::{command::sys as sys_cmd, contexts::StateTypes};
+use crate::command::sys as sys_cmd;
 
 pub(crate) const RUN_COMMANDS_TOKEN: IdleToken = IdleToken::new(1);
 
@@ -189,7 +189,7 @@ impl<T: Data> Inner<T> {
         } = self;
         let mut ctx = DelegateCtx {
             command_queue,
-            state_types: StateTypes::new::<T>(),
+            app_data_type: TypeId::of::<T>(),
         };
         if let Some(delegate) = delegate {
             Some(f(delegate, data, env, &mut ctx))
