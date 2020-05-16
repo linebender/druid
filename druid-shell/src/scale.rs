@@ -322,6 +322,7 @@ impl Scalable for Insets {
 
 impl ScaledArea {
     /// Create a new scaled area from pixels.
+    #[allow(dead_code)]
     pub fn from_px<T: Into<Size>>(size: T, scale: &Scale) -> ScaledArea {
         let size_px = size.into();
         let size_dp = size_px.to_dp(scale);

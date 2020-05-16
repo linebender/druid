@@ -35,8 +35,8 @@ use super::keycodes::key_to_text;
 use super::menu::Menu;
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
-use crate::error::{BorrowError, Error as ShellError};
-use crate::scale::Scale;
+use crate::error::Error as ShellError;
+use crate::scale::{Scale, ScaledArea};
 
 use crate::keyboard;
 use crate::keycodes::KeyCode;
@@ -82,7 +82,8 @@ enum IdleKind {
 }
 
 struct WindowState {
-    scale: RefCell<Scale>,
+    scale: Cell<Scale>,
+    area: Cell<ScaledArea>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     handler: RefCell<Box<dyn WinHandler>>,
     window: web_sys::Window,
@@ -131,6 +132,20 @@ impl WindowState {
         let height = w.inner_height().unwrap().as_f64().unwrap();
         let dpr = w.device_pixel_ratio();
         (width, height, dpr)
+    }
+
+    /// Updates the canvas size and scale factor and returns `Scale` and `ScaledArea`.
+    fn update_scale_and_area(&self) -> (Scale, ScaledArea) {
+        let (css_width, css_height, dpr) = self.get_window_size_and_dpr();
+        let scale = Scale::from_scale(dpr, dpr);
+        let area = ScaledArea::from_dp(Size::new(css_width, css_height), &scale);
+        let size_px = area.size_px();
+        self.canvas.set_width(size_px.width as u32);
+        self.canvas.set_height(size_px.height as u32);
+        let _ = self.context.scale(scale.scale_x(), scale.scale_y());
+        self.scale.set(scale);
+        self.area.set(area);
+        (scale, area)
     }
 }
 
@@ -202,7 +217,7 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
             web_sys::WheelEvent::DOM_DELTA_PIXEL => Vec2::new(dx, dy),
             web_sys::WheelEvent::DOM_DELTA_LINE => Vec2::new(35.0 * dx, 35.0 * dy),
             web_sys::WheelEvent::DOM_DELTA_PAGE => {
-                let size_dp = state.scale.borrow().size_dp();
+                let size_dp = state.area.get().size_dp();
                 Vec2::new(size_dp.width * dx, size_dp.height * dy)
             }
             _ => {
@@ -227,20 +242,8 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
 fn setup_resize_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_window_event_listener(ws, "resize", move |_: web_sys::UiEvent| {
-        let (css_width, css_height, dpr) = state.get_window_size_and_dpr();
-        let size_dp = state.scale.try_borrow_mut().ok().map(|mut scale| {
-            *scale = Scale::from_scale(dpr, dpr);
-            let size_px = scale.set_size_dp(Size::new(css_width, css_height));
-            state.canvas.set_width(size_px.width as u32);
-            state.canvas.set_height(size_px.height as u32);
-            let _ = state.context.scale(scale.scale_x(), scale.scale_y());
-            scale.size_dp()
-        });
-        if let Some(size_dp) = size_dp {
-            state.handler.borrow_mut().size(size_dp);
-        } else {
-            log::error!("Skipped resize event because couldn't borrow scale");
-        }
+        let (_, area) = state.update_scale_and_area();
+        state.handler.borrow_mut().size(area.size_dp());
     });
 }
 
@@ -366,26 +369,28 @@ impl WindowBuilder {
             .dyn_into::<web_sys::CanvasRenderingContext2d>()
             .map_err(|_| Error::JsCast)?;
         // Create the Scale for resolution scaling
-        let mut scale = {
+        let scale = {
             let dpr = window.device_pixel_ratio();
             Scale::from_scale(dpr, dpr)
         };
-        let size_px = {
+        let area = {
             // The initial size in display points isn't necessarily the final size in display points
             let size_dp = Size::new(canvas.offset_width() as f64, canvas.offset_height() as f64);
-            scale.set_size_dp(size_dp)
+            ScaledArea::from_dp(size_dp, &scale)
         };
+        let size_px = area.size_px();
         canvas.set_width(size_px.width as u32);
         canvas.set_height(size_px.height as u32);
         let _ = context.scale(scale.scale_x(), scale.scale_y());
-        let size_dp = scale.size_dp();
+        let size_dp = area.size_dp();
 
         set_cursor(&canvas, &self.cursor);
 
         let handler = self.handler.unwrap();
 
         let window = Rc::new(WindowState {
-            scale: RefCell::new(scale),
+            scale: Cell::new(scale),
+            area: Cell::new(area),
             idle_queue: Default::default(),
             handler: RefCell::new(handler),
             window,
@@ -447,11 +452,7 @@ impl WindowHandle {
 
     pub fn invalidate(&self) {
         if let Some(s) = self.0.upgrade() {
-            if let Ok(scale) = s.scale.try_borrow() {
-                s.invalid_rect.set(scale.size_dp().to_rect());
-            } else {
-                log::error!("Failed to get scale");
-            }
+            s.invalid_rect.set(s.area.get().size_dp().to_rect());
         }
         self.render_soon();
     }
@@ -550,13 +551,12 @@ impl WindowHandle {
 
     /// Get the `Scale` of the window.
     pub fn get_scale(&self) -> Result<Scale, ShellError> {
-        self.0
+        Ok(self
+            .0
             .upgrade()
             .ok_or(ShellError::WindowDropped)?
             .scale
-            .try_borrow()
-            .map_err(|_| BorrowError::new("WindowHandle::get_scale", "scale", false).into())
-            .map(|scale| scale.clone())
+            .get())
     }
 
     pub fn set_menu(&self, _menu: Menu) {
