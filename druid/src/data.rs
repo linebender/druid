@@ -381,27 +381,16 @@ impl Data for piet::Color {
     }
 }
 
-//FIXME Vector::ptr_eq is not currently reliable; this is a temporary impl?
 #[cfg(feature = "im")]
 impl<T: Data> Data for im::Vector<T> {
     fn same(&self, other: &Self) -> bool {
-        // for reasons outlined in https://github.com/bodil/im-rs/issues/129,
-        // ptr_eq always returns false for small collections. This heuristic
-        // falls back to using equality for collections below some threshold.
-        // There may be a possibility of this returning false negatives, but
-        // not false positives; that's an acceptable outcome.
-
-        /* this is the impl I expected to use
-        const INLINE_LEN: usize = 48; // bytes available before first allocation;
-        let inline_capacity: usize = INLINE_LEN / std::mem::size_of::<T>();
-        if self.len() == other.len() && self.len() <= inline_capacity {
-            self.iter().zip(other.iter()).all(|(a, b)| a.same(b))
+        // if a vec is small enough that it doesn't require an allocation
+        // it is 'inline'; in this case a pointer comparison is meaningless.
+        if self.is_inline() {
+            self.len() == other.len() && self.iter().zip(other.iter()).all(|(a, b)| a.same(b))
         } else {
             self.ptr_eq(other)
         }
-        */
-
-        self.len() == other.len() && self.iter().zip(other.iter()).all(|(a, b)| a.same(b))
     }
 }
 
