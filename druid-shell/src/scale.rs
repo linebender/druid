@@ -20,34 +20,21 @@ use crate::kurbo::{Insets, Line, Point, Rect, Size, Vec2};
 
 const SCALE_TARGET_DPI: f64 = 96.0;
 
-/// Resolution scaling state.
+/// Coordinate scaling between pixels and display points.
 ///
-/// This holds the platform DPI, the platform area size in pixels,
-/// the logical area size in display points, and the scale factors between them.
+/// This holds the platform DPI and the equivalent scale factors.
 ///
 /// To translate coordinates between pixels and display points you should use one of the
 /// helper conversion methods of `Scale` or for manual conversion [`scale_x`] / [`scale_y`].
 ///
-/// The platform area size in pixels tends to be limited to integers and `Scale` works
-/// under that assumption.
-///  
-/// The logical area size in display points is an unrounded conversion, which means that it is
-/// often not limited to integers. This allows for accurate calculations of
-/// the platform area pixel boundaries from the logcal area using the scale factors.
-///
-/// Even though the logcal area size can be fractional, the integer boundaries of that logical area
-/// will still match up with the platform area pixel boundaries as often as the scale factor allows.
-///
 /// `Scale` is designed for responsive applications, including responding to platform DPI changes.
 /// The platform DPI can change quickly, e.g. when moving a window from one monitor to another.
 ///
-/// A clone of `Scale` will be stale as soon as the platform area size or the DPI changes.
+/// A copy of `Scale` will be stale as soon as the platform DPI changes.
 ///
 /// [`scale_x`]: #method.scale_x
 /// [`scale_y`]: #method.scale_y
-// NOTE: Scale does not derive Copy because the data it contains can be short-lived.
-//       Forcing an explicit clone can help remind people of this, and avoids accidental copies.
-#[derive(Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Scale {
     /// The platform reported DPI on the x axis.
     dpi_x: f64,
@@ -57,6 +44,27 @@ pub struct Scale {
     scale_x: f64,
     /// The scale factor on the y axis.
     scale_y: f64,
+}
+
+/// A specific area scaling state.
+///
+/// This holds the platform area size in pixels and the logical area size in display points.
+///
+/// The platform area size in pixels tends to be limited to integers and `ScaledArea` works
+/// under that assumption.
+///
+/// The logical area size in display points is an unrounded conversion, which means that it is
+/// often not limited to integers. This allows for accurate calculations of
+/// the platform area pixel boundaries from the logcal area using a [`Scale`].
+///
+/// Even though the logcal area size can be fractional, the integer boundaries of that logical area
+/// will still match up with the platform area pixel boundaries as often as the scale factor allows.
+///
+/// A copy of `ScaledArea` will be stale as soon as the platform area size changes.
+///
+/// [`Scale`]: struct.Scale.html
+#[derive(Copy, Clone, Debug)]
+pub struct ScaledArea {
     /// The size of the scaled area in display points.
     size_dp: Size,
     /// The size of the scaled area in pixels.
@@ -89,8 +97,6 @@ impl Scale {
             dpi_y,
             scale_x: dpi_x / SCALE_TARGET_DPI,
             scale_y: dpi_y / SCALE_TARGET_DPI,
-            size_dp: Size::ZERO,
-            size_px: Size::ZERO,
         }
     }
 
@@ -103,35 +109,7 @@ impl Scale {
             dpi_y: SCALE_TARGET_DPI * scale_y,
             scale_x,
             scale_y,
-            size_dp: Size::ZERO,
-            size_px: Size::ZERO,
         }
-    }
-
-    /// Set the size of the scaled area in pixels.
-    ///
-    /// This updates the internal state and returns the same size in display points.
-    pub fn set_size_px<T: Into<Size>>(&mut self, size: T) -> Size {
-        let size = size.into();
-        self.size_px = size;
-        self.size_dp = self.to_dp(&size);
-        self.size_dp
-    }
-
-    /// Set the size of the scaled area in pixels via conversion from display points.
-    ///
-    /// This updates the internal state and returns the same size in pixels.
-    ///
-    /// The calculated size in pixels is rounded away from zero to integers.
-    /// That means that the scaled area size in display points isn't always the same
-    /// as the `size` given to this method. To find out the new size in points use [`size_dp`].
-    ///
-    /// [`size_dp`]: #method.size_dp
-    pub fn set_size_dp<T: Into<Size>>(&mut self, size: T) -> Size {
-        let size = size.into();
-        self.size_px = self.to_px(&size).expand();
-        self.size_dp = self.to_dp(&self.size_px);
-        self.size_px
     }
 
     /// Returns the x axis platform DPI associated with this `Scale`.
@@ -163,18 +141,6 @@ impl Scale {
     #[inline]
     pub fn scale_y(&self) -> f64 {
         self.scale_y
-    }
-
-    /// Returns the scaled area size in display points.
-    #[inline]
-    pub fn size_dp(&self) -> Size {
-        self.size_dp
-    }
-
-    /// Returns the scaled area size in pixels.
-    #[inline]
-    pub fn size_px(&self) -> Size {
-        self.size_px
     }
 
     /// Converts from display points into pixels, using the x axis scale factor.
@@ -229,16 +195,6 @@ impl Scale {
     #[inline]
     pub fn to_dp<T: Scalable>(&self, item: &T) -> T {
         item.to_dp(self)
-    }
-}
-
-impl std::fmt::Debug for Scale {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "DPI ({}, {}) => ({}, {}) | {:?} => {:?}",
-            self.dpi_x, self.dpi_y, self.scale_x, self.scale_y, self.size_px, self.size_dp,
-        )
     }
 }
 
@@ -364,19 +320,36 @@ impl Scalable for Insets {
     }
 }
 
-// TODO: Replace usages of this with rect.expand() after kurbo#107 has landed.
-#[allow(dead_code)]
-#[doc(hidden)]
-pub fn expand_rect(rect: Rect) -> Rect {
-    let (x0, x1) = if rect.x0 < rect.x1 {
-        (rect.x0.floor(), rect.x1.ceil())
-    } else {
-        (rect.x0.ceil(), rect.x1.floor())
-    };
-    let (y0, y1) = if rect.y0 < rect.y1 {
-        (rect.y0.floor(), rect.y1.ceil())
-    } else {
-        (rect.y0.ceil(), rect.y1.floor())
-    };
-    Rect::new(x0, y0, x1, y1)
+impl ScaledArea {
+    /// Create a new scaled area from pixels.
+    pub fn from_px<T: Into<Size>>(size: T, scale: &Scale) -> ScaledArea {
+        let size_px = size.into();
+        let size_dp = size_px.to_dp(scale);
+        ScaledArea { size_dp, size_px }
+    }
+
+    /// Create a new scaled area from display points.
+    ///
+    /// The calculated size in pixels is rounded away from zero to integers.
+    /// That means that the scaled area size in display points isn't always the same
+    /// as the `size` given to this function. To find out the new size in points use [`size_dp`].
+    ///
+    /// [`size_dp`]: #method.size_dp
+    pub fn from_dp<T: Into<Size>>(size: T, scale: &Scale) -> ScaledArea {
+        let size_px = size.into().to_px(scale).expand();
+        let size_dp = size_px.to_dp(scale);
+        ScaledArea { size_dp, size_px }
+    }
+
+    /// Returns the scaled area size in display points.
+    #[inline]
+    pub fn size_dp(&self) -> Size {
+        self.size_dp
+    }
+
+    /// Returns the scaled area size in pixels.
+    #[inline]
+    pub fn size_px(&self) -> Size {
+        self.size_px
+    }
 }

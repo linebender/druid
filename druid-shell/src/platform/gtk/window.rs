@@ -38,7 +38,7 @@ use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::{BorrowError, Error as ShellError};
 use crate::keyboard;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::scale::{self, Scale};
+use crate::scale::Scale;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 use super::application::Application;
@@ -570,7 +570,7 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             if let Ok(scale) = state.scale.try_borrow() {
                 // GTK takes rects with non-negative integer width/height.
-                let r = scale::expand_rect(scale.to_px(&rect.abs()));
+                let r = scale.to_px(&rect.abs()).expand();
                 let origin = state.drawing_area.get_allocation();
                 state.window.queue_draw_area(
                     r.x0 as i32 + origin.x,

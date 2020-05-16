@@ -202,8 +202,8 @@ impl WindowHandle {
 
     /// Get the [`Scale`] information of the window.
     ///
-    /// The returned [`Scale`] is a clone and thus its information will be stale after the window
-    /// is resized or the platform DPI changes. A correctly behaving application should consider
+    /// The returned [`Scale`] is a copy and thus its information will be stale after
+    /// the platform DPI changes. A correctly behaving application should consider
     /// the lifetime of this [`Scale`] brief, limited to approximately a single event cycle.
     ///
     /// [`Scale`]: struct.Scale.html
