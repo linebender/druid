@@ -24,6 +24,18 @@ const SCALE_TARGET_DPI: f64 = 96.0;
 ///
 /// This holds the platform DPI and the equivalent scale factors.
 ///
+/// ## Pixels and Display Points
+///
+/// A pixel (**px**) represents the smallest controllable area of color on the platform.
+/// A display point (**dp**) is a resolution independent logical unit.
+/// When developing your application you should primarily be thinking in display points.
+/// These display points will be automatically converted into pixels under the hood.
+/// One pixel is equal to one display point when the platform scale factor is `1.0`.
+///
+/// Read more about pixels and display points [in the druid book].
+///
+/// ## Converting with `Scale`
+///
 /// To translate coordinates between pixels and display points you should use one of the
 /// helper conversion methods of `Scale` or for manual conversion [`scale_x`] / [`scale_y`].
 ///
@@ -34,6 +46,7 @@ const SCALE_TARGET_DPI: f64 = 96.0;
 ///
 /// [`scale_x`]: #method.scale_x
 /// [`scale_y`]: #method.scale_y
+/// [in the druid book]: https://xi-editor.io/druid/resolution_independence.html
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Scale {
     /// The platform reported DPI on the x axis.

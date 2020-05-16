@@ -187,7 +187,7 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Set the window's initial drawing area size in display points.
+    /// Set the window's initial drawing area size in [display points].
     ///
     /// You can pass in a tuple `(width, height)` or a [`Size`],
     /// e.g. to create a window with a drawing area 1000dp wide and 500dp high:
@@ -202,12 +202,13 @@ impl<T: Data> WindowDesc<T> {
     /// The platform might increase the size a tiny bit due to DPI.
     ///
     /// [`Size`]: struct.Size.html
+    /// [display points]: struct.Scale.html
     pub fn window_size(mut self, size: impl Into<Size>) -> Self {
         self.size = Some(size.into());
         self
     }
 
-    /// Set the window's minimum drawing area size in display points.
+    /// Set the window's minimum drawing area size in [display points].
     ///
     /// The actual minimum window size in pixels will depend on the platform DPI settings.
     ///
@@ -217,6 +218,7 @@ impl<T: Data> WindowDesc<T> {
     /// To set the window's initial drawing area size use [`window_size`].
     ///
     /// [`window_size`]: #method.window_size
+    /// [display points]: struct.Scale.html
     pub fn with_min_size(mut self, size: impl Into<Size>) -> Self {
         self.min_size = Some(size.into());
         self

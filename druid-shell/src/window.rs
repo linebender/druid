@@ -233,7 +233,7 @@ impl WindowBuilder {
         self.0.set_handler(handler)
     }
 
-    /// Set the window's initial drawing area size in display points.
+    /// Set the window's initial drawing area size in [display points].
     ///
     /// The actual window size in pixels will depend on the platform DPI settings.
     ///
@@ -242,16 +242,19 @@ impl WindowBuilder {
     /// To know the actual size of the window you should handle the [`WinHandler::size`] method.
     ///
     /// [`WinHandler::size`]: trait.WinHandler.html#method.size
+    /// [display points]: struct.Scale.html
     pub fn set_size(&mut self, size: Size) {
         self.0.set_size(size)
     }
 
-    /// Set the window's minimum drawing area size in display points.
+    /// Set the window's minimum drawing area size in [display points].
     ///
     /// The actual minimum window size in pixels will depend on the platform DPI settings.
     ///
     /// This should be considered a request to the platform to set the minimum size of the window.
     /// The platform might increase the size a tiny bit due to DPI.
+    ///
+    /// [display points]: struct.Scale.html
     pub fn set_min_size(&mut self, size: Size) {
         self.0.set_min_size(size)
     }
@@ -300,14 +303,17 @@ pub trait WinHandler {
 
     /// Called when the size of the window has changed.
     ///
-    /// The `size` parameter is the new size in display points.
+    /// The `size` parameter is the new size in [display points].
+    ///
+    /// [display points]: struct.Scale.html
     #[allow(unused_variables)]
     fn size(&mut self, size: Size) {}
 
-    /// Called when the scale of the window has changed.
+    /// Called when the [`Scale`] of the window has changed.
     ///
     /// This is always called before the accompanying [`size`].
     ///
+    /// [`Scale`]: struct.Scale.html
     /// [`size`]: #method.size
     #[allow(unused_variables)]
     fn scale(&mut self, scale: Scale) {}
@@ -315,7 +321,9 @@ pub trait WinHandler {
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
     /// should be scheduled for the next animation frame. `invalid_rect` is the
-    /// rectangle in display points that needs to be repainted.
+    /// rectangle in [display points] that needs to be repainted.
+    ///
+    /// [display points]: struct.Scale.html
     fn paint(&mut self, piet: &mut piet_common::Piet, invalid_rect: Rect) -> bool;
 
     /// Called when the resources need to be rebuilt.
