@@ -15,7 +15,7 @@
 //! GTK window creation and management.
 
 use std::any::Any;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::convert::TryFrom;
 use std::ffi::c_void;
 use std::ffi::OsString;
@@ -35,10 +35,10 @@ use crate::piet::{Piet, RenderContext};
 
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
-use crate::error::{BorrowError, Error as ShellError};
+use crate::error::Error as ShellError;
 use crate::keyboard;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::scale::Scale;
+use crate::scale::{Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 use super::application::Application;
@@ -107,7 +107,8 @@ enum IdleKind {
 
 pub(crate) struct WindowState {
     window: ApplicationWindow,
-    scale: RefCell<Scale>,
+    scale: Cell<Scale>,
+    area: Cell<ScaledArea>,
     drawing_area: DrawingArea,
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
@@ -172,8 +173,9 @@ impl WindowBuilder {
             .get_display()
             .map(|c| c.get_default_screen().get_resolution() as f64)
             .unwrap_or(96.0);
-        let mut scale = Scale::from_dpi(dpi, dpi);
-        let size_px = scale.set_size_dp(self.size);
+        let scale = Scale::from_dpi(dpi, dpi);
+        let area = ScaledArea::from_dp(self.size, &scale);
+        let size_px = area.size_px();
 
         window.set_default_size(size_px.width as i32, size_px.height as i32);
 
@@ -186,7 +188,8 @@ impl WindowBuilder {
 
         let win_state = Arc::new(WindowState {
             window,
-            scale: RefCell::new(scale),
+            scale: Cell::new(scale),
+            area: Cell::new(area),
             drawing_area,
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
@@ -236,62 +239,62 @@ impl WindowBuilder {
             });
 
         // Set the minimum size
-        if let Some(size_dp) = self.min_size {
-            let mut scale = Scale::from_dpi(dpi, dpi);
-            let size_px = scale.set_size_dp(size_dp);
+        if let Some(min_size_dp) = self.min_size {
+            let min_area = ScaledArea::from_dp(min_size_dp, &scale);
+            let min_size_px = min_area.size_px();
             win_state
                 .drawing_area
-                .set_size_request(size_px.width as i32, size_px.height as i32);
+                .set_size_request(min_size_px.width as i32, min_size_px.height as i32);
         }
 
         win_state.drawing_area.connect_draw(clone!(handle => move |widget, context| {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(mut scale) = state.scale.try_borrow_mut() {
-                    // Check if the GTK reported DPI has changed,
-                    // so that we can change our scale factor without restarting the application.
-                    if let Some(dpi) = state.window.get_window()
-                        .map(|w| w.get_display().get_default_screen().get_resolution()) {
-                        if !scale.dpi_approx_eq(dpi, dpi) {
-                            // This new Scale will also ensure a window size event for the handler,
-                            // because it defaults to zero size.
-                            *scale = Scale::from_dpi(dpi, dpi);
-                        }
+                let mut scale = state.scale.get();
+                let mut scale_changed = false;
+                // Check if the GTK reported DPI has changed,
+                // so that we can change our scale factor without restarting the application.
+                if let Some(dpi) = state.window.get_window()
+                    .map(|w| w.get_display().get_default_screen().get_resolution()) {
+                    if !scale.dpi_approx_eq(dpi, dpi) {
+                        scale = Scale::from_dpi(dpi, dpi);
+                        state.scale.set(scale);
+                        scale_changed = true;
                     }
+                }
 
-                    // Check if the size of the window has changed
-                    let extents = widget.get_allocation();
-                    let size_px = Size::new(extents.width as f64, extents.height as f64);
-                    if scale.size_px() != size_px {
-                        let size_dp = scale.set_size_px(size_px);
-                        if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                            handler_borrow.size(size_dp);
-                        } else {
-                            log::warn!("Failed to inform the handler of a resize because it was already borrowed");
-                        }
-                    }
-
+                // Check if the size of the window has changed
+                let extents = widget.get_allocation();
+                let size_px = Size::new(extents.width as f64, extents.height as f64);
+                if scale_changed || state.area.get().size_px() != size_px {
+                    let area = ScaledArea::from_px(size_px, &scale);
+                    let size_dp = area.size_dp();
+                    state.area.set(area);
                     if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                        // For some reason piet needs a mutable context, so give it one I guess.
-                        let mut context = context.clone();
-                        context.scale(scale.scale_x(), scale.scale_y());
-                        let (x0, y0, x1, y1) = context.clip_extents();
-                        let invalid_rect = Rect::new(x0, y0, x1, y1);
-
-                        let mut piet_context = Piet::new(&mut context);
-                        let anim = handler_borrow
-                            .paint(&mut piet_context, invalid_rect);
-                        if let Err(e) = piet_context.finish() {
-                            eprintln!("piet error on render: {:?}", e);
-                        }
-
-                        if anim {
-                            widget.queue_draw();
-                        }
+                        handler_borrow.size(size_dp);
                     } else {
-                        log::warn!("Drawing was skipped because the handler was already borrowed");
+                        log::warn!("Failed to inform the handler of a resize because it was already borrowed");
+                    }
+                }
+
+                if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
+                    // For some reason piet needs a mutable context, so give it one I guess.
+                    let mut context = context.clone();
+                    context.scale(scale.scale_x(), scale.scale_y());
+                    let (x0, y0, x1, y1) = context.clip_extents();
+                    let invalid_rect = Rect::new(x0, y0, x1, y1);
+
+                    let mut piet_context = Piet::new(&mut context);
+                    let anim = handler_borrow
+                        .paint(&mut piet_context, invalid_rect);
+                    if let Err(e) = piet_context.finish() {
+                        eprintln!("piet error on render: {:?}", e);
+                    }
+
+                    if anim {
+                        widget.queue_draw();
                     }
                 } else {
-                    log::warn!("Drawing was skipped because the scale was already borrowed");
+                    log::warn!("Drawing was skipped because the handler was already borrowed");
                 }
             }
 
@@ -300,27 +303,24 @@ impl WindowBuilder {
 
         win_state.drawing_area.connect_button_press_event(clone!(handle => move |_widget, event| {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(scale) = state.scale.try_borrow() {
-                    if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                        if let Some(button) = get_mouse_button(event.get_button()) {
-                            let button_state = event.get_state();
-                            handler.mouse_down(
-                                &MouseEvent {
-                                    pos: scale.to_dp(&Point::from(event.get_position())),
-                                    buttons: get_mouse_buttons_from_modifiers(button_state).with(button),
-                                    mods: get_modifiers(button_state),
-                                    count: get_mouse_click_count(event.get_event_type()),
-                                    focus: false,
-                                    button,
-                                    wheel_delta: Vec2::ZERO
-                                },
-                            );
-                        }
-                    } else {
-                        log::warn!("GTK event was dropped because the handler was already borrowed");
+                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                    if let Some(button) = get_mouse_button(event.get_button()) {
+                        let scale = state.scale.get();
+                        let button_state = event.get_state();
+                        handler.mouse_down(
+                            &MouseEvent {
+                                pos: scale.to_dp(&Point::from(event.get_position())),
+                                buttons: get_mouse_buttons_from_modifiers(button_state).with(button),
+                                mods: get_modifiers(button_state),
+                                count: get_mouse_click_count(event.get_event_type()),
+                                focus: false,
+                                button,
+                                wheel_delta: Vec2::ZERO
+                            },
+                        );
                     }
                 } else {
-                    log::warn!("GTK event was dropped because the scale was already borrowed");
+                    log::warn!("GTK event was dropped because the handler was already borrowed");
                 }
             }
 
@@ -329,27 +329,24 @@ impl WindowBuilder {
 
         win_state.drawing_area.connect_button_release_event(clone!(handle => move |_widget, event| {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(scale) = state.scale.try_borrow() {
-                    if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                        if let Some(button) = get_mouse_button(event.get_button()) {
-                            let button_state = event.get_state();
-                            handler.mouse_up(
-                                &MouseEvent {
-                                    pos: scale.to_dp(&Point::from(event.get_position())),
-                                    buttons: get_mouse_buttons_from_modifiers(button_state).without(button),
-                                    mods: get_modifiers(button_state),
-                                    count: 0,
-                                    focus: false,
-                                    button,
-                                    wheel_delta: Vec2::ZERO
-                                },
-                            );
-                        }
-                    } else {
-                        log::warn!("GTK event was dropped because the handler was already borrowed");
+                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                    if let Some(button) = get_mouse_button(event.get_button()) {
+                        let scale = state.scale.get();
+                        let button_state = event.get_state();
+                        handler.mouse_up(
+                            &MouseEvent {
+                                pos: scale.to_dp(&Point::from(event.get_position())),
+                                buttons: get_mouse_buttons_from_modifiers(button_state).without(button),
+                                mods: get_modifiers(button_state),
+                                count: 0,
+                                focus: false,
+                                button,
+                                wheel_delta: Vec2::ZERO
+                            },
+                        );
                     }
                 } else {
-                    log::warn!("GTK event was dropped because the scale was already borrowed");
+                    log::warn!("GTK event was dropped because the handler was already borrowed");
                 }
             }
 
@@ -358,25 +355,22 @@ impl WindowBuilder {
 
         win_state.drawing_area.connect_motion_notify_event(clone!(handle => move |_widget, motion| {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(scale) = state.scale.try_borrow() {
-                    let motion_state = motion.get_state();
-                    let mouse_event = MouseEvent {
-                        pos: scale.to_dp(&Point::from(motion.get_position())),
-                        buttons: get_mouse_buttons_from_modifiers(motion_state),
-                        mods: get_modifiers(motion_state),
-                        count: 0,
-                        focus: false,
-                        button: MouseButton::None,
-                        wheel_delta: Vec2::ZERO
-                    };
+                let scale = state.scale.get();
+                let motion_state = motion.get_state();
+                let mouse_event = MouseEvent {
+                    pos: scale.to_dp(&Point::from(motion.get_position())),
+                    buttons: get_mouse_buttons_from_modifiers(motion_state),
+                    mods: get_modifiers(motion_state),
+                    count: 0,
+                    focus: false,
+                    button: MouseButton::None,
+                    wheel_delta: Vec2::ZERO
+                };
 
-                    if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                        handler.mouse_move(&mouse_event);
-                    } else {
-                        log::warn!("GTK event was dropped because the handler was already borrowed");
-                    }
+                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                    handler.mouse_move(&mouse_event);
                 } else {
-                    log::warn!("GTK event was dropped because the scale was already borrowed");
+                    log::warn!("GTK event was dropped because the handler was already borrowed");
                 }
             }
 
@@ -385,25 +379,22 @@ impl WindowBuilder {
 
         win_state.drawing_area.connect_leave_notify_event(clone!(handle => move |_widget, crossing| {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(scale) = state.scale.try_borrow() {
-                    let crossing_state = crossing.get_state();
-                    let mouse_event = MouseEvent {
-                        pos: scale.to_dp(&Point::from(crossing.get_position())),
-                        buttons: get_mouse_buttons_from_modifiers(crossing_state),
-                        mods: get_modifiers(crossing_state),
-                        count: 0,
-                        focus: false,
-                        button: MouseButton::None,
-                        wheel_delta: Vec2::ZERO
-                    };
+                let scale = state.scale.get();
+                let crossing_state = crossing.get_state();
+                let mouse_event = MouseEvent {
+                    pos: scale.to_dp(&Point::from(crossing.get_position())),
+                    buttons: get_mouse_buttons_from_modifiers(crossing_state),
+                    mods: get_modifiers(crossing_state),
+                    count: 0,
+                    focus: false,
+                    button: MouseButton::None,
+                    wheel_delta: Vec2::ZERO
+                };
 
-                    if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                        handler.mouse_move(&mouse_event);
-                    } else {
-                        log::warn!("GTK event was dropped because the handler was already borrowed");
-                    }
+                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                    handler.mouse_move(&mouse_event);
                 } else {
-                    log::warn!("GTK event was dropped because the scale was already borrowed");
+                    log::warn!("GTK event was dropped because the handler was already borrowed");
                 }
             }
 
@@ -412,57 +403,54 @@ impl WindowBuilder {
 
         win_state.drawing_area.connect_scroll_event(clone!(handle => move |_widget, scroll| {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(scale) = state.scale.try_borrow() {
-                    let mods = get_modifiers(scroll.get_state());
+                let scale = state.scale.get();
+                let mods = get_modifiers(scroll.get_state());
 
-                    // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
-                    // They claim that one "tick" on a scroll wheel should be 120 units.
-                    let wheel_delta = match scroll.get_direction() {
-                        ScrollDirection::Up if mods.shift => Some(Vec2::new(-120.0, 0.0)),
-                        ScrollDirection::Up => Some(Vec2::new(0.0, -120.0)),
-                        ScrollDirection::Down if mods.shift => Some(Vec2::new(120.0, 0.0)),
-                        ScrollDirection::Down => Some(Vec2::new(0.0, 120.0)),
-                        ScrollDirection::Left => Some(Vec2::new(-120.0, 0.0)),
-                        ScrollDirection::Right => Some(Vec2::new(120.0, 0.0)),
-                        ScrollDirection::Smooth => {
-                            //TODO: Look at how gtk's scroll containers implements it
-                            let (mut delta_x, mut delta_y) = scroll.get_delta();
-                            delta_x *= 120.;
-                            delta_y *= 120.;
-                            if mods.shift {
-                                delta_x += delta_y;
-                                delta_y = 0.;
-                            }
-                            Some(Vec2::new(delta_x, delta_y))
+                // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
+                // They claim that one "tick" on a scroll wheel should be 120 units.
+                let wheel_delta = match scroll.get_direction() {
+                    ScrollDirection::Up if mods.shift => Some(Vec2::new(-120.0, 0.0)),
+                    ScrollDirection::Up => Some(Vec2::new(0.0, -120.0)),
+                    ScrollDirection::Down if mods.shift => Some(Vec2::new(120.0, 0.0)),
+                    ScrollDirection::Down => Some(Vec2::new(0.0, 120.0)),
+                    ScrollDirection::Left => Some(Vec2::new(-120.0, 0.0)),
+                    ScrollDirection::Right => Some(Vec2::new(120.0, 0.0)),
+                    ScrollDirection::Smooth => {
+                        //TODO: Look at how gtk's scroll containers implements it
+                        let (mut delta_x, mut delta_y) = scroll.get_delta();
+                        delta_x *= 120.;
+                        delta_y *= 120.;
+                        if mods.shift {
+                            delta_x += delta_y;
+                            delta_y = 0.;
                         }
-                        e => {
-                            eprintln!(
-                                "Warning: the Druid widget got some whacky scroll direction {:?}",
-                                e
-                            );
-                            None
-                        }
+                        Some(Vec2::new(delta_x, delta_y))
+                    }
+                    e => {
+                        eprintln!(
+                            "Warning: the Druid widget got some whacky scroll direction {:?}",
+                            e
+                        );
+                        None
+                    }
+                };
+
+                if let Some(wheel_delta) = wheel_delta {
+                    let mouse_event = MouseEvent {
+                        pos: scale.to_dp(&Point::from(scroll.get_position())),
+                        buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
+                        mods,
+                        count: 0,
+                        focus: false,
+                        button: MouseButton::None,
+                        wheel_delta
                     };
 
-                    if let Some(wheel_delta) = wheel_delta {
-                        let mouse_event = MouseEvent {
-                            pos: scale.to_dp(&Point::from(scroll.get_position())),
-                            buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
-                            mods,
-                            count: 0,
-                            focus: false,
-                            button: MouseButton::None,
-                            wheel_delta
-                        };
-
-                        if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                            handler.wheel(&mouse_event);
-                        } else {
-                            log::info!("GTK event was dropped because the handler was already borrowed");
-                        }
+                    if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                        handler.wheel(&mouse_event);
+                    } else {
+                        log::info!("GTK event was dropped because the handler was already borrowed");
                     }
-                } else {
-                    log::warn!("GTK event was dropped because the scale was already borrowed");
                 }
             }
 
@@ -568,17 +556,15 @@ impl WindowHandle {
     /// Request invalidation of one rectangle, which is given relative to the drawing area.
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(state) = self.state.upgrade() {
-            if let Ok(scale) = state.scale.try_borrow() {
-                // GTK takes rects with non-negative integer width/height.
-                let r = scale.to_px(&rect.abs()).expand();
-                let origin = state.drawing_area.get_allocation();
-                state.window.queue_draw_area(
-                    r.x0 as i32 + origin.x,
-                    r.y0 as i32 + origin.y,
-                    r.width() as i32,
-                    r.height() as i32,
-                );
-            }
+            // GTK takes rects with non-negative integer width/height.
+            let r = state.scale.get().to_px(&rect.abs()).expand();
+            let origin = state.drawing_area.get_allocation();
+            state.window.queue_draw_area(
+                r.x0 as i32 + origin.x,
+                r.y0 as i32 + origin.y,
+                r.width() as i32,
+                r.height() as i32,
+            );
         }
     }
 
@@ -643,14 +629,12 @@ impl WindowHandle {
 
     /// Get the `Scale` of the window.
     pub fn get_scale(&self) -> Result<Scale, ShellError> {
-        if let Some(state) = self.state.upgrade() {
-            match state.scale.try_borrow() {
-                Ok(scale) => Ok(scale.clone()),
-                Err(_) => Err(BorrowError::new("WindowHandle::get_scale", "scale", false).into()),
-            }
-        } else {
-            Err(ShellError::WindowDropped)
-        }
+        Ok(self
+            .state
+            .upgrade()
+            .ok_or(ShellError::WindowDropped)?
+            .scale
+            .get())
     }
 
     pub fn set_menu(&self, menu: Menu) {
