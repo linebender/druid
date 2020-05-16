@@ -203,6 +203,7 @@ impl WindowBuilder {
                 idle_queue,
             };
             (*view_state).handler.connect(&handle.clone().into());
+            (*view_state).handler.scale(Scale::default());
             (*view_state)
                 .handler
                 .size(Size::new(frame.size.width, frame.size.height));

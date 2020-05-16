@@ -294,6 +294,7 @@ impl Window {
             Ok(mut handler) => {
                 let size = self.size()?;
                 handler.connect(&handle.into());
+                handler.scale(Scale::default());
                 handler.size(size);
                 Ok(())
             }

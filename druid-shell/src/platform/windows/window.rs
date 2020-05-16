@@ -399,6 +399,12 @@ impl WndProc for MyWndProc {
     fn connect(&self, handle: &WindowHandle, state: WndState) {
         *self.handle.borrow_mut() = handle.clone();
         *self.state.borrow_mut() = Some(state);
+        self.state
+            .borrow_mut()
+            .as_mut()
+            .unwrap()
+            .handler
+            .scale(self.scale());
     }
 
     fn cleanup(&self, hwnd: HWND) {

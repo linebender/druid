@@ -22,7 +22,7 @@ use std::rc::Rc;
 use crate::kurbo::{Rect, Size};
 use crate::piet::Piet;
 use crate::shell::{
-    Application, FileDialogOptions, IdleToken, MouseEvent, WinHandler, WindowHandle,
+    Application, FileDialogOptions, IdleToken, MouseEvent, Scale, WinHandler, WindowHandle,
 };
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
@@ -651,6 +651,10 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     fn size(&mut self, size: Size) {
         let event = Event::WindowSize(size);
         self.app_state.do_window_event(event, self.window_id);
+    }
+
+    fn scale(&mut self, _scale: Scale) {
+        // TODO: Do something with the scale
     }
 
     fn command(&mut self, id: u32) {

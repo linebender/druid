@@ -88,7 +88,7 @@ struct EnvImpl {
 /// [`Env`]: struct.Env.html
 pub struct Key<T> {
     key: &'static str,
-    value_type: PhantomData<T>,
+    value_type: PhantomData<*const T>,
 }
 
 // we could do some serious deriving here: the set of types that can be stored

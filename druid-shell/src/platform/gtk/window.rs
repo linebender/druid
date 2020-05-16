@@ -259,6 +259,11 @@ impl WindowBuilder {
                         scale = Scale::from_dpi(dpi, dpi);
                         state.scale.set(scale);
                         scale_changed = true;
+                        if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
+                            handler_borrow.scale(scale);
+                        } else {
+                            log::warn!("Failed to inform the handler of scale change because it was already borrowed");
+                        }
                     }
                 }
 
@@ -508,6 +513,7 @@ impl WindowBuilder {
 
         let mut handler = win_state.handler.borrow_mut();
         handler.connect(&handle.clone().into());
+        handler.scale(scale);
         handler.size(self.size);
 
         Ok(handle)

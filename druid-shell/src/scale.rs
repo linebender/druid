@@ -34,7 +34,7 @@ const SCALE_TARGET_DPI: f64 = 96.0;
 ///
 /// [`scale_x`]: #method.scale_x
 /// [`scale_y`]: #method.scale_y
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Scale {
     /// The platform reported DPI on the x axis.
     dpi_x: f64,
@@ -63,7 +63,7 @@ pub struct Scale {
 /// A copy of `ScaledArea` will be stale as soon as the platform area size changes.
 ///
 /// [`Scale`]: struct.Scale.html
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct ScaledArea {
     /// The size of the scaled area in display points.
     size_dp: Size,

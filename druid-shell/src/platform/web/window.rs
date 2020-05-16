@@ -242,7 +242,9 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
 fn setup_resize_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_window_event_listener(ws, "resize", move |_: web_sys::UiEvent| {
-        let (_, area) = state.update_scale_and_area();
+        let (scale, area) = state.update_scale_and_area();
+        // TODO: For performance, only call the handler when these values actually changed.
+        state.handler.borrow_mut().scale(scale);
         state.handler.borrow_mut().size(area.size_dp());
     });
 }
@@ -401,10 +403,11 @@ impl WindowBuilder {
 
         setup_web_callbacks(&window);
 
-        // Register the size with the window handler.
+        // Register the scale & size with the window handler.
         let wh = window.clone();
         window
             .request_animation_frame(move || {
+                wh.handler.borrow_mut().scale(scale);
                 wh.handler.borrow_mut().size(size_dp);
             })
             .expect("Failed to request animation frame");

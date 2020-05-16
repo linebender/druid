@@ -19,6 +19,7 @@ use std::sync::Arc;
 
 use crate::kurbo::{self, ParamCurve};
 use crate::piet;
+use crate::shell::Scale;
 
 pub use druid_derive::Data;
 
@@ -241,6 +242,12 @@ impl<T0: Data, T1: Data, T2: Data, T3: Data, T4: Data, T5: Data> Data for (T0, T
             && self.3.same(&other.3)
             && self.4.same(&other.4)
             && self.5.same(&other.5)
+    }
+}
+
+impl Data for Scale {
+    fn same(&self, other: &Self) -> bool {
+        self == other
     }
 }
 

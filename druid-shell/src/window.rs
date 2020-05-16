@@ -304,6 +304,14 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn size(&mut self, size: Size) {}
 
+    /// Called when the scale of the window has changed.
+    ///
+    /// This is always called before the accompanying [`size`].
+    ///
+    /// [`size`]: #method.size
+    #[allow(unused_variables)]
+    fn scale(&mut self, scale: Scale) {}
+
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
     /// should be scheduled for the next animation frame. `invalid_rect` is the
