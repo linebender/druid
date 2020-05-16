@@ -365,7 +365,7 @@ dependencies = [
  "console_log 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "druid-derive 0.4.0",
  "druid-shell 0.6.0",
- "float-cmp 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "float-cmp 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-bundle 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-langneg 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-syntax 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -403,6 +403,7 @@ dependencies = [
  "cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "cocoa 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "core-graphics 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "float-cmp 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "foreign-types 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "gdk 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "gdk-sys 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -473,6 +474,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "float-cmp"
 version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "float-cmp"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -1912,6 +1918,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum flate2 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)" = "2cfff41391129e0a856d6d822600b8d71179d46879e310417eb9c762eb178b42"
 "checksum float-cmp 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "75224bec9bfe1a65e2d34132933f2de7fe79900c96a0174307554244ece8150e"
 "checksum float-cmp 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "da62c4f1b81918835a8c6a484a397775fff5953fe83529afd51b05f5c6a6617d"
+"checksum float-cmp 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e1267f4ac4f343772758f7b1bdcbe767c218bbab93bb432acbf5162bbf85a6c4"
 "checksum fluent-bundle 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "27ade33328521266c81cc0924523988f43ccd7359f64689a1b6e818afca3a646"
 "checksum fluent-langneg 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)" = "fe5815efd5542e40841cd34ef9003822352b04c67a70c595c6758597c72e1f56"
 "checksum fluent-syntax 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)" = "ac0f7e83d14cccbf26e165d8881dcac5891af0d85a88543c09dd72ebd31d91ba"
