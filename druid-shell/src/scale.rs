@@ -87,6 +87,17 @@ pub trait Scalable {
     fn to_dp(&self, scale: &Scale) -> Self;
 }
 
+impl Default for Scale {
+    fn default() -> Scale {
+        Scale {
+            dpi_x: SCALE_TARGET_DPI,
+            dpi_y: SCALE_TARGET_DPI,
+            scale_x: 1.0,
+            scale_y: 1.0,
+        }
+    }
+}
+
 impl Scale {
     /// Create a new `Scale` state based on the specified DPIs.
     ///
@@ -320,9 +331,17 @@ impl Scalable for Insets {
     }
 }
 
+impl Default for ScaledArea {
+    fn default() -> ScaledArea {
+        ScaledArea {
+            size_dp: Size::ZERO,
+            size_px: Size::ZERO,
+        }
+    }
+}
+
 impl ScaledArea {
     /// Create a new scaled area from pixels.
-    #[allow(dead_code)]
     pub fn from_px<T: Into<Size>>(size: T, scale: &Scale) -> ScaledArea {
         let size_px = size.into();
         let size_dp = size_px.to_dp(scale);

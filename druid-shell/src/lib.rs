@@ -49,7 +49,7 @@ pub use keyboard::{KeyEvent, KeyModifiers};
 pub use keycodes::KeyCode;
 pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-pub use scale::Scale;
+pub use scale::{Scale, ScaledArea};
 pub use window::{
     IdleHandle, IdleToken, Text, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
