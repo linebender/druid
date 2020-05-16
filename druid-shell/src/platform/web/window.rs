@@ -228,13 +228,13 @@ fn setup_resize_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_window_event_listener(ws, "resize", move |_: web_sys::UiEvent| {
         let (css_width, css_height, dpr) = state.get_window_size_and_dpr();
-        let size_dp = state.scale.try_borrow_mut().map_or(None, |mut scale| {
+        let size_dp = state.scale.try_borrow_mut().ok().map(|mut scale| {
             *scale = Scale::from_scale(dpr, dpr);
             let size_px = scale.set_size_dp(Size::new(css_width, css_height));
             state.canvas.set_width(size_px.width as u32);
             state.canvas.set_height(size_px.height as u32);
             let _ = state.context.scale(scale.scale_x(), scale.scale_y());
-            Some(scale.size_dp())
+            scale.size_dp()
         });
         if let Some(size_dp) = size_dp {
             state.handler.borrow_mut().size(size_dp);
@@ -550,14 +550,13 @@ impl WindowHandle {
 
     /// Get the `Scale` of the window.
     pub fn get_scale(&self) -> Result<Scale, ShellError> {
-        if let Some(state) = self.0.upgrade() {
-            match state.scale.try_borrow() {
-                Ok(scale) => Ok(scale.clone()),
-                Err(_) => Err(BorrowError::new("WindowHandle::get_scale", "scale", false).into()),
-            }
-        } else {
-            Err(ShellError::WindowDropped)
-        }
+        self.0
+            .upgrade()
+            .ok_or(ShellError::WindowDropped)?
+            .scale
+            .try_borrow()
+            .map_err(|_| BorrowError::new("WindowHandle::get_scale", "scale", false).into())
+            .map(|scale| scale.clone())
     }
 
     pub fn set_menu(&self, _menu: Menu) {

@@ -107,7 +107,7 @@ impl FromWide for [u16] {
 
 /// Converts a `Rect` to a winapi `RECT`.
 #[inline]
-pub fn rect_to_recti(rect: Rect) -> RECT {
+pub(crate) fn rect_to_recti(rect: Rect) -> RECT {
     RECT {
         left: rect.x0 as i32,
         top: rect.y0 as i32,
@@ -118,7 +118,7 @@ pub fn rect_to_recti(rect: Rect) -> RECT {
 
 /// Converts a winapi `RECT` to a `Rect`.
 #[inline]
-pub fn recti_to_rect(rect: RECT) -> Rect {
+pub(crate) fn recti_to_rect(rect: RECT) -> Rect {
     Rect::new(
         rect.left as f64,
         rect.top as f64,
