@@ -28,14 +28,6 @@ use crate::{
     Text, TimerToken, Vec2, WidgetId, WindowDesc, WindowHandle, WindowId,
 };
 
-/// These allow type checking new windows and menus at runtime
-#[derive(Clone, Copy)]
-pub(crate) struct StateTypes {
-    pub window_desc: TypeId,
-    pub menu_desc: TypeId,
-    pub context_menu: TypeId,
-}
-
 /// A mutable context provided to event handling methods of widgets.
 ///
 /// Widgets should call [`request_paint`] whenever an event causes a change
@@ -54,7 +46,7 @@ pub struct EventCtx<'a> {
     pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
-    pub(crate) state_types: StateTypes,
+    pub(crate) app_data_type: TypeId,
 }
 
 /// A mutable context provided to the [`lifecycle`] method on widgets.
@@ -138,16 +130,6 @@ pub struct PaintCtx<'a, 'b: 'a> {
 /// is considered "empty", and all empty rectangles are treated the same.
 #[derive(Debug, Clone)]
 pub struct Region(Rect);
-
-impl StateTypes {
-    pub fn new<T: Any>() -> Self {
-        StateTypes {
-            window_desc: TypeId::of::<WindowDesc<T>>(),
-            menu_desc: TypeId::of::<MenuDesc<T>>(),
-            context_menu: TypeId::of::<ContextMenu<T>>(),
-        }
-    }
-}
 
 impl<'a> EventCtx<'a> {
     #[deprecated(since = "0.5.0", note = "use request_paint instead")]
@@ -269,13 +251,13 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
-        if self.state_types.window_desc == TypeId::of::<WindowDesc<T>>() {
+        if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
                 Command::one_shot(commands::NEW_WINDOW, desc),
                 Target::Global,
             );
         } else {
-            const MSG: &str = "WindowDesc<T> - T must match the application state.";
+            const MSG: &str = "WindowDesc<T> - T must match the application data type.";
             if cfg!(debug_assertions) {
                 panic!(MSG);
             } else {
@@ -289,13 +271,13 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        if self.state_types.menu_desc == TypeId::of::<MenuDesc<T>>() {
+        if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
                 Command::new(commands::SET_MENU, menu),
                 Target::Window(self.window_id),
             );
         } else {
-            const MSG: &str = "MenuDesc<T> - T must match the application state.";
+            const MSG: &str = "MenuDesc<T> - T must match the application data type.";
             if cfg!(debug_assertions) {
                 panic!(MSG);
             } else {
@@ -309,13 +291,13 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
-        if self.state_types.context_menu == TypeId::of::<ContextMenu<T>>() {
+        if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
                 Command::new(commands::SHOW_CONTEXT_MENU, menu),
                 Target::Window(self.window_id),
             );
         } else {
-            const MSG: &str = "ContextMenu<T> - T must match the application state.";
+            const MSG: &str = "ContextMenu<T> - T must match the application data type.";
             if cfg!(debug_assertions) {
                 panic!(MSG);
             } else {
