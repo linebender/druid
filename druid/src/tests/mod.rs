@@ -194,6 +194,13 @@ fn take_focus() {
         assert_eq!(left_focus.get(), None);
         assert_eq!(right_focus.get(), Some(true));
 
+        // this is sent to all widgets; the last widget to request focus should still get it
+        // NOTE: This tests siblings in particular, so careful when moving away from Split.
+        harness.submit_command(TAKE_FOCUS, None);
+        assert_eq!(harness.window().focus, Some(id_2));
+        assert_eq!(left_focus.get(), None);
+        assert_eq!(right_focus.get(), Some(true));
+
         // this is sent to a specific widget; it should get focus
         harness.submit_command(TAKE_FOCUS, id_1);
         assert_eq!(harness.window().focus, Some(id_1));
