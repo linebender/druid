@@ -356,6 +356,10 @@ impl<'a> EventCtx<'a> {
 
     /// Request keyboard focus.
     ///
+    /// Because only one widget can be focused at a time, multiple focus requests
+    /// from different widgets during a single event cycle means that the last
+    /// widget that requests focus will override the previous requests.
+    ///
     /// Calling this when the widget is already focused does nothing.
     ///
     /// See [`is_focused`] for more information about focus.

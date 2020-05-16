@@ -965,7 +965,7 @@ impl BaseState {
         self.has_active |= child_state.has_active;
         self.has_focus |= child_state.has_focus;
         self.children_changed |= child_state.children_changed;
-        self.request_focus = self.request_focus.or(child_state.request_focus);
+        self.request_focus = child_state.request_focus.or(self.request_focus);
         self.timers.extend(&child_state.timers);
     }
 
