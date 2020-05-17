@@ -693,6 +693,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     data,
                     env,
                 );
+                // MouseMove is recursed even if the widget is not active and not hot,
+                // but was hot previously. This is to allow the widget to respond to the movement,
+                // e.g. drag functionality where the widget wants to follow the mouse.
                 recurse = had_active || child_ctx.base_state.is_hot || hot_changed;
                 let mut mouse_event = mouse_event.clone();
                 mouse_event.pos -= rect.origin().to_vec2();

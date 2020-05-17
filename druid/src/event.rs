@@ -71,6 +71,8 @@ pub enum Event {
     ///
     /// The `MouseMove` event is propagated to the active widget, if
     /// there is one, otherwise to hot widgets (see `HotChanged`).
+    /// If a widget loses its hot status due to `MouseMove` then that specific
+    /// `MouseMove` event is also still sent to that widget.
     ///
     /// The `MouseMove` event is also the primary mechanism for widgets
     /// to set a cursor, for example to an I-bar inside a text widget. A
@@ -80,6 +82,8 @@ pub enum Event {
     ///
     /// [`set_cursor`]: struct.EventCtx.html#method.set_cursor
     MouseMove(MouseEvent),
+    /// Called when the mouse wheel or trackpad is scrolled.
+    Wheel(MouseEvent),
     /// Called when a key is pressed.
     ///
     /// Note: the intent is for each physical key press to correspond to
@@ -95,8 +99,6 @@ pub enum Event {
     KeyUp(KeyEvent),
     /// Called when a paste command is received.
     Paste(Clipboard),
-    /// Called when the mouse wheel or trackpad is scrolled.
-    Wheel(MouseEvent),
     /// Called when the trackpad is pinched.
     ///
     /// The value is a delta.

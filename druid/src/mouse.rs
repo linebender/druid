@@ -21,6 +21,17 @@ use crate::{KeyModifiers, MouseButton, MouseButtons};
 ///
 /// In `druid`, unlike in `druid_shell`, we treat the widget's coordinate
 /// space and the window's coordinate space separately.
+///
+/// Every mouse event can have a new position. There is no guarantee of
+/// receiving an [`Event::MouseMove`] before another mouse event.
+///
+/// When comparing to the position that was reported by [`Event::MouseMove`],
+/// the position in relation to the window might have changed because
+/// the window moved or the platform just didn't inform us of the move.
+/// The position may also have changed in relation to the receiver,
+/// because the receiver's location changed without the mouse moving.
+///
+/// [`Event::MouseMove`]: enum.Event.html#variant.MouseMove
 #[derive(Debug, Clone)]
 pub struct MouseEvent {
     /// The position of the mouse in the coordinate space of the receiver.
