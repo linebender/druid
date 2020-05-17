@@ -24,7 +24,7 @@ use crate::piet::{
 use crate::{
     BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
     LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget,
-    WidgetId, WindowId,
+    WidgetId, WindowHandle, WindowId,
 };
 
 /// Our queue type
@@ -224,6 +224,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             ctx.command_queue,
             &mut self.state,
             ctx.window_id,
+            ctx.window,
             layout_rect,
             ctx.mouse_pos,
             data,
@@ -334,6 +335,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         command_queue: &mut CommandQueue,
         child_state: &mut BaseState,
         window_id: WindowId,
+        window: &WindowHandle,
         rect: Rect,
         mouse_pos: Option<Point>,
         data: &T,
@@ -350,6 +352,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
                 command_queue,
                 base_state: child_state,
                 window_id,
+                window,
             };
             child.lifecycle(&mut child_ctx, &hot_changed_event, data, env);
             // if hot changes and we're showing widget ids, always repaint
@@ -515,6 +518,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             command_queue: ctx.command_queue,
             base_state: &mut self.state,
             window_id: ctx.window_id,
+            window: ctx.window,
             text_factory: ctx.text_factory,
             mouse_pos: child_mouse_pos,
         };
@@ -600,6 +604,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         child_ctx.command_queue,
                         child_ctx.base_state,
                         child_ctx.window_id,
+                        child_ctx.window,
                         rect,
                         None,
                         data,
@@ -647,6 +652,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     child_ctx.command_queue,
                     child_ctx.base_state,
                     child_ctx.window_id,
+                    child_ctx.window,
                     rect,
                     Some(mouse_event.pos),
                     data,
@@ -663,6 +669,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     child_ctx.command_queue,
                     child_ctx.base_state,
                     child_ctx.window_id,
+                    child_ctx.window,
                     rect,
                     Some(mouse_event.pos),
                     data,
@@ -679,6 +686,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     child_ctx.command_queue,
                     child_ctx.base_state,
                     child_ctx.window_id,
+                    child_ctx.window,
                     rect,
                     Some(mouse_event.pos),
                     data,
@@ -839,6 +847,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             command_queue: ctx.command_queue,
             base_state: &mut self.state,
             window_id: ctx.window_id,
+            window: ctx.window,
         };
 
         if recurse {
@@ -1005,6 +1014,7 @@ mod tests {
             command_queue: &mut command_queue,
             base_state: &mut state,
             window_id: WindowId::next(),
+            window: &WindowHandle::default(),
         };
 
         let env = Env::default();

@@ -42,6 +42,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `MouseButtons` to `MouseEvent` to track which buttons are being held down during an event. ([#843] by [@xStrom])
 - `Env` and `Key` gained methods for inspecting an `Env` at runtime ([#880] by [@Zarenor])
 - `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
+- `LifeCycleCtx::request_timer`. ([#954] by [@xStrom])
 - `UpdateCtx::size` and `LifeCycleCtx::size`. ([#917] by [@jneem])
 - `WidgetExt::debug_widget_id`, for displaying widget ids on hover. ([#876] by [@cmyr])
 - `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924] by [@cmyr])
@@ -196,6 +197,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#943]: https://github.com/xi-editor/druid/pull/943
 [#951]: https://github.com/xi-editor/druid/pull/951
 [#953]: https://github.com/xi-editor/druid/pull/953
+[#954]: https://github.com/xi-editor/druid/pull/954
 
 ## [0.5.0] - 2020-04-01
 

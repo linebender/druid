@@ -250,16 +250,17 @@ impl<T: Data> Window<T> {
         env: &Env,
         process_commands: bool,
     ) {
-        let mut base_state = BaseState::new(self.root.id());
-        let mut ctx = LifeCycleCtx {
-            command_queue: queue,
-            window_id: self.id,
-            base_state: &mut base_state,
-        };
-
         if let LifeCycle::AnimFrame(_) = event {
-            self.do_anim_frame(&mut ctx, data, env)
+            self.do_anim_frame(queue, data, env)
         } else {
+            let mut base_state = BaseState::new(self.root.id());
+            let mut ctx = LifeCycleCtx {
+                command_queue: queue,
+                window_id: self.id,
+                window: &self.handle,
+                base_state: &mut base_state,
+            };
+
             self.root.lifecycle(&mut ctx, event, data, env);
         }
 
@@ -267,7 +268,15 @@ impl<T: Data> Window<T> {
     }
 
     /// AnimFrame has special logic, so we implement it separately.
-    fn do_anim_frame(&mut self, ctx: &mut LifeCycleCtx, data: &T, env: &Env) {
+    fn do_anim_frame(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
+        let mut base_state = BaseState::new(self.root.id());
+        let mut ctx = LifeCycleCtx {
+            command_queue: queue,
+            window_id: self.id,
+            window: &self.handle,
+            base_state: &mut base_state,
+        };
+
         // TODO: this calculation uses wall-clock time of the paint call, which
         // potentially has jitter.
         //
@@ -277,7 +286,7 @@ impl<T: Data> Window<T> {
         let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
 
         let event = LifeCycle::AnimFrame(elapsed_ns);
-        self.root.lifecycle(ctx, &event, data, env);
+        self.root.lifecycle(&mut ctx, &event, data, env);
         if ctx.base_state.request_anim {
             self.last_anim = Some(now);
         }
@@ -340,6 +349,7 @@ impl<T: Data> Window<T> {
             base_state: &mut base_state,
             text_factory: piet.text(),
             window_id: self.id,
+            window: &self.handle,
             mouse_pos: self.last_mouse_pos,
         };
         let bc = BoxConstraints::tight(self.size);
