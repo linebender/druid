@@ -178,6 +178,14 @@ pub enum LifeCycle {
     /// [`WidgetPod`]: struct.WidgetPod.html
     /// [`LifeCycleCtx::register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
     WidgetAdded,
+    /// Called when the size of the widget changes.
+    ///
+    /// The [`Size`] is derived from the [`Rect`] that was set with [`WidgetPod::set_layout_rect`].
+    ///
+    /// [`Size`]: struct.Size.html
+    /// [`Rect`]: struct.Rect.html
+    /// [`WidgetPod::set_layout_rect`]: struct.WidgetPod.html#method.set_layout_rect
+    Size(Size),
     /// Called at the beginning of a new animation frame.
     ///
     /// On the first frame when transitioning from idle to animating, `interval`

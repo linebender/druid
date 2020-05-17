@@ -46,6 +46,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `WidgetExt::debug_widget_id`, for displaying widget ids on hover. ([#876] by [@cmyr])
 - `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924] by [@cmyr])
 - `im::Vector` support for the `List` widget. ([#940] by [@xStrom])
+- `LifeCycle::Size` event to inform widgets that their size changed. ([#953] by [@xStrom])
 
 ### Changed
 
@@ -194,6 +195,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#942]: https://github.com/xi-editor/druid/pull/942
 [#943]: https://github.com/xi-editor/druid/pull/943
 [#951]: https://github.com/xi-editor/druid/pull/951
+[#953]: https://github.com/xi-editor/druid/pull/953
 
 ## [0.5.0] - 2020-04-01
 
