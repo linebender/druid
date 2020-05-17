@@ -88,7 +88,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Keep hot state consistent with mouse position. ([#841] by [@xStrom])
 - Open file menu item works again. ([#851] by [@kindlychung])
 - Supply correct `LifeCycleCtx` to `Event::FocusChanged`. ([#878] by [@cmyr])
-- Windows: Termiate app when all windows have closed. ([#763] by [@xStrom])
+- Windows: Terminate app when all windows have closed. ([#763] by [@xStrom])
 - macOS: `Application::quit` now quits the run loop instead of killing the process. ([#763] by [@xStrom])
 - macOS/GTK/web: `MouseButton::X1` and `MouseButton::X2` clicks are now recognized. ([#843] by [@xStrom])
 - GTK: Support disabled menu items. ([#897] by [@jneem])
@@ -105,6 +105,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Improved `Split` accuracy. ([#738] by [@xStrom])
 - Built-in widgets no longer stroke outside their `paint_rect`. ([#861] by [@jneem])
 - `Switch` toggles with animation when its data changes externally. ([#898] by [@finnerale])
+- Render progress bar correctly. ([#949] by [@scholtzan])
 
 ### Docs
 
@@ -231,6 +232,7 @@ Last release without a changelog :(
 [@Zarenor]: https://github.com/Zarenor
 [@yrns]: https://github.com/yrns
 [@jrmuizel]: https://github.com/jrmuizel
+[@scholtzan]: https://github.com/scholtzan
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
 [0.5.0]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0
