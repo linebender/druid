@@ -213,6 +213,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
                 command_queue: ctx.command_queue,
                 base_state: &mut self.state,
                 window_id: ctx.window_id,
+                window: ctx.window,
             };
             let size_event = LifeCycle::Size(new_size);
             self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
@@ -703,6 +704,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     child_ctx.command_queue,
                     child_ctx.base_state,
                     child_ctx.window_id,
+                    child_ctx.window,
                     rect,
                     Some(mouse_event.pos),
                     data,
