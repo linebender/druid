@@ -85,11 +85,15 @@ impl<T: Data> AppLauncher<T> {
     /// Initialize a minimal logger for printing logs out to stderr.
     ///
     /// Meant for use during development only.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the logger fails to initialize.
     pub fn use_simple_logger(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
-        simple_logger::init().ok();
+        simple_logger::init().expect("Failed to init simple logger");
         #[cfg(target_arch = "wasm32")]
-        console_log::init_with_level(log::Level::Trace).ok();
+        console_log::init_with_level(log::Level::Trace).expect("Failed to init simple logger");
         self
     }
 
