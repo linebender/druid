@@ -658,6 +658,22 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 mouse_event.pos -= rect.origin().to_vec2();
                 Event::MouseMove(mouse_event)
             }
+            Event::Wheel(mouse_event) => {
+                WidgetPod::set_hot_state(
+                    &mut self.inner,
+                    child_ctx.command_queue,
+                    child_ctx.base_state,
+                    child_ctx.window_id,
+                    rect,
+                    Some(mouse_event.pos),
+                    data,
+                    env,
+                );
+                recurse = had_active || child_ctx.base_state.is_hot;
+                let mut mouse_event = mouse_event.clone();
+                mouse_event.pos -= rect.origin().to_vec2();
+                Event::Wheel(mouse_event)
+            }
             Event::KeyDown(e) => {
                 recurse = child_ctx.has_focus();
                 Event::KeyDown(*e)
@@ -669,12 +685,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::Paste(e) => {
                 recurse = child_ctx.has_focus();
                 Event::Paste(e.clone())
-            }
-            Event::Wheel(wheel_event) => {
-                recurse = had_active || child_ctx.base_state.is_hot;
-                let mut wheel_event = wheel_event.clone();
-                wheel_event.pos -= rect.origin().to_vec2();
-                Event::Wheel(wheel_event)
             }
             Event::Zoom(zoom) => {
                 recurse = had_active || child_ctx.base_state.is_hot;
