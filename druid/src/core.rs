@@ -188,12 +188,36 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         self.state.id
     }
 
-    /// Set layout rectangle.
+    /// Set the layout [`Rect`].
     ///
-    /// Intended to be called on child widget in container's `layout`
-    /// implementation.
+    /// A container widget should call the [`Widget::layout`] method on its children in
+    /// its own [`Widget::layout`] implementation, then possibly modify the returned [`Size`], and
+    /// finally call this `set_layout_rect` method on the child to set the final layout [`Rect`].
+    ///
+    /// The child will receive the [`LifeCycle::Size`] event informing them of the final [`Size`].
+    ///
+    /// [`Widget::layout`]: trait.Widget.html#tymethod.layout
+    /// [`Rect`]: struct.Rect.html
+    /// [`Size`]: struct.Size.html
+    /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
     pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, layout_rect: Rect) {
+        let mut needs_merge = false;
+
+        let old_size = self.state.layout_rect.map(|r| r.size());
+        let new_size = layout_rect.size();
+
         self.state.layout_rect = Some(layout_rect);
+
+        if old_size.is_none() || old_size.unwrap() != new_size {
+            let mut child_ctx = LifeCycleCtx {
+                command_queue: ctx.command_queue,
+                base_state: &mut self.state,
+                window_id: ctx.window_id,
+            };
+            let size_event = LifeCycle::Size(new_size);
+            self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
+            needs_merge = true;
+        }
 
         if WidgetPod::set_hot_state(
             &mut self.inner,
@@ -205,6 +229,10 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             data,
             env,
         ) {
+            needs_merge = true;
+        }
+
+        if needs_merge {
             ctx.base_state.merge_up(&self.state);
         }
     }
@@ -215,9 +243,12 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         self.layout_rect()
     }
 
-    /// The layout rectangle.
+    /// Returns the layout [`Rect`].
     ///
-    /// This will be same value as set by `set_layout_rect`.
+    /// This will be the same [`Rect`] that was set by [`set_layout_rect`].
+    ///
+    /// [`Rect`]: struct.Rect.html
+    /// [`set_layout_rect`]: #method.set_layout_rect
     pub fn layout_rect(&self) -> Rect {
         self.state.layout_rect.unwrap_or_default()
     }
@@ -789,6 +820,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 self.env = Some(env.clone());
 
                 true
+            }
+            LifeCycle::Size(_) => {
+                // We are a descendant of a widget that received the Size event.
+                // This event was meant only for our parent, so don't recurse.
+                false
             }
             //NOTE: this is not sent here, but from the special set_hot_state method
             LifeCycle::HotChanged(_) => false,
