@@ -62,6 +62,7 @@ pub struct LifeCycleCtx<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) base_state: &'a mut BaseState,
     pub(crate) window_id: WindowId,
+    pub(crate) window: &'a WindowHandle,
 }
 
 /// A mutable context provided to data update methods of widgets.
@@ -91,6 +92,7 @@ pub struct LayoutCtx<'a, 'b: 'a> {
     pub(crate) base_state: &'a mut BaseState,
     pub(crate) text_factory: &'a mut Text<'b>,
     pub(crate) window_id: WindowId,
+    pub(crate) window: &'a WindowHandle,
     pub(crate) mouse_pos: Option<Point>,
 }
 
@@ -546,6 +548,17 @@ impl<'a> LifeCycleCtx<'a> {
     pub fn request_anim_frame(&mut self) {
         self.base_state.request_anim = true;
         self.request_paint();
+    }
+
+    /// Request a timer event.
+    ///
+    /// The return value is a token, which can be used to associate the
+    /// request with the event.
+    pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
+        self.base_state.request_timer = true;
+        let timer_token = self.window.request_timer(deadline);
+        self.base_state.add_timer(timer_token);
+        timer_token
     }
 
     /// The layout size.
