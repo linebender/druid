@@ -85,9 +85,9 @@ impl<T: Data> AppLauncher<T> {
     /// Initialize a minimal logger for printing logs out to stderr.
     ///
     /// Meant for use during development only.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the logger fails to initialize.
     pub fn use_simple_logger(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
