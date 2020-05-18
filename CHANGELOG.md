@@ -99,6 +99,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Routing `LifeCycle::FocusChanged` to descendant widgets. ([#925] by [@yrns])
 - Built-in open and save menu items now show the correct label and submit the right commands. ([#930] by [@finnerale])
 - Wheel events now properly update hot state. ([#951] by [@xStrom])
+- X11: Support mouse scrolling. ([#961] by [@jneem])
 
 ### Visual
 
@@ -200,6 +201,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#953]: https://github.com/xi-editor/druid/pull/953
 [#954]: https://github.com/xi-editor/druid/pull/954
 [#959]: https://github.com/xi-editor/druid/pull/959
+[#961]: https://github.com/xi-editor/druid/pull/961
 
 ## [0.5.0] - 2020-04-01
 
