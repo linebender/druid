@@ -31,8 +31,8 @@ use crate::ext_event::ExtEventHost;
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, Target, TimerToken, WindowDesc,
-    WindowId,
+    Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, SingleUse, Target, TimerToken,
+    WindowDesc, WindowId,
 };
 
 use crate::command::sys as sys_cmd;
@@ -591,7 +591,10 @@ impl<T: Data> AppState<T> {
     }
 
     fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
-        let desc = cmd.take_object::<WindowDesc<T>>()?;
+        let desc = cmd.get_object::<SingleUse<WindowDesc<T>>>()?;
+        // The NEW_WINDOW command is private and only druid can receive it by normal means,
+        // thus unwrapping can be considered safe and deserves a panic.
+        let desc = desc.take().unwrap();
         let window = desc.build_native(self)?;
         window.show();
         Ok(())
