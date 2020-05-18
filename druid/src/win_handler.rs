@@ -35,7 +35,7 @@ use crate::{
     WindowId,
 };
 
-use crate::command::sys as sys_cmd;
+use crate::command::{sys as sys_cmd, SingleUse};
 
 pub(crate) const RUN_COMMANDS_TOKEN: IdleToken = IdleToken::new(1);
 
@@ -591,7 +591,10 @@ impl<T: Data> AppState<T> {
     }
 
     fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
-        let desc = cmd.take_object::<WindowDesc<T>>()?;
+        let desc = cmd.get_object::<SingleUse<WindowDesc<T>>>()?;
+        // The NEW_WINDOW command is private and only druid can receive it by normal means,
+        // thus unwrapping can be considered save or deserves a panic.
+        let desc = desc.take().unwrap();
         let window = desc.build_native(self)?;
         window.show();
         Ok(())

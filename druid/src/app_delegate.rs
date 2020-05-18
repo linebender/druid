@@ -19,7 +19,9 @@ use std::{
     collections::VecDeque,
 };
 
-use crate::{commands, Command, Data, Env, Event, MenuDesc, Target, WindowDesc, WindowId};
+use crate::{
+    command::SingleUse, commands, Command, Data, Env, Event, MenuDesc, Target, WindowDesc, WindowId,
+};
 
 /// A context passed in to [`AppDelegate`] functions.
 ///
@@ -55,7 +57,7 @@ impl<'a> DelegateCtx<'a> {
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
         if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::one_shot(commands::NEW_WINDOW, desc),
+                Command::new(commands::NEW_WINDOW, SingleUse::new(desc)),
                 Target::Global,
             );
         } else {

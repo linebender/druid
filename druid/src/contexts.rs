@@ -24,8 +24,8 @@ use crate::core::{BaseState, CommandQueue, FocusChange};
 use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::{
-    commands, Affine, Command, ContextMenu, Cursor, Insets, MenuDesc, Point, Rect, Size, Target,
-    Text, TimerToken, Vec2, WidgetId, WindowDesc, WindowHandle, WindowId,
+    command::SingleUse, commands, Affine, Command, ContextMenu, Cursor, Insets, MenuDesc, Point,
+    Rect, Size, Target, Text, TimerToken, Vec2, WidgetId, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A mutable context provided to event handling methods of widgets.
@@ -255,7 +255,7 @@ impl<'a> EventCtx<'a> {
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
         if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::one_shot(commands::NEW_WINDOW, desc),
+                Command::new(commands::NEW_WINDOW, SingleUse::new(desc)),
                 Target::Global,
             );
         } else {
