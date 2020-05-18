@@ -230,11 +230,6 @@ impl Command {
     }
 
     /// Return a reference to this `Command`'s object, if it has one.
-    ///
-    /// This only works for 'reusable' commands; it does not work for commands
-    /// created with [`one_shot`].
-    ///
-    /// [`one_shot`]: #method.one_shot
     pub fn get_object<T: Any>(&self) -> Result<&T, ArgumentError> {
         match self.object.as_ref() {
             Some(o) => o.downcast_ref().ok_or(ArgumentError::IncorrectType),
