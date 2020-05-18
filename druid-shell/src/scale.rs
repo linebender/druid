@@ -14,8 +14,6 @@
 
 //! Resolution scale related helpers.
 
-use float_cmp::ApproxEq;
-
 use crate::kurbo::{Insets, Line, Point, Rect, Size, Vec2};
 
 const SCALE_TARGET_DPI: f64 = 96.0;
@@ -68,9 +66,9 @@ pub struct Scale {
 ///
 /// The logical area size in display points is an unrounded conversion, which means that it is
 /// often not limited to integers. This allows for accurate calculations of
-/// the platform area pixel boundaries from the logcal area using a [`Scale`].
+/// the platform area pixel boundaries from the logical area using a [`Scale`].
 ///
-/// Even though the logcal area size can be fractional, the integer boundaries of that logical area
+/// Even though the logical area size can be fractional, the integer boundaries of that logical area
 /// will still match up with the platform area pixel boundaries as often as the scale factor allows.
 ///
 /// A copy of `ScaledArea` will be stale as soon as the platform area size changes.
@@ -148,13 +146,6 @@ impl Scale {
         self.dpi_y
     }
 
-    /// Returns `true` if the specified DPI is approximately equal to the `Scale` DPI.
-    #[inline]
-    pub fn dpi_approx_eq(&self, dpi_x: f64, dpi_y: f64) -> bool {
-        self.dpi_x.approx_eq(dpi_x, (f64::EPSILON, 2))
-            && self.dpi_y.approx_eq(dpi_y, (f64::EPSILON, 2))
-    }
-
     /// Returns the x axis scale factor.
     #[inline]
     pub fn scale_x(&self) -> f64 {
@@ -165,25 +156,6 @@ impl Scale {
     #[inline]
     pub fn scale_y(&self) -> f64 {
         self.scale_y
-    }
-
-    /// Converts from display points into pixels, using the x axis scale factor.
-    #[inline]
-    pub fn dp_to_px_x<T: Into<f64>>(&self, x: T) -> f64 {
-        x.into() * self.scale_x
-    }
-
-    /// Converts from display points into pixels, using the y axis scale factor.
-    #[inline]
-    pub fn dp_to_px_y<T: Into<f64>>(&self, y: T) -> f64 {
-        y.into() * self.scale_y
-    }
-
-    /// Converts from display points into pixels,
-    /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
-    #[inline]
-    pub fn dp_to_px_xy<T: Into<f64>>(&self, x: T, y: T) -> (f64, f64) {
-        (x.into() * self.scale_x, y.into() * self.scale_y)
     }
 
     /// Converts the `item` from display points into pixels,

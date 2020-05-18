@@ -255,8 +255,9 @@ impl WindowBuilder {
                 // so that we can change our scale factor without restarting the application.
                 if let Some(dpi) = state.window.get_window()
                     .map(|w| w.get_display().get_default_screen().get_resolution()) {
-                    if !scale.dpi_approx_eq(dpi, dpi) {
-                        scale = Scale::from_dpi(dpi, dpi);
+                    let reported_scale = Scale::from_dpi(dpi, dpi);
+                    if scale != reported_scale {
+                        scale = reported_scale;
                         state.scale.set(scale);
                         scale_changed = true;
                         if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
