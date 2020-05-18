@@ -20,7 +20,7 @@ use std::{
 };
 
 use crate::{
-    command::SingleUse, commands, Command, Data, Env, Event, MenuDesc, Target, WindowDesc, WindowId,
+    commands, Command, Data, Env, Event, MenuDesc, SingleUse, Target, WindowDesc, WindowId,
 };
 
 /// A context passed in to [`AppDelegate`] functions.

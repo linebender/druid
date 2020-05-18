@@ -31,11 +31,11 @@ use crate::ext_event::ExtEventHost;
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, Target, TimerToken, WindowDesc,
-    WindowId,
+    Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, SingleUse, Target, TimerToken,
+    WindowDesc, WindowId,
 };
 
-use crate::command::{sys as sys_cmd, SingleUse};
+use crate::command::sys as sys_cmd;
 
 pub(crate) const RUN_COMMANDS_TOKEN: IdleToken = IdleToken::new(1);
 
