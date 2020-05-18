@@ -226,7 +226,16 @@ impl Application {
                         let window_id = button_press.event();
                         match self.window(window_id) {
                             Ok(w) => {
-                                if let Err(err) = w.handle_button_press(button_press) {
+                                // X doesn't have dedicated scroll events: it uses mouse buttons instead.
+                                // Buttons 4/5 are vertical; 6/7 are horizontal.
+                                if button_press.detail() >= 4 && button_press.detail() <= 7 {
+                                    if let Err(err) = w.handle_wheel(button_press) {
+                                        log::error!(
+                                            "BUTTON_PRESS - failed to handle wheel: {}",
+                                            err
+                                        );
+                                    }
+                                } else if let Err(err) = w.handle_button_press(button_press) {
                                     log::error!("BUTTON_PRESS - failed to handle: {}", err);
                                 }
                             }
@@ -238,7 +247,10 @@ impl Application {
                         let window_id = button_release.event();
                         match self.window(window_id) {
                             Ok(w) => {
-                                if let Err(err) = w.handle_button_release(button_release) {
+                                if button_release.detail() >= 4 && button_release.detail() <= 7 {
+                                    // This is the release event corresponding to a mouse wheel.
+                                    // Ignore it: we already handled the press event.
+                                } else if let Err(err) = w.handle_button_release(button_release) {
                                     log::error!("BUTTON_RELEASE - failed to handle: {}", err);
                                 }
                             }
