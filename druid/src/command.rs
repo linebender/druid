@@ -59,9 +59,32 @@ pub struct Command {
     object: Option<Arc<dyn Any>>,
 }
 
-/// `SingleUse` is intended for cases where a command payload should only be
-/// used once; an example would be if you have some resource that cannot be
+/// A wrapper type for [`Command`] arguments that should only be used once.
+///
+/// This is useful if you have some resource that cannot be
 /// cloned, and you wish to send it to another widget.
+///
+/// # Examples
+/// ```
+/// use druid::{Command, Selector, SingleUse};
+///
+/// struct CantClone(u8);
+///
+/// let selector = Selector::new("use-once");
+/// let num = CantClone(42);
+/// let command = Command::new(selector, SingleUse::new(num));
+///
+/// let object: &SingleUse<CantClone> = command.get_object().unwrap();
+/// if let Some(num) = object.take() {
+///     // now you own the data
+///     assert_eq!(num.0, 42);
+/// }
+///
+/// // subsequent calls will return `None`
+/// assert!(object.take().is_none());
+/// ```
+///
+/// [`Command`]: struct.Command.html
 pub struct SingleUse<T>(Mutex<Option<T>>);
 
 /// Errors that can occur when attempting to retrieve the a command's argument.
