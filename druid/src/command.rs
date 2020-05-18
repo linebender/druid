@@ -35,7 +35,7 @@ pub struct Selector(&'static str);
 /// and an optional argument, that can be used to pass arbitrary data.
 ///
 /// If the payload can't or shouldn't be cloned,
-/// wrapping it with [`SingleUse`] allows `take`ing the object.
+/// wrapping it with [`SingleUse`] allows you to `take` the object.
 ///
 /// # Examples
 /// ```

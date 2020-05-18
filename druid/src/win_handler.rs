@@ -593,7 +593,7 @@ impl<T: Data> AppState<T> {
     fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
         let desc = cmd.get_object::<SingleUse<WindowDesc<T>>>()?;
         // The NEW_WINDOW command is private and only druid can receive it by normal means,
-        // thus unwrapping can be considered save or deserves a panic.
+        // thus unwrapping can be considered safe and deserves a panic.
         let desc = desc.take().unwrap();
         let window = desc.build_native(self)?;
         window.show();
