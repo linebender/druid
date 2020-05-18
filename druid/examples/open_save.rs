@@ -37,8 +37,17 @@ fn ui_builder() -> impl Widget<String> {
     let other = FileSpec::new("Bogus file", &["foo", "bar", "baz"]);
     let save_dialog_options = FileDialogOptions::new()
         .allowed_types(vec![rs, txt, other])
-        .default_type(txt);
-    let open_dialog_options = save_dialog_options.clone();
+        .default_type(txt)
+        .default_name("MyFile.txt")
+        .name_label("Target")
+        .title("Choose a target for this lovely file")
+        .button_text("Export");
+    let open_dialog_options = save_dialog_options
+        .clone()
+        .default_name("MySavedFile.txt")
+        .name_label("Source")
+        .title("Where did you put that file?")
+        .button_text("Import");
 
     let input = TextBox::new();
     let save = Button::new("Save").on_click(move |ctx, _, _| {

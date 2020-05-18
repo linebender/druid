@@ -50,6 +50,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924] by [@cmyr])
 - `im::Vector` support for the `List` widget. ([#940] by [@xStrom])
 - `LifeCycle::Size` event to inform widgets that their size changed. ([#953] by [@xStrom])
+- `FileDialogOptions` methods `default_name`, `name_label`, `title`, `button_text`, `force_starting_directory`. ([#960] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `set_menu` method on `UpdateCtx` and `LifeCycleCtx` ([#970] by [@cmyr])
 
@@ -112,6 +113,8 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Built-in open and save menu items now show the correct label and submit the right commands. ([#930] by [@finnerale])
 - Focus request handling is now predictable with the last request overriding earlier ones. ([#948] by [@xStrom])
 - Wheel events now properly update hot state. ([#951] by [@xStrom])
+- macOS: Support `FileDialogOptions::default_type`. ([#960] by [@xStrom])
+- macOS: Show the save dialog even with `FileDialogOptions` `select_directories` and `multi_selection` set. ([#960] by [@xStrom])
 - X11: Support mouse scrolling. ([#961] by [@jneem])
 - `Painter` now properly repaints on data change in `Container`. ([#991] by [@cmyr])
 
@@ -232,6 +235,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#953]: https://github.com/xi-editor/druid/pull/953
 [#954]: https://github.com/xi-editor/druid/pull/954
 [#959]: https://github.com/xi-editor/druid/pull/959
+[#960]: https://github.com/xi-editor/druid/pull/960
 [#961]: https://github.com/xi-editor/druid/pull/961
 [#963]: https://github.com/xi-editor/druid/pull/963
 [#964]: https://github.com/xi-editor/druid/pull/964
