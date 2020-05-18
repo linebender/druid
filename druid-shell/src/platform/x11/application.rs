@@ -183,7 +183,6 @@ impl Application {
         self.screen_num
     }
 
-    // TODO(x11/events): handle mouse scroll events
     #[allow(clippy::cognitive_complexity)]
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         loop {
