@@ -604,10 +604,13 @@ impl Window {
 
     pub fn handle_wheel(&self, event: &xcb::ButtonPressEvent) -> Result<(), Error> {
         let button = event.detail();
-        // The scroll delta of 120.0 was stolen from the GTK code, which apparently came from the
-        // windows docs.
+        let mods = key_mods(event.state());
+
+        // We use a delta of 120 per tick to match the behavior of windows.
         let delta = match button {
+            4 if mods.shift => (-120.0, 0.0),
             4 => (0.0, -120.0),
+            5 if mods.shift => (120.0, 0.0),
             5 => (0.0, 120.0),
             6 => (-120.0, 0.0),
             7 => (120.0, 0.0),
