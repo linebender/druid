@@ -52,6 +52,31 @@ impl<T: Data> Button<T> {
         }
     }
 
+    /// Construct a new dynamic button.
+    ///
+    /// The contents of this button are generated from the data using a closure.
+    ///
+    /// This is provided as a convenience; a closure can also be passed to [`new`],
+    /// but due to limitations of the implementation of that method, the types in
+    /// the closure need to be annotated, which is not true for this method.
+    ///
+    /// # Examples
+    ///
+    /// The following are equivalent.
+    ///
+    /// ```
+    /// use druid::Env;
+    /// use druid::widget::Button;
+    /// let button1: Button<u32> = Button::new(|data: &u32, _: &Env| format!("total is {}", data));
+    /// let button2: Button<u32> = Button::dynamic(|data, _| format!("total is {}", data));
+    /// ```
+    ///
+    /// [`new`]: #method.new
+    pub fn dynamic(text: impl Fn(&T, &Env) -> String + 'static) -> Self {
+        let text: LabelText<T> = text.into();
+        Button::new(text)
+    }
+
     /// Provide a closure to be called when this button is clicked.
     pub fn on_click(
         self,
