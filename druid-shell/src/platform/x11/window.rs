@@ -602,6 +602,47 @@ impl Window {
         }
     }
 
+    pub fn handle_wheel(&self, event: &xcb::ButtonPressEvent) -> Result<(), Error> {
+        let button = event.detail();
+        let mods = key_mods(event.state());
+
+        // We use a delta of 120 per tick to match the behavior of Windows.
+        let delta = match button {
+            4 if mods.shift => (-120.0, 0.0),
+            4 => (0.0, -120.0),
+            5 if mods.shift => (120.0, 0.0),
+            5 => (0.0, 120.0),
+            6 => (-120.0, 0.0),
+            7 => (120.0, 0.0),
+            _ => {
+                return Err(Error::Generic(format!(
+                    "unexpected mouse wheel button: {}",
+                    button
+                )))
+            }
+        };
+        let mouse_event = MouseEvent {
+            pos: Point::new(event.event_x() as f64, event.event_y() as f64),
+            buttons: mouse_buttons(event.state()),
+            mods: key_mods(event.state()),
+            count: 0,
+            focus: false,
+            button: MouseButton::None,
+            wheel_delta: delta.into(),
+        };
+
+        match self.handler.try_borrow_mut() {
+            Ok(mut handler) => {
+                handler.wheel(&mouse_event);
+                Ok(())
+            }
+            Err(err) => Err(Error::BorrowError(format!(
+                "Window::handle_wheel handle: {}",
+                err
+            ))),
+        }
+    }
+
     pub fn handle_motion_notify(
         &self,
         motion_notify: &xcb::MotionNotifyEvent,
