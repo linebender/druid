@@ -22,8 +22,6 @@
 use std::mem;
 use std::ptr::null_mut;
 
-use log::{error, warn};
-
 use winapi::ctypes::c_void;
 use winapi::shared::dxgi::*;
 use winapi::shared::dxgi1_2::*;
@@ -38,6 +36,7 @@ use winapi::Interface;
 use piet_common::d2d::D2DFactory;
 
 use crate::platform::windows::{DeviceContext, DxgiSurfaceRenderTarget, HwndRenderTarget};
+use crate::scale::Scale;
 
 use super::error::Error;
 use super::util::as_result;
@@ -48,7 +47,7 @@ pub(crate) unsafe fn create_render_target(
 ) -> Result<DeviceContext, Error> {
     let mut rect: RECT = mem::zeroed();
     if GetClientRect(hwnd, &mut rect) == 0 {
-        warn!("GetClientRect failed.");
+        log::warn!("GetClientRect failed.");
         Err(Error::D2Error)
     } else {
         let width = (rect.right - rect.left) as u32;
@@ -56,7 +55,7 @@ pub(crate) unsafe fn create_render_target(
         let res = HwndRenderTarget::create(d2d_factory, hwnd, width, height);
 
         if let Err(ref e) = res {
-            error!("Creating hwnd render target failed: {:?}", e);
+            log::error!("Creating hwnd render target failed: {:?}", e);
         }
         res.map(|hrt| cast_to_device_context(&hrt).expect("removethis"))
             .map_err(|_| Error::D2Error)
@@ -69,7 +68,7 @@ pub(crate) unsafe fn create_render_target(
 pub(crate) unsafe fn create_render_target_dxgi(
     d2d_factory: &D2DFactory,
     swap_chain: *mut IDXGISwapChain1,
-    dpi: f32,
+    scale: &Scale,
 ) -> Result<DxgiSurfaceRenderTarget, Error> {
     let mut buffer: *mut IDXGISurface = null_mut();
     as_result((*swap_chain).GetBuffer(
@@ -83,8 +82,8 @@ pub(crate) unsafe fn create_render_target_dxgi(
             format: DXGI_FORMAT_B8G8R8A8_UNORM,
             alphaMode: D2D1_ALPHA_MODE_IGNORE,
         },
-        dpiX: dpi,
-        dpiY: dpi,
+        dpiX: scale.dpi_x() as f32,
+        dpiY: scale.dpi_y() as f32,
         usage: D2D1_RENDER_TARGET_USAGE_NONE,
         minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
     };

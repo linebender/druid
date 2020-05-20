@@ -14,7 +14,7 @@
 
 use std::any::Any;
 
-use druid_shell::kurbo::{Line, Rect};
+use druid_shell::kurbo::{Line, Rect, Size};
 use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
@@ -27,7 +27,7 @@ const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 #[derive(Default)]
 struct HelloState {
-    size: (f64, f64),
+    size: Size,
     handle: WindowHandle,
 }
 
@@ -37,8 +37,7 @@ impl WinHandler for HelloState {
     }
 
     fn paint(&mut self, piet: &mut piet_common::Piet, _: Rect) -> bool {
-        let (width, height) = self.size;
-        let rect = Rect::new(0.0, 0.0, width, height);
+        let rect = self.size.to_rect();
         piet.fill(rect, &BG_COLOR);
         piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &FG_COLOR, 1.0);
         false
@@ -92,12 +91,8 @@ impl WinHandler for HelloState {
         println!("timer fired: {:?}", id);
     }
 
-    fn size(&mut self, width: u32, height: u32) {
-        let dpi = self.handle.get_dpi();
-        let dpi_scale = dpi as f64 / 96.0;
-        let width_f = (width as f64) / dpi_scale;
-        let height_f = (height as f64) / dpi_scale;
-        self.size = (width_f, height_f);
+    fn size(&mut self, size: Size) {
+        self.size = size;
     }
 
     fn destroy(&mut self) {

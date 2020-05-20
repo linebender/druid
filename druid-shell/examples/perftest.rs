@@ -16,7 +16,7 @@ use std::any::Any;
 
 use time::Instant;
 
-use piet_common::kurbo::{Line, Rect};
+use piet_common::kurbo::{Line, Rect, Size};
 use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
 use druid_shell::{Application, KeyEvent, WinHandler, WindowBuilder, WindowHandle};
@@ -26,7 +26,7 @@ const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 struct PerfTest {
     handle: WindowHandle,
-    size: (f64, f64),
+    size: Size,
     start_time: Instant,
     last_time: Instant,
 }
@@ -37,11 +37,14 @@ impl WinHandler for PerfTest {
     }
 
     fn paint(&mut self, piet: &mut Piet, _: Rect) -> bool {
-        let (width, height) = self.size;
-        let rect = Rect::new(0.0, 0.0, width, height);
+        let rect = self.size.to_rect();
         piet.fill(rect, &BG_COLOR);
 
-        piet.stroke(Line::new((0.0, height), (width, 0.0)), &FG_COLOR, 1.0);
+        piet.stroke(
+            Line::new((0.0, self.size.height), (self.size.width, 0.0)),
+            &FG_COLOR,
+            1.0,
+        );
 
         let current_ns = (Instant::now() - self.start_time).whole_nanoseconds();
         let th = ::std::f64::consts::PI * (current_ns as f64) * 2e-9;
@@ -98,12 +101,8 @@ impl WinHandler for PerfTest {
         false
     }
 
-    fn size(&mut self, width: u32, height: u32) {
-        let dpi = self.handle.get_dpi();
-        let dpi_scale = dpi as f64 / 96.0;
-        let width_f = (width as f64) / dpi_scale;
-        let height_f = (height as f64) / dpi_scale;
-        self.size = (width_f, height_f);
+    fn size(&mut self, size: Size) {
+        self.size = size;
     }
 
     fn destroy(&mut self) {
@@ -119,7 +118,7 @@ fn main() {
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
     let perf_test = PerfTest {
-        size: Default::default(),
+        size: Size::ZERO,
         handle: Default::default(),
         start_time: time::Instant::now(),
         last_time: time::Instant::now(),

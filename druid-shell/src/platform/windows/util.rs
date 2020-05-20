@@ -28,7 +28,7 @@ use winapi::ctypes::c_void;
 use winapi::shared::guiddef::REFIID;
 use winapi::shared::minwindef::{HMODULE, UINT};
 use winapi::shared::ntdef::{HRESULT, LPWSTR};
-use winapi::shared::windef::HMONITOR;
+use winapi::shared::windef::{HMONITOR, RECT};
 use winapi::shared::winerror::SUCCEEDED;
 use winapi::um::fileapi::{CreateFileA, GetFileType, OPEN_EXISTING};
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
@@ -39,6 +39,8 @@ use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winbase::{FILE_TYPE_UNKNOWN, STD_ERROR_HANDLE, STD_OUTPUT_HANDLE};
 use winapi::um::wincon::{AttachConsole, ATTACH_PARENT_PROCESS};
 use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
+
+use crate::kurbo::Rect;
 
 use super::error::Error;
 
@@ -101,6 +103,28 @@ impl FromWide for [u16] {
     fn to_u16_slice(&self) -> &[u16] {
         self
     }
+}
+
+/// Converts a `Rect` to a winapi `RECT`.
+#[inline]
+pub(crate) fn rect_to_recti(rect: Rect) -> RECT {
+    RECT {
+        left: rect.x0 as i32,
+        top: rect.y0 as i32,
+        right: rect.x1 as i32,
+        bottom: rect.y1 as i32,
+    }
+}
+
+/// Converts a winapi `RECT` to a `Rect`.
+#[inline]
+pub(crate) fn recti_to_rect(rect: RECT) -> Rect {
+    Rect::new(
+        rect.left as f64,
+        rect.top as f64,
+        rect.right as f64,
+        rect.bottom as f64,
+    )
 }
 
 // Types for functions we want to load, which are only supported on newer windows versions

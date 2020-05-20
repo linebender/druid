@@ -156,6 +156,7 @@ impl<T: Data> Window<T> {
         env: &Env,
     ) -> bool {
         match &event {
+            Event::WindowSize(size) => self.size = *size,
             Event::MouseDown(e) | Event::MouseUp(e) | Event::MouseMove(e) | Event::Wheel(e) => {
                 self.last_mouse_pos = Some(e.pos)
             }
@@ -169,12 +170,6 @@ impl<T: Data> Window<T> {
         };
 
         let event = match event {
-            Event::WindowSize(size) => {
-                let dpi = f64::from(self.handle.get_dpi());
-                let scale = 96.0 / dpi;
-                self.size = Size::new(size.width * scale, size.height * scale);
-                Event::WindowSize(self.size)
-            }
             Event::Timer(token) => {
                 if let Some(widget_id) = self.timers.get(&token) {
                     Event::Internal(InternalEvent::RouteTimer(token, *widget_id))

@@ -27,10 +27,10 @@ use winapi::um::winbase::{
 
 use super::util::FromWide;
 
-/// Error codes. At the moment, this is little more than HRESULT, but that
-/// might change.
+/// Windows platform error.
 #[derive(Debug, Clone)]
 pub enum Error {
+    /// Windows error code.
     Hr(HRESULT),
     // Maybe include the full error from the direct2d crate.
     D2Error,
@@ -67,10 +67,10 @@ fn hresult_description(hr: HRESULT) -> Option<String> {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match *self {
+        match self {
             Error::Hr(hr) => {
                 write!(f, "HRESULT 0x{:x}", hr)?;
-                if let Some(description) = hresult_description(hr) {
+                if let Some(description) = hresult_description(*hr) {
                     write!(f, ": {}", description)?;
                 }
                 Ok(())

@@ -146,7 +146,7 @@ pub use piet::{Color, LinearGradient, RadialGradient, RenderContext, UnitPoint};
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Cursor, Error as PlatformError, FileDialogOptions,
     FileInfo, FileSpec, FormatId, HotKey, KeyCode, KeyEvent, KeyModifiers, MouseButton,
-    MouseButtons, RawMods, SysMods, Text, TimerToken, WindowHandle,
+    MouseButtons, RawMods, Scale, SysMods, Text, TimerToken, WindowHandle,
 };
 
 pub use crate::core::WidgetPod;

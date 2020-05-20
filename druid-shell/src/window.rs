@@ -26,6 +26,7 @@ use crate::kurbo::{Point, Rect, Size};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
+use crate::scale::Scale;
 
 // It's possible we'll want to make this type alias at a lower level,
 // see https://github.com/linebender/piet/pull/37 for more discussion.
@@ -199,12 +200,15 @@ impl WindowHandle {
         self.0.get_idle_handle().map(IdleHandle)
     }
 
-    /// Get the dpi of the window.
+    /// Get the [`Scale`] information of the window.
     ///
-    /// TODO: we want to migrate this from dpi (with 96 as nominal) to a scale
-    /// factor (with 1 as nominal).
-    pub fn get_dpi(&self) -> f32 {
-        self.0.get_dpi()
+    /// The returned [`Scale`] is a copy and thus its information will be stale after
+    /// the platform DPI changes. A correctly behaving application should consider
+    /// the lifetime of this [`Scale`] brief, limited to approximately a single event cycle.
+    ///
+    /// [`Scale`]: struct.Scale.html
+    pub fn get_scale(&self) -> Result<Scale, Error> {
+        self.0.get_scale().map_err(Into::into)
     }
 }
 
@@ -229,12 +233,28 @@ impl WindowBuilder {
         self.0.set_handler(handler)
     }
 
-    /// Set the window's initial size.
+    /// Set the window's initial drawing area size in [display points].
+    ///
+    /// The actual window size in pixels will depend on the platform DPI settings.
+    ///
+    /// This should be considered a request to the platform to set the size of the window.
+    /// The platform might increase the size a tiny bit due to DPI.
+    /// To know the actual size of the window you should handle the [`WinHandler::size`] method.
+    ///
+    /// [`WinHandler::size`]: trait.WinHandler.html#method.size
+    /// [display points]: struct.Scale.html
     pub fn set_size(&mut self, size: Size) {
         self.0.set_size(size)
     }
 
-    /// Set the window's initial size.
+    /// Set the window's minimum drawing area size in [display points].
+    ///
+    /// The actual minimum window size in pixels will depend on the platform DPI settings.
+    ///
+    /// This should be considered a request to the platform to set the minimum size of the window.
+    /// The platform might increase the size a tiny bit due to DPI.
+    ///
+    /// [display points]: struct.Scale.html
     pub fn set_min_size(&mut self, size: Size) {
         self.0.set_min_size(size)
     }
@@ -281,15 +301,29 @@ pub trait WinHandler {
     /// wish to stash it.
     fn connect(&mut self, handle: &WindowHandle);
 
-    /// Called when the size of the window is changed. Note that size
-    /// is in physical pixels.
+    /// Called when the size of the window has changed.
+    ///
+    /// The `size` parameter is the new size in [display points].
+    ///
+    /// [display points]: struct.Scale.html
     #[allow(unused_variables)]
-    fn size(&mut self, width: u32, height: u32) {}
+    fn size(&mut self, size: Size) {}
+
+    /// Called when the [`Scale`] of the window has changed.
+    ///
+    /// This is always called before the accompanying [`size`].
+    ///
+    /// [`Scale`]: struct.Scale.html
+    /// [`size`]: #method.size
+    #[allow(unused_variables)]
+    fn scale(&mut self, scale: Scale) {}
 
     /// Request the handler to paint the window contents. Return value
     /// indicates whether window is animating, i.e. whether another paint
     /// should be scheduled for the next animation frame. `invalid_rect` is the
-    /// rectangle that needs to be repainted.
+    /// rectangle in [display points] that needs to be repainted.
+    ///
+    /// [display points]: struct.Scale.html
     fn paint(&mut self, piet: &mut piet_common::Piet, invalid_rect: Rect) -> bool;
 
     /// Called when the resources need to be rebuilt.

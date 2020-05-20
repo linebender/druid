@@ -43,6 +43,8 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `Env` and `Key` gained methods for inspecting an `Env` at runtime ([#880] by [@Zarenor])
 - `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
 - `LifeCycleCtx::request_timer`. ([#954] by [@xStrom])
+- `scale` method to `WinHandler`. ([#904] by [@xStrom])
+- `WinHandler::scale` method to inform of scale changes. ([#904] by [@xStrom])
 - `UpdateCtx::size` and `LifeCycleCtx::size`. ([#917] by [@jneem])
 - `WidgetExt::debug_widget_id`, for displaying widget ids on hover. ([#876] by [@cmyr])
 - `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924] by [@cmyr])
@@ -61,6 +63,8 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Global `Application` associated functions are instance methods instead, e.g. `Application::global().quit()` instead of the old `Application::quit()`. ([#763] by [@xStrom])
 - Timer events will only be delivered to the widgets that requested them. ([#831] by [@sjoshid])
 - `Event::Wheel` now contains a `MouseEvent` structure. ([#895] by [@teddemunnik])
+- The `WindowHandle::get_dpi` method got replaced by `WindowHandle::get_scale`. ([#904] by [@xStrom])
+- The `WinHandler::size` method now gets a `Size` in display points. ([#904] by [@xStrom])
 - `AppDelegate::command` now receives a `Target` instead of a `&Target`. ([#909] by [@xStrom])
 - `SHOW_WINDOW` and `CLOSE_WINDOW` commands now only use `Target` to determine the affected window. ([#928] by [@finnerale])
 - Replaced `NEW_WINDOW`, `SET_MENU` and `SHOW_CONTEXT_MENU` commands with methods on `EventCtx` and `DelegateCtx`. ([#931] by [@finnerale])
@@ -95,6 +99,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - X11: Support individual window closing. ([#900] by [@xStrom])
 - X11: Support `Application::quit`. ([#900] by [@xStrom])
 - GTK: Support file filters in open/save dialogs. ([#903] by [@jneem])
+- GTK: Support DPI values other than 96. ([#904] by [@xStrom])
 - X11: Support key and mouse button state. ([#920] by [@jneem])
 - Routing `LifeCycle::FocusChanged` to descendant widgets. ([#925] by [@yrns])
 - Built-in open and save menu items now show the correct label and submit the right commands. ([#930] by [@finnerale])
@@ -128,6 +133,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - GTK: Refactored `Application` to use the new structure. ([#892] by [@xStrom])
 - X11: Refactored `Application` to use the new structure. ([#894] by [@xStrom])
 - X11: Refactored `Window` to support some reentrancy and invalidation. ([#894] by [@xStrom])
+- Refactored DPI scaling. ([#904] by [@xStrom])
 - Added docs generation testing for all features. ([#942] by [@xStrom])
 
 ### Outside News
@@ -186,6 +192,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#898]: https://github.com/xi-editor/druid/pull/898
 [#900]: https://github.com/xi-editor/druid/pull/900
 [#903]: https://github.com/xi-editor/druid/pull/903
+[#904]: https://github.com/xi-editor/druid/pull/904
 [#905]: https://github.com/xi-editor/druid/pull/905
 [#909]: https://github.com/xi-editor/druid/pull/909
 [#917]: https://github.com/xi-editor/druid/pull/917

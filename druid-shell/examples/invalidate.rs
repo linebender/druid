@@ -16,14 +16,14 @@ use std::any::Any;
 
 use std::time::{Duration, Instant};
 
-use druid_shell::kurbo::{Point, Rect};
+use druid_shell::kurbo::{Point, Rect, Size};
 use druid_shell::piet::{Color, Piet, RenderContext};
 
 use druid_shell::{Application, TimerToken, WinHandler, WindowBuilder, WindowHandle};
 
 struct InvalidateTest {
     handle: WindowHandle,
-    size: (f64, f64),
+    size: Size,
     start_time: Instant,
     color: Color,
     rect: Rect,
@@ -39,10 +39,10 @@ impl InvalidateTest {
             (_, _) => Color::rgb8(r, g, b.wrapping_add(10)),
         };
 
-        self.rect.x0 = (self.rect.x0 + 5.0) % self.size.0;
-        self.rect.x1 = (self.rect.x1 + 5.5) % self.size.0;
-        self.rect.y0 = (self.rect.y0 + 3.0) % self.size.1;
-        self.rect.y1 = (self.rect.y1 + 3.5) % self.size.1;
+        self.rect.x0 = (self.rect.x0 + 5.0) % self.size.width;
+        self.rect.x1 = (self.rect.x1 + 5.5) % self.size.width;
+        self.rect.y0 = (self.rect.y0 + 3.0) % self.size.height;
+        self.rect.y1 = (self.rect.y1 + 3.5) % self.size.height;
     }
 }
 
@@ -63,12 +63,8 @@ impl WinHandler for InvalidateTest {
         false
     }
 
-    fn size(&mut self, width: u32, height: u32) {
-        let dpi = self.handle.get_dpi();
-        let dpi_scale = dpi as f64 / 96.0;
-        let width_f = (width as f64) / dpi_scale;
-        let height_f = (height as f64) / dpi_scale;
-        self.size = (width_f, height_f);
+    fn size(&mut self, size: Size) {
+        self.size = size;
     }
 
     fn command(&mut self, id: u32) {
@@ -91,7 +87,7 @@ fn main() {
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
     let inv_test = InvalidateTest {
-        size: Default::default(),
+        size: Size::ZERO,
         handle: Default::default(),
         start_time: Instant::now(),
         rect: Rect::from_origin_size(Point::ZERO, (10.0, 20.0)),
