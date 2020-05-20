@@ -104,8 +104,8 @@ impl<T: Data> Label<T> {
     /// ```
     /// use druid::Env;
     /// use druid::widget::Label;
-    /// let button1: Label<u32> = Label::new(|data: &u32, _: &Env| format!("total is {}", data));
-    /// let button2: Label<u32> = Label::dynamic(|data, _| format!("total is {}", data));
+    /// let label1: Label<u32> = Label::new(|data: &u32, _: &Env| format!("total is {}", data));
+    /// let label2: Label<u32> = Label::dynamic(|data, _| format!("total is {}", data));
     /// ```
     ///
     /// [`new`]: #method.new
