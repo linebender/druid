@@ -606,7 +606,7 @@ impl Window {
         let button = event.detail();
         let mods = key_mods(event.state());
 
-        // We use a delta of 120 per tick to match the behavior of windows.
+        // We use a delta of 120 per tick to match the behavior of Windows.
         let delta = match button {
             4 if mods.shift => (-120.0, 0.0),
             4 => (0.0, -120.0),
@@ -615,8 +615,10 @@ impl Window {
             6 => (-120.0, 0.0),
             7 => (120.0, 0.0),
             _ => {
-                log::error!("unexpected mouse wheel button: {}", button);
-                (0.0, 0.0)
+                return Err(Error::Generic(format!(
+                    "unexpected mouse wheel button: {}",
+                    button
+                )))
             }
         };
         let mouse_event = MouseEvent {
