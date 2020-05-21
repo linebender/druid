@@ -50,6 +50,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924] by [@cmyr])
 - `im::Vector` support for the `List` widget. ([#940] by [@xStrom])
 - `LifeCycle::Size` event to inform widgets that their size changed. ([#953] by [@xStrom])
+- `Button::dynamic` constructor. ([#963] by [@totsteps])
 
 ### Changed
 
@@ -106,7 +107,6 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Focus request handling is now predictable with the last request overriding earlier ones. ([#948] by [@xStrom])
 - Wheel events now properly update hot state. ([#951] by [@xStrom])
 - X11: Support mouse scrolling. ([#961] by [@jneem])
-- Add `Button::dynamic` constructor. ([#963] by [@totsteps])
 
 ### Visual
 
