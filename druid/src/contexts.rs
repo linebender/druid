@@ -28,25 +28,30 @@ use crate::{
     Target, Text, TimerToken, Vec2, WidgetId, WindowDesc, WindowHandle, WindowId,
 };
 
+/// Static state that is shared between most contexts.
+pub(crate) struct ContextState<'a> {
+    pub(crate) command_queue: &'a mut CommandQueue,
+    pub(crate) window_id: WindowId,
+    pub(crate) window: &'a WindowHandle,
+    pub(crate) root_app_data_type: TypeId,
+}
+
 /// A mutable context provided to event handling methods of widgets.
 ///
 /// Widgets should call [`request_paint`] whenever an event causes a change
 /// in the widget's appearance, to schedule a repaint.
 ///
 /// [`request_paint`]: #method.request_paint
-pub struct EventCtx<'a> {
+pub struct EventCtx<'a, 'b> {
     // Note: there's a bunch of state that's just passed down, might
     // want to group that into a single struct.
+    pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) cursor: &'a mut Option<Cursor>,
     /// Commands submitted to be run after this event.
-    pub(crate) command_queue: &'a mut CommandQueue,
-    pub(crate) window_id: WindowId,
-    pub(crate) window: &'a WindowHandle,
     pub(crate) widget_state: &'a mut WidgetState,
     pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
-    pub(crate) app_data_type: TypeId,
 }
 
 /// A mutable context provided to the [`lifecycle`] method on widgets.
@@ -58,11 +63,9 @@ pub struct EventCtx<'a> {
 /// [`lifecycle`]: trait.Widget.html#tymethod.lifecycle
 /// [`register_child`]: #method.register_child
 /// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
-pub struct LifeCycleCtx<'a> {
-    pub(crate) command_queue: &'a mut CommandQueue,
+pub struct LifeCycleCtx<'a, 'b> {
     pub(crate) widget_state: &'a mut WidgetState,
-    pub(crate) window_id: WindowId,
-    pub(crate) window: &'a WindowHandle,
+    pub(crate) state: &'a mut ContextState<'b>,
 }
 
 /// A mutable context provided to data update methods of widgets.
@@ -71,14 +74,8 @@ pub struct LifeCycleCtx<'a> {
 /// in the widget's appearance, to schedule a repaint.
 ///
 /// [`request_paint`]: #method.request_paint
-pub struct UpdateCtx<'a> {
-    pub(crate) window: &'a WindowHandle,
-    // Discussion: we probably want to propagate more fine-grained
-    // invalidations, which would mean a structure very much like
-    // `EventCtx` (and possibly using the same structure). But for
-    // now keep it super-simple.
-    pub(crate) command_queue: &'a mut CommandQueue,
-    pub(crate) window_id: WindowId,
+pub struct UpdateCtx<'a, 'b> {
+    pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
 }
 
@@ -87,12 +84,10 @@ pub struct UpdateCtx<'a> {
 /// As of now, the main service provided is access to a factory for
 /// creating text layout objects, which are likely to be useful
 /// during widget layout.
-pub struct LayoutCtx<'a, 'b: 'a> {
-    pub(crate) command_queue: &'a mut CommandQueue,
+pub struct LayoutCtx<'a, 'b, 'c: 'a> {
+    pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
-    pub(crate) text_factory: &'a mut Text<'b>,
-    pub(crate) window_id: WindowId,
-    pub(crate) window: &'a WindowHandle,
+    pub(crate) text_factory: &'a mut Text<'c>,
     pub(crate) mouse_pos: Option<Point>,
 }
 
@@ -110,7 +105,7 @@ pub(crate) struct ZOrderPaintOp {
 /// This struct is expected to grow, for example to include the
 /// "damage region" indicating that only a subset of the entire
 /// widget hierarchy needs repainting.
-pub struct PaintCtx<'a, 'b: 'a> {
+pub struct PaintCtx<'a, 'b> {
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'b>,
     pub window_id: WindowId,
@@ -133,7 +128,7 @@ pub struct PaintCtx<'a, 'b: 'a> {
 #[derive(Debug, Clone)]
 pub struct Region(Rect);
 
-impl<'a> EventCtx<'a> {
+impl EventCtx<'_, '_> {
     #[deprecated(since = "0.5.0", note = "use request_paint instead")]
     pub fn invalidate(&mut self) {
         self.request_paint();
@@ -183,7 +178,7 @@ impl<'a> EventCtx<'a> {
 
     /// Get an object which can create text layouts.
     pub fn text(&mut self) -> Text {
-        self.window.text()
+        self.state.window.text()
     }
 
     /// Set the cursor icon.
@@ -245,7 +240,7 @@ impl<'a> EventCtx<'a> {
 
     /// Returns a reference to the current `WindowHandle`.
     pub fn window(&self) -> &WindowHandle {
-        &self.window
+        &self.state.window
     }
 
     /// Create a new window.
@@ -253,7 +248,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
-        if self.app_data_type == TypeId::of::<T>() {
+        if self.state.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
                 Command::new(commands::NEW_WINDOW, SingleUse::new(desc)),
                 Target::Global,
@@ -273,19 +268,7 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        if self.app_data_type == TypeId::of::<T>() {
-            self.submit_command(
-                Command::new(commands::SET_MENU, menu),
-                Target::Window(self.window_id),
-            );
-        } else {
-            const MSG: &str = "MenuDesc<T> - T must match the application data type.";
-            if cfg!(debug_assertions) {
-                panic!(MSG);
-            } else {
-                log::error!("EventCtx::set_menu: {}", MSG)
-            }
-        }
+        self.state.set_menu(menu);
     }
 
     /// Show the context menu in the window containing the current widget.
@@ -293,10 +276,10 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
-        if self.app_data_type == TypeId::of::<T>() {
+        if self.state.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
                 Command::new(commands::SHOW_CONTEXT_MENU, menu),
-                Target::Window(self.window_id),
+                Target::Window(self.state.window_id),
             );
         } else {
             const MSG: &str = "ContextMenu<T> - T must match the application data type.";
@@ -431,10 +414,7 @@ impl<'a> EventCtx<'a> {
     /// The return value is a token, which can be used to associate the
     /// request with the event.
     pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
-        self.widget_state.request_timer = true;
-        let timer_token = self.window.request_timer(deadline);
-        self.widget_state.add_timer(timer_token);
-        timer_token
+        self.state.request_timer(&mut self.widget_state, deadline)
     }
 
     /// The layout size.
@@ -458,18 +438,13 @@ impl<'a> EventCtx<'a> {
     ///
     /// [`Command`]: struct.Command.html
     /// [`update`]: trait.Widget.html#tymethod.update
-    pub fn submit_command(
-        &mut self,
-        command: impl Into<Command>,
-        target: impl Into<Option<Target>>,
-    ) {
-        let target = target.into().unwrap_or_else(|| self.window_id.into());
-        self.command_queue.push_back((target, command.into()))
+    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
+        self.state.submit_command(cmd.into(), target.into())
     }
 
     /// Get the window id.
     pub fn window_id(&self) -> WindowId {
-        self.window_id
+        self.state.window_id
     }
 
     /// get the `WidgetId` of the current widget.
@@ -478,7 +453,7 @@ impl<'a> EventCtx<'a> {
     }
 }
 
-impl<'a> LifeCycleCtx<'a> {
+impl LifeCycleCtx<'_, '_> {
     #[deprecated(since = "0.5.0", note = "use request_paint instead")]
     pub fn invalidate(&mut self) {
         self.request_paint();
@@ -559,10 +534,7 @@ impl<'a> LifeCycleCtx<'a> {
     /// The return value is a token, which can be used to associate the
     /// request with the event.
     pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
-        self.widget_state.request_timer = true;
-        let timer_token = self.window.request_timer(deadline);
-        self.widget_state.add_timer(timer_token);
-        timer_token
+        self.state.request_timer(&mut self.widget_state, deadline)
     }
 
     /// The layout size.
@@ -586,13 +558,8 @@ impl<'a> LifeCycleCtx<'a> {
     ///
     /// [`Command`]: struct.Command.html
     /// [`update`]: trait.Widget.html#tymethod.update
-    pub fn submit_command(
-        &mut self,
-        command: impl Into<Command>,
-        target: impl Into<Option<Target>>,
-    ) {
-        let target = target.into().unwrap_or_else(|| self.window_id.into());
-        self.command_queue.push_back((target, command.into()))
+    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
+        self.state.submit_command(cmd.into(), target.into())
     }
 
     /// Set the menu of the window containing the current widget.
@@ -601,23 +568,11 @@ impl<'a> LifeCycleCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        if self.app_data_type == TypeId::of::<T>() {
-            self.submit_command(
-                Command::new(commands::SET_MENU, menu),
-                Target::Window(self.window_id),
-            );
-        } else {
-            const MSG: &str = "MenuDesc<T> - T must match the application data type.";
-            if cfg!(debug_assertions) {
-                panic!(MSG);
-            } else {
-                log::error!("EventCtx::set_menu: {}", MSG)
-            }
-        }
+        self.state.set_menu(menu);
     }
 }
 
-impl<'a> UpdateCtx<'a> {
+impl<'a, 'b> UpdateCtx<'a, 'b> {
     #[deprecated(since = "0.5.0", note = "use request_paint instead")]
     pub fn invalidate(&mut self) {
         self.request_paint();
@@ -671,10 +626,7 @@ impl<'a> UpdateCtx<'a> {
     /// The return value is a token, which can be used to associate the
     /// request with the event.
     pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
-        self.widget_state.request_timer = true;
-        let timer_token = self.window.request_timer(deadline);
-        self.widget_state.add_timer(timer_token);
-        timer_token
+        self.state.request_timer(&mut self.widget_state, deadline)
     }
 
     /// The layout size.
@@ -698,13 +650,8 @@ impl<'a> UpdateCtx<'a> {
     /// layout, and paint have completed; this will trigger a new event cycle.
     ///
     /// [`Command`]: struct.Command.html
-    pub fn submit_command(
-        &mut self,
-        command: impl Into<Command>,
-        target: impl Into<Option<Target>>,
-    ) {
-        let target = target.into().unwrap_or_else(|| self.window_id.into());
-        self.command_queue.push_back((target, command.into()))
+    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
+        self.state.submit_command(cmd.into(), target.into());
     }
 
     /// Set the menu of the window containing the current widget.
@@ -713,35 +660,23 @@ impl<'a> UpdateCtx<'a> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        if self.app_data_type == TypeId::of::<T>() {
-            self.submit_command(
-                Command::new(commands::SET_MENU, menu),
-                Target::Window(self.window_id),
-            );
-        } else {
-            const MSG: &str = "MenuDesc<T> - T must match the application data type.";
-            if cfg!(debug_assertions) {
-                panic!(MSG);
-            } else {
-                log::error!("EventCtx::set_menu: {}", MSG)
-            }
-        }
+        self.state.set_menu(menu)
     }
 
     /// Get an object which can create text layouts.
     pub fn text(&mut self) -> Text {
-        self.window.text()
+        self.state.window.text()
     }
 
     /// Returns a reference to the current `WindowHandle`.
     //TODO: can we delete this? where is it used?
     pub fn window(&self) -> &WindowHandle {
-        &self.window
+        &self.state.window
     }
 
     /// Get the window id.
     pub fn window_id(&self) -> WindowId {
-        self.window_id
+        self.state.window_id
     }
 
     /// get the `WidgetId` of the current widget.
@@ -750,15 +685,15 @@ impl<'a> UpdateCtx<'a> {
     }
 }
 
-impl<'a, 'b> LayoutCtx<'a, 'b> {
+impl<'c> LayoutCtx<'_, '_, 'c> {
     /// Get an object which can create text layouts.
-    pub fn text(&mut self) -> &mut Text<'b> {
+    pub fn text(&mut self) -> &mut Text<'c> {
         &mut self.text_factory
     }
 
     /// Get the window id.
     pub fn window_id(&self) -> WindowId {
-        self.window_id
+        self.state.window_id
     }
 
     /// Set explicit paint [`Insets`] for this widget.
@@ -777,7 +712,7 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
     }
 }
 
-impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
+impl PaintCtx<'_, '_> {
     /// get the `WidgetId` of the current widget.
     pub fn widget_id(&self) -> WidgetId {
         self.widget_state.id
@@ -922,6 +857,49 @@ impl<'a, 'b: 'a> PaintCtx<'a, 'b> {
             paint_func: Box::new(paint_func),
             transform: current_transform,
         })
+    }
+}
+
+impl<'a> ContextState<'a> {
+    pub(crate) fn new<T: 'static>(
+        command_queue: &'a mut CommandQueue,
+        window: &'a WindowHandle,
+        window_id: WindowId,
+    ) -> Self {
+        ContextState {
+            command_queue,
+            window,
+            window_id,
+            root_app_data_type: TypeId::of::<T>(),
+        }
+    }
+
+    fn submit_command(&mut self, command: Command, target: Option<Target>) {
+        let target = target.unwrap_or_else(|| self.window_id.into());
+        self.command_queue.push_back((target, command))
+    }
+
+    fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
+        if self.root_app_data_type == TypeId::of::<T>() {
+            self.submit_command(
+                Command::new(commands::SET_MENU, menu),
+                Some(Target::Window(self.window_id)),
+            );
+        } else {
+            const MSG: &str = "MenuDesc<T> - T must match the application data type.";
+            if cfg!(debug_assertions) {
+                panic!(MSG);
+            } else {
+                log::error!("EventCtx::set_menu: {}", MSG)
+            }
+        }
+    }
+
+    fn request_timer(&self, widget_state: &mut WidgetState, deadline: Duration) -> TimerToken {
+        widget_state.request_timer = true;
+        let timer_token = self.window.request_timer(deadline);
+        widget_state.add_timer(timer_token);
+        timer_token
     }
 }
 

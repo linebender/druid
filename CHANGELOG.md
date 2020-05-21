@@ -51,6 +51,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `im::Vector` support for the `List` widget. ([#940] by [@xStrom])
 - `LifeCycle::Size` event to inform widgets that their size changed. ([#953] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
+- `set_menu` method on `UpdateCtx` and `LifeCycleCtx` ([#970] by [@cmyr])
 
 ### Changed
 
@@ -219,6 +220,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#963]: https://github.com/xi-editor/druid/pull/963
 [#967]: https://github.com/xi-editor/druid/pull/967
 [#969]: https://github.com/xi-editor/druid/pull/969
+[#970]: https://github.com/xi-editor/druid/pull/970
 
 ## [0.5.0] - 2020-04-01
 
