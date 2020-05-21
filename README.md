@@ -58,11 +58,9 @@ druid's existing functionality and widgets.
 
 ## Screenshots
 
-#### Linux
-[![calc.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/calc.png)](./druid/examples/calc.rs)
-[![custom_widget.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/custom_widget.png)](./druid/examples/custom_widget.rs)
-[![hello.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/hello.png)](./druid/examples/hello.rs)
-[![slider.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/slider.png)](./druid/examples/slider.rs)
+[![calc.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/0.6.0/calc.png)](./druid/examples/calc.rs)
+[![flex.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/0.6.0/flex.png)](./druid/examples/flex.rs)
+[![custom_widget.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/0.6.0/custom_widget.png)](./druid/examples/custom_widget.rs)
 
 ## Concepts
 
