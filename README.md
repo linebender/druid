@@ -6,10 +6,11 @@
 [![docs.rs](https://docs.rs/druid/badge.svg)](https://docs.rs/druid/)
 [![license](https://img.shields.io/crates/l/druid)](./LICENSE)
 
-Druid is an experimental Rust-native UI toolkit. Its main goal is to
-demonstrate the potential of Rust as an application programming language, while
-letting users write fast, small, and generally efficient programs with minimal
-hassle.
+Druid is an experimental Rust-native UI toolkit. Its main goal is to offer a
+polished user experience. There are many factors to this goal, including
+performance, a rich palette of interactions (thus a widget library to support
+them), and playing well with the native platform.
+See the [goals section](#Goals) for more details.
 
 Druid's current development is largely driven by its use in [Runebender], a new
 font editor.
@@ -61,6 +62,38 @@ druid's existing functionality and widgets.
 [![calc.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/0.6.0/calc.png)](./druid/examples/calc.rs)
 [![flex.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/0.6.0/flex.png)](./druid/examples/flex.rs)
 [![custom_widget.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/0.6.0/custom_widget.png)](./druid/examples/custom_widget.rs)
+
+## Goals
+
+Druid's primary goal is to provide a smooth and polished user experience with
+pixel perfect design and no behavioral quirks. In order to archive this we
+strife for a variety of things:
+
+- Make it easy to build and package on all supported platforms.
+- Provide abstractions to avoid platform specific quirks.
+- Encourage good application behavior across platforms.
+- Automate platform resolution independence.
+- Enable robust internationalization.
+- Ensure accessibility to a wide group of people.
+- Produce small and fast binaries with low memory usage.
+- Have a small dependency tree with a high quality code base and good organization.
+- Focus on powerful, desktop-grade applications.
+- Provide the basic set of widgets needed by most applications.
+- Simplify creation of complex, special purpose widgets.
+
+### Non-Goals
+
+In order to fulfill those goals, we can not support every use case. Luckily
+the Rust community is working on a variety of different libraries with
+different goals, so here are some of druid's non-goals and possible
+alternatives that can offer those capabilities:
+
+- Use the the platform-native widgets or mimic them. ([Relm])
+- Embed easily into custom render pipelines. ([Conrod])
+- Implement a specific architectural style such as Elm. ([Iced], [Relm])
+- Support rendering to HTML when compiling for WASM. ([Iced], [Moxie])
+
+There also is a collection of many more ongoing [Rust-native GUI experiments].
 
 ## Concepts
 
@@ -245,18 +278,6 @@ Alternatively, there is an X11 backend available, although it is currently
 [missing quite a few features](https://github.com/xi-editor/druid/issues/475).
 You can try it out with `--features=x11`.
 
-## Alternatives
-
-Druid is only one of many ongoing [Rust-native GUI experiments]. To mention a
-few:
-
-* [Azul](https://github.com/maps4print/azul)
-* [Conrod](https://github.com/PistonDevelopers/conrod)
-* [Iced](https://github.com/hecrj/iced)
-* [Makepad](https://github.com/makepad/makepad)
-* [Moxie](https://github.com/anp/moxie)
-* [Reclutch](https://github.com/jazzfool/reclutch)
-
 ## Contributions
 
 We gladly accept contributions via GitHub pull requests. Please see
@@ -292,3 +313,8 @@ active and friendly community.
 [Data trait]: https://docs.rs/druid/0.5.0/druid/trait.Data.html
 [Lens datatype]: https://docs.rs/druid/0.5.0/druid/trait.Lens.html
 [druid book]: https://xi-editor.io/druid/intro.html
+[Iced]: https://github.com/hecrj/iced
+[Conrod]: https://github.com/PistonDevelopers/conrod
+[Relm]: https://github.com/antoyo/relm
+[Moxie]: https://github.com/anp/moxie
+
