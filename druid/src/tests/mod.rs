@@ -188,11 +188,24 @@ fn take_focus() {
         assert!(left_focus.get().is_none());
         assert!(right_focus.get().is_none());
 
-        // this is sent to all widgets; the first widget to request focus should get it
+        // this is sent to all widgets; the last widget to request focus should get it
         harness.submit_command(TAKE_FOCUS, None);
+        assert_eq!(harness.window().focus, Some(id_2));
+        assert_eq!(left_focus.get(), None);
+        assert_eq!(right_focus.get(), Some(true));
+
+        // this is sent to all widgets; the last widget to request focus should still get it
+        // NOTE: This tests siblings in particular, so careful when moving away from Split.
+        harness.submit_command(TAKE_FOCUS, None);
+        assert_eq!(harness.window().focus, Some(id_2));
+        assert_eq!(left_focus.get(), None);
+        assert_eq!(right_focus.get(), Some(true));
+
+        // this is sent to a specific widget; it should get focus
+        harness.submit_command(TAKE_FOCUS, id_1);
         assert_eq!(harness.window().focus, Some(id_1));
         assert_eq!(left_focus.get(), Some(true));
-        assert_eq!(right_focus.get(), None);
+        assert_eq!(right_focus.get(), Some(false));
 
         // this is sent to a specific widget; it should get focus
         harness.submit_command(TAKE_FOCUS, id_2);
@@ -205,6 +218,8 @@ fn take_focus() {
 #[test]
 fn focus_changed() {
     const TAKE_FOCUS: Selector = Selector::new("druid-tests.take-focus");
+    const ALL_TAKE_FOCUS_BEFORE: Selector = Selector::new("druid-tests.take-focus-before");
+    const ALL_TAKE_FOCUS_AFTER: Selector = Selector::new("druid-tests.take-focus-after");
 
     fn make_focus_container(children: Vec<WidgetPod<(), Box<dyn Widget<()>>>>) -> impl Widget<()> {
         ModularWidget::new(children)
@@ -215,11 +230,18 @@ fn focus_changed() {
                         // Stop propagating this command so children
                         // aren't requesting focus too.
                         ctx.set_handled();
+                    } else if cmd.selector == ALL_TAKE_FOCUS_BEFORE {
+                        ctx.request_focus();
                     }
                 }
                 children
                     .iter_mut()
                     .for_each(|a| a.event(ctx, event, data, env));
+                if let Event::Command(cmd) = event {
+                    if cmd.selector == ALL_TAKE_FOCUS_AFTER {
+                        ctx.request_focus();
+                    }
+                }
             })
             .lifecycle_fn(|children, ctx, event, data, env| {
                 children
@@ -276,6 +298,20 @@ fn focus_changed() {
 
         // focus c -> a
         harness.submit_command(TAKE_FOCUS, id_a);
+        assert_eq!(harness.window().focus, Some(id_a));
+        assert!(changed(&a_rec, true));
+        assert!(no_change(&b_rec));
+        assert!(changed(&c_rec, false));
+
+        // all focus before passing down the event
+        harness.submit_command(ALL_TAKE_FOCUS_BEFORE, None);
+        assert_eq!(harness.window().focus, Some(id_c));
+        assert!(changed(&a_rec, false));
+        assert!(no_change(&b_rec));
+        assert!(changed(&c_rec, true));
+
+        // all focus after passing down the event
+        harness.submit_command(ALL_TAKE_FOCUS_AFTER, None);
         assert_eq!(harness.window().focus, Some(id_a));
         assert!(changed(&a_rec, true));
         assert!(no_change(&b_rec));

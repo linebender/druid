@@ -15,6 +15,7 @@
 //! The fundamental druid types.
 
 use std::collections::{HashMap, VecDeque};
+use std::mem;
 
 use crate::bloom::Bloom;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
@@ -235,7 +236,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         }
 
         if needs_merge {
-            ctx.base_state.merge_up(&self.state);
+            ctx.base_state.merge_up(&mut self.state);
         }
     }
 
@@ -525,7 +526,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         };
         let size = self.inner.layout(&mut child_ctx, bc, data, env);
 
-        ctx.base_state.merge_up(&child_ctx.base_state);
+        ctx.base_state.merge_up(&mut child_ctx.base_state);
 
         if size.width.is_infinite() {
             let name = self.widget().type_name();
@@ -746,9 +747,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             child_ctx.base_state.has_active |= child_ctx.base_state.is_active;
         };
 
-        ctx.base_state.merge_up(&child_ctx.base_state);
-        // Clear current widget's timers after merging with parent.
-        child_ctx.base_state.timers.clear();
+        ctx.base_state.merge_up(&mut child_ctx.base_state);
         ctx.is_handled |= child_ctx.is_handled;
     }
 
@@ -776,8 +775,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     }
                 }
                 InternalLifeCycle::RouteFocusChanged { old, new } => {
-                    self.state.request_focus = None;
-
                     let this_changed = if *old == Some(self.state.id) {
                         Some(false)
                     } else if *new == Some(self.state.id) {
@@ -787,11 +784,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     };
 
                     if let Some(change) = this_changed {
-                        // Only send FocusChanged in case there's actual change
-                        if old != new {
-                            self.state.has_focus = change;
-                            extra_event = Some(LifeCycle::FocusChanged(change));
-                        }
+                        self.state.has_focus = change;
+                        extra_event = Some(LifeCycle::FocusChanged(change));
                     } else {
                         self.state.has_focus = false;
                     }
@@ -863,7 +857,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             self.inner.lifecycle(&mut child_ctx, event, data, env);
         }
 
-        ctx.base_state.merge_up(&self.state);
+        ctx.base_state.merge_up(&mut self.state);
 
         // we need to (re)register children in case of one of the following events
         match event {
@@ -907,7 +901,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.old_data = Some(data.clone());
         self.env = Some(env.clone());
 
-        ctx.base_state.merge_up(&self.state)
+        ctx.base_state.merge_up(&mut self.state)
     }
 }
 
@@ -949,7 +943,9 @@ impl BaseState {
     }
 
     /// Update to incorporate state changes from a child.
-    fn merge_up(&mut self, child_state: &BaseState) {
+    ///
+    /// This will also clear some requests in the child state.
+    fn merge_up(&mut self, child_state: &mut BaseState) {
         let mut child_region = child_state.invalid.clone();
         child_region += child_state.layout_rect().origin().to_vec2() - child_state.viewport_offset;
         let clip = self
@@ -965,8 +961,15 @@ impl BaseState {
         self.has_active |= child_state.has_active;
         self.has_focus |= child_state.has_focus;
         self.children_changed |= child_state.children_changed;
-        self.request_focus = self.request_focus.or(child_state.request_focus);
-        self.timers.extend(&child_state.timers);
+        self.request_focus = child_state.request_focus.take().or(self.request_focus);
+
+        if !child_state.timers.is_empty() {
+            if self.timers.is_empty() {
+                mem::swap(&mut self.timers, &mut child_state.timers);
+            } else {
+                self.timers.extend(&mut child_state.timers.drain());
+            }
+        }
     }
 
     #[inline]

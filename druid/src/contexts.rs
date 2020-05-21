@@ -356,16 +356,20 @@ impl<'a> EventCtx<'a> {
 
     /// Request keyboard focus.
     ///
-    /// Calling this when the widget is already focused does nothing.
+    /// Because only one widget can be focused at a time, multiple focus requests
+    /// from different widgets during a single event cycle means that the last
+    /// widget that requests focus will override the previous requests.
     ///
     /// See [`is_focused`] for more information about focus.
     ///
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn request_focus(&mut self) {
+        // We need to send the request even if we're currently focused,
+        // because we may have a sibling widget that already requested focus
+        // and we have no way of knowing that yet. We need to override that
+        // to deliver on the "last focus request wins" promise.
         let id = self.widget_id();
-        if self.focus_widget != Some(id) {
-            self.base_state.request_focus = Some(FocusChange::Focus(id));
-        }
+        self.base_state.request_focus = Some(FocusChange::Focus(id));
     }
 
     /// Transfer focus to the next focusable widget.

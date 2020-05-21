@@ -212,9 +212,12 @@ impl<T: Data> Window<T> {
         if let Some(focus_req) = base_state.request_focus.take() {
             let old = self.focus;
             let new = self.widget_for_focus_request(focus_req);
-            let event = LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged { old, new });
-            self.lifecycle(queue, &event, data, env, false);
-            self.focus = new;
+            // Only send RouteFocusChanged in case there's actual change
+            if old != new {
+                let event = LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged { old, new });
+                self.lifecycle(queue, &event, data, env, false);
+                self.focus = new;
+            }
         }
 
         if let Some(cursor) = cursor {
