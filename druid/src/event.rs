@@ -239,7 +239,7 @@ pub enum InternalLifeCycle {
         /// the widget that is gaining focus, if any
         new: Option<WidgetId>,
     },
-    /// Testing only: request the `BaseState` of a specific widget.
+    /// Testing only: request the `WidgetState` of a specific widget.
     ///
     /// During testing, you may wish to verify that the state of a widget
     /// somewhere in the tree is as expected. In that case you can dispatch
@@ -308,16 +308,16 @@ pub(crate) use state_cell::{StateCell, StateCheckFn};
 
 #[cfg(test)]
 mod state_cell {
-    use crate::core::BaseState;
+    use crate::core::WidgetState;
     use crate::WidgetId;
     use std::{cell::RefCell, rc::Rc};
 
     /// An interior-mutable struct for fetching BasteState.
     #[derive(Clone, Default)]
-    pub struct StateCell(Rc<RefCell<Option<BaseState>>>);
+    pub struct StateCell(Rc<RefCell<Option<WidgetState>>>);
 
     #[derive(Clone)]
-    pub struct StateCheckFn(Rc<dyn Fn(&BaseState)>);
+    pub struct StateCheckFn(Rc<dyn Fn(&WidgetState)>);
 
     /// a hacky way of printing the widget id if we panic
     struct WidgetDrop(bool, WidgetId);
@@ -332,7 +332,7 @@ mod state_cell {
 
     impl StateCell {
         /// Set the state. This will panic if it is called twice.
-        pub(crate) fn set(&self, state: BaseState) {
+        pub(crate) fn set(&self, state: WidgetState) {
             assert!(
                 self.0.borrow_mut().replace(state).is_none(),
                 "StateCell already set"
@@ -340,18 +340,18 @@ mod state_cell {
         }
 
         #[allow(dead_code)]
-        pub(crate) fn take(&self) -> Option<BaseState> {
+        pub(crate) fn take(&self) -> Option<WidgetState> {
             self.0.borrow_mut().take()
         }
     }
 
     impl StateCheckFn {
         #[cfg(not(target_arch = "wasm32"))]
-        pub(crate) fn new(f: impl Fn(&BaseState) + 'static) -> Self {
+        pub(crate) fn new(f: impl Fn(&WidgetState) + 'static) -> Self {
             StateCheckFn(Rc::new(f))
         }
 
-        pub(crate) fn call(&self, state: &BaseState) {
+        pub(crate) fn call(&self, state: &WidgetState) {
             let mut panic_reporter = WidgetDrop(true, state.id);
             (self.0)(&state);
             panic_reporter.0 = false;
