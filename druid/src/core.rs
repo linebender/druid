@@ -15,6 +15,7 @@
 //! The fundamental druid types.
 
 use std::collections::{HashMap, VecDeque};
+use std::mem;
 
 use crate::bloom::Bloom;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
@@ -961,7 +962,14 @@ impl BaseState {
         self.has_focus |= child_state.has_focus;
         self.children_changed |= child_state.children_changed;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
-        self.timers.extend(&mut child_state.timers.drain());
+
+        if !child_state.timers.is_empty() {
+            if self.timers.is_empty() {
+                mem::swap(&mut self.timers, &mut child_state.timers);
+            } else {
+                self.timers.extend(&mut child_state.timers.drain());
+            }
+        }
     }
 
     #[inline]
