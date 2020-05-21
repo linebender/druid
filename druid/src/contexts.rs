@@ -594,6 +594,27 @@ impl<'a> LifeCycleCtx<'a> {
         let target = target.into().unwrap_or_else(|| self.window_id.into());
         self.command_queue.push_back((target, command.into()))
     }
+
+    /// Set the menu of the window containing the current widget.
+    /// `T` must be the application's root `Data` type (the type provided
+    /// to [`AppLauncher::launch`]).
+    ///
+    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
+        if self.app_data_type == TypeId::of::<T>() {
+            self.submit_command(
+                Command::new(commands::SET_MENU, menu),
+                Target::Window(self.window_id),
+            );
+        } else {
+            const MSG: &str = "MenuDesc<T> - T must match the application data type.";
+            if cfg!(debug_assertions) {
+                panic!(MSG);
+            } else {
+                log::error!("EventCtx::set_menu: {}", MSG)
+            }
+        }
+    }
 }
 
 impl<'a> UpdateCtx<'a> {
@@ -684,6 +705,27 @@ impl<'a> UpdateCtx<'a> {
     ) {
         let target = target.into().unwrap_or_else(|| self.window_id.into());
         self.command_queue.push_back((target, command.into()))
+    }
+
+    /// Set the menu of the window containing the current widget.
+    /// `T` must be the application's root `Data` type (the type provided
+    /// to [`AppLauncher::launch`]).
+    ///
+    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
+        if self.app_data_type == TypeId::of::<T>() {
+            self.submit_command(
+                Command::new(commands::SET_MENU, menu),
+                Target::Window(self.window_id),
+            );
+        } else {
+            const MSG: &str = "MenuDesc<T> - T must match the application data type.";
+            if cfg!(debug_assertions) {
+                panic!(MSG);
+            } else {
+                log::error!("EventCtx::set_menu: {}", MSG)
+            }
+        }
     }
 
     /// Get an object which can create text layouts.
