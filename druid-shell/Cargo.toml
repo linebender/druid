@@ -18,7 +18,7 @@ default-target = "x86_64-pc-windows-msvc"
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "0.1.0"
+piet-common = "0.1.1"
 kurbo = "0.6.0"
 
 log = "0.4.8"
@@ -74,4 +74,4 @@ version = "0.3.36"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent"]
 
 [dev-dependencies]
-piet-common = { version = "0.1.0", features = ["png"] }
+piet-common = { version = "0.1.1", features = ["png"] }
