@@ -14,6 +14,7 @@
 
 //! The fundamental druid types.
 
+use std::any::TypeId;
 use std::collections::{HashMap, VecDeque};
 use std::mem;
 
@@ -50,6 +51,14 @@ pub struct WidgetPod<T, W> {
     inner: W,
     // stashed layout so we don't recompute this when debugging
     debug_widget_text: Option<PietTextLayout>,
+}
+
+/// Static state that is shared between most contexts.
+pub(crate) struct RootState<'a> {
+    pub(crate) command_queue: &'a mut CommandQueue,
+    pub(crate) window_id: WindowId,
+    pub(crate) window: &'a WindowHandle,
+    pub(crate) root_app_data_type: TypeId,
 }
 
 /// Generic state for all widgets in the hierarchy.
@@ -211,10 +220,8 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
 
         if old_size.is_none() || old_size.unwrap() != new_size {
             let mut child_ctx = LifeCycleCtx {
-                command_queue: ctx.command_queue,
                 widget_state: &mut self.state,
-                window_id: ctx.window_id,
-                window: ctx.window,
+                root_state: ctx.root_state,
             };
             let size_event = LifeCycle::Size(new_size);
             self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
@@ -223,10 +230,8 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
 
         if WidgetPod::set_hot_state(
             &mut self.inner,
-            ctx.command_queue,
             &mut self.state,
-            ctx.window_id,
-            ctx.window,
+            ctx.root_state,
             layout_rect,
             ctx.mouse_pos,
             data,
@@ -331,13 +336,10 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// Returns `true` if the hot state changed.
     ///
     /// The provided `child_state` should be merged up if this returns `true`.
-    #[allow(clippy::too_many_arguments)]
     fn set_hot_state(
         child: &mut W,
-        command_queue: &mut CommandQueue,
         child_state: &mut WidgetState,
-        window_id: WindowId,
-        window: &WindowHandle,
+        root_state: &mut RootState,
         rect: Rect,
         mouse_pos: Option<Point>,
         data: &T,
@@ -351,10 +353,8 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         if had_hot != child_state.is_hot {
             let hot_changed_event = LifeCycle::HotChanged(child_state.is_hot);
             let mut child_ctx = LifeCycleCtx {
-                command_queue,
+                root_state,
                 widget_state: child_state,
-                window_id,
-                window,
             };
             child.lifecycle(&mut child_ctx, &hot_changed_event, data, env);
             // if hot changes and we're showing widget ids, always repaint
@@ -517,10 +517,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             None => None,
         };
         let mut child_ctx = LayoutCtx {
-            command_queue: ctx.command_queue,
             widget_state: &mut self.state,
-            window_id: ctx.window_id,
-            window: ctx.window,
+            root_state: ctx.root_state,
             text_factory: ctx.text_factory,
             mouse_pos: child_mouse_pos,
         };
@@ -584,14 +582,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let had_active = self.state.has_active;
         let mut child_ctx = EventCtx {
             cursor: ctx.cursor,
-            command_queue: ctx.command_queue,
-            window: ctx.window,
-            window_id: ctx.window_id,
+            root_state: ctx.root_state,
             widget_state: &mut self.state,
             is_handled: false,
             is_root: false,
             focus_widget: ctx.focus_widget,
-            app_data_type: ctx.app_data_type,
         };
 
         let rect = child_ctx.widget_state.layout_rect.unwrap_or_default();
@@ -603,10 +598,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 InternalEvent::MouseLeave => {
                     let hot_changed = WidgetPod::set_hot_state(
                         &mut self.inner,
-                        child_ctx.command_queue,
                         child_ctx.widget_state,
-                        child_ctx.window_id,
-                        child_ctx.window,
+                        child_ctx.root_state,
                         rect,
                         None,
                         data,
@@ -651,10 +644,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::MouseDown(mouse_event) => {
                 WidgetPod::set_hot_state(
                     &mut self.inner,
-                    child_ctx.command_queue,
                     child_ctx.widget_state,
-                    child_ctx.window_id,
-                    child_ctx.window,
+                    child_ctx.root_state,
                     rect,
                     Some(mouse_event.pos),
                     data,
@@ -668,10 +659,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::MouseUp(mouse_event) => {
                 WidgetPod::set_hot_state(
                     &mut self.inner,
-                    child_ctx.command_queue,
                     child_ctx.widget_state,
-                    child_ctx.window_id,
-                    child_ctx.window,
+                    child_ctx.root_state,
                     rect,
                     Some(mouse_event.pos),
                     data,
@@ -685,10 +674,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::MouseMove(mouse_event) => {
                 let hot_changed = WidgetPod::set_hot_state(
                     &mut self.inner,
-                    child_ctx.command_queue,
                     child_ctx.widget_state,
-                    child_ctx.window_id,
-                    child_ctx.window,
+                    child_ctx.root_state,
                     rect,
                     Some(mouse_event.pos),
                     data,
@@ -705,10 +692,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::Wheel(mouse_event) => {
                 WidgetPod::set_hot_state(
                     &mut self.inner,
-                    child_ctx.command_queue,
                     child_ctx.widget_state,
-                    child_ctx.window_id,
-                    child_ctx.window,
+                    child_ctx.root_state,
                     rect,
                     Some(mouse_event.pos),
                     data,
@@ -843,10 +828,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         };
 
         let mut child_ctx = LifeCycleCtx {
-            command_queue: ctx.command_queue,
+            root_state: ctx.root_state,
             widget_state: &mut self.state,
-            window_id: ctx.window_id,
-            window: ctx.window,
         };
 
         if recurse {
@@ -890,10 +873,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         let mut child_ctx = UpdateCtx {
-            window: ctx.window,
+            root_state: ctx.root_state,
             widget_state: &mut self.state,
-            window_id: ctx.window_id,
-            command_queue: ctx.command_queue,
         };
 
         self.inner
@@ -995,7 +976,7 @@ impl WidgetState {
 mod tests {
     use super::*;
     use crate::widget::{Flex, Scroll, Split, TextBox};
-    use crate::{WidgetExt, WindowId};
+    use crate::{WidgetExt, WindowHandle, WindowId};
 
     const ID_1: WidgetId = WidgetId::reserved(0);
     const ID_2: WidgetId = WidgetId::reserved(1);
@@ -1017,12 +998,17 @@ mod tests {
         let mut widget = WidgetPod::new(widget).boxed();
 
         let mut command_queue: CommandQueue = VecDeque::new();
-        let mut state = WidgetState::new(WidgetId::next());
-        let mut ctx = LifeCycleCtx {
+        let mut widget_state = WidgetState::new(WidgetId::next());
+        let mut state = RootState {
             command_queue: &mut command_queue,
-            widget_state: &mut state,
             window_id: WindowId::next(),
             window: &WindowHandle::default(),
+            root_app_data_type: std::any::TypeId::of::<Option<u32>>(),
+        };
+
+        let mut ctx = LifeCycleCtx {
+            widget_state: &mut widget_state,
+            root_state: &mut state,
         };
 
         let env = Env::default();

@@ -14,7 +14,6 @@
 
 //! Management of multiple windows.
 
-use std::any::TypeId;
 use std::collections::HashMap;
 use std::mem;
 
@@ -25,7 +24,7 @@ use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::shell::{Counter, Cursor, WindowHandle};
 
-use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::core::{CommandQueue, FocusChange, RootState, WidgetState};
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
@@ -193,16 +192,14 @@ impl<T: Data> Window<T> {
 
         let mut widget_state = WidgetState::new(self.root.id());
         let is_handled = {
+            let mut state = RootState::new::<T>(queue, &self.handle, self.id);
             let mut ctx = EventCtx {
                 cursor: &mut cursor,
-                command_queue: queue,
+                root_state: &mut state,
                 widget_state: &mut widget_state,
                 is_handled: false,
                 is_root: true,
-                window: &self.handle,
-                window_id: self.id,
                 focus_widget: self.focus,
-                app_data_type: TypeId::of::<T>(),
             };
 
             self.root.event(&mut ctx, &event, data, env);
@@ -251,11 +248,10 @@ impl<T: Data> Window<T> {
         if let LifeCycle::AnimFrame(_) = event {
             self.do_anim_frame(queue, data, env)
         } else {
+            let mut state = RootState::new::<T>(queue, &self.handle, self.id);
             let mut widget_state = WidgetState::new(self.root.id());
             let mut ctx = LifeCycleCtx {
-                command_queue: queue,
-                window_id: self.id,
-                window: &self.handle,
+                root_state: &mut state,
                 widget_state: &mut widget_state,
             };
 
@@ -267,11 +263,11 @@ impl<T: Data> Window<T> {
 
     /// AnimFrame has special logic, so we implement it separately.
     fn do_anim_frame(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
+        let mut state = RootState::new::<T>(queue, &self.handle, self.id);
+
         let mut widget_state = WidgetState::new(self.root.id());
         let mut ctx = LifeCycleCtx {
-            command_queue: queue,
-            window_id: self.id,
-            window: &self.handle,
+            root_state: &mut state,
             widget_state: &mut widget_state,
         };
 
@@ -294,11 +290,10 @@ impl<T: Data> Window<T> {
         self.update_title(data, env);
 
         let mut widget_state = WidgetState::new(self.root.id());
+        let mut state = RootState::new::<T>(queue, &self.handle, self.id);
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
-            command_queue: queue,
-            window: &self.handle,
-            window_id: self.id,
+            root_state: &mut state,
         };
 
         self.root.update(&mut update_ctx, data, env);
@@ -342,12 +337,11 @@ impl<T: Data> Window<T> {
 
     fn layout(&mut self, piet: &mut Piet, queue: &mut CommandQueue, data: &T, env: &Env) {
         let mut widget_state = WidgetState::new(self.root.id());
+        let mut state = RootState::new::<T>(queue, &self.handle, self.id);
         let mut layout_ctx = LayoutCtx {
-            command_queue: queue,
+            root_state: &mut state,
             widget_state: &mut widget_state,
             text_factory: piet.text(),
-            window_id: self.id,
-            window: &self.handle,
             mouse_pos: self.last_mouse_pos,
         };
         let bc = BoxConstraints::tight(self.size);
