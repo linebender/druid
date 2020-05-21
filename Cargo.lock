@@ -374,7 +374,7 @@ dependencies = [
  "image 0.23.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "instant 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet-common 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet-common 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "simple_logger 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "unic-langid 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -417,7 +417,7 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "objc 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet-common 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet-common 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "web-sys 0.3.37 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1133,7 +1133,7 @@ dependencies = [
 
 [[package]]
 name = "piet-common"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cairo-rs 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1145,7 +1145,7 @@ dependencies = [
  "dxgi 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "piet 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piet-cairo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piet-coregraphics 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piet-coregraphics 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "piet-direct2d 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piet-web 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "png 0.16.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1155,7 +1155,7 @@ dependencies = [
 
 [[package]]
 name = "piet-coregraphics"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "core-foundation 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1985,8 +1985,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum pango-sys 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "86b93d84907b3cf0819bff8f13598ba72843bee579d5ebc2502e4b0367b4be7d"
 "checksum piet 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "256d71caa7e165076ed6d2f0cda83b97fb4a5db2b42fd9a0d06cc8ac2deb11d4"
 "checksum piet-cairo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a118675088b503c35ba2a91c43170ce2f843d88762285e48e8fc23ebdc7055b5"
-"checksum piet-common 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "98b4d7930c9a4a818084b83e63a0b51aae4f62e148bc8d4494c2ce0b8f22dbf1"
-"checksum piet-coregraphics 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "57680871eb655f0cf34de62240762212f51c37994b4b79938b1f49d77ec54413"
+"checksum piet-common 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8b7472760c8f856e0a37a423f8af46708cdaaadc3032beb93891372ea2bfeeda"
+"checksum piet-coregraphics 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "54bbdad6e50184dfefe691f25b998defb2d1a832f65fc77043b08c07b1153475"
 "checksum piet-direct2d 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "de6a8f033611d567c42c1b06803c169b1bd8b2bdc5c6a1daef0739165dd5c908"
 "checksum piet-web 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0e812147c55d1dd8be983f50f3a117e1cef1785b70c7e0a5e286db39ba986710"
 "checksum pin-utils 0.1.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)" = "5894c618ce612a3fa23881b152b608bafb8c56cfc22f434a3ba3120b40f7b587"
