@@ -65,21 +65,22 @@ druid's existing functionality and widgets.
 
 ## Goals
 
-Druid's primary goal is to provide a smooth and polished user experience with
-pixel perfect design and no behavioral quirks. In order to achieve this we
-strive for a variety of things:
+Druid's goal is to make it easy to write and deploy high quality desktop
+applications with a smooth and polished user experience on all common
+platforms. In order to achieve this we strive for a variety of things:
 
 - Make it easy to build and package on all supported platforms.
-- Provide abstractions to avoid platform specific quirks.
-- Encourage good application behavior across platforms.
-- Automate platform resolution independence.
-- Enable robust internationalization.
-- Ensure accessibility to a wide group of people.
+- Implement abstractions to avoid platform specific quirks.
+- Respect platform conventions and expectations.
+- Handle display resolution and scaling reliably with little effort.
+- Facilitate a smooth and polished user experience with no behavioral quirks.
+- Enable easy, yet powerful internationalization.
+- Offer robust accessibility support.
 - Produce small and fast binaries with low memory usage.
-- Have a small dependency tree with a high quality code base and good organization.
+- Have a small dependency tree, a high quality code base and good organization.
 - Focus on powerful, desktop-grade applications.
-- Provide the basic set of widgets needed by most applications.
-- Simplify creation of complex, special purpose widgets.
+- Provide a flexible set of layouts and common widgets.
+- Ease creation of custom components and application logic as needed.
 
 ### Non-Goals
 
@@ -90,10 +91,11 @@ alternatives that can offer those capabilities:
 
 - Use the the platform-native widgets or mimic them. ([Relm])
 - Embed easily into custom render pipelines. ([Conrod])
-- Implement a specific architectural style such as Elm. ([Iced], [Relm])
+- Adhere to a specific architectural style such as Elm. ([Iced], [Relm])
 - Support rendering to HTML when compiling for WASM. ([Iced], [Moxie])
 
-There is also a collection of many more ongoing [Rust-native GUI experiments].
+Druid is just one of many ongoing [Rust-native GUI experiments]. If it
+doesn't suit your use case, perhaps one of the others will!
 
 ## Concepts
 
