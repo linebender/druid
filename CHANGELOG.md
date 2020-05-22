@@ -52,6 +52,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `LifeCycle::Size` event to inform widgets that their size changed. ([#953] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `set_menu` method on `UpdateCtx` and `LifeCycleCtx` ([#970] by [@cmyr])
+- Standardize and expose more methods on more contexts ([#972] by [@cmyr])
 
 ### Changed
 
@@ -73,8 +74,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Replaced `Command::one_shot` and `::take_object` with a `SingleUse` payload wrapper type. ([#959] by [@finnerale])
 - Renamed `WidgetPod` methods: `paint` to `paint_raw`, `paint_with_offset` to `paint`, `paint_with_offset_always` to `paint_always`. ([#980] by [@totsteps])
 - `Command` and `Selector` have been reworked and are now statically typed, similarly to `Env` and `Key`. ([#993] by [@finnerale])
-- Standardize the type returned by the contexts' `text()` methods. ([#996] by
-  [@cmyr])
+- Standardize the type returned by the contexts' `text()` methods. ([#996] by [@cmyr])
 
 ### Deprecated
 
@@ -240,6 +240,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#967]: https://github.com/xi-editor/druid/pull/967
 [#969]: https://github.com/xi-editor/druid/pull/969
 [#970]: https://github.com/xi-editor/druid/pull/970
+[#972]: https://github.com/xi-editor/druid/pull/972
 [#980]: https://github.com/xi-editor/druid/pull/980
 [#982]: https://github.com/xi-editor/druid/pull/982
 [#984]: https://github.com/xi-editor/druid/pull/984
