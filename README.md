@@ -8,7 +8,7 @@
 
 Druid is an experimental Rust-native UI toolkit. Its main goal is to offer a
 polished user experience. There are many factors to this goal, including
-performance, a rich palette of interactions (thus a widget library to support
+performance, a rich palette of interactions (hence a widget library to support
 them), and playing well with the native platform.
 See the [goals section](#Goals) for more details.
 
@@ -66,8 +66,8 @@ druid's existing functionality and widgets.
 ## Goals
 
 Druid's primary goal is to provide a smooth and polished user experience with
-pixel perfect design and no behavioral quirks. In order to archive this we
-strife for a variety of things:
+pixel perfect design and no behavioral quirks. In order to achieve this we
+strive for a variety of things:
 
 - Make it easy to build and package on all supported platforms.
 - Provide abstractions to avoid platform specific quirks.
@@ -83,7 +83,7 @@ strife for a variety of things:
 
 ### Non-Goals
 
-In order to fulfill those goals, we can not support every use case. Luckily
+In order to fulfill those goals, we cannot support every use case. Luckily
 the Rust community is working on a variety of different libraries with
 different goals, so here are some of druid's non-goals and possible
 alternatives that can offer those capabilities:
@@ -93,7 +93,7 @@ alternatives that can offer those capabilities:
 - Implement a specific architectural style such as Elm. ([Iced], [Relm])
 - Support rendering to HTML when compiling for WASM. ([Iced], [Moxie])
 
-There also is a collection of many more ongoing [Rust-native GUI experiments].
+There is also a collection of many more ongoing [Rust-native GUI experiments].
 
 ## Concepts
 
