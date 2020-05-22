@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 use log::error;
 
+use crate::widget::prelude::*;
 use crate::{
     kurbo::BezPath, widget::common::FillStrat, Affine, BoxConstraints, Color, Data, Env, Event,
     EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Rect, RenderContext, Size, UpdateCtx,

@@ -27,6 +27,7 @@ pub fn main() {
 pub fn main() {
     use log::error;
 
+    use druid::widget::prelude::*;
     use druid::{
         widget::{FillStrat, Flex, Svg, SvgData, WidgetExt},
         AppLauncher, LocalizedString, Widget, WindowDesc,

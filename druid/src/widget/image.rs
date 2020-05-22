@@ -19,6 +19,7 @@ use std::convert::AsRef;
 use std::error::Error;
 use std::path::Path;
 
+use crate::widget::prelude::*;
 use crate::{
     piet::{ImageFormat, InterpolationMode},
     widget::common::FillStrat,
