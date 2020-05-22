@@ -196,14 +196,13 @@ impl<T: Data> Window<T> {
 
         let mut widget_state = WidgetState::new(self.root.id());
         let is_handled = {
-            let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
+            let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
             let mut ctx = EventCtx {
                 cursor: &mut cursor,
                 state: &mut state,
                 widget_state: &mut widget_state,
                 is_handled: false,
                 is_root: true,
-                focus_widget: self.focus,
             };
 
             self.root.event(&mut ctx, &event, data, env);
@@ -250,7 +249,7 @@ impl<T: Data> Window<T> {
         if let LifeCycle::AnimFrame(_) = event {
             self.do_anim_frame(&mut widget_state, queue, data, env);
         } else {
-            let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
+            let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
             let mut ctx = LifeCycleCtx {
                 state: &mut state,
                 widget_state: &mut widget_state,
@@ -269,7 +268,7 @@ impl<T: Data> Window<T> {
         data: &T,
         env: &Env,
     ) {
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
+        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
         let mut ctx = LifeCycleCtx {
             state: &mut state,
             widget_state,
@@ -294,7 +293,7 @@ impl<T: Data> Window<T> {
         self.update_title(data, env);
 
         let mut widget_state = WidgetState::new(self.root.id());
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
+        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
             state: &mut state,
@@ -341,7 +340,7 @@ impl<T: Data> Window<T> {
 
     fn layout(&mut self, piet: &mut Piet, queue: &mut CommandQueue, data: &T, env: &Env) {
         let mut widget_state = WidgetState::new(self.root.id());
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
+        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
         let mut layout_ctx = LayoutCtx {
             state: &mut state,
             widget_state: &mut widget_state,
@@ -372,19 +371,27 @@ impl<T: Data> Window<T> {
         self.layout(piet, queue, data, env)
     }
 
-    fn paint(&mut self, piet: &mut Piet, invalid_rect: Rect, queue: &mut CommandQueue, data: &T, env: &Env) {
+    fn paint(
+        &mut self,
+        piet: &mut Piet,
+        invalid_rect: Rect,
+        queue: &mut CommandQueue,
+        data: &T,
+        env: &Env,
+    ) {
         // we need to destructure to get around some lifetime issues,
         // just like in the good old days!
-        let Window { root, handle, id, focus, .. } = self;
+        let id = self.id;
+        let focus = self.focus;
+        let Window { root, handle, .. } = self;
 
         let widget_state = WidgetState::new(root.id());
-        let mut state = ContextState::new::<T>(queue, handle, *id);
+        let mut state = ContextState::new::<T>(queue, handle, id, focus);
         let mut ctx = PaintCtx {
             render_ctx: piet,
             state: &mut state,
             widget_state: &widget_state,
             z_ops: Vec::new(),
-            focus_widget: *focus,
             region: invalid_rect.into(),
             depth: 0,
         };
