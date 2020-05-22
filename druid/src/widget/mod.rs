@@ -112,7 +112,7 @@ pub use widget_ext::WidgetExt;
 pub mod prelude {
     #[doc(hidden)]
     pub use crate::{
-        BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-        RenderContext, Size, UpdateCtx, Widget, WidgetId,
+        BaseCtx, BoxConstraints, Env, Event, EventCtx, ExtraCtx, LaidOutCtx, LayoutCtx, LifeCycle,
+        LifeCycleCtx, PaintCtx, RenderContext, Size, UpdateCtx, Widget, WidgetId,
     };
 }

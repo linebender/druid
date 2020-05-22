@@ -24,9 +24,9 @@ use crate::piet::{
     FontBuilder, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
 };
 use crate::{
-    BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget,
-    WidgetId, WindowHandle, WindowId,
+    BaseCtx, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, ExtraCtx, InternalEvent,
+    InternalLifeCycle, LaidOutCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target,
+    TimerToken, UpdateCtx, Widget, WidgetId, WindowHandle, WindowId,
 };
 
 /// Our queue type
@@ -54,7 +54,8 @@ pub struct WidgetPod<T, W> {
 }
 
 /// Static state that is shared between most contexts.
-pub(crate) struct RootState<'a> {
+#[doc(hidden)]
+pub struct RootState<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) window_id: WindowId,
     pub(crate) window: &'a WindowHandle,
@@ -76,8 +77,9 @@ pub(crate) struct RootState<'a> {
 ///
 /// [`paint`]: trait.Widget.html#tymethod.paint
 /// [`WidgetPod`]: struct.WidgetPod.html
+#[doc(hidden)]
 #[derive(Clone)]
-pub(crate) struct WidgetState {
+pub struct WidgetState {
     pub(crate) id: WidgetId,
     /// The frame of this widget in its parents coordinate space.
     /// This should always be set; it is only an `Option` so that we

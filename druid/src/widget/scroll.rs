@@ -19,6 +19,7 @@ use std::time::Duration;
 
 use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
 use crate::theme;
+use crate::widget::prelude::*;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
     RenderContext, TimerToken, UpdateCtx, Widget, WidgetPod,

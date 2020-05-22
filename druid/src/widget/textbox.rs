@@ -16,6 +16,7 @@
 
 use std::time::Duration;
 
+use crate::widget::prelude::*;
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
     LifeCycle, LifeCycleCtx, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,

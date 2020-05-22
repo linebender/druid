@@ -16,6 +16,7 @@
 
 use super::BackgroundBrush;
 use crate::shell::kurbo::{Point, Rect, Size};
+use crate::widget::prelude::*;
 use crate::{
     BoxConstraints, Color, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,

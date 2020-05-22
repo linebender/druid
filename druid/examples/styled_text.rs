@@ -15,6 +15,7 @@
 //! Example of dynamic text styling
 
 use druid::widget::{Checkbox, Flex, Label, MainAxisAlignment, Painter, Parse, Stepper, TextBox};
+use druid::widget::prelude::*;
 use druid::{
     theme, AppLauncher, Color, Data, Key, Lens, LensExt, LensWrap, LocalizedString, PlatformError,
     RenderContext, Widget, WidgetExt, WindowDesc,

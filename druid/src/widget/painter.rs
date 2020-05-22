@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::piet::{FixedGradient, LinearGradient, PaintBrush, RadialGradient};
+use crate::widget::prelude::*;
 use crate::{
     BoxConstraints, Color, Data, Env, Event, EventCtx, Key, LayoutCtx, LifeCycle, LifeCycleCtx,
     PaintCtx, RenderContext, Size, UpdateCtx, Widget,

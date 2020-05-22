@@ -17,6 +17,7 @@
 use crate::kurbo::{BezPath, Point, Rect, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
+use crate::widget::prelude::*;
 use crate::widget::{Label, LabelText};
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,

@@ -19,6 +19,7 @@ use druid::{
     WindowDesc,
 };
 
+use druid::widget::prelude::*;
 use druid::widget::{CrossAxisAlignment, Flex, Label, Painter};
 
 #[derive(Clone, Data, Lens)]

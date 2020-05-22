@@ -21,6 +21,7 @@ use druid::{
     Selector, Target, Widget, WidgetExt, WindowDesc,
 };
 
+use druid::widget::prelude::*;
 use druid::widget::{Button, Either, Flex, Label};
 
 const START_SLOW_FUNCTION: Selector = Selector::new("start_slow_function");

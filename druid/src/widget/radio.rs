@@ -16,6 +16,7 @@
 
 use crate::kurbo::{Circle, Point, Rect, Size};
 use crate::theme;
+use crate::widget::prelude::*;
 use crate::widget::{CrossAxisAlignment, Flex, Label, LabelText, Padding};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,

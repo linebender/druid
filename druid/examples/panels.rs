@@ -16,6 +16,7 @@
 
 use druid::kurbo::Circle;
 use druid::widget::{Flex, Label, Painter};
+use druid::widget::prelude::*;
 use druid::{
     AppLauncher, Color, LinearGradient, LocalizedString, PlatformError, RenderContext, UnitPoint,
     Widget, WidgetExt, WindowDesc,

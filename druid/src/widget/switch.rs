@@ -19,6 +19,7 @@ use crate::piet::{
     FontBuilder, LinearGradient, RenderContext, Text, TextLayout, TextLayoutBuilder, UnitPoint,
 };
 use crate::theme;
+use crate::widget::prelude::*;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
     Widget,

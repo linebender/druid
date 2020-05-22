@@ -14,6 +14,7 @@
 
 //! A widget that can dynamically switch between one of many views.
 
+use crate::widget::prelude::*;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
     Point, Rect, Size, UpdateCtx, Widget, WidgetPod,

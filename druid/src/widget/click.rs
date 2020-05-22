@@ -16,6 +16,7 @@
 //!
 //! [`Controller`]: struct.Controller.html
 
+use crate::widget::prelude::*;
 use crate::widget::Controller;
 use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, Widget};
 
