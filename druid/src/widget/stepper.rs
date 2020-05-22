@@ -223,6 +223,7 @@ impl Widget<f64> for Stepper {
                 self.timer_id = TimerToken::INVALID;
 
                 ctx.request_paint();
+                ctx.set_handled();
             }
             Event::Timer(id) if *id == self.timer_id => {
                 if self.increase_active {

@@ -56,6 +56,7 @@ impl Widget<bool> for Checkbox {
                         }
                     }
                     ctx.request_paint();
+                    ctx.set_handled();
                 }
             }
             _ => (),

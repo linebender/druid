@@ -349,6 +349,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 }
                 _ => (), // other events are a noop
             }
+            ctx.set_handled();
         } else if scrollbar_is_hovered {
             // if we're over a scrollbar but not dragging
             match event {

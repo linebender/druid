@@ -96,12 +96,14 @@ impl Widget<f64> for Slider {
                     ctx.set_active(false);
                     *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                     ctx.request_paint();
+                    ctx.set_handled();
                 }
             }
             Event::MouseMove(mouse) => {
                 if ctx.is_active() {
                     *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                     ctx.request_paint();
+                    ctx.set_handled();
                 }
                 if ctx.is_hot() {
                     let knob_hover = self.knob_hit_test(knob_size, mouse.pos);

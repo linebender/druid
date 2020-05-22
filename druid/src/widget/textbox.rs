@@ -265,12 +265,14 @@ impl Widget<String> for TextBox {
                         mods: mouse.mods,
                     }));
                     ctx.request_paint();
+                    ctx.set_handled();
                 }
             }
             Event::MouseUp(_) => {
                 if ctx.is_active() {
                     ctx.set_active(false);
                     ctx.request_paint();
+                    ctx.set_handled();
                 }
             }
             Event::Timer(id) => {

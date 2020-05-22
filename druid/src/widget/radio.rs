@@ -71,6 +71,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
                         *data = self.variant.clone();
                     }
                     ctx.request_paint();
+                    ctx.set_handled();
                 }
             }
             _ => (),

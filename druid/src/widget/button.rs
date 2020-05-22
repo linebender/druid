@@ -73,6 +73,7 @@ impl<T: Data> Widget<T> for Button<T> {
                 if ctx.is_active() {
                     ctx.set_active(false);
                     ctx.request_paint();
+                    ctx.set_handled();
                 }
             }
             _ => (),

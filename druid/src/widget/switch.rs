@@ -131,9 +131,11 @@ impl Widget<bool> for Switch {
                 if self.knob_dragged {
                     // toggle value when dragging if knob has been moved far enough
                     *data = self.knob_pos.x > switch_width / 2.;
+                    ctx.set_handled();
                 } else if ctx.is_active() {
                     // toggle value on click
                     *data = !*data;
+                    ctx.set_handled();
                 }
 
                 ctx.set_active(false);
@@ -146,6 +148,7 @@ impl Widget<bool> for Switch {
                 if ctx.is_active() {
                     self.knob_pos.x = mouse.pos.x.min(on_pos).max(off_pos);
                     self.knob_dragged = true;
+                    ctx.set_handled();
                 }
                 if ctx.is_hot() {
                     self.knob_hovered = self.knob_hit_test(knob_size, mouse.pos)
