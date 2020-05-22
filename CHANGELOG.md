@@ -117,6 +117,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Built-in widgets no longer stroke outside their `paint_rect`. ([#861] by [@jneem])
 - `Switch` toggles with animation when its data changes externally. ([#898] by [@finnerale])
 - Render progress bar correctly. ([#949] by [@scholtzan])
+- Scrollbars animate when the scroll container size changes. ([#964] by [@xStrom])
 
 ### Docs
 
@@ -222,6 +223,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#959]: https://github.com/xi-editor/druid/pull/959
 [#961]: https://github.com/xi-editor/druid/pull/961
 [#963]: https://github.com/xi-editor/druid/pull/963
+[#964]: https://github.com/xi-editor/druid/pull/964
 [#967]: https://github.com/xi-editor/druid/pull/967
 [#969]: https://github.com/xi-editor/druid/pull/969
 [#970]: https://github.com/xi-editor/druid/pull/970

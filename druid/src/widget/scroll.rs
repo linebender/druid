@@ -176,12 +176,15 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     }
 
     /// Makes the scrollbars visible, and resets the fade timer.
-    pub fn reset_scrollbar_fade(&mut self, ctx: &mut EventCtx, env: &Env) {
+    pub fn reset_scrollbar_fade<F>(&mut self, request_timer: F, env: &Env)
+    where
+        F: FnOnce(Duration) -> TimerToken,
+    {
         // Display scroll bars and schedule their disappearance
         self.scrollbars.opacity = env.get(theme::SCROLLBAR_MAX_OPACITY);
         let fade_delay = env.get(theme::SCROLLBAR_FADE_DELAY);
         let deadline = Duration::from_millis(fade_delay);
-        self.scrollbars.timer_id = ctx.request_timer(deadline);
+        self.scrollbars.timer_id = request_timer(deadline);
     }
 
     /// Returns the current scroll offset.
@@ -344,7 +347,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
                     if !scrollbar_is_hovered {
                         self.scrollbars.hovered = BarHoveredState::None;
-                        self.reset_scrollbar_fade(ctx, env);
+                        self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
                     }
                 }
                 _ => (), // other events are a noop
@@ -395,7 +398,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     // if we have just stopped hovering
                     if self.scrollbars.hovered.is_hovered() && !scrollbar_is_hovered {
                         self.scrollbars.hovered = BarHoveredState::None;
-                        self.reset_scrollbar_fade(ctx, env);
+                        self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
                     }
                 }
                 Event::Timer(id) if *id == self.scrollbars.timer_id => {
@@ -412,24 +415,29 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 if self.scroll(mouse.wheel_delta, size) {
                     ctx.request_paint();
                     ctx.set_handled();
-                    self.reset_scrollbar_fade(ctx, env);
+                    self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
                 }
             }
         }
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        // Guard by the timer id being invalid, otherwise the scroll bars would fade
-        // immediately if some other widgeet started animating.
-        if let LifeCycle::AnimFrame(interval) = event {
-            if self.scrollbars.timer_id == TimerToken::INVALID {
-                // Animate scroll bars opacity
-                let diff = 2.0 * (*interval as f64) * 1e-9;
-                self.scrollbars.opacity -= diff;
-                if self.scrollbars.opacity > 0.0 {
-                    ctx.request_anim_frame();
+        match event {
+            LifeCycle::AnimFrame(interval) => {
+                // Guard by the timer id being invalid, otherwise the scroll bars would fade
+                // immediately if some other widgeet started animating.
+                if self.scrollbars.timer_id == TimerToken::INVALID {
+                    // Animate scroll bars opacity
+                    let diff = 2.0 * (*interval as f64) * 1e-9;
+                    self.scrollbars.opacity -= diff;
+                    if self.scrollbars.opacity > 0.0 {
+                        ctx.request_anim_frame();
+                    }
                 }
             }
+            // Show the scrollbars any time our size changes
+            LifeCycle::Size(_) => self.reset_scrollbar_fade(|d| ctx.request_timer(d), &env),
+            _ => (),
         }
         self.child.lifecycle(ctx, event, data, env)
     }

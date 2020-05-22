@@ -15,7 +15,6 @@
 //! The fundamental druid types.
 
 use std::collections::{HashMap, VecDeque};
-use std::mem;
 
 use crate::bloom::Bloom;
 use crate::contexts::ContextState;
@@ -23,6 +22,7 @@ use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::piet::{
     FontBuilder, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
 };
+use crate::util::ExtendDrain;
 use crate::{
     BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
     LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget,
@@ -104,12 +104,6 @@ pub(crate) struct WidgetState {
 
     /// Any descendant has requested an animation frame.
     pub(crate) request_anim: bool,
-
-    /// Any descendant has requested a timer.
-    ///
-    /// Note: we don't have any way of clearing this request, as it's
-    /// likely not worth the complexity.
-    pub(crate) request_timer: bool,
 
     pub(crate) focus_chain: Vec<WidgetId>,
     pub(crate) request_focus: Option<FocusChange>,
@@ -902,7 +896,6 @@ impl WidgetState {
             has_active: false,
             has_focus: false,
             request_anim: false,
-            request_timer: false,
             request_focus: None,
             focus_chain: Vec::new(),
             children: Bloom::new(),
@@ -930,19 +923,11 @@ impl WidgetState {
 
         self.needs_layout |= child_state.needs_layout;
         self.request_anim |= child_state.request_anim;
-        self.request_timer |= child_state.request_timer;
         self.has_active |= child_state.has_active;
         self.has_focus |= child_state.has_focus;
         self.children_changed |= child_state.children_changed;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
-
-        if !child_state.timers.is_empty() {
-            if self.timers.is_empty() {
-                mem::swap(&mut self.timers, &mut child_state.timers);
-            } else {
-                self.timers.extend(&mut child_state.timers.drain());
-            }
-        }
+        self.timers.extend_drain(&mut child_state.timers);
     }
 
     #[inline]

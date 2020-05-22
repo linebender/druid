@@ -896,7 +896,6 @@ impl<'a> ContextState<'a> {
     }
 
     fn request_timer(&self, widget_state: &mut WidgetState, deadline: Duration) -> TimerToken {
-        widget_state.request_timer = true;
         let timer_token = self.window.request_timer(deadline);
         widget_state.add_timer(timer_token);
         timer_token
