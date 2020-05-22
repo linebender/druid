@@ -1,3 +1,4 @@
+use druid::widget::prelude::*;
 use druid::widget::{Controller, Label, Painter, SizedBox, TextBox};
 use druid::{
     Color, Env, Event, EventCtx, KeyCode, PaintCtx, RenderContext, Selector, TimerToken, Widget,
