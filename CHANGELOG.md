@@ -69,6 +69,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `SHOW_WINDOW` and `CLOSE_WINDOW` commands now only use `Target` to determine the affected window. ([#928] by [@finnerale])
 - Replaced `NEW_WINDOW`, `SET_MENU` and `SHOW_CONTEXT_MENU` commands with methods on `EventCtx` and `DelegateCtx`. ([#931] by [@finnerale])
 - Replaced `Command::one_shot` and `::take_object` with a `SingleUse` payload wrapper type. ([#959] by [@finnerale])
+- `is_handled` now returns true on `MouseDown` or `KeyDown` events if already handled by a built-in widget. ([#976] by [@Azorlogh])
 
 ### Deprecated
 
@@ -213,6 +214,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#954]: https://github.com/xi-editor/druid/pull/954
 [#959]: https://github.com/xi-editor/druid/pull/959
 [#961]: https://github.com/xi-editor/druid/pull/961
+[#976]: https://github.com/xi-editor/druid/pull/976
 
 ## [0.5.0] - 2020-04-01
 
@@ -245,6 +247,7 @@ Last release without a changelog :(
 [@yrns]: https://github.com/yrns
 [@jrmuizel]: https://github.com/jrmuizel
 [@scholtzan]: https://github.com/scholtzan
+[@Azorlogh]: https://github.com/Azorlogh
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
 [0.5.0]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0
