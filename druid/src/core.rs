@@ -377,7 +377,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             z_ops: Vec::new(),
             region: ctx.region.clone(),
             widget_state: &self.state,
-            focus_widget: ctx.focus_widget,
             depth: ctx.depth,
         };
         self.inner.paint(&mut inner_ctx, data, env);
@@ -565,7 +564,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             widget_state: &mut self.state,
             is_handled: false,
             is_root: false,
-            focus_widget: ctx.focus_widget,
         };
 
         let rect = child_ctx.widget_state.layout_rect.unwrap_or_default();
@@ -974,6 +972,7 @@ mod tests {
             window_id: WindowId::next(),
             window: &WindowHandle::default(),
             root_app_data_type: std::any::TypeId::of::<Option<u32>>(),
+            focus_widget: None,
         };
 
         let mut ctx = LifeCycleCtx {

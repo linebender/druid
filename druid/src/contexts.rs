@@ -33,6 +33,8 @@ pub(crate) struct ContextState<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) window_id: WindowId,
     pub(crate) window: &'a WindowHandle,
+    /// The id of the widget that currently has focus.
+    pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) root_app_data_type: TypeId,
 }
 
@@ -49,7 +51,6 @@ pub struct EventCtx<'a, 'b> {
     pub(crate) cursor: &'a mut Option<Cursor>,
     /// Commands submitted to be run after this event.
     pub(crate) widget_state: &'a mut WidgetState,
-    pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
 }
@@ -114,7 +115,6 @@ pub struct PaintCtx<'a, 'b, 'c> {
     pub(crate) z_ops: Vec<ZOrderPaintOp>,
     /// The currently visible region.
     pub(crate) region: Region,
-    pub(crate) focus_widget: Option<WidgetId>,
     /// The approximate depth in the tree at the time of painting.
     pub(crate) depth: u32,
 }
@@ -322,7 +322,7 @@ impl EventCtx<'_, '_> {
     /// [`LifeCycle::FocusChanged`]: enum.LifeCycle.html#variant.FocusChanged
     /// [`has_focus`]: struct.EventCtx.html#method.has_focus
     pub fn is_focused(&self) -> bool {
-        self.focus_widget == Some(self.widget_id())
+        self.state.focus_widget == Some(self.widget_id())
     }
 
     /// The (tree) focus status of a widget.
@@ -752,7 +752,7 @@ impl PaintCtx<'_, '_, '_> {
     /// [`has_focus`]: #method.has_focus
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn is_focused(&self) -> bool {
-        self.focus_widget == Some(self.widget_id())
+        self.state.focus_widget == Some(self.widget_id())
     }
 
     /// The (tree) focus status of a widget.
@@ -801,7 +801,6 @@ impl PaintCtx<'_, '_, '_> {
             state: self.state,
             widget_state: self.widget_state,
             z_ops: Vec::new(),
-            focus_widget: self.focus_widget,
             region: region.into(),
             depth: self.depth + 1,
         };
@@ -865,11 +864,13 @@ impl<'a> ContextState<'a> {
         command_queue: &'a mut CommandQueue,
         window: &'a WindowHandle,
         window_id: WindowId,
+        focus_widget: Option<WidgetId>,
     ) -> Self {
         ContextState {
             command_queue,
             window,
             window_id,
+            focus_widget,
             root_app_data_type: TypeId::of::<T>(),
         }
     }
