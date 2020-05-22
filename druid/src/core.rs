@@ -373,7 +373,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         let mut inner_ctx = PaintCtx {
             render_ctx: ctx.render_ctx,
-            window_id: ctx.window_id,
+            state: ctx.state,
             z_ops: Vec::new(),
             region: ctx.region.clone(),
             widget_state: &self.state,
