@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, Button, Flex, TextBox};
 use druid::widget::prelude::*;
+use druid::widget::{Align, Button, Flex, TextBox};
 use druid::{
     AppDelegate, AppLauncher, Command, DelegateCtx, Env, FileDialogOptions, FileInfo, FileSpec,
     LocalizedString, Target, Widget, WindowDesc,

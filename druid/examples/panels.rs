@@ -15,8 +15,8 @@
 //! This example shows how to construct a basic layout.
 
 use druid::kurbo::Circle;
-use druid::widget::{Flex, Label, Painter};
 use druid::widget::prelude::*;
+use druid::widget::{Flex, Label, Painter};
 use druid::{
     AppLauncher, Color, LinearGradient, LocalizedString, PlatformError, RenderContext, UnitPoint,
     Widget, WidgetExt, WindowDesc,

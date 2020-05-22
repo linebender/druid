@@ -31,8 +31,8 @@ use instant::Instant;
 use std::time::Duration;
 
 use druid::kurbo::RoundedRect;
-use druid::widget::{Button, CrossAxisAlignment, Flex, WidgetId};
 use druid::widget::prelude::*;
+use druid::widget::{Button, CrossAxisAlignment, Flex, WidgetId};
 use druid::{
     AppLauncher, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, LayoutCtx, Lens,
     LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size,
