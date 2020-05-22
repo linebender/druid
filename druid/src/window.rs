@@ -383,7 +383,7 @@ impl<T: Data> Window<T> {
             region: invalid_rect.into(),
             depth: 0,
         };
-        ctx.with_child_ctx(invalid_rect, |ctx| self.root.paint(ctx, data, env));
+        ctx.with_child_ctx(invalid_rect, |ctx| self.root.paint_raw(ctx, data, env));
 
         let mut z_ops = mem::take(&mut ctx.z_ops);
         z_ops.sort_by_key(|k| k.z_index);

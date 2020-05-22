@@ -103,9 +103,9 @@ impl<T: Data> Widget<T> for Either<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if self.current {
-            self.true_branch.paint(ctx, data, env);
+            self.true_branch.paint_raw(ctx, data, env);
         } else {
-            self.false_branch.paint(ctx, data, env);
+            self.false_branch.paint_raw(ctx, data, env);
         }
     }
 }

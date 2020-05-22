@@ -443,8 +443,8 @@ impl<T: Data> Widget<T> for Split<T> {
         } else {
             self.paint_stroked_bar(ctx, env);
         }
-        self.child1.paint_with_offset(ctx, &data, env);
-        self.child2.paint_with_offset(ctx, &data, env);
+        self.child1.paint(ctx, &data, env);
+        self.child2.paint(ctx, &data, env);
     }
 }
 

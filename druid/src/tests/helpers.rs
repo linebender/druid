@@ -236,7 +236,7 @@ impl<T: Data> Widget<T> for ReplaceChild<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.inner.paint(ctx, data, env)
+        self.inner.paint_raw(ctx, data, env)
     }
 }
 

@@ -131,7 +131,7 @@ impl<T: Data> Widget<T> for Align<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.child.paint_with_offset(ctx, data, env);
+        self.child.paint(ctx, data, env);
     }
 }
 

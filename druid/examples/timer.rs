@@ -79,7 +79,7 @@ impl Widget<u32> for TimerWidget {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &u32, env: &Env) {
-        self.simple_box.paint_with_offset(ctx, data, env);
+        self.simple_box.paint(ctx, data, env);
     }
 }
 

@@ -99,7 +99,7 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Some(ref mut child) = self.active_child {
-            child.paint(ctx, data, env);
+            child.paint_raw(ctx, data, env);
         }
     }
 }
