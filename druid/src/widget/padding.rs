@@ -73,14 +73,17 @@ impl<T> Padding<T> {
 }
 
 impl<T: Data> Widget<T> for Padding<T> {
+    #[inline]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.child.event(ctx, event, data, env)
     }
 
+    #[inline]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         self.child.lifecycle(ctx, event, data, env)
     }
 
+    #[inline]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.child.update(ctx, data, env);
     }
@@ -103,6 +106,7 @@ impl<T: Data> Widget<T> for Padding<T> {
         my_size
     }
 
+    #[inline]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint_with_offset(ctx, data, env);
     }
