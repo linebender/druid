@@ -213,6 +213,7 @@ impl Widget<f64> for Stepper {
                 self.timer_id = ctx.request_timer(STEPPER_REPEAT_DELAY);
 
                 ctx.request_paint();
+                ctx.set_handled();
             }
             Event::MouseUp(_) => {
                 ctx.set_active(false);

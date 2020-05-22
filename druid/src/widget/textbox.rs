@@ -253,6 +253,7 @@ impl Widget<String> for TextBox {
                 }
 
                 ctx.request_paint();
+                ctx.set_handled();
             }
             Event::MouseMove(mouse) => {
                 ctx.set_cursor(&Cursor::IBeam);
@@ -330,6 +331,7 @@ impl Widget<String> for TextBox {
                 }
 
                 ctx.request_paint();
+                ctx.set_handled();
             }
             _ => (),
         }

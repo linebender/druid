@@ -89,6 +89,7 @@ impl Widget<f64> for Slider {
                     *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                 }
                 ctx.request_paint();
+                ctx.set_handled();
             }
             Event::MouseUp(mouse) => {
                 if ctx.is_active() {

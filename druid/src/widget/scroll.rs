@@ -372,11 +372,13 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                         self.scrollbars.held = BarHeldState::Vertical(
                             pos.y - self.calc_vertical_bar_bounds(viewport, env).y0,
                         );
+                        ctx.set_handled();
                     } else if self.point_hits_horizontal_bar(viewport, pos, env) {
                         ctx.set_active(true);
                         self.scrollbars.held = BarHeldState::Horizontal(
                             pos.x - self.calc_horizontal_bar_bounds(viewport, env).x0,
                         );
+                        ctx.set_handled();
                     }
                 }
                 // if the mouse was downed elsewhere, moved over a scroll bar and released: noop.

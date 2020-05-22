@@ -125,6 +125,7 @@ impl Widget<bool> for Switch {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
                 ctx.request_paint();
+                ctx.set_handled();
             }
             Event::MouseUp(_) => {
                 if self.knob_dragged {

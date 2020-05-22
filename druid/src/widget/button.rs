@@ -67,6 +67,7 @@ impl<T: Data> Widget<T> for Button<T> {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
                 ctx.request_paint();
+                ctx.set_handled();
             }
             Event::MouseUp(_) => {
                 if ctx.is_active() {
