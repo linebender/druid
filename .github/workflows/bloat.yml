@@ -51,7 +51,8 @@ jobs:
             target/release/examples/calc
             target/release/examples/scroll_colors
             target/release/examples/multiwin
-            target/release/examples/textbox
+            target/release/examples/flex
+            target/release/examples/styled_text
             target/release/examples/custom_widget
 
       - name: checkout head
@@ -76,7 +77,8 @@ jobs:
             target/release/examples/calc
             target/release/examples/scroll_colors
             target/release/examples/multiwin
-            target/release/examples/textbox
+            target/release/examples/flex
+            target/release/examples/styled_text
             target/release/examples/custom_widget
 
       - name: compare

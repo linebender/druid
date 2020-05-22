@@ -51,6 +51,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `im::Vector` support for the `List` widget. ([#940] by [@xStrom])
 - `LifeCycle::Size` event to inform widgets that their size changed. ([#953] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
+- `set_menu` method on `UpdateCtx` and `LifeCycleCtx` ([#970] by [@cmyr])
 
 ### Changed
 
@@ -101,6 +102,8 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - X11: Support `Application::quit`. ([#900] by [@xStrom])
 - GTK: Support file filters in open/save dialogs. ([#903] by [@jneem])
 - GTK: Support DPI values other than 96. ([#904] by [@xStrom])
+- Windows: Removed flashes of white background at the edge of the window when resizing. ([#915] by [@xStrom])
+- Windows: Reduced chance of white flash when opening a new window. ([#916] by [@xStrom])
 - X11: Support key and mouse button state. ([#920] by [@jneem])
 - Routing `LifeCycle::FocusChanged` to descendant widgets. ([#925] by [@yrns])
 - Built-in open and save menu items now show the correct label and submit the right commands. ([#930] by [@finnerale])
@@ -139,6 +142,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - X11: Refactored `Window` to support some reentrancy and invalidation. ([#894] by [@xStrom])
 - Refactored DPI scaling. ([#904] by [@xStrom])
 - Added docs generation testing for all features. ([#942] by [@xStrom])
+- Renamed `BaseState` to `WidgetState` ([#969] by [@cmyr])
 
 ### Outside News
 
@@ -199,6 +203,8 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#904]: https://github.com/xi-editor/druid/pull/904
 [#905]: https://github.com/xi-editor/druid/pull/905
 [#909]: https://github.com/xi-editor/druid/pull/909
+[#915]: https://github.com/xi-editor/druid/pull/915
+[#916]: https://github.com/xi-editor/druid/pull/916
 [#917]: https://github.com/xi-editor/druid/pull/917
 [#920]: https://github.com/xi-editor/druid/pull/920
 [#924]: https://github.com/xi-editor/druid/pull/924
@@ -218,6 +224,8 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#961]: https://github.com/xi-editor/druid/pull/961
 [#963]: https://github.com/xi-editor/druid/pull/963
 [#967]: https://github.com/xi-editor/druid/pull/967
+[#969]: https://github.com/xi-editor/druid/pull/969
+[#970]: https://github.com/xi-editor/druid/pull/970
 [#971]: https://github.com/xi-editor/druid/pull/971
 
 ## [0.5.0] - 2020-04-01

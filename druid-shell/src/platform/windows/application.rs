@@ -26,7 +26,6 @@ use winapi::shared::windef::{HCURSOR, HWND};
 use winapi::shared::winerror::HRESULT_FROM_WIN32;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellscalingapi::PROCESS_SYSTEM_DPI_AWARE;
-use winapi::um::wingdi::CreateSolidBrush;
 use winapi::um::winuser::{
     DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PostMessageW, PostQuitMessage,
     RegisterClassW, TranslateAcceleratorW, TranslateMessage, GA_ROOT, IDI_APPLICATION, MSG,
@@ -74,7 +73,6 @@ impl Application {
         unsafe {
             let class_name = CLASS_NAME.to_wide();
             let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
-            let brush = CreateSolidBrush(0xff_ff_ff);
             let wnd = WNDCLASSW {
                 style: 0,
                 lpfnWndProc: Some(window::win_proc_dispatch),
@@ -83,7 +81,7 @@ impl Application {
                 hInstance: 0 as HINSTANCE,
                 hIcon: icon,
                 hCursor: 0 as HCURSOR,
-                hbrBackground: brush,
+                hbrBackground: ptr::null_mut(), // We control all the painting
                 lpszMenuName: 0 as LPCWSTR,
                 lpszClassName: class_name.as_ptr(),
             };
