@@ -26,7 +26,6 @@ pub fn main() {
 
 #[cfg(feature = "image")]
 pub fn main() {
-    use druid::widget::prelude::*;
     use druid::{
         widget::{FillStrat, Flex, Image, ImageData, WidgetExt},
         AppLauncher, Color, Widget, WindowDesc,
