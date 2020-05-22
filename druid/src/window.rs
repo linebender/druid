@@ -26,6 +26,7 @@ use crate::shell::{Counter, Cursor, WindowHandle};
 
 use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
@@ -119,12 +120,12 @@ impl<T: Data> Window<T> {
 
     fn post_event_processing(
         &mut self,
+        widget_state: &mut WidgetState,
         queue: &mut CommandQueue,
         data: &T,
         env: &Env,
         process_commands: bool,
     ) {
-        let widget_state = self.root.state();
         // If children are changed during the handling of an event,
         // we need to send RouteWidgetAdded now, so that they are ready for update/layout.
         if widget_state.children_changed {
@@ -136,6 +137,8 @@ impl<T: Data> Window<T> {
                 false,
             );
         }
+        // Add all the requested timers to the window's timers map.
+        self.timers.extend_drain(&mut widget_state.timers);
         // If there are any commands and they should be processed
         if process_commands && !queue.is_empty() {
             // Ask the handler to call us back on idle
@@ -207,6 +210,12 @@ impl<T: Data> Window<T> {
             ctx.is_handled
         };
 
+        // Clean up the timer token and do it immediately after the event handling
+        // because the token may be reused and re-added in a lifecycle pass below.
+        if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
+            self.timers.remove(&token);
+        }
+
         if let Some(focus_req) = widget_state.request_focus.take() {
             let old = self.focus;
             let new = self.widget_for_focus_request(focus_req);
@@ -222,18 +231,7 @@ impl<T: Data> Window<T> {
             self.handle.set_cursor(&cursor);
         }
 
-        self.post_event_processing(queue, data, env, false);
-
-        //In some platforms, timer tokens are reused. So it is necessary to remove the token from
-        //the window's timer map before adding new tokens to it.
-        if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
-            self.timers.remove(&token);
-        }
-
-        //If at least one widget requested a timer, add all the requested timers to window's timers map.
-        if widget_state.request_timer {
-            self.timers.extend(widget_state.timers);
-        }
+        self.post_event_processing(&mut widget_state, queue, data, env, false);
 
         is_handled
     }
@@ -246,11 +244,13 @@ impl<T: Data> Window<T> {
         env: &Env,
         process_commands: bool,
     ) {
+        let mut widget_state = WidgetState::new(self.root.id());
+        // AnimFrame has separate logic, and due to borrow checker restrictions
+        // it will also create its own LifeCycleCtx.
         if let LifeCycle::AnimFrame(_) = event {
-            self.do_anim_frame(queue, data, env)
+            self.do_anim_frame(&mut widget_state, queue, data, env);
         } else {
             let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
-            let mut widget_state = WidgetState::new(self.root.id());
             let mut ctx = LifeCycleCtx {
                 state: &mut state,
                 widget_state: &mut widget_state,
@@ -258,18 +258,21 @@ impl<T: Data> Window<T> {
 
             self.root.lifecycle(&mut ctx, event, data, env);
         }
-
-        self.post_event_processing(queue, data, env, process_commands);
+        self.post_event_processing(&mut widget_state, queue, data, env, process_commands);
     }
 
     /// AnimFrame has special logic, so we implement it separately.
-    fn do_anim_frame(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
+    fn do_anim_frame(
+        &mut self,
+        widget_state: &mut WidgetState,
+        queue: &mut CommandQueue,
+        data: &T,
+        env: &Env,
+    ) {
         let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
-
-        let mut widget_state = WidgetState::new(self.root.id());
         let mut ctx = LifeCycleCtx {
             state: &mut state,
-            widget_state: &mut widget_state,
+            widget_state,
         };
 
         // TODO: this calculation uses wall-clock time of the paint call, which
@@ -298,7 +301,7 @@ impl<T: Data> Window<T> {
         };
 
         self.root.update(&mut update_ctx, data, env);
-        self.post_event_processing(queue, data, env, false);
+        self.post_event_processing(&mut widget_state, queue, data, env, false);
     }
 
     pub(crate) fn invalidate_and_finalize(&mut self) {
@@ -353,7 +356,7 @@ impl<T: Data> Window<T> {
             env,
             Rect::from_origin_size(Point::ORIGIN, size),
         );
-        self.post_event_processing(queue, data, env, true);
+        self.post_event_processing(&mut widget_state, queue, data, env, true);
     }
 
     /// only expose `layout` for testing; normally it is called as part of `do_paint`
