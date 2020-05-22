@@ -336,7 +336,7 @@ impl<T: Data> Window<T> {
             invalid_rect,
             &env.get(crate::theme::WINDOW_BACKGROUND_COLOR),
         );
-        self.paint(piet, invalid_rect, data, env);
+        self.paint(piet, invalid_rect, queue, data, env);
     }
 
     fn layout(&mut self, piet: &mut Piet, queue: &mut CommandQueue, data: &T, env: &Env) {
@@ -372,19 +372,24 @@ impl<T: Data> Window<T> {
         self.layout(piet, queue, data, env)
     }
 
-    fn paint(&mut self, piet: &mut Piet, invalid_rect: Rect, data: &T, env: &Env) {
-        let widget_state = WidgetState::new(self.root.id());
+    fn paint(&mut self, piet: &mut Piet, invalid_rect: Rect, queue: &mut CommandQueue, data: &T, env: &Env) {
+        // we need to destructure to get around some lifetime issues,
+        // just like in the good old days!
+        let Window { root, handle, id, focus, .. } = self;
+
+        let widget_state = WidgetState::new(root.id());
+        let mut state = ContextState::new::<T>(queue, handle, *id);
         let mut ctx = PaintCtx {
             render_ctx: piet,
+            state: &mut state,
             widget_state: &widget_state,
-            window_id: self.id,
             z_ops: Vec::new(),
-            focus_widget: self.focus,
+            focus_widget: *focus,
             region: invalid_rect.into(),
             depth: 0,
         };
-        ctx.with_child_ctx(invalid_rect, |ctx| self.root.paint_raw(ctx, data, env));
 
+        ctx.with_child_ctx(invalid_rect, |ctx| root.paint_raw(ctx, data, env));
         let mut z_ops = mem::take(&mut ctx.z_ops);
         z_ops.sort_by_key(|k| k.z_index);
 

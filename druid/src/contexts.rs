@@ -105,15 +105,15 @@ pub(crate) struct ZOrderPaintOp {
 /// This struct is expected to grow, for example to include the
 /// "damage region" indicating that only a subset of the entire
 /// widget hierarchy needs repainting.
-pub struct PaintCtx<'a, 'b> {
+pub struct PaintCtx<'a, 'b, 'c> {
+    pub(crate) state: &'a mut ContextState<'b>,
+    pub(crate) widget_state: &'a WidgetState,
     /// The render context for actually painting.
-    pub render_ctx: &'a mut Piet<'b>,
-    pub window_id: WindowId,
+    pub render_ctx: &'a mut Piet<'c>,
     /// The z-order paint operations.
     pub(crate) z_ops: Vec<ZOrderPaintOp>,
     /// The currently visible region.
     pub(crate) region: Region,
-    pub(crate) widget_state: &'a WidgetState,
     pub(crate) focus_widget: Option<WidgetId>,
     /// The approximate depth in the tree at the time of painting.
     pub(crate) depth: u32,
@@ -712,7 +712,7 @@ impl<'c> LayoutCtx<'_, '_, 'c> {
     }
 }
 
-impl PaintCtx<'_, '_> {
+impl PaintCtx<'_, '_, '_> {
     /// get the `WidgetId` of the current widget.
     pub fn widget_id(&self) -> WidgetId {
         self.widget_state.id
@@ -798,9 +798,9 @@ impl PaintCtx<'_, '_> {
     pub fn with_child_ctx(&mut self, region: impl Into<Region>, f: impl FnOnce(&mut PaintCtx)) {
         let mut child_ctx = PaintCtx {
             render_ctx: self.render_ctx,
+            state: self.state,
             widget_state: self.widget_state,
             z_ops: Vec::new(),
-            window_id: self.window_id,
             focus_widget: self.focus_widget,
             region: region.into(),
             depth: self.depth + 1,
@@ -964,15 +964,15 @@ impl From<Rect> for Region {
     }
 }
 
-impl<'a, 'b: 'a> Deref for PaintCtx<'a, 'b> {
-    type Target = Piet<'b>;
+impl<'c> Deref for PaintCtx<'_, '_, 'c> {
+    type Target = Piet<'c>;
 
     fn deref(&self) -> &Self::Target {
         self.render_ctx
     }
 }
 
-impl<'a, 'b: 'a> DerefMut for PaintCtx<'a, 'b> {
+impl<'c> DerefMut for PaintCtx<'_, '_, 'c> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.render_ctx
     }
