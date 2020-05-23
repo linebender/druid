@@ -18,11 +18,11 @@ use druid::widget::prelude::*;
 use druid::widget::{
     Align, BackgroundBrush, Button, Controller, ControllerHost, Flex, Label, Padding,
 };
+use druid::Target::Global;
 use druid::{
     commands as sys_cmds, AppDelegate, AppLauncher, Application, Color, Command, ContextMenu, Data,
     DelegateCtx, LocalizedString, MenuDesc, MenuItem, Selector, Target, WindowDesc, WindowId,
 };
-
 use log::info;
 
 const MENU_COUNT_ACTION: Selector = Selector::new("menu-count-action");
@@ -58,9 +58,9 @@ fn ui_builder() -> impl Widget<State> {
         .with_arg("count", |data: &State, _env| data.menu_count.into());
     let label = Label::new(text);
     let inc_button = Button::<State>::new("Add menu item")
-        .on_click(|ctx, data, _env| ctx.submit_command(MENU_INCREMENT_ACTION, ctx.window_id()));
+        .on_click(|ctx, data, _env| ctx.submit_command(MENU_INCREMENT_ACTION, Global));
     let dec_button = Button::<State>::new("Remove menu item")
-        .on_click(|ctx, data, _env| ctx.submit_command(MENU_DECREMENT_ACTION, ctx.window_id()));
+        .on_click(|ctx, data, _env| ctx.submit_command(MENU_DECREMENT_ACTION, Global));
     let new_button = Button::<State>::new("New window").on_click(|ctx, _data, _env| {
         ctx.submit_command(sys_cmds::NEW_FILE, Target::Global);
     });
@@ -146,7 +146,6 @@ impl<T, W: Widget<T>> Controller<T, W> for ContextMenuController {
     }
 }
 
-
 impl AppDelegate<State> for Delegate {
     fn command(
         &mut self,
@@ -167,9 +166,8 @@ impl AppDelegate<State> for Delegate {
             &MENU_COUNT_ACTION => {
                 data.selected = *cmd.get_object().unwrap();
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu);
                 for id in &self.windows {
-                    ctx.submit_command(cmd.clone(), id.clone());
+                    ctx.set_menu(menu.clone(), id.clone());
                 }
                 false
             }
@@ -178,17 +176,17 @@ impl AppDelegate<State> for Delegate {
             &MENU_INCREMENT_ACTION => {
                 data.menu_count += 1;
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu);
                 for id in &self.windows {
-                    dbg!(id);
-                    ctx.submit_command(cmd.clone(), id.clone());
+                    ctx.set_menu(menu.clone(), id.clone());
                 }
                 false
             }
             &MENU_DECREMENT_ACTION => {
                 data.menu_count = data.menu_count.saturating_sub(1);
                 let menu = make_menu::<State>(data);
-                let cmd = Command::new(druid::commands::SET_MENU, menu);
+                for id in &self.windows {
+                    ctx.set_menu(menu.clone(), id.clone());
+                }
                 false
             }
             _ => true,
