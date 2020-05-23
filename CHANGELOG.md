@@ -149,6 +149,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - There are two new projects using druid:
   - [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
   - [jack-mixer](https://github.com/derekdreery/jack-mixer) A jack client that provides mixing, levels and a 3-band eq.
+  - [kiro-synth](https://github.com/chris-zen/kiro-synth) A work in progress modular sound synthesizer.
 
 [#599]: https://github.com/xi-editor/druid/pull/599
 [#611]: https://github.com/xi-editor/druid/pull/611
