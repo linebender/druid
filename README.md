@@ -73,7 +73,6 @@ platforms. In order to achieve this we strive for a variety of things:
 - Implement abstractions to avoid platform specific quirks.
 - Respect platform conventions and expectations.
 - Handle display resolution and scaling reliably with little effort.
-- Facilitate a smooth and polished user experience with no behavioral quirks.
 - Enable easy, yet powerful internationalization.
 - Offer robust accessibility support.
 - Produce small and fast binaries with low memory usage.
