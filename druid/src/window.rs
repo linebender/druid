@@ -14,7 +14,6 @@
 
 //! Management of multiple windows.
 
-use std::any::TypeId;
 use std::collections::HashMap;
 use std::mem;
 
@@ -25,7 +24,9 @@ use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::shell::{Counter, Cursor, WindowHandle};
 
-use crate::core::{BaseState, CommandQueue, FocusChange};
+use crate::contexts::ContextState;
+use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
@@ -119,15 +120,15 @@ impl<T: Data> Window<T> {
 
     fn post_event_processing(
         &mut self,
+        widget_state: &mut WidgetState,
         queue: &mut CommandQueue,
         data: &T,
         env: &Env,
         process_commands: bool,
     ) {
-        let base_state = self.root.state();
         // If children are changed during the handling of an event,
         // we need to send RouteWidgetAdded now, so that they are ready for update/layout.
-        if base_state.children_changed {
+        if widget_state.children_changed {
             self.lifecycle(
                 queue,
                 &LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded),
@@ -136,6 +137,8 @@ impl<T: Data> Window<T> {
                 false,
             );
         }
+        // Add all the requested timers to the window's timers map.
+        self.timers.extend_drain(&mut widget_state.timers);
         // If there are any commands and they should be processed
         if process_commands && !queue.is_empty() {
             // Ask the handler to call us back on idle
@@ -191,25 +194,29 @@ impl<T: Data> Window<T> {
             );
         }
 
-        let mut base_state = BaseState::new(self.root.id());
+        let mut widget_state = WidgetState::new(self.root.id());
         let is_handled = {
+            let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
             let mut ctx = EventCtx {
                 cursor: &mut cursor,
-                command_queue: queue,
-                base_state: &mut base_state,
+                state: &mut state,
+                widget_state: &mut widget_state,
                 is_handled: false,
                 is_root: true,
-                window: &self.handle,
-                window_id: self.id,
                 focus_widget: self.focus,
-                app_data_type: TypeId::of::<T>(),
             };
 
             self.root.event(&mut ctx, &event, data, env);
             ctx.is_handled
         };
 
-        if let Some(focus_req) = base_state.request_focus.take() {
+        // Clean up the timer token and do it immediately after the event handling
+        // because the token may be reused and re-added in a lifecycle pass below.
+        if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
+            self.timers.remove(&token);
+        }
+
+        if let Some(focus_req) = widget_state.request_focus.take() {
             let old = self.focus;
             let new = self.widget_for_focus_request(focus_req);
             // Only send RouteFocusChanged in case there's actual change
@@ -224,18 +231,7 @@ impl<T: Data> Window<T> {
             self.handle.set_cursor(&cursor);
         }
 
-        self.post_event_processing(queue, data, env, false);
-
-        //In some platforms, timer tokens are reused. So it is necessary to remove the token from
-        //the window's timer map before adding new tokens to it.
-        if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
-            self.timers.remove(&token);
-        }
-
-        //If at least one widget requested a timer, add all the requested timers to window's timers map.
-        if base_state.request_timer {
-            self.timers.extend(base_state.timers);
-        }
+        self.post_event_processing(&mut widget_state, queue, data, env, false);
 
         is_handled
     }
@@ -248,31 +244,35 @@ impl<T: Data> Window<T> {
         env: &Env,
         process_commands: bool,
     ) {
+        let mut widget_state = WidgetState::new(self.root.id());
+        // AnimFrame has separate logic, and due to borrow checker restrictions
+        // it will also create its own LifeCycleCtx.
         if let LifeCycle::AnimFrame(_) = event {
-            self.do_anim_frame(queue, data, env)
+            self.do_anim_frame(&mut widget_state, queue, data, env);
         } else {
-            let mut base_state = BaseState::new(self.root.id());
+            let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
             let mut ctx = LifeCycleCtx {
-                command_queue: queue,
-                window_id: self.id,
-                window: &self.handle,
-                base_state: &mut base_state,
+                state: &mut state,
+                widget_state: &mut widget_state,
             };
 
             self.root.lifecycle(&mut ctx, event, data, env);
         }
-
-        self.post_event_processing(queue, data, env, process_commands);
+        self.post_event_processing(&mut widget_state, queue, data, env, process_commands);
     }
 
     /// AnimFrame has special logic, so we implement it separately.
-    fn do_anim_frame(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
-        let mut base_state = BaseState::new(self.root.id());
+    fn do_anim_frame(
+        &mut self,
+        widget_state: &mut WidgetState,
+        queue: &mut CommandQueue,
+        data: &T,
+        env: &Env,
+    ) {
+        let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
         let mut ctx = LifeCycleCtx {
-            command_queue: queue,
-            window_id: self.id,
-            window: &self.handle,
-            base_state: &mut base_state,
+            state: &mut state,
+            widget_state,
         };
 
         // TODO: this calculation uses wall-clock time of the paint call, which
@@ -285,7 +285,7 @@ impl<T: Data> Window<T> {
 
         let event = LifeCycle::AnimFrame(elapsed_ns);
         self.root.lifecycle(&mut ctx, &event, data, env);
-        if ctx.base_state.request_anim {
+        if ctx.widget_state.request_anim {
             self.last_anim = Some(now);
         }
     }
@@ -293,16 +293,15 @@ impl<T: Data> Window<T> {
     pub(crate) fn update(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         self.update_title(data, env);
 
-        let mut base_state = BaseState::new(self.root.id());
+        let mut widget_state = WidgetState::new(self.root.id());
+        let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
         let mut update_ctx = UpdateCtx {
-            base_state: &mut base_state,
-            command_queue: queue,
-            window: &self.handle,
-            window_id: self.id,
+            widget_state: &mut widget_state,
+            state: &mut state,
         };
 
         self.root.update(&mut update_ctx, data, env);
-        self.post_event_processing(queue, data, env, false);
+        self.post_event_processing(&mut widget_state, queue, data, env, false);
     }
 
     pub(crate) fn invalidate_and_finalize(&mut self) {
@@ -341,13 +340,12 @@ impl<T: Data> Window<T> {
     }
 
     fn layout(&mut self, piet: &mut Piet, queue: &mut CommandQueue, data: &T, env: &Env) {
-        let mut base_state = BaseState::new(self.root.id());
+        let mut widget_state = WidgetState::new(self.root.id());
+        let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
         let mut layout_ctx = LayoutCtx {
-            command_queue: queue,
-            base_state: &mut base_state,
+            state: &mut state,
+            widget_state: &mut widget_state,
             text_factory: piet.text(),
-            window_id: self.id,
-            window: &self.handle,
             mouse_pos: self.last_mouse_pos,
         };
         let bc = BoxConstraints::tight(self.size);
@@ -358,7 +356,7 @@ impl<T: Data> Window<T> {
             env,
             Rect::from_origin_size(Point::ORIGIN, size),
         );
-        self.post_event_processing(queue, data, env, true);
+        self.post_event_processing(&mut widget_state, queue, data, env, true);
     }
 
     /// only expose `layout` for testing; normally it is called as part of `do_paint`
@@ -375,10 +373,10 @@ impl<T: Data> Window<T> {
     }
 
     fn paint(&mut self, piet: &mut Piet, invalid_rect: Rect, data: &T, env: &Env) {
-        let base_state = BaseState::new(self.root.id());
+        let widget_state = WidgetState::new(self.root.id());
         let mut ctx = PaintCtx {
             render_ctx: piet,
-            base_state: &base_state,
+            widget_state: &widget_state,
             window_id: self.id,
             z_ops: Vec::new(),
             focus_widget: self.focus,

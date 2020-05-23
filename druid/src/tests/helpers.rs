@@ -299,7 +299,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.inner.update(ctx, old_data, data, env);
         self.recording
-            .push(Record::Update(ctx.base_state.invalid.to_rect()));
+            .push(Record::Update(ctx.widget_state.invalid.to_rect()));
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {

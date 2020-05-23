@@ -135,6 +135,7 @@ mod mouse;
 mod tests;
 pub mod text;
 pub mod theme;
+mod util;
 pub mod widget;
 mod win_handler;
 mod window;
