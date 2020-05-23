@@ -46,7 +46,9 @@ pub fn main() {
             LocalizedString::new("multiwin-demo-window-title").with_placeholder("Many windows!"),
         );
     AppLauncher::with_window(main_window)
-        .delegate(Delegate)
+        .delegate(Delegate {
+            windows: Vec::new(),
+        })
         .launch(State::default())
         .expect("launch failed");
 }
@@ -55,14 +57,16 @@ fn ui_builder() -> impl Widget<State> {
     let text = LocalizedString::new("hello-counter")
         .with_arg("count", |data: &State, _env| data.menu_count.into());
     let label = Label::new(text);
-    let inc_button = Button::<State>::new("Add menu item").on_click(|ctx, data, _env| {
-        data.menu_count += 1;
-        ctx.set_menu(make_menu::<State>(data));
-    });
-    let dec_button = Button::<State>::new("Remove menu item").on_click(|ctx, data, _env| {
-        data.menu_count = data.menu_count.saturating_sub(1);
-        ctx.set_menu(make_menu::<State>(data));
-    });
+    let inc_button =
+        Button::<State>::new("Add menu item").on_click(|ctx, data, _env| {
+            data.menu_count += 1;
+            ctx.submit_command(MENU_INCREMENT_ACTION, ctx.window_id())
+        });
+    let dec_button =
+        Button::<State>::new("Remove menu item").on_click(|ctx, data, _env| {
+            data.menu_count = data.menu_count.saturating_sub(1);
+            ctx.submit_command(MENU_DECREMENT_ACTION, ctx.window_id())
+        });
     let new_button = Button::<State>::new("New window").on_click(|ctx, _data, _env| {
         ctx.submit_command(sys_cmds::NEW_FILE, Target::Global);
     });
@@ -132,6 +136,9 @@ impl<W: Widget<State>> Widget<State> for Glow<W> {
 }
 
 struct ContextMenuController;
+struct Delegate {
+    windows: Vec<WindowId>,
+}
 
 impl<T, W: Widget<T>> Controller<T, W> for ContextMenuController {
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
@@ -145,7 +152,6 @@ impl<T, W: Widget<T>> Controller<T, W> for ContextMenuController {
     }
 }
 
-struct Delegate;
 
 impl AppDelegate<State> for Delegate {
     fn command(
@@ -156,36 +162,39 @@ impl AppDelegate<State> for Delegate {
         data: &mut State,
         _env: &Env,
     ) -> bool {
-        match (target, &cmd.selector) {
-            (_, &sys_cmds::NEW_FILE) => {
-                let window = WindowDesc::new(ui_builder)
+        match &cmd.selector {
+            &sys_cmds::NEW_FILE => {
+                let new_win = WindowDesc::new(ui_builder)
                     .menu(make_menu(data))
                     .window_size((data.selected as f64 * 100.0 + 300.0, 500.0));
-                ctx.new_window(window);
+                ctx.new_window(new_win);
                 false
             }
-            (Target::Window(id), &MENU_COUNT_ACTION) => {
+            &MENU_COUNT_ACTION => {
                 data.selected = *cmd.get_object().unwrap();
                 let menu = make_menu::<State>(data);
-                ctx.set_menu(menu, id);
+                let cmd = Command::new(druid::commands::SET_MENU, menu);
+                for id in &self.windows {
+                    ctx.submit_command(cmd.clone(), id.clone());
+                }
                 false
             }
             // wouldn't it be nice if a menu (like a button) could just mutate state
             // directly if desired?
-            (Target::Window(id), &MENU_INCREMENT_ACTION) => {
+            &MENU_INCREMENT_ACTION => {
                 data.menu_count += 1;
                 let menu = make_menu::<State>(data);
-                ctx.set_menu(menu, id);
+                let cmd = Command::new(druid::commands::SET_MENU, menu);
+                for id in &self.windows {
+                    dbg!(id);
+                    ctx.submit_command(cmd.clone(), id.clone());
+                }
                 false
             }
-            (Target::Window(id), &MENU_DECREMENT_ACTION) => {
+            &MENU_DECREMENT_ACTION => {
                 data.menu_count = data.menu_count.saturating_sub(1);
                 let menu = make_menu::<State>(data);
-                ctx.set_menu(menu, id);
-                false
-            }
-            (_, &MENU_SWITCH_GLOW_ACTION) => {
-                data.glow_hot = !data.glow_hot;
+                let cmd = Command::new(druid::commands::SET_MENU, menu);
                 false
             }
             _ => true,
@@ -200,7 +209,9 @@ impl AppDelegate<State> for Delegate {
         _ctx: &mut DelegateCtx,
     ) {
         info!("Window added, id: {:?}", id);
+        self.windows.push(id);
     }
+
     fn window_removed(
         &mut self,
         id: WindowId,
@@ -209,6 +220,9 @@ impl AppDelegate<State> for Delegate {
         _ctx: &mut DelegateCtx,
     ) {
         info!("Window removed, id: {:?}", id);
+        if let Some(pos) = self.windows.iter().position(|x| *x == id) {
+            self.windows.remove(pos);
+        }
     }
 }
 
