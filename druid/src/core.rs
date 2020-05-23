@@ -401,23 +401,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// This will recursively paint widgets, stopping if a widget's layout
     /// rect is outside of the currently visible region.
     pub fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.paint_with_offset_impl(ctx, data, env, false)
+        self.paint_impl(ctx, data, env, false)
     }
 
     /// Paint the widget, even if its layout rect is outside of the currently
     /// visible region.
     pub fn paint_always(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.paint_with_offset_impl(ctx, data, env, true)
+        self.paint_impl(ctx, data, env, true)
     }
 
     /// Shared implementation that can skip drawing non-visible content.
-    fn paint_with_offset_impl(
-        &mut self,
-        ctx: &mut PaintCtx,
-        data: &T,
-        env: &Env,
-        paint_if_not_visible: bool,
-    ) {
+    fn paint_impl(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env, paint_if_not_visible: bool) {
         if !paint_if_not_visible && !ctx.region().intersects(self.state.paint_rect()) {
             return;
         }
