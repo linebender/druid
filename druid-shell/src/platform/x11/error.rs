@@ -15,11 +15,12 @@
 //! Errors at the application shell level.
 
 use std::fmt;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub enum Error {
     // Generic error
-    Generic(String),
+    Other(Arc<anyhow::Error>),
     // TODO: Replace String with xcb::ConnError once that gets Clone support
     ConnectionError(String),
     // Runtime borrow failure
@@ -29,7 +30,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Error::Generic(msg) => write!(f, "Error: {}", msg),
+            Error::Other(err) => write!(f, "Error: {}", err),
             Error::ConnectionError(err) => write!(f, "Connection error: {}", err),
             Error::BorrowError(msg) => write!(f, "Failed to borrow: {}", msg),
         }
@@ -37,3 +38,9 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+impl From<anyhow::Error> for Error {
+    fn from(error: anyhow::Error) -> Error {
+        Error::Other(Arc::new(error))
+    }
+}

@@ -14,6 +14,7 @@
 
 //! X11 implementation of features at the application scope.
 
+use anyhow::{anyhow, Context};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -159,18 +160,14 @@ impl Application {
         }
     }
 
-    fn window(&self, id: u32) -> Result<Rc<Window>, Error> {
-        match self.state.try_borrow() {
-            Ok(state) => state
-                .windows
-                .get(&id)
-                .cloned()
-                .ok_or_else(|| Error::Generic(format!("No window with id {}", id))),
-            Err(err) => Err(Error::BorrowError(format!(
-                "Application::window state: {}",
-                err
-            ))),
-        }
+    fn window(&self, id: u32) -> Result<Rc<Window>, anyhow::Error> {
+        self.state
+            .try_borrow()
+            .context("Application::window state")?
+            .windows
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| anyhow!("No window with id {}", id))
     }
 
     #[inline]
