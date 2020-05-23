@@ -28,6 +28,7 @@ mod application;
 mod clipboard;
 mod common_util;
 mod dialog;
+#[macro_use]
 mod error;
 mod hotkey;
 mod keyboard;

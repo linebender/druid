@@ -15,6 +15,7 @@
 //! Errors at the application shell level.
 
 use std::fmt;
+use std::sync::Arc;
 
 use crate::platform::error as platform;
 
@@ -25,12 +26,10 @@ pub enum Error {
     ApplicationAlreadyExists,
     /// The window has already been destroyed.
     WindowDropped,
-    /// Runtime borrow failure.
-    BorrowError(BorrowError),
     /// Platform specific error.
     Platform(platform::Error),
     /// Other miscellaneous error.
-    Other(&'static str),
+    Other(Arc<anyhow::Error>),
 }
 
 impl fmt::Display for Error {
@@ -39,9 +38,8 @@ impl fmt::Display for Error {
             Error::ApplicationAlreadyExists => {
                 write!(f, "An application instance has already been created.")
             }
-            Error::WindowDropped => write!(f, "The window has already been destroyed."),
-            Error::BorrowError(err) => fmt::Display::fmt(err, f),
             Error::Platform(err) => fmt::Display::fmt(err, f),
+            Error::WindowDropped => write!(f, "The window has already been destroyed."),
             Error::Other(s) => write!(f, "{}", s),
         }
     }
@@ -49,54 +47,45 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
+impl From<anyhow::Error> for Error {
+    fn from(src: anyhow::Error) -> Error {
+        Error::Other(Arc::new(src))
+    }
+}
+
 impl From<platform::Error> for Error {
     fn from(src: platform::Error) -> Error {
         Error::Platform(src)
     }
 }
 
-/// Runtime borrow failure.
-#[derive(Debug, Clone)]
-pub struct BorrowError {
-    location: &'static str,
-    target: &'static str,
-    mutable: bool,
-}
-
-impl BorrowError {
-    pub fn new(location: &'static str, target: &'static str, mutable: bool) -> BorrowError {
-        BorrowError {
-            location,
-            target,
-            mutable,
-        }
-    }
-}
-
-impl fmt::Display for BorrowError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        if self.mutable {
-            // Mutable borrow fails when any borrow exists
-            write!(
-                f,
-                "{} was already borrowed in {}",
-                self.target, self.location
+// These are currently only used in the X11 backend.
+#[allow(unused_macros)]
+macro_rules! borrow {
+    ($val:expr) => {{
+        use anyhow::Context;
+        $val.try_borrow().with_context(|| {
+            format!(
+                "[{}:{}] {}",
+                std::file!(),
+                std::line!(),
+                std::stringify!($val)
             )
-        } else {
-            // Regular borrow fails when a mutable borrow exists
-            write!(
-                f,
-                "{} was already mutably borrowed in {}",
-                self.target, self.location
-            )
-        }
-    }
+        })
+    }};
 }
 
-impl std::error::Error for BorrowError {}
-
-impl From<BorrowError> for Error {
-    fn from(src: BorrowError) -> Error {
-        Error::BorrowError(src)
-    }
+#[allow(unused_macros)]
+macro_rules! borrow_mut {
+    ($val:expr) => {{
+        use anyhow::Context;
+        $val.try_borrow_mut().with_context(|| {
+            format!(
+                "[{}:{}] {}",
+                std::file!(),
+                std::line!(),
+                std::stringify!($val)
+            )
+        })
+    }};
 }

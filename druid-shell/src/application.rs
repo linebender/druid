@@ -79,10 +79,7 @@ impl Application {
             return Err(Error::ApplicationAlreadyExists);
         }
         util::claim_main_thread();
-        let platform_app = match platform::Application::new() {
-            Ok(app) => app,
-            Err(err) => return Err(Error::Platform(err)),
-        };
+        let platform_app = platform::Application::new()?;
         let state = Rc::new(RefCell::new(State { running: false }));
         let app = Application {
             platform_app,

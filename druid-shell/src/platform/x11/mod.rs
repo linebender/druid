@@ -20,9 +20,22 @@
 
 pub mod application;
 pub mod clipboard;
-pub mod error;
 pub mod keycodes;
 pub mod menu;
 pub mod window;
+
+// TODO: This is just a placeholder, because we haven't removed all the other platform errors yet.
+pub mod error {
+    #[derive(Clone, Debug)]
+    pub struct Error;
+
+    impl std::fmt::Display for Error {
+        fn fmt(&self, _fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+            Ok(())
+        }
+    }
+
+    impl std::error::Error for Error {}
+}
 
 mod util;
