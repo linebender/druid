@@ -19,7 +19,7 @@ use std::cell::RefCell;
 use std::convert::TryInto;
 use std::rc::{Rc, Weak};
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
 use xcb::{
     Atom, Visualtype, ATOM_ATOM, ATOM_STRING, ATOM_WM_NAME, CONFIG_WINDOW_STACK_MODE,
@@ -102,7 +102,8 @@ impl WindowBuilder {
         //
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#wm_protocols_property
         let wm_protocols = xcb::intern_atom(conn, false, "WM_PROTOCOLS")
-            .get_reply()?
+            .get_reply()
+            .context("failed to get WM_PROTOCOLS")?
             .atom();
 
         // WM_DELETE_WINDOW
@@ -115,7 +116,8 @@ impl WindowBuilder {
         //
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
         let wm_delete_window = xcb::intern_atom(conn, false, "WM_DELETE_WINDOW")
-            .get_reply()?
+            .get_reply()
+            .context("failed to get WM_DELETE_WINDOW")?
             .atom();
 
         // Replace the window's WM_PROTOCOLS with the following.
