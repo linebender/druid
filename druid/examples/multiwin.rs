@@ -155,15 +155,15 @@ impl AppDelegate<State> for Delegate {
         data: &mut State,
         _env: &Env,
     ) -> bool {
-        match &cmd.selector {
-            &sys_cmds::NEW_FILE => {
+        match cmd.selector {
+            sys_cmds::NEW_FILE => {
                 let new_win = WindowDesc::new(ui_builder)
                     .menu(make_menu(data))
                     .window_size((data.selected as f64 * 100.0 + 300.0, 500.0));
                 ctx.new_window(new_win);
                 false
             }
-            &MENU_COUNT_ACTION => {
+            MENU_COUNT_ACTION => {
                 data.selected = *cmd.get_object().unwrap();
                 let menu = make_menu::<State>(data);
                 for id in &self.windows {
@@ -173,7 +173,7 @@ impl AppDelegate<State> for Delegate {
             }
             // wouldn't it be nice if a menu (like a button) could just mutate state
             // directly if desired?
-            &MENU_INCREMENT_ACTION => {
+            MENU_INCREMENT_ACTION => {
                 data.menu_count += 1;
                 let menu = make_menu::<State>(data);
                 for id in &self.windows {
@@ -181,7 +181,7 @@ impl AppDelegate<State> for Delegate {
                 }
                 false
             }
-            &MENU_DECREMENT_ACTION => {
+            MENU_DECREMENT_ACTION => {
                 data.menu_count = data.menu_count.saturating_sub(1);
                 let menu = make_menu::<State>(data);
                 for id in &self.windows {
@@ -189,11 +189,11 @@ impl AppDelegate<State> for Delegate {
                 }
                 false
             }
-            &MENU_SWITCH_GLOW_ACTION => {
+            MENU_SWITCH_GLOW_ACTION => {
                 data.glow_hot = !data.glow_hot;
                 false
             }
-            &_ => true,
+            _ => true,
         }
     }
 
