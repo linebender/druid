@@ -58,34 +58,3 @@ impl From<platform::Error> for Error {
         Error::Platform(src)
     }
 }
-
-// These are currently only used in the X11 backend.
-#[allow(unused_macros)]
-macro_rules! borrow {
-    ($val:expr) => {{
-        use anyhow::Context;
-        $val.try_borrow().with_context(|| {
-            format!(
-                "[{}:{}] {}",
-                std::file!(),
-                std::line!(),
-                std::stringify!($val)
-            )
-        })
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! borrow_mut {
-    ($val:expr) => {{
-        use anyhow::Context;
-        $val.try_borrow_mut().with_context(|| {
-            format!(
-                "[{}:{}] {}",
-                std::file!(),
-                std::line!(),
-                std::stringify!($val)
-            )
-        })
-    }};
-}

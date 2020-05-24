@@ -361,17 +361,31 @@ impl Window {
         let size = Size::new(reply.width() as f64, reply.height() as f64);
         self.set_size(size)?;
 
-        let anim;
+        let mut anim = false;
         {
             let mut cairo_ctx = borrow_mut!(self.cairo_context)?;
             let mut piet_ctx = Piet::new(&mut cairo_ctx);
             piet_ctx.clip(invalid_rect);
 
-            anim = borrow_mut!(self.handler)?.paint(&mut piet_ctx, invalid_rect);
-            piet_ctx
-                .finish()
-                .map_err(|e| anyhow!("Window::render - piet finish failed: {}", e))?;
+            // We need to be careful with earlier returns here, because piet_ctx
+            // can panic if it isn't finish()ed. Also, we want to reset cairo's clip
+            // even on error.
+            let err;
+            match borrow_mut!(self.handler) {
+                Ok(mut handler) => {
+                    anim = handler.paint(&mut piet_ctx, invalid_rect);
+                    err = piet_ctx
+                        .finish()
+                        .map_err(|e| anyhow!("Window::render - piet finish failed: {}", e));
+                }
+                Err(e) => {
+                    err = Err(e);
+                    let _ = piet_ctx.finish();
+                }
+            };
             cairo_ctx.reset_clip();
+
+            err?;
         }
 
         if anim && self.refresh_rate.is_some() {

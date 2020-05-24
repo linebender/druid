@@ -24,11 +24,13 @@
 pub use kurbo;
 pub use piet_common as piet;
 
+#[macro_use]
+mod util;
+
 mod application;
 mod clipboard;
 mod common_util;
 mod dialog;
-#[macro_use]
 mod error;
 mod hotkey;
 mod keyboard;
@@ -37,7 +39,6 @@ mod menu;
 mod mouse;
 mod platform;
 mod scale;
-mod util;
 mod window;
 
 pub use application::{AppHandler, Application};

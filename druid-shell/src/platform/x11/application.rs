@@ -268,7 +268,6 @@ impl Application {
         Ok(false)
     }
 
-    #[allow(clippy::cognitive_complexity)]
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         loop {
             if let Some(ev) = self.connection.wait_for_event() {

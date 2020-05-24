@@ -144,6 +144,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Refactored DPI scaling. ([#904] by [@xStrom])
 - Added docs generation testing for all features. ([#942] by [@xStrom])
 - Renamed `BaseState` to `WidgetState` ([#969] by [@cmyr])
+- X11: Reworked error handling ([#982] by [@jneem])
 
 ### Outside News
 
