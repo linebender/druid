@@ -58,9 +58,9 @@ fn ui_builder() -> impl Widget<State> {
         .with_arg("count", |data: &State, _env| data.menu_count.into());
     let label = Label::new(text);
     let inc_button = Button::<State>::new("Add menu item")
-        .on_click(|ctx, data, _env| ctx.submit_command(MENU_INCREMENT_ACTION, Global));
+        .on_click(|ctx, _data, _env| ctx.submit_command(MENU_INCREMENT_ACTION, Global));
     let dec_button = Button::<State>::new("Remove menu item")
-        .on_click(|ctx, data, _env| ctx.submit_command(MENU_DECREMENT_ACTION, Global));
+        .on_click(|ctx, _data, _env| ctx.submit_command(MENU_DECREMENT_ACTION, Global));
     let new_button = Button::<State>::new("New window").on_click(|ctx, _data, _env| {
         ctx.submit_command(sys_cmds::NEW_FILE, Target::Global);
     });
@@ -150,7 +150,7 @@ impl AppDelegate<State> for Delegate {
     fn command(
         &mut self,
         ctx: &mut DelegateCtx,
-        target: Target,
+        _target: Target,
         cmd: &Command,
         data: &mut State,
         _env: &Env,
@@ -167,7 +167,7 @@ impl AppDelegate<State> for Delegate {
                 data.selected = *cmd.get_object().unwrap();
                 let menu = make_menu::<State>(data);
                 for id in &self.windows {
-                    ctx.set_menu(menu.clone(), id.clone());
+                    ctx.set_menu(menu.clone(), *id);
                 }
                 false
             }
@@ -177,7 +177,7 @@ impl AppDelegate<State> for Delegate {
                 data.menu_count += 1;
                 let menu = make_menu::<State>(data);
                 for id in &self.windows {
-                    ctx.set_menu(menu.clone(), id.clone());
+                    ctx.set_menu(menu.clone(), *id);
                 }
                 false
             }
@@ -185,7 +185,7 @@ impl AppDelegate<State> for Delegate {
                 data.menu_count = data.menu_count.saturating_sub(1);
                 let menu = make_menu::<State>(data);
                 for id in &self.windows {
-                    ctx.set_menu(menu.clone(), id.clone());
+                    ctx.set_menu(menu.clone(), *id);
                 }
                 false
             }
