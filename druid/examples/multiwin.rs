@@ -193,7 +193,7 @@ impl AppDelegate<State> for Delegate {
                 data.glow_hot = !data.glow_hot;
                 false
             }
-            _ => true,
+            &_ => true,
         }
     }
 
