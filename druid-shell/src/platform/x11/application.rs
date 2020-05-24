@@ -164,7 +164,6 @@ impl Application {
     // Returns Ok(true) if we want to exit the main loop.
     fn handle_event(&self, ev: &xcb::GenericEvent) -> Result<bool, Error> {
         let ev_type = ev.response_type() & !0x80;
-        let mut quit = false;
         // NOTE: When adding handling for any of the following events,
         //       there must be a check against self.window_id
         //       to know if the event must be ignored.
@@ -246,27 +245,27 @@ impl Application {
                 if window_id == self.window_id {
                     // The destruction of the Application window means that
                     // we need to quit the run loop.
-                    quit = true;
-                } else {
-                    let w = self
-                        .window(window_id)
-                        .context("DESTROY_NOTIFY - failed to get window")?;
-                    w.handle_destroy_notify(destroy_notify)
-                        .context("DESTROY_NOTIFY - failed to handle")?;
+                    return Ok(true);
+                }
 
-                    // Remove our reference to the Window and allow it to be dropped
-                    let windows_left = self
-                        .remove_window(window_id)
-                        .context("DESTROY_NOTIFY - failed to remove window")?;
-                    // Check if we need to finalize a quit request
-                    if windows_left == 0 && borrow!(self.state)?.quitting {
-                        self.finalize_quit();
-                    }
+                let w = self
+                    .window(window_id)
+                    .context("DESTROY_NOTIFY - failed to get window")?;
+                w.handle_destroy_notify(destroy_notify)
+                    .context("DESTROY_NOTIFY - failed to handle")?;
+
+                // Remove our reference to the Window and allow it to be dropped
+                let windows_left = self
+                    .remove_window(window_id)
+                    .context("DESTROY_NOTIFY - failed to remove window")?;
+                // Check if we need to finalize a quit request
+                if windows_left == 0 && borrow!(self.state)?.quitting {
+                    self.finalize_quit();
                 }
             }
             _ => {}
         }
-        Ok(quit)
+        Ok(false)
     }
 
     #[allow(clippy::cognitive_complexity)]
