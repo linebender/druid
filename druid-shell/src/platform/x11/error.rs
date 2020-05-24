@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! X11 implementation of druid-shell.
+//! Errors at the application shell level.
 
-// TODO(x11/render_improvements): screen is currently flashing when resizing in perftest.
-//     Might be related to the "sleep scheduler" in XWindow::render()?
-// TODO(x11/render_improvements): double-buffering / present strategies / etc?
+use std::fmt;
 
-pub mod application;
-pub mod clipboard;
-pub mod error;
-pub mod keycodes;
-pub mod menu;
-pub mod window;
+/// The X11 backend doesn't currently define any platform-specific errors;
+/// it uses the `crate::error::Other` variant instead.
+#[derive(Debug, Clone)]
+pub enum Error {}
 
-mod util;
+impl fmt::Display for Error {
+    fn fmt(&self, _: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        Ok(())
+    }
+}
