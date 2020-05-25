@@ -26,6 +26,7 @@ lazy_static = "1.0"
 time = "0.2.7"
 cfg-if = "0.1.10"
 instant = { version = "0.1", features = ["wasm-bindgen"] }
+anyhow = "1.0.31"
 
 # Optional dependencies
 cairo-rs = { version = "0.8.1", default_features = false, optional = true }

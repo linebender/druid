@@ -16,23 +16,14 @@
 
 use std::fmt;
 
+/// The X11 backend doesn't currently define any platform-specific errors;
+/// it uses the `crate::error::Other` variant instead.
 #[derive(Debug, Clone)]
-pub enum Error {
-    // Generic error
-    Generic(String),
-    // TODO: Replace String with xcb::ConnError once that gets Clone support
-    ConnectionError(String),
-    // Runtime borrow failure
-    BorrowError(String),
-}
+pub enum Error {}
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match self {
-            Error::Generic(msg) => write!(f, "Error: {}", msg),
-            Error::ConnectionError(err) => write!(f, "Connection error: {}", err),
-            Error::BorrowError(msg) => write!(f, "Failed to borrow: {}", msg),
-        }
+    fn fmt(&self, _: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        Ok(())
     }
 }
 
