@@ -301,10 +301,10 @@ jobs:
           sudo apt install libgtk-3-dev
         if: contains(matrix.os, 'ubuntu')
 
-      - name: install nightly toolchain
+      - name: install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           profile: minimal
           override: true
 
