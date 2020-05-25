@@ -380,7 +380,10 @@ impl Window {
                 }
                 Err(e) => {
                     err = Err(e);
-                    let _ = piet_ctx.finish();
+                    if let Err(e) = piet_ctx.finish() {
+                        // We can't return both errors, so just log this one.
+                        log::error!("Window::render - piet finish failed in error branch: {}", e);
+                    }
                 }
             };
             cairo_ctx.reset_clip();
