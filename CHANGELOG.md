@@ -230,6 +230,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#969]: https://github.com/xi-editor/druid/pull/969
 [#970]: https://github.com/xi-editor/druid/pull/970
 [#980]: https://github.com/xi-editor/druid/pull/980
+[#982]: https://github.com/xi-editor/druid/pull/982
 
 ## [0.5.0] - 2020-04-01
 
