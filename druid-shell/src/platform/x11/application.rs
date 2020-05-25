@@ -14,12 +14,12 @@
 
 //! X11 implementation of features at the application scope.
 
-use anyhow::{anyhow, Context, Error};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::rc::Rc;
 
+use anyhow::{anyhow, Context, Error};
 use xcb::{
     ButtonPressEvent, ButtonReleaseEvent, ClientMessageEvent, Connection, DestroyNotifyEvent,
     ExposeEvent, KeyPressEvent, MotionNotifyEvent, BUTTON_PRESS, BUTTON_RELEASE, CLIENT_MESSAGE,
@@ -161,7 +161,7 @@ impl Application {
         self.screen_num
     }
 
-    // Returns Ok(true) if we want to exit the main loop.
+    /// Returns `Ok(true)` if we want to exit the main loop.
     fn handle_event(&self, ev: &xcb::GenericEvent) -> Result<bool, Error> {
         let ev_type = ev.response_type() & !0x80;
         // NOTE: When adding handling for any of the following events,
