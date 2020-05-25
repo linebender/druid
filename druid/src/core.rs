@@ -356,16 +356,16 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
 impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Paint a child widget.
     ///
-    /// Generally called by container widgets as part of their [`paint`]
+    /// Generally called by container widgets as part of their [`Widget::paint`]
     /// method.
     ///
     /// Note that this method does not apply the offset of the layout rect.
-    /// If that is desired, use [`paint_with_offset`] instead.
+    /// If that is desired, use [`paint`] instead.
     ///
     /// [`layout`]: trait.Widget.html#tymethod.layout
-    /// [`paint`]: trait.Widget.html#tymethod.paint
-    /// [`paint_with_offset`]: #method.paint_with_offset
-    pub fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+    /// [`Widget::paint`]: trait.Widget.html#tymethod.paint
+    /// [`paint`]: #method.paint
+    pub fn paint_raw(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         // we need to do this before we borrow from self
         if env.get(Env::DEBUG_WIDGET_ID) {
             self.make_widget_id_layout_if_needed(self.state.id, ctx, env);
@@ -400,25 +400,18 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// This will recursively paint widgets, stopping if a widget's layout
     /// rect is outside of the currently visible region.
-    // Discussion: should this be `paint` and the other `paint_raw`?
-    pub fn paint_with_offset(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.paint_with_offset_impl(ctx, data, env, false)
+    pub fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.paint_impl(ctx, data, env, false)
     }
 
     /// Paint the widget, even if its layout rect is outside of the currently
     /// visible region.
-    pub fn paint_with_offset_always(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.paint_with_offset_impl(ctx, data, env, true)
+    pub fn paint_always(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.paint_impl(ctx, data, env, true)
     }
 
     /// Shared implementation that can skip drawing non-visible content.
-    fn paint_with_offset_impl(
-        &mut self,
-        ctx: &mut PaintCtx,
-        data: &T,
-        env: &Env,
-        paint_if_not_visible: bool,
-    ) {
+    fn paint_impl(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env, paint_if_not_visible: bool) {
         if !paint_if_not_visible && !ctx.region().intersects(self.state.paint_rect()) {
             return;
         }
@@ -427,7 +420,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let layout_origin = self.layout_rect().origin().to_vec2();
             ctx.transform(Affine::translate(layout_origin));
             let visible = ctx.region().to_rect().intersect(self.state.paint_rect()) - layout_origin;
-            ctx.with_child_ctx(visible, |ctx| self.paint(ctx, data, env));
+            ctx.with_child_ctx(visible, |ctx| self.paint_raw(ctx, data, env));
         });
     }
 

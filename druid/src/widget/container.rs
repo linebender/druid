@@ -154,6 +154,6 @@ impl<T: Data> Widget<T> for Container<T> {
             ctx.stroke(border_rect, &border.color.resolve(env), border_width);
         };
 
-        self.inner.paint_with_offset(ctx, data, env);
+        self.inner.paint(ctx, data, env);
     }
 }

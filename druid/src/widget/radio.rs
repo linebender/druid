@@ -140,6 +140,6 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         }
 
         // Paint the text label
-        self.child_label.paint_with_offset(ctx, data, env);
+        self.child_label.paint(ctx, data, env);
     }
 }

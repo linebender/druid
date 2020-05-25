@@ -647,7 +647,7 @@ impl<T: Data> Widget<T> for Flex<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         for child in &mut self.children {
-            child.widget.paint_with_offset(ctx, data, env);
+            child.widget.paint(ctx, data, env);
         }
     }
 }
