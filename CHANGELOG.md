@@ -115,6 +115,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Focus request handling is now predictable with the last request overriding earlier ones. ([#948] by [@xStrom])
 - Wheel events now properly update hot state. ([#951] by [@xStrom])
 - X11: Support mouse scrolling. ([#961] by [@jneem])
+- Commands targeted at a specific widget now only get sent to that widget. ([#986] by [@xStrom])
 - `Painter` now properly repaints on data change in `Container`. ([#991] by [@cmyr])
 
 ### Visual
@@ -245,6 +246,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#980]: https://github.com/xi-editor/druid/pull/980
 [#982]: https://github.com/xi-editor/druid/pull/982
 [#984]: https://github.com/xi-editor/druid/pull/984
+[#986]: https://github.com/xi-editor/druid/pull/986
 [#990]: https://github.com/xi-editor/druid/pull/990
 [#991]: https://github.com/xi-editor/druid/pull/991
 [#993]: https://github.com/xi-editor/druid/pull/993

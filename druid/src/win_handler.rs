@@ -321,7 +321,7 @@ impl<T: Data> Inner<T> {
                     return self.show_context_menu(id, &cmd);
                 }
                 if let Some(w) = self.windows.get_mut(id) {
-                    let event = Event::Command(cmd);
+                    let event = Event::Internal(InternalEvent::TargetedCommand(target, cmd));
                     w.event(&mut self.command_queue, event, &mut self.data, &self.env);
                 }
             }
@@ -338,7 +338,8 @@ impl<T: Data> Inner<T> {
             }
             Target::Global => {
                 for w in self.windows.iter_mut() {
-                    let event = Event::Command(cmd.clone());
+                    let event =
+                        Event::Internal(InternalEvent::TargetedCommand(target, cmd.clone()));
                     if w.event(&mut self.command_queue, event, &mut self.data, &self.env) {
                         break;
                     }

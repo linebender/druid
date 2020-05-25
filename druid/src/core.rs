@@ -564,6 +564,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         // If we need to replace either the event or its data.
         let mut modified_event = None;
+        // Targeted events can be set as handled
+        // when the target is found to prevent further recursing.
+        let mut is_handled = false;
 
         let recurse = match event {
             Event::Internal(internal) => match internal {
@@ -582,6 +585,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 InternalEvent::TargetedCommand(target, cmd) => {
                     match target {
                         Target::Widget(id) if *id == self.id() => {
+                            is_handled = true; // Prevent it being passed down to children
                             modified_event = Some(Event::Command(cmd.clone()));
                             true
                         }
@@ -702,7 +706,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 cursor: ctx.cursor,
                 state: ctx.state,
                 widget_state: &mut self.state,
-                is_handled: false,
+                is_handled,
                 is_root: false,
             };
             let inner_event = modified_event.as_ref().unwrap_or(event);

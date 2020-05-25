@@ -225,12 +225,7 @@ fn focus_changed() {
         ModularWidget::new(children)
             .event_fn(|children, ctx, event, data, env| {
                 if let Event::Command(cmd) = event {
-                    if cmd.is(TAKE_FOCUS) {
-                        ctx.request_focus();
-                        // Stop propagating this command so children
-                        // aren't requesting focus too.
-                        ctx.set_handled();
-                    } else if cmd.is(ALL_TAKE_FOCUS_BEFORE) {
+                    if cmd.is(TAKE_FOCUS) || cmd.is(ALL_TAKE_FOCUS_BEFORE) {
                         ctx.request_focus();
                     }
                 }
