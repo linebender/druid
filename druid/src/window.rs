@@ -243,50 +243,35 @@ impl<T: Data> Window<T> {
         env: &Env,
         process_commands: bool,
     ) {
-        let mut widget_state = WidgetState::new(self.root.id());
-        // AnimFrame has separate logic, and due to borrow checker restrictions
-        // it will also create its own LifeCycleCtx.
-        if let LifeCycle::AnimFrame(_) = event {
-            self.do_anim_frame(&mut widget_state, queue, data, env);
+        // for AnimFrame, the event the window receives doesn't have the correct
+        // elapsed time; we calculate it here.
+        let now = Instant::now();
+        let substitute_event = if let LifeCycle::AnimFrame(_) = event {
+            // TODO: this calculation uses wall-clock time of the paint call, which
+            // potentially has jitter.
+            //
+            // See https://github.com/xi-editor/druid/issues/85 for discussion.
+            let last = self.last_anim.take();
+            let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
+            Some(LifeCycle::AnimFrame(elapsed_ns))
         } else {
-            let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
-            let mut ctx = LifeCycleCtx {
-                state: &mut state,
-                widget_state: &mut widget_state,
-            };
+            None
+        };
 
-            self.root.lifecycle(&mut ctx, event, data, env);
-        }
-        self.post_event_processing(&mut widget_state, queue, data, env, process_commands);
-    }
-
-    /// AnimFrame has special logic, so we implement it separately.
-    fn do_anim_frame(
-        &mut self,
-        widget_state: &mut WidgetState,
-        queue: &mut CommandQueue,
-        data: &T,
-        env: &Env,
-    ) {
+        let mut widget_state = WidgetState::new(self.root.id());
         let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
         let mut ctx = LifeCycleCtx {
             state: &mut state,
-            widget_state,
+            widget_state: &mut widget_state,
         };
+        let event = substitute_event.as_ref().unwrap_or(event);
+        self.root.lifecycle(&mut ctx, event, data, env);
 
-        // TODO: this calculation uses wall-clock time of the paint call, which
-        // potentially has jitter.
-        //
-        // See https://github.com/xi-editor/druid/issues/85 for discussion.
-        let now = Instant::now();
-        let last = self.last_anim.take();
-        let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
-
-        let event = LifeCycle::AnimFrame(elapsed_ns);
-        self.root.lifecycle(&mut ctx, &event, data, env);
-        if ctx.widget_state.request_anim {
+        if substitute_event.is_some() && ctx.widget_state.request_anim {
             self.last_anim = Some(now);
         }
+
+        self.post_event_processing(&mut widget_state, queue, data, env, process_commands);
     }
 
     pub(crate) fn update(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
