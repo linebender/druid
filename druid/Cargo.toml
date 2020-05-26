@@ -28,24 +28,24 @@ druid-derive = { version = "0.4.0", path = "../druid-derive" }
 
 log = "0.4.8"
 simple_logger = { version = "1.6.0", default-features = false }
-fluent-bundle = "0.11.0"
-fluent-langneg = "0.12.1"
-fluent-syntax = "0.9.1"
-unic-langid = "0.8.0"
+fluent-bundle = "0.12.0"
+fluent-langneg = "0.13.0"
+fluent-syntax = "0.9.3"
+unic-langid = "0.9.0"
 unicode-segmentation = "1.6.0"
 xi-unicode = "0.2.0"
-fnv = "1.0.3"
-instant = { version = "0.1", features = ["wasm-bindgen"] }
+fnv = "1.0.7"
+instant = { version = "0.1.4", features = ["wasm-bindgen"] }
 
 # Optional dependencies
-im = { version = "15.0", optional = true }
+im = { version = "15.0.0", optional = true }
 usvg = { version = "0.9.0", optional = true }
-image = { version = "0.23.2", optional = true }
+image = { version = "0.23.4", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-console_log = "0.1.2"
+console_log = "0.2.0"
 
 [dev-dependencies]
 float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
 tempfile = "3.1.0"
-piet-common = { version = "0.1.0", features = ["png"] }
+piet-common = { version = "0.1.1", features = ["png"] }
