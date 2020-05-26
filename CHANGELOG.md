@@ -132,6 +132,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Added a changelog containing development since the 0.5 release. ([#889] by [@finnerale])
 - Removed references to cairo on macOS. ([#943] by [@xStrom])
 - Updated screenshots in `README.md`. ([#967] by [@xStrom])
+- Added a section about dependencies to `CONTRIBUTING.md`. ([#990] by [@xStrom])
 
 ### Maintenance
 
@@ -234,6 +235,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#980]: https://github.com/xi-editor/druid/pull/980
 [#982]: https://github.com/xi-editor/druid/pull/982
 [#984]: https://github.com/xi-editor/druid/pull/984
+[#990]: https://github.com/xi-editor/druid/pull/990
 [#991]: https://github.com/xi-editor/druid/pull/991
 
 ## [0.5.0] - 2020-04-01
