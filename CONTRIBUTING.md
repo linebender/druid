@@ -20,6 +20,11 @@ add it as part of your patch.
 
 ## Preparing for a new release
 
+If you're already contributing to this project and want to do more,
+then there might be a chance to help out with the preparation of new releases.
+Whether you're new or have prepared druid releases many times already,
+it helps to follow a checklist of what needs to be done. This is that list.
+
 ### Changelog
 
 - Add a new *Unreleased* section by copying the current one.
