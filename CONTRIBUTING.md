@@ -31,6 +31,8 @@ add it as part of your patch.
 
 ### Dependencies
 
+**We only test and specify the newest versions of dependencies.** Read on for more details.
+
 Rust dependencies like druid specify their own sub-dependencies in `Cargo.toml`.
 These specifications are usually version ranges according to [semver],
 stating that the dependency requires a sub-dependency of the specified version
@@ -86,9 +88,9 @@ If you just want to see what would happen you can add the `--dry-run` option.
 cargo update
 ```
 
-Now we'll use the `cargo upgrade` command to update all the versions in the `Cargo.toml`
-files to match the versions specified in `Cargo.lock`. It's crucial that we use the
-`--to-lockfile` option, because without it `cargo upgrade` won't respect semver.
+Next we'll update all the versions in the `Cargo.toml` files to match the versions
+specified in `Cargo.lock`. We'll do this using the `--to-lockfile` option of `cargo upgrade`.
+It's crucial that we use `--to-lockfile` because without it `cargo upgrade` won't respect semver.
 
 If you just want to see what would happen you can add the `--dry-run` option.
 
