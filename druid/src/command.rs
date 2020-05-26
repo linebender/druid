@@ -237,7 +237,7 @@ impl<T> Selector<T> {
         Selector(s, PhantomData)
     }
 
-    pub(crate) const fn symbol(&self) -> SelectorSymbol {
+    pub(crate) const fn symbol(self) -> SelectorSymbol {
         self.0
     }
 }
