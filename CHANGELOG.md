@@ -72,6 +72,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Replaced `NEW_WINDOW`, `SET_MENU` and `SHOW_CONTEXT_MENU` commands with methods on `EventCtx` and `DelegateCtx`. ([#931] by [@finnerale])
 - Replaced `Command::one_shot` and `::take_object` with a `SingleUse` payload wrapper type. ([#959] by [@finnerale])
 - Renamed `WidgetPod` methods: `paint` to `paint_raw`, `paint_with_offset` to `paint`, `paint_with_offset_always` to `paint_always`. ([#980] by [@totsteps])
+- `Command` and `Selector` are now statically typed, similarly to `Env` and `Key`. ([#993] by [@finnerale])
 
 ### Deprecated
 
@@ -242,6 +243,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#984]: https://github.com/xi-editor/druid/pull/984
 [#990]: https://github.com/xi-editor/druid/pull/990
 [#991]: https://github.com/xi-editor/druid/pull/991
+[#993]: https://github.com/xi-editor/druid/pull/993
 
 ## [0.5.0] - 2020-04-01
 
