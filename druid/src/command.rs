@@ -259,8 +259,8 @@ impl Command {
     }
 
     /// Used to create a command from the types sent via an `ExtEventSink`.
-    pub(crate) fn from_ext(selector: SelectorSymbol, object: Arc<dyn Any>) -> Self {
-        Command { selector, object }
+    pub(crate) fn from_ext(selector: SelectorSymbol, object: Box<dyn Any>) -> Self {
+        Command { selector, object: object.into() }
     }
 
     /// Checks if this was created using `selector`.

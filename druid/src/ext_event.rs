@@ -22,7 +22,7 @@ use crate::shell::IdleHandle;
 use crate::win_handler::EXT_EVENT_IDLE_TOKEN;
 use crate::{command::SelectorSymbol, Command, Selector, Target, WindowId};
 
-pub(crate) type ExtCommand = (SelectorSymbol, Arc<dyn Any + Send + Sync>, Option<Target>);
+pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Option<Target>);
 
 /// A thing that can move into other threads and be used to submit commands back
 /// to the running application.
@@ -103,11 +103,11 @@ impl ExtEventSink {
     pub fn submit_command<T: Any + Send + Sync>(
         &self,
         selector: Selector<T>,
-        object: T,
+        object: impl Into<Box<T>>,
         target: impl Into<Option<Target>>,
     ) -> Result<(), ExtEventError> {
         let target = target.into();
-        let object = Arc::new(object);
+        let object = object.into();
         if let Some(handle) = self.handle.lock().unwrap().as_mut() {
             handle.schedule_idle(EXT_EVENT_IDLE_TOKEN);
         }
