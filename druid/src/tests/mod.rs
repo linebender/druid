@@ -158,7 +158,7 @@ fn take_focus() {
         ModularWidget::new(inner)
             .event_fn(|_, ctx, event, _data, _env| {
                 if let Event::Command(cmd) = event {
-                    if cmd.selector == TAKE_FOCUS {
+                    if cmd.is(TAKE_FOCUS) {
                         ctx.request_focus();
                     }
                 }
@@ -225,12 +225,12 @@ fn focus_changed() {
         ModularWidget::new(children)
             .event_fn(|children, ctx, event, data, env| {
                 if let Event::Command(cmd) = event {
-                    if cmd.selector == TAKE_FOCUS {
+                    if cmd.is(TAKE_FOCUS) {
                         ctx.request_focus();
                         // Stop propagating this command so children
                         // aren't requesting focus too.
                         ctx.set_handled();
-                    } else if cmd.selector == ALL_TAKE_FOCUS_BEFORE {
+                    } else if cmd.is(ALL_TAKE_FOCUS_BEFORE) {
                         ctx.request_focus();
                     }
                 }
@@ -238,7 +238,7 @@ fn focus_changed() {
                     .iter_mut()
                     .for_each(|a| a.event(ctx, event, data, env));
                 if let Event::Command(cmd) = event {
-                    if cmd.selector == ALL_TAKE_FOCUS_AFTER {
+                    if cmd.is(ALL_TAKE_FOCUS_AFTER) {
                         ctx.request_focus();
                     }
                 }

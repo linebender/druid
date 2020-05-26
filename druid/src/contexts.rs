@@ -250,7 +250,7 @@ impl EventCtx<'_, '_> {
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
         if self.state.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::NEW_WINDOW, SingleUse::new(desc)),
+                Command::new(commands::NEW_WINDOW, SingleUse::new(Box::new(desc))),
                 Target::Global,
             );
         } else {
@@ -278,7 +278,7 @@ impl EventCtx<'_, '_> {
     pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
         if self.state.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::SHOW_CONTEXT_MENU, menu),
+                Command::new(commands::SHOW_CONTEXT_MENU, Box::new(menu)),
                 Target::Window(self.state.window_id),
             );
         } else {
@@ -883,7 +883,7 @@ impl<'a> ContextState<'a> {
     fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
         if self.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::SET_MENU, menu),
+                Command::new(commands::SET_MENU, Box::new(menu)),
                 Some(Target::Window(self.window_id)),
             );
         } else {
