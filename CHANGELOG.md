@@ -136,7 +136,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Added a changelog containing development since the 0.5 release. ([#889] by [@finnerale])
 - Removed references to cairo on macOS. ([#943] by [@xStrom])
 - Updated screenshots in `README.md`. ([#967] by [@xStrom])
-- Added a section about dependencies to `CONTRIBUTING.md`. ([#990] by [@xStrom])
+- Added a section about dependencies to `CONTRIBUTING.md`. ([#990] by [@xStrom])t s
 - Fixed menu inconsistency across multiple windows in the multiwin example. ([#926] by [@kindlychung])
 
 ### Maintenance
