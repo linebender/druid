@@ -71,7 +71,10 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `SHOW_WINDOW` and `CLOSE_WINDOW` commands now only use `Target` to determine the affected window. ([#928] by [@finnerale])
 - Replaced `NEW_WINDOW`, `SET_MENU` and `SHOW_CONTEXT_MENU` commands with methods on `EventCtx` and `DelegateCtx`. ([#931] by [@finnerale])
 - Replaced `Command::one_shot` and `::take_object` with a `SingleUse` payload wrapper type. ([#959] by [@finnerale])
+<<<<<<< HEAD
 - Renamed `WidgetPod` methods: `paint` to `paint_raw`, `paint_with_offset` to `paint`, `paint_with_offset_always` to `paint_always`. ([#980] by [@totsteps])
+=======
+>>>>>>> move change entry to docs, add link
 
 ### Deprecated
 
@@ -217,7 +220,11 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#920]: https://github.com/xi-editor/druid/pull/920
 [#924]: https://github.com/xi-editor/druid/pull/924
 [#925]: https://github.com/xi-editor/druid/pull/925
+<<<<<<< HEAD
 [#926]: https://github.com/xi-editor/druid/pull/926 
+=======
+[#926]: https://github.com/xi-editor/druid/pull/926
+>>>>>>> move change entry to docs, add link
 [#928]: https://github.com/xi-editor/druid/pull/928
 [#930]: https://github.com/xi-editor/druid/pull/930
 [#931]: https://github.com/xi-editor/druid/pull/931
