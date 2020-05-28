@@ -244,8 +244,11 @@ impl<T> Selector<T> {
 impl<T: Any> Selector<T> {
     /// Convenience method for [`Command::new`] with this selector.
     ///
+    /// If the payload is `()` there is no need to call this,
+    /// as `Selector<()>` implements `Into<Command>`.
+    ///
     /// [`Command::new`]: struct.Command.html#method.new
-    pub fn carry(self, payload: T) -> Command {
+    pub fn with(self, payload: T) -> Command {
         Command::new(self, payload)
     }
 }
@@ -253,12 +256,12 @@ impl<T: Any> Selector<T> {
 impl Command {
     /// Create a new `Command` with a payload.
     ///
-    /// [`Selector::carry`] can be used to create `Command`s more conveniently.
+    /// [`Selector::with`] can be used to create `Command`s more conveniently.
     ///
     /// If you do not need a payload, [`Selector`] implements `Into<Command>`.
     ///
     /// [`Selector`]: struct.Selector.html
-    /// [`Selector::carry`]: struct.Selector.html#method.carry
+    /// [`Selector::with`]: struct.Selector.html#method.with
     pub fn new<T: Any>(selector: Selector<T>, payload: T) -> Self {
         Command {
             symbol: selector.symbol(),

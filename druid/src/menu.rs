@@ -542,7 +542,7 @@ pub mod sys {
             pub fn open<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-open"),
-                    commands::SHOW_OPEN_PANEL.carry(FileDialogOptions::default()),
+                    commands::SHOW_OPEN_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::Ctrl, "o")
             }
@@ -559,7 +559,7 @@ pub mod sys {
             pub fn save<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    commands::SAVE_FILE.carry(None),
+                    commands::SAVE_FILE.with(None),
                 )
                 .hotkey(RawMods::Ctrl, "s")
             }
@@ -570,7 +570,7 @@ pub mod sys {
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-ellipsis"),
-                    commands::SHOW_SAVE_PANEL.carry(FileDialogOptions::default()),
+                    commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::Ctrl, "s")
             }
@@ -579,7 +579,7 @@ pub mod sys {
             pub fn save_as<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-as"),
-                    commands::SHOW_SAVE_PANEL.carry(FileDialogOptions::default()),
+                    commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::CtrlShift, "s")
             }
@@ -746,7 +746,7 @@ pub mod sys {
             pub fn open_file<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-open"),
-                    commands::SHOW_OPEN_PANEL.carry(FileDialogOptions::default()),
+                    commands::SHOW_OPEN_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::Meta, "o")
             }
@@ -764,7 +764,7 @@ pub mod sys {
             pub fn save<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    commands::SAVE_FILE.carry(None),
+                    commands::SAVE_FILE.with(None),
                 )
                 .hotkey(RawMods::Meta, "s")
             }
@@ -775,7 +775,7 @@ pub mod sys {
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-ellipsis"),
-                    commands::SHOW_SAVE_PANEL.carry(FileDialogOptions::default()),
+                    commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::Meta, "s")
             }
@@ -784,7 +784,7 @@ pub mod sys {
             pub fn save_as<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-as"),
-                    commands::SHOW_SAVE_PANEL.carry(FileDialogOptions::default()),
+                    commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::MetaShift, "s")
             }
