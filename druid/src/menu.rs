@@ -268,7 +268,7 @@ impl<T: Data> MenuDesc<T> {
     /// use druid::{Command, LocalizedString, MenuDesc, MenuItem, Selector};
     ///
     /// let num_items: usize = 4;
-    /// const MENU_COUNT_ACTION: Selector = Selector::new("menu-count-action");
+    /// const MENU_COUNT_ACTION: Selector<usize> = Selector::new("menu-count-action");
     ///
     /// let my_menu: MenuDesc<u32> = MenuDesc::empty()
     ///     .append_iter(|| (0..num_items).map(|i| {
@@ -508,6 +508,7 @@ pub mod sys {
         /// [the win32 documentation]: https://docs.microsoft.com/en-us/windows/win32/uxguide/cmd-menus#standard-menus
         pub mod file {
             use super::*;
+            use crate::FileDialogOptions;
 
             /// A default file menu.
             ///
@@ -541,7 +542,7 @@ pub mod sys {
             pub fn open<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-open"),
-                    commands::SHOW_OPEN_PANEL,
+                    commands::SHOW_OPEN_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::Ctrl, "o")
             }
@@ -558,7 +559,7 @@ pub mod sys {
             pub fn save<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    commands::SAVE_FILE,
+                    commands::SAVE_FILE.with(None),
                 )
                 .hotkey(RawMods::Ctrl, "s")
             }
@@ -569,7 +570,7 @@ pub mod sys {
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-ellipsis"),
-                    commands::SHOW_SAVE_PANEL,
+                    commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::Ctrl, "s")
             }
@@ -578,7 +579,7 @@ pub mod sys {
             pub fn save_as<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-as"),
-                    commands::SHOW_SAVE_PANEL,
+                    commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::CtrlShift, "s")
             }
@@ -705,6 +706,7 @@ pub mod sys {
         /// The file menu.
         pub mod file {
             use super::*;
+            use crate::FileDialogOptions;
 
             /// A default file menu.
             ///
@@ -744,7 +746,7 @@ pub mod sys {
             pub fn open_file<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-open"),
-                    commands::SHOW_OPEN_PANEL,
+                    commands::SHOW_OPEN_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::Meta, "o")
             }
@@ -762,7 +764,7 @@ pub mod sys {
             pub fn save<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    commands::SAVE_FILE,
+                    commands::SAVE_FILE.with(None),
                 )
                 .hotkey(RawMods::Meta, "s")
             }
@@ -773,7 +775,7 @@ pub mod sys {
             pub fn save_ellipsis<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-ellipsis"),
-                    commands::SHOW_SAVE_PANEL,
+                    commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::Meta, "s")
             }
@@ -782,7 +784,7 @@ pub mod sys {
             pub fn save_as<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save-as"),
-                    commands::SHOW_SAVE_PANEL,
+                    commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
                 .hotkey(RawMods::MetaShift, "s")
             }

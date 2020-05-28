@@ -14,7 +14,7 @@
 
 use druid::widget::{Align, Button, Flex, TextBox};
 use druid::{
-    AppDelegate, AppLauncher, Command, DelegateCtx, Env, FileDialogOptions, FileInfo, FileSpec,
+    commands, AppDelegate, AppLauncher, Command, DelegateCtx, Env, FileDialogOptions, FileSpec,
     LocalizedString, Target, Widget, WindowDesc,
 };
 
@@ -77,30 +77,24 @@ impl AppDelegate<String> for Delegate {
         data: &mut String,
         _env: &Env,
     ) -> bool {
-        match cmd.selector {
-            druid::commands::SAVE_FILE => {
-                if let Ok(file_info) = cmd.get_object::<FileInfo>() {
-                    if let Err(e) = std::fs::write(file_info.path(), &data[..]) {
-                        println!("Error writing file: {}", e);
-                    }
-                }
-                true
+        if let Some(Some(file_info)) = cmd.get(commands::SAVE_FILE) {
+            if let Err(e) = std::fs::write(file_info.path(), &data[..]) {
+                println!("Error writing file: {}", e);
             }
-            druid::commands::OPEN_FILE => {
-                if let Ok(file_info) = cmd.get_object::<FileInfo>() {
-                    match std::fs::read_to_string(file_info.path()) {
-                        Ok(s) => {
-                            let first_line = s.lines().next().unwrap_or("");
-                            *data = first_line.to_owned();
-                        }
-                        Err(e) => {
-                            println!("Error opening file: {}", e);
-                        }
-                    }
-                }
-                true
-            }
-            _ => false,
+            return true;
         }
+        if let Some(file_info) = cmd.get(commands::OPEN_FILE) {
+            match std::fs::read_to_string(file_info.path()) {
+                Ok(s) => {
+                    let first_line = s.lines().next().unwrap_or("");
+                    *data = first_line.to_owned();
+                }
+                Err(e) => {
+                    println!("Error opening file: {}", e);
+                }
+            }
+            return true;
+        }
+        false
     }
 }

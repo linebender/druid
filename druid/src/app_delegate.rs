@@ -57,7 +57,7 @@ impl<'a> DelegateCtx<'a> {
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
         if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::NEW_WINDOW, SingleUse::new(desc)),
+                Command::new(commands::NEW_WINDOW, SingleUse::new(Box::new(desc))),
                 Target::Global,
             );
         } else {
@@ -77,7 +77,7 @@ impl<'a> DelegateCtx<'a> {
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>, window: WindowId) {
         if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::SET_MENU, menu),
+                Command::new(commands::SET_MENU, Box::new(menu)),
                 Target::Window(window),
             );
         } else {
