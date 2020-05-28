@@ -35,10 +35,11 @@ fn ui_builder() -> impl Widget<String> {
     let rs = FileSpec::new("Rust source", &["rs"]);
     let txt = FileSpec::new("Text file", &["txt"]);
     let other = FileSpec::new("Bogus file", &["foo", "bar", "baz"]);
+    let default_target = String::from("MyFile.txt");
     let save_dialog_options = FileDialogOptions::new()
         .allowed_types(vec![rs, txt, other])
         .default_type(txt)
-        .default_name("MyFile.txt")
+        .default_name(&default_target)
         .name_label("Target")
         .title("Choose a target for this lovely file")
         .button_text("Export");
