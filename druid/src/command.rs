@@ -22,7 +22,7 @@ use std::{
 
 use crate::{WidgetId, WindowId};
 
-/// A [`Selector`]s identity.
+/// The identity of a [`Selector`].
 ///
 /// [`Selector`]: struct.Selector.html
 pub(crate) type SelectorSymbol = &'static str;
@@ -251,12 +251,13 @@ impl<T: Any> Selector<T> {
 }
 
 impl Command {
-    /// Create a new `Command` with payload.
+    /// Create a new `Command` with a payload.
     ///
     /// [`Selector::carry`] can be used to create `Command`s more conveniently.
     ///
-    /// If you do not need an payload, `Selector` implements `Into<Command>`.
+    /// If you do not need a payload, [`Selector`] implements `Into<Command>`.
     ///
+    /// [`Selector`]: struct.Selector.html
     /// [`Selector::carry`]: struct.Selector.html#method.carry
     pub fn new<T: Any>(selector: Selector<T>, payload: T) -> Self {
         Command {
