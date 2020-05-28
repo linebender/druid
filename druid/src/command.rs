@@ -22,11 +22,14 @@ use std::{
 
 use crate::{WidgetId, WindowId};
 
+/// A [`Selector`]s identity.
+///
+/// [`Selector`]: struct.Selector.html
 pub(crate) type SelectorSymbol = &'static str;
 
 /// An identifier for a particular command.
 ///
-/// The type parameter `T` specifies the commands payload type.
+/// The type parameter `T` specifies the command's payload type.
 ///
 /// This should be a unique string identifier. Certain `Selector`s are defined
 /// by druid, and have special meaning to the framework; these are listed in the
@@ -34,7 +37,7 @@ pub(crate) type SelectorSymbol = &'static str;
 ///
 /// [`druid::commands`]: commands/index.html
 #[derive(Debug, PartialEq, Eq)]
-pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
+pub struct Selector<T = ()>(SelectorSymbol, PhantomData<*const T>);
 
 /// An arbitrary command.
 ///
@@ -42,7 +45,7 @@ pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
 /// and what type of payload it carries, as well as the actual payload.
 ///
 /// If the payload can't or shouldn't be cloned,
-/// wrapping it with [`SingleUse`] allows you to `take` the object.
+/// wrapping it with [`SingleUse`] allows you to `take` the payload.
 ///
 /// # Examples
 /// ```
@@ -55,17 +58,15 @@ pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
 /// assert_eq!(command.get(selector), Some(&vec![1, 3, 10, 12]));
 /// ```
 ///
-/// [`Command::new`]: #method.new
-/// [`Command::get_object`]: #method.get_object
 /// [`SingleUse`]: struct.SingleUse.html
 /// [`Selector`]: struct.Selector.html
 #[derive(Debug, Clone)]
 pub struct Command {
-    selector: SelectorSymbol,
-    object: Arc<dyn Any>,
+    symbol: SelectorSymbol,
+    payload: Arc<dyn Any>,
 }
 
-/// A wrapper type for [`Command`] arguments that should only be used once.
+/// A wrapper type for [`Command`] payloads that should only be used once.
 ///
 /// This is useful if you have some resource that cannot be
 /// cloned, and you wish to send it to another widget.
@@ -111,9 +112,10 @@ pub enum Target {
 ///
 /// [`Command`]: ../struct.Command.html
 pub mod sys {
+    use std::any::Any;
+
     use super::Selector;
     use crate::{FileDialogOptions, FileInfo, SingleUse};
-    use std::any::Any;
 
     /// Quit the running application. This command is handled by the druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
@@ -145,14 +147,14 @@ pub mod sys {
     /// will automatically target the window containing the widget.
     pub const SHOW_WINDOW: Selector = Selector::new("druid-builtin.show-window");
 
-    /// Display a context (right-click) menu. The argument must be the [`ContextMenu`].
+    /// Display a context (right-click) menu. The payload must be the [`ContextMenu`]
     /// object to be displayed.
     ///
     /// [`ContextMenu`]: ../struct.ContextMenu.html
     pub(crate) const SHOW_CONTEXT_MENU: Selector<Box<dyn Any>> =
         Selector::new("druid-builtin.show-context-menu");
 
-    /// The selector for a command to set the window's menu. The argument should
+    /// The selector for a command to set the window's menu. The payload should
     /// be a [`MenuDesc`] object.
     ///
     /// [`MenuDesc`]: ../struct.MenuDesc.html
@@ -185,9 +187,7 @@ pub mod sys {
 
     /// Special command. When issued, the system will show the 'save as' panel,
     /// and if a path is selected the system will issue a [`SAVE_FILE`] command
-    /// with the selected path as the argument.
-    ///
-    /// The argument should be a [`FileDialogOptions`] object.
+    /// with the selected path as the payload.
     ///
     /// [`SAVE_FILE`]: constant.SAVE_FILE.html
     /// [`FileDialogOptions`]: ../struct.FileDialogOptions.html
@@ -226,7 +226,7 @@ pub mod sys {
     pub const REDO: Selector = Selector::new("druid-builtin.menu-redo");
 }
 
-impl Selector {
+impl Selector<()> {
     /// A selector that does nothing.
     pub const NOOP: Selector = Selector::new("");
 }
@@ -237,45 +237,54 @@ impl<T> Selector<T> {
         Selector(s, PhantomData)
     }
 
+    /// Returns the `SelectorSymbol` identifying this `Selector`.
     pub(crate) const fn symbol(self) -> SelectorSymbol {
         self.0
     }
 }
 
 impl<T: Any> Selector<T> {
-    pub fn carry(self, object: T) -> Command {
-        Command::new(self, object)
+    /// Convenience method for [`Command::new`] with this selector.
+    ///
+    /// [`Command::new`]: struct.Command.html#method.new
+    pub fn carry(self, payload: T) -> Command {
+        Command::new(self, payload)
     }
 }
 
 impl Command {
-    /// Create a new `Command` with an argument. If you do not need
-    /// an argument, `Selector` implements `Into<Command>`.
-    pub fn new<T: Any>(selector: Selector<T>, object: T) -> Self {
+    /// Create a new `Command` with payload.
+    ///
+    /// [`Selector::carry`] can be used to create `Command`s more conveniently.
+    ///
+    /// If you do not need an payload, `Selector` implements `Into<Command>`.
+    ///
+    /// [`Selector::carry`]: struct.Selector.html#method.carry
+    pub fn new<T: Any>(selector: Selector<T>, payload: T) -> Self {
         Command {
-            selector: selector.symbol(),
-            object: Arc::new(object),
+            symbol: selector.symbol(),
+            payload: Arc::new(payload),
         }
     }
 
     /// Used to create a command from the types sent via an `ExtEventSink`.
-    pub(crate) fn from_ext(selector: SelectorSymbol, object: Box<dyn Any>) -> Self {
+    pub(crate) fn from_ext(symbol: SelectorSymbol, payload: Box<dyn Any>) -> Self {
         Command {
-            selector,
-            object: object.into(),
+            symbol,
+            payload: payload.into(),
         }
     }
 
     /// Checks if this was created using `selector`.
     pub fn is<T>(&self, selector: Selector<T>) -> bool {
-        self.selector == selector.symbol()
+        self.symbol == selector.symbol()
     }
 
-    /// Returns `Some(reference)` to this `Command`'s object, if the selector matches.
+    /// Returns `Some(reference)` to this `Command`'s payload, if the selector matches.
     ///
     /// Returns `None` when `self.is(selector) == false`.
     ///
-    /// If the selector has already been checked, [`get_unchecked`] can be used safely.
+    /// Alternatively you can check the selector with [`is`] and then use [`get_unchecked`].
     ///
     /// # Panics
     ///
@@ -284,10 +293,10 @@ impl Command {
     ///
     /// [`get_unchecked`]: #method.get_unchecked
     pub fn get<T: Any>(&self, selector: Selector<T>) -> Option<&T> {
-        if self.selector == selector.symbol() {
-            Some(self.object.downcast_ref().unwrap_or_else(|| {
+        if self.symbol == selector.symbol() {
+            Some(self.payload.downcast_ref().unwrap_or_else(|| {
                 panic!(
-                    "The selector \"{}\" exists twice with different types. See druid::Command::get_object for more information",
+                    "The selector \"{}\" exists twice with different types. See druid::Command::get for more information",
                     selector.symbol()
                 )
             }))
@@ -296,10 +305,10 @@ impl Command {
         }
     }
 
-    /// Return a reference to this `Command`'s object.
+    /// Returns a reference to this `Command`'s payload.
     ///
-    /// If the selector has already been checked, `get_unchecked` can be used safely.
-    /// Otherwise you should either use [`get`] instead, or check the selector using [`is`] first.
+    /// If the selector has already been checked with [`is`], then `get_unchecked` can be used safely.
+    /// Otherwise you should use [`get`] instead.
     ///
     /// # Panics
     ///
@@ -315,7 +324,7 @@ impl Command {
             panic!(
                 "Expected selector \"{}\" but the command was \"{}\".",
                 selector.symbol(),
-                self.selector
+                self.symbol
             )
         })
     }
@@ -335,8 +344,8 @@ impl<T: Any> SingleUse<T> {
 impl From<Selector> for Command {
     fn from(selector: Selector) -> Command {
         Command {
-            selector: selector.symbol(),
-            object: Arc::new(()),
+            symbol: selector.symbol(),
+            payload: Arc::new(()),
         }
     }
 }

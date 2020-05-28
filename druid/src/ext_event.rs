@@ -87,10 +87,10 @@ impl ExtEventSink {
     /// Submit a [`Command`] to the running application.
     ///
     /// [`Command`] is not thread safe, so you cannot submit it directly;
-    /// instead you have to pass the [`Selector`] and the (optional) argument
+    /// instead you have to pass the [`Selector`] and the payload
     /// separately, and it will be turned into a `Command` when it is received.
     ///
-    /// The `object` argument must implement `Any + Send + Sync`.
+    /// The `payload` must implement `Any + Send + Sync`.
     ///
     /// If no explicit `Target` is submitted, the `Command` will be sent to
     /// the application's first window; if that window is subsequently closed,
@@ -103,17 +103,17 @@ impl ExtEventSink {
     pub fn submit_command<T: Any + Send + Sync>(
         &self,
         selector: Selector<T>,
-        object: impl Into<Box<T>>,
+        payload: impl Into<Box<T>>,
         target: impl Into<Option<Target>>,
     ) -> Result<(), ExtEventError> {
         let target = target.into();
-        let object = object.into();
+        let payload = payload.into();
         if let Some(handle) = self.handle.lock().unwrap().as_mut() {
             handle.schedule_idle(EXT_EVENT_IDLE_TOKEN);
         }
         self.queue.lock().map_err(|_| ExtEventError)?.push_back((
             selector.symbol(),
-            object,
+            payload,
             target,
         ));
         Ok(())
