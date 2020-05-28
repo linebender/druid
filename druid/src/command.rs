@@ -81,14 +81,14 @@ pub struct Command {
 /// let num = CantClone(42);
 /// let command = Command::new(selector, SingleUse::new(num));
 ///
-/// let object: &SingleUse<CantClone> = command.get_unchecked(selector);
-/// if let Some(num) = object.take() {
+/// let payload: &SingleUse<CantClone> = command.get_unchecked(selector);
+/// if let Some(num) = payload.take() {
 ///     // now you own the data
 ///     assert_eq!(num.0, 42);
 /// }
 ///
 /// // subsequent calls will return `None`
-/// assert!(object.take().is_none());
+/// assert!(payload.take().is_none());
 /// ```
 ///
 /// [`Command`]: struct.Command.html
@@ -390,11 +390,12 @@ impl Into<Option<Target>> for WidgetId {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
-    fn get_object() {
+    fn get_payload() {
         let sel = Selector::new("my-selector");
-        let objs = vec![0, 1, 2];
-        let command = Command::new(sel, objs);
+        let payload = vec![0, 1, 2];
+        let command = Command::new(sel, payload);
         assert_eq!(command.get(sel), Some(&vec![0, 1, 2]));
     }
 }
