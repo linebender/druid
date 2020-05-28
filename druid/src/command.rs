@@ -277,12 +277,12 @@ impl Command {
         }
     }
 
-    /// Checks if this was created using `selector`.
+    /// Returns `true` if `self` matches this `selector`.
     pub fn is<T>(&self, selector: Selector<T>) -> bool {
         self.symbol == selector.symbol()
     }
 
-    /// Returns `Some(reference)` to this `Command`'s payload, if the selector matches.
+    /// Returns `Some(&T)` (this `Command`'s payload) if the selector matches.
     ///
     /// Returns `None` when `self.is(selector) == false`.
     ///
