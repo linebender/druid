@@ -53,7 +53,9 @@ pub(crate) fn get_file_dialog_path(
 
     dialog.set_show_hidden(options.show_hidden);
 
-    dialog.set_select_multiple(options.multi_selection);
+    if action != FileChooserAction::Save {
+        dialog.set_select_multiple(options.multi_selection);
+    }
 
     // Don't set the filters when showing the folder selection dialog,
     // because then folder traversing won't work.
@@ -76,15 +78,9 @@ pub(crate) fn get_file_dialog_path(
             }
         }
 
-        if let Some(default_file_type) = &options.default_type {
-            if options.allowed_types.is_some() && !found_default_filter {
-                // It's ok to set a default file filter without providing a list of
-                // allowed filters, but it's not ok (or at least, doesn't work in gtk)
-                // to provide a default filter that isn't in the (present) list
-                // of allowed filters.
-                log::warn!("default file type not found in allowed types");
-            } else if !found_default_filter {
-                dialog.set_filter(&file_filter(default_file_type));
+        if let Some(dt) = &options.default_type {
+            if !found_default_filter {
+                log::warn!("The default type {:?} is not present in allowed types.", dt);
             }
         }
     }
