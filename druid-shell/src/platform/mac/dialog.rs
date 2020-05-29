@@ -67,23 +67,23 @@ pub(crate) fn get_file_dialog_path(
             let () = msg_send![panel, setShowsHiddenFiles: YES];
         }
 
-        if let Some(default_name) = options.default_name {
+        if let Some(default_name) = &options.default_name {
             let () = msg_send![panel, setNameFieldStringValue: make_nsstring(default_name)];
         }
 
-        if let Some(name_label) = options.name_label {
+        if let Some(name_label) = &options.name_label {
             let () = msg_send![panel, setNameFieldLabel: make_nsstring(name_label)];
         }
 
-        if let Some(title) = options.title {
+        if let Some(title) = &options.title {
             let () = msg_send![panel, setTitle: make_nsstring(title)];
         }
 
-        if let Some(text) = options.button_text {
+        if let Some(text) = &options.button_text {
             let () = msg_send![panel, setPrompt: make_nsstring(text)];
         }
 
-        if let Some(path) = options.starting_directory {
+        if let Some(path) = &options.starting_directory {
             if let Some(path) = path.to_str() {
                 let url = NSURL::alloc(nil)
                     .initFileURLWithPath_isDirectory_(make_nsstring(path), YES)
@@ -95,13 +95,16 @@ pub(crate) fn get_file_dialog_path(
         if set_type_filter {
             // If a default type was specified, then we must reorder the allowed types,
             // because there's no way to specify the default type other than having it be first.
-            if let Some(allowed_types) = options.allowed_types.as_mut() {
-                if let Some(dt) = options.default_type {
-                    if let Some(idx) = allowed_types.iter().position(|t| *t == dt) {
+            if let Some(dt) = &options.default_type {
+                let mut present = false;
+                if let Some(allowed_types) = options.allowed_types.as_mut() {
+                    if let Some(idx) = allowed_types.iter().position(|t| t == dt) {
+                        present = true;
                         allowed_types.swap(idx, 0);
-                    } else {
-                        log::warn!("The default type {:?} is not present in allowed types.", dt);
                     }
+                }
+                if !present {
+                    log::warn!("The default type {:?} is not present in allowed types.", dt);
                 }
             }
 

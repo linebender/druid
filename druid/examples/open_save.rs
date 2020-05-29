@@ -35,11 +35,13 @@ fn ui_builder() -> impl Widget<String> {
     let rs = FileSpec::new("Rust source", &["rs"]);
     let txt = FileSpec::new("Text file", &["txt"]);
     let other = FileSpec::new("Bogus file", &["foo", "bar", "baz"]);
-    let default_target = String::from("MyFile.txt");
+    // The options can also be generated at runtime,
+    // so to show that off we create a String for the default save name.
+    let default_save_name = String::from("MyFile.txt");
     let save_dialog_options = FileDialogOptions::new()
         .allowed_types(vec![rs, txt, other])
         .default_type(txt)
-        .default_name(&default_target)
+        .default_name(default_save_name)
         .name_label("Target")
         .title("Choose a target for this lovely file")
         .button_text("Export");
