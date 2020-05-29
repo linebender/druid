@@ -73,6 +73,8 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Replaced `Command::one_shot` and `::take_object` with a `SingleUse` payload wrapper type. ([#959] by [@finnerale])
 - Renamed `WidgetPod` methods: `paint` to `paint_raw`, `paint_with_offset` to `paint`, `paint_with_offset_always` to `paint_always`. ([#980] by [@totsteps])
 - `Command` and `Selector` have been reworked and are now statically typed, similarly to `Env` and `Key`. ([#993] by [@finnerale])
+- Standardize the type returned by the contexts' `text()` methods. ([#996] by
+  [@cmyr])
 
 ### Deprecated
 
@@ -244,6 +246,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#990]: https://github.com/xi-editor/druid/pull/990
 [#991]: https://github.com/xi-editor/druid/pull/991
 [#993]: https://github.com/xi-editor/druid/pull/993
+[#996]: https://github.com/xi-editor/druid/pull/996
 
 ## [0.5.0] - 2020-04-01
 

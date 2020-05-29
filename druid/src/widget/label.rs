@@ -265,17 +265,11 @@ impl<T: Data> Widget<T> for Label<T> {
         }
     }
 
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &T,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         bc.debug_check("Label");
 
         let font_size = self.size.resolve(env);
-        let text_layout = self.get_layout(layout_ctx.text(), env);
+        let text_layout = self.get_layout(&mut ctx.text(), env);
         bc.constrain(Size::new(
             text_layout.width() + 2. * LABEL_X_PADDING,
             font_size * LINE_HEIGHT_FACTOR,
@@ -284,7 +278,7 @@ impl<T: Data> Widget<T> for Label<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
         let font_size = self.size.resolve(env);
-        let text_layout = self.get_layout(ctx.text(), env);
+        let text_layout = self.get_layout(&mut ctx.text(), env);
         let line_height = font_size * LINE_HEIGHT_FACTOR;
 
         // Find the origin for the text

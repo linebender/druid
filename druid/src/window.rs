@@ -313,7 +313,7 @@ impl<T: Data> Window<T> {
         self.lifecycle(queue, &LifeCycle::AnimFrame(0), data, env, true);
 
         if self.root.state().needs_layout {
-            self.layout(piet, queue, data, env);
+            self.layout(queue, data, env);
         }
 
         piet.fill(
@@ -323,13 +323,12 @@ impl<T: Data> Window<T> {
         self.paint(piet, invalid_rect, queue, data, env);
     }
 
-    fn layout(&mut self, piet: &mut Piet, queue: &mut CommandQueue, data: &T, env: &Env) {
+    fn layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         let mut widget_state = WidgetState::new(self.root.id());
         let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
         let mut layout_ctx = LayoutCtx {
             state: &mut state,
             widget_state: &mut widget_state,
-            text_factory: piet.text(),
             mouse_pos: self.last_mouse_pos,
         };
         let bc = BoxConstraints::tight(self.size);
@@ -346,14 +345,8 @@ impl<T: Data> Window<T> {
     /// only expose `layout` for testing; normally it is called as part of `do_paint`
     #[cfg(not(target_arch = "wasm32"))]
     #[cfg(test)]
-    pub(crate) fn just_layout(
-        &mut self,
-        piet: &mut Piet,
-        queue: &mut CommandQueue,
-        data: &T,
-        env: &Env,
-    ) {
-        self.layout(piet, queue, data, env)
+    pub(crate) fn just_layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
+        self.layout(queue, data, env)
     }
 
     fn paint(
