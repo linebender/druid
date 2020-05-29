@@ -50,7 +50,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924] by [@cmyr])
 - `im::Vector` support for the `List` widget. ([#940] by [@xStrom])
 - `LifeCycle::Size` event to inform widgets that their size changed. ([#953] by [@xStrom])
-- `FileDialogOptions` methods `default_name`, `name_label`, `title`, `button_text`, `force_starting_directory`. ([#960] by [@xStrom])
+- `FileDialogOptions` methods `default_name`, `name_label`, `title`, `button_text`, `packages_as_directories`, `force_starting_directory`. ([#960] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `set_menu` method on `UpdateCtx` and `LifeCycleCtx` ([#970] by [@cmyr])
 

@@ -173,13 +173,16 @@ pub mod sys {
     pub const NEW_FILE: Selector = Selector::new("druid-builtin.menu-file-new");
 
     /// When submitted by the application, a file picker dialog will be shown to the user,
-    /// and an [`OPEN_FILE`] command will be sent if a file is chosen.
+    /// and an [`OPEN_FILE`] command will be sent if a path is chosen.
     ///
     /// [`OPEN_FILE`]: constant.OPEN_FILE.html
     pub const SHOW_OPEN_PANEL: Selector<FileDialogOptions> =
         Selector::new("druid-builtin.menu-file-open");
 
-    /// Open a file, must be handled by the application.
+    /// Open a path, must be handled by the application.
+    ///
+    /// The path might be a file or a directory,
+    /// so always check whether it matches your expectations.
     ///
     /// [`FileInfo`]: ../struct.FileInfo.html
     pub const OPEN_FILE: Selector<FileInfo> = Selector::new("druid-builtin.open-file-path");
@@ -192,11 +195,14 @@ pub mod sys {
     pub const SHOW_SAVE_PANEL: Selector<FileDialogOptions> =
         Selector::new("druid-builtin.menu-file-save-as");
 
-    /// Save the current file, must be handled by the application.
+    /// Save the current path, must be handled by the application.
     ///
     /// How this should be handled depends on the payload:
-    /// `Some(handle)`: the app should save to that file and store the `handle` for future use.
+    /// `Some(handle)`: the app should save to that path and store the `handle` for future use.
     /// `None`: the app should have received `Some` before and use the stored `FileInfo`.
+    ///
+    /// The path might be a file or a directory,
+    /// so always check whether it matches your expectations.
     pub const SAVE_FILE: Selector<Option<FileInfo>> = Selector::new("druid-builtin.menu-file-save");
 
     /// Show the print-setup window.

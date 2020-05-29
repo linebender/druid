@@ -39,10 +39,6 @@ pub(crate) fn get_file_dialog_path(
             FileDialogType::Save => msg_send![class!(NSSavePanel), savePanel],
         };
 
-        // Directories with extensions need to be treated as directories.
-        // File packages are a macOS concept and don't translate in a cross-platform way.
-        let () = msg_send![panel, setTreatsFilePackagesAsDirectories: YES];
-
         // Set open dialog specific options
         // NSOpenPanel inherits from NSSavePanel and thus has more options.
         let mut set_type_filter = true;
@@ -53,9 +49,11 @@ pub(crate) fn get_file_dialog_path(
                 // because other platforms like Windows have no support for it,
                 // and expecting it to work will lead to buggy cross-platform behavior.
                 let () = msg_send![panel, setCanChooseFiles: NO];
-                // Because we're choosing only directories, file filters need to be disabled.
-                // Otherwise macOS will still allow selecting those files which match the filter.
-                set_type_filter = false;
+                // File filters are used by macOS to determine which paths are packages.
+                // If we are going to treat packages as directories, then file filters
+                // need to be disabled. Otherwise macOS will allow picking of regular files
+                // that match the filters as if they were directories too.
+                set_type_filter = !options.packages_as_directories;
             }
             if options.multi_selection {
                 let () = msg_send![panel, setAllowsMultipleSelection: YES];
@@ -63,6 +61,10 @@ pub(crate) fn get_file_dialog_path(
         }
 
         // Set universal options
+        if options.packages_as_directories {
+            let () = msg_send![panel, setTreatsFilePackagesAsDirectories: YES];
+        }
+
         if options.show_hidden {
             let () = msg_send![panel, setShowsHiddenFiles: YES];
         }

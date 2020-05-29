@@ -16,7 +16,9 @@
 
 use std::path::{Path, PathBuf};
 
-/// Information about a file to be opened or saved.
+/// Information about the path to be opened or saved.
+///
+/// This path might point to a file or a directory.
 #[derive(Debug, Clone)]
 pub struct FileInfo {
     pub(crate) path: PathBuf,
@@ -32,12 +34,48 @@ pub enum FileDialogType {
 }
 
 /// Options for file dialogs.
+///
+/// File dialogs let the user choose a specific path to open or save.
+///
+/// By default the file dialogs operate in *files mode* where the user can only choose files.
+/// Importantly these are files from the user's perspective, but technically the returned path
+/// will be a directory when the user chooses a package. Read more about [packages] below.
+/// Thus it is important to verify that all the returned paths match your expectations.
+///
+/// The open dialog can also be switched to *directories mode* via [`select_directories`].
+///
+/// # Packages
+///
+/// On macOS directories with known extensions are considered to be packages.
+/// Furthermore the packages are divided into two groups based on their extension.
+/// First there are packages that have been defined at the OS level, and secondly there are
+/// packages that are defined at the file dialog level based on [`allowed_types`].
+/// A package behaves similarly to a regular file in many contexts, including the file dialogs.
+/// This means that it can be chosen in the file open dialog when operating in *files mode*
+/// and all the file filters will apply to it. It won't be selectable in *directories mode*
+/// and the user won't be able to traverse into the package. In the file save dialog
+/// packages that are only defined in [`allowed_types`] can be traversed into. However
+/// packages that are defined at the OS level can't be traversed into even if they are also
+/// defined in [`allowed_types`]. Keep in mind though that the file dialog may start
+/// inside any package if the user had traversed into one previously.
+///
+/// Generally this behavior should be kept, because it's least surprising to macOS users.
+/// However if your application requires selecting directories with extensions as directories
+/// or the user needs to be able to traverse into them to select a specific file,
+/// then you can change the default behavior via [`packages_as_directories`]
+/// to force macOS to behave like other platforms and not give special treatment to packages.
+///
+/// [packages]: #packages
+/// [`select_directories`]: #method.select_directories
+/// [`allowed_types`]: #method.allowed_types
+/// [`packages_as_directories`]: #method.packages_as_directories
 #[derive(Debug, Clone, Default)]
 pub struct FileDialogOptions {
     pub(crate) show_hidden: bool,
     pub(crate) allowed_types: Option<Vec<FileSpec>>,
     pub(crate) default_type: Option<FileSpec>,
     pub(crate) select_directories: bool,
+    pub(crate) packages_as_directories: bool,
     pub(crate) multi_selection: bool,
     pub(crate) default_name: Option<String>,
     pub(crate) name_label: Option<String>,
@@ -50,10 +88,14 @@ pub struct FileDialogOptions {
 ///
 /// # Windows
 ///
-/// On windows, each instance of this type is converted to a [`COMDLG_FILTERSPEC`]
-/// struct.
+/// Each instance of this type is converted to a [`COMDLG_FILTERSPEC`] struct.
+///
+/// # macOS
+///
+/// These file types also apply to directories to define them as [packages].
 ///
 /// [`COMDLG_FILTERSPEC`]: https://docs.microsoft.com/en-ca/windows/win32/api/shtypes/ns-shtypes-comdlg_filterspec
+/// [packages]: struct.FileDialogOptions.html#packages
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FileSpec {
     /// A human readable name, describing this filetype.
@@ -72,7 +114,7 @@ pub struct FileSpec {
 }
 
 impl FileInfo {
-    /// The file's path.
+    /// Returns the underlying path.
     pub fn path(&self) -> &Path {
         &self.path
     }
@@ -98,6 +140,16 @@ impl FileDialogOptions {
         self
     }
 
+    /// Set [packages] to be treated as directories instead of files.
+    ///
+    /// This is only relevant on macOS.
+    ///
+    /// [packages]: #packages
+    pub fn packages_as_directories(mut self) -> Self {
+        self.packages_as_directories = true;
+        self
+    }
+
     /// Set multiple items to be selectable.
     ///
     /// This is only relevant for open dialogs.
@@ -108,7 +160,17 @@ impl FileDialogOptions {
 
     /// Set the file types the user is allowed to select.
     ///
+    /// This filter is only applied to files and [packages], but not to directories.
+    ///
     /// An empty collection is treated as no filter.
+    ///
+    /// # macOS
+    ///
+    /// These file types also apply to directories to define [packages].
+    /// Which means the directories that match the filter are no longer considered directories.
+    /// The packages are defined by this collection even in *directories mode*.
+    ///
+    /// [packages]: #packages
     pub fn allowed_types(mut self, types: Vec<FileSpec>) -> Self {
         // An empty vector can cause platform issues, so treat it as no filter
         if types.is_empty() {
@@ -124,6 +186,8 @@ impl FileDialogOptions {
     /// The provided `default_type` must also be present in [`allowed_types`].
     ///
     /// If it's `None` then the first entry in [`allowed_types`] will be used as the default.
+    ///
+    /// This is only relevant in *files mode*.
     ///
     /// [`allowed_types`]: #method.allowed_types
     pub fn default_type(mut self, default_type: FileSpec) -> Self {
