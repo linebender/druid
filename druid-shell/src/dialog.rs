@@ -51,13 +51,13 @@ pub enum FileDialogType {
 /// First there are packages that have been defined at the OS level, and secondly there are
 /// packages that are defined at the file dialog level based on [`allowed_types`].
 /// A package behaves similarly to a regular file in many contexts, including the file dialogs.
-/// This means that it can be chosen in the file open dialog when operating in *files mode*
-/// and all the file filters will apply to it. It won't be selectable in *directories mode*
-/// and the user won't be able to traverse into the package. In the file save dialog
-/// packages that are only defined in [`allowed_types`] can be traversed into. However
-/// packages that are defined at the OS level can't be traversed into even if they are also
-/// defined in [`allowed_types`]. Keep in mind though that the file dialog may start
-/// inside any package if the user had traversed into one previously.
+/// This means that it can be chosen in the file open dialog when operating in *files mode*,
+/// all the file filters will apply to it, and the user won't be able to traverse into the package.
+/// It won't be selectable in *directories mode* and the user won't be able to traverse into the
+/// package. In the file save dialog packages that are only defined in [`allowed_types`] can be
+/// traversed into. However packages that are defined at the OS level can't be traversed into
+/// even if they are also defined in [`allowed_types`]. Keep in mind though that the file dialog
+/// may start inside any package if the user had traversed into one previously.
 ///
 /// Generally this behavior should be kept, because it's least surprising to macOS users.
 /// However if your application requires selecting directories with extensions as directories
