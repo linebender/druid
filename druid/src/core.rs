@@ -497,7 +497,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut child_ctx = LayoutCtx {
             widget_state: &mut self.state,
             state: ctx.state,
-            text_factory: ctx.text_factory,
             mouse_pos: child_mouse_pos,
         };
         let size = self.inner.layout(&mut child_ctx, bc, data, env);

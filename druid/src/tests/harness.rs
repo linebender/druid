@@ -259,7 +259,7 @@ impl<T: Data> Harness<'_, T> {
 
     /// Only do a layout pass, without painting
     pub fn just_layout(&mut self) {
-        self.inner.layout(&mut self.piet)
+        self.inner.layout()
     }
 
     pub fn paint_rect(&mut self, invalid_rect: Rect) {
@@ -287,9 +287,9 @@ impl<T: Data> Inner<T> {
         self.window.update(&mut self.cmds, &self.data, &self.env);
     }
 
-    fn layout(&mut self, piet: &mut Piet) {
+    fn layout(&mut self) {
         self.window
-            .just_layout(piet, &mut self.cmds, &self.data, &self.env);
+            .just_layout(&mut self.cmds, &self.data, &self.env);
     }
 
     #[allow(dead_code)]

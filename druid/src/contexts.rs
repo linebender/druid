@@ -85,10 +85,9 @@ pub struct UpdateCtx<'a, 'b> {
 /// As of now, the main service provided is access to a factory for
 /// creating text layout objects, which are likely to be useful
 /// during widget layout.
-pub struct LayoutCtx<'a, 'b, 'c: 'a> {
+pub struct LayoutCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
-    pub(crate) text_factory: &'a mut Text<'c>,
     pub(crate) mouse_pos: Option<Point>,
 }
 
@@ -685,10 +684,10 @@ impl<'a, 'b> UpdateCtx<'a, 'b> {
     }
 }
 
-impl<'c> LayoutCtx<'_, '_, 'c> {
+impl LayoutCtx<'_, '_> {
     /// Get an object which can create text layouts.
-    pub fn text(&mut self) -> &mut Text<'c> {
-        &mut self.text_factory
+    pub fn text(&mut self) -> Text {
+        self.state.window.text()
     }
 
     /// Get the window id.
@@ -716,6 +715,11 @@ impl PaintCtx<'_, '_, '_> {
     /// get the `WidgetId` of the current widget.
     pub fn widget_id(&self) -> WidgetId {
         self.widget_state.id
+    }
+
+    /// Get an object which can create text layouts.
+    pub fn text(&mut self) -> Text {
+        self.state.window.text()
     }
 
     /// Query the "hot" state of the widget.

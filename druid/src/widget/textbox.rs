@@ -417,7 +417,7 @@ impl Widget<String> for TextBox {
             rc.clip(clip_rect);
 
             // Calculate layout
-            let text_layout = self.get_layout(rc.text(), &content, env);
+            let text_layout = self.get_layout(&mut rc.text(), &content, env);
 
             // Shift everything inside the clip by the hscroll_offset
             rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
