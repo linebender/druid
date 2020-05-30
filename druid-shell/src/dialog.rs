@@ -47,10 +47,24 @@ pub enum FileDialogType {
 ///
 /// # Cross-platform compatibility
 ///
-/// If you don't want to write platform specific code then your application should avoid
-/// having to deal with directories that have extensions in their name, e.g. `my_stuff.pkg`.
-/// This clashes with [packages] on macOS and you will either need platform specific code
-/// or a degraded user experience on macOS via [`packages_as_directories`].
+/// You could write platform specific code that really makes the best use of each platform.
+/// However if you want to write universal code that will work on all platforms then
+/// you have to keep some restrictions in mind.
+///
+/// ## Don't depend on directories with extensions
+///
+/// Your application should avoid having to deal with directories that have extensions
+/// in their name, e.g. `my_stuff.pkg`. This clashes with [packages] on macOS and you
+/// will either need platform specific code or a degraded user experience on macOS
+/// via [`packages_as_directories`].
+///
+/// ## Use the save dialog only for new paths
+///
+/// Don't direct the user to choose an existing file with the save dialog.
+/// Selecting existing files for overwriting is possible but extremely cumbersome on macOS.
+/// The much more optimized flow is to have the user select a file with the open dialog
+/// and then keep saving to that file without showing a save dialog.
+/// Use the save dialog only for selecting a new location.
 ///
 /// # macOS
 ///
@@ -83,7 +97,7 @@ pub enum FileDialogType {
 /// then you can change the default behavior via [`packages_as_directories`]
 /// to force macOS to behave like other platforms and not give special treatment to packages.
 ///
-/// ## Use the save dialog only for new paths
+/// ## Selecting files for overwriting in the save dialog is cumbersome
 ///
 /// Existing files can be clicked on in the save dialog, but that only copies their base file name.
 /// If the clicked file's extension is different than the first extension of the default type
@@ -93,11 +107,6 @@ pub enum FileDialogType {
 /// and then clicks on an existing file `/Users/Joe/old.txt` in another directory then the returned
 /// path will actually be `/Users/Joe/foo/old.rtf` if the default type's first extension is `rtf`.
 ///
-/// Thus it's not a good idea to direct the user to choose an existing file with the save dialog.
-/// The much more optimized flow is to have the user select a file with the open dialog
-/// and then keep saving to that file without showing a save dialog.
-/// Use the save dialog only for selecting a new location.
-///
 /// ## Have a really good save dialog default type
 ///
 /// There is no way for the user to choose which extension they want to save a file as via the UI.
@@ -106,7 +115,7 @@ pub enum FileDialogType {
 /// *Hopefully it's a temporary problem and we can find a way to show the file formats in the UI.
 /// This is being tracked in [druid#998].*
 ///
-/// [clickable]: #use-the-save-dialog-only-for-new-paths
+/// [clickable]: #selecting-files-for-overwriting-in-the-save-dialog-is-cumbersome
 /// [packages]: #packages
 /// [`select_directories`]: #method.select_directories
 /// [`allowed_types`]: #method.allowed_types
