@@ -45,6 +45,13 @@ pub enum FileDialogType {
 ///
 /// The open dialog can also be switched to *directories mode* via [`select_directories`].
 ///
+/// # Cross-platform compatibility
+///
+/// If you don't want to write platform specific code then your application should avoid
+/// having to deal with directories that have extensions in their name, e.g. `my_stuff.pkg`.
+/// This clashes with [packages] on macOS and you will either need platform specific code
+/// or a degraded user experience on macOS via [`packages_as_directories`].
+///
 /// # macOS
 ///
 /// The file dialog works a bit differently on macOS. For a lot of applications this doesn't matter
@@ -53,11 +60,12 @@ pub enum FileDialogType {
 ///
 /// ## Packages
 ///
-/// On macOS directories with known extensions are considered to be packages.
+/// On macOS directories with known extensions are considered to be packages, e.g. `app_files.pkg`.
 /// Furthermore the packages are divided into two groups based on their extension.
 /// First there are packages that have been defined at the OS level, and secondly there are
 /// packages that are defined at the file dialog level based on [`allowed_types`].
-/// A package behaves similarly to a regular file in many contexts, including the file dialogs.
+/// These two types have slightly different behavior in the file dialogs. Generally packages
+/// behave similarly to regular files in many contexts, including the file dialogs.
 /// This package concept can be turned off in the file dialog via [`packages_as_directories`].
 ///
 /// &#xFEFF; | Packages as files. File filters apply to packages. | Packages as directories.
