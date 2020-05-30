@@ -40,7 +40,8 @@ pub enum FileDialogType {
 /// By default the file dialogs operate in *files mode* where the user can only choose files.
 /// Importantly these are files from the user's perspective, but technically the returned path
 /// will be a directory when the user chooses a package. Read more about [packages] below.
-/// Thus it is important to verify that all the returned paths match your expectations.
+/// It's also possible for users to manually specify a path which they might otherwise not be able
+/// to choose. Thus it is important to verify that all the returned paths match your expectations.
 ///
 /// The open dialog can also be switched to *directories mode* via [`select_directories`].
 ///
@@ -51,13 +52,16 @@ pub enum FileDialogType {
 /// First there are packages that have been defined at the OS level, and secondly there are
 /// packages that are defined at the file dialog level based on [`allowed_types`].
 /// A package behaves similarly to a regular file in many contexts, including the file dialogs.
-/// This means that it can be chosen in the file open dialog when operating in *files mode*,
-/// all the file filters will apply to it, and the user won't be able to traverse into the package.
-/// It won't be selectable in *directories mode* and the user won't be able to traverse into the
-/// package. In the file save dialog packages that are only defined in [`allowed_types`] can be
-/// traversed into. However packages that are defined at the OS level can't be traversed into
-/// even if they are also defined in [`allowed_types`]. Keep in mind though that the file dialog
-/// may start inside any package if the user had traversed into one previously.
+/// This package concept can be turned off in the file dialog via [`packages_as_directories`].
+///
+/// &#xFEFF; | Packages as files. File filters apply to packages. | Packages as directories.
+/// -------- | -------------------------------------------------- | ------------------------
+/// Open directory | Not selectable. Not traversable. | Selectable. Traversable.
+/// Open file | Selectable. Not traversable. | Not selectable. Traversable.
+/// Save file | OS packages [clickable] but not traversable.<br/>Dialog packages traversable but not selectable. | Not selectable. Traversable.
+///
+/// Keep in mind that the file dialog may start inside any package if the user had traversed
+/// into one previously. The user might also manually specify a path inside a package.
 ///
 /// Generally this behavior should be kept, because it's least surprising to macOS users.
 /// However if your application requires selecting directories with extensions as directories
@@ -65,10 +69,36 @@ pub enum FileDialogType {
 /// then you can change the default behavior via [`packages_as_directories`]
 /// to force macOS to behave like other platforms and not give special treatment to packages.
 ///
+/// # macOS
+///
+/// **Use the save dialog only for new paths**
+///
+/// Existing files can be clicked on in the save dialog, but that only copies their base file name.
+/// If the clicked file's extension is different than the first extension of the default type
+/// then the returned path does not actually match the path of the file that was clicked on.
+/// Clicking on a file doesn't change the base path either. So if a user has traversed into
+/// `/Users/Joe/foo/` and then clicks on an existing file `/Users/Joe/old.txt` then the returned
+/// path will actually be `/Users/Joe/foo/old.rtf` if the default type's first extension is `rtf`.
+///
+/// Thus it's not a good idea to direct the user to choose an existing file with the save dialog.
+/// The much more optimized flow is to have the user select a file with the open dialog
+/// and then keep saving to that file without showing a save dialog.
+/// Use the save dialog only for selecting a new location.
+///
+/// **Have a really good save dialog default type**
+///
+/// There is no way for the user to choose which extension they want to save a file as via the UI.
+/// They have no way of knowing which extensions are even supported and must manually type it out.
+///
+/// *Hopefully it's a temporary problem and we can find a way to show the file formats in the UI.
+/// This is being tracked in [druid#998].*
+///
+/// [Clickable]: #macos
 /// [packages]: #packages
 /// [`select_directories`]: #method.select_directories
 /// [`allowed_types`]: #method.allowed_types
 /// [`packages_as_directories`]: #method.packages_as_directories
+/// [druid#998]: https://github.com/xi-editor/druid/issues/998
 #[derive(Debug, Clone, Default)]
 pub struct FileDialogOptions {
     pub(crate) show_hidden: bool,
@@ -141,6 +171,8 @@ impl FileDialogOptions {
     }
 
     /// Set [packages] to be treated as directories instead of files.
+    ///
+    /// This allows for writing more universal cross-platform code at the cost of user experience.
     ///
     /// This is only relevant on macOS.
     ///
