@@ -39,6 +39,11 @@ pub(crate) fn get_file_dialog_path(
             FileDialogType::Save => msg_send![class!(NSSavePanel), savePanel],
         };
 
+        // Enable the user to choose whether file extensions are hidden in the dialog.
+        // This defaults to off, but is recommended to be turned on by Apple.
+        // https://developer.apple.com/design/human-interface-guidelines/macos/user-interaction/file-handling/
+        let () = msg_send![panel, setCanSelectHiddenExtension: YES];
+
         // Set open dialog specific options
         // NSOpenPanel inherits from NSSavePanel and thus has more options.
         let mut set_type_filter = true;
