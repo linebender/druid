@@ -37,7 +37,7 @@ pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
 /// Generally, container widgets don't contain other widgets directly,
 /// but rather contain a `WidgetPod`, which has additional state needed
 /// for layout and for the widget to participate in event flow.
-/// 
+///
 /// `WidgetPod` will translate internal druid events to regular events,
 /// synthesize additional events of interest, and stop propagation when it makes sense.
 ///
