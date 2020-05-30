@@ -34,7 +34,7 @@
 //!
 //! As your application grows, you can use [`Lens`]es to expose only certain
 //! subsets of your data model to certains subsets of your widget tree.
-//! 
+//!
 //! For more information you should read the [druid book].
 //!
 //! # Examples
