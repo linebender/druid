@@ -138,6 +138,7 @@ struct WindowState {
     hwnd: Cell<HWND>,
     scale: Cell<Scale>,
     area: Cell<ScaledArea>,
+    has_menu: Cell<bool>,
     wndproc: Box<dyn WndProc>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     timers: Arc<Mutex<TimerSlots>>,
@@ -358,40 +359,34 @@ impl MyWndProc {
         );
     }
 
-    fn scale(&self) -> Scale {
-        self.handle
+    fn with_window_state<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(Rc<WindowState>) -> R,
+    {
+        f(self
+            .handle
             // Right now there aren't any mutable borrows to this.
             // TODO: Attempt to guarantee this by making mutable handle borrows useless.
             .borrow()
             .state
             .upgrade()
-            .unwrap() // WindowState drops after WM_NCDESTROY, so it's always here.
-            .scale
-            .get()
+            .unwrap()) // WindowState drops after WM_NCDESTROY, so it's always here.
+    }
+
+    fn scale(&self) -> Scale {
+        self.with_window_state(|state| state.scale.get())
     }
 
     fn area(&self) -> ScaledArea {
-        self.handle
-            // Right now there aren't any mutable borrows to this.
-            // TODO: Attempt to guarantee this by making mutable handle borrows useless.
-            .borrow()
-            .state
-            .upgrade()
-            .unwrap() // WindowState drops after WM_NCDESTROY, so it's always here.
-            .area
-            .get()
+        self.with_window_state(|state| state.area.get())
     }
 
     fn set_area(&self, area: ScaledArea) {
-        self.handle
-            // Right now there aren't any mutable borrows to this.
-            // TODO: Attempt to guarantee this by making mutable handle borrows useless.
-            .borrow()
-            .state
-            .upgrade()
-            .unwrap() // WindowState drops after WM_NCDESTROY, so it's always here.
-            .area
-            .set(area)
+        self.with_window_state(move |state| state.area.set(area))
+    }
+
+    fn has_menu(&self) -> bool {
+        self.with_window_state(|state| state.has_menu.get())
     }
 }
 
@@ -677,7 +672,13 @@ impl WndProc for MyWndProc {
                     let is_repeat = (lparam & 0xFFFF) > 0;
                     let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
 
-                    if s.handler.key_down(event) {
+                    if s.handler.key_down(event)
+                        // If the window doesn't have a menu, then we need to suppress ALT/F10.
+                        // Otherwise we will stop getting mouse events for no gain.
+                        // When we do have a menu, those keys will focus the menu.
+                        || (!self.has_menu()
+                            && (key_code == KeyCode::LeftAlt || key_code == KeyCode::F10))
+                    {
                         Some(0)
                     } else {
                         None
@@ -1038,10 +1039,19 @@ impl WindowBuilder {
             let area = ScaledArea::from_dp(self.size, &scale);
             let size_px = area.size_px();
 
+            let (hmenu, accels, has_menu) = match self.menu {
+                Some(menu) => {
+                    let accels = menu.accels();
+                    (menu.into_hmenu(), accels, true)
+                }
+                None => (0 as HMENU, None, false),
+            };
+
             let window = WindowState {
                 hwnd: Cell::new(0 as HWND),
                 scale: Cell::new(scale),
                 area: Cell::new(area),
+                has_menu: Cell::new(has_menu),
                 wndproc: Box::new(wndproc),
                 idle_queue: Default::default(),
                 timers: Arc::new(Mutex::new(TimerSlots::new(1))),
@@ -1063,14 +1073,6 @@ impl WindowBuilder {
                 has_mouse_focus: false,
             };
             win.wndproc.connect(&handle, state);
-
-            let (hmenu, accels) = match self.menu {
-                Some(menu) => {
-                    let accels = menu.accels();
-                    (menu.into_hmenu(), accels)
-                }
-                None => (0 as HMENU, None),
-            };
 
             let mut dwStyle = WS_OVERLAPPEDWINDOW;
             if !self.resizable {
@@ -1406,6 +1408,7 @@ impl WindowHandle {
                 if SetMenu(hwnd, hmenu) == FALSE {
                     warn!("failed to set window menu");
                 } else {
+                    w.has_menu.set(true);
                     DestroyMenu(old_menu);
                 }
                 if let Some(accels) = accels {

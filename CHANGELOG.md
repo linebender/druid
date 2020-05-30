@@ -117,6 +117,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - X11: Support mouse scrolling. ([#961] by [@jneem])
 - `Painter` now properly repaints on data change in `Container`. ([#991] by [@cmyr])
 - macOS: The application menu is now immediately interactable after launch. ([#994] by [@xStrom])
+- Windows: Keep receiving mouse events after pressing ALT or F10 when the window has no menu. ([#997] by [@xStrom])
 
 ### Visual
 
@@ -251,6 +252,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#993]: https://github.com/xi-editor/druid/pull/993
 [#994]: https://github.com/xi-editor/druid/pull/994
 [#996]: https://github.com/xi-editor/druid/pull/996
+[#997]: https://github.com/xi-editor/druid/pull/997
 [#1001]: https://github.com/xi-editor/druid/pull/1001
 
 ## [0.5.0] - 2020-04-01
