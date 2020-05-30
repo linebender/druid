@@ -60,8 +60,8 @@ pub enum FileDialogType {
 /// Open file | Selectable. Not traversable. | Not selectable. Traversable.
 /// Save file | OS packages [clickable] but not traversable.<br/>Dialog packages traversable but not selectable. | Not selectable. Traversable.
 ///
-/// Keep in mind that the file dialog may start inside any package if the user had traversed
-/// into one previously. The user might also manually specify a path inside a package.
+/// Keep in mind that the file dialog may start inside any package if the user has traversed
+/// into one just recently. The user might also manually specify a path inside a package.
 ///
 /// Generally this behavior should be kept, because it's least surprising to macOS users.
 /// However if your application requires selecting directories with extensions as directories
