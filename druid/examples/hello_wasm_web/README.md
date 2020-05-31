@@ -10,10 +10,10 @@ server like [`http`](https://crates.io/crates/https) for serving the web page.
 First build with.
 
 ```
-> wasm-pack build --target web
+> wasm-pack build --target web --dev
 ```
 
-This generates a JavaScript module that exports the `wasm_main` function that's been annotated with the `#[wasm_bindgen]` macro.
+This generates a JavaScript module that exports the `wasm_main` function that's been annotated with the `#[wasm_bindgen]` macro. Leave off the `--dev` flag if you're doing a release build.
 
 Now run
 
@@ -26,4 +26,4 @@ which should start serving this folder.
 Finally, point your browser to the appropriate localhost url (usually http://localhost:8000) and you
 should see your app.
 
-When you make changes to the project, re-run `wasm-pack build --target web` and you can see the changes in your browser when you refresh -- no need to restart `http`.
+When you make changes to the project, re-run `wasm-pack build --target web --dev` and you can see the changes in your browser when you refresh -- no need to restart `http`.

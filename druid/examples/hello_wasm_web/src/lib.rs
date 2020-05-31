@@ -13,31 +13,33 @@
 // limitations under the License.
 
 use druid::widget::{Align, Flex, Label, TextBox};
-use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
+use druid::{AppLauncher, Data, Env, Lens, Widget, WidgetExt, WindowDesc};
 
 use wasm_bindgen::prelude::*;
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
 const TEXT_BOX_WIDTH: f64 = 200.0;
-const WINDOW_TITLE: LocalizedString<HelloState> = LocalizedString::new("Hello World!");
 
 #[derive(Clone, Data, Lens)]
 struct HelloState {
     name: String,
 }
 
-// This wrapper function is the only modification we're making to the vanilla
+// This wrapper function is the primary modification we're making to the vanilla
 // hello.rs example.
 #[wasm_bindgen]
 pub fn wasm_main() {
+    // This hook is necessary to get panic messages on wasm32
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     main()
 }
+
 pub fn main() {
     // describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
-        .title(WINDOW_TITLE)
-        .window_size((400.0, 400.0));
+    //
+    // Window title is set in index.html and window size is ignored on the web,
+    // so can we leave those off.
+    let main_window = WindowDesc::new(build_root_widget);
 
     // create the initial app state
     let initial_state = HelloState {
