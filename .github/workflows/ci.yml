@@ -223,6 +223,16 @@ jobs:
       - name: wasm-pack build examples
         run: wasm-pack build --dev --target web druid/examples/wasm
 
+      # Clippy and build the hello_wasm_web example
+      - name: cargo clippy hello_wasm_web example
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid/examples/hello_wasm_web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+
+      - name: wasm-pack build hello_wasm_web example
+        run: wasm-pack build --target web druid/examples/hello_wasm_web
+
   test-nightly:
     runs-on: ${{ matrix.os }}
     strategy:
