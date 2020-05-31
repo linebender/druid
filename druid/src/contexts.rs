@@ -30,7 +30,7 @@ use crate::{
 
 /// A macro for implementing methods on multiple contexts.
 ///
-/// There are a lot of methods defined on multiple methods; this lets us only
+/// There are a lot of methods defined on multiple contexts; this lets us only
 /// have to write them out once.
 macro_rules! impl_context_method {
     ($ty:ty,  { $($method:item)+ } ) => {
