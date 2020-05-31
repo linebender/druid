@@ -98,7 +98,7 @@
 //! [`Event`]: enum.Event.html
 //! [`druid-shell`]: https://docs.rs/druid-shell
 //! [`piet`]: https://docs.rs/piet
-//! [`druid/examples`]: https://github.com/xi-editor/druid/tree/v0.5.0/druid/examples
+//! [`druid/examples`]: https://github.com/xi-editor/druid/tree/v0.6.0/druid/examples
 //! [druid book]: https://xi-editor.io/druid/intro.html
 
 #![deny(intra_doc_link_resolution_failure, unsafe_code)]

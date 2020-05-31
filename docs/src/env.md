@@ -84,15 +84,15 @@ In general, you should not need to worry about localization directly. See the
 [localization] chapter for an overview of localization in druid.
 
 
-[`Env`]: https://docs.rs/druid/0.5.0/druid/struct.Env.html
-[`Key`]: https://docs.rs/druid/0.5.0/druid/struct.Key.html
-[`Value`]: https://docs.rs/druid/0.5.0/druid/struct.Value.html
-[`LocalizedString`]: https://docs.rs/druid/0.5.0/druid/struct.LocalizedString.html
-[`resolve`]: https://docs.rs/druid/0.5.0/druid/struct.LocalizedString.html#method.resolve
+[`Env`]: https://docs.rs/druid/0.6.0/druid/struct.Env.html
+[`Key`]: https://docs.rs/druid/0.6.0/druid/struct.Key.html
+[`Value`]: https://docs.rs/druid/0.6.0/druid/struct.Value.html
+[`LocalizedString`]: https://docs.rs/druid/0.6.0/druid/struct.LocalizedString.html
+[`resolve`]: https://docs.rs/druid/0.6.0/druid/struct.LocalizedString.html#method.resolve
 [localization]: ./localization.md
 [reverse-DNS]: https://en.wikipedia.org/wiki/Reverse_domain_name_notation
-[`AppLauncher::configure_env`]: https://docs.rs/druid/0.5.0/druid/struct.AppLauncher.html#method.configure_env
-[`KeyOrValue`]: https://docs.rs/druid/0.5.0/druid/enum.KeyOrValue.html
-[`EnvScope`]: https://docs.rs/druid/0.5.0/druid/widget/struct.EnvScope.html
-[`WidgetExt`]: https://docs.rs/druid/0.5.0/druid/trait.WidgetExt.html
-[`env_scope`]: https://docs.rs/druid/0.5.0/druid/trait.WidgetExt.html#method.env_scope
+[`AppLauncher::configure_env`]: https://docs.rs/druid/0.6.0/druid/struct.AppLauncher.html#method.configure_env
+[`KeyOrValue`]: https://docs.rs/druid/0.6.0/druid/enum.KeyOrValue.html
+[`EnvScope`]: https://docs.rs/druid/0.6.0/druid/widget/struct.EnvScope.html
+[`WidgetExt`]: https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html
+[`env_scope`]: https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html#method.env_scope

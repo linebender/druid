@@ -25,6 +25,16 @@ then there might be a chance to help out with the preparation of new releases.
 Whether you're new or have prepared druid releases many times already,
 it helps to follow a checklist of what needs to be done. This is that list.
 
+### Increasing the versions
+
+The `druid`, `druid-shell`, and `druid-derive` `Cargo.toml` files need to be updated.
+The `version` field needs to be increased to the next [semver] version that makes sense.
+These packages all also import eachother and those cross-dependency versions need updating too.
+
+You should also search for the previous version number across the whole workspace
+to find any other references that might need updating. There are for example plenty of links
+to specific version documentation that will need updating.
+
 ### Changelog
 
 - Add a new *Unreleased* section by copying the current one.
