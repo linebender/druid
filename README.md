@@ -224,14 +224,14 @@ a lone dependency (it re-exports all the parts of druid-shell, piet, and kurbo
 that you'll need):
 
 ```toml
-druid = "0.5.0"
+druid = "0.6.0"
 ```
 
 Since druid is currently in fast-evolving state, you might prefer to drink from
 the firehose:
 
 ```toml
-druid = { git = "https://github.com/xi-editor/druid.git", version = "0.5" }
+druid = { git = "https://github.com/xi-editor/druid.git" }
 ```
 
 ### Platform notes
@@ -283,12 +283,12 @@ active and friendly community.
 [Zulip chat instance]: https://xi.zulipchat.com
 [non-druid examples]: ./druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
-[EventCtx]: https://docs.rs/druid/0.5.0/druid/struct.EventCtx.html
-[LifeCycleCtx]: https://docs.rs/druid/0.5.0/druid/struct.EventCtx.html
-[LayoutCtx]: https://docs.rs/druid/0.5.0/druid/struct.LayoutCtx.html
-[PaintCtx]: https://docs.rs/druid/0.5.0/druid/struct.PaintCtx.html
-[UpdateCtx]: https://docs.rs/druid/0.5.0/druid/struct.UpdateCtx.html
-[Widget trait]: https://docs.rs/druid/0.5.0/druid/trait.Widget.html
-[Data trait]: https://docs.rs/druid/0.5.0/druid/trait.Data.html
-[Lens datatype]: https://docs.rs/druid/0.5.0/druid/trait.Lens.html
+[EventCtx]: https://docs.rs/druid/0.6.0/druid/struct.EventCtx.html
+[LifeCycleCtx]: https://docs.rs/druid/0.6.0/druid/struct.EventCtx.html
+[LayoutCtx]: https://docs.rs/druid/0.6.0/druid/struct.LayoutCtx.html
+[PaintCtx]: https://docs.rs/druid/0.6.0/druid/struct.PaintCtx.html
+[UpdateCtx]: https://docs.rs/druid/0.6.0/druid/struct.UpdateCtx.html
+[Widget trait]: https://docs.rs/druid/0.6.0/druid/trait.Widget.html
+[Data trait]: https://docs.rs/druid/0.6.0/druid/trait.Data.html
+[Lens datatype]: https://docs.rs/druid/0.6.0/druid/trait.Lens.html
 [druid book]: https://xi-editor.io/druid/intro.html

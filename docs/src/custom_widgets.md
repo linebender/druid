@@ -80,10 +80,10 @@ v controller, painter
 - request paint & request layout
 - changing widgets at runtime
 
-[`Controller`]: https://docs.rs/druid/0.5.0/druid/widget/trait.Controller.html
+[`Controller`]: https://docs.rs/druid/0.6.0/druid/widget/trait.Controller.html
 [`Widget`]: ./widget.md
-[`Painter`]: https://docs.rs/druid/0.5.0/druid/widget/struct.Painter.html
-[`SizedBox`]: https://docs.rs/druid/0.5.0/druid/widget/struct.SizedBox.html
-[`Container`]: https://docs.rs/druid/0.5.0/druid/widget/struct.Container.html
-[`WidgetExt`]: https://docs.rs/druid/0.5.0/druid/trait.WidgetExt.html
-[`background`]: https://docs.rs/druid/0.5.0/druid/trait.WidgetExt.html#background
+[`Painter`]: https://docs.rs/druid/0.6.0/druid/widget/struct.Painter.html
+[`SizedBox`]: https://docs.rs/druid/0.6.0/druid/widget/struct.SizedBox.html
+[`Container`]: https://docs.rs/druid/0.6.0/druid/widget/struct.Container.html
+[`WidgetExt`]: https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html
+[`background`]: https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html#background

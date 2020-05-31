@@ -11,6 +11,6 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-druid = { path="../.."}
-wasm-bindgen = "0.2.60"
-console_error_panic_hook = { version = "0.1.6" }
+druid = { path="../.." }
+wasm-bindgen = "0.2.63"
+console_error_panic_hook = "0.1.6"
