@@ -564,8 +564,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         // If we need to replace either the event or its data.
         let mut modified_event = None;
-        // Tracking whether we need to merge our state up to the parent.
-        let mut needs_merge = false;
 
         let recurse = match event {
             Event::Internal(internal) => match internal {
@@ -579,7 +577,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         data,
                         env,
                     );
-                    needs_merge |= hot_changed;
                     had_active || hot_changed
                 }
                 InternalEvent::TargetedCommand(target, cmd) => {
@@ -614,7 +611,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 ctx.is_root
             }
             Event::MouseDown(mouse_event) => {
-                needs_merge |= WidgetPod::set_hot_state(
+                WidgetPod::set_hot_state(
                     &mut self.inner,
                     &mut self.state,
                     ctx.state,
@@ -633,7 +630,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
             }
             Event::MouseUp(mouse_event) => {
-                needs_merge |= WidgetPod::set_hot_state(
+                WidgetPod::set_hot_state(
                     &mut self.inner,
                     &mut self.state,
                     ctx.state,
@@ -661,7 +658,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     data,
                     env,
                 );
-                needs_merge |= hot_changed;
                 // MouseMove is recursed even if the widget is not active and not hot,
                 // but was hot previously. This is to allow the widget to respond to the movement,
                 // e.g. drag functionality where the widget wants to follow the mouse.
@@ -675,7 +671,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
             }
             Event::Wheel(mouse_event) => {
-                needs_merge |= WidgetPod::set_hot_state(
+                WidgetPod::set_hot_state(
                     &mut self.inner,
                     &mut self.state,
                     ctx.state,
@@ -716,12 +712,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
             inner_ctx.widget_state.has_active |= inner_ctx.widget_state.is_active;
             ctx.is_handled |= inner_ctx.is_handled;
-            needs_merge = true;
         }
 
-        if needs_merge {
-            ctx.widget_state.merge_up(&mut self.state);
-        }
+        // Always merge even if not needed, because merging is idempotent and gives us simpler code.
+        // Doing this conditionally only makes sense when there's a measurable performance boost.
+        ctx.widget_state.merge_up(&mut self.state);
     }
 
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
@@ -913,6 +908,8 @@ impl WidgetState {
     /// Update to incorporate state changes from a child.
     ///
     /// This will also clear some requests in the child state.
+    ///
+    /// This method is idempotent and can be called multiple times.
     fn merge_up(&mut self, child_state: &mut WidgetState) {
         let mut child_region = child_state.invalid.clone();
         child_region += child_state.layout_rect().origin().to_vec2() - child_state.viewport_offset;
