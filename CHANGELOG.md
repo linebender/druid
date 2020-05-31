@@ -153,6 +153,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Renamed `BaseState` to `WidgetState` ([#969] by [@cmyr])
 - X11: Reworked error handling ([#982] by [@jneem])
 - Fixed test harness crashing on failure. ([#984] by [@xStrom])
+- Refactored `WidgetPod::event` to improve readability and performance of more complex logic. ([#1001] by [@xStrom])
 
 ### Outside News
 
@@ -248,6 +249,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#991]: https://github.com/xi-editor/druid/pull/991
 [#993]: https://github.com/xi-editor/druid/pull/993
 [#996]: https://github.com/xi-editor/druid/pull/996
+[#1001]: https://github.com/xi-editor/druid/pull/1001
 
 ## [0.5.0] - 2020-04-01
 
