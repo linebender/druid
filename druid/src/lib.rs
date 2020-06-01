@@ -167,7 +167,7 @@ pub use ext_event::{ExtEventError, ExtEventSink};
 pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
-pub use modal::Modal;
+pub use modal::ModalDesc;
 pub use mouse::MouseEvent;
 pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;

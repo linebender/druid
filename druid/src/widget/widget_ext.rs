@@ -17,7 +17,7 @@
 use super::invalidation::DebugInvalidation;
 use super::{
     Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
-    IdentityWrapper, Padding, Parse, SizedBox, WidgetId,
+    IdentityWrapper, LabelText, Padding, Parse, SizedBox, TooltipWrap, WidgetId,
 };
 use crate::{Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LensWrap, UnitPoint, Widget};
 
@@ -242,6 +242,10 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a `Box`.
     fn boxed(self) -> Box<dyn Widget<T>> {
         Box::new(self)
+    }
+
+    fn tooltip(self, text: impl Into<LabelText<T>>) -> ControllerHost<Self, TooltipWrap<T>> {
+        self.controller(TooltipWrap::new(text.into()))
     }
 }
 

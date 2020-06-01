@@ -14,8 +14,8 @@
 
 use druid::widget::{Align, Button, Controller, Flex, Label, TextBox};
 use druid::{
-    AppLauncher, Color, Data, Env, Event, EventCtx, KeyCode, Lens, Modal, SingleUse, Widget,
-    WidgetExt, WindowDesc,
+    AppLauncher, Color, Data, Env, Event, EventCtx, KeyCode, Lens, ModalDesc, Widget, WidgetExt,
+    WindowDesc,
 };
 
 const WINDOW_TITLE: &'static str = "Number entry";
@@ -27,13 +27,15 @@ struct ModalState {
 
 struct NumberEntryController;
 
-fn make_modal() -> Modal<ModalState> {
+fn make_modal() -> ModalDesc<ModalState> {
     let label = Label::new("Only numbers allowed!");
-    let button = Button::new("I'm sorry, it won't happen again.").on_click(|ctx, _data, _env| {
-        ctx.submit_command(Modal::DISMISS_MODAL, None);
-    });
+    let button = Button::new("I'm sorry, it won't happen again.")
+        .on_click(|ctx, _data, _env| {
+            ctx.dismiss_modal();
+        })
+        .tooltip("Go on, apologize.");
     let flex = Flex::column().with_child(label).with_child(button);
-    Modal::new(flex).background(Color::grey8(100).with_alpha(0.5))
+    ModalDesc::new(flex).background(Color::grey8(100).with_alpha(0.5))
 }
 
 impl<T, W: Widget<T>> Controller<T, W> for NumberEntryController {
@@ -51,7 +53,7 @@ impl<T, W: Widget<T>> Controller<T, W> for NumberEntryController {
                 | KeyCode::Key8
                 | KeyCode::Key9
                 | KeyCode::Backspace => child.event(ctx, event, data, env),
-                _ => ctx.submit_command(Modal::SHOW_MODAL.with(SingleUse::new(make_modal())), None),
+                _ => ctx.show_modal(make_modal()),
             }
         } else {
             child.event(ctx, event, data, env);
@@ -60,17 +62,14 @@ impl<T, W: Widget<T>> Controller<T, W> for NumberEntryController {
 }
 
 pub fn main() {
-    // describe the main window
     let main_window = WindowDesc::new(build_root_widget)
         .title(WINDOW_TITLE)
         .window_size((400.0, 400.0));
 
-    // create the initial app state
     let initial_state = ModalState {
         number: "123".into(),
     };
 
-    // start the application
     AppLauncher::with_window(main_window)
         .launch(initial_state)
         .expect("Failed to launch application");

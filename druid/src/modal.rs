@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::prelude::*;
-use druid::widget::BackgroundBrush;
-use druid::{Data, Point, Rect, Selector, SingleUse, WidgetPod};
+use std::any::Any;
+
+use crate::lens;
+use crate::widget::prelude::*;
+use crate::{Color, Data, Point, Rect, Selector, SingleUse, WidgetExt, WidgetPod};
 
 /// A widget that has a child, and can optionally show modal widgets that obscure the child.
 pub(crate) struct ModalHost<T, W> {
@@ -33,34 +35,70 @@ pub(crate) struct ModalHost<T, W> {
 ///
 /// [`Window`]: struct.Window.html
 /// [`SHOW_MODAL`]: struct.Modal.html#associatedconstant.SHOW_MODAL
-pub struct Modal<T> {
-    widget: WidgetPod<T, Box<dyn Widget<T>>>,
+pub struct ModalDesc<T> {
+    widget: Box<dyn Widget<T>>,
     /// If false, only the modal will get user input events.
     pass_through_events: bool,
     /// If set, a background that will be drawn over the `ModalHost` before drawing the modal.
-    background: Option<BackgroundBrush<T>>,
+    // TODO: it would be nice to take a BackgroundBrush here, but that requires a type parameter
+    // and there isn't currently a way to 'lens' a BackgroundBrush (which we would need for
+    // SHOW_MODAL_NO_DATA).
+    background: Option<Color>,
     /// If set, the origin of the modal widget. If unset, the modal widget is centered in the
     /// `ModalHost`.
     position: Option<Point>,
 }
 
-impl Modal<()> {
-    /// Command to dismiss the modal.
-    pub const DISMISS_MODAL: Selector<()> = Selector::new("druid.dismiss-modal-widget");
+// The same as ModalDesc, but with the widget wrapped in a WidgetPod.
+pub(crate) struct Modal<T> {
+    widget: WidgetPod<T, Box<dyn Widget<T>>>,
+    pass_through_events: bool,
+    background: Option<Color>,
+    position: Option<Point>,
 }
 
-impl<T> Modal<T> {
+impl<T> From<ModalDesc<T>> for Modal<T> {
+    fn from(desc: ModalDesc<T>) -> Modal<T> {
+        Modal {
+            widget: WidgetPod::new(desc.widget),
+            pass_through_events: desc.pass_through_events,
+            position: desc.position,
+            background: desc.background,
+        }
+    }
+}
+
+impl ModalDesc<()> {
+    /// Command to dismiss the modal.
+    pub(crate) const DISMISS_MODAL: Selector<()> = Selector::new("druid.dismiss-modal-widget");
+
+    /// TODO: docme
+    pub(crate) const SHOW_MODAL_NO_DATA: Selector<SingleUse<ModalDesc<()>>> =
+        Selector::new("druid.show-modal-widget-no-data");
+
+    fn lensed<T: Data>(self) -> ModalDesc<T> {
+        ModalDesc {
+            widget: Box::new(self.widget.lens(lens::Map::new(|_| (), |_, _| {}))),
+            pass_through_events: self.pass_through_events,
+            background: self.background,
+            position: self.position,
+        }
+    }
+}
+
+impl<T> ModalDesc<T> {
     /// Command to display a modal in this host.
     ///
     /// Note: this is a bit of a footgun, because the typed selectors don't know about generics. In
     /// particular, this means that if you submit a SHOW_MODAL command with the wrong `T`, it will
     /// type-check but panic at run-time.
-    pub const SHOW_MODAL: Selector<SingleUse<Modal<T>>> = Selector::new("druid.show-modal-widget");
+    pub(crate) const SHOW_MODAL: Selector<SingleUse<Box<dyn Any>>> =
+        Selector::new("druid.show-modal-widget");
 
     /// Creates a new modal for showing the widget `innner`.
-    pub fn new(inner: impl Widget<T> + 'static) -> Modal<T> {
-        Modal {
-            widget: WidgetPod::new(Box::new(inner)),
+    pub fn new(inner: impl Widget<T> + 'static) -> ModalDesc<T> {
+        ModalDesc {
+            widget: Box::new(inner),
             pass_through_events: false,
             background: None,
             position: None,
@@ -70,8 +108,8 @@ impl<T> Modal<T> {
     /// Sets the background for this modal.
     ///
     /// This background will be drawn on top of the window, but below the modal widget.
-    pub fn background<B: Into<BackgroundBrush<T>>>(mut self, background: B) -> Self {
-        self.background = Some(background.into());
+    pub fn background(mut self, color: Color) -> Self {
+        self.background = Some(color);
         self
     }
 
@@ -105,20 +143,29 @@ impl<T, W> ModalHost<T, W> {
 impl<T: Data, W: Widget<T>> Widget<T> for ModalHost<T, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
-            Event::Command(cmd) if cmd.is(Modal::<T>::SHOW_MODAL) => {
-                if let Some(modal) = cmd.get_unchecked(Modal::<T>::SHOW_MODAL).take() {
-                    self.modals.push(modal);
-                    ctx.children_changed();
-                } else {
-                    log::error!("couldn't get modal payload");
-                }
+            Event::Command(cmd) if cmd.is(ModalDesc::<T>::SHOW_MODAL) => {
+                let modal = cmd.get_unchecked(ModalDesc::<T>::SHOW_MODAL);
+                // SHOW_MODAL is private to druid, and we already checked at command submission
+                // that the type parameter is correct.
+                let modal = modal.take().unwrap().downcast::<ModalDesc<T>>().unwrap();
+                self.modals.push((*modal).into());
+                ctx.children_changed();
                 ctx.set_handled();
             }
-            Event::Command(cmd) if cmd.is(Modal::DISMISS_MODAL) => {
+            Event::Command(cmd) if cmd.is(ModalDesc::DISMISS_MODAL) => {
                 if self.modals.pop().is_some() {
                     ctx.children_changed();
                 } else {
                     log::warn!("cannot dismiss modal; no modal shown");
+                }
+                ctx.set_handled();
+            }
+            Event::Command(cmd) if cmd.is(ModalDesc::SHOW_MODAL_NO_DATA) => {
+                if let Some(modal) = cmd.get_unchecked(ModalDesc::SHOW_MODAL_NO_DATA).take() {
+                    self.modals.push(modal.lensed().into());
+                    ctx.children_changed();
+                } else {
+                    log::error!("couldn't get modal payload");
                 }
                 ctx.set_handled();
             }
@@ -182,12 +229,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for ModalHost<T, W> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint(ctx, data, env);
         for modal in &mut self.modals {
-            let frame = ctx.size().to_rect();
             if let Some(bg) = &mut modal.background {
-                ctx.with_save(|ctx| {
-                    ctx.clip(frame);
-                    bg.paint(ctx, data, env);
-                });
+                let frame = ctx.size().to_rect();
+                ctx.fill(frame, bg);
             }
 
             // TODO: cmyr's modal stuff had support for a drop-shadow
