@@ -72,7 +72,13 @@ impl ModalDesc<()> {
     /// Command to dismiss the modal.
     pub(crate) const DISMISS_MODAL: Selector<()> = Selector::new("druid.dismiss-modal-widget");
 
-    /// TODO: docme
+    /// Shows a modal widget that doesn't take any data.
+    ///
+    /// This is less flexible than `SHOW_MODAL`, but it has one big advantage: it makes it possible
+    /// for druid to provide nice interfaces to show simple modals. The issue with `SHOW_MODAL` is
+    /// that from within druid we have no idea what the right `Data` is, and so druid can't create
+    /// its own `ModalDesc<T>`s. See `WidgetExt::tooltip` for an example of the kind of API that we
+    /// can provide for `ModalDesc<()>`.
     pub(crate) const SHOW_MODAL_NO_DATA: Selector<SingleUse<ModalDesc<()>>> =
         Selector::new("druid.show-modal-widget-no-data");
 
@@ -150,6 +156,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for ModalHost<T, W> {
                 let modal = modal.take().unwrap().downcast::<ModalDesc<T>>().unwrap();
                 self.modals.push((*modal).into());
                 ctx.children_changed();
+                ctx.request_paint();
                 ctx.set_handled();
             }
             Event::Command(cmd) if cmd.is(ModalDesc::DISMISS_MODAL) => {
@@ -158,6 +165,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for ModalHost<T, W> {
                 } else {
                     log::warn!("cannot dismiss modal; no modal shown");
                 }
+                ctx.request_paint();
                 ctx.set_handled();
             }
             Event::Command(cmd) if cmd.is(ModalDesc::SHOW_MODAL_NO_DATA) => {
@@ -167,6 +175,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for ModalHost<T, W> {
                 } else {
                     log::error!("couldn't get modal payload");
                 }
+                ctx.request_paint();
                 ctx.set_handled();
             }
 
