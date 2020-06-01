@@ -244,6 +244,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         Box::new(self)
     }
 
+    /// Displays a tooltip when the mouse hovers over this widget.
     fn tooltip(self, text: impl Into<LabelText<T>>) -> ControllerHost<Self, TooltipWrap<T>> {
         self.controller(TooltipWrap::new(text.into()))
     }

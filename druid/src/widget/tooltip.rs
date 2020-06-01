@@ -30,6 +30,10 @@ const TOOLTIP_TEXT_PADDING: f64 = 3.0;
 const TOOLTIP_OFFSET: Vec2 = Vec2::new(10.0, 10.0);
 
 /// A controller that listens for mouse hovers and displays a tooltip in response.
+///
+/// See [`WidgetExt::tooltip`] for a nicer interface to this functionality.
+///
+/// [`WidgetExt::tooltip`]: ../trait.WidgetExt.html#method.tooltip
 pub struct TooltipWrap<T> {
     text: LabelText<T>,
     timer: TimerToken,
