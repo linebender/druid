@@ -108,25 +108,23 @@ impl<T: Data> Widget<T> for Spinner {
         let t = self.t;
         let (width, height) = (ctx.size().width, ctx.size().height);
         let center = Point::new(width / 2.0, height / 2.0);
-        let (r, g, b, _) = Color::as_rgba(&self.color.resolve(env));
+        let (r, g, b, original_alpha) = Color::as_rgba(&self.color.resolve(env));
         let scale_factor = width.min(height) / 40.0;
 
         for step in 1..=12 {
-            ctx.paint_with_z_index(1, move |ctx| {
-                let step = f64::from(step);
-                let fade_t = (t * 12.0 + 1.0).trunc();
-                let fade = ((fade_t + step).rem_euclid(12.0) / 12.0) + 1.0 / 12.0;
-                let angle = Vec2::from_angle((step / 12.0) * -2.0 * PI);
-                let ambit_start = center + (10.0 * scale_factor * angle);
-                let ambit_end = center + (20.0 * scale_factor * angle);
-                let color = Color::rgba(r, g, b, fade);
+            let step = f64::from(step);
+            let fade_t = (t * 12.0 + 1.0).trunc();
+            let fade = ((fade_t + step).rem_euclid(12.0) / 12.0) + 1.0 / 12.0;
+            let angle = Vec2::from_angle((step / 12.0) * -2.0 * PI);
+            let ambit_start = center + (10.0 * scale_factor * angle);
+            let ambit_end = center + (20.0 * scale_factor * angle);
+            let color = Color::rgba(r, g, b, fade * original_alpha);
 
-                ctx.stroke(
-                    Line::new(ambit_start, ambit_end),
-                    &color,
-                    3.0 * scale_factor,
-                );
-            });
+            ctx.stroke(
+                Line::new(ambit_start, ambit_end),
+                &color,
+                3.0 * scale_factor,
+            );
         }
     }
 }
