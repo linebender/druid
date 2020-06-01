@@ -56,7 +56,7 @@ pub struct Selector<T = ()>(SelectorSymbol, PhantomData<*const T>);
 /// The [`SingleUse`] docs give an example on how to do this.
 ///
 /// Generic payloads can be achieved with `Selector<Box<dyn Any>>`.
-/// In this case it could make sens to use utility functions to construct
+/// In this case it could make sense to use utility functions to construct
 /// such commands in order to maintain as much static typing as possible.
 /// The [`EventCtx::new_window`] method is an example of this.
 ///
