@@ -60,6 +60,12 @@ impl Spinner {
     }
 }
 
+impl Default for Spinner {
+    fn default() -> Self {
+        Spinner::new()
+    }
+}
+
 impl<T: Data> Widget<T> for Spinner {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
