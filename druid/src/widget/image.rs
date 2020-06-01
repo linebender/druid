@@ -25,7 +25,37 @@ use crate::{
     PaintCtx, Rect, RenderContext, Size, UpdateCtx, Widget,
 };
 
-/// A widget that renders an Image
+/// A widget that renders an Image. Contains data about how to fill given space and
+/// interpolate pixels.
+/// Configuration options are provided via the builder pattern.
+///
+/// Note: interpolation can lead to blurry images or artifacts and so is not
+/// recommended for things like icons; instead consider using
+/// [SVG files](https://en.wikipedia.org/wiki/Scalable_Vector_Graphics) and
+/// enabling the `svg` feature with `cargo`.
+///
+/// (See also:
+/// [`druid::widget::ImageData`],
+/// [`druid::widget::FillStrat`],
+/// [`druid::piet::InterpolationMode`]
+/// )
+///
+/// # Example
+///
+/// Create an image widget and configure it using builder methods.
+/// ```
+/// use druid::{
+///     widget::{Image, ImageData, FillStrat},
+///     piet::InterpolationMode,
+/// };
+///
+/// let image_data = ImageData::empty();
+/// let image_widget = Image::new(image_data)
+///     // set fill strategy
+///     .fill_mode(FillStrat::Fill)
+///     // set interpolation mode
+///     .interpolation_mode(InterpolationMode::NearestNeighbor);
+/// ```
 pub struct Image {
     image_data: ImageData,
     fill: FillStrat,
@@ -35,7 +65,10 @@ pub struct Image {
 impl Image {
     /// Create an image drawing widget from `ImageData`.
     ///
-    /// The Image will scale to fit its box constraints.
+    /// By default, the Image will scale to fit its box constraints
+    /// ([`druid::widget::FillStrat::Fill`])
+    /// and will be scaled bilinearly
+    /// ([`druid::piet::InterpolationMode::Bilinear`])
     pub fn new(image_data: ImageData) -> Self {
         Image {
             image_data,
@@ -107,6 +140,7 @@ impl<T: Data> Widget<T> for Image {
 }
 
 /// Stored Image data.
+/// Contains raw bytes, dimensions, and [format data](../piet/enum.ImageFormat.html)
 #[derive(Clone)]
 pub struct ImageData {
     pixels: Vec<u8>,
