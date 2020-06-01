@@ -1,16 +1,38 @@
-//! A widget that may present a modal.
+// Copyright 2019 The xi-editor Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 use druid::widget::prelude::*;
 use druid::widget::BackgroundBrush;
 use druid::{Data, Point, Rect, Selector, SingleUse, WidgetPod};
 
 /// A widget that has a child, and can optionally show modal widgets that obscure the child.
-pub struct ModalHost<T, W> {
+pub(crate) struct ModalHost<T, W> {
     child: W,
     /// A stack of modal widgets. Only the top widget on the stack gets user interaction events.
     modals: Vec<Modal<T>>,
 }
 
+/// Describes a modal widget.
+///
+/// A modal widget is a widget that can be displayed over all the other widgets in a window. It
+/// consists of a widget (which must take the same data type as the [`Window`]) and some settings
+/// describing how the widget will be presented.
+///
+/// You can display a modal widget by sending a [`SHOW_MODAL`] command to a window.
+///
+/// [`Window`]: struct.Window.html
+/// [`SHOW_MODAL`]: struct.Modal.html#associatedconstant.SHOW_MODAL
 pub struct Modal<T> {
     widget: WidgetPod<T, Box<dyn Widget<T>>>,
     /// If false, only the modal will get user input events.
@@ -35,6 +57,7 @@ impl<T> Modal<T> {
     /// type-check but panic at run-time.
     pub const SHOW_MODAL: Selector<SingleUse<Modal<T>>> = Selector::new("druid.show-modal-widget");
 
+    /// Creates a new modal for showing the widget `innner`.
     pub fn new(inner: impl Widget<T> + 'static) -> Modal<T> {
         Modal {
             widget: WidgetPod::new(Box::new(inner)),
@@ -44,14 +67,34 @@ impl<T> Modal<T> {
         }
     }
 
+    /// Sets the background for this modal.
+    ///
+    /// This background will be drawn on top of the window, but below the modal widget.
     pub fn background<B: Into<BackgroundBrush<T>>>(mut self, background: B) -> Self {
         self.background = Some(background.into());
         self
     }
+
+    /// Determines whether to pass through events from the modal to the rest of the window.
+    ///
+    /// The default value of `pass_through` is `false`, meaning that the user can only interact
+    /// with the modal widget.
+    pub fn pass_through_events(mut self, pass_through: bool) -> Self {
+        self.pass_through_events = pass_through;
+        self
+    }
+
+    /// Sets the origin of the modal widget, relative to the window.
+    ///
+    /// By default, the modal widget is centered in the window.
+    pub fn position(mut self, position: Point) -> Self {
+        self.position = Some(position);
+        self
+    }
 }
 
-impl<T, W: Widget<T>> ModalHost<T, W> {
-    pub fn new(widget: W) -> Self {
+impl<T, W> ModalHost<T, W> {
+    pub(crate) fn new(widget: W) -> Self {
         ModalHost {
             child: widget,
             modals: Vec::new(),
