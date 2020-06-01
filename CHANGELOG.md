@@ -53,6 +53,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `set_menu` method on `UpdateCtx` and `LifeCycleCtx` ([#970] by [@cmyr])
 - Standardize and expose more methods on more contexts ([#972] by [@cmyr])
+- `Spinner` widget to represent loading states. ([#1003] by [@futurepaul])
 
 ### Changed
 
@@ -256,6 +257,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#996]: https://github.com/xi-editor/druid/pull/996
 [#997]: https://github.com/xi-editor/druid/pull/997
 [#1001]: https://github.com/xi-editor/druid/pull/1001
+[#1003]: https://github.com/xi-editor/druid/pull/1003
 
 ## [0.5.0] - 2020-04-01
 
