@@ -6,7 +6,7 @@ use druid::{Data, Point, Rect, Selector, SingleUse, WidgetPod};
 
 /// A widget that has a child, and can optionally show modal widgets that obscure the child.
 pub struct ModalHost<T, W> {
-    child: WidgetPod<T, W>,
+    child: W,
     /// A stack of modal widgets. Only the top widget on the stack gets user interaction events.
     modals: Vec<Modal<T>>,
 }
@@ -53,7 +53,7 @@ impl<T> Modal<T> {
 impl<T, W: Widget<T>> ModalHost<T, W> {
     pub fn new(widget: W) -> Self {
         ModalHost {
-            child: WidgetPod::new(widget),
+            child: widget,
             modals: Vec::new(),
         }
     }
@@ -112,16 +112,15 @@ impl<T: Data, W: Widget<T>> Widget<T> for ModalHost<T, W> {
         self.child.lifecycle(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         for modal in &mut self.modals {
             modal.widget.update(ctx, data, env);
         }
-        self.child.update(ctx, data, env);
+        self.child.update(ctx, old_data, data, env);
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         let size = self.child.layout(ctx, bc, data, env);
-        self.child.set_layout_rect(ctx, data, env, size.to_rect());
         for modal in &mut self.modals {
             let modal_constraints = BoxConstraints::new(Size::ZERO, size);
             let modal_size = modal.widget.layout(ctx, &modal_constraints, data, env);
