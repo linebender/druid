@@ -26,6 +26,7 @@ use crate::shell::{Counter, Cursor, WindowHandle};
 
 use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::modal::ModalHost;
 use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
@@ -42,7 +43,7 @@ pub struct WindowId(u64);
 /// Per-window state not owned by user code.
 pub struct Window<T> {
     pub(crate) id: WindowId,
-    pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
+    pub(crate) root: WidgetPod<T, ModalHost<T, Box<dyn Widget<T>>>>,
     pub(crate) title: LabelText<T>,
     size: Size,
     pub(crate) menu: Option<MenuDesc<T>>,
@@ -55,11 +56,11 @@ pub struct Window<T> {
     // delegate?
 }
 
-impl<T> Window<T> {
+impl<T: Data> Window<T> {
     pub(crate) fn new(id: WindowId, handle: WindowHandle, desc: WindowDesc<T>) -> Window<T> {
         Window {
             id,
-            root: WidgetPod::new(desc.root),
+            root: WidgetPod::new(ModalHost::new(desc.root)),
             size: Size::ZERO,
             title: desc.title,
             menu: desc.menu,
@@ -71,9 +72,7 @@ impl<T> Window<T> {
             timers: HashMap::new(),
         }
     }
-}
 
-impl<T: Data> Window<T> {
     /// `true` iff any child requested an animation frame during the last `AnimFrame` event.
     pub(crate) fn wants_animation_frame(&self) -> bool {
         self.last_anim.is_some()
