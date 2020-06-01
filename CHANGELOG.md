@@ -21,6 +21,8 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Docs
 
+- Fixed a link in `druid::command` documentation. ([#1008] by [@covercash2])
+
 ### Examples
 
 ### Maintenance
@@ -213,6 +215,7 @@ Last release without a changelog :(
 [@yrns]: https://github.com/yrns
 [@jrmuizel]: https://github.com/jrmuizel
 [@scholtzan]: https://github.com/scholtzan
+[@covercash2]: https://github.com/covercash2
 
 [#599]: https://github.com/xi-editor/druid/pull/599
 [#611]: https://github.com/xi-editor/druid/pull/611
@@ -306,6 +309,7 @@ Last release without a changelog :(
 [#997]: https://github.com/xi-editor/druid/pull/997
 [#1001]: https://github.com/xi-editor/druid/pull/1001
 [#1003]: https://github.com/xi-editor/druid/pull/1003
+[#1008]: https://github.com/xi-editor/druid/pull/1008
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/xi-editor/druid/compare/v0.5.0...v0.6.0
