@@ -21,7 +21,7 @@ use druid::{
     Selector, Target, Widget, WidgetExt, WindowDesc,
 };
 
-use druid::widget::{Button, Either, Flex, Label};
+use druid::widget::{Button, Either, Flex, Label, Spinner};
 
 const START_SLOW_FUNCTION: Selector<u32> = Selector::new("start_slow_function");
 
@@ -80,9 +80,9 @@ fn ui_builder() -> impl Widget<AppState> {
             ctx.submit_command(cmd, None);
         })
         .padding(5.0);
-    let button_placeholder = Label::new(LocalizedString::new("Processing..."))
-        .padding(5.0)
-        .center();
+    let button_placeholder = Flex::column()
+        .with_child(Label::new(LocalizedString::new("Processing...")).padding(5.0))
+        .with_child(Spinner::new());
 
     let text = LocalizedString::new("hello-counter")
         .with_arg("count", |data: &AppState, _env| (data.value).into());
