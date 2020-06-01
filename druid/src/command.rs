@@ -307,6 +307,7 @@ impl Command {
     /// Panics when the payload has a different type, than what the selector is supposed to carry.
     /// This can happen when two selectors with different types but the same key are used.
     ///
+    /// [`is`]: #method.is
     /// [`get_unchecked`]: #method.get_unchecked
     pub fn get<T: Any>(&self, selector: Selector<T>) -> Option<&T> {
         if self.symbol == selector.symbol() {
