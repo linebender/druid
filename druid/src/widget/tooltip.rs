@@ -142,7 +142,7 @@ impl<T: Data, W: Widget<T>> Controller<T, W> for TooltipWrap<T> {
                     // account for not-completely-accurate clocks.
                     let check_delay = TOOLTIP_DELAY
                         .checked_sub(Duration::from_millis(20))
-                        .unwrap_or(Duration::from_millis(0));
+                        .unwrap_or_else(|| Duration::from_millis(0));
                     if elapsed > check_delay {
                         self.text.resolve(data, env);
                         ctx.show_static_modal(tooltip_desc(
