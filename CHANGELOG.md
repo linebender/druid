@@ -1,24 +1,54 @@
 # Changelog
 
+The latest published druid release is [0.6.0](#060---2020-06-01) which was released on 2020-06-01.
+You can find its changes [documented below](#060---2020-06-01).
+
 ## [Unreleased]
 
 ### Highlights
 
-#### Basic X11 backend for druid-shell. ([#599])
+### Added
 
-[@crsaracco] has implemented basic support to run druid on bare-metal X11!
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Visual
+
+### Docs
+
+### Examples
+
+### Maintenance
+
+### Outside News
+
+## [0.6.0] - 2020-06-01
+
+### Highlights
+
+#### X11 backend for druid-shell.
+
+[@crsaracco] got us started and implemented basic support to run druid on bare-metal X11 in [#599].
+Additional features got fleshed out in [#894] and [#900] by [@xStrom]
+and in [#920], [#961], and [#982] by [@jneem].
 
 While still incomplete this lays the foundation for running druid on Linux without relying on GTK.
 
-#### Mostly complete Wasm backend for druid-shell. ([#759])
+#### Web backend for druid-shell.
 
-[@elrnv] continued the work of [@tedsta] and implemented a mostly complete Wasm backend and enabled
-all druid examples to [run in the browser](https://elrnv.github.io/druid-wasm-examples/).
+[@elrnv] continued the work of [@tedsta] and implemented a mostly complete web backend
+via WebAssembly (Wasm) in [#759] and enabled all druid examples to
+[run in the browser](https://elrnv.github.io/druid-wasm-examples/).
 
 While some features like the clipboard, menus or file dialogs are not yet available,
 all fundamental features are there.
 
-#### Using Core Graphics on macOS. ([#905])
+#### Using Core Graphics on macOS.
 
 [@cmyr] continued the work of [@jrmuizel] and implemented Core Graphics support for piet in
 [piet#176](https://github.com/linebender/piet/pull/176).
@@ -28,58 +58,48 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 
 ### Added
 
+- Standardized and exposed more methods on more contexts. ([#970], [#972], [#855] by [@cmyr], [#898] by [@finnerale], [#954] by [@xStrom], [#917] by [@jneem])
+- `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924] by [@cmyr])
+- `im::Vector` support for the `List` widget. ([#940] by [@xStrom])
 - `TextBox` can receive `EditAction` commands. ([#814] by [@cmyr])
 - `Split::min_splitter_area(f64)` to add padding around the splitter bar. ([#738] by [@xStrom])
 - Published `druid::text` module. ([#816] by [@cmyr])
 - `InternalEvent::MouseLeave` signalling the cursor left the window. ([#821] by [@teddemunnik])
+- `InternalEvent::RouteTimer` to route timer events. ([#831] by [@sjoshid])
 - `children_changed` now always includes layout and paint request. ([#839] by [@xStrom])
-- `UpdateCtx::submit_command`. ([#855] by [@cmyr])
 - `request_paint_rect` for partial invalidation. ([#817] by [@jneem])
 - Window title can be any `LabelText` (such as a simple `String`). ([#869] by [@cmyr])
 - `Label::with_font` and `set_font`. ([#785] by [@thecodewarrior])
-- `InternalEvent::RouteTimer` to route timer events. ([#831] by [@sjoshid])
 - `MouseEvent` now has a `focus` field which is `true` with window focusing left clicks on macOS. ([#842] by [@xStrom])
 - `MouseButtons` to `MouseEvent` to track which buttons are being held down during an event. ([#843] by [@xStrom])
 - `Env` and `Key` gained methods for inspecting an `Env` at runtime ([#880] by [@Zarenor])
-- `UpdateCtx::request_timer` and `UpdateCtx::request_anim_frame`. ([#898] by [@finnerale])
-- `LifeCycleCtx::request_timer`. ([#954] by [@xStrom])
-- `scale` method to `WinHandler`. ([#904] by [@xStrom])
 - `WinHandler::scale` method to inform of scale changes. ([#904] by [@xStrom])
-- `UpdateCtx::size` and `LifeCycleCtx::size`. ([#917] by [@jneem])
 - `WidgetExt::debug_widget_id`, for displaying widget ids on hover. ([#876] by [@cmyr])
-- `im` feature, with `Data` support for the [`im` crate](https://docs.rs/im/) collections. ([#924] by [@cmyr])
-- `im::Vector` support for the `List` widget. ([#940] by [@xStrom])
 - `LifeCycle::Size` event to inform widgets that their size changed. ([#953] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
-- `set_menu` method on `UpdateCtx` and `LifeCycleCtx` ([#970] by [@cmyr])
-- Standardize and expose more methods on more contexts ([#972] by [@cmyr])
 - `Spinner` widget to represent loading states. ([#1003] by [@futurepaul])
 
 ### Changed
 
-- Renamed `Split` constructors to `Split::rows` and `columns`. ([#738] by [@xStrom])
-- `Split::splitter_size` no longer includes padding. ([#738] by [@xStrom])
+- Renamed `WidgetPod` methods: `paint` to `paint_raw`, `paint_with_offset` to `paint`, `paint_with_offset_always` to `paint_always`. ([#980] by [@totsteps])
 - Renamed `Event::MouseMoved` to `MouseMove`. ([#825] by [@teddemunnik])
-- `has_focus` no longer returns false positives. ([#819] by [@xStrom])
+- Renamed `Split` constructors to `Split::rows` and `columns`. ([#738] by [@xStrom])
+- Replaced `NEW_WINDOW`, `SET_MENU` and `SHOW_CONTEXT_MENU` commands with methods on `EventCtx` and `DelegateCtx`. ([#931] by [@finnerale])
+- Replaced `Command::one_shot` and `::take_object` with a `SingleUse` payload wrapper type. ([#959] by [@finnerale])
+- `Command` and `Selector` have been reworked and are now statically typed, similarly to `Env` and `Key`. ([#993] by [@finnerale])
+- `AppDelegate::command` now receives a `Target` instead of a `&Target`. ([#909] by [@xStrom])
+- `SHOW_WINDOW` and `CLOSE_WINDOW` commands now only use `Target` to determine the affected window. ([#928] by [@finnerale])
+- Global `Application` associated functions are instance methods instead, e.g. `Application::global().quit()` instead of the old `Application::quit()`. ([#763] by [@xStrom])
 - `Event::Internal(InternalEvent)` bundles all internal events. ([#833] by [@xStrom])
+- Timer events will only be delivered to the widgets that requested them. ([#831] by [@sjoshid])
+- `Split::splitter_size` no longer includes padding. ([#738] by [@xStrom])
+- `has_focus` no longer returns false positives. ([#819] by [@xStrom])
 - `WidgetPod::set_layout_rect` now requires `LayoutCtx`, data and `Env`. ([#841] by [@xStrom])
 - `request_timer` uses `Duration` instead of `Instant`. ([#847] by [@finnerale])
-- Global `Application` associated functions are instance methods instead, e.g. `Application::global().quit()` instead of the old `Application::quit()`. ([#763] by [@xStrom])
-- Timer events will only be delivered to the widgets that requested them. ([#831] by [@sjoshid])
 - `Event::Wheel` now contains a `MouseEvent` structure. ([#895] by [@teddemunnik])
 - The `WindowHandle::get_dpi` method got replaced by `WindowHandle::get_scale`. ([#904] by [@xStrom])
 - The `WinHandler::size` method now gets a `Size` in display points. ([#904] by [@xStrom])
-- `AppDelegate::command` now receives a `Target` instead of a `&Target`. ([#909] by [@xStrom])
-- `SHOW_WINDOW` and `CLOSE_WINDOW` commands now only use `Target` to determine the affected window. ([#928] by [@finnerale])
-- Replaced `NEW_WINDOW`, `SET_MENU` and `SHOW_CONTEXT_MENU` commands with methods on `EventCtx` and `DelegateCtx`. ([#931] by [@finnerale])
-- Replaced `Command::one_shot` and `::take_object` with a `SingleUse` payload wrapper type. ([#959] by [@finnerale])
-- Renamed `WidgetPod` methods: `paint` to `paint_raw`, `paint_with_offset` to `paint`, `paint_with_offset_always` to `paint_always`. ([#980] by [@totsteps])
-- `Command` and `Selector` have been reworked and are now statically typed, similarly to `Env` and `Key`. ([#993] by [@finnerale])
-- Standardize the type returned by the contexts' `text()` methods. ([#996] by [@cmyr])
-
-### Deprecated
-
-- Nothing
+- Standardized the type returned by the contexts' `text` methods. ([#996] by [@cmyr])
 
 ### Removed
 
@@ -87,38 +107,34 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 
 ### Fixed
 
-- GTK: Use the system locale. ([#798] by [@finnerale])
-- GTK: Actually close windows. ([#797] by [@finnerale])
+- `Event::HotChanged(false)` will be emitted when the cursor leaves the window. ([#821] by [@teddemunnik])
+- Keep hot state consistent with mouse position. ([#841] by [@xStrom])
+- Start focus cycling from not-registered-for-focus widgets. ([#819] by [@xStrom])
+- Supply correct `LifeCycleCtx` to `Event::FocusChanged`. ([#878] by [@cmyr])
+- Propagate `Event::FocusChanged` to focus gaining widgets as well. ([#819] by [@xStrom])
+- Routing `LifeCycle::FocusChanged` to descendant widgets. ([#925] by [@yrns])
+- Focus request handling is now predictable with the last request overriding earlier ones. ([#948] by [@xStrom])
+- Open file menu item works again. ([#851] by [@kindlychung])
+- Built-in open and save menu items now show the correct label and submit the right commands. ([#930] by [@finnerale])
+- Wheel events now properly update hot state. ([#951] by [@xStrom])
+- `Painter` now properly repaints on data change in `Container`. ([#991] by [@cmyr])
+- Windows: Terminate app when all windows have closed. ([#763] by [@xStrom])
 - Windows: Respect the minimum window size. ([#727] by [@teddemunnik])
 - Windows: Respect resizability. ([#712] by [@teddemunnik])
-- `Event::HotChanged(false)` will be emitted when the cursor leaves the window. ([#821] by [@teddemunnik])
 - Windows: Capture mouse for drag actions. ([#695] by [@teddemunnik])
-- Start focus cycling from non-registered-for-focus widgets. ([#819] by [@xStrom])
-- Propagate `Event::FocusChanged` to focus gaining widgets as well. ([#819] by [@xStrom])
-- GTK: Prevent crashing on pop-ups. ([#837] by [@finnerale])
-- Keep hot state consistent with mouse position. ([#841] by [@xStrom])
-- Open file menu item works again. ([#851] by [@kindlychung])
-- Supply correct `LifeCycleCtx` to `Event::FocusChanged`. ([#878] by [@cmyr])
-- Windows: Terminate app when all windows have closed. ([#763] by [@xStrom])
-- macOS: `Application::quit` now quits the run loop instead of killing the process. ([#763] by [@xStrom])
-- macOS: `Event::HotChanged` is properly generated with multiple windows. ([#907] by [@xStrom])
-- macOS/GTK/web: `MouseButton::X1` and `MouseButton::X2` clicks are now recognized. ([#843] by [@xStrom])
-- GTK: Support disabled menu items. ([#897] by [@jneem])
-- X11: Support individual window closing. ([#900] by [@xStrom])
-- X11: Support `Application::quit`. ([#900] by [@xStrom])
-- GTK: Support file filters in open/save dialogs. ([#903] by [@jneem])
-- GTK: Support DPI values other than 96. ([#904] by [@xStrom])
 - Windows: Removed flashes of white background at the edge of the window when resizing. ([#915] by [@xStrom])
 - Windows: Reduced chance of white flash when opening a new window. ([#916] by [@xStrom])
-- X11: Support key and mouse button state. ([#920] by [@jneem])
-- Routing `LifeCycle::FocusChanged` to descendant widgets. ([#925] by [@yrns])
-- Built-in open and save menu items now show the correct label and submit the right commands. ([#930] by [@finnerale])
-- Focus request handling is now predictable with the last request overriding earlier ones. ([#948] by [@xStrom])
-- Wheel events now properly update hot state. ([#951] by [@xStrom])
-- X11: Support mouse scrolling. ([#961] by [@jneem])
-- `Painter` now properly repaints on data change in `Container`. ([#991] by [@cmyr])
-- macOS: The application menu is now immediately interactable after launch. ([#994] by [@xStrom])
 - Windows: Keep receiving mouse events after pressing ALT or F10 when the window has no menu. ([#997] by [@xStrom])
+- macOS: `Application::quit` now quits the run loop instead of killing the process. ([#763] by [@xStrom])
+- macOS: `Event::HotChanged` is properly generated with multiple windows. ([#907] by [@xStrom])
+- macOS: The application menu is now immediately interactable after launch. ([#994] by [@xStrom])
+- macOS/GTK: `MouseButton::X1` and `MouseButton::X2` clicks are now recognized. ([#843] by [@xStrom])
+- GTK: Use the system locale. ([#798] by [@finnerale])
+- GTK: Actually close windows. ([#797] by [@finnerale])
+- GTK: Prevent crashing on pop-ups. ([#837] by [@finnerale])
+- GTK: Support disabled menu items. ([#897] by [@jneem])
+- GTK: Support file filters in open/save dialogs. ([#903] by [@jneem])
+- GTK: Support DPI values other than 96. ([#904] by [@xStrom])
 
 ### Visual
 
@@ -130,34 +146,34 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 
 ### Docs
 
-- Reduce the flashing in ext_event and identity examples. ([#782] by [@futurepaul])
 - Added example and usage hints to `Env`. ([#796] by [@finnerale])
 - Added documentation about the usage of bloom filters. ([#818] by [@xStrom])
 - Added book chapters about `Painter` and `Controller`. ([#832] by [@cmyr])
-- Added hot glow option to multiwin example. ([#845] by [@xStrom])
-- Added new example for blocking functions. ([#840] by [@mastfissh])
 - Added a changelog containing development since the 0.5 release. ([#889] by [@finnerale])
-- Removed references to cairo on macOS. ([#943] by [@xStrom])
-- Updated screenshots in `README.md`. ([#967] by [@xStrom])
 - Added goals section to `README.md`. ([#971] by [@finnerale])
 - Added a section about dependencies to `CONTRIBUTING.md`. ([#990] by [@xStrom])
-- Fixed menu inconsistency across multiple windows in the multiwin example. ([#926] by [@kindlychung])
+- Updated screenshots in `README.md`. ([#967] by [@xStrom])
+- Removed references to cairo on macOS. ([#943] by [@xStrom])
+
+### Examples
+
+- Added `blocking_function`. ([#840] by [@mastfissh])
+- Added hot glow option to `multiwin`. ([#845] by [@xStrom])
+- Reduce the flashing in `ext_event` and `identity`. ([#782] by [@futurepaul])
+- Fixed menu inconsistency across multiple windows in `multiwin`. ([#926] by [@kindlychung])
 
 ### Maintenance
 
+- Added rendering tests. ([#784] by [@fishrockz])
+- Added docs generation testing for all features. ([#942] by [@xStrom])
 - Replaced `#[macro_use]` with normal `use`. ([#808] by [@totsteps])
 - Enabled Clippy checks for all targets. ([#850] by [@xStrom])
-- Added rendering tests. ([#784] by [@fishrockz])
 - Revamped CI testing to optimize coverage and speed. ([#857] by [@xStrom])
-- GTK: Refactored `Application` to use the new structure. ([#892] by [@xStrom])
-- X11: Refactored `Application` to use the new structure. ([#894] by [@xStrom])
-- X11: Refactored `Window` to support some reentrancy and invalidation. ([#894] by [@xStrom])
 - Refactored DPI scaling. ([#904] by [@xStrom])
-- Added docs generation testing for all features. ([#942] by [@xStrom])
-- Renamed `BaseState` to `WidgetState` ([#969] by [@cmyr])
-- X11: Reworked error handling ([#982] by [@jneem])
-- Fixed test harness crashing on failure. ([#984] by [@xStrom])
 - Refactored `WidgetPod::event` to improve readability and performance of more complex logic. ([#1001] by [@xStrom])
+- Renamed `BaseState` to `WidgetState` ([#969] by [@cmyr])
+- Fixed test harness crashing on failure. ([#984] by [@xStrom])
+- GTK: Refactored `Application` to use the new structure. ([#892] by [@xStrom])
 
 ### Outside News
 
@@ -165,6 +181,38 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
   - [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
   - [jack-mixer](https://github.com/derekdreery/jack-mixer) A jack client that provides mixing, levels and a 3-band eq.
   - [kiro-synth](https://github.com/chris-zen/kiro-synth) An in progress modular sound synthesizer.
+
+## [0.5.0] - 2020-04-01
+
+Last release without a changelog :(
+
+## [0.4.0] - 2019-12-28
+## [0.3.2] - 2019-11-05
+## [0.3.1] - 2019-11-04
+## 0.3.0 - 2019-11-02
+## 0.1.1 - 2018-11-02
+## 0.1.0 - 2018-11-02
+
+[@futurepaul]: https://github.com/futurepaul
+[@finnerale]: https://github.com/finnerale
+[@totsteps]: https://github.com/totsteps
+[@cmyr]: https://github.com/cmyr
+[@xStrom]: https://github.com/xStrom
+[@teddemunnik]: https://github.com/teddemunnik
+[@crsaracco]: https://github.com/crsaracco
+[@pyroxymat]: https://github.com/pyroxymat
+[@elrnv]: https://github.com/elrnv
+[@tedsta]: https://github.com/tedsta
+[@kindlychung]: https://github.com/kindlychung
+[@jneem]: https://github.com/jneem
+[@fishrockz]: https://github.com/fishrockz
+[@thecodewarrior]: https://github.com/thecodewarrior
+[@sjoshid]: https://github.com/sjoshid
+[@mastfissh]: https://github.com/mastfissh
+[@Zarenor]: https://github.com/Zarenor
+[@yrns]: https://github.com/yrns
+[@jrmuizel]: https://github.com/jrmuizel
+[@scholtzan]: https://github.com/scholtzan
 
 [#599]: https://github.com/xi-editor/druid/pull/599
 [#611]: https://github.com/xi-editor/druid/pull/611
@@ -259,39 +307,8 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 [#1001]: https://github.com/xi-editor/druid/pull/1001
 [#1003]: https://github.com/xi-editor/druid/pull/1003
 
-## [0.5.0] - 2020-04-01
-
-Last release without a changelog :(
-
-## [0.4.0] - 2019-12-28
-## [0.3.2] - 2019-11-05
-## [0.3.1] - 2019-11-04
-## 0.3.0 - 2019-11-02
-## 0.1.1 - 2018-11-02
-## 0.1.0 - 2018-11-02
-
-[@futurepaul]: https://github.com/futurepaul
-[@finnerale]: https://github.com/finnerale
-[@totsteps]: https://github.com/totsteps
-[@cmyr]: https://github.com/cmyr
-[@xStrom]: https://github.com/xStrom
-[@teddemunnik]: https://github.com/teddemunnik
-[@crsaracco]: https://github.com/crsaracco
-[@pyroxymat]: https://github.com/pyroxymat
-[@elrnv]: https://github.com/elrnv
-[@tedsta]: https://github.com/tedsta
-[@kindlychung]: https://github.com/kindlychung
-[@jneem]: https://github.com/jneem
-[@fishrockz]: https://github.com/fishrockz
-[@thecodewarrior]: https://github.com/thecodewarrior
-[@sjoshid]: https://github.com/sjoshid
-[@mastfissh]: https://github.com/mastfissh
-[@Zarenor]: https://github.com/Zarenor
-[@yrns]: https://github.com/yrns
-[@jrmuizel]: https://github.com/jrmuizel
-[@scholtzan]: https://github.com/scholtzan
-
-[Unreleased]: https://github.com/xi-editor/druid/compare/v0.5.0...master
+[Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master
+[0.6.0]: https://github.com/xi-editor/druid/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/xi-editor/druid/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/xi-editor/druid/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/xi-editor/druid/compare/v0.3.1...v0.3.2
