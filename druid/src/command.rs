@@ -29,12 +29,19 @@ pub(crate) type SelectorSymbol = &'static str;
 
 /// An identifier for a particular command.
 ///
+/// This should be a unique string identifier.
+/// Having multiple selectors with the same identifier but different payload
+/// types is not allowed and can cause [`Command::get`] and [`get_unchecked`] to panic.
+///
 /// The type parameter `T` specifies the command's payload type.
+/// See [`Command`] for more information.
 ///
-/// This should be a unique string identifier. Certain `Selector`s are defined
-/// by druid, and have special meaning to the framework; these are listed in the
-/// [`druid::commands`] module.
+/// Certain `Selector`s are defined by druid, and have special meaning
+/// to the framework; these are listed in the [`druid::commands`] module.
 ///
+/// [`Command`]: struct.Command.html
+/// [`Command::get`]: struct.Command.html#method.get
+/// [`get_unchecked`]: struct.Command.html#method.get_unchecked
 /// [`druid::commands`]: commands/index.html
 #[derive(Debug, PartialEq, Eq)]
 pub struct Selector<T = ()>(SelectorSymbol, PhantomData<*const T>);
@@ -46,6 +53,12 @@ pub struct Selector<T = ()>(SelectorSymbol, PhantomData<*const T>);
 ///
 /// If the payload can't or shouldn't be cloned,
 /// wrapping it with [`SingleUse`] allows you to `take` the payload.
+/// The [`SingleUse`] docs give an example on how to do this.
+///
+/// Generic payloads can be achieved with `Selector<Box<dyn Any>>`.
+/// In this case it could make sens to use utility functions to construct
+/// such commands in order to maintain as much static typing as possible.
+/// The [`EventCtx::new_window`] method is an example of this.
 ///
 /// # Examples
 /// ```
@@ -58,6 +71,7 @@ pub struct Selector<T = ()>(SelectorSymbol, PhantomData<*const T>);
 /// assert_eq!(command.get(selector), Some(&vec![1, 3, 10, 12]));
 /// ```
 ///
+/// [`EventCtx::new_window`]: struct.EventCtx.html#method.new_window
 /// [`SingleUse`]: struct.SingleUse.html
 /// [`Selector`]: struct.Selector.html
 #[derive(Debug, Clone)]
