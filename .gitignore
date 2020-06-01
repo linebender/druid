@@ -1,5 +1,6 @@
 ## Rust
 /target/
+Cargo.lock
 
 ## Intellij Idea
 .idea/

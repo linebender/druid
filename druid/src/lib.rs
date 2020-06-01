@@ -15,7 +15,7 @@
 //! Simple data-oriented GUI.
 //!
 //! Druid lets you build simple interactive graphical applications that
-//! can be deployed on windows, mac, and linux.
+//! can be deployed on Windows, macOS, Linux, and the web.
 //!
 //! Druid is built on top of [`druid-shell`], which implements all of the
 //! lower-level, platform-specific code, providing a common abstraction
@@ -34,6 +34,8 @@
 //!
 //! As your application grows, you can use [`Lens`]es to expose only certain
 //! subsets of your data model to certains subsets of your widget tree.
+//!
+//! For more information you should read the [druid book].
 //!
 //! # Examples
 //!
@@ -96,7 +98,8 @@
 //! [`Event`]: enum.Event.html
 //! [`druid-shell`]: https://docs.rs/druid-shell
 //! [`piet`]: https://docs.rs/piet
-//! [`druid/examples`]: https://github.com/xi-editor/druid/tree/v0.5.0/druid/examples
+//! [`druid/examples`]: https://github.com/xi-editor/druid/tree/v0.6.0/druid/examples
+//! [druid book]: https://xi-editor.io/druid/intro.html
 
 #![deny(intra_doc_link_resolution_failure, unsafe_code)]
 #![allow(clippy::new_ret_no_self, clippy::needless_doctest_main)]
@@ -135,6 +138,7 @@ mod mouse;
 mod tests;
 pub mod text;
 pub mod theme;
+mod util;
 pub mod widget;
 mod win_handler;
 mod window;

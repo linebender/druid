@@ -25,6 +25,7 @@ use std::slice;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
+use anyhow::anyhow;
 use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt};
 use gio::ApplicationExt;
 use gtk::prelude::*;
@@ -694,9 +695,7 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             dialog::get_file_dialog_path(state.window.upcast_ref(), ty, options)
         } else {
-            Err(ShellError::Other(
-                "Cannot upgrade state from weak pointer to arc",
-            ))
+            Err(anyhow!("Cannot upgrade state from weak pointer to arc").into())
         }
     }
 }

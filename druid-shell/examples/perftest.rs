@@ -23,12 +23,15 @@ use druid_shell::{Application, KeyEvent, WinHandler, WindowBuilder, WindowHandle
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
+const RED: Color = Color::rgb8(0xff, 0x80, 0x80);
+const CYAN: Color = Color::rgb8(0x80, 0xff, 0xff);
 
 struct PerfTest {
     handle: WindowHandle,
     size: Size,
     start_time: Instant,
     last_time: Instant,
+    red: bool,
 }
 
 impl WinHandler for PerfTest {
@@ -61,6 +64,11 @@ impl WinHandler for PerfTest {
             .new_font_by_name("Consolas", 15.0)
             .build()
             .unwrap();
+        let large_font = piet
+            .text()
+            .new_font_by_name("Consolas", 48.0)
+            .build()
+            .unwrap();
 
         let now = Instant::now();
         let msg = format!("{}ms", (now - self.last_time).whole_milliseconds());
@@ -71,6 +79,16 @@ impl WinHandler for PerfTest {
             .build()
             .unwrap();
         piet.draw_text(&layout, (10.0, 210.0), &FG_COLOR);
+
+        let msg = "VSYNC";
+        let layout = piet
+            .text()
+            .new_text_layout(&large_font, &msg, std::f64::INFINITY)
+            .build()
+            .unwrap();
+        let color = if self.red { &RED } else { &CYAN };
+        piet.draw_text(&layout, (10.0, 280.0), color);
+        self.red = !self.red;
 
         let msg = "Hello DWrite! This is a somewhat longer string of text intended to provoke slightly longer draw times.";
         let layout = piet
@@ -122,6 +140,7 @@ fn main() {
         handle: Default::default(),
         start_time: time::Instant::now(),
         last_time: time::Instant::now(),
+        red: true,
     };
     builder.set_handler(Box::new(perf_test));
     builder.set_title("Performance tester");

@@ -157,7 +157,6 @@ impl<T: Data> Harness<'_, T> {
                 window_size,
             };
             harness_closure(&mut harness);
-            harness.piet.finish().expect("piet finish failed");
         }
         render_context_closure(target)
     }
@@ -260,7 +259,7 @@ impl<T: Data> Harness<'_, T> {
 
     /// Only do a layout pass, without painting
     pub fn just_layout(&mut self) {
-        self.inner.layout(&mut self.piet)
+        self.inner.layout()
     }
 
     pub fn paint_rect(&mut self, invalid_rect: Rect) {
@@ -288,15 +287,25 @@ impl<T: Data> Inner<T> {
         self.window.update(&mut self.cmds, &self.data, &self.env);
     }
 
-    fn layout(&mut self, piet: &mut Piet) {
+    fn layout(&mut self) {
         self.window
-            .just_layout(piet, &mut self.cmds, &self.data, &self.env);
+            .just_layout(&mut self.cmds, &self.data, &self.env);
     }
 
     #[allow(dead_code)]
     fn paint_rect(&mut self, piet: &mut Piet, invalid_rect: Rect) {
         self.window
             .do_paint(piet, invalid_rect, &mut self.cmds, &self.data, &self.env);
+    }
+}
+
+impl<T> Drop for Harness<'_, T> {
+    fn drop(&mut self) {
+        // We need to call finish even if a test assert failed
+        if let Err(err) = self.piet.finish() {
+            // We can't panic, because we might already be panicking
+            log::error!("piet finish failed: {}", err);
+        }
     }
 }
 

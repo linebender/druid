@@ -106,7 +106,10 @@ impl<T: Data> Widget<T> for Container<T> {
         self.inner.lifecycle(ctx, event, data, env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+        if let Some(BackgroundBrush::Painter(p)) = self.background.as_mut() {
+            p.update(ctx, old_data, data, env);
+        }
         self.inner.update(ctx, data, env);
     }
 
@@ -154,6 +157,6 @@ impl<T: Data> Widget<T> for Container<T> {
             ctx.stroke(border_rect, &border.color.resolve(env), border_width);
         };
 
-        self.inner.paint_with_offset(ctx, data, env);
+        self.inner.paint(ctx, data, env);
     }
 }

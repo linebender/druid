@@ -26,6 +26,7 @@ use crate::shell::{Counter, Cursor, WindowHandle};
 
 use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
@@ -119,12 +120,12 @@ impl<T: Data> Window<T> {
 
     fn post_event_processing(
         &mut self,
+        widget_state: &mut WidgetState,
         queue: &mut CommandQueue,
         data: &T,
         env: &Env,
         process_commands: bool,
     ) {
-        let widget_state = self.root.state();
         // If children are changed during the handling of an event,
         // we need to send RouteWidgetAdded now, so that they are ready for update/layout.
         if widget_state.children_changed {
@@ -136,6 +137,8 @@ impl<T: Data> Window<T> {
                 false,
             );
         }
+        // Add all the requested timers to the window's timers map.
+        self.timers.extend_drain(&mut widget_state.timers);
         // If there are any commands and they should be processed
         if process_commands && !queue.is_empty() {
             // Ask the handler to call us back on idle
@@ -193,19 +196,24 @@ impl<T: Data> Window<T> {
 
         let mut widget_state = WidgetState::new(self.root.id());
         let is_handled = {
-            let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
+            let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
             let mut ctx = EventCtx {
                 cursor: &mut cursor,
                 state: &mut state,
                 widget_state: &mut widget_state,
                 is_handled: false,
                 is_root: true,
-                focus_widget: self.focus,
             };
 
             self.root.event(&mut ctx, &event, data, env);
             ctx.is_handled
         };
+
+        // Clean up the timer token and do it immediately after the event handling
+        // because the token may be reused and re-added in a lifecycle pass below.
+        if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
+            self.timers.remove(&token);
+        }
 
         if let Some(focus_req) = widget_state.request_focus.take() {
             let old = self.focus;
@@ -222,18 +230,7 @@ impl<T: Data> Window<T> {
             self.handle.set_cursor(&cursor);
         }
 
-        self.post_event_processing(queue, data, env, false);
-
-        //In some platforms, timer tokens are reused. So it is necessary to remove the token from
-        //the window's timer map before adding new tokens to it.
-        if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
-            self.timers.remove(&token);
-        }
-
-        //If at least one widget requested a timer, add all the requested timers to window's timers map.
-        if widget_state.request_timer {
-            self.timers.extend(widget_state.timers);
-        }
+        self.post_event_processing(&mut widget_state, queue, data, env, false);
 
         is_handled
     }
@@ -246,59 +243,49 @@ impl<T: Data> Window<T> {
         env: &Env,
         process_commands: bool,
     ) {
-        if let LifeCycle::AnimFrame(_) = event {
-            self.do_anim_frame(queue, data, env)
+        // for AnimFrame, the event the window receives doesn't have the correct
+        // elapsed time; we calculate it here.
+        let now = Instant::now();
+        let substitute_event = if let LifeCycle::AnimFrame(_) = event {
+            // TODO: this calculation uses wall-clock time of the paint call, which
+            // potentially has jitter.
+            //
+            // See https://github.com/xi-editor/druid/issues/85 for discussion.
+            let last = self.last_anim.take();
+            let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
+            Some(LifeCycle::AnimFrame(elapsed_ns))
         } else {
-            let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
-            let mut widget_state = WidgetState::new(self.root.id());
-            let mut ctx = LifeCycleCtx {
-                state: &mut state,
-                widget_state: &mut widget_state,
-            };
-
-            self.root.lifecycle(&mut ctx, event, data, env);
-        }
-
-        self.post_event_processing(queue, data, env, process_commands);
-    }
-
-    /// AnimFrame has special logic, so we implement it separately.
-    fn do_anim_frame(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
+            None
+        };
 
         let mut widget_state = WidgetState::new(self.root.id());
+        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
         let mut ctx = LifeCycleCtx {
             state: &mut state,
             widget_state: &mut widget_state,
         };
+        let event = substitute_event.as_ref().unwrap_or(event);
+        self.root.lifecycle(&mut ctx, event, data, env);
 
-        // TODO: this calculation uses wall-clock time of the paint call, which
-        // potentially has jitter.
-        //
-        // See https://github.com/xi-editor/druid/issues/85 for discussion.
-        let now = Instant::now();
-        let last = self.last_anim.take();
-        let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
-
-        let event = LifeCycle::AnimFrame(elapsed_ns);
-        self.root.lifecycle(&mut ctx, &event, data, env);
-        if ctx.widget_state.request_anim {
+        if substitute_event.is_some() && ctx.widget_state.request_anim {
             self.last_anim = Some(now);
         }
+
+        self.post_event_processing(&mut widget_state, queue, data, env, process_commands);
     }
 
     pub(crate) fn update(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         self.update_title(data, env);
 
         let mut widget_state = WidgetState::new(self.root.id());
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
+        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
             state: &mut state,
         };
 
         self.root.update(&mut update_ctx, data, env);
-        self.post_event_processing(queue, data, env, false);
+        self.post_event_processing(&mut widget_state, queue, data, env, false);
     }
 
     pub(crate) fn invalidate_and_finalize(&mut self) {
@@ -326,23 +313,22 @@ impl<T: Data> Window<T> {
         self.lifecycle(queue, &LifeCycle::AnimFrame(0), data, env, true);
 
         if self.root.state().needs_layout {
-            self.layout(piet, queue, data, env);
+            self.layout(queue, data, env);
         }
 
         piet.fill(
             invalid_rect,
             &env.get(crate::theme::WINDOW_BACKGROUND_COLOR),
         );
-        self.paint(piet, invalid_rect, data, env);
+        self.paint(piet, invalid_rect, queue, data, env);
     }
 
-    fn layout(&mut self, piet: &mut Piet, queue: &mut CommandQueue, data: &T, env: &Env) {
+    fn layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         let mut widget_state = WidgetState::new(self.root.id());
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id);
+        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
         let mut layout_ctx = LayoutCtx {
             state: &mut state,
             widget_state: &mut widget_state,
-            text_factory: piet.text(),
             mouse_pos: self.last_mouse_pos,
         };
         let bc = BoxConstraints::tight(self.size);
@@ -353,35 +339,42 @@ impl<T: Data> Window<T> {
             env,
             Rect::from_origin_size(Point::ORIGIN, size),
         );
-        self.post_event_processing(queue, data, env, true);
+        self.post_event_processing(&mut widget_state, queue, data, env, true);
     }
 
     /// only expose `layout` for testing; normally it is called as part of `do_paint`
     #[cfg(not(target_arch = "wasm32"))]
     #[cfg(test)]
-    pub(crate) fn just_layout(
+    pub(crate) fn just_layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
+        self.layout(queue, data, env)
+    }
+
+    fn paint(
         &mut self,
         piet: &mut Piet,
+        invalid_rect: Rect,
         queue: &mut CommandQueue,
         data: &T,
         env: &Env,
     ) {
-        self.layout(piet, queue, data, env)
-    }
+        // we need to destructure to get around some lifetime issues,
+        // just like in the good old days!
+        let id = self.id;
+        let focus = self.focus;
+        let Window { root, handle, .. } = self;
 
-    fn paint(&mut self, piet: &mut Piet, invalid_rect: Rect, data: &T, env: &Env) {
-        let widget_state = WidgetState::new(self.root.id());
+        let widget_state = WidgetState::new(root.id());
+        let mut state = ContextState::new::<T>(queue, handle, id, focus);
         let mut ctx = PaintCtx {
             render_ctx: piet,
+            state: &mut state,
             widget_state: &widget_state,
-            window_id: self.id,
             z_ops: Vec::new(),
-            focus_widget: self.focus,
             region: invalid_rect.into(),
             depth: 0,
         };
-        ctx.with_child_ctx(invalid_rect, |ctx| self.root.paint(ctx, data, env));
 
+        ctx.with_child_ctx(invalid_rect, |ctx| root.paint_raw(ctx, data, env));
         let mut z_ops = mem::take(&mut ctx.z_ops);
         z_ops.sort_by_key(|k| k.z_index);
 

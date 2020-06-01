@@ -19,6 +19,7 @@ use std::cell::RefCell;
 use std::convert::TryInto;
 use std::rc::{Rc, Weak};
 
+use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
 use xcb::{
     Atom, Visualtype, ATOM_ATOM, ATOM_STRING, ATOM_WM_NAME, CONFIG_WINDOW_STACK_MODE,
@@ -39,7 +40,6 @@ use crate::scale::Scale;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 use super::application::Application;
-use super::error::Error;
 use super::menu::Menu;
 use super::util;
 
@@ -101,15 +101,10 @@ impl WindowBuilder {
         // the client and window manager in which the client is willing to participate.
         //
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#wm_protocols_property
-        let wm_protocols = match xcb::intern_atom(conn, false, "WM_PROTOCOLS").get_reply() {
-            Ok(reply) => reply.atom(),
-            Err(err) => {
-                return Err(Error::Generic(format!(
-                    "failed to get WM_PROTOCOLS: {}",
-                    err
-                )))
-            }
-        };
+        let wm_protocols = xcb::intern_atom(conn, false, "WM_PROTOCOLS")
+            .get_reply()
+            .context("failed to get WM_PROTOCOLS")?
+            .atom();
 
         // WM_DELETE_WINDOW
         //
@@ -120,15 +115,10 @@ impl WindowBuilder {
         // Registering for but ignoring this event means that the window will remain open.
         //
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
-        let wm_delete_window = match xcb::intern_atom(conn, false, "WM_DELETE_WINDOW").get_reply() {
-            Ok(reply) => reply.atom(),
-            Err(err) => {
-                return Err(Error::Generic(format!(
-                    "failed to get WM_DELETE_WINDOW: {}",
-                    err
-                )))
-            }
-        };
+        let wm_delete_window = xcb::intern_atom(conn, false, "WM_DELETE_WINDOW")
+            .get_reply()
+            .context("failed to get WM_DELETE_WINDOW")?
+            .atom();
 
         // Replace the window's WM_PROTOCOLS with the following.
         let protocols = [wm_delete_window];
@@ -171,14 +161,10 @@ impl WindowBuilder {
             &cairo_visual_type,
             self.size.width as i32,
             self.size.height as i32,
-        );
-        match cairo_surface {
-            Ok(cairo_surface) => Ok(RefCell::new(cairo::Context::new(&cairo_surface))),
-            Err(err) => Err(Error::Generic(format!(
-                "Failed to create cairo surface: {}",
-                err
-            ))),
-        }
+        )
+        .map_err(|status| anyhow!("Failed to create cairo surface: {}", status))?;
+
+        Ok(RefCell::new(cairo::Context::new(&cairo_surface)))
     }
 
     // TODO(x11/menus): make menus if requested
@@ -207,8 +193,7 @@ impl WindowBuilder {
         ];
 
         // Create the actual window
-        // TODO(x11/errors): check that this actually succeeds?
-        xcb::create_window(
+        xcb::create_window_checked(
             // Connection to the X server
             conn,
             // Window depth
@@ -236,7 +221,8 @@ impl WindowBuilder {
             visual_id,
             // Window properties mask
             &cw_values,
-        );
+        )
+        .request_check()?;
 
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
         let atoms = self.atoms(id)?;
@@ -290,19 +276,12 @@ struct WindowState {
 
 impl Window {
     fn connect(&self, handle: WindowHandle) -> Result<(), Error> {
-        match self.handler.try_borrow_mut() {
-            Ok(mut handler) => {
-                let size = self.size()?;
-                handler.connect(&handle.into());
-                handler.scale(Scale::default());
-                handler.size(size);
-                Ok(())
-            }
-            Err(err) => Err(Error::BorrowError(format!(
-                "Window::connect handler: {}",
-                err
-            ))),
-        }
+        let mut handler = borrow_mut!(self.handler)?;
+        let size = self.size()?;
+        handler.connect(&handle.into());
+        handler.scale(Scale::default());
+        handler.size(size);
+        Ok(())
     }
 
     /// Start the destruction of the window.
@@ -315,63 +294,38 @@ impl Window {
     }
 
     fn cairo_surface(&self) -> Result<XCBSurface, Error> {
-        match self.cairo_context.try_borrow() {
-            Ok(ctx) => match ctx.get_target().try_into() {
-                Ok(surface) => Ok(surface),
-                Err(err) => Err(Error::Generic(format!(
-                    "Window::cairo_surface ctx.try_into: {}",
-                    err
-                ))),
-            },
-            Err(err) => Err(Error::BorrowError(format!(
-                "Window::cairo_surface cairo_context: {}",
-                err
-            ))),
-        }
+        borrow!(self.cairo_context)?
+            .get_target()
+            .try_into()
+            .map_err(|_| anyhow!("Window::cairo_surface try_into"))
     }
 
     fn size(&self) -> Result<Size, Error> {
-        match self.state.try_borrow() {
-            Ok(state) => Ok(state.size),
-            Err(err) => Err(Error::BorrowError(format!("Window::size state: {}", err))),
-        }
+        Ok(borrow!(self.state)?.size)
     }
 
     fn set_size(&self, size: Size) -> Result<(), Error> {
         // TODO(x11/dpi_scaling): detect DPI and scale size
-        let new_size = match self.state.try_borrow_mut() {
-            Ok(mut state) => {
-                if state.size != size {
-                    state.size = size;
-                    Some(size)
-                } else {
-                    None
-                }
-            }
-            Err(err) => {
-                return Err(Error::BorrowError(format!(
-                    "Window::set_size state: {}",
-                    err
-                )))
+        let new_size = {
+            let mut state = borrow_mut!(self.state)?;
+            if size != state.size {
+                state.size = size;
+                Some(size)
+            } else {
+                None
             }
         };
         if let Some(size) = new_size {
-            let cairo_surface = self.cairo_surface()?;
-            if let Err(err) = cairo_surface.set_size(size.width as i32, size.height as i32) {
-                return Err(Error::Generic(format!(
-                    "Failed to update cairo surface size to {:?}: {}",
-                    size, err
-                )));
-            }
-            match self.handler.try_borrow_mut() {
-                Ok(mut handler) => handler.size(size),
-                Err(err) => {
-                    return Err(Error::BorrowError(format!(
-                        "Window::set_size handler: {}",
-                        err
-                    )))
-                }
-            }
+            self.cairo_surface()?
+                .set_size(size.width as i32, size.height as i32)
+                .map_err(|status| {
+                    anyhow!(
+                        "Failed to update cairo surface size to {:?}: {}",
+                        size,
+                        status
+                    )
+                })?;
+            borrow_mut!(self.handler)?.size(size);
         }
         Ok(())
     }
@@ -401,30 +355,40 @@ impl Window {
     }
 
     fn render(&self, invalid_rect: Rect) -> Result<(), Error> {
-        // TODO(x11/errors): this function should return a an error
-        // instead of panicking or logging if the error isn't recoverable.
-
         // Figure out the window's current size
         let geometry_cookie = xcb::get_geometry(self.app.connection(), self.id);
-        let reply = geometry_cookie.get_reply().unwrap();
+        let reply = geometry_cookie.get_reply()?;
         let size = Size::new(reply.width() as f64, reply.height() as f64);
         self.set_size(size)?;
 
         let mut anim = false;
-        if let Ok(mut cairo_ctx) = self.cairo_context.try_borrow_mut() {
+        {
+            let mut cairo_ctx = borrow_mut!(self.cairo_context)?;
             let mut piet_ctx = Piet::new(&mut cairo_ctx);
             piet_ctx.clip(invalid_rect);
-            if let Ok(mut handler) = self.handler.try_borrow_mut() {
-                anim = handler.paint(&mut piet_ctx, invalid_rect);
-            } else {
-                log::error!("Window::render - handler already borrowed");
-            }
-            if let Err(e) = piet_ctx.finish() {
-                log::error!("Window::render - piet finish failed: {}", e);
-            }
+
+            // We need to be careful with earlier returns here, because piet_ctx
+            // can panic if it isn't finish()ed. Also, we want to reset cairo's clip
+            // even on error.
+            let err;
+            match borrow_mut!(self.handler) {
+                Ok(mut handler) => {
+                    anim = handler.paint(&mut piet_ctx, invalid_rect);
+                    err = piet_ctx
+                        .finish()
+                        .map_err(|e| anyhow!("Window::render - piet finish failed: {}", e));
+                }
+                Err(e) => {
+                    err = Err(e);
+                    if let Err(e) = piet_ctx.finish() {
+                        // We can't return both errors, so just log this one.
+                        log::error!("Window::render - piet finish failed in error branch: {}", e);
+                    }
+                }
+            };
             cairo_ctx.reset_clip();
-        } else {
-            log::error!("Window::render - cairo context already borrowed");
+
+            err?;
         }
 
         if anim && self.refresh_rate.is_some() {
@@ -522,7 +486,7 @@ impl Window {
             (expose.x() as f64, expose.y() as f64),
             (expose.width() as f64, expose.height() as f64),
         );
-        self.render(rect)
+        Ok(self.render(rect)?)
     }
 
     pub fn handle_key_press(&self, key_press: &xcb::KeyPressEvent) -> Result<(), Error> {
@@ -536,16 +500,8 @@ impl Window {
             key_code,
             key_code,
         );
-        match self.handler.try_borrow_mut() {
-            Ok(mut handler) => {
-                handler.key_down(key_event);
-                Ok(())
-            }
-            Err(err) => Err(Error::BorrowError(format!(
-                "Window::handle_key_press handle: {}",
-                err
-            ))),
-        }
+        borrow_mut!(self.handler)?.key_down(key_event);
+        Ok(())
     }
 
     pub fn handle_button_press(&self, button_press: &xcb::ButtonPressEvent) -> Result<(), Error> {
@@ -562,16 +518,8 @@ impl Window {
             button,
             wheel_delta: Vec2::ZERO,
         };
-        match self.handler.try_borrow_mut() {
-            Ok(mut handler) => {
-                handler.mouse_down(&mouse_event);
-                Ok(())
-            }
-            Err(err) => Err(Error::BorrowError(format!(
-                "Window::handle_button_press handle: {}",
-                err
-            ))),
-        }
+        borrow_mut!(self.handler)?.mouse_down(&mouse_event);
+        Ok(())
     }
 
     pub fn handle_button_release(
@@ -593,16 +541,8 @@ impl Window {
             button,
             wheel_delta: Vec2::ZERO,
         };
-        match self.handler.try_borrow_mut() {
-            Ok(mut handler) => {
-                handler.mouse_up(&mouse_event);
-                Ok(())
-            }
-            Err(err) => Err(Error::BorrowError(format!(
-                "Window::handle_button_release handle: {}",
-                err
-            ))),
-        }
+        borrow_mut!(self.handler)?.mouse_up(&mouse_event);
+        Ok(())
     }
 
     pub fn handle_wheel(&self, event: &xcb::ButtonPressEvent) -> Result<(), Error> {
@@ -617,12 +557,7 @@ impl Window {
             5 => (0.0, 120.0),
             6 => (-120.0, 0.0),
             7 => (120.0, 0.0),
-            _ => {
-                return Err(Error::Generic(format!(
-                    "unexpected mouse wheel button: {}",
-                    button
-                )))
-            }
+            _ => return Err(anyhow!("unexpected mouse wheel button: {}", button)),
         };
         let mouse_event = MouseEvent {
             pos: Point::new(event.event_x() as f64, event.event_y() as f64),
@@ -634,16 +569,8 @@ impl Window {
             wheel_delta: delta.into(),
         };
 
-        match self.handler.try_borrow_mut() {
-            Ok(mut handler) => {
-                handler.wheel(&mouse_event);
-                Ok(())
-            }
-            Err(err) => Err(Error::BorrowError(format!(
-                "Window::handle_wheel handle: {}",
-                err
-            ))),
-        }
+        borrow_mut!(self.handler)?.wheel(&mouse_event);
+        Ok(())
     }
 
     pub fn handle_motion_notify(
@@ -662,16 +589,8 @@ impl Window {
             button: MouseButton::None,
             wheel_delta: Vec2::ZERO,
         };
-        match self.handler.try_borrow_mut() {
-            Ok(mut handler) => {
-                handler.mouse_move(&mouse_event);
-                Ok(())
-            }
-            Err(err) => Err(Error::BorrowError(format!(
-                "Window::handle_motion_notify handle: {}",
-                err
-            ))),
-        }
+        borrow_mut!(self.handler)?.mouse_move(&mouse_event);
+        Ok(())
     }
 
     pub fn handle_client_message(
@@ -693,16 +612,8 @@ impl Window {
         &self,
         _destroy_notify: &xcb::DestroyNotifyEvent,
     ) -> Result<(), Error> {
-        match self.handler.try_borrow_mut() {
-            Ok(mut handler) => {
-                handler.destroy();
-                Ok(())
-            }
-            Err(err) => Err(Error::BorrowError(format!(
-                "Window::handle_destroy_notify handle: {}",
-                err
-            ))),
-        }
+        borrow_mut!(self.handler)?.destroy();
+        Ok(())
     }
 }
 
@@ -906,7 +817,7 @@ impl WindowHandle {
 
     pub fn get_scale(&self) -> Result<Scale, ShellError> {
         if let Some(w) = self.window.upgrade() {
-            w.get_scale().map_err(ShellError::Platform)
+            Ok(w.get_scale()?)
         } else {
             log::error!("Window {} has already been dropped", self.id);
             Ok(Scale::from_dpi(96.0, 96.0))

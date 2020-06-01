@@ -40,7 +40,7 @@ use druid::{
 
 const CYCLE_DURATION: Duration = Duration::from_millis(100);
 
-const FREEZE_COLOR: Selector = Selector::new("identity-example.freeze-color");
+const FREEZE_COLOR: Selector<Color> = Selector::new("identity-example.freeze-color");
 const UNFREEZE_COLOR: Selector = Selector::new("identity-example.unfreeze-color");
 
 /// Honestly: it's just a color in fancy clothing.
@@ -109,20 +109,13 @@ impl Widget<OurData> for ColorWell {
                 self.token = ctx.request_timer(CYCLE_DURATION);
                 ctx.request_paint();
             }
-
             Event::WindowConnected if self.randomize => {
                 self.token = ctx.request_timer(CYCLE_DURATION);
             }
-
-            Event::Command(cmd) if cmd.selector == FREEZE_COLOR => {
-                self.frozen = cmd
-                    .get_object::<Color>()
-                    .ok()
-                    .cloned()
-                    .expect("payload is always a Color")
-                    .into();
+            Event::Command(cmd) if cmd.is(FREEZE_COLOR) => {
+                self.frozen = cmd.get(FREEZE_COLOR).cloned();
             }
-            Event::Command(cmd) if cmd.selector == UNFREEZE_COLOR => self.frozen = None,
+            Event::Command(cmd) if cmd.is(UNFREEZE_COLOR) => self.frozen = None,
             _ => (),
         }
     }

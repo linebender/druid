@@ -53,10 +53,7 @@ impl Application {
         util::assert_main_thread();
         unsafe {
             let _pool = NSAutoreleasePool::new(nil);
-
             let ns_app = NSApp();
-            ns_app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
-
             let state = Rc::new(RefCell::new(State { quitting: false }));
 
             Ok(Application { ns_app, state })
@@ -174,7 +171,11 @@ lazy_static! {
 
 extern "C" fn application_did_finish_launching(_this: &mut Object, _: Sel, _notification: id) {
     unsafe {
-        let () = msg_send![NSApp(), activateIgnoringOtherApps: YES];
+        let ns_app = NSApp();
+        // We need to delay setting the activation policy and activating the app
+        // until we have the main menu all set up. Otherwise the menu won't be interactable.
+        ns_app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
+        let () = msg_send![ns_app, activateIgnoringOtherApps: YES];
     }
 }
 

@@ -223,6 +223,16 @@ jobs:
       - name: wasm-pack build examples
         run: wasm-pack build --dev --target web druid/examples/wasm
 
+      # Clippy and build the hello_wasm_web example
+      - name: cargo clippy hello_wasm_web example
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid/examples/hello_wasm_web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+
+      - name: wasm-pack build hello_wasm_web example
+        run: wasm-pack build --target web druid/examples/hello_wasm_web
+
   test-nightly:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -301,10 +311,10 @@ jobs:
           sudo apt install libgtk-3-dev
         if: contains(matrix.os, 'ubuntu')
 
-      - name: install nightly toolchain
+      - name: install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           profile: minimal
           override: true
 

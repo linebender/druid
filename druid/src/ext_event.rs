@@ -20,9 +20,9 @@ use std::sync::{Arc, Mutex};
 
 use crate::shell::IdleHandle;
 use crate::win_handler::EXT_EVENT_IDLE_TOKEN;
-use crate::{Command, Selector, Target, WindowId};
+use crate::{command::SelectorSymbol, Command, Selector, Target, WindowId};
 
-pub(crate) type ExtCommand = (Selector, Option<Box<dyn Any + Send>>, Option<Target>);
+pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Option<Target>);
 
 /// A thing that can move into other threads and be used to submit commands back
 /// to the running application.
@@ -87,11 +87,10 @@ impl ExtEventSink {
     /// Submit a [`Command`] to the running application.
     ///
     /// [`Command`] is not thread safe, so you cannot submit it directly;
-    /// instead you have to pass the [`Selector`] and the (optional) argument
+    /// instead you have to pass the [`Selector`] and the payload
     /// separately, and it will be turned into a `Command` when it is received.
     ///
-    /// The `obj` argument can be any type which implements `Any + Send`, or `None`
-    /// if this command has no argument.
+    /// The `payload` must implement `Any + Send + Sync`.
     ///
     /// If no explicit `Target` is submitted, the `Command` will be sent to
     /// the application's first window; if that window is subsequently closed,
@@ -101,21 +100,22 @@ impl ExtEventSink {
     ///
     /// [`Command`]: struct.Command.html
     /// [`Selector`]: struct.Selector.html
-    pub fn submit_command<T: Any + Send>(
+    pub fn submit_command<T: Any + Send + Sync>(
         &self,
-        sel: Selector,
-        obj: impl Into<Option<T>>,
+        selector: Selector<T>,
+        payload: impl Into<Box<T>>,
         target: impl Into<Option<Target>>,
     ) -> Result<(), ExtEventError> {
         let target = target.into();
-        let obj = obj.into().map(|o| Box::new(o) as Box<dyn Any + Send>);
+        let payload = payload.into();
         if let Some(handle) = self.handle.lock().unwrap().as_mut() {
             handle.schedule_idle(EXT_EVENT_IDLE_TOKEN);
         }
-        self.queue
-            .lock()
-            .map_err(|_| ExtEventError)?
-            .push_back((sel, obj, target));
+        self.queue.lock().map_err(|_| ExtEventError)?.push_back((
+            selector.symbol(),
+            payload,
+            target,
+        ));
         Ok(())
     }
 }

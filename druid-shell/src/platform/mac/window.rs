@@ -43,6 +43,7 @@ use objc::{class, msg_send, sel, sel_impl};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
+use super::appkit::{NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt};
 use super::application::Application;
 use super::dialog;
 use super::menu::Menu;
@@ -107,6 +108,8 @@ struct ViewState {
     last_mods: KeyModifiers,
     /// Tracks window focusing left clicks
     focus_click: bool,
+    // Tracks whether we have already received the mouseExited event
+    mouse_left: bool,
 }
 
 impl WindowBuilder {
@@ -181,8 +184,6 @@ impl WindowBuilder {
 
             window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
-            // TODO: this should probably be a tracking area instead
-            window.setAcceptsMouseMovedEvents_(YES);
 
             let (view, idle_queue) = make_view(self.handler.expect("view"));
             let content_view = window.contentView();
@@ -303,6 +304,14 @@ lazy_static! {
             mouse_move as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
+            sel!(mouseEntered:),
+            mouse_enter as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
+            sel!(mouseExited:),
+            mouse_leave as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
             sel!(scrollWheel:),
             scroll_wheel as extern "C" fn(&mut Object, Sel, id),
         );
@@ -357,11 +366,25 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
             idle_queue,
             last_mods: KeyModifiers::default(),
             focus_click: false,
+            mouse_left: true,
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
         let options: NSAutoresizingMaskOptions = NSViewWidthSizable | NSViewHeightSizable;
         view.setAutoresizingMask_(options);
+
+        // The rect of the tracking area doesn't matter, because
+        // we use the InVisibleRect option where the OS syncs the size automatically.
+        let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(0., 0.));
+        let opts = NSTrackingAreaOptions::MouseEnteredAndExited
+            | NSTrackingAreaOptions::MouseMoved
+            | NSTrackingAreaOptions::ActiveAlways
+            | NSTrackingAreaOptions::InVisibleRect;
+        let tracking_area = NSTrackingArea::alloc(nil)
+            .initWithRect_options_owner_userInfo(rect, opts, view, nil)
+            .autorelease();
+        view.addTrackingArea(tracking_area);
+
         (view.autorelease(), queue_handle)
     }
 }
@@ -490,6 +513,14 @@ fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
         };
         let event = mouse_event(nsevent, this as id, 0, focus, button, Vec2::ZERO);
         (*view_state).handler.mouse_up(&event);
+        // If we have already received a mouseExited event then that means
+        // we're still receiving mouse events because some buttons are being held down.
+        // When the last held button is released and we haven't received a mouseEntered event,
+        // then we will no longer receive mouse events until the next mouseEntered event
+        // and need to inform the handler of the mouse leaving.
+        if view_state.mouse_left && event.buttons.is_empty() {
+            (*view_state).handler.mouse_leave();
+        }
     }
 }
 
@@ -499,6 +530,25 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
         let view_state = &mut *(view_state as *mut ViewState);
         let event = mouse_event(nsevent, this as id, 0, false, MouseButton::None, Vec2::ZERO);
         (*view_state).handler.mouse_move(&event);
+    }
+}
+
+extern "C" fn mouse_enter(this: &mut Object, _sel: Sel, nsevent: id) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        view_state.mouse_left = false;
+        let event = mouse_event(nsevent, this, 0, false, MouseButton::None, Vec2::ZERO);
+        (*view_state).handler.mouse_move(&event);
+    }
+}
+
+extern "C" fn mouse_leave(this: &mut Object, _: Sel, _nsevent: id) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        view_state.mouse_left = true;
+        (*view_state).handler.mouse_leave();
     }
 }
 

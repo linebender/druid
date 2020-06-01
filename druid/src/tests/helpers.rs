@@ -214,7 +214,7 @@ impl<T: Data> ReplaceChild<T> {
 impl<T: Data> Widget<T> for ReplaceChild<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Event::Command(cmd) = event {
-            if cmd.selector == REPLACE_CHILD {
+            if cmd.is(REPLACE_CHILD) {
                 self.inner = WidgetPod::new((self.replacer)());
                 ctx.children_changed();
                 return;
@@ -236,7 +236,7 @@ impl<T: Data> Widget<T> for ReplaceChild<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.inner.paint(ctx, data, env)
+        self.inner.paint_raw(ctx, data, env)
     }
 }
 

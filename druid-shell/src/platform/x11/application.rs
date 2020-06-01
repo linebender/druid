@@ -19,6 +19,7 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::rc::Rc;
 
+use anyhow::{anyhow, Context, Error};
 use xcb::{
     ButtonPressEvent, ButtonReleaseEvent, ClientMessageEvent, Connection, DestroyNotifyEvent,
     ExposeEvent, KeyPressEvent, MotionNotifyEvent, BUTTON_PRESS, BUTTON_RELEASE, CLIENT_MESSAGE,
@@ -29,7 +30,6 @@ use xcb::{
 use crate::application::AppHandler;
 
 use super::clipboard::Clipboard;
-use super::error::Error;
 use super::window::Window;
 
 #[derive(Clone)]
@@ -74,10 +74,7 @@ struct State {
 
 impl Application {
     pub fn new() -> Result<Application, Error> {
-        let (conn, screen_num) = match Connection::connect_with_xlib_display() {
-            Ok(conn) => conn,
-            Err(err) => return Err(Error::ConnectionError(err.to_string())),
-        };
+        let (conn, screen_num) = Connection::connect_with_xlib_display()?;
         let connection = Rc::new(conn);
         let window_id = Application::create_event_window(&connection, screen_num)?;
         let state = Rc::new(RefCell::new(State {
@@ -95,14 +92,15 @@ impl Application {
     fn create_event_window(conn: &Rc<Connection>, screen_num: i32) -> Result<u32, Error> {
         let id = conn.generate_id();
         let setup = conn.get_setup();
-        // TODO(x11/errors): Don't unwrap for screen?
-        let screen = setup.roots().nth(screen_num as usize).unwrap();
+        let screen = setup
+            .roots()
+            .nth(screen_num as usize)
+            .ok_or_else(|| anyhow!("invalid screen num: {}", screen_num))?;
 
         let cw_values = [(CW_EVENT_MASK, EVENT_MASK_STRUCTURE_NOTIFY)];
 
         // Create the actual window
-        // TODO(x11/errors): check that this actually succeeds?
-        xcb::create_window(
+        xcb::create_window_checked(
             // Connection to the X server
             conn,
             // Window depth
@@ -127,50 +125,30 @@ impl Application {
             COPY_FROM_PARENT.try_into().unwrap(),
             // Window properties mask
             &cw_values,
-        );
+        )
+        .request_check()?;
 
         Ok(id)
     }
 
     pub(crate) fn add_window(&self, id: u32, window: Rc<Window>) -> Result<(), Error> {
-        match self.state.try_borrow_mut() {
-            Ok(mut state) => {
-                state.windows.insert(id, window);
-                Ok(())
-            }
-            Err(err) => Err(Error::BorrowError(format!(
-                "Application::add_window state: {}",
-                err
-            ))),
-        }
+        borrow_mut!(self.state)?.windows.insert(id, window);
+        Ok(())
     }
 
     /// Remove the specified window from the `Application` and return the number of windows left.
     fn remove_window(&self, id: u32) -> Result<usize, Error> {
-        match self.state.try_borrow_mut() {
-            Ok(mut state) => {
-                state.windows.remove(&id);
-                Ok(state.windows.len())
-            }
-            Err(err) => Err(Error::BorrowError(format!(
-                "Application::remove_window state: {}",
-                err
-            ))),
-        }
+        let mut state = borrow_mut!(self.state)?;
+        state.windows.remove(&id);
+        Ok(state.windows.len())
     }
 
     fn window(&self, id: u32) -> Result<Rc<Window>, Error> {
-        match self.state.try_borrow() {
-            Ok(state) => state
-                .windows
-                .get(&id)
-                .cloned()
-                .ok_or_else(|| Error::Generic(format!("No window with id {}", id))),
-            Err(err) => Err(Error::BorrowError(format!(
-                "Application::window state: {}",
-                err
-            ))),
-        }
+        borrow!(self.state)?
+            .windows
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| anyhow!("No window with id {}", id))
     }
 
     #[inline]
@@ -183,150 +161,125 @@ impl Application {
         self.screen_num
     }
 
-    #[allow(clippy::cognitive_complexity)]
+    /// Returns `Ok(true)` if we want to exit the main loop.
+    fn handle_event(&self, ev: &xcb::GenericEvent) -> Result<bool, Error> {
+        let ev_type = ev.response_type() & !0x80;
+        // NOTE: When adding handling for any of the following events,
+        //       there must be a check against self.window_id
+        //       to know if the event must be ignored.
+        //       Otherwise there will be a "failed to get window" error.
+        //
+        //       CIRCULATE_NOTIFY, CONFIGURE_NOTIFY, GRAVITY_NOTIFY
+        //       MAP_NOTIFY, REPARENT_NOTIFY, UNMAP_NOTIFY
+        match ev_type {
+            EXPOSE => {
+                let expose = unsafe { xcb::cast_event::<ExposeEvent>(&ev) };
+                let window_id = expose.window();
+                let w = self
+                    .window(window_id)
+                    .context("EXPOSE - failed to get window")?;
+                w.handle_expose(expose)
+                    .context("EXPOSE - failed to handle")?;
+            }
+            KEY_PRESS => {
+                let key_press = unsafe { xcb::cast_event::<KeyPressEvent>(&ev) };
+                let window_id = key_press.event();
+                let w = self
+                    .window(window_id)
+                    .context("KEY_PRESS - failed to get window")?;
+                w.handle_key_press(key_press)
+                    .context("KEY_PRESS - failed to handle")?;
+            }
+            BUTTON_PRESS => {
+                let button_press = unsafe { xcb::cast_event::<ButtonPressEvent>(&ev) };
+                let window_id = button_press.event();
+                let w = self
+                    .window(window_id)
+                    .context("BUTTON_PRESS - failed to get window")?;
+
+                // X doesn't have dedicated scroll events: it uses mouse buttons instead.
+                // Buttons 4/5 are vertical; 6/7 are horizontal.
+                if button_press.detail() >= 4 && button_press.detail() <= 7 {
+                    w.handle_wheel(button_press)
+                        .context("BUTTON_PRESS - failed to handle wheel")?;
+                } else {
+                    w.handle_button_press(button_press)
+                        .context("BUTTON_PRESS - failed to handle")?;
+                }
+            }
+            BUTTON_RELEASE => {
+                let button_release = unsafe { xcb::cast_event::<ButtonReleaseEvent>(&ev) };
+                let window_id = button_release.event();
+                let w = self
+                    .window(window_id)
+                    .context("BUTTON_RELEASE - failed to get window")?;
+                if button_release.detail() >= 4 && button_release.detail() <= 7 {
+                    // This is the release event corresponding to a mouse wheel.
+                    // Ignore it: we already handled the press event.
+                } else {
+                    w.handle_button_release(button_release)
+                        .context("BUTTON_RELEASE - failed to handle")?;
+                }
+            }
+            MOTION_NOTIFY => {
+                let motion_notify = unsafe { xcb::cast_event::<MotionNotifyEvent>(&ev) };
+                let window_id = motion_notify.event();
+                let w = self
+                    .window(window_id)
+                    .context("MOTION_NOTIFY - failed to get window")?;
+                w.handle_motion_notify(motion_notify)
+                    .context("MOTION_NOTIFY - failed to handle")?;
+            }
+            CLIENT_MESSAGE => {
+                let client_message = unsafe { xcb::cast_event::<ClientMessageEvent>(&ev) };
+                let window_id = client_message.window();
+                let w = self
+                    .window(window_id)
+                    .context("CLIENT_MESSAGE - failed to get window")?;
+                w.handle_client_message(client_message)
+                    .context("CLIENT_MESSAGE - failed to handle")?;
+            }
+            DESTROY_NOTIFY => {
+                let destroy_notify = unsafe { xcb::cast_event::<DestroyNotifyEvent>(&ev) };
+                let window_id = destroy_notify.window();
+                if window_id == self.window_id {
+                    // The destruction of the Application window means that
+                    // we need to quit the run loop.
+                    return Ok(true);
+                }
+
+                let w = self
+                    .window(window_id)
+                    .context("DESTROY_NOTIFY - failed to get window")?;
+                w.handle_destroy_notify(destroy_notify)
+                    .context("DESTROY_NOTIFY - failed to handle")?;
+
+                // Remove our reference to the Window and allow it to be dropped
+                let windows_left = self
+                    .remove_window(window_id)
+                    .context("DESTROY_NOTIFY - failed to remove window")?;
+                // Check if we need to finalize a quit request
+                if windows_left == 0 && borrow!(self.state)?.quitting {
+                    self.finalize_quit();
+                }
+            }
+            _ => {}
+        }
+        Ok(false)
+    }
+
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         loop {
             if let Some(ev) = self.connection.wait_for_event() {
-                let ev_type = ev.response_type() & !0x80;
-                // NOTE: When adding handling for any of the following events,
-                //       there must be a check against self.window_id
-                //       to know if the event must be ignored.
-                //       Otherwise there will be a "failed to get window" error.
-                //
-                //       CIRCULATE_NOTIFY, CONFIGURE_NOTIFY, GRAVITY_NOTIFY
-                //       MAP_NOTIFY, REPARENT_NOTIFY, UNMAP_NOTIFY
-                match ev_type {
-                    EXPOSE => {
-                        let expose = unsafe { xcb::cast_event::<ExposeEvent>(&ev) };
-                        let window_id = expose.window();
-                        match self.window(window_id) {
-                            Ok(w) => {
-                                if let Err(err) = w.handle_expose(expose) {
-                                    log::error!("EXPOSE - failed to handle: {}", err);
-                                }
-                            }
-                            Err(err) => log::error!("EXPOSE - failed to get window: {}", err),
-                        }
-                    }
-                    KEY_PRESS => {
-                        let key_press = unsafe { xcb::cast_event::<KeyPressEvent>(&ev) };
-                        let window_id = key_press.event();
-                        match self.window(window_id) {
-                            Ok(w) => {
-                                if let Err(err) = w.handle_key_press(key_press) {
-                                    log::error!("KEY_PRESS - failed to handle: {}", err);
-                                }
-                            }
-                            Err(err) => log::error!("KEY_PRESS - failed to get window: {}", err),
-                        }
-                    }
-                    BUTTON_PRESS => {
-                        let button_press = unsafe { xcb::cast_event::<ButtonPressEvent>(&ev) };
-                        let window_id = button_press.event();
-                        match self.window(window_id) {
-                            Ok(w) => {
-                                // X doesn't have dedicated scroll events: it uses mouse buttons instead.
-                                // Buttons 4/5 are vertical; 6/7 are horizontal.
-                                if button_press.detail() >= 4 && button_press.detail() <= 7 {
-                                    if let Err(err) = w.handle_wheel(button_press) {
-                                        log::error!(
-                                            "BUTTON_PRESS - failed to handle wheel: {}",
-                                            err
-                                        );
-                                    }
-                                } else if let Err(err) = w.handle_button_press(button_press) {
-                                    log::error!("BUTTON_PRESS - failed to handle: {}", err);
-                                }
-                            }
-                            Err(err) => log::error!("BUTTON_PRESS - failed to get window: {}", err),
-                        }
-                    }
-                    BUTTON_RELEASE => {
-                        let button_release = unsafe { xcb::cast_event::<ButtonReleaseEvent>(&ev) };
-                        let window_id = button_release.event();
-                        match self.window(window_id) {
-                            Ok(w) => {
-                                if button_release.detail() >= 4 && button_release.detail() <= 7 {
-                                    // This is the release event corresponding to a mouse wheel.
-                                    // Ignore it: we already handled the press event.
-                                } else if let Err(err) = w.handle_button_release(button_release) {
-                                    log::error!("BUTTON_RELEASE - failed to handle: {}", err);
-                                }
-                            }
-                            Err(err) => {
-                                log::error!("BUTTON_RELEASE - failed to get window: {}", err)
-                            }
-                        }
-                    }
-                    MOTION_NOTIFY => {
-                        let motion_notify = unsafe { xcb::cast_event::<MotionNotifyEvent>(&ev) };
-                        let window_id = motion_notify.event();
-                        match self.window(window_id) {
-                            Ok(w) => {
-                                if let Err(err) = w.handle_motion_notify(motion_notify) {
-                                    log::error!("MOTION_NOTIFY - failed to handle: {}", err);
-                                }
-                            }
-                            Err(err) => {
-                                log::error!("MOTION_NOTIFY - failed to get window: {}", err)
-                            }
-                        }
-                    }
-                    CLIENT_MESSAGE => {
-                        let client_message = unsafe { xcb::cast_event::<ClientMessageEvent>(&ev) };
-                        let window_id = client_message.window();
-                        match self.window(window_id) {
-                            Ok(w) => {
-                                if let Err(err) = w.handle_client_message(client_message) {
-                                    log::error!("CLIENT_MESSAGE - failed to handle: {}", err);
-                                }
-                            }
-                            Err(err) => {
-                                log::error!("CLIENT_MESSAGE - failed to get window: {}", err)
-                            }
-                        }
-                    }
-                    DESTROY_NOTIFY => {
-                        let destroy_notify = unsafe { xcb::cast_event::<DestroyNotifyEvent>(&ev) };
-                        let window_id = destroy_notify.window();
-                        if window_id == self.window_id {
-                            // The destruction of the Application window means that
-                            // we need to quit the run loop.
+                match self.handle_event(&ev) {
+                    Ok(quit) => {
+                        if quit {
                             break;
                         }
-                        match self.window(window_id) {
-                            Ok(w) => {
-                                if let Err(err) = w.handle_destroy_notify(destroy_notify) {
-                                    log::error!("DESTROY_NOTIFY - failed to handle: {}", err);
-                                }
-                            }
-                            Err(err) => {
-                                log::error!("DESTROY_NOTIFY - failed to get window: {}", err)
-                            }
-                        }
-
-                        // Remove our reference to the Window and allow it to be dropped
-                        match self.remove_window(window_id) {
-                            Ok(windows_left) => {
-                                if windows_left == 0 {
-                                    // Check if we need to finalize a quit request
-                                    if let Ok(state) = self.state.try_borrow() {
-                                        if state.quitting {
-                                            self.finalize_quit();
-                                        }
-                                    } else {
-                                        log::error!(
-                                            "DESTROY_NOTIFY - failed to check for quit request"
-                                        );
-                                    }
-                                }
-                            }
-                            Err(err) => {
-                                log::error!("DESTROY_NOTIFY - failed to remove window: {}", err)
-                            }
-                        }
                     }
-                    _ => {}
+                    Err(e) => {
+                        log::error!("Error handling event: {}", e);
+                    }
                 }
             }
         }

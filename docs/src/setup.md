@@ -32,9 +32,9 @@ cargo new my-application
 and adding the druid dependency to your Cargo.toml
 ```no_compile
 [dependencies]
-druid = "0.5.0"
-// or:
-druid = { git = "https://github.com/xi-editor/druid.git", branch = "master" }
+druid = "0.6.0"
+// or to be on the bleeding edge:
+druid = { git = "https://github.com/xi-editor/druid.git" }
 ```
 
 [gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html
