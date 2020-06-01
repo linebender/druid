@@ -282,26 +282,26 @@ impl Command {
         self.symbol == selector.symbol()
     }
 
-    /// Returns `Some(&T)` (this `Command`'s payload) if the selector matches.
+    /// Returns `Some(&T)` (this `Command`'s payload) if the selector matches, and `None` if it
+    /// does not.
     ///
-    /// Returns `None` when `self.is(selector) == false`.
+    /// In most cases, if `self.is(selector)` returns `true` then this method will return
+    /// `Some(&T)`. The exception to this is if there are two selectors with the same symbol, but
+    /// different types.
     ///
     /// Alternatively you can check the selector with [`is`] and then use [`get_unchecked`].
-    ///
-    /// # Panics
-    ///
-    /// Panics when the payload has a different type, than what the selector is supposed to carry.
-    /// This can happen when two selectors with different types but the same key are used.
     ///
     /// [`get_unchecked`]: #method.get_unchecked
     pub fn get<T: Any>(&self, selector: Selector<T>) -> Option<&T> {
         if self.symbol == selector.symbol() {
-            Some(self.payload.downcast_ref().unwrap_or_else(|| {
-                panic!(
+            let ret = self.payload.downcast_ref();
+            if ret.is_none() {
+                log::error!(
                     "The selector \"{}\" exists twice with different types. See druid::Command::get for more information",
                     selector.symbol()
-                )
-            }))
+                );
+            }
+            ret
         } else {
             None
         }
