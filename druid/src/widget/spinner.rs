@@ -34,10 +34,7 @@ pub struct Spinner {
 impl Spinner {
     /// Create a spinner widget
     pub fn new() -> Spinner {
-        Spinner {
-            t: 0.0,
-            color: theme::LABEL_COLOR.into(),
-        }
+        Spinner::default()
     }
 
     /// Builder-style method for setting the spinner's color.
@@ -62,7 +59,10 @@ impl Spinner {
 
 impl Default for Spinner {
     fn default() -> Self {
-        Spinner::new()
+        Spinner {
+            t: 0.0,
+            color: theme::LABEL_COLOR.into(),
+        }
     }
 }
 
