@@ -312,6 +312,7 @@ Last release without a changelog :(
 [#1001]: https://github.com/xi-editor/druid/pull/1001
 [#1003]: https://github.com/xi-editor/druid/pull/1003
 [#1008]: https://github.com/xi-editor/druid/pull/1008
+[#1011]: https://github.com/xi-editor/druid/pull/1011
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/xi-editor/druid/compare/v0.5.0...v0.6.0
