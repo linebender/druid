@@ -130,8 +130,6 @@ mod examples {
             // Record the valid example module we found to add to the generated examples.in
             examples_in.push_str(&format!("    pub mod {};\n", example_str));
 
-            let js_entry_fn_name = example_str.to_string();
-
             // Add an entry to the index.html file.
             let index_entry = format!(
                 "<li><a href=\"./html/{name}.html\">{name}</a></li>",
@@ -173,7 +171,7 @@ mod examples {
         </script>
     </body>
 </html>"#,
-                name = js_entry_fn_name
+                name = example_str.to_string()
             );
 
             // Write out the html file into a designated html directory located in crate root.
