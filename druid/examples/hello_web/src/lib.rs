@@ -29,7 +29,7 @@ struct HelloState {
 // hello.rs example.
 #[wasm_bindgen]
 pub fn wasm_main() {
-    // This hook is necessary to get panic messages on wasm32
+    // This hook is necessary to get panic messages in the console
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     main()
 }
