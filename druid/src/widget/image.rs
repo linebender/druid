@@ -175,11 +175,11 @@ use std::{convert::AsRef, error::Error, path::Path};
 impl ImageData {
     /// Load an image from a DynamicImage from the image crate
     pub fn from_dynamic_image(image_data: image::DynamicImage) -> ImageData {
-	use image::ColorType::*;
-	let has_alpha_channel = match image_data.color() {
-	    La8 | Rgba8 | La16 | Rgba16 | Bgra8 => true,
-	    _ => false,
-	};
+        use image::ColorType::*;
+        let has_alpha_channel = match image_data.color() {
+            La8 | Rgba8 | La16 | Rgba16 | Bgra8 => true,
+            _ => false,
+        };
 
         if has_alpha_channel {
             Self::from_dynamic_image_with_alpha(image_data)
