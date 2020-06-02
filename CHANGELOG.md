@@ -19,6 +19,8 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Visual
 
+- `TextBox` stroke remains inside its `paint_rect`. ([#1007] by [@jneem])
+
 ### Docs
 
 - Fixed a link in `druid::command` documentation. ([#1008] by [@covercash2])
@@ -309,6 +311,7 @@ Last release without a changelog :(
 [#997]: https://github.com/xi-editor/druid/pull/997
 [#1001]: https://github.com/xi-editor/druid/pull/1001
 [#1003]: https://github.com/xi-editor/druid/pull/1003
+[#1007]: https://github.com/xi-editor/druid/pull/1007
 [#1008]: https://github.com/xi-editor/druid/pull/1008
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master
