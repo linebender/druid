@@ -23,17 +23,6 @@ use crate::{
 };
 
 /// A widget that renders an Image
-///
-/// `druid` does not support loading image data by default.
-/// However, there is an optional dependency on the `image` crate
-/// that makes loading simple. This feature can be enabled with cargo.
-/// For example, in `Cargo.toml`:
-/// ```no_compile
-/// [dependencies.druid]
-/// version = "0.6.0"
-/// features = ["image"]
-/// ```
-///
 pub struct Image {
     image_data: ImageData,
     fill: FillStrat,
@@ -115,16 +104,6 @@ impl<T: Data> Widget<T> for Image {
 }
 
 /// Stored Image data.
-///
-/// By default `druid` does not parse image metadata.
-/// However, `druid` supports an optional dependency on the `image` crate,
-/// which allows reading image metadata and some kinds of image data manipulation.
-/// These features are enabled with "image" feature. For example, in `Cargo.toml`:
-/// ```no_compile
-/// [dependencies.druid]
-/// version = "0.6.0"
-/// features = ["image"]
-/// ```
 #[derive(Clone)]
 pub struct ImageData {
     pixels: Vec<u8>,
