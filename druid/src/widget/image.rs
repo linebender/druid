@@ -28,8 +28,8 @@ use crate::{
 ///
 /// Note: interpolation can lead to blurry images or artifacts and so is not
 /// recommended for things like icons; instead consider using
-/// [SVG files](https://en.wikipedia.org/wiki/Scalable_Vector_Graphics) and
-/// enabling the `svg` feature with `cargo`.
+/// [SVG files](https://en.wikipedia.org/wiki/Scalable_Vector_Graphics)
+/// and enabling the `svg` feature with `cargo`.
 ///
 /// `druid` does not support loading image data by default.
 /// However, there is an optional dependency on the `image` crate
@@ -42,14 +42,14 @@ use crate::{
 /// ```
 ///
 /// (See also:
-/// [`druid::widget::ImageData`],
-/// [`druid::widget::FillStrat`],
-/// [`druid::piet::InterpolationMode`]
+/// [`ImageData`],
+/// [`FillStrat`],
+/// [`InterpolationMode`]
 /// )
 ///
 /// # Example
 ///
-/// Create an image widget and configure it using builder methods.
+/// Create an image widget and configure it using builder methods
 /// ```
 /// use druid::{
 ///     widget::{Image, ImageData, FillStrat},
@@ -73,9 +73,9 @@ impl Image {
     /// Create an image drawing widget from `ImageData`.
     ///
     /// By default, the Image will scale to fit its box constraints
-    /// ([`druid::widget::FillStrat::Fill`])
+    /// ([`FillStrat::Fill`])
     /// and will be scaled bilinearly
-    /// ([`druid::piet::InterpolationMode::Bilinear`])
+    /// ([`InterpolationMode::Bilinear`])
     pub fn new(image_data: ImageData) -> Self {
         Image {
             image_data,
@@ -90,7 +90,7 @@ impl Image {
         self
     }
 
-    /// Modify the widget's `FillStrat`.
+    /// Modify the widget's [`FillStrat`].
     pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
     }
@@ -101,7 +101,7 @@ impl Image {
         self
     }
 
-    /// Modify the widget's `InterpolationMode`.
+    /// Modify the widget's [`InterpolationMode`].
     pub fn set_interpolation_mode(&mut self, interpolation: InterpolationMode) {
         self.interpolation = interpolation;
     }
@@ -149,9 +149,9 @@ impl<T: Data> Widget<T> for Image {
 /// Stored Image data.
 /// Contains raw bytes, dimensions, and [format data](../piet/enum.ImageFormat.html)
 ///
-/// By default druid does not parse image metadata.
-/// However, druid supports an optional dependency on the `image` crate,
-/// which allows reading image metadata and other kinds of image data manipulation.
+/// By default `druid` does not parse image metadata.
+/// However, `druid` supports an optional dependency on the `image` crate,
+/// which allows reading image metadata and some kinds of image data manipulation.
 /// These features are enabled with "image" feature. For example, in `Cargo.toml`:
 /// ```no_compile
 /// [dependencies.druid]
