@@ -91,7 +91,7 @@ alternatives that can offer those capabilities:
 - Use the the platform-native widgets or mimic them. ([Relm])
 - Embed easily into custom render pipelines. ([Conrod])
 - Adhere to a specific architectural style such as Elm. ([Iced], [Relm])
-- Support rendering to HTML when compiling for WASM. ([Iced], [Moxie])
+- Support rendering to HTML when targeting the web. ([Iced], [Moxie])
 
 Druid is just one of many ongoing [Rust-native GUI experiments]. If it
 doesn't suit your use case, perhaps one of the others will!
