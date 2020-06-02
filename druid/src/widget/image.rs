@@ -15,10 +15,6 @@
 //! An Image widget.
 //! Please consider using SVG and the SVG wideget as it scales much better.
 
-use std::convert::AsRef;
-use std::error::Error;
-use std::path::Path;
-
 use crate::{
     piet::{ImageFormat, InterpolationMode},
     widget::common::FillStrat,
@@ -27,6 +23,17 @@ use crate::{
 };
 
 /// A widget that renders an Image
+///
+/// `druid` does not support loading image data by default.
+/// However, there is an optional dependency on the `image` crate
+/// that makes loading simple. This feature can be enabled with cargo.
+/// For example, in `Cargo.toml`:
+/// ```no_compile
+/// [dependencies.druid]
+/// version = "0.6.0"
+/// features = ["image"]
+/// ```
+///
 pub struct Image {
     image_data: ImageData,
     fill: FillStrat,
@@ -108,6 +115,16 @@ impl<T: Data> Widget<T> for Image {
 }
 
 /// Stored Image data.
+///
+/// By default `druid` does not parse image metadata.
+/// However, `druid` supports an optional dependency on the `image` crate,
+/// which allows reading image metadata and some kinds of image data manipulation.
+/// These features are enabled with "image" feature. For example, in `Cargo.toml`:
+/// ```no_compile
+/// [dependencies.druid]
+/// version = "0.6.0"
+/// features = ["image"]
+/// ```
 #[derive(Clone)]
 pub struct ImageData {
     pixels: Vec<u8>,
@@ -127,6 +144,35 @@ impl ImageData {
         }
     }
 
+    /// Get the size in pixels of the contained image.
+    fn get_size(&self) -> Size {
+        Size::new(self.x_pixels as f64, self.y_pixels as f64)
+    }
+
+    /// Convert ImageData into Piet draw instructions.
+    fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, interpolation: InterpolationMode) {
+        ctx.with_save(|ctx| {
+            ctx.transform(offset_matrix);
+            let size = self.get_size();
+            let im = ctx
+                .make_image(
+                    size.width as usize,
+                    size.height as usize,
+                    &self.pixels,
+                    self.format,
+                )
+                .unwrap();
+            ctx.draw_image(&im, size.to_rect(), interpolation);
+        })
+    }
+}
+
+#[cfg(feature = "image")]
+use std::{convert::AsRef, error::Error, path::Path};
+
+#[cfg(feature = "image")]
+#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
+impl ImageData {
     /// Load an image from a DynamicImage from the image crate
     pub fn from_dynamic_image(image_data: image::DynamicImage) -> ImageData {
         if has_alpha_channel(&image_data) {
@@ -173,30 +219,10 @@ impl ImageData {
         let image_data = image::open(path).map_err(|e| e)?;
         Ok(ImageData::from_dynamic_image(image_data))
     }
-
-    /// Get the size in pixels of the contained image.
-    fn get_size(&self) -> Size {
-        Size::new(self.x_pixels as f64, self.y_pixels as f64)
-    }
-
-    /// Convert ImageData into Piet draw instructions.
-    fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, interpolation: InterpolationMode) {
-        ctx.with_save(|ctx| {
-            ctx.transform(offset_matrix);
-            let size = self.get_size();
-            let im = ctx
-                .make_image(
-                    size.width as usize,
-                    size.height as usize,
-                    &self.pixels,
-                    self.format,
-                )
-                .unwrap();
-            ctx.draw_image(&im, size.to_rect(), interpolation);
-        })
-    }
 }
 
+#[cfg(feature = "image")]
+#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
 fn has_alpha_channel(image: &image::DynamicImage) -> bool {
     use image::ColorType::*;
     match image.color() {
