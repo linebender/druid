@@ -25,8 +25,6 @@ mod either;
 mod env_scope;
 mod flex;
 mod identity_wrapper;
-#[cfg(feature = "image")]
-#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
 mod image;
 mod invalidation;
 mod label;
@@ -52,8 +50,6 @@ mod view_switcher;
 mod widget;
 mod widget_ext;
 
-#[cfg(feature = "image")]
-#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
 pub use self::image::{Image, ImageData};
 pub use align::Align;
 pub use button::Button;

@@ -11,6 +11,8 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Changed
 
+- `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
+
 ### Deprecated
 
 ### Removed
@@ -315,6 +317,7 @@ Last release without a changelog :(
 [#1003]: https://github.com/xi-editor/druid/pull/1003
 [#1007]: https://github.com/xi-editor/druid/pull/1007
 [#1008]: https://github.com/xi-editor/druid/pull/1008
+[#1011]: https://github.com/xi-editor/druid/pull/1011
 [#1013]: https://github.com/xi-editor/druid/pull/1013
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master

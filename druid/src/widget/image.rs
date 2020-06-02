@@ -15,9 +15,8 @@
 //! An Image widget.
 //! Please consider using SVG and the SVG wideget as it scales much better.
 
-use std::convert::AsRef;
-use std::error::Error;
-use std::path::Path;
+#[cfg(feature = "image")]
+use std::{convert::AsRef, error::Error, path::Path};
 
 use crate::{
     piet::{ImageFormat, InterpolationMode},
@@ -127,9 +126,41 @@ impl ImageData {
         }
     }
 
+    /// Get the size in pixels of the contained image.
+    fn get_size(&self) -> Size {
+        Size::new(self.x_pixels as f64, self.y_pixels as f64)
+    }
+
+    /// Convert ImageData into Piet draw instructions.
+    fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, interpolation: InterpolationMode) {
+        ctx.with_save(|ctx| {
+            ctx.transform(offset_matrix);
+            let size = self.get_size();
+            let im = ctx
+                .make_image(
+                    size.width as usize,
+                    size.height as usize,
+                    &self.pixels,
+                    self.format,
+                )
+                .unwrap();
+            ctx.draw_image(&im, size.to_rect(), interpolation);
+        })
+    }
+}
+
+#[cfg(feature = "image")]
+#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
+impl ImageData {
     /// Load an image from a DynamicImage from the image crate
     pub fn from_dynamic_image(image_data: image::DynamicImage) -> ImageData {
-        if has_alpha_channel(&image_data) {
+        use image::ColorType::*;
+        let has_alpha_channel = match image_data.color() {
+            La8 | Rgba8 | La16 | Rgba16 | Bgra8 => true,
+            _ => false,
+        };
+
+        if has_alpha_channel {
             Self::from_dynamic_image_with_alpha(image_data)
         } else {
             Self::from_dynamic_image_without_alpha(image_data)
@@ -172,36 +203,6 @@ impl ImageData {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
         let image_data = image::open(path).map_err(|e| e)?;
         Ok(ImageData::from_dynamic_image(image_data))
-    }
-
-    /// Get the size in pixels of the contained image.
-    fn get_size(&self) -> Size {
-        Size::new(self.x_pixels as f64, self.y_pixels as f64)
-    }
-
-    /// Convert ImageData into Piet draw instructions.
-    fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, interpolation: InterpolationMode) {
-        ctx.with_save(|ctx| {
-            ctx.transform(offset_matrix);
-            let size = self.get_size();
-            let im = ctx
-                .make_image(
-                    size.width as usize,
-                    size.height as usize,
-                    &self.pixels,
-                    self.format,
-                )
-                .unwrap();
-            ctx.draw_image(&im, size.to_rect(), interpolation);
-        })
-    }
-}
-
-fn has_alpha_channel(image: &image::DynamicImage) -> bool {
-    use image::ColorType::*;
-    match image.color() {
-        La8 | Rgba8 | La16 | Rgba16 | Bgra8 => true,
-        _ => false,
     }
 }
 
