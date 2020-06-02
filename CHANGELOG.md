@@ -11,6 +11,8 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Changed
 
+- `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
+
 ### Deprecated
 
 ### Removed
