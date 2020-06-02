@@ -16,6 +16,7 @@ edition = "2018"
 # Once cargo doc becomes smart enough to handle multiple versions of the same crate,
 # the "svg" and "image" features should be enabled for the docs.rs output.
 features = ["im"]
+rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
 
 [features]

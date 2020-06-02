@@ -9,11 +9,12 @@ readme = "README.md"
 categories = ["os::macos-apis", "os::windows-apis", "gui"]
 edition = "2018"
 
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+default-target = "x86_64-pc-windows-msvc"
+
 [features]
 x11 = ["xcb", "cairo-sys-rs"]
-
-[package.metadata.docs.rs]
-default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that

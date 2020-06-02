@@ -10,6 +10,10 @@ edition = "2018"
 [lib]
 proc-macro = true
 
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+default-target = "x86_64-pc-windows-msvc"
+
 [dependencies]
 syn = "1.0.29"
 quote = "1.0.6"

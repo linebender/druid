@@ -76,7 +76,6 @@ pub use spinner::Spinner;
 pub use split::Split;
 pub use stepper::Stepper;
 #[cfg(feature = "svg")]
-#[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
 pub use textbox::TextBox;
