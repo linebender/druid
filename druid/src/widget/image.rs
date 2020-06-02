@@ -15,6 +15,9 @@
 //! An Image widget.
 //! Please consider using SVG and the SVG wideget as it scales much better.
 
+#[cfg(feature = "image")]
+use std::{convert::AsRef, error::Error, path::Path};
+
 use crate::{
     piet::{ImageFormat, InterpolationMode},
     widget::common::FillStrat,
@@ -145,9 +148,6 @@ impl ImageData {
         })
     }
 }
-
-#[cfg(feature = "image")]
-use std::{convert::AsRef, error::Error, path::Path};
 
 #[cfg(feature = "image")]
 #[cfg_attr(docsrs, doc(cfg(feature = "image")))]
