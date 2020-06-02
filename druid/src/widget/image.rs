@@ -34,6 +34,16 @@ use crate::{
 /// [SVG files](https://en.wikipedia.org/wiki/Scalable_Vector_Graphics) and
 /// enabling the `svg` feature with `cargo`.
 ///
+/// `druid` does not support loading image data by default.
+/// However, there is an optional dependency on the `image` crate
+/// that makes loading simple. This feature can be enabled with cargo.
+/// For example, in `Cargo.toml`:
+/// ```no_compile
+/// [dependencies.druid]
+/// version = "0.6.0"
+/// features = ["image"]
+/// ```
+///
 /// (See also:
 /// [`druid::widget::ImageData`],
 /// [`druid::widget::FillStrat`],
@@ -141,6 +151,17 @@ impl<T: Data> Widget<T> for Image {
 
 /// Stored Image data.
 /// Contains raw bytes, dimensions, and [format data](../piet/enum.ImageFormat.html)
+///
+/// By default druid does not parse image metadata.
+/// However, druid supports an optional dependency on the `image` crate,
+/// which allows reading image metadata and other kinds of image data manipulation.
+/// These features are enabled with "image" feature. For example, in `Cargo.toml`:
+/// ```no_compile
+/// [dependencies.druid]
+/// version = "0.6.0"
+/// features = ["image"]
+/// ```
+///
 #[derive(Clone)]
 pub struct ImageData {
     pixels: Vec<u8>,
