@@ -41,6 +41,7 @@ to specific version documentation that will need updating.
   Keep the sections, but delete the entries.
 - Rename the old *Unreleased* section to the target release version and add the release date.
 - Add the correct link for the target release revision to the bottom of the file.
+- Update the changelog introduction message to reflect this new release.
 - Delete any empty sections.
 - Tidy up the entries, possibly reordering some for more logical grouping.
 

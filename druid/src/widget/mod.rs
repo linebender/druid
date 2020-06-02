@@ -37,6 +37,7 @@ mod radio;
 mod scroll;
 mod sized_box;
 mod slider;
+mod spinner;
 mod split;
 mod stepper;
 #[cfg(feature = "svg")]
@@ -71,6 +72,7 @@ pub use radio::{Radio, RadioGroup};
 pub use scroll::Scroll;
 pub use sized_box::SizedBox;
 pub use slider::Slider;
+pub use spinner::Spinner;
 pub use split::Split;
 pub use stepper::Stepper;
 #[cfg(feature = "svg")]
