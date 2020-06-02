@@ -4,6 +4,11 @@ members = [
     "druid-shell",
     "druid-derive",
     "docs/book_examples",
-    "druid/examples/wasm",
-    "druid/examples/hello_wasm_web",
+    "druid/examples/web",
+    "druid/examples/hello_web",
+]
+default-members = [
+    "druid",
+    "druid-shell",
+    "druid-derive",
 ]

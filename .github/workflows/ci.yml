@@ -213,25 +213,25 @@ jobs:
           command: test
           args: --manifest-path=docs/book_examples/Cargo.toml --no-run --target wasm32-unknown-unknown
 
-      # Clippy and build the special druid-wasm-examples package.
-      - name: cargo clippy druid-wasm-examples
+      # Clippy and build the special druid-web-examples package.
+      - name: cargo clippy druid-web-examples
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/examples/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+          args: --manifest-path=druid/examples/web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 
       - name: wasm-pack build examples
-        run: wasm-pack build --dev --target web druid/examples/wasm
+        run: wasm-pack build --dev --target web druid/examples/web
 
-      # Clippy and build the hello_wasm_web example
-      - name: cargo clippy hello_wasm_web example
+      # Clippy and build the hello_web example
+      - name: cargo clippy hello_web example
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/examples/hello_wasm_web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+          args: --manifest-path=druid/examples/hello_web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 
-      - name: wasm-pack build hello_wasm_web example
-        run: wasm-pack build --target web druid/examples/hello_wasm_web
+      - name: wasm-pack build hello_web example
+        run: wasm-pack build --dev --target web druid/examples/hello_web
 
   test-nightly:
     runs-on: ${{ matrix.os }}
