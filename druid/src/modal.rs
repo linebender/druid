@@ -16,14 +16,7 @@ use std::any::Any;
 
 use crate::lens;
 use crate::widget::prelude::*;
-use crate::{Color, Data, Point, Rect, Selector, SingleUse, WidgetExt, WidgetPod};
-
-/// A widget that has a child, and can optionally show modal widgets that obscure the child.
-pub(crate) struct ModalHost<T, W> {
-    child: W,
-    /// A stack of modal widgets. Only the top widget on the stack gets user interaction events.
-    modals: Vec<Modal<T>>,
-}
+use crate::{Color, Data, Point, Selector, SingleUse, WidgetExt, WidgetPod};
 
 /// Describes a modal widget.
 ///
@@ -51,10 +44,10 @@ pub struct ModalDesc<T> {
 
 // The same as ModalDesc, but with the widget wrapped in a WidgetPod.
 pub(crate) struct Modal<T> {
-    widget: WidgetPod<T, Box<dyn Widget<T>>>,
-    pass_through_events: bool,
-    background: Option<Color>,
-    position: Option<Point>,
+    pub(crate) widget: WidgetPod<T, Box<dyn Widget<T>>>,
+    pub(crate) pass_through_events: bool,
+    pub(crate) background: Option<Color>,
+    pub(crate) position: Option<Point>,
 }
 
 impl<T> From<ModalDesc<T>> for Modal<T> {
@@ -82,7 +75,7 @@ impl ModalDesc<()> {
     pub(crate) const SHOW_MODAL_NO_DATA: Selector<SingleUse<ModalDesc<()>>> =
         Selector::new("druid.show-modal-widget-no-data");
 
-    fn lensed<T: Data>(self) -> ModalDesc<T> {
+    pub(crate) fn lensed<T: Data>(self) -> ModalDesc<T> {
         ModalDesc {
             widget: Box::new(self.widget.lens(lens::Map::new(|_| (), |_, _| {}))),
             pass_through_events: self.pass_through_events,
@@ -134,136 +127,5 @@ impl<T> ModalDesc<T> {
     pub fn position(mut self, position: Point) -> Self {
         self.position = Some(position);
         self
-    }
-}
-
-impl<T, W> ModalHost<T, W> {
-    pub(crate) fn new(widget: W) -> Self {
-        ModalHost {
-            child: widget,
-            modals: Vec::new(),
-        }
-    }
-}
-
-impl<T: Data, W: Widget<T>> Widget<T> for ModalHost<T, W> {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        match event {
-            Event::Command(cmd) if cmd.is(ModalDesc::<T>::SHOW_MODAL) => {
-                let modal = cmd.get_unchecked(ModalDesc::<T>::SHOW_MODAL);
-                // SHOW_MODAL is private to druid, and we already checked at command submission
-                // that the type parameter is correct.
-                let modal = modal.take().unwrap().downcast::<ModalDesc<T>>().unwrap();
-                self.modals.push((*modal).into());
-                ctx.children_changed();
-                ctx.request_paint();
-                ctx.set_handled();
-            }
-            Event::Command(cmd) if cmd.is(ModalDesc::DISMISS_MODAL) => {
-                if self.modals.pop().is_some() {
-                    ctx.children_changed();
-                } else {
-                    log::warn!("cannot dismiss modal; no modal shown");
-                }
-                ctx.request_paint();
-                ctx.set_handled();
-            }
-            Event::Command(cmd) if cmd.is(ModalDesc::SHOW_MODAL_NO_DATA) => {
-                if let Some(modal) = cmd.get_unchecked(ModalDesc::SHOW_MODAL_NO_DATA).take() {
-                    self.modals.push(modal.lensed().into());
-                    ctx.children_changed();
-                } else {
-                    log::error!("couldn't get modal payload");
-                }
-                ctx.request_paint();
-                ctx.set_handled();
-            }
-
-            // User input gets delivered to the top of the modal stack, passing through every modal
-            // that wants to pass through events.
-            e if is_user_input(e) => {
-                let mut done = false;
-                for modal in self.modals.iter_mut().rev() {
-                    modal.widget.event(ctx, event, data, env);
-                    done |= !modal.pass_through_events;
-                    if done {
-                        break;
-                    }
-                }
-                if !done {
-                    self.child.event(ctx, event, data, env);
-                }
-            }
-            // Other events (timers, commands) are delivered to everything.
-            other => {
-                for modal in &mut self.modals {
-                    modal.widget.event(ctx, other, data, env);
-                }
-                self.child.event(ctx, other, data, env);
-            }
-        }
-    }
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        for modal in &mut self.modals {
-            modal.widget.lifecycle(ctx, event, data, env);
-        }
-        self.child.lifecycle(ctx, event, data, env);
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        for modal in &mut self.modals {
-            modal.widget.update(ctx, data, env);
-        }
-        self.child.update(ctx, old_data, data, env);
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let size = self.child.layout(ctx, bc, data, env);
-        for modal in &mut self.modals {
-            let modal_constraints = BoxConstraints::new(Size::ZERO, size);
-            let modal_size = modal.widget.layout(ctx, &modal_constraints, data, env);
-            let modal_origin = if let Some(pos) = modal.position {
-                // TODO: translate the position to ensure that the modal fits in our bounds.
-                pos
-            } else {
-                ((size.to_vec2() - modal_size.to_vec2()) / 2.0).to_point()
-            };
-            let modal_frame = Rect::from_origin_size(modal_origin, modal_size);
-            modal.widget.set_layout_rect(ctx, data, env, modal_frame);
-        }
-        size
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.child.paint(ctx, data, env);
-        for modal in &mut self.modals {
-            if let Some(bg) = &mut modal.background {
-                let frame = ctx.size().to_rect();
-                ctx.fill(frame, bg);
-            }
-
-            // TODO: cmyr's modal stuff had support for a drop-shadow
-            /*
-            let modal_rect = modal.layout_rect() + Vec2::new(5.0, 5.0);
-            let blur_color = Color::grey8(100);
-            ctx.blurred_rect(modal_rect, 5.0, &blur_color);
-            */
-            modal.widget.paint(ctx, data, env);
-        }
-    }
-}
-
-fn is_user_input(event: &Event) -> bool {
-    match event {
-        Event::MouseUp(_)
-        | Event::MouseDown(_)
-        | Event::MouseMove(_)
-        | Event::KeyUp(_)
-        | Event::KeyDown(_)
-        | Event::Paste(_)
-        | Event::Wheel(_)
-        | Event::Zoom(_) => true,
-        _ => false,
     }
 }
