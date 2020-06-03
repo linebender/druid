@@ -148,20 +148,3 @@ pub enum KeyCode {
 
     Unknown(platform::RawKeyCode),
 }
-
-impl KeyCode {
-    pub fn is_printable(self) -> bool {
-        use KeyCode::*;
-        match self {
-            Backtick | Key0 | Key1 | Key2 | Key3 | Key4 | Key5 | Key6 | Key7 | Key8 | Key9
-            | Minus | Equals | Tab | KeyQ | KeyW | KeyE | KeyR | KeyT | KeyY | KeyU | KeyI
-            | KeyO | KeyP | LeftBracket | RightBracket | Return | KeyA | KeyS | KeyD | KeyF
-            | KeyG | KeyH | KeyJ | KeyK | KeyL | Semicolon | Quote | Backslash | KeyZ | KeyX
-            | KeyC | KeyV | KeyB | KeyN | KeyM | Comma | Period | Slash | Space | Numpad0
-            | Numpad1 | Numpad2 | Numpad3 | Numpad4 | Numpad5 | Numpad6 | Numpad7 | Numpad8
-            | Numpad9 | NumpadEquals | NumpadSubtract | NumpadAdd | NumpadDecimal
-            | NumpadMultiply | NumpadDivide | NumpadEnter => true,
-            _ => false,
-        }
-    }
-}

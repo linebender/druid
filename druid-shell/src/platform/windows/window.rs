@@ -661,7 +661,30 @@ impl WndProc for MyWndProc {
                     let key_code: KeyCode = (wparam as i32).into();
                     s.stashed_key_code = key_code;
 
-                    if key_code.is_printable() || key_code == KeyCode::Backspace {
+                    /*
+                     * FIXME: This match was originally in KeyCode.is_printable().
+                     * It is required in order to prevent an erroneous double KeyDown
+                     * event on the druid side as the WM_CHAR is also mapped to a
+                     * KeyDown but we cannot(?) easily find out the chars for the
+                     * WM_KEYDOWN in this context. As a result the hack of naively
+                     * determining if the key is supposedly printable and avoiding
+                     * propagating it if it does appear to be printable has been kept
+                     * despite the original KeyCode.is_printable() being removed.
+                     */
+                    use KeyCode::*;
+                    let probably_printable = match key_code {
+                        Backtick | Key0 | Key1 | Key2 | Key3 | Key4 | Key5 | Key6 | Key7 | Key8
+                        | Key9 | Minus | Equals | Tab | KeyQ | KeyW | KeyE | KeyR | KeyT | KeyY
+                        | KeyU | KeyI | KeyO | KeyP | LeftBracket | RightBracket | Return
+                        | KeyA | KeyS | KeyD | KeyF | KeyG | KeyH | KeyJ | KeyK | KeyL
+                        | Semicolon | Quote | Backslash | KeyZ | KeyX | KeyC | KeyV | KeyB
+                        | KeyN | KeyM | Comma | Period | Slash | Space | Numpad0 | Numpad1
+                        | Numpad2 | Numpad3 | Numpad4 | Numpad5 | Numpad6 | Numpad7 | Numpad8
+                        | Numpad9 | NumpadEquals | NumpadSubtract | NumpadAdd | NumpadDecimal
+                        | NumpadMultiply | NumpadDivide | NumpadEnter => true,
+                        _ => false,
+                    };
+                    if probably_printable || key_code == KeyCode::Backspace {
                         //FIXME: this will fail to propogate key combinations such as alt+s
                         return None;
                     }

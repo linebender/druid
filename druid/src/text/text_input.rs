@@ -100,7 +100,8 @@ impl TextInput for BasicTextInput {
             // Delete
             k_e if (HotKey::new(None, KeyCode::Delete)).matches(k_e) => EditAction::Delete,
             // Actual typing
-            k_e if k_e.key_code.is_printable() => {
+            k_e if k_e.text().is_some() => {
+                // `if let` in a match case is currently unsupported
                 if let Some(chars) = k_e.text() {
                     EditAction::Insert(chars.to_owned())
                 } else {
