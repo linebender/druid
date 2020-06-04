@@ -160,7 +160,7 @@ impl<T: Data> Widget<T> for Image {
 /// Hoever, [enabling the `image` feature](../index.html#optional-features)
 /// provides several
 /// methods by which you can load image files.
-/// 
+///
 /// Contains raw bytes, dimensions, and image format ([`druid::piet::ImageFormat`]).
 #[derive(Clone)]
 pub struct ImageData {
