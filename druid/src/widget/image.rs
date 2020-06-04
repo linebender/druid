@@ -30,7 +30,7 @@ use crate::{
 /// Contains data about how to fill given space and interpolate pixels.
 /// Configuration options are provided via the builder pattern.
 ///
-/// Note: interpolation can lead to blurry images or artifacts and so is not
+/// Note: interpolation can lead to blurry or pixelated images and so is not
 /// recommended for things like icons. Instead consider using
 /// [SVG files](https://en.wikipedia.org/wiki/Scalable_Vector_Graphics)
 /// and enabling the `svg` feature with `cargo`.
@@ -154,9 +154,14 @@ impl<T: Data> Widget<T> for Image {
     }
 }
 
-/// Owned Image data.
+/// Loaded image data.
+///
+/// By default, Druid does not parse image data.
+/// Hoever, [enabling the `image` feature](../index.html#optional-features)
+/// provides several
+/// methods by which you can load image files.
 /// 
-/// Contains raw bytes, dimensions, and image format ([`ImageFormat`])
+/// Contains raw bytes, dimensions, and image format ([`druid::piet::ImageFormat`]).
 #[derive(Clone)]
 pub struct ImageData {
     pixels: Vec<u8>,
