@@ -91,6 +91,21 @@
 //! }
 //! ```
 //!
+//! # Optional Features
+//!
+//! * `im` - Efficient immutable data structures using the [`im` crate],
+//!          which is made available via the [`im` module].
+//! * `svg` - Scalable Vector Graphics for icons and other scalable images using the [`usvg` crate].
+//! * `image` - Bitmap image support using the [`image` crate].
+//! * `x11` - Work-in-progress X11 Linux backend instead of GTK.
+//!
+//! Features can be added with `cargo`. For example, in your `Cargo.toml`:
+//! ```no_compile
+//! [dependencies.druid]
+//! version = "0.6.0"
+//! features = ["im", "svg", "image"]
+//! ```
+//!
 //! [`Widget`]: trait.Widget.html
 //! [`Data`]: trait.Data.html
 //! [`Lens`]: trait.Lens.html
@@ -100,6 +115,10 @@
 //! [`piet`]: https://docs.rs/piet
 //! [`druid/examples`]: https://github.com/xi-editor/druid/tree/v0.6.0/druid/examples
 //! [druid book]: https://xi-editor.io/druid/intro.html
+//! [`im` crate]: https://crates.io/crates/im
+//! [`im` module]: im/index.html
+//! [`usvg` crate]: https://crates.io/crates/usvg
+//! [`image` crate]: https://crates.io/crates/image
 
 #![deny(intra_doc_link_resolution_failure, unsafe_code)]
 #![allow(clippy::new_ret_no_self, clippy::needless_doctest_main)]

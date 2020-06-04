@@ -11,6 +11,8 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Changed
 
+- `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
+
 ### Deprecated
 
 ### Removed
@@ -19,6 +21,8 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Visual
 
+- `TextBox` stroke remains inside its `paint_rect`. ([#1007] by [@jneem])
+
 ### Docs
 
 - Fixed a link in `druid::command` documentation. ([#1008] by [@covercash2])
@@ -26,6 +30,8 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Examples
 
 ### Maintenance
+
+- Standardized web targeting terminology. ([#1013] by [@xStrom])
 
 ### Outside News
 
@@ -309,7 +315,10 @@ Last release without a changelog :(
 [#997]: https://github.com/xi-editor/druid/pull/997
 [#1001]: https://github.com/xi-editor/druid/pull/1001
 [#1003]: https://github.com/xi-editor/druid/pull/1003
+[#1007]: https://github.com/xi-editor/druid/pull/1007
 [#1008]: https://github.com/xi-editor/druid/pull/1008
+[#1011]: https://github.com/xi-editor/druid/pull/1011
+[#1013]: https://github.com/xi-editor/druid/pull/1013
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/xi-editor/druid/compare/v0.5.0...v0.6.0

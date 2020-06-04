@@ -404,11 +404,10 @@ impl Widget<String> for TextBox {
         };
 
         // Paint the background
-        let clip_rect = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(self.width - BORDER_WIDTH, height).to_vec2(),
-            env.get(theme::TEXTBOX_BORDER_RADIUS),
-        );
+        let clip_rect = Size::new(self.width - BORDER_WIDTH, height)
+            .to_rect()
+            .inset(-BORDER_WIDTH / 2.0)
+            .to_rounded_rect(env.get(theme::TEXTBOX_BORDER_RADIUS));
 
         ctx.fill(clip_rect, &background_color);
 
