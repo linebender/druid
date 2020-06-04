@@ -57,6 +57,20 @@ use crate::{
 ///     // set interpolation mode
 ///     .interpolation_mode(InterpolationMode::NearestNeighbor);
 /// ```
+/// Create an image widget and configure it using setters
+/// ```
+/// use druid::{
+///     widget::{Image, ImageData, FillStrat},
+///     piet::InterpolationMode,
+/// };
+///
+/// let image_data = ImageData::empty();
+/// let mut image_widget = Image::new(image_data);
+/// // set fill strategy
+/// image_widget.set_fill_mode(FillStrat::FitWidth);
+/// // set interpolation mode
+/// image_widget.set_interpolation_mode(InterpolationMode::NearestNeighbor);
+/// ```
 pub struct Image {
     image_data: ImageData,
     fill: FillStrat,
