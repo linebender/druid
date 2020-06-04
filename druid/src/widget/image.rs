@@ -25,12 +25,13 @@ use crate::{
     PaintCtx, Rect, RenderContext, Size, UpdateCtx, Widget,
 };
 
-/// A widget that renders an Image. Contains data about how to fill given space and
-/// interpolate pixels.
+/// A widget that renders a bitmap Image.
+///
+/// Contains data about how to fill given space and interpolate pixels.
 /// Configuration options are provided via the builder pattern.
 ///
 /// Note: interpolation can lead to blurry images or artifacts and so is not
-/// recommended for things like icons; instead consider using
+/// recommended for things like icons. Instead consider using
 /// [SVG files](https://en.wikipedia.org/wiki/Scalable_Vector_Graphics)
 /// and enabling the `svg` feature with `cargo`.
 ///
@@ -139,8 +140,9 @@ impl<T: Data> Widget<T> for Image {
     }
 }
 
-/// Stored Image data.
-/// Contains raw bytes, dimensions, and [format data](../piet/enum.ImageFormat.html)
+/// Owned Image data.
+/// 
+/// Contains raw bytes, dimensions, and image format ([`ImageFormat`])
 #[derive(Clone)]
 pub struct ImageData {
     pixels: Vec<u8>,
