@@ -25,6 +25,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Docs
 
+- Added documentation for the `druid::Image` widget. ([#1018] by [@covercash2])
 - Fixed a link in `druid::command` documentation. ([#1008] by [@covercash2])
 
 ### Examples
@@ -319,6 +320,7 @@ Last release without a changelog :(
 [#1008]: https://github.com/xi-editor/druid/pull/1008
 [#1011]: https://github.com/xi-editor/druid/pull/1011
 [#1013]: https://github.com/xi-editor/druid/pull/1013
+[#1018]: https://github.com/xi-editor/druid/pull/1018
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/xi-editor/druid/compare/v0.5.0...v0.6.0
