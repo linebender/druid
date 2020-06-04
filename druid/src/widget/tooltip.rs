@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
+
+use instant::Instant;
 
 use crate::widget::prelude::*;
 use crate::widget::{Controller, Label, LabelText, WidgetExt};
@@ -34,11 +36,16 @@ const TOOLTIP_OFFSET: Vec2 = Vec2::new(10.0, 10.0);
 /// See [`WidgetExt::tooltip`] for a nicer interface to this functionality.
 ///
 /// [`WidgetExt::tooltip`]: ../trait.WidgetExt.html#method.tooltip
-pub struct TooltipWrap<T> {
+pub struct TooltipController<T> {
     text: LabelText<T>,
     timer: TimerToken,
-    // If we are considering showing a tooltip, this will be the time of the last
-    // mouse move event.
+    // The naive implementation of a tooltip timer would be: on every mouse move, create a new
+    // timer, but only keep the token of the last one. When the last one fires, show the tooltip.
+    //
+    // We do something a little more complicated, to avoid setting so many timers: if we get a
+    // mouse move while a timer's already running, we update `last_mouse_move` instead of starting
+    // a new timer. That way, when the timer fires we know how long it's been since the last mouse
+    // move.
     last_mouse_move: Option<Instant>,
     mouse_pos: Point,
 }
@@ -123,9 +130,9 @@ fn tooltip_desc(text: &str, position: Point) -> ModalDesc<()> {
     .position(Point::ZERO)
 }
 
-impl<T: Data> TooltipWrap<T> {
-    pub(crate) fn new(text: LabelText<T>) -> TooltipWrap<T> {
-        TooltipWrap {
+impl<T: Data> TooltipController<T> {
+    pub(crate) fn new(text: LabelText<T>) -> TooltipController<T> {
+        TooltipController {
             text,
             timer: TimerToken::INVALID,
             last_mouse_move: None,
@@ -134,7 +141,7 @@ impl<T: Data> TooltipWrap<T> {
     }
 }
 
-impl<T: Data, W: Widget<T>> Controller<T, W> for TooltipWrap<T> {
+impl<T: Data, W: Widget<T>> Controller<T, W> for TooltipController<T> {
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, ev: &Event, data: &mut T, env: &Env) {
         match ev {
             Event::MouseDown(_) | Event::MouseUp(_) => {

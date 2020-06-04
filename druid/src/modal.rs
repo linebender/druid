@@ -16,7 +16,7 @@ use std::any::Any;
 
 use crate::lens;
 use crate::widget::prelude::*;
-use crate::{Color, Data, Point, Selector, SingleUse, WidgetExt, WidgetPod};
+use crate::{Data, Point, Selector, SingleUse, WidgetExt, WidgetPod};
 
 /// Describes a modal widget.
 ///
@@ -32,11 +32,6 @@ pub struct ModalDesc<T> {
     widget: Box<dyn Widget<T>>,
     /// If false, only the modal will get user input events.
     pass_through_events: bool,
-    /// If set, a background that will be drawn over the `ModalHost` before drawing the modal.
-    // TODO: it would be nice to take a BackgroundBrush here, but that requires a type parameter
-    // and there isn't currently a way to 'lens' a BackgroundBrush (which we would need for
-    // SHOW_MODAL_NO_DATA).
-    background: Option<Color>,
     /// If set, the origin of the modal widget. If unset, the modal widget is centered in the
     /// `ModalHost`.
     position: Option<Point>,
@@ -46,7 +41,6 @@ pub struct ModalDesc<T> {
 pub(crate) struct Modal<T> {
     pub(crate) widget: WidgetPod<T, Box<dyn Widget<T>>>,
     pub(crate) pass_through_events: bool,
-    pub(crate) background: Option<Color>,
     pub(crate) position: Option<Point>,
 }
 
@@ -56,7 +50,6 @@ impl<T> From<ModalDesc<T>> for Modal<T> {
             widget: WidgetPod::new(desc.widget),
             pass_through_events: desc.pass_through_events,
             position: desc.position,
-            background: desc.background,
         }
     }
 }
@@ -79,7 +72,6 @@ impl ModalDesc<()> {
         ModalDesc {
             widget: Box::new(self.widget.lens(lens::Map::new(|_| (), |_, _| {}))),
             pass_through_events: self.pass_through_events,
-            background: self.background,
             position: self.position,
         }
     }
@@ -94,22 +86,13 @@ impl<T> ModalDesc<T> {
     pub(crate) const SHOW_MODAL: Selector<SingleUse<Box<dyn Any>>> =
         Selector::new("druid.show-modal-widget");
 
-    /// Creates a new modal for showing the widget `innner`.
-    pub fn new(inner: impl Widget<T> + 'static) -> ModalDesc<T> {
+    /// Creates a new modal for displaying the widget `widget`.
+    pub fn new(widget: impl Widget<T> + 'static) -> ModalDesc<T> {
         ModalDesc {
-            widget: Box::new(inner),
+            widget: Box::new(widget),
             pass_through_events: false,
-            background: None,
             position: None,
         }
-    }
-
-    /// Sets the background for this modal.
-    ///
-    /// This background will be drawn on top of the window, but below the modal widget.
-    pub fn background(mut self, color: Color) -> Self {
-        self.background = Some(color);
-        self
     }
 
     /// Determines whether to pass through events from the modal to the rest of the window.

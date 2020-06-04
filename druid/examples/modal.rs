@@ -18,7 +18,7 @@ use druid::{
     WindowDesc,
 };
 
-const WINDOW_TITLE: &'static str = "Number entry";
+const WINDOW_TITLE: &str = "Number entry";
 
 #[derive(Clone, Data, Lens)]
 struct ModalState {
@@ -34,8 +34,13 @@ fn make_modal() -> ModalDesc<ModalState> {
             ctx.dismiss_modal();
         })
         .tooltip("Go on, apologize.");
-    let flex = Flex::column().with_child(label).with_child(button);
-    ModalDesc::new(flex).background(Color::grey8(100).with_alpha(0.5))
+    let flex = Flex::column()
+        .with_child(label)
+        .with_child(button)
+        .center()
+        .expand()
+        .background(Color::grey8(200).with_alpha(0.8));
+    ModalDesc::new(flex)
 }
 
 impl<T, W: Widget<T>> Controller<T, W> for NumberEntryController {

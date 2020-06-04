@@ -54,7 +54,8 @@ pub struct Window<T> {
     pub(crate) handle: WindowHandle,
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
     // delegate?
-    /// A stack of modal widgets. Only the top widget on the stack gets user interaction events.
+    /// A stack of modal widgets. The last widget gets user interaction events, and can choose
+    /// whether to propagate them.
     modals: Vec<Modal<T>>,
     invalid: Region,
 }
@@ -251,29 +252,13 @@ impl<T: Data> Window<T> {
                 is_root: true,
             };
 
-            if is_user_input(&event) {
-                // User input gets delivered to the top of the modal stack, passing through every
-                // modal that wants to pass through events.
-                // TODO: maybe we can wrap the modal in something that calls set_handled, instead
-                // of handling it here?
-                let mut done = false;
-                for modal in self.modals.iter_mut().rev() {
-                    modal.widget.event(&mut ctx, &event, data, env);
-                    done |= !modal.pass_through_events;
-                    if done {
-                        break;
-                    }
+            for modal in self.modals.iter_mut().rev() {
+                modal.widget.event(&mut ctx, &event, data, env);
+                if is_user_input(&event) && !modal.pass_through_events {
+                    ctx.set_handled();
                 }
-                if !done {
-                    self.root.event(&mut ctx, &event, data, env);
-                }
-            } else {
-                // Other events are sent to everything.
-                for modal in self.modals.iter_mut().rev() {
-                    modal.widget.event(&mut ctx, &event, data, env);
-                }
-                self.root.event(&mut ctx, &event, data, env);
             }
+            self.root.event(&mut ctx, &event, data, env);
             ctx.is_handled
         };
 
@@ -485,17 +470,6 @@ impl<T: Data> Window<T> {
             root.paint_raw(ctx, data, env);
 
             for modal in modals {
-                if let Some(bg) = &mut modal.background {
-                    let rect = ctx.size().to_rect();
-                    ctx.fill(rect, bg);
-                }
-
-                // TODO: cmyr's modal stuff had support for a drop-shadow
-                /*
-                let modal_rect = modal.layout_rect() + Vec2::new(5.0, 5.0);
-                let blur_color = Color::grey8(100);
-                ctx.blurred_rect(modal_rect, 5.0, &blur_color);
-                */
                 modal.widget.paint(ctx, data, env);
             }
         });
