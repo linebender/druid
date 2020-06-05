@@ -157,7 +157,7 @@ impl<T: Data> Widget<T> for Image {
 /// Loaded image data.
 ///
 /// By default, Druid does not parse image data.
-/// Hoever, [enabling the `image` feature](../index.html#optional-features)
+/// However, [enabling the `image` feature](../index.html#optional-features)
 /// provides several
 /// methods by which you can load image files.
 ///
