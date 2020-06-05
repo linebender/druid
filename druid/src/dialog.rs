@@ -67,7 +67,7 @@ impl<T: Data> DialogDesc<T> {
         let col = Flex::column().with_child(label).with_child(button_row);
         col.center().expand().background(
             self.background
-                .unwrap_or(Color::WHITE.with_alpha(0.0).into()),
+                .unwrap_or_else(|| Color::WHITE.with_alpha(0.0).into()),
         )
     }
 
