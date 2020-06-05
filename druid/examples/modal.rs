@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, Button, Controller, Flex, Label, TextBox};
+use druid::widget::{Button, Controller, Flex, Label, TextBox};
 use druid::{
-    AppLauncher, Color, Data, Env, Event, EventCtx, KeyCode, Lens, ModalDesc, Widget, WidgetExt,
-    WindowDesc,
+    AppLauncher, Color, Data, DialogDesc, Env, Event, EventCtx, KeyCode, Lens, ModalDesc, Widget,
+    WidgetExt, WindowDesc,
 };
 
 const WINDOW_TITLE: &str = "Number entry";
@@ -43,8 +43,15 @@ fn make_modal() -> ModalDesc<ModalState> {
     ModalDesc::new(flex)
 }
 
-impl<T, W: Widget<T>> Controller<T, W> for NumberEntryController {
-    fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+impl<W: Widget<String>> Controller<String, W> for NumberEntryController {
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut String,
+        env: &Env,
+    ) {
         if let Event::KeyDown(ev) = event {
             match ev.key_code {
                 KeyCode::Key0
@@ -82,8 +89,22 @@ pub fn main() {
 
 fn build_root_widget() -> impl Widget<ModalState> {
     let textbox = TextBox::new()
-        .lens(ModalState::number)
-        .controller(NumberEntryController);
+        .controller(NumberEntryController)
+        .lens(ModalState::number);
 
-    Align::centered(textbox)
+    let button = Button::new("Clear").on_click(|ctx, _data, _env| {
+        ctx.show_dialog(
+            DialogDesc::new("Really clear?")
+                .background(Color::grey8(100).with_alpha(0.8))
+                .with_option("Yes, really", |_ctx, data: &mut ModalState, _env| {
+                    data.number.clear();
+                })
+                .with_option("Never mind", |_, _, _| {}),
+        );
+    });
+
+    Flex::column()
+        .with_child(textbox)
+        .with_child(button)
+        .center()
 }

@@ -25,8 +25,9 @@ use crate::modal::ModalDesc;
 use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::{
-    commands, Affine, Command, ContextMenu, Cursor, Insets, MenuDesc, Point, Rect, SingleUse, Size,
-    Target, Text, TimerToken, Vec2, WidgetId, WindowDesc, WindowHandle, WindowId,
+    commands, Affine, Command, ContextMenu, Cursor, Data, DialogDesc, Insets, MenuDesc, Point,
+    Rect, SingleUse, Size, Target, Text, TimerToken, Vec2, WidgetId, WindowDesc, WindowHandle,
+    WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -435,6 +436,14 @@ impl EventCtx<'_, '_> {
             ModalDesc::DISMISS_MODAL,
             Target::Window(self.state.window_id),
         );
+    }
+
+    pub fn show_dialog<T: Any + Data>(&mut self, dialog: DialogDesc<T>) {
+        self.show_modal(dialog.into_modal_desc());
+    }
+
+    pub fn show_static_dialog(&mut self, dialog: DialogDesc<()>) {
+        self.show_static_modal(dialog.into_modal_desc());
     }
 
     /// Set the event as "handled", which stops its propagation to other
