@@ -19,6 +19,8 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Fixed
 
+- GTK: Directory selection now properly ignores file filters. ([#957] by [@xStrom])
+
 ### Visual
 
 - `TextBox` stroke remains inside its `paint_rect`. ([#1007] by [@jneem])
@@ -295,6 +297,7 @@ Last release without a changelog :(
 [#951]: https://github.com/xi-editor/druid/pull/951
 [#953]: https://github.com/xi-editor/druid/pull/953
 [#954]: https://github.com/xi-editor/druid/pull/954
+[#957]: https://github.com/xi-editor/druid/pull/957
 [#959]: https://github.com/xi-editor/druid/pull/959
 [#961]: https://github.com/xi-editor/druid/pull/961
 [#963]: https://github.com/xi-editor/druid/pull/963
