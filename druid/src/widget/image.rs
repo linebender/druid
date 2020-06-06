@@ -32,8 +32,7 @@ use crate::{
 ///
 /// Note: interpolation can lead to blurry or pixelated images and so is not
 /// recommended for things like icons. Instead consider using
-/// [SVG files](https://en.wikipedia.org/wiki/Scalable_Vector_Graphics)
-/// and enabling the `svg` feature with `cargo`.
+/// [SVG files] and enabling the `svg` feature with `cargo`.
 ///
 /// (See also:
 /// [`ImageData`],
@@ -71,6 +70,8 @@ use crate::{
 /// // set interpolation mode
 /// image_widget.set_interpolation_mode(InterpolationMode::NearestNeighbor);
 /// ```
+///
+/// [SVG files]: https://en.wikipedia.org/wiki/Scalable_Vector_Graphics
 pub struct Image {
     image_data: ImageData,
     fill: FillStrat,
@@ -157,11 +158,14 @@ impl<T: Data> Widget<T> for Image {
 /// Loaded image data.
 ///
 /// By default, Druid does not parse image data.
-/// However, [enabling the `image` feature](../index.html#optional-features)
+/// However, enabling [the `image` feature]
 /// provides several
 /// methods by which you can load image files.
 ///
-/// Contains raw bytes, dimensions, and image format ([`druid::piet::ImageFormat`]).
+/// Contains raw bytes, dimensions, and image format ([`piet::ImageFormat`]).
+///
+/// [the `image` feature]: ../index.html#optional-features
+/// [`piet::ImageFormat`]: druid::piet::ImageFormat
 #[derive(Clone)]
 pub struct ImageData {
     pixels: Vec<u8>,
