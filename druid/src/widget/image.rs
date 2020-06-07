@@ -27,7 +27,7 @@ use crate::{
 
 /// A widget that renders a bitmap Image.
 ///
-/// Contains data about how to fill given space and interpolate pixels.
+/// Contains data about how to fill the given space and interpolate pixels.
 /// Configuration options are provided via the builder pattern.
 ///
 /// Note: when [scaling a bitmap image], interpolation can lead to blurry
@@ -51,10 +51,10 @@ use crate::{
 ///
 /// let image_data = ImageData::empty();
 /// let image_widget = Image::new(image_data)
-///     // set fill strategy
+///     // set the fill strategy
 ///     .fill_mode(FillStrat::Fill)
-///     // set interpolation mode
-///     .interpolation_mode(InterpolationMode::NearestNeighbor);
+///     // set the interpolation mode
+///     .interpolation_mode(InterpolationMode::Bilinear);
 /// ```
 /// Create an image widget and configure it using setters
 /// ```
@@ -65,10 +65,10 @@ use crate::{
 ///
 /// let image_data = ImageData::empty();
 /// let mut image_widget = Image::new(image_data);
-/// // set fill strategy
+/// // set the fill strategy
 /// image_widget.set_fill_mode(FillStrat::FitWidth);
-/// // set interpolation mode
-/// image_widget.set_interpolation_mode(InterpolationMode::NearestNeighbor);
+/// // set the interpolation mode
+/// image_widget.set_interpolation_mode(InterpolationMode::Bilinear);
 /// ```
 ///
 /// [scaling a bitmap image]: https://en.wikipedia.org/wiki/Image_scaling
@@ -156,7 +156,7 @@ impl<T: Data> Widget<T> for Image {
     }
 }
 
-/// Loaded image data.
+/// Processed image data.
 ///
 /// By default, Druid does not parse image data.
 /// However, enabling [the `image` feature]
