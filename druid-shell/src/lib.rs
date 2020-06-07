@@ -28,6 +28,7 @@ pub use piet_common as piet;
 #[macro_use]
 mod util;
 
+mod alert;
 mod application;
 mod clipboard;
 mod common_util;
@@ -42,6 +43,7 @@ mod platform;
 mod scale;
 mod window;
 
+pub use alert::{AlertButton, AlertIcon, AlertOptions, AlertResponse, AlertToken};
 pub use application::{AppHandler, Application};
 pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
 pub use common_util::Counter;

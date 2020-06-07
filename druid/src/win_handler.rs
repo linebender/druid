@@ -29,8 +29,8 @@ use crate::ext_event::ExtEventHost;
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, Target, TimerToken, WindowDesc,
-    WindowId,
+    AlertResponse, Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, Target,
+    TimerToken, WindowDesc, WindowId,
 };
 
 use crate::command::sys as sys_cmd;
@@ -716,6 +716,11 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
     fn got_focus(&mut self) {
         self.app_state.window_got_focus(self.window_id);
+    }
+
+    fn alert_response(&mut self, response: AlertResponse) {
+        self.app_state
+            .do_window_event(Event::AlertResponse(response), self.window_id);
     }
 
     fn timer(&mut self, token: TimerToken) {

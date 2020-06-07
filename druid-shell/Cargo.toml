@@ -46,7 +46,7 @@ wio = "0.2.2"
 
 [target.'cfg(target_os="windows")'.dependencies.winapi]
 version = "0.3.8"
-features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser",
+features = ["commctrl", "d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser",
             "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "dcomp",
             "d3d11", "dwmapi", "wincon", "fileapi", "processenv", "winbase", "handleapi"]
 

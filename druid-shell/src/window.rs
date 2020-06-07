@@ -17,6 +17,7 @@
 use std::any::Any;
 use std::time::Duration;
 
+use crate::alert::{AlertOptions, AlertResponse, AlertToken};
 use crate::application::Application;
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
@@ -151,6 +152,20 @@ impl WindowHandle {
     /// Get access to a type that can perform text layout.
     pub fn text(&self) -> Text {
         self.0.text()
+    }
+
+    /// Show an alert dialog.
+    ///
+    /// Read [`AlertOptions`] for more information about alert dialogs.
+    ///
+    /// The return value is an [`AlertToken`], which can be used to associate
+    /// the [`AlertResponse`] with this specific alert.
+    ///
+    /// [`AlertOptions`]: struct.AlertOptions.html
+    /// [`AlertToken`]: struct.AlertToken.html
+    /// [`AlertResponse`]: struct.AlertResponse.html
+    pub fn alert(&self, options: AlertOptions) -> AlertToken {
+        self.0.alert(options)
     }
 
     /// Schedule a timer.
@@ -381,6 +396,10 @@ pub trait WinHandler {
 
     /// Called when the mouse cursor has left the application window
     fn mouse_leave(&mut self) {}
+
+    /// Called when an alert dialog is closed.
+    #[allow(unused_variables)]
+    fn alert_response(&mut self, response: AlertResponse) {}
 
     /// Called on timer event.
     ///

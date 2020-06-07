@@ -19,7 +19,7 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
 use crate::mouse::MouseEvent;
-use crate::{Command, Target, WidgetId};
+use crate::{AlertResponse, Command, Target, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -103,6 +103,13 @@ pub enum Event {
     ///
     /// The value is a delta.
     Zoom(f64),
+    /// Called when an alert dialog is closed.
+    ///
+    /// You can show an alert with the [`EventCtx::alert`] method.
+    /// The response to that alert is delivered via this event.
+    ///
+    /// [`EventCtx::alert`]: struct.EventCtx.html#method.alert
+    AlertResponse(AlertResponse),
     /// Called on a timer event.
     ///
     /// Request a timer event through [`EventCtx::request_timer()`]. That will
@@ -149,6 +156,8 @@ pub enum InternalEvent {
     MouseLeave,
     /// A command still in the process of being dispatched.
     TargetedCommand(Target, Command),
+    /// Used for routing AlertResponse events.
+    RouteAlertResponse(WidgetId, AlertResponse),
     /// Used for routing timer events.
     RouteTimer(TimerToken, WidgetId),
 }

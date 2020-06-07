@@ -30,9 +30,9 @@ use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken, UpdateCtx, Widget,
-    WidgetId, WidgetPod, WindowDesc,
+    AlertToken, BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken,
+    UpdateCtx, Widget, WidgetId, WidgetPod, WindowDesc,
 };
 
 /// A unique identifier for a window.
@@ -51,6 +51,7 @@ pub struct Window<T> {
     pub(crate) last_mouse_pos: Option<Point>,
     pub(crate) focus: Option<WidgetId>,
     pub(crate) handle: WindowHandle,
+    pub(crate) alerts: HashMap<AlertToken, WidgetId>,
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
     // delegate?
 }
@@ -68,6 +69,7 @@ impl<T> Window<T> {
             last_mouse_pos: None,
             focus: None,
             handle,
+            alerts: HashMap::new(),
             timers: HashMap::new(),
         }
     }
@@ -137,6 +139,8 @@ impl<T: Data> Window<T> {
                 false,
             );
         }
+        // Add all the requested alerts to the window's alerts map.
+        self.alerts.extend_drain(&mut widget_state.alerts);
         // Add all the requested timers to the window's timers map.
         self.timers.extend_drain(&mut widget_state.timers);
         // If there are any commands and they should be processed
@@ -173,6 +177,14 @@ impl<T: Data> Window<T> {
         };
 
         let event = match event {
+            Event::AlertResponse(response) => {
+                if let Some(widget_id) = self.alerts.get(&response.token()) {
+                    Event::Internal(InternalEvent::RouteAlertResponse(*widget_id, response))
+                } else {
+                    log::error!("No widget found for alert response {:?}", response.token());
+                    return false;
+                }
+            }
             Event::Timer(token) => {
                 if let Some(widget_id) = self.timers.get(&token) {
                     Event::Internal(InternalEvent::RouteTimer(token, *widget_id))
@@ -209,10 +221,16 @@ impl<T: Data> Window<T> {
             ctx.is_handled
         };
 
-        // Clean up the timer token and do it immediately after the event handling
+        // Clean up the alert/timer token and do it immediately after the event handling
         // because the token may be reused and re-added in a lifecycle pass below.
-        if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
-            self.timers.remove(&token);
+        match event {
+            Event::Internal(InternalEvent::RouteAlertResponse(_, response)) => {
+                self.alerts.remove(&response.token());
+            }
+            Event::Internal(InternalEvent::RouteTimer(token, _)) => {
+                self.timers.remove(&token);
+            }
+            _ => (),
         }
 
         if let Some(focus_req) = widget_state.request_focus.take() {

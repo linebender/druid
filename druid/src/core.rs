@@ -24,9 +24,9 @@ use crate::piet::{
 };
 use crate::util::ExtendDrain;
 use crate::{
-    BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget,
-    WidgetId,
+    AlertToken, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken,
+    UpdateCtx, Widget, WidgetId,
 };
 
 /// Our queue type
@@ -112,6 +112,8 @@ pub(crate) struct WidgetState {
     pub(crate) request_focus: Option<FocusChange>,
     pub(crate) children: Bloom<WidgetId>,
     pub(crate) children_changed: bool,
+    /// Associate alerts with widgets that requested them.
+    pub(crate) alerts: HashMap<AlertToken, WidgetId>,
     /// Associate timers with widgets that requested them.
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
 }
@@ -596,6 +598,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         }
                     }
                 }
+                InternalEvent::RouteAlertResponse(widget_id, response) => {
+                    if *widget_id == self.id() {
+                        modified_event = Some(Event::AlertResponse(response.clone()));
+                        true
+                    } else {
+                        self.state.children.may_contain(widget_id)
+                    }
+                }
                 InternalEvent::RouteTimer(token, widget_id) => {
                     if *widget_id == self.id() {
                         modified_event = Some(Event::Timer(*token));
@@ -693,7 +703,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::KeyUp(_) => self.state.has_focus,
             Event::Paste(_) => self.state.has_focus,
             Event::Zoom(_) => had_active || self.state.is_hot,
-            Event::Timer(_) => false, // This event was targeted only to our parent
+            Event::AlertResponse(_) => false, // This event was targeted only to our parent
+            Event::Timer(_) => false,         // This event was targeted only to our parent
             Event::Command(_) => true,
         };
 
@@ -897,8 +908,13 @@ impl WidgetState {
             focus_chain: Vec::new(),
             children: Bloom::new(),
             children_changed: false,
+            alerts: HashMap::new(),
             timers: HashMap::new(),
         }
+    }
+
+    pub(crate) fn add_alert(&mut self, alert_token: AlertToken) {
+        self.alerts.insert(alert_token, self.id);
     }
 
     pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {
@@ -926,6 +942,7 @@ impl WidgetState {
         self.has_focus |= child_state.has_focus;
         self.children_changed |= child_state.children_changed;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
+        self.alerts.extend_drain(&mut child_state.alerts);
         self.timers.extend_drain(&mut child_state.timers);
     }
 

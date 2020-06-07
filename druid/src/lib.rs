@@ -168,9 +168,10 @@ pub use kurbo::{Affine, Insets, Point, Rect, Size, Vec2};
 pub use piet::{Color, LinearGradient, RadialGradient, RenderContext, UnitPoint};
 // these are the types from shell that we expose; others we only use internally.
 pub use shell::{
-    Application, Clipboard, ClipboardFormat, Cursor, Error as PlatformError, FileDialogOptions,
-    FileInfo, FileSpec, FormatId, HotKey, KeyCode, KeyEvent, KeyModifiers, MouseButton,
-    MouseButtons, RawMods, Scale, SysMods, Text, TimerToken, WindowHandle,
+    AlertButton, AlertIcon, AlertOptions, AlertResponse, AlertToken, Application, Clipboard,
+    ClipboardFormat, Cursor, Error as PlatformError, FileDialogOptions, FileInfo, FileSpec,
+    FormatId, HotKey, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseButtons, RawMods, Scale,
+    SysMods, Text, TimerToken, WindowHandle,
 };
 
 pub use crate::core::WidgetPod;

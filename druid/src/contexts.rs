@@ -24,8 +24,9 @@ use crate::core::{CommandQueue, FocusChange, WidgetState};
 use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::{
-    commands, Affine, Command, ContextMenu, Cursor, Insets, MenuDesc, Point, Rect, SingleUse, Size,
-    Target, Text, TimerToken, Vec2, WidgetId, WindowDesc, WindowHandle, WindowId,
+    commands, Affine, AlertOptions, AlertToken, Command, ContextMenu, Cursor, Insets, MenuDesc,
+    Point, Rect, SingleUse, Size, Target, Text, TimerToken, Vec2, WidgetId, WindowDesc,
+    WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -337,6 +338,21 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
         self.state.set_menu(menu);
+    }
+
+    /// Show an alert dialog.
+    ///
+    /// Read [`AlertOptions`] for more information about alert dialogs.
+    ///
+    /// The return value is an [`AlertToken`], which can be used to associate this
+    /// specific alert with an [`AlertResponse`] delivered via [`Event::AlertResponse`].
+    ///
+    /// [`AlertOptions`]: struct.AlertOptions.html
+    /// [`AlertToken`]: struct.AlertToken.html
+    /// [`AlertResponse`]: struct.AlertResponse.html
+    /// [`Event::AlertResponse`]: enum.Event.html#variant.AlertResponse
+    pub fn alert(&mut self, options: AlertOptions) -> AlertToken {
+        self.state.alert(&mut self.widget_state, options)
     }
 });
 
@@ -652,6 +668,12 @@ impl<'a> ContextState<'a> {
                 log::error!("EventCtx::set_menu: {}", MSG)
             }
         }
+    }
+
+    fn alert(&self, widget_state: &mut WidgetState, options: AlertOptions) -> AlertToken {
+        let alert_token = self.window.alert(options);
+        widget_state.add_alert(alert_token);
+        alert_token
     }
 
     fn request_timer(&self, widget_state: &mut WidgetState, deadline: Duration) -> TimerToken {
