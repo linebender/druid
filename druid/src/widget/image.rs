@@ -30,9 +30,9 @@ use crate::{
 /// Contains data about how to fill given space and interpolate pixels.
 /// Configuration options are provided via the builder pattern.
 ///
-/// Note: interpolation can lead to blurry or pixelated images and so is not
-/// recommended for things like icons. Instead consider using
-/// [SVG files] and enabling the `svg` feature with `cargo`.
+/// Note: when [scaling a bitmap image], interpolation can lead to blurry
+/// or pixelated images and so is not recommended for things like icons.
+/// Instead consider using [SVG files] and enabling the `svg` feature with `cargo`.
 ///
 /// (See also:
 /// [`ImageData`],
@@ -71,6 +71,7 @@ use crate::{
 /// image_widget.set_interpolation_mode(InterpolationMode::NearestNeighbor);
 /// ```
 ///
+/// [scaling a bitmap image]: https://en.wikipedia.org/wiki/Image_scaling
 /// [SVG files]: https://en.wikipedia.org/wiki/Scalable_Vector_Graphics
 pub struct Image {
     image_data: ImageData,
