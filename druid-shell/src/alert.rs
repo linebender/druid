@@ -24,13 +24,18 @@ pub struct AlertToken(usize);
 #[derive(Debug, Clone)]
 pub struct AlertResponse {
     token: AlertToken,
-    button: AlertButton,
+    button: Option<AlertButton>,
 }
 
 /// Options for alert dialogs.
 ///
 /// An alert dialog is a modal dialog that provides the user with some information
 /// and optionally asks the user to make some decision.
+///
+/// # Button order
+///
+/// The order of buttons across button types is determined automatically
+/// based on the guidelines of the specific platform.
 ///
 /// # User experience
 ///
@@ -52,9 +57,11 @@ pub struct AlertResponse {
 /// While an alert dialog is open it takes interaction priority and the user won't be
 /// able to continue interacting with the parent window while the alert is open.
 ///
-/// Multiple alert dialogs can be open at once, but only the most recent one will be interactable.
-/// When that alert dialog is closed, the next most recent will become interactive.
-#[derive(Debug, Clone, Default)]
+/// There is no guaranteed behavior when multiple alert dialogs are requested.
+/// Depending on platform specifics, all the alerts might be visible or just some.
+/// Regardless of visibility, only one of the alert dialogs will be interactable.
+/// When that alert dialog is closed, another one will become interactable.
+#[derive(Debug, Clone)]
 pub struct AlertOptions {
     /// The context of the alert.
     pub(crate) context: String,
@@ -64,8 +71,12 @@ pub struct AlertOptions {
     pub(crate) description: String,
     /// The icon of the alert.
     pub(crate) icon: Option<AlertIcon>,
-    /// The buttons to be shown on the alert.
-    pub(crate) buttons: Vec<AlertButton>,
+    /// The primary button of the alert.
+    pub(crate) primary: AlertButton,
+    /// The cancel button of the alert.
+    pub(crate) cancel: Option<AlertButton>,
+    /// The alternative buttons of the alert.
+    pub(crate) alternatives: Vec<AlertButton>,
 }
 
 /// Alert dialog icon.
@@ -79,25 +90,7 @@ pub enum AlertIcon {
     Error,
 }
 
-/// Alert dialog button type.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AlertButtonType {
-    /// Positive buttons are used for choices that agree with the primary alert message.
-    Positive,
-    /// Negative buttons are used for choices that disagree with the primary alert message.
-    Negative,
-    /// Cancel buttons reflect the user's desire to not answer at all
-    /// and instead cancel the task which initiated the alert.
-    Cancel,
-}
-
 /// A specific button for the alert dialog.
-///
-/// There are three types of buttons:
-/// - **Positive** - for choices that agree with the primary alert message.
-/// - **Negative** - for choices that disagree with the primary alert message.
-/// - **Cancel** - used by the user to show a desire to not answer at all
-///   and instead cancel the task which initiated the alert.
 ///
 /// If the alert is just reporting information and it only needs a single button,  
 /// then you should use a positive button with the label **OK** or a translation of it.
@@ -115,7 +108,6 @@ pub enum AlertButtonType {
 /// **Confirm**, or **Yes**.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AlertButton {
-    pub(crate) button_type: AlertButtonType,
     pub(crate) label: ConstString,
 }
 
@@ -131,7 +123,7 @@ impl AlertToken {
 
 impl AlertResponse {
     /// Create a new alert response.
-    pub(crate) fn new(token: AlertToken, button: AlertButton) -> AlertResponse {
+    pub(crate) fn new(token: AlertToken, button: Option<AlertButton>) -> AlertResponse {
         AlertResponse { token, button }
     }
 
@@ -145,114 +137,70 @@ impl AlertResponse {
 
     /// Returns the [`AlertButton`] that closed the alert.
     ///
-    /// # Canceled by the platform
+    /// # Canceled
     ///
-    /// If the platform cancels the alert, e.g. when the parent window gets closed,
-    /// then this will return a cancel button that was defined in [`AlertOptions`].
-    /// If no cancel button was provided then this will be [`AlertButton::CANCEL`].
+    /// This will return `None` if the alert was canceled.
+    ///
+    /// Keep in mind that the platform may forcefully cancel the alert, e.g. when
+    /// the parent window is closed, even when the alert dialog has no cancel button.
     ///
     /// [`AlertButton`]: struct.AlertButton.html
-    /// [`AlertOptions`]: struct.AlertOptions.html
-    /// [`AlertButton::CANCEL`]: struct.AlertButton.html#associatedconstant.CANCEL
     #[inline]
-    pub fn button(&self) -> &AlertButton {
-        &self.button
+    pub fn button(&self) -> Option<&AlertButton> {
+        self.button.as_ref()
     }
 }
 
 impl AlertButton {
-    /// A positive button with the English label **OK**.
-    pub const OK: AlertButton = AlertButton::const_positive("OK");
+    /// A primary button with the English label **OK**.
+    pub const OK: AlertButton = AlertButton::new("OK");
     /// A cancel button with the English label **Cancel**.
-    pub const CANCEL: AlertButton = AlertButton::const_cancel("Cancel");
+    pub const CANCEL: AlertButton = AlertButton::new("Cancel");
 
-    /// Create a new positive button with the specified `label`.
+    /// Create a new `const` button with the specified `label`.
     ///
-    /// If this is the only button of the alert, use **OK** or a translation of it as the `label`.
-    /// Otherwise you should give a short but descriptive label like **Save the draft** that lets
+    /// You should give a short but descriptive label like **Send message** that lets
     /// the user know what will happen when they click the button.
     ///
     /// See [`AlertButton`] for more information.
     ///
     /// [`AlertButton`]: struct.AlertButton.html
-    pub fn positive(label: impl Into<String>) -> AlertButton {
+    pub const fn new(label: &'static str) -> AlertButton {
         AlertButton {
-            button_type: AlertButtonType::Positive,
-            label: ConstString::new(label),
-        }
-    }
-
-    /// Create a new negative button with the specified `label`.
-    ///
-    /// You should give a short but descriptive label like **Delete the draft** that lets the user
-    /// know what will happen when they click the button.
-    ///
-    /// See [`AlertButton`] for more information.
-    ///
-    /// [`AlertButton`]: struct.AlertButton.html
-    pub fn negative(label: impl Into<String>) -> AlertButton {
-        AlertButton {
-            button_type: AlertButtonType::Negative,
-            label: ConstString::new(label),
-        }
-    }
-
-    /// Create a new cancel button with the specified `label`.
-    ///
-    /// The cancel button `label` should always be **Cancel** or a translation of it.
-    ///
-    /// See [`AlertButton`] for more information.
-    ///
-    /// [`AlertButton`]: struct.AlertButton.html
-    pub fn cancel(label: impl Into<String>) -> AlertButton {
-        AlertButton {
-            button_type: AlertButtonType::Cancel,
-            label: ConstString::new(label),
-        }
-    }
-
-    /// Create a new `const` positive button with the specified `label`.
-    ///
-    /// This is a specialized `const` version of the [`positive`] function.
-    ///
-    /// See [`AlertButton`] for more information.
-    ///
-    /// [`positive`]: #method.positive
-    /// [`AlertButton`]: struct.AlertButton.html
-    pub const fn const_positive(label: &'static str) -> AlertButton {
-        AlertButton {
-            button_type: AlertButtonType::Positive,
             label: ConstString::from_static(label),
         }
     }
 
-    /// Create a new `const` negative button with the specified `label`.
+    /// Create a new button with the specified `label` at runtime.
     ///
-    /// This is a specialized `const` version of the [`negative`] function.
+    /// This is the runtime version of [`new`] that allows you to use
+    /// runtime generated labels, e.g. dynamic personalization or translation.
+    ///
+    /// You should give a short but descriptive label like **Send message** that lets
+    /// the user know what will happen when they click the button.
     ///
     /// See [`AlertButton`] for more information.
     ///
-    /// [`negative`]: #method.negative
+    /// [`new`]: #method.new
     /// [`AlertButton`]: struct.AlertButton.html
-    pub const fn const_negative(label: &'static str) -> AlertButton {
+    pub fn dynamic(label: impl Into<String>) -> AlertButton {
         AlertButton {
-            button_type: AlertButtonType::Negative,
-            label: ConstString::from_static(label),
+            label: ConstString::new(label),
         }
     }
+}
 
-    /// Create a new `const` cancel button with the specified `label`.
-    ///
-    /// This is a specialized `const` version of the [`cancel`] function.
-    ///
-    /// See [`AlertButton`] for more information.
-    ///
-    /// [`cancel`]: #method.cancel
-    /// [`AlertButton`]: struct.AlertButton.html
-    pub const fn const_cancel(label: &'static str) -> AlertButton {
-        AlertButton {
-            button_type: AlertButtonType::Cancel,
-            label: ConstString::from_static(label),
+impl Default for AlertOptions {
+    /// Create a default set of alert options.
+    fn default() -> AlertOptions {
+        AlertOptions {
+            context: Default::default(),
+            message: Default::default(),
+            description: Default::default(),
+            icon: None,
+            primary: AlertButton::OK,
+            cancel: None,
+            alternatives: Vec::new(),
         }
     }
 }
@@ -260,10 +208,7 @@ impl AlertButton {
 impl AlertOptions {
     /// Create a new set of alert options.
     pub fn new() -> AlertOptions {
-        AlertOptions {
-            buttons: vec![AlertButton::OK],
-            ..Default::default()
-        }
+        AlertOptions::default()
     }
 
     /// Set the context of the alert.
@@ -354,33 +299,82 @@ impl AlertOptions {
         self
     }
 
-    /// Set the buttons to be shown on the alert.
+    /// Set the primary button of the alert.
     ///
-    /// There are three types of buttons - positive, negative, and cancel.
+    /// The primary button is the hero of the alert dialog. It should be the button
+    /// that agrees with the message of the alert, and it should be the one that is
+    /// most likely to be chosen by the user.
+    ///
+    /// This defaults to the English [`AlertButton::OK`].
+    ///
+    /// If the alert has more than one button then you should change this to something
+    /// more descriptive of the action that will be taken.
+    ///
     /// Read [`AlertButton`] for more information about buttons.
     ///
-    /// Keep the number of buttons low, almost never showing more than three.
+    /// # Example
     ///
-    /// The order of buttons in this collection matters only in relation to the same button type,
-    /// e.g. the order of positive buttons determines their location
-    /// only in regards to other positive buttons.
-    ///
-    /// The order of buttons across button types is determined automatically
-    /// based on the guidelines of the specific platform.
-    ///
-    /// This defaults to a single button - the English [`AlertButton::OK`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the provided `buttons` collection is empty.
+    /// When a user attempts to close a new document, the primary button should be **Save**.
     ///
     /// [`AlertButton`]: struct.AlertButton.html
     /// [`AlertButton::OK`]: struct.AlertButton.html#associatedconstant.OK
-    pub fn buttons(mut self, buttons: Vec<AlertButton>) -> Self {
-        if buttons.is_empty() {
-            panic!("Empty alert button collection specified!");
-        }
-        self.buttons = buttons;
+    pub fn primary(mut self, button: AlertButton) -> Self {
+        self.primary = button;
+        self
+    }
+
+    /// Set the cancel button of the alert.
+    ///
+    /// The cancel button is used by the user to show a desire to not answer at all
+    /// and instead cancel the task which initiated the alert.
+    ///
+    /// Specifying a cancel button will also enable other platform provided ways to
+    /// cancel the alert, e.g. closing the alert window or pressing the escape key.
+    ///
+    /// The cancel button should always be [`AlertButton::CANCEL`] or a translation of it.
+    ///
+    /// This defaults to `None` which omits the cancel button. Keep in mind that the platform
+    /// may still forcefully cancel the alert anyway, e.g. when the parent window is closed.
+    ///
+    /// Read [`AlertButton`] for more information about buttons.
+    ///
+    /// # Example
+    ///
+    /// When a user attempts to close a new document, the cancel button should be **Cancel**.
+    ///
+    /// [`AlertButton`]: struct.AlertButton.html
+    /// [`AlertButton::CANCEL`]: struct.AlertButton.html#associatedconstant.CANCEL
+    pub fn cancel(mut self, button: impl Into<Option<AlertButton>>) -> Self {
+        self.cancel = button.into();
+        self
+    }
+
+    /// Set the alternative buttons of the alert.
+    ///
+    /// Alternative buttons are a way to provide the user with multiple choices.
+    /// These are usually not the choices that the user will make, but in the right
+    /// circumstances can be very valuable.
+    ///
+    /// Alternative buttons can provide the user a way to disagree with the message
+    /// of the alert but still proceed. Agree or not, alternative buttons provide
+    /// ways to proceed that differ from the primary button.
+    ///
+    /// Keep the total number of buttons on the alert dialog low, almost never
+    /// present more than three including the [`primary`] and [`cancel`] buttons.
+    /// Having more buttons is supported, but will look quirky and will create
+    /// a worse user experience by introducing an overly complex situation.
+    ///
+    /// Read [`AlertButton`] for more information about buttons.
+    ///
+    /// # Example
+    ///
+    /// When a user attempts to close a new document, an alternative button should be **Delete**.
+    ///
+    /// [`primary`]: #method.primary
+    /// [`cancel`]: #method.cancel
+    /// [`AlertButton`]: struct.AlertButton.html
+    pub fn alternatives(mut self, buttons: Vec<AlertButton>) -> Self {
+        self.alternatives = buttons;
         self
     }
 }

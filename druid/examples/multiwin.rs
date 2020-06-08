@@ -14,33 +14,27 @@
 
 //! Opening and closing windows and using window and context menus.
 
-use std::collections::HashMap;
-use std::time::Duration;
-
 use druid::widget::prelude::*;
 use druid::widget::{
     Align, BackgroundBrush, Button, Controller, ControllerHost, Flex, Label, Padding,
 };
 use druid::Target::Global;
 use druid::{
-    commands as sys_cmds, AlertButton, AlertOptions, AlertToken, AppDelegate, AppLauncher,
-    Application, Color, Command, ContextMenu, Data, DelegateCtx, LocalizedString, MenuDesc,
-    MenuItem, Selector, Target, TimerToken, WidgetExt, WindowDesc, WindowId,
+    commands as sys_cmds, AppDelegate, AppLauncher, Application, Color, Command, ContextMenu, Data,
+    DelegateCtx, LocalizedString, MenuDesc, MenuItem, Selector, Target, WindowDesc, WindowId,
 };
+use log::info;
 
 const MENU_COUNT_ACTION: Selector<usize> = Selector::new("menu-count-action");
 const MENU_INCREMENT_ACTION: Selector = Selector::new("menu-increment-action");
 const MENU_DECREMENT_ACTION: Selector = Selector::new("menu-decrement-action");
 const MENU_SWITCH_GLOW_ACTION: Selector = Selector::new("menu-switch-glow");
 
-const ALERT_ADD_MENU_ITEM_BUTTON: AlertButton = AlertButton::const_positive("Add menu item");
-
 #[derive(Debug, Clone, Default, Data)]
 struct State {
     menu_count: usize,
     selected: usize,
     glow_hot: bool,
-    button_bits: usize,
 }
 
 pub fn main() {
@@ -67,27 +61,6 @@ fn ui_builder() -> impl Widget<State> {
         .on_click(|ctx, _data, _env| ctx.submit_command(MENU_INCREMENT_ACTION, Global));
     let dec_button = Button::<State>::new("Remove menu item")
         .on_click(|ctx, _data, _env| ctx.submit_command(MENU_DECREMENT_ACTION, Global));
-    let manage_button = Button::<State>::new("Manage menu items")
-        .on_click(|ctx, _data, _env| {
-            let buttons = vec![
-                AlertButton::negative("Remove menu item"), // A button generated at runtime
-                ALERT_ADD_MENU_ITEM_BUTTON,                // A button generated at compile time
-                AlertButton::CANCEL,                       // A predefined button
-            ];
-            let opts = AlertOptions::new()
-                .information()
-                .context("Manage menu items")
-                .message("How would you like to manage the menu items?")
-                .description(
-                    "Clicking the action buttons below has the same result \
-                    as clicking the regular buttons in the window.",
-                )
-                .buttons(buttons);
-            ctx.alert(opts);
-        })
-        .controller(ManageButtonController);
-    let bits_button = Button::<State>::dynamic(|data, _| format!("{:05b}", data.button_bits))
-        .controller(BitsButtonController::new());
     let new_button = Button::<State>::new("New window").on_click(|ctx, _data, _env| {
         ctx.submit_command(sys_cmds::NEW_FILE, Target::Global);
     });
@@ -100,10 +73,6 @@ fn ui_builder() -> impl Widget<State> {
     let mut row = Flex::row();
     row.add_child(Padding::new(5.0, inc_button));
     row.add_child(Padding::new(5.0, dec_button));
-    row.add_child(Padding::new(5.0, manage_button));
-    col.add_flex_child(Align::centered(row), 1.0);
-    let mut row = Flex::row();
-    row.add_child(Padding::new(5.0, bits_button));
     col.add_flex_child(Align::centered(row), 1.0);
     let mut row = Flex::row();
     row.add_child(Padding::new(5.0, new_button));
@@ -111,90 +80,6 @@ fn ui_builder() -> impl Widget<State> {
     col.add_flex_child(Align::centered(row), 1.0);
     let content = ControllerHost::new(col, ContextMenuController);
     Glow::new(content)
-}
-
-struct ManageButtonController;
-
-impl<T, W: Widget<T>> Controller<T, W> for ManageButtonController {
-    fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        match event {
-            Event::AlertResponse(response) => {
-                if *response.button() == ALERT_ADD_MENU_ITEM_BUTTON {
-                    ctx.submit_command(MENU_INCREMENT_ACTION, Global);
-                } else if *response.button() == AlertButton::negative("Remove menu item") {
-                    ctx.submit_command(MENU_DECREMENT_ACTION, Global);
-                }
-            }
-            _ => child.event(ctx, event, data, env),
-        }
-    }
-}
-
-const BITS_BUTTON_SET: AlertButton = AlertButton::const_positive("Set");
-const BITS_BUTTON_CLEAR: AlertButton = AlertButton::const_negative("Clear");
-
-struct BitsButtonController {
-    counter: usize,
-    timer_token: TimerToken,
-    tokens: HashMap<AlertToken, usize>,
-}
-
-impl BitsButtonController {
-    pub fn new() -> BitsButtonController {
-        BitsButtonController {
-            counter: 0,
-            timer_token: TimerToken::INVALID,
-            tokens: HashMap::new(),
-        }
-    }
-}
-
-impl<W: Widget<State>> Controller<State, W> for BitsButtonController {
-    fn event(
-        &mut self,
-        child: &mut W,
-        ctx: &mut EventCtx,
-        event: &Event,
-        data: &mut State,
-        env: &Env,
-    ) {
-        match event {
-            Event::MouseUp(_) => {
-                if ctx.is_active() && ctx.is_hot() {
-                    self.timer_token = ctx.request_timer(Duration::from_millis(1));
-                }
-            }
-            Event::Timer(timer_token) => {
-                if self.timer_token == *timer_token {
-                    if self.counter == 0 {
-                        self.tokens.clear();
-                    }
-                    self.counter += 1;
-                    let buttons = vec![BITS_BUTTON_SET, BITS_BUTTON_CLEAR];
-                    let opts = AlertOptions::new()
-                        .message(format!("What about bit #{}?", self.counter))
-                        .buttons(buttons);
-                    let token = ctx.alert(opts);
-                    self.tokens.insert(token, self.counter);
-                    if self.counter < 5 {
-                        self.timer_token = ctx.request_timer(Duration::from_millis(200));
-                    } else {
-                        self.counter = 0;
-                        self.timer_token = TimerToken::INVALID;
-                    }
-                }
-            }
-            Event::AlertResponse(response) => {
-                let bit = self.tokens.get(&response.token()).unwrap();
-                if *response.button() == BITS_BUTTON_SET {
-                    data.button_bits |= 1 << (bit - 1);
-                } else if *response.button() == BITS_BUTTON_CLEAR {
-                    data.button_bits &= !(1 << (bit - 1));
-                }
-            }
-            _ => child.event(ctx, event, data, env),
-        }
-    }
 }
 
 struct Glow<W> {
@@ -319,7 +204,7 @@ impl AppDelegate<State> for Delegate {
         _env: &Env,
         _ctx: &mut DelegateCtx,
     ) {
-        log::info!("Window added, id: {:?}", id);
+        info!("Window added, id: {:?}", id);
         self.windows.push(id);
     }
 
@@ -330,7 +215,7 @@ impl AppDelegate<State> for Delegate {
         _env: &Env,
         _ctx: &mut DelegateCtx,
     ) {
-        log::info!("Window removed, id: {:?}", id);
+        info!("Window removed, id: {:?}", id);
         if let Some(pos) = self.windows.iter().position(|x| *x == id) {
             self.windows.remove(pos);
         }
