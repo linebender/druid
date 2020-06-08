@@ -166,7 +166,7 @@ fn load_optional_functions() -> OptionalFunctions {
             let function_ptr = unsafe { GetProcAddress($lib, cstr.as_ptr()) };
 
             if function_ptr.is_null() {
-                log::error!(
+                log::info!(
                     "Could not load `{}`. Windows {} or later is needed",
                     name,
                     $min_windows_version
