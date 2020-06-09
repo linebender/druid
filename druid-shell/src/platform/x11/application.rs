@@ -20,12 +20,10 @@ use std::convert::TryInto;
 use std::rc::Rc;
 
 use anyhow::{anyhow, Context, Error};
-use xcb::{
-    ButtonPressEvent, ButtonReleaseEvent, ClientMessageEvent, Connection, DestroyNotifyEvent,
-    ExposeEvent, KeyPressEvent, MotionNotifyEvent, BUTTON_PRESS, BUTTON_RELEASE, CLIENT_MESSAGE,
-    COPY_FROM_PARENT, CW_EVENT_MASK, DESTROY_NOTIFY, EVENT_MASK_STRUCTURE_NOTIFY, EXPOSE,
-    KEY_PRESS, MOTION_NOTIFY, WINDOW_CLASS_INPUT_ONLY,
-};
+use x11rb::connection::Connection;
+use x11rb::protocol::xproto::{ConnectionExt, CreateWindowAux, EventMask, WindowClass};
+use x11rb::protocol::Event;
+use x11rb::xcb_ffi::XCBConnection;
 
 use crate::application::AppHandler;
 
@@ -40,7 +38,7 @@ pub(crate) struct Application {
     /// The X server might also host other displays.
     ///
     /// A display is a collection of screens.
-    connection: Rc<Connection>,
+    connection: Rc<XCBConnection>,
     /// The default screen of the connected display.
     ///
     /// The connected display may also have additional screens.
@@ -74,59 +72,59 @@ struct State {
 
 impl Application {
     pub fn new() -> Result<Application, Error> {
-        let (conn, screen_num) = Connection::connect_with_xlib_display()?;
+        let (conn, screen_num) = XCBConnection::connect(None)?;
         let connection = Rc::new(conn);
-        let window_id = Application::create_event_window(&connection, screen_num)?;
+        let window_id = Application::create_event_window(&connection, screen_num as i32)?;
         let state = Rc::new(RefCell::new(State {
             quitting: false,
             windows: HashMap::new(),
         }));
         Ok(Application {
             connection,
-            screen_num,
+            screen_num: screen_num as i32,
             window_id,
             state,
         })
     }
 
-    fn create_event_window(conn: &Rc<Connection>, screen_num: i32) -> Result<u32, Error> {
-        let id = conn.generate_id();
-        let setup = conn.get_setup();
+    fn create_event_window(conn: &Rc<XCBConnection>, screen_num: i32) -> Result<u32, Error> {
+        let id = conn.generate_id()?;
+        let setup = conn.setup();
         let screen = setup
-            .roots()
-            .nth(screen_num as usize)
+            .roots
+            .get(screen_num as usize)
             .ok_or_else(|| anyhow!("invalid screen num: {}", screen_num))?;
 
-        let cw_values = [(CW_EVENT_MASK, EVENT_MASK_STRUCTURE_NOTIFY)];
-
         // Create the actual window
-        xcb::create_window_checked(
-            // Connection to the X server
-            conn,
-            // Window depth
-            COPY_FROM_PARENT.try_into().unwrap(),
-            // The new window's ID
-            id,
-            // Parent window of this new window
-            screen.root(),
-            // X-coordinate of the new window
-            0,
-            // Y-coordinate of the new window
-            0,
-            // Width of the new window
-            1,
-            // Height of the new window
-            1,
-            // Border width
-            0,
-            // Window class type
-            WINDOW_CLASS_INPUT_ONLY as u16,
-            // Visual ID
-            COPY_FROM_PARENT.try_into().unwrap(),
-            // Window properties mask
-            &cw_values,
-        )
-        .request_check()?;
+        if let Some(err) = conn
+            .create_window(
+                // Window depth
+                x11rb::COPY_FROM_PARENT.try_into().unwrap(),
+                // The new window's ID
+                id,
+                // Parent window of this new window
+                screen.root,
+                // X-coordinate of the new window
+                0,
+                // Y-coordinate of the new window
+                0,
+                // Width of the new window
+                1,
+                // Height of the new window
+                1,
+                // Border width
+                0,
+                // Window class type
+                WindowClass::InputOnly,
+                // Visual ID
+                x11rb::COPY_FROM_PARENT,
+                // Window properties mask
+                &CreateWindowAux::new().event_mask(EventMask::StructureNotify),
+            )?
+            .check()?
+        {
+            return Err(x11rb::errors::ReplyError::X11Error(err).into());
+        }
 
         Ok(id)
     }
@@ -152,7 +150,7 @@ impl Application {
     }
 
     #[inline]
-    pub(crate) fn connection(&self) -> &Rc<Connection> {
+    pub(crate) fn connection(&self) -> &Rc<XCBConnection> {
         &self.connection
     }
 
@@ -162,101 +160,85 @@ impl Application {
     }
 
     /// Returns `Ok(true)` if we want to exit the main loop.
-    fn handle_event(&self, ev: &xcb::GenericEvent) -> Result<bool, Error> {
-        let ev_type = ev.response_type() & !0x80;
-        // NOTE: When adding handling for any of the following events,
-        //       there must be a check against self.window_id
-        //       to know if the event must be ignored.
-        //       Otherwise there will be a "failed to get window" error.
-        //
-        //       CIRCULATE_NOTIFY, CONFIGURE_NOTIFY, GRAVITY_NOTIFY
-        //       MAP_NOTIFY, REPARENT_NOTIFY, UNMAP_NOTIFY
-        match ev_type {
-            EXPOSE => {
-                let expose = unsafe { xcb::cast_event::<ExposeEvent>(&ev) };
-                let window_id = expose.window();
+    fn handle_event(&self, ev: &Event) -> Result<bool, Error> {
+        match ev {
+            // NOTE: When adding handling for any of the following events,
+            //       there must be a check against self.window_id
+            //       to know if the event must be ignored.
+            //       Otherwise there will be a "failed to get window" error.
+            //
+            //       CIRCULATE_NOTIFY, CONFIGURE_NOTIFY, GRAVITY_NOTIFY
+            //       MAP_NOTIFY, REPARENT_NOTIFY, UNMAP_NOTIFY
+            Event::Expose(ev) => {
                 let w = self
-                    .window(window_id)
+                    .window(ev.window)
                     .context("EXPOSE - failed to get window")?;
-                w.handle_expose(expose)
-                    .context("EXPOSE - failed to handle")?;
+                w.handle_expose(ev).context("EXPOSE - failed to handle")?;
             }
-            KEY_PRESS => {
-                let key_press = unsafe { xcb::cast_event::<KeyPressEvent>(&ev) };
-                let window_id = key_press.event();
+            Event::KeyPress(ev) => {
                 let w = self
-                    .window(window_id)
+                    .window(ev.event)
                     .context("KEY_PRESS - failed to get window")?;
-                w.handle_key_press(key_press)
+                w.handle_key_press(ev)
                     .context("KEY_PRESS - failed to handle")?;
             }
-            BUTTON_PRESS => {
-                let button_press = unsafe { xcb::cast_event::<ButtonPressEvent>(&ev) };
-                let window_id = button_press.event();
+            Event::ButtonPress(ev) => {
                 let w = self
-                    .window(window_id)
+                    .window(ev.event)
                     .context("BUTTON_PRESS - failed to get window")?;
 
                 // X doesn't have dedicated scroll events: it uses mouse buttons instead.
                 // Buttons 4/5 are vertical; 6/7 are horizontal.
-                if button_press.detail() >= 4 && button_press.detail() <= 7 {
-                    w.handle_wheel(button_press)
+                if ev.detail >= 4 && ev.detail <= 7 {
+                    w.handle_wheel(ev)
                         .context("BUTTON_PRESS - failed to handle wheel")?;
                 } else {
-                    w.handle_button_press(button_press)
+                    w.handle_button_press(ev)
                         .context("BUTTON_PRESS - failed to handle")?;
                 }
             }
-            BUTTON_RELEASE => {
-                let button_release = unsafe { xcb::cast_event::<ButtonReleaseEvent>(&ev) };
-                let window_id = button_release.event();
+            Event::ButtonRelease(ev) => {
                 let w = self
-                    .window(window_id)
+                    .window(ev.event)
                     .context("BUTTON_RELEASE - failed to get window")?;
-                if button_release.detail() >= 4 && button_release.detail() <= 7 {
+                if ev.detail >= 4 && ev.detail <= 7 {
                     // This is the release event corresponding to a mouse wheel.
                     // Ignore it: we already handled the press event.
                 } else {
-                    w.handle_button_release(button_release)
+                    w.handle_button_release(ev)
                         .context("BUTTON_RELEASE - failed to handle")?;
                 }
             }
-            MOTION_NOTIFY => {
-                let motion_notify = unsafe { xcb::cast_event::<MotionNotifyEvent>(&ev) };
-                let window_id = motion_notify.event();
+            Event::MotionNotify(ev) => {
                 let w = self
-                    .window(window_id)
+                    .window(ev.event)
                     .context("MOTION_NOTIFY - failed to get window")?;
-                w.handle_motion_notify(motion_notify)
+                w.handle_motion_notify(ev)
                     .context("MOTION_NOTIFY - failed to handle")?;
             }
-            CLIENT_MESSAGE => {
-                let client_message = unsafe { xcb::cast_event::<ClientMessageEvent>(&ev) };
-                let window_id = client_message.window();
+            Event::ClientMessage(ev) => {
                 let w = self
-                    .window(window_id)
+                    .window(ev.window)
                     .context("CLIENT_MESSAGE - failed to get window")?;
-                w.handle_client_message(client_message)
+                w.handle_client_message(ev)
                     .context("CLIENT_MESSAGE - failed to handle")?;
             }
-            DESTROY_NOTIFY => {
-                let destroy_notify = unsafe { xcb::cast_event::<DestroyNotifyEvent>(&ev) };
-                let window_id = destroy_notify.window();
-                if window_id == self.window_id {
+            Event::DestroyNotify(ev) => {
+                if ev.window == self.window_id {
                     // The destruction of the Application window means that
                     // we need to quit the run loop.
                     return Ok(true);
                 }
 
                 let w = self
-                    .window(window_id)
+                    .window(ev.window)
                     .context("DESTROY_NOTIFY - failed to get window")?;
-                w.handle_destroy_notify(destroy_notify)
+                w.handle_destroy_notify(ev)
                     .context("DESTROY_NOTIFY - failed to handle")?;
 
                 // Remove our reference to the Window and allow it to be dropped
                 let windows_left = self
-                    .remove_window(window_id)
+                    .remove_window(ev.window)
                     .context("DESTROY_NOTIFY - failed to remove window")?;
                 // Check if we need to finalize a quit request
                 if windows_left == 0 && borrow!(self.state)?.quitting {
@@ -270,7 +252,7 @@ impl Application {
 
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         loop {
-            if let Some(ev) = self.connection.wait_for_event() {
+            if let Ok(ev) = self.connection.wait_for_event() {
                 match self.handle_event(&ev) {
                     Ok(quit) => {
                         if quit {
@@ -298,7 +280,7 @@ impl Application {
                     for window in state.windows.values() {
                         window.destroy();
                     }
-                    self.connection.flush();
+                    log_x11!(self.connection.flush());
                 }
             }
         } else {
@@ -307,8 +289,8 @@ impl Application {
     }
 
     fn finalize_quit(&self) {
-        xcb::destroy_window(&self.connection, self.window_id);
-        self.connection.flush();
+        log_x11!(self.connection.destroy_window(self.window_id));
+        log_x11!(self.connection.flush());
     }
 
     pub fn clipboard(&self) -> Clipboard {

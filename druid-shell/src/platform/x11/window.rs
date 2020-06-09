@@ -21,13 +21,11 @@ use std::rc::{Rc, Weak};
 
 use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
-use xcb::{
-    Atom, Visualtype, ATOM_ATOM, ATOM_STRING, ATOM_WM_NAME, CONFIG_WINDOW_STACK_MODE,
-    COPY_FROM_PARENT, CURRENT_TIME, CW_BACK_PIXEL, CW_EVENT_MASK, EVENT_MASK_BUTTON_PRESS,
-    EVENT_MASK_BUTTON_RELEASE, EVENT_MASK_EXPOSURE, EVENT_MASK_KEY_PRESS, EVENT_MASK_KEY_RELEASE,
-    EVENT_MASK_POINTER_MOTION, EVENT_MASK_STRUCTURE_NOTIFY, INPUT_FOCUS_POINTER_ROOT,
-    PROP_MODE_REPLACE, STACK_MODE_ABOVE, WINDOW_CLASS_INPUT_OUTPUT,
+use x11rb::connection::Connection;
+use x11rb::protocol::xproto::{
+    self, Atom, AtomEnum, ConnectionExt, EventMask, ExposeEvent, PropMode, Visualtype, WindowClass,
 };
+use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
 
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error as ShellError;
@@ -42,6 +40,36 @@ use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use super::application::Application;
 use super::menu::Menu;
 use super::util;
+
+/// A version of XCB's `xcb_visualtype_t` struct. This was copied from the example in x11rb; it
+/// is used to interoperate with cairo.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct xcb_visualtype_t {
+    pub visual_id: u32,
+    pub class: u8,
+    pub bits_per_rgb_value: u8,
+    pub colormap_entries: u16,
+    pub red_mask: u32,
+    pub green_mask: u32,
+    pub blue_mask: u32,
+    pub pad0: [u8; 4],
+}
+
+impl From<Visualtype> for xcb_visualtype_t {
+    fn from(value: Visualtype) -> xcb_visualtype_t {
+        xcb_visualtype_t {
+            visual_id: value.visual_id,
+            class: value.class.into(),
+            bits_per_rgb_value: value.bits_per_rgb_value,
+            colormap_entries: value.colormap_entries,
+            red_mask: value.red_mask,
+            green_mask: value.green_mask,
+            blue_mask: value.blue_mask,
+            pad0: [0; 4],
+        }
+    }
+}
 
 pub(crate) struct WindowBuilder {
     app: Application,
@@ -101,10 +129,12 @@ impl WindowBuilder {
         // the client and window manager in which the client is willing to participate.
         //
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#wm_protocols_property
-        let wm_protocols = xcb::intern_atom(conn, false, "WM_PROTOCOLS")
-            .get_reply()
+        let wm_protocols = conn
+            .intern_atom(false, b"WM_PROTOCOLS")
             .context("failed to get WM_PROTOCOLS")?
-            .atom();
+            .reply()
+            .context("failed to get WM_PROTOCOLS reply")?
+            .atom;
 
         // WM_DELETE_WINDOW
         //
@@ -115,23 +145,23 @@ impl WindowBuilder {
         // Registering for but ignoring this event means that the window will remain open.
         //
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
-        let wm_delete_window = xcb::intern_atom(conn, false, "WM_DELETE_WINDOW")
-            .get_reply()
+        let wm_delete_window = conn
+            .intern_atom(false, b"WM_DELETE_WINDOW")
             .context("failed to get WM_DELETE_WINDOW")?
-            .atom();
+            .reply()
+            .context("failed to get WM_DELETE_WINDOW reply")?
+            .atom;
 
         // Replace the window's WM_PROTOCOLS with the following.
         let protocols = [wm_delete_window];
         // TODO(x11/errors): Check the response for errors?
-        xcb::change_property(
-            conn,
-            PROP_MODE_REPLACE as u8,
+        conn.change_property32(
+            PropMode::Replace,
             window_id,
             wm_protocols,
-            ATOM_ATOM,
-            32,
+            AtomEnum::ATOM,
             &protocols,
-        );
+        )?;
 
         Ok(WindowAtoms {
             wm_protocols,
@@ -143,16 +173,19 @@ impl WindowBuilder {
     fn create_cairo_context(
         &self,
         window_id: u32,
-        visual_type: &mut Visualtype,
+        visual_type: &Visualtype,
     ) -> Result<RefCell<cairo::Context>, Error> {
         let conn = self.app.connection();
         let cairo_xcb_connection = unsafe {
-            XCBConnection::from_raw_none(conn.get_raw_conn() as *mut cairo_sys::xcb_connection_t)
+            XCBConnection::from_raw_none(
+                conn.get_raw_xcb_connection() as *mut cairo_sys::xcb_connection_t
+            )
         };
         let cairo_drawable = XCBDrawable(window_id);
+        let mut xcb_visual = xcb_visualtype_t::from(*visual_type);
         let cairo_visual_type = unsafe {
             XCBVisualType::from_raw_none(
-                &mut visual_type.base as *mut _ as *mut cairo_sys::xcb_visualtype_t,
+                &mut xcb_visual as *mut xcb_visualtype_t as *mut cairo_sys::xcb_visualtype_t,
             )
         };
         let cairo_surface = XCBSurface::create(
@@ -171,62 +204,64 @@ impl WindowBuilder {
     pub fn build(self) -> Result<WindowHandle, Error> {
         let conn = self.app.connection();
         let screen_num = self.app.screen_num();
-        let id = conn.generate_id();
-        let setup = conn.get_setup();
+        let id = conn.generate_id()?;
+        let setup = conn.setup();
         // TODO(x11/errors): Don't unwrap for screen or visual_type?
-        let screen = setup.roots().nth(screen_num as usize).unwrap();
-        let mut visual_type = util::get_visual_from_screen(&screen).unwrap();
-        let visual_id = visual_type.visual_id();
+        let screen = setup.roots.get(screen_num as usize).unwrap();
+        let visual_type = util::get_visual_from_screen(&screen).unwrap();
+        let visual_id = visual_type.visual_id;
 
-        let cw_values = [
-            (CW_BACK_PIXEL, screen.white_pixel()),
-            (
-                CW_EVENT_MASK,
-                EVENT_MASK_EXPOSURE
-                    | EVENT_MASK_STRUCTURE_NOTIFY
-                    | EVENT_MASK_KEY_PRESS
-                    | EVENT_MASK_KEY_RELEASE
-                    | EVENT_MASK_BUTTON_PRESS
-                    | EVENT_MASK_BUTTON_RELEASE
-                    | EVENT_MASK_POINTER_MOTION,
-            ),
-        ];
+        let cw_values = xproto::CreateWindowAux::new()
+            .background_pixel(screen.white_pixel)
+            .event_mask(
+                EventMask::Exposure
+                    | EventMask::StructureNotify
+                    | EventMask::KeyPress
+                    | EventMask::KeyRelease
+                    | EventMask::ButtonPress
+                    | EventMask::ButtonRelease
+                    | EventMask::PointerMotion,
+            );
 
         // Create the actual window
-        xcb::create_window_checked(
-            // Connection to the X server
-            conn,
-            // Window depth
-            COPY_FROM_PARENT.try_into().unwrap(),
-            // The new window's ID
-            id,
-            // Parent window of this new window
-            // TODO(#468): either `screen.root()` (no parent window) or pass parent here to attach
-            screen.root(),
-            // X-coordinate of the new window
-            0,
-            // Y-coordinate of the new window
-            0,
-            // Width of the new window
-            // TODO(x11/dpi_scaling): figure out DPI scaling
-            self.size.width as u16,
-            // Height of the new window
-            // TODO(x11/dpi_scaling): figure out DPI scaling
-            self.size.height as u16,
-            // Border width
-            0,
-            // Window class type
-            WINDOW_CLASS_INPUT_OUTPUT as u16,
-            // Visual ID
-            visual_id,
-            // Window properties mask
-            &cw_values,
-        )
-        .request_check()?;
+        // TODO: https://github.com/psychon/x11rb/pull/469 will make error handling easier with the
+        // next x11rb release.
+        if let Some(err) = conn
+            .create_window(
+                // Window depth
+                x11rb::COPY_FROM_PARENT.try_into().unwrap(),
+                // The new window's ID
+                id,
+                // Parent window of this new window
+                // TODO(#468): either `screen.root()` (no parent window) or pass parent here to attach
+                screen.root,
+                // X-coordinate of the new window
+                0,
+                // Y-coordinate of the new window
+                0,
+                // Width of the new window
+                // TODO(x11/dpi_scaling): figure out DPI scaling
+                self.size.width as u16,
+                // Height of the new window
+                // TODO(x11/dpi_scaling): figure out DPI scaling
+                self.size.height as u16,
+                // Border width
+                0,
+                // Window class type
+                WindowClass::InputOutput,
+                // Visual ID
+                visual_id,
+                // Window properties mask
+                &cw_values,
+            )?
+            .check()?
+        {
+            return Err(x11rb::errors::ReplyError::X11Error(err).into());
+        }
 
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
         let atoms = self.atoms(id)?;
-        let cairo_context = self.create_cairo_context(id, &mut visual_type)?;
+        let cairo_context = self.create_cairo_context(id, &visual_type)?;
         // Figure out the refresh rate of the current screen
         let refresh_rate = util::refresh_rate(conn, id);
         let state = RefCell::new(WindowState { size: self.size });
@@ -290,7 +325,7 @@ impl Window {
     ///
     /// Does not flush the connection.
     pub fn destroy(&self) {
-        xcb::destroy_window(self.app.connection(), self.id);
+        log_x11!(self.app.connection().destroy_window(self.id));
     }
 
     fn cairo_surface(&self) -> Result<XCBSurface, Error> {
@@ -337,28 +372,28 @@ impl Window {
     /// Does not flush the connection.
     fn request_redraw(&self, rect: Rect) {
         // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
-        let expose_event = xcb::ExposeEvent::new(
-            self.id,
-            rect.x0 as u16,
-            rect.y0 as u16,
-            rect.width() as u16,
-            rect.height() as u16,
-            0,
-        );
-        xcb::send_event(
-            self.app.connection(),
+        let expose_event = ExposeEvent {
+            window: self.id,
+            x: rect.x0 as u16,
+            y: rect.y0 as u16,
+            width: rect.width() as u16,
+            height: rect.height() as u16,
+            count: 0,
+            response_type: x11rb::protocol::xproto::EXPOSE_EVENT,
+            sequence: 0,
+        };
+        log_x11!(self.app.connection().send_event(
             false,
             self.id,
-            EVENT_MASK_EXPOSURE,
-            &expose_event,
-        );
+            EventMask::Exposure,
+            expose_event
+        ));
     }
 
     fn render(&self, invalid_rect: Rect) -> Result<(), Error> {
         // Figure out the window's current size
-        let geometry_cookie = xcb::get_geometry(self.app.connection(), self.id);
-        let reply = geometry_cookie.get_reply()?;
-        let size = Size::new(reply.width() as f64, reply.height() as f64);
+        let reply = self.app.connection().get_geometry(self.id)?.reply()?;
+        let size = Size::new(reply.width as f64, reply.height as f64);
         self.set_size(size)?;
 
         let mut anim = false;
@@ -404,18 +439,18 @@ impl Window {
 
             self.request_redraw(size.to_rect());
         }
-        self.app.connection().flush();
+        self.app.connection().flush()?;
         Ok(())
     }
 
     fn show(&self) {
-        xcb::map_window(self.app.connection(), self.id);
-        self.app.connection().flush();
+        log_x11!(self.app.connection().map_window(self.id));
+        log_x11!(self.app.connection().flush());
     }
 
     fn close(&self) {
         self.destroy();
-        self.app.connection().flush();
+        log_x11!(self.app.connection().flush());
     }
 
     /// Set whether the window should be resizable
@@ -431,18 +466,17 @@ impl Window {
     /// Bring this window to the front of the window stack and give it focus.
     fn bring_to_front_and_focus(&self) {
         // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
-        xcb::configure_window(
-            self.app.connection(),
+        let conn = self.app.connection();
+        log_x11!(conn.configure_window(
             self.id,
-            &[(CONFIG_WINDOW_STACK_MODE as u16, STACK_MODE_ABOVE)],
-        );
-        xcb::set_input_focus(
-            self.app.connection(),
-            INPUT_FOCUS_POINTER_ROOT as u8,
+            &xproto::ConfigureWindowAux::new().stack_mode(xproto::StackMode::Above),
+        ));
+        log_x11!(conn.set_input_focus(
+            xproto::InputFocus::PointerRoot,
             self.id,
-            CURRENT_TIME,
-        );
-        self.app.connection().flush();
+            xproto::Time::CurrentTime,
+        ));
+        log_x11!(conn.flush());
     }
 
     fn invalidate(&self) {
@@ -454,20 +488,18 @@ impl Window {
 
     fn invalidate_rect(&self, rect: Rect) {
         self.request_redraw(rect);
-        self.app.connection().flush();
+        log_x11!(self.app.connection().flush());
     }
 
     fn set_title(&self, title: &str) {
-        xcb::change_property(
-            self.app.connection(),
-            PROP_MODE_REPLACE as u8,
+        log_x11!(self.app.connection().change_property8(
+            xproto::PropMode::Replace,
             self.id,
-            ATOM_WM_NAME,
-            ATOM_STRING,
-            8,
+            AtomEnum::WM_NAME,
+            AtomEnum::STRING,
             title.as_bytes(),
-        );
-        self.app.connection().flush();
+        ));
+        log_x11!(self.app.connection().flush());
     }
 
     fn set_menu(&self, _menu: Menu) {
@@ -479,24 +511,24 @@ impl Window {
         Ok(Scale::new(1.0, 1.0))
     }
 
-    pub fn handle_expose(&self, expose: &xcb::ExposeEvent) -> Result<(), Error> {
+    pub fn handle_expose(&self, expose: &xproto::ExposeEvent) -> Result<(), Error> {
         // TODO(x11/dpi_scaling): when dpi scaling is
         // implemented, it needs to be used here too
         let rect = Rect::from_origin_size(
-            (expose.x() as f64, expose.y() as f64),
-            (expose.width() as f64, expose.height() as f64),
+            (expose.x as f64, expose.y as f64),
+            (expose.width as f64, expose.height as f64),
         );
         Ok(self.render(rect)?)
     }
 
-    pub fn handle_key_press(&self, key_press: &xcb::KeyPressEvent) -> Result<(), Error> {
-        let key: u32 = key_press.detail() as u32;
+    pub fn handle_key_press(&self, key_press: &xproto::KeyPressEvent) -> Result<(), Error> {
+        let key: u32 = key_press.detail as u32;
         let key_code: KeyCode = key.into();
         let key_event = KeyEvent::new(
             key_code,
             // TODO: detect repeated keys
             false,
-            key_mods(key_press.state()),
+            key_mods(key_press.state),
             key_code,
             key_code,
         );
@@ -504,14 +536,17 @@ impl Window {
         Ok(())
     }
 
-    pub fn handle_button_press(&self, button_press: &xcb::ButtonPressEvent) -> Result<(), Error> {
-        let button = mouse_button(button_press.detail());
+    pub fn handle_button_press(
+        &self,
+        button_press: &xproto::ButtonPressEvent,
+    ) -> Result<(), Error> {
+        let button = mouse_button(button_press.detail);
         let mouse_event = MouseEvent {
-            pos: Point::new(button_press.event_x() as f64, button_press.event_y() as f64),
+            pos: Point::new(button_press.event_x as f64, button_press.event_y as f64),
             // The xcb state field doesn't include the newly pressed button, but
             // druid wants it to be included.
-            buttons: mouse_buttons(button_press.state()).with(button),
-            mods: key_mods(button_press.state()),
+            buttons: mouse_buttons(button_press.state).with(button),
+            mods: key_mods(button_press.state),
             // TODO: detect the count
             count: 1,
             focus: false,
@@ -524,18 +559,15 @@ impl Window {
 
     pub fn handle_button_release(
         &self,
-        button_release: &xcb::ButtonReleaseEvent,
+        button_release: &xproto::ButtonReleaseEvent,
     ) -> Result<(), Error> {
-        let button = mouse_button(button_release.detail());
+        let button = mouse_button(button_release.detail);
         let mouse_event = MouseEvent {
-            pos: Point::new(
-                button_release.event_x() as f64,
-                button_release.event_y() as f64,
-            ),
+            pos: Point::new(button_release.event_x as f64, button_release.event_y as f64),
             // The xcb state includes the newly released button, but druid
             // doesn't want it.
-            buttons: mouse_buttons(button_release.state()).without(button),
-            mods: key_mods(button_release.state()),
+            buttons: mouse_buttons(button_release.state).without(button),
+            mods: key_mods(button_release.state),
             count: 0,
             focus: false,
             button,
@@ -545,9 +577,9 @@ impl Window {
         Ok(())
     }
 
-    pub fn handle_wheel(&self, event: &xcb::ButtonPressEvent) -> Result<(), Error> {
-        let button = event.detail();
-        let mods = key_mods(event.state());
+    pub fn handle_wheel(&self, event: &xproto::ButtonPressEvent) -> Result<(), Error> {
+        let button = event.detail;
+        let mods = key_mods(event.state);
 
         // We use a delta of 120 per tick to match the behavior of Windows.
         let delta = match button {
@@ -560,9 +592,9 @@ impl Window {
             _ => return Err(anyhow!("unexpected mouse wheel button: {}", button)),
         };
         let mouse_event = MouseEvent {
-            pos: Point::new(event.event_x() as f64, event.event_y() as f64),
-            buttons: mouse_buttons(event.state()),
-            mods: key_mods(event.state()),
+            pos: Point::new(event.event_x as f64, event.event_y as f64),
+            buttons: mouse_buttons(event.state),
+            mods: key_mods(event.state),
             count: 0,
             focus: false,
             button: MouseButton::None,
@@ -575,15 +607,12 @@ impl Window {
 
     pub fn handle_motion_notify(
         &self,
-        motion_notify: &xcb::MotionNotifyEvent,
+        motion_notify: &xproto::MotionNotifyEvent,
     ) -> Result<(), Error> {
         let mouse_event = MouseEvent {
-            pos: Point::new(
-                motion_notify.event_x() as f64,
-                motion_notify.event_y() as f64,
-            ),
-            buttons: mouse_buttons(motion_notify.state()),
-            mods: key_mods(motion_notify.state()),
+            pos: Point::new(motion_notify.event_x as f64, motion_notify.event_y as f64),
+            buttons: mouse_buttons(motion_notify.state),
+            mods: key_mods(motion_notify.state),
             count: 0,
             focus: false,
             button: MouseButton::None,
@@ -595,12 +624,12 @@ impl Window {
 
     pub fn handle_client_message(
         &self,
-        client_message: &xcb::ClientMessageEvent,
+        client_message: &xproto::ClientMessageEvent,
     ) -> Result<(), Error> {
         // https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html#id2745388
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
-        if client_message.type_() == self.atoms.wm_protocols && client_message.format() == 32 {
-            let protocol = client_message.data().data32()[0];
+        if client_message.type_ == self.atoms.wm_protocols && client_message.format == 32 {
+            let protocol = client_message.data.as_data32()[0];
             if protocol == self.atoms.wm_delete_window {
                 self.close();
             }
@@ -608,9 +637,10 @@ impl Window {
         Ok(())
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn handle_destroy_notify(
         &self,
-        _destroy_notify: &xcb::DestroyNotifyEvent,
+        _destroy_notify: &xproto::DestroyNotifyEvent,
     ) -> Result<(), Error> {
         borrow_mut!(self.handler)?.destroy();
         Ok(())
@@ -639,9 +669,9 @@ fn mouse_button(button: u8) -> MouseButton {
 fn mouse_buttons(mods: u16) -> MouseButtons {
     let mut buttons = MouseButtons::new();
     let button_masks = &[
-        (xcb::xproto::BUTTON_MASK_1, MouseButton::Left),
-        (xcb::xproto::BUTTON_MASK_2, MouseButton::Middle),
-        (xcb::xproto::BUTTON_MASK_3, MouseButton::Right),
+        (xproto::ButtonMask::M1, MouseButton::Left),
+        (xproto::ButtonMask::M2, MouseButton::Middle),
+        (xproto::ButtonMask::M3, MouseButton::Right),
         // TODO: determine the X1/X2 state, using our own caching if necessary.
         // BUTTON_MASK_4/5 do not work: they are for scroll events.
     ];
@@ -658,13 +688,13 @@ fn mouse_buttons(mods: u16) -> MouseButtons {
 fn key_mods(mods: u16) -> KeyModifiers {
     let mut ret = KeyModifiers::default();
     let mut key_masks = [
-        (xcb::xproto::MOD_MASK_SHIFT, &mut ret.shift),
-        (xcb::xproto::MOD_MASK_CONTROL, &mut ret.ctrl),
+        (xproto::ModMask::Shift, &mut ret.shift),
+        (xproto::ModMask::Control, &mut ret.ctrl),
         // X11's mod keys are configurable, but this seems
         // like a reasonable default for US keyboards, at least,
         // where the "windows" key seems to be MOD_MASK_4.
-        (xcb::xproto::MOD_MASK_1, &mut ret.alt),
-        (xcb::xproto::MOD_MASK_4, &mut ret.meta),
+        (xproto::ModMask::M1, &mut ret.alt),
+        (xproto::ModMask::M4, &mut ret.meta),
     ];
     for (mask, key) in &mut key_masks {
         if mods & (*mask as u16) != 0 {
