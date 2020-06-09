@@ -14,88 +14,9 @@
 
 //! Utility functions for determining the main thread.
 
-use std::fmt::{Debug, Display};
 use std::mem;
-use std::ops::Deref;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
-
-/// A convenience wrapper over `String` / `&'static str`.
-///
-/// This is useful for cases where you want to use a `String` but also
-/// want to be able to create the type at compile time via `const` functions.
-#[derive(Clone)]
-pub struct ConstString(ConstStringValue);
-
-#[derive(Clone)]
-enum ConstStringValue {
-    Owned(String),
-    Static(&'static str),
-}
-
-impl ConstString {
-    /// Create a new `ConstString` from a `&'static str`.
-    pub const fn from_static(value: &'static str) -> ConstString {
-        ConstString(ConstStringValue::Static(value))
-    }
-
-    /// Create a new `ConstString`.
-    pub fn new(value: impl Into<String>) -> ConstString {
-        ConstString(ConstStringValue::Owned(value.into()))
-    }
-}
-
-impl Eq for ConstString {}
-
-impl PartialEq for ConstString {
-    fn eq(&self, other: &ConstString) -> bool {
-        self.as_ref() == other.as_ref()
-    }
-}
-
-impl Deref for ConstString {
-    type Target = str;
-
-    fn deref(&self) -> &str {
-        match &self.0 {
-            ConstStringValue::Owned(s) => s,
-            ConstStringValue::Static(s) => *s,
-        }
-    }
-}
-
-impl AsRef<str> for ConstString {
-    fn as_ref(&self) -> &str {
-        match &self.0 {
-            ConstStringValue::Owned(s) => s,
-            ConstStringValue::Static(s) => *s,
-        }
-    }
-}
-
-impl Default for ConstString {
-    fn default() -> ConstString {
-        ConstString::from_static("")
-    }
-}
-
-impl Display for ConstString {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match &self.0 {
-            ConstStringValue::Owned(s) => Display::fmt(s, f),
-            ConstStringValue::Static(s) => Display::fmt(*s, f),
-        }
-    }
-}
-
-impl Debug for ConstString {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match &self.0 {
-            ConstStringValue::Owned(s) => Debug::fmt(s, f),
-            ConstStringValue::Static(s) => Debug::fmt(*s, f),
-        }
-    }
-}
 
 static MAIN_THREAD_ID: AtomicU64 = AtomicU64::new(0);
 

@@ -14,7 +14,7 @@
 
 //! Alert dialogs.
 
-use crate::util::ConstString;
+use std::borrow::Cow;
 
 /// A token that uniquely identifies an alert dialog.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
@@ -54,15 +54,29 @@ pub struct AlertResponse {
 ///
 /// # Modality
 ///
-/// While an alert dialog is open it takes interaction priority and the user won't be
-/// able to continue interacting with the parent window while the alert is open.
+/// Alerts can operate in two different modality modes. By default
+/// they are window scoped. Alternatively they can be application scoped.
 ///
-/// There is no guaranteed behavior when multiple alert dialogs are requested.
-/// Depending on platform specifics, all the alerts might be visible or just some.
-/// Regardless of visibility, only one of the alert dialogs will be interactable.
-/// When that alert dialog is closed, another one will become interactable.
+/// While an alert dialog is open it takes interaction priority in its modality scope
+/// and the user won't be able to continue interacting with anything else.
+/// In window scope this means the user can't interact with the parent window
+/// and in application scope this means the user can't interact with any other window.
+///
+/// # Multiple alerts
+///
+/// There is no guaranteed behavior when multiple alert dialogs are requested with
+/// overlapping modality scope. Depending on platform specifics, all the alerts
+/// might be visible or just some of them. Regardless of visibility, only one of
+/// the alert dialogs will be interactable. When that alert dialog is closed,
+/// another one will become interactable.
+///
+/// If the modality scopes don't overlap, i.e. when multiple alerts are originating
+/// from different windows and they are all window scoped, all the alerts can be
+/// interacted with and they won't block eachother.
 #[derive(Debug, Clone)]
 pub struct AlertOptions {
+    /// Whether the alert is app-modal.
+    pub(crate) app_modal: bool,
     /// The context of the alert.
     pub(crate) context: String,
     /// The primary message of the alert.
@@ -108,7 +122,7 @@ pub enum AlertIcon {
 /// **Confirm**, or **Yes**.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AlertButton {
-    pub(crate) label: ConstString,
+    pub(crate) label: Cow<'static, str>,
 }
 
 impl AlertToken {
@@ -167,7 +181,7 @@ impl AlertButton {
     /// [`AlertButton`]: struct.AlertButton.html
     pub const fn new(label: &'static str) -> AlertButton {
         AlertButton {
-            label: ConstString::from_static(label),
+            label: Cow::Borrowed(label),
         }
     }
 
@@ -185,7 +199,7 @@ impl AlertButton {
     /// [`AlertButton`]: struct.AlertButton.html
     pub fn dynamic(label: impl Into<String>) -> AlertButton {
         AlertButton {
-            label: ConstString::new(label),
+            label: Cow::Owned(label.into()),
         }
     }
 }
@@ -194,6 +208,7 @@ impl Default for AlertOptions {
     /// Create a default set of alert options.
     fn default() -> AlertOptions {
         AlertOptions {
+            app_modal: false,
             context: Default::default(),
             message: Default::default(),
             description: Default::default(),
@@ -207,8 +222,68 @@ impl Default for AlertOptions {
 
 impl AlertOptions {
     /// Create a new set of alert options.
-    pub fn new() -> AlertOptions {
+    pub fn new() -> Self {
         AlertOptions::default()
+    }
+
+    /// Create a new set of alert options with [`AlertIcon::Information`].
+    ///
+    /// Use this when the alert dialog is providing important time sensitive information.
+    ///
+    /// This function is equivalent to calling [`icon`] with [`AlertIcon::Information`].
+    ///
+    /// [`icon`]: #method.icon
+    /// [`AlertIcon::Information`]: enum.AlertIcon.html#variant.Information
+    pub fn information() -> Self {
+        AlertOptions {
+            icon: Some(AlertIcon::Information),
+            ..Default::default()
+        }
+    }
+
+    /// Create a new set of alert options with [`AlertIcon::Warning`].
+    ///
+    /// Use this when the alert dialog is warning about a potential future problem.
+    ///
+    /// This function is equivalent to calling [`icon`] with [`AlertIcon::Warning`].
+    ///
+    /// [`icon`]: #method.icon
+    /// [`AlertIcon::Warning`]: enum.AlertIcon.html#variant.Warning
+    pub fn warning() -> Self {
+        AlertOptions {
+            icon: Some(AlertIcon::Warning),
+            ..Default::default()
+        }
+    }
+
+    /// Create a new set of alert options with [`AlertIcon::Error`].
+    ///
+    /// Use this when the alert dialog is informing of a critical problem that has already happened.
+    ///
+    /// This function is equivalent to calling [`icon`] with [`AlertIcon::Error`].
+    ///
+    /// [`icon`]: #method.icon
+    /// [`AlertIcon::Error`]: enum.AlertIcon.html#variant.Error
+    pub fn error() -> Self {
+        AlertOptions {
+            icon: Some(AlertIcon::Error),
+            ..Default::default()
+        }
+    }
+
+    /// Set the icon of the alert.
+    ///
+    /// This should accurately represent your primary message.
+    /// Read [`AlertIcon`] for more information about icons.
+    ///
+    /// This is shown on the alert dialog next to your primary message.
+    ///
+    /// Setting this to `None` means there will not be any icon.
+    ///
+    /// [`AlertIcon`]: enum.AlertIcon.html
+    pub fn icon(mut self, icon: impl Into<Option<AlertIcon>>) -> Self {
+        self.icon = icon.into();
+        self
     }
 
     /// Set the context of the alert.
@@ -245,60 +320,6 @@ impl AlertOptions {
         self
     }
 
-    /// Set the icon of the alert.
-    ///
-    /// This should accurately represent your primary message.
-    /// Read [`AlertIcon`] for more information about icons.
-    ///
-    /// This is shown on the alert dialog next to your primary message.
-    ///
-    /// Setting this to `None` means there will not be any icon.
-    ///
-    /// [`AlertIcon`]: enum.AlertIcon.html
-    pub fn icon(mut self, icon: impl Into<Option<AlertIcon>>) -> Self {
-        self.icon = icon.into();
-        self
-    }
-
-    /// Set the icon of the alert to [`AlertIcon::Information`].
-    ///
-    /// Use this when the alert dialog is providing important time sensitive information.
-    ///
-    /// This method is equivalent to calling [`icon`] with [`AlertIcon::Information`].
-    ///
-    /// [`icon`]: #method.icon
-    /// [`AlertIcon::Information`]: enum.AlertIcon.html#variant.Information
-    pub fn information(mut self) -> Self {
-        self.icon = Some(AlertIcon::Information);
-        self
-    }
-
-    /// Set the icon of the alert to [`AlertIcon::Warning`].
-    ///
-    /// Use this when the alert dialog is warning about a potential future problem.
-    ///
-    /// This method is equivalent to calling [`icon`] with [`AlertIcon::Warning`].
-    ///
-    /// [`icon`]: #method.icon
-    /// [`AlertIcon::Warning`]: enum.AlertIcon.html#variant.Warning
-    pub fn warning(mut self) -> Self {
-        self.icon = Some(AlertIcon::Warning);
-        self
-    }
-
-    /// Set the icon of the alert to [`AlertIcon::Error`].
-    ///
-    /// Use this when the alert dialog is informing of a critical problem that has already happened.
-    ///
-    /// This method is equivalent to calling [`icon`] with [`AlertIcon::Error`].
-    ///
-    /// [`icon`]: #method.icon
-    /// [`AlertIcon::Error`]: enum.AlertIcon.html#variant.Error
-    pub fn error(mut self) -> Self {
-        self.icon = Some(AlertIcon::Error);
-        self
-    }
-
     /// Set the primary button of the alert.
     ///
     /// The primary button is the hero of the alert dialog. It should be the button
@@ -320,6 +341,37 @@ impl AlertOptions {
     /// [`AlertButton::OK`]: struct.AlertButton.html#associatedconstant.OK
     pub fn primary(mut self, button: AlertButton) -> Self {
         self.primary = button;
+        self
+    }
+
+    /// Add an alternative button to the alert.
+    ///
+    /// Alternative buttons are a way to provide the user with multiple choices.
+    /// These are usually not the choices that the user will make, but in the right
+    /// circumstances can be very valuable.
+    ///
+    /// Alternative buttons can provide the user a way to disagree with the message
+    /// of the alert but still proceed. Agree or not, alternative buttons provide
+    /// ways to proceed that differ from the primary button.
+    ///
+    /// You can have multiple alternative buttons by calling this method multiple times.
+    ///
+    /// Keep the total number of buttons on the alert dialog low, almost never
+    /// present more than three including the [`primary`] and [`cancel`] buttons.
+    /// Having more buttons is supported, but will look quirky and will create
+    /// a worse user experience by introducing an overly complex situation.
+    ///
+    /// Read [`AlertButton`] for more information about buttons.
+    ///
+    /// # Example
+    ///
+    /// When a user attempts to close a new document, an alternative button should be **Delete**.
+    ///
+    /// [`primary`]: #method.primary
+    /// [`cancel`]: #method.cancel
+    /// [`AlertButton`]: struct.AlertButton.html
+    pub fn alternative(mut self, button: AlertButton) -> Self {
+        self.alternatives.push(button);
         self
     }
 
@@ -349,32 +401,31 @@ impl AlertOptions {
         self
     }
 
-    /// Set the alternative buttons of the alert.
+    /// Set the cancel button of the alert to [`AlertButton::CANCEL`].
     ///
-    /// Alternative buttons are a way to provide the user with multiple choices.
-    /// These are usually not the choices that the user will make, but in the right
-    /// circumstances can be very valuable.
+    /// This is a convenience method that is equal to calling [`cancel`]
+    /// with [`AlertButton::CANCEL`]. Read [`cancel`] for more information.
     ///
-    /// Alternative buttons can provide the user a way to disagree with the message
-    /// of the alert but still proceed. Agree or not, alternative buttons provide
-    /// ways to proceed that differ from the primary button.
-    ///
-    /// Keep the total number of buttons on the alert dialog low, almost never
-    /// present more than three including the [`primary`] and [`cancel`] buttons.
-    /// Having more buttons is supported, but will look quirky and will create
-    /// a worse user experience by introducing an overly complex situation.
-    ///
-    /// Read [`AlertButton`] for more information about buttons.
-    ///
-    /// # Example
-    ///
-    /// When a user attempts to close a new document, an alternative button should be **Delete**.
-    ///
-    /// [`primary`]: #method.primary
+    /// [`AlertButton::CANCEL`]: struct.AlertButton.html#associatedconstant.CANCEL
     /// [`cancel`]: #method.cancel
-    /// [`AlertButton`]: struct.AlertButton.html
-    pub fn alternatives(mut self, buttons: Vec<AlertButton>) -> Self {
-        self.alternatives = buttons;
+    pub fn cancelable(mut self) -> Self {
+        self.cancel = Some(AlertButton::CANCEL);
+        self
+    }
+
+    /// Set the alert dialog modality to be application scoped.
+    ///
+    /// By default the alert dialog modality is window scoped, which means
+    /// that the user will not be able to interact with the parent window of the alert.
+    ///
+    /// An app-modal alert will prevent the user from interacting with
+    /// any window of the application.
+    /// 
+    /// [Read more about modality.]
+    /// 
+    /// [Read more about modality.]: #modality
+    pub fn app_modal(mut self) -> Self {
+        self.app_modal = true;
         self
     }
 }
