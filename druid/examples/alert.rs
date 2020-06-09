@@ -22,13 +22,25 @@ use druid::widget::{Button, Controller, Flex, Label, MainAxisAlignment, Padding}
 use druid::{AlertButton, AlertOptions, AlertToken, AppLauncher, WidgetExt, WindowDesc};
 use druid::{Data, TimerToken};
 
+// If you know the alert button label at compile time, you can make const AlertButtons.
 const ALERT_BUTTON_TO_LEFT: AlertButton = AlertButton::new("Increase left");
+const ALERT_BUTTON_TO_RIGHT: AlertButton = AlertButton::new("Increase right");
 
 #[derive(Debug, Clone, Data)]
 struct State {
     left: usize,
     right: usize,
     bits: usize,
+}
+
+struct ManageButtonController;
+
+struct BitsButtonController {
+    button_set: AlertButton,
+    button_clear: AlertButton,
+    counter: usize,
+    timer_token: TimerToken,
+    tokens: HashMap<AlertToken, usize>,
 }
 
 fn main() {
@@ -73,15 +85,15 @@ fn ui_builder() -> impl Widget<State> {
         .on_click(|ctx, _data, _env| {
             let opts = AlertOptions::information()
                 .context("Manage score")
-                .message("How would you like to manage the score?")
+                .message("Which side should be increased?")
                 .primary(ALERT_BUTTON_TO_LEFT)
-                .alternative(AlertButton::dynamic("Increase right"))
+                .alternative(ALERT_BUTTON_TO_RIGHT)
                 .cancelable();
             ctx.alert(opts);
         })
         .controller(ManageButtonController);
     let button_bits = Button::<State>::dynamic(|data, _| format!("Bits: {:05b}", data.bits))
-        .controller(BitsButtonController::new());
+        .controller(BitsButtonController::new("bit"));
 
     let label_left = Label::new(|data: &State, _: &_| format!("{}", data.left));
     let label_right = Label::new(|data: &State, _: &_| format!("{}", data.right));
@@ -102,8 +114,6 @@ fn ui_builder() -> impl Widget<State> {
         .with_flex_child(Padding::new(20.0, label_row), 1.0)
 }
 
-struct ManageButtonController;
-
 impl<W: Widget<State>> Controller<State, W> for ManageButtonController {
     fn event(
         &mut self,
@@ -120,7 +130,7 @@ impl<W: Widget<State>> Controller<State, W> for ManageButtonController {
                         data.left += 1;
                         data.right -= 1;
                     }
-                } else if response.button() == Some(&AlertButton::dynamic("Increase right")) {
+                } else if response.button() == Some(&ALERT_BUTTON_TO_RIGHT) {
                     if data.left > 0 {
                         data.left -= 1;
                         data.right += 1;
@@ -132,18 +142,11 @@ impl<W: Widget<State>> Controller<State, W> for ManageButtonController {
     }
 }
 
-const BITS_BUTTON_SET: AlertButton = AlertButton::new("Set");
-const BITS_BUTTON_CLEAR: AlertButton = AlertButton::new("Clear");
-
-struct BitsButtonController {
-    counter: usize,
-    timer_token: TimerToken,
-    tokens: HashMap<AlertToken, usize>,
-}
-
 impl BitsButtonController {
-    pub fn new() -> BitsButtonController {
+    pub fn new(what: &str) -> BitsButtonController {
         BitsButtonController {
+            button_set: AlertButton::dynamic(format!("Set {}", what)),
+            button_clear: AlertButton::dynamic(format!("Clear {}", what)),
             counter: 0,
             timer_token: TimerToken::INVALID,
             tokens: HashMap::new(),
@@ -174,8 +177,8 @@ impl<W: Widget<State>> Controller<State, W> for BitsButtonController {
                     self.counter += 1;
                     let opts = AlertOptions::new()
                         .message(format!("What about bit #{}?", self.counter))
-                        .primary(BITS_BUTTON_SET)
-                        .alternative(BITS_BUTTON_CLEAR);
+                        .primary(self.button_set.clone())
+                        .alternative(self.button_clear.clone());
                     let token = ctx.alert(opts);
                     self.tokens.insert(token, self.counter);
                     if self.counter < 5 {
@@ -188,9 +191,9 @@ impl<W: Widget<State>> Controller<State, W> for BitsButtonController {
             }
             Event::AlertResponse(response) => {
                 let bit = self.tokens.get(&response.token()).unwrap();
-                if response.button() == Some(&BITS_BUTTON_SET) {
+                if response.button() == Some(&self.button_set) {
                     data.bits |= 1 << (bit - 1);
-                } else if response.button() == Some(&BITS_BUTTON_CLEAR) {
+                } else if response.button() == Some(&self.button_clear) {
                     data.bits &= !(1 << (bit - 1));
                 }
             }
