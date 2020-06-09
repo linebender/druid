@@ -420,9 +420,9 @@ impl AlertOptions {
     ///
     /// An app-modal alert will prevent the user from interacting with
     /// any window of the application.
-    /// 
+    ///
     /// [Read more about modality.]
-    /// 
+    ///
     /// [Read more about modality.]: #modality
     pub fn app_modal(mut self) -> Self {
         self.app_modal = true;
