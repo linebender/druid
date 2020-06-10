@@ -123,6 +123,8 @@ impl Application {
             )?
             .check()?
         {
+            // TODO: https://github.com/psychon/x11rb/pull/469 will make error handling easier with
+            // the next x11rb release.
             return Err(x11rb::errors::ReplyError::X11Error(err).into());
         }
 

@@ -41,8 +41,13 @@ use super::application::Application;
 use super::menu::Menu;
 use super::util;
 
-/// A version of XCB's `xcb_visualtype_t` struct. This was copied from the example in x11rb; it
+/// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
 /// is used to interoperate with cairo.
+///
+/// The official upstream reference for this struct definition is [here].
+///
+/// [example]: https://github.com/psychon/x11rb/blob/master/cairo-example/src/main.rs
+/// [here]: https://xcb.freedesktop.org/manual/structxcb__visualtype__t.html
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct xcb_visualtype_t {
@@ -386,7 +391,7 @@ impl Window {
             false,
             self.id,
             EventMask::Exposure,
-            expose_event
+            expose_event,
         ));
     }
 
