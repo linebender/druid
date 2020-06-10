@@ -167,8 +167,8 @@ impl<T: Data> Window<T> {
             let modal = modal.take().unwrap().downcast::<ModalDesc<T>>().unwrap();
             self.modals.push((*modal).into());
             state.children_changed = true;
-            // TODO: if the modal doesn't show a background, we could be more conservative about
-            // invalidation (also below)
+            // TODO: We could be more conservative about invalidation. The problem is that we
+            // haven't laid out the modal yet, so we don't know how big it is. (also below)
             self.invalid.add_rect(self.size.to_rect());
             true
         } else if cmd.is(ModalDesc::DISMISS_MODAL) {
@@ -367,6 +367,7 @@ impl<T: Data> Window<T> {
             // need to mark an invalid region when a modal *disappears*
             if !self.invalid.is_empty() {
                 self.handle.invalidate_rect(self.invalid.to_rect());
+                self.invalid = Region::EMPTY;
             }
         }
     }
