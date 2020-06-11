@@ -25,7 +25,7 @@ use druid::{
     WindowDesc,
 };
 
-const XI_IMAGE: &[u8] = include_bytes!("xi.image");
+const XI_IMAGE: &[u8] = include_bytes!("assets/xi.image");
 
 #[derive(Clone, Data, Lens)]
 struct AppData {
