@@ -20,6 +20,13 @@ use std::borrow::Cow;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
 pub struct AlertToken(usize);
 
+/// All the info needed to show and respond to an alert.
+#[derive(Debug, Clone)]
+pub(crate) struct AlertRequest {
+    pub(crate) token: AlertToken,
+    pub(crate) options: AlertOptions,
+}
+
 /// Contains the result of the alert after it was closed.
 #[derive(Debug, Clone)]
 pub struct AlertResponse {
