@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Provides a grid to display the more complex widgets.
-
 use std::sync::Arc;
 
 use druid::{
+    kurbo::Circle,
     widget::{
         prelude::*, Button, Checkbox, Flex, Label, List, Painter, ProgressBar, RadioGroup, Scroll,
         Slider, Stepper, Switch, TextBox,
     },
-    AppLauncher, Color, Data, Lens, LocalizedString, Rect, Widget, WidgetExt, WidgetPod,
-    WindowDesc,
+    AppLauncher, Color, Data, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc,
 };
 
 const XI_IMAGE: &[u8] = include_bytes!("assets/xi.image");
@@ -47,8 +45,7 @@ enum MyRadio {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder)
-        .title(LocalizedString::new("list-demo-window-title").with_placeholder("List Demo"));
+    let main_window = WindowDesc::new(ui_builder).title("List Demo");
     // Set our initial data
     let data = AppData {
         label_data: "test".into(),
@@ -126,9 +123,20 @@ fn ui_builder() -> impl Widget<AppData> {
             // You may also want to load an image at runtime using a crate like `image`.
             .with_child(label_widget(
                 Painter::new(|ctx, _, _| {
+                    let bounds = ctx.size().to_rect();
                     let img = load_xi_image(ctx.render_ctx);
-                    let rect = ctx.size().to_rect();
-                    ctx.draw_image(&img, rect, druid::piet::InterpolationMode::NearestNeighbor);
+                    ctx.draw_image(
+                        &img,
+                        bounds,
+                        druid::piet::InterpolationMode::NearestNeighbor,
+                    );
+                    // Draw the dot of the `i` on top of the image data.
+                    let i_dot = Circle::new(
+                        (0.775 * bounds.width(), 0.18 * bounds.height()),
+                        0.05 * bounds.width(),
+                    );
+                    let i_dot_brush = ctx.solid_brush(Color::WHITE);
+                    ctx.fill(i_dot, &i_dot_brush);
                 })
                 .fix_size(32.0, 32.0),
                 "Painter",
