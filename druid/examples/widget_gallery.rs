@@ -18,7 +18,7 @@ use druid::{
     kurbo::Circle,
     widget::{
         prelude::*, Button, Checkbox, Flex, Label, List, Painter, ProgressBar, RadioGroup, Scroll,
-        Slider, Stepper, Switch, TextBox,
+        Slider, Spinner, Stepper, Switch, TextBox,
     },
     AppLauncher, Color, Data, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc,
 };
@@ -175,6 +175,10 @@ fn ui_builder() -> impl Widget<AppData> {
             .with_child(label_widget(
                 Switch::new().lens(AppData::checkbox_data),
                 "Switch",
+            ))
+            .with_child(label_widget(
+                Spinner::new().fix_height(40.0).center(),
+                "Spinner",
             )),
     )
     .vertical()
