@@ -22,6 +22,11 @@ use cocoa::base::id;
 use cocoa::foundation::NSRect;
 use objc::{class, msg_send, sel, sel_impl};
 
+#[link(name = "AppKit", kind = "framework")]
+extern "C" {
+    pub static NSRunLoopCommonModes: id;
+}
+
 bitflags! {
     pub struct NSTrackingAreaOptions: i32 {
         const MouseEnteredAndExited = 1;
