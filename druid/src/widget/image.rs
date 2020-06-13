@@ -30,7 +30,8 @@ use crate::{
 /// Contains data about how to fill the given space and interpolate pixels.
 /// Configuration options are provided via the builder pattern.
 ///
-/// Note: when [scaling a bitmap image], interpolation can lead to blurry
+/// Note: when [scaling a bitmap image], such as supporting multiple
+/// screen sizes and resolutions, interpolation can lead to blurry
 /// or pixelated images and so is not recommended for things like icons.
 /// Instead consider using [SVG files] and enabling the `svg` feature with `cargo`.
 ///
