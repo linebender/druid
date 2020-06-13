@@ -72,7 +72,7 @@ use crate::{
 /// image_widget.set_interpolation_mode(InterpolationMode::Bilinear);
 /// ```
 ///
-/// [scaling a bitmap image]: https://en.wikipedia.org/wiki/Image_scaling
+/// [scaling a bitmap image]: ../struct.Scale.html#pixels-and-display-points
 /// [SVG files]: https://en.wikipedia.org/wiki/Scalable_Vector_Graphics
 pub struct Image {
     image_data: ImageData,
