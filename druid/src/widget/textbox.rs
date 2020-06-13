@@ -16,12 +16,14 @@
 
 use std::time::Duration;
 
+extern crate bytecount;
+
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
     LifeCycle, LifeCycleCtx, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
-use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
+use crate::kurbo::{Affine, Line, Point, Rect, RoundedRect, Size, Vec2};
 use crate::piet::{
     FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
 };
@@ -33,7 +35,6 @@ use crate::text::{
 };
 
 const BORDER_WIDTH: f64 = 1.;
-const PADDING_TOP: f64 = 5.;
 const PADDING_LEFT: f64 = 4.;
 
 // we send ourselves this when we want to reset blink, which must be done in event.
@@ -45,10 +46,12 @@ const CURSOR_BLINK_DRUATION: Duration = Duration::from_millis(500);
 pub struct TextBox {
     placeholder: String,
     width: f64,
+    height: f64,
     hscroll_offset: f64,
     selection: Selection,
     cursor_timer: TimerToken,
     cursor_on: bool,
+    multiline: bool,
 }
 
 impl TextBox {
@@ -60,12 +63,19 @@ impl TextBox {
     pub fn new() -> TextBox {
         Self {
             width: 0.0,
+            height: 0.0,
             hscroll_offset: 0.,
             selection: Selection::caret(0),
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
             placeholder: String::new(),
+            multiline: false,
         }
+    }
+
+    pub fn multiline(mut self, enable: bool) -> Self {
+        self.multiline = enable;
+        self
     }
 
     /// Builder-style method to set the `TextBox`'s placeholder text.
@@ -179,10 +189,13 @@ impl TextBox {
 
     /// For a given point, returns the corresponding offset (in bytes) of
     /// the grapheme cluster closest to that point.
-    fn offset_for_point(&self, point: Point, layout: &PietTextLayout) -> usize {
+    fn offset_for_point(&self, point: Point, layout: &PietTextLayout, line_height: f64) -> usize {
         // Translating from screenspace to Piet's text layout representation.
         // We need to account for hscroll_offset state and TextBox's padding.
-        let translated_point = Point::new(point.x + self.hscroll_offset - PADDING_LEFT, point.y);
+        let translated_point = Point::new(
+            point.x + self.hscroll_offset - PADDING_LEFT,
+            point.y - line_height,
+        );
         let hit_test = layout.hit_test_point(translated_point);
         hit_test.metrics.text_position
     }
@@ -229,6 +242,10 @@ impl TextBox {
         self.cursor_on = true;
         self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DRUATION);
     }
+
+    fn get_lines(&self, text: &str) -> usize {
+        bytecount::count(text.as_bytes(), b'\n')
+    }
 }
 
 impl Widget<String> for TextBox {
@@ -238,14 +255,15 @@ impl Widget<String> for TextBox {
 
         let mut text_layout = self.get_layout(&mut ctx.text(), &data, env);
         let mut edit_action = None;
-
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let line_height = font_size + font_size / 3.0;
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
                 ctx.set_active(true);
 
                 if !mouse.focus {
-                    let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
+                    let cursor_offset = self.offset_for_point(mouse.pos, &text_layout, line_height);
                     edit_action = Some(EditAction::Click(MouseAction {
                         row: 0,
                         column: cursor_offset,
@@ -258,7 +276,7 @@ impl Widget<String> for TextBox {
             Event::MouseMove(mouse) => {
                 ctx.set_cursor(&Cursor::IBeam);
                 if ctx.is_active() {
-                    let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
+                    let cursor_offset = self.offset_for_point(mouse.pos, &text_layout, line_height);
                     edit_action = Some(EditAction::Drag(MouseAction {
                         row: 0,
                         column: cursor_offset,
@@ -314,10 +332,14 @@ impl Widget<String> for TextBox {
                         ctx.focus_prev();
                         true
                     }
+                    //Bug? This is not triggered on shift+enter
                     k_e if HotKey::new(None, KeyCode::Return).matches(k_e) => {
                         // 'enter' should do something, maybe?
                         // but for now we are suppressing it, because we don't want
                         // newlines.
+                        if self.multiline {
+                            edit_action = Some(EditAction::Insert(String::from("\n")));
+                        }
                         true
                     }
                     _ => false,
@@ -359,6 +381,7 @@ impl Widget<String> for TextBox {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &String, _data: &String, _env: &Env) {
+        ctx.request_layout();
         ctx.request_paint();
     }
 
@@ -370,10 +393,16 @@ impl Widget<String> for TextBox {
         env: &Env,
     ) -> Size {
         let width = env.get(theme::WIDE_WIDGET_WIDTH);
-        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let line_height = font_size + font_size / 3.0;
+        let mut height = line_height + font_size / 3.0;
+        if self.multiline {
+            height += (line_height) * (self.get_lines(_data)) as f64;
+        }
 
         let size = bc.constrain((width, height));
         self.width = size.width;
+        self.height = size.height;
         size
     }
 
@@ -388,7 +417,7 @@ impl Widget<String> for TextBox {
         self.selection = self.selection.constrain_to(content);
 
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let line_height = font_size + font_size / 3.0;
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let selection_color = env.get(theme::SELECTION_COLOR);
         let text_color = env.get(theme::LABEL_COLOR);
@@ -404,7 +433,7 @@ impl Widget<String> for TextBox {
         };
 
         // Paint the background
-        let clip_rect = Size::new(self.width - BORDER_WIDTH, height)
+        let clip_rect = Size::new(self.width - BORDER_WIDTH, self.height)
             .to_rect()
             .inset(-BORDER_WIDTH / 2.0)
             .to_rounded_rect(env.get(theme::TEXTBOX_BORDER_RADIUS));
@@ -423,25 +452,51 @@ impl Widget<String> for TextBox {
 
             // Draw selection rect
             if !self.selection.is_caret() {
-                let (left, right) = (self.selection.min(), self.selection.max());
-                let left_offset = self.x_for_offset(&text_layout, left);
-                let right_offset = self.x_for_offset(&text_layout, right);
+                if self.multiline {
+                    let previous_lines = self.get_lines(&data[0..self.selection.min()]);
 
-                let selection_width = right_offset - left_offset;
+                    let selection = &data[self.selection.min()..self.selection.max()];
 
-                let selection_pos = Point::new(left_offset + PADDING_LEFT - 1., PADDING_TOP - 2.);
+                    let mut start_index = self.selection.min();
+                    for (line_count, line) in selection.lines().enumerate() {
+                        let end_index = line.len() + start_index;
+                        let left_offset = self.x_for_offset(&text_layout, start_index);
+                        let mut right_offset = self.x_for_offset(&text_layout, end_index);
+                        if right_offset == 0.0 {
+                            right_offset = 1.0;
+                        }
+                        let selection_pos = Point::new(
+                            left_offset + PADDING_LEFT,
+                            (line_height * (previous_lines as f64 + line_count as f64))
+                                + font_size / 6.0,
+                        );
+                        let selection_rect = Rect::from_origin_size(
+                            selection_pos,
+                            Size::new(right_offset - left_offset, line_height as f64).to_vec2(),
+                        );
+                        rc.fill(selection_rect, &selection_color);
+                        start_index = end_index + 1;
+                    }
+                } else {
+                    let (left, right) = (self.selection.min(), self.selection.max());
+                    let left_offset = self.x_for_offset(&text_layout, left);
+                    let right_offset = self.x_for_offset(&text_layout, right);
 
-                let selection_rect = RoundedRect::from_origin_size(
-                    selection_pos,
-                    Size::new(selection_width + 2., font_size + 4.).to_vec2(),
-                    1.,
-                );
-                rc.fill(selection_rect, &selection_color);
+                    let selection_width = right_offset - left_offset;
+
+                    let selection_pos = Point::new(left_offset + PADDING_LEFT, font_size / 6.0);
+
+                    let selection_rect = RoundedRect::from_origin_size(
+                        selection_pos,
+                        Size::new(selection_width, line_height as f64).to_vec2(),
+                        1.,
+                    );
+                    rc.fill(selection_rect, &selection_color);
+                }
             }
 
             // Layout, measure, and draw text
-            let text_height = font_size * 0.8;
-            let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
+            let text_pos = Point::new(PADDING_LEFT, font_size + font_size / 6.0);
             let color = if data.is_empty() {
                 &placeholder_color
             } else {
@@ -453,8 +508,13 @@ impl Widget<String> for TextBox {
             // Paint the cursor if focused and there's no selection
             if is_focused && self.cursor_on && self.selection.is_caret() {
                 let cursor_x = self.x_for_offset(&text_layout, self.cursor());
-                let xy = text_pos + Vec2::new(cursor_x, 2. - font_size);
-                let x2y2 = xy + Vec2::new(0., font_size + 2.);
+                let cursor_y = if self.multiline {
+                    line_height * (self.get_lines(&data[0..self.cursor()])) as f64
+                } else {
+                    0.0
+                };
+                let xy = Point::new(cursor_x + PADDING_LEFT, cursor_y + font_size / 3.0);
+                let x2y2 = xy + Vec2::new(0.0, font_size);
                 let line = Line::new(xy, x2y2);
 
                 rc.stroke(line, &cursor_color, 1.);
