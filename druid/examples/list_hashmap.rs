@@ -27,7 +27,6 @@ pub fn main() {
 
 #[cfg(feature = "im")]
 mod example {
-    use druid::im::{vector, Vector};
     use druid::lens::{self, LensExt};
     use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, Scroll};
     use druid::{
@@ -67,7 +66,7 @@ mod example {
                 .on_click(|_, data: &mut AppData, _| {
                     // Inserting into our HashMaps by finding the highest key and going + 1
                     // Add child to left list
-                    let mut left_max = data
+                    let left_max = data
                         .left_map
                         .iter()
                         .max_by_key(|(_, value)| value.clone())
@@ -77,7 +76,7 @@ mod example {
                         .insert(format!("{}", value).to_string(), value as u32);
 
                     // Add child to left list
-                    let mut right_max = data
+                    let right_max = data
                         .right_map
                         .iter()
                         .max_by_key(|(_, value)| value.clone())
@@ -131,7 +130,7 @@ mod example {
                         Button::new("Delete")
                             .on_click(
                                 |_ctx,
-                                 (shared, item_key, item_value): &mut (
+                                 (shared, item_key, _item_value): &mut (
                                     im::HashMap<String, u32>,
                                     String,
                                     u32,

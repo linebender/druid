@@ -176,38 +176,6 @@ impl<S: Data, K: Data + std::hash::Hash + std::cmp::Eq, T: Data> ListIter<(S, K,
     }
 }
 
-// // K == hashmap key type
-// // S == shared data type
-// #[cfg(feature = "im")]
-// impl<S: Data, K: Data + std::hash::Hash + std::cmp::Eq, T: Data> ListIter<(S, T)>
-//     for (S, im::HashMap<K, T>)
-// {
-//     fn for_each(&self, mut cb: impl FnMut(&(S, K, T), usize)) {
-//         for (i, item) in self.1.iter().enumerate() {
-//             let d = (self.0.to_owned(), item.0.to_owned(), item.1.to_owned());
-//             cb(&d, i);
-//         }
-//     }
-
-//     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (S, K, T), usize)) {
-//         for (i, item) in self.1.iter_mut().enumerate() {
-//             let mut d = (self.0.clone(), item.0.clone(), item.1.clone());
-//             cb(&mut d, i);
-
-//             if !self.0.same(&d.0) {
-//                 self.0 = d.0;
-//             }
-//             if !item.1.same(&d.2) {
-//                 *item.1 = d.2;
-//             }
-//         }
-//     }
-
-//     fn data_len(&self) -> usize {
-//         self.1.len()
-//     }
-// }
-
 impl<T: Data> ListIter<T> for Arc<Vec<T>> {
     fn for_each(&self, mut cb: impl FnMut(&T, usize)) {
         for (i, item) in self.iter().enumerate() {
