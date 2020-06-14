@@ -122,6 +122,92 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Vector<T>) {
     }
 }
 
+// K == hashmap key type
+#[cfg(feature = "im")]
+impl<K: Data + std::hash::Hash + std::cmp::Eq, T: Data> ListIter<(K, T)> for im::HashMap<K, T> {
+    fn for_each(&self, mut cb: impl FnMut(&(K, T), usize)) {
+        for (i, (key, value)) in self.iter().enumerate() {
+            cb(&(key.to_owned(), value.to_owned()), i);
+        }
+    }
+
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (K, T), usize)) {
+        for (i, (key, value)) in self.iter_mut().enumerate() {
+            cb(&mut (key.to_owned(), value.to_owned()), i);
+        }
+    }
+
+    fn data_len(&self) -> usize {
+        self.len()
+    }
+}
+
+// K == hashmap key type
+// S == shared data type
+#[cfg(feature = "im")]
+impl<S: Data, K: Data + std::hash::Hash + std::cmp::Eq, T: Data> ListIter<(S, K, T)>
+    for (S, im::HashMap<K, T>)
+{
+    fn for_each(&self, mut cb: impl FnMut(&(S, K, T), usize)) {
+        let (shared, map) = self;
+
+        for (i, (key, value)) in map.iter().enumerate() {
+            cb(&(shared.to_owned(), key.to_owned(), value.to_owned()), i);
+        }
+    }
+
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (S, K, T), usize)) {
+        let (shared, map) = self;
+        for (i, (key, value)) in map.iter_mut().enumerate() {
+            let mut d = (shared.clone(), key.clone(), value.clone());
+            cb(&mut d, i);
+
+            if !shared.same(&d.0) {
+                *shared = d.0;
+            }
+            if !value.same(&d.2) {
+                *value = d.2
+            }
+        }
+    }
+
+    fn data_len(&self) -> usize {
+        self.1.len()
+    }
+}
+
+// // K == hashmap key type
+// // S == shared data type
+// #[cfg(feature = "im")]
+// impl<S: Data, K: Data + std::hash::Hash + std::cmp::Eq, T: Data> ListIter<(S, T)>
+//     for (S, im::HashMap<K, T>)
+// {
+//     fn for_each(&self, mut cb: impl FnMut(&(S, K, T), usize)) {
+//         for (i, item) in self.1.iter().enumerate() {
+//             let d = (self.0.to_owned(), item.0.to_owned(), item.1.to_owned());
+//             cb(&d, i);
+//         }
+//     }
+
+//     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (S, K, T), usize)) {
+//         for (i, item) in self.1.iter_mut().enumerate() {
+//             let mut d = (self.0.clone(), item.0.clone(), item.1.clone());
+//             cb(&mut d, i);
+
+//             if !self.0.same(&d.0) {
+//                 self.0 = d.0;
+//             }
+//             if !item.1.same(&d.2) {
+//                 *item.1 = d.2;
+//             }
+//         }
+//     }
+
+//     fn data_len(&self) -> usize {
+//         self.1.len()
+//     }
+// }
+
 impl<T: Data> ListIter<T> for Arc<Vec<T>> {
     fn for_each(&self, mut cb: impl FnMut(&T, usize)) {
         for (i, item) in self.iter().enumerate() {
