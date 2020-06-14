@@ -69,21 +69,19 @@ mod example {
                     let left_max = data
                         .left_map
                         .iter()
-                        .max_by_key(|(_, value)| value.clone())
+                        .max_by_key(|(_, value)| *value)
                         .unwrap();
                     let value = left_max.1 + 1;
-                    data.left_map
-                        .insert(format!("{}", value).to_string(), value as u32);
+                    data.left_map.insert(format!("{}", value), value as u32);
 
                     // Add child to left list
                     let right_max = data
                         .right_map
                         .iter()
-                        .max_by_key(|(_, value)| value.clone())
+                        .max_by_key(|(_, value)| *value)
                         .unwrap();
                     let value = right_max.1 + 1;
-                    data.right_map
-                        .insert(format!("{}", value).to_string(), value as u32);
+                    data.right_map.insert(format!("{}", value), value as u32);
                 })
                 .fix_height(30.0)
                 .expand_width(),
