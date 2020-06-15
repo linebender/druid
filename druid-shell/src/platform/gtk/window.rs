@@ -156,6 +156,10 @@ impl WindowBuilder {
         self.show_titlebar = show_titlebar;
     }
 
+    pub fn set_position(&mut self, _position: Point) {
+        log::warn!("WindowBuilder::set_position is currently unimplemented for gtk.");
+    }
+
     pub fn set_title(&mut self, title: impl Into<String>) {
         self.title = title.into();
     }
@@ -551,6 +555,24 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             state.window.set_decorated(show_titlebar)
         }
+    }
+
+    pub fn set_position(&self, _position: Point) {
+        log::warn!("WindowHandle::set_position is currently unimplemented for gtk.");
+    }
+
+    pub fn get_position(&self) -> Point {
+        log::warn!("WindowHandle::get_position is currently unimplemented for gtk.");
+        Point::new(0.0, 0.0)
+    }
+
+    pub fn set_size(&self, _size: Size) {
+        log::warn!("WindowHandle::set_size is currently unimplemented for gtk.");
+    }
+
+    pub fn get_size(&self) -> Size {
+        log::warn!("WindowHandle::get_size is currently unimplemented for gtk.");
+        Size::new(0.0, 0.0)
     }
 
     /// Close the window.

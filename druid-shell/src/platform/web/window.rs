@@ -345,6 +345,10 @@ impl WindowBuilder {
         // Ignored
     }
 
+    pub fn set_position(&mut self, _position: Point) {
+        // Ignored
+    }
+
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
         self.title = title.into();
     }
@@ -428,6 +432,24 @@ impl WindowHandle {
 
     pub fn show_titlebar(&self, _show_titlebar: bool) {
         log::warn!("show_titlebar unimplemented for web");
+    }
+
+    pub fn set_position(&self, _position: Point) {
+        log::warn!("WindowHandle::set_position unimplemented for web");
+    }
+
+    pub fn get_position(&self) -> Point {
+        log::warn!("WindowHandle::get_position unimplemented for web.");
+        Point::new(0.0, 0.0)
+    }
+
+    pub fn set_size(&self, _size: Size) {
+        log::warn!("WindowHandle::set_size unimplemented for web.");
+    }
+
+    pub fn get_size(&self) -> Size {
+        log::warn!("WindowHandle::get_size unimplemented for web.");
+        Size::new(0.0, 0.0)
     }
 
     pub fn close(&self) {

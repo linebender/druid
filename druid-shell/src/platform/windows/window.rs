@@ -85,6 +85,7 @@ pub(crate) struct WindowBuilder {
     show_titlebar: bool,
     size: Size,
     min_size: Option<Size>,
+    position: Point,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -891,6 +892,7 @@ impl WindowBuilder {
             present_strategy: Default::default(),
             size: Size::new(500.0, 400.0),
             min_size: None,
+            position: Point::new(CW_USEDEFAULT as f64, CW_USEDEFAULT as f64),
         }
     }
 
@@ -922,6 +924,10 @@ impl WindowBuilder {
 
     pub fn set_menu(&mut self, menu: Menu) {
         self.menu = Some(menu);
+    }
+
+    pub fn set_position(&mut self, position : Point) {
+        self.position = position;
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
@@ -989,18 +995,21 @@ impl WindowBuilder {
             if !self.resizable {
                 dwStyle &= !(WS_THICKFRAME | WS_MAXIMIZEBOX);
             }
-
+            if !self.show_titlebar {
+                dwStyle = WS_POPUP
+            }
             let mut dwExStyle = 0;
             if self.present_strategy == PresentStrategy::Flip {
                 dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
             }
+            
             let hwnd = create_window(
                 dwExStyle,
                 class_name.as_ptr(),
                 self.title.to_wide().as_ptr(),
                 dwStyle,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
+                self.position.x as i32,
+                self.position.y as i32,
                 size_px.width as i32,
                 size_px.height as i32,
                 0 as HWND,
@@ -1279,6 +1288,88 @@ impl WindowHandle {
 
     // TODO: Implement this
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
+
+    pub fn set_position(&self, position: Point) {
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0};
+                
+                if GetWindowRect(hwnd, &mut rect) == 0 {
+                    warn!(
+                        "failed to get window rect: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                };
+                let width = rect.right - rect.left;
+                let height = rect.bottom - rect.top;
+                if MoveWindow(hwnd, position.x as i32, position.y as i32, width, height, 0) == 0 {
+                    warn!(
+                        "failed to reposition window: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                };
+            }
+        }
+    }
+
+    pub fn get_position(&self) -> Point {
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0};
+                if GetWindowRect(hwnd, &mut rect) == 0 {
+                    warn!(
+                        "failed to get window rect: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                };
+                return Point::new(rect.left as f64, rect.top as f64)
+            }
+        }
+        warn!(
+            "failed to get window hwnd"
+        );
+        Point::new(0.0, 0.0)
+    }
+
+    //FIXME: Currently the WM_SIZE message gets dropped and the GUI is not redrawn when size is changed
+    pub fn set_size(&self, size: Size) {
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                let position = self.get_position();
+                if MoveWindow(hwnd, position.x as i32, position.y as i32, size.width as i32, size.height as i32, 1) == 0 {
+                    warn!(
+                        "failed to resize window: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                };
+            }
+        }
+    }
+
+    pub fn get_size(&self) -> Size {
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0};
+                if GetWindowRect(hwnd, &mut rect) == 0 {
+                    warn!(
+                        "failed to get window rect: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                };
+                let width = rect.right - rect.left;
+                let height = rect.bottom - rect.top;
+                return Size::new(width as f64, height as f64);
+            }
+        }
+        warn!(
+            "failed to get window size"
+        );
+        Size::new(0.0, 0.0)
+    }
 
     pub fn resizable(&self, resizable: bool) {
         if let Some(w) = self.state.upgrade() {

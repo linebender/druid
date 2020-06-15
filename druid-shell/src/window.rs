@@ -123,6 +123,26 @@ impl WindowHandle {
         self.0.show_titlebar(show_titlebar)
     }
 
+    /// Set the position of the window
+    pub fn set_position(&self, position: Point) {
+        self.0.set_position(position)
+    }
+
+    /// Get the position of the window
+    pub fn get_position(&self) -> Point {
+        self.0.get_position()
+    }
+
+    /// Set the size of the window
+    pub fn set_size(&self, size: Size) {
+        self.0.set_size(size)
+    }
+
+    /// Gets the size of the window
+    pub fn get_size(&self) -> Size {
+        self.0.get_size()
+    }
+
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
         self.0.bring_to_front_and_focus()
@@ -267,6 +287,11 @@ impl WindowBuilder {
     /// Set whether the window should have a titlebar and decorations
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
+    }
+
+    /// Set the window's initial position.
+    pub fn set_position(&mut self, position: Point) {
+        self.0.set_position(position);
     }
 
     /// Set the window's initial title.

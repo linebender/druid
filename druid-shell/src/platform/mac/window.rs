@@ -147,6 +147,10 @@ impl WindowBuilder {
         self.show_titlebar = show_titlebar;
     }
 
+    pub fn set_position(&mut self, _position: Point) {
+        log::warn!("WindowBuilder::set_position is currently unimplemented for mac platforms.");
+    }
+
     pub fn set_title(&mut self, title: impl Into<String>) {
         self.title = title.into();
     }
@@ -837,6 +841,24 @@ impl WindowHandle {
 
     // TODO: Implement this
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
+
+    pub fn set_position(&self, _position: Point) {
+        log::warn!("WindowHandle::set_position is currently unimplemented for Mac.");
+    }
+
+    pub fn get_position(&self) -> Point {
+        log::warn!("WindowHandle::get_position is currently unimplemented for Mac.");
+        Point::new(0.0, 0.0)
+    }
+
+    pub fn set_size(&self, _size: Size) {
+        log::warn!("WindowHandle::set_size is currently unimplemented for Mac.");
+    }
+
+    pub fn get_size(&self) -> Size {
+        log::warn!("WindowHandle::get_size is currently unimplemented for Mac.");
+        Size::new(0.0, 0.0)
+    }
 
     pub fn resizable(&self, resizable: bool) {
         unsafe {

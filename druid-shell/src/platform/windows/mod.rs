@@ -26,6 +26,7 @@ pub mod paint;
 mod timers;
 pub mod util;
 pub mod window;
+pub mod screen;
 
 // https://docs.microsoft.com/en-us/windows/win32/direct2d/render-targets-overview
 // ID2D1RenderTarget is the interface. The other resources inherit from it.

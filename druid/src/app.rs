@@ -15,7 +15,7 @@
 //! Window building and app lifecycle.
 
 use crate::ext_event::{ExtEventHost, ExtEventSink};
-use crate::kurbo::Size;
+use crate::kurbo::{Point, Size};
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
 use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
@@ -44,6 +44,7 @@ pub struct WindowDesc<T> {
     pub(crate) title: LabelText<T>,
     pub(crate) size: Option<Size>,
     pub(crate) min_size: Option<Size>,
+    pub(crate) position: Option<Point>,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) resizable: bool,
     pub(crate) show_titlebar: bool,
@@ -163,6 +164,7 @@ impl<T: Data> WindowDesc<T> {
             title: LocalizedString::new("app-name").into(),
             size: None,
             min_size: None,
+            position: None,
             menu: MenuDesc::platform_default(),
             resizable: true,
             show_titlebar: true,
@@ -234,6 +236,12 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    /// Set the initial position for this window.
+    pub fn set_position(mut self, position: Point) -> Self {
+        self.position = Some(position);
+        self
+    }
+
     /// Attempt to create a platform window from this `WindowDesc`.
     pub(crate) fn build_native(
         mut self,
@@ -258,6 +266,10 @@ impl<T: Data> WindowDesc<T> {
         }
         if let Some(min_size) = self.min_size {
             builder.set_min_size(min_size);
+        }
+
+        if let Some(position) = self.position {
+            builder.set_position(position);
         }
 
         builder.set_title(self.title.display_text());
