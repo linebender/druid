@@ -9,6 +9,8 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Added
 
+- Alert dialogs for time sensetive notifications. ([#1039] by [@xStrom])
+
 ### Changed
 
 - `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
@@ -334,6 +336,7 @@ Last release without a changelog :(
 [#1018]: https://github.com/xi-editor/druid/pull/1018
 [#1025]: https://github.com/xi-editor/druid/pull/1025
 [#1028]: https://github.com/xi-editor/druid/pull/1028
+[#1039]: https://github.com/xi-editor/druid/pull/1039
 [#1042]: https://github.com/xi-editor/druid/pull/1042
 [#1043]: https://github.com/xi-editor/druid/pull/1043
 [#1050]: https://github.com/xi-editor/druid/pull/1050
