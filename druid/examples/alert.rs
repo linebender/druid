@@ -150,16 +150,12 @@ impl<W: Widget<State>> Controller<State, W> for ManageButtonController {
     ) {
         match event {
             Event::AlertResponse(response) => {
-                if response.button() == Some(&ALERT_BUTTON_TO_LEFT) {
-                    if data.right > 0 {
-                        data.left += 1;
-                        data.right -= 1;
-                    }
-                } else if response.button() == Some(&ALERT_BUTTON_TO_RIGHT) {
-                    if data.left > 0 {
-                        data.left -= 1;
-                        data.right += 1;
-                    }
+                if response.button() == Some(&ALERT_BUTTON_TO_LEFT) && data.right > 0 {
+                    data.left += 1;
+                    data.right -= 1;
+                } else if response.button() == Some(&ALERT_BUTTON_TO_RIGHT) && data.left > 0 {
+                    data.left -= 1;
+                    data.right += 1;
                 }
             }
             _ => child.event(ctx, event, data, env),
