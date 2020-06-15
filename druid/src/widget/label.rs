@@ -23,10 +23,6 @@ use crate::{
     LifeCycleCtx, LocalizedString, PaintCtx, Point, Size, UpdateCtx, Widget,
 };
 
-// a fudgey way to get an approximate line height from a font size
-const LINE_HEIGHT_FACTOR: f64 = 1.2;
-// a fudgey way of figuring out where to put the baseline, relative to line height
-const BASELINE_GUESS_FACTOR: f64 = 0.8;
 // added padding between the edges of the widget and the text.
 const LABEL_X_PADDING: f64 = 2.0;
 
@@ -195,14 +191,14 @@ impl<T: Data> Label<T> {
         self.font = font.into();
     }
 
-    fn get_layout(&mut self, t: &mut PietText, env: &Env) -> PietTextLayout {
+    fn get_layout(&mut self, t: &mut PietText, env: &Env, bounds: &Size) -> PietTextLayout {
         let font_name = self.font.resolve(env);
         let font_size = self.size.resolve(env);
 
         // TODO: caching of both the format and the layout
         let font = t.new_font_by_name(font_name, font_size).build().unwrap();
         self.text.with_display_text(|text| {
-            t.new_text_layout(&font, &text, std::f64::INFINITY)
+            t.new_text_layout(&font, &text, bounds.width)
                 .build()
                 .unwrap()
         })
@@ -268,21 +264,30 @@ impl<T: Data> Widget<T> for Label<T> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         bc.debug_check("Label");
 
-        let font_size = self.size.resolve(env);
-        let text_layout = self.get_layout(&mut ctx.text(), env);
+        let text_layout = self.get_layout(&mut ctx.text(), env, &bc.max());
+        let total_height = if text_layout.line_count() > 0 {
+            text_layout
+                .line_metric(text_layout.line_count() - 1)
+                .map(|lm| lm.cumulative_height)
+                .unwrap_or(0.0)
+        } else {
+            0.0
+        };
         bc.constrain(Size::new(
             text_layout.width() + 2. * LABEL_X_PADDING,
-            font_size * LINE_HEIGHT_FACTOR,
+            total_height,
         ))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
-        let font_size = self.size.resolve(env);
-        let text_layout = self.get_layout(&mut ctx.text(), env);
-        let line_height = font_size * LINE_HEIGHT_FACTOR;
+        let text_layout = self.get_layout(&mut ctx.text(), env, &ctx.size());
 
         // Find the origin for the text
-        let origin = Point::new(LABEL_X_PADDING, line_height * BASELINE_GUESS_FACTOR);
+        let baseline = text_layout
+            .line_metric(0)
+            .map(|lm| lm.baseline)
+            .unwrap_or(0.0);
+        let origin = Point::new(LABEL_X_PADDING, baseline);
         let color = self.color.resolve(env);
 
         ctx.draw_text(&text_layout, origin, &color);
