@@ -49,8 +49,10 @@ struct QuitButtonController {
     timer_token: TimerToken,
 }
 
+const WINDOW_TITLE: &str = "Alerts everywhere";
+
 fn main() {
-    let main_window = WindowDesc::new(ui_builder).title("Alerts everywhere");
+    let main_window = WindowDesc::new(ui_builder).title(WINDOW_TITLE);
     let state = State {
         app_modal: false,
         left: 5,
@@ -73,7 +75,7 @@ fn opts_modal(options: AlertOptions, data: &State) -> AlertOptions {
 
 fn ui_builder() -> impl Widget<State> {
     let button_new_window = Button::new("New window").on_click(|ctx, _data, _env| {
-        let new_window = WindowDesc::new(ui_builder);
+        let new_window = WindowDesc::new(ui_builder).title(WINDOW_TITLE);
         ctx.new_window(new_window);
     });
     let button_kitchen = Button::new("Kitchen sink").on_click(|ctx, data, _env| {
