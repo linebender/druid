@@ -18,16 +18,17 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use druid::widget::prelude::*;
-use druid::widget::{Button, Controller, Flex, Label, MainAxisAlignment, Padding};
+use druid::widget::{Button, Checkbox, Controller, Flex, Label, MainAxisAlignment, Padding};
 use druid::{AlertButton, AlertOptions, AlertToken, AppLauncher, WidgetExt, WindowDesc};
-use druid::{Data, TimerToken};
+use druid::{Application, Data, Lens, TimerToken};
 
 // If you know the alert button label at compile time, you can make const AlertButtons.
 const ALERT_BUTTON_TO_LEFT: AlertButton = AlertButton::new("Increase left");
 const ALERT_BUTTON_TO_RIGHT: AlertButton = AlertButton::new("Increase right");
 
-#[derive(Debug, Clone, Data)]
+#[derive(Debug, Clone, Data, Lens)]
 struct State {
+    app_modal: bool,
     left: usize,
     right: usize,
     bits: usize,
@@ -43,9 +44,15 @@ struct BitsButtonController {
     tokens: HashMap<AlertToken, usize>,
 }
 
+struct QuitButtonController {
+    counter: usize,
+    timer_token: TimerToken,
+}
+
 fn main() {
     let main_window = WindowDesc::new(ui_builder).title("Alerts everywhere");
     let state = State {
+        app_modal: false,
         left: 5,
         right: 5,
         bits: 0,
@@ -56,12 +63,20 @@ fn main() {
         .expect("launch failed");
 }
 
+fn opts_modal(options: AlertOptions, data: &State) -> AlertOptions {
+    if data.app_modal {
+        options.app_modal()
+    } else {
+        options
+    }
+}
+
 fn ui_builder() -> impl Widget<State> {
     let button_new_window = Button::new("New window").on_click(|ctx, _data, _env| {
         let new_window = WindowDesc::new(ui_builder);
         ctx.new_window(new_window);
     });
-    let button_kitchen = Button::new("Kitchen sink").on_click(|ctx, _data, _env| {
+    let button_kitchen = Button::new("Kitchen sink").on_click(|ctx, data, _env| {
         let opts = AlertOptions::error()
             .context("Heavyweight example")
             .message("Don't do this at home!")
@@ -72,36 +87,43 @@ fn ui_builder() -> impl Widget<State> {
             .primary(AlertButton::new("Get me out of here"))
             .alternative(AlertButton::new("Refrigerate lemons"))
             .alternative(AlertButton::new("Dip fat-free cheese in fat"))
-            .cancel(AlertButton::new("Custom cancel"));
+            .cancel(AlertButton::new("Translated cancel"));
+        let opts = opts_modal(opts, data);
         ctx.alert(opts);
     });
-    let button_flood = Button::new("Three in a row").on_click(|ctx, _data, _env| {
+    let button_flood = Button::new("Three in a row").on_click(|ctx, data, _env| {
         for i in 0..3 {
-            let opts = AlertOptions::warning().message(format!("Alert #{}", i + 1));
+            let opts = AlertOptions::new().message(format!("Alert #{}", i + 1));
+            let opts = opts_modal(opts, data);
             ctx.alert(opts);
         }
     });
     let button_manage = Button::<State>::new("Manage score")
-        .on_click(|ctx, _data, _env| {
+        .on_click(|ctx, data, _env| {
             let opts = AlertOptions::information()
                 .context("Manage score")
                 .message("Which side should be increased?")
                 .primary(ALERT_BUTTON_TO_LEFT)
                 .alternative(ALERT_BUTTON_TO_RIGHT)
                 .cancelable();
+            let opts = opts_modal(opts, data);
             ctx.alert(opts);
         })
         .controller(ManageButtonController);
     let button_bits = Button::<State>::dynamic(|data, _| format!("Bits: {:05b}", data.bits))
         .controller(BitsButtonController::new("bit"));
+    let button_quit = Button::<State>::new("Quit in style").controller(QuitButtonController::new());
 
     let label_left = Label::new(|data: &State, _: &_| format!("{}", data.left));
     let label_right = Label::new(|data: &State, _: &_| format!("{}", data.right));
 
-    let label_row = Flex::row()
+    let checkbox_app_modal = Checkbox::new("App modal").lens(State::app_modal);
+
+    let bottom_row = Flex::row()
         .must_fill_main_axis(true)
         .main_axis_alignment(MainAxisAlignment::SpaceBetween)
         .with_child(label_left)
+        .with_child(checkbox_app_modal)
         .with_child(label_right);
 
     Flex::column()
@@ -111,7 +133,8 @@ fn ui_builder() -> impl Widget<State> {
         .with_flex_child(Padding::new(5.0, button_manage), 1.0)
         .with_flex_child(Padding::new(5.0, button_flood), 1.0)
         .with_flex_child(Padding::new(5.0, button_bits), 1.0)
-        .with_flex_child(Padding::new(20.0, label_row), 1.0)
+        .with_flex_child(Padding::new(5.0, button_quit), 1.0)
+        .with_flex_child(Padding::new(20.0, bottom_row), 1.0)
 }
 
 impl<W: Widget<State>> Controller<State, W> for ManageButtonController {
@@ -175,10 +198,11 @@ impl<W: Widget<State>> Controller<State, W> for BitsButtonController {
                         self.tokens.clear();
                     }
                     self.counter += 1;
-                    let opts = AlertOptions::new()
+                    let opts = AlertOptions::error()
                         .message(format!("What about bit #{}?", self.counter))
                         .primary(self.button_set.clone())
                         .alternative(self.button_clear.clone());
+                    let opts = opts_modal(opts, data);
                     let token = ctx.alert(opts);
                     self.tokens.insert(token, self.counter);
                     if self.counter < 5 {
@@ -195,6 +219,53 @@ impl<W: Widget<State>> Controller<State, W> for BitsButtonController {
                     data.bits |= 1 << (bit - 1);
                 } else if response.button() == Some(&self.button_clear) {
                     data.bits &= !(1 << (bit - 1));
+                }
+            }
+            _ => child.event(ctx, event, data, env),
+        }
+    }
+}
+
+impl QuitButtonController {
+    pub fn new() -> QuitButtonController {
+        QuitButtonController {
+            counter: 0,
+            timer_token: TimerToken::INVALID,
+        }
+    }
+}
+
+impl<W: Widget<State>> Controller<State, W> for QuitButtonController {
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut State,
+        env: &Env,
+    ) {
+        match event {
+            Event::MouseUp(_) => {
+                if ctx.is_active() && ctx.is_hot() {
+                    self.timer_token = ctx.request_timer(Duration::from_millis(1));
+                }
+            }
+            Event::Timer(timer_token) => {
+                if self.timer_token == *timer_token {
+                    self.counter += 1;
+                    if self.counter == 4 {
+                        Application::global().quit();
+                    } else {
+                        let opts = match self.counter {
+                            1 => AlertOptions::information().message("Things are getting shaky"),
+                            2 => AlertOptions::warning().message("It's about to blow!"),
+                            3 => AlertOptions::error().message("Abandon deck!"),
+                            _ => unreachable!(),
+                        };
+                        let opts = opts_modal(opts, data);
+                        ctx.alert(opts);
+                        self.timer_token = ctx.request_timer(Duration::from_millis(1000));
+                    }
                 }
             }
             _ => child.event(ctx, event, data, env),

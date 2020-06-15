@@ -16,6 +16,7 @@
 
 #![allow(clippy::let_unit_value)]
 
+mod alert;
 pub mod appkit;
 pub mod application;
 pub mod clipboard;

@@ -14,12 +14,14 @@
 
 //! macOS AppKit bindings.
 
+#![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
 use bitflags::bitflags;
+use block::RcBlock;
 use cocoa::base::id;
-use cocoa::foundation::NSRect;
+use cocoa::foundation::{NSInteger, NSRect};
 use objc::{class, msg_send, sel, sel_impl};
 
 #[link(name = "AppKit", kind = "framework")]
@@ -76,5 +78,99 @@ pub trait NSView: Sized {
 impl NSView for id {
     unsafe fn addTrackingArea(self, trackingArea: id) -> id {
         msg_send![self, addTrackingArea: trackingArea]
+    }
+}
+
+pub trait NSButton: Sized {
+    unsafe fn setKeyEquivalent(self, key: id);
+}
+
+impl NSButton for id {
+    unsafe fn setKeyEquivalent(self, key: id) {
+        msg_send![self, setKeyEquivalent: key]
+    }
+}
+
+pub trait NSControl: Sized {
+    unsafe fn setTag(self, tag: NSInteger);
+}
+
+impl NSControl for id {
+    unsafe fn setTag(self, tag: NSInteger) {
+        msg_send![self, setTag: tag]
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum NSAlertStyle {
+    Warning,
+    Informational,
+    Critical,
+}
+
+pub const NSModalResponseContinue: NSInteger = -1002;
+pub const NSModalResponseAbort: NSInteger = -1001;
+pub const NSModalResponseStop: NSInteger = -1000;
+pub const NSModalResponseCancel: NSInteger = 0;
+pub const NSModalResponseOK: NSInteger = 1;
+
+pub const NSAlertFirstButtonReturn: NSInteger = 1000;
+pub const NSAlertSecondButtonReturn: NSInteger = 1001;
+pub const NSAlertThirdButtonReturn: NSInteger = 1002;
+
+pub trait NSAlert: Sized {
+    unsafe fn alloc(_: Self) -> id {
+        msg_send![class!(NSAlert), alloc]
+    }
+
+    unsafe fn init(self) -> id;
+    unsafe fn setAlertStyle(self, style: NSAlertStyle);
+    unsafe fn runModal(self) -> NSInteger;
+    unsafe fn beginSheetModalForWindow_completionHandler(
+        self,
+        window: id,
+        completionHandler: RcBlock<(NSInteger,), ()>,
+    );
+    unsafe fn setInformativeText(self, informativeText: id);
+    unsafe fn setMessageText(self, messageText: id);
+    unsafe fn addButtonWithTitle(self, title: id) -> id;
+    unsafe fn window(self) -> id;
+}
+
+impl NSAlert for id {
+    unsafe fn init(self) -> id {
+        msg_send![self, init]
+    }
+
+    unsafe fn setAlertStyle(self, alertStyle: NSAlertStyle) {
+        msg_send![self, setAlertStyle: alertStyle]
+    }
+
+    unsafe fn runModal(self) -> NSInteger {
+        msg_send![self, runModal]
+    }
+
+    unsafe fn beginSheetModalForWindow_completionHandler(
+        self,
+        window: id,
+        completionHandler: RcBlock<(NSInteger,), ()>,
+    ) {
+        msg_send![self, beginSheetModalForWindow: window completionHandler: completionHandler]
+    }
+
+    unsafe fn setInformativeText(self, informativeText: id) {
+        msg_send![self, setInformativeText: informativeText]
+    }
+
+    unsafe fn setMessageText(self, messageText: id) {
+        msg_send![self, setMessageText: messageText]
+    }
+
+    unsafe fn addButtonWithTitle(self, title: id) -> id {
+        msg_send![self, addButtonWithTitle: title]
+    }
+
+    unsafe fn window(self) -> id {
+        msg_send![self, window]
     }
 }

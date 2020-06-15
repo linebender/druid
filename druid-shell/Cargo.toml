@@ -55,6 +55,7 @@ cocoa = "0.20.1"
 objc = "0.2.7"
 core-graphics = "0.19.0"
 foreign-types = "0.3.2"
+block = "0.1.6"
 bitflags = "1.2.1"
 
 # TODO(x11/dependencies): only use feature "xcb" if using X11

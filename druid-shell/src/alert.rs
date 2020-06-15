@@ -101,6 +101,10 @@ pub struct AlertOptions {
 }
 
 /// Alert dialog icon.
+///
+/// # macOS
+///
+/// On macOS the information and warning icons are the same.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum AlertIcon {
     /// The alert dialog is providing important time sensitive information.
@@ -287,7 +291,12 @@ impl AlertOptions {
     ///
     /// Setting this to `None` means there will not be any icon.
     ///
+    /// # macOS
+    ///
+    /// On macOS `None` defaults to [`AlertIcon::Warning`].
+    ///
     /// [`AlertIcon`]: enum.AlertIcon.html
+    /// [`AlertIcon::Warning`]: enum.AlertIcon.html#variant.Warning
     pub fn icon(mut self, icon: impl Into<Option<AlertIcon>>) -> Self {
         self.icon = icon.into();
         self
@@ -299,6 +308,10 @@ impl AlertOptions {
     /// or a related component name, or at the very least your application name.
     ///
     /// This gets shown in the alert dialog title bar.
+    ///
+    /// # macOS
+    ///
+    /// This is not relevant or visible on macOS.
     pub fn context(mut self, context: impl Into<String>) -> Self {
         self.context = context.into();
         self

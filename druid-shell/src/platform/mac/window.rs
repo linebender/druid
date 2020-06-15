@@ -17,6 +17,8 @@
 #![allow(non_snake_case)]
 
 use std::any::Any;
+use std::cell::{Cell, RefCell};
+use std::collections::VecDeque;
 use std::ffi::c_void;
 use std::mem;
 use std::sync::{Arc, Mutex, Weak};
@@ -43,6 +45,7 @@ use objc::{class, msg_send, sel, sel_impl};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
+use super::alert;
 use super::appkit::{
     NSRunLoopCommonModes, NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt,
 };
@@ -50,6 +53,7 @@ use super::application::Application;
 use super::dialog;
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
+use crate::alert::{AlertOptions, AlertRequest, AlertToken};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard::{KeyEvent, KeyModifiers};
@@ -103,15 +107,19 @@ enum IdleKind {
 }
 
 /// This is the state associated with our custom NSView.
-struct ViewState {
+pub(crate) struct ViewState {
     nsview: WeakPtr,
-    handler: Box<dyn WinHandler>,
+    pub(crate) handler: Box<dyn WinHandler>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     last_mods: KeyModifiers,
     /// Tracks window focusing left clicks
     focus_click: bool,
     // Tracks whether we have already received the mouseExited event
     mouse_left: bool,
+    /// Pending alert requests
+    alert_queue: RefCell<VecDeque<AlertRequest>>,
+    /// Used to generate new alert tokens
+    alert_last_token: Cell<usize>,
 }
 
 impl WindowBuilder {
@@ -336,6 +344,7 @@ lazy_static! {
         );
         decl.add_method(sel!(runIdle), run_idle as extern "C" fn(&mut Object, Sel));
         decl.add_method(sel!(redraw), redraw as extern "C" fn(&mut Object, Sel));
+        decl.add_method(sel!(alert), alert as extern "C" fn(&mut Object, Sel));
         decl.add_method(
             sel!(handleTimer:),
             handle_timer as extern "C" fn(&mut Object, Sel, id),
@@ -369,6 +378,8 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
             last_mods: KeyModifiers::default(),
             focus_click: false,
             mouse_left: true,
+            alert_queue: Default::default(),
+            alert_last_token: Cell::new(0),
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
@@ -682,6 +693,19 @@ extern "C" fn redraw(this: &mut Object, _: Sel) {
     }
 }
 
+extern "C" fn alert(this: &mut Object, _: Sel) {
+    let view_state = unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        &mut *(view_state as *mut ViewState)
+    };
+    let alert_request = view_state.alert_queue.borrow_mut().pop_front();
+    if let Some(alert_request) = alert_request {
+        unsafe {
+            alert::show(this, alert_request);
+        }
+    }
+}
+
 extern "C" fn handle_timer(this: &mut Object, _: Sel, timer: id) {
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
@@ -794,6 +818,36 @@ impl WindowHandle {
                 Cursor::ResizeUpDown => msg_send![nscursor, resizeUpDownCursor],
             };
             let () = msg_send![cursor, set];
+        }
+    }
+
+    pub fn alert(&self, options: AlertOptions) -> AlertToken {
+        let view = *self.nsview.load();
+        if !view.is_null() {
+            let view_state = unsafe {
+                let view_state: *mut c_void = *(*view).get_ivar("viewState");
+                &mut *(view_state as *mut ViewState)
+            };
+            let token = {
+                let mut token_id = view_state.alert_last_token.get().wrapping_add(1);
+                // Make sure we don't wrap around to AlertToken::INVALID
+                if token_id == 0 {
+                    token_id = 1;
+                }
+                view_state.alert_last_token.set(token_id);
+                AlertToken::new(token_id)
+            };
+            view_state
+                .alert_queue
+                .borrow_mut()
+                .push_back(AlertRequest { token, options });
+            unsafe {
+                let () = msg_send![view, performSelectorOnMainThread: sel!(alert) withObject: nil waitUntilDone: NO];
+            }
+            token
+        } else {
+            log::error!("WindowHandle::alert - the window has already been dropped!");
+            AlertToken::INVALID
         }
     }
 
