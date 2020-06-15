@@ -21,28 +21,26 @@ use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 
 use instant::Instant;
-
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
+use crate::alert::{AlertOptions, AlertResponse, AlertToken};
+use crate::common_util::IdleCallback;
+use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
+use crate::error::Error as ShellError;
+use crate::keyboard;
+use crate::keycodes::KeyCode;
 use crate::kurbo::{Point, Rect, Size, Vec2};
-
+use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::RenderContext;
+use crate::scale::{Scale, ScaledArea};
+use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::KeyModifiers;
 
 use super::application::Application;
 use super::error::Error;
 use super::keycodes::key_to_text;
 use super::menu::Menu;
-use crate::common_util::IdleCallback;
-use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
-use crate::error::Error as ShellError;
-use crate::scale::{Scale, ScaledArea};
-
-use crate::keyboard;
-use crate::keycodes::KeyCode;
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
-use crate::KeyModifiers;
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
@@ -467,6 +465,15 @@ impl WindowHandle {
             .unwrap_or_else(|| panic!("Failed to produce a text context"));
 
         Text::new(s.context.clone(), s.window.clone())
+    }
+
+    /// Show an alert dialog.
+    pub fn alert(&self, _options: AlertOptions) -> AlertToken {
+        {
+            // Just shutting up clippy until the real implementation arrives
+            AlertResponse::new(AlertToken::new(1), None);
+        }
+        AlertToken::INVALID
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {

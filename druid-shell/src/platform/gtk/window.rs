@@ -34,6 +34,7 @@ use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
+use crate::alert::{AlertOptions, AlertResponse, AlertToken};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
@@ -584,6 +585,15 @@ impl WindowHandle {
 
     pub fn text(&self) -> Text {
         Text::new()
+    }
+
+    /// Show an alert dialog.
+    pub fn alert(&self, _options: AlertOptions) -> AlertToken {
+        {
+            // Just shutting up clippy until the real implementation arrives
+            AlertResponse::new(AlertToken::new(1), None);
+        }
+        AlertToken::INVALID
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {

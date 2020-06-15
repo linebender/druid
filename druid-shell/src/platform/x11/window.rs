@@ -28,6 +28,7 @@ use x11rb::protocol::xproto::{
 };
 use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
 
+use crate::alert::{AlertOptions, AlertResponse, AlertToken};
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KeyEvent, KeyModifiers};
@@ -800,6 +801,15 @@ impl WindowHandle {
     pub fn text(&self) -> Text {
         // I'm not entirely sure what this method is doing here, so here's a Text.
         Text::new()
+    }
+
+    /// Show an alert dialog.
+    pub fn alert(&self, _options: AlertOptions) -> AlertToken {
+        {
+            // Just shutting up clippy until the real implementation arrives
+            AlertResponse::new(AlertToken::new(1), None);
+        }
+        AlertToken::INVALID
     }
 
     pub fn request_timer(&self, _deadline: std::time::Instant) -> TimerToken {

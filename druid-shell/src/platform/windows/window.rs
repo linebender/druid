@@ -56,6 +56,7 @@ use super::paint;
 use super::timers::TimerSlots;
 use super::util::{self, as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 
+use crate::alert::{AlertOptions, AlertResponse, AlertToken};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
@@ -1444,6 +1445,15 @@ impl WindowHandle {
 
     pub fn text(&self) -> Text {
         Text::new(&self.dwrite_factory)
+    }
+
+    /// Show an alert dialog.
+    pub fn alert(&self, _options: AlertOptions) -> AlertToken {
+        {
+            // Just shutting up clippy until the real implementation arrives
+            AlertResponse::new(AlertToken::new(1), None);
+        }
+        AlertToken::INVALID
     }
 
     /// Request a timer event.
