@@ -51,7 +51,7 @@ struct QuitButtonController {
 
 const WINDOW_TITLE: &str = "Alerts everywhere";
 
-fn main() {
+pub fn main() {
     let main_window = WindowDesc::new(ui_builder).title(WINDOW_TITLE);
     let state = State {
         app_modal: false,

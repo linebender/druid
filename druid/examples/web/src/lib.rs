@@ -54,6 +54,7 @@ macro_rules! impl_example {
 
 // Below is a list of examples that can be built for the web.
 // Please add the examples that cannot be built to the EXCEPTIONS list in build.rs.
+impl_example!(alert);
 impl_example!(anim);
 impl_example!(calc);
 impl_example!(custom_widget);
