@@ -118,7 +118,7 @@ pub enum AlertIcon {
 /// A specific button for the alert dialog.
 ///
 /// If the alert is just reporting information and it only needs a single button,  
-/// then you should use a positive button with the label **OK** or a translation of it.
+/// then you should use a primary button with the label **OK** or a translation of it.
 ///
 /// The cancel button should always be labeled **Cancel** or a translation of it.
 ///
