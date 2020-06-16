@@ -59,7 +59,7 @@ Handling different pixel densities is done at the `druid-shell` level already.
 In fact pixels mostly don't even enter the conversation at the `druid` level.
 The `druid` coordinate system is instead measured in **display points** (**dp**),
 e.g. you might say a widget has a width of **100dp**.
-**Display points** are conceptually similar to Microsoft's *device-independent pixels*,
+*Display points* are conceptually similar to Microsoft's *device-independent pixels*,
 Google's *density-independent pixels*, Apple's *points*, and CSS's *pixel units*.
 
 You **describe the UI using display points and then druid will automatically
