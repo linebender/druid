@@ -146,6 +146,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - GTK: Support disabled menu items. ([#897] by [@jneem])
 - GTK: Support file filters in open/save dialogs. ([#903] by [@jneem])
 - GTK: Support DPI values other than 96. ([#904] by [@xStrom])
+- GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
 
 ### Visual
 
@@ -324,6 +325,7 @@ Last release without a changelog :(
 [#1011]: https://github.com/xi-editor/druid/pull/1011
 [#1013]: https://github.com/xi-editor/druid/pull/1013
 [#1028]: https://github.com/xi-editor/druid/pull/1028
+[#1043]: https://github.com/xi-editor/druid/pull/1043
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/xi-editor/druid/compare/v0.5.0...v0.6.0
