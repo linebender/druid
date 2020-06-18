@@ -41,7 +41,7 @@ pub fn main() {
         .expect("launch failed");
 
     fn ui_builder() -> impl Widget<u32> {
-        let tiger_svg = match include_str!("tiger.svg").parse::<SvgData>() {
+        let tiger_svg = match include_str!("./assets/tiger.svg").parse::<SvgData>() {
             Ok(svg) => svg,
             Err(err) => {
                 error!("{}", err);

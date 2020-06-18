@@ -137,12 +137,12 @@ impl WindowState {
     /// Updates the canvas size and scale factor and returns `Scale` and `ScaledArea`.
     fn update_scale_and_area(&self) -> (Scale, ScaledArea) {
         let (css_width, css_height, dpr) = self.get_window_size_and_dpr();
-        let scale = Scale::from_scale(dpr, dpr);
+        let scale = Scale::new(dpr, dpr);
         let area = ScaledArea::from_dp(Size::new(css_width, css_height), &scale);
         let size_px = area.size_px();
         self.canvas.set_width(size_px.width as u32);
         self.canvas.set_height(size_px.height as u32);
-        let _ = self.context.scale(scale.scale_x(), scale.scale_y());
+        let _ = self.context.scale(scale.x(), scale.y());
         self.scale.set(scale);
         self.area.set(area);
         (scale, area)
@@ -373,7 +373,7 @@ impl WindowBuilder {
         // Create the Scale for resolution scaling
         let scale = {
             let dpr = window.device_pixel_ratio();
-            Scale::from_scale(dpr, dpr)
+            Scale::new(dpr, dpr)
         };
         let area = {
             // The initial size in display points isn't necessarily the final size in display points
@@ -383,7 +383,7 @@ impl WindowBuilder {
         let size_px = area.size_px();
         canvas.set_width(size_px.width as u32);
         canvas.set_height(size_px.height as u32);
-        let _ = context.scale(scale.scale_x(), scale.scale_y());
+        let _ = context.scale(scale.x(), scale.y());
         let size_dp = area.size_dp();
 
         set_cursor(&canvas, &self.cursor);

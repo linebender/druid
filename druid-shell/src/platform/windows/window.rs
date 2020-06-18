@@ -65,6 +65,11 @@ use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::scale::{Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
+/// The platform target DPI.
+///
+/// Windows considers 96 the default value which represents a 1.0 scale factor.
+pub(crate) const SCALE_TARGET_DPI: f64 = 96.0;
+
 extern "system" {
     pub fn DwmFlush();
 }
@@ -1026,16 +1031,16 @@ impl WindowBuilder {
                 present_strategy: self.present_strategy,
             };
 
-            // Simple scaling based on System DPI (96 is equivalent to 100%)
-            let dpi = if let Some(func) = OPTIONAL_FUNCTIONS.GetDpiForSystem {
+            // Simple scaling based on System DPI
+            let scale_factor = if let Some(func) = OPTIONAL_FUNCTIONS.GetDpiForSystem {
                 // Only supported on Windows 10
-                func() as f64
+                func() as f64 / SCALE_TARGET_DPI
             } else {
                 // TODO GetDpiForMonitor is supported on Windows 8.1, try falling back to that here
                 // Probably GetDeviceCaps(..., LOGPIXELSX) is the best to do pre-10
-                96.0
+                1.0
             };
-            let scale = Scale::from_dpi(dpi, dpi);
+            let scale = Scale::new(scale_factor, scale_factor);
             let area = ScaledArea::from_dp(self.size, &scale);
             let size_px = area.size_px();
 
