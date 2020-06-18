@@ -21,6 +21,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 - macOS: Timers not firing during modal loop. ([#1028] by [@xStrom])
 - GTK: Directory selection now properly ignores file filters. ([#957] by [@xStrom])
+- GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
 
 ### Visual
 
@@ -146,7 +147,6 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - GTK: Support disabled menu items. ([#897] by [@jneem])
 - GTK: Support file filters in open/save dialogs. ([#903] by [@jneem])
 - GTK: Support DPI values other than 96. ([#904] by [@xStrom])
-- GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
 
 ### Visual
 
