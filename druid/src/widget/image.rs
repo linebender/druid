@@ -74,6 +74,9 @@ use crate::{
 ///
 /// [scaling a bitmap image]: ../struct.Scale.html#pixels-and-display-points
 /// [SVG files]: https://en.wikipedia.org/wiki/Scalable_Vector_Graphics
+/// [`ImageData`]: struct.ImageData.html
+/// [`FillStrat`]: ../widget/enum.FillStrat.html
+/// [`InterpolationMode`]: ../piet/enum.InterpolationMode.html
 pub struct Image {
     image_data: ImageData,
     fill: FillStrat,
@@ -87,6 +90,9 @@ impl Image {
     /// ([`FillStrat::Fill`])
     /// and will be scaled bilinearly
     /// ([`InterpolationMode::Bilinear`])
+    ///
+    /// [`FillStrat::Fill`]: ../widget/enum.FillStrat.html#variant.Fill
+    /// [`InterpolationMode::Bilinear`]: ../piet/enum.InterpolationMode.html#variant.Bilinear
     pub fn new(image_data: ImageData) -> Self {
         Image {
             image_data,
@@ -101,7 +107,7 @@ impl Image {
         self
     }
 
-    /// Modify the widget's [`FillStrat`].
+    /// Modify the widget's fill strategy.
     pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
     }
@@ -112,7 +118,7 @@ impl Image {
         self
     }
 
-    /// Modify the widget's [`InterpolationMode`].
+    /// Modify the widget's interpolation mode.
     pub fn set_interpolation_mode(&mut self, interpolation: InterpolationMode) {
         self.interpolation = interpolation;
     }
@@ -167,7 +173,7 @@ impl<T: Data> Widget<T> for Image {
 /// Contains raw bytes, dimensions, and image format ([`piet::ImageFormat`]).
 ///
 /// [the `image` feature]: ../index.html#optional-features
-/// [`piet::ImageFormat`]: druid::piet::ImageFormat
+/// [`piet::ImageFormat`]: ../piet/enum.ImageFormat.html
 #[derive(Clone)]
 pub struct ImageData {
     pixels: Vec<u8>,
