@@ -290,7 +290,7 @@ impl WindowBuilder {
                 if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
                     // For some reason piet needs a mutable context, so give it one I guess.
                     let mut context = context.clone();
-                    context.scale(scale.scale_x(), scale.scale_y());
+                    context.scale(scale.x(), scale.y());
                     let (x0, y0, x1, y1) = context.clip_extents();
                     let invalid_rect = Rect::new(x0, y0, x1, y1);
 

@@ -142,7 +142,7 @@ impl WindowState {
         let size_px = area.size_px();
         self.canvas.set_width(size_px.width as u32);
         self.canvas.set_height(size_px.height as u32);
-        let _ = self.context.scale(scale.scale_x(), scale.scale_y());
+        let _ = self.context.scale(scale.x(), scale.y());
         self.scale.set(scale);
         self.area.set(area);
         (scale, area)
@@ -383,7 +383,7 @@ impl WindowBuilder {
         let size_px = area.size_px();
         canvas.set_width(size_px.width as u32);
         canvas.set_height(size_px.height as u32);
-        let _ = context.scale(scale.scale_x(), scale.scale_y());
+        let _ = context.scale(scale.x(), scale.y());
         let size_dp = area.size_dp();
 
         set_cursor(&canvas, &self.cursor);
