@@ -43,7 +43,9 @@ use objc::{class, msg_send, sel, sel_impl};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
-use super::appkit::{NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt};
+use super::appkit::{
+    NSRunLoopCommonModes, NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt,
+};
 use super::application::Application;
 use super::dialog;
 use super::menu::Menu;
@@ -804,7 +806,9 @@ impl WindowHandle {
             let user_info: id = msg_send![nsnumber, numberWithUnsignedInteger: token.into_raw()];
             let selector = sel!(handleTimer:);
             let view = self.nsview.load();
-            let _: id = msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
+            let timer: id = msg_send![nstimer, timerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
+            let runloop: id = msg_send![class!(NSRunLoop), currentRunLoop];
+            let () = msg_send![runloop, addTimer: timer forMode: NSRunLoopCommonModes];
         }
         token
     }
