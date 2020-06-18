@@ -66,7 +66,7 @@ use crate::scale::{Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 /// The platform target DPI.
-/// 
+///
 /// Windows considers 96 the default value which represents a 1.0 scale factor.
 pub(crate) const SCALE_TARGET_DPI: f64 = 96.0;
 

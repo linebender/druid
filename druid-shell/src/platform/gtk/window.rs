@@ -48,7 +48,7 @@ use super::menu::Menu;
 use super::util;
 
 /// The platform target DPI.
-/// 
+///
 /// GTK considers 96 the default value which represents a 1.0 scale factor.
 const SCALE_TARGET_DPI: f64 = 96.0;
 
