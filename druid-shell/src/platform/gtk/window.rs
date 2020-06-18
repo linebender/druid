@@ -47,6 +47,9 @@ use super::dialog;
 use super::menu::Menu;
 use super::util;
 
+/// When the GTK reported DPI differs from this we will scale coordinates to achieve it.
+const SCALE_TARGET_DPI: f64 = 96.0;
+
 /// Taken from https://gtk-rs.org/docs-src/tutorial/closures
 /// It is used to reduce the boilerplate of setting up gtk callbacks
 /// Example:
@@ -169,12 +172,13 @@ impl WindowBuilder {
         window.set_resizable(self.resizable);
         window.set_decorated(self.show_titlebar);
 
-        // Get the GTK reported DPI
-        let dpi = window
+        // Get the scale factor based on the GTK reported DPI
+        let scale_factor = window
             .get_display()
             .map(|c| c.get_default_screen().get_resolution() as f64)
-            .unwrap_or(96.0);
-        let scale = Scale::from_dpi(dpi, dpi);
+            .unwrap_or(SCALE_TARGET_DPI)
+            / SCALE_TARGET_DPI;
+        let scale = Scale::new(scale_factor, scale_factor);
         let area = ScaledArea::from_dp(self.size, &scale);
         let size_px = area.size_px();
 
@@ -254,9 +258,9 @@ impl WindowBuilder {
                 let mut scale_changed = false;
                 // Check if the GTK reported DPI has changed,
                 // so that we can change our scale factor without restarting the application.
-                if let Some(dpi) = state.window.get_window()
-                    .map(|w| w.get_display().get_default_screen().get_resolution()) {
-                    let reported_scale = Scale::from_dpi(dpi, dpi);
+                if let Some(scale_factor) = state.window.get_window()
+                    .map(|w| w.get_display().get_default_screen().get_resolution() / SCALE_TARGET_DPI) {
+                    let reported_scale = Scale::new(scale_factor, scale_factor);
                     if scale != reported_scale {
                         scale = reported_scale;
                         state.scale.set(scale);
