@@ -47,7 +47,9 @@ use super::dialog;
 use super::menu::Menu;
 use super::util;
 
-/// When the GTK reported DPI differs from this we will scale coordinates to achieve it.
+/// The platform target DPI.
+/// 
+/// GTK considers 96 the default value which represents a 1.0 scale factor.
 const SCALE_TARGET_DPI: f64 = 96.0;
 
 /// Taken from https://gtk-rs.org/docs-src/tutorial/closures
@@ -175,7 +177,7 @@ impl WindowBuilder {
         // Get the scale factor based on the GTK reported DPI
         let scale_factor = window
             .get_display()
-            .map(|c| c.get_default_screen().get_resolution() as f64)
+            .map(|c| c.get_default_screen().get_resolution())
             .unwrap_or(SCALE_TARGET_DPI)
             / SCALE_TARGET_DPI;
         let scale = Scale::new(scale_factor, scale_factor);

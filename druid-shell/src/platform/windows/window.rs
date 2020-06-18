@@ -65,7 +65,9 @@ use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::scale::{Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
-/// When the OS reported DPI differs from this we will scale coordinates to achieve it.
+/// The platform target DPI.
+/// 
+/// Windows considers 96 the default value which represents a 1.0 scale factor.
 pub(crate) const SCALE_TARGET_DPI: f64 = 96.0;
 
 extern "system" {

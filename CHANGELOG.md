@@ -12,12 +12,13 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Changed
 
 - `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
+- `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 
 ### Deprecated
 
 ### Removed
 
-- DPI related functions/methods from `Scale`. ([#1042] by [@xStrom])
+- `Scale::from_dpi`, `Scale::dpi_x`, and `Scale::dpi_y`. ([#1042] by [@xStrom])
 
 ### Fixed
 
