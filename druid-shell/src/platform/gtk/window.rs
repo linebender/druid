@@ -742,15 +742,22 @@ impl IdleHandle {
 
 fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
     util::assert_main_thread();
-    let mut handler = state.handler.borrow_mut();
+    if let Ok(mut handler) = state.handler.try_borrow_mut() {
+        let queue: Vec<_> = std::mem::replace(&mut state.idle_queue.lock().unwrap(), Vec::new());
 
-    let queue: Vec<_> = std::mem::replace(&mut state.idle_queue.lock().unwrap(), Vec::new());
-
-    for item in queue {
-        match item {
-            IdleKind::Callback(it) => it.call(handler.as_any()),
-            IdleKind::Token(it) => handler.idle(it),
+        for item in queue {
+            match item {
+                IdleKind::Callback(it) => it.call(handler.as_any()),
+                IdleKind::Token(it) => handler.idle(it),
+            }
         }
+    } else {
+        log::warn!("Delaying idle callbacks because the handler is borrowed.");
+        // Keep trying to reschedule this idle callback, because we haven't had a chance
+        // to empty the idle queue. Returning glib::source::Continue(true) achieves this but
+        // causes 100% CPU usage, apparently because glib likes to call us back very quickly.
+        let state = Arc::clone(state);
+        glib::timeout_add(16, move || run_idle(&state));
     }
     glib::source::Continue(false)
 }
