@@ -79,7 +79,7 @@ impl Application {
         // libxcb, you should call XSetEventQueueOwner(dpy, XCBOwnsEventQueue). Otherwise, libX11
         // might randomly eat your events / move them to its own event queue.
         //
-        // https://github.com/xi-editor/druid/pull/1025/files/76b923417183bd103f61e56b56a56474b7417cec#r442777892
+        // https://github.com/xi-editor/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
         let connection = Rc::new(conn);
         let window_id = Application::create_event_window(&connection, screen_num as i32)?;
