@@ -21,9 +21,10 @@ use std::rc::{Rc, Weak};
 
 use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
+use x11rb::atom_manager;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
-    self, Atom, AtomEnum, ConnectionExt, EventMask, ExposeEvent, PropMode, Visualtype, WindowClass,
+    self, AtomEnum, ConnectionExt, EventMask, ExposeEvent, PropMode, Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
 
@@ -127,51 +128,23 @@ impl WindowBuilder {
     /// Registers and returns all the atoms that the window will need.
     fn atoms(&self, window_id: u32) -> Result<WindowAtoms, Error> {
         let conn = self.app.connection();
-
-        // WM_PROTOCOLS
-        //
-        // List of atoms that identify the communications protocols between
-        // the client and window manager in which the client is willing to participate.
-        //
-        // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#wm_protocols_property
-        let wm_protocols = conn
-            .intern_atom(false, b"WM_PROTOCOLS")
-            .context("failed to get WM_PROTOCOLS")?
+        let atoms = WindowAtoms::new(conn.as_ref())
+            .context("failed to intern X11 atoms")?
             .reply()
-            .context("failed to get WM_PROTOCOLS reply")?
-            .atom;
-
-        // WM_DELETE_WINDOW
-        //
-        // Including this atom in the WM_PROTOCOLS property on each window makes sure that
-        // if the window manager respects WM_DELETE_WINDOW it will send us the event.
-        //
-        // The WM_DELETE_WINDOW event is sent when there is a request to close the window.
-        // Registering for but ignoring this event means that the window will remain open.
-        //
-        // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
-        let wm_delete_window = conn
-            .intern_atom(false, b"WM_DELETE_WINDOW")
-            .context("failed to get WM_DELETE_WINDOW")?
-            .reply()
-            .context("failed to get WM_DELETE_WINDOW reply")?
-            .atom;
+            .context("failed to get back X11 atoms")?;
 
         // Replace the window's WM_PROTOCOLS with the following.
-        let protocols = [wm_delete_window];
+        let protocols = [atoms.WM_DELETE_WINDOW];
         // TODO(x11/errors): Check the response for errors?
         conn.change_property32(
             PropMode::Replace,
             window_id,
-            wm_protocols,
+            atoms.WM_PROTOCOLS,
             AtomEnum::ATOM,
             &protocols,
         )?;
 
-        Ok(WindowAtoms {
-            wm_protocols,
-            wm_delete_window,
-        })
+        Ok(atoms)
     }
 
     /// Create a new cairo `Context`.
@@ -229,40 +202,34 @@ impl WindowBuilder {
             );
 
         // Create the actual window
-        // TODO: https://github.com/psychon/x11rb/pull/469 will make error handling easier with the
-        // next x11rb release.
-        if let Some(err) = conn
-            .create_window(
-                // Window depth
-                x11rb::COPY_FROM_PARENT.try_into().unwrap(),
-                // The new window's ID
-                id,
-                // Parent window of this new window
-                // TODO(#468): either `screen.root()` (no parent window) or pass parent here to attach
-                screen.root,
-                // X-coordinate of the new window
-                0,
-                // Y-coordinate of the new window
-                0,
-                // Width of the new window
-                // TODO(x11/dpi_scaling): figure out DPI scaling
-                self.size.width as u16,
-                // Height of the new window
-                // TODO(x11/dpi_scaling): figure out DPI scaling
-                self.size.height as u16,
-                // Border width
-                0,
-                // Window class type
-                WindowClass::InputOutput,
-                // Visual ID
-                visual_id,
-                // Window properties mask
-                &cw_values,
-            )?
-            .check()?
-        {
-            return Err(x11rb::errors::ReplyError::X11Error(err).into());
-        }
+        conn.create_window(
+            // Window depth
+            x11rb::COPY_FROM_PARENT.try_into().unwrap(),
+            // The new window's ID
+            id,
+            // Parent window of this new window
+            // TODO(#468): either `screen.root()` (no parent window) or pass parent here to attach
+            screen.root,
+            // X-coordinate of the new window
+            0,
+            // Y-coordinate of the new window
+            0,
+            // Width of the new window
+            // TODO(x11/dpi_scaling): figure out DPI scaling
+            self.size.width as u16,
+            // Height of the new window
+            // TODO(x11/dpi_scaling): figure out DPI scaling
+            self.size.height as u16,
+            // Border width
+            0,
+            // Window class type
+            WindowClass::InputOutput,
+            // Visual ID
+            visual_id,
+            // Window properties mask
+            &cw_values,
+        )?
+        .check()?;
 
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
         let atoms = self.atoms(id)?;
@@ -303,10 +270,30 @@ pub(crate) struct Window {
     state: RefCell<WindowState>,
 }
 
-/// All the Atom references the window needs.
-struct WindowAtoms {
-    wm_protocols: Atom,
-    wm_delete_window: Atom,
+// This creates a `struct WindowAtoms` containing the specified atoms as members (along with some
+// convenience methods to intern and query those atoms). We use the following atoms:
+//
+// WM_PROTOCOLS
+//
+// List of atoms that identify the communications protocols between
+// the client and window manager in which the client is willing to participate.
+//
+// https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#wm_protocols_property
+//
+// WM_DELETE_WINDOW
+//
+// Including this atom in the WM_PROTOCOLS property on each window makes sure that
+// if the window manager respects WM_DELETE_WINDOW it will send us the event.
+//
+// The WM_DELETE_WINDOW event is sent when there is a request to close the window.
+// Registering for but ignoring this event means that the window will remain open.
+//
+// https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
+atom_manager! {
+    WindowAtoms: WindowAtomsCookie {
+        WM_PROTOCOLS,
+        WM_DELETE_WINDOW,
+    }
 }
 
 /// The mutable state of the window.
@@ -633,9 +620,9 @@ impl Window {
     ) -> Result<(), Error> {
         // https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html#id2745388
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
-        if client_message.type_ == self.atoms.wm_protocols && client_message.format == 32 {
+        if client_message.type_ == self.atoms.WM_PROTOCOLS && client_message.format == 32 {
             let protocol = client_message.data.as_data32()[0];
-            if protocol == self.atoms.wm_delete_window {
+            if protocol == self.atoms.WM_DELETE_WINDOW {
                 self.close();
             }
         }

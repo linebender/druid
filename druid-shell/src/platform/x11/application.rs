@@ -72,6 +72,14 @@ struct State {
 
 impl Application {
     pub fn new() -> Result<Application, Error> {
+        // If we want to support OpenGL, we will need to open a connection with Xlib support (see
+        // https://xcb.freedesktop.org/opengl/ for background).  There is some sample code for this
+        // in the `rust-xcb` crate (see `connect_with_xlib_display`), although it may be missing
+        // something: according to the link below, If you want to handle events through x11rb and
+        // libxcb, you should call XSetEventQueueOwner(dpy, XCBOwnsEventQueue). Otherwise, libX11
+        // might randomly eat your events / move them to its own event queue.
+        //
+        // https://github.com/xi-editor/druid/pull/1025/files/76b923417183bd103f61e56b56a56474b7417cec#r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
         let connection = Rc::new(conn);
         let window_id = Application::create_event_window(&connection, screen_num as i32)?;
@@ -96,37 +104,31 @@ impl Application {
             .ok_or_else(|| anyhow!("invalid screen num: {}", screen_num))?;
 
         // Create the actual window
-        if let Some(err) = conn
-            .create_window(
-                // Window depth
-                x11rb::COPY_FROM_PARENT.try_into().unwrap(),
-                // The new window's ID
-                id,
-                // Parent window of this new window
-                screen.root,
-                // X-coordinate of the new window
-                0,
-                // Y-coordinate of the new window
-                0,
-                // Width of the new window
-                1,
-                // Height of the new window
-                1,
-                // Border width
-                0,
-                // Window class type
-                WindowClass::InputOnly,
-                // Visual ID
-                x11rb::COPY_FROM_PARENT,
-                // Window properties mask
-                &CreateWindowAux::new().event_mask(EventMask::StructureNotify),
-            )?
-            .check()?
-        {
-            // TODO: https://github.com/psychon/x11rb/pull/469 will make error handling easier with
-            // the next x11rb release.
-            return Err(x11rb::errors::ReplyError::X11Error(err).into());
-        }
+        conn.create_window(
+            // Window depth
+            x11rb::COPY_FROM_PARENT.try_into().unwrap(),
+            // The new window's ID
+            id,
+            // Parent window of this new window
+            screen.root,
+            // X-coordinate of the new window
+            0,
+            // Y-coordinate of the new window
+            0,
+            // Width of the new window
+            1,
+            // Height of the new window
+            1,
+            // Border width
+            0,
+            // Window class type
+            WindowClass::InputOnly,
+            // Visual ID
+            x11rb::COPY_FROM_PARENT,
+            // Window properties mask
+            &CreateWindowAux::new().event_mask(EventMask::StructureNotify),
+        )?
+        .check()?;
 
         Ok(id)
     }
