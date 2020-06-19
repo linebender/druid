@@ -48,6 +48,7 @@ use super::appkit::{
 };
 use super::application::Application;
 use super::dialog;
+use super::keyboard::KeyboardState;
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
 use crate::common_util::IdleCallback;
@@ -112,6 +113,7 @@ struct ViewState {
     focus_click: bool,
     // Tracks whether we have already received the mouseExited event
     mouse_left: bool,
+    keyboard_state: KeyboardState,
 }
 
 impl WindowBuilder {
@@ -362,6 +364,7 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
     unsafe {
         let view: id = msg_send![VIEW_CLASS.0, new];
         let nsview = WeakPtr::new(view);
+        let keyboard_state = KeyboardState::new();
         let state = ViewState {
             nsview,
             handler,
@@ -369,6 +372,7 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
             last_mods: KeyModifiers::default(),
             focus_click: false,
             mouse_left: true,
+            keyboard_state,
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
@@ -597,6 +601,9 @@ extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
+    // TODO: this is debugging, make into real event processing.
+    let opt_keyboard_event = (*view_state).keyboard_state.process_native_event(nsevent);
+    println!("keyboard event: {:?}", opt_keyboard_event);
     (*view_state).handler.key_down(event);
     view_state.last_mods = event.mods;
 }
@@ -607,6 +614,9 @@ extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
+    // TODO: this is debugging, make into real event processing.
+    let opt_keyboard_event = (*view_state).keyboard_state.process_native_event(nsevent);
+    println!("keyboard event: {:?}", opt_keyboard_event);
     (*view_state).handler.key_up(event);
     view_state.last_mods = event.mods;
 }
@@ -616,6 +626,9 @@ extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
+    // TODO: this is debugging, make into real event processing.
+    let opt_keyboard_event = (*view_state).keyboard_state.process_native_event(nsevent);
+    println!("keyboard event: {:?}", opt_keyboard_event);
     let (down, event) = mods_changed_key_event(view_state.last_mods, nsevent);
     view_state.last_mods = event.mods;
     if down {
@@ -959,6 +972,7 @@ fn make_key_event(event: id) -> KeyEvent {
             unmodified_chars.len(),
         );
         let unmodified_text = std::str::from_utf8_unchecked(slice);
+        println!("text = {}, unmodified text = {}", text, unmodified_text);
 
         let virtual_key = event.keyCode();
         let is_repeat: bool = msg_send!(event, isARepeat);
