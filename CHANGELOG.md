@@ -12,10 +12,13 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Changed
 
 - `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
+- `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 
 ### Deprecated
 
 ### Removed
+
+- `Scale::from_dpi`, `Scale::dpi_x`, and `Scale::dpi_y`. ([#1042] by [@xStrom])
 
 ### Fixed
 
@@ -325,6 +328,7 @@ Last release without a changelog :(
 [#1011]: https://github.com/xi-editor/druid/pull/1011
 [#1013]: https://github.com/xi-editor/druid/pull/1013
 [#1028]: https://github.com/xi-editor/druid/pull/1028
+[#1042]: https://github.com/xi-editor/druid/pull/1042
 [#1043]: https://github.com/xi-editor/druid/pull/1043
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master

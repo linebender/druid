@@ -884,7 +884,7 @@ impl WindowHandle {
     /// Get the `Scale` of the window.
     pub fn get_scale(&self) -> Result<Scale, Error> {
         // TODO: Get actual Scale
-        Ok(Scale::from_dpi(96.0, 96.0))
+        Ok(Scale::new(1.0, 1.0))
     }
 }
 

@@ -40,6 +40,7 @@ use crate::scale::Scale;
 
 use super::error::Error;
 use super::util::as_result;
+use super::window::SCALE_TARGET_DPI;
 
 pub(crate) unsafe fn create_render_target(
     d2d_factory: &D2DFactory,
@@ -82,8 +83,8 @@ pub(crate) unsafe fn create_render_target_dxgi(
             format: DXGI_FORMAT_B8G8R8A8_UNORM,
             alphaMode: D2D1_ALPHA_MODE_IGNORE,
         },
-        dpiX: scale.dpi_x() as f32,
-        dpiY: scale.dpi_y() as f32,
+        dpiX: (scale.x() * SCALE_TARGET_DPI) as f32,
+        dpiY: (scale.y() * SCALE_TARGET_DPI) as f32,
         usage: D2D1_RENDER_TARGET_USAGE_NONE,
         minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
     };

@@ -476,7 +476,7 @@ impl Window {
 
     fn get_scale(&self) -> Result<Scale, Error> {
         // TODO(x11/dpi_scaling): figure out DPI scaling
-        Ok(Scale::from_dpi(96.0, 96.0))
+        Ok(Scale::new(1.0, 1.0))
     }
 
     pub fn handle_expose(&self, expose: &xcb::ExposeEvent) -> Result<(), Error> {
@@ -820,7 +820,7 @@ impl WindowHandle {
             Ok(w.get_scale()?)
         } else {
             log::error!("Window {} has already been dropped", self.id);
-            Ok(Scale::from_dpi(96.0, 96.0))
+            Ok(Scale::new(1.0, 1.0))
         }
     }
 }
