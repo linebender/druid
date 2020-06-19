@@ -138,7 +138,7 @@ impl WindowState {
     fn update_scale_and_area(&self) -> (Scale, ScaledArea) {
         let (css_width, css_height, dpr) = self.get_window_size_and_dpr();
         let scale = Scale::new(dpr, dpr);
-        let area = ScaledArea::from_dp(Size::new(css_width, css_height), &scale);
+        let area = ScaledArea::from_dp(Size::new(css_width, css_height), scale);
         let size_px = area.size_px();
         self.canvas.set_width(size_px.width as u32);
         self.canvas.set_height(size_px.height as u32);
@@ -378,7 +378,7 @@ impl WindowBuilder {
         let area = {
             // The initial size in display points isn't necessarily the final size in display points
             let size_dp = Size::new(canvas.offset_width() as f64, canvas.offset_height() as f64);
-            ScaledArea::from_dp(size_dp, &scale)
+            ScaledArea::from_dp(size_dp, scale)
         };
         let size_px = area.size_px();
         canvas.set_width(size_px.width as u32);
