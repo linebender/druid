@@ -39,6 +39,7 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Maintenance
 
 - Standardized web targeting terminology. ([#1013] by [@xStrom])
+- X11: Ported the X11 backend to `x11rb`. ([#1025] by [@jneem])
 
 ### Outside News
 
@@ -327,6 +328,7 @@ Last release without a changelog :(
 [#1008]: https://github.com/xi-editor/druid/pull/1008
 [#1011]: https://github.com/xi-editor/druid/pull/1011
 [#1013]: https://github.com/xi-editor/druid/pull/1013
+[#1025]: https://github.com/xi-editor/druid/pull/1025
 [#1028]: https://github.com/xi-editor/druid/pull/1028
 [#1042]: https://github.com/xi-editor/druid/pull/1042
 [#1043]: https://github.com/xi-editor/druid/pull/1043
