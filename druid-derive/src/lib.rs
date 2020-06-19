@@ -14,6 +14,8 @@
 
 //! derive macros for druid.
 
+#![deny(clippy::trivially_copy_pass_by_ref)]
+
 extern crate proc_macro;
 
 mod attr;
