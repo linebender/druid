@@ -19,15 +19,16 @@
 use std::{convert::AsRef, error::Error, path::Path};
 
 use crate::{
-    piet::{ImageFormat, InterpolationMode},
+    piet::{Image as PietImage, ImageFormat, InterpolationMode},
     widget::common::FillStrat,
-    Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Rect, RenderContext, Size, UpdateCtx, Widget,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Rect,
+    RenderContext, Size, UpdateCtx, Widget,
 };
 
 /// A widget that renders an Image
 pub struct Image {
     image_data: ImageData,
+    paint_data: Option<PietImage>,
     fill: FillStrat,
     interpolation: InterpolationMode,
 }
@@ -39,6 +40,7 @@ impl Image {
     pub fn new(image_data: ImageData) -> Self {
         Image {
             image_data,
+            paint_data: None,
             fill: FillStrat::default(),
             interpolation: InterpolationMode::Bilinear,
         }
@@ -53,6 +55,7 @@ impl Image {
     /// Modify the widget's `FillStrat`.
     pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
+        self.paint_data = None;
     }
 
     /// A builder-style method for specifying the interpolation strategy.
@@ -64,6 +67,7 @@ impl Image {
     /// Modify the widget's `InterpolationMode`.
     pub fn set_interpolation_mode(&mut self, interpolation: InterpolationMode) {
         self.interpolation = interpolation;
+        self.paint_data = None;
     }
 }
 
@@ -101,8 +105,20 @@ impl<T: Data> Widget<T> for Image {
             let clip_rect = Rect::ZERO.with_size(ctx.size());
             ctx.clip(clip_rect);
         }
-        self.image_data
-            .to_piet(offset_matrix, ctx, self.interpolation);
+
+        ctx.with_save(|ctx| {
+            let piet_image = {
+                let image_data = &self.image_data;
+                self.paint_data
+                    .get_or_insert_with(|| image_data.to_piet(ctx))
+            };
+            ctx.transform(offset_matrix);
+            ctx.draw_image(
+                piet_image,
+                self.image_data.get_size().to_rect(),
+                self.interpolation,
+            );
+        });
     }
 }
 
@@ -132,20 +148,14 @@ impl ImageData {
     }
 
     /// Convert ImageData into Piet draw instructions.
-    fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, interpolation: InterpolationMode) {
-        ctx.with_save(|ctx| {
-            ctx.transform(offset_matrix);
-            let size = self.get_size();
-            let im = ctx
-                .make_image(
-                    size.width as usize,
-                    size.height as usize,
-                    &self.pixels,
-                    self.format,
-                )
-                .unwrap();
-            ctx.draw_image(&im, size.to_rect(), interpolation);
-        })
+    fn to_piet(&self, ctx: &mut PaintCtx) -> PietImage {
+        ctx.make_image(
+            self.get_size().width as usize,
+            self.get_size().height as usize,
+            &self.pixels,
+            self.format,
+        )
+        .unwrap()
     }
 }
 
