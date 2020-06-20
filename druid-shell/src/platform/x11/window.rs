@@ -201,8 +201,7 @@ impl WindowBuilder {
                 | EventMask::KeyRelease
                 | EventMask::ButtonPress
                 | EventMask::ButtonRelease
-                | EventMask::PointerMotion
-                | EventMask::StructureNotify,
+                | EventMask::PointerMotion,
         );
 
         // Create the actual window
