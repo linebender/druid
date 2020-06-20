@@ -133,6 +133,7 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
+    env_logger::init();
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
     let perf_test = PerfTest {

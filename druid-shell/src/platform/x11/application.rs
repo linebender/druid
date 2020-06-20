@@ -21,6 +21,8 @@ use std::rc::Rc;
 
 use anyhow::{anyhow, Context, Error};
 use x11rb::connection::Connection;
+use x11rb::protocol::present::ConnectionExt as _;
+use x11rb::protocol::xfixes::ConnectionExt as _;
 use x11rb::protocol::xproto::{ConnectionExt, CreateWindowAux, EventMask, WindowClass};
 use x11rb::protocol::Event;
 use x11rb::xcb_ffi::XCBConnection;
@@ -60,6 +62,8 @@ pub(crate) struct Application {
     window_id: u32,
     /// The mutable `Application` state.
     state: Rc<RefCell<State>>,
+    /// The major opcode of the Present extension, if it is supported.
+    present_opcode: Option<u8>,
 }
 
 /// The mutable `Application` state.
@@ -87,12 +91,67 @@ impl Application {
             quitting: false,
             windows: HashMap::new(),
         }));
+        let present_opcode = match Application::query_present_opcode(&connection) {
+            Ok(p) => p,
+            Err(e) => {
+                log::info!("failed to find Present extension: {}", e);
+                None
+            }
+        };
         Ok(Application {
             connection,
             screen_num: screen_num as i32,
             window_id,
             state,
+            present_opcode,
         })
+    }
+
+    // Check if the Present extension is supported, returning its opcode if it is.
+    fn query_present_opcode(conn: &Rc<XCBConnection>) -> Result<Option<u8>, Error> {
+        let query = conn
+            .query_extension(b"Present")?
+            .reply()
+            .context("query Present extension")?;
+
+        if !query.present {
+            return Ok(None);
+        }
+
+        let opcode = Some(query.major_opcode);
+
+        // If Present is there at all, version 1.0 should be supported. This code
+        // shouldn't have a real effect; it's just a sanity check.
+        let version = conn
+            .present_query_version(1, 0)?
+            .reply()
+            .context("query Present version")?;
+        log::info!(
+            "X server supports Present version {}.{}",
+            version.major_version,
+            version.minor_version,
+        );
+
+        // We need the XFIXES extension to use regions. This code looks like it's just doing a
+        // sanity check but it is *necessary*: XFIXES doesn't work until we've done version
+        // negotiation
+        // (https://www.x.org/releases/X11R7.7/doc/fixesproto/fixesproto.txt)
+        let version = conn
+            .xfixes_query_version(5, 0)?
+            .reply()
+            .context("query XFIXES version")?;
+        log::info!(
+            "X server supports XFIXES version {}.{}",
+            version.major_version,
+            version.minor_version,
+        );
+
+        Ok(opcode)
+    }
+
+    #[inline]
+    pub(crate) fn present_opcode(&self) -> Option<u8> {
+        self.present_opcode
     }
 
     fn create_event_window(conn: &Rc<XCBConnection>, screen_num: i32) -> Result<u32, Error> {
@@ -249,6 +308,27 @@ impl Application {
                     self.finalize_quit();
                 }
             }
+            Event::PresentCompleteNotify(ev) => {
+                let w = self
+                    .window(ev.window)
+                    .context("COMPLETE_NOTIFY - failed to get window")?;
+                w.handle_complete_notify(ev)
+                    .context("COMPLETE_NOTIFY - failed to handle")?;
+            }
+            Event::PresentIdleNotify(ev) => {
+                let w = self
+                    .window(ev.window)
+                    .context("IDLE_NOTIFY - failed to get window")?;
+                w.handle_idle_notify(ev)
+                    .context("IDLE_NOTIFY - failed to handle")?;
+            }
+            // In XCB, errors are reported asynchronously by default, by sending them to the event
+            // loop. You can opt-out of this by using ..._checked variants of a function, and then
+            // getting the error synchronously. We use this in window initialization, but otherwise
+            // we take the async route.
+            Event::Error(e) => {
+                return Err(x11rb::errors::ReplyError::from(e.clone()).into());
+            }
             _ => {}
         }
         Ok(false)
@@ -264,7 +344,7 @@ impl Application {
                         }
                     }
                     Err(e) => {
-                        log::error!("Error handling event: {}", e);
+                        log::error!("Error handling event: {:#}", e);
                     }
                 }
             }
