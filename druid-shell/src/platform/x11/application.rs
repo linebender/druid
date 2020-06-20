@@ -327,6 +327,13 @@ impl Application {
             // getting the error synchronously. We use this in window initialization, but otherwise
             // we take the async route.
             Event::Error(e) => {
+                if let x11rb::protocol::Error::Request(req) = e {
+                    if self.present_opcode == Some(req.major_opcode) {
+                        for window in borrow!(self.state)?.windows.values() {
+                            window.disable_present()?;
+                        }
+                    }
+                }
                 return Err(x11rb::errors::ReplyError::from(e.clone()).into());
             }
             _ => {}

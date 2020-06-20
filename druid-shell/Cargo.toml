@@ -78,4 +78,4 @@ features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEve
 
 [dev-dependencies]
 piet-common = { version = "0.1.1", features = ["png"] }
-env_logger = "0.7.1"
+simple_logger = { version = "1.6.0", default-features = false }

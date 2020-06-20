@@ -863,8 +863,6 @@ impl Window {
     }
 
     /// Frees all resources used for the Present extension, and falls back to just using EXPOSE.
-    // FIXME: figure out if we need this
-    #[allow(dead_code)]
     pub fn disable_present(&self) -> Result<(), Error> {
         if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
             present.destroy_x_resources(self.app.connection());
