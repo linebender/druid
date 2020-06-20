@@ -37,13 +37,14 @@ use crate::piet::{Piet, RenderContext};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
-use crate::keyboard;
+use crate::keyboard_types::{Key, KeyState, KeyboardEvent, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::scale::{Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 use super::application::Application;
 use super::dialog;
+use super::keycodes;
 use super::menu::Menu;
 use super::util;
 
@@ -421,10 +422,11 @@ impl WindowBuilder {
 
                 // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
                 // They claim that one "tick" on a scroll wheel should be 120 units.
+                let shift = mods.contains(Modifiers::SHIFT);
                 let wheel_delta = match scroll.get_direction() {
-                    ScrollDirection::Up if mods.shift => Some(Vec2::new(-120.0, 0.0)),
+                    ScrollDirection::Up if shift => Some(Vec2::new(-120.0, 0.0)),
                     ScrollDirection::Up => Some(Vec2::new(0.0, -120.0)),
-                    ScrollDirection::Down if mods.shift => Some(Vec2::new(120.0, 0.0)),
+                    ScrollDirection::Down if shift => Some(Vec2::new(120.0, 0.0)),
                     ScrollDirection::Down => Some(Vec2::new(0.0, 120.0)),
                     ScrollDirection::Left => Some(Vec2::new(-120.0, 0.0)),
                     ScrollDirection::Right => Some(Vec2::new(120.0, 0.0)),
@@ -433,7 +435,7 @@ impl WindowBuilder {
                         let (mut delta_x, mut delta_y) = scroll.get_delta();
                         delta_x *= 120.;
                         delta_y *= 120.;
-                        if mods.shift {
+                        if shift {
                             delta_x += delta_y;
                             delta_y = 0.;
                         }
@@ -479,7 +481,7 @@ impl WindowBuilder {
                 *current_keyval = Some(key.get_keyval());
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                    handler.key_down(make_key_event(key, repeat));
+                    handler.key_down(make_key_event(key, repeat, KeyState::Down));
                 } else {
                     log::info!("GTK event was dropped because the handler was already borrowed");
                 }
@@ -494,7 +496,7 @@ impl WindowBuilder {
                 *(state.current_keyval.borrow_mut()) = None;
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                    handler.key_up(make_key_event(key, false));
+                    handler.key_up(make_key_event(key, false, KeyState::Up));
                 } else {
                     log::info!("GTK event was dropped because the handler was already borrowed");
                 }
@@ -832,24 +834,62 @@ fn get_mouse_click_count(event_type: gdk::EventType) -> u8 {
     }
 }
 
-fn get_modifiers(modifiers: gdk::ModifierType) -> keyboard::KeyModifiers {
-    keyboard::KeyModifiers {
-        shift: modifiers.contains(ModifierType::SHIFT_MASK),
-        alt: modifiers.contains(ModifierType::MOD1_MASK),
-        ctrl: modifiers.contains(ModifierType::CONTROL_MASK),
-        meta: modifiers.contains(ModifierType::META_MASK),
+const MODIFIER_MAP: &[(gdk::ModifierType, Modifiers)] = &[
+    (ModifierType::SHIFT_MASK, Modifiers::SHIFT),
+    (ModifierType::MOD1_MASK, Modifiers::ALT),
+    (ModifierType::CONTROL_MASK, Modifiers::CONTROL),
+    (ModifierType::META_MASK, Modifiers::META),
+];
+
+fn get_modifiers(modifiers: gdk::ModifierType) -> Modifiers {
+    let mut result = Modifiers::empty();
+    for &(gdk_mod, modifier) in MODIFIER_MAP {
+        if modifiers.contains(gdk_mod) {
+            result |= modifier;
+        }
     }
+    result
 }
 
-fn make_key_event(key: &EventKey, repeat: bool) -> keyboard::KeyEvent {
+fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyboardEvent {
     let keyval = key.get_keyval();
     let hardware_keycode = key.get_hardware_keycode();
 
     let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval);
 
     let text = gdk::keyval_to_unicode(keyval);
+    /*
+    println!(
+        "keyval = 0x{:x} ({}), hw = 0x{:x}, text = {:?}",
+        keyval, keyval, hardware_keycode, text
+    );
+    */
+    let modifiers = get_modifiers(key.get_state());
+    let key = keycodes::raw_key_to_key(keyval).unwrap_or_else(|| {
+        if let Some(c) = text {
+            if c >= ' ' && c != '\x7f' {
+                Key::Character(c.to_string())
+            } else {
+                Key::Unidentified
+            }
+        } else {
+            Key::Unidentified
+        }
+    });
+    let code = keycodes::hardware_keycode_to_code(hardware_keycode);
+    let location = keycodes::raw_key_to_location(keycode);
+    let is_composing = false;
+    // TODO: set this to "up" for key up events
 
-    keyboard::KeyEvent::new(keycode, repeat, get_modifiers(key.get_state()), text, text)
+    KeyboardEvent {
+        key,
+        code,
+        location,
+        modifiers,
+        repeat,
+        is_composing,
+        state,
+    }
 }
 
 /// Map a hardware keycode to a keyval by performing a lookup in the keymap and finding the
