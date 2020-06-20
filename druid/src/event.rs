@@ -16,7 +16,8 @@
 
 use crate::kurbo::{Rect, Shape, Size, Vec2};
 
-use druid_shell::{Clipboard, KeyEvent, TimerToken};
+use druid_shell::keyboard_types::KeyboardEvent;
+use druid_shell::{Clipboard, TimerToken};
 
 use crate::mouse::MouseEvent;
 use crate::{Command, Target, WidgetId};
@@ -85,18 +86,12 @@ pub enum Event {
     /// Called when the mouse wheel or trackpad is scrolled.
     Wheel(MouseEvent),
     /// Called when a key is pressed.
-    ///
-    /// Note: the intent is for each physical key press to correspond to
-    /// a single `KeyDown` event. This is sometimes different than the
-    /// raw events provided by the platform. In particular, Windows sends
-    /// one or both of WM_KEYDOWN (a raw key code) and WM_CHAR (the
-    /// Unicode value), depending on the actual key.
-    KeyDown(KeyEvent),
+    KeyDown(KeyboardEvent),
     /// Called when a key is released.
     ///
     /// Because of repeat, there may be a number `KeyDown` events before
     /// a corresponding `KeyUp` is sent.
-    KeyUp(KeyEvent),
+    KeyUp(KeyboardEvent),
     /// Called when a paste command is received.
     Paste(Clipboard),
     /// Called when the trackpad is pinched.

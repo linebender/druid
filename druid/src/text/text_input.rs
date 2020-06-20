@@ -15,8 +15,8 @@
 //! Map input to `EditAction`s
 
 use super::Movement;
-use crate::{HotKey, KeyCode, SysMods};
-use druid_shell::{KeyEvent, KeyModifiers};
+use crate::{HotKey, SysMods};
+use druid_shell::keyboard_types::{Code, Key, KeyboardEvent, Modifiers};
 
 // This following enumerations are heavily inspired by xi-editors enumerations found at
 // https://github.com/xi-editor/xi-editor/blob/e2589974fc4050beb33af82481aa71b258358e48/rust/core-lib/src/edit_types.rs
@@ -42,13 +42,13 @@ pub enum EditAction {
 pub struct MouseAction {
     pub row: usize,
     pub column: usize,
-    pub mods: KeyModifiers,
+    pub mods: Modifiers,
 }
 
 pub trait TextInput {
     /// Handle a key event and return an edit action to be executed
     /// for the key event
-    fn handle_event(&self, event: &KeyEvent) -> Option<EditAction>;
+    fn handle_event(&self, event: &KeyboardEvent) -> Option<EditAction>;
 }
 
 /// Handles key events and returns actions that are applicable to
@@ -63,45 +63,46 @@ impl BasicTextInput {
 }
 
 impl TextInput for BasicTextInput {
-    fn handle_event(&self, event: &KeyEvent) -> Option<EditAction> {
+    fn handle_event(&self, event: &KeyboardEvent) -> Option<EditAction> {
         let action = match event {
             // Select all (Ctrl+A || Cmd+A)
+            // TODO: This is based on key="a" but maybe should be code=KeyA.
             k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => EditAction::SelectAll,
             // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
-            k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft)).matches(k_e)
-                || HotKey::new(None, KeyCode::Home).matches(k_e) =>
+            k_e if (HotKey::new(SysMods::Cmd, Code::ArrowLeft)).matches(k_e)
+                || HotKey::new(None, Code::Home).matches(k_e) =>
             {
                 EditAction::Move(Movement::LeftOfLine)
             }
             // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
-            k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowRight)).matches(k_e)
-                || HotKey::new(None, KeyCode::End).matches(k_e) =>
+            k_e if (HotKey::new(SysMods::Cmd, Code::ArrowRight)).matches(k_e)
+                || HotKey::new(None, Code::End).matches(k_e) =>
             {
                 EditAction::Move(Movement::RightOfLine)
             }
             // Select left (Shift+ArrowLeft)
-            k_e if (HotKey::new(SysMods::Shift, KeyCode::ArrowLeft)).matches(k_e) => {
+            k_e if (HotKey::new(SysMods::Shift, Code::ArrowLeft)).matches(k_e) => {
                 EditAction::ModifySelection(Movement::Left)
             }
             // Select right (Shift+ArrowRight)
-            k_e if (HotKey::new(SysMods::Shift, KeyCode::ArrowRight)).matches(k_e) => {
+            k_e if (HotKey::new(SysMods::Shift, Code::ArrowRight)).matches(k_e) => {
                 EditAction::ModifySelection(Movement::Right)
             }
             // Move left (ArrowLeft)
-            k_e if (HotKey::new(None, KeyCode::ArrowLeft)).matches(k_e) => {
+            k_e if (HotKey::new(None, Code::ArrowLeft)).matches(k_e) => {
                 EditAction::Move(Movement::Left)
             }
             // Move right (ArrowRight)
-            k_e if (HotKey::new(None, KeyCode::ArrowRight)).matches(k_e) => {
+            k_e if (HotKey::new(None, Code::ArrowRight)).matches(k_e) => {
                 EditAction::Move(Movement::Right)
             }
             // Backspace
-            k_e if (HotKey::new(None, KeyCode::Backspace)).matches(k_e) => EditAction::Backspace,
+            k_e if (HotKey::new(None, Code::Backspace)).matches(k_e) => EditAction::Backspace,
             // Delete
-            k_e if (HotKey::new(None, KeyCode::Delete)).matches(k_e) => EditAction::Delete,
+            k_e if (HotKey::new(None, Code::Delete)).matches(k_e) => EditAction::Delete,
             // Actual typing
-            k_e if k_e.key_code.is_printable() => {
-                if let Some(chars) = k_e.text() {
+            k_e if key_event_is_printable(k_e) => {
+                if let Key::Character(chars) = &k_e.key {
                     EditAction::Insert(chars.to_owned())
                 } else {
                     return None;
@@ -111,5 +112,25 @@ impl TextInput for BasicTextInput {
         };
 
         Some(action)
+    }
+}
+
+/// Determine whether a keyboard event contains insertable text.
+fn key_event_is_printable(event: &KeyboardEvent) -> bool {
+    if let Key::Character(_) = &event.key {
+        if event.modifiers.contains(Modifiers::CONTROL) || event.modifiers.contains(Modifiers::META)
+        {
+            return false;
+        }
+        // On mac, Alt functions more like AltGr.
+        #[cfg(not(target_os = "macos"))]
+        {
+            if event.modifiers.contains(Modifiers::ALT) {
+                return false;
+            }
+        }
+        true
+    } else {
+        false
     }
 }

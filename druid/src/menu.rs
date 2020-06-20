@@ -107,9 +107,10 @@
 
 use std::num::NonZeroU32;
 
+use crate::keyboard_types::Code;
 use crate::kurbo::Point;
 use crate::shell::{HotKey, KeyCompare, Menu as PlatformMenu, RawMods, SysMods};
-use crate::{commands, Command, Data, Env, KeyCode, LocalizedString, Selector};
+use crate::{commands, Command, Data, Env, LocalizedString, Selector};
 
 /// A platform-agnostic description of an application, window, or context
 /// menu.
@@ -615,7 +616,7 @@ pub mod sys {
                     LocalizedString::new("win-menu-file-exit"),
                     commands::QUIT_APP,
                 )
-                .hotkey(RawMods::Alt, KeyCode::F4)
+                .hotkey(RawMods::Alt, Code::F4)
             }
         }
     }

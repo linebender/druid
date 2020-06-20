@@ -14,8 +14,9 @@
 
 //! The mousey bits
 
+use crate::keyboard_types::Modifiers;
 use crate::kurbo::{Point, Vec2};
-use crate::{KeyModifiers, MouseButton, MouseButtons};
+use crate::{MouseButton, MouseButtons};
 
 /// The state of the mouse for a click, mouse-up, move, or wheel event.
 ///
@@ -43,7 +44,7 @@ pub struct MouseEvent {
     /// and it will not contain the `button` that triggered a mouse-up event.
     pub buttons: MouseButtons,
     /// Keyboard modifiers at the time of the event.
-    pub mods: KeyModifiers,
+    pub mods: Modifiers,
     /// The number of mouse clicks associated with this event. This will always
     /// be `0` for a mouse-up and mouse-move events.
     pub count: u8,
