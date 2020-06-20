@@ -69,7 +69,7 @@ pub(crate) unsafe fn create_render_target(
 pub(crate) unsafe fn create_render_target_dxgi(
     d2d_factory: &D2DFactory,
     swap_chain: *mut IDXGISwapChain1,
-    scale: &Scale,
+    scale: Scale,
 ) -> Result<DxgiSurfaceRenderTarget, Error> {
     let mut buffer: *mut IDXGISurface = null_mut();
     as_result((*swap_chain).GetBuffer(

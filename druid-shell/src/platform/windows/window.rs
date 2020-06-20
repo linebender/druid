@@ -294,7 +294,7 @@ fn is_point_in_client_rect(hwnd: HWND, x: i32, y: i32) -> bool {
 }
 
 impl WndState {
-    fn rebuild_render_target(&mut self, d2d: &D2DFactory, scale: &Scale) {
+    fn rebuild_render_target(&mut self, d2d: &D2DFactory, scale: Scale) {
         unsafe {
             let swap_chain = self.dcomp_state.as_ref().unwrap().swap_chain;
             let rt = paint::create_render_target_dxgi(d2d, swap_chain, scale)
@@ -533,7 +533,7 @@ impl WndProc for MyWndProc {
                         );
                         if SUCCEEDED(res) {
                             s.handler.rebuild_resources();
-                            s.rebuild_render_target(&self.d2d_factory, &self.scale());
+                            s.rebuild_render_target(&self.d2d_factory, self.scale());
                             s.render(
                                 &self.d2d_factory,
                                 &self.dwrite_factory,
@@ -566,7 +566,7 @@ impl WndProc for MyWndProc {
                     let width = LOWORD(lparam as u32) as u32;
                     let height = HIWORD(lparam as u32) as u32;
                     let scale = self.scale();
-                    let area = ScaledArea::from_px((width as f64, height as f64), &scale);
+                    let area = ScaledArea::from_px((width as f64, height as f64), scale);
                     let size_dp = area.size_dp();
                     self.set_area(area);
                     s.handler.size(size_dp);
@@ -601,7 +601,7 @@ impl WndProc for MyWndProc {
                             );
                         }
                         if SUCCEEDED(res) {
-                            s.rebuild_render_target(&self.d2d_factory, &scale);
+                            s.rebuild_render_target(&self.d2d_factory, scale);
                             s.render(
                                 &self.d2d_factory,
                                 &self.dwrite_factory,
@@ -942,7 +942,7 @@ impl WndProc for MyWndProc {
                 if let Ok(s) = self.state.try_borrow() {
                     let s = s.as_ref().unwrap();
                     if let Some(min_size_dp) = s.min_size {
-                        let min_area = ScaledArea::from_dp(min_size_dp, &self.scale());
+                        let min_area = ScaledArea::from_dp(min_size_dp, self.scale());
                         let min_size_px = min_area.size_px();
                         min_max_info.ptMinTrackSize.x = min_size_px.width as i32;
                         min_max_info.ptMinTrackSize.y = min_size_px.height as i32;
@@ -1041,7 +1041,7 @@ impl WindowBuilder {
                 1.0
             };
             let scale = Scale::new(scale_factor, scale_factor);
-            let area = ScaledArea::from_dp(self.size, &scale);
+            let area = ScaledArea::from_dp(self.size, scale);
             let size_px = area.size_px();
 
             let (hmenu, accels, has_menu) = match self.menu {

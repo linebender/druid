@@ -181,7 +181,7 @@ impl WindowBuilder {
             .unwrap_or(SCALE_TARGET_DPI)
             / SCALE_TARGET_DPI;
         let scale = Scale::new(scale_factor, scale_factor);
-        let area = ScaledArea::from_dp(self.size, &scale);
+        let area = ScaledArea::from_dp(self.size, scale);
         let size_px = area.size_px();
 
         window.set_default_size(size_px.width as i32, size_px.height as i32);
@@ -247,7 +247,7 @@ impl WindowBuilder {
 
         // Set the minimum size
         if let Some(min_size_dp) = self.min_size {
-            let min_area = ScaledArea::from_dp(min_size_dp, &scale);
+            let min_area = ScaledArea::from_dp(min_size_dp, scale);
             let min_size_px = min_area.size_px();
             win_state
                 .drawing_area
@@ -279,7 +279,7 @@ impl WindowBuilder {
                 let extents = widget.get_allocation();
                 let size_px = Size::new(extents.width as f64, extents.height as f64);
                 if scale_changed || state.area.get().size_px() != size_px {
-                    let area = ScaledArea::from_px(size_px, &scale);
+                    let area = ScaledArea::from_px(size_px, scale);
                     let size_dp = area.size_dp();
                     state.area.set(area);
                     if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
@@ -748,15 +748,22 @@ impl IdleHandle {
 
 fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
     util::assert_main_thread();
-    let mut handler = state.handler.borrow_mut();
+    if let Ok(mut handler) = state.handler.try_borrow_mut() {
+        let queue: Vec<_> = std::mem::replace(&mut state.idle_queue.lock().unwrap(), Vec::new());
 
-    let queue: Vec<_> = std::mem::replace(&mut state.idle_queue.lock().unwrap(), Vec::new());
-
-    for item in queue {
-        match item {
-            IdleKind::Callback(it) => it.call(handler.as_any()),
-            IdleKind::Token(it) => handler.idle(it),
+        for item in queue {
+            match item {
+                IdleKind::Callback(it) => it.call(handler.as_any()),
+                IdleKind::Token(it) => handler.idle(it),
+            }
         }
+    } else {
+        log::warn!("Delaying idle callbacks because the handler is borrowed.");
+        // Keep trying to reschedule this idle callback, because we haven't had a chance
+        // to empty the idle queue. Returning glib::source::Continue(true) achieves this but
+        // causes 100% CPU usage, apparently because glib likes to call us back very quickly.
+        let state = Arc::clone(state);
+        glib::timeout_add(16, move || run_idle(&state));
     }
     glib::source::Continue(false)
 }

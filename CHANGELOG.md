@@ -24,6 +24,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 - macOS: Timers not firing during modal loop. ([#1028] by [@xStrom])
 - GTK: Directory selection now properly ignores file filters. ([#957] by [@xStrom])
+- GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
 
 ### Visual
 
@@ -39,6 +40,7 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Maintenance
 
 - Standardized web targeting terminology. ([#1013] by [@xStrom])
+- X11: Ported the X11 backend to `x11rb`. ([#1025] by [@jneem])
 
 ### Outside News
 
@@ -328,8 +330,10 @@ Last release without a changelog :(
 [#1011]: https://github.com/xi-editor/druid/pull/1011
 [#1013]: https://github.com/xi-editor/druid/pull/1013
 [#1018]: https://github.com/xi-editor/druid/pull/1018
+[#1025]: https://github.com/xi-editor/druid/pull/1025
 [#1028]: https://github.com/xi-editor/druid/pull/1028
 [#1042]: https://github.com/xi-editor/druid/pull/1042
+[#1043]: https://github.com/xi-editor/druid/pull/1043
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/xi-editor/druid/compare/v0.5.0...v0.6.0

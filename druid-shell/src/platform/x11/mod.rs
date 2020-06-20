@@ -18,11 +18,12 @@
 //     Might be related to the "sleep scheduler" in XWindow::render()?
 // TODO(x11/render_improvements): double-buffering / present strategies / etc?
 
+#[macro_use]
+mod util;
+
 pub mod application;
 pub mod clipboard;
 pub mod error;
 pub mod keycodes;
 pub mod menu;
 pub mod window;
-
-mod util;
