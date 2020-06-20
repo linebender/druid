@@ -26,8 +26,8 @@ use x11rb::connection::Connection;
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region};
 use x11rb::protocol::xproto::{
-    self, AtomEnum, ConnectionExt, CreateGCAux, EventMask, ExposeEvent, Gcontext, Pixmap, PropMode,
-    Rectangle, Visualtype, WindowClass,
+    self, AtomEnum, ConfigureNotifyEvent, ConnectionExt, CreateGCAux, EventMask, ExposeEvent,
+    Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
@@ -194,17 +194,16 @@ impl WindowBuilder {
             .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
         let visual_id = visual_type.visual_id;
 
-        let cw_values = xproto::CreateWindowAux::new()
-            .background_pixel(screen.white_pixel)
-            .event_mask(
-                EventMask::Exposure
-                    | EventMask::StructureNotify
-                    | EventMask::KeyPress
-                    | EventMask::KeyRelease
-                    | EventMask::ButtonPress
-                    | EventMask::ButtonRelease
-                    | EventMask::PointerMotion,
-            );
+        let cw_values = xproto::CreateWindowAux::new().event_mask(
+            EventMask::Exposure
+                | EventMask::StructureNotify
+                | EventMask::KeyPress
+                | EventMask::KeyRelease
+                | EventMask::ButtonPress
+                | EventMask::ButtonRelease
+                | EventMask::PointerMotion
+                | EventMask::StructureNotify,
+        );
 
         // Create the actual window
         let (width, height) = (self.size.width as u16, self.size.height as u16);
@@ -465,7 +464,7 @@ impl Window {
         Ok(borrow!(self.state)?.size)
     }
 
-    fn set_size_and_depth(&self, size: Size, depth: u8) -> Result<(), Error> {
+    fn set_size(&self, size: Size) -> Result<(), Error> {
         // TODO(x11/dpi_scaling): detect DPI and scale size
         let new_size = {
             let mut state = borrow_mut!(self.state)?;
@@ -477,12 +476,11 @@ impl Window {
             }
         };
         if new_size {
-            borrow_mut!(self.buffers)?.set_size_and_depth(
+            borrow_mut!(self.buffers)?.set_size(
                 self.app.connection(),
                 self.id,
                 size.width as u16,
                 size.height as u16,
-                depth,
             );
             borrow_mut!(self.cairo_surface)?
                 .set_size(size.width as i32, size.height as i32)
@@ -493,6 +491,7 @@ impl Window {
                         status
                     )
                 })?;
+            self.enlarge_invalid_rect(size.to_rect())?;
             borrow_mut!(self.handler)?.size(size);
         }
         Ok(())
@@ -514,13 +513,9 @@ impl Window {
         Ok(())
     }
 
-    fn render(&self, invalid_rect: Rect) -> Result<(), Error> {
-        // Figure out the window's current size
-        // TODO: Store the size and depth instead of requiring a round-trip every frame.
-        let reply = self.app.connection().get_geometry(self.id)?.reply()?;
-        let size = Size::new(reply.width as f64, reply.height as f64);
-        self.set_size_and_depth(size, reply.depth)?;
-
+    fn render(&self) -> Result<(), Error> {
+        let size = borrow!(self.state)?.size;
+        let invalid_rect = borrow!(self.state)?.invalid;
         let mut anim = false;
         self.update_cairo_surface()?;
         {
@@ -699,11 +694,11 @@ impl Window {
             (expose.width as f64, expose.height as f64),
         );
 
+        self.enlarge_invalid_rect(rect)?;
         if self.waiting_on_present()? {
-            self.enlarge_invalid_rect(rect)?;
             self.set_needs_present(true)?;
-        } else {
-            self.render(rect)?;
+        } else if expose.count == 0 {
+            self.render()?;
         }
         Ok(())
     }
@@ -833,6 +828,10 @@ impl Window {
         Ok(())
     }
 
+    pub fn handle_configure_notify(&self, event: &ConfigureNotifyEvent) -> Result<(), Error> {
+        self.set_size(Size::new(event.width as f64, event.height as f64))
+    }
+
     pub fn handle_complete_notify(&self, event: &CompleteNotifyEvent) -> Result<(), Error> {
         if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
             // A little sanity check (which isn't worth an early return): we should only have
@@ -850,14 +849,19 @@ impl Window {
         }
 
         if self.needs_present()? {
-            let invalid = borrow!(self.state)?.invalid;
-            self.render(invalid)?;
+            self.render()?;
         }
         Ok(())
     }
 
     pub fn handle_idle_notify(&self, event: &IdleNotifyEvent) -> Result<(), Error> {
-        borrow_mut!(self.buffers)?.idle_pixmaps.push(event.pixmap);
+        let mut buffers = borrow_mut!(self.buffers)?;
+        if buffers.all_pixmaps.contains(&event.pixmap) {
+            buffers.idle_pixmaps.push(event.pixmap);
+        } else {
+            // We must have reallocated the buffers while this pixmap was busy, so free it now.
+            self.app.connection().free_pixmap(event.pixmap)?;
+        }
         Ok(())
     }
 
@@ -914,21 +918,16 @@ impl Buffers {
 
     /// Frees all the X pixmaps that we hold.
     fn free_pixmaps(&mut self, conn: &Rc<XCBConnection>) {
-        for &p in &self.all_pixmaps {
+        // We can't touch pixmaps if the present extension is waiting on them, so only free the
+        // idle ones. We'll free the busy ones when we get notified that they're idle.
+        for &p in &self.idle_pixmaps {
             log_x11!(conn.free_pixmap(p));
         }
         self.all_pixmaps.clear();
         self.idle_pixmaps.clear();
     }
 
-    fn set_size_and_depth(
-        &mut self,
-        conn: &Rc<XCBConnection>,
-        window_id: u32,
-        width: u16,
-        height: u16,
-        depth: u8,
-    ) {
+    fn set_size(&mut self, conn: &Rc<XCBConnection>, window_id: u32, width: u16, height: u16) {
         // How big should the buffer be if we want at least x pixels? Rounding up to the next power
         // of 2 has the potential to waste 75% of our memory (factor 2 in both directions), so
         // instead we round up to the nearest number of the form 2^k or 3 * 2^k.
@@ -942,12 +941,11 @@ impl Buffers {
 
         let width = next_size(width);
         let height = next_size(height);
-        if (width, height, depth) != (self.width, self.height, self.depth) {
+        if (width, height) != (self.width, self.height) {
             let count = self.all_pixmaps.len();
             self.free_pixmaps(conn);
             self.width = width;
             self.height = height;
-            self.depth = depth;
             log_x11!(self.create_pixmaps(conn, window_id, count));
         }
     }

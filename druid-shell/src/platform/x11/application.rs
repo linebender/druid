@@ -308,6 +308,13 @@ impl Application {
                     self.finalize_quit();
                 }
             }
+            Event::ConfigureNotify(ev) => {
+                let w = self
+                    .window(ev.window)
+                    .context("CONFIGURE_NOTIFY - failed to get window")?;
+                w.handle_configure_notify(ev)
+                    .context("CONFIGURE_NOTIFY - failed to handle")?;
+            }
             Event::PresentCompleteNotify(ev) => {
                 let w = self
                     .window(ev.window)
