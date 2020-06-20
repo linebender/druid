@@ -11,7 +11,7 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-druid = { path="../.." }
+druid = { path="../..", features = ["im", "image"] }
 
 wasm-bindgen = "0.2.63"
 console_error_panic_hook = "0.1.6"

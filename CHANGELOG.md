@@ -37,6 +37,8 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Examples
 
+- Specify feature requirements in a standard way. ([#1050] by [@xStrom])
+
 ### Maintenance
 
 - Standardized web targeting terminology. ([#1013] by [@xStrom])
@@ -334,6 +336,7 @@ Last release without a changelog :(
 [#1028]: https://github.com/xi-editor/druid/pull/1028
 [#1042]: https://github.com/xi-editor/druid/pull/1042
 [#1043]: https://github.com/xi-editor/druid/pull/1043
+[#1050]: https://github.com/xi-editor/druid/pull/1050
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/xi-editor/druid/compare/v0.5.0...v0.6.0
