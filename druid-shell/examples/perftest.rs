@@ -19,7 +19,8 @@ use time::Instant;
 use piet_common::kurbo::{Line, Rect, Size};
 use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
-use druid_shell::{Application, KeyEvent, WinHandler, WindowBuilder, WindowHandle};
+use druid_shell::keyboard_types::KeyboardEvent;
+use druid_shell::{Application, WinHandler, WindowBuilder, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
@@ -114,7 +115,7 @@ impl WinHandler for PerfTest {
         }
     }
 
-    fn key_down(&mut self, event: KeyEvent) -> bool {
+    fn key_down(&mut self, event: KeyboardEvent) -> bool {
         println!("keydown: {:?}", event);
         false
     }

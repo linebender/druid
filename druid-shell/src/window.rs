@@ -21,7 +21,7 @@ use crate::application::Application;
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
-use crate::keyboard::KeyEvent;
+use crate::keyboard_types::KeyboardEvent;
 use crate::kurbo::{Point, Rect, Size};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
@@ -342,14 +342,14 @@ pub trait WinHandler {
     ///
     /// Return `true` if the event is handled.
     #[allow(unused_variables)]
-    fn key_down(&mut self, event: KeyEvent) -> bool {
+    fn key_down(&mut self, event: KeyboardEvent) -> bool {
         false
     }
 
     /// Called when a key is released. This corresponds to the WM_KEYUP message
     /// on Windows, or keyUp(withEvent:) on macOS.
     #[allow(unused_variables)]
-    fn key_up(&mut self, event: KeyEvent) {}
+    fn key_up(&mut self, event: KeyboardEvent) {}
 
     /// Called on a mouse wheel event.
     ///

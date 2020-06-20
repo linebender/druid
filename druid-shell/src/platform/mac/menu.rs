@@ -22,8 +22,7 @@ use objc::{msg_send, sel, sel_impl};
 use super::util::make_nsstring;
 use crate::common_util::strip_access_key;
 use crate::hotkey::{HotKey, KeyCompare};
-use crate::keyboard::KeyModifiers;
-use crate::keycodes::KeyCode;
+use crate::keyboard_types::{Code, Modifiers};
 
 pub struct Menu {
     pub menu: id,
@@ -116,33 +115,33 @@ impl HotKey {
             KeyCompare::Text(t) => t,
 
             // from NSText.h
-            KeyCompare::Code(KeyCode::Return) => "\u{0003}",
-            KeyCompare::Code(KeyCode::Backspace) => "\u{0008}",
-            KeyCompare::Code(KeyCode::Delete) => "\u{007f}",
+            KeyCompare::Code(Code::Enter) => "\u{0003}",
+            KeyCompare::Code(Code::Backspace) => "\u{0008}",
+            KeyCompare::Code(Code::Delete) => "\u{007f}",
             // from NSEvent.h
-            KeyCompare::Code(KeyCode::Insert) => "\u{F727}",
-            KeyCompare::Code(KeyCode::Home) => "\u{F729}",
-            KeyCompare::Code(KeyCode::End) => "\u{F72B}",
-            KeyCompare::Code(KeyCode::PageUp) => "\u{F72C}",
-            KeyCompare::Code(KeyCode::PageDown) => "\u{F72D}",
-            KeyCompare::Code(KeyCode::PrintScreen) => "\u{F72E}",
-            KeyCompare::Code(KeyCode::ScrollLock) => "\u{F72F}",
-            KeyCompare::Code(KeyCode::ArrowUp) => "\u{F700}",
-            KeyCompare::Code(KeyCode::ArrowDown) => "\u{F701}",
-            KeyCompare::Code(KeyCode::ArrowLeft) => "\u{F702}",
-            KeyCompare::Code(KeyCode::ArrowRight) => "\u{F703}",
-            KeyCompare::Code(KeyCode::F1) => "\u{F704}",
-            KeyCompare::Code(KeyCode::F2) => "\u{F705}",
-            KeyCompare::Code(KeyCode::F3) => "\u{F706}",
-            KeyCompare::Code(KeyCode::F4) => "\u{F707}",
-            KeyCompare::Code(KeyCode::F5) => "\u{F708}",
-            KeyCompare::Code(KeyCode::F6) => "\u{F709}",
-            KeyCompare::Code(KeyCode::F7) => "\u{F70A}",
-            KeyCompare::Code(KeyCode::F8) => "\u{F70B}",
-            KeyCompare::Code(KeyCode::F9) => "\u{F70C}",
-            KeyCompare::Code(KeyCode::F10) => "\u{F70D}",
-            //KeyCompare::Code(KeyCode::F11)            => "\u{F70E}",
-            //KeyCompare::Code(KeyCode::F12)            => "\u{F70F}",
+            KeyCompare::Code(Code::Insert) => "\u{F727}",
+            KeyCompare::Code(Code::Home) => "\u{F729}",
+            KeyCompare::Code(Code::End) => "\u{F72B}",
+            KeyCompare::Code(Code::PageUp) => "\u{F72C}",
+            KeyCompare::Code(Code::PageDown) => "\u{F72D}",
+            KeyCompare::Code(Code::PrintScreen) => "\u{F72E}",
+            KeyCompare::Code(Code::ScrollLock) => "\u{F72F}",
+            KeyCompare::Code(Code::ArrowUp) => "\u{F700}",
+            KeyCompare::Code(Code::ArrowDown) => "\u{F701}",
+            KeyCompare::Code(Code::ArrowLeft) => "\u{F702}",
+            KeyCompare::Code(Code::ArrowRight) => "\u{F703}",
+            KeyCompare::Code(Code::F1) => "\u{F704}",
+            KeyCompare::Code(Code::F2) => "\u{F705}",
+            KeyCompare::Code(Code::F3) => "\u{F706}",
+            KeyCompare::Code(Code::F4) => "\u{F707}",
+            KeyCompare::Code(Code::F5) => "\u{F708}",
+            KeyCompare::Code(Code::F6) => "\u{F709}",
+            KeyCompare::Code(Code::F7) => "\u{F70A}",
+            KeyCompare::Code(Code::F8) => "\u{F70B}",
+            KeyCompare::Code(Code::F9) => "\u{F70C}",
+            KeyCompare::Code(Code::F10) => "\u{F70D}",
+            KeyCompare::Code(Code::F11) => "\u{F70E}",
+            KeyCompare::Code(Code::F12) => "\u{F70F}",
             //KeyCompare::Code(KeyCode::F13)            => "\u{F710}",
             //KeyCompare::Code(KeyCode::F14)            => "\u{F711}",
             //KeyCompare::Code(KeyCode::F15)            => "\u{F712}",
@@ -159,18 +158,18 @@ impl HotKey {
     }
 
     fn key_modifier_mask(&self) -> NSEventModifierFlags {
-        let mods: KeyModifiers = self.mods.into();
+        let mods: Modifiers = self.mods.into();
         let mut flags = NSEventModifierFlags::empty();
-        if mods.shift {
+        if mods.contains(Modifiers::SHIFT) {
             flags.insert(NSEventModifierFlags::NSShiftKeyMask);
         }
-        if mods.meta {
+        if mods.contains(Modifiers::META) {
             flags.insert(NSEventModifierFlags::NSCommandKeyMask);
         }
-        if mods.alt {
+        if mods.contains(Modifiers::ALT) {
             flags.insert(NSEventModifierFlags::NSAlternateKeyMask);
         }
-        if mods.ctrl {
+        if mods.contains(Modifiers::CONTROL) {
             flags.insert(NSEventModifierFlags::NSControlKeyMask);
         }
         flags

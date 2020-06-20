@@ -16,7 +16,7 @@
 
 use crate::kurbo::{Point, Vec2};
 
-use crate::keyboard::KeyModifiers;
+use crate::keyboard_types::Modifiers;
 
 /// Information about the mouse event.
 ///
@@ -33,7 +33,7 @@ pub struct MouseEvent {
     /// and it will not contain the `button` that triggered a mouse-up event.
     pub buttons: MouseButtons,
     /// Keyboard modifiers at the time of the event.
-    pub mods: KeyModifiers,
+    pub mods: Modifiers,
     /// The number of mouse clicks associated with this event. This will always
     /// be `0` for a mouse-up and mouse-move events.
     pub count: u8,

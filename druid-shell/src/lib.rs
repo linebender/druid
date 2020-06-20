@@ -33,8 +33,6 @@ mod common_util;
 mod dialog;
 mod error;
 mod hotkey;
-mod keyboard;
-mod keycodes;
 mod menu;
 mod mouse;
 mod platform;
@@ -47,11 +45,12 @@ pub use common_util::Counter;
 pub use dialog::{FileDialogOptions, FileInfo, FileSpec};
 pub use error::Error;
 pub use hotkey::{HotKey, KeyCompare, RawMods, SysMods};
-pub use keyboard::{KeyEvent, KeyModifiers};
-pub use keycodes::KeyCode;
 pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 pub use scale::{Scalable, Scale, ScaledArea};
 pub use window::{
     IdleHandle, IdleToken, Text, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
+
+// Discussion question: export types to top-level? Just KeyboardEvent?
+pub use keyboard_types;

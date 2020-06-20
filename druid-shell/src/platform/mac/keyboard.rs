@@ -267,7 +267,7 @@ fn code_to_key(code: Code) -> Option<Key> {
 fn is_valid_key(s: &str) -> bool {
     match s.chars().next() {
         None => false,
-        Some(c) => c >= ' ' && c != '\x7f' && !('\u{e000}'..'\u{f900}').contains(&c)
+        Some(c) => c >= ' ' && c != '\x7f' && !('\u{e000}'..'\u{f900}').contains(&c),
     }
 }
 
@@ -281,6 +281,7 @@ fn is_modifier_code(code: Code) -> bool {
         | Code::ControlRight
         | Code::MetaLeft
         | Code::MetaRight
+        | Code::CapsLock
         | Code::Help => true,
         _ => false,
     }
@@ -313,7 +314,6 @@ impl KeyboardState {
                         // The OS apparently only sends the flagsChanged event
                         // on key down for CapsLock. Mozilla always translates
                         // this to keydown, while Chrome toggles.
-                        Code::CapsLock => KeyState::Down,
                         _ if is_modifier_code(code) => {
                             if any_down == 0 {
                                 KeyState::Up
@@ -374,8 +374,7 @@ const MODIFIER_MAP: &[(NSEventModifierFlags, Modifiers)] = &[
     ),
 ];
 
-pub fn make_modifiers(raw: NSEventModifierFlags) -> Modifiers {
-    println!("modifiers = {:x}", raw.bits());
+pub(crate) fn make_modifiers(raw: NSEventModifierFlags) -> Modifiers {
     let mut modifiers = Modifiers::empty();
     for &(flags, mods) in MODIFIER_MAP {
         if raw.contains(flags) {

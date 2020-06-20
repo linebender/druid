@@ -22,7 +22,6 @@ pub mod clipboard;
 pub mod dialog;
 pub mod error;
 mod keyboard;
-pub mod keycodes;
 pub mod menu;
 pub mod util;
 pub mod window;
