@@ -116,6 +116,11 @@ impl Application {
 
     // Check if the Present extension is supported, returning its opcode if it is.
     fn query_present_opcode(conn: &Rc<XCBConnection>) -> Result<Option<u8>, Error> {
+        // When checking for X11 errors synchronously, there are two places where the error could
+        // happen. An error on the request means the connection is broken. There's no need for
+        // extra error context here, because the fact that the connection broke has nothing to do
+        // with what we're trying to do. An error on the reply means there was something wrong with
+        // the request, and so we add context. This convention is used throughout the x11 backend.
         let query = conn
             .query_extension(b"Present")?
             .reply()
@@ -194,7 +199,8 @@ impl Application {
             // Window properties mask
             &CreateWindowAux::new().event_mask(EventMask::StructureNotify),
         )?
-        .check()?;
+        .check()
+        .context("create input-only window")?;
 
         Ok(id)
     }
@@ -237,7 +243,7 @@ impl Application {
             //       to know if the event must be ignored.
             //       Otherwise there will be a "failed to get window" error.
             //
-            //       CIRCULATE_NOTIFY, CONFIGURE_NOTIFY, GRAVITY_NOTIFY
+            //       CIRCULATE_NOTIFY, GRAVITY_NOTIFY
             //       MAP_NOTIFY, REPARENT_NOTIFY, UNMAP_NOTIFY
             Event::Expose(ev) => {
                 let w = self
@@ -339,17 +345,12 @@ impl Application {
                     .context("IDLE_NOTIFY - failed to handle")?;
             }
             // In XCB, errors are reported asynchronously by default, by sending them to the event
-            // loop. You can opt-out of this by using ..._checked variants of a function, and then
-            // getting the error synchronously. We use this in window initialization, but otherwise
-            // we take the async route.
+            // loop. You can also request a synchronous error for a given call; we use this in
+            // window initialization, but otherwise we take the async route.
             Event::Error(e) => {
-                if let x11rb::protocol::Error::Request(req) = e {
-                    if self.present_opcode == Some(req.major_opcode) {
-                        for window in borrow!(self.state)?.windows.values() {
-                            window.disable_present()?;
-                        }
-                    }
-                }
+                // TODO: if an error is caused by the present extension, disable it and fall back
+                // to copying pixels. This is blocked on
+                // https://github.com/psychon/x11rb/issues/503
                 return Err(x11rb::errors::ReplyError::from(e.clone()).into());
             }
             _ => {}

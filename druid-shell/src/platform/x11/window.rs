@@ -132,10 +132,9 @@ impl WindowBuilder {
     /// Registers and returns all the atoms that the window will need.
     fn atoms(&self, window_id: u32) -> Result<WindowAtoms, Error> {
         let conn = self.app.connection();
-        let atoms = WindowAtoms::new(conn.as_ref())
-            .context("failed to intern X11 atoms")?
+        let atoms = WindowAtoms::new(conn.as_ref())?
             .reply()
-            .context("failed to get back X11 atoms")?;
+            .context("get X11 atoms")?;
 
         // Replace the window's WM_PROTOCOLS with the following.
         let protocols = [atoms.WM_DELETE_WINDOW];
@@ -146,7 +145,8 @@ impl WindowBuilder {
             AtomEnum::ATOM,
             &protocols,
         )?
-        .check()?;
+        .check()
+        .context("set WM_PROTOCOLS")?;
 
         Ok(atoms)
     }
@@ -233,12 +233,15 @@ impl WindowBuilder {
             // Window properties mask
             &cw_values,
         )?
-        .check()?;
+        .check()
+        .context("create window")?;
 
         // Allocate a graphics context (currently used only for copying pixels when present is
         // unavailable).
         let gc = conn.generate_id()?;
-        conn.create_gc(gc, id, &CreateGCAux::new())?.check()?;
+        conn.create_gc(gc, id, &CreateGCAux::new())?
+            .check()
+            .context("create graphics context")?;
 
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
         let atoms = self.atoms(id)?;
@@ -296,7 +299,7 @@ impl WindowBuilder {
         if self.app.present_opcode().is_some() {
             let conn = self.app.connection();
 
-            // We use the COMPLETE_NOTIFY events to schedule the next frame, and the IDLE_NOTIFY
+            // We use the CompleteNotify events to schedule the next frame, and the IdleNotify
             // events to manage our buffers.
             let id = conn.generate_id()?;
             use x11rb::protocol::present::EventMask::*;
@@ -334,7 +337,8 @@ pub(crate) struct Window {
     state: RefCell<WindowState>,
 
     /// When this is `Some(_)`, we use the X11 Present extension to present windows. This syncs all
-    /// presentation to vblank and it appears to prevent tearing as long as compositing is enabled.
+    /// presentation to vblank and it appears to prevent tearing (subject to various caveats
+    /// regarding broken video drivers).
     ///
     /// The Present extension works roughly like this: we submit a pixmap for presentation. It will
     /// get drawn at the next vblank, and some time shortly after that we'll get a notification
@@ -857,13 +861,13 @@ impl Window {
             // Check whether we missed presenting on any frames.
             if let Some(last_msc) = present.last_msc {
                 if last_msc.wrapping_add(1) != event.msc {
-                    log::warn!(
+                    log::info!(
                         "missed a present: msc went from {} to {}",
                         last_msc,
                         event.msc
                     );
                     if let Some(last_ust) = present.last_ust {
-                        log::warn!("ust went from {} to {}", last_ust, event.ust);
+                        log::info!("ust went from {} to {}", last_ust, event.ust);
                     }
                 }
             }
@@ -909,15 +913,6 @@ impl Window {
             .as_ref()
             .map(|p| p.needs_present)
             .unwrap_or(false))
-    }
-
-    /// Frees all resources used for the Present extension, and falls back to just using EXPOSE.
-    pub fn disable_present(&self) -> Result<(), Error> {
-        if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
-            present.destroy_x_resources(self.app.connection());
-        }
-        *borrow_mut!(self.present_data)? = None;
-        Ok(())
     }
 }
 
@@ -1003,13 +998,6 @@ impl Buffers {
 }
 
 impl PresentData {
-    /// Frees all the X resources that we hold. Note the potential for memory leaks, because this
-    /// is not called automatically on drop. (Maybe we should add an `Rc<Connection>` to
-    /// `PresentData` so that we can do it on drop?)
-    fn destroy_x_resources(&mut self, conn: &Rc<XCBConnection>) {
-        log_x11!(conn.xfixes_destroy_region(self.region));
-    }
-
     // We have already rendered into the active pixmap buffer. Present it to the
     // X server, and then rotate the buffers.
     fn present(
@@ -1026,8 +1014,8 @@ impl PresentData {
             height: rect.height() as u16,
         };
 
-        log_x11!(conn.xfixes_set_region(self.region, &[x_rect]));
-        log_x11!(conn.present_pixmap(
+        conn.xfixes_set_region(self.region, &[x_rect])?;
+        conn.present_pixmap(
             window_id,
             pixmap,
             self.serial,
@@ -1055,7 +1043,7 @@ impl PresentData {
             0,
             // notifies
             &[],
-        ));
+        )?;
         self.waiting_on = Some(self.serial);
         self.serial += 1;
         Ok(())
