@@ -91,13 +91,20 @@ impl Application {
             quitting: false,
             windows: HashMap::new(),
         }));
-        let present_opcode = match Application::query_present_opcode(&connection) {
-            Ok(p) => p,
-            Err(e) => {
-                log::info!("failed to find Present extension: {}", e);
-                None
+
+        let present_opcode = if std::env::var_os("DRUID_SHELL_DISABLE_X11_PRESENT").is_some() {
+            // Allow disabling Present with an environment variable.
+            None
+        } else {
+            match Application::query_present_opcode(&connection) {
+                Ok(p) => p,
+                Err(e) => {
+                    log::info!("failed to find Present extension: {}", e);
+                    None
+                }
             }
         };
+
         Ok(Application {
             connection,
             screen_num: screen_num as i32,

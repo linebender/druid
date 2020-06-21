@@ -579,6 +579,8 @@ impl Window {
             // We aren't using the present extension, so fall back to sleeping for scheduling
             // redraws. Sleeping is a terrible way to schedule redraws, but hopefully we don't
             // have to fall back to this very often.
+            // TODO: once we have an idle handler, we should use that. Sleeping causes lots of
+            // problems when windows are dragged to resize.
             if anim && self.refresh_rate.is_some() {
                 let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
                 std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
