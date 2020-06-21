@@ -313,6 +313,8 @@ impl WindowBuilder {
                 region: region_id,
                 waiting_on: None,
                 needs_present: false,
+                last_msc: None,
+                last_ust: None,
             })
         } else {
             Err(anyhow!("no present opcode"))
@@ -438,6 +440,12 @@ struct PresentData {
     waiting_on: Option<u32>,
     /// We need to render another frame as soon as the current one is done presenting.
     needs_present: bool,
+    /// The last MSC that was completed. This can be used to diagnose latency problems, because MSC
+    /// is a frame counter: we should be presenting on every frame, and storing the last completed
+    /// MSC lets us know if we missed one.
+    last_msc: Option<u64>,
+    /// The time at which the last frame was completed.
+    last_ust: Option<u64>,
 }
 
 impl Window {
@@ -844,6 +852,22 @@ impl Window {
                 );
             }
 
+            // Check whether we missed presenting on any frames.
+            if let Some(last_msc) = present.last_msc {
+                if last_msc.wrapping_add(1) != event.msc {
+                    log::warn!(
+                        "missed a present: msc went from {} to {}",
+                        last_msc,
+                        event.msc
+                    );
+                    if let Some(last_ust) = present.last_ust {
+                        log::warn!("ust went from {} to {}", last_ust, event.ust);
+                    }
+                }
+            }
+
+            present.last_msc = Some(event.msc);
+            present.last_ust = Some(event.ust);
             present.waiting_on = None;
         }
 
