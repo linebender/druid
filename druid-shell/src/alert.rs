@@ -237,6 +237,10 @@ impl AlertButton {
 
 impl Default for AlertOptions {
     /// Create a default set of alert options.
+    ///
+    /// The default options contain only [`AlertButton::OK`] as the primary button.
+    ///
+    /// [`AlertButton::OK`]: struct.AlertButton.html#associatedconstant.OK
     fn default() -> AlertOptions {
         AlertOptions {
             app_modal: false,
@@ -253,6 +257,10 @@ impl Default for AlertOptions {
 
 impl AlertOptions {
     /// Create a new set of alert options.
+    ///
+    /// The default options contain only [`AlertButton::OK`] as the primary button.
+    ///
+    /// [`AlertButton::OK`]: struct.AlertButton.html#associatedconstant.OK
     pub fn new() -> Self {
         AlertOptions::default()
     }
