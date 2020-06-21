@@ -23,8 +23,8 @@ use druid::{AlertButton, AlertOptions, AlertToken, AppLauncher, WidgetExt, Windo
 use druid::{Application, Data, Lens, TimerToken};
 
 // If you know the alert button label at compile time, you can make const AlertButtons.
-const ALERT_BUTTON_TO_LEFT: AlertButton = AlertButton::new("Increase left");
-const ALERT_BUTTON_TO_RIGHT: AlertButton = AlertButton::new("Increase right");
+const ALERT_BUTTON_TO_LEFT: AlertButton = AlertButton::constant("Increase left");
+const ALERT_BUTTON_TO_RIGHT: AlertButton = AlertButton::constant("Increase right");
 
 #[derive(Debug, Clone, Data, Lens)]
 struct State {
@@ -86,10 +86,10 @@ fn ui_builder() -> impl Widget<State> {
                 "This is an example of how the alert system works, \
                 but not an example of a good user experience.",
             )
-            .primary(AlertButton::new("Get me out of here"))
-            .alternative(AlertButton::new("Refrigerate lemons"))
-            .alternative(AlertButton::new("Dip fat-free cheese in fat"))
-            .cancel(AlertButton::new("Translated cancel"));
+            .primary(AlertButton::constant("Get me out of here"))
+            .alternative(AlertButton::constant("Refrigerate lemons"))
+            .alternative(AlertButton::constant("Dip fat-free cheese in fat"))
+            .cancel(AlertButton::constant("Translated cancel"));
         let opts = opts_modal(opts, data);
         ctx.alert(opts);
     });
@@ -166,8 +166,8 @@ impl<W: Widget<State>> Controller<State, W> for ManageButtonController {
 impl BitsButtonController {
     pub fn new(what: &str) -> BitsButtonController {
         BitsButtonController {
-            button_set: AlertButton::dynamic(format!("Set {}", what)),
-            button_clear: AlertButton::dynamic(format!("Clear {}", what)),
+            button_set: AlertButton::new(format!("Set {}", what)),
+            button_clear: AlertButton::new(format!("Clear {}", what)),
             counter: 0,
             timer_token: TimerToken::INVALID,
             tokens: HashMap::new(),

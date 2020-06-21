@@ -125,7 +125,7 @@ pub struct AlertOptions {
 /// # macOS
 ///
 /// On macOS the information and warning icons are the same.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum AlertIcon {
     /// The alert dialog is providing important time sensitive information.
     Information,
@@ -198,11 +198,11 @@ impl AlertResponse {
 
 impl AlertButton {
     /// A primary button with the English label **OK**.
-    pub const OK: AlertButton = AlertButton::new("OK");
+    pub const OK: AlertButton = AlertButton::constant("OK");
     /// A cancel button with the English label **Cancel**.
-    pub const CANCEL: AlertButton = AlertButton::new("Cancel");
+    pub const CANCEL: AlertButton = AlertButton::constant("Cancel");
 
-    /// Create a new `const` button with the specified `label`.
+    /// Create a new button with the specified `label`.
     ///
     /// You should give a short but descriptive label like **Send message** that lets
     /// the user know what will happen when they click the button.
@@ -210,16 +210,16 @@ impl AlertButton {
     /// See [`AlertButton`] for more information.
     ///
     /// [`AlertButton`]: struct.AlertButton.html
-    pub const fn new(label: &'static str) -> AlertButton {
+    pub fn new(label: impl Into<String>) -> AlertButton {
         AlertButton {
-            label: Cow::Borrowed(label),
+            label: Cow::Owned(label.into()),
         }
     }
 
-    /// Create a new button with the specified `label` at runtime.
+    /// Create a new `const` button with the specified `label`.
     ///
-    /// This is the runtime version of [`new`] that allows you to use
-    /// runtime generated labels, e.g. dynamic personalization or translation.
+    /// This is the `const` version of [`new`] that allows you to create
+    /// `const` buttons at compile time.
     ///
     /// You should give a short but descriptive label like **Send message** that lets
     /// the user know what will happen when they click the button.
@@ -228,9 +228,9 @@ impl AlertButton {
     ///
     /// [`new`]: #method.new
     /// [`AlertButton`]: struct.AlertButton.html
-    pub fn dynamic(label: impl Into<String>) -> AlertButton {
+    pub const fn constant(label: &'static str) -> AlertButton {
         AlertButton {
-            label: Cow::Owned(label.into()),
+            label: Cow::Borrowed(label),
         }
     }
 }
