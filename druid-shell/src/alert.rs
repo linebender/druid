@@ -80,6 +80,26 @@ pub struct AlertResponse {
 /// If the modality scopes don't overlap, i.e. when multiple alerts are originating
 /// from different windows and they are all window scoped, all the alerts can be
 /// interacted with and they won't block eachother.
+///
+/// # More information
+///
+/// If you wish to dive deeper into platform specifics and learn more then you can
+/// check out Apple guidelines for
+/// [alerts](https://developer.apple.com/design/human-interface-guidelines/macos/windows-and-views/alerts/)
+/// and
+/// [dialogs](https://developer.apple.com/design/human-interface-guidelines/macos/windows-and-views/dialogs/);
+/// Microsoft guidelines for
+/// [dialogs](https://docs.microsoft.com/en-us/windows/win32/uxguide/win-dialog-box),
+/// [confirmations](https://docs.microsoft.com/en-us/windows/win32/uxguide/mess-confirm),
+/// [warnings](https://docs.microsoft.com/en-us/windows/win32/uxguide/mess-warn), and
+/// [errors](https://docs.microsoft.com/en-us/windows/win32/uxguide/mess-error);
+/// Gnome guidelines for
+/// [dialogs](https://developer.gnome.org/hig/stable/dialogs.html.en)
+/// and
+/// [buttons](https://developer.gnome.org/hig/stable/buttons.html.en).
+///
+/// Keep in mind that unless you are writing platform specific code you should
+/// only follow guidelines that all the platforms agree on.
 #[derive(Debug, Clone)]
 pub struct AlertOptions {
     /// Whether the alert is app-modal.

@@ -24,12 +24,18 @@ use cocoa::base::id;
 use cocoa::foundation::{NSInteger, NSRect};
 use objc::{class, msg_send, sel, sel_impl};
 
+#[link(name = "AppKit", kind = "framework")]
+extern "C" {
+    pub static NSRunLoopCommonModes: id;
+}
+
+// Values can be found in AppKit NSTrackingArea.h
 bitflags! {
     pub struct NSTrackingAreaOptions: i32 {
         const MouseEnteredAndExited = 1;
         const MouseMoved = 1 << 1;
         const CursorUpdate = 1 << 2;
-        // What's 1 << 3?
+        // 1 << 3 is not used
         const ActiveWhenFirstResponder = 1 << 4;
         const ActiveInKeyWindow = 1 << 5;
         const ActiveInActiveApp = 1 << 6;
@@ -103,12 +109,16 @@ pub enum NSAlertStyle {
     Critical,
 }
 
+// Values can be found in AppKit NSApplication.h
 pub const NSModalResponseContinue: NSInteger = -1002;
 pub const NSModalResponseAbort: NSInteger = -1001;
 pub const NSModalResponseStop: NSInteger = -1000;
+
+// Values can be found in AppKit NSWindow.h
 pub const NSModalResponseCancel: NSInteger = 0;
 pub const NSModalResponseOK: NSInteger = 1;
 
+// Values can be found in AppKit NSAlert.h
 pub const NSAlertFirstButtonReturn: NSInteger = 1000;
 pub const NSAlertSecondButtonReturn: NSInteger = 1001;
 pub const NSAlertThirdButtonReturn: NSInteger = 1002;

@@ -93,28 +93,31 @@ pub(crate) unsafe fn show(view: &mut Object, request: AlertRequest) {
     }
 }
 
-unsafe fn handle_result(view: &mut Object, request: &AlertRequest, tag: NSInteger) {
+fn handle_result(view: &mut Object, request: &AlertRequest, tag: NSInteger) {
     let button = match tag {
         BUTTON_ID_PRIMARY => Some(request.options.primary.clone()),
         BUTTON_ID_CANCEL | NSModalResponseAbort | NSModalResponseStop | NSModalResponseCancel => {
             None
         }
+        id if is_alternative_id(id, request) => {
+            Some(request.options.alternatives[(id - BUTTON_ID_ALT_START) as usize].clone())
+        }
         id => {
-            if id >= BUTTON_ID_ALT_START
-                && id < BUTTON_ID_ALT_START + request.options.alternatives.len() as NSInteger
-            {
-                Some(request.options.alternatives[(id - BUTTON_ID_ALT_START) as usize].clone())
-            } else {
-                log::error!("Unexpected alert dialog result {}", id);
-                None
-            }
+            log::error!("Unexpected alert dialog result {}", id);
+            None
         }
     };
-    let view_state = {
+    let view_state = unsafe {
         let view_state: *mut c_void = *view.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
     (*view_state)
         .handler
         .alert_response(AlertResponse::new(request.token, button));
+}
+
+/// Returns `true` if the provided button `id` identifies an alternative button.
+fn is_alternative_id(id: NSInteger, request: &AlertRequest) -> bool {
+    id >= BUTTON_ID_ALT_START
+        && id < BUTTON_ID_ALT_START + request.options.alternatives.len() as NSInteger
 }
