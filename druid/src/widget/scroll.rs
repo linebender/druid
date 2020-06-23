@@ -425,13 +425,24 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         match event {
             LifeCycle::AnimFrame(interval) => {
                 // Guard by the timer id being invalid, otherwise the scroll bars would fade
-                // immediately if some other widgeet started animating.
+                // immediately if some other widget started animating.
                 if self.scrollbars.timer_id == TimerToken::INVALID {
                     // Animate scroll bars opacity
                     let diff = 2.0 * (*interval as f64) * 1e-9;
                     self.scrollbars.opacity -= diff;
                     if self.scrollbars.opacity > 0.0 {
                         ctx.request_anim_frame();
+                    }
+                    let viewport = ctx.size().to_rect();
+                    if viewport.width() < self.child_size.width {
+                        ctx.request_paint_rect(
+                            self.calc_horizontal_bar_bounds(viewport, env) - self.scroll_offset,
+                        );
+                    }
+                    if viewport.height() < self.child_size.height {
+                        ctx.request_paint_rect(
+                            self.calc_vertical_bar_bounds(viewport, env) - self.scroll_offset,
+                        );
                     }
                 }
             }
@@ -466,7 +477,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             ctx.clip(viewport);
             ctx.transform(Affine::translate(-self.scroll_offset));
 
-            let visible = ctx.region().to_rect() + self.scroll_offset;
+            let mut visible = ctx.region().clone();
+            visible += self.scroll_offset;
             ctx.with_child_ctx(visible, |ctx| self.child.paint_raw(ctx, data, env));
 
             self.draw_bars(ctx, viewport, env);

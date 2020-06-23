@@ -23,9 +23,10 @@ use std::{
 use crate::core::{CommandQueue, FocusChange, WidgetState};
 use crate::piet::Piet;
 use crate::piet::RenderContext;
+use crate::shell::Region;
 use crate::{
     commands, Affine, Command, ContextMenu, Cursor, Insets, MenuDesc, Point, Rect, SingleUse, Size,
-    Target, Text, TimerToken, Vec2, WidgetId, WindowDesc, WindowHandle, WindowId,
+    Target, Text, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -128,15 +129,6 @@ pub struct PaintCtx<'a, 'b, 'c> {
     /// The approximate depth in the tree at the time of painting.
     pub(crate) depth: u32,
 }
-
-/// A region of a widget, generally used to describe what needs to be drawn.
-///
-/// This is currently just a single `Rect`, but may become more complicated in the future.  Although
-/// this is just a wrapper around `Rect`, it has some different conventions. Mainly, "signed"
-/// invalidation regions don't make sense. Therefore, a rectangle with non-positive width or height
-/// is considered "empty", and all empty rectangles are treated the same.
-#[derive(Debug, Clone)]
-pub struct Region(Rect);
 
 // methods on everyone
 impl_context_method!(
@@ -269,7 +261,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// [`request_paint_rect`]: #method.request_paint_rect
     /// [`paint_rect`]: struct.WidgetPod.html#method.paint_rect
     pub fn request_paint(&mut self) {
-        self.request_paint_rect(
+        self.widget_state.invalid.set_rect(
             self.widget_state.paint_rect() - self.widget_state.layout_rect().origin().to_vec2(),
         );
     }
@@ -299,7 +291,6 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// Request an animation frame.
     pub fn request_anim_frame(&mut self) {
         self.widget_state.request_anim = true;
-        self.request_paint();
     }
 
     /// Request a timer event.
@@ -540,9 +531,7 @@ impl PaintCtx<'_, '_, '_> {
         self.depth
     }
 
-    /// Returns the currently visible [`Region`].
-    ///
-    /// [`Region`]: struct.Region.html
+    /// Returns the region that needs to be repainted.
     #[inline]
     pub fn region(&self) -> &Region {
         &self.region
@@ -658,68 +647,6 @@ impl<'a> ContextState<'a> {
         let timer_token = self.window.request_timer(deadline);
         widget_state.add_timer(timer_token);
         timer_token
-    }
-}
-
-impl Region {
-    /// An empty region.
-    pub const EMPTY: Region = Region(Rect::ZERO);
-
-    /// Returns the smallest `Rect` that encloses the entire region.
-    pub fn to_rect(&self) -> Rect {
-        self.0
-    }
-
-    /// Returns `true` if `self` intersects with `other`.
-    #[inline]
-    pub fn intersects(&self, other: Rect) -> bool {
-        self.0.intersect(other).area() > 0.
-    }
-
-    /// Returns `true` if this region is empty.
-    pub fn is_empty(&self) -> bool {
-        self.0.width() <= 0.0 || self.0.height() <= 0.0
-    }
-
-    /// Adds a new `Rect` to this region.
-    ///
-    /// This differs from `Rect::union` in its treatment of empty rectangles: an empty rectangle has
-    /// no effect on the union.
-    pub(crate) fn add_rect(&mut self, rect: Rect) {
-        if self.is_empty() {
-            self.0 = rect;
-        } else if rect.width() > 0.0 && rect.height() > 0.0 {
-            self.0 = self.0.union(rect);
-        }
-    }
-
-    /// Modifies this region by including everything in the other region.
-    pub(crate) fn merge_with(&mut self, other: Region) {
-        self.add_rect(other.0);
-    }
-
-    /// Modifies this region by intersecting it with the given rectangle.
-    pub(crate) fn intersect_with(&mut self, rect: Rect) {
-        self.0 = self.0.intersect(rect);
-    }
-}
-
-impl std::ops::AddAssign<Vec2> for Region {
-    fn add_assign(&mut self, offset: Vec2) {
-        self.0 = self.0 + offset;
-    }
-}
-
-impl std::ops::SubAssign<Vec2> for Region {
-    fn sub_assign(&mut self, offset: Vec2) {
-        self.0 = self.0 - offset;
-    }
-}
-
-impl From<Rect> for Region {
-    fn from(src: Rect) -> Region {
-        // We maintain the invariant that the width/height of the rect are non-negative.
-        Region(src.abs())
     }
 }
 
