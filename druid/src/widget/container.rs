@@ -30,7 +30,7 @@ struct BorderStyle {
 pub struct Container<T> {
     background: Option<BackgroundBrush<T>>,
     border: Option<BorderStyle>,
-    corner_radius: f64,
+    corner_radius: KeyOrValue<f64>,
 
     inner: WidgetPod<T, Box<dyn Widget<T>>>,
 }
@@ -41,7 +41,7 @@ impl<T: Data> Container<T> {
         Self {
             background: None,
             border: None,
-            corner_radius: 0.0,
+            corner_radius: (0.0).into(),
             inner: WidgetPod::new(inner).boxed(),
         }
     }
@@ -81,8 +81,8 @@ impl<T: Data> Container<T> {
     }
 
     /// Round off corners of this container by setting a corner radius
-    pub fn rounded(mut self, radius: f64) -> Self {
-        self.corner_radius = radius;
+    pub fn rounded(mut self, radius: impl Into<KeyOrValue<f64>>) -> Self {
+        self.corner_radius = radius.into();
         self
     }
 
@@ -138,8 +138,10 @@ impl<T: Data> Widget<T> for Container<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        let corner_radius = self.corner_radius.resolve(env);
+
         if let Some(background) = self.background.as_mut() {
-            let panel = ctx.size().to_rounded_rect(self.corner_radius);
+            let panel = ctx.size().to_rounded_rect(corner_radius);
 
             ctx.with_save(|ctx| {
                 ctx.clip(panel);
@@ -153,7 +155,7 @@ impl<T: Data> Widget<T> for Container<T> {
                 .size()
                 .to_rect()
                 .inset(border_width / -2.0)
-                .to_rounded_rect(self.corner_radius);
+                .to_rounded_rect(corner_radius);
             ctx.stroke(border_rect, &border.color.resolve(env), border_width);
         };
 
