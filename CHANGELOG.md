@@ -13,6 +13,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 - `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
+- `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([1054] by [@binomial0])
 
 ### Deprecated
 
@@ -233,6 +234,7 @@ Last release without a changelog :(
 [@jrmuizel]: https://github.com/jrmuizel
 [@scholtzan]: https://github.com/scholtzan
 [@covercash2]: https://github.com/covercash2
+[@binomial0]: https://github.com/binomial0
 
 [#599]: https://github.com/xi-editor/druid/pull/599
 [#611]: https://github.com/xi-editor/druid/pull/611
@@ -337,6 +339,7 @@ Last release without a changelog :(
 [#1042]: https://github.com/xi-editor/druid/pull/1042
 [#1043]: https://github.com/xi-editor/druid/pull/1043
 [#1050]: https://github.com/xi-editor/druid/pull/1050
+[#1054]: https://github.com/xi-editor/druid/pull/1054
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/xi-editor/druid/compare/v0.5.0...v0.6.0
