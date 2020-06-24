@@ -14,12 +14,13 @@
 
 //! Key event handling.
 
-use keyboard_types::{Code, Key, KeyState, KeyboardEvent, Location, Modifiers};
-
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::mem;
 use std::ops::RangeInclusive;
+
+use keyboard_types::{Code, Key, KeyState, KeyboardEvent, Location, Modifiers};
 
 use winapi::shared::minwindef::{HKL, INT, LPARAM, UINT, WPARAM};
 use winapi::shared::ntdef::SHORT;
@@ -698,33 +699,37 @@ impl KeyboardState {
                         0,
                         self.hkl,
                     );
-                    if ret > 0 {
-                        let utf16_slice = &uni_chars[..ret as usize];
-                        if let Ok(strval) = String::from_utf16(utf16_slice) {
-                            self.key_vals.insert((vk, shift_state), strval);
+                    match ret.cmp(&0) {
+                        Ordering::Greater => {
+                            let utf16_slice = &uni_chars[..ret as usize];
+                            if let Ok(strval) = String::from_utf16(utf16_slice) {
+                                self.key_vals.insert((vk, shift_state), strval);
+                            }
+                            // If the AltGr version of the key has a different string than
+                            // the base, then the layout has AltGr. Note that Mozilla also
+                            // checks dead keys for change.
+                            if has_altgr
+                                && !self.has_altgr
+                                && self.key_vals.get(&(vk, shift_state))
+                                    != self.key_vals.get(&(vk, shift_state & !SHIFT_STATE_ALTGR))
+                            {
+                                self.has_altgr = true;
+                            }
                         }
-                        // If the AltGr version of the key has a different string than
-                        // the base, then the layout has AltGr. Note that Mozilla also
-                        // checks dead keys for change.
-                        if has_altgr
-                            && !self.has_altgr
-                            && self.key_vals.get(&(vk, shift_state))
-                                != self.key_vals.get(&(vk, shift_state & !SHIFT_STATE_ALTGR))
-                        {
-                            self.has_altgr = true;
+                        Ordering::Less => {
+                            // It's a dead key, press it again to reset the state.
+                            self.dead_keys.insert((vk, shift_state));
+                            let _ = ToUnicodeEx(
+                                vk as UINT,
+                                0,
+                                key_state.as_ptr(),
+                                uni_chars.as_mut_ptr(),
+                                uni_chars.len() as _,
+                                0,
+                                self.hkl,
+                            );
                         }
-                    } else if ret < 0 {
-                        // It's a dead key, press it again to reset the state.
-                        self.dead_keys.insert((vk, shift_state));
-                        let _ = ToUnicodeEx(
-                            vk as UINT,
-                            0,
-                            key_state.as_ptr(),
-                            uni_chars.as_mut_ptr(),
-                            uni_chars.len() as _,
-                            0,
-                            self.hkl,
-                        );
+                        _ => (),
                     }
                 }
             }

@@ -13,6 +13,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 - `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
+- Major rework of keyboard event handling ([#1049] by [@raphlinus])
 
 ### Deprecated
 
@@ -233,6 +234,7 @@ Last release without a changelog :(
 [@jrmuizel]: https://github.com/jrmuizel
 [@scholtzan]: https://github.com/scholtzan
 [@covercash2]: https://github.com/covercash2
+[@raphlinus]: https://github.com/raphlinus
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -336,6 +338,7 @@ Last release without a changelog :(
 [#1028]: https://github.com/linebender/druid/pull/1028
 [#1042]: https://github.com/linebender/druid/pull/1042
 [#1043]: https://github.com/linebender/druid/pull/1043
+[#1049]: https://github.com/linebender/druid/pull/1049
 [#1050]: https://github.com/linebender/druid/pull/1050
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master

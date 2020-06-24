@@ -135,6 +135,11 @@ impl Menu {
     }
 }
 
+/// Convert a hotkey to an accelerator.
+///
+/// Note that this conversion is dependent on the keyboard map.
+/// Therefore, when the keyboard map changes (WM_INPUTLANGCHANGE),
+/// we should be rebuilding the accelerator map.
 fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
     let mut virt_key = FVIRTKEY;
     let key_mods: Modifiers = key.mods.into();
@@ -148,7 +153,6 @@ fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
         virt_key |= FSHIFT;
     }
 
-    // TODO: probably want to use Unicode pathway (non-VIRTKEY) when no modifiers are given.
     let raw_key = if let Some(vk_code) = super::keyboard::key_to_vk(&key.key) {
         let mod_code = vk_code >> 8;
         if mod_code & 0x1 != 0 {
