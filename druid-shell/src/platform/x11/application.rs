@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ impl Application {
         // libxcb, you should call XSetEventQueueOwner(dpy, XCBOwnsEventQueue). Otherwise, libX11
         // might randomly eat your events / move them to its own event queue.
         //
-        // https://github.com/xi-editor/druid/pull/1025#discussion_r442777892
+        // https://github.com/linebender/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
         let connection = Rc::new(conn);
         let window_id = Application::create_event_window(&connection, screen_num as i32)?;
