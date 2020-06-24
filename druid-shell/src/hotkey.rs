@@ -18,7 +18,7 @@ use std::borrow::Borrow;
 
 use log::warn;
 
-use crate::keyboard_types::{Key, KeyboardEvent, Modifiers};
+use crate::keyboard_types::{Code, Key, KeyState, KeyboardEvent, Location, Modifiers};
 
 // TODO: fix docstring
 
@@ -32,28 +32,28 @@ use crate::keyboard_types::{Key, KeyboardEvent, Modifiers};
 /// [`SysMods`] matches the Command key on macOS and Ctrl elsewhere:
 ///
 /// ```
-/// use druid_shell::{HotKey, RawMods, SysMods};
+/// use druid_shell::{key_event_for_test, HotKey, RawMods, SysMods};
 /// use druid_shell::keyboard_types::Key;
 ///
 /// let hotkey = HotKey::new(SysMods::Cmd, "a");
 ///
 /// #[cfg(target_os = "macos")]
-/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Meta, "a", Key::Character("a".to_string()))));
+/// assert!(hotkey.matches(key_event_for_test(RawMods::Meta, "a")));
 ///
 /// #[cfg(target_os = "windows")]
-/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "a", Key::Character("a".to_string()))));
+/// assert!(hotkey.matches(key_event_for_test(RawMods::Ctrl, "a")));
 /// ```
 ///
 /// `None` matches only the key without modifiers:
 ///
 /// ```
-/// use druid_shell::{HotKey, RawMods, SysMods};
+/// use druid_shell::{key_event_for_test, HotKey, RawMods, SysMods};
 /// use druid_shell::keyboard_types::Key;
 ///
 /// let hotkey = HotKey::new(None, Key::ArrowLeft);
 ///
-/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::None, "", Key::ArrowLeft)));
-/// assert!(!hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "", Key::ArrowLeft)));
+/// assert!(hotkey.matches(key_event_for_test(RawMods::None, Key::ArrowLeft)));
+/// assert!(!hotkey.matches(key_event_for_test(RawMods::Ctrl, Key::ArrowLeft)));
 /// ```
 ///
 /// [`SysMods`]: enum.SysMods.html
@@ -63,6 +63,12 @@ pub struct HotKey {
     pub(crate) key: Key,
 }
 
+/// A convenience trait for creating Key objects.
+///
+/// This trait is implemented by [`Key`] itself and also strings, which are
+/// converted into the `Character` variant.
+///
+/// [`Key`]: keyboard_types::Key
 pub trait IntoKey {
     fn into_key(self) -> Key;
 }
@@ -80,7 +86,7 @@ impl HotKey {
     ///
     /// # Examples
     /// ```
-    /// use druid_shell::{HotKey, KeyEvent, KeyCode, RawMods, SysMods};
+    /// use druid_shell::{HotKey, RawMods, SysMods};
     /// use druid_shell::keyboard_types::Key;
     ///
     /// let select_all = HotKey::new(SysMods::Cmd, "a");
@@ -268,5 +274,21 @@ impl IntoKey for Key {
 impl<'a> IntoKey for &'a str {
     fn into_key(self) -> Key {
         Key::Character(self.into())
+    }
+}
+
+#[allow(unused)]
+/// Create a key event for testing purposes.
+pub fn key_event_for_test(mods: impl Into<Modifiers>, key: impl IntoKey) -> KeyboardEvent {
+    let modifiers = mods.into();
+    let key = key.into_key();
+    KeyboardEvent {
+        key,
+        code: Code::Unidentified,
+        location: Location::Standard,
+        state: KeyState::Down,
+        modifiers,
+        is_composing: false,
+        repeat: false,
     }
 }

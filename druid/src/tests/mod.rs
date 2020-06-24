@@ -78,7 +78,7 @@ fn propogate_hot() {
             pos,
             window_pos: pos,
             buttons: MouseButtons::default(),
-            mods: KeyModifiers::default(),
+            mods: keyboard_types::Modifiers::default(),
             count: 0,
             focus: false,
             button: MouseButton::None,
