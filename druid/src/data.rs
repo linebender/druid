@@ -474,3 +474,32 @@ mod test {
         assert!(!one.same(&two));
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    #[allow(dead_code)]
+
+    #[test]
+    fn test_derive() {
+        use crate::data::Data;
+
+        trait X {}
+
+        #[derive(Clone, Data)]
+        struct A<T: X + Data> {
+            a: T,
+        }
+
+        #[derive(Clone, Data)]
+        struct B<T> where T: X {
+            b: T,
+        }
+
+        #[derive(Clone, Data)]
+        enum C<T: X + 'static> {
+            V1(T),
+            V2,
+        }
+    }
+}
