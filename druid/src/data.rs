@@ -479,7 +479,6 @@ mod test {
 mod tests {
 
     #[allow(dead_code)]
-
     #[test]
     fn test_derive() {
         use crate::data::Data;
@@ -492,7 +491,10 @@ mod tests {
         }
 
         #[derive(Clone, Data)]
-        struct B<T> where T: X {
+        struct B<T>
+        where
+            T: X,
+        {
             b: T,
         }
 
