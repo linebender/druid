@@ -14,7 +14,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
 
 [features]
-x11 = ["xcb", "cairo-sys-rs"]
+x11 = ["x11rb", "cairo-sys-rs"]
 
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
@@ -40,7 +40,7 @@ gtk = { version = "0.8.1", optional = true }
 glib = { version = "0.9.3", optional = true }
 glib-sys = { version = "0.9.1", optional = true }
 gtk-sys = { version = "0.9.2", optional = true }
-xcb = { version = "0.9.0", features = ["thread", "xlib_xcb", "randr"], optional = true }
+x11rb = { version = "0.6.0", features = ["allow-unsafe-code", "randr"], optional = true }
 
 [target.'cfg(target_os="windows")'.dependencies]
 wio = "0.2.2"
@@ -58,7 +58,7 @@ core-graphics = "0.19.0"
 foreign-types = "0.3.2"
 bitflags = "1.2.1"
 
-# TODO(x11/dependencies): only use feature "xcb" if using XCB
+# TODO(x11/dependencies): only use feature "xcb" if using X11
 [target.'cfg(target_os="linux")'.dependencies]
 cairo-rs = { version = "0.8.1", default_features = false, features = ["xcb"] }
 gio = "0.8.1"

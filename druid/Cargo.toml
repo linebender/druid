@@ -50,3 +50,15 @@ console_log = "0.2.0"
 float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
 tempfile = "3.1.0"
 piet-common = { version = "0.1.1", features = ["png"] }
+
+[[example]]
+name = "image"
+required-features = ["image"]
+
+[[example]]
+name = "list"
+required-features = ["im"]
+
+[[example]]
+name = "svg"
+required-features = ["svg"]

@@ -32,13 +32,17 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Docs
 
+- Added documentation for the `Image` widget. ([#1018] by [@covercash2])
 - Fixed a link in `druid::command` documentation. ([#1008] by [@covercash2])
 
 ### Examples
 
+- Specify feature requirements in a standard way. ([#1050] by [@xStrom])
+
 ### Maintenance
 
 - Standardized web targeting terminology. ([#1013] by [@xStrom])
+- X11: Ported the X11 backend to `x11rb`. ([#1025] by [@jneem])
 
 ### Outside News
 
@@ -327,9 +331,12 @@ Last release without a changelog :(
 [#1008]: https://github.com/xi-editor/druid/pull/1008
 [#1011]: https://github.com/xi-editor/druid/pull/1011
 [#1013]: https://github.com/xi-editor/druid/pull/1013
+[#1018]: https://github.com/xi-editor/druid/pull/1018
+[#1025]: https://github.com/xi-editor/druid/pull/1025
 [#1028]: https://github.com/xi-editor/druid/pull/1028
 [#1042]: https://github.com/xi-editor/druid/pull/1042
 [#1043]: https://github.com/xi-editor/druid/pull/1043
+[#1050]: https://github.com/xi-editor/druid/pull/1050
 
 [Unreleased]: https://github.com/xi-editor/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/xi-editor/druid/compare/v0.5.0...v0.6.0

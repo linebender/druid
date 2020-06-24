@@ -122,6 +122,7 @@
 
 #![deny(intra_doc_link_resolution_failure, unsafe_code)]
 #![allow(clippy::new_ret_no_self, clippy::needless_doctest_main)]
+#![deny(clippy::trivially_copy_pass_by_ref)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 // Allows to use macros from druid_derive in this crate
