@@ -24,7 +24,7 @@ use winapi::um::winuser::*;
 
 use super::util::ToWide;
 use crate::hotkey::{HotKey, KeyCompare};
-use crate::KeyModifiers;
+use crate::keyboard_types::Modifiers;
 
 /// A menu object, which can be either a top-level menubar or a
 /// submenu.
@@ -137,21 +137,23 @@ impl Menu {
 
 fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
     let mut virt_key = FVIRTKEY;
-    let key_mods: KeyModifiers = key.mods.into();
-    if key_mods.ctrl {
+    let key_mods: Modifiers = key.mods.into();
+    if key_mods.contains(Modifiers::CONTROL) {
         virt_key |= FCONTROL;
     }
-    if key_mods.alt {
+    if key_mods.contains(Modifiers::ALT) {
         virt_key |= FALT;
     }
-    if key_mods.shift {
+    if key_mods.contains(Modifiers::SHIFT) {
         virt_key |= FSHIFT;
     }
 
     let raw_key = match key.key {
-        KeyCompare::Code(code) => code.to_i32()?,
+        // TODO: figure this out.
+        KeyCompare::Code(code) => None?,
         KeyCompare::Text(text) => {
-            // See https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscana
+            // See https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscanw
+            // TODO: probably want to use Unicode pathway non-virtkey) when no modifiers are given.
             let wchar = match text.encode_utf16().next() {
                 Some(it) => it,
                 None => {
