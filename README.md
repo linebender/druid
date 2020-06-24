@@ -17,7 +17,7 @@ font editor.
 
 We have been doing periodic releases of druid on crates.io, but it is under
 active development and its API might change. All changes are documented
-in [the changelog](https://github.com/xi-editor/druid/blob/master/CHANGELOG.md).
+in [the changelog](https://github.com/linebender/druid/blob/master/CHANGELOG.md).
 
 For an overview of some key concepts, see the (work in progress) [druid book].
 
@@ -59,9 +59,9 @@ druid's existing functionality and widgets.
 
 ## Screenshots
 
-[![calc.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/0.6.0/calc.png)](./druid/examples/calc.rs)
-[![flex.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/0.6.0/flex.png)](./druid/examples/flex.rs)
-[![custom_widget.rs example](https://raw.githubusercontent.com/xi-editor/druid/screenshots/images/0.6.0/custom_widget.png)](./druid/examples/custom_widget.rs)
+[![calc.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/calc.png)](./druid/examples/calc.rs)
+[![flex.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/flex.png)](./druid/examples/flex.rs)
+[![custom_widget.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/custom_widget.png)](./druid/examples/custom_widget.rs)
 
 ## Goals
 
@@ -265,7 +265,7 @@ Since druid is currently in fast-evolving state, you might prefer to drink from
 the firehose:
 
 ```toml
-druid = { git = "https://github.com/xi-editor/druid.git" }
+druid = { git = "https://github.com/linebender/druid.git" }
 ```
 
 ### Platform notes
@@ -276,7 +276,7 @@ On Linux, druid requires gtk+3; see [gtk-rs dependencies] for installation
 instructions.
 
 Alternatively, there is an X11 backend available, although it is currently
-[missing quite a few features](https://github.com/xi-editor/druid/issues/475).
+[missing quite a few features](https://github.com/linebender/druid/issues/475).
 You can try it out with `--features=x11`.
 
 ## Contributions
@@ -313,7 +313,7 @@ active and friendly community.
 [Widget trait]: https://docs.rs/druid/0.6.0/druid/trait.Widget.html
 [Data trait]: https://docs.rs/druid/0.6.0/druid/trait.Data.html
 [Lens datatype]: https://docs.rs/druid/0.6.0/druid/trait.Lens.html
-[druid book]: https://xi-editor.io/druid/intro.html
+[druid book]: https://linebender.org/druid/
 [Iced]: https://github.com/hecrj/iced
 [Conrod]: https://github.com/PistonDevelopers/conrod
 [Relm]: https://github.com/antoyo/relm

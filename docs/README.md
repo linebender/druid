@@ -26,4 +26,4 @@ To build the documentation from the project root run;
 `mdbook build docs`
 This will build the documentation to the `docs\book` folder. This folder can then be copied onto the
 `gh-pages` branch. This will tell github to publish the documentation. For the druid repository it
-will be hosted on [https://xi-editor.github.com/druid]
+will be hosted on [https://linebender.org/druid/]
