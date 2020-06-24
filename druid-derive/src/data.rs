@@ -36,7 +36,6 @@ fn derive_struct(
     input: &syn::DeriveInput,
     s: &DataStruct,
 ) -> Result<proc_macro2::TokenStream, syn::Error> {
-    
     let ident = &input.ident;
     let impl_generics = generics_bounds(&input.generics);
     let (_, ty_generics, where_clause) = &input.generics.split_for_impl();
@@ -81,7 +80,6 @@ fn derive_enum(
     input: &syn::DeriveInput,
     s: &DataEnum,
 ) -> Result<proc_macro2::TokenStream, syn::Error> {
-    
     let ident = &input.ident;
     let impl_generics = generics_bounds(&input.generics);
     let (_, ty_generics, where_clause) = &input.generics.split_for_impl();
@@ -188,7 +186,7 @@ fn generics_bounds(generics: &syn::Generics) -> proc_macro2::TokenStream {
                 } else {
                     quote_spanned!(ty.span()=> #ident : #bounds + ::druid::Data)
                 }
-            },
+            }
             Lifetime(lf) => quote!(#lf),
             Const(cst) => quote!(#cst),
         }
