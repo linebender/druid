@@ -16,7 +16,7 @@
 
 use super::Movement;
 use crate::{HotKey, SysMods};
-use druid_shell::keyboard_types::{Code, Key, KeyboardEvent, Modifiers};
+use druid_shell::keyboard_types::{Key, KeyboardEvent, Modifiers};
 
 // This following enumerations are heavily inspired by xi-editors enumerations found at
 // https://github.com/xi-editor/xi-editor/blob/e2589974fc4050beb33af82481aa71b258358e48/rust/core-lib/src/edit_types.rs
@@ -66,40 +66,39 @@ impl TextInput for BasicTextInput {
     fn handle_event(&self, event: &KeyboardEvent) -> Option<EditAction> {
         let action = match event {
             // Select all (Ctrl+A || Cmd+A)
-            // TODO: This is based on key="a" but maybe should be code=KeyA.
             k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => EditAction::SelectAll,
             // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
-            k_e if (HotKey::new(SysMods::Cmd, Code::ArrowLeft)).matches(k_e)
-                || HotKey::new(None, Code::Home).matches(k_e) =>
+            k_e if (HotKey::new(SysMods::Cmd, Key::ArrowLeft)).matches(k_e)
+                || HotKey::new(None, Key::Home).matches(k_e) =>
             {
                 EditAction::Move(Movement::LeftOfLine)
             }
             // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
-            k_e if (HotKey::new(SysMods::Cmd, Code::ArrowRight)).matches(k_e)
-                || HotKey::new(None, Code::End).matches(k_e) =>
+            k_e if (HotKey::new(SysMods::Cmd, Key::ArrowRight)).matches(k_e)
+                || HotKey::new(None, Key::End).matches(k_e) =>
             {
                 EditAction::Move(Movement::RightOfLine)
             }
             // Select left (Shift+ArrowLeft)
-            k_e if (HotKey::new(SysMods::Shift, Code::ArrowLeft)).matches(k_e) => {
+            k_e if (HotKey::new(SysMods::Shift, Key::ArrowLeft)).matches(k_e) => {
                 EditAction::ModifySelection(Movement::Left)
             }
             // Select right (Shift+ArrowRight)
-            k_e if (HotKey::new(SysMods::Shift, Code::ArrowRight)).matches(k_e) => {
+            k_e if (HotKey::new(SysMods::Shift, Key::ArrowRight)).matches(k_e) => {
                 EditAction::ModifySelection(Movement::Right)
             }
             // Move left (ArrowLeft)
-            k_e if (HotKey::new(None, Code::ArrowLeft)).matches(k_e) => {
+            k_e if (HotKey::new(None, Key::ArrowLeft)).matches(k_e) => {
                 EditAction::Move(Movement::Left)
             }
             // Move right (ArrowRight)
-            k_e if (HotKey::new(None, Code::ArrowRight)).matches(k_e) => {
+            k_e if (HotKey::new(None, Key::ArrowRight)).matches(k_e) => {
                 EditAction::Move(Movement::Right)
             }
             // Backspace
-            k_e if (HotKey::new(None, Code::Backspace)).matches(k_e) => EditAction::Backspace,
+            k_e if (HotKey::new(None, Key::Backspace)).matches(k_e) => EditAction::Backspace,
             // Delete
-            k_e if (HotKey::new(None, Code::Delete)).matches(k_e) => EditAction::Delete,
+            k_e if (HotKey::new(None, Key::Delete)).matches(k_e) => EditAction::Delete,
             // Actual typing
             k_e if key_event_is_printable(k_e) => {
                 if let Key::Character(chars) = &k_e.key {

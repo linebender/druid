@@ -18,7 +18,7 @@ use std::borrow::Borrow;
 
 use log::warn;
 
-use crate::keyboard_types::{Code, Key, KeyboardEvent, Modifiers};
+use crate::keyboard_types::{Key, KeyboardEvent, Modifiers};
 
 // TODO: fix docstring
 
@@ -32,40 +32,39 @@ use crate::keyboard_types::{Code, Key, KeyboardEvent, Modifiers};
 /// [`SysMods`] matches the Command key on macOS and Ctrl elsewhere:
 ///
 /// ```
-/// use druid_shell::{HotKey, KeyEvent, KeyCode, RawMods, SysMods};
+/// use druid_shell::{HotKey, RawMods, SysMods};
+/// use druid_shell::keyboard_types::Key;
 ///
 /// let hotkey = HotKey::new(SysMods::Cmd, "a");
 ///
 /// #[cfg(target_os = "macos")]
-/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Meta, "a", KeyCode::KeyA)));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Meta, "a", Key::Character("a".to_string()))));
 ///
 /// #[cfg(target_os = "windows")]
-/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "a", KeyCode::KeyA)));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "a", Key::Character("a".to_string()))));
 /// ```
 ///
 /// `None` matches only the key without modifiers:
 ///
 /// ```
-/// use druid_shell::{HotKey, KeyEvent, KeyCode, RawMods, SysMods};
+/// use druid_shell::{HotKey, RawMods, SysMods};
+/// use druid_shell::keyboard_types::Key;
 ///
-/// let hotkey = HotKey::new(None, KeyCode::ArrowLeft);
+/// let hotkey = HotKey::new(None, Key::ArrowLeft);
 ///
-/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::None, "", KeyCode::ArrowLeft)));
-/// assert!(!hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "", KeyCode::ArrowLeft)));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::None, "", Key::ArrowLeft)));
+/// assert!(!hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "", Key::ArrowLeft)));
 /// ```
 ///
 /// [`SysMods`]: enum.SysMods.html
 #[derive(Debug, Clone)]
 pub struct HotKey {
     pub(crate) mods: RawMods,
-    pub(crate) key: KeyCompare,
+    pub(crate) key: Key,
 }
 
-/// Something that can be compared with a keyboard key.
-#[derive(Debug, Clone, PartialEq)]
-pub enum KeyCompare {
-    Code(Code),
-    Text(&'static str),
+pub trait IntoKey {
+    fn into_key(self) -> Key;
 }
 
 impl HotKey {
@@ -76,38 +75,33 @@ impl HotKey {
     /// 'Command' key on macOS with the 'Ctrl' key on other platforms.
     ///
     /// The second argument describes the non-modifier key. This can be either
-    /// a `&'static str` or a [`KeyCode`]. If it is a `&str`, it will be compared
-    /// against the [`unmodified text`] for a given key event; if it is a [`KeyCode`]
-    /// it will be compared against the event's key code.
-    ///
-    /// In general, [`KeyCode`] should be preferred for non-printing keys, like
-    /// the arrows or backspace.
+    /// a `&str` or a [`Key`]; the former is merely a convenient
+    /// shorthand for `Key::Character()`.
     ///
     /// # Examples
     /// ```
     /// use druid_shell::{HotKey, KeyEvent, KeyCode, RawMods, SysMods};
+    /// use druid_shell::keyboard_types::Key;
     ///
     /// let select_all = HotKey::new(SysMods::Cmd, "a");
-    /// let esc = HotKey::new(None, KeyCode::Escape);
+    /// let esc = HotKey::new(None, Key::Escape);
     /// let macos_fullscreen = HotKey::new(RawMods::CtrlMeta, "f");
     /// ```
     ///
-    /// [`KeyCode`]: enum.KeyCode.html
+    /// [`Key`]: keyboard_types::Key
     /// [`SysMods`]: enum.SysMods.html
     /// [`RawMods`]: enum.RawMods.html
-    /// [`unmodified text`]: struct.KeyEvent.html#method.unmod_text
-    pub fn new(mods: impl Into<Option<RawMods>>, key: impl Into<KeyCompare>) -> Self {
+    pub fn new(mods: impl Into<Option<RawMods>>, key: impl IntoKey) -> Self {
         HotKey {
             mods: mods.into().unwrap_or(RawMods::None),
-            key: key.into(),
+            key: key.into_key(),
         }
         .warn_if_needed()
     }
 
-    //TODO: figure out if we need to be normalizing case or something? This requires
-    //correctly documenting the expected behaviour of `unmod_text`.
+    //TODO: figure out if we need to be normalizing case or something?
     fn warn_if_needed(self) -> Self {
-        if let KeyCompare::Text(s) = self.key {
+        if let Key::Character(s) = &self.key {
             let km: Modifiers = self.mods.into();
             if km.contains(Modifiers::SHIFT) && s.chars().any(|c| c.is_uppercase()) {
                 warn!(
@@ -122,21 +116,10 @@ impl HotKey {
 
     /// Returns `true` if this [`KeyboardEvent`] matches this `HotKey`.
     ///
-    /// TODO: fix link
-    /// [`KeyboardEvent`]: struct.KeyEvent.html
+    /// [`KeyboardEvent`]: keyboard_types::KeyEvent
     pub fn matches(&self, event: impl Borrow<KeyboardEvent>) -> bool {
         let event = event.borrow();
-        self.mods == event.modifiers
-            && match self.key {
-                KeyCompare::Code(code) => code == event.code,
-                KeyCompare::Text(text) => {
-                    if let Key::Character(c) = &event.key {
-                        c == text
-                    } else {
-                        false
-                    }
-                }
-            }
+        self.mods == event.modifiers && self.key == event.key
     }
 }
 
@@ -276,14 +259,14 @@ impl From<SysMods> for RawMods {
     }
 }
 
-impl From<Code> for KeyCompare {
-    fn from(src: Code) -> KeyCompare {
-        KeyCompare::Code(src)
+impl IntoKey for Key {
+    fn into_key(self) -> Key {
+        self
     }
 }
 
-impl From<&'static str> for KeyCompare {
-    fn from(src: &'static str) -> KeyCompare {
-        KeyCompare::Text(src)
+impl<'a> IntoKey for &'a str {
+    fn into_key(self) -> Key {
+        Key::Character(self.into())
     }
 }

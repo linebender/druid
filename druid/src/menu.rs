@@ -107,9 +107,9 @@
 
 use std::num::NonZeroU32;
 
-use crate::keyboard_types::Code;
+use crate::keyboard_types::Key;
 use crate::kurbo::Point;
-use crate::shell::{HotKey, KeyCompare, Menu as PlatformMenu, RawMods, SysMods};
+use crate::shell::{HotKey, IntoKey, Menu as PlatformMenu, RawMods, SysMods};
 use crate::{commands, Command, Data, Env, LocalizedString, Selector};
 
 /// A platform-agnostic description of an application, window, or context
@@ -196,7 +196,7 @@ impl<T> MenuItem<T> {
     /// # // hide the type param in or example code by letting it be inferred here
     /// # MenuDesc::<u32>::empty().append(item);
     /// ```
-    pub fn hotkey(mut self, mods: impl Into<Option<RawMods>>, key: impl Into<KeyCompare>) -> Self {
+    pub fn hotkey(mut self, mods: impl Into<Option<RawMods>>, key: impl IntoKey) -> Self {
         self.hotkey = Some(HotKey::new(mods, key));
         self
     }
@@ -616,7 +616,7 @@ pub mod sys {
                     LocalizedString::new("win-menu-file-exit"),
                     commands::QUIT_APP,
                 )
-                .hotkey(RawMods::Alt, Code::F4)
+                .hotkey(RawMods::Alt, Key::F4)
             }
         }
     }

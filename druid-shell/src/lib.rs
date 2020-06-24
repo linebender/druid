@@ -44,7 +44,7 @@ pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
 pub use common_util::Counter;
 pub use dialog::{FileDialogOptions, FileInfo, FileSpec};
 pub use error::Error;
-pub use hotkey::{HotKey, KeyCompare, RawMods, SysMods};
+pub use hotkey::{HotKey, IntoKey, RawMods, SysMods};
 pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 pub use scale::{Scalable, Scale, ScaledArea};

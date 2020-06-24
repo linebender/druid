@@ -23,7 +23,7 @@ use winapi::shared::windef::*;
 use winapi::um::winuser::*;
 
 use super::util::ToWide;
-use crate::hotkey::{HotKey, KeyCompare};
+use crate::hotkey::HotKey;
 use crate::keyboard_types::Modifiers;
 
 /// A menu object, which can be either a top-level menubar or a
@@ -148,32 +148,22 @@ fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
         virt_key |= FSHIFT;
     }
 
-    let raw_key = match key.key {
-        // TODO: figure this out.
-        KeyCompare::Code(code) => None?,
-        KeyCompare::Text(text) => {
-            // See https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscanw
-            // TODO: probably want to use Unicode pathway non-virtkey) when no modifiers are given.
-            let wchar = match text.encode_utf16().next() {
-                Some(it) => it,
-                None => {
-                    log::error!("The text of Hotkey is empty");
-                    return None;
-                }
-            };
-            let code = unsafe { VkKeyScanW(wchar) };
-            let ctrl_code = code >> 8;
-            if ctrl_code & 0x1 != 0 {
-                virt_key |= FSHIFT;
-            }
-            if ctrl_code & 0x02 != 0 {
-                virt_key |= FCONTROL;
-            }
-            if ctrl_code & 0x04 != 0 {
-                virt_key |= FALT;
-            }
-            (code & 0x00ff) as i32
+    // TODO: probably want to use Unicode pathway (non-VIRTKEY) when no modifiers are given.
+    let raw_key = if let Some(vk_code) = super::keyboard::key_to_vk(&key.key) {
+        let mod_code = vk_code >> 8;
+        if mod_code & 0x1 != 0 {
+            virt_key |= FSHIFT;
         }
+        if mod_code & 0x02 != 0 {
+            virt_key |= FCONTROL;
+        }
+        if mod_code & 0x04 != 0 {
+            virt_key |= FALT;
+        }
+        vk_code & 0x00ff
+    } else {
+        log::error!("Failed to convert key {:?} into virtual key code", key.key);
+        return None;
     };
 
     Some(ACCEL {

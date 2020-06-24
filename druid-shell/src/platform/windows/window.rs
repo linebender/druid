@@ -604,19 +604,22 @@ impl WndProc for MyWndProc {
                         if let Some(event) =
                             s.keyboard_state.process_message(hwnd, msg, wparam, lparam)
                         {
+                            // If the window doesn't have a menu, then we need to suppress ALT/F10.
+                            // Otherwise we will stop getting mouse events for no gain.
+                            // When we do have a menu, those keys will focus the menu.
+                            let handle_menu = !self.has_menu()
+                                && (event.key == Key::Alt || event.key == Key::F10);
                             match event.state {
-                                // If the window doesn't have a menu, then we need to suppress ALT/F10.
-                                // Otherwise we will stop getting mouse events for no gain.
-                                // When we do have a menu, those keys will focus the menu.
                                 KeyState::Down => {
-                                    let is_menu = event.key == Key::Alt || event.key == Key::F10;
-                                    if s.handler.key_down(event) || (!self.has_menu() && is_menu) {
+                                    if s.handler.key_down(event) || handle_menu {
                                         return Some(0);
                                     }
                                 }
                                 KeyState::Up => {
                                     s.handler.key_up(event);
-                                    return Some(0);
+                                    if handle_menu {
+                                        return Some(0);
+                                    }
                                 }
                             }
                         }

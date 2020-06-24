@@ -21,7 +21,7 @@ use crate::{
     LifeCycleCtx, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
-use crate::keyboard_types::{Code, Modifiers};
+use crate::keyboard_types::{Key, Modifiers};
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
 use crate::piet::{
     FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
@@ -307,15 +307,15 @@ impl Widget<String> for TextBox {
             Event::KeyDown(key_event) => {
                 let event_handled = match key_event {
                     // Tab and shift+tab
-                    k_e if HotKey::new(None, Code::Tab).matches(k_e) => {
+                    k_e if HotKey::new(None, Key::Tab).matches(k_e) => {
                         ctx.focus_next();
                         true
                     }
-                    k_e if HotKey::new(SysMods::Shift, Code::Tab).matches(k_e) => {
+                    k_e if HotKey::new(SysMods::Shift, Key::Tab).matches(k_e) => {
                         ctx.focus_prev();
                         true
                     }
-                    k_e if HotKey::new(None, Code::Enter).matches(k_e) => {
+                    k_e if HotKey::new(None, Key::Enter).matches(k_e) => {
                         // 'enter' should do something, maybe?
                         // but for now we are suppressing it, because we don't want
                         // newlines.

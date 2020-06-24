@@ -25,7 +25,7 @@ use winapi::shared::minwindef::{HKL, INT, LPARAM, UINT, WPARAM};
 use winapi::shared::ntdef::SHORT;
 use winapi::shared::windef::HWND;
 use winapi::um::winuser::{
-    GetKeyState, GetKeyboardLayout, MapVirtualKeyExW, PeekMessageW, ToUnicodeEx, VkKeyScanExW,
+    GetKeyState, GetKeyboardLayout, MapVirtualKeyExW, PeekMessageW, ToUnicodeEx, VkKeyScanW,
     MAPVK_VK_TO_CHAR, MAPVK_VSC_TO_VK_EX, PM_NOREMOVE, VK_CAPITAL, WM_CHAR, WM_INPUTLANGCHANGE,
     WM_KEYDOWN, WM_KEYUP, WM_SYSCHAR, WM_SYSKEYDOWN, WM_SYSKEYUP,
 };
@@ -343,12 +343,21 @@ fn vk_to_key(vk: VkCode) -> Option<Key> {
     })
 }
 
-fn raw_key_to_vk(key: &Key, hkl: HKL) -> Option<i32> {
+/// Convert a key to a virtual key code.
+///
+/// The virtual key code is needed in various winapi interfaces, including
+/// accelerators. This provides the virtual key code in the current keyboard
+/// map.
+///
+/// The virtual key code can have modifiers in the higher order byte when the
+/// argument is a `Character` variant. See:
+/// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscanw
+pub fn key_to_vk(key: &Key) -> Option<i32> {
     Some(match key {
         Key::Character(s) => {
             if let Some(code_point) = s.chars().next() {
                 if let Ok(wchar) = (code_point as u32).try_into() {
-                    unsafe { VkKeyScanExW(wchar, hkl) as i32 }
+                    unsafe { VkKeyScanW(wchar) as i32 }
                 } else {
                     return None;
                 }
@@ -652,15 +661,6 @@ impl KeyboardState {
             }
             modifiers
         }
-    }
-
-    /// Convert a key to a virtual key code.
-    ///
-    /// The virtual key code is needed in various winapi interfaces, including
-    /// accelerators. This provides the virtual key code in the current keyboard
-    /// map.
-    pub fn key_to_vk(&self, key: &Key) -> Option<i32> {
-        raw_key_to_vk(key, self.hkl)
     }
 
     /// Load a keyboard layout.
