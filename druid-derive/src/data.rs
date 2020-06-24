@@ -36,10 +36,11 @@ fn derive_struct(
     input: &syn::DeriveInput,
     s: &DataStruct,
 ) -> Result<proc_macro2::TokenStream, syn::Error> {
-    let generics_bounds = generics_bounds(&input.generics);
-    let generics = &input.generics;
+    
+    let ident = &input.ident;
+    let impl_generics = generics_bounds(&input.generics);
+    let (_, ty_generics, where_clause) = &input.generics.split_for_impl();
 
-    let ty = &input.ident;
     let fields = Fields::parse_ast(&s.fields)?;
 
     let diff = if fields.len() > 0 {
@@ -54,7 +55,7 @@ fn derive_struct(
     };
 
     let res = quote! {
-        impl<#generics_bounds> druid::Data for #ty #generics {
+        impl<#impl_generics> ::druid::Data for #ident #ty_generics #where_clause {
             fn same(&self, other: &Self) -> bool {
                 #diff
             }
@@ -80,14 +81,14 @@ fn derive_enum(
     input: &syn::DeriveInput,
     s: &DataEnum,
 ) -> Result<proc_macro2::TokenStream, syn::Error> {
-    let ty = &input.ident;
+    
+    let ident = &input.ident;
+    let impl_generics = generics_bounds(&input.generics);
+    let (_, ty_generics, where_clause) = &input.generics.split_for_impl();
 
     if is_c_style_enum(&s) {
-        let generics_bounds = generics_bounds(&input.generics);
-        let generics = &input.generics;
-
         let res = quote! {
-            impl<#generics_bounds> ::druid::Data for #ty #generics {
+            impl<#impl_generics> ::druid::Data for #ident #ty_generics #where_clause {
                 fn same(&self, other: &Self) -> bool { self == other }
             }
         };
@@ -132,7 +133,7 @@ fn derive_enum(
                     .collect();
 
                 Ok(quote! {
-                    (#ty :: #variant { #( #lefts ),* }, #ty :: #variant { #( #rights ),* }) => {
+                    (#ident :: #variant { #( #lefts ),* }, #ident :: #variant { #( #rights ),* }) => {
                         #( #tests )&&*
                     }
                 })
@@ -148,24 +149,21 @@ fn derive_enum(
 
                 if fields.iter().filter(|field| !field.ignore).count() > 0 {
                     Ok(quote! {
-                        ( #ty :: #variant( #(#vars_left),* ),  #ty :: #variant( #(#vars_right),* )) => {
+                        ( #ident :: #variant( #(#vars_left),* ),  #ident :: #variant( #(#vars_right),* )) => {
                             #( #tests )&&*
                         }
                     })
                 } else {
                     Ok(quote! {
-                       ( #ty :: #variant ,  #ty :: #variant ) => { true }
+                        ( #ident :: #variant ,  #ident :: #variant ) => { true }
                     })
                 }
             }
         })
         .collect::<Result<Vec<proc_macro2::TokenStream>, syn::Error>>()?;
 
-    let generics_bounds = generics_bounds(&input.generics);
-    let generics = &input.generics;
-
     let res = quote! {
-        impl<#generics_bounds> ::druid::Data for #ty #generics {
+        impl<#impl_generics> ::druid::Data for #ident #ty_generics #where_clause {
             fn same(&self, other: &Self) -> bool {
                 match (self, other) {
                     #( #cases ),*
@@ -182,7 +180,15 @@ fn generics_bounds(generics: &syn::Generics) -> proc_macro2::TokenStream {
     let res = generics.params.iter().map(|gp| {
         use syn::GenericParam::*;
         match gp {
-            Type(ty) => quote_spanned!(ty.span()=> #ty : ::druid::Data),
+            Type(ty) => {
+                let ident = &ty.ident;
+                let bounds = &ty.bounds;
+                if bounds.is_empty() {
+                    quote_spanned!(ty.span()=> #ident : ::druid::Data)
+                } else {
+                    quote_spanned!(ty.span()=> #ident : #bounds + ::druid::Data)
+                }
+            },
             Lifetime(lf) => quote!(#lf),
             Const(cst) => quote!(#cst),
         }
