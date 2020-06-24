@@ -21,8 +21,8 @@ use objc::{msg_send, sel, sel_impl};
 
 use super::util::make_nsstring;
 use crate::common_util::strip_access_key;
-use crate::hotkey::{HotKey, KeyCompare};
-use crate::keyboard_types::{Code, Modifiers};
+use crate::hotkey::HotKey;
+use crate::keyboard_types::{Key, Modifiers};
 
 pub struct Menu {
     pub menu: id,
@@ -111,47 +111,47 @@ impl HotKey {
     ///
     /// Returns the empty string if no key equivalent is known.
     fn key_equivalent(&self) -> &str {
-        match self.key {
-            KeyCompare::Text(t) => t,
+        match &self.key {
+            Key::Character(t) => t,
 
             // from NSText.h
-            KeyCompare::Code(Code::Enter) => "\u{0003}",
-            KeyCompare::Code(Code::Backspace) => "\u{0008}",
-            KeyCompare::Code(Code::Delete) => "\u{007f}",
+            Key::Enter => "\u{0003}",
+            Key::Backspace => "\u{0008}",
+            Key::Delete => "\u{007f}",
             // from NSEvent.h
-            KeyCompare::Code(Code::Insert) => "\u{F727}",
-            KeyCompare::Code(Code::Home) => "\u{F729}",
-            KeyCompare::Code(Code::End) => "\u{F72B}",
-            KeyCompare::Code(Code::PageUp) => "\u{F72C}",
-            KeyCompare::Code(Code::PageDown) => "\u{F72D}",
-            KeyCompare::Code(Code::PrintScreen) => "\u{F72E}",
-            KeyCompare::Code(Code::ScrollLock) => "\u{F72F}",
-            KeyCompare::Code(Code::ArrowUp) => "\u{F700}",
-            KeyCompare::Code(Code::ArrowDown) => "\u{F701}",
-            KeyCompare::Code(Code::ArrowLeft) => "\u{F702}",
-            KeyCompare::Code(Code::ArrowRight) => "\u{F703}",
-            KeyCompare::Code(Code::F1) => "\u{F704}",
-            KeyCompare::Code(Code::F2) => "\u{F705}",
-            KeyCompare::Code(Code::F3) => "\u{F706}",
-            KeyCompare::Code(Code::F4) => "\u{F707}",
-            KeyCompare::Code(Code::F5) => "\u{F708}",
-            KeyCompare::Code(Code::F6) => "\u{F709}",
-            KeyCompare::Code(Code::F7) => "\u{F70A}",
-            KeyCompare::Code(Code::F8) => "\u{F70B}",
-            KeyCompare::Code(Code::F9) => "\u{F70C}",
-            KeyCompare::Code(Code::F10) => "\u{F70D}",
-            KeyCompare::Code(Code::F11) => "\u{F70E}",
-            KeyCompare::Code(Code::F12) => "\u{F70F}",
-            //KeyCompare::Code(KeyCode::F13)            => "\u{F710}",
-            //KeyCompare::Code(KeyCode::F14)            => "\u{F711}",
-            //KeyCompare::Code(KeyCode::F15)            => "\u{F712}",
-            //KeyCompare::Code(KeyCode::F16)            => "\u{F713}",
-            //KeyCompare::Code(KeyCode::F17)            => "\u{F714}",
-            //KeyCompare::Code(KeyCode::F18)            => "\u{F715}",
-            //KeyCompare::Code(KeyCode::F19)            => "\u{F716}",
-            //KeyCompare::Code(KeyCode::F20)            => "\u{F717}",
-            KeyCompare::Code(other) => {
-                eprintln!("no key equivalent for {:?}", other);
+            Key::Insert => "\u{F727}",
+            Key::Home => "\u{F729}",
+            Key::End => "\u{F72B}",
+            Key::PageUp => "\u{F72C}",
+            Key::PageDown => "\u{F72D}",
+            Key::PrintScreen => "\u{F72E}",
+            Key::ScrollLock => "\u{F72F}",
+            Key::ArrowUp => "\u{F700}",
+            Key::ArrowDown => "\u{F701}",
+            Key::ArrowLeft => "\u{F702}",
+            Key::ArrowRight => "\u{F703}",
+            Key::F1 => "\u{F704}",
+            Key::F2 => "\u{F705}",
+            Key::F3 => "\u{F706}",
+            Key::F4 => "\u{F707}",
+            Key::F5 => "\u{F708}",
+            Key::F6 => "\u{F709}",
+            Key::F7 => "\u{F70A}",
+            Key::F8 => "\u{F70B}",
+            Key::F9 => "\u{F70C}",
+            Key::F10 => "\u{F70D}",
+            Key::F11 => "\u{F70E}",
+            Key::F12 => "\u{F70F}",
+            //Key::F13            => "\u{F710}",
+            //Key::F14            => "\u{F711}",
+            //Key::F15            => "\u{F712}",
+            //Key::F16            => "\u{F713}",
+            //Key::F17            => "\u{F714}",
+            //Key::F18            => "\u{F715}",
+            //Key::F19            => "\u{F716}",
+            //Key::F20            => "\u{F717}",
+            _ => {
+                eprintln!("no key equivalent for {:?}", self);
                 ""
             }
         }
