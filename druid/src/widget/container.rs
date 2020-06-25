@@ -41,7 +41,7 @@ impl<T: Data> Container<T> {
         Self {
             background: None,
             border: None,
-            corner_radius: (0.0).into(),
+            corner_radius: 0.0.into(),
             inner: WidgetPod::new(inner).boxed(),
         }
     }

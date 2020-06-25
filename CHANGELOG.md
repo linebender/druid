@@ -13,7 +13,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 - `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
-- `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([1054] by [@binomial0])
+- `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
 
 ### Deprecated
 
