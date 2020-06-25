@@ -8,6 +8,7 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Highlights
 
 ### Added
+- `OPEN_PANEL_CANCELLED` and `SAVE_PANEL_CANCELLED` commands. ([#1061] by @cmyr)
 
 - Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
@@ -360,6 +361,7 @@ Last release without a changelog :(
 [#1050]: https://github.com/linebender/druid/pull/1050
 [#1054]: https://github.com/linebender/druid/pull/1054
 [#1058]: https://github.com/linebender/druid/pull/1058
+[#1061]: https://github.com/linebender/druid/pull/1061
 [#1062]: https://github.com/linebender/druid/pull/1062
 [#1072]: https://github.com/linebender/druid/pull/1072
 [#1075]: https://github.com/linebender/druid/pull/1075
@@ -375,4 +377,3 @@ Last release without a changelog :(
 [0.4.0]: https://github.com/linebender/druid/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/linebender/druid/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/linebender/druid/compare/v0.3.0...v0.3.1
-
