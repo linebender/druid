@@ -581,6 +581,9 @@ impl<T: Data> AppState<T> {
         if let Some(info) = result {
             let cmd = Command::new(sys_cmd::OPEN_FILE, info);
             self.inner.borrow_mut().dispatch_cmd(window_id.into(), cmd);
+        } else {
+            let cmd = sys_cmd::OPEN_PANEL_CANCELLED.into();
+            self.inner.borrow_mut().dispatch_cmd(window_id.into(), cmd);
         }
     }
 
@@ -595,6 +598,9 @@ impl<T: Data> AppState<T> {
         let result = handle.and_then(|mut handle| handle.save_as_sync(options));
         if let Some(info) = result {
             let cmd = Command::new(sys_cmd::SAVE_FILE, Some(info));
+            self.inner.borrow_mut().dispatch_cmd(window_id.into(), cmd);
+        } else {
+            let cmd = sys_cmd::SAVE_PANEL_CANCELLED.into();
             self.inner.borrow_mut().dispatch_cmd(window_id.into(), cmd);
         }
     }
