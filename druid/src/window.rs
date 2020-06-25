@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -250,7 +250,7 @@ impl<T: Data> Window<T> {
             // TODO: this calculation uses wall-clock time of the paint call, which
             // potentially has jitter.
             //
-            // See https://github.com/xi-editor/druid/issues/85 for discussion.
+            // See https://github.com/linebender/druid/issues/85 for discussion.
             let last = self.last_anim.take();
             let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
             Some(LifeCycle::AnimFrame(elapsed_ns))

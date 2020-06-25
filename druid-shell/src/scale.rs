@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ use crate::kurbo::{Insets, Line, Point, Rect, Size, Vec2};
 ///
 /// [`x`]: #method.x
 /// [`y`]: #method.y
-/// [in the druid book]: https://xi-editor.io/druid/resolution_independence.html
+/// [in the druid book]: https://linebender.org/druid/resolution_independence.html
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Scale {
     /// The scale factor on the x axis.

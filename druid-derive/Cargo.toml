@@ -4,7 +4,7 @@ version = "0.3.1"
 license = "Apache-2.0"
 authors = ["Druid authors"]
 description = "derive impls for druid, a Rust UI toolkit."
-repository = "https://github.com/xi-editor/druid"
+repository = "https://github.com/linebender/druid"
 edition = "2018"
 
 [lib]
