@@ -310,23 +310,19 @@ impl KeyboardState {
                     // may be pressed, for example).
                     let any_down = raw_mods.bits() & !self.last_mods.bits();
                     self.last_mods = raw_mods;
-                    match code {
-                        // The OS apparently only sends the flagsChanged event
-                        // on key down for CapsLock. Mozilla always translates
-                        // this to keydown, while Chrome toggles.
-                        _ if is_modifier_code(code) => {
-                            if any_down == 0 {
-                                KeyState::Up
-                            } else {
-                                KeyState::Down
-                            }
+                    if is_modifier_code(code) {
+                        if any_down == 0 {
+                            KeyState::Up
+                        } else {
+                            KeyState::Down
                         }
+                    } else {
                         // HandleFlagsChanged has some logic for this; it might
                         // happen when an app is deactivated by Command-Tab. In
                         // that case, the best thing to do is synthesize the event
                         // from the modifiers. But a challenge there is that we
                         // might get multiple events.
-                        _ => return None,
+                        return None;
                     }
                 }
                 _ => unreachable!(),

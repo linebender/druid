@@ -30,7 +30,7 @@ use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
 
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error as ShellError;
-use crate::keyboard_types::{KeyboardEvent, KeyState, Modifiers};
+use crate::keyboard_types::{KeyState, KeyboardEvent, Modifiers};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, RenderContext};

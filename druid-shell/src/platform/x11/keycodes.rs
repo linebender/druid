@@ -14,8 +14,8 @@
 
 //! X11 keycode handling.
 
-use x11rb::protocol::xproto::Keycode;
 use crate::keyboard_types::{Code, Key, Location, Modifiers};
+use x11rb::protocol::xproto::Keycode;
 
 // TODO: there's duplication here with gtk, as hardware keycodes
 // are shared. There should be one source of truth.
