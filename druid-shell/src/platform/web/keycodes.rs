@@ -14,17 +14,228 @@
 
 //! Web keycode handling.
 
-use web_sys::{KeyEvent, KeyboardEvent};
+use web_sys::KeyboardEvent;
 
-use crate::keycodes::KeyCode;
+use crate::keyboard_types::{self, Code, Key, KeyState, Location, Modifiers};
 
-pub type RawKeyCode = u32;
+/// Convert a web-sys KeyboardEvent into a keyboard-types one.
+pub(crate) fn convert_keyboard_event(event: &KeyboardEvent, modifiers: Modifiers, state: KeyState) -> keyboard_types::KeyboardEvent {
+    keyboard_types::KeyboardEvent {
+        state,
+        key: event.key().parse().unwrap_or(Key::Unidentified),
+        code: convert_code(&event.code()),
+        location: convert_location(event.location()),
+        modifiers,
+        repeat: event.repeat(),
+        is_composing: event.is_composing(),
+    }
+}
 
-//const LOC_STANDARD: u32 = KeyboardEvent::DOM_KEY_LOCATION_STANDARD;
-const LOC_LEFT: u32 = KeyboardEvent::DOM_KEY_LOCATION_LEFT;
-const LOC_RIGHT: u32 = KeyboardEvent::DOM_KEY_LOCATION_RIGHT;
-const LOC_NUMPAD: u32 = KeyboardEvent::DOM_KEY_LOCATION_NUMPAD;
+fn convert_code(code: &str) -> Code {
+    match code {
+        "Backquote" => Code::Backquote,
+        "Backslash" => Code::Backslash,
+        "BracketLeft" => Code::BracketLeft,
+        "BracketRight" => Code::BracketRight,
+        "Comma" => Code::Comma,
+        "Digit0" => Code::Digit0,
+        "Digit1" => Code::Digit1,
+        "Digit2" => Code::Digit2,
+        "Digit3" => Code::Digit3,
+        "Digit4" => Code::Digit4,
+        "Digit5" => Code::Digit5,
+        "Digit6" => Code::Digit6,
+        "Digit7" => Code::Digit7,
+        "Digit8" => Code::Digit8,
+        "Digit9" => Code::Digit9,
+        "Equal" => Code::Equal,
+        "IntlBackslash" => Code::IntlBackslash,
+        "IntlRo" => Code::IntlRo,
+        "IntlYen" => Code::IntlYen,
+        "KeyA" => Code::KeyA,
+        "KeyB" => Code::KeyB,
+        "KeyC" => Code::KeyC,
+        "KeyD" => Code::KeyD,
+        "KeyE" => Code::KeyE,
+        "KeyF" => Code::KeyF,
+        "KeyG" => Code::KeyG,
+        "KeyH" => Code::KeyH,
+        "KeyI" => Code::KeyI,
+        "KeyJ" => Code::KeyJ,
+        "KeyK" => Code::KeyK,
+        "KeyL" => Code::KeyL,
+        "KeyM" => Code::KeyM,
+        "KeyN" => Code::KeyN,
+        "KeyO" => Code::KeyO,
+        "KeyP" => Code::KeyP,
+        "KeyQ" => Code::KeyQ,
+        "KeyR" => Code::KeyR,
+        "KeyS" => Code::KeyS,
+        "KeyT" => Code::KeyT,
+        "KeyU" => Code::KeyU,
+        "KeyV" => Code::KeyV,
+        "KeyW" => Code::KeyW,
+        "KeyX" => Code::KeyX,
+        "KeyY" => Code::KeyY,
+        "KeyZ" => Code::KeyZ,
+        "Minus" => Code::Minus,
+        "Period" => Code::Period,
+        "Quote" => Code::Quote,
+        "Semicolon" => Code::Semicolon,
+        "Slash" => Code::Slash,
+        "AltLeft" => Code::AltLeft,
+        "AltRight" => Code::AltRight,
+        "Backspace" => Code::Backspace,
+        "CapsLock" => Code::CapsLock,
+        "ContextMenu" => Code::ContextMenu,
+        "ControlLeft" => Code::ControlLeft,
+        "ControlRight" => Code::ControlRight,
+        "Enter" => Code::Enter,
+        "MetaLeft" => Code::MetaLeft,
+        "MetaRight" => Code::MetaRight,
+        "ShiftLeft" => Code::ShiftLeft,
+        "ShiftRight" => Code::ShiftRight,
+        "Space" => Code::Space,
+        "Tab" => Code::Tab,
+        "Convert" => Code::Convert,
+        "KanaMode" => Code::KanaMode,
+        "Lang1" => Code::Lang1,
+        "Lang2" => Code::Lang2,
+        "Lang3" => Code::Lang3,
+        "Lang4" => Code::Lang4,
+        "Lang5" => Code::Lang5,
+        "NonConvert" => Code::NonConvert,
+        "Delete" => Code::Delete,
+        "End" => Code::End,
+        "Help" => Code::Help,
+        "Home" => Code::Home,
+        "Insert" => Code::Insert,
+        "PageDown" => Code::PageDown,
+        "PageUp" => Code::PageUp,
+        "ArrowDown" => Code::ArrowDown,
+        "ArrowLeft" => Code::ArrowLeft,
+        "ArrowRight" => Code::ArrowRight,
+        "ArrowUp" => Code::ArrowUp,
+        "NumLock" => Code::NumLock,
+        "Numpad0" => Code::Numpad0,
+        "Numpad1" => Code::Numpad1,
+        "Numpad2" => Code::Numpad2,
+        "Numpad3" => Code::Numpad3,
+        "Numpad4" => Code::Numpad4,
+        "Numpad5" => Code::Numpad5,
+        "Numpad6" => Code::Numpad6,
+        "Numpad7" => Code::Numpad7,
+        "Numpad8" => Code::Numpad8,
+        "Numpad9" => Code::Numpad9,
+        "NumpadAdd" => Code::NumpadAdd,
+        "NumpadBackspace" => Code::NumpadBackspace,
+        "NumpadClear" => Code::NumpadClear,
+        "NumpadClearEntry" => Code::NumpadClearEntry,
+        "NumpadComma" => Code::NumpadComma,
+        "NumpadDecimal" => Code::NumpadDecimal,
+        "NumpadDivide" => Code::NumpadDivide,
+        "NumpadEnter" => Code::NumpadEnter,
+        "NumpadEqual" => Code::NumpadEqual,
+        "NumpadHash" => Code::NumpadHash,
+        "NumpadMemoryAdd" => Code::NumpadMemoryAdd,
+        "NumpadMemoryClear" => Code::NumpadMemoryClear,
+        "NumpadMemoryRecall" => Code::NumpadMemoryRecall,
+        "NumpadMemoryStore" => Code::NumpadMemoryStore,
+        "NumpadMemorySubtract" => Code::NumpadMemorySubtract,
+        "NumpadMultiply" => Code::NumpadMultiply,
+        "NumpadParenLeft" => Code::NumpadParenLeft,
+        "NumpadParenRight" => Code::NumpadParenRight,
+        "NumpadStar" => Code::NumpadStar,
+        "NumpadSubtract" => Code::NumpadSubtract,
+        "Escape" => Code::Escape,
+        "F1" => Code::F1,
+        "F2" => Code::F2,
+        "F3" => Code::F3,
+        "F4" => Code::F4,
+        "F5" => Code::F5,
+        "F6" => Code::F6,
+        "F7" => Code::F7,
+        "F8" => Code::F8,
+        "F9" => Code::F9,
+        "F10" => Code::F10,
+        "F11" => Code::F11,
+        "F12" => Code::F12,
+        "Fn" => Code::Fn,
+        "FnLock" => Code::FnLock,
+        "PrintScreen" => Code::PrintScreen,
+        "ScrollLock" => Code::ScrollLock,
+        "Pause" => Code::Pause,
+        "BrowserBack" => Code::BrowserBack,
+        "BrowserFavorites" => Code::BrowserFavorites,
+        "BrowserForward" => Code::BrowserForward,
+        "BrowserHome" => Code::BrowserHome,
+        "BrowserRefresh" => Code::BrowserRefresh,
+        "BrowserSearch" => Code::BrowserSearch,
+        "BrowserStop" => Code::BrowserStop,
+        "Eject" => Code::Eject,
+        "LaunchApp1" => Code::LaunchApp1,
+        "LaunchApp2" => Code::LaunchApp2,
+        "LaunchMail" => Code::LaunchMail,
+        "MediaPlayPause" => Code::MediaPlayPause,
+        "MediaSelect" => Code::MediaSelect,
+        "MediaStop" => Code::MediaStop,
+        "MediaTrackNext" => Code::MediaTrackNext,
+        "MediaTrackPrevious" => Code::MediaTrackPrevious,
+        "Power" => Code::Power,
+        "Sleep" => Code::Sleep,
+        "AudioVolumeDown" => Code::AudioVolumeDown,
+        "AudioVolumeMute" => Code::AudioVolumeMute,
+        "AudioVolumeUp" => Code::AudioVolumeUp,
+        "WakeUp" => Code::WakeUp,
+        "Hyper" => Code::Hyper,
+        "Super" => Code::Super,
+        "Turbo" => Code::Turbo,
+        "Abort" => Code::Abort,
+        "Resume" => Code::Resume,
+        "Suspend" => Code::Suspend,
+        "Again" => Code::Again,
+        "Copy" => Code::Copy,
+        "Cut" => Code::Cut,
+        "Find" => Code::Find,
+        "Open" => Code::Open,
+        "Paste" => Code::Paste,
+        "Props" => Code::Props,
+        "Select" => Code::Select,
+        "Undo" => Code::Undo,
+        "Hiragana" => Code::Hiragana,
+        "Katakana" => Code::Katakana,
+        // Should be exhaustive but in case not, use reasonable default
+        _ => Code::Unidentified,
+    }
+}
 
+fn convert_location(loc: u32) -> Location {
+    match loc {
+        KeyboardEvent::DOM_KEY_LOCATION_LEFT => Location::Left,
+        KeyboardEvent::DOM_KEY_LOCATION_RIGHT => Location::Right,
+        KeyboardEvent::DOM_KEY_LOCATION_NUMPAD => Location::Numpad,
+        // Should be exhaustive but in case not, use reasonable default
+        _ => Location::Standard,
+    }
+}
+
+/*
+// TODO: use macro in window to avoid code dupl
+fn get_modifiers(event: &KeyboardEvent) -> Modifiers {
+    let mut result = Modifiers::default();
+    result.set(Modifiers::SHIFT, event.shift_key());
+    result.set(Modifiers::ALT, event.alt_key());
+    result.set(Modifiers::CONTROL, event.ctrl_key());
+    result.set(Modifiers::META, event.meta_key());
+    result.set(Modifiers::ALT_GRAPH, event.get_modifier_state("AltGraph"));
+    result.set(Modifiers::CAPS_LOCK, event.get_modifier_state("CapsLock"));
+    result.set(Modifiers::NUM_LOCK, event.get_modifier_state("NumLock"));
+    result.set(Modifiers::SCROLL_LOCK, event.get_modifier_state("ScrollLock"));
+    result
+}
+*/
+
+/*
 macro_rules! map_keys {
     ($( ($id:path, ($loc:tt)) => $code:path),*) => {
         impl From<KeyCode> for u32 {
@@ -598,3 +809,4 @@ pub(crate) fn key_to_text(key: &str) -> &str {
         k => k,
     }
 }
+*/
