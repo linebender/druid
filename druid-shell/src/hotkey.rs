@@ -273,7 +273,7 @@ impl IntoKey for Key {
     }
 }
 
-impl<'a> IntoKey for &'a str {
+impl IntoKey for &str {
     fn into_key(self) -> Key {
         Key::Character(self.into())
     }
