@@ -31,7 +31,7 @@ use super::util::from_nsstring;
 ///
 /// Most of the logic in this module is adapted from Mozilla, and in particular
 /// TextInputHandler.mm.
-pub struct KeyboardState {
+pub(crate) struct KeyboardState {
     last_mods: NSEventModifierFlags,
 }
 
@@ -288,12 +288,12 @@ fn is_modifier_code(code: Code) -> bool {
 }
 
 impl KeyboardState {
-    pub fn new() -> KeyboardState {
+    pub(crate) fn new() -> KeyboardState {
         let last_mods = NSEventModifierFlags::empty();
         KeyboardState { last_mods }
     }
 
-    pub fn process_native_event(&mut self, event: id) -> Option<KeyboardEvent> {
+    pub(crate) fn process_native_event(&mut self, event: id) -> Option<KeyboardEvent> {
         unsafe {
             let event_type = event.eventType();
             let key_code = event.keyCode();
@@ -328,7 +328,7 @@ impl KeyboardState {
                 _ => unreachable!(),
             };
             let is_composing = false;
-            let repeat: bool = event_type == NSEventType::NSKeyDown && msg_send!(event, isARepeat);
+            let repeat: bool = event_type == NSEventType::NSKeyDown && msg_send![event, isARepeat];
             let key = if let Some(key) = code_to_key(code) {
                 key
             } else {

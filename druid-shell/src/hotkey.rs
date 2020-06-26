@@ -66,7 +66,9 @@ pub struct HotKey {
 /// A convenience trait for creating Key objects.
 ///
 /// This trait is implemented by [`Key`] itself and also strings, which are
-/// converted into the `Character` variant.
+/// converted into the `Character` variant. It is defined this way and not
+/// using the standard `Into` mechanism because `Key` is a type in an external
+/// crate.
 ///
 /// [`Key`]: keyboard_types::Key
 pub trait IntoKey {

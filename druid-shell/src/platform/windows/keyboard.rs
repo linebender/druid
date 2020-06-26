@@ -27,24 +27,21 @@ use winapi::shared::ntdef::SHORT;
 use winapi::shared::windef::HWND;
 use winapi::um::winuser::{
     GetKeyState, GetKeyboardLayout, MapVirtualKeyExW, PeekMessageW, ToUnicodeEx, VkKeyScanW,
-    MAPVK_VK_TO_CHAR, MAPVK_VSC_TO_VK_EX, PM_NOREMOVE, VK_CAPITAL, WM_CHAR, WM_INPUTLANGCHANGE,
-    WM_KEYDOWN, WM_KEYUP, WM_SYSCHAR, WM_SYSKEYDOWN, WM_SYSKEYUP,
-};
-
-use winapi::um::winuser::{
-    VK_ACCEPT, VK_ADD, VK_APPS, VK_ATTN, VK_BACK, VK_BROWSER_BACK, VK_BROWSER_FAVORITES,
-    VK_BROWSER_FORWARD, VK_BROWSER_HOME, VK_BROWSER_REFRESH, VK_BROWSER_SEARCH, VK_BROWSER_STOP,
-    VK_CANCEL, VK_CLEAR, VK_CONTROL, VK_CONVERT, VK_CRSEL, VK_DECIMAL, VK_DELETE, VK_DIVIDE,
-    VK_DOWN, VK_END, VK_EREOF, VK_ESCAPE, VK_EXECUTE, VK_EXSEL, VK_F1, VK_F10, VK_F11, VK_F12,
-    VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_F9, VK_FINAL, VK_HELP, VK_HOME, VK_INSERT,
-    VK_JUNJA, VK_KANA, VK_KANJI, VK_LAUNCH_APP1, VK_LAUNCH_APP2, VK_LAUNCH_MAIL,
-    VK_LAUNCH_MEDIA_SELECT, VK_LCONTROL, VK_LEFT, VK_LMENU, VK_LSHIFT, VK_LWIN,
-    VK_MEDIA_NEXT_TRACK, VK_MEDIA_PLAY_PAUSE, VK_MEDIA_PREV_TRACK, VK_MEDIA_STOP, VK_MENU,
-    VK_MODECHANGE, VK_MULTIPLY, VK_NEXT, VK_NONCONVERT, VK_NUMLOCK, VK_NUMPAD0, VK_NUMPAD1,
-    VK_NUMPAD2, VK_NUMPAD3, VK_NUMPAD4, VK_NUMPAD5, VK_NUMPAD6, VK_NUMPAD7, VK_NUMPAD8, VK_NUMPAD9,
-    VK_OEM_ATTN, VK_OEM_CLEAR, VK_PAUSE, VK_PLAY, VK_PRINT, VK_PRIOR, VK_PROCESSKEY, VK_RCONTROL,
-    VK_RETURN, VK_RIGHT, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SCROLL, VK_SELECT, VK_SHIFT, VK_SLEEP,
-    VK_SNAPSHOT, VK_SUBTRACT, VK_TAB, VK_UP, VK_VOLUME_DOWN, VK_VOLUME_MUTE, VK_VOLUME_UP, VK_ZOOM,
+    MAPVK_VK_TO_CHAR, MAPVK_VSC_TO_VK_EX, PM_NOREMOVE, VK_ACCEPT, VK_ADD, VK_APPS, VK_ATTN,
+    VK_BACK, VK_BROWSER_BACK, VK_BROWSER_FAVORITES, VK_BROWSER_FORWARD, VK_BROWSER_HOME,
+    VK_BROWSER_REFRESH, VK_BROWSER_SEARCH, VK_BROWSER_STOP, VK_CANCEL, VK_CAPITAL, VK_CLEAR,
+    VK_CONTROL, VK_CONVERT, VK_CRSEL, VK_DECIMAL, VK_DELETE, VK_DIVIDE, VK_DOWN, VK_END, VK_EREOF,
+    VK_ESCAPE, VK_EXECUTE, VK_EXSEL, VK_F1, VK_F10, VK_F11, VK_F12, VK_F2, VK_F3, VK_F4, VK_F5,
+    VK_F6, VK_F7, VK_F8, VK_F9, VK_FINAL, VK_HELP, VK_HOME, VK_INSERT, VK_JUNJA, VK_KANA, VK_KANJI,
+    VK_LAUNCH_APP1, VK_LAUNCH_APP2, VK_LAUNCH_MAIL, VK_LAUNCH_MEDIA_SELECT, VK_LCONTROL, VK_LEFT,
+    VK_LMENU, VK_LSHIFT, VK_LWIN, VK_MEDIA_NEXT_TRACK, VK_MEDIA_PLAY_PAUSE, VK_MEDIA_PREV_TRACK,
+    VK_MEDIA_STOP, VK_MENU, VK_MODECHANGE, VK_MULTIPLY, VK_NEXT, VK_NONCONVERT, VK_NUMLOCK,
+    VK_NUMPAD0, VK_NUMPAD1, VK_NUMPAD2, VK_NUMPAD3, VK_NUMPAD4, VK_NUMPAD5, VK_NUMPAD6, VK_NUMPAD7,
+    VK_NUMPAD8, VK_NUMPAD9, VK_OEM_ATTN, VK_OEM_CLEAR, VK_PAUSE, VK_PLAY, VK_PRINT, VK_PRIOR,
+    VK_PROCESSKEY, VK_RCONTROL, VK_RETURN, VK_RIGHT, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SCROLL,
+    VK_SELECT, VK_SHIFT, VK_SLEEP, VK_SNAPSHOT, VK_SUBTRACT, VK_TAB, VK_UP, VK_VOLUME_DOWN,
+    VK_VOLUME_MUTE, VK_VOLUME_UP, VK_ZOOM, WM_CHAR, WM_INPUTLANGCHANGE, WM_KEYDOWN, WM_KEYUP,
+    WM_SYSCHAR, WM_SYSKEYDOWN, WM_SYSKEYUP,
 };
 
 const VK_ABNT_C2: INT = 0xc2;
@@ -59,7 +56,7 @@ const SHIFT_STATE_ALTGR: ShiftState = 2;
 const N_SHIFT_STATE: ShiftState = 4;
 
 /// Per-window keyboard state.
-pub struct KeyboardState {
+pub(crate) struct KeyboardState {
     hkl: HKL,
     // A map from (vk, is_shifted) to string val
     key_vals: HashMap<(VkCode, ShiftState), String>,
@@ -353,7 +350,7 @@ fn vk_to_key(vk: VkCode) -> Option<Key> {
 /// The virtual key code can have modifiers in the higher order byte when the
 /// argument is a `Character` variant. See:
 /// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscanw
-pub fn key_to_vk(key: &Key) -> Option<i32> {
+pub(crate) fn key_to_vk(key: &Key) -> Option<i32> {
     Some(match key {
         Key::Character(s) => {
             if let Some(code_point) = s.chars().next() {
@@ -494,7 +491,7 @@ impl KeyboardState {
     ///
     /// There should be one of these per window. It loads the current keyboard
     /// layout and retains some mapping information from it.
-    pub fn new() -> KeyboardState {
+    pub(crate) fn new() -> KeyboardState {
         unsafe {
             let hkl = GetKeyboardLayout(0);
             let key_vals = HashMap::new();
@@ -529,12 +526,25 @@ impl KeyboardState {
     /// do the processing on the first message, fetching the subsequent messages
     /// from the queue. We believe our handling is simpler and more robust.
     ///
+    /// A simple example of a multi-message sequence is the key "=". In a US layout,
+    /// we'd expect `WM_KEYDOWN` with `wparam = VK_OEM_PLUS` and lparam encoding the
+    /// keycode that translates into `Code::Equal`, followed by a `WM_CHAR` with
+    /// `wparam = b"="` and the same scancode.
+    ///
+    /// A more complex example of a multi-message sequence is the second press of
+    /// that key in a German layout, where it's mapped to the dead key for accent
+    /// acute. Then we expect `WM_KEYDOWN` with `wparam = VK_OEM_6` followed by
+    /// two `WM_CHAR` with `wparam = 0xB4` (corresponding to U+00B4 = acute accent).
+    /// In this case, the result (produced on the final message in the sequence) is
+    /// a key event with `key = Key::Character("´´")`, which also matches browser
+    /// behavior.
+    ///
     /// # Safety
     ///
-    /// The `hwnd` argument must be a valid `HWND`. Similarly, the `lparam` must
+    /// The `hwnd` argument must be a valid `HWND`. Similarly, the `lparam` must be
     /// a valid `HKL` reference in the `WM_INPUTLANGCHANGE` message. Actual danger
     /// is likely low, though.
-    pub unsafe fn process_message(
+    pub(crate) unsafe fn process_message(
         &mut self,
         hwnd: HWND,
         msg: UINT,
@@ -648,7 +658,7 @@ impl KeyboardState {
     ///
     /// [`GetKeyState`]: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getkeystate
     /// [AltGr]: https://en.wikipedia.org/wiki/AltGr_key
-    pub fn get_modifiers(&self) -> Modifiers {
+    pub(crate) fn get_modifiers(&self) -> Modifiers {
         unsafe {
             let mut modifiers = Modifiers::empty();
             for &(vk, modifier, mask) in MODIFIER_MAP {

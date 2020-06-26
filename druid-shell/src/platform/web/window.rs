@@ -45,20 +45,21 @@ use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
 macro_rules! get_modifiers {
-    ($event:ident) => {
-        {
-            let mut result = Modifiers::default();
-            result.set(Modifiers::SHIFT, $event.shift_key());
-            result.set(Modifiers::ALT, $event.alt_key());
-            result.set(Modifiers::CONTROL, $event.ctrl_key());
-            result.set(Modifiers::META, $event.meta_key());
-            result.set(Modifiers::ALT_GRAPH, $event.get_modifier_state("AltGraph"));
-            result.set(Modifiers::CAPS_LOCK, $event.get_modifier_state("CapsLock"));
-            result.set(Modifiers::NUM_LOCK, $event.get_modifier_state("NumLock"));
-            result.set(Modifiers::SCROLL_LOCK, $event.get_modifier_state("ScrollLock"));
-            result
-        }
-    }
+    ($event:ident) => {{
+        let mut result = Modifiers::default();
+        result.set(Modifiers::SHIFT, $event.shift_key());
+        result.set(Modifiers::ALT, $event.alt_key());
+        result.set(Modifiers::CONTROL, $event.ctrl_key());
+        result.set(Modifiers::META, $event.meta_key());
+        result.set(Modifiers::ALT_GRAPH, $event.get_modifier_state("AltGraph"));
+        result.set(Modifiers::CAPS_LOCK, $event.get_modifier_state("CapsLock"));
+        result.set(Modifiers::NUM_LOCK, $event.get_modifier_state("NumLock"));
+        result.set(
+            Modifiers::SCROLL_LOCK,
+            $event.get_modifier_state("ScrollLock"),
+        );
+        result
+    }};
 }
 
 /// Builder abstraction for creating new windows.

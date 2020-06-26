@@ -858,12 +858,6 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyboardEven
     let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval);
 
     let text = gdk::keyval_to_unicode(keyval);
-    /*
-    println!(
-        "keyval = 0x{:x} ({}), hw = 0x{:x}, text = {:?}",
-        keyval, keyval, hardware_keycode, text
-    );
-    */
     let modifiers = get_modifiers(key.get_state());
     let key = keycodes::raw_key_to_key(keyval).unwrap_or_else(|| {
         if let Some(c) = text {
@@ -879,7 +873,6 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyboardEven
     let code = keycodes::hardware_keycode_to_code(hardware_keycode);
     let location = keycodes::raw_key_to_location(keycode);
     let is_composing = false;
-    // TODO: set this to "up" for key up events
 
     KeyboardEvent {
         key,
