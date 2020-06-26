@@ -22,7 +22,7 @@ use objc::{msg_send, sel, sel_impl};
 use super::util::make_nsstring;
 use crate::common_util::strip_access_key;
 use crate::hotkey::HotKey;
-use crate::keyboard_types::{Key, Modifiers};
+use crate::keyboard::{KbKey, Modifiers};
 
 pub struct Menu {
     pub menu: id,
@@ -112,44 +112,44 @@ impl HotKey {
     /// Returns the empty string if no key equivalent is known.
     fn key_equivalent(&self) -> &str {
         match &self.key {
-            Key::Character(t) => t,
+            KbKey::Character(t) => t,
 
             // from NSText.h
-            Key::Enter => "\u{0003}",
-            Key::Backspace => "\u{0008}",
-            Key::Delete => "\u{007f}",
+            KbKey::Enter => "\u{0003}",
+            KbKey::Backspace => "\u{0008}",
+            KbKey::Delete => "\u{007f}",
             // from NSEvent.h
-            Key::Insert => "\u{F727}",
-            Key::Home => "\u{F729}",
-            Key::End => "\u{F72B}",
-            Key::PageUp => "\u{F72C}",
-            Key::PageDown => "\u{F72D}",
-            Key::PrintScreen => "\u{F72E}",
-            Key::ScrollLock => "\u{F72F}",
-            Key::ArrowUp => "\u{F700}",
-            Key::ArrowDown => "\u{F701}",
-            Key::ArrowLeft => "\u{F702}",
-            Key::ArrowRight => "\u{F703}",
-            Key::F1 => "\u{F704}",
-            Key::F2 => "\u{F705}",
-            Key::F3 => "\u{F706}",
-            Key::F4 => "\u{F707}",
-            Key::F5 => "\u{F708}",
-            Key::F6 => "\u{F709}",
-            Key::F7 => "\u{F70A}",
-            Key::F8 => "\u{F70B}",
-            Key::F9 => "\u{F70C}",
-            Key::F10 => "\u{F70D}",
-            Key::F11 => "\u{F70E}",
-            Key::F12 => "\u{F70F}",
-            //Key::F13            => "\u{F710}",
-            //Key::F14            => "\u{F711}",
-            //Key::F15            => "\u{F712}",
-            //Key::F16            => "\u{F713}",
-            //Key::F17            => "\u{F714}",
-            //Key::F18            => "\u{F715}",
-            //Key::F19            => "\u{F716}",
-            //Key::F20            => "\u{F717}",
+            KbKey::Insert => "\u{F727}",
+            KbKey::Home => "\u{F729}",
+            KbKey::End => "\u{F72B}",
+            KbKey::PageUp => "\u{F72C}",
+            KbKey::PageDown => "\u{F72D}",
+            KbKey::PrintScreen => "\u{F72E}",
+            KbKey::ScrollLock => "\u{F72F}",
+            KbKey::ArrowUp => "\u{F700}",
+            KbKey::ArrowDown => "\u{F701}",
+            KbKey::ArrowLeft => "\u{F702}",
+            KbKey::ArrowRight => "\u{F703}",
+            KbKey::F1 => "\u{F704}",
+            KbKey::F2 => "\u{F705}",
+            KbKey::F3 => "\u{F706}",
+            KbKey::F4 => "\u{F707}",
+            KbKey::F5 => "\u{F708}",
+            KbKey::F6 => "\u{F709}",
+            KbKey::F7 => "\u{F70A}",
+            KbKey::F8 => "\u{F70B}",
+            KbKey::F9 => "\u{F70C}",
+            KbKey::F10 => "\u{F70D}",
+            KbKey::F11 => "\u{F70E}",
+            KbKey::F12 => "\u{F70F}",
+            //KbKey::F13            => "\u{F710}",
+            //KbKey::F14            => "\u{F711}",
+            //KbKey::F15            => "\u{F712}",
+            //KbKey::F16            => "\u{F713}",
+            //KbKey::F17            => "\u{F714}",
+            //KbKey::F18            => "\u{F715}",
+            //KbKey::F19            => "\u{F716}",
+            //KbKey::F20            => "\u{F717}",
             _ => {
                 eprintln!("no key equivalent for {:?}", self);
                 ""

@@ -24,7 +24,7 @@ use super::keycodes;
 use super::window::WindowHandle;
 use crate::common_util::strip_access_key;
 use crate::hotkey::{HotKey, RawMods};
-use crate::keyboard_types::{Key, Modifiers};
+use crate::keyboard::{KbKey, Modifiers};
 
 #[derive(Default, Debug)]
 pub struct Menu {
@@ -144,7 +144,7 @@ impl Menu {
 
 fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: HotKey) {
     let gdk_keyval = match &menu_key.key {
-        Key::Character(text) => text.chars().next().unwrap() as u32,
+        KbKey::Character(text) => text.chars().next().unwrap() as u32,
         k => {
             if let Some(gdk_key) = keycodes::key_to_raw_key(k) {
                 gdk_key

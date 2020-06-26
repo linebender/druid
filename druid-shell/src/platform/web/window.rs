@@ -38,7 +38,7 @@ use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::scale::{Scale, ScaledArea};
 
-use crate::keyboard_types::{Key, KeyState, Modifiers};
+use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
@@ -268,7 +268,7 @@ fn setup_keydown_callback(ws: &Rc<WindowState>) {
     register_window_event_listener(ws, "keydown", move |event: web_sys::KeyboardEvent| {
         let modifiers = get_modifiers!(event);
         let kb_event = convert_keyboard_event(&event, modifiers, KeyState::Down);
-        if kb_event.key == Key::Backspace {
+        if kb_event.key == KbKey::Backspace {
             // Prevent the browser from going back a page by default.
             event.prevent_default();
         }

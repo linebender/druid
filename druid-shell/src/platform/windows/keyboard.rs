@@ -20,7 +20,7 @@ use std::convert::TryInto;
 use std::mem;
 use std::ops::RangeInclusive;
 
-use keyboard_types::{Code, Key, KeyState, KeyboardEvent, Location, Modifiers};
+use crate::keyboard::{Code, KbKey, KeyEvent, KeyState, Location, Modifiers};
 
 use winapi::shared::minwindef::{HKL, INT, LPARAM, UINT, WPARAM};
 use winapi::shared::ntdef::SHORT;
@@ -256,87 +256,87 @@ fn scan_to_code(scan_code: u32) -> Code {
     }
 }
 
-fn vk_to_key(vk: VkCode) -> Option<Key> {
+fn vk_to_key(vk: VkCode) -> Option<KbKey> {
     Some(match vk as INT {
-        VK_CANCEL => Key::Cancel,
-        VK_BACK => Key::Backspace,
-        VK_TAB => Key::Tab,
-        VK_CLEAR => Key::Clear,
-        VK_RETURN => Key::Enter,
-        VK_SHIFT | VK_LSHIFT | VK_RSHIFT => Key::Shift,
-        VK_CONTROL | VK_LCONTROL | VK_RCONTROL => Key::Control,
-        VK_MENU | VK_LMENU | VK_RMENU => Key::Alt,
-        VK_PAUSE => Key::Pause,
-        VK_CAPITAL => Key::CapsLock,
+        VK_CANCEL => KbKey::Cancel,
+        VK_BACK => KbKey::Backspace,
+        VK_TAB => KbKey::Tab,
+        VK_CLEAR => KbKey::Clear,
+        VK_RETURN => KbKey::Enter,
+        VK_SHIFT | VK_LSHIFT | VK_RSHIFT => KbKey::Shift,
+        VK_CONTROL | VK_LCONTROL | VK_RCONTROL => KbKey::Control,
+        VK_MENU | VK_LMENU | VK_RMENU => KbKey::Alt,
+        VK_PAUSE => KbKey::Pause,
+        VK_CAPITAL => KbKey::CapsLock,
         // TODO: disambiguate kana and hangul? same vk
-        VK_KANA => Key::KanaMode,
-        VK_JUNJA => Key::JunjaMode,
-        VK_FINAL => Key::FinalMode,
-        VK_KANJI => Key::KanjiMode,
-        VK_ESCAPE => Key::Escape,
-        VK_NONCONVERT => Key::NonConvert,
-        VK_ACCEPT => Key::Accept,
-        VK_PRIOR => Key::PageUp,
-        VK_NEXT => Key::PageDown,
-        VK_END => Key::End,
-        VK_HOME => Key::Home,
-        VK_LEFT => Key::ArrowLeft,
-        VK_UP => Key::ArrowUp,
-        VK_RIGHT => Key::ArrowRight,
-        VK_DOWN => Key::ArrowDown,
-        VK_SELECT => Key::Select,
-        VK_PRINT => Key::Print,
-        VK_EXECUTE => Key::Execute,
-        VK_SNAPSHOT => Key::PrintScreen,
-        VK_INSERT => Key::Insert,
-        VK_DELETE => Key::Delete,
-        VK_HELP => Key::Help,
-        VK_LWIN | VK_RWIN => Key::Meta,
-        VK_APPS => Key::ContextMenu,
-        VK_SLEEP => Key::Standby,
-        VK_F1 => Key::F1,
-        VK_F2 => Key::F2,
-        VK_F3 => Key::F3,
-        VK_F4 => Key::F4,
-        VK_F5 => Key::F5,
-        VK_F6 => Key::F6,
-        VK_F7 => Key::F7,
-        VK_F8 => Key::F8,
-        VK_F9 => Key::F9,
-        VK_F10 => Key::F10,
-        VK_F11 => Key::F11,
-        VK_F12 => Key::F12,
-        VK_NUMLOCK => Key::NumLock,
-        VK_SCROLL => Key::ScrollLock,
-        VK_BROWSER_BACK => Key::BrowserBack,
-        VK_BROWSER_FORWARD => Key::BrowserForward,
-        VK_BROWSER_REFRESH => Key::BrowserRefresh,
-        VK_BROWSER_STOP => Key::BrowserStop,
-        VK_BROWSER_SEARCH => Key::BrowserSearch,
-        VK_BROWSER_FAVORITES => Key::BrowserFavorites,
-        VK_BROWSER_HOME => Key::BrowserHome,
-        VK_VOLUME_MUTE => Key::AudioVolumeMute,
-        VK_VOLUME_DOWN => Key::AudioVolumeDown,
-        VK_VOLUME_UP => Key::AudioVolumeUp,
-        VK_MEDIA_NEXT_TRACK => Key::MediaTrackNext,
-        VK_MEDIA_PREV_TRACK => Key::MediaTrackPrevious,
-        VK_MEDIA_STOP => Key::MediaStop,
-        VK_MEDIA_PLAY_PAUSE => Key::MediaPlayPause,
-        VK_LAUNCH_MAIL => Key::LaunchMail,
-        VK_LAUNCH_MEDIA_SELECT => Key::LaunchMediaPlayer,
-        VK_LAUNCH_APP1 => Key::LaunchApplication1,
-        VK_LAUNCH_APP2 => Key::LaunchApplication2,
-        VK_OEM_ATTN => Key::Alphanumeric,
-        VK_CONVERT => Key::Convert,
-        VK_MODECHANGE => Key::ModeChange,
-        VK_PROCESSKEY => Key::Process,
-        VK_ATTN => Key::Attn,
-        VK_CRSEL => Key::CrSel,
-        VK_EXSEL => Key::ExSel,
-        VK_EREOF => Key::EraseEof,
-        VK_PLAY => Key::Play,
-        VK_ZOOM => Key::ZoomToggle,
-        VK_OEM_CLEAR => Key::Clear,
+        VK_KANA => KbKey::KanaMode,
+        VK_JUNJA => KbKey::JunjaMode,
+        VK_FINAL => KbKey::FinalMode,
+        VK_KANJI => KbKey::KanjiMode,
+        VK_ESCAPE => KbKey::Escape,
+        VK_NONCONVERT => KbKey::NonConvert,
+        VK_ACCEPT => KbKey::Accept,
+        VK_PRIOR => KbKey::PageUp,
+        VK_NEXT => KbKey::PageDown,
+        VK_END => KbKey::End,
+        VK_HOME => KbKey::Home,
+        VK_LEFT => KbKey::ArrowLeft,
+        VK_UP => KbKey::ArrowUp,
+        VK_RIGHT => KbKey::ArrowRight,
+        VK_DOWN => KbKey::ArrowDown,
+        VK_SELECT => KbKey::Select,
+        VK_PRINT => KbKey::Print,
+        VK_EXECUTE => KbKey::Execute,
+        VK_SNAPSHOT => KbKey::PrintScreen,
+        VK_INSERT => KbKey::Insert,
+        VK_DELETE => KbKey::Delete,
+        VK_HELP => KbKey::Help,
+        VK_LWIN | VK_RWIN => KbKey::Meta,
+        VK_APPS => KbKey::ContextMenu,
+        VK_SLEEP => KbKey::Standby,
+        VK_F1 => KbKey::F1,
+        VK_F2 => KbKey::F2,
+        VK_F3 => KbKey::F3,
+        VK_F4 => KbKey::F4,
+        VK_F5 => KbKey::F5,
+        VK_F6 => KbKey::F6,
+        VK_F7 => KbKey::F7,
+        VK_F8 => KbKey::F8,
+        VK_F9 => KbKey::F9,
+        VK_F10 => KbKey::F10,
+        VK_F11 => KbKey::F11,
+        VK_F12 => KbKey::F12,
+        VK_NUMLOCK => KbKey::NumLock,
+        VK_SCROLL => KbKey::ScrollLock,
+        VK_BROWSER_BACK => KbKey::BrowserBack,
+        VK_BROWSER_FORWARD => KbKey::BrowserForward,
+        VK_BROWSER_REFRESH => KbKey::BrowserRefresh,
+        VK_BROWSER_STOP => KbKey::BrowserStop,
+        VK_BROWSER_SEARCH => KbKey::BrowserSearch,
+        VK_BROWSER_FAVORITES => KbKey::BrowserFavorites,
+        VK_BROWSER_HOME => KbKey::BrowserHome,
+        VK_VOLUME_MUTE => KbKey::AudioVolumeMute,
+        VK_VOLUME_DOWN => KbKey::AudioVolumeDown,
+        VK_VOLUME_UP => KbKey::AudioVolumeUp,
+        VK_MEDIA_NEXT_TRACK => KbKey::MediaTrackNext,
+        VK_MEDIA_PREV_TRACK => KbKey::MediaTrackPrevious,
+        VK_MEDIA_STOP => KbKey::MediaStop,
+        VK_MEDIA_PLAY_PAUSE => KbKey::MediaPlayPause,
+        VK_LAUNCH_MAIL => KbKey::LaunchMail,
+        VK_LAUNCH_MEDIA_SELECT => KbKey::LaunchMediaPlayer,
+        VK_LAUNCH_APP1 => KbKey::LaunchApplication1,
+        VK_LAUNCH_APP2 => KbKey::LaunchApplication2,
+        VK_OEM_ATTN => KbKey::Alphanumeric,
+        VK_CONVERT => KbKey::Convert,
+        VK_MODECHANGE => KbKey::ModeChange,
+        VK_PROCESSKEY => KbKey::Process,
+        VK_ATTN => KbKey::Attn,
+        VK_CRSEL => KbKey::CrSel,
+        VK_EXSEL => KbKey::ExSel,
+        VK_EREOF => KbKey::EraseEof,
+        VK_PLAY => KbKey::Play,
+        VK_ZOOM => KbKey::ZoomToggle,
+        VK_OEM_CLEAR => KbKey::Clear,
         _ => return None,
     })
 }
@@ -350,9 +350,9 @@ fn vk_to_key(vk: VkCode) -> Option<Key> {
 /// The virtual key code can have modifiers in the higher order byte when the
 /// argument is a `Character` variant. See:
 /// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscanw
-pub(crate) fn key_to_vk(key: &Key) -> Option<i32> {
+pub(crate) fn key_to_vk(key: &KbKey) -> Option<i32> {
     Some(match key {
-        Key::Character(s) => {
+        KbKey::Character(s) => {
             if let Some(code_point) = s.chars().next() {
                 if let Ok(wchar) = (code_point as u32).try_into() {
                     unsafe { VkKeyScanW(wchar) as i32 }
@@ -363,109 +363,109 @@ pub(crate) fn key_to_vk(key: &Key) -> Option<i32> {
                 return None;
             }
         }
-        Key::Cancel => VK_CANCEL,
-        Key::Backspace => VK_BACK,
-        Key::Tab => VK_TAB,
-        Key::Clear => VK_CLEAR,
-        Key::Enter => VK_RETURN,
-        Key::Shift => VK_SHIFT,
-        Key::Control => VK_CONTROL,
-        Key::Alt => VK_MENU,
-        Key::Pause => VK_PAUSE,
-        Key::CapsLock => VK_CAPITAL,
+        KbKey::Cancel => VK_CANCEL,
+        KbKey::Backspace => VK_BACK,
+        KbKey::Tab => VK_TAB,
+        KbKey::Clear => VK_CLEAR,
+        KbKey::Enter => VK_RETURN,
+        KbKey::Shift => VK_SHIFT,
+        KbKey::Control => VK_CONTROL,
+        KbKey::Alt => VK_MENU,
+        KbKey::Pause => VK_PAUSE,
+        KbKey::CapsLock => VK_CAPITAL,
         // TODO: disambiguate kana and hangul? same vk
-        Key::KanaMode => VK_KANA,
-        Key::JunjaMode => VK_JUNJA,
-        Key::FinalMode => VK_FINAL,
-        Key::KanjiMode => VK_KANJI,
-        Key::Escape => VK_ESCAPE,
-        Key::NonConvert => VK_NONCONVERT,
-        Key::Accept => VK_ACCEPT,
-        Key::PageUp => VK_PRIOR,
-        Key::PageDown => VK_NEXT,
-        Key::End => VK_END,
-        Key::Home => VK_HOME,
-        Key::ArrowLeft => VK_LEFT,
-        Key::ArrowUp => VK_UP,
-        Key::ArrowRight => VK_RIGHT,
-        Key::ArrowDown => VK_DOWN,
-        Key::Select => VK_SELECT,
-        Key::Print => VK_PRINT,
-        Key::Execute => VK_EXECUTE,
-        Key::PrintScreen => VK_SNAPSHOT,
-        Key::Insert => VK_INSERT,
-        Key::Delete => VK_DELETE,
-        Key::Help => VK_HELP,
-        Key::Meta => VK_LWIN,
-        Key::ContextMenu => VK_APPS,
-        Key::Standby => VK_SLEEP,
-        Key::F1 => VK_F1,
-        Key::F2 => VK_F2,
-        Key::F3 => VK_F3,
-        Key::F4 => VK_F4,
-        Key::F5 => VK_F5,
-        Key::F6 => VK_F6,
-        Key::F7 => VK_F7,
-        Key::F8 => VK_F8,
-        Key::F9 => VK_F9,
-        Key::F10 => VK_F10,
-        Key::F11 => VK_F11,
-        Key::F12 => VK_F12,
-        Key::NumLock => VK_NUMLOCK,
-        Key::ScrollLock => VK_SCROLL,
-        Key::BrowserBack => VK_BROWSER_BACK,
-        Key::BrowserForward => VK_BROWSER_FORWARD,
-        Key::BrowserRefresh => VK_BROWSER_REFRESH,
-        Key::BrowserStop => VK_BROWSER_STOP,
-        Key::BrowserSearch => VK_BROWSER_SEARCH,
-        Key::BrowserFavorites => VK_BROWSER_FAVORITES,
-        Key::BrowserHome => VK_BROWSER_HOME,
-        Key::AudioVolumeMute => VK_VOLUME_MUTE,
-        Key::AudioVolumeDown => VK_VOLUME_DOWN,
-        Key::AudioVolumeUp => VK_VOLUME_UP,
-        Key::MediaTrackNext => VK_MEDIA_NEXT_TRACK,
-        Key::MediaTrackPrevious => VK_MEDIA_PREV_TRACK,
-        Key::MediaStop => VK_MEDIA_STOP,
-        Key::MediaPlayPause => VK_MEDIA_PLAY_PAUSE,
-        Key::LaunchMail => VK_LAUNCH_MAIL,
-        Key::LaunchMediaPlayer => VK_LAUNCH_MEDIA_SELECT,
-        Key::LaunchApplication1 => VK_LAUNCH_APP1,
-        Key::LaunchApplication2 => VK_LAUNCH_APP2,
-        Key::Alphanumeric => VK_OEM_ATTN,
-        Key::Convert => VK_CONVERT,
-        Key::ModeChange => VK_MODECHANGE,
-        Key::Process => VK_PROCESSKEY,
-        Key::Attn => VK_ATTN,
-        Key::CrSel => VK_CRSEL,
-        Key::ExSel => VK_EXSEL,
-        Key::EraseEof => VK_EREOF,
-        Key::Play => VK_PLAY,
-        Key::ZoomToggle => VK_ZOOM,
+        KbKey::KanaMode => VK_KANA,
+        KbKey::JunjaMode => VK_JUNJA,
+        KbKey::FinalMode => VK_FINAL,
+        KbKey::KanjiMode => VK_KANJI,
+        KbKey::Escape => VK_ESCAPE,
+        KbKey::NonConvert => VK_NONCONVERT,
+        KbKey::Accept => VK_ACCEPT,
+        KbKey::PageUp => VK_PRIOR,
+        KbKey::PageDown => VK_NEXT,
+        KbKey::End => VK_END,
+        KbKey::Home => VK_HOME,
+        KbKey::ArrowLeft => VK_LEFT,
+        KbKey::ArrowUp => VK_UP,
+        KbKey::ArrowRight => VK_RIGHT,
+        KbKey::ArrowDown => VK_DOWN,
+        KbKey::Select => VK_SELECT,
+        KbKey::Print => VK_PRINT,
+        KbKey::Execute => VK_EXECUTE,
+        KbKey::PrintScreen => VK_SNAPSHOT,
+        KbKey::Insert => VK_INSERT,
+        KbKey::Delete => VK_DELETE,
+        KbKey::Help => VK_HELP,
+        KbKey::Meta => VK_LWIN,
+        KbKey::ContextMenu => VK_APPS,
+        KbKey::Standby => VK_SLEEP,
+        KbKey::F1 => VK_F1,
+        KbKey::F2 => VK_F2,
+        KbKey::F3 => VK_F3,
+        KbKey::F4 => VK_F4,
+        KbKey::F5 => VK_F5,
+        KbKey::F6 => VK_F6,
+        KbKey::F7 => VK_F7,
+        KbKey::F8 => VK_F8,
+        KbKey::F9 => VK_F9,
+        KbKey::F10 => VK_F10,
+        KbKey::F11 => VK_F11,
+        KbKey::F12 => VK_F12,
+        KbKey::NumLock => VK_NUMLOCK,
+        KbKey::ScrollLock => VK_SCROLL,
+        KbKey::BrowserBack => VK_BROWSER_BACK,
+        KbKey::BrowserForward => VK_BROWSER_FORWARD,
+        KbKey::BrowserRefresh => VK_BROWSER_REFRESH,
+        KbKey::BrowserStop => VK_BROWSER_STOP,
+        KbKey::BrowserSearch => VK_BROWSER_SEARCH,
+        KbKey::BrowserFavorites => VK_BROWSER_FAVORITES,
+        KbKey::BrowserHome => VK_BROWSER_HOME,
+        KbKey::AudioVolumeMute => VK_VOLUME_MUTE,
+        KbKey::AudioVolumeDown => VK_VOLUME_DOWN,
+        KbKey::AudioVolumeUp => VK_VOLUME_UP,
+        KbKey::MediaTrackNext => VK_MEDIA_NEXT_TRACK,
+        KbKey::MediaTrackPrevious => VK_MEDIA_PREV_TRACK,
+        KbKey::MediaStop => VK_MEDIA_STOP,
+        KbKey::MediaPlayPause => VK_MEDIA_PLAY_PAUSE,
+        KbKey::LaunchMail => VK_LAUNCH_MAIL,
+        KbKey::LaunchMediaPlayer => VK_LAUNCH_MEDIA_SELECT,
+        KbKey::LaunchApplication1 => VK_LAUNCH_APP1,
+        KbKey::LaunchApplication2 => VK_LAUNCH_APP2,
+        KbKey::Alphanumeric => VK_OEM_ATTN,
+        KbKey::Convert => VK_CONVERT,
+        KbKey::ModeChange => VK_MODECHANGE,
+        KbKey::Process => VK_PROCESSKEY,
+        KbKey::Attn => VK_ATTN,
+        KbKey::CrSel => VK_CRSEL,
+        KbKey::ExSel => VK_EXSEL,
+        KbKey::EraseEof => VK_EREOF,
+        KbKey::Play => VK_PLAY,
+        KbKey::ZoomToggle => VK_ZOOM,
         _ => return None,
     })
 }
 
-fn code_unit_to_key(code_unit: u32) -> Key {
+fn code_unit_to_key(code_unit: u32) -> KbKey {
     match code_unit {
-        0x8 | 0x7F => Key::Backspace,
-        0x9 => Key::Tab,
-        0xA | 0xD => Key::Enter,
-        0x1B => Key::Escape,
+        0x8 | 0x7F => KbKey::Backspace,
+        0x9 => KbKey::Tab,
+        0xA | 0xD => KbKey::Enter,
+        0x1B => KbKey::Escape,
         _ if code_unit >= 0x20 => {
             if let Some(c) = std::char::from_u32(code_unit) {
-                Key::Character(c.to_string())
+                KbKey::Character(c.to_string())
             } else {
                 // UTF-16 error, very unlikely
-                Key::Unidentified
+                KbKey::Unidentified
             }
         }
-        _ => Key::Unidentified,
+        _ => KbKey::Unidentified,
     }
 }
 
 /// Get location from virtual key code.
 ///
-/// This logic is based on NativeKey::GetKeyLocation from Mozilla.
+/// This logic is based on NativeKbKey::GetKeyLocation from Mozilla.
 fn vk_to_location(vk: VkCode, is_extended: bool) -> Location {
     match vk as INT {
         VK_LSHIFT | VK_LCONTROL | VK_LMENU | VK_LWIN => Location::Left,
@@ -536,7 +536,7 @@ impl KeyboardState {
     /// acute. Then we expect `WM_KEYDOWN` with `wparam = VK_OEM_6` followed by
     /// two `WM_CHAR` with `wparam = 0xB4` (corresponding to U+00B4 = acute accent).
     /// In this case, the result (produced on the final message in the sequence) is
-    /// a key event with `key = Key::Character("´´")`, which also matches browser
+    /// a key event with `key = KbKey::Character("´´")`, which also matches browser
     /// behavior.
     ///
     /// # Safety
@@ -550,7 +550,7 @@ impl KeyboardState {
         msg: UINT,
         wparam: WPARAM,
         lparam: LPARAM,
-    ) -> Option<KeyboardEvent> {
+    ) -> Option<KeyEvent> {
         match msg {
             WM_KEYDOWN | WM_SYSKEYDOWN => {
                 //println!("keydown wparam {:x} lparam {:x}", wparam, lparam);
@@ -564,7 +564,7 @@ impl KeyboardState {
                     let is_extended = (lparam & 0x100_0000) != 0;
                     let location = vk_to_location(vk, is_extended);
                     let state = KeyState::Down;
-                    let event = KeyboardEvent {
+                    let event = KeyEvent {
                         state,
                         modifiers,
                         code,
@@ -589,7 +589,7 @@ impl KeyboardState {
                 let is_extended = (lparam & 0x100_0000) != 0;
                 let location = vk_to_location(vk, is_extended);
                 let state = KeyState::Up;
-                let event = KeyboardEvent {
+                let event = KeyEvent {
                     state,
                     modifiers,
                     code,
@@ -613,9 +613,9 @@ impl KeyboardState {
                     } else {
                         self.stash_utf16.push(wparam as u16);
                         if let Ok(s) = String::from_utf16(&self.stash_utf16) {
-                            Key::Character(s)
+                            KbKey::Character(s)
                         } else {
-                            Key::Unidentified
+                            KbKey::Unidentified
                         }
                     };
                     self.stash_utf16.clear();
@@ -623,7 +623,7 @@ impl KeyboardState {
                     let is_extended = (lparam & 0x100_0000) != 0;
                     let location = vk_to_location(vk, is_extended);
                     let state = KeyState::Down;
-                    let event = KeyboardEvent {
+                    let event = KeyEvent {
                         state,
                         modifiers,
                         code,
@@ -746,7 +746,7 @@ impl KeyboardState {
         }
     }
 
-    fn get_base_key(&self, vk: VkCode, modifiers: Modifiers) -> Key {
+    fn get_base_key(&self, vk: VkCode, modifiers: Modifiers) -> KbKey {
         let mut shift_state = 0;
         if modifiers.contains(Modifiers::SHIFT) {
             shift_state |= SHIFT_STATE_SHIFT;
@@ -755,11 +755,11 @@ impl KeyboardState {
             shift_state |= SHIFT_STATE_ALTGR;
         }
         if let Some(s) = self.key_vals.get(&(vk, shift_state)) {
-            Key::Character(s.clone())
+            KbKey::Character(s.clone())
         } else {
             let mapped = self.map_vk(vk);
             if mapped >= (1 << 31) {
-                Key::Dead
+                KbKey::Dead
             } else {
                 code_unit_to_key(mapped)
             }

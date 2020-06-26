@@ -26,11 +26,11 @@ use crate::shell::{Application, IdleToken, MouseEvent, Scale, WinHandler, Window
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
 use crate::ext_event::ExtEventHost;
-use crate::keyboard_types::KeyboardEvent;
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, InternalEvent, MenuDesc, Target, TimerToken, WindowDesc, WindowId,
+    Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, Target, TimerToken, WindowDesc,
+    WindowId,
 };
 
 use crate::command::sys as sys_cmd;
@@ -694,12 +694,12 @@ impl<T: Data> WinHandler for DruidHandler<T> {
             .do_window_event(Event::Internal(InternalEvent::MouseLeave), self.window_id);
     }
 
-    fn key_down(&mut self, event: KeyboardEvent) -> bool {
+    fn key_down(&mut self, event: KeyEvent) -> bool {
         self.app_state
             .do_window_event(Event::KeyDown(event), self.window_id)
     }
 
-    fn key_up(&mut self, event: KeyboardEvent) {
+    fn key_up(&mut self, event: KeyEvent) {
         self.app_state
             .do_window_event(Event::KeyUp(event), self.window_id);
     }

@@ -16,7 +16,7 @@
 
 use crate::kurbo::{Point, Vec2};
 
-use crate::keyboard_types::Modifiers;
+use crate::Modifiers;
 
 /// Information about the mouse event.
 ///

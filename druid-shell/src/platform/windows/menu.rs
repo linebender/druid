@@ -24,7 +24,7 @@ use winapi::um::winuser::*;
 
 use super::util::ToWide;
 use crate::hotkey::HotKey;
-use crate::keyboard_types::Modifiers;
+use crate::keyboard::Modifiers;
 
 /// A menu object, which can be either a top-level menubar or a
 /// submenu.

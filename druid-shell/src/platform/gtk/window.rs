@@ -37,7 +37,7 @@ use crate::piet::{Piet, RenderContext};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
-use crate::keyboard_types::{Key, KeyState, KeyboardEvent, Modifiers};
+use crate::keyboard::{KbKey, KeyState, KeyEvent, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::scale::{Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
@@ -851,7 +851,7 @@ fn get_modifiers(modifiers: gdk::ModifierType) -> Modifiers {
     result
 }
 
-fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyboardEvent {
+fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
     let keyval = key.get_keyval();
     let hardware_keycode = key.get_hardware_keycode();
 
@@ -862,19 +862,19 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyboardEven
     let key = keycodes::raw_key_to_key(keyval).unwrap_or_else(|| {
         if let Some(c) = text {
             if c >= ' ' && c != '\x7f' {
-                Key::Character(c.to_string())
+                KbKey::Character(c.to_string())
             } else {
-                Key::Unidentified
+                KbKey::Unidentified
             }
         } else {
-            Key::Unidentified
+            KbKey::Unidentified
         }
     });
     let code = keycodes::hardware_keycode_to_code(hardware_keycode);
     let location = keycodes::raw_key_to_location(keycode);
     let is_composing = false;
 
-    KeyboardEvent {
+    KeyEvent {
         key,
         code,
         location,

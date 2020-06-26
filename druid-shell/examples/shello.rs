@@ -17,9 +17,8 @@ use std::any::Any;
 use druid_shell::kurbo::{Line, Rect, Size};
 use druid_shell::piet::{Color, RenderContext};
 
-use druid_shell::keyboard_types::KeyboardEvent;
 use druid_shell::{
-    Application, Cursor, FileDialogOptions, FileSpec, HotKey, Menu, MouseEvent, SysMods,
+    Application, Cursor, FileDialogOptions, FileSpec, HotKey, KeyEvent, Menu, MouseEvent, SysMods,
     TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 
@@ -63,12 +62,12 @@ impl WinHandler for HelloState {
         }
     }
 
-    fn key_down(&mut self, event: KeyboardEvent) -> bool {
+    fn key_down(&mut self, event: KeyEvent) -> bool {
         println!("keydown: {:?}", event);
         false
     }
 
-    fn key_up(&mut self, event: KeyboardEvent) {
+    fn key_up(&mut self, event: KeyEvent) {
         println!("keyup: {:?}", event);
     }
 

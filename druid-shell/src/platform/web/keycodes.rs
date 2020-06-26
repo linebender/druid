@@ -16,17 +16,17 @@
 
 use web_sys::KeyboardEvent;
 
-use crate::keyboard_types::{self, Code, Key, KeyState, Location, Modifiers};
+use crate::keyboard::{Code, KbKey, KeyEvent, KeyState, Location, Modifiers};
 
 /// Convert a web-sys KeyboardEvent into a keyboard-types one.
 pub(crate) fn convert_keyboard_event(
     event: &KeyboardEvent,
     modifiers: Modifiers,
     state: KeyState,
-) -> keyboard_types::KeyboardEvent {
-    keyboard_types::KeyboardEvent {
+) -> KeyEvent {
+    KeyEvent {
         state,
-        key: event.key().parse().unwrap_or(Key::Unidentified),
+        key: event.key().parse().unwrap_or(KbKey::Unidentified),
         code: convert_code(&event.code()),
         location: convert_location(event.location()),
         modifiers,

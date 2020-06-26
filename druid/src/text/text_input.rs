@@ -15,8 +15,7 @@
 //! Map input to `EditAction`s
 
 use super::Movement;
-use crate::{HotKey, SysMods};
-use druid_shell::keyboard_types::{Key, KeyboardEvent, Modifiers};
+use crate::{HotKey, KbKey, KeyEvent, Modifiers, SysMods};
 
 // This following enumerations are heavily inspired by xi-editors enumerations found at
 // https://github.com/xi-editor/xi-editor/blob/e2589974fc4050beb33af82481aa71b258358e48/rust/core-lib/src/edit_types.rs
@@ -48,7 +47,7 @@ pub struct MouseAction {
 pub trait TextInput {
     /// Handle a key event and return an edit action to be executed
     /// for the key event
-    fn handle_event(&self, event: &KeyboardEvent) -> Option<EditAction>;
+    fn handle_event(&self, event: &KeyEvent) -> Option<EditAction>;
 }
 
 /// Handles key events and returns actions that are applicable to
@@ -63,45 +62,45 @@ impl BasicTextInput {
 }
 
 impl TextInput for BasicTextInput {
-    fn handle_event(&self, event: &KeyboardEvent) -> Option<EditAction> {
+    fn handle_event(&self, event: &KeyEvent) -> Option<EditAction> {
         let action = match event {
             // Select all (Ctrl+A || Cmd+A)
             k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => EditAction::SelectAll,
             // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
-            k_e if (HotKey::new(SysMods::Cmd, Key::ArrowLeft)).matches(k_e)
-                || HotKey::new(None, Key::Home).matches(k_e) =>
+            k_e if (HotKey::new(SysMods::Cmd, KbKey::ArrowLeft)).matches(k_e)
+                || HotKey::new(None, KbKey::Home).matches(k_e) =>
             {
                 EditAction::Move(Movement::LeftOfLine)
             }
             // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
-            k_e if (HotKey::new(SysMods::Cmd, Key::ArrowRight)).matches(k_e)
-                || HotKey::new(None, Key::End).matches(k_e) =>
+            k_e if (HotKey::new(SysMods::Cmd, KbKey::ArrowRight)).matches(k_e)
+                || HotKey::new(None, KbKey::End).matches(k_e) =>
             {
                 EditAction::Move(Movement::RightOfLine)
             }
             // Select left (Shift+ArrowLeft)
-            k_e if (HotKey::new(SysMods::Shift, Key::ArrowLeft)).matches(k_e) => {
+            k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowLeft)).matches(k_e) => {
                 EditAction::ModifySelection(Movement::Left)
             }
             // Select right (Shift+ArrowRight)
-            k_e if (HotKey::new(SysMods::Shift, Key::ArrowRight)).matches(k_e) => {
+            k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowRight)).matches(k_e) => {
                 EditAction::ModifySelection(Movement::Right)
             }
             // Move left (ArrowLeft)
-            k_e if (HotKey::new(None, Key::ArrowLeft)).matches(k_e) => {
+            k_e if (HotKey::new(None, KbKey::ArrowLeft)).matches(k_e) => {
                 EditAction::Move(Movement::Left)
             }
             // Move right (ArrowRight)
-            k_e if (HotKey::new(None, Key::ArrowRight)).matches(k_e) => {
+            k_e if (HotKey::new(None, KbKey::ArrowRight)).matches(k_e) => {
                 EditAction::Move(Movement::Right)
             }
             // Backspace
-            k_e if (HotKey::new(None, Key::Backspace)).matches(k_e) => EditAction::Backspace,
+            k_e if (HotKey::new(None, KbKey::Backspace)).matches(k_e) => EditAction::Backspace,
             // Delete
-            k_e if (HotKey::new(None, Key::Delete)).matches(k_e) => EditAction::Delete,
+            k_e if (HotKey::new(None, KbKey::Delete)).matches(k_e) => EditAction::Delete,
             // Actual typing
             k_e if key_event_is_printable(k_e) => {
-                if let Key::Character(chars) = &k_e.key {
+                if let KbKey::Character(chars) = &k_e.key {
                     EditAction::Insert(chars.to_owned())
                 } else {
                     return None;
@@ -115,8 +114,8 @@ impl TextInput for BasicTextInput {
 }
 
 /// Determine whether a keyboard event contains insertable text.
-fn key_event_is_printable(event: &KeyboardEvent) -> bool {
-    if let Key::Character(_) = &event.key {
+fn key_event_is_printable(event: &KeyEvent) -> bool {
+    if let KbKey::Character(_) = &event.key {
         if event.modifiers.contains(Modifiers::CONTROL) || event.modifiers.contains(Modifiers::META)
         {
             return false;

@@ -18,7 +18,7 @@ use std::borrow::Borrow;
 
 use log::warn;
 
-use crate::keyboard_types::{Code, Key, KeyState, KeyboardEvent, Location, Modifiers};
+use crate::{IntoKey, KbKey, KeyEvent, Modifiers};
 
 // TODO: fix docstring
 
@@ -32,47 +32,33 @@ use crate::keyboard_types::{Code, Key, KeyState, KeyboardEvent, Location, Modifi
 /// [`SysMods`] matches the Command key on macOS and Ctrl elsewhere:
 ///
 /// ```
-/// use druid_shell::{key_event_for_test, HotKey, RawMods, SysMods};
-/// use druid_shell::keyboard_types::Key;
+/// use druid_shell::{HotKey, KbKey, KeyEvent, RawMods, SysMods};
 ///
 /// let hotkey = HotKey::new(SysMods::Cmd, "a");
 ///
 /// #[cfg(target_os = "macos")]
-/// assert!(hotkey.matches(key_event_for_test(RawMods::Meta, "a")));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Meta, "a")));
 ///
 /// #[cfg(target_os = "windows")]
-/// assert!(hotkey.matches(key_event_for_test(RawMods::Ctrl, "a")));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "a")));
 /// ```
 ///
 /// `None` matches only the key without modifiers:
 ///
 /// ```
-/// use druid_shell::{key_event_for_test, HotKey, RawMods, SysMods};
-/// use druid_shell::keyboard_types::Key;
+/// use druid_shell::{HotKey, KbKey, KeyEvent, RawMods, SysMods};
 ///
-/// let hotkey = HotKey::new(None, Key::ArrowLeft);
+/// let hotkey = HotKey::new(None, KbKey::ArrowLeft);
 ///
-/// assert!(hotkey.matches(key_event_for_test(RawMods::None, Key::ArrowLeft)));
-/// assert!(!hotkey.matches(key_event_for_test(RawMods::Ctrl, Key::ArrowLeft)));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::None, KbKey::ArrowLeft)));
+/// assert!(!hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, KbKey::ArrowLeft)));
 /// ```
 ///
 /// [`SysMods`]: enum.SysMods.html
 #[derive(Debug, Clone)]
 pub struct HotKey {
     pub(crate) mods: RawMods,
-    pub(crate) key: Key,
-}
-
-/// A convenience trait for creating Key objects.
-///
-/// This trait is implemented by [`Key`] itself and also strings, which are
-/// converted into the `Character` variant. It is defined this way and not
-/// using the standard `Into` mechanism because `Key` is a type in an external
-/// crate.
-///
-/// [`Key`]: keyboard_types::Key
-pub trait IntoKey {
-    fn into_key(self) -> Key;
+    pub(crate) key: KbKey,
 }
 
 impl HotKey {
@@ -83,16 +69,15 @@ impl HotKey {
     /// 'Command' key on macOS with the 'Ctrl' key on other platforms.
     ///
     /// The second argument describes the non-modifier key. This can be either
-    /// a `&str` or a [`Key`]; the former is merely a convenient
-    /// shorthand for `Key::Character()`.
+    /// a `&str` or a [`KbKey`]; the former is merely a convenient
+    /// shorthand for `KbKey::Character()`.
     ///
     /// # Examples
     /// ```
-    /// use druid_shell::{HotKey, RawMods, SysMods};
-    /// use druid_shell::keyboard_types::Key;
+    /// use druid_shell::{HotKey, KbKey, RawMods, SysMods};
     ///
     /// let select_all = HotKey::new(SysMods::Cmd, "a");
-    /// let esc = HotKey::new(None, Key::Escape);
+    /// let esc = HotKey::new(None, KbKey::Escape);
     /// let macos_fullscreen = HotKey::new(RawMods::CtrlMeta, "f");
     /// ```
     ///
@@ -109,7 +94,7 @@ impl HotKey {
 
     //TODO: figure out if we need to be normalizing case or something?
     fn warn_if_needed(self) -> Self {
-        if let Key::Character(s) = &self.key {
+        if let KbKey::Character(s) = &self.key {
             let km: Modifiers = self.mods.into();
             if km.contains(Modifiers::SHIFT) && s.chars().any(|c| c.is_uppercase()) {
                 warn!(
@@ -125,7 +110,7 @@ impl HotKey {
     /// Returns `true` if this [`KeyboardEvent`] matches this `HotKey`.
     ///
     /// [`KeyboardEvent`]: keyboard_types::KeyEvent
-    pub fn matches(&self, event: impl Borrow<KeyboardEvent>) -> bool {
+    pub fn matches(&self, event: impl Borrow<KeyEvent>) -> bool {
         let event = event.borrow();
         self.mods == event.modifiers && self.key == event.key
     }
@@ -221,18 +206,10 @@ impl From<RawMods> for Modifiers {
             RawMods::AltCtrlMetaShift => (true, true, true, true),
         };
         let mut mods = Modifiers::empty();
-        if alt {
-            mods |= Modifiers::ALT;
-        }
-        if ctrl {
-            mods |= Modifiers::CONTROL;
-        }
-        if meta {
-            mods |= Modifiers::META;
-        }
-        if shift {
-            mods |= Modifiers::SHIFT;
-        }
+        mods.set(Modifiers::ALT, alt);
+        mods.set(Modifiers::CONTROL, ctrl);
+        mods.set(Modifiers::META, meta);
+        mods.set(Modifiers::SHIFT, shift);
         mods
     }
 }
@@ -264,33 +241,5 @@ impl From<SysMods> for RawMods {
             SysMods::CmdShift => RawMods::CtrlShift,
             SysMods::AltCmdShift => RawMods::AltCtrlShift,
         }
-    }
-}
-
-impl IntoKey for Key {
-    fn into_key(self) -> Key {
-        self
-    }
-}
-
-impl IntoKey for &str {
-    fn into_key(self) -> Key {
-        Key::Character(self.into())
-    }
-}
-
-#[allow(unused)]
-/// Create a key event for testing purposes.
-pub fn key_event_for_test(mods: impl Into<Modifiers>, key: impl IntoKey) -> KeyboardEvent {
-    let modifiers = mods.into();
-    let key = key.into_key();
-    KeyboardEvent {
-        key,
-        code: Code::Unidentified,
-        location: Location::Standard,
-        state: KeyState::Down,
-        modifiers,
-        is_composing: false,
-        repeat: false,
     }
 }

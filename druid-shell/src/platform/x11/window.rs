@@ -30,7 +30,7 @@ use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
 
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error as ShellError;
-use crate::keyboard_types::{KeyState, KeyboardEvent, Modifiers};
+use crate::keyboard::{KeyState, KeyEvent, Modifiers};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, RenderContext};
@@ -520,7 +520,7 @@ impl Window {
         let key = keycodes::code_to_key(code, modifiers);
         let location = keycodes::code_to_location(code);
         let state = KeyState::Down;
-        let key_event = KeyboardEvent {
+        let key_event = KeyEvent {
             code,
             key,
             modifiers,

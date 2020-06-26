@@ -43,7 +43,6 @@ use piet_common::dwrite::DwriteFactory;
 
 use crate::platform::windows::HwndRenderTarget;
 
-use crate::keyboard_types::{Key, KeyState, Modifiers};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
@@ -61,6 +60,7 @@ use super::util::{self, as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
+use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::scale::{Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
@@ -608,7 +608,7 @@ impl WndProc for MyWndProc {
                             // Otherwise we will stop getting mouse events for no gain.
                             // When we do have a menu, those keys will focus the menu.
                             let handle_menu = !self.has_menu()
-                                && (event.key == Key::Alt || event.key == Key::F10);
+                                && (event.key == KbKey::Alt || event.key == KbKey::F10);
                             match event.state {
                                 KeyState::Down => {
                                     if s.handler.key_down(event) || handle_menu {

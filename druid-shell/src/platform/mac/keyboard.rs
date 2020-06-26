@@ -18,7 +18,7 @@ use cocoa::appkit::{NSEvent, NSEventModifierFlags, NSEventType};
 use cocoa::base::id;
 use objc::{msg_send, sel, sel_impl};
 
-use keyboard_types::{Code, Key, KeyState, KeyboardEvent, Modifiers};
+use crate::keyboard::{Code, KbKey, KeyEvent, KeyState, Modifiers};
 
 use super::super::shared;
 use super::util::from_nsstring;
@@ -183,52 +183,52 @@ fn key_code_to_code(key_code: u16) -> Code {
 ///
 /// The logic for this function is derived from KEY_MAP_COCOA bindings in
 /// NativeKeyToDOMKeyName.h.
-fn code_to_key(code: Code) -> Option<Key> {
+fn code_to_key(code: Code) -> Option<KbKey> {
     Some(match code {
-        Code::Escape => Key::Escape,
-        Code::ShiftLeft | Code::ShiftRight => Key::Shift,
-        Code::AltLeft | Code::AltRight => Key::Alt,
-        Code::MetaLeft | Code::MetaRight => Key::Meta,
-        Code::ControlLeft | Code::ControlRight => Key::Control,
-        Code::CapsLock => Key::CapsLock,
+        Code::Escape => KbKey::Escape,
+        Code::ShiftLeft | Code::ShiftRight => KbKey::Shift,
+        Code::AltLeft | Code::AltRight => KbKey::Alt,
+        Code::MetaLeft | Code::MetaRight => KbKey::Meta,
+        Code::ControlLeft | Code::ControlRight => KbKey::Control,
+        Code::CapsLock => KbKey::CapsLock,
         // kVK_ANSI_KeypadClear
-        Code::NumLock => Key::Clear,
-        Code::Fn => Key::Fn,
-        Code::F1 => Key::F1,
-        Code::F2 => Key::F2,
-        Code::F3 => Key::F3,
-        Code::F4 => Key::F4,
-        Code::F5 => Key::F5,
-        Code::F6 => Key::F6,
-        Code::F7 => Key::F7,
-        Code::F8 => Key::F8,
-        Code::F9 => Key::F9,
-        Code::F10 => Key::F10,
-        Code::F11 => Key::F11,
-        Code::F12 => Key::F12,
-        Code::Pause => Key::Pause,
-        Code::ScrollLock => Key::ScrollLock,
-        Code::PrintScreen => Key::PrintScreen,
-        Code::Insert => Key::Insert,
-        Code::Delete => Key::Delete,
-        Code::Tab => Key::Tab,
-        Code::Backspace => Key::Backspace,
-        Code::ContextMenu => Key::ContextMenu,
+        Code::NumLock => KbKey::Clear,
+        Code::Fn => KbKey::Fn,
+        Code::F1 => KbKey::F1,
+        Code::F2 => KbKey::F2,
+        Code::F3 => KbKey::F3,
+        Code::F4 => KbKey::F4,
+        Code::F5 => KbKey::F5,
+        Code::F6 => KbKey::F6,
+        Code::F7 => KbKey::F7,
+        Code::F8 => KbKey::F8,
+        Code::F9 => KbKey::F9,
+        Code::F10 => KbKey::F10,
+        Code::F11 => KbKey::F11,
+        Code::F12 => KbKey::F12,
+        Code::Pause => KbKey::Pause,
+        Code::ScrollLock => KbKey::ScrollLock,
+        Code::PrintScreen => KbKey::PrintScreen,
+        Code::Insert => KbKey::Insert,
+        Code::Delete => KbKey::Delete,
+        Code::Tab => KbKey::Tab,
+        Code::Backspace => KbKey::Backspace,
+        Code::ContextMenu => KbKey::ContextMenu,
         // kVK_JIS_Kana
-        Code::Lang1 => Key::KanjiMode,
+        Code::Lang1 => KbKey::KanjiMode,
         // kVK_JIS_Eisu
-        Code::Lang2 => Key::Eisu,
-        Code::Home => Key::Home,
-        Code::End => Key::End,
-        Code::PageUp => Key::PageUp,
-        Code::PageDown => Key::PageDown,
-        Code::ArrowLeft => Key::ArrowLeft,
-        Code::ArrowRight => Key::ArrowRight,
-        Code::ArrowUp => Key::ArrowUp,
-        Code::ArrowDown => Key::ArrowDown,
-        Code::Enter => Key::Enter,
-        Code::NumpadEnter => Key::Enter,
-        Code::Help => Key::Help,
+        Code::Lang2 => KbKey::Eisu,
+        Code::Home => KbKey::Home,
+        Code::End => KbKey::End,
+        Code::PageUp => KbKey::PageUp,
+        Code::PageDown => KbKey::PageDown,
+        Code::ArrowLeft => KbKey::ArrowLeft,
+        Code::ArrowRight => KbKey::ArrowRight,
+        Code::ArrowUp => KbKey::ArrowUp,
+        Code::ArrowDown => KbKey::ArrowDown,
+        Code::Enter => KbKey::Enter,
+        Code::NumpadEnter => KbKey::Enter,
+        Code::Help => KbKey::Help,
         _ => return None,
     })
 }
@@ -262,7 +262,7 @@ impl KeyboardState {
         KeyboardState { last_mods }
     }
 
-    pub(crate) fn process_native_event(&mut self, event: id) -> Option<KeyboardEvent> {
+    pub(crate) fn process_native_event(&mut self, event: id) -> Option<KeyEvent> {
         unsafe {
             let event_type = event.eventType();
             let key_code = event.keyCode();
@@ -303,18 +303,18 @@ impl KeyboardState {
             } else {
                 let characters = from_nsstring(event.characters());
                 if is_valid_key(&characters) {
-                    Key::Character(characters)
+                    KbKey::Character(characters)
                 } else {
                     let chars_ignoring = from_nsstring(event.charactersIgnoringModifiers());
                     if is_valid_key(&chars_ignoring) {
-                        Key::Character(chars_ignoring)
+                        KbKey::Character(chars_ignoring)
                     } else {
                         // There may be more heroic things we can do here.
-                        Key::Unidentified
+                        KbKey::Unidentified
                     }
                 }
             };
-            let event = KeyboardEvent {
+            let event = KeyEvent {
                 code,
                 key,
                 location,
