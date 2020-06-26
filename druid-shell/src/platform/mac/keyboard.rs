@@ -18,8 +18,9 @@ use cocoa::appkit::{NSEvent, NSEventModifierFlags, NSEventType};
 use cocoa::base::id;
 use objc::{msg_send, sel, sel_impl};
 
-use keyboard_types::{Code, Key, KeyState, KeyboardEvent, Location, Modifiers};
+use keyboard_types::{Code, Key, KeyState, KeyboardEvent, Modifiers};
 
+use super::super::shared;
 use super::util::from_nsstring;
 
 /// State for processing of keyboard events.
@@ -173,38 +174,6 @@ fn key_code_to_code(key_code: u16) -> Code {
     }
 }
 
-/// Map key code to location.
-///
-/// The logic for this is adapted from InitKeyEvent in TextInputHandler.
-///
-/// Note: in the original, this is based on kVK constants, but since we don't have those
-/// readily available, we use the mapping to code (which should be effectively lossless).
-fn code_to_location(code: Code) -> Location {
-    match code {
-        Code::MetaLeft | Code::ShiftLeft | Code::AltLeft | Code::ControlLeft => Location::Left,
-        Code::MetaRight | Code::ShiftRight | Code::AltRight | Code::ControlRight => Location::Right,
-        Code::Numpad0
-        | Code::Numpad1
-        | Code::Numpad2
-        | Code::Numpad3
-        | Code::Numpad4
-        | Code::Numpad5
-        | Code::Numpad6
-        | Code::Numpad7
-        | Code::Numpad8
-        | Code::Numpad9
-        | Code::NumpadAdd
-        | Code::NumpadComma
-        | Code::NumpadDecimal
-        | Code::NumpadDivide
-        | Code::NumpadEnter
-        | Code::NumpadEqual
-        | Code::NumpadMultiply
-        | Code::NumpadSubtract => Location::Numpad,
-        _ => Location::Standard,
-    }
-}
-
 /// Convert code to key.
 ///
 /// On macOS, for non-printable keys, the keyCode we get from the event serves is
@@ -298,7 +267,7 @@ impl KeyboardState {
             let event_type = event.eventType();
             let key_code = event.keyCode();
             let code = key_code_to_code(key_code);
-            let location = code_to_location(code);
+            let location = shared::code_to_location(code);
             let raw_mods = event.modifierFlags();
             let modifiers = make_modifiers(raw_mods);
             let state = match event_type {
