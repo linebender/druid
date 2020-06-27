@@ -28,14 +28,14 @@ pub fn code_to_key(code: Code, m: Modifiers) -> KbKey {
         KbKey::Character(s.into())
     }
     fn s(mods: Modifiers, base: &str, shifted: &str) -> KbKey {
-        if mods.contains(Modifiers::SHIFT) {
+        if mods.shift() {
             KbKey::Character(shifted.into())
         } else {
             KbKey::Character(base.into())
         }
     }
     fn n(mods: Modifiers, base: KbKey, num: &str) -> KbKey {
-        if mods.contains(Modifiers::NUM_LOCK) != mods.contains(Modifiers::SHIFT) {
+        if mods.contains(Modifiers::NUM_LOCK) != mods.shift() {
             KbKey::Character(num.into())
         } else {
             base

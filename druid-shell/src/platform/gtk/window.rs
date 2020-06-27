@@ -422,7 +422,7 @@ impl WindowBuilder {
 
                 // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
                 // They claim that one "tick" on a scroll wheel should be 120 units.
-                let shift = mods.contains(Modifiers::SHIFT);
+                let shift = mods.shift();
                 let wheel_delta = match scroll.get_direction() {
                     ScrollDirection::Up if shift => Some(Vec2::new(-120.0, 0.0)),
                     ScrollDirection::Up => Some(Vec2::new(0.0, -120.0)),

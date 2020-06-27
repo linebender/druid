@@ -116,14 +116,13 @@ impl TextInput for BasicTextInput {
 /// Determine whether a keyboard event contains insertable text.
 fn key_event_is_printable(event: &KeyEvent) -> bool {
     if let KbKey::Character(_) = &event.key {
-        if event.modifiers.contains(Modifiers::CONTROL) || event.modifiers.contains(Modifiers::META)
-        {
+        if event.modifiers.ctrl() || event.modifiers.meta() {
             return false;
         }
         // On mac, Alt functions more like AltGr.
         #[cfg(not(target_os = "macos"))]
         {
-            if event.modifiers.contains(Modifiers::ALT) {
+            if event.modifiers.alt() {
                 return false;
             }
         }

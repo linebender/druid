@@ -96,7 +96,7 @@ impl HotKey {
     fn warn_if_needed(self) -> Self {
         if let KbKey::Character(s) = &self.key {
             let km: Modifiers = self.mods.into();
-            if km.contains(Modifiers::SHIFT) && s.chars().any(|c| c.is_uppercase()) {
+            if km.shift() && s.chars().any(|c| c.is_uppercase()) {
                 warn!(
                     "warning: HotKey {:?} includes shift, but text is lowercase. \
                      Text is matched literally; this may cause problems.",

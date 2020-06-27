@@ -579,7 +579,7 @@ impl Window {
         let mods = key_mods(event.state);
 
         // We use a delta of 120 per tick to match the behavior of Windows.
-        let is_shift = mods.contains(Modifiers::SHIFT);
+        let is_shift = mods.shift();
         let delta = match button {
             4 if is_shift => (-120.0, 0.0),
             4 => (0.0, -120.0),

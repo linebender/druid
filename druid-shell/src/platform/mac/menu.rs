@@ -160,16 +160,16 @@ impl HotKey {
     fn key_modifier_mask(&self) -> NSEventModifierFlags {
         let mods: Modifiers = self.mods.into();
         let mut flags = NSEventModifierFlags::empty();
-        if mods.contains(Modifiers::SHIFT) {
+        if mods.shift() {
             flags.insert(NSEventModifierFlags::NSShiftKeyMask);
         }
-        if mods.contains(Modifiers::META) {
+        if mods.meta() {
             flags.insert(NSEventModifierFlags::NSCommandKeyMask);
         }
-        if mods.contains(Modifiers::ALT) {
+        if mods.alt() {
             flags.insert(NSEventModifierFlags::NSAlternateKeyMask);
         }
-        if mods.contains(Modifiers::CONTROL) {
+        if mods.ctrl() {
             flags.insert(NSEventModifierFlags::NSControlKeyMask);
         }
         flags

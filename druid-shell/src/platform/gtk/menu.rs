@@ -169,16 +169,16 @@ fn modifiers_to_gdk_modifier_type(raw_modifiers: RawMods) -> gdk::ModifierType {
 
     let modifiers: Modifiers = raw_modifiers.into();
 
-    result.set(ModifierType::MOD1_MASK, modifiers.contains(Modifiers::ALT));
+    result.set(ModifierType::MOD1_MASK, modifiers.alt());
     result.set(
         ModifierType::CONTROL_MASK,
-        modifiers.contains(Modifiers::CONTROL),
+        modifiers.ctrl(),
     );
     result.set(
         ModifierType::SHIFT_MASK,
-        modifiers.contains(Modifiers::SHIFT),
+        modifiers.shift(),
     );
-    result.set(ModifierType::META_MASK, modifiers.contains(Modifiers::META));
+    result.set(ModifierType::META_MASK, modifiers.meta());
 
     result
 }

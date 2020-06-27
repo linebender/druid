@@ -143,13 +143,13 @@ impl Menu {
 fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
     let mut virt_key = FVIRTKEY;
     let key_mods: Modifiers = key.mods.into();
-    if key_mods.contains(Modifiers::CONTROL) {
+    if key_mods.ctrl() {
         virt_key |= FCONTROL;
     }
-    if key_mods.contains(Modifiers::ALT) {
+    if key_mods.alt() {
         virt_key |= FALT;
     }
-    if key_mods.contains(Modifiers::SHIFT) {
+    if key_mods.shift() {
         virt_key |= FSHIFT;
     }
 

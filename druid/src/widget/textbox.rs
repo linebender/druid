@@ -18,7 +18,7 @@ use std::time::Duration;
 
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KbKey, LayoutCtx, LifeCycle,
-    LifeCycleCtx, Modifiers, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,
+    LifeCycleCtx, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
@@ -134,7 +134,7 @@ impl TextBox {
             EditAction::ModifySelection(movement) => self.move_selection(movement, text, true),
             EditAction::SelectAll => self.selection.all(text),
             EditAction::Click(action) => {
-                if action.mods.contains(Modifiers::SHIFT) {
+                if action.mods.shift() {
                     self.selection.end = action.column;
                 } else {
                     self.caret_to(text, action.column);

@@ -60,7 +60,7 @@ use super::util::{self, as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
-use crate::keyboard::{KbKey, KeyState, Modifiers};
+use crate::keyboard::{KbKey, KeyState};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::scale::{Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
@@ -637,7 +637,7 @@ impl WndProc for MyWndProc {
                     let system_delta = HIWORD(wparam as u32) as i16 as f64;
                     let down_state = LOWORD(wparam as u32) as usize;
                     let mods = s.keyboard_state.get_modifiers();
-                    let is_shift = mods.contains(Modifiers::SHIFT);
+                    let is_shift = mods.shift();
                     let wheel_delta = match msg {
                         WM_MOUSEWHEEL if is_shift => Vec2::new(-system_delta, 0.),
                         WM_MOUSEWHEEL => Vec2::new(0., -system_delta),

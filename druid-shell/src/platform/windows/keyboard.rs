@@ -748,7 +748,7 @@ impl KeyboardState {
 
     fn get_base_key(&self, vk: VkCode, modifiers: Modifiers) -> KbKey {
         let mut shift_state = 0;
-        if modifiers.contains(Modifiers::SHIFT) {
+        if modifiers.shift() {
             shift_state |= SHIFT_STATE_SHIFT;
         }
         if modifiers.contains(Modifiers::ALT_GRAPH) {
