@@ -886,6 +886,7 @@ impl Window {
             buffers.idle_pixmaps.push(event.pixmap);
         } else {
             // We must have reallocated the buffers while this pixmap was busy, so free it now.
+            // Regular freeing happens in `Buffers::free_pixmaps`.
             self.app.connection().free_pixmap(event.pixmap)?;
         }
         Ok(())
