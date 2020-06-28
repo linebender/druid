@@ -436,7 +436,7 @@ struct Buffers {
 /// The state involved in using X's Present extension.
 #[derive(Debug)]
 struct PresentData {
-    /// A monotonically increasing request counter.
+    /// A monotonically increasing present request counter.
     serial: u32,
     /// The region that we use for telling X what to present.
     region: Region,
