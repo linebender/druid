@@ -652,11 +652,8 @@ impl Window {
     }
 
     fn invalidate_rect(&self, rect: Rect) {
-        match self.enlarge_invalid_rect(rect) {
-            Ok(rect) => rect,
-            Err(err) => {
-                log::error!("Window::invalidate_rect - failed to enlarge rect: {}", err);
-            }
+        if let Err(err) =  self.enlarge_invalid_rect(rect) {
+            log::error!("Window::invalidate_rect - failed to enlarge rect: {}", err);
         }
 
         // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
