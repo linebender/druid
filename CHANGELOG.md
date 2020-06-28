@@ -26,6 +26,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - macOS: Timers not firing during modal loop. ([#1028] by [@xStrom])
 - GTK: Directory selection now properly ignores file filters. ([#957] by [@xStrom])
 - GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
+- Ensure that `update` is called after all commands. ([#1062] by [@jneem])
 
 ### Visual
 
@@ -340,6 +341,7 @@ Last release without a changelog :(
 [#1043]: https://github.com/linebender/druid/pull/1043
 [#1050]: https://github.com/linebender/druid/pull/1050
 [#1054]: https://github.com/linebender/druid/pull/1054
+[#1062]: https://github.com/linebender/druid/pull/1062
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
