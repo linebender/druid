@@ -105,6 +105,7 @@ impl WinHandler for HelloState {
 }
 
 fn main() {
+    simple_logger::init().expect("Failed to init simple logger");
     let mut file_menu = Menu::new();
     file_menu.add_item(
         0x100,

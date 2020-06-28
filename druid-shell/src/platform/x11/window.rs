@@ -433,7 +433,9 @@ struct Buffers {
     depth: u8,
 }
 
-/// The state involved in using X's Present extension.
+/// The state involved in using X's [Present] extension.
+///
+/// [Present]: https://cgit.freedesktop.org/xorg/proto/presentproto/tree/presentproto.txt
 #[derive(Debug)]
 struct PresentData {
     /// A monotonically increasing present request counter.
@@ -444,11 +446,13 @@ struct PresentData {
     waiting_on: Option<u32>,
     /// We need to render another frame as soon as the current one is done presenting.
     needs_present: bool,
-    /// The last MSC that was completed. This can be used to diagnose latency problems, because MSC
-    /// is a frame counter: we should be presenting on every frame, and storing the last completed
-    /// MSC lets us know if we missed one.
+    /// The last MSC (media stream counter) that was completed. This can be used to diagnose
+    /// latency problems, because MSC is a frame counter: it increments once per frame. We should
+    /// be presenting on every frame, and storing the last completed MSC lets us know if we missed
+    /// one.
     last_msc: Option<u64>,
-    /// The time at which the last frame was completed.
+    /// The time at which the last frame was completed. The present protocol documentation doesn't
+    /// define the units, but it appears to be in microseconds.
     last_ust: Option<u64>,
 }
 
@@ -514,6 +518,7 @@ impl Window {
         let pixmap = if let Some(p) = buffers.idle_pixmaps.last() {
             *p
         } else {
+            log::info!("ran out of idle pixmaps, creating a new one");
             buffers.create_pixmap(self.app.connection(), self.id)?
         };
 
@@ -984,7 +989,6 @@ impl Buffers {
         count: usize,
     ) -> Result<(), Error> {
         if !self.all_pixmaps.is_empty() {
-            log::error!("BUG: need to free the pixmaps before creating new ones");
             self.free_pixmaps(conn);
         }
 
