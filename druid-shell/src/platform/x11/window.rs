@@ -942,7 +942,7 @@ impl Buffers {
     /// Frees all the X pixmaps that we hold.
     fn free_pixmaps(&mut self, conn: &Rc<XCBConnection>) {
         // We can't touch pixmaps if the present extension is waiting on them, so only free the
-        // idle ones. We'll free the busy ones when we get notified that they're idle.
+        // idle ones. We'll free the busy ones when we get notified that they're idle in `Window::handle_idle_notify`.
         for &p in &self.idle_pixmaps {
             log_x11!(conn.free_pixmap(p));
         }
