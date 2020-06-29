@@ -21,7 +21,7 @@ use crate::keyboard::{Code, KbKey, KeyEvent, KeyState, Location, Modifiers};
 /// Convert a web-sys KeyboardEvent into a keyboard-types one.
 pub(crate) fn convert_keyboard_event(
     event: &KeyboardEvent,
-    modifiers: Modifiers,
+    mods: Modifiers,
     state: KeyState,
 ) -> KeyEvent {
     KeyEvent {
@@ -29,7 +29,7 @@ pub(crate) fn convert_keyboard_event(
         key: event.key().parse().unwrap_or(KbKey::Unidentified),
         code: convert_code(&event.code()),
         location: convert_location(event.location()),
-        modifiers,
+        mods,
         repeat: event.repeat(),
         is_composing: event.is_composing(),
     }

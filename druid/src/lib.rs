@@ -195,3 +195,17 @@ pub use window::{Window, WindowId};
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 pub(crate) use event::{StateCell, StateCheckFn};
+
+/// The meaning (mapped value) of a keypress.
+///
+/// Note that in previous versions, the `KeyCode` field referred to the
+/// physical position of the key, rather than the mapped value. In most
+/// cases, applications should dispatch based on the value instead. This
+/// alias is provided to make that transition easy, but in any case make
+/// an explicit choice whether to use meaning or physical location and
+/// use the appropriate type.
+#[deprecated(since = "0.7.0", note = "Use KbKey instead")]
+pub type KeyCode = KbKey;
+
+#[deprecated(since = "0.7.0", note = "Use Modifiers instead")]
+pub type KeyModifiers = Modifiers;

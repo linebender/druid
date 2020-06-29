@@ -22,6 +22,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, N
 
 pub use keyboard_types::{Code, KeyState, Location};
 
+/// The meaning (mapped value) of a keypress.
 pub type KbKey = keyboard_types::Key;
 
 /// Information about a keyboard event.
@@ -31,6 +32,7 @@ pub type KbKey = keyboard_types::Key;
 /// field because that is already implicit in the event.
 ///
 /// [`KeyboardEvent`]: keyboard_types::KeyboardEvent
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct KeyEvent {
     /// Whether the key is pressed or released.
@@ -42,7 +44,7 @@ pub struct KeyEvent {
     /// Location for keys with multiple instances on common keyboards.
     pub location: Location,
     /// Flags for pressed modifier keys.
-    pub modifiers: Modifiers,
+    pub mods: Modifiers,
     /// True if the key is currently auto-repeated.
     pub repeat: bool,
     /// Events with this flag should be ignored in a text editor
@@ -76,14 +78,14 @@ impl KeyEvent {
     #[doc(hidden)]
     /// Create a key event for testing purposes.
     pub fn for_test(mods: impl Into<Modifiers>, key: impl IntoKey) -> KeyEvent {
-        let modifiers = mods.into();
+        let mods = mods.into();
         let key = key.into_key();
         KeyEvent {
             key,
             code: Code::Unidentified,
             location: Location::Standard,
             state: KeyState::Down,
-            modifiers,
+            mods,
             is_composing: false,
             repeat: false,
         }

@@ -516,14 +516,14 @@ impl Window {
     pub fn handle_key_press(&self, key_press: &xproto::KeyPressEvent) -> Result<(), Error> {
         let hw_keycode = key_press.detail;
         let code = keycodes::hardware_keycode_to_code(hw_keycode);
-        let modifiers = key_mods(key_press.state);
-        let key = keycodes::code_to_key(code, modifiers);
+        let mods = key_mods(key_press.state);
+        let key = keycodes::code_to_key(code, mods);
         let location = keycodes::code_to_location(code);
         let state = KeyState::Down;
         let key_event = KeyEvent {
             code,
             key,
-            modifiers,
+            mods,
             location,
             state,
             repeat: false,

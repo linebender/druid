@@ -269,7 +269,7 @@ impl KeyboardState {
             let code = key_code_to_code(key_code);
             let location = shared::code_to_location(code);
             let raw_mods = event.modifierFlags();
-            let modifiers = make_modifiers(raw_mods);
+            let mods = make_modifiers(raw_mods);
             let state = match event_type {
                 NSEventType::NSKeyDown => KeyState::Down,
                 NSEventType::NSKeyUp => KeyState::Up,
@@ -318,7 +318,7 @@ impl KeyboardState {
                 code,
                 key,
                 location,
-                modifiers,
+                mods,
                 state,
                 is_composing,
                 repeat,

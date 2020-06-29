@@ -858,7 +858,7 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
     let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval);
 
     let text = gdk::keyval_to_unicode(keyval);
-    let modifiers = get_modifiers(key.get_state());
+    let mods = get_modifiers(key.get_state());
     let key = keycodes::raw_key_to_key(keyval).unwrap_or_else(|| {
         if let Some(c) = text {
             if c >= ' ' && c != '\x7f' {
@@ -878,7 +878,7 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
         key,
         code,
         location,
-        modifiers,
+        mods,
         repeat,
         is_composing,
         state,

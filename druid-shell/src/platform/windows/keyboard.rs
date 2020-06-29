@@ -557,16 +557,16 @@ impl KeyboardState {
                 let scan_code = ((lparam & SCAN_MASK) >> 16) as u32;
                 let vk = self.refine_vk(wparam as u8, scan_code);
                 if is_last_message(hwnd, msg, lparam) {
-                    let modifiers = self.get_modifiers();
+                    let mods = self.get_modifiers();
                     let code = scan_to_code(scan_code);
-                    let key = vk_to_key(vk).unwrap_or_else(|| self.get_base_key(vk, modifiers));
+                    let key = vk_to_key(vk).unwrap_or_else(|| self.get_base_key(vk, mods));
                     let repeat = (lparam & 0x4000_0000) != 0;
                     let is_extended = (lparam & 0x100_0000) != 0;
                     let location = vk_to_location(vk, is_extended);
                     let state = KeyState::Down;
                     let event = KeyEvent {
                         state,
-                        modifiers,
+                        mods,
                         code,
                         key,
                         is_composing: false,
@@ -582,16 +582,16 @@ impl KeyboardState {
             WM_KEYUP | WM_SYSKEYUP => {
                 let scan_code = ((lparam & SCAN_MASK) >> 16) as u32;
                 let vk = self.refine_vk(wparam as u8, scan_code);
-                let modifiers = self.get_modifiers();
+                let mods = self.get_modifiers();
                 let code = scan_to_code(scan_code);
-                let key = vk_to_key(vk).unwrap_or_else(|| self.get_base_key(vk, modifiers));
+                let key = vk_to_key(vk).unwrap_or_else(|| self.get_base_key(vk, mods));
                 let repeat = false;
                 let is_extended = (lparam & 0x100_0000) != 0;
                 let location = vk_to_location(vk, is_extended);
                 let state = KeyState::Up;
                 let event = KeyEvent {
                     state,
-                    modifiers,
+                    mods,
                     code,
                     key,
                     is_composing: false,
@@ -604,12 +604,12 @@ impl KeyboardState {
                 //println!("char wparam {:x} lparam {:x}", wparam, lparam);
                 if is_last_message(hwnd, msg, lparam) {
                     let stash_vk = self.stash_vk.take();
-                    let modifiers = self.get_modifiers();
+                    let mods = self.get_modifiers();
                     let scan_code = ((lparam & SCAN_MASK) >> 16) as u32;
                     let vk = self.refine_vk(stash_vk.unwrap_or(0), scan_code);
                     let code = scan_to_code(scan_code);
                     let key = if self.stash_utf16.is_empty() && wparam < 0x20 {
-                        vk_to_key(vk).unwrap_or_else(|| self.get_base_key(vk, modifiers))
+                        vk_to_key(vk).unwrap_or_else(|| self.get_base_key(vk, mods))
                     } else {
                         self.stash_utf16.push(wparam as u16);
                         if let Ok(s) = String::from_utf16(&self.stash_utf16) {
@@ -625,7 +625,7 @@ impl KeyboardState {
                     let state = KeyState::Down;
                     let event = KeyEvent {
                         state,
-                        modifiers,
+                        mods,
                         code,
                         key,
                         is_composing: false,
