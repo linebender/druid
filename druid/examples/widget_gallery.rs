@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::Arc;
-
 use druid::{
-    kurbo::Circle,
+    kurbo::{Affine, BezPath, Circle},
+    piet::{FixedLinearGradient, GradientStop, InterpolationMode},
     widget::{
-        prelude::*, Button, Checkbox, Flex, Label, List, Painter, ProgressBar, RadioGroup, Scroll,
-        Slider, Spinner, Stepper, Switch, TextBox,
+        prelude::*, Button, Checkbox, FillStrat, Flex, Image, ImageData, Label, List, Painter,
+        ProgressBar, RadioGroup, Scroll, Slider, Spinner, Stepper, Svg, SvgData, Switch, TextBox,
     },
     AppLauncher, Color, Data, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc,
 };
@@ -30,7 +29,7 @@ struct AppData {
     label_data: String,
     checkbox_data: bool,
     clicked_count: u64,
-    list_items: Arc<Vec<String>>,
+    list_items: im::Vector<String>,
     progressbar: f64,
     radio: MyRadio,
     stepper: f64,
@@ -51,7 +50,7 @@ pub fn main() {
         label_data: "test".into(),
         checkbox_data: false,
         clicked_count: 0,
-        list_items: Arc::new(vec!["1".into(), "2".into(), "3".into()]),
+        list_items: im::vector!["1".into(), "2".into(), "3".into()],
         progressbar: 0.5,
         radio: MyRadio::GaGa,
         stepper: 0.0,
@@ -130,13 +129,37 @@ fn ui_builder() -> impl Widget<AppData> {
                         bounds,
                         druid::piet::InterpolationMode::NearestNeighbor,
                     );
-                    // Draw the dot of the `i` on top of the image data.
-                    let i_dot = Circle::new(
-                        (0.775 * bounds.width(), 0.18 * bounds.height()),
-                        0.05 * bounds.width(),
-                    );
-                    let i_dot_brush = ctx.solid_brush(Color::WHITE);
-                    ctx.fill(i_dot, &i_dot_brush);
+                    ctx.with_save(|ctx| {
+                        ctx.transform(Affine::scale_non_uniform(bounds.width(), bounds.height()));
+                        // Draw the dot of the `i` on top of the image data.
+                        let i_dot = Circle::new((0.775, 0.18), 0.05);
+                        let i_dot_brush = ctx.solid_brush(Color::WHITE);
+                        ctx.fill(i_dot, &i_dot_brush);
+                        // Cross out Xi because it's going dormant :'(
+                        let mut spare = BezPath::new();
+                        spare.move_to((0.1, 0.1));
+                        spare.line_to((0.2, 0.1));
+                        spare.line_to((0.9, 0.9));
+                        spare.line_to((0.8, 0.9));
+                        spare.close_path();
+                        let spare_brush = ctx
+                            .gradient(FixedLinearGradient {
+                                start: (0.0, 0.0).into(),
+                                end: (1.0, 1.0).into(),
+                                stops: vec![
+                                    GradientStop {
+                                        pos: 0.0,
+                                        color: Color::rgb(1.0, 0.0, 0.0),
+                                    },
+                                    GradientStop {
+                                        pos: 1.0,
+                                        color: Color::rgb(0.4, 0.0, 0.0),
+                                    },
+                                ],
+                            })
+                            .unwrap();
+                        ctx.fill(spare, &spare_brush);
+                    });
                 })
                 .fix_size(32.0, 32.0),
                 "Painter",
@@ -179,6 +202,22 @@ fn ui_builder() -> impl Widget<AppData> {
             .with_child(label_widget(
                 Spinner::new().fix_height(40.0).center(),
                 "Spinner",
+            ))
+            .with_child(label_widget(
+                Image::new(
+                    ImageData::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap(),
+                )
+                .fill_mode(FillStrat::Fill)
+                .interpolation_mode(InterpolationMode::Bilinear),
+                "Image",
+            ))
+            .with_child(label_widget(
+                Svg::new(
+                    include_str!("./assets/tiger.svg")
+                        .parse::<SvgData>()
+                        .unwrap(),
+                ),
+                "Svg",
             )),
     )
     .vertical()
