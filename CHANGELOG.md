@@ -25,6 +25,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - macOS: Timers not firing during modal loop. ([#1028] by [@xStrom])
 - GTK: Directory selection now properly ignores file filters. ([#957] by [@xStrom])
 - GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
+- Fix derive `Data` when type param bounds are defined ([#1058] by [@chris-zen])
 
 ### Visual
 
