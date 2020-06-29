@@ -30,6 +30,26 @@ struct MultiFieldStruct {
     c: String,
 }
 
+trait UserTrait {}
+
+#[derive(Clone, Data)]
+struct TypeParamForUserTraitStruct<T: UserTrait + Data> {
+    a: T,
+}
+
+#[derive(Clone, Data)]
+struct TypeParamForUserTraitWithWhereClauseStruct<T>
+where
+    T: UserTrait,
+{
+    b: T,
+}
+
+#[derive(Clone, Data)]
+enum TypeParamForUserTraitAndLifetimeEnum<T: UserTrait + 'static> {
+    V1(T),
+}
+
 #[test]
 fn test_data_derive_same() {
     let plain = PlainStruct;
@@ -70,4 +90,24 @@ fn test_data_derive_same() {
             c: "Fail".to_string()
         })
     );
+
+    #[derive(Clone, Data)]
+    struct Value(u32);
+
+    impl UserTrait for Value {}
+
+    let v = TypeParamForUserTraitStruct { a: Value(1) };
+    assert!(v.same(&v));
+    assert_eq!(false, v.same(&TypeParamForUserTraitStruct { a: Value(2) }));
+
+    let v = TypeParamForUserTraitWithWhereClauseStruct { b: Value(3) };
+    assert!(v.same(&v));
+    assert_eq!(
+        false,
+        v.same(&TypeParamForUserTraitWithWhereClauseStruct { b: Value(6) })
+    );
+
+    let v = TypeParamForUserTraitAndLifetimeEnum::V1(Value(10));
+    assert!(v.same(&v));
+    assert_eq!(false, v.same(&TypeParamForUserTraitAndLifetimeEnum::V1(Value(12))));
 }
