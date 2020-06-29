@@ -229,10 +229,10 @@ impl Controller&lt;String, TextBox&gt; for TextBoxActionController {
         env: &amp;Env,
     ) {
         match event {
-            Event::KeyDown(k) if k.key_code == KeyCode::Return =&gt; {
+            Event::KeyDown(k) if k.key == Key::Enter =&gt; {
                 ctx.submit_command(ACTION, None);
             }
-            Event::KeyUp(k) if k.key_code != KeyCode::Return =&gt; {
+            Event::KeyUp(k) if k.key == Key::Enter =&gt; {
                 self.timer = Some(ctx.request_timer(DELAY));
                 child.event(ctx, event, data, env);
             }
