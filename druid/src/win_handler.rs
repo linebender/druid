@@ -485,7 +485,7 @@ impl<T: Data> AppState<T> {
         match token {
             RUN_COMMANDS_TOKEN => {
                 self.process_commands();
-                self.inner.borrow_mut().invalidate_and_finalize();
+                self.inner.borrow_mut().do_update();
             }
             EXT_EVENT_IDLE_TOKEN => {
                 self.process_ext_events();
