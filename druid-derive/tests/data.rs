@@ -109,5 +109,8 @@ fn test_data_derive_same() {
 
     let v = TypeParamForUserTraitAndLifetimeEnum::V1(Value(10));
     assert!(v.same(&v));
-    assert_eq!(false, v.same(&TypeParamForUserTraitAndLifetimeEnum::V1(Value(12))));
+    assert_eq!(
+        false,
+        v.same(&TypeParamForUserTraitAndLifetimeEnum::V1(Value(12)))
+    );
 }
