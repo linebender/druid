@@ -20,10 +20,11 @@ use gtk::{
     MenuItem as GtkMenuItem, MenuShellExt, SeparatorMenuItemBuilder, WidgetExt,
 };
 
+use super::keycodes;
 use super::window::WindowHandle;
 use crate::common_util::strip_access_key;
-use crate::hotkey::{HotKey, KeyCompare, RawMods};
-use crate::keyboard::KeyModifiers;
+use crate::hotkey::{HotKey, RawMods};
+use crate::keyboard::{KbKey, Modifiers};
 
 #[derive(Default, Debug)]
 pub struct Menu {
@@ -142,9 +143,16 @@ impl Menu {
 }
 
 fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: HotKey) {
-    let gdk_keyval = match menu_key.key {
-        KeyCompare::Code(key_code) => key_code.into(),
-        KeyCompare::Text(text) => text.chars().next().unwrap() as u32,
+    let gdk_keyval = match &menu_key.key {
+        KbKey::Character(text) => text.chars().next().unwrap() as u32,
+        k => {
+            if let Some(gdk_key) = keycodes::key_to_raw_key(k) {
+                gdk_key
+            } else {
+                log::warn!("Cannot map key {:?}", k);
+                return;
+            }
+        }
     };
 
     item.add_accelerator(
@@ -159,12 +167,18 @@ fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: 
 fn modifiers_to_gdk_modifier_type(raw_modifiers: RawMods) -> gdk::ModifierType {
     let mut result = ModifierType::empty();
 
-    let modifiers: KeyModifiers = raw_modifiers.into();
+    let modifiers: Modifiers = raw_modifiers.into();
 
-    result.set(ModifierType::MOD1_MASK, modifiers.alt);
-    result.set(ModifierType::CONTROL_MASK, modifiers.ctrl);
-    result.set(ModifierType::SHIFT_MASK, modifiers.shift);
-    result.set(ModifierType::META_MASK, modifiers.meta);
+    result.set(ModifierType::MOD1_MASK, modifiers.alt());
+    result.set(
+        ModifierType::CONTROL_MASK,
+        modifiers.ctrl(),
+    );
+    result.set(
+        ModifierType::SHIFT_MASK,
+        modifiers.shift(),
+    );
+    result.set(ModifierType::META_MASK, modifiers.meta());
 
     result
 }

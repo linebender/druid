@@ -30,8 +30,7 @@ use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
 
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error as ShellError;
-use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::keycodes::KeyCode;
+use crate::keyboard::{KeyState, KeyEvent, Modifiers};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, RenderContext};
@@ -39,6 +38,7 @@ use crate::scale::Scale;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 use super::application::Application;
+use super::keycodes;
 use super::menu::Menu;
 use super::util;
 
@@ -514,16 +514,21 @@ impl Window {
     }
 
     pub fn handle_key_press(&self, key_press: &xproto::KeyPressEvent) -> Result<(), Error> {
-        let key: u32 = key_press.detail as u32;
-        let key_code: KeyCode = key.into();
-        let key_event = KeyEvent::new(
-            key_code,
-            // TODO: detect repeated keys
-            false,
-            key_mods(key_press.state),
-            key_code,
-            key_code,
-        );
+        let hw_keycode = key_press.detail;
+        let code = keycodes::hardware_keycode_to_code(hw_keycode);
+        let mods = key_mods(key_press.state);
+        let key = keycodes::code_to_key(code, mods);
+        let location = keycodes::code_to_location(code);
+        let state = KeyState::Down;
+        let key_event = KeyEvent {
+            code,
+            key,
+            mods,
+            location,
+            state,
+            repeat: false,
+            is_composing: false,
+        };
         borrow_mut!(self.handler)?.key_down(key_event);
         Ok(())
     }
@@ -574,10 +579,11 @@ impl Window {
         let mods = key_mods(event.state);
 
         // We use a delta of 120 per tick to match the behavior of Windows.
+        let is_shift = mods.shift();
         let delta = match button {
-            4 if mods.shift => (-120.0, 0.0),
+            4 if is_shift => (-120.0, 0.0),
             4 => (0.0, -120.0),
-            5 if mods.shift => (120.0, 0.0),
+            5 if is_shift => (120.0, 0.0),
             5 => (0.0, 120.0),
             6 => (-120.0, 0.0),
             7 => (120.0, 0.0),
@@ -677,20 +683,22 @@ fn mouse_buttons(mods: u16) -> MouseButtons {
 
 // Extracts the keyboard modifiers from, e.g., the `state` field of
 // `xcb::xproto::ButtonPressEvent`
-fn key_mods(mods: u16) -> KeyModifiers {
-    let mut ret = KeyModifiers::default();
+fn key_mods(mods: u16) -> Modifiers {
+    let mut ret = Modifiers::default();
     let mut key_masks = [
-        (xproto::ModMask::Shift, &mut ret.shift),
-        (xproto::ModMask::Control, &mut ret.ctrl),
+        (xproto::ModMask::Shift, Modifiers::SHIFT),
+        (xproto::ModMask::Control, Modifiers::CONTROL),
         // X11's mod keys are configurable, but this seems
         // like a reasonable default for US keyboards, at least,
         // where the "windows" key seems to be MOD_MASK_4.
-        (xproto::ModMask::M1, &mut ret.alt),
-        (xproto::ModMask::M4, &mut ret.meta),
+        (xproto::ModMask::M1, Modifiers::ALT),
+        (xproto::ModMask::M2, Modifiers::NUM_LOCK),
+        (xproto::ModMask::M4, Modifiers::META),
+        (xproto::ModMask::Lock, Modifiers::CAPS_LOCK),
     ];
-    for (mask, key) in &mut key_masks {
+    for (mask, modifiers) in &mut key_masks {
         if mods & (*mask as u16) != 0 {
-            **key = true;
+            ret |= *modifiers;
         }
     }
     ret

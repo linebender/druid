@@ -1,7 +1,7 @@
+use druid::keyboard_types::Key;
 use druid::widget::{Controller, Label, Painter, SizedBox, TextBox};
 use druid::{
-    Color, Env, Event, EventCtx, KeyCode, PaintCtx, RenderContext, Selector, TimerToken, Widget,
-    WidgetExt,
+    Color, Env, Event, EventCtx, PaintCtx, RenderContext, Selector, TimerToken, Widget, WidgetExt,
 };
 use std::time::Duration;
 
@@ -59,10 +59,10 @@ impl Controller<String, TextBox> for TextBoxActionController {
         env: &Env,
     ) {
         match event {
-            Event::KeyDown(k) if k.key_code == KeyCode::Return => {
+            Event::KeyDown(k) if k.key == Key::Enter => {
                 ctx.submit_command(ACTION, None);
             }
-            Event::KeyUp(k) if k.key_code != KeyCode::Return => {
+            Event::KeyUp(k) if k.key == Key::Enter => {
                 self.timer = Some(ctx.request_timer(DELAY));
                 child.event(ctx, event, data, env);
             }

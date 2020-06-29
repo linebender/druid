@@ -31,30 +31,35 @@ use crate::piet::RenderContext;
 
 use super::application::Application;
 use super::error::Error;
-use super::keycodes::key_to_text;
+use super::keycodes::convert_keyboard_event;
 use super::menu::Menu;
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::scale::{Scale, ScaledArea};
 
-use crate::keyboard;
-use crate::keycodes::KeyCode;
+use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
-use crate::KeyModifiers;
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
 macro_rules! get_modifiers {
-    ($event:ident) => {
-        KeyModifiers {
-            shift: $event.shift_key(),
-            alt: $event.alt_key(),
-            ctrl: $event.ctrl_key(),
-            meta: $event.meta_key(),
-        }
-    };
+    ($event:ident) => {{
+        let mut result = Modifiers::default();
+        result.set(Modifiers::SHIFT, $event.shift_key());
+        result.set(Modifiers::ALT, $event.alt_key());
+        result.set(Modifiers::CONTROL, $event.ctrl_key());
+        result.set(Modifiers::META, $event.meta_key());
+        result.set(Modifiers::ALT_GRAPH, $event.get_modifier_state("AltGraph"));
+        result.set(Modifiers::CAPS_LOCK, $event.get_modifier_state("CapsLock"));
+        result.set(Modifiers::NUM_LOCK, $event.get_modifier_state("NumLock"));
+        result.set(
+            Modifiers::SCROLL_LOCK,
+            $event.get_modifier_state("ScrollLock"),
+        );
+        result
+    }};
 }
 
 /// Builder abstraction for creating new windows.
@@ -252,30 +257,22 @@ fn setup_resize_callback(ws: &Rc<WindowState>) {
 fn setup_keyup_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_window_event_listener(ws, "keyup", move |event: web_sys::KeyboardEvent| {
-        let code = KeyCode::from((event.key_code(), event.location()));
-        let mods = get_modifiers!(event);
-        let key = event.key();
-        let text = key_to_text(key.as_str());
-        let repeat = event.repeat();
-        let event = keyboard::KeyEvent::new(code, repeat, mods, text, text);
-        state.handler.borrow_mut().key_up(event);
+        let modifiers = get_modifiers!(event);
+        let kb_event = convert_keyboard_event(&event, modifiers, KeyState::Up);
+        state.handler.borrow_mut().key_up(kb_event);
     });
 }
 
 fn setup_keydown_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_window_event_listener(ws, "keydown", move |event: web_sys::KeyboardEvent| {
-        let code = KeyCode::from((event.key_code(), event.location()));
-        let mods = get_modifiers!(event);
-        let key = event.key();
-        let text = key_to_text(key.as_str());
-        let repeat = event.repeat();
-        if let KeyCode::Backspace = code {
+        let modifiers = get_modifiers!(event);
+        let kb_event = convert_keyboard_event(&event, modifiers, KeyState::Down);
+        if kb_event.key == KbKey::Backspace {
             // Prevent the browser from going back a page by default.
             event.prevent_default();
         }
-        let event = keyboard::KeyEvent::new(code, repeat, mods, text, text);
-        state.handler.borrow_mut().key_down(event);
+        state.handler.borrow_mut().key_down(kb_event);
     });
 }
 

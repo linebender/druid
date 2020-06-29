@@ -17,8 +17,8 @@
 use std::time::Duration;
 
 use crate::{
-    Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
-    LifeCycle, LifeCycleCtx, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,
+    Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KbKey, LayoutCtx, LifeCycle,
+    LifeCycleCtx, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
 use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
@@ -134,7 +134,7 @@ impl TextBox {
             EditAction::ModifySelection(movement) => self.move_selection(movement, text, true),
             EditAction::SelectAll => self.selection.all(text),
             EditAction::Click(action) => {
-                if action.mods.shift {
+                if action.mods.shift() {
                     self.selection.end = action.column;
                 } else {
                     self.caret_to(text, action.column);
@@ -306,15 +306,15 @@ impl Widget<String> for TextBox {
             Event::KeyDown(key_event) => {
                 let event_handled = match key_event {
                     // Tab and shift+tab
-                    k_e if HotKey::new(None, KeyCode::Tab).matches(k_e) => {
+                    k_e if HotKey::new(None, KbKey::Tab).matches(k_e) => {
                         ctx.focus_next();
                         true
                     }
-                    k_e if HotKey::new(SysMods::Shift, KeyCode::Tab).matches(k_e) => {
+                    k_e if HotKey::new(SysMods::Shift, KbKey::Tab).matches(k_e) => {
                         ctx.focus_prev();
                         true
                     }
-                    k_e if HotKey::new(None, KeyCode::Return).matches(k_e) => {
+                    k_e if HotKey::new(None, KbKey::Enter).matches(k_e) => {
                         // 'enter' should do something, maybe?
                         // but for now we are suppressing it, because we don't want
                         // newlines.
