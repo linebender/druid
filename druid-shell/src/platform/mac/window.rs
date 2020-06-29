@@ -24,8 +24,7 @@ use std::time::Instant;
 
 use cocoa::appkit::{
     CGFloat, NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSEvent,
-    NSEventModifierFlags, NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow,
-    NSWindowStyleMask,
+    NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
 };
 use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{
@@ -48,12 +47,12 @@ use super::appkit::{
 };
 use super::application::Application;
 use super::dialog;
+use super::keyboard::{make_modifiers, KeyboardState};
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
-use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::keycodes::KeyCode;
+use crate::keyboard_types::KeyState;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::scale::Scale;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
@@ -107,11 +106,11 @@ struct ViewState {
     nsview: WeakPtr,
     handler: Box<dyn WinHandler>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
-    last_mods: KeyModifiers,
     /// Tracks window focusing left clicks
     focus_click: bool,
     // Tracks whether we have already received the mouseExited event
     mouse_left: bool,
+    keyboard_state: KeyboardState,
 }
 
 impl WindowBuilder {
@@ -362,13 +361,14 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
     unsafe {
         let view: id = msg_send![VIEW_CLASS.0, new];
         let nsview = WeakPtr::new(view);
+        let keyboard_state = KeyboardState::new();
         let state = ViewState {
             nsview,
             handler,
             idle_queue,
-            last_mods: KeyModifiers::default(),
             focus_click: false,
             mouse_left: true,
+            keyboard_state,
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
@@ -591,24 +591,23 @@ extern "C" fn pinch_event(this: &mut Object, _: Sel, nsevent: id) {
 }
 
 extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
-    let event = make_key_event(nsevent);
-
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    (*view_state).handler.key_down(event);
-    view_state.last_mods = event.mods;
+    if let Some(event) = (*view_state).keyboard_state.process_native_event(nsevent) {
+        (*view_state).handler.key_down(event);
+    }
 }
 
 extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
-    let event = make_key_event(nsevent);
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    (*view_state).handler.key_up(event);
-    view_state.last_mods = event.mods;
+    if let Some(event) = (*view_state).keyboard_state.process_native_event(nsevent) {
+        (*view_state).handler.key_up(event);
+    }
 }
 
 extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
@@ -616,12 +615,12 @@ extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    let (down, event) = mods_changed_key_event(view_state.last_mods, nsevent);
-    view_state.last_mods = event.mods;
-    if down {
-        (*view_state).handler.key_down(event);
-    } else {
-        (*view_state).handler.key_up(event);
+    if let Some(event) = (*view_state).keyboard_state.process_native_event(nsevent) {
+        if event.state == KeyState::Down {
+            (*view_state).handler.key_down(event);
+        } else {
+            (*view_state).handler.key_up(event);
+        }
     }
 }
 
@@ -944,54 +943,5 @@ fn time_interval_from_deadline(deadline: std::time::Instant) -> f64 {
         let secs = t.as_secs() as f64;
         let subsecs = f64::from(t.subsec_micros()) * 0.000_001;
         secs + subsecs
-    }
-}
-
-fn make_key_event(event: id) -> KeyEvent {
-    unsafe {
-        let chars = event.characters();
-        let slice = std::slice::from_raw_parts(chars.UTF8String() as *const _, chars.len());
-        let text = std::str::from_utf8_unchecked(slice);
-
-        let unmodified_chars = event.charactersIgnoringModifiers();
-        let slice = std::slice::from_raw_parts(
-            unmodified_chars.UTF8String() as *const _,
-            unmodified_chars.len(),
-        );
-        let unmodified_text = std::str::from_utf8_unchecked(slice);
-
-        let virtual_key = event.keyCode();
-        let is_repeat: bool = msg_send!(event, isARepeat);
-        let modifiers = event.modifierFlags();
-        let modifiers = make_modifiers(modifiers);
-        KeyEvent::new(virtual_key, is_repeat, modifiers, text, unmodified_text)
-    }
-}
-
-fn mods_changed_key_event(prev: KeyModifiers, event: id) -> (bool, KeyEvent) {
-    unsafe {
-        let key_code: KeyCode = event.keyCode().into();
-        let is_repeat = false;
-        let modifiers = event.modifierFlags();
-        let modifiers = make_modifiers(modifiers);
-
-        let down = match key_code {
-            KeyCode::LeftShift | KeyCode::RightShift if prev.shift => false,
-            KeyCode::LeftAlt | KeyCode::RightAlt if prev.alt => false,
-            KeyCode::LeftControl | KeyCode::RightControl if prev.ctrl => false,
-            KeyCode::LeftMeta | KeyCode::RightMeta if prev.meta => false,
-            _ => true,
-        };
-        let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
-        (down, event)
-    }
-}
-
-fn make_modifiers(raw: NSEventModifierFlags) -> KeyModifiers {
-    KeyModifiers {
-        shift: raw.contains(NSEventModifierFlags::NSShiftKeyMask),
-        alt: raw.contains(NSEventModifierFlags::NSAlternateKeyMask),
-        ctrl: raw.contains(NSEventModifierFlags::NSControlKeyMask),
-        meta: raw.contains(NSEventModifierFlags::NSCommandKeyMask),
     }
 }

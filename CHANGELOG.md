@@ -13,6 +13,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 - `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
+- Major rework of keyboard event handling ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
 
 ### Deprecated
@@ -235,7 +236,11 @@ Last release without a changelog :(
 [@jrmuizel]: https://github.com/jrmuizel
 [@scholtzan]: https://github.com/scholtzan
 [@covercash2]: https://github.com/covercash2
+<<<<<<< HEAD
+[@raphlinus]: https://github.com/raphlinus
+=======
 [@binomial0]: https://github.com/binomial0
+>>>>>>> master
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -339,6 +344,7 @@ Last release without a changelog :(
 [#1028]: https://github.com/linebender/druid/pull/1028
 [#1042]: https://github.com/linebender/druid/pull/1042
 [#1043]: https://github.com/linebender/druid/pull/1043
+[#1049]: https://github.com/linebender/druid/pull/1049
 [#1050]: https://github.com/linebender/druid/pull/1050
 [#1054]: https://github.com/linebender/druid/pull/1054
 [#1062]: https://github.com/linebender/druid/pull/1062

@@ -85,12 +85,6 @@ pub enum Event {
     /// Called when the mouse wheel or trackpad is scrolled.
     Wheel(MouseEvent),
     /// Called when a key is pressed.
-    ///
-    /// Note: the intent is for each physical key press to correspond to
-    /// a single `KeyDown` event. This is sometimes different than the
-    /// raw events provided by the platform. In particular, Windows sends
-    /// one or both of WM_KEYDOWN (a raw key code) and WM_CHAR (the
-    /// Unicode value), depending on the actual key.
     KeyDown(KeyEvent),
     /// Called when a key is released.
     ///
