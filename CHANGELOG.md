@@ -27,6 +27,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - macOS: Timers not firing during modal loop. ([#1028] by [@xStrom])
 - GTK: Directory selection now properly ignores file filters. ([#957] by [@xStrom])
 - GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
+- Fix derive `Data` when type param bounds are defined ([#1058] by [@chris-zen])
 - Ensure that `update` is called after all commands. ([#1062] by [@jneem])
 
 ### Visual
@@ -236,11 +237,9 @@ Last release without a changelog :(
 [@jrmuizel]: https://github.com/jrmuizel
 [@scholtzan]: https://github.com/scholtzan
 [@covercash2]: https://github.com/covercash2
-<<<<<<< HEAD
 [@raphlinus]: https://github.com/raphlinus
-=======
 [@binomial0]: https://github.com/binomial0
->>>>>>> master
+[@chris-zen]: https://github.com/chris-zen
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -347,6 +346,7 @@ Last release without a changelog :(
 [#1049]: https://github.com/linebender/druid/pull/1049
 [#1050]: https://github.com/linebender/druid/pull/1050
 [#1054]: https://github.com/linebender/druid/pull/1054
+[#1058]: https://github.com/linebender/druid/pull/1058
 [#1062]: https://github.com/linebender/druid/pull/1062
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
