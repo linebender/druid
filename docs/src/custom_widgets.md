@@ -1,11 +1,11 @@
 # Create custom widgets
 
-The `Widget` trait is the heart of druid, and in any serious application you
+The `Widget` trait is the heart of Druid, and in any serious application you
 will eventually need to create and use custom `Widget`s.
 
 ## `Painter` and `Controller`
 
-There are two helper widgets in druid that let you customize widget behaviour
+There are two helper widgets in Druid that let you customize widget behaviour
 without needing to implement the full widget trait: [`Painter`] and
 [`Controller`].
 

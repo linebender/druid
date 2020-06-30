@@ -22,7 +22,7 @@ add it as part of your patch.
 
 If you're already contributing to this project and want to do more,
 then there might be a chance to help out with the preparation of new releases.
-Whether you're new or have prepared druid releases many times already,
+Whether you're new or have prepared Druid releases many times already,
 it helps to follow a checklist of what needs to be done. This is that list.
 
 ### Increasing the versions
@@ -49,7 +49,7 @@ to specific version documentation that will need updating.
 
 **We only test and specify the newest versions of dependencies.** Read on for more details.
 
-Rust dependencies like druid specify their own sub-dependencies in `Cargo.toml`.
+Rust dependencies like Druid specify their own sub-dependencies in `Cargo.toml`.
 These specifications are usually version ranges according to [semver],
 stating that the dependency requires a sub-dependency of the specified version
 or any newer version that is still compatible. It is up to the final application
@@ -57,12 +57,12 @@ to choose which actual versions get used via the `Cargo.lock` file of that appli
 
 Because the final application chooses the sub-dependency versions and they are most likely
 going to be higher than the minimum that is specified in our `Cargo.toml` file,
-we need to make sure that druid works properly with these newer versions.
+we need to make sure that Druid works properly with these newer versions.
 Yes according to [semver] rules they should work, but library authors make mistakes
-and it won't be a good experience or a sign of druid quality if a new developer
-adds druid as a dependency and it won't even compile.
+and it won't be a good experience or a sign of Druid's quality if a new developer
+adds Druid as a dependency and it won't even compile.
 For that reason our CI testing always uses the highest version that is still compatible.
-This mimics what a new developer would experience when they start using druid.
+This mimics what a new developer would experience when they start using Druid.
 
 What about the the minimum supported version or all the versions between the minimum and maximum?
 It is not practical for us to test all the combinations of possible sub-dependency versions.
@@ -79,7 +79,7 @@ Just because `1.1.1` used to work back in the day doesn't mean that it will alwa
 One partial solution to this problem is to be more precise in what we are actually promising.
 So whenever we release a new version we also update all our dependencies in `Cargo.toml`
 to match the versions that we are actually testing with. This will be much more accurate
-to the spirit of the version specification - druid will work with the specified version
+to the spirit of the version specification - Druid will work with the specified version
 and any newer one if it's [semver] compatible. We're not testing the extremely big matrix of
 old versions of our sub-dependencies and so we shouldn't claim that the old versions will work.
 

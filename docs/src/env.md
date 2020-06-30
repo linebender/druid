@@ -81,7 +81,7 @@ The `Env` contains the localization resources for the current locale. A
 calling its [`resolve`] method.
 
 In general, you should not need to worry about localization directly. See the
-[localization] chapter for an overview of localization in druid.
+[localization] chapter for an overview of localization in Druid.
 
 
 [`Env`]: https://docs.rs/druid/0.6.0/druid/struct.Env.html

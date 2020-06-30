@@ -1,6 +1,6 @@
 # Changelog
 
-The latest published druid release is [0.6.0](#060---2020-06-01) which was released on 2020-06-01.
+The latest published Druid release is [0.6.0](#060---2020-06-01) which was released on 2020-06-01.
 You can find its changes [documented below](#060---2020-06-01).
 
 ## [Unreleased]
@@ -73,7 +73,7 @@ all fundamental features are there.
 
 #### Using Core Graphics on macOS.
 
-[@cmyr] continued the work of [@jrmuizel] and implemented Core Graphics support for piet in
+[@cmyr] continued the work of [@jrmuizel] and implemented Core Graphics support for Piet in
 [piet#176](https://github.com/linebender/piet/pull/176).
 
 Those changes made it into druid via [#905].
@@ -301,7 +301,7 @@ Last release without a changelog :(
 [#920]: https://github.com/linebender/druid/pull/920
 [#924]: https://github.com/linebender/druid/pull/924
 [#925]: https://github.com/linebender/druid/pull/925
-[#926]: https://github.com/linebender/druid/pull/926 
+[#926]: https://github.com/linebender/druid/pull/926
 [#928]: https://github.com/linebender/druid/pull/928
 [#930]: https://github.com/linebender/druid/pull/930
 [#931]: https://github.com/linebender/druid/pull/931

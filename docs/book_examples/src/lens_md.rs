@@ -76,7 +76,7 @@ struct Item {
     count: usize,
 }
 
-// this now works
+// This works now:
 impl Item {
     fn count(&self) -> usize {
         self.count
@@ -88,7 +88,7 @@ impl Item {
 use druid::widget::{Checkbox, Flex, Label, Widget, WidgetExt};
 
 fn make_todo_item() -> impl Widget<TodoItem> {
-    // A label that generates its text based on the data
+    // A label that generates its text based on the data:
     let title = Label::dynamic(|text: &String, _| text.to_string()).lens(TodoItem::title);
     let completed = Checkbox::new("Completed:").lens(TodoItem::completed);
     let urgent = Checkbox::new("Urgent:").lens(TodoItem::urgent);
@@ -137,7 +137,7 @@ impl Lens<Contacts, Option<Contact>> for ContactIdLens {
             _ => true,
         };
         if changed {
-            //if !data.inner.get(&self.0).same(&contact.as_ref()) {
+            // if !data.inner.get(&self.0).same(&contact.as_ref()) {
             let contacts = Arc::make_mut(&mut data.inner);
             // if we're none, we were deleted, and remove from the map; else replace
             match contact {

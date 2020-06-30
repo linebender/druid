@@ -9,7 +9,7 @@ that will represent a single todo item. Our data model looks like this:
 
 We would like our widget to display the title of the item, and then below
 that to display two checkmarks that toggle the 'completed' and 'urgent' bools.
-`Checkbox` (a widget included in druid) implements `Widget<bool>`.
+`Checkbox` (a widget included in Druid) implements `Widget<bool>`.
 How do we use it with `TodoItem`? By using a `Lens`.
 
 ## Conceptual
@@ -33,7 +33,7 @@ our `TodoItem`. With our simple trait, we might do:
 {{#include ../book_examples/src/lens_md.rs:completed_lens}}
 ```
 
-> **Note**: `Lens` isn't that helpful on its own; in druid it is generally used alongside
+> **Note**: `Lens` isn't that helpful on its own; in Druid it is generally used alongside
 `LensWrap`, which is a special widget that uses a `Lens` to change the `Data`
 type of its child. Lets say we have a `Checkbox`, but our data is a `TodoItem`:
 we can do, `LensWrap::new(my_checkbox, CompletedLens)` in order to bridge the
