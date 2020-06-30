@@ -1,4 +1,4 @@
-// Copyright 2020 The druid Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,17 +22,41 @@ use std::fmt::Display;
 #[derive(Clone)]
 pub struct Monitor {
     primary: bool,
-    rect: Rect, // The working Rectangle of the monitor in pixels related to Screen.size
-    work_rect: Rect, // The working Rectangle of the monitor in pixels related to Screen.size excluding reserved space (the taskbar)
+    rect: Rect,
+    // TODO: Work area, cross_platform
+    // https://developer.apple.com/documentation/appkit/nsscreen/1388369-visibleframe
+    // https://developer.gnome.org/gdk3/stable/GdkMonitor.html#gdk-monitor-get-workarea
+    // https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-monitorinfo
+    // Unsure about x11
+    work_rect: Rect,
 }
 
 impl Monitor {
-    pub fn new(primary: bool, rect: Rect, work_rect: Rect) -> Self {
+    pub(crate) fn new(primary: bool, rect: Rect, work_rect: Rect) -> Self {
         Monitor {
             primary,
             rect,
             work_rect,
         }
+    }
+    /// Returns true if the monitor is the primary monitor
+    /// a primary monitor has its top-left corner at (0,0)
+    /// in virtual screen coordinates.
+    pub fn is_primary(&self) -> bool {
+        self.primary
+    }
+    /// Returns a RECT of the monitor rectangle in virtual screen coordinates
+    /// meaning that it contains the monitors resolution
+    /// oriented around the origin point: (0,0) being the top-left corner
+    /// of the primary monitor, in pixels.
+    pub fn virtual_rect(&self) -> Rect {
+        self.rect
+    }
+
+    /// Returns a RECT of the monitor working rectangle in virtual screen coordinates
+    /// The RECT excludes area occupied by things like the dock,menubar (mac). taskbar (windows)
+    pub fn virtual_work_rect(&self) -> Rect {
+        self.work_rect
     }
 }
 

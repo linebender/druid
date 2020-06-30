@@ -1,4 +1,4 @@
-// Copyright 2020 The druid Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@
 use crate::screen::Monitor;
 use crate::kurbo::Size;
 
-pub fn get_display_size() -> Size {
+pub(crate) fn get_display_size() -> Size {
     log::warn!("Screen::get_display_size() is currently unimplemented for X11 platforms.");
     Size::new(0.0, 0.0)
 }
 
-pub fn get_monitors() -> Vec<Monitor> {
+pub(crate) fn get_monitors() -> Vec<Monitor> {
     log::warn!("Screen::get_monitors() is currently unimplemented for X11 platforms.");
     Vec::<Monitor>::new()
 }

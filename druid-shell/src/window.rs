@@ -123,22 +123,32 @@ impl WindowHandle {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Set the position of the window
+    /// Sets the position of the window in virtual screen coordinates (Pixels)
+    /// [`Point`] Position in pixels
+    ///
+    /// [`Point`]: struct.Point.html
     pub fn set_position(&self, position: Point) {
         self.0.set_position(position)
     }
 
-    /// Get the position of the window
+    /// Returns [`Point`] Position in virtual screen coordinates (Pixels)
+    ///
+    /// [`Point`]: struct.Point.html
     pub fn get_position(&self) -> Point {
         self.0.get_position()
     }
 
-    /// Set the size of the window
+    /// Set the size of the window in Pixels
+    /// [`Size`] Struct representing the Size
+    ///
+    /// [`Size`]: struct.Size.html
     pub fn set_size(&self, size: Size) {
         self.0.set_size(size)
     }
 
-    /// Gets the size of the window
+    /// returns [`Size`] containing the window size in pixels
+    ///
+    /// [`Size`]: struct.Size.html
     pub fn get_size(&self) -> Size {
         self.0.get_size()
     }

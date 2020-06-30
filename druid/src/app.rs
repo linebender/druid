@@ -236,7 +236,10 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Set the initial position for this window.
+    /// Sets the initial window position in virtual screen coordinates
+    /// [`Point`] Position in pixels
+    ///
+    /// [`Point`]: struct.Point.html
     pub fn set_position(mut self, position: Point) -> Self {
         self.position = Some(position);
         self

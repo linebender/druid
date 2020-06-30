@@ -1,4 +1,4 @@
-// Copyright 2020 The druid Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,12 +23,11 @@ use winapi::shared::windef::*;
 use winapi::um::winuser::*;
 use std::ptr::null_mut;
 use std::mem::size_of;
-use std::sync::Once;
 
 use crate::screen::Monitor;
 use crate::kurbo::{Rect, Size};
 
-pub fn get_display_size() -> Size {
+pub(crate) fn get_display_size() -> Size {
     unsafe {
         let width = GetSystemMetrics(SM_CXVIRTUALSCREEN) as f64;
         let height = GetSystemMetrics(SM_CYVIRTUALSCREEN) as f64;
@@ -61,17 +60,15 @@ unsafe extern "system" fn monitorenumproc(hmonitor : HMONITOR, _hdc : HDC, _lpre
 }
 
 
-pub fn get_monitors() -> Vec<Monitor> {
-    static START: Once = Once::new();
+pub(crate) fn get_monitors() -> Vec<Monitor> {
     unsafe {
-        START.call_once(|| {
-            if EnumDisplayMonitors(null_mut(), null_mut(), Some(monitorenumproc), 0) == 0{
-                warn!(
-                    "Failed to Enumerate Display Monitors: {}",
-                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                );
-            };
-        });
+        MONITORS = Vec::new();
+        if EnumDisplayMonitors(null_mut(), null_mut(), Some(monitorenumproc), 0) == 0{
+            warn!(
+                "Failed to Enumerate Display Monitors: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+        };
         MONITORS.clone()
     }
 }

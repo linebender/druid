@@ -29,7 +29,7 @@ use winapi::um::shellscalingapi::PROCESS_SYSTEM_DPI_AWARE;
 use winapi::um::winuser::{
     DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PostMessageW, PostQuitMessage,
     RegisterClassW, TranslateAcceleratorW, TranslateMessage, GA_ROOT, IDI_APPLICATION, MSG,
-    WNDCLASSW,
+    WNDCLASSW, SendMessageW
 };
 
 use crate::application::AppHandler;
@@ -38,7 +38,7 @@ use super::accels;
 use super::clipboard::Clipboard;
 use super::error::Error;
 use super::util::{self, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
-use super::window::{self, DS_REQUEST_DESTROY};
+use super::window::{self, DS_REQUEST_DESTROY, DS_HANDLE_DROPPED};
 
 #[derive(Clone)]
 pub(crate) struct Application {
@@ -105,6 +105,11 @@ impl Application {
         unsafe {
             // Handle windows messages
             loop {
+                if let Ok(state) = self.state.try_borrow() {
+                    for hwnd in &state.windows {
+                        SendMessageW(*hwnd, DS_HANDLE_DROPPED, 0,0);
+                    }
+                }
                 let mut msg = mem::MaybeUninit::uninit();
                 let res = GetMessageW(msg.as_mut_ptr(), ptr::null_mut(), 0, 0);
                 if res <= 0 {
