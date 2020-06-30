@@ -31,6 +31,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
 - Fix derive `Data` when type param bounds are defined ([#1058] by [@chris-zen])
 - Ensure that `update` is called after all commands. ([#1062] by [@jneem])
+- X11: Support idle callbacks. ([#1072] by [@jneem])
 - GTK: Don't interrupt `KeyEvent.repeat` when releasing another key. ([#1081] by [@raphlinus])
 
 ### Visual
@@ -352,6 +353,7 @@ Last release without a changelog :(
 [#1054]: https://github.com/linebender/druid/pull/1054
 [#1058]: https://github.com/linebender/druid/pull/1058
 [#1062]: https://github.com/linebender/druid/pull/1062
+[#1072]: https://github.com/linebender/druid/pull/1072
 [#1081]: https://github.com/linebender/druid/pull/1081
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
