@@ -12,7 +12,7 @@ widgets (such as a slider) may expect a single type (such as `f64`).
 > **Note**: For more information on how different parts of your [`Data`] are exposed
 to different widgets, see [`Lens`].
 
-At a high level, druid works like this:
+At a high level, Druid works like this:
 
 - **event**: an `Event` arrives from the operating system, such as a key press,
 a mouse movement, or a timer firing. This event is delivered to your root

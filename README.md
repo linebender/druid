@@ -1,4 +1,4 @@
-# druid
+# Druid
 
 ## A data-first Rust-native UI toolkit.
 
@@ -15,11 +15,11 @@ See the [goals section](#Goals) for more details.
 Druid's current development is largely driven by its use in [Runebender], a new
 font editor.
 
-We have been doing periodic releases of druid on crates.io, but it is under
+We have been doing periodic releases of Druid on crates.io, but it is under
 active development and its API might change. All changes are documented
 in [the changelog](https://github.com/linebender/druid/blob/master/CHANGELOG.md).
 
-For an overview of some key concepts, see the (work in progress) [druid book].
+For an overview of some key concepts, see the (work in progress) [Druid book].
 
 ## Example
 
@@ -55,7 +55,7 @@ fn ui_builder() -> impl Widget<u32> {
 ```
 
 Check out the [the examples folder] for a more comprehensive demonstration of
-druid's existing functionality and widgets.
+Druid's existing functionality and widgets.
 
 ## Screenshots
 
@@ -85,7 +85,7 @@ platforms. In order to achieve this we strive for a variety of things:
 
 In order to fulfill those goals, we cannot support every use case. Luckily
 the Rust community is working on a variety of different libraries with
-different goals, so here are some of druid's non-goals and possible
+different goals, so here are some of Druid's non-goals and possible
 alternatives that can offer those capabilities:
 
 - Use the the platform-native widgets or mimic them. ([Relm])
@@ -100,12 +100,12 @@ doesn't suit your use case, perhaps one of the others will!
 
 ### druid-shell
 
-The druid toolkit uses druid-shell for a platform-abstracting application shell.
-Druid-shell is responsible for starting a native platform runloop, listening to
+The Druid toolkit uses druid-shell for a platform-abstracting application shell.
+druid-shell is responsible for starting a native platform runloop, listening to
 events, converting them into a platform-agnostic representation, and calling a
 user-provided handler with them.
 
-While druid-shell is being developed with the druid toolkit in mind, it is
+While druid-shell is being developed with the Druid toolkit in mind, it is
 intended to be general enough that it could be reused by other projects
 interested in experimenting with Rust GUI. The druid-shell crate includes a
 couple of [non-druid examples].
@@ -115,7 +115,7 @@ couple of [non-druid examples].
 Druid relies on the [piet library] for drawing and text layout. Piet is a 2D graphics
 abstraction with multiple backends: `piet-direct2d`, `piet-coregraphics`, `piet-cairo`,
 `piet-web`, and `piet-svg` are currently available, and a GPU backend is planned.
-In terms of druid platform support via piet, macOS uses `piet-coregraphics`,
+In terms of Druid platform support via piet, macOS uses `piet-coregraphics`,
 Linux uses `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
 
 ```rust
@@ -144,7 +144,7 @@ ctx.fill(rect, &fill_color);
 
 ### widgets
 
-Widgets in druid (text boxes, buttons, layout components, etc.) are objects
+Widgets in Druid (text boxes, buttons, layout components, etc.) are objects
 which implement the [Widget trait]. The trait is parametrized by a type (`T`)
 for associated data. All trait methods (`event`, `lifecycle`, `update`, `paint`,
 and `layout`) are provided with access to this data, and in the case of
@@ -201,7 +201,7 @@ fn build_widget() -> impl Widget<u32> {
 ### layout
 
 Druid's layout protocol is strongly inspired by [Flutter's box layout model].
-In druid, widgets are passed a `BoxConstraint` that provides them a minimum and
+In Druid, widgets are passed a `BoxConstraint` that provides them a minimum and
 maximum size for layout. Widgets are also responsible for computing appropriate
 constraints for their children if applicable.
 
@@ -250,9 +250,9 @@ LensWrap::new(WidgetThatExpectsf64::new(), lens!(AppState, value));
 
 This is particularly useful when working with types defined in another crate.
 
-## Using druid
+## Using Druid
 
-An explicit goal of druid is to be easy to build, so please open an issue if you
+An explicit goal of Druid is to be easy to build, so please open an issue if you
 run into any difficulties. Druid is available on [crates.io] and should work as
 a lone dependency (it re-exports all the parts of druid-shell, piet, and kurbo
 that you'll need):
@@ -261,7 +261,7 @@ that you'll need):
 druid = "0.6.0"
 ```
 
-Since druid is currently in fast-evolving state, you might prefer to drink from
+Since Druid is currently in fast-evolving state, you might prefer to drink from
 the firehose:
 
 ```toml
@@ -272,7 +272,7 @@ druid = { git = "https://github.com/linebender/druid.git" }
 
 #### Linux
 
-On Linux, druid requires gtk+3; see [gtk-rs dependencies] for installation
+On Linux, Druid requires gtk+3; see [gtk-rs dependencies] for installation
 instructions.
 
 Alternatively, there is an X11 backend available, although it is currently
@@ -313,7 +313,7 @@ active and friendly community.
 [Widget trait]: https://docs.rs/druid/0.6.0/druid/trait.Widget.html
 [Data trait]: https://docs.rs/druid/0.6.0/druid/trait.Data.html
 [Lens datatype]: https://docs.rs/druid/0.6.0/druid/trait.Lens.html
-[druid book]: https://linebender.org/druid/
+[Druid book]: https://linebender.org/druid/
 [Iced]: https://github.com/hecrj/iced
 [Conrod]: https://github.com/PistonDevelopers/conrod
 [Relm]: https://github.com/antoyo/relm
