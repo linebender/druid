@@ -17,6 +17,14 @@
 //! `druid-shell` is an abstraction around a given platform UI & application
 //! framework. It provides common types, which then defer to a platform-defined
 //! implementation.
+//!
+//! # Env
+//!
+//! For testing and debugging, `druid-shell` can change its behavior based on environment
+//! variables. Here is a list of environment variables that `druid-shell` supports:
+//!
+//! - `DRUID_SHELL_DISABLE_X11_PRESENT`: if this is set and `druid-shell` is using the `x11`
+//! backend, it will avoid using the Present extension.
 
 #![deny(intra_doc_link_resolution_failure)]
 #![allow(clippy::new_without_default)]

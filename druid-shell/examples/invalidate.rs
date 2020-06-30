@@ -84,6 +84,7 @@ impl WinHandler for InvalidateTest {
 }
 
 fn main() {
+    simple_logger::init().expect("Failed to init simple logger");
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
     let inv_test = InvalidateTest {

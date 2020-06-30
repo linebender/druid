@@ -20,13 +20,17 @@ use std::convert::TryInto;
 use std::rc::{Rc, Weak};
 
 use anyhow::{anyhow, Context, Error};
-use cairo::{XCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
+use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
 use x11rb::atom_manager;
 use x11rb::connection::Connection;
+use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
+use x11rb::protocol::xfixes::{ConnectionExt as _, Region};
 use x11rb::protocol::xproto::{
-    self, AtomEnum, ConnectionExt, EventMask, ExposeEvent, PropMode, Visualtype, WindowClass,
+    self, AtomEnum, ConfigureNotifyEvent, ConnectionExt, CreateGCAux, EventMask, ExposeEvent,
+    Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
 };
-use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
+use x11rb::wrapper::ConnectionExt as _;
+use x11rb::xcb_ffi::XCBConnection;
 
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error as ShellError;
@@ -128,34 +132,33 @@ impl WindowBuilder {
     /// Registers and returns all the atoms that the window will need.
     fn atoms(&self, window_id: u32) -> Result<WindowAtoms, Error> {
         let conn = self.app.connection();
-        let atoms = WindowAtoms::new(conn.as_ref())
-            .context("failed to intern X11 atoms")?
+        let atoms = WindowAtoms::new(conn.as_ref())?
             .reply()
-            .context("failed to get back X11 atoms")?;
+            .context("get X11 atoms")?;
 
         // Replace the window's WM_PROTOCOLS with the following.
         let protocols = [atoms.WM_DELETE_WINDOW];
-        // TODO(x11/errors): Check the response for errors?
         conn.change_property32(
             PropMode::Replace,
             window_id,
             atoms.WM_PROTOCOLS,
             AtomEnum::ATOM,
             &protocols,
-        )?;
+        )?
+        .check()
+        .context("set WM_PROTOCOLS")?;
 
         Ok(atoms)
     }
 
-    /// Create a new cairo `Context`.
-    fn create_cairo_context(
+    fn create_cairo_surface(
         &self,
         window_id: u32,
         visual_type: &Visualtype,
-    ) -> Result<RefCell<cairo::Context>, Error> {
+    ) -> Result<XCBSurface, Error> {
         let conn = self.app.connection();
         let cairo_xcb_connection = unsafe {
-            XCBConnection::from_raw_none(
+            CairoXCBConnection::from_raw_none(
                 conn.get_raw_xcb_connection() as *mut cairo_sys::xcb_connection_t
             )
         };
@@ -174,8 +177,7 @@ impl WindowBuilder {
             self.size.height as i32,
         )
         .map_err(|status| anyhow!("Failed to create cairo surface: {}", status))?;
-
-        Ok(RefCell::new(cairo::Context::new(&cairo_surface)))
+        Ok(cairo_surface)
     }
 
     // TODO(x11/menus): make menus if requested
@@ -184,24 +186,26 @@ impl WindowBuilder {
         let screen_num = self.app.screen_num();
         let id = conn.generate_id()?;
         let setup = conn.setup();
-        // TODO(x11/errors): Don't unwrap for screen or visual_type?
-        let screen = setup.roots.get(screen_num as usize).unwrap();
-        let visual_type = util::get_visual_from_screen(&screen).unwrap();
+        let screen = setup
+            .roots
+            .get(screen_num as usize)
+            .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
+        let visual_type = util::get_visual_from_screen(&screen)
+            .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
         let visual_id = visual_type.visual_id;
 
-        let cw_values = xproto::CreateWindowAux::new()
-            .background_pixel(screen.white_pixel)
-            .event_mask(
-                EventMask::Exposure
-                    | EventMask::StructureNotify
-                    | EventMask::KeyPress
-                    | EventMask::KeyRelease
-                    | EventMask::ButtonPress
-                    | EventMask::ButtonRelease
-                    | EventMask::PointerMotion,
-            );
+        let cw_values = xproto::CreateWindowAux::new().event_mask(
+            EventMask::Exposure
+                | EventMask::StructureNotify
+                | EventMask::KeyPress
+                | EventMask::KeyRelease
+                | EventMask::ButtonPress
+                | EventMask::ButtonRelease
+                | EventMask::PointerMotion,
+        );
 
         // Create the actual window
+        let (width, height) = (self.size.width as u16, self.size.height as u16);
         conn.create_window(
             // Window depth
             x11rb::COPY_FROM_PARENT.try_into().unwrap(),
@@ -216,10 +220,10 @@ impl WindowBuilder {
             0,
             // Width of the new window
             // TODO(x11/dpi_scaling): figure out DPI scaling
-            self.size.width as u16,
+            width,
             // Height of the new window
             // TODO(x11/dpi_scaling): figure out DPI scaling
-            self.size.height as u16,
+            height,
             // Border width
             0,
             // Window class type
@@ -229,24 +233,57 @@ impl WindowBuilder {
             // Window properties mask
             &cw_values,
         )?
-        .check()?;
+        .check()
+        .context("create window")?;
+
+        // Allocate a graphics context (currently used only for copying pixels when present is
+        // unavailable).
+        let gc = conn.generate_id()?;
+        conn.create_gc(gc, id, &CreateGCAux::new())?
+            .check()
+            .context("create graphics context")?;
 
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
         let atoms = self.atoms(id)?;
-        let cairo_context = self.create_cairo_context(id, &visual_type)?;
+        let cairo_surface = RefCell::new(self.create_cairo_surface(id, &visual_type)?);
         // Figure out the refresh rate of the current screen
         let refresh_rate = util::refresh_rate(conn, id);
-        let state = RefCell::new(WindowState { size: self.size });
+        let state = RefCell::new(WindowState {
+            size: self.size,
+            invalid: Rect::ZERO,
+        });
+        let present_data = match self.initialize_present_data(id) {
+            Ok(p) => Some(p),
+            Err(e) => {
+                log::info!("Failed to initialize present extension: {}", e);
+                None
+            }
+        };
         let handler = RefCell::new(self.handler.unwrap());
+        // When using present, we generally need two buffers (because after we present, we aren't
+        // allowed to use that buffer for a little while, and so we might want to render to the
+        // other one). Otherwise, we only need one.
+        let buf_count = if present_data.is_some() { 2 } else { 1 };
+        let buffers = RefCell::new(Buffers::new(
+            conn,
+            id,
+            buf_count,
+            width,
+            height,
+            screen.root_depth,
+        )?);
 
         let window = Rc::new(Window {
             id,
+            gc,
             app: self.app.clone(),
             handler,
-            cairo_context,
+            cairo_surface,
             refresh_rate,
             atoms,
             state,
+            present_data: RefCell::new(present_data),
+            buffers,
         });
         window.set_title(&self.title);
 
@@ -257,17 +294,79 @@ impl WindowBuilder {
 
         Ok(handle)
     }
+
+    fn initialize_present_data(&self, window_id: u32) -> Result<PresentData, Error> {
+        if self.app.present_opcode().is_some() {
+            let conn = self.app.connection();
+
+            // We use the CompleteNotify events to schedule the next frame, and the IdleNotify
+            // events to manage our buffers.
+            let id = conn.generate_id()?;
+            use x11rb::protocol::present::EventMask::*;
+            conn.present_select_input(id, window_id, CompleteNotify | IdleNotify)?
+                .check()
+                .context("set present event mask")?;
+
+            let region_id = conn.generate_id()?;
+            conn.xfixes_create_region(region_id, &[])
+                .context("create region")?;
+
+            Ok(PresentData {
+                serial: 0,
+                region: region_id,
+                waiting_on: None,
+                needs_present: false,
+                last_msc: None,
+                last_ust: None,
+            })
+        } else {
+            Err(anyhow!("no present opcode"))
+        }
+    }
 }
 
 /// An X11 window.
 pub(crate) struct Window {
     id: u32,
+    gc: Gcontext,
     app: Application,
     handler: RefCell<Box<dyn WinHandler>>,
-    cairo_context: RefCell<cairo::Context>,
+    cairo_surface: RefCell<XCBSurface>,
     refresh_rate: Option<f64>,
     atoms: WindowAtoms,
     state: RefCell<WindowState>,
+
+    /// When this is `Some(_)`, we use the X11 Present extension to present windows. This syncs all
+    /// presentation to vblank and it appears to prevent tearing (subject to various caveats
+    /// regarding broken video drivers).
+    ///
+    /// The Present extension works roughly like this: we submit a pixmap for presentation. It will
+    /// get drawn at the next vblank, and some time shortly after that we'll get a notification
+    /// that the drawing was completed.
+    ///
+    /// There are three ways that rendering can get triggered:
+    /// 1) We render a frame, and it signals to us that an animation is requested. In this case, we
+    ///     will render the next frame as soon as we get a notification that the just-presented
+    ///     frame completed. In other words, we use `CompleteNotifyEvent` to schedule rendering.
+    /// 2) We get an expose event telling us that a region got invalidated. In
+    ///    this case, we will render the next frame immediately unless we're already waiting for a
+    ///    completion notification. (If we are waiting for a completion notification, we just make
+    ///    a note to schedule a new frame once we get it.)
+    /// 3) Someone calls `invalidate` or `invalidate_rect` on us. We send ourselves an expose event
+    ///    and end up in state 2. This is better than rendering straight away, because for example
+    ///    they might have called `invalidate` from their paint callback, and then we'd end up
+    ///    painting re-entrantively.
+    ///
+    /// This is probably not the best (or at least, not the lowest-latency) scheme we can come up
+    /// with, because invalidations that happen shortly after a vblank might need to wait 2 frames
+    /// before they appear. If we're getting lots of invalidations, it might be better to render more
+    /// than once per frame. Note that if we do, it will require some changes to part 1) above,
+    /// because if we render twice in a frame then we will get two completion notifications in a
+    /// row, so we don't want to present on both of them. The `msc` field of the completion
+    /// notification might be useful here, because it allows us to check how many frames have
+    /// actually been presented.
+    present_data: RefCell<Option<PresentData>>,
+    buffers: RefCell<Buffers>,
 }
 
 // This creates a `struct WindowAtoms` containing the specified atoms as members (along with some
@@ -299,6 +398,62 @@ atom_manager! {
 /// The mutable state of the window.
 struct WindowState {
     size: Size,
+    /// The region that was invalidated since the last time we rendered.
+    invalid: Rect,
+}
+
+/// A collection of pixmaps for rendering to. This gets used in two different ways: if the present
+/// extension is enabled, we render to a pixmap and then present it. If the present extension is
+/// disabled, we render to a pixmap and then call `copy_area` on it (this probably isn't the best
+/// way to imitate double buffering, but it's the fallback anyway).
+struct Buffers {
+    /// A list of idle pixmaps. We take a pixmap from here for rendering to.
+    ///
+    /// When we're not using the present extension, all pixmaps belong in here; as soon as we copy
+    /// from one, we can use it again.
+    ///
+    /// When we submit a pixmap to present, we're not allowed to touch it again until we get a
+    /// corresponding IDLE_NOTIFY event. In my limited experiments this happens shortly after
+    /// vsync, meaning that we may want to start rendering the next pixmap before we get the old
+    /// one back. Therefore, we keep a list of pixmaps. We pop one each time we render, and push
+    /// one when we get IDLE_NOTIFY.
+    ///
+    /// Since the current code only renders at most once per vsync, two pixmaps seems to always be
+    /// enough. Nevertheless, we will allocate more on the fly if we need them. Note that rendering
+    /// more than once per vsync can only improve latency, because only the most recently-presented
+    /// pixmap will get rendered.
+    idle_pixmaps: Vec<Pixmap>,
+    /// A list of all the allocated pixmaps (including the idle ones).
+    all_pixmaps: Vec<Pixmap>,
+    /// The sizes of the pixmaps (they all have the same size). In order to avoid repeatedly
+    /// reallocating as the window size changes, we allow these to be bigger than the window.
+    width: u16,
+    height: u16,
+    /// The depth of the currently allocated pixmaps.
+    depth: u8,
+}
+
+/// The state involved in using X's [Present] extension.
+///
+/// [Present]: https://cgit.freedesktop.org/xorg/proto/presentproto/tree/presentproto.txt
+#[derive(Debug)]
+struct PresentData {
+    /// A monotonically increasing present request counter.
+    serial: u32,
+    /// The region that we use for telling X what to present.
+    region: Region,
+    /// Did we submit a present that hasn't completed yet? If so, this is its serial number.
+    waiting_on: Option<u32>,
+    /// We need to render another frame as soon as the current one is done presenting.
+    needs_present: bool,
+    /// The last MSC (media stream counter) that was completed. This can be used to diagnose
+    /// latency problems, because MSC is a frame counter: it increments once per frame. We should
+    /// be presenting on every frame, and storing the last completed MSC lets us know if we missed
+    /// one.
+    last_msc: Option<u64>,
+    /// The time at which the last frame was completed. The present protocol documentation doesn't
+    /// define the units, but it appears to be in microseconds.
+    last_ust: Option<u64>,
 }
 
 impl Window {
@@ -320,13 +475,6 @@ impl Window {
         log_x11!(self.app.connection().destroy_window(self.id));
     }
 
-    fn cairo_surface(&self) -> Result<XCBSurface, Error> {
-        borrow!(self.cairo_context)?
-            .get_target()
-            .try_into()
-            .map_err(|_| anyhow!("Window::cairo_surface try_into"))
-    }
-
     fn size(&self) -> Result<Size, Error> {
         Ok(borrow!(self.state)?.size)
     }
@@ -337,13 +485,19 @@ impl Window {
             let mut state = borrow_mut!(self.state)?;
             if size != state.size {
                 state.size = size;
-                Some(size)
+                true
             } else {
-                None
+                false
             }
         };
-        if let Some(size) = new_size {
-            self.cairo_surface()?
+        if new_size {
+            borrow_mut!(self.buffers)?.set_size(
+                self.app.connection(),
+                self.id,
+                size.width as u16,
+                size.height as u16,
+            );
+            borrow_mut!(self.cairo_surface)?
                 .set_size(size.width as i32, size.height as i32)
                 .map_err(|status| {
                     anyhow!(
@@ -352,45 +506,37 @@ impl Window {
                         status
                     )
                 })?;
+            self.enlarge_invalid_rect(size.to_rect())?;
             borrow_mut!(self.handler)?.size(size);
         }
         Ok(())
     }
 
-    /// Tell the X server to mark the specified `rect` as needing redraw.
-    ///
-    /// ### Connection
-    ///
-    /// Does not flush the connection.
-    fn request_redraw(&self, rect: Rect) {
-        // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
-        let expose_event = ExposeEvent {
-            window: self.id,
-            x: rect.x0 as u16,
-            y: rect.y0 as u16,
-            width: rect.width() as u16,
-            height: rect.height() as u16,
-            count: 0,
-            response_type: x11rb::protocol::xproto::EXPOSE_EVENT,
-            sequence: 0,
+    // Ensure that our cairo context is targeting the right drawable, allocating one if necessary.
+    fn update_cairo_surface(&self) -> Result<(), Error> {
+        let mut buffers = borrow_mut!(self.buffers)?;
+        let pixmap = if let Some(p) = buffers.idle_pixmaps.last() {
+            *p
+        } else {
+            log::info!("ran out of idle pixmaps, creating a new one");
+            buffers.create_pixmap(self.app.connection(), self.id)?
         };
-        log_x11!(self.app.connection().send_event(
-            false,
-            self.id,
-            EventMask::Exposure,
-            expose_event,
-        ));
+
+        let drawable = XCBDrawable(pixmap);
+        borrow_mut!(self.cairo_surface)?
+            .set_drawable(&drawable, buffers.width as i32, buffers.height as i32)
+            .map_err(|e| anyhow!("Failed to update cairo drawable: {}", e))?;
+        Ok(())
     }
 
-    fn render(&self, invalid_rect: Rect) -> Result<(), Error> {
-        // Figure out the window's current size
-        let reply = self.app.connection().get_geometry(self.id)?.reply()?;
-        let size = Size::new(reply.width as f64, reply.height as f64);
-        self.set_size(size)?;
-
+    fn render(&self) -> Result<(), Error> {
+        let size = borrow!(self.state)?.size;
+        let invalid_rect = borrow!(self.state)?.invalid;
         let mut anim = false;
+        self.update_cairo_surface()?;
         {
-            let mut cairo_ctx = borrow_mut!(self.cairo_context)?;
+            let surface = borrow!(self.cairo_surface)?;
+            let mut cairo_ctx = cairo::Context::new(&surface);
             let mut piet_ctx = Piet::new(&mut cairo_ctx);
             piet_ctx.clip(invalid_rect);
 
@@ -418,18 +564,38 @@ impl Window {
             err?;
         }
 
-        if anim && self.refresh_rate.is_some() {
-            // TODO(x11/render_improvements): Sleeping is a terrible way to schedule redraws.
-            //     I think I'll end up having to write a redraw scheduler or something. :|
-            //     Doing it this way for now to proof-of-concept it.
-            //
-            // Eventually we also need to make sure we respect V-Sync timings.
-            // A druid-shell test utility should probably be written to verify that.
-            // Inspiration can be taken from: https://www.vsynctester.com/we
-            let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
-            std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
+        borrow_mut!(self.state)?.invalid = Rect::ZERO;
+        self.set_needs_present(false)?;
 
-            self.request_redraw(size.to_rect());
+        let mut buffers = borrow_mut!(self.buffers)?;
+        let pixmap = *buffers
+            .idle_pixmaps
+            .last()
+            .ok_or_else(|| anyhow!("after rendering, no pixmap to present"))?;
+        if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
+            present.present(self.app.connection(), pixmap, self.id, invalid_rect)?;
+            buffers.idle_pixmaps.pop();
+            if anim {
+                self.enlarge_invalid_rect(size.to_rect())?;
+                present.needs_present = true;
+            }
+        } else {
+            let (x, y) = (invalid_rect.x0 as i16, invalid_rect.y0 as i16);
+            let (w, h) = (invalid_rect.width() as u16, invalid_rect.height() as u16);
+            self.app
+                .connection()
+                .copy_area(pixmap, self.id, self.gc, x, y, x, y, w, h)?;
+            // We aren't using the present extension, so fall back to sleeping for scheduling
+            // redraws. Sleeping is a terrible way to schedule redraws, but hopefully we don't
+            // have to fall back to this very often.
+            // TODO: once we have an idle handler, we should use that. Sleeping causes lots of
+            // problems when windows are dragged to resize.
+            if anim && self.refresh_rate.is_some() {
+                let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
+                std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
+
+                self.invalidate_rect(size.to_rect());
+            }
         }
         self.app.connection().flush()?;
         Ok(())
@@ -471,6 +637,18 @@ impl Window {
         log_x11!(conn.flush());
     }
 
+    fn enlarge_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
+        let invalid = &mut borrow_mut!(self.state)?.invalid;
+        // This is basically just a rectangle union, but we need to be careful because
+        // `Rect::union` doesn't do what we want when one rect is empty.
+        if invalid.area() == 0.0 {
+            *invalid = rect;
+        } else if rect.area() > 0.0 {
+            *invalid = invalid.union(rect);
+        }
+        Ok(())
+    }
+
     fn invalidate(&self) {
         match self.size() {
             Ok(size) => self.invalidate_rect(size.to_rect()),
@@ -479,7 +657,27 @@ impl Window {
     }
 
     fn invalidate_rect(&self, rect: Rect) {
-        self.request_redraw(rect);
+        if let Err(err) =  self.enlarge_invalid_rect(rect) {
+            log::error!("Window::invalidate_rect - failed to enlarge rect: {}", err);
+        }
+
+        // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
+        let expose_event = ExposeEvent {
+            window: self.id,
+            x: rect.x0 as u16,
+            y: rect.y0 as u16,
+            width: rect.width() as u16,
+            height: rect.height() as u16,
+            count: 0,
+            response_type: x11rb::protocol::xproto::EXPOSE_EVENT,
+            sequence: 0,
+        };
+        log_x11!(self.app.connection().send_event(
+            false,
+            self.id,
+            EventMask::Exposure,
+            expose_event,
+        ));
         log_x11!(self.app.connection().flush());
     }
 
@@ -510,7 +708,14 @@ impl Window {
             (expose.x as f64, expose.y as f64),
             (expose.width as f64, expose.height as f64),
         );
-        Ok(self.render(rect)?)
+
+        self.enlarge_invalid_rect(rect)?;
+        if self.waiting_on_present()? {
+            self.set_needs_present(true)?;
+        } else if expose.count == 0 {
+            self.render()?;
+        }
+        Ok(())
     }
 
     pub fn handle_key_press(&self, key_press: &xproto::KeyPressEvent) -> Result<(), Error> {
@@ -641,6 +846,214 @@ impl Window {
         _destroy_notify: &xproto::DestroyNotifyEvent,
     ) -> Result<(), Error> {
         borrow_mut!(self.handler)?.destroy();
+        Ok(())
+    }
+
+    pub fn handle_configure_notify(&self, event: &ConfigureNotifyEvent) -> Result<(), Error> {
+        self.set_size(Size::new(event.width as f64, event.height as f64))
+    }
+
+    pub fn handle_complete_notify(&self, event: &CompleteNotifyEvent) -> Result<(), Error> {
+        if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
+            // A little sanity check (which isn't worth an early return): we should only have
+            // one present request in flight, so we should only get notified about the request
+            // that we're waiting for.
+            if present.waiting_on != Some(event.serial) {
+                log::warn!(
+                    "Got a notify for serial {}, but waiting on {:?}",
+                    event.serial,
+                    present.waiting_on
+                );
+            }
+
+            // Check whether we missed presenting on any frames.
+            if let Some(last_msc) = present.last_msc {
+                if last_msc.wrapping_add(1) != event.msc {
+                    log::info!(
+                        "missed a present: msc went from {} to {}",
+                        last_msc,
+                        event.msc
+                    );
+                    if let Some(last_ust) = present.last_ust {
+                        log::info!("ust went from {} to {}", last_ust, event.ust);
+                    }
+                }
+            }
+
+            present.last_msc = Some(event.msc);
+            present.last_ust = Some(event.ust);
+            present.waiting_on = None;
+        }
+
+        if self.needs_present()? {
+            self.render()?;
+        }
+        Ok(())
+    }
+
+    pub fn handle_idle_notify(&self, event: &IdleNotifyEvent) -> Result<(), Error> {
+        let mut buffers = borrow_mut!(self.buffers)?;
+        if buffers.all_pixmaps.contains(&event.pixmap) {
+            buffers.idle_pixmaps.push(event.pixmap);
+        } else {
+            // We must have reallocated the buffers while this pixmap was busy, so free it now.
+            // Regular freeing happens in `Buffers::free_pixmaps`.
+            self.app.connection().free_pixmap(event.pixmap)?;
+        }
+        Ok(())
+    }
+
+    fn waiting_on_present(&self) -> Result<bool, Error> {
+        Ok(borrow!(self.present_data)?
+            .as_ref()
+            .map(|p| p.waiting_on.is_some())
+            .unwrap_or(false))
+    }
+
+    fn set_needs_present(&self, val: bool) -> Result<(), Error> {
+        if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
+            present.needs_present = val;
+        }
+        Ok(())
+    }
+
+    fn needs_present(&self) -> Result<bool, Error> {
+        Ok(borrow!(self.present_data)?
+            .as_ref()
+            .map(|p| p.needs_present)
+            .unwrap_or(false))
+    }
+}
+
+impl Buffers {
+    fn new(
+        conn: &Rc<XCBConnection>,
+        window_id: u32,
+        buf_count: usize,
+        width: u16,
+        height: u16,
+        depth: u8,
+    ) -> Result<Buffers, Error> {
+        let mut ret = Buffers {
+            width,
+            height,
+            depth,
+            idle_pixmaps: Vec::new(),
+            all_pixmaps: Vec::new(),
+        };
+        ret.create_pixmaps(conn, window_id, buf_count)?;
+        Ok(ret)
+    }
+
+    /// Frees all the X pixmaps that we hold.
+    fn free_pixmaps(&mut self, conn: &Rc<XCBConnection>) {
+        // We can't touch pixmaps if the present extension is waiting on them, so only free the
+        // idle ones. We'll free the busy ones when we get notified that they're idle in `Window::handle_idle_notify`.
+        for &p in &self.idle_pixmaps {
+            log_x11!(conn.free_pixmap(p));
+        }
+        self.all_pixmaps.clear();
+        self.idle_pixmaps.clear();
+    }
+
+    fn set_size(&mut self, conn: &Rc<XCBConnection>, window_id: u32, width: u16, height: u16) {
+        // How big should the buffer be if we want at least x pixels? Rounding up to the next power
+        // of 2 has the potential to waste 75% of our memory (factor 2 in both directions), so
+        // instead we round up to the nearest number of the form 2^k or 3 * 2^k.
+        fn next_size(x: u16) -> u16 {
+            // We round up to the nearest multiple of `accuracy`, which is between x/2 and x/4.
+            // Don't bother rounding to anything smaller than 32 = 2^(7-1).
+            let accuracy = 1 << ((16 - x.leading_zeros()).max(7) - 2);
+            let mask = accuracy - 1;
+            (x + mask) & !mask
+        }
+
+        let width = next_size(width);
+        let height = next_size(height);
+        if (width, height) != (self.width, self.height) {
+            let count = self.all_pixmaps.len();
+            self.free_pixmaps(conn);
+            self.width = width;
+            self.height = height;
+            log_x11!(self.create_pixmaps(conn, window_id, count));
+        }
+    }
+
+    /// Creates a new pixmap for rendering to. The new pixmap will be first in line for rendering.
+    fn create_pixmap(&mut self, conn: &Rc<XCBConnection>, window_id: u32) -> Result<Pixmap, Error> {
+        let pixmap_id = conn.generate_id()?;
+        conn.create_pixmap(self.depth, pixmap_id, window_id, self.width, self.height)?;
+        self.all_pixmaps.push(pixmap_id);
+        self.idle_pixmaps.push(pixmap_id);
+        Ok(pixmap_id)
+    }
+
+    fn create_pixmaps(
+        &mut self,
+        conn: &Rc<XCBConnection>,
+        window_id: u32,
+        count: usize,
+    ) -> Result<(), Error> {
+        if !self.all_pixmaps.is_empty() {
+            self.free_pixmaps(conn);
+        }
+
+        for _ in 0..count {
+            self.create_pixmap(conn, window_id)?;
+        }
+        Ok(())
+    }
+}
+
+impl PresentData {
+    // We have already rendered into the active pixmap buffer. Present it to the
+    // X server, and then rotate the buffers.
+    fn present(
+        &mut self,
+        conn: &Rc<XCBConnection>,
+        pixmap: Pixmap,
+        window_id: u32,
+        rect: Rect,
+    ) -> Result<(), Error> {
+        let x_rect = Rectangle {
+            x: rect.x0 as i16,
+            y: rect.y0 as i16,
+            width: rect.width() as u16,
+            height: rect.height() as u16,
+        };
+
+        conn.xfixes_set_region(self.region, &[x_rect])?;
+        conn.present_pixmap(
+            window_id,
+            pixmap,
+            self.serial,
+            // valid region of the pixmap
+            self.region,
+            // region of the window that must get updated
+            self.region,
+            // window-relative x-offset of the pixmap
+            0,
+            // window-relative y-offset of the pixmap
+            0,
+            // target CRTC
+            x11rb::NONE,
+            // wait fence
+            x11rb::NONE,
+            // idle fence
+            x11rb::NONE,
+            // present options
+            x11rb::protocol::present::Option::None.into(),
+            // target msc (0 means present at the next time that msc % divisor == remainder)
+            0,
+            // divisor
+            1,
+            // remainder
+            0,
+            // notifies
+            &[],
+        )?;
+        self.waiting_on = Some(self.serial);
+        self.serial += 1;
         Ok(())
     }
 }
