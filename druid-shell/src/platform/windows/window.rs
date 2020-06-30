@@ -51,6 +51,7 @@ use super::application::Application;
 use super::dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
 use super::dialog::get_file_dialog_path;
 use super::error::Error;
+use super::keyboard::KeyboardState;
 use super::menu::Menu;
 use super::paint;
 use super::timers::TimerSlots;
@@ -59,8 +60,7 @@ use super::util::{self, as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
-use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::keycodes::KeyCode;
+use crate::keyboard::{KbKey, KeyState};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::scale::{Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
@@ -176,12 +176,7 @@ struct WndState {
     render_target: Option<DeviceContext>,
     dcomp_state: Option<DCompState>,
     min_size: Option<Size>,
-    /// The `KeyCode` of the last `WM_KEYDOWN` event. We stash this so we can
-    /// include it when handling `WM_CHAR` events.
-    stashed_key_code: KeyCode,
-    /// The `char` of the last `WM_CHAR` event, if there has not already been
-    /// a `WM_KEYUP` event.
-    stashed_char: Option<char>,
+    keyboard_state: KeyboardState,
     // Stores a set of all mouse buttons that are currently holding mouse
     // capture. When the first mouse button is down on our window we enter
     // capture, and we hold it until the last mouse button is up.
@@ -223,37 +218,6 @@ impl Default for PresentStrategy {
         // the artifacty resizing.
         PresentStrategy::FlipRedirect
     }
-}
-
-/// Must only be called while handling an input message.
-/// This queries the keyboard state at the time of message delivery.
-fn get_mod_state() -> KeyModifiers {
-    KeyModifiers {
-        shift: get_mod_state_shift(),
-        alt: get_mod_state_alt(),
-        ctrl: get_mod_state_ctrl(),
-        meta: get_mod_state_win(),
-    }
-}
-
-#[inline]
-fn get_mod_state_shift() -> bool {
-    unsafe { GetKeyState(VK_SHIFT) < 0 }
-}
-
-#[inline]
-fn get_mod_state_alt() -> bool {
-    unsafe { GetKeyState(VK_MENU) < 0 }
-}
-
-#[inline]
-fn get_mod_state_ctrl() -> bool {
-    unsafe { GetKeyState(VK_CONTROL) < 0 }
-}
-
-#[inline]
-fn get_mod_state_win() -> bool {
-    unsafe { GetKeyState(VK_LWIN) < 0 || GetKeyState(VK_RWIN) < 0 }
 }
 
 /// Extract the buttons that are being held down from wparam in mouse events.
@@ -631,83 +595,40 @@ impl WndProc for MyWndProc {
                 }
                 Some(0)
             }
-            WM_CHAR => {
-                if let Ok(mut s) = self.state.try_borrow_mut() {
-                    let s = s.as_mut().unwrap();
-                    //FIXME: this can receive lone surrogate pairs?
-                    let key_code = s.stashed_key_code;
-
-                    s.stashed_char = std::char::from_u32(wparam as u32);
-                    let text = match s.stashed_char {
-                        Some(c) => c,
-                        None => {
-                            warn!("failed to convert WM_CHAR to char: {:#X}", wparam);
-                            return None;
-                        }
-                    };
-
-                    let modifiers = get_mod_state();
-                    let is_repeat = (lparam & 0xFFFF) > 0;
-                    let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
-
-                    if s.handler.key_down(event) {
-                        Some(0)
-                    } else {
-                        None
-                    }
-                } else {
-                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
-                    None
-                }
-            }
-            WM_KEYDOWN | WM_SYSKEYDOWN => {
-                if let Ok(mut s) = self.state.try_borrow_mut() {
-                    let s = s.as_mut().unwrap();
-                    let key_code: KeyCode = (wparam as i32).into();
-                    s.stashed_key_code = key_code;
-
-                    if key_code.is_printable() || key_code == KeyCode::Backspace {
-                        //FIXME: this will fail to propogate key combinations such as alt+s
-                        return None;
-                    }
-
-                    let modifiers = get_mod_state();
-                    // bits 0-15 of iparam are the repeat count:
-                    // https://docs.microsoft.com/en-ca/windows/desktop/inputdev/wm-keydown
-                    let is_repeat = (lparam & 0xFFFF) > 0;
-                    let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
-
-                    if s.handler.key_down(event)
-                        // If the window doesn't have a menu, then we need to suppress ALT/F10.
-                        // Otherwise we will stop getting mouse events for no gain.
-                        // When we do have a menu, those keys will focus the menu.
-                        || (!self.has_menu()
-                            && (key_code == KeyCode::LeftAlt || key_code == KeyCode::F10))
-                    {
-                        Some(0)
-                    } else {
-                        None
-                    }
-                } else {
-                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
-                    None
-                }
-            }
-            WM_KEYUP => {
-                if let Ok(mut s) = self.state.try_borrow_mut() {
-                    let s = s.as_mut().unwrap();
-                    let key_code: KeyCode = (wparam as i32).into();
-                    let modifiers = get_mod_state();
-                    let is_repeat = false;
-                    let text = s.stashed_char.take();
-                    let event = KeyEvent::new(key_code, is_repeat, modifiers, text, text);
-                    s.handler.key_up(event);
-                } else {
-                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
-                }
-                Some(0)
-            }
             //TODO: WM_SYSCOMMAND
+            WM_CHAR | WM_SYSCHAR | WM_KEYDOWN | WM_SYSKEYDOWN | WM_KEYUP | WM_SYSKEYUP
+            | WM_INPUTLANGCHANGE => {
+                unsafe {
+                    if let Ok(mut s) = self.state.try_borrow_mut() {
+                        let s = s.as_mut().unwrap();
+                        if let Some(event) =
+                            s.keyboard_state.process_message(hwnd, msg, wparam, lparam)
+                        {
+                            // If the window doesn't have a menu, then we need to suppress ALT/F10.
+                            // Otherwise we will stop getting mouse events for no gain.
+                            // When we do have a menu, those keys will focus the menu.
+                            let handle_menu = !self.has_menu()
+                                && (event.key == KbKey::Alt || event.key == KbKey::F10);
+                            match event.state {
+                                KeyState::Down => {
+                                    if s.handler.key_down(event) || handle_menu {
+                                        return Some(0);
+                                    }
+                                }
+                                KeyState::Up => {
+                                    s.handler.key_up(event);
+                                    if handle_menu {
+                                        return Some(0);
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                    }
+                }
+                None
+            }
             WM_MOUSEWHEEL | WM_MOUSEHWHEEL => {
                 // TODO: apply mouse sensitivity based on
                 // SPI_GETWHEELSCROLLLINES setting.
@@ -715,14 +636,10 @@ impl WndProc for MyWndProc {
                     let s = s.as_mut().unwrap();
                     let system_delta = HIWORD(wparam as u32) as i16 as f64;
                     let down_state = LOWORD(wparam as u32) as usize;
-                    let mods = KeyModifiers {
-                        shift: down_state & MK_SHIFT != 0,
-                        alt: get_mod_state_alt(),
-                        ctrl: down_state & MK_CONTROL != 0,
-                        meta: get_mod_state_win(),
-                    };
+                    let mods = s.keyboard_state.get_modifiers();
+                    let is_shift = mods.shift();
                     let wheel_delta = match msg {
-                        WM_MOUSEWHEEL if mods.shift => Vec2::new(-system_delta, 0.),
+                        WM_MOUSEWHEEL if is_shift => Vec2::new(-system_delta, 0.),
                         WM_MOUSEWHEEL => Vec2::new(0., -system_delta),
                         WM_MOUSEHWHEEL => Vec2::new(system_delta, 0.),
                         _ => unreachable!(),
@@ -789,12 +706,7 @@ impl WndProc for MyWndProc {
                     }
 
                     let pos = self.scale().to_dp(&(x as f64, y as f64).into());
-                    let mods = KeyModifiers {
-                        shift: wparam & MK_SHIFT != 0,
-                        alt: get_mod_state_alt(),
-                        ctrl: wparam & MK_CONTROL != 0,
-                        meta: get_mod_state_win(),
-                    };
+                    let mods = s.keyboard_state.get_modifiers();
                     let buttons = get_buttons(wparam);
                     let event = MouseEvent {
                         pos,
@@ -856,12 +768,7 @@ impl WndProc for MyWndProc {
                         let x = LOWORD(lparam as u32) as i16 as i32;
                         let y = HIWORD(lparam as u32) as i16 as i32;
                         let pos = self.scale().to_dp(&(x as f64, y as f64).into());
-                        let mods = KeyModifiers {
-                            shift: wparam & MK_SHIFT != 0,
-                            alt: get_mod_state_alt(),
-                            ctrl: wparam & MK_CONTROL != 0,
-                            meta: get_mod_state_win(),
-                        };
+                        let mods = s.keyboard_state.get_modifiers();
                         let buttons = get_buttons(wparam);
                         let event = MouseEvent {
                             pos,
@@ -1072,8 +979,7 @@ impl WindowBuilder {
                 render_target: None,
                 dcomp_state: None,
                 min_size: self.min_size,
-                stashed_key_code: KeyCode::Unknown(0),
-                stashed_char: None,
+                keyboard_state: KeyboardState::new(),
                 captured_mouse_buttons: MouseButtons::new(),
                 has_mouse_focus: false,
             };

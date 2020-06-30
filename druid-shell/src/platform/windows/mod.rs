@@ -20,7 +20,7 @@ pub mod clipboard;
 pub mod dcomp;
 pub mod dialog;
 pub mod error;
-pub mod keycodes;
+mod keyboard;
 pub mod menu;
 pub mod paint;
 mod timers;

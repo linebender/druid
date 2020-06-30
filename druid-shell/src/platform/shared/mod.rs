@@ -1,4 +1,4 @@
-// Copyright 2019 The druid Authors.
+// Copyright 2020 The druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! macOS druid-shell backend.
+//! Logic that is shared by more than one platform.
 
-#![allow(clippy::let_unit_value)]
-
-pub mod appkit;
-pub mod application;
-pub mod clipboard;
-pub mod dialog;
-pub mod error;
-mod keyboard;
-pub mod menu;
-pub mod util;
-pub mod window;
+cfg_if::cfg_if! {
+    if #[cfg(any(target_os = "macos", target_os = "linux"))] {
+        mod keyboard;
+        pub use keyboard::*;
+    }
+}
