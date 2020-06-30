@@ -152,7 +152,7 @@
                     <main>
                         <h1><a class="header" href="#druid" id="druid">Druid</a></h1>
 <p>Druid is a framework for building simple graphical applications.</p>
-<p>'Druid' is composed of a number of related projects. <a href="https://docs.rs/druid-shell"><code>druid-shell</code></a> is a
+<p>Druid is composed of a number of related projects. <a href="https://docs.rs/druid-shell"><code>druid-shell</code></a> is a
 low-level library that provides a common abstraction for interacting with the
 current OS &amp; window manager. <a href="https://docs.rs/piet"><code>piet</code></a> is an abstraction for doing 2D graphics;
 <a href="https://docs.rs/kurbo"><code>kurbo</code></a> is a library for 2D geometry; and <a href="https://docs.rs/druid"><code>druid</code></a> itself is an opinionated set of
@@ -161,9 +161,9 @@ high-level APIs for building cross-platform desktop applications.</p>
 contemporary declarative UI frameworks such as <a href="https://flutter.dev">Flutter</a>, <a href="https://developer.android.com/jetpack/compose">Jetpack Compose</a>,
 and <a href="https://developer.apple.com/documentation/swiftui">SwiftUI</a>, while also attempting to be conceptually simple and largely
 <em>non-magical</em>. A programmer familiar with Rust should be able to understand how
-druid works without special difficulty.</p>
+Druid works without special difficulty.</p>
 <h2><a class="header" href="#goals-and-status" id="goals-and-status">Goals and Status</a></h2>
-<p>The current goal of druid is to make it easy to write a program in Rust that
+<p>The current goal of Druid is to make it easy to write a program in Rust that
 can present a GUI and accept user input. Running your program should be as
 simple as <code>cargo run</code>.</p>
 <h2><a class="header" href="#key-concepts" id="key-concepts">Key Concepts</a></h2>
@@ -180,9 +180,9 @@ released version of Druid.</p>
 <p>This tutorial will first walk you through setting up the dependencies for developing a Druid
 application, then it will show you how to set up a basic application, build it and run it.</p>
 <h2><a class="header" href="#setting-up-druid-dependencies" id="setting-up-druid-dependencies">Setting up Druid dependencies</a></h2>
-<p>In addition to including the druid library in your project</p>
+<p>In addition to including the <code>druid</code> library in your project</p>
 <h3><a class="header" href="#linux" id="linux">Linux</a></h3>
-<p>On Linux, druid requires gtk+3.</p>
+<p>On Linux, Druid requires gtk+3.</p>
 <p>On Ubuntu this can be installed with</p>
 <pre><code class="language-no_compile">sudo apt-get install libgtk-3-dev
 </code></pre>
@@ -203,12 +203,12 @@ druid = { git = &quot;https://github.com/linebender/druid.git&quot; }
 <h1><a class="header" href="#get-started-with-druid" id="get-started-with-druid">Get started with Druid</a></h1>
 <p><em>this is outdated, and should be replaced with a walkthrough of getting a simple
 app built and running</em>.</p>
-<p>This chapter will walk you through setting up a simple druid application from start to finish.</p>
+<p>This chapter will walk you through setting up a simple Druid application from start to finish.</p>
 <h2><a class="header" href="#set-up-a-druid-project" id="set-up-a-druid-project">Set up a Druid project</a></h2>
 <p>Setting up a project is a simple as creating a new Rust project;</p>
 <pre><code class="language-bash">&gt; cargo new druid-example
 </code></pre>
-<p>And then adding druid as a dependency to Cargo.toml</p>
+<p>And then adding Druid as a dependency to Cargo.toml</p>
 <pre><code class="language-toml">[dependencies]
 druid = &quot;0.6.0&quot;
 </code></pre>
@@ -276,8 +276,8 @@ For this we need to define what our application's state looks like.</p>
 <h2><a class="header" href="#putting-it-all-together" id="putting-it-all-together">Putting it all together</a></h2>
 <p>...</p>
 <h1><a class="header" href="#model-data-and-the-data-trait" id="model-data-and-the-data-trait">Model data and the <code>Data</code> trait</a></h1>
-<p>The heart of a <code>druid</code> application is your application model. Your model drives
-your UI. When you mutate your model, druid compares the old and new version,
+<p>The heart of a Druid application is your application model. Your model drives
+your UI. When you mutate your model, Druid compares the old and new version,
 and propagates the change to the components ('widgets') of your application that
 are affected by the change.</p>
 <p>For this to work, your model must implement the <code>Clone</code> and <code>Data</code> traits. It
@@ -324,8 +324,8 @@ struct TodoItem {
     category: Category,
     // `Data` is implemented for any `Arc`.
     due_date: Option&lt;Arc&lt;DateTime&gt;&gt;,
-    // you can specify a custom comparison fn
-    // (anything with the signature (&amp;T, &amp;T) -&gt; bool)
+    // You can specify a custom comparison fn
+    // (anything with the signature (&amp;T, &amp;T) -&gt; bool).
     #[data(same_fn = &quot;PartialEq::eq&quot;)]
     added_date: DateTime,
     title: String,
@@ -347,7 +347,7 @@ enum Category {
 issues with collection types. For this reason, <code>Data</code> is not implemented for
 <code>std</code> types like <code>Vec</code> or <code>HashMap</code>. This is not a huge issue, however; you can
 always put these types inside an <code>Rc</code> or an <code>Arc</code>, or if you're dealing with
-larger collections you can build druid with the <code>im</code> feature, which brings in
+larger collections you can build Druid with the <code>im</code> feature, which brings in
 the [<code>im crate</code>], and adds a <code>Data</code> impl for the collections there. The <a href="https://docs.rs/im"><code>im</code>
 crate</a> is a collection of immutable data structures that act a lot like the <code>std</code>
 collections, but can be cloned efficiently.</p>
@@ -364,7 +364,7 @@ widgets (such as a slider) may expect a single type (such as <code>f64</code>).<
 <p><strong>Note</strong>: For more information on how different parts of your <a href="./data.html"><code>Data</code></a> are exposed
 to different widgets, see <a href="./lens.html"><code>Lens</code></a>.</p>
 </blockquote>
-<p>At a high level, druid works like this:</p>
+<p>At a high level, Druid works like this:</p>
 <ul>
 <li><strong>event</strong>: an <code>Event</code> arrives from the operating system, such as a key press,
 a mouse movement, or a timer firing. This event is delivered to your root
@@ -482,7 +482,7 @@ struct TodoItem {
 </code></pre>
 <p>We would like our widget to display the title of the item, and then below
 that to display two checkmarks that toggle the 'completed' and 'urgent' bools.
-<code>Checkbox</code> (a widget included in druid) implements <code>Widget&lt;bool&gt;</code>.
+<code>Checkbox</code> (a widget included in Druid) implements <code>Widget&lt;bool&gt;</code>.
 How do we use it with <code>TodoItem</code>? By using a <code>Lens</code>.</p>
 <h2><a class="header" href="#conceptual" id="conceptual">Conceptual</a></h2>
 <p>You can think of a lens as a way of &quot;focusing in&quot; on one part of the data. You
@@ -506,7 +506,7 @@ impl SimpleLens&lt;TodoItem, bool&gt; for CompletedLens {
 }
 </code></pre>
 <blockquote>
-<p><strong>Note</strong>: <code>Lens</code> isn't that helpful on its own; in druid it is generally used alongside
+<p><strong>Note</strong>: <code>Lens</code> isn't that helpful on its own; in Druid it is generally used alongside
 <code>LensWrap</code>, which is a special widget that uses a <code>Lens</code> to change the <code>Data</code>
 type of its child. Lets say we have a <code>Checkbox</code>, but our data is a <code>TodoItem</code>:
 we can do, <code>LensWrap::new(my_checkbox, CompletedLens)</code> in order to bridge the
@@ -580,7 +580,7 @@ struct Item {
     count: usize,
 }
 
-// this now works
+// This works now:
 impl Item {
     fn count(&amp;self) -&gt; usize {
         self.count
@@ -595,7 +595,7 @@ with a given lens.</p>
 <pre><code class="language-rust noplaypen">use druid::widget::{Checkbox, Flex, Label, Widget, WidgetExt};
 
 fn make_todo_item() -&gt; impl Widget&lt;TodoItem&gt; {
-    // A label that generates its text based on the data
+    // A label that generates its text based on the data:
     let title = Label::dynamic(|text: &amp;String, _| text.to_string()).lens(TodoItem::title);
     let completed = Checkbox::new(&quot;Completed:&quot;).lens(TodoItem::completed);
     let urgent = Checkbox::new(&quot;Urgent:&quot;).lens(TodoItem::urgent);
@@ -654,7 +654,7 @@ impl Lens&lt;Contacts, Option&lt;Contact&gt;&gt; for ContactIdLens {
             _ =&gt; true,
         };
         if changed {
-            //if !data.inner.get(&amp;self.0).same(&amp;contact.as_ref()) {
+            // if !data.inner.get(&amp;self.0).same(&amp;contact.as_ref()) {
             let contacts = Arc::make_mut(&amp;mut data.inner);
             // if we're none, we were deleted, and remove from the map; else replace
             match contact {
@@ -777,14 +777,14 @@ the <a href="https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html#method.env_s
 <a href="https://docs.rs/druid/0.6.0/druid/struct.LocalizedString.html"><code>LocalizedString</code></a> can be resolved to a given string in the current locale by
 calling its <a href="https://docs.rs/druid/0.6.0/druid/struct.LocalizedString.html#method.resolve"><code>resolve</code></a> method.</p>
 <p>In general, you should not need to worry about localization directly. See the
-<a href="./localization.html">localization</a> chapter for an overview of localization in druid.</p>
+<a href="./localization.html">localization</a> chapter for an overview of localization in Druid.</p>
 <h1><a class="header" href="#localization-todo" id="localization-todo">Localization (TODO)</a></h1>
 <h1><a class="header" href="#command-todo" id="command-todo">Command (TODO)</a></h1>
 <h1><a class="header" href="#create-custom-widgets" id="create-custom-widgets">Create custom widgets</a></h1>
-<p>The <code>Widget</code> trait is the heart of druid, and in any serious application you
+<p>The <code>Widget</code> trait is the heart of Druid, and in any serious application you
 will eventually need to create and use custom <code>Widget</code>s.</p>
 <h2><a class="header" href="#painter-and-controller" id="painter-and-controller"><code>Painter</code> and <code>Controller</code></a></h2>
-<p>There are two helper widgets in druid that let you customize widget behaviour
+<p>There are two helper widgets in Druid that let you customize widget behaviour
 without needing to implement the full widget trait: <a href="https://docs.rs/druid/0.6.0/druid/widget/struct.Painter.html"><code>Painter</code></a> and
 <a href="https://docs.rs/druid/0.6.0/druid/widget/trait.Controller.html"><code>Controller</code></a>.</p>
 <h3><a class="header" href="#painter" id="painter">Painter</a></h3>

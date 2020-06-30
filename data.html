@@ -149,8 +149,8 @@
                 <div id="content" class="content">
                     <main>
                         <h1><a class="header" href="#model-data-and-the-data-trait" id="model-data-and-the-data-trait">Model data and the <code>Data</code> trait</a></h1>
-<p>The heart of a <code>druid</code> application is your application model. Your model drives
-your UI. When you mutate your model, druid compares the old and new version,
+<p>The heart of a Druid application is your application model. Your model drives
+your UI. When you mutate your model, Druid compares the old and new version,
 and propagates the change to the components ('widgets') of your application that
 are affected by the change.</p>
 <p>For this to work, your model must implement the <code>Clone</code> and <code>Data</code> traits. It
@@ -197,8 +197,8 @@ struct TodoItem {
     category: Category,
     // `Data` is implemented for any `Arc`.
     due_date: Option&lt;Arc&lt;DateTime&gt;&gt;,
-    // you can specify a custom comparison fn
-    // (anything with the signature (&amp;T, &amp;T) -&gt; bool)
+    // You can specify a custom comparison fn
+    // (anything with the signature (&amp;T, &amp;T) -&gt; bool).
     #[data(same_fn = &quot;PartialEq::eq&quot;)]
     added_date: DateTime,
     title: String,
@@ -220,7 +220,7 @@ enum Category {
 issues with collection types. For this reason, <code>Data</code> is not implemented for
 <code>std</code> types like <code>Vec</code> or <code>HashMap</code>. This is not a huge issue, however; you can
 always put these types inside an <code>Rc</code> or an <code>Arc</code>, or if you're dealing with
-larger collections you can build druid with the <code>im</code> feature, which brings in
+larger collections you can build Druid with the <code>im</code> feature, which brings in
 the [<code>im crate</code>], and adds a <code>Data</code> impl for the collections there. The <a href="https://docs.rs/im"><code>im</code>
 crate</a> is a collection of immutable data structures that act a lot like the <code>std</code>
 collections, but can be cloned efficiently.</p>

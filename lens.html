@@ -161,7 +161,7 @@ struct TodoItem {
 </code></pre>
 <p>We would like our widget to display the title of the item, and then below
 that to display two checkmarks that toggle the 'completed' and 'urgent' bools.
-<code>Checkbox</code> (a widget included in druid) implements <code>Widget&lt;bool&gt;</code>.
+<code>Checkbox</code> (a widget included in Druid) implements <code>Widget&lt;bool&gt;</code>.
 How do we use it with <code>TodoItem</code>? By using a <code>Lens</code>.</p>
 <h2><a class="header" href="#conceptual" id="conceptual">Conceptual</a></h2>
 <p>You can think of a lens as a way of &quot;focusing in&quot; on one part of the data. You
@@ -185,7 +185,7 @@ impl SimpleLens&lt;TodoItem, bool&gt; for CompletedLens {
 }
 </code></pre>
 <blockquote>
-<p><strong>Note</strong>: <code>Lens</code> isn't that helpful on its own; in druid it is generally used alongside
+<p><strong>Note</strong>: <code>Lens</code> isn't that helpful on its own; in Druid it is generally used alongside
 <code>LensWrap</code>, which is a special widget that uses a <code>Lens</code> to change the <code>Data</code>
 type of its child. Lets say we have a <code>Checkbox</code>, but our data is a <code>TodoItem</code>:
 we can do, <code>LensWrap::new(my_checkbox, CompletedLens)</code> in order to bridge the
@@ -259,7 +259,7 @@ struct Item {
     count: usize,
 }
 
-// this now works
+// This works now:
 impl Item {
     fn count(&amp;self) -&gt; usize {
         self.count
@@ -274,7 +274,7 @@ with a given lens.</p>
 <pre><code class="language-rust noplaypen">use druid::widget::{Checkbox, Flex, Label, Widget, WidgetExt};
 
 fn make_todo_item() -&gt; impl Widget&lt;TodoItem&gt; {
-    // A label that generates its text based on the data
+    // A label that generates its text based on the data:
     let title = Label::dynamic(|text: &amp;String, _| text.to_string()).lens(TodoItem::title);
     let completed = Checkbox::new(&quot;Completed:&quot;).lens(TodoItem::completed);
     let urgent = Checkbox::new(&quot;Urgent:&quot;).lens(TodoItem::urgent);
@@ -333,7 +333,7 @@ impl Lens&lt;Contacts, Option&lt;Contact&gt;&gt; for ContactIdLens {
             _ =&gt; true,
         };
         if changed {
-            //if !data.inner.get(&amp;self.0).same(&amp;contact.as_ref()) {
+            // if !data.inner.get(&amp;self.0).same(&amp;contact.as_ref()) {
             let contacts = Arc::make_mut(&amp;mut data.inner);
             // if we're none, we were deleted, and remove from the map; else replace
             match contact {
