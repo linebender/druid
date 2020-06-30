@@ -108,7 +108,7 @@ user-provided handler with them.
 While `druid-shell` is being developed with the Druid toolkit in mind, it is
 intended to be general enough that it could be reused by other projects
 interested in experimenting with Rust GUI. The `druid-shell` crate includes a
-couple of [non-druid examples].
+couple of [non-`druid` examples].
 
 ### piet
 
@@ -303,7 +303,7 @@ active and friendly community.
 [Rust-native GUI experiments]: https://areweguiyet.com
 [CONTRIBUTING.md]: ./CONTRIBUTING.md
 [Zulip chat instance]: https://xi.zulipchat.com
-[non-druid examples]: ./druid-shell/examples/shello.rs
+[non-`druid` examples]: ./druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
 [EventCtx]: https://docs.rs/druid/0.6.0/druid/struct.EventCtx.html
 [LifeCycleCtx]: https://docs.rs/druid/0.6.0/druid/struct.EventCtx.html
