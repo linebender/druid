@@ -100,22 +100,22 @@ doesn't suit your use case, perhaps one of the others will!
 
 ### druid-shell
 
-The Druid toolkit uses druid-shell for a platform-abstracting application shell.
-druid-shell is responsible for starting a native platform runloop, listening to
+The Druid toolkit uses `druid-shell` for a platform-abstracting application shell.
+`druid-shell` is responsible for starting a native platform runloop, listening to
 events, converting them into a platform-agnostic representation, and calling a
 user-provided handler with them.
 
-While druid-shell is being developed with the Druid toolkit in mind, it is
+While `druid-shell` is being developed with the Druid toolkit in mind, it is
 intended to be general enough that it could be reused by other projects
-interested in experimenting with Rust GUI. The druid-shell crate includes a
+interested in experimenting with Rust GUI. The `druid-shell` crate includes a
 couple of [non-druid examples].
 
 ### piet
 
-Druid relies on the [piet library] for drawing and text layout. Piet is a 2D graphics
+Druid relies on the [Piet library] for drawing and text layout. Piet is a 2D graphics
 abstraction with multiple backends: `piet-direct2d`, `piet-coregraphics`, `piet-cairo`,
 `piet-web`, and `piet-svg` are currently available, and a GPU backend is planned.
-In terms of Druid platform support via piet, macOS uses `piet-coregraphics`,
+In terms of Druid platform support via Piet, macOS uses `piet-coregraphics`,
 Linux uses `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
 
 ```rust
@@ -254,7 +254,7 @@ This is particularly useful when working with types defined in another crate.
 
 An explicit goal of Druid is to be easy to build, so please open an issue if you
 run into any difficulties. Druid is available on [crates.io] and should work as
-a lone dependency (it re-exports all the parts of druid-shell, piet, and kurbo
+a lone dependency (it re-exports all the parts of `druid-shell`, piet, and kurbo
 that you'll need):
 
 ```toml
@@ -294,7 +294,7 @@ active and friendly community.
 
 [Runebender]: https://github.com/linebender/runebender
 [the examples folder]: ./druid/examples
-[piet library]: https://github.com/linebender/piet
+[Piet library]: https://github.com/linebender/piet
 [custom_widget]: ./druid/examples/custom_widget.rs
 [basic utility and layout widgets]: ./druid/src/widget
 [Flutter's box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html

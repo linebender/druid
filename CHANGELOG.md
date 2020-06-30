@@ -73,7 +73,7 @@ all fundamental features are there.
 
 #### Using Core Graphics on macOS.
 
-[@cmyr] continued the work of [@jrmuizel] and implemented Core Graphics support for piet in
+[@cmyr] continued the work of [@jrmuizel] and implemented Core Graphics support for Piet in
 [piet#176](https://github.com/linebender/piet/pull/176).
 
 Those changes made it into druid via [#905].
