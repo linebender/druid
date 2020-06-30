@@ -16,8 +16,10 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
+use std::os::unix::io::RawFd;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context, Error};
 use x11rb::connection::Connection;
@@ -30,6 +32,7 @@ use x11rb::xcb_ffi::XCBConnection;
 use crate::application::AppHandler;
 
 use super::clipboard::Clipboard;
+use super::util;
 use super::window::Window;
 
 #[derive(Clone)]
@@ -62,6 +65,10 @@ pub(crate) struct Application {
     window_id: u32,
     /// The mutable `Application` state.
     state: Rc<RefCell<State>>,
+    /// The read end of the "idle pipe", a pipe that allows the event loop to be woken up.
+    idle_read: RawFd,
+    /// The write end of the "idle pipe", a pipe that allows the event loop to be woken up.
+    idle_write: RawFd,
     /// The major opcode of the Present extension, if it is supported.
     present_opcode: Option<u8>,
 }
@@ -92,6 +99,8 @@ impl Application {
             windows: HashMap::new(),
         }));
 
+        let (idle_read, idle_write) = nix::unistd::pipe2(nix::fcntl::OFlag::O_NONBLOCK)?;
+
         let present_opcode = if std::env::var_os("DRUID_SHELL_DISABLE_X11_PRESENT").is_some() {
             // Allow disabling Present with an environment variable.
             None
@@ -110,6 +119,8 @@ impl Application {
             screen_num: screen_num as i32,
             window_id,
             state,
+            idle_read,
+            idle_write,
             present_opcode,
         })
     }
@@ -350,13 +361,22 @@ impl Application {
         Ok(false)
     }
 
-    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
+    fn run_inner(self) -> Result<(), Error> {
+        // Try to figure out the refresh rate of the current screen. We run the idle loop at that
+        // rate.
+        let refresh_rate = util::refresh_rate(self.connection(), self.window_id).unwrap_or(60.0);
+        let timeout = Duration::from_millis((1000.0 / refresh_rate) as u64);
+        let mut last_idle_time = Instant::now();
         loop {
-            if let Ok(ev) = self.connection.wait_for_event() {
+            let next_idle_time = last_idle_time + timeout;
+            poll_with_timeout(&self.connection, self.idle_read, next_idle_time)
+                .context("Error while waiting for X11 connection")?;
+
+            while let Some(ev) = self.connection.poll_for_event()? {
                 match self.handle_event(&ev) {
                     Ok(quit) => {
                         if quit {
-                            break;
+                            return Ok(());
                         }
                     }
                     Err(e) => {
@@ -364,6 +384,48 @@ impl Application {
                     }
                 }
             }
+
+            let now = Instant::now();
+            if now >= next_idle_time {
+                last_idle_time = now;
+                // Clear out our idle pipe. Each write to it adds one byte; it's unlikely that there
+                // will be much in it, but read it 16 bytes at a time just in case.
+                let mut read_buf = [0u8; 16];
+                loop {
+                    match nix::unistd::read(self.idle_read, &mut read_buf[..]) {
+                        Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
+                        // According to write(2), this is the outcome of reading an empty, O_NONBLOCK
+                        // pipe.
+                        Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {
+                            break;
+                        }
+                        Err(e) => {
+                            return Err(e).context("Failed to read from idle pipe");
+                        }
+                        // According to write(2), this is the outcome of reading an O_NONBLOCK pipe
+                        // when the other end has been closed. This shouldn't happen to us because we
+                        // own both ends, but just in case.
+                        Ok(0) => {
+                            break;
+                        }
+                        Ok(_) => {}
+                    }
+                }
+
+                if let Ok(state) = self.state.try_borrow() {
+                    for w in state.windows.values() {
+                        w.run_idle();
+                    }
+                } else {
+                    log::error!("In idle loop, application state already borrowed");
+                }
+            }
+        }
+    }
+
+    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
+        if let Err(e) = self.run_inner() {
+            log::error!("{}", e);
         }
     }
 
@@ -404,4 +466,57 @@ impl Application {
         log::warn!("Application::get_locale is currently unimplemented for X11 platforms. (defaulting to en-US)");
         "en-US".into()
     }
+
+    pub(crate) fn idle_pipe(&self) -> RawFd {
+        self.idle_write
+    }
+}
+
+/// Returns when there is an event ready to read from `conn`, or there is data ready to read from
+/// `idle` and the `timeout` has passed.
+// This was taken, with minor modifications, from the xclock_utc example in the x11rb crate.
+// https://raw.githubusercontent.com/psychon/x11rb/a6bd1453fd8e931394b9b1f2185fad48b7cca5fe/examples/xclock_utc.rs
+fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) -> Result<(), Error> {
+    use nix::poll::{poll, PollFd, PollFlags};
+    use std::os::raw::c_int;
+    use std::os::unix::io::AsRawFd;
+
+    let fd = conn.as_raw_fd();
+    let mut poll_fds = [
+        PollFd::new(fd, PollFlags::POLLIN),
+        PollFd::new(idle, PollFlags::POLLIN),
+    ];
+
+    // We start with no timeout in the poll call. If we get something from the idle handler, we'll
+    // start setting one.
+    let mut poll_timeout = -1;
+    loop {
+        let readable = |p: &PollFd| {
+            p.revents()
+                .unwrap_or_else(PollFlags::empty)
+                .contains(PollFlags::POLLIN)
+        };
+
+        match poll(&mut poll_fds, poll_timeout) {
+            Ok(_) => {
+                if readable(&poll_fds[0]) {
+                    break;
+                }
+                if readable(&poll_fds[1]) {
+                    let now = Instant::now();
+                    if now >= timeout {
+                        break;
+                    } else {
+                        poll_timeout = c_int::try_from(timeout.duration_since(now).as_millis())
+                            .unwrap_or(c_int::max_value())
+                    }
+                }
+            }
+
+            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
+            Err(e) => return Err(e.into()),
+        }
+    }
+
+    Ok(())
 }
