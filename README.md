@@ -21,36 +21,40 @@ in [the changelog](https://github.com/linebender/druid/blob/master/CHANGELOG.md)
 
 For an overview of some key concepts, see the (work in progress) [Druid book].
 
+## Contributions
+
+A very good place to ask questions and discuss development work is our [Zulip
+chat instance], in the #druid channel.
+
+We gladly accept contributions via GitHub pull requests. Please see
+[CONTRIBUTING.md] for more details.
+
 ## Example
 
 Here's a simple counter example app.
 
 ```rust
 use druid::widget::{Button, Flex, Label};
-use druid::{AppLauncher, LocalizedString, Widget, WidgetExt, WindowDesc};
+use druid::{AppLauncher, LocalizedString, PlatformError, Widget, WidgetExt, WindowDesc};
 
-fn main() {
+fn main() -> Result<(), PlatformError> {
     let main_window = WindowDesc::new(ui_builder);
     let data = 0_u32;
     AppLauncher::with_window(main_window)
         .use_simple_logger()
         .launch(data)
-        .expect("launch failed");
 }
 
 fn ui_builder() -> impl Widget<u32> {
     // The label text will be computed dynamically based on the current locale and count
     let text =
         LocalizedString::new("hello-counter").with_arg("count", |data: &u32, _env| (*data).into());
-    let label = Label::new(text)
-        .padding(5.0)
-        .center();
-    let button = Button::new("increment").on_click(|_ctx, data, _env| *data += 1)
+    let label = Label::new(text).padding(5.0).center();
+    let button = Button::new("increment")
+        .on_click(|_ctx, data, _env| *data += 1)
         .padding(5.0);
 
-    Flex::column()
-    .with_child(label)
-    .with_child(button)
+    Flex::column().with_child(label).with_child(button)
 }
 ```
 
@@ -62,6 +66,35 @@ Druid's existing functionality and widgets.
 [![calc.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/calc.png)](./druid/examples/calc.rs)
 [![flex.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/flex.png)](./druid/examples/flex.rs)
 [![custom_widget.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/custom_widget.png)](./druid/examples/custom_widget.rs)
+
+## Using Druid
+
+An explicit goal of Druid is to be easy to build, so please open an issue if you
+run into any difficulties. Druid is available on [crates.io] and should work as
+a lone dependency (it re-exports all the parts of `druid-shell`, `piet`, and `kurbo`
+that you'll need):
+
+```toml
+druid = "0.6.0"
+```
+
+Since Druid is currently in fast-evolving state, you might prefer to drink from
+the firehose:
+
+```toml
+druid = { git = "https://github.com/linebender/druid.git" }
+```
+
+### Platform notes
+
+#### Linux
+
+On Linux, Druid requires gtk+3; see [gtk-rs dependencies] for installation
+instructions.
+
+Alternatively, there is an X11 backend available, although it is currently
+[missing quite a few features](https://github.com/linebender/druid/issues?q=is%3Aopen+is%3Aissue+label%3Ashell%2Fx11+label%3Amissing).
+You can try it out with `--features=x11`.
 
 ## Goals
 
@@ -249,43 +282,6 @@ LensWrap::new(WidgetThatExpectsf64::new(), lens!(AppState, value));
 ```
 
 This is particularly useful when working with types defined in another crate.
-
-## Using Druid
-
-An explicit goal of Druid is to be easy to build, so please open an issue if you
-run into any difficulties. Druid is available on [crates.io] and should work as
-a lone dependency (it re-exports all the parts of `druid-shell`, piet, and kurbo
-that you'll need):
-
-```toml
-druid = "0.6.0"
-```
-
-Since Druid is currently in fast-evolving state, you might prefer to drink from
-the firehose:
-
-```toml
-druid = { git = "https://github.com/linebender/druid.git" }
-```
-
-### Platform notes
-
-#### Linux
-
-On Linux, Druid requires gtk+3; see [gtk-rs dependencies] for installation
-instructions.
-
-Alternatively, there is an X11 backend available, although it is currently
-[missing quite a few features](https://github.com/linebender/druid/issues/475).
-You can try it out with `--features=x11`.
-
-## Contributions
-
-We gladly accept contributions via GitHub pull requests. Please see
-[CONTRIBUTING.md] for more details.
-
-A very good place to ask questions and discuss development work is our [Zulip
-chat instance], in the #druid channel.
 
 ## Authors
 
