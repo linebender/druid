@@ -4,7 +4,8 @@
 
 [![crates.io](https://meritbadge.herokuapp.com/druid)](https://crates.io/crates/druid)
 [![docs.rs](https://docs.rs/druid/badge.svg)](https://docs.rs/druid/)
-[![license](https://img.shields.io/crates/l/druid)](./LICENSE)
+[![license](https://img.shields.io/crates/l/druid)](https://github.com/linebender/druid/blob/master/LICENSE)
+[![chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://xi.zulipchat.com)
 
 Druid is an experimental Rust-native UI toolkit. Its main goal is to offer a
 polished user experience. There are many factors to this goal, including
