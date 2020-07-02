@@ -3,11 +3,7 @@
 We'd love to accept your patches and contributions to this project. There are
 just a few small guidelines you need to follow.
 
-## Code reviews
-
-All submissions, including submissions by project members, require review. We
-use GitHub pull requests for this purpose. Consult [GitHub Help] for more
-information on using pull requests.
+## Changelog
 
 Every pull request should document all changes made in the [changelog].
 - The format is always `- [what changed]. ([#pr-number] by [@username])`.
@@ -17,6 +13,14 @@ Every pull request should document all changes made in the [changelog].
 
 If your name does not already appear in the [AUTHORS] file, please feel free to
 add it as part of your patch.
+
+## Code reviews
+
+All submissions, including submissions by project members, require review. We
+use GitHub pull requests for this purpose. Consult [GitHub Help] for more
+information on using pull requests.
+
+# How to maintain
 
 ## Preparing for a new release
 
