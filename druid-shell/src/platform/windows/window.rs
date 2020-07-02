@@ -62,7 +62,7 @@ use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyState};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::scale::{Scale, ScaledArea};
+use crate::scale::{Scale, Scalable, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 /// The platform target DPI.
@@ -429,7 +429,7 @@ impl WndProc for MyWndProc {
                         s.render_target = rt.ok();
                     }
                     s.handler.rebuild_resources();
-                    let rect_dp = self.scale().to_dp(&util::recti_to_rect(rect));
+                    let rect_dp = util::recti_to_rect(rect).to_dp(self.scale());
                     s.render(
                         &self.d2d_factory,
                         &self.dwrite_factory,
@@ -659,7 +659,7 @@ impl WndProc for MyWndProc {
                         }
                     }
 
-                    let pos = self.scale().to_dp(&(p.x as f64, p.y as f64).into());
+                    let pos = Point::new(p.x as f64, p.y as f64).to_dp(self.scale());
                     let buttons = get_buttons(down_state);
                     let event = MouseEvent {
                         pos,
@@ -705,7 +705,7 @@ impl WndProc for MyWndProc {
                         }
                     }
 
-                    let pos = self.scale().to_dp(&(x as f64, y as f64).into());
+                    let pos = Point::new(x as f64, y as f64).to_dp(self.scale());
                     let mods = s.keyboard_state.get_modifiers();
                     let buttons = get_buttons(wparam);
                     let event = MouseEvent {
@@ -767,7 +767,7 @@ impl WndProc for MyWndProc {
                         };
                         let x = LOWORD(lparam as u32) as i16 as i32;
                         let y = HIWORD(lparam as u32) as i16 as i32;
-                        let pos = self.scale().to_dp(&(x as f64, y as f64).into());
+                        let pos = Point::new(x as f64, y as f64).to_dp(self.scale());
                         let mods = s.keyboard_state.get_modifiers();
                         let buttons = get_buttons(wparam);
                         let event = MouseEvent {
@@ -1252,7 +1252,7 @@ impl WindowHandle {
 
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(w) = self.state.upgrade() {
-            let rect = util::rect_to_recti(w.scale.get().to_px(&rect).expand());
+            let rect = util::rect_to_recti(rect.to_px(w.scale.get()).expand());
             let hwnd = w.hwnd.get();
             unsafe {
                 if InvalidateRect(hwnd, &rect, FALSE) == FALSE {
@@ -1333,7 +1333,7 @@ impl WindowHandle {
         let hmenu = menu.into_hmenu();
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
-            let pos = w.scale.get().to_px(&pos).round();
+            let pos = pos.to_px(w.scale.get()).round();
             unsafe {
                 let mut point = POINT {
                     x: pos.x as i32,
