@@ -474,7 +474,7 @@ impl Window {
     ///
     /// ### Connection
     ///
-    /// Does not flush the connection.
+    /// Does not flush the connection (it gets flushed by the event loop).
     pub fn destroy(&self) {
         log_x11!(self.app.connection().destroy_window(self.id));
     }
@@ -596,18 +596,15 @@ impl Window {
                 self.invalidate();
             }
         }
-        self.app.connection().flush()?;
         Ok(())
     }
 
     fn show(&self) {
         log_x11!(self.app.connection().map_window(self.id));
-        log_x11!(self.app.connection().flush());
     }
 
     fn close(&self) {
         self.destroy();
-        log_x11!(self.app.connection().flush());
     }
 
     /// Set whether the window should be resizable
@@ -633,7 +630,6 @@ impl Window {
             self.id,
             xproto::Time::CurrentTime,
         ));
-        log_x11!(conn.flush());
     }
 
     fn enlarge_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
@@ -693,7 +689,6 @@ impl Window {
             AtomEnum::STRING,
             title.as_bytes(),
         ));
-        log_x11!(self.app.connection().flush());
     }
 
     fn set_menu(&self, _menu: Menu) {

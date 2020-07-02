@@ -44,6 +44,10 @@ pub(crate) struct Application {
     ///
     /// A display is a collection of screens.
     connection: Rc<XCBConnection>,
+    /// An `XCBConnection` is *technically* safe to use from other threads, but there are lots of
+    /// subtleties; let's just avoid the issue altogether. As far as public API is concerned, this
+    /// causes `druid_shell::WindowHandle` to be `!Send` and `!Sync`.
+    marker: std::marker::PhantomData<*mut XCBConnection>,
     /// The default screen of the connected display.
     ///
     /// The connected display may also have additional screens.
@@ -122,6 +126,7 @@ impl Application {
             idle_read,
             idle_write,
             present_opcode,
+            marker: std::marker::PhantomData,
         })
     }
 
@@ -369,10 +374,19 @@ impl Application {
         let mut last_idle_time = Instant::now();
         loop {
             let next_idle_time = last_idle_time + timeout;
-            poll_with_timeout(&self.connection, self.idle_read, next_idle_time)
-                .context("Error while waiting for X11 connection")?;
+            self.connection.flush()?;
 
-            while let Some(ev) = self.connection.poll_for_event()? {
+            // Before we poll on the connection's file descriptor, check whether there are any
+            // events ready. It could be that XCB has some events in its internal buffers because
+            // of something that happened during the idle loop.
+            let mut event = self.connection.poll_for_event()?;
+
+            if event.is_none() {
+                poll_with_timeout(&self.connection, self.idle_read, next_idle_time)
+                    .context("Error while waiting for X11 connection")?;
+            }
+
+            while let Some(ev) = event {
                 match self.handle_event(&ev) {
                     Ok(quit) => {
                         if quit {
@@ -383,34 +397,13 @@ impl Application {
                         log::error!("Error handling event: {:#}", e);
                     }
                 }
+                event = self.connection.poll_for_event()?;
             }
 
             let now = Instant::now();
             if now >= next_idle_time {
                 last_idle_time = now;
-                // Clear out our idle pipe. Each write to it adds one byte; it's unlikely that there
-                // will be much in it, but read it 16 bytes at a time just in case.
-                let mut read_buf = [0u8; 16];
-                loop {
-                    match nix::unistd::read(self.idle_read, &mut read_buf[..]) {
-                        Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
-                        // According to write(2), this is the outcome of reading an empty, O_NONBLOCK
-                        // pipe.
-                        Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {
-                            break;
-                        }
-                        Err(e) => {
-                            return Err(e).context("Failed to read from idle pipe");
-                        }
-                        // According to write(2), this is the outcome of reading an O_NONBLOCK pipe
-                        // when the other end has been closed. This shouldn't happen to us because we
-                        // own both ends, but just in case.
-                        Ok(0) => {
-                            break;
-                        }
-                        Ok(_) => {}
-                    }
-                }
+                drain_idle_pipe(self.idle_read)?;
 
                 if let Ok(state) = self.state.try_borrow() {
                     for w in state.windows.values() {
@@ -442,7 +435,6 @@ impl Application {
                     for window in state.windows.values() {
                         window.destroy();
                     }
-                    log_x11!(self.connection.flush());
                 }
             }
         } else {
@@ -452,7 +444,6 @@ impl Application {
 
     fn finalize_quit(&self) {
         log_x11!(self.connection.destroy_window(self.window_id));
-        log_x11!(self.connection.flush());
     }
 
     pub fn clipboard(&self) -> Clipboard {
@@ -472,8 +463,37 @@ impl Application {
     }
 }
 
-/// Returns when there is an event ready to read from `conn`, or there is data ready to read from
-/// `idle` and the `timeout` has passed.
+/// Clears out our idle pipe; `idle_read` should be the reading end of a pipe that was opened with
+/// O_NONBLOCK.
+fn drain_idle_pipe(idle_read: RawFd) -> Result<(), Error> {
+    // Each write to the idle pipe adds one byte; it's unlikely that there will be much in it, but
+    // read it 16 bytes at a time just in case.
+    let mut read_buf = [0u8; 16];
+    loop {
+        match nix::unistd::read(idle_read, &mut read_buf[..]) {
+            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
+            // According to write(2), this is the outcome of reading an empty, O_NONBLOCK
+            // pipe.
+            Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {
+                break;
+            }
+            Err(e) => {
+                return Err(e).context("Failed to read from idle pipe");
+            }
+            // According to write(2), this is the outcome of reading an O_NONBLOCK pipe
+            // when the other end has been closed. This shouldn't happen to us because we
+            // own both ends, but just in case.
+            Ok(0) => {
+                break;
+            }
+            Ok(_) => {}
+        }
+    }
+    Ok(())
+}
+
+/// Returns when there is an event ready to read from `conn`, or we got signalled by another thread
+/// writing into our idle pipe and the `timeout` has passed.
 // This was taken, with minor modifications, from the xclock_utc example in the x11rb crate.
 // https://raw.githubusercontent.com/psychon/x11rb/a6bd1453fd8e931394b9b1f2185fad48b7cca5fe/examples/xclock_utc.rs
 fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) -> Result<(), Error> {
@@ -482,10 +502,12 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) ->
     use std::os::unix::io::AsRawFd;
 
     let fd = conn.as_raw_fd();
-    let mut poll_fds = [
+    let mut both_poll_fds = [
         PollFd::new(fd, PollFlags::POLLIN),
         PollFd::new(idle, PollFlags::POLLIN),
     ];
+    let mut just_connection = [PollFd::new(fd, PollFlags::POLLIN)];
+    let mut poll_fds = &mut both_poll_fds[..];
 
     // We start with no timeout in the poll call. If we get something from the idle handler, we'll
     // start setting one.
@@ -497,12 +519,16 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) ->
                 .contains(PollFlags::POLLIN)
         };
 
-        match poll(&mut poll_fds, poll_timeout) {
+        match poll(poll_fds, poll_timeout) {
             Ok(_) => {
                 if readable(&poll_fds[0]) {
                     break;
                 }
-                if readable(&poll_fds[1]) {
+                if poll_fds.len() == 1 || readable(&poll_fds[1]) {
+                    // Now that we got signalled, stop polling from the idle pipe and use a timeout
+                    // instead.
+                    poll_fds = &mut just_connection;
+
                     let now = Instant::now();
                     if now >= timeout {
                         break;
