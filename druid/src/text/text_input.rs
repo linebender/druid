@@ -32,6 +32,8 @@ pub enum EditAction {
     Drag(MouseAction),
     Delete,
     Backspace,
+    JumpDelete(Movement),
+    JumpBackspace(Movement),
     Insert(String),
     Paste(String),
 }
@@ -64,19 +66,21 @@ impl BasicTextInput {
 impl TextInput for BasicTextInput {
     fn handle_event(&self, event: &KeyEvent) -> Option<EditAction> {
         let action = match event {
-            // Select all (Ctrl+A || Cmd+A)
-            k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => EditAction::SelectAll,
-            // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
-            k_e if (HotKey::new(SysMods::Cmd, KbKey::ArrowLeft)).matches(k_e)
-                || HotKey::new(None, KbKey::Home).matches(k_e) =>
-            {
-                EditAction::Move(Movement::LeftOfLine)
+            // Select left word (Shift+Ctrl+ArrowLeft || Shift+Cmd+ArrowLeft)
+            k_e if (HotKey::new(SysMods::CmdShift, KbKey::ArrowLeft)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::LeftWord)
             }
-            // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
-            k_e if (HotKey::new(SysMods::Cmd, KbKey::ArrowRight)).matches(k_e)
-                || HotKey::new(None, KbKey::End).matches(k_e) =>
-            {
-                EditAction::Move(Movement::RightOfLine)
+            // Select right word (Shift+Ctrl+ArrowRight || Shift+Cmd+ArrowRight)
+            k_e if (HotKey::new(SysMods::CmdShift, KbKey::ArrowRight)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::RightWord)
+            }
+            // Select to home (Shift+Home)
+            k_e if (HotKey::new(SysMods::Shift, KbKey::Home)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::LeftOfLine)
+            }
+            // Select to end (Shift+End)
+            k_e if (HotKey::new(SysMods::Shift, KbKey::End)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::RightOfLine)
             }
             // Select left (Shift+ArrowLeft)
             k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowLeft)).matches(k_e) => {
@@ -86,6 +90,16 @@ impl TextInput for BasicTextInput {
             k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowRight)).matches(k_e) => {
                 EditAction::ModifySelection(Movement::Right)
             }
+            // Select all (Ctrl+A || Cmd+A)
+            k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => EditAction::SelectAll,
+            // Left word (Ctrl+ArrowLeft || Cmd+ArrowLeft)
+            k_e if (HotKey::new(SysMods::Cmd, KbKey::ArrowLeft)).matches(k_e) => {
+                EditAction::Move(Movement::LeftWord)
+            }
+            // Right word (Ctrl+ArrowRight || Cmd+ArrowRight)
+            k_e if (HotKey::new(SysMods::Cmd, KbKey::ArrowRight)).matches(k_e) => {
+                EditAction::Move(Movement::RightWord)
+            }
             // Move left (ArrowLeft)
             k_e if (HotKey::new(None, KbKey::ArrowLeft)).matches(k_e) => {
                 EditAction::Move(Movement::Left)
@@ -94,10 +108,26 @@ impl TextInput for BasicTextInput {
             k_e if (HotKey::new(None, KbKey::ArrowRight)).matches(k_e) => {
                 EditAction::Move(Movement::Right)
             }
+            // Delete left word
+            k_e if (HotKey::new(SysMods::Cmd, KbKey::Backspace)).matches(k_e) => {
+                EditAction::JumpBackspace(Movement::LeftWord)
+            }
+            // Delete right word
+            k_e if (HotKey::new(SysMods::Cmd, KbKey::Delete)).matches(k_e) => {
+                EditAction::JumpDelete(Movement::RightWord)
+            }
             // Backspace
             k_e if (HotKey::new(None, KbKey::Backspace)).matches(k_e) => EditAction::Backspace,
             // Delete
             k_e if (HotKey::new(None, KbKey::Delete)).matches(k_e) => EditAction::Delete,
+            // Home
+            k_e if (HotKey::new(None, KbKey::Home)).matches(k_e) => {
+                EditAction::Move(Movement::LeftOfLine)
+            }
+            // End
+            k_e if (HotKey::new(None, KbKey::End)).matches(k_e) => {
+                EditAction::Move(Movement::RightOfLine)
+            }
             // Actual typing
             k_e if key_event_is_printable(k_e) => {
                 if let KbKey::Character(chars) = &k_e.key {
