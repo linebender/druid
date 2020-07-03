@@ -17,7 +17,7 @@
 use std::borrow::Cow;
 use std::ops::Range;
 
-use unicode_segmentation::GraphemeCursor;
+use unicode_segmentation::{GraphemeCursor, UnicodeSegmentation};
 
 /// An EditableText trait.
 pub trait EditableText: Sized {
@@ -40,16 +40,22 @@ pub trait EditableText: Sized {
     /// Get length of text (in bytes).
     fn len(&self) -> usize;
 
+    /// Get the previous word offset from the given offset, if it exists.
+    fn prev_word_offset(&self, offset: usize) -> Option<usize>;
+
+    /// Get the next word offset from the given offset, if it exists.
+    fn next_word_offset(&self, offset: usize) -> Option<usize>;
+
     /// Get the next grapheme offset from the given offset, if it exists.
     fn prev_grapheme_offset(&self, offset: usize) -> Option<usize>;
 
-    /// Get the previous grapheme offset from the given offset, if it exists.
+    /// Get the next grapheme offset from the given offset, if it exists.
     fn next_grapheme_offset(&self, offset: usize) -> Option<usize>;
 
-    /// Get the next codepoint offset from the given offset, if it exists.
+    /// Get the previous codepoint offset from the given offset, if it exists.
     fn prev_codepoint_offset(&self, offset: usize) -> Option<usize>;
 
-    /// Get the previous codepoint offset from the given offset, if it exists.
+    /// Get the next codepoint offset from the given offset, if it exists.
     fn next_codepoint_offset(&self, offset: usize) -> Option<usize>;
 
     fn is_empty(&self) -> bool;
@@ -109,6 +115,38 @@ impl EditableText for String {
         } else {
             None
         }
+    }
+
+    fn prev_word_offset(&self, from: usize) -> Option<usize> {
+        let mut graphemes = self.get(0..from)?.graphemes(true);
+        let mut offset = from;
+        let mut passed_alphanumeric = false;
+        while let Some(prev_grapheme) = graphemes.next_back() {
+            let is_alphanumeric = prev_grapheme.chars().next()?.is_alphanumeric();
+            if is_alphanumeric {
+                passed_alphanumeric = true;
+            } else if passed_alphanumeric {
+                return Some(offset);
+            }
+            offset -= prev_grapheme.len();
+        }
+        None
+    }
+
+    fn next_word_offset(&self, from: usize) -> Option<usize> {
+        let mut graphemes = self.get(from..)?.graphemes(true);
+        let mut offset = from;
+        let mut passed_alphanumeric = false;
+        while let Some(next_grapheme) = graphemes.next() {
+            let is_alphanumeric = next_grapheme.chars().next()?.is_alphanumeric();
+            if is_alphanumeric {
+                passed_alphanumeric = true;
+            } else if passed_alphanumeric {
+                return Some(offset);
+            }
+            offset += next_grapheme.len();
+        }
+        Some(self.len())
     }
 
     fn is_empty(&self) -> bool {
@@ -343,5 +381,33 @@ mod tests {
         assert_eq!(Some(9), a.next_grapheme_offset(3));
         assert_eq!(Some(17), a.next_grapheme_offset(9));
         assert_eq!(None, a.next_grapheme_offset(17));
+    }
+
+    #[test]
+    fn prev_word_offset() {
+        let a = String::from("Technically a word: ৬藏A\u{030a}\u{110b}\u{1161}");
+        assert_eq!(Some(20), a.prev_word_offset(35));
+        assert_eq!(Some(20), a.prev_word_offset(27));
+        assert_eq!(Some(20), a.prev_word_offset(23));
+        assert_eq!(Some(14), a.prev_word_offset(20));
+        assert_eq!(Some(14), a.prev_word_offset(19));
+        assert_eq!(Some(12), a.prev_word_offset(13));
+        assert_eq!(None, a.prev_word_offset(12));
+        assert_eq!(None, a.prev_word_offset(11));
+        assert_eq!(None, a.prev_word_offset(0));
+    }
+
+    #[test]
+    fn next_word_offset() {
+        let a = String::from("Technically a word: ৬藏A\u{030a}\u{110b}\u{1161}");
+        assert_eq!(Some(11), a.next_word_offset(0));
+        assert_eq!(Some(11), a.next_word_offset(7));
+        assert_eq!(Some(13), a.next_word_offset(11));
+        assert_eq!(Some(18), a.next_word_offset(14));
+        assert_eq!(Some(35), a.next_word_offset(18));
+        assert_eq!(Some(35), a.next_word_offset(19));
+        assert_eq!(Some(35), a.next_word_offset(20));
+        assert_eq!(Some(35), a.next_word_offset(26));
+        assert_eq!(Some(35), a.next_word_offset(35));
     }
 }

@@ -9,6 +9,8 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Added
 
+- Added ctrl/shift key support to textbox. ([#1063] by [@vkahl])
+
 ### Changed
 
 - `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
@@ -240,6 +242,7 @@ Last release without a changelog :(
 [@raphlinus]: https://github.com/raphlinus
 [@binomial0]: https://github.com/binomial0
 [@chris-zen]: https://github.com/chris-zen
+[@vkahl]: https://github.com/vkahl
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611

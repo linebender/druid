@@ -130,6 +130,14 @@ impl TextBox {
             EditAction::Insert(chars) | EditAction::Paste(chars) => self.insert(text, &chars),
             EditAction::Backspace => self.delete_backward(text),
             EditAction::Delete => self.delete_forward(text),
+            EditAction::JumpDelete(movement) => {
+                self.move_selection(movement, text, true);
+                self.delete_forward(text)
+            }
+            EditAction::JumpBackspace(movement) => {
+                self.move_selection(movement, text, true);
+                self.delete_backward(text)
+            }
             EditAction::Move(movement) => self.move_selection(movement, text, false),
             EditAction::ModifySelection(movement) => self.move_selection(movement, text, true),
             EditAction::SelectAll => self.selection.all(text),
