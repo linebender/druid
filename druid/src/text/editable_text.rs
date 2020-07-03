@@ -118,10 +118,9 @@ impl EditableText for String {
     }
 
     fn prev_word_offset(&self, from: usize) -> Option<usize> {
-        let mut graphemes = self.get(0..from)?.graphemes(true);
         let mut offset = from;
         let mut passed_alphanumeric = false;
-        while let Some(prev_grapheme) = graphemes.next_back() {
+        for prev_grapheme in self.get(0..from)?.graphemes(true).rev() {
             let is_alphanumeric = prev_grapheme.chars().next()?.is_alphanumeric();
             if is_alphanumeric {
                 passed_alphanumeric = true;
@@ -134,10 +133,9 @@ impl EditableText for String {
     }
 
     fn next_word_offset(&self, from: usize) -> Option<usize> {
-        let mut graphemes = self.get(from..)?.graphemes(true);
         let mut offset = from;
         let mut passed_alphanumeric = false;
-        while let Some(next_grapheme) = graphemes.next() {
+        for next_grapheme in self.get(from..)?.graphemes(true) {
             let is_alphanumeric = next_grapheme.chars().next()?.is_alphanumeric();
             if is_alphanumeric {
                 passed_alphanumeric = true;
