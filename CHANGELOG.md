@@ -31,6 +31,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
 - Fix derive `Data` when type param bounds are defined ([#1058] by [@chris-zen])
 - Ensure that `update` is called after all commands. ([#1062] by [@jneem])
+- Fix comparison between Modifier with NUM_LOCK and RawMods. ([#1077] by [@HoNile])
 
 ### Visual
 
@@ -243,6 +244,7 @@ Last release without a changelog :(
 [@binomial0]: https://github.com/binomial0
 [@chris-zen]: https://github.com/chris-zen
 [@vkahl]: https://github.com/vkahl
+[@HoNile]: https://github.com/HoNile
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
