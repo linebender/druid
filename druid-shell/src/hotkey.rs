@@ -112,7 +112,10 @@ impl HotKey {
     /// [`KeyboardEvent`]: keyboard_types::KeyEvent
     pub fn matches(&self, event: impl Borrow<KeyEvent>) -> bool {
         let event = event.borrow();
-        self.mods == (event.mods & (!Modifiers::NUM_LOCK)) && self.key == event.key
+        self.mods
+            == (event.mods
+                & !(Modifiers::NUM_LOCK | Modifiers::ALT | Modifiers::CAPS_LOCK | Modifiers::META))
+            && self.key == event.key
     }
 }
 
