@@ -15,6 +15,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 - Major rework of keyboard event handling ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
+- Fix Gtk key repeat logic ([#1081] by [@raphlinus])
 
 ### Deprecated
 
@@ -348,6 +349,7 @@ Last release without a changelog :(
 [#1054]: https://github.com/linebender/druid/pull/1054
 [#1058]: https://github.com/linebender/druid/pull/1058
 [#1062]: https://github.com/linebender/druid/pull/1062
+[#1081]: https://github.com/linebender/druid/pull/1081
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

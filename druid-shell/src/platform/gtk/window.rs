@@ -16,6 +16,7 @@
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
+use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::ffi::c_void;
 use std::ffi::OsString;
@@ -119,7 +120,7 @@ pub(crate) struct WindowState {
     drawing_area: DrawingArea,
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
-    current_keyval: RefCell<Option<u32>>,
+    pressed_keys: RefCell<HashSet<u16>>,
 }
 
 impl WindowBuilder {
@@ -201,7 +202,7 @@ impl WindowBuilder {
             drawing_area,
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
-            current_keyval: RefCell::new(None),
+            pressed_keys: Default::default(),
         });
 
         self.app
@@ -475,10 +476,7 @@ impl WindowBuilder {
         win_state.drawing_area.connect_key_press_event(clone!(handle => move |_widget, key| {
             if let Some(state) = handle.state.upgrade() {
 
-                let mut current_keyval = state.current_keyval.borrow_mut();
-                let repeat = *current_keyval == Some(key.get_keyval());
-
-                *current_keyval = Some(key.get_keyval());
+                let repeat = !state.pressed_keys.borrow_mut().insert(key.get_hardware_keycode());
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
                     handler.key_down(make_key_event(key, repeat, KeyState::Down));
@@ -493,7 +491,7 @@ impl WindowBuilder {
         win_state.drawing_area.connect_key_release_event(clone!(handle => move |_widget, key| {
             if let Some(state) = handle.state.upgrade() {
 
-                *(state.current_keyval.borrow_mut()) = None;
+                state.pressed_keys.borrow_mut().remove(&key.get_hardware_keycode());
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
                     handler.key_up(make_key_event(key, false, KeyState::Up));
@@ -839,6 +837,10 @@ const MODIFIER_MAP: &[(gdk::ModifierType, Modifiers)] = &[
     (ModifierType::MOD1_MASK, Modifiers::ALT),
     (ModifierType::CONTROL_MASK, Modifiers::CONTROL),
     (ModifierType::META_MASK, Modifiers::META),
+    (ModifierType::LOCK_MASK, Modifiers::CAPS_LOCK),
+    // Note: this is the usual value on X11, not sure how consistent it is.
+    // Possibly we should use `Keymap::get_num_lock_state()` instead.
+    (ModifierType::MOD2_MASK, Modifiers::NUM_LOCK),
 ];
 
 fn get_modifiers(modifiers: gdk::ModifierType) -> Modifiers {
