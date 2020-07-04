@@ -16,7 +16,6 @@
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
-use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::ffi::c_void;
 use std::ffi::OsString;
@@ -120,7 +119,7 @@ pub(crate) struct WindowState {
     drawing_area: DrawingArea,
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
-    pressed_keys: RefCell<HashSet<u16>>,
+    current_keycode: RefCell<Option<u16>>,
 }
 
 impl WindowBuilder {
@@ -202,7 +201,7 @@ impl WindowBuilder {
             drawing_area,
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
-            pressed_keys: Default::default(),
+            current_keycode: RefCell::new(None),
         });
 
         self.app
@@ -476,7 +475,11 @@ impl WindowBuilder {
         win_state.drawing_area.connect_key_press_event(clone!(handle => move |_widget, key| {
             if let Some(state) = handle.state.upgrade() {
 
-                let repeat = !state.pressed_keys.borrow_mut().insert(key.get_hardware_keycode());
+                let mut current_keycode = state.current_keycode.borrow_mut();
+                let hw_keycode = key.get_hardware_keycode();
+                let repeat = *current_keycode == Some(hw_keycode);
+
+                *current_keycode = Some(hw_keycode);
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
                     handler.key_down(make_key_event(key, repeat, KeyState::Down));
@@ -491,7 +494,10 @@ impl WindowBuilder {
         win_state.drawing_area.connect_key_release_event(clone!(handle => move |_widget, key| {
             if let Some(state) = handle.state.upgrade() {
 
-                state.pressed_keys.borrow_mut().remove(&key.get_hardware_keycode());
+                let mut current_keycode = state.current_keycode.borrow_mut();
+                if *current_keycode == Some(key.get_hardware_keycode()) {
+                    *current_keycode = None;
+                }
 
                 if let Ok(mut handler) = state.handler.try_borrow_mut() {
                     handler.key_up(make_key_event(key, false, KeyState::Up));
