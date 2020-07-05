@@ -19,9 +19,6 @@ jobs:
           components: rustfmt
           override: true
 
-      - name: install rustfmt
-        run: rustup component add rustfmt
-
       - name: cargo fmt
         uses: actions-rs/cargo@v1
         with:
