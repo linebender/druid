@@ -187,7 +187,7 @@ impl BoxConstraints {
 
         // Firstly check if we can simply return the exact requested
         if self.contains(ideal_size) {
-            println!("ideal");
+            //println!("ideal");
             return ideal_size;
         }
 
