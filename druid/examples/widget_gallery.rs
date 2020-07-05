@@ -13,13 +13,14 @@
 // limitations under the License.
 
 use druid::{
+    im,
     kurbo::{Affine, BezPath, Circle},
     piet::{FixedLinearGradient, GradientStop, InterpolationMode},
     widget::{
         prelude::*, Button, Checkbox, FillStrat, Flex, Image, ImageData, Label, List, Painter,
         ProgressBar, RadioGroup, Scroll, Slider, Spinner, Stepper, Switch, TextBox,
     },
-    AppLauncher, Color, Data, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc, im,
+    AppLauncher, Color, Data, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -66,7 +67,6 @@ pub fn main() {
 }
 
 fn ui_builder() -> impl Widget<AppData> {
-
     #[cfg(not(target_arch = "wasm32"))]
     let svg_example = label_widget(
         Svg::new(
@@ -78,10 +78,7 @@ fn ui_builder() -> impl Widget<AppData> {
     );
 
     #[cfg(target_arch = "wasm32")]
-    let svg_example = label_widget(
-        Label::new("no SVG on wasm (yet)").center(),
-        "Svg",
-    );
+    let svg_example = label_widget(Label::new("no SVG on wasm (yet)").center(), "Svg");
 
     Scroll::new(
         SquaresGrid::new()
