@@ -285,7 +285,7 @@ mod tests {
 
     #[test]
     fn constrain_aspect_ratio() {
-        for (bc, aspect_ratio, width, output) in vec![
+        for (bc, aspect_ratio, width, output) in [
             // The ideal size lies within the constraints
             (bc(0.0, 0.0, 100.0, 100.0), 1.0, 50.0, Size::new(50.0, 50.0)),
             (bc(0.0, 10.0, 90.0, 100.0), 1.0, 50.0, Size::new(50.0, 50.0)),
@@ -356,10 +356,12 @@ mod tests {
                 100.0,
                 Size::new(50.0, 50.0),
             ),
-        ] {
+        ]
+        .iter()
+        {
             assert_eq!(
-                bc.constrain_aspect_ratio(aspect_ratio, width),
-                output,
+                bc.constrain_aspect_ratio(*aspect_ratio, *width),
+                *output,
                 "bc:{:?}, ar:{}, w:{}",
                 bc,
                 aspect_ratio,
