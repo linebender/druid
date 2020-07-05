@@ -17,10 +17,13 @@ use druid::{
     piet::{FixedLinearGradient, GradientStop, InterpolationMode},
     widget::{
         prelude::*, Button, Checkbox, FillStrat, Flex, Image, ImageData, Label, List, Painter,
-        ProgressBar, RadioGroup, Scroll, Slider, Spinner, Stepper, Svg, SvgData, Switch, TextBox,
+        ProgressBar, RadioGroup, Scroll, Slider, Spinner, Stepper, Switch, TextBox,
     },
-    AppLauncher, Color, Data, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc,
+    AppLauncher, Color, Data, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc, im,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use druid::widget::{Svg, SvgData};
 
 const XI_IMAGE: &[u8] = include_bytes!("assets/xi.image");
 
@@ -63,6 +66,23 @@ pub fn main() {
 }
 
 fn ui_builder() -> impl Widget<AppData> {
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let svg_example = label_widget(
+        Svg::new(
+            include_str!("./assets/tiger.svg")
+                .parse::<SvgData>()
+                .unwrap(),
+        ),
+        "Svg",
+    );
+
+    #[cfg(target_arch = "wasm32")]
+    let svg_example = label_widget(
+        Label::new("no SVG on wasm (yet)").center(),
+        "Svg",
+    );
+
     Scroll::new(
         SquaresGrid::new()
             .with_cell_size(Size::new(200.0, 240.0))
@@ -211,14 +231,7 @@ fn ui_builder() -> impl Widget<AppData> {
                 .interpolation_mode(InterpolationMode::Bilinear),
                 "Image",
             ))
-            .with_child(label_widget(
-                Svg::new(
-                    include_str!("./assets/tiger.svg")
-                        .parse::<SvgData>()
-                        .unwrap(),
-                ),
-                "Svg",
-            )),
+            .with_child(svg_example),
     )
     .vertical()
 }
