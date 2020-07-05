@@ -29,7 +29,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
 - Fix derive `Data` when type param bounds are defined ([#1058] by [@chris-zen])
 - Ensure that `update` is called after all commands. ([#1062] by [@jneem])
-- Fix Gtk key repeat logic ([#1081] by [@raphlinus])
+- GTK: Don't interrupt `KeyEvent.repeat` when releasing another key. ([#1081] by [@raphlinus])
 
 ### Visual
 
