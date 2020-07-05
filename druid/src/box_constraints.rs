@@ -187,6 +187,7 @@ impl BoxConstraints {
 
         // Firstly check if we can simply return the exact requested
         if self.contains(ideal_size) {
+            println!("ideal");
             return ideal_size;
         }
 
@@ -195,7 +196,7 @@ impl BoxConstraints {
         let min_w_min_h = self.min.height / self.min.width;
         let max_w_min_h = self.min.height / self.max.width;
         let min_w_max_h = self.max.height / self.min.width;
-        //let max_w_max_h = self.max.height / self.max.width;
+        let max_w_max_h = self.max.height / self.max.width;
 
         // When the aspect ratio line crosses the constraints, the closest point must be one of the
         // two points where the aspect ratio enters/exits.
@@ -204,47 +205,67 @@ impl BoxConstraints {
         // point must be either (max width, min height) or (max height, min width). So all we have
         // to do is check which one of these has the closest aspect ratio.
 
-        // To the left of the top-left corner.
-        if aspect_ratio > min_w_min_h {
-            // Does not intersect the constraints
-            if aspect_ratio > min_w_max_h {
+        // Check each possible intersection (or not) of the aspect ratio line with the constraints
+        if aspect_ratio > min_w_max_h {
+            // outside max height min width
+            //println!("outside max height min width");
+            Size {
+                width: self.min.width,
+                height: self.max.height,
+            }
+        } else if aspect_ratio < max_w_min_h {
+            // outside min height max width
+            //println!("outside min height max width");
+            Size {
+                width: self.max.width,
+                height: self.min.height,
+            }
+        } else if aspect_ratio > min_w_min_h {
+            // hits the constraints on the min width line
+            if width < self.min.width {
+                //println!("min width");
+                // we take the point on the min width
                 Size {
                     width: self.min.width,
+                    height: self.min.width * aspect_ratio,
+                }
+            } else if aspect_ratio < max_w_max_h {
+                // exits through max.width
+                //println!("max width");
+                Size {
+                    width: self.max.width,
+                    height: self.max.width * aspect_ratio,
+                }
+            } else {
+                // exits through max.height
+                //println!("max height");
+                Size {
+                    width: self.max.height * aspect_ratio.recip(),
+                    height: self.max.height,
+                }
+            }
+        } else {
+            // final case is where we hit constraints on the min height line
+            if width < self.min.width {
+                // take the point on the min height
+                //println!("min height");
+                Size {
+                    width: self.min.height * aspect_ratio.recip(),
+                    height: self.min.height,
+                }
+            } else if aspect_ratio > max_w_max_h {
+                // exit thru max height
+                //println!("max height");
+                Size {
+                    width: self.max.height * aspect_ratio.recip(),
                     height: self.max.height,
                 }
             } else {
-                if width < self.min.width {
-                    Size {
-                        width: self.min.width,
-                        height: self.min.width * aspect_ratio,
-                    }
-                } else {
-                    Size {
-                        width: self.max.height * aspect_ratio.recip(),
-                        height: self.max.height,
-                    }
-                }
-            }
-        }
-        // To the right of the top-left corner.
-        else {
-            // Does not intersect the constraints
-            if aspect_ratio < max_w_min_h {
+                // exit thru max width
+                //println!("max width");
                 Size {
                     width: self.max.width,
-                    height: self.min.height,
-                }
-            } else {
-                if ideal_size.height < self.min.height {
-                    Size {
-                        width: self.min.height * aspect_ratio.recip(),
-                        height: self.min.height,
-                    }
-                } else {
-                    Size {
-                        width: self.max.width,
-                        height: self.max.width * aspect_ratio,
-                    }
+                    height: self.max.width * aspect_ratio,
                 }
             }
         }
@@ -269,6 +290,7 @@ mod tests {
             (bc(0.0, 0.0, 100.0, 100.0), 1.0, 50.0, Size::new(50.0, 50.0)),
             (bc(0.0, 10.0, 90.0, 100.0), 1.0, 50.0, Size::new(50.0, 50.0)),
             // The correct aspect ratio is available (but not width)
+            // min height
             (
                 bc(10.0, 10.0, 100.0, 100.0),
                 1.0,
@@ -276,10 +298,10 @@ mod tests {
                 Size::new(10.0, 10.0),
             ),
             (
-                bc(10.0, 10.0, 100.0, 100.0),
+                bc(40.0, 90.0, 60.0, 100.0),
                 2.0,
-                5.0,
-                Size::new(10.0, 20.0),
+                30.0,
+                Size::new(45.0, 90.0),
             ),
             (
                 bc(10.0, 10.0, 100.0, 100.0),
@@ -287,6 +309,26 @@ mod tests {
                 5.0,
                 Size::new(20.0, 10.0),
             ),
+            // min width
+            (
+                bc(10.0, 10.0, 100.0, 100.0),
+                2.0,
+                5.0,
+                Size::new(10.0, 20.0),
+            ),
+            (
+                bc(90.0, 40.0, 100.0, 60.0),
+                0.5,
+                60.0,
+                Size::new(90.0, 45.0),
+            ),
+            (
+                bc(50.0, 0.0, 50.0, 100.0),
+                1.0,
+                100.0,
+                Size::new(50.0, 50.0),
+            ),
+            // max height
             (
                 bc(10.0, 10.0, 100.0, 100.0),
                 2.0,
@@ -307,8 +349,22 @@ mod tests {
                 Size::new(20.0, 40.0),
             ),
             (bc(20.0, 20.0, 40.0, 40.0), 0.1, 30.0, Size::new(40.0, 20.0)),
+            // non-finite
+            (
+                bc(50.0, 0.0, 50.0, f64::INFINITY),
+                1.0,
+                100.0,
+                Size::new(50.0, 50.0),
+            ),
         ] {
-            assert_eq!(bc.constrain_aspect_ratio(aspect_ratio, width), output);
+            assert_eq!(
+                bc.constrain_aspect_ratio(aspect_ratio, width),
+                output,
+                "bc:{:?}, ar:{}, w:{}",
+                bc,
+                aspect_ratio,
+                width
+            );
         }
     }
 }
