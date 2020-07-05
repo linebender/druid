@@ -155,4 +155,160 @@ impl BoxConstraints {
 
         BoxConstraints::new(min, max)
     }
+
+    /// Test whether these constraints contain the given `Size`.
+    pub fn contains(&self, size: impl Into<Size>) -> bool {
+        let size = size.into();
+        (self.min.width <= size.width && size.width <= self.max.width)
+            && (self.min.height <= size.height && size.height <= self.max.height)
+    }
+
+    /// Find the `Size` within these `BoxConstraint`s that minimises the difference between the
+    /// returned `Size`'s aspect ratio and `aspect_ratio` An aspect ratio is defined as
+    /// `height / width`.
+    ///
+    /// If multiple `Size`s give the optimal `aspect_ratio`, then the one with the `width` nearest
+    /// the supplied width will be used. Specifically, if `width == 0.0` then the smallest possible
+    /// `Size` will be chosen, and likewise if `width == f64::INFINITY`, then the largest `Size`
+    /// will be chosen.
+    ///
+    /// Use this function when maintaining an aspect ratio is more important than minimizing the
+    /// distance between input and output size width and height.
+    ///
+    /// TODO should aspect_ratio be restricted to 0 < ar < infinity and panic otherwise? Same for
+    /// `width` and `self`.
+    pub fn constrain_aspect_ratio(&self, aspect_ratio: f64, width: f64) -> Size {
+        // Minimizing/maximizing based on aspect ratio seems complicated, but in reality everything
+        // is linear, so the amount of work to do is low.
+        let ideal_size = Size {
+            width,
+            height: width * aspect_ratio,
+        };
+
+        // Firstly check if we can simply return the exact requested
+        if self.contains(ideal_size) {
+            return ideal_size;
+        }
+
+        // Then we check if any `Size`s with our desired aspect ratio are inside the constraints.
+        // TODO this currently outputs garbage when things are < 0.
+        let min_w_min_h = self.min.height / self.min.width;
+        let max_w_min_h = self.min.height / self.max.width;
+        let min_w_max_h = self.max.height / self.min.width;
+        //let max_w_max_h = self.max.height / self.max.width;
+
+        // When the aspect ratio line crosses the constraints, the closest point must be one of the
+        // two points where the aspect ratio enters/exits.
+
+        // When the aspect ratio line doesn't intersect the box of possible sizes, the closest
+        // point must be either (max width, min height) or (max height, min width). So all we have
+        // to do is check which one of these has the closest aspect ratio.
+
+        // To the left of the top-left corner.
+        if aspect_ratio > min_w_min_h {
+            // Does not intersect the constraints
+            if aspect_ratio > min_w_max_h {
+                Size {
+                    width: self.min.width,
+                    height: self.max.height,
+                }
+            } else {
+                if width < self.min.width {
+                    Size {
+                        width: self.min.width,
+                        height: self.min.width * aspect_ratio,
+                    }
+                } else {
+                    Size {
+                        width: self.max.height * aspect_ratio.recip(),
+                        height: self.max.height,
+                    }
+                }
+            }
+        }
+        // To the right of the top-left corner.
+        else {
+            // Does not intersect the constraints
+            if aspect_ratio < max_w_min_h {
+                Size {
+                    width: self.max.width,
+                    height: self.min.height,
+                }
+            } else {
+                if ideal_size.height < self.min.height {
+                    Size {
+                        width: self.min.height * aspect_ratio.recip(),
+                        height: self.min.height,
+                    }
+                } else {
+                    Size {
+                        width: self.max.width,
+                        height: self.max.width * aspect_ratio,
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bc(min_width: f64, min_height: f64, max_width: f64, max_height: f64) -> BoxConstraints {
+        BoxConstraints::new(
+            Size::new(min_width, min_height),
+            Size::new(max_width, max_height),
+        )
+    }
+
+    #[test]
+    fn constrain_aspect_ratio() {
+        for (bc, aspect_ratio, width, output) in vec![
+            // The ideal size lies within the constraints
+            (bc(0.0, 0.0, 100.0, 100.0), 1.0, 50.0, Size::new(50.0, 50.0)),
+            (bc(0.0, 10.0, 90.0, 100.0), 1.0, 50.0, Size::new(50.0, 50.0)),
+            // The correct aspect ratio is available (but not width)
+            (
+                bc(10.0, 10.0, 100.0, 100.0),
+                1.0,
+                5.0,
+                Size::new(10.0, 10.0),
+            ),
+            (
+                bc(10.0, 10.0, 100.0, 100.0),
+                2.0,
+                5.0,
+                Size::new(10.0, 20.0),
+            ),
+            (
+                bc(10.0, 10.0, 100.0, 100.0),
+                0.5,
+                5.0,
+                Size::new(20.0, 10.0),
+            ),
+            (
+                bc(10.0, 10.0, 100.0, 100.0),
+                2.0,
+                105.0,
+                Size::new(50.0, 100.0),
+            ),
+            (
+                bc(10.0, 10.0, 100.0, 100.0),
+                0.5,
+                105.0,
+                Size::new(100.0, 50.0),
+            ),
+            // The correct aspet ratio is not available
+            (
+                bc(20.0, 20.0, 40.0, 40.0),
+                10.0,
+                30.0,
+                Size::new(20.0, 40.0),
+            ),
+            (bc(20.0, 20.0, 40.0, 40.0), 0.1, 30.0, Size::new(40.0, 20.0)),
+        ] {
+            assert_eq!(bc.constrain_aspect_ratio(aspect_ratio, width), output);
+        }
+    }
 }
