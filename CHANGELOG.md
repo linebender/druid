@@ -100,6 +100,7 @@ values and their textual representations. ([#1377])
 - Open and save dialogs send configurable commands. ([#1463] by [@jneem])
 - Windows: Dialogs now respect the parameter passed to `force_starting_directory()` ([#1452] by [@MaximilianKoestler])
 - Value formatting with the `Formatter` trait ([#1377] by [@cmyr])
+- `Focus` and `FocusScope` widgets. ([#1089] by [@sysint64])
 
 ### Changed
 
@@ -136,6 +137,7 @@ values and their textual representations. ([#1377])
 
 - `Scale::from_dpi`, `Scale::dpi_x`, and `Scale::dpi_y`. ([#1042] by [@xStrom])
 - `Scale::to_px` and `Scale::to_dp`. ([#1075] by [@ForLoveOfCats])
+- `LifeCycleCtx::register_for_focus`. ([#1089] by [@sysint64])
 
 ### Fixed
 
@@ -605,6 +607,7 @@ Last release without a changelog :(
 [#1532]: https://github.com/linebender/druid/pull/1532
 [#1534]: https://github.com/linebender/druid/pull/1534
 [#1254]: https://github.com/linebender/druid/pull/1254
+[#1089]: https://github.com/linebender/druid/pull/1089
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

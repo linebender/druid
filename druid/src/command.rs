@@ -172,7 +172,7 @@ pub mod sys {
     use super::Selector;
     use crate::{
         sub_window::{SubWindowDesc, SubWindowUpdate},
-        FileDialogOptions, FileInfo, SingleUse, WindowConfig,
+        FileDialogOptions, FileInfo, SingleUse, WidgetId, WindowConfig,
     };
 
     /// Quit the running application. This command is handled by the druid library.
@@ -313,6 +313,22 @@ pub mod sys {
 
     /// Redo.
     pub const REDO: Selector = Selector::new("druid-builtin.menu-redo");
+
+    /// Notify descendants that a [`FocusNode`] has changed focus.
+    ///
+    /// [`FocusNode`]: FocusNode
+    /// The payload indicates wheter the focus_node in the context is focused or not.
+    pub const FOCUS_NODE_FOCUS_CHANGED: Selector<bool> =
+        Selector::new("druid-builtin.focus_node_focus_changed");
+
+    /// Request focus for the widget
+    pub const REQUEST_FOCUS: Selector<WidgetId> = Selector::new("druid-builtin.request_focus");
+
+    /// Request that focus change to the next widget in the current [`FocusScope`].
+    pub const NEXT_FOCUS: Selector = Selector::new("druid-builtin.next_focus");
+
+    /// Request that focus change to the previous widget in the current [`FocusScope`].
+    pub const PREV_FOCUS: Selector = Selector::new("druid-builtin.prev_focus");
 }
 
 impl Selector<()> {
