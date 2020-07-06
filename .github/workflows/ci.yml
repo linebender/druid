@@ -34,6 +34,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Generate Cargo.lock
+        run: cargo generate-lockfile
+
       - uses: actions/cache@v2
         with:
           path: |
@@ -147,6 +150,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Generate Cargo.lock
+        run: cargo generate-lockfile
+
       - uses: actions/cache@v2
         with:
           path: |
@@ -257,6 +263,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Generate Cargo.lock
+        run: cargo generate-lockfile
+
       - uses: actions/cache@v2
         with:
           path: |
@@ -329,6 +338,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Generate Cargo.lock
+        run: cargo generate-lockfile
+
       - uses: actions/cache@v2
         with:
           path: |
@@ -389,6 +401,9 @@ jobs:
     name: mdbook build
     steps:
       - uses: actions/checkout@v2
+
+      - name: Generate Cargo.lock
+        run: cargo generate-lockfile
 
       - uses: actions/cache@v2
         with:
