@@ -9,10 +9,17 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Added
 
+- Windows: Added Screen module to get information about monitors and the screen. ([#1037] by [@rhzk])
+- Added documentation to resizable() and show_titlebar() in WindowDesc. ([#1037] by [@rhzk])
+- Windows: Added internal functions to handle Re-entrancy. ([#1037] by [@rhzk])
+- Windows: WindowDesc: Create window with disabled titlebar, maximized or minimized and with position. ([#1037] by [@rhzk])
+- Windows: WindowHandle: Toggle maximize, minimize window. Toggle titlebar. Change size and position of window. ([#1037] by [@rhzk])
+- Windows: WindowHandle: Added handle_titlebar(), Allowing a custom titlebar to behave like the OS one. ([#1037] by [@rhzk])
 - Added ctrl/shift key support to textbox. ([#1063] by [@vkahl])
 
 ### Changed
 
+- winOS: Window created with OS default size if not set. ([#1037] by [@rhzk])
 - `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 - Major rework of keyboard event handling ([#1049] by [@raphlinus])
@@ -222,6 +229,7 @@ Last release without a changelog :(
 ## 0.1.1 - 2018-11-02
 ## 0.1.0 - 2018-11-02
 
+[@rhzk]: https://github.com/rhzk
 [@futurepaul]: https://github.com/futurepaul
 [@finnerale]: https://github.com/finnerale
 [@totsteps]: https://github.com/totsteps
@@ -359,6 +367,7 @@ Last release without a changelog :(
 [#1062]: https://github.com/linebender/druid/pull/1062
 [#1072]: https://github.com/linebender/druid/pull/1072
 [#1081]: https://github.com/linebender/druid/pull/1081
+[#1037]: https://github.com/linebender/druid/pull/1037
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

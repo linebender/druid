@@ -60,6 +60,7 @@ pub use keyboard::{Code, IntoKey, KbKey, KeyEvent, KeyState, Location, Modifiers
 pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 pub use scale::{Scalable, Scale, ScaledArea};
+pub use screen::Monitor;
 pub use screen::Screen;
 pub use window::{
     IdleHandle, IdleToken, Text, TimerToken, WinHandler, WindowBuilder, WindowHandle,

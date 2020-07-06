@@ -160,6 +160,14 @@ impl WindowBuilder {
         log::warn!("WindowBuilder::set_position is currently unimplemented for gtk.");
     }
 
+    pub fn maximized(&self) {
+        log::warn!("WindowBuilder::maximized is currently unimplemented for gtk.");
+    }
+
+    pub fn minimized(&self) {
+        log::warn!("WindowBuilder::minimized is currently unimplemented for gtk.");
+    }
+
     pub fn set_title(&mut self, title: impl Into<String>) {
         self.title = title.into();
     }
@@ -573,6 +581,18 @@ impl WindowHandle {
     pub fn get_size(&self) -> Size {
         log::warn!("WindowHandle::get_size is currently unimplemented for gtk.");
         Size::new(0.0, 0.0)
+    }
+
+    pub fn maximize(&self) {
+        log::warn!("WindowHandle::maximize is currently unimplemented for gtk.");
+    }
+
+    pub fn minimize(&self) {
+        log::warn!("WindowHandle::minimize is currently unimplemented for gtk.");
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for gtk.");
     }
 
     /// Close the window.

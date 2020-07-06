@@ -349,6 +349,14 @@ impl WindowBuilder {
         // Ignored
     }
 
+    pub fn maximized(&self) {
+        // Ignored
+    }
+
+    pub fn minimized(&self) {
+        // Ignored
+    }
+
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
         self.title = title.into();
     }
@@ -450,6 +458,18 @@ impl WindowHandle {
     pub fn get_size(&self) -> Size {
         log::warn!("WindowHandle::get_size unimplemented for web.");
         Size::new(0.0, 0.0)
+    }
+
+    pub fn maximize(&self) {
+        log::warn!("WindowHandle::maximize unimplemented for web.");
+    }
+
+    pub fn minimize(&self) {
+        log::warn!("WindowHandle::minimize unimplemented for web.");
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar unimplemented for web.");
     }
 
     pub fn close(&self) {

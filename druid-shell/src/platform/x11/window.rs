@@ -128,6 +128,14 @@ impl WindowBuilder {
         log::warn!("WindowBuilder::set_position is currently unimplemented for X11 platforms.");
     }
 
+    pub fn maximized(&self) {
+        log::warn!("WindowBuilder::maximized is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn minimized(&self) {
+        log::warn!("WindowBuilder::minimized is currently unimplemented for X11 platforms.");
+    }
+
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
         self.title = title.into();
     }
@@ -1271,6 +1279,18 @@ impl WindowHandle {
     pub fn get_size(&self) -> Size {
         log::warn!("WindowHandle::get_size is currently unimplemented for X11 platforms.");
         Size::new(0.0, 0.0)
+    }
+
+    pub fn maximize(&self) {
+        log::warn!("WindowHandle::maximize is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn minimize(&self) {
+        log::warn!("WindowHandle::minimize is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 platforms.");
     }
 
     pub fn bring_to_front_and_focus(&self) {

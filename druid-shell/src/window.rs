@@ -118,35 +118,74 @@ impl WindowHandle {
         self.0.resizable(resizable)
     }
 
+    /// Toggles window maximized.
+    /// Note this might not work the same on all platforms
+    /// Note that on windows, if resizable is set to false
+    /// This will cause the window to be maximized above the taskbar
+    pub fn maximize(&self) {
+        self.0.maximize();
+    }
+
+    /// Toggles window minimized.
+    /// Note this might not work the same on all platforms
+    pub fn minimize(&self) {
+        self.0.minimize();
+    }
+
+    /// Allows the operating system to handle a custom titlebar
+    /// like the default one
+    ///
+    /// It should be used on Event::MouseMove in a widget:
+    /// `Event::MouseMove(_) => {
+    ///    if ctx.is_hot() {
+    ///        ctx.window().handle_titlebar(true);
+    ///    } else {
+    ///        ctx.window().handle_titlebar(false);
+    ///    }
+    ///}`
+    ///
+    /// This might not work or behave the same across all platforms
+    pub fn handle_titlebar(&self, val: bool) {
+        self.0.handle_titlebar(val);
+    }
+
     /// Set whether the window should show titlebar
     pub fn show_titlebar(&self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Sets the position of the window in virtual screen coordinates (Pixels)
-    /// [`Point`] Position in pixels
+    /// Sets the position of the window in virtual screen coordinates.
+    /// [`position`] The position in pixels.
     ///
-    /// [`Point`]: struct.Point.html
+    /// [`position`]: struct.Point.html
     pub fn set_position(&self, position: Point) {
         self.0.set_position(position)
     }
 
-    /// Returns [`Point`] Position in virtual screen coordinates (Pixels)
+    /// Returns the position in virtual screen coordinates.
+    /// [`Point`] The position in pixels.
     ///
     /// [`Point`]: struct.Point.html
     pub fn get_position(&self) -> Point {
         self.0.get_position()
     }
 
-    /// Set the size of the window in Pixels
-    /// [`Size`] Struct representing the Size
+    /// Set the window's size in [display points].
     ///
-    /// [`Size`]: struct.Size.html
+    /// The actual window size in pixels will depend on the platform DPI settings.
+    ///
+    /// This should be considered a request to the platform to set the size of the window.
+    /// The platform might increase the size a tiny bit due to DPI.
+    /// To know the actual size of the window you should handle the [`WinHandler::size`] method.
+    ///
+    /// [`WinHandler::size`]: trait.WinHandler.html#method.size
+    /// [display points]: struct.Scale.html
     pub fn set_size(&self, size: Size) {
         self.0.set_size(size)
     }
 
-    /// returns [`Size`] containing the window size in pixels
+    /// Gets the window size.
+    /// [`Size`] Window size in pixels.
     ///
     /// [`Size`]: struct.Size.html
     pub fn get_size(&self) -> Size {
@@ -289,17 +328,20 @@ impl WindowBuilder {
         self.0.set_min_size(size)
     }
 
-    /// Set whether the window should be resizable
+    /// Set whether the window should be resizable.
     pub fn resizable(&mut self, resizable: bool) {
         self.0.resizable(resizable)
     }
 
-    /// Set whether the window should have a titlebar and decorations
+    /// Set whether the window should have a titlebar and decorations.
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Set the window's initial position.
+    /// Sets the initial window position in virtual screen coordinates.
+    /// [`position`] Position in pixels.
+    ///
+    /// [`position`]: struct.Point.html
     pub fn set_position(&mut self, position: Point) {
         self.0.set_position(position);
     }
@@ -312,6 +354,16 @@ impl WindowBuilder {
     /// Set the window's menu.
     pub fn set_menu(&mut self, menu: Menu) {
         self.0.set_menu(menu.into_inner())
+    }
+
+    /// Creates the window maximized.
+    pub fn maximized(&mut self) {
+        self.0.maximized();
+    }
+
+    /// Creates the window minimized.
+    pub fn minimized(&mut self) {
+        self.0.minimized();
     }
 
     /// Attempt to construct the platform window.

@@ -19,6 +19,9 @@ use crate::platform;
 use std::fmt;
 use std::fmt::Display;
 
+/// Monitor struct containing data about a monitor on the system
+///
+/// Use Screen::get_monitors() to return a Vec<Monitor> of all the monitors on the system
 #[derive(Clone)]
 pub struct Monitor {
     primary: bool,
@@ -32,6 +35,7 @@ pub struct Monitor {
 }
 
 impl Monitor {
+    #[allow(dead_code)]
     pub(crate) fn new(primary: bool, rect: Rect, work_rect: Rect) -> Self {
         Monitor {
             primary,
@@ -39,22 +43,19 @@ impl Monitor {
             work_rect,
         }
     }
-    /// Returns true if the monitor is the primary monitor
-    /// a primary monitor has its top-left corner at (0,0)
-    /// in virtual screen coordinates.
+    /// Returns true if the monitor is the primary monitor.
+    /// The primary monitor has its origin at (0, 0) in virtual screen coordinates.
     pub fn is_primary(&self) -> bool {
         self.primary
     }
-    /// Returns a RECT of the monitor rectangle in virtual screen coordinates
-    /// meaning that it contains the monitors resolution
-    /// oriented around the origin point: (0,0) being the top-left corner
-    /// of the primary monitor, in pixels.
+    /// Returns the monitor rectangle in virtual screen coordinates.
     pub fn virtual_rect(&self) -> Rect {
         self.rect
     }
 
-    /// Returns a RECT of the monitor working rectangle in virtual screen coordinates
-    /// The RECT excludes area occupied by things like the dock,menubar (mac). taskbar (windows)
+    /// Returns the monitor working rectangle in virtual screen coordinates.
+    /// The working rectangle excludes certain things like the dock and menubar on mac,
+    /// and the taskbar on windows.
     pub fn virtual_work_rect(&self) -> Rect {
         self.work_rect
     }
@@ -76,12 +77,17 @@ impl Display for Monitor {
     }
 }
 
+/// Information about the screen and monitors
 pub struct Screen {}
 impl Screen {
+    /// Returns a vector of all the [`monitors`] on the system.
+    ///
+    /// [`monitors`]: struct.Monitor.html
     pub fn get_monitors() -> Vec<Monitor> {
         platform::screen::get_monitors()
     }
 
+    /// Returns the total virtual screen space on the system, in pixels.
     pub fn get_display_size() -> Size {
         platform::screen::get_display_size()
     }

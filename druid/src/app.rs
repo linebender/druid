@@ -48,6 +48,8 @@ pub struct WindowDesc<T> {
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) resizable: bool,
     pub(crate) show_titlebar: bool,
+    pub(crate) maximized: bool,
+    pub(crate) minimized: bool,
     /// The `WindowId` that will be assigned to this window.
     ///
     /// This can be used to track a window from when it is launched and when
@@ -168,6 +170,8 @@ impl<T: Data> WindowDesc<T> {
             menu: MenuDesc::platform_default(),
             resizable: true,
             show_titlebar: true,
+            maximized: false,
+            minimized: false,
             id: WindowId::next(),
         }
     }
@@ -226,22 +230,36 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    /// Set whether the window should be resizable.
     pub fn resizable(mut self, resizable: bool) -> Self {
         self.resizable = resizable;
         self
     }
 
+    /// Set whether the window should have a titlebar and decorations.
     pub fn show_titlebar(mut self, show_titlebar: bool) -> Self {
         self.show_titlebar = show_titlebar;
         self
     }
 
-    /// Sets the initial window position in virtual screen coordinates
-    /// [`Point`] Position in pixels
+    /// Sets the initial window position in virtual screen coordinates.
+    /// [`position`] Position in pixels.
     ///
-    /// [`Point`]: struct.Point.html
+    /// [`position`]: struct.Point.html
     pub fn set_position(mut self, position: Point) -> Self {
         self.position = Some(position);
+        self
+    }
+
+    /// Creates the window maximized.
+    pub fn maximized(mut self) -> Self {
+        self.maximized = true;
+        self
+    }
+
+    /// Creates the window minimized.
+    pub fn minimized(mut self) -> Self {
+        self.minimized = true;
         self
     }
 
@@ -273,6 +291,14 @@ impl<T: Data> WindowDesc<T> {
 
         if let Some(position) = self.position {
             builder.set_position(position);
+        }
+
+        if self.maximized {
+            builder.maximized();
+        }
+
+        if self.minimized {
+            builder.minimized();
         }
 
         builder.set_title(self.title.display_text());
