@@ -21,6 +21,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `ExtEventSink`s can now be obtained from widget methods. ([#1152] by [@jneem])
 - 'Scope' widget to allow encapsulation of reactive state. ([#1151] by [@rjwittams])
 - `Ref` lens that applies `AsRef` and thus allow indexing arrays. ([#1171] by [@finnerale])
+- `Movement::StartOfDocument`, `Movement::EndOfDocument`. ([#1092] by [@sysint64])
 
 ### Changed
 
@@ -412,6 +413,7 @@ Last release without a changelog :(
 [#1171]: https://github.com/linebender/druid/pull/1171
 [#1172]: https://github.com/linebender/druid/pull/1172
 [#1173]: https://github.com/linebender/druid/pull/1173
+[#1092]: https://github.com/linebender/druid/pull/1092
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

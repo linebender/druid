@@ -58,6 +58,12 @@ pub trait EditableText: Sized {
     /// Get the next codepoint offset from the given offset, if it exists.
     fn next_codepoint_offset(&self, offset: usize) -> Option<usize>;
 
+    /// Get the line beginning offset from the given offset
+    fn left_end_of_line(&self, offset: usize) -> usize;
+
+    /// Get the line ending offset from the given offset
+    fn right_end_of_line(&self, offset: usize) -> usize;
+
     /// Returns `true` if this text has 0 length.
     fn is_empty(&self) -> bool;
 
@@ -155,6 +161,32 @@ impl EditableText for String {
 
     fn from_str(s: &str) -> Self {
         s.to_string()
+    }
+
+    fn left_end_of_line(&self, from: usize) -> usize {
+        let mut offset = from;
+
+        for byte in self.get(0..from).unwrap_or("").bytes().rev() {
+            if byte == 0x0a {
+                return offset;
+            }
+            offset -= 1;
+        }
+
+        0
+    }
+
+    fn right_end_of_line(&self, from: usize) -> usize {
+        let mut offset = from;
+
+        for char in self.get(from..).unwrap_or("").bytes() {
+            if char == 0x0a {
+                return offset;
+            }
+            offset += 1;
+        }
+
+        self.len()
     }
 }
 
@@ -409,5 +441,39 @@ mod tests {
         assert_eq!(Some(35), a.next_word_offset(20));
         assert_eq!(Some(35), a.next_word_offset(26));
         assert_eq!(Some(35), a.next_word_offset(35));
+    }
+
+    #[test]
+    fn left_end_of_line() {
+        let a = String::from("Technically\na word:\n ৬藏A\u{030a}\n\u{110b}\u{1161}");
+        assert_eq!(0, a.left_end_of_line(0));
+        assert_eq!(0, a.left_end_of_line(11));
+        assert_eq!(12, a.left_end_of_line(12));
+        assert_eq!(12, a.left_end_of_line(13));
+        assert_eq!(20, a.left_end_of_line(21));
+        assert_eq!(31, a.left_end_of_line(31));
+        assert_eq!(31, a.left_end_of_line(34));
+
+        let b = String::from("Technically a word: ৬藏A\u{030a}\u{110b}\u{1161}");
+        assert_eq!(0, b.left_end_of_line(0));
+        assert_eq!(0, b.left_end_of_line(11));
+        assert_eq!(0, b.left_end_of_line(13));
+        assert_eq!(0, b.left_end_of_line(21));
+    }
+
+    #[test]
+    fn right_end_of_line() {
+        let a = String::from("Technically\na word:\n ৬藏A\u{030a}\n\u{110b}\u{1161}");
+        assert_eq!(11, a.right_end_of_line(0));
+        assert_eq!(11, a.right_end_of_line(11));
+        assert_eq!(19, a.right_end_of_line(13));
+        assert_eq!(30, a.right_end_of_line(21));
+        assert_eq!(a.len(), a.right_end_of_line(31));
+
+        let b = String::from("Technically a word: ৬藏A\u{030a}\u{110b}\u{1161}");
+        assert_eq!(b.len(), b.right_end_of_line(0));
+        assert_eq!(b.len(), b.right_end_of_line(11));
+        assert_eq!(b.len(), b.right_end_of_line(13));
+        assert_eq!(b.len(), b.right_end_of_line(19));
     }
 }

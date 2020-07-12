@@ -31,6 +31,10 @@ pub enum Movement {
     LeftOfLine,
     /// Move to right end of visible line.
     RightOfLine,
+    /// Move to the beginning of the document
+    StartOfDocument,
+    /// Move to the end of the document
+    EndOfDocument,
 }
 
 /// Compute the result of movement on a selection .
@@ -51,8 +55,11 @@ pub fn movement(m: Movement, s: Selection, text: &impl EditableText, modify: boo
             }
         }
 
-        Movement::LeftOfLine => 0,
-        Movement::RightOfLine => text.len(),
+        Movement::LeftOfLine => text.left_end_of_line(s.end),
+        Movement::RightOfLine => text.right_end_of_line(s.end),
+
+        Movement::StartOfDocument => 0,
+        Movement::EndOfDocument => text.len(),
 
         Movement::LeftWord => {
             if s.is_caret() || modify {
