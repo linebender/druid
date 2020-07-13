@@ -886,7 +886,13 @@ impl Window {
                 }
             }
 
-            present.last_msc = Some(event.msc);
+            // Only store the last MSC if we're animating (if we aren't animating, missed MSCs
+            // aren't interesting).
+            present.last_msc = if present.needs_present {
+                Some(event.msc)
+            } else {
+                None
+            };
             present.last_ust = Some(event.ust);
             present.waiting_on = None;
         }
