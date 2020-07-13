@@ -37,6 +37,7 @@ pub const BUTTON_BORDER_WIDTH: Key<f64> = Key::new("button_border_width");
 pub const BORDER_DARK: Key<Color> = Key::new("border");
 pub const BORDER_LIGHT: Key<Color> = Key::new("border_light");
 pub const SELECTION_COLOR: Key<Color> = Key::new("selection_color");
+pub const SELECTION_TEXT_COLOR: Key<Color> = Key::new("selection_text_color");
 pub const CURSOR_COLOR: Key<Color> = Key::new("cursor_color");
 
 pub const FONT_NAME: Key<&str> = Key::new("font_name");
@@ -79,6 +80,7 @@ pub fn init() -> Env {
         .adding(BORDER_DARK, Color::rgb8(0x3a, 0x3a, 0x3a))
         .adding(BORDER_LIGHT, Color::rgb8(0xa1, 0xa1, 0xa1))
         .adding(SELECTION_COLOR, Color::rgb8(0xf3, 0x00, 0x21))
+        .adding(SELECTION_TEXT_COLOR, Color::rgb8(0x00, 0x00, 0x00))
         .adding(CURSOR_COLOR, Color::WHITE)
         .adding(TEXT_SIZE_NORMAL, 15.0)
         .adding(TEXT_SIZE_LARGE, 24.0)
