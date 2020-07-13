@@ -44,9 +44,10 @@ pub(crate) struct Application {
     ///
     /// A display is a collection of screens.
     connection: Rc<XCBConnection>,
-    /// An `XCBConnection` is *technically* safe to use from other threads, but there are lots of
-    /// subtleties; let's just avoid the issue altogether. As far as public API is concerned, this
-    /// causes `druid_shell::WindowHandle` to be `!Send` and `!Sync`.
+    /// An `XCBConnection` is *technically* safe to use from other threads, but there are
+    /// subtleties; see https://github.com/psychon/x11rb/blob/master/src/event_loop_integration.rs.
+    /// Let's just avoid the issue altogether. As far as public API is concerned, this causes
+    /// `druid_shell::WindowHandle` to be `!Send` and `!Sync`.
     marker: std::marker::PhantomData<*mut XCBConnection>,
     /// The default screen of the connected display.
     ///
@@ -69,9 +70,11 @@ pub(crate) struct Application {
     window_id: u32,
     /// The mutable `Application` state.
     state: Rc<RefCell<State>>,
-    /// The read end of the "idle pipe", a pipe that allows the event loop to be woken up.
+    /// The read end of the "idle pipe", a pipe that allows the event loop to be woken up from
+    /// other threads.
     idle_read: RawFd,
-    /// The write end of the "idle pipe", a pipe that allows the event loop to be woken up.
+    /// The write end of the "idle pipe", a pipe that allows the event loop to be woken up from
+    /// other threads.
     idle_write: RawFd,
     /// The major opcode of the Present extension, if it is supported.
     present_opcode: Option<u8>,
@@ -444,6 +447,12 @@ impl Application {
 
     fn finalize_quit(&self) {
         log_x11!(self.connection.destroy_window(self.window_id));
+        if let Err(e) = nix::unistd::close(self.idle_read) {
+            log::error!("Error closing idle_read: {}", e);
+        }
+        if let Err(e) = nix::unistd::close(self.idle_write) {
+            log::error!("Error closing idle_write: {}", e);
+        }
     }
 
     pub fn clipboard(&self) -> Clipboard {

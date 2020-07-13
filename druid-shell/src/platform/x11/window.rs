@@ -657,13 +657,20 @@ impl Window {
         Ok(())
     }
 
-    /// Schedule a redraw on the idle loop.
+    /// Schedule a redraw on the idle loop, or if we are waiting on present then schedule it for
+    /// when the current present finishes.
     fn redraw_soon(&self) {
-        let idle = IdleHandle {
-            queue: Arc::clone(&self.idle_queue),
-            pipe: self.idle_pipe,
-        };
-        idle.schedule_redraw();
+        if matches!(self.waiting_on_present(), Ok(true)) {
+            if let Err(e) = self.set_needs_present(true) {
+                log::error!("Window::redraw_soon - failed to schedule present: {}", e);
+            }
+        } else {
+            let idle = IdleHandle {
+                queue: Arc::clone(&self.idle_queue),
+                pipe: self.idle_pipe,
+            };
+            idle.schedule_redraw();
+        }
     }
 
     fn invalidate(&self) {
@@ -712,7 +719,7 @@ impl Window {
         if self.waiting_on_present()? {
             self.set_needs_present(true)?;
         } else if expose.count == 0 {
-            self.render()?;
+            self.redraw_soon();
         }
         Ok(())
     }
@@ -1147,7 +1154,7 @@ fn key_mods(mods: u16) -> Modifiers {
 }
 
 /// A handle that can get used to schedule an idle handler. Note that
-/// this handle is thread safe.
+/// this handle can be cloned and sent between threads.
 #[derive(Clone)]
 pub struct IdleHandle {
     queue: Arc<Mutex<Vec<IdleKind>>>,
