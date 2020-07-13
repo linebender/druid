@@ -32,6 +32,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Fix derive `Data` when type param bounds are defined ([#1058] by [@chris-zen])
 - Ensure that `update` is called after all commands. ([#1062] by [@jneem])
 - GTK: Don't interrupt `KeyEvent.repeat` when releasing another key. ([#1081] by [@raphlinus])
+- Floor the origin for the Align widget to avoid blurry borders. ([#1091] by [@sysint64])
 
 ### Visual
 
@@ -244,6 +245,7 @@ Last release without a changelog :(
 [@binomial0]: https://github.com/binomial0
 [@chris-zen]: https://github.com/chris-zen
 [@vkahl]: https://github.com/vkahl
+[@sysint64]: https://github.com/sysint64
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -353,6 +355,7 @@ Last release without a changelog :(
 [#1058]: https://github.com/linebender/druid/pull/1058
 [#1062]: https://github.com/linebender/druid/pull/1062
 [#1081]: https://github.com/linebender/druid/pull/1081
+[#1091]: https://github.com/linebender/druid/pull/1091
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
@@ -360,4 +363,3 @@ Last release without a changelog :(
 [0.4.0]: https://github.com/linebender/druid/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/linebender/druid/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/linebender/druid/compare/v0.3.0...v0.3.1
-
