@@ -45,7 +45,7 @@ pub(crate) struct Application {
     /// A display is a collection of screens.
     connection: Rc<XCBConnection>,
     /// An `XCBConnection` is *technically* safe to use from other threads, but there are
-    /// subtleties; see https://github.com/psychon/x11rb/blob/master/src/event_loop_integration.rs.
+    /// subtleties; see https://github.com/psychon/x11rb/blob/41ab6610f44f5041e112569684fc58cd6d690e57/src/event_loop_integration.rs.
     /// Let's just avoid the issue altogether. As far as public API is concerned, this causes
     /// `druid_shell::WindowHandle` to be `!Send` and `!Sync`.
     marker: std::marker::PhantomData<*mut XCBConnection>,
