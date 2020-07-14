@@ -660,7 +660,7 @@ impl Window {
     /// Schedule a redraw on the idle loop, or if we are waiting on present then schedule it for
     /// when the current present finishes.
     fn redraw_soon(&self) {
-        if matches!(self.waiting_on_present(), Ok(true)) {
+        if let Ok(true) = self.waiting_on_present() {
             if let Err(e) = self.set_needs_present(true) {
                 log::error!("Window::redraw_soon - failed to schedule present: {}", e);
             }
