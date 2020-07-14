@@ -522,7 +522,7 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) ->
     // start setting one.
     let mut poll_timeout = -1;
     loop {
-        let readable = |p: &PollFd| {
+        fn readable(p: &PollFd) -> bool {
             p.revents()
                 .unwrap_or_else(PollFlags::empty)
                 .contains(PollFlags::POLLIN)
