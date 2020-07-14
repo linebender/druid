@@ -371,7 +371,12 @@ impl Application {
 
     fn run_inner(self) -> Result<(), Error> {
         // Try to figure out the refresh rate of the current screen. We run the idle loop at that
-        // rate.
+        // rate. The rate-limiting of the idle loop has two purposes:
+        //  - When the present extension is disabled, we paint in the idle loop. By limiting the
+        //    idle loop to the monitor's refresh rate, we aren't painting unnecessarily.
+        //  - By running idle commands at a limited rate, we limit spurious wake-ups: if the X11
+        //    connection is otherwise idle, we'll wake up at most once per frame, run *all* the
+        //    pending idle commands, and then go back to sleep.
         let refresh_rate = util::refresh_rate(self.connection(), self.window_id).unwrap_or(60.0);
         let timeout = Duration::from_millis((1000.0 / refresh_rate) as u64);
         let mut last_idle_time = Instant::now();
@@ -531,6 +536,7 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) ->
         match poll(poll_fds, poll_timeout) {
             Ok(_) => {
                 if readable(&poll_fds[0]) {
+                    // There is an X11 event ready to be handled.
                     break;
                 }
                 if poll_fds.len() == 1 || readable(&poll_fds[1]) {

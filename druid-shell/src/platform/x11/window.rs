@@ -471,10 +471,6 @@ impl Window {
     }
 
     /// Start the destruction of the window.
-    ///
-    /// ### Connection
-    ///
-    /// Does not flush the connection (it gets flushed by the event loop).
     pub fn destroy(&self) {
         log_x11!(self.app.connection().destroy_window(self.id));
     }
