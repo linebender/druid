@@ -504,7 +504,7 @@ fn drain_idle_pipe(idle_read: RawFd) -> Result<(), Error> {
 /// Returns when there is an event ready to read from `conn`, or we got signalled by another thread
 /// writing into our idle pipe and the `timeout` has passed.
 // This was taken, with minor modifications, from the xclock_utc example in the x11rb crate.
-// https://raw.githubusercontent.com/psychon/x11rb/a6bd1453fd8e931394b9b1f2185fad48b7cca5fe/examples/xclock_utc.rs
+// https://github.com/psychon/x11rb/blob/a6bd1453fd8e931394b9b1f2185fad48b7cca5fe/examples/xclock_utc.rs
 fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) -> Result<(), Error> {
     use nix::poll::{poll, PollFd, PollFlags};
     use std::os::raw::c_int;
