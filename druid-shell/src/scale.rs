@@ -116,14 +116,6 @@ impl Scale {
         self.y
     }
 
-    /// Converts the `item` from display points into pixels,
-    /// using the x axis scale factor for coordinates on the x axis
-    /// and the y axis scale factor for coordinates on the y axis.
-    #[inline]
-    pub fn to_px<T: Scalable>(self, item: &T) -> T {
-        item.to_px(self)
-    }
-
     /// Converts from pixels into display points, using the x axis scale factor.
     #[inline]
     pub fn px_to_dp_x<T: Into<f64>>(self, x: T) -> f64 {
@@ -141,14 +133,6 @@ impl Scale {
     #[inline]
     pub fn px_to_dp_xy<T: Into<f64>>(self, x: T, y: T) -> (f64, f64) {
         (x.into() / self.x, y.into() / self.y)
-    }
-
-    /// Converts the `item` from pixels into display points,
-    /// using the x axis scale factor for coordinates on the x axis
-    /// and the y axis scale factor for coordinates on the y axis.
-    #[inline]
-    pub fn to_dp<T: Scalable>(self, item: &T) -> T {
-        item.to_dp(self)
     }
 }
 

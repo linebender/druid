@@ -17,12 +17,14 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 - Major rework of keyboard event handling ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
+- Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
 
 ### Deprecated
 
 ### Removed
 
 - `Scale::from_dpi`, `Scale::dpi_x`, and `Scale::dpi_y`. ([#1042] by [@xStrom])
+- `Scale::to_px` and `Scale::to_dp`. ([#1075] by [@ForLoveOfCats])
 
 ### Fixed
 
@@ -242,6 +244,7 @@ Last release without a changelog :(
 [@covercash2]: https://github.com/covercash2
 [@raphlinus]: https://github.com/raphlinus
 [@binomial0]: https://github.com/binomial0
+[@ForLoveOfCats]: https://github.com/ForLoveOfCats
 [@chris-zen]: https://github.com/chris-zen
 [@vkahl]: https://github.com/vkahl
 
@@ -351,6 +354,7 @@ Last release without a changelog :(
 [#1050]: https://github.com/linebender/druid/pull/1050
 [#1054]: https://github.com/linebender/druid/pull/1054
 [#1058]: https://github.com/linebender/druid/pull/1058
+[#1075]: https://github.com/linebender/druid/pull/1075
 [#1062]: https://github.com/linebender/druid/pull/1062
 [#1081]: https://github.com/linebender/druid/pull/1081
 

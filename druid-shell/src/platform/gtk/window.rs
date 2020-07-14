@@ -39,7 +39,7 @@ use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyState, KeyEvent, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::scale::{Scale, ScaledArea};
+use crate::scale::{Scale, Scalable, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 use super::application::Application;
@@ -323,7 +323,7 @@ impl WindowBuilder {
                         let button_state = event.get_state();
                         handler.mouse_down(
                             &MouseEvent {
-                                pos: scale.to_dp(&Point::from(event.get_position())),
+                                pos: Point::from(event.get_position()).to_dp(scale),
                                 buttons: get_mouse_buttons_from_modifiers(button_state).with(button),
                                 mods: get_modifiers(button_state),
                                 count: get_mouse_click_count(event.get_event_type()),
@@ -349,7 +349,7 @@ impl WindowBuilder {
                         let button_state = event.get_state();
                         handler.mouse_up(
                             &MouseEvent {
-                                pos: scale.to_dp(&Point::from(event.get_position())),
+                                pos: Point::from(event.get_position()).to_dp(scale),
                                 buttons: get_mouse_buttons_from_modifiers(button_state).without(button),
                                 mods: get_modifiers(button_state),
                                 count: 0,
@@ -372,7 +372,7 @@ impl WindowBuilder {
                 let scale = state.scale.get();
                 let motion_state = motion.get_state();
                 let mouse_event = MouseEvent {
-                    pos: scale.to_dp(&Point::from(motion.get_position())),
+                    pos: Point::from(motion.get_position()).to_dp(scale),
                     buttons: get_mouse_buttons_from_modifiers(motion_state),
                     mods: get_modifiers(motion_state),
                     count: 0,
@@ -396,7 +396,7 @@ impl WindowBuilder {
                 let scale = state.scale.get();
                 let crossing_state = crossing.get_state();
                 let mouse_event = MouseEvent {
-                    pos: scale.to_dp(&Point::from(crossing.get_position())),
+                    pos: Point::from(crossing.get_position()).to_dp(scale),
                     buttons: get_mouse_buttons_from_modifiers(crossing_state),
                     mods: get_modifiers(crossing_state),
                     count: 0,
@@ -452,7 +452,7 @@ impl WindowBuilder {
 
                 if let Some(wheel_delta) = wheel_delta {
                     let mouse_event = MouseEvent {
-                        pos: scale.to_dp(&Point::from(scroll.get_position())),
+                        pos: Point::from(scroll.get_position()).to_dp(scale),
                         buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
                         mods,
                         count: 0,
@@ -577,7 +577,7 @@ impl WindowHandle {
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(state) = self.state.upgrade() {
             // GTK takes rects with non-negative integer width/height.
-            let r = state.scale.get().to_px(&rect.abs()).expand();
+            let r = rect.abs().to_px(state.scale.get()).expand();
             let origin = state.drawing_area.get_allocation();
             state.window.queue_draw_area(
                 r.x0 as i32 + origin.x,
