@@ -527,7 +527,7 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) ->
     // start setting one.
     let mut poll_timeout = -1;
     loop {
-        fn readable(p: &PollFd) -> bool {
+        fn readable(p: PollFd) -> bool {
             p.revents()
                 .unwrap_or_else(PollFlags::empty)
                 .contains(PollFlags::POLLIN)
@@ -535,11 +535,11 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) ->
 
         match poll(poll_fds, poll_timeout) {
             Ok(_) => {
-                if readable(&poll_fds[0]) {
+                if readable(poll_fds[0]) {
                     // There is an X11 event ready to be handled.
                     break;
                 }
-                if poll_fds.len() == 1 || readable(&poll_fds[1]) {
+                if poll_fds.len() == 1 || readable(poll_fds[1]) {
                     // Now that we got signalled, stop polling from the idle pipe and use a timeout
                     // instead.
                     poll_fds = &mut just_connection;
