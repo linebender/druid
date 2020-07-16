@@ -5,6 +5,34 @@ on:
   pull_request:
 
 jobs:
+  update-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        
+      - name: Generate Cargo.lock
+        run: cargo generate-lockfile
+        
+      - id: cargo-deps
+        name: Cache dependency crates
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-deps-${{ hashFiles('Cargo.lock') }}
+        
+      - if: steps.cargo-deps.outputs.cache-hit != 'true'
+        name: Fetch dependencies
+        run: cargo fetch --locked
+        
+      - name: Upload Cargo.lock
+        uses: actions/upload-artifact@v2
+        with:
+          name: lockfile
+          path: Cargo.lock
+   
   rustfmt:
     runs-on: ubuntu-latest
     name: cargo fmt
@@ -26,7 +54,10 @@ jobs:
           args: --all -- --check
 
   test-stable:
+    needs: update-deps
     runs-on: ${{ matrix.os }}
+    env:
+      CARGO_INCREMENTAL: 0
     strategy:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
@@ -48,55 +79,69 @@ jobs:
           profile: minimal
           override: true
 
+      - name: Download Cargo.lock
+        uses: actions/download-artifact@v2
+        with:
+          name: lockfile
+          
+      - name: Restore dependency crates
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-deps-${{ hashFiles('Cargo.lock') }}
+          
       # Clippy packages in deeper-to-higher dependency order
       - name: cargo clippy druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --locked --all-targets -- -D warnings
 
       - name: cargo clippy druid
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im -- -D warnings
+          args: --manifest-path=druid/Cargo.toml --locked --all-targets --features=svg,image,im -- -D warnings
 
       - name: cargo clippy druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-derive/Cargo.toml --all-targets -- -D warnings
+          args: --manifest-path=druid-derive/Cargo.toml --locked --all-targets -- -D warnings
 
       - name: cargo clippy book examples
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=docs/book_examples/Cargo.toml --all-targets -- -D warnings
+          args: --manifest-path=docs/book_examples/Cargo.toml --locked --all-targets -- -D warnings
 
       # Test packages in deeper-to-higher dependency order
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-shell/Cargo.toml
+          args: --manifest-path=druid-shell/Cargo.toml --locked
 
       - name: cargo test druid
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --features=svg,image,im
+          args: --manifest-path=druid/Cargo.toml --locked --features=svg,image,im
 
       - name: cargo test druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-derive/Cargo.toml
+          args: --manifest-path=druid-derive/Cargo.toml --locked
 
       - name: cargo test book examples
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=docs/book_examples/Cargo.toml
+          args: --manifest-path=docs/book_examples/Cargo.toml --locked
 
       # After default features are done, also perform X11 clippy+testing on Linux.
       # This is better than a separate job because common dependencies are already built.
@@ -104,32 +149,35 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=x11 -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --locked --all-targets --features=x11 -- -D warnings
         if: contains(matrix.os, 'ubuntu')
 
       - name: cargo clippy druid (X11)
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=x11 -- -D warnings
+          args: --manifest-path=druid/Cargo.toml --locked --all-targets --features=x11 -- -D warnings
         if: contains(matrix.os, 'ubuntu')
 
       - name: cargo test druid-shell (X11)
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-shell/Cargo.toml --features=x11
+          args: --manifest-path=druid-shell/Cargo.toml --locked --features=x11
         if: contains(matrix.os, 'ubuntu')
 
       - name: cargo test druid (X11)
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --features=x11
+          args: --manifest-path=druid/Cargo.toml --locked --features=x11
         if: contains(matrix.os, 'ubuntu')
 
   test-stable-wasm:
+    needs: update-deps
     runs-on: ${{ matrix.os }}
+    env:
+      CARGO_INCREMENTAL: 0
     strategy:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
@@ -145,9 +193,6 @@ jobs:
           sudo apt install libgtk-3-dev
         if: contains(matrix.os, 'ubuntu')
 
-      - name: install wasm-pack
-        run: cargo install wasm-pack
-
       - name: install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -157,31 +202,48 @@ jobs:
           profile: minimal
           override: true
 
+      - name: Download Cargo.lock
+        uses: actions/download-artifact@v2
+        with:
+          name: lockfile
+          
+      - name: Restore dependency crates
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-deps-${{ hashFiles('Cargo.lock') }}
+          
+      - name: install wasm-pack
+        run: cargo install wasm-pack
+          
       # Clippy wasm32 relevant packages in deeper-to-higher dependency order
       - name: cargo clippy druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --locked --all-targets --target wasm32-unknown-unknown -- -D warnings
 
       - name: cargo clippy druid
         uses: actions-rs/cargo@v1
         with:
           command: clippy
           # TODO: Add svg feature when it's no longer broken with wasm
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=image,im --target wasm32-unknown-unknown -- -D warnings
+          args: --manifest-path=druid/Cargo.toml --locked --all-targets --features=image,im --target wasm32-unknown-unknown -- -D warnings
 
       - name: cargo clippy druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-derive/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+          args: --manifest-path=druid-derive/Cargo.toml --locked --all-targets --target wasm32-unknown-unknown -- -D warnings
 
       - name: cargo clippy book examples
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=docs/book_examples/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+          args: --manifest-path=docs/book_examples/Cargo.toml --locked --all-targets --target wasm32-unknown-unknown -- -D warnings
 
       # Test wasm32 relevant packages in deeper-to-higher dependency order
       # TODO: Find a way to make tests work. Until then the tests are merely compiled.
@@ -189,33 +251,33 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-shell/Cargo.toml --no-run --target wasm32-unknown-unknown
+          args: --manifest-path=druid-shell/Cargo.toml --locked --no-run --target wasm32-unknown-unknown
 
       - name: cargo test compile druid
         uses: actions-rs/cargo@v1
         with:
           command: test
           # TODO: Add svg feature when it's no longer broken with wasm
-          args: --manifest-path=druid/Cargo.toml --features=image,im --no-run --target wasm32-unknown-unknown
+          args: --manifest-path=druid/Cargo.toml --locked --features=image,im --no-run --target wasm32-unknown-unknown
 
       - name: cargo test compile druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-derive/Cargo.toml --no-run --target wasm32-unknown-unknown
+          args: --manifest-path=druid-derive/Cargo.toml --locked --no-run --target wasm32-unknown-unknown
 
       - name: cargo test compile book examples
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=docs/book_examples/Cargo.toml --no-run --target wasm32-unknown-unknown
+          args: --manifest-path=docs/book_examples/Cargo.toml --locked --no-run --target wasm32-unknown-unknown
 
       # Clippy and build the special druid-web-examples package.
       - name: cargo clippy druid-web-examples
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/examples/web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+          args: --manifest-path=druid/examples/web/Cargo.toml --locked --target wasm32-unknown-unknown -- -D warnings
 
       - name: wasm-pack build examples
         run: wasm-pack build --dev --target web druid/examples/web
@@ -225,13 +287,16 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/examples/hello_web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+          args: --manifest-path=druid/examples/hello_web/Cargo.toml --locked --target wasm32-unknown-unknown -- -D warnings
 
       - name: wasm-pack build hello_web example
         run: wasm-pack build --dev --target web druid/examples/hello_web
 
   test-nightly:
+    needs: update-deps
     runs-on: ${{ matrix.os }}
+    env:
+      CARGO_INCREMENTAL: 0
     strategy:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
@@ -252,30 +317,44 @@ jobs:
           profile: minimal
           override: true
 
+      - name: Download Cargo.lock
+        uses: actions/download-artifact@v2
+        with:
+          name: lockfile
+          
+      - name: Restore dependency crates
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-deps-${{ hashFiles('Cargo.lock') }}
+          
       # Test packages in deeper-to-higher dependency order
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-shell/Cargo.toml
+          args: --manifest-path=druid-shell/Cargo.toml --locked
 
       - name: cargo test druid
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --features=svg,image,im
+          args: --manifest-path=druid/Cargo.toml --locked --features=svg,image,im
 
       - name: cargo test druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-derive/Cargo.toml
+          args: --manifest-path=druid-derive/Cargo.toml --locked
 
       - name: cargo test book examples
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=docs/book_examples/Cargo.toml
+          args: --manifest-path=docs/book_examples/Cargo.toml --locked
 
       # After default features are done, also perform X11 testing on Linux.
       # This is better than a separate job because common dependencies are already built.
@@ -283,19 +362,22 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-shell/Cargo.toml --features=x11
+          args: --manifest-path=druid-shell/Cargo.toml --locked --features=x11
         if: contains(matrix.os, 'ubuntu')
 
       - name: cargo test druid (X11)
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --features=x11
+          args: --manifest-path=druid/Cargo.toml --locked --features=x11
         if: contains(matrix.os, 'ubuntu')
 
   check-docs:
+    needs: update-deps
     name: Docs
     runs-on: ${{ matrix.os }}
+    env:
+      CARGO_INCREMENTAL: 0
     strategy:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
@@ -315,37 +397,51 @@ jobs:
           profile: minimal
           override: true
 
+      - name: Download Cargo.lock
+        uses: actions/download-artifact@v2
+        with:
+          name: lockfile
+          
+      - name: Restore dependency crates
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-deps-${{ hashFiles('Cargo.lock') }}
+          
       # Doc packages in deeper-to-higher dependency order
       - name: cargo doc druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --document-private-items
+          args: --manifest-path=druid-shell/Cargo.toml --locked --document-private-items
 
       - name: cargo doc druid
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid/Cargo.toml --features=svg,image,im --document-private-items
+          args: --manifest-path=druid/Cargo.toml --locked --features=svg,image,im --document-private-items
 
       - name: cargo doc druid-derive
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid-derive/Cargo.toml --document-private-items
+          args: --manifest-path=druid-derive/Cargo.toml --locked --document-private-items
 
       - name: cargo doc book examples
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=docs/book_examples/Cargo.toml --document-private-items
+          args: --manifest-path=docs/book_examples/Cargo.toml --locked --document-private-items
 
       # On Linux also attempt docs for X11.
       - name: cargo doc druid-shell (X11)
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --features=x11 --document-private-items
+          args: --manifest-path=druid-shell/Cargo.toml --locked --features=x11 --document-private-items
         if: contains(matrix.os, 'ubuntu')
 
   mdbook-build:
@@ -360,7 +456,7 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
-
+          
       - name: install mdbook
         uses: actions-rs/cargo@v1
         with:
