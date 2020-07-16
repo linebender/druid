@@ -373,6 +373,10 @@ impl MyWndProc {
         self.with_window_state(|state| state.scale.get())
     }
 
+    fn set_scale(&self, scale: Scale) {
+        self.with_window_state(move |state| state.scale.set(scale))
+    }
+
     fn area(&self) -> ScaledArea {
         self.with_window_state(|state| state.area.get())
     }
@@ -537,8 +541,9 @@ impl WndProc for MyWndProc {
                         })
                     };
                     if dcomp_state.is_none() {
+                        let scale = self.scale();
                         unsafe {
-                            let rt = paint::create_render_target(&self.d2d_factory, hwnd);
+                            let rt = paint::create_render_target(&self.d2d_factory, hwnd, scale);
                             state.render_target = rt.ok();
                         }
                     }
@@ -575,8 +580,9 @@ impl WndProc for MyWndProc {
                     let mut rect: RECT = mem::zeroed();
                     GetUpdateRect(hwnd, &mut rect, FALSE);
                     let s = s.as_mut().unwrap();
+                    let scale = self.scale();
                     if s.render_target.is_none() {
-                        let rt = paint::create_render_target(&self.d2d_factory, hwnd);
+                        let rt = paint::create_render_target(&self.d2d_factory, hwnd, scale);
                         s.render_target = rt.ok();
                     }
                     s.handler.rebuild_resources();
@@ -605,9 +611,52 @@ impl WndProc for MyWndProc {
                 }
                 Some(0)
             },
+            WM_DPICHANGED => unsafe {
+                let x = HIWORD(wparam as u32) as f64 / SCALE_TARGET_DPI;
+                let y = LOWORD(wparam as u32) as f64 / SCALE_TARGET_DPI;
+                let scale = Scale::new(x, y);
+                self.set_scale(scale);
+                let rect: *mut RECT = lparam as *mut RECT;
+                SetWindowPos(hwnd, HWND_TOPMOST, (*rect).left, (*rect).top, (*rect).right - (*rect).left, (*rect).bottom - (*rect).top, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_DRAWFRAME);
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    if s.dcomp_state.is_some() {
+                        let scale = self.scale();
+                        let rt = paint::create_render_target(&self.d2d_factory, hwnd, scale);
+                        s.render_target = rt.ok();
+                        {
+                            let rect_dp = self.area().size_dp().to_rect();
+                            s.handler.rebuild_resources();
+                            s.render(
+                                &self.d2d_factory,
+                                &self.dwrite_factory,
+                                &self.handle,
+                                rect_dp,
+                            );
+                        }
+
+                        if let Some(ref mut ds) = s.dcomp_state {
+                            let _ = ds.dcomp_target.clear_root();
+                            let _ = ds.dcomp_device.commit();
+                            ds.sizing = true;
+                        }
+                    }
+                } else {
+                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
+                }
+                Some(0)
+            },
             WM_NCCALCSIZE => unsafe {
                 // Hack to get rid of caption but keeping the borders created by it.
                 if !self.has_titlebar() {
+                    let scale_factor = if let Some(func) = OPTIONAL_FUNCTIONS.GetDpiForWindow {
+                        // Only supported on Windows 10
+                        func(hwnd) as f64 / SCALE_TARGET_DPI
+                    } else {
+                        // TODO GetDpiForMonitor is supported on Windows 8.1, try falling back to that here
+                        // Probably GetDeviceCaps(..., LOGPIXELSX) is the best to do pre-10
+                        1.0
+                    };
                     let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
                     if style == 0 {
                         warn!(
@@ -616,12 +665,12 @@ impl WndProc for MyWndProc {
                         );
                         return Some(0);
                     }
-
+                    
                     let s: *mut NCCALCSIZE_PARAMS = lparam as *mut NCCALCSIZE_PARAMS;
                     if let Some(mut s) = s.as_mut() {
-                        s.rgrc[0].top -= 31;
+                        s.rgrc[0].top -= (31.0 * scale_factor) as i32;
                         if (style & WS_MAXIMIZE) != 0 {
-                            s.rgrc[0].top += 7;
+                            s.rgrc[0].top += (7.0 * scale_factor) as i32;
                         }
                     }
                 }
@@ -659,7 +708,8 @@ impl WndProc for MyWndProc {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
                     if s.dcomp_state.is_some() {
-                        let rt = paint::create_render_target(&self.d2d_factory, hwnd);
+                        let scale = self.scale();
+                        let rt = paint::create_render_target(&self.d2d_factory, hwnd, scale);
                         s.render_target = rt.ok();
                         {
                             let rect_dp = self.area().size_dp().to_rect();

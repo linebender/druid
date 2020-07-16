@@ -22,10 +22,9 @@ use std::rc::Rc;
 
 use winapi::shared::minwindef::{FALSE, HINSTANCE};
 use winapi::shared::ntdef::LPCWSTR;
-use winapi::shared::windef::{HCURSOR, HWND};
+use winapi::shared::windef::{HCURSOR, HWND, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2};
 use winapi::shared::winerror::HRESULT_FROM_WIN32;
 use winapi::um::errhandlingapi::GetLastError;
-use winapi::um::shellscalingapi::PROCESS_SYSTEM_DPI_AWARE;
 use winapi::um::winuser::{
     DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PostMessageW, PostQuitMessage,
     RegisterClassW, TranslateAcceleratorW, TranslateMessage, GA_ROOT, IDI_APPLICATION, MSG,
@@ -64,10 +63,10 @@ impl Application {
     fn init() -> Result<(), Error> {
         // TODO: Report back an error instead of panicking
         util::attach_console();
-        if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
+        if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwarenessContext {
             // This function is only supported on windows 10
             unsafe {
-                func(PROCESS_SYSTEM_DPI_AWARE); // TODO: per monitor (much harder)
+                func(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
             }
         }
         unsafe {

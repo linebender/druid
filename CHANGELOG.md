@@ -19,6 +19,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Changed
 
+- Windows: Improved DPI handling. Druid should now redraw correctly when dpi changes. ([#1037] by [@rhzk])
 - winOS: Window created with OS default size if not set. ([#1037] by [@rhzk])
 - `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
