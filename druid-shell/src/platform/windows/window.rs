@@ -236,7 +236,7 @@ pub(crate) const DS_REQUEST_DESTROY: UINT = WM_USER + 1;
 /// Message relaying a request to handle dropped messages.
 ///
 /// Rust borrow checker causes messages to be dropped
-/// so as a temporary? solution we place them in a queue and handle them again
+/// so instead we place them in a queue and run them when the borrow is released.
 pub(crate) const DS_HANDLE_DROPPED: UINT = WM_USER + 2;
 
 impl Default for PresentStrategy {
@@ -555,13 +555,15 @@ impl WndProc for MyWndProc {
                 Some(0)
             }
             WM_ACTIVATE => {
-                unsafe {
-                    if SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOSIZE) == 0 {
-                        warn!(
-                            "failed to update window style: {}",
-                            Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                        );
-                    };
+                if LOWORD(wparam as u32) as u32 != 0 {
+                    unsafe {
+                        if SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOSIZE) == 0 {
+                            warn!(
+                                "failed to update window style: {}",
+                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                            );
+                        };
+                    }
                 }
                 Some(0)
             }
@@ -649,14 +651,6 @@ impl WndProc for MyWndProc {
             WM_NCCALCSIZE => unsafe {
                 // Hack to get rid of caption but keeping the borders created by it.
                 if !self.has_titlebar() {
-                    let scale_factor = if let Some(func) = OPTIONAL_FUNCTIONS.GetDpiForWindow {
-                        // Only supported on Windows 10
-                        func(hwnd) as f64 / SCALE_TARGET_DPI
-                    } else {
-                        // TODO GetDpiForMonitor is supported on Windows 8.1, try falling back to that here
-                        // Probably GetDeviceCaps(..., LOGPIXELSX) is the best to do pre-10
-                        1.0
-                    };
                     let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
                     if style == 0 {
                         warn!(
@@ -668,9 +662,9 @@ impl WndProc for MyWndProc {
                     
                     let s: *mut NCCALCSIZE_PARAMS = lparam as *mut NCCALCSIZE_PARAMS;
                     if let Some(mut s) = s.as_mut() {
-                        s.rgrc[0].top -= (31.0 * scale_factor) as i32;
+                        s.rgrc[0].top -= (31.0 * self.scale().x()) as i32;
                         if (style & WS_MAXIMIZE) != 0 {
-                            s.rgrc[0].top += (7.0 * scale_factor) as i32;
+                            s.rgrc[0].top += (7.0 * self.scale().x()) as i32;
                         }
                     }
                 }
@@ -687,19 +681,20 @@ impl WndProc for MyWndProc {
                             Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                         );
                     };
-                    let a = HIWORD(lparam as u32) as i32 - rect.top;
+                    let a = HIWORD(lparam as u32) as i16 as i32 - rect.top;
                     if  (a == 0) && (hit != HTTOPLEFT) && (hit != HTTOPRIGHT) && self.resizable() {
                         hit = HTTOP;
-                    } else {
-                        let mouseDown = GetAsyncKeyState(VK_LBUTTON) < 0;
+                    }
+                }
+                if hit != HTTOP {
+                    let mouseDown = GetAsyncKeyState(VK_LBUTTON) < 0;
 
-                        if self.with_window_state(|state| state.handle_titlebar.get()) && !mouseDown {
-                            self.with_window_state(move |state| state.handle_titlebar.set(false));
-                        };
-                        
-                        if self.with_window_state(|state| state.handle_titlebar.get()) &&  hit == HTCLIENT {
-                            hit = HTCAPTION;
-                        }
+                    if self.with_window_state(|state| state.handle_titlebar.get()) && !mouseDown {
+                        self.with_window_state(move |state| state.handle_titlebar.set(false));
+                    };
+                    
+                    if self.with_window_state(|state| state.handle_titlebar.get()) &&  hit == HTCLIENT {
+                        hit = HTCAPTION;
                     }
                 }
                 Some(hit)
@@ -776,10 +771,13 @@ impl WndProc for MyWndProc {
                 None
             },
             WM_SIZE => unsafe {
+                let width = LOWORD(lparam as u32) as u32;
+                let height = HIWORD(lparam as u32) as u32;
+                if width == 0 || height == 0 {
+                    return Some(0);
+                }
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
-                    let width = LOWORD(lparam as u32) as u32;
-                    let height = HIWORD(lparam as u32) as u32;
                     let scale = self.scale();
                     let area = ScaledArea::from_px((width as f64, height as f64), scale);
                     let size_dp = area.size_dp();

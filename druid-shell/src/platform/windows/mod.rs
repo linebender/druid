@@ -69,10 +69,6 @@ impl HwndRenderTarget {
         height: u32,
         rt_props: D2D1_RENDER_TARGET_PROPERTIES,
     ) -> Result<Self, Error> {
-        // hardcode
-        // - RenderTargetType::Default
-        // - AlphaMode::Unknown
-        //let rt_props = DEFAULT_PROPS;
         let mut hwnd_props = DEFAULT_HWND_PROPS;
 
         hwnd_props.hwnd = hwnd;
