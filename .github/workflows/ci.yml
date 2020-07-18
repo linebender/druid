@@ -6,9 +6,15 @@ on:
 
 jobs:
   update-deps:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }} # Temporary workaround for cache miss on Windows
+    strategy:
+      matrix:
+        os: [windows-2019, ubuntu-latest]
     steps:
       - uses: actions/checkout@v2
+        
+      - name: Update Rust to latest
+        run: rustup update
         
       - name: Generate Cargo.lock
         run: cargo generate-lockfile
