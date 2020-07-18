@@ -32,6 +32,7 @@ pub enum FileDialogType {
 }
 
 /// Options for file dialogs.
+#[non_exhaustive]
 #[derive(Debug, Clone, Default)]
 pub struct FileDialogOptions {
     pub show_hidden: bool,
@@ -39,8 +40,6 @@ pub struct FileDialogOptions {
     pub default_type: Option<FileSpec>,
     pub select_directories: bool,
     pub multi_selection: bool,
-    // we don't want a library user to be able to construct this type directly
-    __non_exhaustive: (),
 }
 
 /// A description of a filetype, for specifiying allowed types in a file dialog.
