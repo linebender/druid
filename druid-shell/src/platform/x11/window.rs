@@ -17,7 +17,9 @@
 use std::any::Any;
 use std::cell::RefCell;
 use std::convert::TryInto;
+use std::os::unix::io::RawFd;
 use std::rc::{Rc, Weak};
+use std::sync::{Arc, Mutex};
 
 use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
@@ -26,15 +28,16 @@ use x11rb::connection::Connection;
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region};
 use x11rb::protocol::xproto::{
-    self, AtomEnum, ConfigureNotifyEvent, ConnectionExt, CreateGCAux, EventMask, ExposeEvent,
-    Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
+    self, AtomEnum, ConfigureNotifyEvent, ConnectionExt, CreateGCAux, EventMask, Gcontext, Pixmap,
+    PropMode, Rectangle, Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
 
+use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error as ShellError;
-use crate::keyboard::{KeyState, KeyEvent, Modifiers};
+use crate::keyboard::{KeyEvent, KeyState, Modifiers};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, RenderContext};
@@ -246,8 +249,6 @@ impl WindowBuilder {
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
         let atoms = self.atoms(id)?;
         let cairo_surface = RefCell::new(self.create_cairo_surface(id, &visual_type)?);
-        // Figure out the refresh rate of the current screen
-        let refresh_rate = util::refresh_rate(conn, id);
         let state = RefCell::new(WindowState {
             size: self.size,
             invalid: Rect::ZERO,
@@ -279,9 +280,10 @@ impl WindowBuilder {
             app: self.app.clone(),
             handler,
             cairo_surface,
-            refresh_rate,
             atoms,
             state,
+            idle_queue: Arc::new(Mutex::new(Vec::new())),
+            idle_pipe: self.app.idle_pipe(),
             present_data: RefCell::new(present_data),
             buffers,
         });
@@ -332,9 +334,11 @@ pub(crate) struct Window {
     app: Application,
     handler: RefCell<Box<dyn WinHandler>>,
     cairo_surface: RefCell<XCBSurface>,
-    refresh_rate: Option<f64>,
     atoms: WindowAtoms,
     state: RefCell<WindowState>,
+    idle_queue: Arc<Mutex<Vec<IdleKind>>>,
+    // Writing to this wakes up the event loop, so that it can run idle handlers.
+    idle_pipe: RawFd,
 
     /// When this is `Some(_)`, we use the X11 Present extension to present windows. This syncs all
     /// presentation to vblank and it appears to prevent tearing (subject to various caveats
@@ -352,10 +356,10 @@ pub(crate) struct Window {
     ///    this case, we will render the next frame immediately unless we're already waiting for a
     ///    completion notification. (If we are waiting for a completion notification, we just make
     ///    a note to schedule a new frame once we get it.)
-    /// 3) Someone calls `invalidate` or `invalidate_rect` on us. We send ourselves an expose event
-    ///    and end up in state 2. This is better than rendering straight away, because for example
-    ///    they might have called `invalidate` from their paint callback, and then we'd end up
-    ///    painting re-entrantively.
+    /// 3) Someone calls `invalidate` or `invalidate_rect` on us. We schedule ourselves to repaint
+    ///    in the idle loop. This is better than rendering straight away, because for example they
+    ///    might have called `invalidate` from their paint callback, and then we'd end up painting
+    ///    re-entrantively.
     ///
     /// This is probably not the best (or at least, not the lowest-latency) scheme we can come up
     /// with, because invalidations that happen shortly after a vblank might need to wait 2 frames
@@ -467,10 +471,6 @@ impl Window {
     }
 
     /// Start the destruction of the window.
-    ///
-    /// ### Connection
-    ///
-    /// Does not flush the connection.
     pub fn destroy(&self) {
         log_x11!(self.app.connection().destroy_window(self.id));
     }
@@ -585,30 +585,22 @@ impl Window {
             self.app
                 .connection()
                 .copy_area(pixmap, self.id, self.gc, x, y, x, y, w, h)?;
-            // We aren't using the present extension, so fall back to sleeping for scheduling
-            // redraws. Sleeping is a terrible way to schedule redraws, but hopefully we don't
-            // have to fall back to this very often.
-            // TODO: once we have an idle handler, we should use that. Sleeping causes lots of
-            // problems when windows are dragged to resize.
-            if anim && self.refresh_rate.is_some() {
-                let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
-                std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
-
-                self.invalidate_rect(size.to_rect());
+            // We aren't using the present extension, so use the idle loop to schedule redraws.
+            // Note that the idle loop's wakeup times are roughly tied to the refresh rate, so this
+            // shouldn't draw too often.
+            if anim {
+                self.invalidate();
             }
         }
-        self.app.connection().flush()?;
         Ok(())
     }
 
     fn show(&self) {
         log_x11!(self.app.connection().map_window(self.id));
-        log_x11!(self.app.connection().flush());
     }
 
     fn close(&self) {
         self.destroy();
-        log_x11!(self.app.connection().flush());
     }
 
     /// Set whether the window should be resizable
@@ -634,7 +626,6 @@ impl Window {
             self.id,
             xproto::Time::CurrentTime,
         ));
-        log_x11!(conn.flush());
     }
 
     fn enlarge_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
@@ -649,6 +640,35 @@ impl Window {
         Ok(())
     }
 
+    /// Redraw more-or-less now.
+    ///
+    /// "More-or-less" because if we're already waiting on a present, we defer the drawing until it
+    /// completes.
+    fn redraw_now(&self) -> Result<(), Error> {
+        if self.waiting_on_present()? {
+            self.set_needs_present(true)?;
+        } else {
+            self.render()?;
+        }
+        Ok(())
+    }
+
+    /// Schedule a redraw on the idle loop, or if we are waiting on present then schedule it for
+    /// when the current present finishes.
+    fn redraw_soon(&self) {
+        if let Ok(true) = self.waiting_on_present() {
+            if let Err(e) = self.set_needs_present(true) {
+                log::error!("Window::redraw_soon - failed to schedule present: {}", e);
+            }
+        } else {
+            let idle = IdleHandle {
+                queue: Arc::clone(&self.idle_queue),
+                pipe: self.idle_pipe,
+            };
+            idle.schedule_redraw();
+        }
+    }
+
     fn invalidate(&self) {
         match self.size() {
             Ok(size) => self.invalidate_rect(size.to_rect()),
@@ -657,28 +677,11 @@ impl Window {
     }
 
     fn invalidate_rect(&self, rect: Rect) {
-        if let Err(err) =  self.enlarge_invalid_rect(rect) {
+        if let Err(err) = self.enlarge_invalid_rect(rect) {
             log::error!("Window::invalidate_rect - failed to enlarge rect: {}", err);
         }
 
-        // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
-        let expose_event = ExposeEvent {
-            window: self.id,
-            x: rect.x0 as u16,
-            y: rect.y0 as u16,
-            width: rect.width() as u16,
-            height: rect.height() as u16,
-            count: 0,
-            response_type: x11rb::protocol::xproto::EXPOSE_EVENT,
-            sequence: 0,
-        };
-        log_x11!(self.app.connection().send_event(
-            false,
-            self.id,
-            EventMask::Exposure,
-            expose_event,
-        ));
-        log_x11!(self.app.connection().flush());
+        self.redraw_soon();
     }
 
     fn set_title(&self, title: &str) {
@@ -689,7 +692,6 @@ impl Window {
             AtomEnum::STRING,
             title.as_bytes(),
         ));
-        log_x11!(self.app.connection().flush());
     }
 
     fn set_menu(&self, _menu: Menu) {
@@ -713,7 +715,7 @@ impl Window {
         if self.waiting_on_present()? {
             self.set_needs_present(true)?;
         } else if expose.count == 0 {
-            self.render()?;
+            self.redraw_soon();
         }
         Ok(())
     }
@@ -869,18 +871,24 @@ impl Window {
             // Check whether we missed presenting on any frames.
             if let Some(last_msc) = present.last_msc {
                 if last_msc.wrapping_add(1) != event.msc {
-                    log::info!(
+                    log::debug!(
                         "missed a present: msc went from {} to {}",
                         last_msc,
                         event.msc
                     );
                     if let Some(last_ust) = present.last_ust {
-                        log::info!("ust went from {} to {}", last_ust, event.ust);
+                        log::debug!("ust went from {} to {}", last_ust, event.ust);
                     }
                 }
             }
 
-            present.last_msc = Some(event.msc);
+            // Only store the last MSC if we're animating (if we aren't animating, missed MSCs
+            // aren't interesting).
+            present.last_msc = if present.needs_present {
+                Some(event.msc)
+            } else {
+                None
+            };
             present.last_ust = Some(event.ust);
             present.waiting_on = None;
         }
@@ -922,6 +930,36 @@ impl Window {
             .as_ref()
             .map(|p| p.needs_present)
             .unwrap_or(false))
+    }
+
+    pub(crate) fn run_idle(&self) {
+        let mut queue = Vec::new();
+        std::mem::swap(&mut *self.idle_queue.lock().unwrap(), &mut queue);
+
+        let mut needs_redraw = false;
+        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+            for callback in queue {
+                match callback {
+                    IdleKind::Callback(f) => {
+                        f.call(handler.as_any());
+                    }
+                    IdleKind::Token(tok) => {
+                        handler.idle(tok);
+                    }
+                    IdleKind::Redraw => {
+                        needs_redraw = true;
+                    }
+                }
+            }
+        } else {
+            log::error!("Not running idle callbacks because the handler is borrowed");
+        }
+
+        if needs_redraw {
+            if let Err(e) = self.redraw_now() {
+                log::error!("Error redrawing: {}", e);
+            }
+        }
     }
 }
 
@@ -1117,21 +1155,56 @@ fn key_mods(mods: u16) -> Modifiers {
     ret
 }
 
+/// A handle that can get used to schedule an idle handler. Note that
+/// this handle can be cloned and sent between threads.
 #[derive(Clone)]
-pub(crate) struct IdleHandle;
+pub struct IdleHandle {
+    queue: Arc<Mutex<Vec<IdleKind>>>,
+    pipe: RawFd,
+}
+
+pub(crate) enum IdleKind {
+    Callback(Box<dyn IdleCallback>),
+    Token(IdleToken),
+    Redraw,
+}
 
 impl IdleHandle {
-    pub fn add_idle_callback<F>(&self, _callback: F)
+    fn wake(&self) {
+        loop {
+            match nix::unistd::write(self.pipe, &[0]) {
+                Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
+                Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {}
+                Err(e) => {
+                    log::error!("Failed to write to idle pipe: {}", e);
+                    break;
+                }
+                Ok(_) => {
+                    break;
+                }
+            }
+        }
+    }
+
+    pub(crate) fn schedule_redraw(&self) {
+        self.queue.lock().unwrap().push(IdleKind::Redraw);
+        self.wake();
+    }
+
+    pub fn add_idle_callback<F>(&self, callback: F)
     where
         F: FnOnce(&dyn Any) + Send + 'static,
     {
-        // TODO(x11/idle_handles): implement IdleHandle::add_idle_callback
-        log::warn!("IdleHandle::add_idle_callback is currently unimplemented for X11 platforms.");
+        self.queue
+            .lock()
+            .unwrap()
+            .push(IdleKind::Callback(Box::new(callback)));
+        self.wake();
     }
 
-    pub fn add_idle_token(&self, _token: IdleToken) {
-        // TODO(x11/idle_handles): implement IdleHandle::add_idle_token
-        log::warn!("IdleHandle::add_idle_token is currently unimplemented for X11 platforms.");
+    pub fn add_idle_token(&self, token: IdleToken) {
+        self.queue.lock().unwrap().push(IdleKind::Token(token));
+        self.wake();
     }
 }
 
@@ -1253,9 +1326,14 @@ impl WindowHandle {
     }
 
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        // TODO(x11/idle_handles): implement WindowHandle::get_idle_handle
-        //log::warn!("WindowHandle::get_idle_handle is currently unimplemented for X11 platforms.");
-        Some(IdleHandle)
+        if let Some(w) = self.window.upgrade() {
+            Some(IdleHandle {
+                queue: Arc::clone(&w.idle_queue),
+                pipe: w.idle_pipe,
+            })
+        } else {
+            None
+        }
     }
 
     pub fn get_scale(&self) -> Result<Scale, ShellError> {
