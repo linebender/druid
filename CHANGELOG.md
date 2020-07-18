@@ -35,6 +35,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Ensure that `update` is called after all commands. ([#1062] by [@jneem])
 - X11: Support idle callbacks. ([#1072] by [@jneem])
 - GTK: Don't interrupt `KeyEvent.repeat` when releasing another key. ([#1081] by [@raphlinus])
+- X11: Set some more common window properties. ([#1097] by [@psychon])
 
 ### Visual
 
@@ -248,6 +249,7 @@ Last release without a changelog :(
 [@ForLoveOfCats]: https://github.com/ForLoveOfCats
 [@chris-zen]: https://github.com/chris-zen
 [@vkahl]: https://github.com/vkahl
+[@psychon]: https://github.com/psychon
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -359,6 +361,7 @@ Last release without a changelog :(
 [#1062]: https://github.com/linebender/druid/pull/1062
 [#1072]: https://github.com/linebender/druid/pull/1072
 [#1081]: https://github.com/linebender/druid/pull/1081
+[#1097]: https://github.com/linebender/druid/pull/1097
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
