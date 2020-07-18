@@ -36,6 +36,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - X11: Support idle callbacks. ([#1072] by [@jneem])
 - GTK: Don't interrupt `KeyEvent.repeat` when releasing another key. ([#1081] by [@raphlinus])
 - X11: Set some more common window properties. ([#1097] by [@psychon])
+- X11: Support timers. ([#1096] by [@psychon])
 
 ### Visual
 
@@ -361,6 +362,7 @@ Last release without a changelog :(
 [#1062]: https://github.com/linebender/druid/pull/1062
 [#1072]: https://github.com/linebender/druid/pull/1072
 [#1081]: https://github.com/linebender/druid/pull/1081
+[#1096]: https://github.com/linebender/druid/pull/1096
 [#1097]: https://github.com/linebender/druid/pull/1097
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
