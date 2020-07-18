@@ -1009,6 +1009,27 @@ impl Window {
             }
         }
     }
+
+    pub(crate) fn next_timeout(&self) -> Option<Instant> {
+        if let Some(timer) = self.timer_queue.lock().unwrap().peek() {
+            Some(timer.deadline())
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn run_timers(&self, now: Instant) {
+        while let Some(deadline) = self.next_timeout() {
+            if deadline > now {
+                break;
+            }
+            // Remove the timer and get the token
+            let token = self.timer_queue.lock().unwrap().pop().unwrap().token();
+            if let Ok(mut handler_borrow) = self.handler.try_borrow_mut() {
+                handler_borrow.timer(token);
+            }
+        }
+    }
 }
 
 impl Buffers {

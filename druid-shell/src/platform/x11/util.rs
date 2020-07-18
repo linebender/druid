@@ -105,6 +105,10 @@ impl Timer {
         Self { deadline, token }
     }
 
+    pub(crate) fn deadline(&self) -> Instant {
+        self.deadline
+    }
+
     pub(crate) fn token(&self) -> TimerToken {
         self.token
     }

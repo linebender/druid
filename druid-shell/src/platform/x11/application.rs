@@ -381,7 +381,18 @@ impl Application {
         let timeout = Duration::from_millis((1000.0 / refresh_rate) as u64);
         let mut last_idle_time = Instant::now();
         loop {
+            // Figure out when the next wakeup needs to happen
+            let next_timeout = if let Ok(state) = self.state.try_borrow() {
+                state.windows
+                    .values()
+                    .filter_map(|w| w.next_timeout())
+                    .min()
+            } else {
+                log::error!("Getting next timeout, application state already borrowed");
+                None
+            };
             let next_idle_time = last_idle_time + timeout;
+
             self.connection.flush()?;
 
             // Before we poll on the connection's file descriptor, check whether there are any
@@ -390,7 +401,7 @@ impl Application {
             let mut event = self.connection.poll_for_event()?;
 
             if event.is_none() {
-                poll_with_timeout(&self.connection, self.idle_read, next_idle_time)
+                poll_with_timeout(&self.connection, self.idle_read, next_timeout, next_idle_time)
                     .context("Error while waiting for X11 connection")?;
             }
 
@@ -409,6 +420,17 @@ impl Application {
             }
 
             let now = Instant::now();
+            if let Some(timeout) = next_timeout {
+                if timeout <= now {
+                    if let Ok(state) = self.state.try_borrow() {
+                        for w in state.windows.values() {
+                            w.run_timers(now);
+                        }
+                    } else {
+                        log::error!("In timer loop, application state already borrowed");
+                    }
+                }
+            }
             if now >= next_idle_time {
                 last_idle_time = now;
                 drain_idle_pipe(self.idle_read)?;
@@ -510,10 +532,19 @@ fn drain_idle_pipe(idle_read: RawFd) -> Result<(), Error> {
 /// writing into our idle pipe and the `timeout` has passed.
 // This was taken, with minor modifications, from the xclock_utc example in the x11rb crate.
 // https://github.com/psychon/x11rb/blob/a6bd1453fd8e931394b9b1f2185fad48b7cca5fe/examples/xclock_utc.rs
-fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) -> Result<(), Error> {
+fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Option<Instant>, idle_timeout: Instant) -> Result<(), Error> {
     use nix::poll::{poll, PollFd, PollFlags};
     use std::os::raw::c_int;
     use std::os::unix::io::AsRawFd;
+
+    fn to_timeout(timeout: Instant, now: Instant) -> c_int {
+        if timeout < now {
+            0
+        } else {
+            c_int::try_from(timeout.duration_since(now).as_millis())
+                .unwrap_or(c_int::max_value())
+        }
+    }
 
     let fd = conn.as_raw_fd();
     let mut both_poll_fds = [
@@ -526,6 +557,10 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) ->
     // We start with no timeout in the poll call. If we get something from the idle handler, we'll
     // start setting one.
     let mut poll_timeout = -1;
+    // However, we still have to honor the timer_timeout
+    if let Some(timeout) = timer_timeout {
+        poll_timeout = to_timeout(timeout, Instant::now());
+    }
     loop {
         fn readable(p: PollFd) -> bool {
             p.revents()
@@ -539,18 +574,15 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timeout: Instant) ->
                     // There is an X11 event ready to be handled.
                     break;
                 }
+                let now = Instant::now();
+                if now >= idle_timeout.min(timer_timeout.unwrap_or(idle_timeout)) {
+                    break;
+                }
                 if poll_fds.len() == 1 || readable(poll_fds[1]) {
                     // Now that we got signalled, stop polling from the idle pipe and use a timeout
                     // instead.
                     poll_fds = &mut just_connection;
-
-                    let now = Instant::now();
-                    if now >= timeout {
-                        break;
-                    } else {
-                        poll_timeout = c_int::try_from(timeout.duration_since(now).as_millis())
-                            .unwrap_or(c_int::max_value())
-                    }
+                    poll_timeout = to_timeout(idle_timeout, now);
                 }
             }
 
