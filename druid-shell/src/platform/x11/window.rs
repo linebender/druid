@@ -28,7 +28,7 @@ use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVis
 use x11rb::atom_manager;
 use x11rb::connection::Connection;
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
-use x11rb::protocol::xfixes::{ConnectionExt as _, Region};
+use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
     self, AtomEnum, ConfigureNotifyEvent, ConnectionExt, CreateGCAux, EventMask, Gcontext, Pixmap,
     PropMode, Rectangle, Visualtype, WindowClass,
@@ -43,6 +43,7 @@ use crate::keyboard::{KeyEvent, KeyState, Modifiers};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, RenderContext};
+use crate::region::Region;
 use crate::scale::Scale;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
@@ -253,7 +254,7 @@ impl WindowBuilder {
         let cairo_surface = RefCell::new(self.create_cairo_surface(id, &visual_type)?);
         let state = RefCell::new(WindowState {
             size: self.size,
-            invalid: Rect::ZERO,
+            invalid: Region::EMPTY,
         });
         let present_data = match self.initialize_present_data(id) {
             Ok(p) => Some(p),
@@ -441,7 +442,7 @@ atom_manager! {
 struct WindowState {
     size: Size,
     /// The region that was invalidated since the last time we rendered.
-    invalid: Rect,
+    invalid: Region,
 }
 
 /// A collection of pixmaps for rendering to. This gets used in two different ways: if the present
@@ -483,7 +484,7 @@ struct PresentData {
     /// A monotonically increasing present request counter.
     serial: u32,
     /// The region that we use for telling X what to present.
-    region: Region,
+    region: XRegion,
     /// Did we submit a present that hasn't completed yet? If so, this is its serial number.
     waiting_on: Option<u32>,
     /// We need to render another frame as soon as the current one is done presenting.
@@ -544,7 +545,7 @@ impl Window {
                         status
                     )
                 })?;
-            self.enlarge_invalid_rect(size.to_rect())?;
+            self.add_invalid_rect(size.to_rect())?;
             borrow_mut!(self.handler)?.size(size);
         }
         Ok(())
@@ -568,15 +569,20 @@ impl Window {
     }
 
     fn render(&self) -> Result<(), Error> {
-        let size = borrow!(self.state)?.size;
-        let invalid_rect = borrow!(self.state)?.invalid;
-        let mut anim = false;
+        borrow_mut!(self.handler)?.prepare_paint();
+
         self.update_cairo_surface()?;
         {
+            let state = borrow!(self.state)?;
             let surface = borrow!(self.cairo_surface)?;
             let mut cairo_ctx = cairo::Context::new(&surface);
+
+            for rect in state.invalid.rects() {
+                cairo_ctx.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
+            }
+            cairo_ctx.clip();
+
             let mut piet_ctx = Piet::new(&mut cairo_ctx);
-            piet_ctx.clip(invalid_rect);
 
             // We need to be careful with earlier returns here, because piet_ctx
             // can panic if it isn't finish()ed. Also, we want to reset cairo's clip
@@ -584,7 +590,7 @@ impl Window {
             let err;
             match borrow_mut!(self.handler) {
                 Ok(mut handler) => {
-                    anim = handler.paint(&mut piet_ctx, invalid_rect);
+                    handler.paint(&mut piet_ctx, &state.invalid);
                     err = piet_ctx
                         .finish()
                         .map_err(|e| anyhow!("Window::render - piet finish failed: {}", e));
@@ -602,34 +608,27 @@ impl Window {
             err?;
         }
 
-        borrow_mut!(self.state)?.invalid = Rect::ZERO;
         self.set_needs_present(false)?;
 
         let mut buffers = borrow_mut!(self.buffers)?;
+        let mut state = borrow_mut!(self.state)?;
         let pixmap = *buffers
             .idle_pixmaps
             .last()
             .ok_or_else(|| anyhow!("after rendering, no pixmap to present"))?;
         if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
-            present.present(self.app.connection(), pixmap, self.id, invalid_rect)?;
+            present.present(self.app.connection(), pixmap, self.id, &state.invalid)?;
             buffers.idle_pixmaps.pop();
-            if anim {
-                self.enlarge_invalid_rect(size.to_rect())?;
-                present.needs_present = true;
-            }
         } else {
-            let (x, y) = (invalid_rect.x0 as i16, invalid_rect.y0 as i16);
-            let (w, h) = (invalid_rect.width() as u16, invalid_rect.height() as u16);
-            self.app
-                .connection()
-                .copy_area(pixmap, self.id, self.gc, x, y, x, y, w, h)?;
-            // We aren't using the present extension, so use the idle loop to schedule redraws.
-            // Note that the idle loop's wakeup times are roughly tied to the refresh rate, so this
-            // shouldn't draw too often.
-            if anim {
-                self.invalidate();
+            for r in state.invalid.rects() {
+                let (x, y) = (r.x0 as i16, r.y0 as i16);
+                let (w, h) = (r.width() as u16, r.height() as u16);
+                self.app
+                    .connection()
+                    .copy_area(pixmap, self.id, self.gc, x, y, x, y, w, h)?;
             }
         }
+        state.invalid.clear();
         Ok(())
     }
 
@@ -666,15 +665,8 @@ impl Window {
         ));
     }
 
-    fn enlarge_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
-        let invalid = &mut borrow_mut!(self.state)?.invalid;
-        // This is basically just a rectangle union, but we need to be careful because
-        // `Rect::union` doesn't do what we want when one rect is empty.
-        if invalid.area() == 0.0 {
-            *invalid = rect;
-        } else if rect.area() > 0.0 {
-            *invalid = invalid.union(rect);
-        }
+    fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
+        borrow_mut!(self.state)?.invalid.add_rect(rect.expand());
         Ok(())
     }
 
@@ -693,10 +685,13 @@ impl Window {
 
     /// Schedule a redraw on the idle loop, or if we are waiting on present then schedule it for
     /// when the current present finishes.
-    fn redraw_soon(&self) {
+    fn request_anim_frame(&self) {
         if let Ok(true) = self.waiting_on_present() {
             if let Err(e) = self.set_needs_present(true) {
-                log::error!("Window::redraw_soon - failed to schedule present: {}", e);
+                log::error!(
+                    "Window::request_anim_frame - failed to schedule present: {}",
+                    e
+                );
             }
         } else {
             let idle = IdleHandle {
@@ -715,11 +710,11 @@ impl Window {
     }
 
     fn invalidate_rect(&self, rect: Rect) {
-        if let Err(err) = self.enlarge_invalid_rect(rect) {
+        if let Err(err) = self.add_invalid_rect(rect) {
             log::error!("Window::invalidate_rect - failed to enlarge rect: {}", err);
         }
 
-        self.redraw_soon();
+        self.request_anim_frame();
     }
 
     fn set_title(&self, title: &str) {
@@ -759,11 +754,11 @@ impl Window {
             (expose.width as f64, expose.height as f64),
         );
 
-        self.enlarge_invalid_rect(rect)?;
+        self.add_invalid_rect(rect)?;
         if self.waiting_on_present()? {
             self.set_needs_present(true)?;
         } else if expose.count == 0 {
-            self.redraw_soon();
+            self.request_anim_frame();
         }
         Ok(())
     }
@@ -1120,16 +1115,20 @@ impl PresentData {
         conn: &Rc<XCBConnection>,
         pixmap: Pixmap,
         window_id: u32,
-        rect: Rect,
+        region: &Region,
     ) -> Result<(), Error> {
-        let x_rect = Rectangle {
-            x: rect.x0 as i16,
-            y: rect.y0 as i16,
-            width: rect.width() as u16,
-            height: rect.height() as u16,
-        };
+        let x_rects: Vec<Rectangle> = region
+            .rects()
+            .iter()
+            .map(|r| Rectangle {
+                x: r.x0 as i16,
+                y: r.y0 as i16,
+                width: r.width() as u16,
+                height: r.height() as u16,
+            })
+            .collect();
 
-        conn.xfixes_set_region(self.region, &[x_rect])?;
+        conn.xfixes_set_region(self.region, &x_rects[..])?;
         conn.present_pixmap(
             window_id,
             pixmap,
@@ -1323,6 +1322,14 @@ impl WindowHandle {
     pub fn bring_to_front_and_focus(&self) {
         if let Some(w) = self.window.upgrade() {
             w.bring_to_front_and_focus();
+        } else {
+            log::error!("Window {} has already been dropped", self.id);
+        }
+    }
+
+    pub fn request_anim_frame(&self) {
+        if let Some(w) = self.window.upgrade() {
+            w.request_anim_frame();
         } else {
             log::error!("Window {} has already been dropped", self.id);
         }
