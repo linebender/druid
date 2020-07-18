@@ -16,7 +16,7 @@
 
 use std::any::Any;
 use std::cell::RefCell;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::os::unix::io::RawFd;
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
@@ -274,6 +274,20 @@ impl WindowBuilder {
             screen.root_depth,
         )?);
 
+        // Initialize some properties
+        let pid = nix::unistd::Pid::this().as_raw();
+        if let Ok(pid) = u32::try_from(pid) {
+            conn.change_property32(
+                xproto::PropMode::Replace,
+                id,
+                atoms._NET_WM_PID,
+                AtomEnum::CARDINAL,
+                &[pid],
+            )?
+            .check()
+            .context("set _NET_WM_PID")?;
+        }
+
         let window = Rc::new(Window {
             id,
             gc,
@@ -392,10 +406,29 @@ pub(crate) struct Window {
 // Registering for but ignoring this event means that the window will remain open.
 //
 // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
+//
+// _NET_WM_PID
+//
+// A property containing the PID of the process that created the window.
+//
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407915360
+//
+// _NET_WM_NAME
+//
+// A version of WM_NAME supporting UTF8 text.
+//
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407982336
+//
+// UTF8_STRING
+//
+// The type of _NET_WM_NAME
 atom_manager! {
     WindowAtoms: WindowAtomsCookie {
         WM_PROTOCOLS,
         WM_DELETE_WINDOW,
+        _NET_WM_PID,
+        _NET_WM_NAME,
+        UTF8_STRING,
     }
 }
 
@@ -685,11 +718,21 @@ impl Window {
     }
 
     fn set_title(&self, title: &str) {
+        // This is technically incorrect. STRING encoding is *not* UTF8. However, I am not sure
+        // what it really is. WM_LOCALE_NAME might be involved. Hopefully, nothing cares about this
+        // as long as _NET_WM_NAME is also set (which uses UTF8).
         log_x11!(self.app.connection().change_property8(
             xproto::PropMode::Replace,
             self.id,
             AtomEnum::WM_NAME,
             AtomEnum::STRING,
+            title.as_bytes(),
+        ));
+        log_x11!(self.app.connection().change_property8(
+            xproto::PropMode::Replace,
+            self.id,
+            self.atoms._NET_WM_NAME,
+            self.atoms.UTF8_STRING,
             title.as_bytes(),
         ));
     }
