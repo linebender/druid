@@ -546,6 +546,7 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Optio
         }
     }
 
+    let earliest_timeout = idle_timeout.min(timer_timeout.unwrap_or(idle_timeout));
     let fd = conn.as_raw_fd();
     let mut both_poll_fds = [
         PollFd::new(fd, PollFlags::POLLIN),
@@ -582,7 +583,7 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Optio
                     // Now that we got signalled, stop polling from the idle pipe and use a timeout
                     // instead.
                     poll_fds = &mut just_connection;
-                    poll_timeout = to_timeout(idle_timeout, now);
+                    poll_timeout = to_timeout(earliest_timeout, now);
                     if now >= idle_timeout {
                         break;
                     }
