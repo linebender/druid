@@ -537,15 +537,7 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Optio
     use std::os::raw::c_int;
     use std::os::unix::io::AsRawFd;
 
-    fn to_timeout(timeout: Instant, now: Instant) -> c_int {
-        if timeout < now {
-            0
-        } else {
-            c_int::try_from(timeout.duration_since(now).as_millis())
-                .unwrap_or(c_int::max_value())
-        }
-    }
-
+    let mut now = Instant::now();
     let earliest_timeout = idle_timeout.min(timer_timeout.unwrap_or(idle_timeout));
     let fd = conn.as_raw_fd();
     let mut both_poll_fds = [
@@ -557,16 +549,31 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Optio
 
     // We start with no timeout in the poll call. If we get something from the idle handler, we'll
     // start setting one.
-    let mut poll_timeout = -1;
-    // However, we still have to honor the timer_timeout
-    if let Some(timeout) = timer_timeout {
-        poll_timeout = to_timeout(timeout, Instant::now());
-    }
+    let mut honor_idle_timeout = false;
     loop {
         fn readable(p: PollFd) -> bool {
             p.revents()
                 .unwrap_or_else(PollFlags::empty)
                 .contains(PollFlags::POLLIN)
+        };
+
+        // Compute the deadline for when poll() has to wakeup
+        let deadline = if honor_idle_timeout {
+            Some(earliest_timeout)
+        } else {
+            timer_timeout
+        };
+        // ...and convert the deadline into an argument for poll()
+        let poll_timeout = if let Some(deadline) = deadline {
+            if deadline < now {
+                0
+            } else {
+                c_int::try_from(deadline.duration_since(now).as_millis())
+                    .unwrap_or(c_int::max_value())
+            }
+        } else {
+            // No timeout
+            -1
         };
 
         match poll(poll_fds, poll_timeout) {
@@ -575,7 +582,7 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Optio
                     // There is an X11 event ready to be handled.
                     break;
                 }
-                let now = Instant::now();
+                now = Instant::now();
                 if timer_timeout.is_some() && now >= timer_timeout.unwrap() {
                     break;
                 }
@@ -583,14 +590,16 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Optio
                     // Now that we got signalled, stop polling from the idle pipe and use a timeout
                     // instead.
                     poll_fds = &mut just_connection;
-                    poll_timeout = to_timeout(earliest_timeout, now);
+                    honor_idle_timeout = true;
                     if now >= idle_timeout {
                         break;
                     }
                 }
             }
 
-            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
+            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {
+                now = Instant::now();
+            }
             Err(e) => return Err(e.into()),
         }
     }
