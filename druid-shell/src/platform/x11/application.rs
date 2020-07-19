@@ -575,7 +575,7 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Optio
                     break;
                 }
                 let now = Instant::now();
-                if now >= idle_timeout.min(timer_timeout.unwrap_or(idle_timeout)) {
+                if timer_timeout.is_some() && now >= timer_timeout.unwrap() {
                     break;
                 }
                 if poll_fds.len() == 1 || readable(poll_fds[1]) {
@@ -583,6 +583,9 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Optio
                     // instead.
                     poll_fds = &mut just_connection;
                     poll_timeout = to_timeout(idle_timeout, now);
+                    if now >= idle_timeout {
+                        break;
+                    }
                 }
             }
 
