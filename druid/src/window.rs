@@ -149,7 +149,7 @@ impl<T: Data> Window<T> {
         if self.wants_animation_frame() {
             self.handle.request_anim_frame();
         }
-        self.invalid.merge_with(&widget_state.invalid);
+        self.invalid.union_with(&widget_state.invalid);
 
         // If there are any commands and they should be processed
         if process_commands && !queue.is_empty() {

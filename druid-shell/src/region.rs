@@ -69,7 +69,7 @@ impl Region {
     }
 
     /// Modifies this region by including everything in the other region.
-    pub fn merge_with(&mut self, other: &Region) {
+    pub fn union_with(&mut self, other: &Region) {
         self.rects.extend_from_slice(&other.rects);
     }
 
