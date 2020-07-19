@@ -63,7 +63,7 @@ use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyState};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
-use crate::scale::{Scale, Scalable, ScaledArea};
+use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 /// The platform target DPI.
@@ -1273,21 +1273,7 @@ impl WindowHandle {
 
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(w) = self.state.upgrade() {
-<<<<<<< HEAD
-            let rect = util::rect_to_recti(rect.to_px(w.scale.get()).expand());
-            let hwnd = w.hwnd.get();
-            unsafe {
-                if InvalidateRect(hwnd, &rect, FALSE) == FALSE {
-                    log::warn!(
-                        "InvalidateRect failed: {}",
-                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                    );
-                }
-            }
-=======
-            // TODO: round up
             w.invalid.borrow_mut().add_rect(rect);
->>>>>>> f96a771... More-or-less working, but missing x11.
         }
         self.request_anim_frame();
     }

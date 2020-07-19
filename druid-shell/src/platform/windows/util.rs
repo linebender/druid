@@ -42,7 +42,7 @@ use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
 
 use crate::kurbo::Rect;
 use crate::region::Region;
-use crate::scale::Scale;
+use crate::scale::{Scalable, Scale};
 
 use super::error::Error;
 
@@ -135,7 +135,7 @@ pub(crate) fn region_to_rectis(region: &Region, scale: Scale) -> Vec<RECT> {
     region
         .rects()
         .iter()
-        .map(|r| rect_to_recti(scale.to_px(r).expand()))
+        .map(|r| rect_to_recti(r.to_px(scale).expand()))
         .collect()
 }
 
