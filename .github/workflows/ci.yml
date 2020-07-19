@@ -28,6 +28,7 @@ jobs:
   test-stable:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     name: cargo clippy+test
@@ -131,6 +132,7 @@ jobs:
   test-stable-wasm:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
 
@@ -233,6 +235,7 @@ jobs:
   test-nightly:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     name: cargo test nightly
@@ -297,6 +300,7 @@ jobs:
     name: Docs
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     steps:
