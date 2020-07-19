@@ -9,15 +9,15 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Added
 
-- Added ctrl/shift key support to textbox. ([#1063] by [@vkahl])
+- Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
+- Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
+- `TextBox` now supports ctrl and shift hotkeys. ([#1076] by [@vkahl])
 
 ### Changed
 
-- `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
-- Major rework of keyboard event handling ([#1049] by [@raphlinus])
+- Major rework of keyboard event handling. ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
-- Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
 
 ### Deprecated
 
@@ -31,7 +31,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - macOS: Timers not firing during modal loop. ([#1028] by [@xStrom])
 - GTK: Directory selection now properly ignores file filters. ([#957] by [@xStrom])
 - GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
-- Fix derive `Data` when type param bounds are defined ([#1058] by [@chris-zen])
+- `Data` derive now works when type param bounds are defined. ([#1058] by [@chris-zen])
 - Ensure that `update` is called after all commands. ([#1062] by [@jneem])
 - X11: Support idle callbacks. ([#1072] by [@jneem])
 - GTK: Don't interrupt `KeyEvent.repeat` when releasing another key. ([#1081] by [@raphlinus])
@@ -53,7 +53,7 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Maintenance
 
 - Standardized web targeting terminology. ([#1013] by [@xStrom])
-- X11: Ported the X11 backend to `x11rb`. ([#1025] by [@jneem])
+- X11: Ported the X11 backend to [`x11rb`](https://github.com/psychon/x11rb). ([#1025] by [@jneem])
 
 ### Outside News
 
@@ -357,9 +357,10 @@ Last release without a changelog :(
 [#1050]: https://github.com/linebender/druid/pull/1050
 [#1054]: https://github.com/linebender/druid/pull/1054
 [#1058]: https://github.com/linebender/druid/pull/1058
-[#1075]: https://github.com/linebender/druid/pull/1075
 [#1062]: https://github.com/linebender/druid/pull/1062
 [#1072]: https://github.com/linebender/druid/pull/1072
+[#1075]: https://github.com/linebender/druid/pull/1075
+[#1076]: https://github.com/linebender/druid/pull/1076
 [#1081]: https://github.com/linebender/druid/pull/1081
 [#1097]: https://github.com/linebender/druid/pull/1097
 
