@@ -115,8 +115,10 @@ impl Timer {
 }
 
 impl Ord for Timer {
+    /// Ordering is so that earliest deadline sorts first
+    // "Earliest deadline first" that a std::collections::BinaryHeap will have the earliest timer
+    // at its head, which is just what is needed for timer management.
     fn cmp(&self, other: &Self) -> Ordering {
-        // Ordering is so that earliest deadline sorts first
         self.deadline.cmp(&other.deadline).reverse()
     }
 }
