@@ -565,8 +565,8 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Optio
         };
         // ...and convert the deadline into an argument for poll()
         let poll_timeout = if let Some(deadline) = deadline {
-            if deadline < now {
-                0
+            if deadline <= now {
+                break;
             } else {
                 let millis = c_int::try_from(deadline.duration_since(now).as_millis())
                     .unwrap_or(c_int::max_value() - 1);
