@@ -568,8 +568,11 @@ fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Optio
             if deadline < now {
                 0
             } else {
-                c_int::try_from(deadline.duration_since(now).as_millis())
-                    .unwrap_or(c_int::max_value())
+                let millis = c_int::try_from(deadline.duration_since(now).as_millis())
+                    .unwrap_or(c_int::max_value() - 1);
+                // The above .as_millis() rounds down. This means we would wake up before the
+                // deadline is reached. Add one to 'simulate' rounding up instead.
+                millis + 1
             }
         } else {
             // No timeout
