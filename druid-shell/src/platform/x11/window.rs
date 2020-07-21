@@ -17,9 +17,11 @@
 use std::any::Any;
 use std::cell::RefCell;
 use std::convert::{TryFrom, TryInto};
+use std::collections::BinaryHeap;
 use std::os::unix::io::RawFd;
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
@@ -47,7 +49,7 @@ use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use super::application::Application;
 use super::keycodes;
 use super::menu::Menu;
-use super::util;
+use super::util::{self, Timer};
 
 /// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
 /// is used to interoperate with cairo.
@@ -296,6 +298,7 @@ impl WindowBuilder {
             cairo_surface,
             atoms,
             state,
+            timer_queue: Mutex::new(BinaryHeap::new()),
             idle_queue: Arc::new(Mutex::new(Vec::new())),
             idle_pipe: self.app.idle_pipe(),
             present_data: RefCell::new(present_data),
@@ -350,6 +353,8 @@ pub(crate) struct Window {
     cairo_surface: RefCell<XCBSurface>,
     atoms: WindowAtoms,
     state: RefCell<WindowState>,
+    /// Timers, sorted by "earliest deadline first"
+    timer_queue: Mutex<BinaryHeap<Timer>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     // Writing to this wakes up the event loop, so that it can run idle handlers.
     idle_pipe: RawFd,
@@ -1004,6 +1009,27 @@ impl Window {
             }
         }
     }
+
+    pub(crate) fn next_timeout(&self) -> Option<Instant> {
+        if let Some(timer) = self.timer_queue.lock().unwrap().peek() {
+            Some(timer.deadline())
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn run_timers(&self, now: Instant) {
+        while let Some(deadline) = self.next_timeout() {
+            if deadline > now {
+                break;
+            }
+            // Remove the timer and get the token
+            let token = self.timer_queue.lock().unwrap().pop().unwrap().token();
+            if let Ok(mut handler_borrow) = self.handler.try_borrow_mut() {
+                handler_borrow.timer(token);
+            }
+        }
+    }
 }
 
 impl Buffers {
@@ -1339,12 +1365,14 @@ impl WindowHandle {
         Text::new()
     }
 
-    pub fn request_timer(&self, _deadline: std::time::Instant) -> TimerToken {
-        // TODO(x11/timers): implement WindowHandle::request_timer
-        //     This one might be tricky, since there's not really any timers to hook into in X11.
-        //     Might have to code up our own Timer struct, running in its own thread?
-        log::warn!("WindowHandle::resizeable is currently unimplemented for X11 platforms.");
-        TimerToken::INVALID
+    pub fn request_timer(&self, deadline: Instant) -> TimerToken {
+        if let Some(w) = self.window.upgrade() {
+            let timer = Timer::new(deadline);
+            w.timer_queue.lock().unwrap().push(timer);
+            timer.token()
+        } else {
+            TimerToken::INVALID
+        }
     }
 
     pub fn set_cursor(&mut self, _cursor: &Cursor) {
