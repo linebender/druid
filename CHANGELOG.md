@@ -39,6 +39,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - X11: Support timers. ([#1096] by [@psychon])
 - `EnvScope` now also updates the `Env` during `Widget::lifecycle`. ([#1100] by [@finnerale])
 - `WidgetExt::debug_widget_id` and `debug_paint_layout` now also apply to the widget they are called on. ([#1100] by [@finnerale])
+- X11: Fix X11 errors caused by destroyed windows ([#1103] by [@jneem])
 
 ### Visual
 
@@ -368,6 +369,7 @@ Last release without a changelog :(
 [#1096]: https://github.com/linebender/druid/pull/1096
 [#1097]: https://github.com/linebender/druid/pull/1097
 [#1100]: https://github.com/linebender/druid/pull/1100
+[#1103]: https://github.com/linebender/druid/pull/1103
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
