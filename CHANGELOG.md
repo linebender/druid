@@ -13,6 +13,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
 - `TextBox` now supports ctrl and shift hotkeys. ([#1076] by [@vkahl])
+- Added selection text color to textbox. ([#1093] by [@sysint64])
 
 ### Changed
 
@@ -254,6 +255,7 @@ Last release without a changelog :(
 [@chris-zen]: https://github.com/chris-zen
 [@vkahl]: https://github.com/vkahl
 [@psychon]: https://github.com/psychon
+[@sysint64]: https://github.com/sysint64
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -369,7 +371,9 @@ Last release without a changelog :(
 [#1081]: https://github.com/linebender/druid/pull/1081
 [#1096]: https://github.com/linebender/druid/pull/1096
 [#1097]: https://github.com/linebender/druid/pull/1097
+[#1093]: https://github.com/linebender/druid/pull/1093
 [#1100]: https://github.com/linebender/druid/pull/1100
+
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

@@ -399,6 +399,7 @@ impl Widget<String> for TextBox {
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let selection_color = env.get(theme::SELECTION_COLOR);
+        let selection_text_color = env.get(theme::SELECTION_TEXT_COLOR);
         let text_color = env.get(theme::LABEL_COLOR);
         let placeholder_color = env.get(theme::PLACEHOLDER_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
@@ -429,6 +430,17 @@ impl Widget<String> for TextBox {
             // Shift everything inside the clip by the hscroll_offset
             rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
 
+            // Layout, measure, and draw text
+            let text_height = font_size * 0.8;
+            let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
+            let color = if data.is_empty() {
+                &placeholder_color
+            } else {
+                &text_color
+            };
+
+            rc.draw_text(&text_layout, text_pos, color);
+
             // Draw selection rect
             if !self.selection.is_caret() {
                 let (left, right) = (self.selection.min(), self.selection.max());
@@ -445,18 +457,11 @@ impl Widget<String> for TextBox {
                     1.,
                 );
                 rc.fill(selection_rect, &selection_color);
+
+                // Draw selection text
+                rc.clip(selection_rect);
+                rc.draw_text(&text_layout, text_pos, &selection_text_color);
             }
-
-            // Layout, measure, and draw text
-            let text_height = font_size * 0.8;
-            let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
-            let color = if data.is_empty() {
-                &placeholder_color
-            } else {
-                &text_color
-            };
-
-            rc.draw_text(&text_layout, text_pos, color);
 
             // Paint the cursor if focused and there's no selection
             if is_focused && self.cursor_on && self.selection.is_caret() {
