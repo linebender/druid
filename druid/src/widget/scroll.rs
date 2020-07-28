@@ -17,7 +17,7 @@
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::{
     scroll_component::*, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintCtx, TimerToken, UpdateCtx, Widget, WidgetPod,
+    LifeCycleCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A container that scrolls its contents.
@@ -96,26 +96,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        match event {
-            LifeCycle::AnimFrame(interval) => {
-                // Guard by the timer id being invalid, otherwise the scroll bars would fade
-                // immediately if some other widgeet started animating.
-                if self.scroll_component.scrollbars.timer_id == TimerToken::INVALID {
-                    // Animate scroll bars opacity
-                    let diff = 2.0 * (*interval as f64) * 1e-9;
-                    self.scroll_component.scrollbars.opacity -= diff;
-                    if self.scroll_component.scrollbars.opacity > 0.0 {
-                        ctx.request_anim_frame();
-                    }
-                }
-            }
-            // Show the scrollbars any time our size changes
-            LifeCycle::Size(_) => self
-                .scroll_component
-                .reset_scrollbar_fade(|d| ctx.request_timer(d), &env),
-            _ => (),
+        if !self.scroll_component.filter_lifecycle(ctx, event, env) {
+            self.child.lifecycle(ctx, event, data, env);
         }
-        self.child.lifecycle(ctx, event, data, env)
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {

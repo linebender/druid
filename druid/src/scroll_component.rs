@@ -20,7 +20,10 @@ use std::time::Duration;
 
 use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
 use crate::theme;
-use crate::{BoxConstraints, Env, Event, EventCtx, PaintCtx, Region, RenderContext, TimerToken};
+use crate::{
+    BoxConstraints, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext,
+    TimerToken,
+};
 
 pub const SCROLLBAR_MIN_SIZE: f64 = 45.0;
 
@@ -375,6 +378,38 @@ impl ScrollComponent {
                 }
             }
         }
+    }
+
+    pub fn filter_lifecycle(
+        &mut self,
+        ctx: &mut LifeCycleCtx,
+        event: &LifeCycle,
+        env: &Env,
+    ) -> bool {
+        match event {
+            LifeCycle::AnimFrame(interval) => {
+                // Guard by the timer id being invalid, otherwise the scroll bars would fade
+                // immediately if some other widget started animating.
+                if self.scrollbars.timer_id == TimerToken::INVALID {
+                    // Animate scroll bars opacity
+                    let diff = 2.0 * (*interval as f64) * 1e-9;
+                    self.scrollbars.opacity -= diff;
+                    if self.scrollbars.opacity > 0.0 {
+                        ctx.request_anim_frame();
+                    }
+
+                    return true;
+                }
+            }
+            // Show the scrollbars any time our size changes
+            LifeCycle::Size(_) => {
+                self.reset_scrollbar_fade(|d| ctx.request_timer(d), &env);
+                return true;
+            }
+            _ => (),
+        }
+
+        false
     }
 
     pub fn draw_content(
