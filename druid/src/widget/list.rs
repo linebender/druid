@@ -23,14 +23,15 @@ use crate::im::Vector;
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetPod,
+    scroll_component::*, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
+    LifeCycleCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A list widget for a variable-size collection of items.
 pub struct List<T> {
     closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
+    scroll_component: ScrollComponent,
 }
 
 impl<T: Data> List<T> {
@@ -40,6 +41,7 @@ impl<T: Data> List<T> {
         List {
             closure: Box::new(move || Box::new(closure())),
             children: Vec::new(),
+            scroll_component: ScrollComponent::new(),
         }
     }
 
@@ -195,27 +197,40 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<Vec<T>>) {
 
 impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        let mut children = self.children.iter_mut();
-        data.for_each_mut(|child_data, _| {
-            if let Some(child) = children.next() {
-                child.event(ctx, event, child_data, env);
-            }
-        });
+        if !self.scroll_component.filter_event(ctx, event, env) {
+            let viewport = Rect::from_origin_size(Point::ORIGIN, ctx.size());
+            let scroll_offset = self.scroll_component.scroll_offset;
+            let mut children = self.children.iter_mut();
+
+            data.for_each_mut(|child_data, _| {
+                if let Some(child) = children.next() {
+                    let force_event = child.is_hot() || child.is_active();
+                    let child_event = event.transform_scroll(scroll_offset, viewport, force_event);
+                    if let Some(child_event) = child_event {
+                        child.event(ctx, &child_event, child_data, env);
+                    }
+                }
+            });
+        }
+
+        self.scroll_component.handle_scroll(ctx, event, env);
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        if let LifeCycle::WidgetAdded = event {
-            if self.update_child_count(data, env) {
-                ctx.children_changed();
+        if !self.scroll_component.filter_lifecycle(ctx, event, env) {
+            if let LifeCycle::WidgetAdded = event {
+                if self.update_child_count(data, env) {
+                    ctx.children_changed();
+                }
             }
-        }
 
-        let mut children = self.children.iter_mut();
-        data.for_each(|child_data, _| {
-            if let Some(child) = children.next() {
-                child.lifecycle(ctx, event, child_data, env);
-            }
-        });
+            let mut children = self.children.iter_mut();
+            data.for_each(|child_data, _| {
+                if let Some(child) = children.next() {
+                    child.lifecycle(ctx, event, child_data, env);
+                }
+            });
+        }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
@@ -259,6 +274,8 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
             y += child_size.height;
         });
 
+        self.scroll_component.content_size = Size::new(width, y);
+
         let my_size = bc.constrain(Size::new(width, y));
         let insets = paint_rect - Rect::ZERO.with_size(my_size);
         ctx.set_paint_insets(insets);
@@ -266,11 +283,16 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let mut children = self.children.iter_mut();
-        data.for_each(|child_data, _| {
-            if let Some(child) = children.next() {
-                child.paint(ctx, child_data, env);
-            }
-        });
+        self.scroll_component
+            .paint_content(ctx, env, |visible, ctx| {
+                let mut children = self.children.iter_mut();
+                data.for_each(|child_data, _| {
+                    if let Some(child) = children.next() {
+                        ctx.with_child_ctx(visible.clone(), |ctx| {
+                            child.paint(ctx, child_data, env)
+                        });
+                    }
+                })
+            });
     }
 }

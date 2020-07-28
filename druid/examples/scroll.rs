@@ -18,7 +18,7 @@
 use druid::kurbo::Circle;
 use druid::piet::RadialGradient;
 use druid::widget::prelude::*;
-use druid::widget::{Flex, Padding, Scroll};
+use druid::widget::{AbsoluteScroll, Flex, Padding};
 use druid::{AppLauncher, Data, Insets, LocalizedString, Rect, WindowDesc};
 
 pub fn main() {
@@ -35,7 +35,7 @@ fn build_widget() -> impl Widget<u32> {
     for i in 0..30 {
         col.add_child(Padding::new(3.0, OverPainter(i)));
     }
-    Scroll::new(col)
+    AbsoluteScroll::new(col)
 }
 
 /// A widget that paints outside of its bounds.

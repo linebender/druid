@@ -26,36 +26,21 @@ use crate::{
 /// when the child's bounds are larger than the viewport.
 ///
 /// The child is laid out with completely unconstrained layout bounds.
-pub struct Scroll<T, W> {
+pub struct AbsoluteScroll<T, W> {
     child: WidgetPod<T, W>,
     scroll_component: ScrollComponent,
 }
 
-impl<T, W: Widget<T>> Scroll<T, W> {
+impl<T, W: Widget<T>> AbsoluteScroll<T, W> {
     /// Create a new scroll container.
     ///
     /// This method will allow scrolling in all directions if child's bounds
-    /// are larger than the viewport. Use [vertical](#method.vertical)
-    /// and [horizontal](#method.horizontal) methods to limit scroll behavior.
-    pub fn new(child: W) -> Scroll<T, W> {
-        Scroll {
+    /// are larger than the viewport.
+    pub fn new(child: W) -> AbsoluteScroll<T, W> {
+        AbsoluteScroll {
             child: WidgetPod::new(child),
             scroll_component: ScrollComponent::new(),
         }
-    }
-
-    /// Limit scroll behavior to allow only vertical scrolling (Y-axis).
-    /// The child is laid out with constrained width and infinite height.
-    pub fn vertical(mut self) -> Self {
-        self.scroll_component.direction = ScrollDirection::Vertical;
-        self
-    }
-
-    /// Limit scroll behavior to allow only horizontal scrolling (X-axis).
-    /// The child is laid out with constrained height and infinite width.
-    pub fn horizontal(mut self) -> Self {
-        self.scroll_component.direction = ScrollDirection::Horizontal;
-        self
     }
 
     /// Returns a reference to the child widget.
@@ -79,7 +64,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     }
 }
 
-impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
+impl<T: Data, W: Widget<T>> Widget<T> for AbsoluteScroll<T, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if !self.scroll_component.filter_event(ctx, event, env) {
             let viewport = Rect::from_origin_size(Point::ORIGIN, ctx.size());
@@ -122,7 +107,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.scroll_component
-            .draw_content(ctx, env, |visible, ctx| {
+            .paint_content(ctx, env, |visible, ctx| {
                 ctx.with_child_ctx(visible, |ctx| self.child.paint_raw(ctx, data, env));
             });
     }

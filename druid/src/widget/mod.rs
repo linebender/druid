@@ -14,6 +14,7 @@
 
 //! Common widgets.
 
+mod absolute_scroll;
 mod align;
 mod button;
 mod checkbox;
@@ -34,7 +35,6 @@ mod painter;
 mod parse;
 mod progress_bar;
 mod radio;
-mod scroll;
 mod sized_box;
 mod slider;
 mod spinner;
@@ -51,6 +51,7 @@ mod widget;
 mod widget_ext;
 
 pub use self::image::{Image, ImageData};
+pub use absolute_scroll::AbsoluteScroll;
 pub use align::Align;
 pub use button::Button;
 pub use checkbox::Checkbox;
@@ -69,7 +70,6 @@ pub use painter::{BackgroundBrush, Painter};
 pub use parse::Parse;
 pub use progress_bar::ProgressBar;
 pub use radio::{Radio, RadioGroup};
-pub use scroll::Scroll;
 pub use sized_box::SizedBox;
 pub use slider::Slider;
 pub use spinner::Spinner;

@@ -16,7 +16,7 @@
 
 use druid::im::{vector, Vector};
 use druid::lens::{self, LensExt};
-use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, Scroll};
+use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List};
 use druid::{
     AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc,
 };
@@ -64,22 +64,21 @@ fn ui_builder() -> impl Widget<AppData> {
 
     // Build a simple list
     lists.add_flex_child(
-        Scroll::new(List::new(|| {
+        List::new(|| {
             Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
                 .align_vertical(UnitPoint::LEFT)
                 .padding(10.0)
                 .expand()
                 .height(50.0)
                 .background(Color::rgb(0.5, 0.5, 0.5))
-        }))
-        .vertical()
+        })
         .lens(AppData::left),
         1.0,
     );
 
     // Build a list with shared data
     lists.add_flex_child(
-        Scroll::new(List::new(|| {
+        List::new(|| {
             Flex::row()
                 .with_child(
                     Label::new(|(_, item): &(Vector<u32>, u32), _env: &_| {
@@ -101,8 +100,7 @@ fn ui_builder() -> impl Widget<AppData> {
                 .padding(10.0)
                 .background(Color::rgb(0.5, 0.0, 0.5))
                 .fix_height(50.0)
-        }))
-        .vertical()
+        })
         .lens(lens::Id.map(
             // Expose shared data with children data
             |d: &AppData| (d.right.clone(), d.right.clone()),

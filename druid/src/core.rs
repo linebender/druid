@@ -951,7 +951,7 @@ impl WidgetState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::widget::{Flex, Scroll, Split, TextBox};
+    use crate::widget::{AbsoluteScroll, Flex, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
 
     const ID_1: WidgetId = WidgetId::reserved(0);
@@ -966,7 +966,7 @@ mod tests {
                     .with_child(TextBox::new().with_id(ID_1).parse())
                     .with_child(TextBox::new().with_id(ID_2).parse())
                     .with_child(TextBox::new().with_id(ID_3).parse()),
-                Scroll::new(TextBox::new().parse()),
+                AbsoluteScroll::new(TextBox::new().parse()),
             )
         }
 

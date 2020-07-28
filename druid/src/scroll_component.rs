@@ -439,8 +439,8 @@ impl ScrollComponent {
         false
     }
 
-    /// Helper function to draw a closure at the correct offset with clipping and scrollbars
-    pub fn draw_content(
+    /// Helper function to paint a closure at the correct offset with clipping and scrollbars
+    pub fn paint_content(
         self,
         ctx: &mut PaintCtx,
         env: &Env,
