@@ -153,6 +153,7 @@ pub mod lens;
 mod localization;
 mod menu;
 mod mouse;
+pub mod scroll_component;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests;
