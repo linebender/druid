@@ -20,7 +20,7 @@ use std::time::Duration;
 
 use crate::kurbo::{Point, Rect, RoundedRect, Size, Vec2};
 use crate::theme;
-use crate::{BoxConstraints, Env, PaintCtx, RenderContext, TimerToken};
+use crate::{BoxConstraints, Env, Event, EventCtx, PaintCtx, RenderContext, TimerToken};
 
 pub const SCROLLBAR_MIN_SIZE: f64 = 45.0;
 
@@ -254,6 +254,122 @@ impl ScrollComponent {
             bounds.contains(pos)
         } else {
             false
+        }
+    }
+
+    pub fn filter_event(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) -> bool {
+        let size = ctx.size();
+        let viewport = Rect::from_origin_size(Point::ORIGIN, size);
+
+        let scrollbar_is_hovered = match event {
+            Event::MouseMove(e) | Event::MouseUp(e) | Event::MouseDown(e) => {
+                let offset_pos = e.pos + self.scroll_offset;
+                self.point_hits_vertical_bar(viewport, offset_pos, env)
+                    || self.point_hits_horizontal_bar(viewport, offset_pos, env)
+            }
+            _ => false,
+        };
+
+        if self.scrollbars.are_held() {
+            // if we're dragging a scrollbar
+            match event {
+                Event::MouseMove(event) => {
+                    match self.scrollbars.held {
+                        BarHeldState::Vertical(offset) => {
+                            let scale_y = viewport.height() / self.content_size.height;
+                            let bounds = self.calc_vertical_bar_bounds(viewport, env);
+                            let mouse_y = event.pos.y + self.scroll_offset.y;
+                            let delta = mouse_y - bounds.y0 - offset;
+                            self.scroll(Vec2::new(0f64, (delta / scale_y).ceil()), size);
+                        }
+                        BarHeldState::Horizontal(offset) => {
+                            let scale_x = viewport.width() / self.content_size.width;
+                            let bounds = self.calc_horizontal_bar_bounds(viewport, env);
+                            let mouse_x = event.pos.x + self.scroll_offset.x;
+                            let delta = mouse_x - bounds.x0 - offset;
+                            self.scroll(Vec2::new((delta / scale_x).ceil(), 0f64), size);
+                        }
+                        _ => (),
+                    }
+                    ctx.request_paint();
+                }
+                Event::MouseUp(_) => {
+                    self.scrollbars.held = BarHeldState::None;
+                    ctx.set_active(false);
+
+                    if !scrollbar_is_hovered {
+                        self.scrollbars.hovered = BarHoveredState::None;
+                        self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
+                    }
+                }
+                _ => (), // other events are a noop
+            }
+        } else if scrollbar_is_hovered {
+            // if we're over a scrollbar but not dragging
+            match event {
+                Event::MouseMove(event) => {
+                    let offset_pos = event.pos + self.scroll_offset;
+                    if self.point_hits_vertical_bar(viewport, offset_pos, env) {
+                        self.scrollbars.hovered = BarHoveredState::Vertical;
+                    } else {
+                        self.scrollbars.hovered = BarHoveredState::Horizontal;
+                    }
+
+                    self.scrollbars.opacity = env.get(theme::SCROLLBAR_MAX_OPACITY);
+                    self.scrollbars.timer_id = TimerToken::INVALID; // Cancel any fade out in progress
+                    ctx.request_paint();
+                }
+                Event::MouseDown(event) => {
+                    let pos = event.pos + self.scroll_offset;
+
+                    if self.point_hits_vertical_bar(viewport, pos, env) {
+                        ctx.set_active(true);
+                        self.scrollbars.held = BarHeldState::Vertical(
+                            pos.y - self.calc_vertical_bar_bounds(viewport, env).y0,
+                        );
+                    } else if self.point_hits_horizontal_bar(viewport, pos, env) {
+                        ctx.set_active(true);
+                        self.scrollbars.held = BarHeldState::Horizontal(
+                            pos.x - self.calc_horizontal_bar_bounds(viewport, env).x0,
+                        );
+                    }
+                }
+                // if the mouse was downed elsewhere, moved over a scroll bar and released: noop.
+                Event::MouseUp(_) => (),
+                _ => unreachable!(),
+            }
+        } else {
+            match event {
+                Event::MouseMove(_) => {
+                    // if we have just stopped hovering
+                    if self.scrollbars.hovered.is_hovered() && !scrollbar_is_hovered {
+                        self.scrollbars.hovered = BarHoveredState::None;
+                        self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
+                    }
+                }
+                Event::Timer(id) if *id == self.scrollbars.timer_id => {
+                    // Schedule scroll bars animation
+                    ctx.request_anim_frame();
+                    self.scrollbars.timer_id = TimerToken::INVALID;
+                }
+                _ => (),
+            }
+
+            return false;
+        }
+
+        true
+    }
+
+    pub fn check_and_scroll(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) {
+        if !ctx.is_handled() {
+            if let Event::Wheel(mouse) = event {
+                if self.scroll(mouse.wheel_delta, ctx.size()) {
+                    ctx.request_paint();
+                    ctx.set_handled();
+                    self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
+                }
+            }
         }
     }
 }
