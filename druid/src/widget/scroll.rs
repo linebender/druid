@@ -92,7 +92,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             };
         }
 
-        self.scroll_component.check_and_scroll(ctx, event, env);
+        self.scroll_component.handle_scroll(ctx, event, env);
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {

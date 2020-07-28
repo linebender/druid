@@ -152,7 +152,14 @@ impl ScrollComponent {
         self.scrollbars.timer_id = request_timer(deadline);
     }
 
+    /// Calculates the paint rect of the vertical scrollbar.
+    ///
+    /// Returns `Rect::ZERO` if the vertical scrollbar is not visible.
     pub fn calc_vertical_bar_bounds(&self, viewport: Rect, env: &Env) -> Rect {
+        if viewport.height() >= self.content_size.height {
+            return Rect::ZERO;
+        }
+
         let bar_width = env.get(theme::SCROLLBAR_WIDTH);
         let bar_pad = env.get(theme::SCROLLBAR_PAD);
 
@@ -178,7 +185,14 @@ impl ScrollComponent {
         Rect::new(x0, y0, x1, y1)
     }
 
+    /// Calculates the paint rect of the horizontal scrollbar.
+    ///
+    /// Returns `Rect::ZERO` if the horizontal scrollbar is not visible.
     pub fn calc_horizontal_bar_bounds(&self, viewport: Rect, env: &Env) -> Rect {
+        if viewport.width() >= self.content_size.width {
+            return Rect::ZERO;
+        }
+
         let bar_width = env.get(theme::SCROLLBAR_WIDTH);
         let bar_pad = env.get(theme::SCROLLBAR_PAD);
 
@@ -242,6 +256,9 @@ impl ScrollComponent {
         }
     }
 
+    /// Tests if the specified point overlaps the vertical scrollbar
+    ///
+    /// Returns false if the vertical scrollbar is not visible
     pub fn point_hits_vertical_bar(&self, viewport: Rect, pos: Point, env: &Env) -> bool {
         if viewport.height() < self.content_size.height {
             // Stretch hitbox to edge of widget
@@ -253,6 +270,9 @@ impl ScrollComponent {
         }
     }
 
+    /// Tests if the specified point overlaps the horizontal scrollbar
+    ///
+    /// Returns false if the horizontal scrollbar is not visible
     pub fn point_hits_horizontal_bar(&self, viewport: Rect, pos: Point, env: &Env) -> bool {
         if viewport.width() < self.content_size.width {
             // Stretch hitbox to edge of widget
@@ -264,6 +284,9 @@ impl ScrollComponent {
         }
     }
 
+    /// Checks if the event applies to the scroll behavior, uses it and returns true if so
+    ///
+    /// Returns false if the event was not used
     pub fn filter_event(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) -> bool {
         let size = ctx.size();
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
@@ -368,7 +391,8 @@ impl ScrollComponent {
         true
     }
 
-    pub fn check_and_scroll(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) {
+    /// Applies mousewheel scrolling if the event has not already been handled
+    pub fn handle_scroll(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) {
         if !ctx.is_handled() {
             if let Event::Wheel(mouse) = event {
                 if self.scroll(mouse.wheel_delta, ctx.size()) {
@@ -380,6 +404,9 @@ impl ScrollComponent {
         }
     }
 
+    /// Checks if the lifecycle event applies to the scroll behavior, uses it and returns true if so
+    ///
+    /// Returns false if the lifecycle event was not used
     pub fn filter_lifecycle(
         &mut self,
         ctx: &mut LifeCycleCtx,
@@ -412,6 +439,7 @@ impl ScrollComponent {
         false
     }
 
+    /// Helper function to draw a closure at the correct offset with clipping and scrollbars
     pub fn draw_content(
         self,
         ctx: &mut PaintCtx,
