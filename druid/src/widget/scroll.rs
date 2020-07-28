@@ -14,10 +14,10 @@
 
 //! A container that scrolls its contents.
 
-use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
+use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::{
     scroll_component::*, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintCtx, RenderContext, TimerToken, UpdateCtx, Widget, WidgetPod,
+    LifeCycleCtx, PaintCtx, TimerToken, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A container that scrolls its contents.
@@ -138,16 +138,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let viewport = ctx.size().to_rect();
-        ctx.with_save(|ctx| {
-            ctx.clip(viewport);
-            ctx.transform(Affine::translate(-self.scroll_component.scroll_offset));
-
-            let visible = ctx.region().to_rect() + self.scroll_component.scroll_offset;
-            ctx.with_child_ctx(visible, |ctx| self.child.paint_raw(ctx, data, env));
-
-            self.scroll_component.draw_bars(ctx, viewport, env);
-        });
+        self.scroll_component
+            .draw_content(ctx, env, |visible, ctx| {
+                ctx.with_child_ctx(visible, |ctx| self.child.paint_raw(ctx, data, env));
+            });
     }
 }
 

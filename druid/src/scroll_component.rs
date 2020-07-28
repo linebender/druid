@@ -18,13 +18,13 @@
 use std::f64::INFINITY;
 use std::time::Duration;
 
-use crate::kurbo::{Point, Rect, RoundedRect, Size, Vec2};
+use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
 use crate::theme;
-use crate::{BoxConstraints, Env, Event, EventCtx, PaintCtx, RenderContext, TimerToken};
+use crate::{BoxConstraints, Env, Event, EventCtx, PaintCtx, Region, RenderContext, TimerToken};
 
 pub const SCROLLBAR_MIN_SIZE: f64 = 45.0;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum ScrollDirection {
     Horizontal,
     Vertical,
@@ -45,6 +45,7 @@ impl ScrollDirection {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum BarHoveredState {
     None,
     Vertical,
@@ -60,6 +61,7 @@ impl BarHoveredState {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum BarHeldState {
     None,
     /// Vertical scrollbar is being dragged. Contains an `f64` with
@@ -70,6 +72,7 @@ pub enum BarHeldState {
     Horizontal(f64),
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct ScrollbarsState {
     pub opacity: f64,
     pub timer_id: TimerToken,
@@ -98,6 +101,7 @@ impl ScrollbarsState {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct ScrollComponent {
     pub content_size: Size,
     pub scroll_offset: Vec2,
@@ -371,5 +375,23 @@ impl ScrollComponent {
                 }
             }
         }
+    }
+
+    pub fn draw_content(
+        self,
+        ctx: &mut PaintCtx,
+        env: &Env,
+        f: impl FnOnce(Region, &mut PaintCtx),
+    ) {
+        let viewport = ctx.size().to_rect();
+        ctx.with_save(|ctx| {
+            ctx.clip(viewport);
+            ctx.transform(Affine::translate(-self.scroll_offset));
+
+            let visible = ctx.region().to_rect() + self.scroll_offset;
+            f(visible.into(), ctx);
+
+            self.draw_bars(ctx, viewport, env);
+        });
     }
 }
