@@ -14,12 +14,15 @@ You can find its changes [documented below](#060---2020-06-01).
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
 - `TextBox` now supports ctrl and shift hotkeys. ([#1076] by [@vkahl])
 - Added selection text color to textbox. ([#1093] by [@sysint64])
+- `scroll_component` for ease of adding consistant, customized, scrolling behavior to a widget. ([#1107] by [@ForLoveOfCats])
 
 ### Changed
 
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 - Major rework of keyboard event handling. ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
+- `Scroll` renamed to `AbsoluteScroll`. ([#1107] by [@ForLoveOfCats])
+- `List` handles its own scrolling on either the vertical or horizontal axis. ([#1107] by [@ForLoveOfCats])
 
 ### Deprecated
 
@@ -27,6 +30,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 - `Scale::from_dpi`, `Scale::dpi_x`, and `Scale::dpi_y`. ([#1042] by [@xStrom])
 - `Scale::to_px` and `Scale::to_dp`. ([#1075] by [@ForLoveOfCats])
+- Specific axis scrolling behavior from `AbsoluteScroll`. ([#1107] by [@ForLoveOfCats])
 
 ### Fixed
 
@@ -375,6 +379,7 @@ Last release without a changelog :(
 [#1093]: https://github.com/linebender/druid/pull/1093
 [#1100]: https://github.com/linebender/druid/pull/1100
 [#1103]: https://github.com/linebender/druid/pull/1103
+[#1107]: https://github.com/linebender/druid/pull/1107
 
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
