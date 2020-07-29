@@ -18,7 +18,7 @@ use std::f64::INFINITY;
 use std::time::Duration;
 
 use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
-use crate::theme;
+use crate::{theme, Selector};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
     RenderContext, TimerToken, UpdateCtx, Widget, WidgetPod,
@@ -100,6 +100,8 @@ impl ScrollbarsState {
     }
 }
 
+type ScrollHandler = dyn Fn(&mut EventCtx, &Vec2) -> ();
+
 /// A container that scrolls its contents.
 ///
 /// This container holds a single child, and uses the wheel to scroll it
@@ -112,7 +114,41 @@ pub struct Scroll<T, W> {
     scroll_offset: Vec2,
     direction: ScrollDirection,
     scrollbars: ScrollbarsState,
+    scroll_handlers: Vec<Box<ScrollHandler>>,
 }
+
+#[derive(Debug)]
+pub struct ScrollTo {
+    x: Option<f64>,
+    y: Option<f64>,
+}
+
+impl ScrollTo {
+    pub fn new(x: impl Into<Option<f64>>, y: impl Into<Option<f64>>) -> ScrollTo {
+        ScrollTo {
+            x: x.into(),
+            y: y.into(),
+        }
+    }
+
+    pub fn x(x: f64) -> ScrollTo {
+        ScrollTo::new(x, None)
+    }
+
+    pub fn y(y: f64) -> ScrollTo {
+        ScrollTo::new(None, y)
+    }
+
+    pub fn origin() -> ScrollTo {
+        Self::new(0., 0.)
+    }
+
+    pub fn has_effect(&self) -> bool {
+        self.x.is_some() && self.y.is_some()
+    }
+}
+
+pub const SCROLL_TO: Selector<ScrollTo> = Selector::new("druid-builtin.scroll.scroll_to");
 
 impl<T, W: Widget<T>> Scroll<T, W> {
     /// Create a new scroll container.
@@ -127,7 +163,15 @@ impl<T, W: Widget<T>> Scroll<T, W> {
             scroll_offset: Vec2::new(0.0, 0.0),
             direction: ScrollDirection::All,
             scrollbars: ScrollbarsState::default(),
+            scroll_handlers: Vec::new(),
         }
+    }
+
+    pub fn add_scroll_handler(
+        &mut self,
+        scroll_handler: impl Fn(&mut EventCtx, &Vec2) -> () + 'static,
+    ) {
+        self.scroll_handlers.push(Box::new(scroll_handler));
     }
 
     /// Limit scroll behavior to allow only vertical scrolling (Y-axis).
@@ -162,13 +206,21 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// Update the scroll.
     ///
     /// Returns `true` if the scroll has been updated.
-    pub fn scroll(&mut self, delta: Vec2, size: Size) -> bool {
-        let mut offset = self.scroll_offset + delta;
-        offset.x = offset.x.min(self.child_size.width - size.width).max(0.0);
-        offset.y = offset.y.min(self.child_size.height - size.height).max(0.0);
+    pub fn scroll(&mut self, ctx: &mut EventCtx, delta: Vec2, size: Size) -> bool {
+        self.scroll_to(ctx, self.scroll_offset + delta, size)
+    }
+
+    pub fn scroll_to(&mut self, ctx: &mut EventCtx, offset: Vec2, size: Size) -> bool {
+        let offset = Vec2::new(
+            offset.x.min(self.child_size.width - size.width).max(0.0),
+            offset.y.min(self.child_size.height - size.height).max(0.0),
+        );
         if (offset - self.scroll_offset).hypot2() > 1e-12 {
             self.scroll_offset = offset;
             self.child.set_viewport_offset(offset);
+            for scroll_handler in &self.scroll_handlers {
+                scroll_handler(ctx, &offset)
+            }
             true
         } else {
             false
@@ -328,14 +380,14 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                             let bounds = self.calc_vertical_bar_bounds(viewport, env);
                             let mouse_y = event.pos.y + self.scroll_offset.y;
                             let delta = mouse_y - bounds.y0 - offset;
-                            self.scroll(Vec2::new(0f64, (delta / scale_y).ceil()), size);
+                            self.scroll(ctx, Vec2::new(0f64, (delta / scale_y).ceil()), size);
                         }
                         BarHeldState::Horizontal(offset) => {
                             let scale_x = viewport.width() / self.child_size.width;
                             let bounds = self.calc_horizontal_bar_bounds(viewport, env);
                             let mouse_x = event.pos.x + self.scroll_offset.x;
                             let delta = mouse_x - bounds.x0 - offset;
-                            self.scroll(Vec2::new((delta / scale_x).ceil(), 0f64), size);
+                            self.scroll(ctx, Vec2::new((delta / scale_x).ceil(), 0f64), size);
                         }
                         _ => (),
                     }
@@ -410,9 +462,21 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             }
         }
 
+        if let Event::Command(ref cmd) = event {
+            if let Some(scroll_to) = cmd.get(SCROLL_TO) {
+                let new_pos = Vec2::new(
+                    scroll_to.x.unwrap_or(self.scroll_offset.x),
+                    scroll_to.y.unwrap_or(self.scroll_offset.y),
+                );
+                self.scroll_to(ctx, new_pos, size);
+                ctx.request_paint();
+                ctx.set_handled();
+            }
+        }
+
         if !ctx.is_handled() {
             if let Event::Wheel(mouse) = event {
-                if self.scroll(mouse.wheel_delta, size) {
+                if self.scroll(ctx, mouse.wheel_delta, size) {
                     ctx.request_paint();
                     ctx.set_handled();
                     self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
@@ -456,7 +520,16 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         self.child_size = size;
         self.child.set_layout_rect(ctx, data, env, size.to_rect());
         let self_size = bc.constrain(self.child_size);
-        let _ = self.scroll(Vec2::new(0.0, 0.0), self_size);
+
+        let scroll_to = ScrollTo::new(
+            Some(f64::max(self_size.width - size.width, self.scroll_offset.x)),
+            Some(f64::max(
+                self_size.height - size.height,
+                self.scroll_offset.y,
+            )),
+        );
+
+        ctx.submit_command(SCROLL_TO.with(scroll_to), ctx.widget_state.id);
         self_size
     }
 
@@ -467,6 +540,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             ctx.transform(Affine::translate(-self.scroll_offset));
 
             let visible = ctx.region().to_rect() + self.scroll_offset;
+
             ctx.with_child_ctx(visible, |ctx| self.child.paint_raw(ctx, data, env));
 
             self.draw_bars(ctx, viewport, env);

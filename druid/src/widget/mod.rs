@@ -69,7 +69,7 @@ pub use painter::{BackgroundBrush, Painter};
 pub use parse::Parse;
 pub use progress_bar::ProgressBar;
 pub use radio::{Radio, RadioGroup};
-pub use scroll::Scroll;
+pub use scroll::{Scroll, ScrollTo, SCROLL_TO};
 pub use sized_box::SizedBox;
 pub use slider::Slider;
 pub use spinner::Spinner;

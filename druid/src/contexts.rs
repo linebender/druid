@@ -523,6 +523,10 @@ impl LayoutCtx<'_, '_> {
     pub fn set_paint_insets(&mut self, insets: impl Into<Insets>) {
         self.widget_state.paint_insets = insets.into().nonnegative();
     }
+
+    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
+        self.state.submit_command(cmd.into(), target.into())
+    }
 }
 
 impl PaintCtx<'_, '_, '_> {
@@ -615,6 +619,10 @@ impl PaintCtx<'_, '_, '_> {
             transform: current_transform,
         })
     }
+
+    pub fn viewport_offset(&self) -> Vec2 {
+        self.widget_state.viewport_offset
+    }
 }
 
 impl<'a> ContextState<'a> {
@@ -633,7 +641,7 @@ impl<'a> ContextState<'a> {
         }
     }
 
-    fn submit_command(&mut self, command: Command, target: Option<Target>) {
+    pub(crate) fn submit_command(&mut self, command: Command, target: Option<Target>) {
         let target = target.unwrap_or_else(|| self.window_id.into());
         self.command_queue.push_back((target, command))
     }
