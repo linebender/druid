@@ -33,7 +33,7 @@ pub enum BarHoveredState {
 }
 
 impl BarHoveredState {
-    pub fn is_hovered(&self) -> bool {
+    pub fn is_hovered(self) -> bool {
         match self {
             BarHoveredState::Vertical | BarHoveredState::Horizontal => true,
             _ => false,
@@ -86,6 +86,12 @@ pub struct ScrollComponent {
     pub content_size: Size,
     pub scroll_offset: Vec2,
     pub scrollbars: ScrollbarsState,
+}
+
+impl Default for ScrollComponent {
+    fn default() -> Self {
+        ScrollComponent::new()
+    }
 }
 
 impl ScrollComponent {
