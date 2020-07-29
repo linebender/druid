@@ -14,6 +14,8 @@
 
 //! A container that scrolls its contents.
 
+use std::f64::INFINITY;
+
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::{
     scroll_component::*, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
@@ -93,8 +95,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for AbsoluteScroll<T, W> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Scroll");
 
-        let child_bc =
-            BoxConstraints::new(Size::ZERO, self.scroll_component.direction.max_size(bc));
+        let child_bc = BoxConstraints::new(Size::ZERO, Size::new(INFINITY, INFINITY));
         let size = self.child.layout(ctx, &child_bc, data, env);
         log_size_warnings(size);
 

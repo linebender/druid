@@ -15,38 +15,15 @@
 //! A component for embedding in another widget to provide consistant and
 //! extendable scrolling behavior
 
-use std::f64::INFINITY;
 use std::time::Duration;
 
 use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
 use crate::theme;
 use crate::{
-    BoxConstraints, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext,
-    TimerToken,
+    Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext, TimerToken,
 };
 
 pub const SCROLLBAR_MIN_SIZE: f64 = 45.0;
-
-#[derive(Debug, Copy, Clone)]
-pub enum ScrollDirection {
-    Horizontal,
-    Vertical,
-    All,
-}
-
-impl ScrollDirection {
-    /// Return the maximum size the container can be given
-    /// its scroll direction and box constraints.
-    /// In practice vertical scrolling will be width limited to
-    /// box constraints and horizontal will be height limited.
-    pub fn max_size(&self, bc: &BoxConstraints) -> Size {
-        match self {
-            ScrollDirection::Horizontal => Size::new(INFINITY, bc.max().height),
-            ScrollDirection::Vertical => Size::new(bc.max().width, INFINITY),
-            ScrollDirection::All => Size::new(INFINITY, INFINITY),
-        }
-    }
-}
 
 #[derive(Debug, Copy, Clone)]
 pub enum BarHoveredState {
@@ -108,7 +85,6 @@ impl ScrollbarsState {
 pub struct ScrollComponent {
     pub content_size: Size,
     pub scroll_offset: Vec2,
-    pub direction: ScrollDirection,
     pub scrollbars: ScrollbarsState,
 }
 
@@ -117,7 +93,6 @@ impl ScrollComponent {
         ScrollComponent {
             content_size: Default::default(),
             scroll_offset: Vec2::new(0.0, 0.0),
-            direction: ScrollDirection::All,
             scrollbars: ScrollbarsState::default(),
         }
     }

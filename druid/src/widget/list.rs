@@ -27,22 +27,36 @@ use crate::{
     LifeCycleCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
+#[derive(Debug, Copy, Clone)]
+pub enum ListDirection {
+    Vertical,
+    Horizontal,
+}
+
 /// A list widget for a variable-size collection of items.
 pub struct List<T> {
     closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
+    direction: ListDirection,
     scroll_component: ScrollComponent,
 }
 
 impl<T: Data> List<T> {
     /// Create a new list widget. Closure will be called every time when a new child
-    /// needs to be constructed.
+    /// needs to be constructed. Children will layed out vertically Use
+    /// [horizontal](#method.horizontal) to lay out items horizontally.
     pub fn new<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
         List {
             closure: Box::new(move || Box::new(closure())),
             children: Vec::new(),
+            direction: ListDirection::Vertical,
             scroll_component: ScrollComponent::new(),
         }
+    }
+
+    pub fn horizontal(mut self) -> Self {
+        self.direction = ListDirection::Horizontal;
+        self
     }
 
     /// When the widget is created or the data changes, create or remove children as needed
@@ -250,8 +264,12 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let mut width = bc.min().width;
-        let mut y = 0.0;
+        let my_size = bc.constrain(bc.max());
+        let layout_direction = self.direction;
+        let (mut width, mut height) = match layout_direction {
+            ListDirection::Vertical => (bc.min().width, 0.0),
+            ListDirection::Horizontal => (0.0, bc.min().height),
+        };
 
         let mut paint_rect = Rect::ZERO;
         let mut children = self.children.iter_mut();
@@ -262,21 +280,45 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
                     return;
                 }
             };
-            let child_bc = BoxConstraints::new(
-                Size::new(bc.min().width, 0.0),
-                Size::new(bc.max().width, std::f64::INFINITY),
-            );
-            let child_size = child.layout(ctx, &child_bc, child_data, env);
-            let rect = Rect::from_origin_size(Point::new(0.0, y), child_size);
+            let child_bc = match layout_direction {
+                ListDirection::Vertical => BoxConstraints::new(
+                    Size::new(bc.min().width, 0.0),
+                    Size::new(bc.max().width, std::f64::INFINITY),
+                ),
+                ListDirection::Horizontal => BoxConstraints::new(
+                    Size::new(0.0, bc.min().height),
+                    Size::new(std::f64::INFINITY, bc.max().height),
+                ),
+            };
+            let child_size = match layout_direction {
+                ListDirection::Vertical => Size::new(
+                    my_size.width,
+                    child.layout(ctx, &child_bc, child_data, env).height,
+                ),
+                ListDirection::Horizontal => Size::new(
+                    child.layout(ctx, &child_bc, child_data, env).width,
+                    my_size.height,
+                ),
+            };
+            let rect = match layout_direction {
+                ListDirection::Vertical => {
+                    Rect::from_origin_size(Point::new(0.0, height), child_size)
+                }
+
+                ListDirection::Horizontal => {
+                    Rect::from_origin_size(Point::new(width, 0.0), child_size)
+                }
+            };
             child.set_layout_rect(ctx, child_data, env, rect);
             paint_rect = paint_rect.union(child.paint_rect());
-            width = width.max(child_size.width);
-            y += child_size.height;
+
+            match layout_direction {
+                ListDirection::Vertical => height += child_size.height,
+                ListDirection::Horizontal => width += child_size.width,
+            }
         });
 
-        self.scroll_component.content_size = Size::new(width, y);
-
-        let my_size = bc.constrain(Size::new(width, y));
+        self.scroll_component.content_size = Size::new(width, height);
         let insets = paint_rect - Rect::ZERO.with_size(my_size);
         ctx.set_paint_insets(insets);
         my_size
