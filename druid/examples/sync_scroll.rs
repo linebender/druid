@@ -21,9 +21,12 @@ fn build_widget() -> impl Widget<String> {
         ctx.submit_command(SCROLL_TO.with(ScrollTo::y(scroll_offsets.y)), follower_id);
     });
 
-    row.add_child(leader);
+    let follower = Scroll::new(make_col(1))
+        .disable_scrollbars()
+        .with_id(follower_id);
+    row.add_child(follower);
 
-    row.add_child(Scroll::new(make_col(1)).with_id(follower_id));
+    row.add_child(leader);
 
     row
 }

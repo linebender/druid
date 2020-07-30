@@ -47,6 +47,25 @@ impl ScrollDirection {
     }
 }
 
+#[derive(Debug, Clone)]
+enum ScrollbarsEnabled {
+    None,
+    Horizontal,
+    Vertical,
+    All,
+}
+
+impl ScrollbarsEnabled {
+    fn is_enabled(&self, direction: ScrollDirection) -> bool {
+        match (self, direction) {
+            (ScrollbarsEnabled::All, _) => true,
+            (ScrollbarsEnabled::Horizontal, ScrollDirection::Horizontal) => true,
+            (ScrollbarsEnabled::Vertical, ScrollDirection::Vertical) => true,
+            _ => false,
+        }
+    }
+}
+
 enum BarHoveredState {
     None,
     Vertical,
@@ -115,6 +134,7 @@ pub struct Scroll<T, W> {
     direction: ScrollDirection,
     scrollbars: ScrollbarsState,
     scroll_handlers: Vec<Box<ScrollHandler>>,
+    scrollbars_enabled: ScrollbarsEnabled,
 }
 
 #[derive(Debug)]
@@ -164,9 +184,13 @@ impl<T, W: Widget<T>> Scroll<T, W> {
             direction: ScrollDirection::All,
             scrollbars: ScrollbarsState::default(),
             scroll_handlers: Vec::new(),
+            scrollbars_enabled: ScrollbarsEnabled::All,
         }
     }
 
+    // Will get called back when the scroll offsets change.
+    // This can be used to send commands to other widgets, eg to synchronise
+    // scrolling between siblings
     pub fn add_scroll_handler(&mut self, scroll_handler: impl Fn(&mut EventCtx, &Vec2) + 'static) {
         self.scroll_handlers.push(Box::new(scroll_handler));
     }
@@ -175,6 +199,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// The child is laid out with constrained width and infinite height.
     pub fn vertical(mut self) -> Self {
         self.direction = ScrollDirection::Vertical;
+        self.scrollbars_enabled = ScrollbarsEnabled::Vertical;
         self
     }
 
@@ -182,6 +207,22 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// The child is laid out with constrained height and infinite width.
     pub fn horizontal(mut self) -> Self {
         self.direction = ScrollDirection::Horizontal;
+        self.scrollbars_enabled = ScrollbarsEnabled::Horizontal;
+        self
+    }
+
+    pub fn disable_scrollbars(mut self) -> Self {
+        self.scrollbars_enabled = ScrollbarsEnabled::None;
+        self
+    }
+
+    pub fn only_vertical_scrollbar(mut self) -> Self {
+        self.scrollbars_enabled = ScrollbarsEnabled::Vertical;
+        self
+    }
+
+    pub fn only_horizontal_scrollbar(mut self) -> Self {
+        self.scrollbars_enabled = ScrollbarsEnabled::Horizontal;
         self
     }
 
@@ -293,7 +334,14 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 
     /// Draw scroll bars.
     fn draw_bars(&self, ctx: &mut PaintCtx, viewport: Rect, env: &Env) {
-        if self.scrollbars.opacity <= 0.0 {
+        let (draw_vertical, draw_horizontal) = (
+            self.scrollbars_enabled
+                .is_enabled(ScrollDirection::Horizontal),
+            self.scrollbars_enabled
+                .is_enabled(ScrollDirection::Vertical),
+        );
+
+        if !(draw_vertical || draw_horizontal) || self.scrollbars.opacity <= 0.0 {
             return;
         }
 
@@ -310,7 +358,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         let edge_width = env.get(theme::SCROLLBAR_EDGE_WIDTH);
 
         // Vertical bar
-        if viewport.height() < self.child_size.height {
+        if draw_vertical && viewport.height() < self.child_size.height {
             let bounds = self
                 .calc_vertical_bar_bounds(viewport, env)
                 .inset(-edge_width / 2.0);
@@ -320,7 +368,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         }
 
         // Horizontal bar
-        if viewport.width() < self.child_size.width {
+        if draw_horizontal && viewport.width() < self.child_size.width {
             let bounds = self
                 .calc_horizontal_bar_bounds(viewport, env)
                 .inset(-edge_width / 2.0);
@@ -331,7 +379,11 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     }
 
     fn point_hits_vertical_bar(&self, viewport: Rect, pos: Point, env: &Env) -> bool {
-        if viewport.height() < self.child_size.height {
+        if self
+            .scrollbars_enabled
+            .is_enabled(ScrollDirection::Vertical)
+            && viewport.height() < self.child_size.height
+        {
             // Stretch hitbox to edge of widget
             let mut bounds = self.calc_vertical_bar_bounds(viewport, env);
             bounds.x1 = self.scroll_offset.x + viewport.width();
@@ -342,7 +394,11 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     }
 
     fn point_hits_horizontal_bar(&self, viewport: Rect, pos: Point, env: &Env) -> bool {
-        if viewport.width() < self.child_size.width {
+        if self
+            .scrollbars_enabled
+            .is_enabled(ScrollDirection::Horizontal)
+            && viewport.width() < self.child_size.width
+        {
             // Stretch hitbox to edge of widget
             let mut bounds = self.calc_horizontal_bar_bounds(viewport, env);
             bounds.y1 = self.scroll_offset.y + viewport.height();
