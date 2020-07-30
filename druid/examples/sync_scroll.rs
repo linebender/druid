@@ -1,6 +1,6 @@
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, Padding, Scroll, ScrollTo, TextBox, SCROLL_TO};
-use druid::{AppLauncher, LocalizedString, Target, WidgetExt, WindowDesc};
+use druid::{AppLauncher, LocalizedString, WidgetExt, WindowDesc};
 
 pub fn main() {
     let window = WindowDesc::new(build_widget)

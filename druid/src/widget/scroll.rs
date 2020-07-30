@@ -100,7 +100,7 @@ impl ScrollbarsState {
     }
 }
 
-type ScrollHandler = dyn Fn(&mut EventCtx, &Vec2) -> ();
+type ScrollHandler = dyn Fn(&mut EventCtx, &Vec2);
 
 /// A container that scrolls its contents.
 ///
@@ -167,10 +167,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         }
     }
 
-    pub fn add_scroll_handler(
-        &mut self,
-        scroll_handler: impl Fn(&mut EventCtx, &Vec2) -> () + 'static,
-    ) {
+    pub fn add_scroll_handler(&mut self, scroll_handler: impl Fn(&mut EventCtx, &Vec2) + 'static) {
         self.scroll_handlers.push(Box::new(scroll_handler));
     }
 
