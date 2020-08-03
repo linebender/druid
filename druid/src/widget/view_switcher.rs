@@ -79,9 +79,7 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
             self.active_child = Some(WidgetPod::new((self.child_builder)(&child_id, data, env)));
             self.active_child_id = Some(child_id);
             ctx.children_changed();
-        }
-
-        if let Some(child) = self.active_child.as_mut() {
+        } else if let Some(child) = self.active_child.as_mut() {
             child.update(ctx, data, env);
         }
     }
