@@ -15,6 +15,7 @@
 //! A textbox widget.
 
 use std::time::Duration;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KbKey, LayoutCtx, LifeCycle,
@@ -49,6 +50,8 @@ pub struct TextBox {
     selection: Selection,
     cursor_timer: TimerToken,
     cursor_on: bool,
+    /// Whether to display `****` instead of `my_password`
+    password_mode: bool,
 }
 
 impl TextBox {
@@ -65,12 +68,18 @@ impl TextBox {
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
             placeholder: String::new(),
+            password_mode: false,
         }
     }
 
     /// Builder-style method to set the `TextBox`'s placeholder text.
     pub fn with_placeholder(mut self, placeholder: impl Into<String>) -> Self {
         self.placeholder = placeholder.into();
+        self
+    }
+
+    pub fn with_password_mode(mut self, password_mode: bool) -> Self {
+        self.password_mode = password_mode;
         self
     }
 
@@ -90,6 +99,15 @@ impl TextBox {
             .build()
             .unwrap();
 
+        let text = if self.password_mode {
+            let mut t = String::new();
+            for _ in text.grapheme_indices(true) {
+                t.push('*');
+            }
+            t
+        } else {
+            text.to_string()
+        };
         piet_text
             .new_text_layout(&font, &text.to_string(), std::f64::INFINITY)
             .build()
