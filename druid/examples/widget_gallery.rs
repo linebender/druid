@@ -48,7 +48,7 @@ enum MyRadio {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder).title("List Demo");
+    let main_window = WindowDesc::new(ui_builder).title("Widget Gallery");
     // Set our initial data
     let data = AppData {
         label_data: "test".into(),
@@ -138,47 +138,7 @@ fn ui_builder() -> impl Widget<AppData> {
             // The image example here uses hard-coded literal image data included in the binary.
             // You may also want to load an image at runtime using a crate like `image`.
             .with_child(label_widget(
-                Painter::new(|ctx, _, _| {
-                    let bounds = ctx.size().to_rect();
-                    let img = load_xi_image(ctx.render_ctx);
-                    ctx.draw_image(
-                        &img,
-                        bounds,
-                        druid::piet::InterpolationMode::NearestNeighbor,
-                    );
-                    ctx.with_save(|ctx| {
-                        ctx.transform(Affine::scale_non_uniform(bounds.width(), bounds.height()));
-                        // Draw the dot of the `i` on top of the image data.
-                        let i_dot = Circle::new((0.775, 0.18), 0.05);
-                        let i_dot_brush = ctx.solid_brush(Color::WHITE);
-                        ctx.fill(i_dot, &i_dot_brush);
-                        // Cross out Xi because it's going dormant :'(
-                        let mut spare = BezPath::new();
-                        spare.move_to((0.1, 0.1));
-                        spare.line_to((0.2, 0.1));
-                        spare.line_to((0.9, 0.9));
-                        spare.line_to((0.8, 0.9));
-                        spare.close_path();
-                        let spare_brush = ctx
-                            .gradient(FixedLinearGradient {
-                                start: (0.0, 0.0).into(),
-                                end: (1.0, 1.0).into(),
-                                stops: vec![
-                                    GradientStop {
-                                        pos: 0.0,
-                                        color: Color::rgb(1.0, 0.0, 0.0),
-                                    },
-                                    GradientStop {
-                                        pos: 1.0,
-                                        color: Color::rgb(0.4, 0.0, 0.0),
-                                    },
-                                ],
-                            })
-                            .unwrap();
-                        ctx.fill(spare, &spare_brush);
-                    });
-                })
-                .fix_size(32.0, 32.0),
+                Painter::new(paint_example).fix_size(32.0, 32.0),
                 "Painter",
             ))
             .with_child(label_widget(
@@ -252,6 +212,49 @@ fn load_xi_image<Ctx: druid::RenderContext>(ctx: &mut Ctx) -> Ctx::Image {
     ctx.make_image(32, 32, XI_IMAGE, druid::piet::ImageFormat::Rgb)
         .unwrap()
 }
+
+fn paint_example<T>(ctx: &mut PaintCtx, _: &T, _env: &Env) {
+    let bounds = ctx.size().to_rect();
+    let img = load_xi_image(ctx.render_ctx);
+    ctx.draw_image(
+        &img,
+        bounds,
+        druid::piet::InterpolationMode::NearestNeighbor,
+    );
+    ctx.with_save(|ctx| {
+        ctx.transform(Affine::scale_non_uniform(bounds.width(), bounds.height()));
+        // Draw the dot of the `i` on top of the image data.
+        let i_dot = Circle::new((0.775, 0.18), 0.05);
+        let i_dot_brush = ctx.solid_brush(Color::WHITE);
+        ctx.fill(i_dot, &i_dot_brush);
+        // Cross out Xi because it's going dormant :'(
+        let mut spare = BezPath::new();
+        spare.move_to((0.1, 0.1));
+        spare.line_to((0.2, 0.1));
+        spare.line_to((0.9, 0.9));
+        spare.line_to((0.8, 0.9));
+        spare.close_path();
+        let spare_brush = ctx
+            .gradient(FixedLinearGradient {
+                start: (0.0, 0.0).into(),
+                end: (1.0, 1.0).into(),
+                stops: vec![
+                    GradientStop {
+                        pos: 0.0,
+                        color: Color::rgb(1.0, 0.0, 0.0),
+                    },
+                    GradientStop {
+                        pos: 1.0,
+                        color: Color::rgb(0.4, 0.0, 0.0),
+                    },
+                ],
+            })
+            .unwrap();
+        ctx.fill(spare, &spare_brush);
+    });
+}
+
+// Grid widget
 
 const DEFAULT_GRID_CELL_SIZE: Size = Size::new(100.0, 100.0);
 const DEFAULT_GRID_SPACING: f64 = 10.0;
@@ -358,13 +361,12 @@ impl<T: Data> Widget<T> for SquaresGrid<T> {
                 x_position + self.cell_size.width,
                 y_position + self.cell_size.height,
             );
-            let size = widget.layout(
+            widget.layout(
                 ctx,
                 &BoxConstraints::new(self.cell_size, self.cell_size),
                 data,
                 env,
             );
-            assert_eq!(size, self.cell_size); // todo remove this
             widget.set_layout_rect(ctx, data, env, rect);
             // Increment position for the next cell
             x_position += self.cell_size.width + self.spacing;
