@@ -164,7 +164,7 @@ impl BoxConstraints {
     }
 
     /// Find the `Size` within these `BoxConstraint`s that minimises the difference between the
-    /// returned `Size`'s aspect ratio and `aspect_ratio` An aspect ratio is defined as
+    /// returned `Size`'s aspect ratio and `aspect_ratio`, where *aspect ratio* is defined as
     /// `height / width`.
     ///
     /// If multiple `Size`s give the optimal `aspect_ratio`, then the one with the `width` nearest
@@ -174,9 +174,6 @@ impl BoxConstraints {
     ///
     /// Use this function when maintaining an aspect ratio is more important than minimizing the
     /// distance between input and output size width and height.
-    ///
-    /// TODO should aspect_ratio be restricted to 0 < ar < infinity and panic otherwise? Same for
-    /// `width` and `self`.
     pub fn constrain_aspect_ratio(&self, aspect_ratio: f64, width: f64) -> Size {
         // Minimizing/maximizing based on aspect ratio seems complicated, but in reality everything
         // is linear, so the amount of work to do is low.
@@ -185,9 +182,12 @@ impl BoxConstraints {
             height: width * aspect_ratio,
         };
 
+        // It may be possible to remove these in the future if the invariant is checked elsewhere.
+        let aspect_ratio = aspect_ratio.abs();
+        let width = width.abs();
+
         // Firstly check if we can simply return the exact requested
         if self.contains(ideal_size) {
-            //println!("ideal");
             return ideal_size;
         }
 
@@ -208,14 +208,12 @@ impl BoxConstraints {
         // Check each possible intersection (or not) of the aspect ratio line with the constraints
         if aspect_ratio > min_w_max_h {
             // outside max height min width
-            //println!("outside max height min width");
             Size {
                 width: self.min.width,
                 height: self.max.height,
             }
         } else if aspect_ratio < max_w_min_h {
             // outside min height max width
-            //println!("outside min height max width");
             Size {
                 width: self.max.width,
                 height: self.min.height,
@@ -223,7 +221,6 @@ impl BoxConstraints {
         } else if aspect_ratio > min_w_min_h {
             // hits the constraints on the min width line
             if width < self.min.width {
-                //println!("min width");
                 // we take the point on the min width
                 Size {
                     width: self.min.width,
@@ -231,14 +228,12 @@ impl BoxConstraints {
                 }
             } else if aspect_ratio < max_w_max_h {
                 // exits through max.width
-                //println!("max width");
                 Size {
                     width: self.max.width,
                     height: self.max.width * aspect_ratio,
                 }
             } else {
                 // exits through max.height
-                //println!("max height");
                 Size {
                     width: self.max.height * aspect_ratio.recip(),
                     height: self.max.height,
@@ -248,21 +243,18 @@ impl BoxConstraints {
             // final case is where we hit constraints on the min height line
             if width < self.min.width {
                 // take the point on the min height
-                //println!("min height");
                 Size {
                     width: self.min.height * aspect_ratio.recip(),
                     height: self.min.height,
                 }
             } else if aspect_ratio > max_w_max_h {
                 // exit thru max height
-                //println!("max height");
                 Size {
                     width: self.max.height * aspect_ratio.recip(),
                     height: self.max.height,
                 }
             } else {
                 // exit thru max width
-                //println!("max width");
                 Size {
                     width: self.max.width,
                     height: self.max.width * aspect_ratio,
