@@ -562,8 +562,11 @@ impl WindowHandle {
 
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
-        //FIXME: implementation goes here
-        log::warn!("bring_to_front_and_focus not yet implemented for gtk");
+        if let Some(state) = self.state.upgrade() {
+            // TODO(gtk/misc): replace with present_with_timestamp if/when druid-shell
+            // has a system to get the correct input time, as GTK discourages present
+            state.window.present();
+        }
     }
 
     // Request invalidation of the entire window contents.
