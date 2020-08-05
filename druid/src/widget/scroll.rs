@@ -18,7 +18,7 @@ use std::f64::INFINITY;
 use std::time::Duration;
 
 use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
-use crate::{theme, Selector, Command, Target};
+use crate::{theme, Command, Selector, Target};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
     RenderContext, TimerToken, UpdateCtx, Widget, WidgetPod,
@@ -184,7 +184,10 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     // Will get called back when the scroll offsets change.
     // This can be used to send commands to other widgets, eg to synchronise
     // scrolling between siblings
-    pub fn add_scroll_handler(&mut self, scroll_handler: impl Fn(&mut SubmitCommand, &Vec2) + 'static) {
+    pub fn add_scroll_handler(
+        &mut self,
+        scroll_handler: impl Fn(&mut SubmitCommand, &Vec2) + 'static,
+    ) {
         self.scroll_handlers.push(Box::new(scroll_handler));
     }
 
@@ -426,14 +429,22 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                             let bounds = self.calc_vertical_bar_bounds(viewport, env);
                             let mouse_y = event.pos.y + self.scroll_offset.y;
                             let delta = mouse_y - bounds.y0 - offset;
-                            self.scroll_by(&mut |command, target| ctx.submit_command(command, target), Vec2::new(0f64, (delta / scale_y).ceil()), size);
+                            self.scroll_by(
+                                &mut |command, target| ctx.submit_command(command, target),
+                                Vec2::new(0f64, (delta / scale_y).ceil()),
+                                size,
+                            );
                         }
                         BarHeldState::Horizontal(offset) => {
                             let scale_x = viewport.width() / self.child_size.width;
                             let bounds = self.calc_horizontal_bar_bounds(viewport, env);
                             let mouse_x = event.pos.x + self.scroll_offset.x;
                             let delta = mouse_x - bounds.x0 - offset;
-                            self.scroll_by(&mut |command, target| ctx.submit_command(command, target), Vec2::new((delta / scale_x).ceil(), 0f64), size);
+                            self.scroll_by(
+                                &mut |command, target| ctx.submit_command(command, target),
+                                Vec2::new((delta / scale_x).ceil(), 0f64),
+                                size,
+                            );
                         }
                         _ => (),
                     }
@@ -514,7 +525,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                     scroll_to.x.unwrap_or(self.scroll_offset.x),
                     scroll_to.y.unwrap_or(self.scroll_offset.y),
                 );
-                self.scroll_to(&mut |command, target| ctx.submit_command(command, target), new_pos, size);
+                self.scroll_to(
+                    &mut |command, target| ctx.submit_command(command, target),
+                    new_pos,
+                    size,
+                );
                 ctx.request_paint();
                 ctx.set_handled();
             }
@@ -522,7 +537,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
         if !ctx.is_handled() {
             if let Event::Wheel(mouse) = event {
-                if self.scroll_by(&mut |command, target| ctx.submit_command(command, target), mouse.wheel_delta, size) {
+                if self.scroll_by(
+                    &mut |command, target| ctx.submit_command(command, target),
+                    mouse.wheel_delta,
+                    size,
+                ) {
                     ctx.request_paint();
                     ctx.set_handled();
                     self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
@@ -570,7 +589,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         let x = f64::max(self_size.width - size.width, self.scroll_offset.x);
         let y = f64::max(self_size.height - size.height, self.scroll_offset.y);
 
-        self.scroll_to(&mut |command, target| ctx.submit_command(command, target), Vec2::new(x, y), self_size  );
+        self.scroll_to(
+            &mut |command, target| ctx.submit_command(command, target),
+            Vec2::new(x, y),
+            self_size,
+        );
         self_size
     }
 
