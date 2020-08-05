@@ -109,7 +109,7 @@ impl TextBox {
             text.to_string()
         };
         piet_text
-            .new_text_layout(&font, &text.to_string(), std::f64::INFINITY)
+            .new_text_layout(&font, &text, std::f64::INFINITY)
             .build()
             .unwrap()
     }
