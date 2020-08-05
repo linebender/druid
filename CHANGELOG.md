@@ -136,6 +136,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - The `WindowHandle::get_dpi` method got replaced by `WindowHandle::get_scale`. ([#904] by [@xStrom])
 - The `WinHandler::size` method now gets a `Size` in display points. ([#904] by [@xStrom])
 - Standardized the type returned by the contexts' `text` methods. ([#996] by [@cmyr])
+- `ViewSwitcher` uses `Data` type constraint instead of `PartialEq`. ([#1112] by [@justinmoon])
 
 ### Removed
 
@@ -257,6 +258,7 @@ Last release without a changelog :(
 [@vkahl]: https://github.com/vkahl
 [@psychon]: https://github.com/psychon
 [@sysint64]: https://github.com/sysint64
+[@justinmoon]: https://github.com/justinmoon
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
