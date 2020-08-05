@@ -17,8 +17,8 @@ fn build_widget() -> impl Widget<String> {
 
     let mut leader = Scroll::new(make_col(0));
 
-    leader.add_scroll_handler(move |ctx, scroll_offsets| {
-        ctx.submit_command(SCROLL_TO.with(ScrollTo::y(scroll_offsets.y)), follower_id);
+    leader.add_scroll_handler(move |submit_command, scroll_offsets| {
+        submit_command(SCROLL_TO.with(ScrollTo::y(scroll_offsets.y)), follower_id.into());
     });
 
     let follower = Scroll::new(make_col(1))

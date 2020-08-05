@@ -318,6 +318,17 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.request_layout();
     }
 
+    /// Set the menu of the window containing the current widget.
+    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
+    ///
+    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
+        self.state.set_menu(menu);
+    }
+});
+
+// methods on event, update, and lifecycle
+impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, LayoutCtx<'_,'_>, {
     /// Submit a [`Command`] to be run after this event is handled.
     ///
     /// Commands are run in the order they are submitted; all commands
@@ -329,14 +340,6 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// [`update`]: trait.Widget.html#tymethod.update
     pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
         self.state.submit_command(cmd.into(), target.into())
-    }
-
-    /// Set the menu of the window containing the current widget.
-    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
-    ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        self.state.set_menu(menu);
     }
 });
 
@@ -523,10 +526,6 @@ impl LayoutCtx<'_, '_> {
     pub fn set_paint_insets(&mut self, insets: impl Into<Insets>) {
         self.widget_state.paint_insets = insets.into().nonnegative();
     }
-
-    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
-        self.state.submit_command(cmd.into(), target.into())
-    }
 }
 
 impl PaintCtx<'_, '_, '_> {
@@ -620,9 +619,6 @@ impl PaintCtx<'_, '_, '_> {
         })
     }
 
-    pub fn viewport_offset(&self) -> Vec2 {
-        self.widget_state.viewport_offset
-    }
 }
 
 impl<'a> ContextState<'a> {
@@ -641,7 +637,7 @@ impl<'a> ContextState<'a> {
         }
     }
 
-    pub(crate) fn submit_command(&mut self, command: Command, target: Option<Target>) {
+    fn submit_command(&mut self, command: Command, target: Option<Target>) {
         let target = target.unwrap_or_else(|| self.window_id.into());
         self.command_queue.push_back((target, command))
     }
