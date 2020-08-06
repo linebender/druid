@@ -80,9 +80,8 @@ impl<T: Data, U: Data> Widget<T> for ViewSwitcher<T, U> {
             self.active_child = Some(WidgetPod::new((self.child_builder)(&child_id, data, env)));
             self.active_child_id = Some(child_id);
             ctx.children_changed();
-        }
-
-        if let Some(child) = self.active_child.as_mut() {
+        // Because the new child has not yet been initialized, we have to skip the update after switching.
+        } else if let Some(child) = self.active_child.as_mut() {
             child.update(ctx, data, env);
         }
     }
