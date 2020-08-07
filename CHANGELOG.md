@@ -43,6 +43,8 @@ You can find its changes [documented below](#060---2020-06-01).
 - `WidgetExt::debug_widget_id` and `debug_paint_layout` now also apply to the widget they are called on. ([#1100] by [@finnerale])
 - X11: Fix X11 errors caused by destroyed windows. ([#1103] by [@jneem])
 - `ViewSwitcher` now skips the update after switching widgets. ([#1113] by [@finnerale])
+- Key and KeyOrValue derive Clone ([#1119] by [@rjwittams])
+- Allow submit_command from the layout method in Widgets ([#1119] by [@rjwittams])
 
 ### Visual
 
