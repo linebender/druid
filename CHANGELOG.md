@@ -117,6 +117,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `LifeCycle::Size` event to inform widgets that their size changed. ([#953] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `Spinner` widget to represent loading states. ([#1003] by [@futurepaul])
+-  Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
 
 ### Changed
 
@@ -382,6 +383,7 @@ Last release without a changelog :(
 [#1100]: https://github.com/linebender/druid/pull/1100
 [#1103]: https://github.com/linebender/druid/pull/1103
 [#1119]: https://github.com/linebender/druid/pull/1119
+[#1120]: https://github.com/linebender/druid/pull/1120
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
