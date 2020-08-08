@@ -262,6 +262,7 @@ Last release without a changelog :(
 [@psychon]: https://github.com/psychon
 [@sysint64]: https://github.com/sysint64
 [@justinmoon]: https://github.com/justinmoon
+[@rjwittams]: https://github.com/rjwittams
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -380,7 +381,7 @@ Last release without a changelog :(
 [#1093]: https://github.com/linebender/druid/pull/1093
 [#1100]: https://github.com/linebender/druid/pull/1100
 [#1103]: https://github.com/linebender/druid/pull/1103
-
+[#1119]: https://github.com/linebender/druid/pull/1119
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
