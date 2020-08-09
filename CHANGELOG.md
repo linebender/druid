@@ -45,6 +45,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `ViewSwitcher` now skips the update after switching widgets. ([#1113] by [@finnerale])
 - Key and KeyOrValue derive Clone ([#1119] by [@rjwittams])
 - Allow submit_command from the layout method in Widgets ([#1119] by [@rjwittams])
+-  Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
 
 ### Visual
 
@@ -117,7 +118,6 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `LifeCycle::Size` event to inform widgets that their size changed. ([#953] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `Spinner` widget to represent loading states. ([#1003] by [@futurepaul])
--  Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
 
 ### Changed
 
