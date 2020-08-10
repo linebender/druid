@@ -341,11 +341,7 @@ impl Widget<String> for TextBox {
         }
 
         if let Some(edit_action) = edit_action {
-            let is_select_all = if let EditAction::SelectAll = &edit_action {
-                true
-            } else {
-                false
-            };
+            let is_select_all = matches!(edit_action, EditAction::SelectAll);
 
             self.do_edit_action(edit_action, data);
             self.reset_cursor_blink(ctx);
