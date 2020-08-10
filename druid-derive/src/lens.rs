@@ -96,7 +96,6 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         Ident::new(&candidate, Span::call_site())
     };
 
-    //let ret_ty_par = G;
     let func_ty_par = gen_new_param("F");
     let val_ty_par = gen_new_param("V");
 
