@@ -14,6 +14,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
 - `TextBox` now supports ctrl and shift hotkeys. ([#1076] by [@vkahl])
 - Added selection text color to textbox. ([#1093] by [@sysint64])
+- Added `BoxConstraints::UNBOUNDED` constant. (by [@danieldulaney]) 
 
 ### Changed
 
