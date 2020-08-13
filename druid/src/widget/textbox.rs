@@ -38,7 +38,7 @@ const PADDING_LEFT: f64 = 4.;
 
 // we send ourselves this when we want to reset blink, which must be done in event.
 const RESET_BLINK: Selector = Selector::new("druid-builtin.reset-textbox-blink");
-const CURSOR_BLINK_DRUATION: Duration = Duration::from_millis(500);
+const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
@@ -235,7 +235,7 @@ impl TextBox {
 
     fn reset_cursor_blink(&mut self, ctx: &mut EventCtx) {
         self.cursor_on = true;
-        self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DRUATION);
+        self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DURATION);
     }
 }
 
@@ -285,7 +285,7 @@ impl Widget<String> for TextBox {
                 if *id == self.cursor_timer {
                     self.cursor_on = !self.cursor_on;
                     ctx.request_paint();
-                    self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DRUATION);
+                    self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DURATION);
                 }
             }
             Event::Command(ref cmd)
@@ -341,11 +341,7 @@ impl Widget<String> for TextBox {
         }
 
         if let Some(edit_action) = edit_action {
-            let is_select_all = if let EditAction::SelectAll = &edit_action {
-                true
-            } else {
-                false
-            };
+            let is_select_all = matches!(edit_action, EditAction::SelectAll);
 
             self.do_edit_action(edit_action, data);
             self.reset_cursor_blink(ctx);

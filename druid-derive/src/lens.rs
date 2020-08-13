@@ -13,8 +13,10 @@
 // limitations under the License.
 
 use super::attr::{FieldKind, Fields};
+use proc_macro2::{Ident, Span};
 use quote::quote;
-use syn::{spanned::Spanned, Data};
+use std::collections::HashSet;
+use syn::{spanned::Spanned, Data, GenericParam, TypeParam};
 
 pub(crate) fn derive_lens_impl(
     input: syn::DeriveInput,
@@ -72,18 +74,42 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
             pub struct #field_name;
         }
     });
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
+    let used_params: HashSet<String> = input
+        .generics
+        .params
+        .iter()
+        .flat_map(|gp: &GenericParam| match gp {
+            GenericParam::Type(TypeParam { ident, .. }) => Some(ident.to_string()),
+            _ => None,
+        })
+        .collect();
+
+    let gen_new_param = |name: &str| {
+        let mut candidate: String = name.into();
+        let mut count = 1usize;
+        while used_params.contains(&candidate) {
+            candidate = format!("{}_{}", name, count);
+            count += 1;
+        }
+        Ident::new(&candidate, Span::call_site())
+    };
+
+    let func_ty_par = gen_new_param("F");
+    let val_ty_par = gen_new_param("V");
 
     let impls = fields.iter().map(|f| {
         let field_name = &f.ident.unwrap_named();
         let field_ty = &f.ty;
 
         quote! {
-            impl druid::Lens<#ty, #field_ty> for #twizzled_name::#field_name {
-                fn with<V, F: FnOnce(&#field_ty) -> V>(&self, data: &#ty, f: F) -> V {
+            impl #impl_generics druid::Lens<#ty#ty_generics, #field_ty> for #twizzled_name::#field_name #where_clause {
+                fn with<#val_ty_par, #func_ty_par: FnOnce(&#field_ty) -> #val_ty_par>(&self, data: &#ty#ty_generics, f: #func_ty_par) -> #val_ty_par {
                     f(&data.#field_name)
                 }
 
-                fn with_mut<V, F: FnOnce(&mut #field_ty) -> V>(&self, data: &mut #ty, f: F) -> V {
+                fn with_mut<#val_ty_par, #func_ty_par: FnOnce(&mut #field_ty) -> #val_ty_par>(&self, data: &mut #ty#ty_generics, f: #func_ty_par) -> #val_ty_par {
                     f(&mut data.#field_name)
                 }
             }
@@ -99,8 +125,6 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
             pub const #lens_field_name: #twizzled_name::#field_name = #twizzled_name::#field_name;
         }
     });
-
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let expanded = quote! {
         pub mod #twizzled_name {

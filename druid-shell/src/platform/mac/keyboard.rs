@@ -241,7 +241,7 @@ fn is_valid_key(s: &str) -> bool {
 }
 
 fn is_modifier_code(code: Code) -> bool {
-    match code {
+    matches!(code, 
         Code::ShiftLeft
         | Code::ShiftRight
         | Code::AltLeft
@@ -251,9 +251,7 @@ fn is_modifier_code(code: Code) -> bool {
         | Code::MetaLeft
         | Code::MetaRight
         | Code::CapsLock
-        | Code::Help => true,
-        _ => false,
-    }
+        | Code::Help)
 }
 
 impl KeyboardState {
