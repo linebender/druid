@@ -94,12 +94,15 @@ impl ScrollbarsState {
 /// To use, instance in your widget's new fn and place in a field, keep
 /// the [`content_size`] field updated as scrollable content size changes,
 /// call [`event`] and [`lifecycle`] with all event and lifecycle events,
-/// and finally perform painting from within a closure provided to [`paint_content`].
+/// call [`handle_scroll`] with all events after all other event handling
+/// code and finally perform painting from within a closure provided to
+/// [`paint_content`].
 ///
 /// [`Scroll`]: ../widget/struct.Scroll.html
 /// [`List`]: ../widget/struct.List.html
 /// [`content_size`]: struct.ScrollComponent.html#field.content_size
 /// [`event`]: struct.ScrollComponent.html#method.event
+/// [`handle_scroll`]: struct.ScrollComponent.html#method.handle_scroll
 /// [`lifecycle`]: struct.ScrollComponent.html#method.lifecycle
 /// [`paint_content`]: struct.ScrollComponent.html#method.paint_content
 #[derive(Debug, Copy, Clone)]
