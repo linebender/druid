@@ -14,7 +14,7 @@
 
 //! This example allows to play with scroll bars over different color tones.
 
-use druid::widget::{AbsoluteScroll, Container, Flex, SizedBox};
+use druid::widget::{Container, Flex, Scroll, SizedBox};
 use druid::{AppLauncher, Color, LocalizedString, Widget, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
@@ -38,7 +38,7 @@ fn build_app() -> impl Widget<u32> {
         col.add_child(row);
     }
 
-    AbsoluteScroll::new(col)
+    Scroll::new(col)
 }
 
 pub fn main() {

@@ -17,7 +17,7 @@
 
 use druid::kurbo::{Circle, Shape};
 use druid::widget::prelude::*;
-use druid::widget::{AbsoluteScroll, Button, Flex, Split, TextBox};
+use druid::widget::{Button, Flex, Scroll, Split, TextBox};
 use druid::{AppLauncher, Color, Data, Lens, LocalizedString, Point, WidgetExt, WindowDesc};
 
 pub fn main() {
@@ -46,11 +46,7 @@ fn build_widget() -> impl Widget<AppState> {
     for i in 0..30 {
         col.add_child(Button::new(format!("Button {}", i)).padding(3.0));
     }
-    Split::columns(
-        AbsoluteScroll::new(col),
-        CircleView.lens(AppState::circle_pos),
-    )
-    .debug_invalidation()
+    Split::columns(Scroll::new(col), CircleView.lens(AppState::circle_pos)).debug_invalidation()
 }
 
 struct CircleView;

@@ -23,6 +23,7 @@ use crate::{
     Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext, TimerToken,
 };
 
+//TODO: Add this to env
 pub const SCROLLBAR_MIN_SIZE: f64 = 45.0;
 
 #[derive(Debug, Copy, Clone)]
@@ -34,10 +35,10 @@ pub enum BarHoveredState {
 
 impl BarHoveredState {
     pub fn is_hovered(self) -> bool {
-        match self {
-            BarHoveredState::Vertical | BarHoveredState::Horizontal => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            BarHoveredState::Vertical | BarHoveredState::Horizontal
+        )
     }
 }
 
@@ -74,15 +75,37 @@ impl Default for ScrollbarsState {
 impl ScrollbarsState {
     /// true if either scrollbar is currently held down/being dragged
     pub fn are_held(&self) -> bool {
-        match self.held {
-            BarHeldState::None => false,
-            _ => true,
-        }
+        !matches!(self.held, BarHeldState::None)
     }
 }
 
+/// Embedable component exposing reusable scroll handling logic.
+///
+/// In most situations composing [`Scroll`] or [`List`] is a better idea
+/// for general UI construction. However some cases are not covered by
+/// composing those widgets, such as when a widget needs fine grained
+/// control over its scrolling state or doesn't make sense to exist alone
+/// without scrolling behavior.
+///
+/// `ScrollComponent` contains the unified and consistant scroll logic
+/// used by both [`Scroll`] and [`List`]. This can be used to add this
+/// logic to a custom widget when the need arises.
+///
+/// To use, instance in your widget's new fn and place in a field, keep
+/// the [`content_size`] field updated as scrollable content size changes,
+/// call [`event`] and [`lifecycle`] with all event and lifecycle events,
+/// and finally perform painting from within a closure provided to [`paint_content`].
+///
+/// [`Scroll`]: ../widget/struct.Scroll.html
+/// [`List`]: ../widget/struct.List.html
+/// [`content_size`]: struct.ScrollComponent.html#field.content_size
+/// [`event`]: struct.ScrollComponent.html#method.event
+/// [`lifecycle`]: struct.ScrollComponent.html#method.lifecycle
+/// [`paint_content`]: struct.ScrollComponent.html#method.paint_content
 #[derive(Debug, Copy, Clone)]
 pub struct ScrollComponent {
+    /// The size of the scrollable content, make sure to keep up this
+    /// accurate to the content being scrolled
     pub content_size: Size,
     pub scroll_offset: Vec2,
     pub scrollbars: ScrollbarsState,
@@ -265,10 +288,10 @@ impl ScrollComponent {
         }
     }
 
-    /// Checks if the event applies to the scroll behavior, uses it and returns true if so
+    /// Checks if the event applies to the scroll behavior, uses it, and marks it handled
     ///
-    /// Returns false if the event was not used
-    pub fn filter_event(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) -> bool {
+    /// Make sure to call on every event
+    pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) {
         let size = ctx.size();
         let viewport = Rect::from_origin_size(Point::ORIGIN, size);
 
@@ -362,14 +385,11 @@ impl ScrollComponent {
                     // Schedule scroll bars animation
                     ctx.request_anim_frame();
                     self.scrollbars.timer_id = TimerToken::INVALID;
+                    ctx.set_handled();
                 }
                 _ => (),
             }
-
-            return false;
         }
-
-        true
     }
 
     /// Applies mousewheel scrolling if the event has not already been handled
@@ -385,15 +405,10 @@ impl ScrollComponent {
         }
     }
 
-    /// Checks if the lifecycle event applies to the scroll behavior, uses it and returns true if so
+    /// Perform any nessesary action prompted by a lifecycle event
     ///
-    /// Returns false if the lifecycle event was not used
-    pub fn filter_lifecycle(
-        &mut self,
-        ctx: &mut LifeCycleCtx,
-        event: &LifeCycle,
-        env: &Env,
-    ) -> bool {
+    /// Make sure to call on every lifecycle event
+    pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, env: &Env) {
         match event {
             LifeCycle::AnimFrame(interval) => {
                 // Guard by the timer id being invalid, otherwise the scroll bars would fade
@@ -405,19 +420,16 @@ impl ScrollComponent {
                     if self.scrollbars.opacity > 0.0 {
                         ctx.request_anim_frame();
                     }
-
-                    return true;
                 }
             }
+
             // Show the scrollbars any time our size changes
             LifeCycle::Size(_) => {
                 self.reset_scrollbar_fade(|d| ctx.request_timer(d), &env);
-                return true;
             }
-            _ => (),
-        }
 
-        false
+            _ => {}
+        }
     }
 
     /// Helper function to paint a closure at the correct offset with clipping and scrollbars

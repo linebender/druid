@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Simple list view widget.
+//! Simple scrolling list view widget.
 
 use std::cmp::Ordering;
 use std::sync::Arc;
@@ -33,7 +33,7 @@ pub enum ListDirection {
     Horizontal,
 }
 
-/// A list widget for a variable-size collection of items.
+/// A scrollable list widget for a variable-size collection of items.
 pub struct List<T> {
     closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
@@ -43,8 +43,8 @@ pub struct List<T> {
 
 impl<T: Data> List<T> {
     /// Create a new list widget. Closure will be called every time when a new child
-    /// needs to be constructed. Children will layed out vertically Use
-    /// [horizontal](#method.horizontal) to lay out items horizontally.
+    /// needs to be constructed. Children will layed out vertically while locking width.
+    /// Use [horizontal](#method.horizontal) to lay out items horizontally.
     pub fn new<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
         List {
             closure: Box::new(move || Box::new(closure())),
@@ -54,6 +54,7 @@ impl<T: Data> List<T> {
         }
     }
 
+    /// Lay out items on the horizontal axis while locking item height
     pub fn horizontal(mut self) -> Self {
         self.direction = ListDirection::Horizontal;
         self
@@ -211,7 +212,8 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<Vec<T>>) {
 
 impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        if !self.scroll_component.filter_event(ctx, event, env) {
+        self.scroll_component.event(ctx, event, env);
+        if !ctx.is_handled {
             let viewport = Rect::from_origin_size(Point::ORIGIN, ctx.size());
             let scroll_offset = self.scroll_component.scroll_offset;
             let mut children = self.children.iter_mut();
@@ -231,20 +233,20 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        if !self.scroll_component.filter_lifecycle(ctx, event, env) {
-            if let LifeCycle::WidgetAdded = event {
-                if self.update_child_count(data, env) {
-                    ctx.children_changed();
-                }
-            }
+        self.scroll_component.lifecycle(ctx, event, env);
 
-            let mut children = self.children.iter_mut();
-            data.for_each(|child_data, _| {
-                if let Some(child) = children.next() {
-                    child.lifecycle(ctx, event, child_data, env);
-                }
-            });
+        if let LifeCycle::WidgetAdded = event {
+            if self.update_child_count(data, env) {
+                ctx.children_changed();
+            }
         }
+
+        let mut children = self.children.iter_mut();
+        data.for_each(|child_data, _| {
+            if let Some(child) = children.next() {
+                child.lifecycle(ctx, event, child_data, env);
+            }
+        });
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
@@ -319,7 +321,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         });
 
         self.scroll_component.content_size = Size::new(width, height);
-        let insets = paint_rect - Rect::ZERO.with_size(my_size);
+        let insets = paint_rect - my_size.to_rect();
         ctx.set_paint_insets(insets);
         my_size
     }

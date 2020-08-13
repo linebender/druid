@@ -22,27 +22,54 @@ use crate::{
     LifeCycleCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
+#[derive(Debug, Clone)]
+enum ScrollDirection {
+    Bidirectional,
+    Vertical,
+    Horizontal,
+}
+
 /// A container that scrolls its contents.
 ///
 /// This container holds a single child, and uses the wheel to scroll it
 /// when the child's bounds are larger than the viewport.
 ///
-/// The child is laid out with completely unconstrained layout bounds.
-pub struct AbsoluteScroll<T, W> {
+/// The child is laid out with completely unconstrained layout bounds by
+/// default. Restrict to a specific axis with [`vertical`] or [`horizontal`].
+/// When restricted to scrolling on a specific axis the child's size is
+/// locked on the opposite axis.
+///
+/// [`vertical`]: struct.Scroll.html#method.vertical
+/// [`horizontal`]: struct.Scroll.html#method.horizontal
+pub struct Scroll<T, W> {
     child: WidgetPod<T, W>,
     scroll_component: ScrollComponent,
+    direction: ScrollDirection,
 }
 
-impl<T, W: Widget<T>> AbsoluteScroll<T, W> {
+impl<T, W: Widget<T>> Scroll<T, W> {
     /// Create a new scroll container.
     ///
     /// This method will allow scrolling in all directions if child's bounds
     /// are larger than the viewport.
-    pub fn new(child: W) -> AbsoluteScroll<T, W> {
-        AbsoluteScroll {
+    pub fn new(child: W) -> Scroll<T, W> {
+        Scroll {
             child: WidgetPod::new(child),
             scroll_component: ScrollComponent::new(),
+            direction: ScrollDirection::Bidirectional,
         }
+    }
+
+    /// Restrict scrolling to the vertical axis while locking child width
+    pub fn vertical(mut self) -> Self {
+        self.direction = ScrollDirection::Vertical;
+        self
+    }
+
+    /// Restrict scrolling to the horizontal axis while locking child height
+    pub fn horizontal(mut self) -> Self {
+        self.direction = ScrollDirection::Horizontal;
+        self
     }
 
     /// Returns a reference to the child widget.
@@ -66,9 +93,10 @@ impl<T, W: Widget<T>> AbsoluteScroll<T, W> {
     }
 }
 
-impl<T: Data, W: Widget<T>> Widget<T> for AbsoluteScroll<T, W> {
+impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        if !self.scroll_component.filter_event(ctx, event, env) {
+        self.scroll_component.event(ctx, event, env);
+        if !ctx.is_handled {
             let viewport = Rect::from_origin_size(Point::ORIGIN, ctx.size());
 
             let force_event = self.child.is_hot() || self.child.is_active();
@@ -83,9 +111,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for AbsoluteScroll<T, W> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        if !self.scroll_component.filter_lifecycle(ctx, event, env) {
-            self.child.lifecycle(ctx, event, data, env);
-        }
+        self.scroll_component.lifecycle(ctx, event, env);
+        self.child.lifecycle(ctx, event, data, env);
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
@@ -95,13 +122,20 @@ impl<T: Data, W: Widget<T>> Widget<T> for AbsoluteScroll<T, W> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Scroll");
 
-        let child_bc = BoxConstraints::new(Size::ZERO, Size::new(INFINITY, INFINITY));
-        let size = self.child.layout(ctx, &child_bc, data, env);
-        log_size_warnings(size);
+        let max_bc = match self.direction {
+            ScrollDirection::Bidirectional => Size::new(INFINITY, INFINITY),
+            ScrollDirection::Vertical => Size::new(bc.min().width, INFINITY),
+            ScrollDirection::Horizontal => Size::new(INFINITY, bc.min().height),
+        };
 
-        self.scroll_component.content_size = size;
-        self.child.set_layout_rect(ctx, data, env, size.to_rect());
-        let self_size = bc.constrain(self.scroll_component.content_size);
+        let child_bc = BoxConstraints::new(Size::ZERO, max_bc);
+        let child_size = self.child.layout(ctx, &child_bc, data, env);
+        log_size_warnings(child_size);
+        self.scroll_component.content_size = child_size;
+        self.child
+            .set_layout_rect(ctx, data, env, child_size.to_rect());
+
+        let self_size = bc.constrain(max_bc);
         let _ = self.scroll_component.scroll(Vec2::new(0.0, 0.0), self_size);
         self_size
     }

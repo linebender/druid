@@ -21,7 +21,6 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 - Major rework of keyboard event handling. ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
-- `Scroll` renamed to `AbsoluteScroll`. ([#1107] by [@ForLoveOfCats])
 - `List` handles its own scrolling on either the vertical or horizontal axis. ([#1107] by [@ForLoveOfCats])
 
 ### Deprecated
