@@ -847,7 +847,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`update`]: trait.Widget.html#tymethod.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
-        if !ctx.widget_state.request_update {
+        if !self.state.request_update {
             match (self.old_data.as_ref(), self.env.as_ref()) {
                 (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
                 (None, _) => {
@@ -870,8 +870,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.old_data = Some(data.clone());
         self.env = Some(env.clone());
 
+        self.state.request_update = false;
         ctx.widget_state.merge_up(&mut self.state);
-        ctx.widget_state.request_update = false;
     }
 }
 
