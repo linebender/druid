@@ -25,7 +25,7 @@ use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::{
     commands, Affine, Command, ContextMenu, Cursor, Insets, MenuDesc, Point, Rect, SingleUse, Size,
-    Target, Text, TimerToken, Vec2, WidgetId, WindowDesc, WindowHandle, WindowId,
+    Target, Text, TimerToken, Vec2, WidgetId, WidgetPod, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -494,6 +494,23 @@ impl EventCtx<'_, '_> {
                 self.widget_id()
             );
         }
+    }
+
+    /// Request an update cycle.
+    ///
+    /// After this, `update` will be called on the widget in the next update cycle, even
+    /// if there's not a data change.
+    pub fn request_update<T, W>(&mut self) {
+        self.widget_state.request_update = true;
+    }
+
+    /// Request an update cycle for a child widget.
+    ///
+    /// After this, `update` will be called on the child widget in the next update cycle,
+    /// even if there's not a data change.
+    pub fn request_update_child<T, W>(&mut self, child: &mut WidgetPod<T, W>) {
+        self.widget_state.request_update = true;
+        child.state.request_update = true;
     }
 }
 
