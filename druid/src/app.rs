@@ -24,6 +24,8 @@ use crate::{
     theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget, WidgetExt,
 };
 
+use druid_shell::WindowState;
+
 /// A function that modifies the initial environment.
 type EnvSetupFn<T> = dyn FnOnce(&mut Env, &T);
 
@@ -48,8 +50,7 @@ pub struct WindowDesc<T> {
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) resizable: bool,
     pub(crate) show_titlebar: bool,
-    pub(crate) maximized: bool,
-    pub(crate) minimized: bool,
+    pub(crate) state: WindowState,
     /// The `WindowId` that will be assigned to this window.
     ///
     /// This can be used to track a window from when it is launched and when
@@ -170,8 +171,7 @@ impl<T: Data> WindowDesc<T> {
             menu: MenuDesc::platform_default(),
             resizable: true,
             show_titlebar: true,
-            maximized: false,
-            minimized: false,
+            state: WindowState::RESTORED,
             id: WindowId::next(),
         }
     }
@@ -251,15 +251,9 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Creates the window maximized.
-    pub fn maximized(mut self) -> Self {
-        self.maximized = true;
-        self
-    }
-
-    /// Creates the window minimized.
-    pub fn minimized(mut self) -> Self {
-        self.minimized = true;
+    /// Set initial state for the window.
+    pub fn set_window_state(mut self, state: WindowState) -> Self {
+        self.state = state;
         self
     }
 
@@ -293,13 +287,7 @@ impl<T: Data> WindowDesc<T> {
             builder.set_position(position);
         }
 
-        if self.maximized {
-            builder.maximized();
-        }
-
-        if self.minimized {
-            builder.minimized();
-        }
+        builder.set_window_state(self.state);
 
         builder.set_title(self.title.display_text());
         if let Some(menu) = platform_menu {

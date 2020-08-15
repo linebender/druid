@@ -58,6 +58,8 @@ use crate::scale::Scale;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use crate::Error;
 
+use crate::window::WindowState as WindowSizeState; // Avoid name conflict.
+
 #[allow(non_upper_case_globals)]
 const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
 
@@ -151,12 +153,8 @@ impl WindowBuilder {
         log::warn!("WindowBuilder::set_position is currently unimplemented for mac platforms.");
     }
 
-    pub fn maximized(&self) {
-        log::warn!("WindowBuilder::maximized is currently unimplemented for mac platforms.");
-    }
-
-    pub fn minimized(&self) {
-        log::warn!("WindowBuilder::minimized is currently unimplemented for mac platforms.");
+    pub fn set_window_state(&self, _state: WindowSizeState) {
+        log::warn!("WindowBuilder::set_window_state is currently unimplemented for mac platforms.");
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -868,12 +866,13 @@ impl WindowHandle {
         Size::new(0.0, 0.0)
     }
 
-    pub fn maximize(&self) {
-        log::warn!("WindowHandle::maximize is currently unimplemented for Mac.");
+    pub fn set_window_state(&self, _state: WindowSizeState) {
+        log::warn!("WindowHandle::set_window_state is currently unimplemented for Mac.");
     }
 
-    pub fn minimize(&self) {
-        log::warn!("WindowHandle::minimize is currently unimplemented for Mac.");
+    pub fn get_window_state(&self) -> WindowSizeState {
+        log::warn!("WindowHandle::get_window_state is currently unimplemented for Mac.");
+        WindowSizeState::RESTORED
     }
 
     pub fn handle_titlebar(&self, _val: bool) {

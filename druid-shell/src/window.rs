@@ -95,6 +95,14 @@ impl IdleToken {
     }
 }
 
+/// Contains the different states a Window can be in.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum WindowState {
+    MAXIMIZED,
+    MINIMIZED,
+    RESTORED,
+}
+
 /// A handle to a platform window object.
 #[derive(Clone, Default)]
 pub struct WindowHandle(platform::WindowHandle);
@@ -118,22 +126,22 @@ impl WindowHandle {
         self.0.resizable(resizable)
     }
 
-    /// Toggles window maximized.
-    /// Note this might not work the same on all platforms
-    /// Note that on windows, if resizable is set to false
-    /// This will cause the window to be maximized above the taskbar
-    pub fn maximize(&self) {
-        self.0.maximize();
+    /// Sets the state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn set_window_state(&self, state: WindowState) {
+        self.0.set_window_state(state);
     }
 
-    /// Toggles window minimized.
-    /// Note this might not work the same on all platforms
-    pub fn minimize(&self) {
-        self.0.minimize();
+    /// Gets the state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn get_window_state(&self) -> WindowState {
+        self.0.get_window_state()
     }
 
     /// Allows the operating system to handle a custom titlebar
-    /// like the default one
+    /// like the default one.
     ///
     /// It should be used on Event::MouseMove in a widget:
     /// `Event::MouseMove(_) => {
@@ -144,12 +152,12 @@ impl WindowHandle {
     ///    }
     ///}`
     ///
-    /// This might not work or behave the same across all platforms
+    /// This might not work or behave the same across all platforms.
     pub fn handle_titlebar(&self, val: bool) {
         self.0.handle_titlebar(val);
     }
 
-    /// Set whether the window should show titlebar
+    /// Set whether the window should show titlebar.
     pub fn show_titlebar(&self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
     }
@@ -356,14 +364,11 @@ impl WindowBuilder {
         self.0.set_menu(menu.into_inner())
     }
 
-    /// Creates the window maximized.
-    pub fn maximized(&mut self) {
-        self.0.maximized();
-    }
-
-    /// Creates the window minimized.
-    pub fn minimized(&mut self) {
-        self.0.minimized();
+    /// Sets the initial state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn set_window_state(&mut self, state: WindowState) {
+        self.0.set_window_state(state);
     }
 
     /// Attempt to construct the platform window.

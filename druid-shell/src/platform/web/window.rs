@@ -42,6 +42,8 @@ use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
+use crate::window::WindowState as WindowSizeState; // Avoid name conflict.
+
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
 macro_rules! get_modifiers {
@@ -349,11 +351,7 @@ impl WindowBuilder {
         // Ignored
     }
 
-    pub fn maximized(&self) {
-        // Ignored
-    }
-
-    pub fn minimized(&self) {
+    pub fn set_window_state(&self, _state: WindowSizeState) {
         // Ignored
     }
 
@@ -460,12 +458,13 @@ impl WindowHandle {
         Size::new(0.0, 0.0)
     }
 
-    pub fn maximize(&self) {
-        log::warn!("WindowHandle::maximize unimplemented for web.");
+    pub fn set_window_state(&self, _state: WindowSizeState) {
+        log::warn!("WindowHandle::set_window_state unimplemented for web.");
     }
 
-    pub fn minimize(&self) {
-        log::warn!("WindowHandle::minimize unimplemented for web.");
+    pub fn get_window_state(&self) -> WindowSizeState {
+        log::warn!("WindowHandle::get_window_state unimplemented for web.");
+        WindowSizeState::RESTORED
     }
 
     pub fn handle_titlebar(&self, _val: bool) {

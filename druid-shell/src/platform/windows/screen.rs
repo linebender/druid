@@ -25,20 +25,7 @@ use std::ptr::null_mut;
 use std::mem::size_of;
 
 use crate::screen::Monitor;
-use crate::kurbo::{Rect, Size};
-
-pub(crate) fn get_display_size() -> Size {
-    unsafe {
-        let width = GetSystemMetrics(SM_CXVIRTUALSCREEN) as f64;
-        let height = GetSystemMetrics(SM_CYVIRTUALSCREEN) as f64;
-        if width == 0.0 || height == 0.0 {
-            warn!(
-                "Failed to get display size"
-            );
-        }
-        Size::new(width, height)
-    }
-}
+use crate::kurbo::Rect;
 
 static mut MONITORS : Vec<Monitor> = Vec::new();
 

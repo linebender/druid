@@ -15,12 +15,6 @@
 //! Monitor and Screen information ignored for web.
 
 use crate::screen::Monitor;
-use crate::kurbo::Size;
-
-pub(crate) fn get_display_size() -> Size {
-    log::warn!("Screen::get_display_size() is not implemented for web.");
-    Size::new(0.0, 0.0)
-}
 
 pub(crate) fn get_monitors() -> Vec<Monitor> {
     log::warn!("Screen::get_monitors() is not implemented for web.");

@@ -49,6 +49,8 @@ use super::keycodes;
 use super::menu::Menu;
 use super::util;
 
+use crate::window::WindowState as WindowSizeState; // Avoid name conflict.
+
 /// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
 /// is used to interoperate with cairo.
 ///
@@ -128,12 +130,8 @@ impl WindowBuilder {
         log::warn!("WindowBuilder::set_position is currently unimplemented for X11 platforms.");
     }
 
-    pub fn maximized(&self) {
-        log::warn!("WindowBuilder::maximized is currently unimplemented for X11 platforms.");
-    }
-
-    pub fn minimized(&self) {
-        log::warn!("WindowBuilder::minimized is currently unimplemented for X11 platforms.");
+    pub fn set_window_state(&self, _state: WindowSizeState) {
+        log::warn!("WindowBuilder::set_window_state is currently unimplemented for X11 platforms.");
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -1281,12 +1279,12 @@ impl WindowHandle {
         Size::new(0.0, 0.0)
     }
 
-    pub fn maximize(&self) {
-        log::warn!("WindowHandle::maximize is currently unimplemented for X11 platforms.");
+    pub fn set_window_state(&self, _state: WindowSizeState) {
+        log::warn!("WindowHandle::set_window_state is currently unimplemented for X11 platforms.");
     }
 
-    pub fn minimize(&self) {
-        log::warn!("WindowHandle::minimize is currently unimplemented for X11 platforms.");
+    pub fn get_window_state(&self) -> WindowSizeState {
+        log::warn!("WindowHandle::get_window_state is currently unimplemented for X11 platforms.");
     }
 
     pub fn handle_titlebar(&self, _val: bool) {

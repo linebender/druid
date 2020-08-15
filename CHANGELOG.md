@@ -12,8 +12,8 @@ You can find its changes [documented below](#060---2020-06-01).
 - Windows: Added Screen module to get information about monitors and the screen. ([#1037] by [@rhzk])
 - Added documentation to resizable() and show_titlebar() in WindowDesc. ([#1037] by [@rhzk])
 - Windows: Added internal functions to handle Re-entrancy. ([#1037] by [@rhzk])
-- Windows: WindowDesc: Create window with disabled titlebar, maximized or minimized and with position. ([#1037] by [@rhzk])
-- Windows: WindowHandle: Toggle maximize, minimize window. Toggle titlebar. Change size and position of window. ([#1037] by [@rhzk])
+- Windows: WindowDesc: Create window with disabled titlebar, maximized or minimized state, and with position. ([#1037] by [@rhzk])
+- Windows: WindowHandle: Change window state. Toggle titlebar. Change size and position of window. ([#1037] by [@rhzk])
 - Windows: WindowHandle: Added handle_titlebar(), Allowing a custom titlebar to behave like the OS one. ([#1037] by [@rhzk])
 - Added ctrl/shift key support to textbox. ([#1063] by [@vkahl])
 

@@ -14,7 +14,7 @@
 
 //! Module to get information about monitors
 
-use crate::kurbo::{Rect, Size};
+use crate::kurbo::Rect;
 use crate::platform;
 use std::fmt;
 use std::fmt::Display;
@@ -87,8 +87,11 @@ impl Screen {
         platform::screen::get_monitors()
     }
 
-    /// Returns the total virtual screen space on the system, in pixels.
-    pub fn get_display_size() -> Size {
-        platform::screen::get_display_size()
+    /// Returns the bounding rectangle of the total virtual screen space in pixels.
+    pub fn get_display_size() -> Rect {
+        Self::get_monitors()
+            .iter()
+            .map(|x| x.virtual_rect())
+            .fold(Rect::ZERO, |a, b| a.union(b))
     }
 }

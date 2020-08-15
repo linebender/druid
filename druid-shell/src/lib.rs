@@ -63,7 +63,7 @@ pub use scale::{Scalable, Scale, ScaledArea};
 pub use screen::Monitor;
 pub use screen::Screen;
 pub use window::{
-    IdleHandle, IdleToken, Text, TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    IdleHandle, IdleToken, Text, TimerToken, WinHandler, WindowBuilder, WindowHandle, WindowState,
 };
 
 pub use keyboard_types;

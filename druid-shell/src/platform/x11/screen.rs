@@ -15,12 +15,6 @@
 //! X11 Monitors and Screen information.
 
 use crate::screen::Monitor;
-use crate::kurbo::Size;
-
-pub(crate) fn get_display_size() -> Size {
-    log::warn!("Screen::get_display_size() is currently unimplemented for X11 platforms.");
-    Size::new(0.0, 0.0)
-}
 
 pub(crate) fn get_monitors() -> Vec<Monitor> {
     log::warn!("Screen::get_monitors() is currently unimplemented for X11 platforms.");

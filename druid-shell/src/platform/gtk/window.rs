@@ -48,6 +48,8 @@ use super::keycodes;
 use super::menu::Menu;
 use super::util;
 
+use crate::window::WindowState as WindowSizeState; // Avoid name conflict.
+
 /// The platform target DPI.
 ///
 /// GTK considers 96 the default value which represents a 1.0 scale factor.
@@ -160,12 +162,8 @@ impl WindowBuilder {
         log::warn!("WindowBuilder::set_position is currently unimplemented for gtk.");
     }
 
-    pub fn maximized(&self) {
-        log::warn!("WindowBuilder::maximized is currently unimplemented for gtk.");
-    }
-
-    pub fn minimized(&self) {
-        log::warn!("WindowBuilder::minimized is currently unimplemented for gtk.");
+    pub fn set_window_state(&self, _state: WindowSizeState) {
+        log::warn!("WindowBuilder::set_window_state is currently unimplemented for gtk.");
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -583,12 +581,13 @@ impl WindowHandle {
         Size::new(0.0, 0.0)
     }
 
-    pub fn maximize(&self) {
-        log::warn!("WindowHandle::maximize is currently unimplemented for gtk.");
+    pub fn set_window_state(&self, _state: WindowSizeState) {
+        log::warn!("WindowHandle::set_window_state is currently unimplemented for gtk.");
     }
 
-    pub fn minimize(&self) {
-        log::warn!("WindowHandle::minimize is currently unimplemented for gtk.");
+    pub fn get_window_state(&self) -> WindowSizeState {
+        log::warn!("WindowHandle::get_window_state is currently unimplemented for gtk.");
+        WindowSizeState::RESTORED
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
