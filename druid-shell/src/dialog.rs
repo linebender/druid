@@ -32,7 +32,6 @@ pub enum FileDialogType {
 }
 
 /// Options for file dialogs.
-#[non_exhaustive]
 #[derive(Debug, Clone, Default)]
 #[non_exhaustive]
 pub struct FileDialogOptions {
