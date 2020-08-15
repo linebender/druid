@@ -88,7 +88,7 @@ impl Screen {
     }
 
     /// Returns the bounding rectangle of the total virtual screen space in pixels.
-    pub fn get_display_size() -> Rect {
+    pub fn get_display_rect() -> Rect {
         Self::get_monitors()
             .iter()
             .map(|x| x.virtual_rect())
