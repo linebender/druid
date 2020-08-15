@@ -16,10 +16,12 @@
 
 use std::any::Any;
 use std::cell::RefCell;
-use std::convert::TryInto;
+use std::collections::BinaryHeap;
+use std::convert::{TryFrom, TryInto};
 use std::os::unix::io::RawFd;
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
@@ -47,7 +49,7 @@ use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use super::application::Application;
 use super::keycodes;
 use super::menu::Menu;
-use super::util;
+use super::util::{self, Timer};
 
 use crate::window::WindowState as WindowSizeState; // Avoid name conflict.
 
@@ -262,6 +264,7 @@ impl WindowBuilder {
         let state = RefCell::new(WindowState {
             size: self.size,
             invalid: Rect::ZERO,
+            destroyed: false,
         });
         let present_data = match self.initialize_present_data(id) {
             Ok(p) => Some(p),
@@ -284,6 +287,20 @@ impl WindowBuilder {
             screen.root_depth,
         )?);
 
+        // Initialize some properties
+        let pid = nix::unistd::Pid::this().as_raw();
+        if let Ok(pid) = u32::try_from(pid) {
+            conn.change_property32(
+                xproto::PropMode::Replace,
+                id,
+                atoms._NET_WM_PID,
+                AtomEnum::CARDINAL,
+                &[pid],
+            )?
+            .check()
+            .context("set _NET_WM_PID")?;
+        }
+
         let window = Rc::new(Window {
             id,
             gc,
@@ -292,6 +309,7 @@ impl WindowBuilder {
             cairo_surface,
             atoms,
             state,
+            timer_queue: Mutex::new(BinaryHeap::new()),
             idle_queue: Arc::new(Mutex::new(Vec::new())),
             idle_pipe: self.app.idle_pipe(),
             present_data: RefCell::new(present_data),
@@ -346,6 +364,8 @@ pub(crate) struct Window {
     cairo_surface: RefCell<XCBSurface>,
     atoms: WindowAtoms,
     state: RefCell<WindowState>,
+    /// Timers, sorted by "earliest deadline first"
+    timer_queue: Mutex<BinaryHeap<Timer>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     // Writing to this wakes up the event loop, so that it can run idle handlers.
     idle_pipe: RawFd,
@@ -402,10 +422,29 @@ pub(crate) struct Window {
 // Registering for but ignoring this event means that the window will remain open.
 //
 // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
+//
+// _NET_WM_PID
+//
+// A property containing the PID of the process that created the window.
+//
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407915360
+//
+// _NET_WM_NAME
+//
+// A version of WM_NAME supporting UTF8 text.
+//
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407982336
+//
+// UTF8_STRING
+//
+// The type of _NET_WM_NAME
 atom_manager! {
     WindowAtoms: WindowAtomsCookie {
         WM_PROTOCOLS,
         WM_DELETE_WINDOW,
+        _NET_WM_PID,
+        _NET_WM_NAME,
+        UTF8_STRING,
     }
 }
 
@@ -414,6 +453,8 @@ struct WindowState {
     size: Size,
     /// The region that was invalidated since the last time we rendered.
     invalid: Rect,
+    /// We've told X11 to destroy this window, so don't so any more X requests with this window id.
+    destroyed: bool,
 }
 
 /// A collection of pixmaps for rendering to. This gets used in two different ways: if the present
@@ -482,7 +523,17 @@ impl Window {
 
     /// Start the destruction of the window.
     pub fn destroy(&self) {
-        log_x11!(self.app.connection().destroy_window(self.id));
+        if !self.destroyed() {
+            match borrow_mut!(self.state) {
+                Ok(mut state) => state.destroyed = true,
+                Err(e) => log::error!("Failed to set destroyed flag: {}", e),
+            }
+            log_x11!(self.app.connection().destroy_window(self.id));
+        }
+    }
+
+    fn destroyed(&self) -> bool {
+        borrow!(self.state).map(|s| s.destroyed).unwrap_or(false)
     }
 
     fn size(&self) -> Result<Size, Error> {
@@ -540,6 +591,10 @@ impl Window {
     }
 
     fn render(&self) -> Result<(), Error> {
+        if self.destroyed() {
+            return Ok(());
+        }
+
         let size = borrow!(self.state)?.size;
         let invalid_rect = borrow!(self.state)?.invalid;
         let mut anim = false;
@@ -606,7 +661,9 @@ impl Window {
     }
 
     fn show(&self) {
-        log_x11!(self.app.connection().map_window(self.id));
+        if !self.destroyed() {
+            log_x11!(self.app.connection().map_window(self.id));
+        }
     }
 
     fn close(&self) {
@@ -625,6 +682,10 @@ impl Window {
 
     /// Bring this window to the front of the window stack and give it focus.
     fn bring_to_front_and_focus(&self) {
+        if self.destroyed() {
+            return;
+        }
+
         // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
         let conn = self.app.connection();
         log_x11!(conn.configure_window(
@@ -695,11 +756,25 @@ impl Window {
     }
 
     fn set_title(&self, title: &str) {
+        if self.destroyed() {
+            return;
+        }
+
+        // This is technically incorrect. STRING encoding is *not* UTF8. However, I am not sure
+        // what it really is. WM_LOCALE_NAME might be involved. Hopefully, nothing cares about this
+        // as long as _NET_WM_NAME is also set (which uses UTF8).
         log_x11!(self.app.connection().change_property8(
             xproto::PropMode::Replace,
             self.id,
             AtomEnum::WM_NAME,
             AtomEnum::STRING,
+            title.as_bytes(),
+        ));
+        log_x11!(self.app.connection().change_property8(
+            xproto::PropMode::Replace,
+            self.id,
+            self.atoms._NET_WM_NAME,
+            self.atoms.UTF8_STRING,
             title.as_bytes(),
         ));
     }
@@ -910,6 +985,10 @@ impl Window {
     }
 
     pub fn handle_idle_notify(&self, event: &IdleNotifyEvent) -> Result<(), Error> {
+        if self.destroyed() {
+            return Ok(());
+        }
+
         let mut buffers = borrow_mut!(self.buffers)?;
         if buffers.all_pixmaps.contains(&event.pixmap) {
             buffers.idle_pixmaps.push(event.pixmap);
@@ -968,6 +1047,27 @@ impl Window {
         if needs_redraw {
             if let Err(e) = self.redraw_now() {
                 log::error!("Error redrawing: {}", e);
+            }
+        }
+    }
+
+    pub(crate) fn next_timeout(&self) -> Option<Instant> {
+        if let Some(timer) = self.timer_queue.lock().unwrap().peek() {
+            Some(timer.deadline())
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn run_timers(&self, now: Instant) {
+        while let Some(deadline) = self.next_timeout() {
+            if deadline > now {
+                break;
+            }
+            // Remove the timer and get the token
+            let token = self.timer_queue.lock().unwrap().pop().unwrap().token();
+            if let Ok(mut handler_borrow) = self.handler.try_borrow_mut() {
+                handler_borrow.timer(token);
             }
         }
     }
@@ -1336,12 +1436,14 @@ impl WindowHandle {
         Text::new()
     }
 
-    pub fn request_timer(&self, _deadline: std::time::Instant) -> TimerToken {
-        // TODO(x11/timers): implement WindowHandle::request_timer
-        //     This one might be tricky, since there's not really any timers to hook into in X11.
-        //     Might have to code up our own Timer struct, running in its own thread?
-        log::warn!("WindowHandle::resizeable is currently unimplemented for X11 platforms.");
-        TimerToken::INVALID
+    pub fn request_timer(&self, deadline: Instant) -> TimerToken {
+        if let Some(w) = self.window.upgrade() {
+            let timer = Timer::new(deadline);
+            w.timer_queue.lock().unwrap().push(timer);
+            timer.token()
+        } else {
+            TimerToken::INVALID
+        }
     }
 
     pub fn set_cursor(&mut self, _cursor: &Cursor) {

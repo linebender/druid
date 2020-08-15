@@ -15,17 +15,19 @@ You can find its changes [documented below](#060---2020-06-01).
 - Windows: WindowDesc: Create window with disabled titlebar, maximized or minimized state, and with position. ([#1037] by [@rhzk])
 - Windows: WindowHandle: Change window state. Toggle titlebar. Change size and position of window. ([#1037] by [@rhzk])
 - Windows: WindowHandle: Added handle_titlebar(), Allowing a custom titlebar to behave like the OS one. ([#1037] by [@rhzk])
-- Added ctrl/shift key support to textbox. ([#1063] by [@vkahl])
+- `OPEN_PANEL_CANCELLED` and `SAVE_PANEL_CANCELLED` commands. ([#1061] by @cmyr)
+- Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
+- Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
+- `TextBox` now supports ctrl and shift hotkeys. ([#1076] by [@vkahl])
+- Added selection text color to textbox. ([#1093] by [@sysint64])
 
 ### Changed
 
 - Windows: Improved DPI handling. Druid should now redraw correctly when dpi changes. ([#1037] by [@rhzk])
-- winOS: Window created with OS default size if not set. ([#1037] by [@rhzk])
-- `Image` and `ImageData` exported by default. ([#1011] by [@covercash2])
+- windows: Window created with OS default size if not set. ([#1037] by [@rhzk])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
-- Major rework of keyboard event handling ([#1049] by [@raphlinus])
+- Major rework of keyboard event handling. ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
-- Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
 
 ### Deprecated
 
@@ -39,10 +41,19 @@ You can find its changes [documented below](#060---2020-06-01).
 - macOS: Timers not firing during modal loop. ([#1028] by [@xStrom])
 - GTK: Directory selection now properly ignores file filters. ([#957] by [@xStrom])
 - GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
-- Fix derive `Data` when type param bounds are defined ([#1058] by [@chris-zen])
+- `Data` derive now works when type param bounds are defined. ([#1058] by [@chris-zen])
 - Ensure that `update` is called after all commands. ([#1062] by [@jneem])
 - X11: Support idle callbacks. ([#1072] by [@jneem])
 - GTK: Don't interrupt `KeyEvent.repeat` when releasing another key. ([#1081] by [@raphlinus])
+- X11: Set some more common window properties. ([#1097] by [@psychon])
+- X11: Support timers. ([#1096] by [@psychon])
+- `EnvScope` now also updates the `Env` during `Widget::lifecycle`. ([#1100] by [@finnerale])
+- `WidgetExt::debug_widget_id` and `debug_paint_layout` now also apply to the widget they are called on. ([#1100] by [@finnerale])
+- X11: Fix X11 errors caused by destroyed windows. ([#1103] by [@jneem])
+- `ViewSwitcher` now skips the update after switching widgets. ([#1113] by [@finnerale])
+- Key and KeyOrValue derive Clone ([#1119] by [@rjwittams])
+- Allow submit_command from the layout method in Widgets ([#1119] by [@rjwittams])
+-  Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
 
 ### Visual
 
@@ -60,7 +71,7 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Maintenance
 
 - Standardized web targeting terminology. ([#1013] by [@xStrom])
-- X11: Ported the X11 backend to `x11rb`. ([#1025] by [@jneem])
+- X11: Ported the X11 backend to [`x11rb`](https://github.com/psychon/x11rb). ([#1025] by [@jneem])
 
 ### Outside News
 
@@ -137,6 +148,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - The `WindowHandle::get_dpi` method got replaced by `WindowHandle::get_scale`. ([#904] by [@xStrom])
 - The `WinHandler::size` method now gets a `Size` in display points. ([#904] by [@xStrom])
 - Standardized the type returned by the contexts' `text` methods. ([#996] by [@cmyr])
+- `ViewSwitcher` uses `Data` type constraint instead of `PartialEq`. ([#1112] by [@justinmoon])
 
 ### Removed
 
@@ -230,7 +242,6 @@ Last release without a changelog :(
 ## 0.1.1 - 2018-11-02
 ## 0.1.0 - 2018-11-02
 
-[@rhzk]: https://github.com/rhzk
 [@futurepaul]: https://github.com/futurepaul
 [@finnerale]: https://github.com/finnerale
 [@totsteps]: https://github.com/totsteps
@@ -257,6 +268,11 @@ Last release without a changelog :(
 [@ForLoveOfCats]: https://github.com/ForLoveOfCats
 [@chris-zen]: https://github.com/chris-zen
 [@vkahl]: https://github.com/vkahl
+[@psychon]: https://github.com/psychon
+[@sysint64]: https://github.com/sysint64
+[@justinmoon]: https://github.com/justinmoon
+[@rjwittams]: https://github.com/rjwittams
+[@rhzk]: https://github.com/rhzk
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -358,17 +374,26 @@ Last release without a changelog :(
 [#1018]: https://github.com/linebender/druid/pull/1018
 [#1025]: https://github.com/linebender/druid/pull/1025
 [#1028]: https://github.com/linebender/druid/pull/1028
+[#1037]: https://github.com/linebender/druid/pull/1037
 [#1042]: https://github.com/linebender/druid/pull/1042
 [#1043]: https://github.com/linebender/druid/pull/1043
 [#1049]: https://github.com/linebender/druid/pull/1049
 [#1050]: https://github.com/linebender/druid/pull/1050
 [#1054]: https://github.com/linebender/druid/pull/1054
 [#1058]: https://github.com/linebender/druid/pull/1058
-[#1075]: https://github.com/linebender/druid/pull/1075
+[#1061]: https://github.com/linebender/druid/pull/1061
 [#1062]: https://github.com/linebender/druid/pull/1062
 [#1072]: https://github.com/linebender/druid/pull/1072
+[#1075]: https://github.com/linebender/druid/pull/1075
+[#1076]: https://github.com/linebender/druid/pull/1076
 [#1081]: https://github.com/linebender/druid/pull/1081
-[#1037]: https://github.com/linebender/druid/pull/1037
+[#1096]: https://github.com/linebender/druid/pull/1096
+[#1097]: https://github.com/linebender/druid/pull/1097
+[#1093]: https://github.com/linebender/druid/pull/1093
+[#1100]: https://github.com/linebender/druid/pull/1100
+[#1103]: https://github.com/linebender/druid/pull/1103
+[#1119]: https://github.com/linebender/druid/pull/1119
+[#1120]: https://github.com/linebender/druid/pull/1120
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
@@ -376,4 +401,3 @@ Last release without a changelog :(
 [0.4.0]: https://github.com/linebender/druid/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/linebender/druid/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/linebender/druid/compare/v0.3.0...v0.3.1
-

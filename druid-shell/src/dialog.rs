@@ -34,6 +34,7 @@ pub enum FileDialogType {
 /// Options for file dialogs.
 #[non_exhaustive]
 #[derive(Debug, Clone, Default)]
+#[non_exhaustive]
 pub struct FileDialogOptions {
     pub show_hidden: bool,
     pub allowed_types: Option<Vec<FileSpec>>,

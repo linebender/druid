@@ -493,7 +493,7 @@ pub mod sys {
             }
             #[cfg(not(target_os = "windows"))]
             {
-                item.hotkey(SysMods::CmdShift, "z")
+                item.hotkey(SysMods::CmdShift, "Z")
             }
         }
     }
@@ -582,7 +582,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-save-as"),
                     commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
-                .hotkey(RawMods::CtrlShift, "s")
+                .hotkey(RawMods::CtrlShift, "S")
             }
 
             /// The 'Print...' menu item.
@@ -787,7 +787,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-save-as"),
                     commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
-                .hotkey(RawMods::MetaShift, "s")
+                .hotkey(RawMods::MetaShift, "S")
             }
 
             /// The 'Page Setup...' menu item.
@@ -796,7 +796,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-page-setup"),
                     commands::PRINT_SETUP,
                 )
-                .hotkey(RawMods::MetaShift, "p")
+                .hotkey(RawMods::MetaShift, "P")
             }
 
             /// The 'Print...' menu item.

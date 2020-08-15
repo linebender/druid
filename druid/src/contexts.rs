@@ -318,19 +318,6 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.request_layout();
     }
 
-    /// Submit a [`Command`] to be run after this event is handled.
-    ///
-    /// Commands are run in the order they are submitted; all commands
-    /// submitted during the handling of an event are executed before
-    /// the [`update`] method is called; events submitted during [`update`]
-    /// are handled after painting.
-    ///
-    /// [`Command`]: struct.Command.html
-    /// [`update`]: trait.Widget.html#tymethod.update
-    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
-        self.state.submit_command(cmd.into(), target.into())
-    }
-
     /// Set the menu of the window containing the current widget.
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
@@ -339,6 +326,32 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.state.set_menu(menu);
     }
 });
+
+// methods on event, update, and lifecycle
+impl_context_method!(
+    EventCtx<'_, '_>,
+    UpdateCtx<'_, '_>,
+    LifeCycleCtx<'_, '_>,
+    LayoutCtx<'_, '_>,
+    {
+        /// Submit a [`Command`] to be run after this event is handled.
+        ///
+        /// Commands are run in the order they are submitted; all commands
+        /// submitted during the handling of an event are executed before
+        /// the [`update`] method is called; events submitted during [`update`]
+        /// are handled after painting.
+        ///
+        /// [`Command`]: struct.Command.html
+        /// [`update`]: trait.Widget.html#tymethod.update
+        pub fn submit_command(
+            &mut self,
+            cmd: impl Into<Command>,
+            target: impl Into<Option<Target>>,
+        ) {
+            self.state.submit_command(cmd.into(), target.into())
+        }
+    }
+);
 
 impl EventCtx<'_, '_> {
     /// Set the cursor icon.

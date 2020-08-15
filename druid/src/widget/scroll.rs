@@ -55,10 +55,10 @@ enum BarHoveredState {
 
 impl BarHoveredState {
     fn is_hovered(&self) -> bool {
-        match self {
-            BarHoveredState::Vertical | BarHoveredState::Horizontal => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            BarHoveredState::Vertical | BarHoveredState::Horizontal
+        )
     }
 }
 
@@ -93,10 +93,7 @@ impl Default for ScrollbarsState {
 impl ScrollbarsState {
     /// true if either scrollbar is currently held down/being dragged
     fn are_held(&self) -> bool {
-        match self.held {
-            BarHeldState::None => false,
-            _ => true,
-        }
+        !matches!(self.held, BarHeldState::None)
     }
 }
 
