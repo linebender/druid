@@ -31,7 +31,7 @@ fn derive_lens() {
 
     assert_eq!(state.text, "2.0");
     approx_eq!(f64, state.number, 2.0);
-    assert_eq!(state.ignored, 2.0);
+    approx_eq!(f64, state.ignored, 2.0);
 }
 
 #[test]
