@@ -37,9 +37,9 @@ use crate::piet::{Piet, RenderContext};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
-use crate::keyboard::{KbKey, KeyState, KeyEvent, Modifiers};
+use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::scale::{Scale, Scalable, ScaledArea};
+use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 use super::application::Application;
@@ -116,6 +116,9 @@ pub(crate) struct WindowState {
     window: ApplicationWindow,
     scale: Cell<Scale>,
     area: Cell<ScaledArea>,
+    /// Used to determine whether to honor close requests from the system: we inhibit them unless
+    /// this is true, and this gets set to true when our client requests a close.
+    closing: Cell<bool>,
     drawing_area: DrawingArea,
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
@@ -198,6 +201,7 @@ impl WindowBuilder {
             window,
             scale: Cell::new(scale),
             area: Cell::new(area),
+            closing: Cell::new(false),
             drawing_area,
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
@@ -510,6 +514,17 @@ impl WindowBuilder {
         }));
 
         win_state
+            .window
+            .connect_delete_event(clone!(handle => move |_widget, _ev| {
+                if let Some(state) = handle.state.upgrade() {
+                    state.handler.borrow_mut().request_close();
+                    Inhibit(!state.closing.get())
+                } else {
+                    Inhibit(false)
+                }
+            }));
+
+        win_state
             .drawing_area
             .connect_destroy(clone!(handle => move |_widget| {
                 if let Some(state) = handle.state.upgrade() {
@@ -556,6 +571,7 @@ impl WindowHandle {
     /// Close the window.
     pub fn close(&self) {
         if let Some(state) = self.state.upgrade() {
+            state.closing.set(true);
             state.window.close();
         }
     }
