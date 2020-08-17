@@ -633,16 +633,15 @@ impl WndProc for MyWndProc {
             },
             WM_NCCALCSIZE => unsafe {
                 // Hack to get rid of caption but keeping the borders created by it.
-                if !self.has_titlebar() {
-                    let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
-                    if style == 0 {
-                        warn!(
-                            "failed to get window style: {}",
-                            Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                        );
-                        return Some(0);
-                    }
-                    
+                let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
+                if style == 0 {
+                    warn!(
+                        "failed to get window style: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                    return Some(0);
+                }
+                if !self.has_titlebar() && (style & WS_CAPTION) != 0 {
                     let s: *mut NCCALCSIZE_PARAMS = lparam as *mut NCCALCSIZE_PARAMS;
                     if let Some(mut s) = s.as_mut() {
                         s.rgrc[0].top -= (31.0 * self.scale().x()) as i32;
