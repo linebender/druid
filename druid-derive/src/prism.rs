@@ -75,12 +75,11 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
                 impl druid::Prism<#ty, #field_ty> for #twizzled_name::#variant_name {
     
                     fn with_raw<V, F: FnOnce(Option<&#field_ty>) -> Option<V>>(&self, data: &#ty, f: F) -> Option<V> {
-                        let inner = if let #ty::#variant_name { #field_name } = data {
-                            Some(#field_name)
+                        if let #ty::#variant_name { #field_name } = data {
+                            f(Some(#field_name))
                         } else {
                             None
-                        };
-                        f(inner)
+                        }
                     }
     
                     fn with_raw_mut<V, F: FnOnce(Option<&mut #field_ty>) -> Option<V>>(
@@ -88,12 +87,11 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
                         data: &mut #ty,
                         f: F,
                     ) -> Option<V> {
-                        let inner = if let #ty::#variant_name { #field_name } = data {
-                            Some(#field_name)
+                        if let #ty::#variant_name { #field_name } = data {
+                            f(Some(#field_name))
                         } else {
                             None
-                        };
-                        f(inner)
+                        }
                     }
                 }
             }
@@ -102,12 +100,11 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
                 impl druid::Prism<#ty, #field_ty> for #twizzled_name::#variant_name {
     
                     fn with_raw<V, F: FnOnce(Option<&#field_ty>) -> Option<V>>(&self, data: &#ty, f: F) -> Option<V> {
-                        let inner = if let #ty::#variant_name (#field_name) = data {
-                            Some(#field_name)
+                        if let #ty::#variant_name (#field_name) = data {
+                            f(Some(#field_name))
                         } else {
                             None
-                        };
-                        f(inner)
+                        }
                     }
     
                     fn with_raw_mut<V, F: FnOnce(Option<&mut #field_ty>) -> Option<V>>(
@@ -115,12 +112,11 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
                         data: &mut #ty,
                         f: F,
                     ) -> Option<V> {
-                        let inner = if let #ty::#variant_name(inner) = data {
-                            Some(inner)
+                        if let #ty::#variant_name(inner) = data {
+                            f(Some(inner))
                         } else {
                             None
-                        };
-                        f(inner)
+                        }
                     }
                 }
             }
