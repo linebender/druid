@@ -128,6 +128,7 @@
 // Allows to use macros from druid_derive in this crate
 extern crate self as druid;
 pub use druid_derive::Lens;
+pub use druid_derive::Prism;
 
 use druid_shell as shell;
 #[doc(inline)]
@@ -153,6 +154,7 @@ pub mod lens;
 mod localization;
 mod menu;
 mod mouse;
+pub mod prism;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests;
@@ -188,6 +190,7 @@ pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
+pub use prism::{Prism, PrismExt, PrismWrap};
 pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};

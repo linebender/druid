@@ -43,7 +43,7 @@ pub enum FieldKind {
     Unnamed,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FieldIdent {
     Named(String),
     Unnamed(usize),
@@ -59,7 +59,7 @@ impl FieldIdent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Field {
     pub ident: FieldIdent,
     pub ty: syn::Type,

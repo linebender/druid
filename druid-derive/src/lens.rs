@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::attr::{FieldKind, Fields};
+use super::field_attr::{FieldKind, Fields};
 use quote::quote;
 use syn::{spanned::Spanned, Data};
 
@@ -119,11 +119,11 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
 }
 
 //I stole these from rustc!
-fn char_has_case(c: char) -> bool {
+pub fn char_has_case(c: char) -> bool {
     c.is_lowercase() || c.is_uppercase()
 }
 
-fn is_camel_case(name: &str) -> bool {
+pub fn is_camel_case(name: &str) -> bool {
     let name = name.trim_matches('_');
     if name.is_empty() {
         return true;
@@ -139,7 +139,7 @@ fn is_camel_case(name: &str) -> bool {
         })
 }
 
-fn to_snake_case(mut str: &str) -> String {
+pub fn to_snake_case(mut str: &str) -> String {
     let mut words = vec![];
     // Preserve leading underscores
     str = str.trim_start_matches(|c: char| {

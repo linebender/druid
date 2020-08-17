@@ -19,7 +19,10 @@ use super::{
     Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, Padding, Parse, SizedBox, WidgetId,
 };
-use crate::{Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LensWrap, UnitPoint, Widget};
+use crate::{
+    Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LensWrap, Prism, PrismWrap, UnitPoint,
+    Widget,
+};
 
 /// A trait that provides extra methods for combining `Widget`s.
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
@@ -216,6 +219,10 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`Lens`]: trait.Lens.html
     fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<T, L, Self> {
         LensWrap::new(self, lens)
+    }
+
+    fn prism<S: Data, P: Prism<S, T>>(self, prism: P) -> PrismWrap<T, P, Self> {
+        PrismWrap::new(self, prism)
     }
 
     /// Parse a `Widget<String>`'s contents
