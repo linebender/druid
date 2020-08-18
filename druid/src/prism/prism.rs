@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
-// use std::ops;
-// use std::sync::Arc;
+use std::ops;
+use std::sync::Arc;
 
 use crate::kurbo::Size;
 use crate::widget::prelude::*;
@@ -41,54 +41,24 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         });
     }
 
-    /*
-    /// Compose a `Lens<A, B>` with a `Lens<B, C>` to produce a `Lens<A, C>`
-    ///
-    /// ```
-    /// # use druid::*;
-    /// struct Foo { x: (u32, bool) }
-    /// let lens = lens!(Foo, x).then(lens!((u32, bool), 1));
-    /// assert_eq!(lens.get(&Foo { x: (0, true) }), true);
-    /// ```
     fn then<Other, C>(self, other: Other) -> Then<Self, Other, B>
     where
-        Other: Lens<B, C> + Sized,
+        Other: Prism<B, C> + Sized,
         C: ?Sized,
         Self: Sized,
     {
         Then::new(self, other)
     }
-    */
 
-    /*
-    /// Combine a `Lens<A, B>` with a function that can transform a `B` and its inverse.
-    ///
-    /// Useful for cases where the desired value doesn't physically exist in `A`, but can be
-    /// computed. For example, a lens like the following might be used to adapt a value with the
-    /// range 0-2 for use with a `Widget<f64>` like `Slider` that has a range of 0-1:
-    ///
-    /// ```
-    /// # use druid::*;
-    /// let lens = lens!((bool, f64), 1);
-    /// assert_eq!(lens.map(|x| x / 2.0, |x, y| *x = y * 2.0).get(&(true, 2.0)), 1.0);
-    /// ```
-    ///
-    /// The computed `C` may represent a whole or only part of the original `B`.
     fn map<Get, Put, C>(self, get: Get, put: Put) -> Then<Self, Map<Get, Put>, B>
     where
-        Get: Fn(&B) -> C,
-        Put: Fn(&mut B, C),
+        Get: Fn(&B) -> Option<C>,
+        Put: Fn(&mut B, Option<C>),
         Self: Sized,
     {
         self.then(Map::new(get, put))
     }
 
-    /// Invoke a type's `Deref` impl
-    ///
-    /// ```
-    /// # use druid::*;
-    /// assert_eq!(lens::Id.deref().get(&Box::new(42)), 42);
-    /// ```
     fn deref(self) -> Then<Self, Deref, B>
     where
         B: ops::Deref + ops::DerefMut,
@@ -97,12 +67,6 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         self.then(Deref)
     }
 
-    /// Access an index in a container
-    ///
-    /// ```
-    /// # use druid::*;
-    /// assert_eq!(lens::Id.index(2).get(&vec![0u32, 1, 2, 3]), 2);
-    /// ```
     fn index<I>(self, index: I) -> Then<Self, Index<I>, B>
     where
         I: Clone,
@@ -112,19 +76,6 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         self.then(Index::new(index))
     }
 
-    /// Adapt to operate on the contents of an `Arc` with efficient copy-on-write semantics
-    ///
-    /// ```
-    /// # use druid::*; use std::sync::Arc;
-    /// let lens = lens::Id.index(2).in_arc();
-    /// let mut x = Arc::new(vec![0, 1, 2, 3]);
-    /// let original = x.clone();
-    /// assert_eq!(lens.get(&x), 2);
-    /// lens.put(&mut x, 2);
-    /// assert!(Arc::ptr_eq(&original, &x), "no-op writes don't cause a deep copy");
-    /// lens.put(&mut x, 42);
-    /// assert_eq!(&*x, &[0, 1, 42, 3]);
-    /// ```
     fn in_arc(self) -> InArc<Self>
     where
         A: Clone,
@@ -133,7 +84,6 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
     {
         InArc::new(self)
     }
-    */
 }
 
 impl<A: ?Sized, B: ?Sized, T: Prism<A, B>> PrismExt<A, B> for T {}
@@ -233,5 +183,206 @@ where
 
     fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> Option<V> {
         (self.get_mut)(data).map(f)
+    }
+}
+
+#[macro_export]
+macro_rules! prism {
+    // enum type, variant name
+    ($ty:ident, $variant:ident) => {{
+        $crate::prism::Variant::new::<$ty, _>(
+            |x| {
+                if let $ty::$variant(ref v) = x {
+                    Some(v)
+                } else {
+                    None
+                }
+            },
+            |x| {
+                if let $ty::$variant(ref mut v) = x {
+                    Some(v)
+                } else {
+                    None
+                }
+            },
+        )
+    }};
+}
+
+#[derive(Debug, Copy)]
+pub struct Then<T, U, B: ?Sized> {
+    left: T,
+    right: U,
+    _marker: PhantomData<B>,
+}
+
+impl<T, U, B: ?Sized> Then<T, U, B> {
+    pub fn new<A: ?Sized, C: ?Sized>(left: T, right: U) -> Self
+    where
+        T: Prism<A, B>,
+        U: Prism<B, C>,
+    {
+        Self {
+            left,
+            right,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<T, U, A, B, C> Prism<A, C> for Then<T, U, B>
+where
+    A: ?Sized,
+    B: ?Sized,
+    C: ?Sized,
+    T: Prism<A, B>,
+    U: Prism<B, C>,
+{
+    fn with<V, F: FnOnce(&C) -> V>(&self, data: &A, f: F) -> Option<V> {
+        self.left.with(data, |b| self.right.with(b, f)).flatten()
+    }
+
+    fn with_mut<V, F: FnOnce(&mut C) -> V>(&self, data: &mut A, f: F) -> Option<V> {
+        self.left
+            .with_mut(data, |b| self.right.with_mut(b, f))
+            .flatten()
+    }
+}
+
+impl<T: Clone, U: Clone, B> Clone for Then<T, U, B> {
+    fn clone(&self) -> Self {
+        Self {
+            left: self.left.clone(),
+            right: self.right.clone(),
+            _marker: PhantomData,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Map<Get, Put> {
+    get: Get,
+    put: Put,
+}
+
+impl<Get, Put> Map<Get, Put> {
+    pub fn new<A: ?Sized, B>(get: Get, put: Put) -> Self
+    where
+        Get: Fn(&A) -> Option<B>,
+        Put: Fn(&mut A, Option<B>),
+    {
+        Self { get, put }
+    }
+}
+
+impl<A: ?Sized, B, Get, Put> Prism<A, B> for Map<Get, Put>
+where
+    Get: Fn(&A) -> Option<B>,
+    Put: Fn(&mut A, Option<B>),
+{
+    fn with<V, F: FnOnce(&B) -> V>(&self, data: &A, f: F) -> Option<V> {
+        (&(self.get)(data)).as_ref().map(f)
+    }
+
+    fn with_mut<V, F: FnOnce(&mut B) -> V>(&self, data: &mut A, f: F) -> Option<V> {
+        let mut temp = (self.get)(data);
+        let x = temp.as_mut().map(f);
+        (self.put)(data, temp);
+        x
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Deref;
+
+impl<T: ?Sized> Prism<T, T::Target> for Deref
+where
+    T: ops::Deref + ops::DerefMut,
+{
+    fn with<V, F: FnOnce(&T::Target) -> V>(&self, data: &T, f: F) -> Option<V> {
+        Some(f(data.deref()))
+    }
+
+    fn with_mut<V, F: FnOnce(&mut T::Target) -> V>(&self, data: &mut T, f: F) -> Option<V> {
+        Some(f(data.deref_mut()))
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Index<I> {
+    index: I,
+}
+
+impl<I> Index<I> {
+    pub fn new(index: I) -> Self {
+        Self { index }
+    }
+}
+
+impl<T, I> Prism<T, T::Output> for Index<I>
+where
+    T: ?Sized + ops::Index<I> + ops::IndexMut<I>,
+    I: Clone,
+{
+    fn with<V, F: FnOnce(&T::Output) -> V>(&self, data: &T, f: F) -> Option<V> {
+        Some(f(&data[self.index.clone()]))
+    }
+    fn with_mut<V, F: FnOnce(&mut T::Output) -> V>(&self, data: &mut T, f: F) -> Option<V> {
+        Some(f(&mut data[self.index.clone()]))
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Id;
+
+impl<A: ?Sized> Prism<A, A> for Id {
+    fn with<V, F: FnOnce(&A) -> V>(&self, data: &A, f: F) -> Option<V> {
+        Some(f(data))
+    }
+
+    fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut A, f: F) -> Option<V> {
+        Some(f(data))
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct InArc<L> {
+    inner: L,
+}
+
+impl<L> InArc<L> {
+    pub fn new<A, B>(inner: L) -> Self
+    where
+        A: Clone,
+        B: Data,
+        L: Prism<A, B>,
+    {
+        Self { inner }
+    }
+}
+
+impl<A, B, L> Prism<Arc<A>, B> for InArc<L>
+where
+    A: Clone,
+    B: Data,
+    L: Prism<A, B>,
+{
+    fn with<V, F: FnOnce(&B) -> V>(&self, data: &Arc<A>, f: F) -> Option<V> {
+        self.inner.with(data, f)
+    }
+
+    fn with_mut<V, F: FnOnce(&mut B) -> V>(&self, data: &mut Arc<A>, f: F) -> Option<V> {
+        let mut temp = self.inner.with(data, |x| x.clone());
+        let v = temp.as_mut().map(f);
+
+        if let Some(true) = self
+            .inner
+            .with(data, |x| temp.as_ref().map(|b| !x.same(b)))
+            .flatten()
+        {
+            self.inner
+                .with_mut(Arc::make_mut(data), |x| temp.map(|b| *x = b));
+        }
+        v
     }
 }

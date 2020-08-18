@@ -5,6 +5,8 @@ use druid::Prism;
 
 #[test]
 fn derive_prism() {
+    use druid::prism;
+
     #[derive(Debug, Prism, PartialEq)]
     pub enum State {
         Text(String),
@@ -20,6 +22,10 @@ fn derive_prism() {
 
     text_prism.with(&state_text, |data| assert_eq!(data, "1.0"));
     number_prism.with(&state_number, |data| assert!(approx_eq!(f64, *data, 1.0)));
+
+    // tests the prism! macro
+    prism!(State, Text).with(&state_text, |data| assert_eq!(data, "1.0"));
+    prism!(State, Number).with(&state_number, |data| assert!(approx_eq!(f64, *data, 1.0)));
 
     // mappings for the wrong variant are ignored
     text_prism.with(&state_number, |_data| panic!());
@@ -57,6 +63,7 @@ fn named_derive_prism() {
     let mut state_text = State::Text { s: "1.0".into() };
     let mut state_number = State::Number { n: 1.0 };
 
+    // let text_prism = druid::prism!(State, text);
     let text_prism = State::text;
     let number_prism = State::prism_number;
 

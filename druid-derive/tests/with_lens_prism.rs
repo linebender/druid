@@ -1,7 +1,7 @@
-use float_cmp::approx_eq;
+// use float_cmp::approx_eq;
 
-use druid::lens;
-use druid::Data;
+// use druid::lens;
+// use druid::Data;
 use druid::Lens;
 use druid::Prism;
 
@@ -13,13 +13,14 @@ fn derive_lens() {
         alt: Alt,
     }
 
+    #[allow(dead_code)]
     #[derive(Debug, PartialEq, Prism)]
     enum Alt {
         A(bool),
         B(u8),
     }
 
-    let mut state_a = State {
+    let state_a = State {
         text: "1.0".into(),
         alt: Alt::A(true),
     };
@@ -29,6 +30,10 @@ fn derive_lens() {
     let alt_a_prism = Alt::a;
     let alt_b_prism = Alt::b;
 
+    // TODO: find a way to pass a function f as
+    // State -> alt / Alt -> a
+    //
+    // this won't work:
     // let x = Alt::a;
     // let alt_a_lens = {
     //     use druid::LensExt;
