@@ -14,7 +14,7 @@
 
 //! The implementation for #[derive(Data)]
 
-use crate::attr::{Field, FieldKind, Fields};
+use crate::attr::{DataAttrs, Field, FieldKind, Fields};
 
 use quote::{quote, quote_spanned};
 use syn::{spanned::Spanned, Data, DataEnum, DataStruct};
@@ -40,14 +40,17 @@ fn derive_struct(
     let impl_generics = generics_bounds(&input.generics);
     let (_, ty_generics, where_clause) = &input.generics.split_for_impl();
 
-    let fields = Fields::parse_ast(&s.fields)?;
+    let fields = Fields::<DataAttrs>::parse_ast(&s.fields)?;
 
     let diff = if fields.len() > 0 {
         let same_fns = fields
             .iter()
-            .filter(|f| !f.ignore)
+            .filter(|f| !f.attrs.ignore)
             .map(Field::same_fn_path_tokens);
-        let fields = fields.iter().filter(|f| !f.ignore).map(Field::ident_tokens);
+        let fields = fields
+            .iter()
+            .filter(|f| !f.attrs.ignore)
+            .map(Field::ident_tokens);
         quote!( #( #same_fns(&self.#fields, &other.#fields) )&&* )
     } else {
         quote!(true)
@@ -97,13 +100,13 @@ fn derive_enum(
         .variants
         .iter()
         .map(|variant| {
-            let fields = Fields::parse_ast(&variant.fields)?;
+            let fields = Fields::<DataAttrs>::parse_ast(&variant.fields)?;
             let variant = &variant.ident;
 
             // the various inner `same()` calls, to the right of the match arm.
             let tests: Vec<_> = fields
                 .iter()
-                .filter(|field| !field.ignore)
+                .filter(|field| !field.attrs.ignore)
                 .map(|field| {
                     let same_fn = field.same_fn_path_tokens();
                     let var_left = ident_from_str(&format!("__self_{}", field.ident_string()));
@@ -145,7 +148,7 @@ fn derive_enum(
                     .map(|field| ident_from_str(&format!("__other_{}", field.ident_string())))
                     .collect();
 
-                if fields.iter().filter(|field| !field.ignore).count() > 0 {
+                if fields.iter().count() > 0 {
                     Ok(quote! {
                         ( #ident :: #variant( #(#vars_left),* ),  #ident :: #variant( #(#vars_right),* )) => {
                             #( #tests )&&*
