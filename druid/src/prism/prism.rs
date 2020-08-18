@@ -7,19 +7,8 @@ use crate::widget::prelude::*;
 use crate::Data;
 
 pub trait Prism<T: ?Sized, U: ?Sized> {
-    fn with_raw<V, F: FnOnce(Option<&U>) -> Option<V>>(&self, data: &T, f: F) -> Option<V>;
-    fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> Option<V> {
-        self.with_raw::<V, _>(data, |data| data.map(|data| f(data)))
-    }
-
-    fn with_raw_mut<V, F: FnOnce(Option<&mut U>) -> Option<V>>(
-        &self,
-        data: &mut T,
-        f: F,
-    ) -> Option<V>;
-    fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> Option<V> {
-        self.with_raw_mut::<V, _>(data, |data| data.map(|data| f(data)))
-    }
+    fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> Option<V>;
+    fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> Option<V>;
 }
 
 pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
@@ -224,8 +213,8 @@ pub struct Variant<Get, GetMut> {
 impl<Get, GetMut> Variant<Get, GetMut> {
     pub fn new<T: ?Sized, U: ?Sized>(get: Get, get_mut: GetMut) -> Self
     where
-        Get: Fn(Option<&T>) -> Option<&U>,
-        GetMut: Fn(Option<&mut T>) -> Option<&mut U>,
+        Get: Fn(&T) -> Option<&U>,
+        GetMut: Fn(&mut T) -> Option<&mut U>,
     {
         Self { get, get_mut }
     }
@@ -235,18 +224,14 @@ impl<T, U, Get, GetMut> Prism<T, U> for Variant<Get, GetMut>
 where
     T: ?Sized,
     U: ?Sized,
-    Get: Fn(&T) -> &U,
-    GetMut: Fn(&mut T) -> &mut U,
+    Get: Fn(&T) -> Option<&U>,
+    GetMut: Fn(&mut T) -> Option<&mut U>,
 {
-    fn with_raw<V, F: FnOnce(Option<&U>) -> Option<V>>(&self, data: &T, f: F) -> Option<V> {
-        f(Some((self.get)(data)))
+    fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> Option<V> {
+        (self.get)(data).map(f)
     }
 
-    fn with_raw_mut<V, F: FnOnce(Option<&mut U>) -> Option<V>>(
-        &self,
-        data: &mut T,
-        f: F,
-    ) -> Option<V> {
-        f(Some((self.get_mut)(data)))
+    fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> Option<V> {
+        (self.get_mut)(data).map(f)
     }
 }

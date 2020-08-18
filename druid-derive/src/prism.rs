@@ -54,68 +54,71 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
         }
     });
 
-    let impls: Vec<_> = variants.iter().map(|v| {
-        let variant_name = &v.ident.named();
-        let field = if let Some(field) = v.fields.iter().next() {
-            if v.fields.iter().count() > 1 {
+    let impls: Vec<_> = variants
+        .iter()
+        .map(|v| {
+            let variant_name = &v.ident.named();
+            let field = if let Some(field) = v.fields.iter().next() {
+                if v.fields.iter().count() > 1 {
+                    return Err(Error::new(
+                        variant_name.span(),
+                        "Expecting no more than one field for the variant",
+                    ));
+                } else {
+                    field
+                }
+            } else {
                 return Err(Error::new(
                     variant_name.span(),
-                    "Expecting no more than one field for the variant",
+                    "Expecting one field for the variant",
                 ));
-            } else {
-                field
-            }
-        } else {
-            return Err(Error::new(
-                variant_name.span(),
-                "Expecting one field for the variant",
-            ));
-        };
-        let field_ty = &field.ty;
+            };
+            let field_ty = &field.ty;
 
-        let expr = match &field.ident {
-            FieldIdent::Named(name) => {
-                let field_name = StringIdent(name.into()).named();
-                quote!(
-                    if let #ty::#variant_name { #field_name } = data {
-                        f(Some(#field_name))
-                    } else {
-                        None
-                    }
-                )
-            },
-            FieldIdent::Unnamed(0) =>  {
-                let field_name = StringIdent("inner".into()).named();
-                quote!(
-                    if let #ty::#variant_name (#field_name) = data {
-                        f(Some(#field_name))
-                    } else {
-                        None
-                    }
-                )
-            },
-            // TODO: analyze/test
-            FieldIdent::Unnamed(_) => unreachable!(),
-        };
-
-        let quote = quote! {
-            impl druid::Prism<#ty, #field_ty> for #twizzled_name::#variant_name {
-
-                fn with_raw<V, F: FnOnce(Option<&#field_ty>) -> Option<V>>(&self, data: &#ty, f: F) -> Option<V> {
-                    #expr
+            let expr = match &field.ident {
+                FieldIdent::Named(name) => {
+                    let field_name = StringIdent(name.into()).named();
+                    quote!(
+                        if let #ty::#variant_name { #field_name } = data {
+                            Some(f(#field_name))
+                        } else {
+                            None
+                        }
+                    )
                 }
-
-                fn with_raw_mut<V, F: FnOnce(Option<&mut #field_ty>) -> Option<V>>(
-                    &self,
-                    data: &mut #ty,
-                    f: F,
-                ) -> Option<V> {
-                    #expr
+                FieldIdent::Unnamed(0) => {
+                    let field_name = StringIdent("inner".into()).named();
+                    quote!(
+                        if let #ty::#variant_name (#field_name) = data {
+                            Some(f(#field_name))
+                        } else {
+                            None
+                        }
+                    )
                 }
-            }
-        };
-        Ok(quote)
-    }).collect::<Result<_, _>>()?;
+                // TODO: analyze/test
+                FieldIdent::Unnamed(_) => unreachable!(),
+            };
+
+            let quote = quote! {
+                impl druid::Prism<#ty, #field_ty> for #twizzled_name::#variant_name {
+
+                    fn with<V, F: FnOnce(&#field_ty) -> V>(&self, data: &#ty, f: F) -> Option<V> {
+                        #expr
+                    }
+
+                    fn with_mut<V, F: FnOnce(&mut #field_ty) -> V>(
+                        &self,
+                        data: &mut #ty,
+                        f: F,
+                    ) -> Option<V> {
+                        #expr
+                    }
+                }
+            };
+            Ok(quote)
+        })
+        .collect::<Result<_, _>>()?;
 
     let associated_items = variants.iter().map(|v| {
         let variant_name = &v.ident.named();
