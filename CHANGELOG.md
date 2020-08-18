@@ -23,6 +23,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 - Major rework of keyboard event handling. ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
+- `ExtEventSink` was redone to work per-window instead of globally. ([#1137] by [@jneem])
 
 ### Deprecated
 
@@ -390,6 +391,7 @@ Last release without a changelog :(
 [#1120]: https://github.com/linebender/druid/pull/1120
 [#1126]: https://github.com/linebender/druid/pull/1120
 [#1133]: https://github.com/linebender/druid/pull/1133
+[#1137]: https://github.com/linebender/druid/pull/1137
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
