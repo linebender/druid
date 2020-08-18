@@ -16,6 +16,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Selection text color to textbox. ([#1093] by [@sysint64])
 - `BoxConstraints::UNBOUNDED` constant. ([#1126] by [@danieldulaney]) 
 - Close requests from the shell can now be intercepted ([#1118] by [@jneem])
+- The Lens derive now supports an `ignore` attribute. ([#1133] by [@jneem])
 
 ### Changed
 
@@ -388,6 +389,7 @@ Last release without a changelog :(
 [#1119]: https://github.com/linebender/druid/pull/1119
 [#1120]: https://github.com/linebender/druid/pull/1120
 [#1126]: https://github.com/linebender/druid/pull/1120
+[#1133]: https://github.com/linebender/druid/pull/1133
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

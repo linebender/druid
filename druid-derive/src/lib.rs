@@ -34,10 +34,34 @@ pub fn derive_data(input: TokenStream) -> TokenStream {
         .into()
 }
 
-/// Generates lenses to access the fields of a struct
+/// Generates lenses to access the fields of a struct.
 ///
 /// An associated constant is defined on the struct for each field,
 /// having the same name as the field.
+///
+/// This macro supports a `lens` field attribute with the following arguments:
+///
+/// - `#[lens(ignore)]` skips creating a lens for one field.
+/// - `#[lens(name="foo")]` gives the lens the specified name (instead of the default, which is to
+///    create a lens with the same name as the field).
+///
+/// # Example
+///
+/// ```rust
+/// #[derive(Lens)]
+/// struct State {
+///     // The Lens derive will create a `State::text` constant implementing
+///     // `druid::Lens<State, String>`
+///     text: String,
+///     // The Lens derive will create a `State::lens_number` constant implementing
+///     // `druid::Lens<State, f64>`
+///     #[lens(name = "lens_number")]
+///     number: f64,
+///     // The Lens derive won't create anything for this field.
+///     #[lens(ignore)]
+///     blah: f64,
+/// }
+/// ```
 #[proc_macro_derive(Lens, attributes(lens))]
 pub fn derive_lens(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
