@@ -20,7 +20,9 @@ use std::time::Duration;
 
 use druid::kurbo::RoundedRect;
 use druid::widget::prelude::*;
-use druid::{AppLauncher, Color, Data, LocalizedString, Rect, Selector, WidgetExt, WindowDesc};
+use druid::{
+    AppLauncher, Color, Data, ExtEventSink, LocalizedString, Rect, Selector, WidgetExt, WindowDesc,
+};
 
 const SET_COLOR: Selector<Color> = Selector::new("event-example.set-color");
 
@@ -44,6 +46,34 @@ fn split_rgba(rgba: &Color) -> (u8, u8, u8, u8) {
     )
 }
 
+fn color_changer(start_time: Instant, event_sink: ExtEventSink) {
+    let mut last_color = Color::WHITE;
+
+    loop {
+        let time_since_start = (Instant::now() - start_time).as_nanos();
+        let (r, g, b, _) = split_rgba(&last_color);
+
+        // there is no logic here; it's a very silly way of mutating the color.
+        let new_color = match (time_since_start % 2, time_since_start % 3) {
+            (0, _) => Color::rgb8(r.wrapping_add(10), g, b),
+            (_, 0) => Color::rgb8(r, g.wrapping_add(10), b),
+            (_, _) => Color::rgb8(r, g, b.wrapping_add(10)),
+        };
+
+        last_color = new_color.clone();
+
+        // if this fails we're shutting down
+        if event_sink
+            .submit_command(SET_COLOR, new_color, None)
+            .is_err()
+        {
+            dbg!("shutting down");
+            break;
+        }
+        thread::sleep(Duration::from_millis(150));
+    }
+}
+
 impl ColorWell {
     pub fn new() -> Self {
         ColorWell
@@ -61,7 +91,12 @@ impl Widget<MyColor> for ColorWell {
         }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &MyColor, _: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &MyColor, _: &Env) {
+        if let LifeCycle::WidgetAdded = event {
+            let sink = ctx.get_external_handle();
+            let start_time = Instant::now();
+            std::thread::spawn(move || color_changer(start_time, sink));
+        }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &MyColor, data: &MyColor, _: &Env) {
@@ -87,36 +122,6 @@ pub fn main() {
     );
 
     let launcher = AppLauncher::with_window(window);
-
-    let event_sink = launcher.get_external_handle();
-    let start_time = Instant::now();
-
-    thread::spawn(move || {
-        let mut last_color = Color::WHITE;
-
-        loop {
-            let time_since_start = (Instant::now() - start_time).as_nanos();
-            let (r, g, b, _) = split_rgba(&last_color);
-
-            // there is no logic here; it's a very silly way of mutating the color.
-            let new_color = match (time_since_start % 2, time_since_start % 3) {
-                (0, _) => Color::rgb8(r.wrapping_add(10), g, b),
-                (_, 0) => Color::rgb8(r, g.wrapping_add(10), b),
-                (_, _) => Color::rgb8(r, g, b.wrapping_add(10)),
-            };
-
-            last_color = new_color.clone();
-
-            // if this fails we're shutting down
-            if event_sink
-                .submit_command(SET_COLOR, new_color, None)
-                .is_err()
-            {
-                break;
-            }
-            thread::sleep(Duration::from_millis(150));
-        }
-    });
 
     launcher
         .use_simple_logger()

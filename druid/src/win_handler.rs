@@ -25,7 +25,6 @@ use crate::shell::{Application, IdleToken, MouseEvent, Scale, WinHandler, Window
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
-use crate::ext_event::ExtEventHost;
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
@@ -73,7 +72,6 @@ struct Inner<T> {
     app: Application,
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: CommandQueue,
-    ext_event_host: ExtEventHost,
     windows: Windows<T>,
     /// the application-level menu, only set on macos and only if there
     /// are no open windows.
@@ -135,14 +133,12 @@ impl<T> AppState<T> {
         data: T,
         env: Env,
         delegate: Option<Box<dyn AppDelegate<T>>>,
-        ext_event_host: ExtEventHost,
     ) -> Self {
         let inner = Rc::new(RefCell::new(Inner {
             app,
             delegate,
             command_queue: VecDeque::new(),
             root_menu: None,
-            ext_event_host,
             data,
             env,
             windows: Windows::default(),
@@ -212,13 +208,6 @@ impl<T: Data> Inner<T> {
 
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
         self.windows.connect(id, handle);
-
-        // If the external event host has no handle, it cannot wake us
-        // when an event arrives.
-        if self.ext_event_host.handle_window_id.is_none() {
-            self.set_ext_event_idle_handler(id);
-        }
-
         self.with_delegate(|del, data, env, ctx| del.window_added(id, data, env, ctx));
     }
 
@@ -238,32 +227,6 @@ impl<T: Data> Inner<T> {
                     self.app.quit();
                 }
             }
-        }
-
-        // if we are closing the window that is currently responsible for
-        // waking us when external events arrive, we want to pass that responsibility
-        // to another window.
-        if self.ext_event_host.handle_window_id == Some(window_id) {
-            self.ext_event_host.handle_window_id = None;
-            // find any other live window
-            let win_id = self.windows.windows.keys().find(|k| *k != &window_id);
-            if let Some(any_other_window) = win_id.cloned() {
-                self.set_ext_event_idle_handler(any_other_window);
-            }
-        }
-    }
-
-    /// Set the idle handle that will be used to wake us when external events arrive.
-    fn set_ext_event_idle_handler(&mut self, id: WindowId) {
-        if let Some(mut idle) = self
-            .windows
-            .get_mut(id)
-            .and_then(|win| win.handle.get_idle_handle())
-        {
-            if self.ext_event_host.has_pending_items() {
-                idle.schedule_idle(EXT_EVENT_IDLE_TOKEN);
-            }
-            self.ext_event_host.set_idle(idle, id);
         }
     }
 
@@ -511,12 +474,14 @@ impl<T: Data> AppState<T> {
     }
 
     fn process_ext_events(&mut self) {
-        loop {
-            let ext_cmd = self.inner.borrow_mut().ext_event_host.recv();
-            match ext_cmd {
-                Some((targ, cmd)) => self.handle_cmd(targ.unwrap_or(Target::Global), cmd),
-                None => break,
+        let mut cmds = Vec::new();
+        for (id, window) in self.inner.borrow().windows.windows.iter() {
+            for (target, cmd) in window.ext_event_host.iter() {
+                cmds.push((target.unwrap_or(Target::Window(*id)), cmd));
             }
+        }
+        for (target, cmd) in cmds {
+            self.handle_cmd(target, cmd);
         }
     }
 

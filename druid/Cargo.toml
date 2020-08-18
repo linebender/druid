@@ -32,6 +32,7 @@ simple_logger = { version = "1.6.0", default-features = false }
 fluent-bundle = "0.12.0"
 fluent-langneg = "0.13.0"
 fluent-syntax = "0.9.3"
+static_assertions = "1.1.0"
 unic-langid = "0.9.0"
 unicode-segmentation = "1.6.0"
 xi-unicode = "0.2.0"

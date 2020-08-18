@@ -14,7 +14,6 @@
 
 //! Window building and app lifecycle.
 
-use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::Size;
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
 use crate::widget::LabelText;
@@ -32,7 +31,6 @@ pub struct AppLauncher<T> {
     windows: Vec<WindowDesc<T>>,
     env_setup: Option<Box<EnvSetupFn<T>>>,
     delegate: Option<Box<dyn AppDelegate<T>>>,
-    ext_event_host: ExtEventHost,
 }
 
 /// A description of a window to be instantiated.
@@ -61,7 +59,6 @@ impl<T: Data> AppLauncher<T> {
             windows: vec![window],
             env_setup: None,
             delegate: None,
-            ext_event_host: ExtEventHost::new(),
         }
     }
 
@@ -97,14 +94,6 @@ impl<T: Data> AppLauncher<T> {
         self
     }
 
-    /// Returns an [`ExtEventSink`] that can be moved between threads,
-    /// and can be used to submit events back to the application.
-    ///
-    /// [`ExtEventSink`]: struct.ExtEventSink.html
-    pub fn get_external_handle(&self) -> ExtEventSink {
-        self.ext_event_host.make_sink()
-    }
-
     /// Paint colorful rectangles for layout debugging.
     ///
     /// The rectangles are drawn around each widget's layout rect.
@@ -125,13 +114,7 @@ impl<T: Data> AppLauncher<T> {
             f(&mut env, &data);
         }
 
-        let mut state = AppState::new(
-            app.clone(),
-            data,
-            env,
-            self.delegate.take(),
-            self.ext_event_host,
-        );
+        let mut state = AppState::new(app.clone(), data, env, self.delegate.take());
 
         for desc in self.windows {
             let window = desc.build_native(&mut state)?;

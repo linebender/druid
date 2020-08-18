@@ -951,6 +951,7 @@ impl WidgetState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ext_event::ExtEventHost;
     use crate::widget::{Flex, Scroll, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
 
@@ -975,9 +976,11 @@ mod tests {
 
         let mut command_queue: CommandQueue = VecDeque::new();
         let mut widget_state = WidgetState::new(WidgetId::next());
+        let ext_event_host = ExtEventHost::new(None);
         let mut state = ContextState {
             command_queue: &mut command_queue,
             window_id: WindowId::next(),
+            ext_event_host: &ext_event_host,
             window: &WindowHandle::default(),
             root_app_data_type: std::any::TypeId::of::<Option<u32>>(),
             focus_widget: None,

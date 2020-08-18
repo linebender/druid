@@ -79,7 +79,7 @@ impl IdleHandle {
 
     /// Request a callback from the runloop. Your `WinHander::idle` method will
     /// be called with the `token` that was passed in.
-    pub fn schedule_idle(&mut self, token: IdleToken) {
+    pub fn schedule_idle(&self, token: IdleToken) {
         self.0.add_idle_token(token)
     }
 }

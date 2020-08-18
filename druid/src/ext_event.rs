@@ -15,14 +15,16 @@
 //! Simple handle for submitting external events.
 
 use std::any::Any;
-use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::{channel, Receiver, Sender};
+
+use static_assertions as sa;
 
 use crate::shell::IdleHandle;
 use crate::win_handler::EXT_EVENT_IDLE_TOKEN;
-use crate::{command::SelectorSymbol, Command, Selector, Target, WindowId};
+use crate::{command::SelectorSymbol, Command, Selector, Target};
 
 pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Option<Target>);
+sa::assert_impl_all!(ExtCommand: Send);
 
 /// A thing that can move into other threads and be used to submit commands back
 /// to the running application.
@@ -30,22 +32,28 @@ pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Option<Target
 /// This API is preliminary, and may be changed or removed without warning.
 #[derive(Clone)]
 pub struct ExtEventSink {
-    queue: Arc<Mutex<VecDeque<ExtCommand>>>,
-    handle: Arc<Mutex<Option<IdleHandle>>>,
+    tx: Sender<ExtCommand>,
+    handle: Option<IdleHandle>,
 }
+
+sa::assert_impl_all!(ExtEventSink: Send);
 
 /// The stuff that we hold onto inside the app that is related to the
 /// handling of external events.
-#[derive(Default)]
 pub(crate) struct ExtEventHost {
-    /// A shared queue of items that have been sent to us.
-    queue: Arc<Mutex<VecDeque<ExtCommand>>>,
-    /// This doesn't exist when the app starts and it can go away if a window
-    /// closes, so we keep a reference here and can update it when needed.
-    handle: Arc<Mutex<Option<IdleHandle>>>,
-    /// The window that the handle belongs to, so we can keep track of when
-    /// we need to get a new handle.
-    pub(crate) handle_window_id: Option<WindowId>,
+    /// The items that have been sent to us.
+    rx: Receiver<ExtCommand>,
+    /// The sending end of `rx`. We don't use this ourselves, but we hand out
+    /// a copy when creating an `ExtEventSink`.
+    tx: Sender<ExtCommand>,
+    /// This also needs to get passed to the event sinks, so that they can
+    /// notify the idle loop that there are events to be processed.
+    ///
+    /// This is an `Option` because `druid-shell` doesn't guarantee that we'll get one.
+    /// In practice, it seems like we only fail to get one if the window was closed.
+    /// So in the absence of an idle handle, we just print warnings instead of sending
+    /// commands.
+    handle: Option<IdleHandle>,
 }
 
 /// An error that occurs if an external event cannot be submitted.
@@ -54,31 +62,21 @@ pub(crate) struct ExtEventHost {
 pub struct ExtEventError;
 
 impl ExtEventHost {
-    pub(crate) fn new() -> Self {
-        Default::default()
+    pub(crate) fn new(handle: Option<IdleHandle>) -> Self {
+        let (tx, rx) = channel();
+        ExtEventHost { rx, tx, handle }
     }
 
     pub(crate) fn make_sink(&self) -> ExtEventSink {
         ExtEventSink {
-            queue: self.queue.clone(),
+            tx: self.tx.clone(),
             handle: self.handle.clone(),
         }
     }
 
-    pub(crate) fn set_idle(&mut self, handle: IdleHandle, window_id: WindowId) {
-        self.handle.lock().unwrap().replace(handle);
-        self.handle_window_id = Some(window_id);
-    }
-
-    pub(crate) fn has_pending_items(&self) -> bool {
-        !self.queue.lock().unwrap().is_empty()
-    }
-
-    pub(crate) fn recv(&mut self) -> Option<(Option<Target>, Command)> {
-        self.queue
-            .lock()
-            .unwrap()
-            .pop_front()
+    pub(crate) fn iter<'a>(&'a self) -> impl Iterator<Item = (Option<Target>, Command)> + 'a {
+        self.rx
+            .try_iter()
             .map(|(sel, obj, targ)| (targ, Command::from_ext(sel, obj)))
     }
 }
@@ -93,10 +91,7 @@ impl ExtEventSink {
     /// The `payload` must implement `Any + Send + Sync`.
     ///
     /// If no explicit `Target` is submitted, the `Command` will be sent to
-    /// the application's first window; if that window is subsequently closed,
-    /// then the command will be sent to *an arbitrary other window*.
-    ///
-    /// This limitation may be removed in the future.
+    /// the window that created this event sink.
     ///
     /// [`Command`]: struct.Command.html
     /// [`Selector`]: struct.Selector.html
@@ -108,15 +103,16 @@ impl ExtEventSink {
     ) -> Result<(), ExtEventError> {
         let target = target.into();
         let payload = payload.into();
-        if let Some(handle) = self.handle.lock().unwrap().as_mut() {
+        if let Some(handle) = &self.handle {
             handle.schedule_idle(EXT_EVENT_IDLE_TOKEN);
+            if self.tx.send((selector.symbol(), payload, target)).is_err() {
+                Err(ExtEventError)
+            } else {
+                Ok(())
+            }
+        } else {
+            Err(ExtEventError)
         }
-        self.queue.lock().map_err(|_| ExtEventError)?.push_back((
-            selector.symbol(),
-            payload,
-            target,
-        ));
-        Ok(())
     }
 }
 

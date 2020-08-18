@@ -21,6 +21,7 @@ use std::{
 };
 
 use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::{
@@ -45,6 +46,7 @@ macro_rules! impl_context_method {
 /// Static state that is shared between most contexts.
 pub(crate) struct ContextState<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
+    pub(crate) ext_event_host: &'a ExtEventHost,
     pub(crate) window_id: WindowId,
     pub(crate) window: &'a WindowHandle,
     /// The id of the widget that currently has focus.
@@ -350,6 +352,13 @@ impl_context_method!(
         ) {
             self.state.submit_command(cmd.into(), target.into())
         }
+
+        /// Returns a handle that can be used to submit commands. The handle is owned and can be
+        /// sent across threads, but it is tied to the current window in the sense that the
+        /// commands it submits will only be processed until the window is closed.
+        pub fn get_external_handle(&self) -> ExtEventSink {
+            self.state.ext_event_host.make_sink()
+        }
     }
 );
 
@@ -633,12 +642,14 @@ impl PaintCtx<'_, '_, '_> {
 impl<'a> ContextState<'a> {
     pub(crate) fn new<T: 'static>(
         command_queue: &'a mut CommandQueue,
+        ext_event_host: &'a ExtEventHost,
         window: &'a WindowHandle,
         window_id: WindowId,
         focus_widget: Option<WidgetId>,
     ) -> Self {
         ContextState {
             command_queue,
+            ext_event_host,
             window,
             window_id,
             focus_widget,

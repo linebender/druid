@@ -26,6 +26,7 @@ use crate::shell::{Counter, Cursor, WindowHandle};
 
 use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::ext_event::ExtEventHost;
 use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
@@ -52,11 +53,14 @@ pub struct Window<T> {
     pub(crate) focus: Option<WidgetId>,
     pub(crate) handle: WindowHandle,
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
+    pub(crate) ext_event_host: ExtEventHost,
     // delegate?
 }
 
 impl<T> Window<T> {
     pub(crate) fn new(id: WindowId, handle: WindowHandle, desc: WindowDesc<T>) -> Window<T> {
+        let idle = handle.get_idle_handle();
+
         Window {
             id,
             root: WidgetPod::new(desc.root),
@@ -68,6 +72,7 @@ impl<T> Window<T> {
             last_mouse_pos: None,
             focus: None,
             handle,
+            ext_event_host: ExtEventHost::new(idle),
             timers: HashMap::new(),
         }
     }
@@ -143,7 +148,7 @@ impl<T: Data> Window<T> {
         if process_commands && !queue.is_empty() {
             // Ask the handler to call us back on idle
             // so we can process them in a new event/update pass.
-            if let Some(mut handle) = self.handle.get_idle_handle() {
+            if let Some(handle) = self.handle.get_idle_handle() {
                 handle.schedule_idle(RUN_COMMANDS_TOKEN);
             } else {
                 log::error!("failed to get idle handle");
@@ -196,7 +201,13 @@ impl<T: Data> Window<T> {
 
         let mut widget_state = WidgetState::new(self.root.id());
         let is_handled = {
-            let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+            let mut state = ContextState::new::<T>(
+                queue,
+                &self.ext_event_host,
+                &self.handle,
+                self.id,
+                self.focus,
+            );
             let mut ctx = EventCtx {
                 cursor: &mut cursor,
                 state: &mut state,
@@ -259,7 +270,13 @@ impl<T: Data> Window<T> {
         };
 
         let mut widget_state = WidgetState::new(self.root.id());
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+        let mut state = ContextState::new::<T>(
+            queue,
+            &self.ext_event_host,
+            &self.handle,
+            self.id,
+            self.focus,
+        );
         let mut ctx = LifeCycleCtx {
             state: &mut state,
             widget_state: &mut widget_state,
@@ -278,7 +295,13 @@ impl<T: Data> Window<T> {
         self.update_title(data, env);
 
         let mut widget_state = WidgetState::new(self.root.id());
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+        let mut state = ContextState::new::<T>(
+            queue,
+            &self.ext_event_host,
+            &self.handle,
+            self.id,
+            self.focus,
+        );
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
             state: &mut state,
@@ -325,7 +348,13 @@ impl<T: Data> Window<T> {
 
     fn layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         let mut widget_state = WidgetState::new(self.root.id());
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+        let mut state = ContextState::new::<T>(
+            queue,
+            &self.ext_event_host,
+            &self.handle,
+            self.id,
+            self.focus,
+        );
         let mut layout_ctx = LayoutCtx {
             state: &mut state,
             widget_state: &mut widget_state,
@@ -364,7 +393,7 @@ impl<T: Data> Window<T> {
         let Window { root, handle, .. } = self;
 
         let widget_state = WidgetState::new(root.id());
-        let mut state = ContextState::new::<T>(queue, handle, id, focus);
+        let mut state = ContextState::new::<T>(queue, &self.ext_event_host, handle, id, focus);
         let mut ctx = PaintCtx {
             render_ctx: piet,
             state: &mut state,
