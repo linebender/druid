@@ -1,6 +1,9 @@
-use super::field_attr::{Field, Fields};
+use super::field_attr::{self, Fields};
 use proc_macro2::Span;
-use syn::Error;
+use syn::{Error, ExprPath, Ident, Meta, NestedMeta};
+
+pub const BASE_PRISM_ATTR_PATH: &str = "prism";
+pub const PRISM_NAME_OVERRIDE_ATTR_PATH: &str = "name";
 
 #[derive(Debug)]
 pub struct Variants {
@@ -10,7 +13,13 @@ pub struct Variants {
 #[derive(Debug)]
 pub struct Variant {
     pub ident: StringIdent,
-    pub field: Field,
+    pub fields: Fields,
+
+    /// `true` if this field should be ignored.
+    pub ignore: bool,
+    pub same_fn: Option<ExprPath>,
+    pub prism_name_override: Option<Ident>,
+    //TODO: more attrs here
 }
 
 #[derive(Debug)]
@@ -52,25 +61,94 @@ impl Variant {
             .trim_start_matches("r#")
             .to_owned();
         let fields = Fields::parse_ast(&variant.fields)?;
-        let field = if let Some(field) = fields.iter().next() {
-            if fields.iter().count() > 1 {
-                return Err(Error::new(
-                    variant.ident.span(),
-                    "Expecting no more than one field for the variant",
-                ));
-            } else {
-                field
+
+        let mut ignore = false;
+        let mut same_fn = None;
+        let mut prism_name_override = None;
+
+        for attr in variant.attrs.iter() {
+            if attr
+                .path
+                .is_ident(field_attr::BASE_DRUID_DEPRECATED_ATTR_PATH)
+            {
+                panic!(
+                    "The 'druid' attribute has been replaced with separate \
+                    'lens', 'prism' and 'data' attributes.",
+                );
+            } else if attr.path.is_ident(field_attr::BASE_DATA_ATTR_PATH) {
+                use syn::spanned::Spanned;
+                match attr.parse_meta()? {
+                    Meta::List(meta) => {
+                        for nested in meta.nested.iter() {
+                            match nested {
+                                NestedMeta::Meta(Meta::Path(path))
+                                    if path.is_ident(field_attr::IGNORE_ATTR_PATH) =>
+                                {
+                                    if ignore {
+                                        return Err(Error::new(
+                                            nested.span(),
+                                            "Duplicate attribute",
+                                        ));
+                                    }
+                                    ignore = true;
+                                }
+                                NestedMeta::Meta(Meta::NameValue(meta))
+                                    if meta.path.is_ident(field_attr::DATA_SAME_FN_ATTR_PATH) =>
+                                {
+                                    if same_fn.is_some() {
+                                        return Err(Error::new(meta.span(), "Duplicate attribute"));
+                                    }
+
+                                    let path = field_attr::parse_lit_into_expr_path(&meta.lit)?;
+                                    same_fn = Some(path);
+                                }
+                                other => return Err(Error::new(other.span(), "Unknown attribute")),
+                            }
+                        }
+                    }
+                    other => {
+                        return Err(Error::new(
+                            other.span(),
+                            "Expected attribute list (the form #[data(one, two)])",
+                        ));
+                    }
+                }
+            } else if attr.path.is_ident(BASE_PRISM_ATTR_PATH) {
+                use syn::spanned::Spanned;
+                match attr.parse_meta()? {
+                    Meta::List(meta) => {
+                        for nested in meta.nested.iter() {
+                            match nested {
+                                NestedMeta::Meta(Meta::NameValue(meta))
+                                    if meta.path.is_ident(PRISM_NAME_OVERRIDE_ATTR_PATH) =>
+                                {
+                                    if prism_name_override.is_some() {
+                                        return Err(Error::new(meta.span(), "Duplicate attribute"));
+                                    }
+
+                                    let ident = field_attr::parse_lit_into_ident(&meta.lit)?;
+                                    prism_name_override = Some(ident);
+                                }
+                                other => return Err(Error::new(other.span(), "Unknown attribute")),
+                            }
+                        }
+                    }
+                    other => {
+                        return Err(Error::new(
+                            other.span(),
+                            "Expected attribute list (the form #[data(one, two)])",
+                        ));
+                    }
+                }
             }
-        } else {
-            return Err(Error::new(
-                variant.ident.span(),
-                "Expecting one field for the variant",
-            ));
-        };
+        }
 
         Ok(Variant {
             ident: StringIdent(ident),
-            field: field.clone(),
+            fields,
+            ignore,
+            same_fn,
+            prism_name_override,
         })
     }
 }

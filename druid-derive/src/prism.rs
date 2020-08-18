@@ -2,7 +2,7 @@ use super::field_attr::FieldIdent;
 use super::lens::{is_camel_case, to_snake_case};
 use super::variant_attr::{StringIdent, Variants};
 use quote::quote;
-use syn::{spanned::Spanned, Data};
+use syn::{spanned::Spanned, Data, Error};
 
 pub(crate) fn derive_prism_impl(
     input: syn::DeriveInput,
@@ -54,88 +54,85 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
         }
     });
 
-    let impls = variants.iter().map(|v| {
+    let impls: Vec<_> = variants.iter().map(|v| {
         let variant_name = &v.ident.named();
-        let field_ty = &v.field.ty;
-        let (
-            field_name,
-            original_name
-         ) = match &v.field.ident {
-            FieldIdent::Named(name) => 
-                (StringIdent(name.into()).named(), true)
-            ,
-            FieldIdent::Unnamed(0) => 
-                (StringIdent("inner".into()).named(), false)
-            ,
+        let field = if let Some(field) = v.fields.iter().next() {
+            if v.fields.iter().count() > 1 {
+                return Err(Error::new(
+                    variant_name.span(),
+                    "Expecting no more than one field for the variant",
+                ));
+            } else {
+                field
+            }
+        } else {
+            return Err(Error::new(
+                variant_name.span(),
+                "Expecting one field for the variant",
+            ));
+        };
+        let field_ty = &field.ty;
+
+        let expr = match &field.ident {
+            FieldIdent::Named(name) => {
+                let field_name = StringIdent(name.into()).named();
+                quote!(
+                    if let #ty::#variant_name { #field_name } = data {
+                        f(Some(#field_name))
+                    } else {
+                        None
+                    }
+                )
+            },
+            FieldIdent::Unnamed(0) =>  {
+                let field_name = StringIdent("inner".into()).named();
+                quote!(
+                    if let #ty::#variant_name (#field_name) = data {
+                        f(Some(#field_name))
+                    } else {
+                        None
+                    }
+                )
+            },
+            // TODO: analyze/test
             FieldIdent::Unnamed(_) => unreachable!(),
         };
 
-        if original_name {
-            quote! {
-                impl druid::Prism<#ty, #field_ty> for #twizzled_name::#variant_name {
-    
-                    fn with_raw<V, F: FnOnce(Option<&#field_ty>) -> Option<V>>(&self, data: &#ty, f: F) -> Option<V> {
-                        if let #ty::#variant_name { #field_name } = data {
-                            f(Some(#field_name))
-                        } else {
-                            None
-                        }
-                    }
-    
-                    fn with_raw_mut<V, F: FnOnce(Option<&mut #field_ty>) -> Option<V>>(
-                        &self,
-                        data: &mut #ty,
-                        f: F,
-                    ) -> Option<V> {
-                        if let #ty::#variant_name { #field_name } = data {
-                            f(Some(#field_name))
-                        } else {
-                            None
-                        }
-                    }
-                }
-            }
-        } else {
-            quote! {
-                impl druid::Prism<#ty, #field_ty> for #twizzled_name::#variant_name {
-    
-                    fn with_raw<V, F: FnOnce(Option<&#field_ty>) -> Option<V>>(&self, data: &#ty, f: F) -> Option<V> {
-                        if let #ty::#variant_name (#field_name) = data {
-                            f(Some(#field_name))
-                        } else {
-                            None
-                        }
-                    }
-    
-                    fn with_raw_mut<V, F: FnOnce(Option<&mut #field_ty>) -> Option<V>>(
-                        &self,
-                        data: &mut #ty,
-                        f: F,
-                    ) -> Option<V> {
-                        if let #ty::#variant_name(inner) = data {
-                            f(Some(inner))
-                        } else {
-                            None
-                        }
-                    }
-                }
-            }
+        let quote = quote! {
+            impl druid::Prism<#ty, #field_ty> for #twizzled_name::#variant_name {
 
-        }
-    });
+                fn with_raw<V, F: FnOnce(Option<&#field_ty>) -> Option<V>>(&self, data: &#ty, f: F) -> Option<V> {
+                    #expr
+                }
+
+                fn with_raw_mut<V, F: FnOnce(Option<&mut #field_ty>) -> Option<V>>(
+                    &self,
+                    data: &mut #ty,
+                    f: F,
+                ) -> Option<V> {
+                    #expr
+                }
+            }
+        };
+        Ok(quote)
+    }).collect::<Result<_, _>>()?;
 
     let associated_items = variants.iter().map(|v| {
         let variant_name = &v.ident.named();
-        let variant_twizzled_name = if is_camel_case(&variant_name.to_string()) {
-            let temp_name = to_snake_case(&variant_name.to_string());
-            proc_macro2::Ident::new(&temp_name, proc_macro2::Span::call_site())
-        } else {
-            return Err(syn::Error::new(
-                ty.span(),
-                "Prisms implementations can only be derived from CamelCase variants",
-            ));
+        let prism_variant_name = match v.prism_name_override.as_ref() {
+            Some(name) => name.clone(),
+            None => {
+                if is_camel_case(&variant_name.to_string()) {
+                    let temp_name = to_snake_case(&variant_name.to_string());
+                    proc_macro2::Ident::new(&temp_name, proc_macro2::Span::call_site())
+                } else {
+                    return Err(syn::Error::new(
+                        ty.span(),
+                        "Prisms implementations can only be derived from CamelCase variants",
+                    ));
+                }
+            }
         };
-        let prism_variant_name = &variant_twizzled_name;
 
         Ok(quote! {
             /// Prism for the corresponding variant
@@ -158,8 +155,6 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
             #(#associated_items)*
         }
     };
-    // let exp = format!("{}", &expanded);
-    // println!("{}", exp);
 
     Ok(expanded)
 }

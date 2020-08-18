@@ -15,6 +15,7 @@
 //! The implementation for #[derive(Data)]
 
 use crate::field_attr::{Field, FieldKind, Fields};
+use crate::variant_attr::Variants;
 
 use quote::{quote, quote_spanned};
 use syn::{spanned::Spanned, Data, DataEnum, DataStruct};
@@ -84,6 +85,7 @@ fn derive_enum(
     let impl_generics = generics_bounds(&input.generics);
     let (_, ty_generics, where_clause) = &input.generics.split_for_impl();
 
+    // TODO: analyze
     if is_c_style_enum(&s) {
         let res = quote! {
             impl<#impl_generics> ::druid::Data for #ident #ty_generics #where_clause {
@@ -93,69 +95,95 @@ fn derive_enum(
         return Ok(res);
     }
 
-    let cases: Vec<proc_macro2::TokenStream> = s
-        .variants
-        .iter()
-        .map(|variant| {
-            let fields = Fields::parse_ast(&variant.fields)?;
-            let variant = &variant.ident;
+    let variants = Variants::parse_ast(&s.variants)?;
+    let (to_test, to_ignore): (Vec<_>, Vec<_>) = variants.iter().partition(|v| !v.ignore);
+    let to_test = to_test.iter().map(|v| {
+        let variant_ident = &v.ident.named();
+        let fields = &v.fields;
 
-            // the various inner `same()` calls, to the right of the match arm.
-            let tests: Vec<_> = fields
+        // the various inner `same()` calls, to the right of the match arm.
+        let tests: Vec<_> = fields
+            .iter()
+            .filter(|field| !field.ignore)
+            .map(|field| {
+                let same_fn = field.same_fn_path_tokens();
+                let var_left = ident_from_str(&format!("__self_{}", field.ident_string()));
+                let var_right = ident_from_str(&format!("__other_{}", field.ident_string()));
+                quote!( #same_fn(#var_left, #var_right) )
+            })
+            .collect();
+
+        if let FieldKind::Named = fields.kind {
+            let lefts: Vec<_> = fields
                 .iter()
-                .filter(|field| !field.ignore)
                 .map(|field| {
-                    let same_fn = field.same_fn_path_tokens();
-                    let var_left = ident_from_str(&format!("__self_{}", field.ident_string()));
-                    let var_right = ident_from_str(&format!("__other_{}", field.ident_string()));
-                    quote!( #same_fn(#var_left, #var_right) )
+                    let ident = field.ident_tokens();
+                    let var = ident_from_str(&format!("__self_{}", field.ident_string()));
+                    quote!( #ident: #var )
+                })
+                .collect();
+            let rights: Vec<_> = fields
+                .iter()
+                .map(|field| {
+                    let ident = field.ident_tokens();
+                    let var = ident_from_str(&format!("__other_{}", field.ident_string()));
+                    quote!( #ident: #var )
                 })
                 .collect();
 
-            if let FieldKind::Named = fields.kind {
-                let lefts: Vec<_> = fields
-                    .iter()
-                    .map(|field| {
-                        let ident = field.ident_tokens();
-                        let var = ident_from_str(&format!("__self_{}", field.ident_string()));
-                        quote!( #ident: #var )
-                    })
-                    .collect();
-                let rights: Vec<_> = fields
-                    .iter()
-                    .map(|field| {
-                        let ident = field.ident_tokens();
-                        let var = ident_from_str(&format!("__other_{}", field.ident_string()));
-                        quote!( #ident: #var )
-                    })
-                    .collect();
+            Ok(quote! {
+                (#ident :: #variant_ident { #( #lefts ),* }, #ident :: #variant_ident { #( #rights ),* }) => {
+                    #( #tests )&&*
+                }
+            })
+        } else {
+            let vars_left: Vec<_> = fields
+                .iter()
+                .map(|field| ident_from_str(&format!("__self_{}", field.ident_string())))
+                .collect();
+            let vars_right: Vec<_> = fields
+                .iter()
+                .map(|field| ident_from_str(&format!("__other_{}", field.ident_string())))
+                .collect();
 
+            if fields.iter().filter(|field| !field.ignore).count() > 0 {
                 Ok(quote! {
-                    (#ident :: #variant { #( #lefts ),* }, #ident :: #variant { #( #rights ),* }) => {
+                    ( #ident :: #variant_ident( #(#vars_left),* ),  #ident :: #variant_ident( #(#vars_right),* )) => {
                         #( #tests )&&*
                     }
                 })
             } else {
-                let vars_left: Vec<_> = fields
-                    .iter()
-                    .map(|field| ident_from_str(&format!("__self_{}", field.ident_string())))
-                    .collect();
-                let vars_right: Vec<_> = fields
-                    .iter()
-                    .map(|field| ident_from_str(&format!("__other_{}", field.ident_string())))
-                    .collect();
+                Ok(quote! {
+                    ( #ident :: #variant_ident ,  #ident :: #variant_ident ) => { true }
+                })
+            }
+        }
+    }).collect::<Result<Vec<proc_macro2::TokenStream>, syn::Error>>()?;
 
-                if fields.iter().filter(|field| !field.ignore).count() > 0 {
-                    Ok(quote! {
-                        ( #ident :: #variant( #(#vars_left),* ),  #ident :: #variant( #(#vars_right),* )) => {
-                            #( #tests )&&*
-                        }
-                    })
-                } else {
-                    Ok(quote! {
-                        ( #ident :: #variant ,  #ident :: #variant ) => { true }
-                    })
-                }
+    let to_ignore = to_ignore
+        .iter()
+        .map(|v| {
+            let variant_ident = &v.ident.named();
+            let fields = &v.fields;
+
+            if let FieldKind::Named = fields.kind {
+                Ok(quote! {
+                    (#ident :: #variant_ident { .. }, _ )
+                    | (_, #ident :: #variant_ident { .. }) => {
+                        true
+                    }
+                })
+            } else if fields.iter().filter(|field| !field.ignore).count() > 0 {
+                Ok(quote! {
+                    ( #ident :: #variant_ident( .. ),  _)
+                    | ( _,  #ident :: #variant_ident( .. )) => {
+                        true
+                    }
+                })
+            } else {
+                Ok(quote! {
+                    ( #ident :: #variant_ident ,  #ident :: #variant_ident ) => { true }
+                })
             }
         })
         .collect::<Result<Vec<proc_macro2::TokenStream>, syn::Error>>()?;
@@ -164,7 +192,8 @@ fn derive_enum(
         impl<#impl_generics> ::druid::Data for #ident #ty_generics #where_clause {
             fn same(&self, other: &Self) -> bool {
                 match (self, other) {
-                    #( #cases ),*
+                    #( #to_test ),*
+                    #( #to_ignore ),*
                     _ => false,
                 }
             }
