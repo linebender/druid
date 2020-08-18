@@ -28,21 +28,21 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
     } else {
         return Err(syn::Error::new(
             input.span(),
-            "Prisms implementations can only be derived from .. (TODO)",
+            "Prism implementations can only be derived from .. (TODO)",
         ));
     };
 
     let twizzled_name = if is_camel_case(&ty.to_string()) {
-        let temp_name = format!("{}_derived_prisms", to_snake_case(&ty.to_string()));
+        let temp_name = format!("{}_derived_prism", to_snake_case(&ty.to_string()));
         proc_macro2::Ident::new(&temp_name, proc_macro2::Span::call_site())
     } else {
         return Err(syn::Error::new(
             ty.span(),
-            "Prisms implementations can only be derived from CamelCase types",
+            "Prism implementations can only be derived from CamelCase types",
         ));
     };
 
-    // Define prisms types for each variant
+    // Define prism types for each variant
     let defs = variants.iter().map(|v| {
         let variant_name = &v.ident.named();
 
@@ -128,7 +128,7 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
                 } else {
                     return Err(syn::Error::new(
                         ty.span(),
-                        "Prisms implementations can only be derived from CamelCase variants",
+                        "Prism implementations can only be derived from CamelCase variants",
                     ));
                 }
             }
