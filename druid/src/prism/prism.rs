@@ -215,3 +215,38 @@ where
         self.inner.id()
     }
 }
+
+pub struct Variant<Get, GetMut> {
+    get: Get,
+    get_mut: GetMut,
+}
+
+impl<Get, GetMut> Variant<Get, GetMut> {
+    pub fn new<T: ?Sized, U: ?Sized>(get: Get, get_mut: GetMut) -> Self
+    where
+        Get: Fn(Option<&T>) -> Option<&U>,
+        GetMut: Fn(Option<&mut T>) -> Option<&mut U>,
+    {
+        Self { get, get_mut }
+    }
+}
+
+impl<T, U, Get, GetMut> Prism<T, U> for Variant<Get, GetMut>
+where
+    T: ?Sized,
+    U: ?Sized,
+    Get: Fn(&T) -> &U,
+    GetMut: Fn(&mut T) -> &mut U,
+{
+    fn with_raw<V, F: FnOnce(Option<&U>) -> Option<V>>(&self, data: &T, f: F) -> Option<V> {
+        f(Some((self.get)(data)))
+    }
+
+    fn with_raw_mut<V, F: FnOnce(Option<&mut U>) -> Option<V>>(
+        &self,
+        data: &mut T,
+        f: F,
+    ) -> Option<V> {
+        f(Some((self.get_mut)(data)))
+    }
+}
