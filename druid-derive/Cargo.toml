@@ -15,9 +15,9 @@ rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
-syn = "1.0.29"
-quote = "1.0.6"
-proc-macro2 = "1.0.17"
+syn = "1.0.38"
+quote = "1.0.7"
+proc-macro2 = "1.0.19"
 
 [dev-dependencies]
 druid = { version = "0.6.0", path = "../druid" }
