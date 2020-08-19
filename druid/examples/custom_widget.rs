@@ -15,7 +15,7 @@
 //! An example of a custom drawing widget.
 
 use druid::kurbo::BezPath;
-use druid::piet::{FontBuilder, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
+use druid::piet::{FontFamily, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
 use druid::widget::prelude::*;
 use druid::{Affine, AppLauncher, Color, LocalizedString, Point, Rect, WindowDesc};
 
@@ -82,15 +82,12 @@ impl Widget<String> for CustomWidget {
         ctx.fill(rect, &fill_color);
 
         // Text is easy, if you ignore all these unwraps. Just pick a font and a size.
-        let font = ctx
-            .text()
-            .new_font_by_name("Segoe UI", 24.0)
-            .build()
-            .unwrap();
         // Here's where we actually use the UI state
         let layout = ctx
             .text()
-            .new_text_layout(&font, data, std::f64::INFINITY)
+            .new_text_layout(data)
+            .font(FontFamily::SYSTEM_UI, 24.0)
+            .text_color(fill_color)
             .build()
             .unwrap();
 
@@ -98,7 +95,7 @@ impl Widget<String> for CustomWidget {
         ctx.with_save(|ctx| {
             // Now we can rotate the context (or set a clip path, for instance):
             ctx.transform(Affine::rotate(0.1));
-            ctx.draw_text(&layout, (80.0, 40.0), &fill_color);
+            ctx.draw_text(&layout, (80.0, 40.0));
         });
         // When we exit with_save, the original context's rotation is restored
 

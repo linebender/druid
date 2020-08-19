@@ -274,7 +274,7 @@ impl WndState {
         let rt = self.render_target.as_mut().unwrap();
         rt.begin_draw();
         {
-            let mut piet_ctx = Piet::new(d2d, dw, rt);
+            let mut piet_ctx = Piet::new(d2d, dw.clone(), rt);
             // The documentation on DXGI_PRESENT_PARAMETERS says we "must not update any
             // pixel outside of the dirty rectangles."
             piet_ctx.clip(invalid.to_bez_path());
@@ -1362,7 +1362,7 @@ impl WindowHandle {
     }
 
     pub fn text(&self) -> Text {
-        Text::new(&self.dwrite_factory)
+        Text::new(self.dwrite_factory.clone())
     }
 
     /// Request a timer event.
