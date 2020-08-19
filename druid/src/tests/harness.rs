@@ -66,8 +66,8 @@ impl<'a> TargetGuard<'a> {
     /// Turns the TargetGuard into a array of pixels
     #[allow(dead_code)]
     pub fn into_raw(mut self) -> Vec<u8> {
-        let raw_target = self.0.take().unwrap();
-        let raw_pixels: Vec<u8> = raw_target.into_raw_pixels(ImageFormat::RgbaPremul).unwrap();
+        let mut raw_target = self.0.take().unwrap();
+        let raw_pixels: Vec<u8> = raw_target.raw_pixels(ImageFormat::RgbaPremul).unwrap();
         raw_pixels
     }
 
@@ -320,6 +320,6 @@ impl Drop for TargetGuard<'_> {
         let _ = self
             .0
             .take()
-            .map(|t| t.into_raw_pixels(piet::ImageFormat::RgbaPremul));
+            .map(|mut t| t.raw_pixels(piet::ImageFormat::RgbaPremul));
     }
 }

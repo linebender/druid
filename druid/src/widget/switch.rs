@@ -16,9 +16,9 @@
 
 use std::time::Duration;
 
-use crate::kurbo::{Circle, Point, Rect, Shape, Size};
+use crate::kurbo::{Circle, Point, Shape, Size};
 use crate::piet::{
-    FontBuilder, LinearGradient, RenderContext, Text, TextLayout, TextLayoutBuilder, UnitPoint,
+    FontFamily, LinearGradient, RenderContext, Text, TextLayout, TextLayoutBuilder, UnitPoint,
 };
 use crate::theme;
 use crate::{
@@ -53,66 +53,49 @@ impl Switch {
     fn paint_labels(&mut self, ctx: &mut PaintCtx, env: &Env, switch_width: f64) {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let text_color = env.get(theme::LABEL_COLOR);
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let knob_size = switch_height - 2. * SWITCH_PADDING;
 
         let font = ctx
             .text()
-            .new_font_by_name(font_name, font_size)
-            .build()
-            .unwrap();
+            .font_family(font_name)
+            .unwrap_or(FontFamily::SYSTEM_UI);
 
         // off/on labels
         // TODO: use LocalizedString
         let on_label_layout = ctx
             .text()
-            .new_text_layout(&font, "ON", std::f64::INFINITY)
+            .new_text_layout("ON")
+            .font(font.clone(), font_size)
+            .text_color(text_color.clone())
             .build()
             .unwrap();
 
         let off_label_layout = ctx
             .text()
-            .new_text_layout(&font, "OFF", std::f64::INFINITY)
+            .new_text_layout("OFF")
+            .font(font, font_size)
+            .text_color(text_color)
             .build()
             .unwrap();
 
-        // position off/on labels
-        let mut on_label_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(
-                (ctx.size().width - on_label_layout.width()).max(0.0),
-                switch_height + (font_size * 1.2) / 2.,
-            ),
-        ));
+        let label_y = (switch_height - on_label_layout.size().height).max(0.0) / 2.0;
+        let label_x_space = switch_width - knob_size - SWITCH_PADDING * 2.0;
+        let off_pos = knob_size / 2. + SWITCH_PADDING;
+        let knob_delta = self.knob_pos.x - off_pos;
 
-        let mut off_label_origin = UnitPoint::LEFT.resolve(Rect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(
-                (ctx.size().width - off_label_layout.width()).max(0.0),
-                switch_height + (font_size * 1.2) / 2.,
-            ),
-        ));
+        let on_label_width = on_label_layout.size().width;
+        let on_base_x_pos =
+            -on_label_width - (label_x_space - on_label_width) / 2.0 + SWITCH_PADDING;
+        let on_label_origin = Point::new(on_base_x_pos + knob_delta, label_y);
 
-        // adjust label position
-        on_label_origin.y = on_label_origin.y.min(switch_height);
-        off_label_origin.y = off_label_origin.y.min(switch_height);
+        let off_base_x_pos =
+            knob_size + (label_x_space - off_label_layout.size().width) / 2.0 + SWITCH_PADDING;
+        let off_label_origin = Point::new(off_base_x_pos + knob_delta, label_y);
 
-        on_label_origin.x = self.knob_pos.x - switch_width + knob_size;
-        off_label_origin.x = switch_width - off_label_layout.width() - SWITCH_PADDING * 2.
-            + self.knob_pos.x
-            - knob_size / 2.
-            - SWITCH_PADDING;
-
-        ctx.draw_text(
-            &on_label_layout,
-            on_label_origin,
-            &env.get(theme::LABEL_COLOR),
-        );
-        ctx.draw_text(
-            &off_label_layout,
-            off_label_origin,
-            &env.get(theme::LABEL_COLOR),
-        );
+        ctx.draw_text(&on_label_layout, on_label_origin);
+        ctx.draw_text(&off_label_layout, off_label_origin);
     }
 }
 

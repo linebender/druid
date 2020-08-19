@@ -9,7 +9,6 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Added
 - `OPEN_PANEL_CANCELLED` and `SAVE_PANEL_CANCELLED` commands. ([#1061] by @cmyr)
-
 - Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
 - `TextBox` now supports ctrl and shift hotkeys. ([#1076] by [@vkahl])
@@ -25,6 +24,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Major rework of keyboard event handling. ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
 - `request_anim_frame` no longer invalidates the entire window. ([#1057] by [@jneem])
+- Use new Piet text api ([#1143] by [@cmyr])
 
 ### Deprecated
 
@@ -395,6 +395,7 @@ Last release without a changelog :(
 [#1126]: https://github.com/linebender/druid/pull/1120
 [#1128]: https://github.com/linebender/druid/pull/1128
 [#1133]: https://github.com/linebender/druid/pull/1133
+[#1143]: https://github.com/linebender/druid/pull/1143
 [#1145]: https://github.com/linebender/druid/pull/1145
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master

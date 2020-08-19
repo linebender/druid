@@ -40,7 +40,7 @@ use objc::runtime::{Class, Object, Sel};
 use objc::{class, msg_send, sel, sel_impl};
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
-use crate::piet::{Piet, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
 use super::appkit::{
     NSRunLoopCommonModes, NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt,
@@ -112,6 +112,7 @@ struct ViewState {
     // Tracks whether we have already received the mouseExited event
     mouse_left: bool,
     keyboard_state: KeyboardState,
+    text: PietText,
 }
 
 impl WindowBuilder {
@@ -371,6 +372,7 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
             focus_click: false,
             mouse_left: true,
             keyboard_state,
+            text: PietText::new_with_unique_state(),
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
@@ -649,11 +651,12 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
             (dirtyRect.origin.x, dirtyRect.origin.y),
             (dirtyRect.size.width, dirtyRect.size.height),
         );
-        let mut invalid = Region::EMPTY;
-        invalid.add_rect(rect);
-        let mut piet_ctx = Piet::new_y_down(cgcontext_ref);
+        let invalid = Region::from(rect);
+
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
+        let mut piet_ctx = Piet::new_y_down(cgcontext_ref, Some(view_state.text.clone()));
+
         (*view_state).handler.paint(&mut piet_ctx, &invalid);
         if let Err(e) = piet_ctx.finish() {
             error!("{}", e)
@@ -829,7 +832,16 @@ impl WindowHandle {
     }
 
     pub fn text(&self) -> Text {
-        Text::new()
+        let view = self.nsview.load();
+        unsafe {
+            if let Some(view) = (*view).as_ref() {
+                let state: *mut c_void = *view.get_ivar("viewState");
+                (*(state as *mut ViewState)).text.clone()
+            } else {
+                // this codepath should only happen during tests in druid, when view is nil
+                PietText::new_with_unique_state()
+            }
+        }
     }
 
     pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {

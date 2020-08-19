@@ -17,7 +17,7 @@ use std::any::Any;
 use time::Instant;
 
 use piet_common::kurbo::{Line, Size};
-use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
+use piet_common::{Color, FontFamily, Piet, RenderContext, Text, TextLayoutBuilder};
 
 use druid_shell::{Application, KeyEvent, Region, WinHandler, WindowBuilder, WindowHandle};
 
@@ -63,41 +63,37 @@ impl WinHandler for PerfTest {
             1.0,
         );
 
-        let font = piet
-            .text()
-            .new_font_by_name("Consolas", 15.0)
-            .build()
-            .unwrap();
-        let large_font = piet
-            .text()
-            .new_font_by_name("Consolas", 48.0)
-            .build()
-            .unwrap();
-
         let now = Instant::now();
         let msg = format!("{}ms", (now - self.last_time).whole_milliseconds());
         self.last_time = now;
         let layout = piet
             .text()
-            .new_text_layout(&font, &msg, std::f64::INFINITY)
+            .new_text_layout(&msg)
+            .font(FontFamily::MONOSPACE, 15.0)
+            .text_color(FG_COLOR)
             .build()
             .unwrap();
-        piet.draw_text(&layout, (10.0, 210.0), &FG_COLOR);
+        piet.draw_text(&layout, (10.0, 210.0));
 
         let msg = "VSYNC";
+        let color = if self.red { RED } else { CYAN };
+
         let layout = piet
             .text()
-            .new_text_layout(&large_font, &msg, std::f64::INFINITY)
+            .new_text_layout(&msg)
+            .text_color(color)
+            .font(FontFamily::MONOSPACE, 48.0)
             .build()
             .unwrap();
-        let color = if self.red { &RED } else { &CYAN };
-        piet.draw_text(&layout, (10.0, 280.0), color);
+        piet.draw_text(&layout, (10.0, 280.0));
         self.red = !self.red;
 
         let msg = "Hello DWrite! This is a somewhat longer string of text intended to provoke slightly longer draw times.";
         let layout = piet
             .text()
-            .new_text_layout(&font, &msg, std::f64::INFINITY)
+            .new_text_layout(msg)
+            .font(FontFamily::MONOSPACE, 15.0)
+            .text_color(FG_COLOR)
             .build()
             .unwrap();
         let dy = 15.0;
@@ -105,7 +101,7 @@ impl WinHandler for PerfTest {
         let y0 = 10.0;
         for i in 0..60 {
             let y = y0 + (i as f64) * dy;
-            piet.draw_text(&layout, (x0, y), &FG_COLOR);
+            piet.draw_text(&layout, (x0, y));
         }
         self.handle.request_anim_frame();
     }

@@ -467,7 +467,7 @@ impl WindowHandle {
             .upgrade()
             .unwrap_or_else(|| panic!("Failed to produce a text context"));
 
-        Text::new(s.context.clone(), s.window.clone())
+        Text::new(s.context.clone())
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {

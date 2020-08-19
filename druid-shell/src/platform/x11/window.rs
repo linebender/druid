@@ -592,14 +592,14 @@ impl Window {
         {
             let state = borrow!(self.state)?;
             let surface = borrow!(self.cairo_surface)?;
-            let mut cairo_ctx = cairo::Context::new(&surface);
+            let cairo_ctx = cairo::Context::new(&surface);
 
             for rect in state.invalid.rects() {
                 cairo_ctx.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
             }
             cairo_ctx.clip();
 
-            let mut piet_ctx = Piet::new(&mut cairo_ctx);
+            let mut piet_ctx = Piet::new(&cairo_ctx);
 
             // We need to be careful with earlier returns here, because piet_ctx
             // can panic if it isn't finish()ed. Also, we want to reset cairo's clip
