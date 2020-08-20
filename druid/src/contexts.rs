@@ -500,7 +500,7 @@ impl EventCtx<'_, '_> {
     ///
     /// After this, `update` will be called on the widget in the next update cycle, even
     /// if there's not a data change.
-    pub fn request_update<T, W>(&mut self) {
+    pub fn request_update(&mut self) {
         self.widget_state.request_update = true;
     }
 }
