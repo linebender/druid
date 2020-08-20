@@ -24,8 +24,6 @@ use std::ptr;
 use std::slice;
 
 use lazy_static::lazy_static;
-use winapi::ctypes::c_void;
-use winapi::shared::guiddef::REFIID;
 use winapi::shared::minwindef::{HMODULE, UINT};
 use winapi::shared::ntdef::{HRESULT, LPWSTR};
 use winapi::shared::windef::{HMONITOR, RECT};
@@ -35,7 +33,6 @@ use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::libloaderapi::{GetModuleHandleW, GetProcAddress, LoadLibraryW};
 use winapi::um::processenv::{GetStdHandle, SetStdHandle};
 use winapi::um::shellscalingapi::{MONITOR_DPI_TYPE, PROCESS_DPI_AWARENESS};
-use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winbase::{FILE_TYPE_UNKNOWN, STD_ERROR_HANDLE, STD_OUTPUT_HANDLE};
 use winapi::um::wincon::{AttachConsole, ATTACH_PARENT_PROCESS};
 use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
@@ -133,24 +130,12 @@ type GetDpiForSystem = unsafe extern "system" fn() -> UINT;
 type GetDpiForMonitor = unsafe extern "system" fn(HMONITOR, MONITOR_DPI_TYPE, *mut UINT, *mut UINT);
 // from user32.dll
 type SetProcessDpiAwareness = unsafe extern "system" fn(PROCESS_DPI_AWARENESS) -> HRESULT;
-type DCompositionCreateDevice2 = unsafe extern "system" fn(
-    renderingDevice: *const IUnknown,
-    iid: REFIID,
-    dcompositionDevice: *mut *mut c_void,
-) -> HRESULT;
-type CreateDXGIFactory1 =
-    unsafe extern "system" fn(riid: REFIID, ppFactory: *mut *mut c_void) -> HRESULT;
-type CreateDXGIFactory2 =
-    unsafe extern "system" fn(Flags: UINT, riid: REFIID, ppFactory: *mut *mut c_void) -> HRESULT;
 
 #[allow(non_snake_case)] // For member fields
 pub struct OptionalFunctions {
     pub GetDpiForSystem: Option<GetDpiForSystem>,
     pub GetDpiForMonitor: Option<GetDpiForMonitor>,
     pub SetProcessDpiAwareness: Option<SetProcessDpiAwareness>,
-    pub DCompositionCreateDevice2: Option<DCompositionCreateDevice2>,
-    pub CreateDXGIFactory1: Option<CreateDXGIFactory1>,
-    pub CreateDXGIFactory2: Option<CreateDXGIFactory2>,
 }
 
 #[allow(non_snake_case)] // For local variables
@@ -196,15 +181,10 @@ fn load_optional_functions() -> OptionalFunctions {
 
     let shcore = load_library("shcore.dll");
     let user32 = load_library("user32.dll");
-    let dcomp = load_library("dcomp.dll");
-    let dxgi = load_library("dxgi.dll");
 
     let mut GetDpiForSystem = None;
     let mut GetDpiForMonitor = None;
     let mut SetProcessDpiAwareness = None;
-    let mut DCompositionCreateDevice2 = None;
-    let mut CreateDXGIFactory1 = None;
-    let mut CreateDXGIFactory2 = None;
 
     if shcore.is_null() {
         log::info!("No shcore.dll");
@@ -219,25 +199,10 @@ fn load_optional_functions() -> OptionalFunctions {
         load_function!(user32, GetDpiForSystem, "10");
     }
 
-    if !dcomp.is_null() {
-        load_function!(dcomp, DCompositionCreateDevice2, "8.1");
-    }
-
-    if !dxgi.is_null() {
-        load_function!(dxgi, CreateDXGIFactory1, "7.0");
-    }
-
-    if !dxgi.is_null() {
-        load_function!(dxgi, CreateDXGIFactory2, "8.1");
-    }
-
     OptionalFunctions {
         GetDpiForSystem,
         GetDpiForMonitor,
         SetProcessDpiAwareness,
-        DCompositionCreateDevice2,
-        CreateDXGIFactory1,
-        CreateDXGIFactory2,
     }
 }
 

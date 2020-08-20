@@ -32,7 +32,6 @@ use winapi::shared::dxgitype::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
-use winapi::um::d2d1::*;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::unknwnbase::*;
 use winapi::um::winnt::*;
@@ -41,14 +40,12 @@ use winapi::um::winuser::*;
 use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
 
-use crate::platform::windows::HwndRenderTarget;
-
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, RenderContext};
 
 use super::accels::register_accel;
 use super::application::Application;
-use super::dcomp::{D3D11Device, DCompositionDevice, DCompositionTarget, DCompositionVisual};
+use super::dcomp::D3D11Device;
 use super::dialog::get_file_dialog_path;
 use super::error::Error;
 use super::keyboard::KeyboardState;
@@ -70,10 +67,6 @@ use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 /// Windows considers 96 the default value which represents a 1.0 scale factor.
 pub(crate) const SCALE_TARGET_DPI: f64 = 96.0;
 
-extern "system" {
-    pub fn DwmFlush();
-}
-
 /// Builder abstraction for creating new windows.
 pub(crate) struct WindowBuilder {
     app: Application,
@@ -92,21 +85,22 @@ pub(crate) struct WindowBuilder {
 /// good performance on Windows. This setting lets clients experiment
 /// with different strategies.
 pub enum PresentStrategy {
-    /// Don't try to use DXGI at all, only create Hwnd render targets.
-    /// Note: on Windows 7 this is the only mode available.
-    Hwnd,
-
-    /// Corresponds to the swap effect DXGI_SWAP_EFFECT_SEQUENTIAL. In
-    /// testing, it causes diagonal banding artifacts with Nvidia
-    /// adapters, and incremental present doesn't work. However, it
-    /// is compatible with GDI (such as menus).
-    #[allow(dead_code)]
+    /// Corresponds to the swap effect DXGI_SWAP_EFFECT_SEQUENTIAL. It
+    /// is compatible with GDI (such as menus), but is not the best in
+    /// performance.
+    ///
+    /// In earlier testing, it exhibited diagonal banding artifacts (most
+    /// likely because of bugs in Nvidia Optimus configurations) and did
+    /// not do incremental present, but in more recent testing, at least
+    /// incremental present seems to work fine.
+    ///
+    /// Also note, this swap effect is not compatible with DX12.
     Sequential,
 
     /// Corresponds to the swap effect DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL.
-    /// In testing, it seems to perform well (including allowing smooth
-    /// resizing when the frame can be rendered quickly), but isn't
-    /// compatible with GDI.
+    /// In testing, it seems to perform well, but isn't compatible with
+    /// GDI. Resize can probably be made to work reasonably smoothly with
+    /// additional synchronization work, but has some artifacts.
     Flip,
 
     /// Corresponds to the swap effect DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL
@@ -174,7 +168,7 @@ struct MyWndProc {
 struct WndState {
     handler: Box<dyn WinHandler>,
     render_target: Option<DeviceContext>,
-    dcomp_state: Option<DCompState>,
+    dxgi_state: Option<DxgiState>,
     min_size: Option<Size>,
     keyboard_state: KeyboardState,
     // Stores a set of all mouse buttons that are currently holding mouse
@@ -186,12 +180,9 @@ struct WndState {
     //TODO: track surrogate orphan
 }
 
-/// State for DirectComposition. This is optional because it is only supported
-/// on 8.1 and up.
-struct DCompState {
+/// State for DXGI swapchains.
+struct DxgiState {
     swap_chain: *mut IDXGISwapChain1,
-    // True if in a drag-resizing gesture (at which point the swapchain is disabled)
-    sizing: bool,
 }
 
 /// Message indicating there are idle tasks to run.
@@ -211,8 +202,6 @@ pub(crate) const DS_REQUEST_DESTROY: UINT = WM_USER + 1;
 
 impl Default for PresentStrategy {
     fn default() -> PresentStrategy {
-        // We probably want to change this, but we need GDI to work. Too bad about
-        // the artifacty resizing.
         PresentStrategy::Sequential
     }
 }
@@ -257,7 +246,7 @@ fn is_point_in_client_rect(hwnd: HWND, x: i32, y: i32) -> bool {
 impl WndState {
     fn rebuild_render_target(&mut self, d2d: &D2DFactory, scale: Scale) {
         unsafe {
-            let swap_chain = self.dcomp_state.as_ref().unwrap().swap_chain;
+            let swap_chain = self.dxgi_state.as_ref().unwrap().swap_chain;
             let rt = paint::create_render_target_dxgi(d2d, swap_chain, scale)
                 .map(|rt| rt.as_device_context().expect("TODO remove this expect"));
             self.render_target = rt.ok();
@@ -343,10 +332,6 @@ impl MyWndProc {
         self.with_window_state(|state| state.scale.get())
     }
 
-    fn area(&self) -> ScaledArea {
-        self.with_window_state(|state| state.area.get())
-    }
-
     fn set_area(&self, area: ScaledArea) {
         self.with_window_state(move |state| state.area.set(area))
     }
@@ -387,19 +372,13 @@ impl WndProc for MyWndProc {
                     state.hwnd.set(hwnd);
                 }
                 if let Some(state) = self.state.borrow_mut().as_mut() {
-                    let dcomp_state = unsafe {
-                        create_dcomp_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
-                            warn!("Creating swapchain failed, falling back to hwnd: {:?}", e);
+                    let dxgi_state = unsafe {
+                        create_dxgi_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
+                            error!("Creating swapchain failed: {:?}", e);
                             None
                         })
                     };
-                    if dcomp_state.is_none() {
-                        unsafe {
-                            let rt = paint::create_render_target(&self.d2d_factory, hwnd);
-                            state.render_target = rt.ok();
-                        }
-                    }
-                    state.dcomp_state = dcomp_state;
+                    state.dxgi_state = dxgi_state;
 
                     let handle = self.handle.borrow().to_owned();
                     state.handler.connect(&handle.into());
@@ -421,10 +400,6 @@ impl WndProc for MyWndProc {
                     let mut rect: RECT = mem::zeroed();
                     GetUpdateRect(hwnd, &mut rect, FALSE);
                     let s = s.as_mut().unwrap();
-                    if s.render_target.is_none() {
-                        let rt = paint::create_render_target(&self.d2d_factory, hwnd);
-                        s.render_target = rt.ok();
-                    }
                     s.handler.rebuild_resources();
                     let rect_dp = util::recti_to_rect(rect).to_dp(self.scale());
                     s.render(
@@ -433,17 +408,14 @@ impl WndProc for MyWndProc {
                         &self.handle,
                         rect_dp,
                     );
-                    if let Some(ref mut ds) = s.dcomp_state {
+                    if let Some(ref mut ds) = s.dxgi_state {
                         let params = DXGI_PRESENT_PARAMETERS {
                             DirtyRectsCount: 1,
                             pDirtyRects: &mut rect,
                             pScrollRect: null_mut(),
                             pScrollOffset: null_mut(),
                         };
-                        if !ds.sizing {
-                            (*ds.swap_chain).Present1(1, 0, &params);
-                            //let _ = ds.dcomp_device.commit();
-                        }
+                        (*ds.swap_chain).Present1(1, 0, &params);
                     }
                     ValidateRect(hwnd, null_mut());
                 } else {
@@ -451,82 +423,6 @@ impl WndProc for MyWndProc {
                 }
                 Some(0)
             },
-            /*
-            WM_ENTERSIZEMOVE => unsafe {
-                if let Ok(mut s) = self.state.try_borrow_mut() {
-                    let s = s.as_mut().unwrap();
-                    if s.dcomp_state.is_some() {
-                        let rt = paint::create_render_target(&self.d2d_factory, hwnd);
-                        s.render_target = rt.ok();
-                        {
-                            let rect_dp = self.area().size_dp().to_rect();
-                            s.handler.rebuild_resources();
-                            s.render(
-                                &self.d2d_factory,
-                                &self.dwrite_factory,
-                                &self.handle,
-                                rect_dp,
-                            );
-                        }
-
-                        /*
-                        if let Some(ref mut ds) = s.dcomp_state {
-                            let _ = ds.dcomp_target.clear_root();
-                            let _ = ds.dcomp_device.commit();
-                            ds.sizing = true;
-                        }
-                        */
-                    }
-                } else {
-                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
-                }
-                None
-            },
-            WM_EXITSIZEMOVE => unsafe {
-                if let Ok(mut s) = self.state.try_borrow_mut() {
-                    let s = s.as_mut().unwrap();
-                    if s.dcomp_state.is_some() {
-                        let area = self.area();
-                        let size_px = area.size_px();
-                        let res = (*s.dcomp_state.as_mut().unwrap().swap_chain).ResizeBuffers(
-                            2,
-                            size_px.width as u32,
-                            size_px.height as u32,
-                            DXGI_FORMAT_UNKNOWN,
-                            0,
-                        );
-                        if SUCCEEDED(res) {
-                            s.handler.rebuild_resources();
-                            s.rebuild_render_target(&self.d2d_factory, self.scale());
-                            s.render(
-                                &self.d2d_factory,
-                                &self.dwrite_factory,
-                                &self.handle,
-                                area.size_dp().to_rect(),
-                            );
-                            (*s.dcomp_state.as_ref().unwrap().swap_chain).Present(0, 0);
-                        } else {
-                            error!("ResizeBuffers failed: 0x{:x}", res);
-                        }
-
-                        // Flush to present flicker artifact (old swapchain composited)
-                        // It might actually be better to create a new swapchain here.
-                        DwmFlush();
-
-                        /*
-                        if let Some(ref mut ds) = s.dcomp_state {
-                            let _ = ds.dcomp_target.set_root(&mut ds.swapchain_visual);
-                            let _ = ds.dcomp_device.commit();
-                            ds.sizing = false;
-                        }
-                        */
-                    }
-                } else {
-                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
-                }
-                None
-            },
-            */
             WM_SIZE => unsafe {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
@@ -537,52 +433,31 @@ impl WndProc for MyWndProc {
                     let size_dp = area.size_dp();
                     self.set_area(area);
                     s.handler.size(size_dp);
-                    let use_hwnd = if let Some(ref dcomp_state) = s.dcomp_state {
-                        dcomp_state.sizing
+                    let res;
+                    {
+                        s.render_target = None;
+                        res = (*s.dxgi_state.as_mut().unwrap().swap_chain).ResizeBuffers(
+                            0,
+                            width,
+                            height,
+                            DXGI_FORMAT_UNKNOWN,
+                            0,
+                        );
+                    }
+                    if SUCCEEDED(res) {
+                        s.rebuild_render_target(&self.d2d_factory, scale);
+                        s.render(
+                            &self.d2d_factory,
+                            &self.dwrite_factory,
+                            &self.handle,
+                            size_dp.to_rect(),
+                        );
+                        if let Some(ref mut dxgi_state) = s.dxgi_state {
+                            (*dxgi_state.swap_chain).Present(0, 0);
+                        }
+                        ValidateRect(hwnd, null_mut());
                     } else {
-                        true
-                    };
-                    if use_hwnd {
-                        if let Some(ref mut rt) = s.render_target {
-                            if let Some(hrt) = cast_to_hwnd(rt) {
-                                let size = D2D1_SIZE_U { width, height };
-                                let _ = hrt.ptr.Resize(&size);
-                            }
-                        }
-                        if InvalidateRect(hwnd, null(), FALSE) == FALSE {
-                            log::warn!(
-                                "InvalidateRect failed: {}",
-                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                            );
-                        }
-                    } else {
-                        let res;
-                        {
-                            s.render_target = None;
-                            res = (*s.dcomp_state.as_mut().unwrap().swap_chain).ResizeBuffers(
-                                0,
-                                width,
-                                height,
-                                DXGI_FORMAT_UNKNOWN,
-                                0,
-                            );
-                        }
-                        if SUCCEEDED(res) {
-                            s.rebuild_render_target(&self.d2d_factory, scale);
-                            s.render(
-                                &self.d2d_factory,
-                                &self.dwrite_factory,
-                                &self.handle,
-                                size_dp.to_rect(),
-                            );
-                            if let Some(ref mut dcomp_state) = s.dcomp_state {
-                                (*dcomp_state.swap_chain).Present(0, 0);
-                                //let _ = dcomp_state.dcomp_device.commit();
-                            }
-                            ValidateRect(hwnd, null_mut());
-                        } else {
-                            error!("ResizeBuffers failed: 0x{:x}", res);
-                        }
+                        error!("ResizeBuffers failed: 0x{:x}", res);
                     }
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
@@ -980,7 +855,7 @@ impl WindowBuilder {
             let state = WndState {
                 handler: self.handler.unwrap(),
                 render_target: None,
-                dcomp_state: None,
+                dxgi_state: None,
                 min_size: self.min_size,
                 keyboard_state: KeyboardState::new(),
                 captured_mouse_buttons: MouseButtons::new(),
@@ -1060,67 +935,57 @@ unsafe fn choose_adapter(factory: *mut IDXGIFactory2) -> *mut IDXGIAdapter {
     best_adapter
 }
 
-unsafe fn create_dcomp_state(
+unsafe fn create_dxgi_state(
     present_strategy: PresentStrategy,
     hwnd: HWND,
-) -> Result<Option<DCompState>, Error> {
-    if present_strategy == PresentStrategy::Hwnd {
-        return Ok(None);
-    }
-    if let Some(create_dxgi_factory1) = OPTIONAL_FUNCTIONS.CreateDXGIFactory1 {
-        let mut factory: *mut IDXGIFactory2 = null_mut();
-        as_result(create_dxgi_factory1(
-            &IID_IDXGIFactory2,
-            &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void,
-        ))?;
-        debug!("dxgi factory pointer = {:?}", factory);
-        let adapter = choose_adapter(factory);
-        debug!("adapter = {:?}", adapter);
+) -> Result<Option<DxgiState>, Error> {
+    let mut factory: *mut IDXGIFactory2 = null_mut();
+    as_result(CreateDXGIFactory1(
+        &IID_IDXGIFactory2,
+        &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void,
+    ))?;
+    debug!("dxgi factory pointer = {:?}", factory);
+    let adapter = choose_adapter(factory);
+    debug!("adapter = {:?}", adapter);
 
-        let mut d3d11_device = D3D11Device::new_simple()?;
-        //let mut d2d1_device = d3d11_device.create_d2d1_device()?;
+    let mut d3d11_device = D3D11Device::new_simple()?;
 
-        let (swap_effect, bufs) = match present_strategy {
-            PresentStrategy::Hwnd => unreachable!(),
-            PresentStrategy::Sequential => (DXGI_SWAP_EFFECT_SEQUENTIAL, 1),
-            PresentStrategy::Flip | PresentStrategy::FlipRedirect => {
-                (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, 2)
-            }
-        };
-        let desc = DXGI_SWAP_CHAIN_DESC1 {
-            Width: 1024,
-            Height: 768,
-            Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-            Stereo: FALSE,
-            SampleDesc: DXGI_SAMPLE_DESC {
-                Count: 1,
-                Quality: 0,
-            },
-            BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
-            BufferCount: bufs,
-            Scaling: DXGI_SCALING_STRETCH,
-            SwapEffect: swap_effect,
-            AlphaMode: DXGI_ALPHA_MODE_IGNORE,
-            Flags: 0,
-        };
-        let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
-        let res = (*factory).CreateSwapChainForHwnd(
-            d3d11_device.raw_ptr() as *mut IUnknown,
-            hwnd,
-            &desc,
-            null_mut(),
-            null_mut(),
-            &mut swap_chain,
-        );
-        debug!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
+    let (swap_effect, bufs) = match present_strategy {
+        PresentStrategy::Sequential => (DXGI_SWAP_EFFECT_SEQUENTIAL, 1),
+        PresentStrategy::Flip | PresentStrategy::FlipRedirect => {
+            (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, 2)
+        }
+    };
+    let desc = DXGI_SWAP_CHAIN_DESC1 {
+        Width: 1024,
+        Height: 768,
+        Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+        Stereo: FALSE,
+        SampleDesc: DXGI_SAMPLE_DESC {
+            Count: 1,
+            Quality: 0,
+        },
+        BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
+        BufferCount: bufs,
+        Scaling: DXGI_SCALING_STRETCH,
+        SwapEffect: swap_effect,
+        AlphaMode: DXGI_ALPHA_MODE_IGNORE,
+        Flags: 0,
+    };
+    let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
+    let res = (*factory).CreateSwapChainForHwnd(
+        d3d11_device.raw_ptr() as *mut IUnknown,
+        hwnd,
+        &desc,
+        null_mut(),
+        null_mut(),
+        &mut swap_chain,
+    );
+    debug!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
 
-        Ok(Some(DCompState {
-            swap_chain,
-            sizing: false,
-        }))
-    } else {
-        Ok(None)
-    }
+    Ok(Some(DxgiState {
+        swap_chain,
+    }))
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1490,14 +1355,6 @@ impl IdleHandle {
             }
         }
     }
-}
-
-/// Casts render target to hwnd variant.
-unsafe fn cast_to_hwnd(dc: &DeviceContext) -> Option<HwndRenderTarget> {
-    dc.get_comptr()
-        .cast()
-        .ok()
-        .map(|com_ptr| HwndRenderTarget::from_ptr(com_ptr))
 }
 
 impl Default for WindowHandle {

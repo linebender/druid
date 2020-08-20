@@ -45,94 +45,11 @@ pub mod window;
 // Basically, go from HwndRenderTarget or DxgiSurfaceRenderTarget (2d or 3d) to a Device Context.
 // Go back up for particular needs.
 
-use piet_common::d2d::{D2DFactory, DeviceContext};
+use piet_common::d2d::DeviceContext;
 use std::fmt::{Debug, Display, Formatter};
-use winapi::shared::windef::HWND;
-use winapi::shared::winerror::{HRESULT, SUCCEEDED};
-use winapi::um::d2d1::{
-    ID2D1HwndRenderTarget, ID2D1RenderTarget, D2D1_HWND_RENDER_TARGET_PROPERTIES,
-    D2D1_RENDER_TARGET_PROPERTIES, D2D1_SIZE_U,
-};
-use winapi::um::dcommon::D2D1_PIXEL_FORMAT;
+use winapi::shared::winerror::HRESULT;
+use winapi::um::d2d1::ID2D1RenderTarget;
 use wio::com::ComPtr;
-
-#[derive(Clone)]
-pub struct HwndRenderTarget {
-    ptr: ComPtr<ID2D1HwndRenderTarget>,
-}
-
-impl HwndRenderTarget {
-    pub fn create(
-        factory: &D2DFactory,
-        hwnd: HWND,
-        width: u32,
-        height: u32,
-    ) -> Result<Self, Error> {
-        // hardcode
-        // - RenderTargetType::Default
-        // - AlphaMode::Unknown
-        let rt_props = DEFAULT_PROPS;
-        let mut hwnd_props = DEFAULT_HWND_PROPS;
-
-        hwnd_props.hwnd = hwnd;
-        hwnd_props.pixelSize.width = width;
-        hwnd_props.pixelSize.height = height;
-
-        // now build
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            let hr = (*factory.get_raw()).CreateHwndRenderTarget(&rt_props, &hwnd_props, &mut ptr);
-
-            if SUCCEEDED(hr) {
-                Ok(HwndRenderTarget::from_raw(ptr))
-            } else {
-                Err(hr.into())
-            }
-        }
-    }
-
-    /// construct from COM ptr
-    ///
-    /// # Safety
-    /// TODO
-    pub unsafe fn from_ptr(ptr: ComPtr<ID2D1HwndRenderTarget>) -> Self {
-        Self { ptr }
-    }
-
-    /// construct from raw ptr
-    ///
-    /// # Safety
-    /// TODO
-    pub unsafe fn from_raw(raw: *mut ID2D1HwndRenderTarget) -> Self {
-        Self::from_ptr(ComPtr::from_raw(raw))
-    }
-
-    pub fn get_comptr(&self) -> &ComPtr<ID2D1HwndRenderTarget> {
-        &self.ptr
-    }
-}
-
-// props for creating hwnd render target
-const DEFAULT_PROPS: D2D1_RENDER_TARGET_PROPERTIES = D2D1_RENDER_TARGET_PROPERTIES {
-    _type: 0u32, //RenderTargetType::Default
-    pixelFormat: D2D1_PIXEL_FORMAT {
-        format: 87u32, //Format::B8G8R8A8Unorm, see https://docs.rs/dxgi/0.3.0-alpha4/src/dxgi/enums/format.rs.html#631
-        alphaMode: 0u32, //AlphaMode::Unknown
-    },
-    dpiX: 0.0,
-    dpiY: 0.0,
-    usage: 0,
-    minLevel: 0,
-};
-
-const DEFAULT_HWND_PROPS: D2D1_HWND_RENDER_TARGET_PROPERTIES = D2D1_HWND_RENDER_TARGET_PROPERTIES {
-    hwnd: std::ptr::null_mut(),
-    pixelSize: D2D1_SIZE_U {
-        width: 0,
-        height: 0,
-    },
-    presentOptions: 0,
-};
 
 #[derive(Clone)]
 pub struct DxgiSurfaceRenderTarget {
