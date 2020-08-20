@@ -463,3 +463,29 @@ fn register_after_adding_child() {
         assert_eq!(harness.get_state(id_5).children.entry_count(), 5);
     })
 }
+
+#[test]
+/// Test that request_update actually causes the request.
+fn request_update() {
+    const REQUEST_UPDATE: Selector = Selector::new("druid-tests.request_update");
+    let updated: Rc<Cell<bool>> = Default::default();
+    let updated_clone = updated.clone();
+
+    let widget = ModularWidget::new(())
+        .event_fn(|_, ctx, event, _data, _env| {
+            if let Event::Command(cmd) = event {
+                if cmd.is(REQUEST_UPDATE) {
+                    ctx.request_update();
+                }
+            }
+        })
+        .update_fn(move |_, _ctx, _old_data, _data, _env| {
+            updated_clone.set(true);
+        });
+    Harness::create_simple((), widget, |harness| {
+        harness.send_initial_events();
+        assert!(!updated.get());
+        harness.submit_command(REQUEST_UPDATE, None);
+        assert!(updated.get());
+    })
+}
