@@ -138,6 +138,8 @@ type DCompositionCreateDevice2 = unsafe extern "system" fn(
     iid: REFIID,
     dcompositionDevice: *mut *mut c_void,
 ) -> HRESULT;
+type CreateDXGIFactory1 =
+    unsafe extern "system" fn(riid: REFIID, ppFactory: *mut *mut c_void) -> HRESULT;
 type CreateDXGIFactory2 =
     unsafe extern "system" fn(Flags: UINT, riid: REFIID, ppFactory: *mut *mut c_void) -> HRESULT;
 
@@ -147,6 +149,7 @@ pub struct OptionalFunctions {
     pub GetDpiForMonitor: Option<GetDpiForMonitor>,
     pub SetProcessDpiAwareness: Option<SetProcessDpiAwareness>,
     pub DCompositionCreateDevice2: Option<DCompositionCreateDevice2>,
+    pub CreateDXGIFactory1: Option<CreateDXGIFactory1>,
     pub CreateDXGIFactory2: Option<CreateDXGIFactory2>,
 }
 
@@ -200,6 +203,7 @@ fn load_optional_functions() -> OptionalFunctions {
     let mut GetDpiForMonitor = None;
     let mut SetProcessDpiAwareness = None;
     let mut DCompositionCreateDevice2 = None;
+    let mut CreateDXGIFactory1 = None;
     let mut CreateDXGIFactory2 = None;
 
     if shcore.is_null() {
@@ -220,6 +224,10 @@ fn load_optional_functions() -> OptionalFunctions {
     }
 
     if !dxgi.is_null() {
+        load_function!(dxgi, CreateDXGIFactory1, "7.0");
+    }
+
+    if !dxgi.is_null() {
         load_function!(dxgi, CreateDXGIFactory2, "8.1");
     }
 
@@ -228,6 +236,7 @@ fn load_optional_functions() -> OptionalFunctions {
         GetDpiForMonitor,
         SetProcessDpiAwareness,
         DCompositionCreateDevice2,
+        CreateDXGIFactory1,
         CreateDXGIFactory2,
     }
 }

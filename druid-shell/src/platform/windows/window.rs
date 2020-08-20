@@ -190,9 +190,6 @@ struct WndState {
 /// on 8.1 and up.
 struct DCompState {
     swap_chain: *mut IDXGISwapChain1,
-    dcomp_device: DCompositionDevice,
-    dcomp_target: DCompositionTarget,
-    swapchain_visual: DCompositionVisual,
     // True if in a drag-resizing gesture (at which point the swapchain is disabled)
     sizing: bool,
 }
@@ -216,7 +213,7 @@ impl Default for PresentStrategy {
     fn default() -> PresentStrategy {
         // We probably want to change this, but we need GDI to work. Too bad about
         // the artifacty resizing.
-        PresentStrategy::FlipRedirect
+        PresentStrategy::Sequential
     }
 }
 
@@ -445,7 +442,7 @@ impl WndProc for MyWndProc {
                         };
                         if !ds.sizing {
                             (*ds.swap_chain).Present1(1, 0, &params);
-                            let _ = ds.dcomp_device.commit();
+                            //let _ = ds.dcomp_device.commit();
                         }
                     }
                     ValidateRect(hwnd, null_mut());
@@ -454,6 +451,7 @@ impl WndProc for MyWndProc {
                 }
                 Some(0)
             },
+            /*
             WM_ENTERSIZEMOVE => unsafe {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
@@ -471,11 +469,13 @@ impl WndProc for MyWndProc {
                             );
                         }
 
+                        /*
                         if let Some(ref mut ds) = s.dcomp_state {
                             let _ = ds.dcomp_target.clear_root();
                             let _ = ds.dcomp_device.commit();
                             ds.sizing = true;
                         }
+                        */
                     }
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
@@ -513,17 +513,20 @@ impl WndProc for MyWndProc {
                         // It might actually be better to create a new swapchain here.
                         DwmFlush();
 
+                        /*
                         if let Some(ref mut ds) = s.dcomp_state {
                             let _ = ds.dcomp_target.set_root(&mut ds.swapchain_visual);
                             let _ = ds.dcomp_device.commit();
                             ds.sizing = false;
                         }
+                        */
                     }
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
                 None
             },
+            */
             WM_SIZE => unsafe {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
                     let s = s.as_mut().unwrap();
@@ -574,7 +577,7 @@ impl WndProc for MyWndProc {
                             );
                             if let Some(ref mut dcomp_state) = s.dcomp_state {
                                 (*dcomp_state.swap_chain).Present(0, 0);
-                                let _ = dcomp_state.dcomp_device.commit();
+                                //let _ = dcomp_state.dcomp_device.commit();
                             }
                             ValidateRect(hwnd, null_mut());
                         } else {
@@ -1064,10 +1067,9 @@ unsafe fn create_dcomp_state(
     if present_strategy == PresentStrategy::Hwnd {
         return Ok(None);
     }
-    if let Some(create_dxgi_factory2) = OPTIONAL_FUNCTIONS.CreateDXGIFactory2 {
+    if let Some(create_dxgi_factory1) = OPTIONAL_FUNCTIONS.CreateDXGIFactory1 {
         let mut factory: *mut IDXGIFactory2 = null_mut();
-        as_result(create_dxgi_factory2(
-            0,
+        as_result(create_dxgi_factory1(
             &IID_IDXGIFactory2,
             &mut factory as *mut *mut IDXGIFactory2 as *mut *mut c_void,
         ))?;
@@ -1076,9 +1078,7 @@ unsafe fn create_dcomp_state(
         debug!("adapter = {:?}", adapter);
 
         let mut d3d11_device = D3D11Device::new_simple()?;
-        let mut d2d1_device = d3d11_device.create_d2d1_device()?;
-        let mut dcomp_device = d2d1_device.create_composition_device()?;
-        let mut dcomp_target = dcomp_device.create_target_for_hwnd(hwnd, true)?;
+        //let mut d2d1_device = d3d11_device.create_d2d1_device()?;
 
         let (swap_effect, bufs) = match present_strategy {
             PresentStrategy::Hwnd => unreachable!(),
@@ -1104,22 +1104,18 @@ unsafe fn create_dcomp_state(
             Flags: 0,
         };
         let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
-        let res = (*factory).CreateSwapChainForComposition(
+        let res = (*factory).CreateSwapChainForHwnd(
             d3d11_device.raw_ptr() as *mut IUnknown,
+            hwnd,
             &desc,
+            null_mut(),
             null_mut(),
             &mut swap_chain,
         );
         debug!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
 
-        let mut swapchain_visual = dcomp_device.create_visual()?;
-        swapchain_visual.set_content_raw(swap_chain as *mut IUnknown)?;
-        dcomp_target.set_root(&mut swapchain_visual)?;
         Ok(Some(DCompState {
             swap_chain,
-            dcomp_device,
-            dcomp_target,
-            swapchain_visual,
             sizing: false,
         }))
     } else {
