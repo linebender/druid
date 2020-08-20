@@ -16,8 +16,8 @@
 
 use std::any::Any;
 use std::cell::RefCell;
-use std::convert::{TryFrom, TryInto};
 use std::collections::BinaryHeap;
+use std::convert::{TryFrom, TryInto};
 use std::os::unix::io::RawFd;
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
@@ -255,6 +255,7 @@ impl WindowBuilder {
         let state = RefCell::new(WindowState {
             size: self.size,
             invalid: Region::EMPTY,
+            destroyed: false,
         });
         let present_data = match self.initialize_present_data(id) {
             Ok(p) => Some(p),
@@ -443,6 +444,8 @@ struct WindowState {
     size: Size,
     /// The region that was invalidated since the last time we rendered.
     invalid: Region,
+    /// We've told X11 to destroy this window, so don't so any more X requests with this window id.
+    destroyed: bool,
 }
 
 /// A collection of pixmaps for rendering to. This gets used in two different ways: if the present
@@ -511,7 +514,17 @@ impl Window {
 
     /// Start the destruction of the window.
     pub fn destroy(&self) {
-        log_x11!(self.app.connection().destroy_window(self.id));
+        if !self.destroyed() {
+            match borrow_mut!(self.state) {
+                Ok(mut state) => state.destroyed = true,
+                Err(e) => log::error!("Failed to set destroyed flag: {}", e),
+            }
+            log_x11!(self.app.connection().destroy_window(self.id));
+        }
+    }
+
+    fn destroyed(&self) -> bool {
+        borrow!(self.state).map(|s| s.destroyed).unwrap_or(false)
     }
 
     fn size(&self) -> Result<Size, Error> {
@@ -570,6 +583,10 @@ impl Window {
 
     fn render(&self) -> Result<(), Error> {
         borrow_mut!(self.handler)?.prepare_paint();
+
+        if self.destroyed() {
+            return Ok(());
+        }
 
         self.update_cairo_surface()?;
         {
@@ -633,7 +650,9 @@ impl Window {
     }
 
     fn show(&self) {
-        log_x11!(self.app.connection().map_window(self.id));
+        if !self.destroyed() {
+            log_x11!(self.app.connection().map_window(self.id));
+        }
     }
 
     fn close(&self) {
@@ -652,6 +671,10 @@ impl Window {
 
     /// Bring this window to the front of the window stack and give it focus.
     fn bring_to_front_and_focus(&self) {
+        if self.destroyed() {
+            return;
+        }
+
         // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
         let conn = self.app.connection();
         log_x11!(conn.configure_window(
@@ -718,6 +741,10 @@ impl Window {
     }
 
     fn set_title(&self, title: &str) {
+        if self.destroyed() {
+            return;
+        }
+
         // This is technically incorrect. STRING encoding is *not* UTF8. However, I am not sure
         // what it really is. WM_LOCALE_NAME might be involved. Hopefully, nothing cares about this
         // as long as _NET_WM_NAME is also set (which uses UTF8).
@@ -943,6 +970,10 @@ impl Window {
     }
 
     pub fn handle_idle_notify(&self, event: &IdleNotifyEvent) -> Result<(), Error> {
+        if self.destroyed() {
+            return Ok(());
+        }
+
         let mut buffers = borrow_mut!(self.buffers)?;
         if buffers.all_pixmaps.contains(&event.pixmap) {
             buffers.idle_pixmaps.push(event.pixmap);

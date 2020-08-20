@@ -41,6 +41,14 @@ pub struct BoxConstraints {
 }
 
 impl BoxConstraints {
+    /// An unbounded box constraints object.
+    ///
+    /// Can be satisfied by any nonnegative size.
+    pub const UNBOUNDED: BoxConstraints = BoxConstraints {
+        min: Size::ZERO,
+        max: Size::new(f64::INFINITY, f64::INFINITY),
+    };
+
     /// Create a new box constraints object.
     ///
     /// Create constraints based on minimum and maximum size.
@@ -154,5 +162,18 @@ impl BoxConstraints {
         );
 
         BoxConstraints::new(min, max)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unbounded() {
+        assert!(!BoxConstraints::UNBOUNDED.is_width_bounded());
+        assert!(!BoxConstraints::UNBOUNDED.is_height_bounded());
+
+        assert_eq!(BoxConstraints::UNBOUNDED.min(), Size::ZERO);
     }
 }

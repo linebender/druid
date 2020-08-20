@@ -97,6 +97,10 @@ impl WinHandler for HelloState {
         self.size = size;
     }
 
+    fn request_close(&mut self) {
+        self.handle.close();
+    }
+
     fn destroy(&mut self) {
         Application::global().quit()
     }

@@ -108,6 +108,9 @@ pub(crate) struct WidgetState {
     /// Any descendant has requested an animation frame.
     pub(crate) request_anim: bool,
 
+    /// Any descendant has requested update.
+    pub(crate) request_update: bool,
+
     pub(crate) focus_chain: Vec<WidgetId>,
     pub(crate) request_focus: Option<FocusChange>,
     pub(crate) children: Bloom<WidgetId>,
@@ -845,15 +848,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`update`]: trait.Widget.html#tymethod.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
-        match (self.old_data.as_ref(), self.env.as_ref()) {
-            (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
-            (None, _) => {
-                log::warn!("old_data missing in {:?}, skipping update", self.id());
-                self.old_data = Some(data.clone());
-                self.env = Some(env.clone());
-                return;
+        if !self.state.request_update {
+            match (self.old_data.as_ref(), self.env.as_ref()) {
+                (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
+                (None, _) => {
+                    log::warn!("old_data missing in {:?}, skipping update", self.id());
+                    self.old_data = Some(data.clone());
+                    self.env = Some(env.clone());
+                    return;
+                }
+                _ => (),
             }
-            _ => (),
         }
 
         let mut child_ctx = UpdateCtx {
@@ -866,7 +871,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.old_data = Some(data.clone());
         self.env = Some(env.clone());
 
-        ctx.widget_state.merge_up(&mut self.state)
+        self.state.request_update = false;
+        ctx.widget_state.merge_up(&mut self.state);
     }
 }
 
@@ -894,6 +900,7 @@ impl WidgetState {
             has_active: false,
             has_focus: false,
             request_anim: false,
+            request_update: false,
             request_focus: None,
             focus_chain: Vec::new(),
             children: Bloom::new(),
@@ -934,6 +941,7 @@ impl WidgetState {
         self.has_active |= child_state.has_active;
         self.has_focus |= child_state.has_focus;
         self.children_changed |= child_state.children_changed;
+        self.request_update |= child_state.request_update;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
         self.timers.extend_drain(&mut child_state.timers);
     }

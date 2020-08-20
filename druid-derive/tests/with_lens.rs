@@ -10,11 +10,14 @@ fn derive_lens() {
         text: String,
         #[lens(name = "lens_number")]
         number: f64,
+        #[lens(ignore)]
+        ignored: f64,
     }
 
     let mut state = State {
         text: "1.0".into(),
         number: 1.0,
+        ignored: 2.0,
     };
 
     let text_lens = State::text;
@@ -28,6 +31,7 @@ fn derive_lens() {
 
     assert_eq!(state.text, "2.0");
     approx_eq!(f64, state.number, 2.0);
+    approx_eq!(f64, state.ignored, 2.0);
 }
 
 #[test]

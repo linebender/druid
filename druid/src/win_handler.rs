@@ -310,23 +310,26 @@ impl<T: Data> Inner<T> {
         }
     }
 
-    fn dispatch_cmd(&mut self, target: Target, cmd: Command) {
+    /// Returns `true` if the command was handled.
+    fn dispatch_cmd(&mut self, target: Target, cmd: Command) -> bool {
         if !self.delegate_cmd(target, &cmd) {
-            return;
+            return true;
         }
 
         match target {
             Target::Window(id) => {
                 // first handle special window-level events
                 if cmd.is(sys_cmd::SET_MENU) {
-                    return self.set_menu(id, &cmd);
+                    self.set_menu(id, &cmd);
+                    return true;
                 }
                 if cmd.is(sys_cmd::SHOW_CONTEXT_MENU) {
-                    return self.show_context_menu(id, &cmd);
+                    self.show_context_menu(id, &cmd);
+                    return true;
                 }
                 if let Some(w) = self.windows.get_mut(id) {
                     let event = Event::Command(cmd);
-                    w.event(&mut self.command_queue, event, &mut self.data, &self.env);
+                    return w.event(&mut self.command_queue, event, &mut self.data, &self.env);
                 }
             }
             // in this case we send it to every window that might contain
@@ -336,7 +339,7 @@ impl<T: Data> Inner<T> {
                     let event =
                         Event::Internal(InternalEvent::TargetedCommand(id.into(), cmd.clone()));
                     if w.event(&mut self.command_queue, event, &mut self.data, &self.env) {
-                        break;
+                        return true;
                     }
                 }
             }
@@ -344,11 +347,12 @@ impl<T: Data> Inner<T> {
                 for w in self.windows.iter_mut() {
                     let event = Event::Command(cmd.clone());
                     if w.event(&mut self.command_queue, event, &mut self.data, &self.env) {
-                        break;
+                        return true;
                     }
                 }
             }
         }
+        false
     }
 
     fn do_window_event(&mut self, source_id: WindowId, event: Event) -> bool {
@@ -560,7 +564,11 @@ impl<T: Data> AppState<T> {
             // FIXME: we need to be able to open a file without a window handle
             T::Window(id) if cmd.is(sys_cmd::SHOW_OPEN_PANEL) => self.show_open_panel(cmd, id),
             T::Window(id) if cmd.is(sys_cmd::SHOW_SAVE_PANEL) => self.show_save_panel(cmd, id),
-            T::Window(id) if cmd.is(sys_cmd::CLOSE_WINDOW) => self.request_close_window(id),
+            T::Window(id) if cmd.is(sys_cmd::CLOSE_WINDOW) => {
+                if !self.inner.borrow_mut().dispatch_cmd(target, cmd) {
+                    self.request_close_window(id);
+                }
+            }
             T::Window(id) if cmd.is(sys_cmd::SHOW_WINDOW) => self.show_window(id),
             T::Window(id) if cmd.is(sys_cmd::PASTE) => self.do_paste(id),
             _ if cmd.is(sys_cmd::CLOSE_WINDOW) => {
@@ -569,7 +577,9 @@ impl<T: Data> AppState<T> {
             _ if cmd.is(sys_cmd::SHOW_WINDOW) => {
                 log::warn!("SHOW_WINDOW command must target a window.")
             }
-            _ => self.inner.borrow_mut().dispatch_cmd(target, cmd),
+            _ => {
+                self.inner.borrow_mut().dispatch_cmd(target, cmd);
+            }
         }
     }
 
@@ -589,6 +599,9 @@ impl<T: Data> AppState<T> {
         if let Some(info) = result {
             let cmd = Command::new(sys_cmd::OPEN_FILE, info);
             self.inner.borrow_mut().dispatch_cmd(window_id.into(), cmd);
+        } else {
+            let cmd = sys_cmd::OPEN_PANEL_CANCELLED.into();
+            self.inner.borrow_mut().dispatch_cmd(window_id.into(), cmd);
         }
     }
 
@@ -603,6 +616,9 @@ impl<T: Data> AppState<T> {
         let result = handle.and_then(|mut handle| handle.save_as_sync(options));
         if let Some(info) = result {
             let cmd = Command::new(sys_cmd::SAVE_FILE, Some(info));
+            self.inner.borrow_mut().dispatch_cmd(window_id.into(), cmd);
+        } else {
+            let cmd = sys_cmd::SAVE_PANEL_CANCELLED.into();
             self.inner.borrow_mut().dispatch_cmd(window_id.into(), cmd);
         }
     }
@@ -741,6 +757,12 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
     fn as_any(&mut self) -> &mut dyn Any {
         self
+    }
+
+    fn request_close(&mut self) {
+        self.app_state
+            .handle_cmd(self.window_id.into(), sys_cmd::CLOSE_WINDOW.into());
+        self.app_state.inner.borrow_mut().do_update();
     }
 
     fn destroy(&mut self) {

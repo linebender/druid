@@ -309,19 +309,6 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.request_layout();
     }
 
-    /// Submit a [`Command`] to be run after this event is handled.
-    ///
-    /// Commands are run in the order they are submitted; all commands
-    /// submitted during the handling of an event are executed before
-    /// the [`update`] method is called; events submitted during [`update`]
-    /// are handled after painting.
-    ///
-    /// [`Command`]: struct.Command.html
-    /// [`update`]: trait.Widget.html#tymethod.update
-    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
-        self.state.submit_command(cmd.into(), target.into())
-    }
-
     /// Set the menu of the window containing the current widget.
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
@@ -330,6 +317,32 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.state.set_menu(menu);
     }
 });
+
+// methods on event, update, and lifecycle
+impl_context_method!(
+    EventCtx<'_, '_>,
+    UpdateCtx<'_, '_>,
+    LifeCycleCtx<'_, '_>,
+    LayoutCtx<'_, '_>,
+    {
+        /// Submit a [`Command`] to be run after this event is handled.
+        ///
+        /// Commands are run in the order they are submitted; all commands
+        /// submitted during the handling of an event are executed before
+        /// the [`update`] method is called; events submitted during [`update`]
+        /// are handled after painting.
+        ///
+        /// [`Command`]: struct.Command.html
+        /// [`update`]: trait.Widget.html#tymethod.update
+        pub fn submit_command(
+            &mut self,
+            cmd: impl Into<Command>,
+            target: impl Into<Option<Target>>,
+        ) {
+            self.state.submit_command(cmd.into(), target.into())
+        }
+    }
+);
 
 impl EventCtx<'_, '_> {
     /// Set the cursor icon.
@@ -472,6 +485,19 @@ impl EventCtx<'_, '_> {
                 self.widget_id()
             );
         }
+    }
+
+    /// Request an update cycle.
+    ///
+    /// After this, `update` will be called on the widget in the next update cycle, even
+    /// if there's not a data change.
+    ///
+    /// The use case for this method is when a container widget synthesizes data for its
+    /// children. This is appropriate in specialized cases, but before reaching for this
+    /// method, consider whether it might be better to refactor to be more idiomatic, in
+    /// particular to make that data available in the app state.
+    pub fn request_update(&mut self) {
+        self.widget_state.request_update = true;
     }
 }
 

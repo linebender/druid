@@ -75,6 +75,10 @@ impl WinHandler for InvalidateTest {
         }
     }
 
+    fn request_close(&mut self) {
+        self.handle.close();
+    }
+
     fn destroy(&mut self) {
         Application::global().quit()
     }

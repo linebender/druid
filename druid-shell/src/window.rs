@@ -417,6 +417,16 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn got_focus(&mut self) {}
 
+    /// Called when the shell requests to close the window, for example because the user clicked
+    /// the little "X" in the titlebar.
+    ///
+    /// If you want to actually close the window in response to this request, call
+    /// [`WindowHandle::close`]. If you don't implement this method, clicking the titlebar "X" will
+    /// have no effect.
+    ///
+    /// [`WindowHandle::close`]: struct.WindowHandle.html#tymethod.close
+    fn request_close(&mut self) {}
+
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is
     /// WM_NCDESTROY).
