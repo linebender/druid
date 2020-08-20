@@ -473,10 +473,8 @@ fn request_update() {
 
     let widget = ModularWidget::new(())
         .event_fn(|_, ctx, event, _data, _env| {
-            if let Event::Command(cmd) = event {
-                if cmd.is(REQUEST_UPDATE) {
-                    ctx.request_update();
-                }
+            if matches!(event, Event::Command(cmd) if cmd.is(REQUEST_UPDATE)) {
+                ctx.request_update();
             }
         })
         .update_fn(move |_, _ctx, _old_data, _data, _env| {
