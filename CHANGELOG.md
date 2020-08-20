@@ -14,7 +14,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
 - `TextBox` now supports ctrl and shift hotkeys. ([#1076] by [@vkahl])
 - Selection text color to textbox. ([#1093] by [@sysint64])
-- `BoxConstraints::UNBOUNDED` constant. ([#1126] by [@danieldulaney]) 
+- `BoxConstraints::UNBOUNDED` constant. ([#1126] by [@danieldulaney])
 - Close requests from the shell can now be intercepted ([#1118] by [@jneem])
 - The Lens derive now supports an `ignore` attribute. ([#1133] by [@jneem])
 - `request_update` in `EventCtx`. ([#1128] by [@raphlinus])
@@ -50,6 +50,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Key and KeyOrValue derive Clone ([#1119] by [@rjwittams])
 - Allow submit_command from the layout method in Widgets ([#1119] by [@rjwittams])
 - Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
+- Switch widget: Toggle animation being window refresh rate dependent ([#1145] by [@ForLoveOfCats])
 
 ### Visual
 
@@ -392,6 +393,7 @@ Last release without a changelog :(
 [#1126]: https://github.com/linebender/druid/pull/1120
 [#1128]: https://github.com/linebender/druid/pull/1128
 [#1133]: https://github.com/linebender/druid/pull/1133
+[#1145]: https://github.com/linebender/druid/pull/1145
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

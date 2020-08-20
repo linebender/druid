@@ -14,6 +14,8 @@
 
 //! A toggle switch widget.
 
+use std::time::Duration;
+
 use crate::kurbo::{Circle, Point, Rect, Shape, Size};
 use crate::piet::{
     FontBuilder, LinearGradient, RenderContext, Text, TextLayout, TextLayoutBuilder, UnitPoint,
@@ -24,6 +26,7 @@ use crate::{
     Widget,
 };
 
+const SWITCH_CHANGE_TIME: f64 = 0.2;
 const SWITCH_PADDING: f64 = 3.;
 const SWITCH_WIDTH_RATIO: f64 = 2.75;
 
@@ -156,7 +159,8 @@ impl Widget<bool> for Switch {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &bool, env: &Env) {
-        if let LifeCycle::AnimFrame(_) = event {
+        if let LifeCycle::AnimFrame(interval) = event {
+            let delta = Duration::from_nanos(*interval).as_secs_f64();
             let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
             let switch_width = switch_height * SWITCH_WIDTH_RATIO;
             let knob_size = switch_height - 2. * SWITCH_PADDING;
@@ -165,8 +169,13 @@ impl Widget<bool> for Switch {
 
             // move knob to right position depending on the value
             if self.animation_in_progress {
-                let delta = if *data { 2. } else { -2. };
-                self.knob_pos.x += delta;
+                let change_time = if *data {
+                    SWITCH_CHANGE_TIME
+                } else {
+                    -SWITCH_CHANGE_TIME
+                };
+                let change = (switch_width / change_time) * delta;
+                self.knob_pos.x = (self.knob_pos.x + change).min(on_pos).max(off_pos);
 
                 if self.knob_pos.x > off_pos && self.knob_pos.x < on_pos {
                     ctx.request_anim_frame();
