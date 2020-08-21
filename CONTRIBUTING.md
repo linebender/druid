@@ -20,6 +20,40 @@ All submissions, including submissions by project members, require review. We
 use GitHub pull requests for this purpose. Consult [GitHub Help] for more
 information on using pull requests.
 
+
+## Before opening a PR
+
+Testing a patch on github can take 15+ minutes, and you can save a lot of time by
+testing locally. We recommend using the following [git `pre-push` hook], by
+copying it to `druid/.git/hooks/pre-push`:
+
+```sh
+#!/bin/sh
+
+set -e
+
+echo "cargo fmt"
+cargo fmt --all -- --check
+echo "cargo clippy druid-shell"
+cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets -- -D warnings
+echo "cargo clippy druid"
+cargo clippy --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im -- -D warnings
+echo "cargo clippy druid (wasm)"
+cargo clippy --manifest-path=druid/Cargo.toml --all-targets --features=image,im --target wasm32-unknown-unknown -- -D warnings
+echo "cargo clippy druid-derive"
+cargo clippy --manifest-path=druid-derive/Cargo.toml --all-targets -- -D warnings
+echo "cargo clippy book examples"
+cargo clippy --manifest-path=docs/book_examples/Cargo.toml --all-targets -- -D warnings
+echo "cargo test druid-shell"
+cargo test --manifest-path=druid-shell/Cargo.toml
+echo "cargo test druid"
+cargo test --manifest-path=druid/Cargo.toml --features=svg,image,im
+echo "cargo test druid-derive"
+cargo test --manifest-path=druid-derive/Cargo.toml
+echo "cargo test book examples"
+cargo test --manifest-path=docs/book_examples/Cargo.toml
+```
+
 # How to maintain
 
 ## Preparing for a new release
@@ -135,3 +169,4 @@ plus how and if it makes sense to update to the newer version.
 [changelog]: CHANGELOG.md
 [cargo-edit]: https://github.com/killercup/cargo-edit
 [semver]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html
+[git `pre-push` hook]: https://githooks.com
