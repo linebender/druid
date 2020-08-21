@@ -14,10 +14,12 @@
 
 use std::any::Any;
 
-use druid_shell::kurbo::{Line, Rect, Size};
+use druid_shell::kurbo::{Line, Size};
 use druid_shell::piet::{Color, RenderContext};
 
-use druid_shell::{Application, HotKey, Menu, SysMods, WinHandler, WindowBuilder, WindowHandle};
+use druid_shell::{
+    Application, HotKey, Menu, Region, SysMods, WinHandler, WindowBuilder, WindowHandle,
+};
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
@@ -34,11 +36,12 @@ impl WinHandler for QuitState {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut piet_common::Piet, _: Rect) -> bool {
+    fn prepare_paint(&mut self) {}
+
+    fn paint(&mut self, piet: &mut piet_common::Piet, _: &Region) {
         let rect = self.size.to_rect();
         piet.fill(rect, &BG_COLOR);
         piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &FG_COLOR, 1.0);
-        false
     }
 
     fn size(&mut self, size: Size) {
