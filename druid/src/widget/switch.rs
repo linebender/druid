@@ -177,7 +177,7 @@ impl Widget<bool> for Switch {
                 let change = (switch_width / change_time) * delta;
                 self.knob_pos.x = (self.knob_pos.x + change).min(on_pos).max(off_pos);
 
-                if self.knob_pos.x > off_pos && self.knob_pos.x < on_pos {
+                if (self.knob_pos.x > off_pos && !*data) || (self.knob_pos.x < on_pos && *data) {
                     ctx.request_anim_frame();
                 } else {
                     self.animation_in_progress = false;
