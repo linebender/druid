@@ -16,10 +16,10 @@ use std::any::Any;
 
 use time::Instant;
 
-use piet_common::kurbo::{Line, Rect, Size};
+use piet_common::kurbo::{Line, Size};
 use piet_common::{Color, FontBuilder, Piet, RenderContext, Text, TextLayoutBuilder};
 
-use druid_shell::{Application, KeyEvent, WinHandler, WindowBuilder, WindowHandle};
+use druid_shell::{Application, KeyEvent, Region, WinHandler, WindowBuilder, WindowHandle};
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
@@ -39,7 +39,11 @@ impl WinHandler for PerfTest {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut Piet, _: Rect) -> bool {
+    fn prepare_paint(&mut self) {
+        self.handle.invalidate();
+    }
+
+    fn paint(&mut self, piet: &mut Piet, _: &Region) {
         let rect = self.size.to_rect();
         piet.fill(rect, &BG_COLOR);
 
@@ -103,8 +107,7 @@ impl WinHandler for PerfTest {
             let y = y0 + (i as f64) * dy;
             piet.draw_text(&layout, (x0, y), &FG_COLOR);
         }
-
-        true
+        self.handle.request_anim_frame();
     }
 
     fn command(&mut self, id: u32) {

@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 use druid_shell::kurbo::{Point, Rect, Size};
 use druid_shell::piet::{Color, Piet, RenderContext};
 
-use druid_shell::{Application, TimerToken, WinHandler, WindowBuilder, WindowHandle};
+use druid_shell::{Application, Region, TimerToken, WinHandler, WindowBuilder, WindowHandle};
 
 struct InvalidateTest {
     handle: WindowHandle,
@@ -58,9 +58,10 @@ impl WinHandler for InvalidateTest {
         self.handle.request_timer(Duration::from_millis(60));
     }
 
-    fn paint(&mut self, piet: &mut Piet, rect: Rect) -> bool {
-        piet.fill(rect, &self.color);
-        false
+    fn prepare_paint(&mut self) {}
+
+    fn paint(&mut self, piet: &mut Piet, region: &Region) {
+        piet.fill(region.bounding_box(), &self.color);
     }
 
     fn size(&mut self, size: Size) {

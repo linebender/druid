@@ -54,6 +54,7 @@ use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard_types::KeyState;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::region::Region;
 use crate::scale::Scale;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use crate::Error;
@@ -334,6 +335,7 @@ lazy_static! {
             draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
         );
         decl.add_method(sel!(runIdle), run_idle as extern "C" fn(&mut Object, Sel));
+        decl.add_method(sel!(viewWillDraw), view_will_draw as extern "C" fn(&mut Object, Sel));
         decl.add_method(sel!(redraw), redraw as extern "C" fn(&mut Object, Sel));
         decl.add_method(
             sel!(handleTimer:),
@@ -624,6 +626,14 @@ extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
     }
 }
 
+extern "C" fn view_will_draw(this: &mut Object, _: Sel) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        (*view_state).handler.prepare_paint();
+    }
+}
+
 extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
     unsafe {
         let context: id = msg_send![class![NSGraphicsContext], currentContext];
@@ -633,22 +643,20 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
             msg_send![context, CGContext];
         let cgcontext_ref = CGContextRef::from_ptr_mut(cgcontext_ptr);
 
+        // FIXME: use the actual invalid region instead of just this bounding box.
+        // https://developer.apple.com/documentation/appkit/nsview/1483772-getrectsbeingdrawn?language=objc
         let rect = Rect::from_origin_size(
             (dirtyRect.origin.x, dirtyRect.origin.y),
             (dirtyRect.size.width, dirtyRect.size.height),
         );
+        let mut invalid = Region::EMPTY;
+        invalid.add_rect(rect);
         let mut piet_ctx = Piet::new_y_down(cgcontext_ref);
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let anim = (*view_state).handler.paint(&mut piet_ctx, rect);
+        (*view_state).handler.paint(&mut piet_ctx, &invalid);
         if let Err(e) = piet_ctx.finish() {
             error!("{}", e)
-        }
-
-        if anim {
-            // TODO: synchronize with screen refresh rate using CVDisplayLink instead.
-            let () = msg_send!(this as *const _, performSelectorOnMainThread: sel!(redraw)
-                withObject: nil waitUntilDone: NO);
         }
 
         let superclass = msg_send![this, superclass];
@@ -757,6 +765,14 @@ impl WindowHandle {
         unsafe {
             let window: id = msg_send![*self.nsview.load(), window];
             let () = msg_send![window, performSelectorOnMainThread: sel!(makeKeyAndOrderFront:) withObject: nil waitUntilDone: NO];
+        }
+    }
+
+    pub fn request_anim_frame(&self) {
+        unsafe {
+            // TODO: synchronize with screen refresh rate using CVDisplayLink instead.
+            let () = msg_send![*self.nsview.load(), performSelectorOnMainThread: sel!(redraw)
+                withObject: nil waitUntilDone: NO];
         }
     }
 

@@ -294,8 +294,13 @@ impl<T: Data> Inner<T> {
 
     #[allow(dead_code)]
     fn paint_rect(&mut self, piet: &mut Piet, invalid_rect: Rect) {
-        self.window
-            .do_paint(piet, invalid_rect, &mut self.cmds, &self.data, &self.env);
+        self.window.do_paint(
+            piet,
+            &invalid_rect.into(),
+            &mut self.cmds,
+            &self.data,
+            &self.env,
+        );
     }
 }
 

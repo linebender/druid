@@ -24,6 +24,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 - Major rework of keyboard event handling. ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
+- `request_anim_frame` no longer invalidates the entire window. ([#1057] by [@jneem])
 
 ### Deprecated
 
@@ -375,6 +376,7 @@ Last release without a changelog :(
 [#1049]: https://github.com/linebender/druid/pull/1049
 [#1050]: https://github.com/linebender/druid/pull/1050
 [#1054]: https://github.com/linebender/druid/pull/1054
+[#1057]: https://github.com/linebender/druid/pull/1057
 [#1058]: https://github.com/linebender/druid/pull/1058
 [#1061]: https://github.com/linebender/druid/pull/1061
 [#1062]: https://github.com/linebender/druid/pull/1062

@@ -182,6 +182,7 @@ impl Widget<bool> for Switch {
                 } else {
                     self.animation_in_progress = false;
                 }
+                ctx.request_paint();
             }
         }
     }

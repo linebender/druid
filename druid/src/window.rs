@@ -22,7 +22,7 @@ use instant::Instant;
 
 use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
-use crate::shell::{Counter, Cursor, WindowHandle};
+use crate::shell::{Counter, Cursor, Region, WindowHandle};
 
 use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
@@ -45,6 +45,7 @@ pub struct Window<T> {
     pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
     pub(crate) title: LabelText<T>,
     size: Size,
+    invalid: Region,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) context_menu: Option<MenuDesc<T>>,
     pub(crate) last_anim: Option<Instant>,
@@ -61,6 +62,7 @@ impl<T> Window<T> {
             id,
             root: WidgetPod::new(desc.root),
             size: Size::ZERO,
+            invalid: Region::EMPTY,
             title: desc.title,
             menu: desc.menu,
             context_menu: None,
@@ -139,6 +141,16 @@ impl<T: Data> Window<T> {
         }
         // Add all the requested timers to the window's timers map.
         self.timers.extend_drain(&mut widget_state.timers);
+
+        // If we need a new paint pass, make sure druid-shell knows it.
+        if widget_state.request_anim && self.last_anim.is_none() {
+            self.last_anim = Some(Instant::now());
+        }
+        if self.wants_animation_frame() {
+            self.handle.request_anim_frame();
+        }
+        self.invalid.union_with(&widget_state.invalid);
+
         // If there are any commands and they should be processed
         if process_commands && !queue.is_empty() {
             // Ask the handler to call us back on idle
@@ -194,7 +206,7 @@ impl<T: Data> Window<T> {
             );
         }
 
-        let mut widget_state = WidgetState::new(self.root.id());
+        let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let is_handled = {
             let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
             let mut ctx = EventCtx {
@@ -258,7 +270,7 @@ impl<T: Data> Window<T> {
             None
         };
 
-        let mut widget_state = WidgetState::new(self.root.id());
+        let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
         let mut ctx = LifeCycleCtx {
             state: &mut state,
@@ -277,7 +289,7 @@ impl<T: Data> Window<T> {
     pub(crate) fn update(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         self.update_title(data, env);
 
-        let mut widget_state = WidgetState::new(self.root.id());
+        let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
@@ -292,39 +304,40 @@ impl<T: Data> Window<T> {
         if self.root.state().needs_layout {
             self.handle.invalidate();
         } else {
-            let invalid = &self.root.state().invalid;
-            if !invalid.is_empty() {
-                self.handle.invalidate_rect(invalid.to_rect());
+            for rect in self.invalid.rects() {
+                self.handle.invalidate_rect(*rect);
             }
+            self.invalid.clear();
         }
     }
 
-    /// Do all the stuff we do in response to a paint call from the system:
-    /// layout, send an `AnimFrame` event, and then actually paint.
-    pub(crate) fn do_paint(
-        &mut self,
-        piet: &mut Piet,
-        invalid_rect: Rect,
-        queue: &mut CommandQueue,
-        data: &T,
-        env: &Env,
-    ) {
+    /// Get ready for painting, by doing layout and sending an `AnimFrame` event.
+    pub(crate) fn prepare_paint(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         // FIXME: only do AnimFrame if root has requested_anim?
         self.lifecycle(queue, &LifeCycle::AnimFrame(0), data, env, true);
 
         if self.root.state().needs_layout {
             self.layout(queue, data, env);
         }
+    }
 
+    pub(crate) fn do_paint(
+        &mut self,
+        piet: &mut Piet,
+        invalid: &Region,
+        queue: &mut CommandQueue,
+        data: &T,
+        env: &Env,
+    ) {
         piet.fill(
-            invalid_rect,
+            invalid.bounding_box(),
             &env.get(crate::theme::WINDOW_BACKGROUND_COLOR),
         );
-        self.paint(piet, invalid_rect, queue, data, env);
+        self.paint(piet, invalid, queue, data, env);
     }
 
     fn layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
-        let mut widget_state = WidgetState::new(self.root.id());
+        let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
         let mut layout_ctx = LayoutCtx {
             state: &mut state,
@@ -352,7 +365,7 @@ impl<T: Data> Window<T> {
     fn paint(
         &mut self,
         piet: &mut Piet,
-        invalid_rect: Rect,
+        invalid: &Region,
         queue: &mut CommandQueue,
         data: &T,
         env: &Env,
@@ -363,28 +376,32 @@ impl<T: Data> Window<T> {
         let focus = self.focus;
         let Window { root, handle, .. } = self;
 
-        let widget_state = WidgetState::new(root.id());
+        let widget_state = WidgetState::new(root.id(), Some(self.size));
         let mut state = ContextState::new::<T>(queue, handle, id, focus);
         let mut ctx = PaintCtx {
             render_ctx: piet,
             state: &mut state,
             widget_state: &widget_state,
             z_ops: Vec::new(),
-            region: invalid_rect.into(),
+            region: invalid.clone(),
             depth: 0,
         };
 
-        ctx.with_child_ctx(invalid_rect, |ctx| root.paint_raw(ctx, data, env));
+        ctx.with_child_ctx(invalid.clone(), |ctx| root.paint_raw(ctx, data, env));
         let mut z_ops = mem::take(&mut ctx.z_ops);
         z_ops.sort_by_key(|k| k.z_index);
 
         for z_op in z_ops.into_iter() {
-            ctx.with_child_ctx(invalid_rect, |ctx| {
+            ctx.with_child_ctx(invalid.clone(), |ctx| {
                 ctx.with_save(|ctx| {
                     ctx.render_ctx.transform(z_op.transform);
                     (z_op.paint_func)(ctx);
                 });
             });
+        }
+
+        if self.wants_animation_frame() {
+            self.handle.request_anim_frame();
         }
     }
 

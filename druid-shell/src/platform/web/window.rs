@@ -40,6 +40,7 @@ use crate::scale::{Scale, ScaledArea};
 
 use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::region::Region;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
@@ -94,16 +95,18 @@ struct WindowState {
     window: web_sys::Window,
     canvas: web_sys::HtmlCanvasElement,
     context: web_sys::CanvasRenderingContext2d,
-    invalid_rect: Cell<Rect>,
+    invalid: RefCell<Region>,
 }
 
 impl WindowState {
-    fn render(&self, invalid_rect: Rect) -> bool {
+    fn render(&self) {
+        self.handler.borrow_mut().prepare_paint();
+
         let mut piet_ctx = piet_common::Piet::new(self.context.clone(), self.window.clone());
-        let mut want_anim_frame = false;
         if let Err(e) = piet_ctx.with_save(|mut ctx| {
-            ctx.clip(invalid_rect);
-            want_anim_frame = self.handler.borrow_mut().paint(&mut ctx, invalid_rect);
+            let invalid = self.invalid.borrow();
+            ctx.clip(invalid.to_bez_path());
+            self.handler.borrow_mut().paint(&mut ctx, &invalid);
             Ok(())
         }) {
             log::error!("piet error on render: {:?}", e);
@@ -111,7 +114,7 @@ impl WindowState {
         if let Err(e) = piet_ctx.finish() {
             log::error!("piet error finishing render: {:?}", e);
         }
-        want_anim_frame
+        self.invalid.borrow_mut().clear();
     }
 
     fn process_idle_queue(&self) {
@@ -395,7 +398,7 @@ impl WindowBuilder {
             window,
             canvas,
             context,
-            invalid_rect: Cell::new(Rect::ZERO),
+            invalid: RefCell::new(Region::EMPTY),
         });
 
         setup_web_callbacks(&window);
@@ -438,21 +441,22 @@ impl WindowHandle {
         log::warn!("bring_to_frontand_focus unimplemented for web");
     }
 
+    pub fn request_anim_frame(&self) {
+        self.render_soon();
+    }
+
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(s) = self.0.upgrade() {
-            let cur_rect = s.invalid_rect.get();
-            if cur_rect.width() == 0.0 || cur_rect.height() == 0.0 {
-                s.invalid_rect.set(rect);
-            } else if rect.width() != 0.0 && rect.height() != 0.0 {
-                s.invalid_rect.set(cur_rect.union(rect));
-            }
+            s.invalid.borrow_mut().add_rect(rect);
         }
         self.render_soon();
     }
 
     pub fn invalidate(&self) {
         if let Some(s) = self.0.upgrade() {
-            s.invalid_rect.set(s.area.get().size_dp().to_rect());
+            s.invalid
+                .borrow_mut()
+                .add_rect(s.area.get().size_dp().to_rect());
         }
         self.render_soon();
     }
@@ -519,15 +523,9 @@ impl WindowHandle {
 
     fn render_soon(&self) {
         if let Some(s) = self.0.upgrade() {
-            let handle = self.clone();
-            let rect = s.invalid_rect.get();
-            s.invalid_rect.set(Rect::ZERO);
             let state = s.clone();
             s.request_animation_frame(move || {
-                let want_anim_frame = state.render(rect);
-                if want_anim_frame {
-                    handle.render_soon();
-                }
+                state.render();
             })
             .expect("Failed to request animation frame");
         }
