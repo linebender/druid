@@ -17,6 +17,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Close requests from the shell can now be intercepted ([#1118] by [@jneem])
 - The Lens derive now supports an `ignore` attribute. ([#1133] by [@jneem])
 - `request_update` in `EventCtx`. ([#1128] by [@raphlinus])
+- 'Scope' widget to allow encapsulation of reactive state. ([#1151] by [@rjwittams])
 
 ### Changed
 
@@ -397,6 +398,7 @@ Last release without a changelog :(
 [#1133]: https://github.com/linebender/druid/pull/1133
 [#1143]: https://github.com/linebender/druid/pull/1143
 [#1145]: https://github.com/linebender/druid/pull/1145
+[#1151]: https://github.com/linebender/druid/pull/1151
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
