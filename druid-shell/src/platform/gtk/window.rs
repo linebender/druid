@@ -299,10 +299,12 @@ impl WindowBuilder {
                     }
                 }
 
-                // Check if the size of the window has changed
+                // Create a new cairo surface if necessary (either because there is no surface, or
+                // because the size or scale changed).
                 let extents = widget.get_allocation();
                 let size_px = Size::new(extents.width as f64, extents.height as f64);
-                if scale_changed || state.area.get().size_px() != size_px {
+                let no_surface = state.surface.try_borrow().map(|x| x.is_none()).ok() == Some(true);
+                if no_surface || scale_changed || state.area.get().size_px() != size_px {
                     let area = ScaledArea::from_px(size_px, scale);
                     let size_dp = area.size_dp();
                     state.area.set(area);
