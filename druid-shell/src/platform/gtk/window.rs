@@ -196,10 +196,8 @@ impl WindowBuilder {
         window.set_decorated(self.show_titlebar);
 
         // Get the scale factor based on the GTK reported DPI
-        let scale_factor = window
-            .get_display()
-            .get_default_screen().get_resolution()
-            / SCALE_TARGET_DPI;
+        let scale_factor =
+            window.get_display().get_default_screen().get_resolution() / SCALE_TARGET_DPI;
         let scale = Scale::new(scale_factor, scale_factor);
         let area = ScaledArea::from_dp(self.size, scale);
         let size_px = area.size_px();
@@ -727,7 +725,7 @@ impl WindowHandle {
         let token = TimerToken::next();
         let handle = self.clone();
 
-        glib::timeout_add_local(interval, move || {
+        glib::timeout_add(interval, move || {
             if let Some(state) = handle.state.upgrade() {
                 if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
                     handler_borrow.timer(token);
