@@ -40,8 +40,9 @@ pub struct ExtEventSink {
 pub(crate) struct ExtEventHost {
     /// A shared queue of items that have been sent to us.
     queue: Arc<Mutex<VecDeque<ExtCommand>>>,
-    /// This doesn't exist when the app starts and it can go away if a window
-    /// closes, so we keep a reference here and can update it when needed.
+    /// This doesn't exist when the app starts and it can go away if a window closes, so we keep a
+    /// reference here and can update it when needed. Note that this reference is shared with all
+    /// `ExtEventSink`s, so that we can update them too.
     handle: Arc<Mutex<Option<IdleHandle>>>,
     /// The window that the handle belongs to, so we can keep track of when
     /// we need to get a new handle.
@@ -96,11 +97,12 @@ impl ExtEventSink {
     /// the application's first window; if that window is subsequently closed,
     /// then the command will be sent to *an arbitrary other window*.
     ///
-    /// This limitation may be removed in the future.
+    /// This behavior may be changed in the future; in any case, you should
+    /// probably provide an explicit `Target`.
     ///
     /// [`Command`]: struct.Command.html
     /// [`Selector`]: struct.Selector.html
-    pub fn submit_command<T: Any + Send + Sync>(
+    pub fn submit_command<T: Any + Send>(
         &self,
         selector: Selector<T>,
         payload: impl Into<Box<T>>,

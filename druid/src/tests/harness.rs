@@ -17,6 +17,7 @@
 use std::path::Path;
 
 use crate::core::{CommandQueue, WidgetState};
+use crate::ext_event::ExtEventHost;
 use crate::piet::{BitmapTarget, Device, Error, ImageFormat, Piet};
 use crate::*;
 
@@ -133,6 +134,8 @@ impl<T: Data> Harness<'_, T> {
         mut harness_closure: impl FnMut(&mut Harness<T>),
         mut render_context_closure: impl FnMut(TargetGuard),
     ) {
+        let ext_host = ExtEventHost::default();
+        let ext_handle = ext_host.make_sink();
         let mut device = Device::new().expect("harness failed to get device");
         let target = device
             .bitmap_target(window_size.width as usize, window_size.height as usize, 1.0)
@@ -142,7 +145,7 @@ impl<T: Data> Harness<'_, T> {
             let piet = target.0.as_mut().unwrap().render_context();
 
             let desc = WindowDesc::new(|| root);
-            let window = Window::new(WindowId::next(), Default::default(), desc);
+            let window = Window::new(WindowId::next(), Default::default(), desc, ext_handle);
 
             let inner = Inner {
                 data,
