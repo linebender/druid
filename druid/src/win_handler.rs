@@ -25,7 +25,7 @@ use crate::shell::{Application, IdleToken, MouseEvent, Region, Scale, WinHandler
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
-use crate::ext_event::ExtEventHost;
+use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
@@ -89,9 +89,9 @@ struct Windows<T> {
 }
 
 impl<T> Windows<T> {
-    fn connect(&mut self, id: WindowId, handle: WindowHandle) {
+    fn connect(&mut self, id: WindowId, handle: WindowHandle, ext_handle: ExtEventSink) {
         if let Some(pending) = self.pending.remove(&id) {
-            let win = Window::new(id, handle, pending);
+            let win = Window::new(id, handle, pending, ext_handle);
             assert!(self.windows.insert(id, win).is_none(), "duplicate window");
         } else {
             log::error!("no window for connecting handle {:?}", id);
@@ -211,7 +211,8 @@ impl<T: Data> Inner<T> {
     }
 
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
-        self.windows.connect(id, handle);
+        self.windows
+            .connect(id, handle, self.ext_event_host.make_sink());
 
         // If the external event host has no handle, it cannot wake us
         // when an event arrives.

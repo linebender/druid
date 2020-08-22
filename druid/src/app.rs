@@ -98,7 +98,7 @@ impl<T: Data> AppLauncher<T> {
     }
 
     /// Returns an [`ExtEventSink`] that can be moved between threads,
-    /// and can be used to submit events back to the application.
+    /// and can be used to submit commands back to the application.
     ///
     /// [`ExtEventSink`]: struct.ExtEventSink.html
     pub fn get_external_handle(&self) -> ExtEventSink {
