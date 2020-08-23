@@ -45,6 +45,28 @@ fn derive_prism() {
 
     assert!(!approx_eq!(f64, num, 1.0));
     assert!(approx_eq!(f64, num, 2.0));
+
+    {
+        use druid::prism::PrismReplacer;
+
+        impl Default for State {
+            fn default() -> Self {
+                Self::Number(0.)
+            }
+        }
+
+        // test upgrade
+        assert_ne!(state_text, text_prism.upgrade("1.0".into()));
+        assert_eq!(state_text, text_prism.upgrade("2.0".into()));
+
+        // test replace
+        // different from with_mut, wrong mapping re-builds the enum
+        text_prism.replace(&mut state_text, "3.0".into());
+        text_prism.replace(&mut state_number, "3.0".into());
+
+        assert_eq!(state_text, State::Text("3.0".into()));
+        assert_eq!(state_text, state_number);
+    }
 }
 
 #[test]

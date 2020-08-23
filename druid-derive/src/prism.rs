@@ -75,7 +75,7 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
             };
             let field_ty = &field.ty;
 
-            let expr = match &field.ident {
+            let with_expr = match &field.ident {
                 FieldIdent::Named(name) => {
                     let field_name = StringIdent(name.into()).named();
                     quote!(
@@ -99,12 +99,27 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
                 // TODO: analyze/test
                 FieldIdent::Unnamed(_) => unreachable!(),
             };
+            let replace_expr = match &field.ident {
+                FieldIdent::Named(name) => {
+                    let field_name = StringIdent(name.into()).named();
+                    quote!(
+                        *data = #ty::#variant_name {
+                            #field_name: v
+                        };
+                    )
+                }
+                FieldIdent::Unnamed(0) => quote!(
+                    *data = #ty::#variant_name (v);
+                ),
+                // TODO: analyze/test
+                FieldIdent::Unnamed(_) => unreachable!(),
+            };
 
             let quote = quote! {
                 impl druid::Prism<#ty, #field_ty> for #twizzled_name::#variant_name {
 
                     fn with<V, F: FnOnce(&#field_ty) -> V>(&self, data: &#ty, f: F) -> Option<V> {
-                        #expr
+                        #with_expr
                     }
 
                     fn with_mut<V, F: FnOnce(&mut #field_ty) -> V>(
@@ -112,7 +127,14 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
                         data: &mut #ty,
                         f: F,
                     ) -> Option<V> {
-                        #expr
+                        #with_expr
+                    }
+                }
+
+                impl druid::prism::PrismReplacer<#ty, #field_ty> for #twizzled_name::#variant_name {
+                    fn replace<'a>(&self, data: &'a mut #ty, v: #field_ty) -> &'a mut #ty {
+                        #replace_expr
+                        data
                     }
                 }
             };

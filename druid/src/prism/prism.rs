@@ -11,6 +11,51 @@ pub trait Prism<T: ?Sized, U: ?Sized> {
     fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> Option<V>;
 }
 
+pub trait PrismReplacer<A: ?Sized, B: ?Sized>: Prism<A, B> {
+    fn replace<'a>(&self, data: &'a mut A, v: B) -> &'a mut A
+    where
+        B: Sized;
+
+    fn upgrade(&self, v: B) -> A
+    where
+        B: Sized,
+        A: Default + Sized,
+    {
+        let mut data = A::default();
+        self.replace(&mut data, v);
+        data
+    }
+}
+
+pub trait PrismRefReplacer<A: ?Sized, B: ?Sized>: Prism<A, B> {
+    fn ref_replace<'a>(&self, data: &'a mut A, v: &B) -> &'a mut A
+    where
+        B: Clone,
+        Self: PrismReplacer<A, B>,
+    {
+        self.replace(data, v.clone())
+    }
+
+    fn ref_upgrade(&self, v: &B) -> A
+    where
+        B: Clone,
+        A: Default + Sized,
+        Self: PrismReplacer<A, B>,
+    {
+        let mut data = A::default();
+        self.ref_replace(&mut data, v);
+        data
+    }
+}
+
+impl<A, B, T> PrismRefReplacer<A, B> for T
+where
+    A: ?Sized,
+    B: ?Sized,
+    T: PrismReplacer<A, B>,
+{
+}
+
 pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
     /// Copy the targeted value out of `data`
     fn get(&self, data: &A) -> Option<B>
@@ -53,7 +98,7 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
     fn map<Get, Put, C>(self, get: Get, put: Put) -> Then<Self, Map<Get, Put>, B>
     where
         Get: Fn(&B) -> Option<C>,
-        Put: Fn(&mut B, Option<C>),
+        Put: Fn(&mut B, C),
         Self: Sized,
     {
         self.then(Map::new(get, put))
@@ -100,7 +145,7 @@ impl<U, P, W> PrismWrap<U, P, W> {
         PrismWrap {
             inner,
             prism,
-            phantom: Default::default(),
+            phantom: PhantomData,
         }
     }
 }
@@ -155,27 +200,36 @@ where
     }
 }
 
-pub struct Variant<Get, GetMut> {
+pub struct Variant<Get, GetMut, Replace> {
     get: Get,
     get_mut: GetMut,
+    replace: Replace,
 }
 
-impl<Get, GetMut> Variant<Get, GetMut> {
-    pub fn new<T: ?Sized, U: ?Sized>(get: Get, get_mut: GetMut) -> Self
+impl<Get, GetMut, Replace> Variant<Get, GetMut, Replace> {
+    pub fn new<T, U>(get: Get, get_mut: GetMut, replace: Replace) -> Self
     where
+        T: ?Sized,
+        U: Sized,
         Get: Fn(&T) -> Option<&U>,
         GetMut: Fn(&mut T) -> Option<&mut U>,
+        Replace: for<'a> Fn(&'a mut T, U) -> &'a mut T,
     {
-        Self { get, get_mut }
+        Self {
+            get,
+            get_mut,
+            replace,
+        }
     }
 }
 
-impl<T, U, Get, GetMut> Prism<T, U> for Variant<Get, GetMut>
+impl<T, U, Get, GetMut, Replace> Prism<T, U> for Variant<Get, GetMut, Replace>
 where
     T: ?Sized,
-    U: ?Sized,
+    U: Sized,
     Get: Fn(&T) -> Option<&U>,
     GetMut: Fn(&mut T) -> Option<&mut U>,
+    Replace: for<'a> Fn(&'a mut T, U) -> &'a mut T,
 {
     fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> Option<V> {
         (self.get)(data).map(f)
@@ -186,23 +240,48 @@ where
     }
 }
 
+impl<T, U, Get, GetMut, Replace> PrismReplacer<T, U> for Variant<Get, GetMut, Replace>
+where
+    T: ?Sized,
+    U: Sized,
+    Get: Fn(&T) -> Option<&U>,
+    GetMut: Fn(&mut T) -> Option<&mut U>,
+    Replace: for<'a> Fn(&'a mut T, U) -> &'a mut T,
+{
+    fn replace<'a>(&self, data: &'a mut T, v: U) -> &'a mut T
+    where
+        U: Sized,
+    {
+        (self.replace)(data, v)
+    }
+}
+
 #[macro_export]
 macro_rules! prism {
     // enum type, variant name
     ($ty:ident, $variant:ident) => {{
         $crate::prism::Variant::new::<$ty, _>(
-            |x| {
+            |x: &_| {
                 if let $ty::$variant(ref v) = x {
                     Some(v)
                 } else {
                     None
                 }
             },
-            |x| {
+            |x: &mut _| {
                 if let $ty::$variant(ref mut v) = x {
                     Some(v)
                 } else {
                     None
+                }
+            },
+            |x: &mut _, v: _| {
+                if let $ty::$variant(ref mut refv) = x {
+                    *refv = v;
+                    x
+                } else {
+                    *x = $ty::$variant(v);
+                    x
                 }
             },
         )
@@ -249,6 +328,59 @@ where
     }
 }
 
+impl<T, U, A, B, C> PrismReplacer<A, C> for Then<T, U, B>
+where
+    A: ?Sized + Default,
+    B: ?Sized + Default,
+    C: Sized + Clone,
+    T: Prism<A, B> + PrismReplacer<A, B>,
+    U: Prism<B, C> + PrismReplacer<B, C>,
+{
+    /// Given the matching path of `A` -> `B` -> `C`,
+    /// it is guaranteed that `A` will end up matching
+    /// to `B`, and that `B` will end up match to `C`.
+    ///
+    /// First it tries replacing `B` -> `C`, and if
+    /// it's a success, this means that `A` -> `B` is
+    /// already in place.
+    ///
+    /// Otherwise, if `A` is valued in some  
+    /// variant other than `B`, `C` is upgraded
+    /// to `B`, and `A` -> `B` is replaced.
+    fn replace<'a>(&self, data: &'a mut A, v: C) -> &'a mut A {
+        #[allow(clippy::unused_unit)]
+        let some_replacement = self.left.with_mut(
+            data,
+            // A -> B -> C was already set
+            // only replaces B -> C
+            // (as A -> B is already set)
+            |b| {
+                self.right.ref_replace(b, &v);
+                ()
+            },
+        );
+        if some_replacement.is_none() {
+            // couldn't access A -> B,
+            // give up the replacement
+            // and build B -> C from scratch
+            let new_b = self.right.upgrade(v);
+            // replace A -> B
+            self.left.replace(data, new_b)
+        } else {
+            // A -> B already set
+            // (implicit with/with_mut above)
+            data
+        }
+    }
+
+    fn upgrade<'a>(&self, v: C) -> A
+    where
+        A: Sized,
+    {
+        self.left.upgrade(self.right.upgrade(v))
+    }
+}
+
 impl<T: Clone, U: Clone, B> Clone for Then<T, U, B> {
     fn clone(&self) -> Self {
         Self {
@@ -269,7 +401,7 @@ impl<Get, Put> Map<Get, Put> {
     pub fn new<A: ?Sized, B>(get: Get, put: Put) -> Self
     where
         Get: Fn(&A) -> Option<B>,
-        Put: Fn(&mut A, Option<B>),
+        Put: Fn(&mut A, B),
     {
         Self { get, put }
     }
@@ -278,7 +410,7 @@ impl<Get, Put> Map<Get, Put> {
 impl<A: ?Sized, B, Get, Put> Prism<A, B> for Map<Get, Put>
 where
     Get: Fn(&A) -> Option<B>,
-    Put: Fn(&mut A, Option<B>),
+    Put: Fn(&mut A, B),
 {
     fn with<V, F: FnOnce(&B) -> V>(&self, data: &A, f: F) -> Option<V> {
         (&(self.get)(data)).as_ref().map(f)
@@ -287,17 +419,30 @@ where
     fn with_mut<V, F: FnOnce(&mut B) -> V>(&self, data: &mut A, f: F) -> Option<V> {
         let mut temp = (self.get)(data);
         let x = temp.as_mut().map(f);
-        (self.put)(data, temp);
+        if let Some(b) = temp {
+            (self.put)(data, b);
+        };
         x
+    }
+}
+
+impl<A, B, Get, Put> PrismReplacer<A, B> for Map<Get, Put>
+where
+    Get: Fn(&A) -> Option<B>,
+    Put: Fn(&mut A, B),
+{
+    fn replace<'a>(&self, data: &'a mut A, v: B) -> &'a mut A {
+        (self.put)(data, v);
+        data
     }
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct Deref;
 
-impl<T: ?Sized> Prism<T, T::Target> for Deref
+impl<T> Prism<T, T::Target> for Deref
 where
-    T: ops::Deref + ops::DerefMut,
+    T: ?Sized + ops::Deref + ops::DerefMut,
 {
     fn with<V, F: FnOnce(&T::Target) -> V>(&self, data: &T, f: F) -> Option<V> {
         Some(f(data.deref()))
@@ -305,6 +450,17 @@ where
 
     fn with_mut<V, F: FnOnce(&mut T::Target) -> V>(&self, data: &mut T, f: F) -> Option<V> {
         Some(f(data.deref_mut()))
+    }
+}
+
+impl<T> PrismReplacer<T, T::Target> for Deref
+where
+    T: ?Sized + ops::DerefMut,
+    T::Target: Sized,
+{
+    fn replace<'a>(&self, data: &'a mut T, v: T::Target) -> &'a mut T {
+        *data.deref_mut() = v;
+        data
     }
 }
 
@@ -332,6 +488,18 @@ where
     }
 }
 
+impl<T, I> PrismReplacer<T, T::Output> for Index<I>
+where
+    T: ?Sized + ops::Index<I> + ops::IndexMut<I>,
+    I: Clone,
+    T::Output: Sized,
+{
+    fn replace<'a>(&self, data: &'a mut T, v: T::Output) -> &'a mut T {
+        data[self.index.clone()] = v;
+        data
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct Id;
 
@@ -342,6 +510,13 @@ impl<A: ?Sized> Prism<A, A> for Id {
 
     fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut A, f: F) -> Option<V> {
         Some(f(data))
+    }
+}
+
+impl<A> PrismReplacer<A, A> for Id {
+    fn replace<'a>(&self, data: &'a mut A, v: A) -> &'a mut A {
+        *data = v;
+        data
     }
 }
 
@@ -384,5 +559,26 @@ where
                 .with_mut(Arc::make_mut(data), |x| temp.map(|b| *x = b));
         }
         v
+    }
+}
+
+impl<A, B, L> PrismReplacer<Arc<A>, B> for InArc<L>
+where
+    A: Clone + Default,
+    B: Data,
+    L: PrismReplacer<A, B>,
+    Arc<A>: ops::DerefMut,
+{
+    fn replace<'a>(&self, data: &'a mut Arc<A>, v: B) -> &'a mut Arc<A> {
+        #[allow(clippy::unused_unit)]
+        let some_replacement = self.with_mut(data, |x| {
+            *x = v.clone();
+            ()
+        });
+        if some_replacement.is_none() {
+            let inner = self.inner.upgrade(v);
+            *Arc::make_mut(data) = inner;
+        }
+        data
     }
 }
