@@ -174,13 +174,56 @@ where
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         let inner = &mut self.inner;
         let prism = &self.prism;
-        prism.with(old_data, |old_data| {
-            prism.with(data, |data| {
+
+        #[allow(clippy::unused_unit)]
+        match prism.with(data, |newer_data| {
+            match prism.with(old_data, |older_data| {
                 if !old_data.same(data) {
-                    inner.update(ctx, old_data, data, env);
+                    // forwards older and newer data into inner
+                    inner.update(ctx, older_data, newer_data, env);
+                    // note: the variant wasn't been changed
+                    ()
                 }
-            })
-        });
+            }) {
+                // had both an older and newer data,
+                // do nothing more
+                Some(()) => (),
+                // only had the newer data
+                // send newer as both older and newer
+                // TODO: check if this is right
+                // maybe just ignore the inner update call..
+                None => {
+                    ctx.request_layout(); // variant was changed
+                    inner.update(ctx, newer_data, newer_data, env);
+                    ()
+                }
+            }
+        }) {
+            // already had the newer data,
+            // with or without older data.
+            // do nothing more
+            Some(()) => (),
+            // didn't have the newer data,
+            // check if at least the older data is available
+            #[allow(clippy::single_match)]
+            None => match prism.with(old_data, |older_data| {
+                // only had the older data
+                // send older as both older and newer
+                // TODO: check if this is right
+                // maybe just ignore the inner update call..
+                ctx.request_layout(); // variant was changed
+                inner.update(ctx, older_data, older_data, env);
+                ()
+            }) {
+                // already had only the older data,
+                // do nothing more.
+                Some(()) => (),
+                // didn't have any of the older nor newer data,
+                // do nothing.
+                // TODO: check if this is right
+                None => (),
+            },
+        }
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
