@@ -202,17 +202,19 @@ impl Widget<f64> for Stepper {
             Event::MouseDown(mouse) => {
                 ctx.set_active(true);
 
-                if mouse.pos.y > height / 2. {
-                    self.decrease_active = true;
-                    self.decrement(data);
-                } else {
-                    self.increase_active = true;
-                    self.increment(data);
+                if mouse.count == 1 {
+                    if mouse.pos.y > height / 2. {
+                        self.decrease_active = true;
+                        self.decrement(data);
+                    } else {
+                        self.increase_active = true;
+                        self.increment(data);
+                    }
+
+                    self.timer_id = ctx.request_timer(STEPPER_REPEAT_DELAY);
+
+                    ctx.request_paint();
                 }
-
-                self.timer_id = ctx.request_timer(STEPPER_REPEAT_DELAY);
-
-                ctx.request_paint();
             }
             Event::MouseUp(_) => {
                 ctx.set_active(false);
