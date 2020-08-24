@@ -15,7 +15,7 @@
 //! Demos basic list widget and list manipulations.
 
 use druid::im::{vector, Vector};
-use druid::lens::{self, LensExt};
+use druid::optics::{lens, LensExt};
 use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, Scroll};
 use druid::{
     AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc,

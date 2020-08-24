@@ -47,7 +47,7 @@ fn derive_prism() {
     assert!(approx_eq!(f64, num, 2.0));
 
     {
-        use druid::prism::PrismReplacer;
+        use druid::optics::prism::PrismReplacer;
 
         impl Default for State {
             fn default() -> Self {

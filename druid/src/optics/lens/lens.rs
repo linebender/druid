@@ -348,7 +348,8 @@ where
     U: Lens<B, C>,
 {
     fn with<V, F: FnOnce(&C) -> V>(&self, data: &A, f: F) -> V {
-        self.left.with(data, |b| self.right.with(b, f))
+        let bf = |b: &B| self.right.with(b, f);
+        self.left.with(data, bf)
     }
 
     fn with_mut<V, F: FnOnce(&mut C) -> V>(&self, data: &mut A, f: F) -> V {

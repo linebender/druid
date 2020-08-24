@@ -303,26 +303,33 @@ where
 macro_rules! prism {
     // enum type, variant name
     ($ty:ident, $variant:ident) => {{
-        $crate::prism::Variant::new::<$ty, _>(
-            |x: &_| {
+        $crate::optics::prism::Variant::new::<$ty, _>(
+            // get
+            |x: &$ty| {
                 if let $ty::$variant(ref v) = x {
                     Some(v)
                 } else {
                     None
                 }
             },
-            |x: &mut _| {
+            // get mut
+            |x: &mut $ty| {
                 if let $ty::$variant(ref mut v) = x {
                     Some(v)
                 } else {
                     None
                 }
             },
-            |x: &mut _, v: _| {
+            // replace
+            |x: &mut $ty, v: _| {
+                // only works for newtype-like variants
                 if let $ty::$variant(ref mut refv) = x {
+                    // replace variant's value in-place
                     *refv = v;
                     x
                 } else {
+                    // upgrade the variant value
+                    // and replace the whole enum
                     *x = $ty::$variant(v);
                     x
                 }

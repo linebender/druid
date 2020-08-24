@@ -150,11 +150,10 @@ mod data;
 mod env;
 mod event;
 mod ext_event;
-pub mod lens;
 mod localization;
 mod menu;
 mod mouse;
-pub mod prism;
+pub mod optics;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests;
@@ -186,11 +185,12 @@ pub use data::Data;
 pub use env::{Env, Key, KeyOrValue, Value, ValueType};
 pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle};
 pub use ext_event::{ExtEventError, ExtEventSink};
-pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
-pub use prism::{Prism, PrismExt, PrismWrap};
+pub use optics::traversal;
+pub use optics::{lens, Lens, LensExt, LensWrap};
+pub use optics::{prism, Prism, PrismExt, PrismWrap};
 pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
