@@ -5,12 +5,18 @@ use crate::{
 };
 use std::marker::PhantomData;
 
+/// A policy that controls how a Scope will interact with its surrounding application data.
+/// Specifically, how to create an initial State from the Input, and how to synchronise the two.
 pub trait ScopePolicy {
+    /// The type of data that comes in from the surrounding application or scope.
     type In: Data;
+    /// The type of data that the Scope will maintain internally.
+    /// This will usually be larger than the input data, and will embed the input data.
     type State: Data;
+    /// The type of transfer that will be used to synchronise internal and application state
     type Transfer: ScopeTransfer<In = Self::In, State = Self::State>;
-    // Make a new state and transfer from the input.
-    // This consumes the policy, so non cloneable items can make their way into the state this way.
+    /// Make a new state and transfer from the input.
+    /// This consumes the policy, so non cloneable items can make their way into the state this way.
     fn create(self, inner: &Self::In) -> (Self::State, Self::Transfer);
 }
 
@@ -18,19 +24,20 @@ pub trait ScopeTransfer {
     type In: Data;
     type State: Data;
 
-    // Replace the input we have with a new one from outside
+    /// Replace the input we have within our State with a new one from outside
     fn read_input(&self, state: &mut Self::State, inner: &Self::In);
-    // Take the modifications we have made and write them back
-    // to our input.
+    /// Take the modifications we have made and write them back
+    /// to our input.
     fn write_back_input(&self, state: &Self::State, inner: &mut Self::In);
 }
 
-pub struct DefaultScopePolicy<F: Fn(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer> {
+/// A default implementation of scope policy that takes a function and a transfer
+pub struct DefaultScopePolicy<F: FnOnce(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer> {
     make_state: F,
     transfer: Transfer,
 }
 
-impl<F: Fn(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer>
+impl<F: FnOnce(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer>
     DefaultScopePolicy<F, Transfer>
 {
     pub fn new(make_state: F, transfer: Transfer) -> Self {
@@ -41,10 +48,10 @@ impl<F: Fn(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer>
     }
 }
 
-impl<F: Fn(In) -> State, L: Lens<State, In>, In: Data, State: Data>
+impl<F: FnOnce(In) -> State, L: Lens<State, In>, In: Data, State: Data>
     DefaultScopePolicy<F, LensScopeTransfer<L, In, State>>
 {
-    pub fn for_lens(make_state: F, lens: L) -> Self {
+    pub fn from_lens(make_state: F, lens: L) -> Self {
         Self::new(make_state, LensScopeTransfer::new(lens))
     }
 }
@@ -62,6 +69,7 @@ impl<F: Fn(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer> ScopePolic
     }
 }
 
+/// A scope transfer that uses a Lens to synchronise between a large internal state and a small input.
 pub struct LensScopeTransfer<L: Lens<State, In>, In, State> {
     lens: L,
     phantom_in: PhantomData<In>,
@@ -109,20 +117,74 @@ enum ScopeContent<SP: ScopePolicy> {
     },
 }
 
+/// A widget that allows encapsulation of application state.
+///
+/// This is useful in circumstances where
+/// * A (potentially reusable) widget is composed of a tree of multiple cooperating child widgets
+/// * Those widgets communicate amongst themselves using Druids reactive data mechanisms
+/// * It is undesirable to complicate the surrounding application state with the internal details
+///   of the widget.
+///
+///
+/// Examples include:
+/// * In a tabs widget composed of a tab bar, and a widget switching body, those widgets need to
+///   cooperate on which tab is selected. However not every user of a tabs widget wishes to
+///   encumber their application state with this internal detail - especially as many tabs widgets may
+///   reasonably exist in an involved application.
+/// * In a table/grid widget composed of various internal widgets, many things need to be synchronised.
+///   Scroll position, heading moves, drag operations, sort/filter operations. For many applications
+///   access to this internal data outside of the table widget isn't needed.
+///   For this reason it may be useful to use a Scope to establish private state.
+///
+/// A scope embeds some input state (from its surrounding application or parent scope)
+/// into a larger piece of internal state. This is controlled by a user provided policy.
+///
+/// The ScopePolicy needs to do two things
+/// a) Create a new scope from the initial value of its input,
+/// b) Provide two way synchronisation between the input and the state via a ScopeTransfer
+///
+/// Convenience methods are provided to make a policy from a function and a lens.
+/// It may sometimes be advisable to implement ScopePolicy directly if you need to
+/// mention the type of a Scope.
+///
+/// # Examples
+/// ```
+/// #[derive(Data, Lens)]
+/// struct AppState{
+///     name: String
+/// }
+///
+/// #[derive(Data, Lens)]
+/// struct PrivateState{
+///     text: String,
+///     other: u32
+/// }
+///
+/// impl PrivateState{
+///     pub fn new(text: String) -> Self {
+///         PrivateState{ text, other: 0 }
+///     }
+/// }
+///
+/// fn main(){
+///     let scope = Scope::from_lens(PrivateState::new,
+///                                  PrivateState::text,
+///                                  MyWidget::new() );
+/// }
+/// ```
 pub struct Scope<SP: ScopePolicy, W: Widget<SP::State>> {
     content: ScopeContent<SP>,
     inner: WidgetPod<SP::State, W>,
-    widget_added: bool,
 }
 
 impl<SP: ScopePolicy, W: Widget<SP::State>> Scope<SP, W> {
+    /// Create a new scope from a policy and an inner widget
     pub fn new(policy: SP, inner: W) -> Self {
         Scope {
             content: ScopeContent::Policy {
                 policy: Some(policy),
             },
             inner: WidgetPod::new(inner),
-            widget_added: false,
         }
     }
 
@@ -145,9 +207,9 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Scope<SP, W> {
             }
             ScopeContent::Transfer {
                 ref mut state,
-                transfer: policy,
+                transfer,
             } => {
-                policy.read_input(state, data);
+                transfer.read_input(state, data);
                 f(state, &mut self.inner)
             }
         }
@@ -160,22 +222,36 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Scope<SP, W> {
     }
 }
 
+impl<
+        F: Fn(Transfer::In) -> Transfer::State,
+        Transfer: ScopeTransfer,
+        W: Widget<Transfer::State>,
+    > Scope<DefaultScopePolicy<F, Transfer>, W>
+{
+    /// Create a new policy from a function creating the state, and a ScopeTransfer synchronising it
+    pub fn from_function(make_state: F, transfer: Transfer, inner: W) -> Self {
+        Self::new(DefaultScopePolicy::new(make_state, transfer), inner)
+    }
+}
+
+impl<In: Data, State: Data, F: Fn(In) -> State, L: Lens<State, In>, W: Widget<State>>
+    Scope<DefaultScopePolicy<F, LensScopeTransfer<L, In, State>>, W>
+{
+    /// Create a new policy from a function creating the state, and a Lens synchronising it
+    pub fn from_lens(make_state: F, lens: L, inner: W) -> Self {
+        Self::new(DefaultScopePolicy::from_lens(make_state, lens), inner)
+    }
+}
+
 impl<SP: ScopePolicy, W: Widget<SP::State>> Widget<SP::In> for Scope<SP, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut SP::In, env: &Env) {
-        if self.widget_added {
-            self.with_state(data, |state, inner| inner.event(ctx, event, state, env));
-            self.write_back_input(data);
-            ctx.request_update()
-        } else {
-            log::warn!("Scope dropping event (widget not added) {:?}", event);
-        }
+        self.with_state(data, |state, inner| inner.event(ctx, event, state, env));
+        self.write_back_input(data);
+        ctx.request_update()
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &SP::In, env: &Env) {
         self.with_state(data, |state, inner| inner.lifecycle(ctx, event, state, env));
-        if let LifeCycle::WidgetAdded = event {
-            self.widget_added = true;
-        }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &SP::In, data: &SP::In, env: &Env) {
