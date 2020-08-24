@@ -1,3 +1,5 @@
+use crate::optics::{lens, prism, traversal};
+
 use std::marker::PhantomData;
 use std::ops;
 use std::sync::Arc;
@@ -93,6 +95,24 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         Self: Sized,
     {
         Then::new(self, other)
+    }
+
+    fn then_lens<Other, C>(self, other: Other) -> traversal::ThenLens<Self, Other, B>
+    where
+        Other: lens::Lens<B, C> + Sized,
+        C: ?Sized,
+        Self: Sized,
+    {
+        traversal::ThenLens::new(self, other)
+    }
+
+    fn before_lens<Other, BeforeA>(self, other: Other) -> traversal::BeforeLens<Other, Self, A>
+    where
+        Other: lens::Lens<BeforeA, A> + Sized,
+        BeforeA: ?Sized,
+        Self: Sized,
+    {
+        traversal::BeforeLens::new(other, self)
     }
 
     fn map<Get, Put, C>(self, get: Get, put: Put) -> Then<Self, Map<Get, Put>, B>
