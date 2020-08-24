@@ -53,7 +53,7 @@ fn derive_prism() {
     assert!(approx_eq!(f64, num, 2.0));
 
     {
-        use druid::optics::prism::PrismReplacer;
+        use druid::optics::prism::{DefaultUpgrade, Replace};
 
         impl Default for State {
             fn default() -> Self {
@@ -62,8 +62,8 @@ fn derive_prism() {
         }
 
         // test upgrade
-        assert_ne!(state_text, text_prism.upgrade("1.0".into()));
-        assert_eq!(state_text, text_prism.upgrade("2.0".into()));
+        assert_ne!(state_text, text_prism.default_upgrade("1.0".into()));
+        assert_eq!(state_text, text_prism.default_upgrade("2.0".into()));
 
         // test replace
         // different from with_mut, wrong mapping re-builds the enum

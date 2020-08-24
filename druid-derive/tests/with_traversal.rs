@@ -138,7 +138,7 @@ fn derive_traversal() {
 
     // alice will change from a House into a new Apartment
     {
-        use druid::optics::PrismReplacer;
+        use druid::optics::Replace;
 
         // required for replace/upgrade (which is forceful)
         impl Default for Place {
@@ -151,11 +151,14 @@ fn derive_traversal() {
         assert_eq!(
             Some(()),
             person_place.with_mut(&mut alice, |alice_place| {
-                *alice_place = place_apt.upgrade(Apartment {
-                    building_number: 2,
-                    floor_number: 1,
-                    apartment_number: 100,
-                })
+                place_apt.replace(
+                    alice_place,
+                    Apartment {
+                        building_number: 2,
+                        floor_number: 1,
+                        apartment_number: 100,
+                    },
+                );
             })
         );
 
@@ -165,7 +168,7 @@ fn derive_traversal() {
 
     // carl will move into bob's place
     {
-        use druid::optics::PrismReplacer;
+        use druid::optics::Replace;
 
         // required for replace/upgrade (which is forceful)
         impl Default for Addr {
@@ -186,5 +189,10 @@ fn derive_traversal() {
         assert_eq!(person_place.get(&bob), person_place.get(&carl));
         // confirms carl's new apartment number
         assert_eq!(Some(7), person_apt_number.get(&carl));
+
+        // note that the street name, which is outside of the
+        // Place enum, is still old (aka wrong).
+        // for it to be correct, the entire ExtensiveAddr
+        // should have been replaced.
     }
 }

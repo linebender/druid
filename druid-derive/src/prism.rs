@@ -131,7 +131,7 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
                     }
                 }
 
-                impl druid::optics::PrismReplacer<#ty, #field_ty> for #twizzled_name::#variant_name {
+                impl druid::optics::Replace<#ty, #field_ty> for #twizzled_name::#variant_name {
                     fn replace<'a>(&self, data: &'a mut #ty, v: #field_ty) -> &'a mut #ty {
                         #replace_expr
                         data

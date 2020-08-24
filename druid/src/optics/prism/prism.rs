@@ -16,51 +16,51 @@ pub trait Prism<T: ?Sized, U: ?Sized> {
     fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> Option<V>;
 }
 
-// TODO: rename to Prism?
-pub trait PrismReplacer<A: ?Sized, B: ?Sized>: Prism<A, B> {
+pub trait Replace<A: ?Sized, B: ?Sized>: Prism<A, B> {
     fn replace<'a>(&self, data: &'a mut A, v: B) -> &'a mut A
     where
         B: Sized;
+}
 
-    fn upgrade(&self, v: B) -> A
+pub trait DefaultUpgrade<A: ?Sized, B: ?Sized>: Prism<A, B> {
+    fn default_upgrade(&self, v: B) -> A
     where
         B: Sized,
         A: Default + Sized,
+        Self: Replace<A, B>,
     {
-        let mut data = A::default();
-        self.replace(&mut data, v);
-        data
+        let mut base = A::default();
+        self.replace(&mut base, v);
+        base
     }
 }
 
+impl<A: ?Sized, B: ?Sized, P> DefaultUpgrade<A, B> for P where P: Prism<A, B> {}
+
 // TODO: rename to Prism?
-pub trait PrismRefReplacer<A: ?Sized, B: ?Sized>: Prism<A, B> {
+// TODO: see if is necessary
+pub trait RefReplace<A: ?Sized, B: ?Sized>: Prism<A, B> {
     fn ref_replace<'a>(&self, data: &'a mut A, v: &B) -> &'a mut A
     where
         B: Clone,
-        Self: PrismReplacer<A, B>,
+        Self: Replace<A, B>,
     {
         self.replace(data, v.clone())
     }
+}
 
+// TODO: see if is necessary
+pub trait RefUpgrade<A: ?Sized, B: ?Sized>: Prism<A, B> {
     fn ref_upgrade(&self, v: &B) -> A
     where
         B: Clone,
         A: Default + Sized,
-        Self: PrismReplacer<A, B>,
+        Self: Replace<A, B> + RefReplace<A, B>,
     {
         let mut data = A::default();
         self.ref_replace(&mut data, v);
         data
     }
-}
-
-impl<A, B, T> PrismRefReplacer<A, B> for T
-where
-    A: ?Sized,
-    B: ?Sized,
-    T: PrismReplacer<A, B>,
-{
 }
 
 pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
@@ -317,13 +317,13 @@ where
     }
 }
 
-impl<T, U, Get, GetMut, Replace> PrismReplacer<T, U> for Variant<Get, GetMut, Replace>
+impl<T, U, Get, GetMut, Replacer> Replace<T, U> for Variant<Get, GetMut, Replacer>
 where
     T: ?Sized,
     U: Sized,
     Get: Fn(&T) -> Option<&U>,
     GetMut: Fn(&mut T) -> Option<&mut U>,
-    Replace: for<'a> Fn(&'a mut T, U) -> &'a mut T,
+    Replacer: for<'a> Fn(&'a mut T, U) -> &'a mut T,
 {
     fn replace<'a>(&self, data: &'a mut T, v: U) -> &'a mut T
     where
@@ -412,13 +412,13 @@ where
     }
 }
 
-impl<T, U, A, B, C> PrismReplacer<A, C> for Then<T, U, B>
+impl<T, U, A, B, C> Replace<A, C> for Then<T, U, B>
 where
     A: ?Sized + Default,
     B: ?Sized + Default,
     C: Sized + Clone,
-    T: Prism<A, B> + PrismReplacer<A, B>,
-    U: Prism<B, C> + PrismReplacer<B, C>,
+    T: Prism<A, B> + Replace<A, B> + RefReplace<A, B>,
+    U: Prism<B, C> + Replace<B, C> + RefReplace<B, C>,
 {
     /// Given the matching path of `A` -> `B` -> `C`,
     /// it is guaranteed that `A` will end up matching
@@ -447,7 +447,8 @@ where
             // couldn't access A -> B,
             // give up the replacement
             // and build B -> C from scratch
-            let new_b = self.right.upgrade(v);
+            let mut new_b = B::default();
+            self.right.replace(&mut new_b, v);
             // replace A -> B
             self.left.replace(data, new_b)
         } else {
@@ -455,13 +456,6 @@ where
             // (implicit with/with_mut above)
             data
         }
-    }
-
-    fn upgrade<'a>(&self, v: C) -> A
-    where
-        A: Sized,
-    {
-        self.left.upgrade(self.right.upgrade(v))
     }
 }
 
@@ -510,7 +504,7 @@ where
     }
 }
 
-impl<A, B, Get, Put> PrismReplacer<A, B> for Map<Get, Put>
+impl<A, B, Get, Put> Replace<A, B> for Map<Get, Put>
 where
     Get: Fn(&A) -> Option<B>,
     Put: Fn(&mut A, B),
@@ -537,7 +531,7 @@ where
     }
 }
 
-impl<T> PrismReplacer<T, T::Target> for Deref
+impl<T> Replace<T, T::Target> for Deref
 where
     T: ?Sized + ops::DerefMut,
     T::Target: Sized,
@@ -572,7 +566,7 @@ where
     }
 }
 
-impl<T, I> PrismReplacer<T, T::Output> for Index<I>
+impl<T, I> Replace<T, T::Output> for Index<I>
 where
     T: ?Sized + ops::Index<I> + ops::IndexMut<I>,
     I: Clone,
@@ -597,7 +591,7 @@ impl<A: ?Sized> Prism<A, A> for Id {
     }
 }
 
-impl<A> PrismReplacer<A, A> for Id {
+impl<A> Replace<A, A> for Id {
     fn replace<'a>(&self, data: &'a mut A, v: A) -> &'a mut A {
         *data = v;
         data
@@ -646,11 +640,11 @@ where
     }
 }
 
-impl<A, B, L> PrismReplacer<Arc<A>, B> for InArc<L>
+impl<A, B, L> Replace<Arc<A>, B> for InArc<L>
 where
     A: Clone + Default,
     B: Data,
-    L: PrismReplacer<A, B>,
+    L: Replace<A, B> + DefaultUpgrade<A, B>,
     Arc<A>: ops::DerefMut,
 {
     fn replace<'a>(&self, data: &'a mut Arc<A>, v: B) -> &'a mut Arc<A> {
@@ -660,7 +654,7 @@ where
             ()
         });
         if some_replacement.is_none() {
-            let inner = self.inner.upgrade(v);
+            let inner = self.inner.default_upgrade(v);
             *Arc::make_mut(data) = inner;
         }
         data
