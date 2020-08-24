@@ -49,7 +49,7 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
         quote! {
             /// Prism for the variant on (the enum)
             #[allow(non_camel_case_types)]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, Copy, Clone, PartialEq)]
             pub struct #variant_name;
         }
     });

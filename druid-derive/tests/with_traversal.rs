@@ -1,61 +1,190 @@
-use druid::Lens;
-use druid::Prism;
+use druid::{Lens, Prism};
+
+#[derive(Debug, Lens, PartialEq, Clone, Default)]
+struct Person {
+    pub name: String,
+    pub addr: Addr,
+}
+
+#[derive(Debug, Prism, PartialEq, Clone)]
+pub enum Addr {
+    Long(String),
+    Short(String),
+    Extensive(ExtensiveAddr),
+}
+
+#[derive(Debug, Lens, PartialEq, Clone, Default)]
+pub struct ExtensiveAddr {
+    pub street: String,
+    pub place: Place,
+}
+
+#[derive(Debug, Prism, PartialEq, Clone)]
+pub enum Place {
+    House(House),
+    Apartment(Apartment),
+}
+
+#[derive(Debug, Lens, PartialEq, Clone, Default)]
+pub struct House {
+    house_number: u64,
+}
+
+#[derive(Debug, Lens, PartialEq, Clone, Default)]
+pub struct Apartment {
+    building_number: u64,
+    floor_number: i8,
+    apartment_number: u32,
+}
 
 #[test]
-fn derive_lens() {
-    #[derive(Lens)]
-    struct State {
-        text: String,
-        alt: Alt,
-    }
+fn derive_traversal() {
+    use druid::PrismExt;
 
-    #[allow(dead_code)]
-    #[derive(Debug, PartialEq, Prism)]
-    enum Alt {
-        A(bool),
-        B(u8),
-    }
-
-    let state_a = State {
-        text: "1.0".into(),
-        alt: Alt::B(2),
+    let mut alice = Person {
+        name: "Alice".into(),
+        addr: Addr::Extensive(ExtensiveAddr {
+            street: "alice's street".into(),
+            place: Place::House(House { house_number: 2 }),
+        }),
     };
 
-    let text_lens = State::text;
-    let alt_lens = State::alt;
-    let alt_a_prism = Alt::a;
-    let alt_b_prism = Alt::b;
+    let mut bob = Person {
+        name: "Bob".into(),
+        addr: Addr::Extensive(ExtensiveAddr {
+            street: "bob's street".into(),
+            place: Place::Apartment(Apartment {
+                building_number: 3,
+                floor_number: -1,
+                apartment_number: 4,
+            }),
+        }),
+    };
 
-    let f_alt_b = |data: &u8| data + 3;
-    let f_alt = |data: &Alt| alt_b_prism.with(data, f_alt_b);
-    let result: Option<u8> = alt_lens.with(&state_a, f_alt);
-    assert_eq!(Some(2 + 3), result);
+    let mut carl = Person {
+        name: "Carl".into(),
+        addr: Addr::Short("carl's short address".into()),
+    };
 
-    text_lens.with(&state_a, |data: &String| assert_eq!(data, "1.0"));
-    alt_lens.with(&state_a, |data: &Alt| assert_eq!(data, &Alt::B(2)));
-    alt_lens.with(&state_a, |data: &Alt| assert_ne!(data, &Alt::A(true)));
-    alt_lens.with(&state_a, |data: &Alt| assert_ne!(data, &Alt::A(false)));
+    // all basic lenses and prisms
+    let _person_name = Person::name; // lens
+    let person_addr = Person::addr; // lens
+    let _addr_long = Addr::long; // prism
+    let _addr_short = Addr::short; // prism
+    let addr_extensive = Addr::extensive; // prism
+    let _ext_street = ExtensiveAddr::street; // lens
+    let ext_place = ExtensiveAddr::place; // lens
+    let _place_house = Place::house; // prism
+    let place_apt = Place::apartment; // prism
+    let _house_number = House::house_number; // lens
+    let _apt_building = Apartment::building_number; // lens
+    let _apt_floor = Apartment::floor_number; // lens
+    let apt_number = Apartment::apartment_number; // lens
 
-    let txt: String = text_lens.with(&state_a, |data: &String| data.clone());
-    assert_eq!("1.0", &txt);
+    // traversal for A -> B -> C -> D -> E -> F
+    let person_apt_number = {
+        use druid::{LensExt, PrismExt};
+        (Person::addr) // A -> B
+            .then_prism(Addr::extensive) // B -> C
+            .then_lens(ExtensiveAddr::place) // C -> D
+            .then_prism(Place::apartment) // D -> E
+            .then_lens(Apartment::apartment_number) // E -> F
+    };
 
-    alt_lens.with(&state_a, |data: &Alt| {
-        alt_a_prism.with(data, |data| assert_eq!(data, &true))
-    });
+    // alternative traversal for A -> B -> C -> D -> E -> F
+    // (the outer type ends up different)
+    let person_apt_number_2 = {
+        use druid::{LensExt, PrismExt};
+        let place_apt_number = place_apt.then_lens(apt_number); // D -> E -> F
+        let addr_ext_place = addr_extensive.then_lens(ext_place); // B -> C -> D
 
-    let b: Option<bool> =
-        alt_lens.with(&state_a, |data: &Alt| alt_a_prism.with(data, |data| *data));
-    assert_eq!(None, b);
+        // B -> C -> D -> E -> F
+        let addr_apt_number = addr_ext_place.then_prism(place_apt_number);
+        // A -> B -> C -> D -> E -> F
+        person_addr.then_prism(addr_apt_number)
+    };
 
-    alt_lens.with(&state_a, |data: &Alt| {
-        alt_a_prism.with(data, |data| assert_ne!(data, &false))
-    });
+    // gets the apartment number (only bob has)
+    assert_eq!(None, person_apt_number.with(&alice, |_n| unreachable!()));
+    assert_eq!(Some(4), person_apt_number.get(&bob));
+    assert_eq!(None, person_apt_number.with(&carl, |_n| unreachable!()));
 
-    alt_lens.with(&state_a, |data: &Alt| {
-        alt_a_prism.with(data, |_data| panic!())
-    });
+    // again, gets the apartment number (only bob has)
+    assert_eq!(None, person_apt_number_2.with(&alice, |_n| unreachable!()));
+    assert_eq!(Some(4), person_apt_number_2.get(&bob));
+    assert_eq!(None, person_apt_number_2.with(&carl, |_n| unreachable!()));
 
-    let u: Option<bool> =
-        alt_lens.with(&state_a, |data: &Alt| alt_a_prism.with(data, |data| *data));
-    assert_eq!(None, u);
+    // changes the apartment number (only bob has)
+    assert_eq!(
+        None,
+        person_apt_number.with_mut(&mut alice, |_n| unreachable!())
+    );
+    assert_eq!(Some(()), person_apt_number.with_mut(&mut bob, |n| *n = 7));
+    assert_eq!(
+        None,
+        person_apt_number.with_mut(&mut carl, |_n| unreachable!())
+    );
+
+    // confirms bob changed the apartment number (from 4 to 7)
+    assert_eq!(Some(7), person_apt_number.get(&bob));
+
+    // traversal for A -> B -> C -> D
+    let person_place = {
+        use druid::{LensExt, PrismExt};
+        (Person::addr) // A -> B
+            .then_prism(Addr::extensive) // B -> C
+            .then_lens(ExtensiveAddr::place) // C -> D
+    };
+
+    // alice will change from a House into a new Apartment
+    {
+        use druid::optics::PrismReplacer;
+
+        // required for replace/upgrade (which is forceful)
+        impl Default for Place {
+            fn default() -> Self {
+                Self::House(House { house_number: 0 })
+            }
+        }
+
+        // alice will change from a House into a new Apartment
+        assert_eq!(
+            Some(()),
+            person_place.with_mut(&mut alice, |alice_place| {
+                *alice_place = place_apt.upgrade(Apartment {
+                    building_number: 2,
+                    floor_number: 1,
+                    apartment_number: 100,
+                })
+            })
+        );
+
+        // confirms alice's new apartment number
+        assert_eq!(Some(100), person_apt_number.get(&alice));
+    }
+
+    // carl will move into bob's place
+    {
+        use druid::optics::PrismReplacer;
+
+        // required for replace/upgrade (which is forceful)
+        impl Default for Addr {
+            fn default() -> Self {
+                Self::Short("".into())
+            }
+        }
+
+        // carl will move into bob's place
+        assert_eq!(
+            Some(()),
+            person_place.with(&bob, |bob_place| {
+                person_place.replace(&mut carl, bob_place.clone());
+            })
+        );
+
+        // confirm carl's new place
+        assert_eq!(person_place.get(&bob), person_place.get(&carl));
+        // confirms carl's new apartment number
+        assert_eq!(Some(7), person_apt_number.get(&carl));
+    }
 }

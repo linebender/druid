@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use druid::optics::{prism, traversal};
+
 use std::marker::PhantomData;
 use std::ops;
 use std::sync::Arc;
@@ -87,6 +89,15 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         Self: Sized,
     {
         Then::new(self, other)
+    }
+
+    fn then_prism<Other, C>(self, other: Other) -> traversal::AfterLens<Self, Other, B>
+    where
+        Other: prism::Prism<B, C> + Sized,
+        C: ?Sized,
+        Self: Sized,
+    {
+        traversal::AfterLens::new(self, other)
     }
 
     /// Combine a `Lens<A, B>` with a function that can transform a `B` and its inverse.
@@ -315,7 +326,7 @@ macro_rules! lens {
 }
 
 /// `Lens` composed of two lenses joined together
-#[derive(Debug, Copy)]
+#[derive(Debug, Copy, PartialEq)]
 pub struct Then<T, U, B: ?Sized> {
     left: T,
     right: U,
@@ -368,7 +379,7 @@ impl<T: Clone, U: Clone, B> Clone for Then<T, U, B> {
 }
 
 /// `Lens` built from a getter and a setter
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Map<Get, Put> {
     get: Get,
     put: Put,
@@ -407,7 +418,7 @@ where
 /// `Lens` for invoking `Deref` and `DerefMut` on a type
 ///
 /// See also `LensExt::deref`.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Deref;
 
 impl<T: ?Sized> Lens<T, T::Target> for Deref
@@ -423,7 +434,7 @@ where
 }
 
 /// `Lens` for indexing containers
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Index<I> {
     index: I,
 }
@@ -453,7 +464,7 @@ where
 /// The identity lens: the lens which does nothing, i.e. exposes exactly the original value.
 ///
 /// Useful for starting a lens combinator chain, or passing to lens-based interfaces.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Id;
 
 impl<A: ?Sized> Lens<A, A> for Id {
@@ -469,7 +480,7 @@ impl<A: ?Sized> Lens<A, A> for Id {
 /// A `Lens` that exposes data within an `Arc` with copy-on-write semantics
 ///
 /// A copy is only made in the event that a different value is written.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct InArc<L> {
     inner: L,
 }

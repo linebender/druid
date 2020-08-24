@@ -28,11 +28,17 @@ fn derive_prism() {
     prism!(State, Number).with(&state_number, |data| assert!(approx_eq!(f64, *data, 1.0)));
 
     // mappings for the wrong variant are ignored
-    text_prism.with(&state_number, |_data| panic!());
-    number_prism.with(&state_text, |_data| panic!());
+    assert_eq!(None, text_prism.with(&state_number, |_data| unreachable!()));
+    assert_eq!(None, number_prism.with(&state_text, |_data| unreachable!()));
 
-    text_prism.with_mut(&mut state_text, |data| *data = "2.0".into());
-    number_prism.with_mut(&mut state_number, |data| *data = 2.0);
+    assert_eq!(
+        Some(()),
+        text_prism.with_mut(&mut state_text, |data| *data = "2.0".into())
+    );
+    assert_eq!(
+        Some(()),
+        number_prism.with_mut(&mut state_number, |data| *data = 2.0)
+    );
 
     assert_ne!(state_text, State::Text("1.0".into()));
     assert_eq!(state_text, State::Text("2.0".into()));
@@ -40,7 +46,7 @@ fn derive_prism() {
     let num: f64 = if let State::Number(f) = state_number {
         f
     } else {
-        panic!()
+        unreachable!()
     };
 
     assert!(!approx_eq!(f64, num, 1.0));
@@ -89,15 +95,27 @@ fn named_derive_prism() {
     let text_prism = State::text;
     let number_prism = State::prism_number;
 
-    text_prism.with(&state_text, |data| assert_eq!(data, "1.0"));
-    number_prism.with(&state_number, |data| assert!(approx_eq!(f64, *data, 1.0)));
+    assert_eq!(
+        Some(()),
+        text_prism.with(&state_text, |data| assert_eq!(data, "1.0"))
+    );
+    assert_eq!(
+        Some(()),
+        number_prism.with(&state_number, |data| assert!(approx_eq!(f64, *data, 1.0)))
+    );
 
     // mappings for the wrong variant are ignored
-    text_prism.with(&state_number, |_data| panic!());
-    number_prism.with(&state_text, |_data| panic!());
+    assert_eq!(None, text_prism.with(&state_number, |_data| unreachable!()));
+    assert_eq!(None, number_prism.with(&state_text, |_data| unreachable!()));
 
-    text_prism.with_mut(&mut state_text, |data| *data = "2.0".into());
-    number_prism.with_mut(&mut state_number, |data| *data = 2.0);
+    assert_eq!(
+        Some(()),
+        text_prism.with_mut(&mut state_text, |data| *data = "2.0".into())
+    );
+    assert_eq!(
+        Some(()),
+        number_prism.with_mut(&mut state_number, |data| *data = 2.0)
+    );
 
     assert_ne!(state_text, State::Text { s: "1.0".into() });
     assert_eq!(state_text, State::Text { s: "2.0".into() });
@@ -105,7 +123,7 @@ fn named_derive_prism() {
     let num: f64 = if let State::Number { n: f } = state_number {
         f
     } else {
-        panic!()
+        unreachable!()
     };
 
     assert!(!approx_eq!(f64, num, 1.0));
@@ -131,20 +149,32 @@ fn mix_with_data_prism() {
     let text_prism = State::text;
     let number_prism = State::prism_number;
 
-    text_prism.with(&state_text, |data| assert_eq!(data, "1.0"));
-    number_prism.with(&state_number, |data| assert!(approx_eq!(f64, *data, 1.0)));
+    assert_eq!(
+        Some(()),
+        text_prism.with(&state_text, |data| assert_eq!(data, "1.0"))
+    );
+    assert_eq!(
+        Some(()),
+        number_prism.with(&state_number, |data| assert!(approx_eq!(f64, *data, 1.0)))
+    );
 
     // mappings for the wrong variant are ignored
-    text_prism.with(&state_number, |_data| panic!());
-    number_prism.with(&state_text, |_data| panic!());
+    assert_eq!(None, text_prism.with(&state_number, |_data| unreachable!()));
+    assert_eq!(None, number_prism.with(&state_text, |_data| unreachable!()));
 
-    text_prism.with_mut(&mut state_text, |data| *data = "2.0".into());
-    number_prism.with_mut(&mut state_number, |data| *data = 2.0);
+    assert_eq!(
+        Some(()),
+        text_prism.with_mut(&mut state_text, |data| *data = "2.0".into())
+    );
+    assert_eq!(
+        Some(()),
+        number_prism.with_mut(&mut state_number, |data| *data = 2.0)
+    );
 
     let num: f64 = if let State::Number(f) = state_number {
         f
     } else {
-        panic!()
+        unreachable!()
     };
     assert!(!approx_eq!(f64, num, 1.0));
     assert!(approx_eq!(f64, num, 2.0));

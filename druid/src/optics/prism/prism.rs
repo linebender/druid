@@ -1,4 +1,4 @@
-use crate::optics::{lens, prism, traversal};
+use crate::optics::{lens, traversal};
 
 use std::marker::PhantomData;
 use std::ops;
@@ -8,11 +8,15 @@ use crate::kurbo::Size;
 use crate::widget::prelude::*;
 use crate::Data;
 
+// TODO: rename to PartialPrism? or is it AffineTraversal? maybe both
+// since a complete Prism also have the replace and upgrade stuff,
+// which neither this nor the AffineTraversal has
 pub trait Prism<T: ?Sized, U: ?Sized> {
     fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> Option<V>;
     fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> Option<V>;
 }
 
+// TODO: rename to Prism?
 pub trait PrismReplacer<A: ?Sized, B: ?Sized>: Prism<A, B> {
     fn replace<'a>(&self, data: &'a mut A, v: B) -> &'a mut A
     where
@@ -29,6 +33,7 @@ pub trait PrismReplacer<A: ?Sized, B: ?Sized>: Prism<A, B> {
     }
 }
 
+// TODO: rename to Prism?
 pub trait PrismRefReplacer<A: ?Sized, B: ?Sized>: Prism<A, B> {
     fn ref_replace<'a>(&self, data: &'a mut A, v: &B) -> &'a mut A
     where
@@ -97,6 +102,15 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         Then::new(self, other)
     }
 
+    fn then_prism<Other, C>(self, other: Other) -> Then<Self, Other, B>
+    where
+        Other: Prism<B, C> + Sized,
+        C: ?Sized,
+        Self: Sized,
+    {
+        self.then(other)
+    }
+
     fn then_lens<Other, C>(self, other: Other) -> traversal::ThenLens<Self, Other, B>
     where
         Other: lens::Lens<B, C> + Sized,
@@ -106,13 +120,13 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         traversal::ThenLens::new(self, other)
     }
 
-    fn before_lens<Other, BeforeA>(self, other: Other) -> traversal::BeforeLens<Other, Self, A>
+    fn after_lens<Other, BeforeA>(self, other: Other) -> traversal::AfterLens<Other, Self, A>
     where
         Other: lens::Lens<BeforeA, A> + Sized,
         BeforeA: ?Sized,
         Self: Sized,
     {
-        traversal::BeforeLens::new(other, self)
+        traversal::AfterLens::new(other, self)
     }
 
     fn map<Get, Put, C>(self, get: Get, put: Put) -> Then<Self, Map<Get, Put>, B>
@@ -358,7 +372,7 @@ macro_rules! prism {
     }};
 }
 
-#[derive(Debug, Copy)]
+#[derive(Debug, Copy, PartialEq)]
 pub struct Then<T, U, B: ?Sized> {
     left: T,
     right: U,
@@ -461,7 +475,7 @@ impl<T: Clone, U: Clone, B> Clone for Then<T, U, B> {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Map<Get, Put> {
     get: Get,
     put: Put,
@@ -507,7 +521,7 @@ where
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Deref;
 
 impl<T> Prism<T, T::Target> for Deref
@@ -534,7 +548,7 @@ where
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Index<I> {
     index: I,
 }
@@ -570,7 +584,7 @@ where
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Id;
 
 impl<A: ?Sized> Prism<A, A> for Id {
@@ -590,7 +604,7 @@ impl<A> PrismReplacer<A, A> for Id {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct InArc<L> {
     inner: L,
 }
