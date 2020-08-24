@@ -22,6 +22,7 @@ use std::mem;
 use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use log::{debug, error, warn};
 use winapi::ctypes::{c_int, c_void};
@@ -186,6 +187,8 @@ struct WndState {
     // Is this window the topmost window under the mouse cursor
     has_mouse_focus: bool,
     //TODO: track surrogate orphan
+    last_click_time: Instant,
+    click_count: u8,
 }
 
 /// State for DirectComposition. This is optional because it is only supported
@@ -741,8 +744,10 @@ impl WndProc for MyWndProc {
                 }
                 Some(0)
             }
-            // TODO: not clear where double-click processing should happen. Currently disabled
-            // because CS_DBLCLKS is not set
+            // Note: we handle the double-click events out of caution here, but we don't expect
+            // to actually receive any, because we don't set CS_DBLCLKS on the window class style.
+            // And the reason for that is that we want click counts that go above 2, so it just
+            // makes a lot more sense to do the click count logic ourselves.
             WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_RBUTTONDBLCLK
             | WM_RBUTTONDOWN | WM_RBUTTONUP | WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP
             | WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
@@ -766,18 +771,28 @@ impl WndProc for MyWndProc {
                 } {
                     if let Ok(mut s) = self.state.try_borrow_mut() {
                         let s = s.as_mut().unwrap();
-                        let count = match msg {
-                            WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN => 1,
-                            WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK
-                            | WM_XBUTTONDBLCLK => 2,
-                            WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP => 0,
-                            _ => unreachable!(),
-                        };
+                        let down = matches!(msg,  WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN |
+                                                        WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK
+                                                        | WM_XBUTTONDBLCLK);
                         let x = LOWORD(lparam as u32) as i16 as i32;
                         let y = HIWORD(lparam as u32) as i16 as i32;
                         let pos = Point::new(x as f64, y as f64).to_dp(self.scale());
                         let mods = s.keyboard_state.get_modifiers();
                         let buttons = get_buttons(wparam);
+                        let dct = unsafe { GetDoubleClickTime() };
+                        let threshold = Duration::from_millis(dct as u64);
+                        let count = if down {
+                            // TODO: it may be more precise to use the timestamp from the event.
+                            let this_click = Instant::now();
+                            if this_click - s.last_click_time >= threshold {
+                                s.click_count = 0;
+                            }
+                            s.click_count = s.click_count.saturating_add(1);
+                            s.last_click_time = this_click;
+                            s.click_count
+                        } else {
+                            0
+                        };
                         let event = MouseEvent {
                             pos,
                             buttons,
@@ -991,6 +1006,8 @@ impl WindowBuilder {
                 keyboard_state: KeyboardState::new(),
                 captured_mouse_buttons: MouseButtons::new(),
                 has_mouse_focus: false,
+                last_click_time: Instant::now(),
+                click_count: 0,
             };
             win.wndproc.connect(&handle, state);
 
