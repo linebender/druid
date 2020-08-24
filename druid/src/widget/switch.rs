@@ -137,37 +137,38 @@ impl Widget<bool> for Switch {
                 }
                 ctx.request_paint();
             }
+            Event::AnimFrame(interval) => {
+                let delta = Duration::from_nanos(*interval).as_secs_f64();
+                let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+                let switch_width = switch_height * SWITCH_WIDTH_RATIO;
+                let knob_size = switch_height - 2. * SWITCH_PADDING;
+                let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
+                let off_pos = knob_size / 2. + SWITCH_PADDING;
+
+                // move knob to right position depending on the value
+                if self.animation_in_progress {
+                    let change_time = if *data {
+                        SWITCH_CHANGE_TIME
+                    } else {
+                        -SWITCH_CHANGE_TIME
+                    };
+                    let change = (switch_width / change_time) * delta;
+                    self.knob_pos.x = (self.knob_pos.x + change).min(on_pos).max(off_pos);
+
+                    if (self.knob_pos.x > off_pos && !*data) || (self.knob_pos.x < on_pos && *data)
+                    {
+                        ctx.request_anim_frame();
+                    } else {
+                        self.animation_in_progress = false;
+                    }
+                    ctx.request_paint();
+                }
+            }
             _ => (),
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &bool, env: &Env) {
-        if let LifeCycle::AnimFrame(interval) = event {
-            let delta = Duration::from_nanos(*interval).as_secs_f64();
-            let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
-            let switch_width = switch_height * SWITCH_WIDTH_RATIO;
-            let knob_size = switch_height - 2. * SWITCH_PADDING;
-            let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
-            let off_pos = knob_size / 2. + SWITCH_PADDING;
-
-            // move knob to right position depending on the value
-            if self.animation_in_progress {
-                let change_time = if *data {
-                    SWITCH_CHANGE_TIME
-                } else {
-                    -SWITCH_CHANGE_TIME
-                };
-                let change = (switch_width / change_time) * delta;
-                self.knob_pos.x = (self.knob_pos.x + change).min(on_pos).max(off_pos);
-
-                if (self.knob_pos.x > off_pos && !*data) || (self.knob_pos.x < on_pos && *data) {
-                    ctx.request_anim_frame();
-                } else {
-                    self.animation_in_progress = false;
-                }
-                ctx.request_paint();
-            }
-        }
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &bool, _env: &Env) {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &bool, data: &bool, _env: &Env) {

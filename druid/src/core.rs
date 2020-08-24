@@ -689,6 +689,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     false
                 }
             }
+            Event::AnimFrame(_) => {
+                let r = self.state.request_anim;
+                self.state.request_anim = false;
+                r
+            }
             Event::KeyDown(_) => self.state.has_focus,
             Event::KeyUp(_) => self.state.has_focus,
             Event::Paste(_) => self.state.has_focus,
@@ -786,11 +791,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     true
                 }
             },
-            LifeCycle::AnimFrame(_) => {
-                let r = self.state.request_anim;
-                self.state.request_anim = false;
-                r
-            }
             LifeCycle::WidgetAdded => {
                 assert!(self.old_data.is_none());
 

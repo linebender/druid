@@ -93,24 +93,23 @@ impl Widget<Vector<Circle>> for CircleView {
                 });
             }
             ctx.request_anim_frame();
-        }
-    }
-
-    fn lifecycle(
-        &mut self,
-        ctx: &mut LifeCycleCtx,
-        ev: &LifeCycle,
-        data: &Vector<Circle>,
-        _env: &Env,
-    ) {
-        if let LifeCycle::AnimFrame(_) = ev {
-            for c in data {
+        } else if let Event::AnimFrame(_) = ev {
+            for c in &*data {
                 ctx.request_paint_rect(kurbo::Circle::new(c.pos, RADIUS).bounding_box());
             }
             if !data.is_empty() {
                 ctx.request_anim_frame();
             }
         }
+    }
+
+    fn lifecycle(
+        &mut self,
+        _ctx: &mut LifeCycleCtx,
+        _ev: &LifeCycle,
+        _data: &Vector<Circle>,
+        _env: &Env,
+    ) {
     }
 
     fn update(
