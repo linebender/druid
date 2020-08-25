@@ -149,12 +149,14 @@ enum ScopeContent<SP: ScopePolicy> {
 ///
 /// # Examples
 /// ```
-/// #[derive(Data, Lens)]
+/// use druid::{Data, Lens, WidgetExt};
+/// use druid::widget::{TextBox, Scope};
+/// #[derive(Clone, Data, Lens)]
 /// struct AppState {
 ///     name: String,
 /// }
 ///
-/// #[derive(Data, Lens)]
+/// #[derive(Clone, Data, Lens)]
 /// struct PrivateState {
 ///     text: String,
 ///     other: u32,
@@ -167,7 +169,11 @@ enum ScopeContent<SP: ScopePolicy> {
 /// }
 ///
 /// fn main() {
-///     let scope = Scope::from_lens(PrivateState::new, PrivateState::text, MyWidget::new());
+///     let scope = Scope::from_lens(
+///         PrivateState::new,
+///         PrivateState::text,
+///         TextBox::new().lens(PrivateState::text),
+///     );
 /// }
 /// ```
 pub struct Scope<SP: ScopePolicy, W: Widget<SP::State>> {
