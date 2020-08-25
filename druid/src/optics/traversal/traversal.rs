@@ -111,13 +111,65 @@ where
 }
 
 #[derive(Debug, Copy, PartialEq)]
-pub struct AfterLens<L1, P2, B: ?Sized> {
+pub struct AndLens<P1, L2, B: ?Sized> {
+    left: P1,
+    right: L2,
+    _marker: PhantomData<B>,
+}
+
+impl<P1, L2, B: ?Sized> AndLens<P1, L2, B> {
+    pub fn new<A: ?Sized, C: ?Sized>(left: P1, right: L2) -> Self
+    where
+        P1: Traversal<A, B>,
+        L2: Lens<A, C>,
+    {
+        Self {
+            left,
+            right,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<P1, L2, A, B, C> Traversal<A, C> for AndLens<P1, L2, B>
+where
+    A: ?Sized,
+    B: ?Sized,
+    C: ?Sized,
+    P1: Traversal<A, B>,
+    L2: Lens<A, C>,
+{
+    fn with<V, F: FnOnce(&C) -> V>(&self, data: &A, f: F) -> Option<V> {
+        self.left
+            .with(data, |_b| ())
+            .and(Some(self.right.with(data, f)))
+    }
+
+    fn with_mut<V, F: FnOnce(&mut C) -> V>(&self, data: &mut A, f: F) -> Option<V> {
+        self.left
+            .with_mut(data, |_b| ())
+            .and(Some(self.right.with_mut(data, f)))
+    }
+}
+
+impl<P1: Clone, L2: Clone, B> Clone for AndLens<P1, L2, B> {
+    fn clone(&self) -> Self {
+        Self {
+            left: self.left.clone(),
+            right: self.right.clone(),
+            _marker: PhantomData,
+        }
+    }
+}
+
+#[derive(Debug, Copy, PartialEq)]
+pub struct ThenAfterLens<L1, P2, B: ?Sized> {
     left: L1,
     right: P2,
     _marker: PhantomData<B>,
 }
 
-impl<L1, P2, B: ?Sized> AfterLens<L1, P2, B> {
+impl<L1, P2, B: ?Sized> ThenAfterLens<L1, P2, B> {
     pub fn new<A: ?Sized, C: ?Sized>(left: L1, right: P2) -> Self
     where
         L1: Lens<A, B>,
@@ -131,7 +183,7 @@ impl<L1, P2, B: ?Sized> AfterLens<L1, P2, B> {
     }
 }
 
-impl<L1, P2, A, B, C> Traversal<A, C> for AfterLens<L1, P2, B>
+impl<L1, P2, A, B, C> Traversal<A, C> for ThenAfterLens<L1, P2, B>
 where
     A: ?Sized,
     B: ?Sized,
@@ -148,7 +200,7 @@ where
     }
 }
 
-impl<L1: Clone, P2: Clone, B> Clone for AfterLens<L1, P2, B> {
+impl<L1: Clone, P2: Clone, B> Clone for ThenAfterLens<L1, P2, B> {
     fn clone(&self) -> Self {
         Self {
             left: self.left.clone(),
@@ -159,7 +211,7 @@ impl<L1: Clone, P2: Clone, B> Clone for AfterLens<L1, P2, B> {
 }
 
 // TODO: decide if this should exist..
-impl<L1, P2, A, B, C> prism::Replace<A, C> for AfterLens<L1, P2, B>
+impl<L1, P2, A, B, C> prism::Replace<A, C> for ThenAfterLens<L1, P2, B>
 where
     A: ?Sized + Default,
     B: ?Sized + Default,

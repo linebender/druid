@@ -122,13 +122,22 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         traversal::ThenLens::new(self, other)
     }
 
-    fn after_lens<Other, BeforeA>(self, other: Other) -> traversal::AfterLens<Other, Self, A>
+    fn and_lens<Other, C>(self, other: Other) -> traversal::AndLens<Self, Other, B>
+    where
+        Other: lens::Lens<A, C> + Sized,
+        C: ?Sized,
+        Self: Sized,
+    {
+        traversal::AndLens::new(self, other)
+    }
+
+    fn after_lens<Other, BeforeA>(self, other: Other) -> traversal::ThenAfterLens<Other, Self, A>
     where
         Other: lens::Lens<BeforeA, A> + Sized,
         BeforeA: ?Sized,
         Self: Sized,
     {
-        traversal::AfterLens::new(other, self)
+        traversal::ThenAfterLens::new(other, self)
     }
 
     fn map<Get, Put, C>(self, get: Get, put: Put) -> Then<Self, Map<Get, Put>, B>

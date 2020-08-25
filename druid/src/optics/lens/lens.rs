@@ -91,13 +91,13 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         Then::new(self, other)
     }
 
-    fn then_prism<Other, C>(self, other: Other) -> traversal::AfterLens<Self, Other, B>
+    fn then_prism<Other, C>(self, other: Other) -> traversal::ThenAfterLens<Self, Other, B>
     where
         Other: prism::Prism<B, C> + Sized,
         C: ?Sized,
         Self: Sized,
     {
-        traversal::AfterLens::new(self, other)
+        traversal::ThenAfterLens::new(self, other)
     }
 
     /// Combine a `Lens<A, B>` with a function that can transform a `B` and its inverse.

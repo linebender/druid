@@ -1,3 +1,3 @@
 mod traversal;
 
-pub use traversal::{AfterLens, LensWrap, ThenLens, Traversal};
+pub use traversal::{AndLens, LensWrap, ThenAfterLens, ThenLens, Traversal};
