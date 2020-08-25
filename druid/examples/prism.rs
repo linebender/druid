@@ -23,7 +23,7 @@ fn ui_builder() -> impl Widget<State> {
     let slider = Slider::new().prism(State::scale);
     let label = Label::new(|d: &State, _: &Env| format!("{:?}", d));
 
-    let switch = Switch::new().on_click(|_evt, _bool, _env| {
+    let _switch = Switch::new().on_click(|_evt, _bool, _env| {
         //
         todo!()
     });

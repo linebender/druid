@@ -11,53 +11,53 @@ use crate::Data;
 // TODO: rename to PartialPrism? or is it AffineTraversal? maybe both
 // since a complete Prism also have the replace and upgrade stuff,
 // which neither this nor the AffineTraversal has
-pub trait Prism<T: ?Sized, U: ?Sized> {
-    fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> Option<V>;
-    fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> Option<V>;
+pub trait Prism<S: ?Sized, A: ?Sized> {
+    fn with<V, F: FnOnce(&A) -> V>(&self, data: &S, f: F) -> Option<V>;
+    fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut S, f: F) -> Option<V>;
 }
 
-pub trait Replace<A: ?Sized, B: ?Sized>: Prism<A, B> {
-    fn replace<'a>(&self, data: &'a mut A, v: B) -> &'a mut A
+pub trait Replace<S: ?Sized, A: ?Sized>: Prism<S, A> {
+    fn replace<'a>(&self, data: &'a mut S, v: A) -> &'a mut S
     where
-        B: Sized;
+        A: Sized;
 }
 
-pub trait DefaultUpgrade<A: ?Sized, B: ?Sized>: Prism<A, B> {
-    fn default_upgrade(&self, v: B) -> A
+pub trait DefaultUpgrade<S: ?Sized, A: ?Sized>: Prism<S, A> {
+    fn default_upgrade(&self, v: A) -> S
     where
-        B: Sized,
-        A: Default + Sized,
-        Self: Replace<A, B>,
+        A: Sized,
+        S: Default + Sized,
+        Self: Replace<S, A>,
     {
-        let mut base = A::default();
+        let mut base = S::default();
         self.replace(&mut base, v);
         base
     }
 }
 
-impl<A: ?Sized, B: ?Sized, P> DefaultUpgrade<A, B> for P where P: Prism<A, B> {}
+impl<S: ?Sized, A: ?Sized, P> DefaultUpgrade<S, A> for P where P: Prism<S, A> {}
 
 // TODO: rename to Prism?
 // TODO: see if is necessary
-pub trait RefReplace<A: ?Sized, B: ?Sized>: Prism<A, B> {
-    fn ref_replace<'a>(&self, data: &'a mut A, v: &B) -> &'a mut A
+pub trait RefReplace<S: ?Sized, A: ?Sized>: Prism<S, A> {
+    fn ref_replace<'a>(&self, data: &'a mut S, v: &A) -> &'a mut S
     where
-        B: Clone,
-        Self: Replace<A, B>,
+        A: Clone,
+        Self: Replace<S, A>,
     {
         self.replace(data, v.clone())
     }
 }
 
 // TODO: see if is necessary
-pub trait RefUpgrade<A: ?Sized, B: ?Sized>: Prism<A, B> {
-    fn ref_upgrade(&self, v: &B) -> A
+pub trait RefUpgrade<S: ?Sized, A: ?Sized>: Prism<S, A> {
+    fn ref_upgrade(&self, v: &A) -> S
     where
-        B: Clone,
-        A: Default + Sized,
-        Self: Replace<A, B> + RefReplace<A, B>,
+        A: Clone,
+        S: Default + Sized,
+        Self: Replace<S, A> + RefReplace<S, A>,
     {
-        let mut data = A::default();
+        let mut data = S::default();
         self.ref_replace(&mut data, v);
         data
     }
@@ -93,6 +93,8 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         });
     }
 
+    // TODO: use something like an IntoAffineTraversal
+    // so this method can be used with lenses and prism
     fn then<Other, C>(self, other: Other) -> Then<Self, Other, B>
     where
         Other: Prism<B, C> + Sized,
@@ -165,7 +167,7 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
     }
 }
 
-impl<A: ?Sized, B: ?Sized, T: Prism<A, B>> PrismExt<A, B> for T {}
+impl<S: ?Sized, A: ?Sized, P: Prism<S, A>> PrismExt<S, A> for P {}
 
 pub struct PrismWrap<U, P, W> {
     inner: W,
@@ -184,28 +186,28 @@ impl<U, P, W> PrismWrap<U, P, W> {
     }
 }
 
-impl<T, U, P, W> Widget<T> for PrismWrap<U, P, W>
+impl<S, A, P, W> Widget<S> for PrismWrap<A, P, W>
 where
-    T: Data,
-    U: Data,
-    P: Prism<T, U>,
-    W: Widget<U>,
+    S: Data,
+    A: Data,
+    P: Prism<S, A>,
+    W: Widget<A>,
 {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut S, env: &Env) {
         let inner = &mut self.inner;
         let _opt = self
             .prism
             .with_mut::<(), _>(data, |data| inner.event(ctx, event, data, env));
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &S, env: &Env) {
         let inner = &mut self.inner;
         let _opt = self
             .prism
             .with::<(), _>(data, |data| inner.lifecycle(ctx, event, data, env));
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &S, data: &S, env: &Env) {
         let inner = &mut self.inner;
         let prism = &self.prism;
 
@@ -260,14 +262,14 @@ where
         }
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &S, env: &Env) -> Size {
         let inner = &mut self.inner;
         self.prism
             .with::<Size, _>(data, |data| inner.layout(ctx, bc, data, env))
             .unwrap_or(Size::ZERO)
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &S, env: &Env) {
         let inner = &mut self.inner;
         self.prism.with(data, |data| inner.paint(ctx, data, env));
     }
@@ -284,13 +286,13 @@ pub struct Variant<Get, GetMut, Replace> {
 }
 
 impl<Get, GetMut, Replace> Variant<Get, GetMut, Replace> {
-    pub fn new<T, U>(get: Get, get_mut: GetMut, replace: Replace) -> Self
+    pub fn new<S, A>(get: Get, get_mut: GetMut, replace: Replace) -> Self
     where
-        T: ?Sized,
-        U: Sized,
-        Get: Fn(&T) -> Option<&U>,
-        GetMut: Fn(&mut T) -> Option<&mut U>,
-        Replace: for<'a> Fn(&'a mut T, U) -> &'a mut T,
+        S: ?Sized,
+        A: Sized,
+        Get: Fn(&S) -> Option<&A>,
+        GetMut: Fn(&mut S) -> Option<&mut A>,
+        Replace: for<'a> Fn(&'a mut S, A) -> &'a mut S,
     {
         Self {
             get,
@@ -300,34 +302,34 @@ impl<Get, GetMut, Replace> Variant<Get, GetMut, Replace> {
     }
 }
 
-impl<T, U, Get, GetMut, Replace> Prism<T, U> for Variant<Get, GetMut, Replace>
+impl<S, A, Get, GetMut, Replace> Prism<S, A> for Variant<Get, GetMut, Replace>
 where
-    T: ?Sized,
-    U: Sized,
-    Get: Fn(&T) -> Option<&U>,
-    GetMut: Fn(&mut T) -> Option<&mut U>,
-    Replace: for<'a> Fn(&'a mut T, U) -> &'a mut T,
+    S: ?Sized,
+    A: Sized,
+    Get: Fn(&S) -> Option<&A>,
+    GetMut: Fn(&mut S) -> Option<&mut A>,
+    Replace: for<'a> Fn(&'a mut S, A) -> &'a mut S,
 {
-    fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> Option<V> {
+    fn with<V, F: FnOnce(&A) -> V>(&self, data: &S, f: F) -> Option<V> {
         (self.get)(data).map(f)
     }
 
-    fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> Option<V> {
+    fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut S, f: F) -> Option<V> {
         (self.get_mut)(data).map(f)
     }
 }
 
-impl<T, U, Get, GetMut, Replacer> Replace<T, U> for Variant<Get, GetMut, Replacer>
+impl<S, A, Get, GetMut, Replacer> Replace<S, A> for Variant<Get, GetMut, Replacer>
 where
-    T: ?Sized,
-    U: Sized,
-    Get: Fn(&T) -> Option<&U>,
-    GetMut: Fn(&mut T) -> Option<&mut U>,
-    Replacer: for<'a> Fn(&'a mut T, U) -> &'a mut T,
+    S: ?Sized,
+    A: Sized,
+    Get: Fn(&S) -> Option<&A>,
+    GetMut: Fn(&mut S) -> Option<&mut A>,
+    Replacer: for<'a> Fn(&'a mut S, A) -> &'a mut S,
 {
-    fn replace<'a>(&self, data: &'a mut T, v: U) -> &'a mut T
+    fn replace<'a>(&self, data: &'a mut S, v: A) -> &'a mut S
     where
-        U: Sized,
+        A: Sized,
     {
         (self.replace)(data, v)
     }
@@ -373,17 +375,17 @@ macro_rules! prism {
 }
 
 #[derive(Debug, Copy, PartialEq)]
-pub struct Then<T, U, B: ?Sized> {
-    left: T,
-    right: U,
+pub struct Then<P1, P2, B: ?Sized> {
+    left: P1,
+    right: P2,
     _marker: PhantomData<B>,
 }
 
-impl<T, U, B: ?Sized> Then<T, U, B> {
-    pub fn new<A: ?Sized, C: ?Sized>(left: T, right: U) -> Self
+impl<P1, P2, B: ?Sized> Then<P1, P2, B> {
+    pub fn new<A: ?Sized, C: ?Sized>(left: P1, right: P2) -> Self
     where
-        T: Prism<A, B>,
-        U: Prism<B, C>,
+        P1: Prism<A, B>,
+        P2: Prism<B, C>,
     {
         Self {
             left,
@@ -393,13 +395,13 @@ impl<T, U, B: ?Sized> Then<T, U, B> {
     }
 }
 
-impl<T, U, A, B, C> Prism<A, C> for Then<T, U, B>
+impl<P1, P2, A, B, C> Prism<A, C> for Then<P1, P2, B>
 where
     A: ?Sized,
     B: ?Sized,
     C: ?Sized,
-    T: Prism<A, B>,
-    U: Prism<B, C>,
+    P1: Prism<A, B>,
+    P2: Prism<B, C>,
 {
     fn with<V, F: FnOnce(&C) -> V>(&self, data: &A, f: F) -> Option<V> {
         self.left.with(data, |b| self.right.with(b, f)).flatten()
@@ -412,13 +414,13 @@ where
     }
 }
 
-impl<T, U, A, B, C> Replace<A, C> for Then<T, U, B>
+impl<P1, P2, A, B, C> Replace<A, C> for Then<P1, P2, B>
 where
     A: ?Sized + Default,
     B: ?Sized + Default,
     C: Sized + Clone,
-    T: Prism<A, B> + Replace<A, B> + RefReplace<A, B>,
-    U: Prism<B, C> + Replace<B, C> + RefReplace<B, C>,
+    P1: Prism<A, B> + Replace<A, B> + RefReplace<A, B>,
+    P2: Prism<B, C> + Replace<B, C> + RefReplace<B, C>,
 {
     /// Given the matching path of `A` -> `B` -> `C`,
     /// it is guaranteed that `A` will end up matching
@@ -459,7 +461,7 @@ where
     }
 }
 
-impl<T: Clone, U: Clone, B> Clone for Then<T, U, B> {
+impl<P1: Clone, P2: Clone, B> Clone for Then<P1, P2, B> {
     fn clone(&self) -> Self {
         Self {
             left: self.left.clone(),
@@ -518,25 +520,25 @@ where
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Deref;
 
-impl<T> Prism<T, T::Target> for Deref
+impl<S> Prism<S, S::Target> for Deref
 where
-    T: ?Sized + ops::Deref + ops::DerefMut,
+    S: ?Sized + ops::Deref + ops::DerefMut,
 {
-    fn with<V, F: FnOnce(&T::Target) -> V>(&self, data: &T, f: F) -> Option<V> {
+    fn with<V, F: FnOnce(&S::Target) -> V>(&self, data: &S, f: F) -> Option<V> {
         Some(f(data.deref()))
     }
 
-    fn with_mut<V, F: FnOnce(&mut T::Target) -> V>(&self, data: &mut T, f: F) -> Option<V> {
+    fn with_mut<V, F: FnOnce(&mut S::Target) -> V>(&self, data: &mut S, f: F) -> Option<V> {
         Some(f(data.deref_mut()))
     }
 }
 
-impl<T> Replace<T, T::Target> for Deref
+impl<S> Replace<S, S::Target> for Deref
 where
-    T: ?Sized + ops::DerefMut,
-    T::Target: Sized,
+    S: ?Sized + ops::DerefMut,
+    S::Target: Sized,
 {
-    fn replace<'a>(&self, data: &'a mut T, v: T::Target) -> &'a mut T {
+    fn replace<'a>(&self, data: &'a mut S, v: S::Target) -> &'a mut S {
         *data.deref_mut() = v;
         data
     }
@@ -553,26 +555,26 @@ impl<I> Index<I> {
     }
 }
 
-impl<T, I> Prism<T, T::Output> for Index<I>
+impl<S, I> Prism<S, S::Output> for Index<I>
 where
-    T: ?Sized + ops::Index<I> + ops::IndexMut<I>,
+    S: ?Sized + ops::Index<I> + ops::IndexMut<I>,
     I: Clone,
 {
-    fn with<V, F: FnOnce(&T::Output) -> V>(&self, data: &T, f: F) -> Option<V> {
+    fn with<V, F: FnOnce(&S::Output) -> V>(&self, data: &S, f: F) -> Option<V> {
         Some(f(&data[self.index.clone()]))
     }
-    fn with_mut<V, F: FnOnce(&mut T::Output) -> V>(&self, data: &mut T, f: F) -> Option<V> {
+    fn with_mut<V, F: FnOnce(&mut S::Output) -> V>(&self, data: &mut S, f: F) -> Option<V> {
         Some(f(&mut data[self.index.clone()]))
     }
 }
 
-impl<T, I> Replace<T, T::Output> for Index<I>
+impl<S, I> Replace<S, S::Output> for Index<I>
 where
-    T: ?Sized + ops::Index<I> + ops::IndexMut<I>,
+    S: ?Sized + ops::Index<I> + ops::IndexMut<I>,
     I: Clone,
-    T::Output: Sized,
+    S::Output: Sized,
 {
-    fn replace<'a>(&self, data: &'a mut T, v: T::Output) -> &'a mut T {
+    fn replace<'a>(&self, data: &'a mut S, v: S::Output) -> &'a mut S {
         data[self.index.clone()] = v;
         data
     }
@@ -581,50 +583,50 @@ where
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Id;
 
-impl<A: ?Sized> Prism<A, A> for Id {
-    fn with<V, F: FnOnce(&A) -> V>(&self, data: &A, f: F) -> Option<V> {
+impl<S: ?Sized> Prism<S, S> for Id {
+    fn with<V, F: FnOnce(&S) -> V>(&self, data: &S, f: F) -> Option<V> {
         Some(f(data))
     }
 
-    fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut A, f: F) -> Option<V> {
+    fn with_mut<V, F: FnOnce(&mut S) -> V>(&self, data: &mut S, f: F) -> Option<V> {
         Some(f(data))
     }
 }
 
-impl<A> Replace<A, A> for Id {
-    fn replace<'a>(&self, data: &'a mut A, v: A) -> &'a mut A {
+impl<S> Replace<S, S> for Id {
+    fn replace<'a>(&self, data: &'a mut S, v: S) -> &'a mut S {
         *data = v;
         data
     }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct InArc<L> {
-    inner: L,
+pub struct InArc<P> {
+    inner: P,
 }
 
-impl<L> InArc<L> {
-    pub fn new<A, B>(inner: L) -> Self
+impl<P> InArc<P> {
+    pub fn new<S, A>(inner: P) -> Self
     where
-        A: Clone,
-        B: Data,
-        L: Prism<A, B>,
+        S: Clone,
+        A: Data,
+        P: Prism<S, A>,
     {
         Self { inner }
     }
 }
 
-impl<A, B, L> Prism<Arc<A>, B> for InArc<L>
+impl<S, A, P> Prism<Arc<S>, A> for InArc<P>
 where
-    A: Clone,
-    B: Data,
-    L: Prism<A, B>,
+    S: Clone,
+    A: Data,
+    P: Prism<S, A>,
 {
-    fn with<V, F: FnOnce(&B) -> V>(&self, data: &Arc<A>, f: F) -> Option<V> {
+    fn with<V, F: FnOnce(&A) -> V>(&self, data: &Arc<S>, f: F) -> Option<V> {
         self.inner.with(data, f)
     }
 
-    fn with_mut<V, F: FnOnce(&mut B) -> V>(&self, data: &mut Arc<A>, f: F) -> Option<V> {
+    fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut Arc<S>, f: F) -> Option<V> {
         let mut temp = self.inner.with(data, |x| x.clone());
         let v = temp.as_mut().map(f);
 
@@ -640,14 +642,14 @@ where
     }
 }
 
-impl<A, B, L> Replace<Arc<A>, B> for InArc<L>
+impl<S, A, P> Replace<Arc<S>, A> for InArc<P>
 where
-    A: Clone + Default,
-    B: Data,
-    L: Replace<A, B> + DefaultUpgrade<A, B>,
-    Arc<A>: ops::DerefMut,
+    S: Clone + Default,
+    A: Data,
+    P: Replace<S, A> + DefaultUpgrade<S, A>,
+    Arc<S>: ops::DerefMut,
 {
-    fn replace<'a>(&self, data: &'a mut Arc<A>, v: B) -> &'a mut Arc<A> {
+    fn replace<'a>(&self, data: &'a mut Arc<S>, v: A) -> &'a mut Arc<S> {
         #[allow(clippy::unused_unit)]
         let some_replacement = self.with_mut(data, |x| {
             *x = v.clone();

@@ -40,17 +40,17 @@ where
 }
 
 #[derive(Debug, Copy, PartialEq)]
-pub struct ThenLens<T, U, B: ?Sized> {
-    left: T,
-    right: U,
+pub struct ThenLens<P1, L2, B: ?Sized> {
+    left: P1,
+    right: L2,
     _marker: PhantomData<B>,
 }
 
-impl<T, U, B: ?Sized> ThenLens<T, U, B> {
-    pub fn new<A: ?Sized, C: ?Sized>(left: T, right: U) -> Self
+impl<P1, L2, B: ?Sized> ThenLens<P1, L2, B> {
+    pub fn new<A: ?Sized, C: ?Sized>(left: P1, right: L2) -> Self
     where
-        T: Traversal<A, B>,
-        U: Lens<B, C>,
+        P1: Traversal<A, B>,
+        L2: Lens<B, C>,
     {
         Self {
             left,
@@ -60,13 +60,13 @@ impl<T, U, B: ?Sized> ThenLens<T, U, B> {
     }
 }
 
-impl<T, U, A, B, C> Traversal<A, C> for ThenLens<T, U, B>
+impl<P1, L2, A, B, C> Traversal<A, C> for ThenLens<P1, L2, B>
 where
     A: ?Sized,
     B: ?Sized,
     C: ?Sized,
-    T: Traversal<A, B>,
-    U: Lens<B, C>,
+    P1: Traversal<A, B>,
+    L2: Lens<B, C>,
 {
     fn with<V, F: FnOnce(&C) -> V>(&self, data: &A, f: F) -> Option<V> {
         self.left.with(data, |b| self.right.with(b, f))
@@ -77,7 +77,7 @@ where
     }
 }
 
-impl<T: Clone, U: Clone, B> Clone for ThenLens<T, U, B> {
+impl<P1: Clone, L2: Clone, B> Clone for ThenLens<P1, L2, B> {
     fn clone(&self) -> Self {
         Self {
             left: self.left.clone(),
@@ -88,13 +88,13 @@ impl<T: Clone, U: Clone, B> Clone for ThenLens<T, U, B> {
 }
 
 // TODO: decide if this should exist..
-impl<T, U, A, B, C> prism::Replace<A, C> for ThenLens<T, U, B>
+impl<P1, L2, A, B, C> prism::Replace<A, C> for ThenLens<P1, L2, B>
 where
     A: ?Sized + Default,
     B: ?Sized + Default,
     C: Sized + Clone,
-    T: prism::Prism<A, B> + prism::Replace<A, B>,
-    U: Lens<B, C>,
+    P1: prism::Prism<A, B> + prism::Replace<A, B>,
+    L2: Lens<B, C>,
 {
     fn replace<'a>(&self, base: &'a mut A, v: C) -> &'a mut A
     where
@@ -111,17 +111,17 @@ where
 }
 
 #[derive(Debug, Copy, PartialEq)]
-pub struct AfterLens<T, U, B: ?Sized> {
-    left: T,
-    right: U,
+pub struct AfterLens<L1, P2, B: ?Sized> {
+    left: L1,
+    right: P2,
     _marker: PhantomData<B>,
 }
 
-impl<T, U, B: ?Sized> AfterLens<T, U, B> {
-    pub fn new<A: ?Sized, C: ?Sized>(left: T, right: U) -> Self
+impl<L1, P2, B: ?Sized> AfterLens<L1, P2, B> {
+    pub fn new<A: ?Sized, C: ?Sized>(left: L1, right: P2) -> Self
     where
-        T: Lens<A, B>,
-        U: Traversal<B, C>,
+        L1: Lens<A, B>,
+        P2: Traversal<B, C>,
     {
         Self {
             left,
@@ -131,13 +131,13 @@ impl<T, U, B: ?Sized> AfterLens<T, U, B> {
     }
 }
 
-impl<T, U, A, B, C> Traversal<A, C> for AfterLens<T, U, B>
+impl<L1, P2, A, B, C> Traversal<A, C> for AfterLens<L1, P2, B>
 where
     A: ?Sized,
     B: ?Sized,
     C: ?Sized,
-    T: Lens<A, B>,
-    U: Traversal<B, C>,
+    L1: Lens<A, B>,
+    P2: Traversal<B, C>,
 {
     fn with<V, F: FnOnce(&C) -> V>(&self, data: &A, f: F) -> Option<V> {
         self.left.with(data, |b| self.right.with(b, f))
@@ -148,7 +148,7 @@ where
     }
 }
 
-impl<T: Clone, U: Clone, B> Clone for AfterLens<T, U, B> {
+impl<L1: Clone, P2: Clone, B> Clone for AfterLens<L1, P2, B> {
     fn clone(&self) -> Self {
         Self {
             left: self.left.clone(),
@@ -159,13 +159,13 @@ impl<T: Clone, U: Clone, B> Clone for AfterLens<T, U, B> {
 }
 
 // TODO: decide if this should exist..
-impl<T, U, A, B, C> prism::Replace<A, C> for AfterLens<T, U, B>
+impl<L1, P2, A, B, C> prism::Replace<A, C> for AfterLens<L1, P2, B>
 where
     A: ?Sized + Default,
     B: ?Sized + Default,
     C: Sized + Clone,
-    T: Lens<A, B>,
-    U: Traversal<B, C> + prism::Replace<B, C>,
+    L1: Lens<A, B>,
+    P2: Traversal<B, C> + prism::Replace<B, C>,
 {
     /// Given the matching path of `A` -> `B` -> `C`,
     /// it is guaranteed that `B` will end up matching
