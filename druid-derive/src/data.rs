@@ -14,7 +14,7 @@
 
 //! The implementation for #[derive(Data)]
 
-use crate::field_attr::{Field, FieldKind, Fields};
+use crate::field_attr::{DataAttrs, Field, FieldKind, Fields};
 use crate::variant_attr::Variants;
 
 use quote::{quote, quote_spanned};
@@ -41,14 +41,17 @@ fn derive_struct(
     let impl_generics = generics_bounds(&input.generics);
     let (_, ty_generics, where_clause) = &input.generics.split_for_impl();
 
-    let fields = Fields::parse_ast(&s.fields)?;
+    let fields = Fields::<DataAttrs>::parse_ast(&s.fields)?;
 
     let diff = if fields.len() > 0 {
         let same_fns = fields
             .iter()
-            .filter(|f| !f.ignore)
+            .filter(|f| !f.attrs.ignore)
             .map(Field::same_fn_path_tokens);
-        let fields = fields.iter().filter(|f| !f.ignore).map(Field::ident_tokens);
+        let fields = fields
+            .iter()
+            .filter(|f| !f.attrs.ignore)
+            .map(Field::ident_tokens);
         quote!( #( #same_fns(&self.#fields, &other.#fields) )&&* )
     } else {
         quote!(true)
@@ -95,16 +98,18 @@ fn derive_enum(
         return Ok(res);
     }
 
-    let variants = Variants::parse_ast(&s.variants)?;
-    let (to_test, to_ignore): (Vec<_>, Vec<_>) = variants.iter().partition(|v| !v.ignore);
+    let variants = Variants::<DataAttrs, DataAttrs>::parse_ast(&s.variants)?;
+    let (to_test, to_ignore): (Vec<_>, Vec<_>) = variants.iter().partition(|v| !v.attrs.ignore);
     let to_test = to_test.iter().map(|v| {
         let variant_ident = &v.ident.named();
+        // TODO: incoming: Fields<DataAttrs>
         let fields = &v.fields;
+
 
         // the various inner `same()` calls, to the right of the match arm.
         let tests: Vec<_> = fields
             .iter()
-            .filter(|field| !field.ignore)
+            .filter(|field| !field.attrs.ignore)
             .map(|field| {
                 let same_fn = field.same_fn_path_tokens();
                 let var_left = ident_from_str(&format!("__self_{}", field.ident_string()));
@@ -146,7 +151,7 @@ fn derive_enum(
                 .map(|field| ident_from_str(&format!("__other_{}", field.ident_string())))
                 .collect();
 
-            if fields.iter().filter(|field| !field.ignore).count() > 0 {
+            if fields.iter().count() > 0 {
                 Ok(quote! {
                     ( #ident :: #variant_ident( #(#vars_left),* ),  #ident :: #variant_ident( #(#vars_right),* )) => {
                         #( #tests )&&*
@@ -173,7 +178,7 @@ fn derive_enum(
                         true
                     }
                 })
-            } else if fields.iter().filter(|field| !field.ignore).count() > 0 {
+            } else if fields.iter().count() > 0 {
                 Ok(quote! {
                     ( #ident :: #variant_ident( .. ),  _)
                     | ( _,  #ident :: #variant_ident( .. )) => {

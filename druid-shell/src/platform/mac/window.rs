@@ -40,7 +40,7 @@ use objc::runtime::{Class, Object, Sel};
 use objc::{class, msg_send, sel, sel_impl};
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
-use crate::piet::{Piet, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
 use super::appkit::{
     NSRunLoopCommonModes, NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt,
@@ -54,6 +54,7 @@ use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard_types::KeyState;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::region::Region;
 use crate::scale::Scale;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 use crate::Error;
@@ -111,6 +112,7 @@ struct ViewState {
     // Tracks whether we have already received the mouseExited event
     mouse_left: bool,
     keyboard_state: KeyboardState,
+    text: PietText,
 }
 
 impl WindowBuilder {
@@ -334,6 +336,7 @@ lazy_static! {
             draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
         );
         decl.add_method(sel!(runIdle), run_idle as extern "C" fn(&mut Object, Sel));
+        decl.add_method(sel!(viewWillDraw), view_will_draw as extern "C" fn(&mut Object, Sel));
         decl.add_method(sel!(redraw), redraw as extern "C" fn(&mut Object, Sel));
         decl.add_method(
             sel!(handleTimer:),
@@ -369,6 +372,7 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
             focus_click: false,
             mouse_left: true,
             keyboard_state,
+            text: PietText::new_with_unique_state(),
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
@@ -624,6 +628,14 @@ extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
     }
 }
 
+extern "C" fn view_will_draw(this: &mut Object, _: Sel) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        (*view_state).handler.prepare_paint();
+    }
+}
+
 extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
     unsafe {
         let context: id = msg_send![class![NSGraphicsContext], currentContext];
@@ -633,22 +645,21 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
             msg_send![context, CGContext];
         let cgcontext_ref = CGContextRef::from_ptr_mut(cgcontext_ptr);
 
+        // FIXME: use the actual invalid region instead of just this bounding box.
+        // https://developer.apple.com/documentation/appkit/nsview/1483772-getrectsbeingdrawn?language=objc
         let rect = Rect::from_origin_size(
             (dirtyRect.origin.x, dirtyRect.origin.y),
             (dirtyRect.size.width, dirtyRect.size.height),
         );
-        let mut piet_ctx = Piet::new_y_down(cgcontext_ref);
+        let invalid = Region::from(rect);
+
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let anim = (*view_state).handler.paint(&mut piet_ctx, rect);
+        let mut piet_ctx = Piet::new_y_down(cgcontext_ref, Some(view_state.text.clone()));
+
+        (*view_state).handler.paint(&mut piet_ctx, &invalid);
         if let Err(e) = piet_ctx.finish() {
             error!("{}", e)
-        }
-
-        if anim {
-            // TODO: synchronize with screen refresh rate using CVDisplayLink instead.
-            let () = msg_send!(this as *const _, performSelectorOnMainThread: sel!(redraw)
-                withObject: nil waitUntilDone: NO);
         }
 
         let superclass = msg_send![this, superclass];
@@ -760,6 +771,14 @@ impl WindowHandle {
         }
     }
 
+    pub fn request_anim_frame(&self) {
+        unsafe {
+            // TODO: synchronize with screen refresh rate using CVDisplayLink instead.
+            let () = msg_send![*self.nsview.load(), performSelectorOnMainThread: sel!(redraw)
+                withObject: nil waitUntilDone: NO];
+        }
+    }
+
     // Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
         unsafe {
@@ -813,7 +832,16 @@ impl WindowHandle {
     }
 
     pub fn text(&self) -> Text {
-        Text::new()
+        let view = self.nsview.load();
+        unsafe {
+            if let Some(view) = (*view).as_ref() {
+                let state: *mut c_void = *view.get_ivar("viewState");
+                (*(state as *mut ViewState)).text.clone()
+            } else {
+                // this codepath should only happen during tests in druid, when view is nil
+                PietText::new_with_unique_state()
+            }
+        }
     }
 
     pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {

@@ -1,6 +1,6 @@
-use super::field_attr::FieldIdent;
+use super::field_attr::{FieldIdent, LensAttrs};
 use super::lens::{is_camel_case, to_snake_case};
-use super::variant_attr::{StringIdent, Variants};
+use super::variant_attr::{PrismAttrs, StringIdent, Variants};
 use quote::quote;
 use syn::{spanned::Spanned, Data, Error};
 
@@ -24,7 +24,7 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
     let ty = &input.ident;
 
     let variants = if let syn::Data::Enum(syn::DataEnum { variants, .. }) = &input.data {
-        Variants::parse_ast(variants)?
+        Variants::<PrismAttrs, LensAttrs>::parse_ast(variants)?
     } else {
         return Err(syn::Error::new(
             input.span(),
@@ -144,7 +144,7 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
 
     let associated_items = variants.iter().map(|v| {
         let variant_name = &v.ident.named();
-        let prism_variant_name = match v.prism_name_override.as_ref() {
+        let prism_variant_name = match v.attrs.prism_name_override.as_ref() {
             Some(name) => name.clone(),
             None => {
                 if is_camel_case(&variant_name.to_string()) {

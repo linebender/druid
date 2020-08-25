@@ -13,10 +13,10 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 druid = { path="../..", features = ["im", "image"] }
 
-wasm-bindgen = "0.2.63"
+wasm-bindgen = "0.2.67"
 console_error_panic_hook = "0.1.6"
-log = "0.4.8"
-instant = { version = "0.1.4", features = ["wasm-bindgen"] }
+log = "0.4.11"
+instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 simple_logger = { version = "1.6.0", default-features = false }

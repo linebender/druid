@@ -19,9 +19,7 @@ use std::collections::{HashMap, VecDeque};
 use crate::bloom::Bloom;
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
-use crate::piet::{
-    FontBuilder, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
-};
+use crate::piet::{FontFamily, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder};
 use crate::util::ExtendDrain;
 use crate::{
     BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
@@ -108,6 +106,9 @@ pub(crate) struct WidgetState {
     /// Any descendant has requested an animation frame.
     pub(crate) request_anim: bool,
 
+    /// Any descendant has requested update.
+    pub(crate) request_update: bool,
+
     pub(crate) focus_chain: Vec<WidgetId>,
     pub(crate) request_focus: Option<FocusChange>,
     pub(crate) children: Bloom<WidgetId>,
@@ -136,7 +137,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// so it can participate in layout and event flow. The process of
     /// adding a child widget to a container should call this method.
     pub fn new(inner: W) -> WidgetPod<T, W> {
-        let mut state = WidgetState::new(inner.id().unwrap_or_else(WidgetId::next));
+        let mut state = WidgetState::new(inner.id().unwrap_or_else(WidgetId::next), None);
         state.children_changed = true;
         state.needs_layout = true;
         WidgetPod {
@@ -395,7 +396,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         ctx.z_ops.append(&mut inner_ctx.z_ops);
-        self.state.invalid = Region::EMPTY;
     }
 
     /// Paint the widget, translating it by the origin of its layout rectangle.
@@ -421,22 +421,31 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.with_save(|ctx| {
             let layout_origin = self.layout_rect().origin().to_vec2();
             ctx.transform(Affine::translate(layout_origin));
-            let visible = ctx.region().to_rect().intersect(self.state.paint_rect()) - layout_origin;
+            let mut visible = ctx.region().clone();
+            visible.intersect_with(self.state.paint_rect());
+            visible -= layout_origin;
             ctx.with_child_ctx(visible, |ctx| self.paint_raw(ctx, data, env));
         });
     }
 
     fn make_widget_id_layout_if_needed(&mut self, id: WidgetId, ctx: &mut PaintCtx, env: &Env) {
         if self.debug_widget_text.is_none() {
-            let font = ctx
-                .text()
-                .new_font_by_name(env.get(crate::theme::FONT_NAME), 10.0)
-                .build()
-                .unwrap();
+            // switch text color based on background, this is meh and that's okay
+            let border_color = env.get_debug_color(id.to_raw());
+            let (r, g, b, _) = border_color.as_rgba8();
+            let avg = (r as u32 + g as u32 + b as u32) / 3;
+            let text_color = if avg < 128 {
+                Color::WHITE
+            } else {
+                Color::BLACK
+            };
+
             let id_string = id.to_raw().to_string();
             self.debug_widget_text = ctx
                 .text()
-                .new_text_layout(&font, &id_string, f64::INFINITY)
+                .new_text_layout(&id_string)
+                .font(FontFamily::SYSTEM_UI, 10.0)
+                .text_color(text_color)
                 .build()
                 .ok();
         }
@@ -446,7 +455,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         // we clone because we need to move it for paint_with_z_index
         let text = self.debug_widget_text.clone();
         if let Some(text) = text {
-            let text_size = Size::new(text.width(), 10.0);
+            let text_size = text.size();
             let origin = ctx.size().to_vec2() - text_size.to_vec2();
             let border_color = env.get_debug_color(ctx.widget_id().to_raw());
             self.debug_paint_layout_bounds(ctx, env);
@@ -458,14 +467,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 let text_rect = Rect::from_origin_size(origin, text_size);
 
                 ctx.fill(text_rect, &border_color);
-                let (r, g, b, _) = border_color.as_rgba8();
-                let avg = (r as u32 + g as u32 + b as u32) / 3;
-                let text_color = if avg < 128 {
-                    Color::WHITE
-                } else {
-                    Color::BLACK
-                };
-                ctx.draw_text(&text, text_pos, &text_color);
+                ctx.draw_text(&text, text_pos);
             })
         }
     }
@@ -844,15 +846,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`update`]: trait.Widget.html#tymethod.update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
-        match (self.old_data.as_ref(), self.env.as_ref()) {
-            (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
-            (None, _) => {
-                log::warn!("old_data missing in {:?}, skipping update", self.id());
-                self.old_data = Some(data.clone());
-                self.env = Some(env.clone());
-                return;
+        if !self.state.request_update {
+            match (self.old_data.as_ref(), self.env.as_ref()) {
+                (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
+                (None, _) => {
+                    log::warn!("old_data missing in {:?}, skipping update", self.id());
+                    self.old_data = Some(data.clone());
+                    self.env = Some(env.clone());
+                    return;
+                }
+                _ => (),
             }
-            _ => (),
         }
 
         let mut child_ctx = UpdateCtx {
@@ -865,7 +869,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.old_data = Some(data.clone());
         self.env = Some(env.clone());
 
-        ctx.widget_state.merge_up(&mut self.state)
+        self.state.request_update = false;
+        ctx.widget_state.merge_up(&mut self.state);
     }
 }
 
@@ -880,10 +885,10 @@ impl<T, W: Widget<T> + 'static> WidgetPod<T, W> {
 }
 
 impl WidgetState {
-    pub(crate) fn new(id: WidgetId) -> WidgetState {
+    pub(crate) fn new(id: WidgetId, size: Option<Size>) -> WidgetState {
         WidgetState {
             id,
-            layout_rect: None,
+            layout_rect: size.map(|s| s.to_rect()),
             paint_insets: Insets::ZERO,
             invalid: Region::EMPTY,
             viewport_offset: Vec2::ZERO,
@@ -893,6 +898,7 @@ impl WidgetState {
             has_active: false,
             has_focus: false,
             request_anim: false,
+            request_update: false,
             request_focus: None,
             focus_chain: Vec::new(),
             children: Bloom::new(),
@@ -911,20 +917,29 @@ impl WidgetState {
     ///
     /// This method is idempotent and can be called multiple times.
     fn merge_up(&mut self, child_state: &mut WidgetState) {
-        let mut child_region = child_state.invalid.clone();
-        child_region += child_state.layout_rect().origin().to_vec2() - child_state.viewport_offset;
         let clip = self
             .layout_rect()
             .with_origin(Point::ORIGIN)
             .inset(self.paint_insets);
-        child_region.intersect_with(clip);
-        self.invalid.merge_with(child_region);
+        let offset = child_state.layout_rect().origin().to_vec2() - child_state.viewport_offset;
+        for &r in child_state.invalid.rects() {
+            let r = (r + offset).intersect(clip);
+            if r.area() != 0.0 {
+                self.invalid.add_rect(r);
+            }
+        }
+        // Clearing the invalid rects here is less fragile than doing it while painting. The
+        // problem is that widgets (for example, Either) might choose not to paint certain
+        // invisible children, and we shouldn't allow these invisible children to accumulate
+        // invalid rects.
+        child_state.invalid.clear();
 
         self.needs_layout |= child_state.needs_layout;
         self.request_anim |= child_state.request_anim;
         self.has_active |= child_state.has_active;
         self.has_focus |= child_state.has_focus;
         self.children_changed |= child_state.children_changed;
+        self.request_update |= child_state.request_update;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
         self.timers.extend_drain(&mut child_state.timers);
     }
@@ -951,6 +966,7 @@ impl WidgetState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ext_event::ExtEventHost;
     use crate::widget::{Flex, Scroll, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
 
@@ -974,9 +990,12 @@ mod tests {
         let mut widget = WidgetPod::new(widget).boxed();
 
         let mut command_queue: CommandQueue = VecDeque::new();
-        let mut widget_state = WidgetState::new(WidgetId::next());
+        let mut widget_state = WidgetState::new(WidgetId::next(), None);
+        let ext_host = ExtEventHost::default();
+        let ext_handle = ext_host.make_sink();
         let mut state = ContextState {
             command_queue: &mut command_queue,
+            ext_handle: &ext_handle,
             window_id: WindowId::next(),
             window: &WindowHandle::default(),
             root_app_data_type: std::any::TypeId::of::<Option<u32>>(),
