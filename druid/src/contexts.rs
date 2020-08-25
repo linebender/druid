@@ -25,8 +25,8 @@ use crate::piet::Piet;
 use crate::piet::RenderContext;
 use crate::shell::Region;
 use crate::{
-    commands, Affine, Command, ContextMenu, Cursor, Insets, MenuDesc, Point, Rect, SingleUse, Size,
-    Target, Text, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
+    commands, Affine, Command, ContextMenu, Cursor, ExtEventSink, Insets, MenuDesc, Point, Rect,
+    SingleUse, Size, Target, Text, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -46,6 +46,7 @@ macro_rules! impl_context_method {
 /// Static state that is shared between most contexts.
 pub(crate) struct ContextState<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
+    pub(crate) ext_handle: &'a ExtEventSink,
     pub(crate) window_id: WindowId,
     pub(crate) window: &'a WindowHandle,
     /// The id of the widget that currently has focus.
@@ -340,6 +341,14 @@ impl_context_method!(
             target: impl Into<Option<Target>>,
         ) {
             self.state.submit_command(cmd.into(), target.into())
+        }
+
+        /// Returns an [`ExtEventSink`] that can be moved between threads,
+        /// and can be used to submit commands back to the application.
+        ///
+        /// [`ExtEventSink`]: struct.ExtEventSink.html
+        pub fn get_external_handle(&self) -> ExtEventSink {
+            self.state.ext_handle.clone()
         }
     }
 );
@@ -641,12 +650,14 @@ impl PaintCtx<'_, '_, '_> {
 impl<'a> ContextState<'a> {
     pub(crate) fn new<T: 'static>(
         command_queue: &'a mut CommandQueue,
+        ext_handle: &'a ExtEventSink,
         window: &'a WindowHandle,
         window_id: WindowId,
         focus_widget: Option<WidgetId>,
     ) -> Self {
         ContextState {
             command_queue,
+            ext_handle,
             window,
             window_id,
             focus_widget,

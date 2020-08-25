@@ -30,9 +30,9 @@ use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken, UpdateCtx, Widget,
-    WidgetId, WidgetPod, WindowDesc,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, ExtEventSink, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken,
+    UpdateCtx, Widget, WidgetId, WidgetPod, WindowDesc,
 };
 
 /// A unique identifier for a window.
@@ -53,11 +53,17 @@ pub struct Window<T> {
     pub(crate) focus: Option<WidgetId>,
     pub(crate) handle: WindowHandle,
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
+    ext_handle: ExtEventSink,
     // delegate?
 }
 
 impl<T> Window<T> {
-    pub(crate) fn new(id: WindowId, handle: WindowHandle, desc: WindowDesc<T>) -> Window<T> {
+    pub(crate) fn new(
+        id: WindowId,
+        handle: WindowHandle,
+        desc: WindowDesc<T>,
+        ext_handle: ExtEventSink,
+    ) -> Window<T> {
         Window {
             id,
             root: WidgetPod::new(desc.root),
@@ -71,6 +77,7 @@ impl<T> Window<T> {
             focus: None,
             handle,
             timers: HashMap::new(),
+            ext_handle,
         }
     }
 }
@@ -208,7 +215,8 @@ impl<T: Data> Window<T> {
 
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let is_handled = {
-            let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+            let mut state =
+                ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
             let mut ctx = EventCtx {
                 cursor: &mut cursor,
                 state: &mut state,
@@ -271,7 +279,8 @@ impl<T: Data> Window<T> {
         };
 
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+        let mut state =
+            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
         let mut ctx = LifeCycleCtx {
             state: &mut state,
             widget_state: &mut widget_state,
@@ -290,7 +299,8 @@ impl<T: Data> Window<T> {
         self.update_title(data, env);
 
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+        let mut state =
+            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
             state: &mut state,
@@ -338,7 +348,8 @@ impl<T: Data> Window<T> {
 
     fn layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+        let mut state =
+            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
         let mut layout_ctx = LayoutCtx {
             state: &mut state,
             widget_state: &mut widget_state,
@@ -370,14 +381,9 @@ impl<T: Data> Window<T> {
         data: &T,
         env: &Env,
     ) {
-        // we need to destructure to get around some lifetime issues,
-        // just like in the good old days!
-        let id = self.id;
-        let focus = self.focus;
-        let Window { root, handle, .. } = self;
-
-        let widget_state = WidgetState::new(root.id(), Some(self.size));
-        let mut state = ContextState::new::<T>(queue, handle, id, focus);
+        let widget_state = WidgetState::new(self.root.id(), Some(self.size));
+        let mut state =
+            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
         let mut ctx = PaintCtx {
             render_ctx: piet,
             state: &mut state,
@@ -387,6 +393,7 @@ impl<T: Data> Window<T> {
             depth: 0,
         };
 
+        let root = &mut self.root;
         ctx.with_child_ctx(invalid.clone(), |ctx| root.paint_raw(ctx, data, env));
         let mut z_ops = mem::take(&mut ctx.z_ops);
         z_ops.sort_by_key(|k| k.z_index);
