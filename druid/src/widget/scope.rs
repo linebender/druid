@@ -150,26 +150,24 @@ enum ScopeContent<SP: ScopePolicy> {
 /// # Examples
 /// ```
 /// #[derive(Data, Lens)]
-/// struct AppState{
-///     name: String
+/// struct AppState {
+///     name: String,
 /// }
 ///
 /// #[derive(Data, Lens)]
-/// struct PrivateState{
+/// struct PrivateState {
 ///     text: String,
-///     other: u32
+///     other: u32,
 /// }
 ///
-/// impl PrivateState{
+/// impl PrivateState {
 ///     pub fn new(text: String) -> Self {
-///         PrivateState{ text, other: 0 }
+///         PrivateState { text, other: 0 }
 ///     }
 /// }
 ///
-/// fn main(){
-///     let scope = Scope::from_lens(PrivateState::new,
-///                                  PrivateState::text,
-///                                  MyWidget::new() );
+/// fn main() {
+///     let scope = Scope::from_lens(PrivateState::new, PrivateState::text, MyWidget::new());
 /// }
 /// ```
 pub struct Scope<SP: ScopePolicy, W: Widget<SP::State>> {
