@@ -1,10 +1,12 @@
-// TODO: check how generics from master affects the derivation
+// TODO: test the generics part
 
 use super::field_attr::{FieldIdent, LensAttrs};
 use super::lens::{is_camel_case, to_snake_case};
 use super::variant_attr::{PrismAttrs, StringIdent, Variants};
+use proc_macro2::{Ident, Span};
 use quote::quote;
-use syn::{spanned::Spanned, Data, Error};
+use std::collections::HashSet;
+use syn::{spanned::Spanned, Data, Error, GenericParam, TypeParam};
 
 pub(crate) fn derive_prism_impl(
     input: syn::DeriveInput,
@@ -45,7 +47,7 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
     };
 
     // Define prism types for each variant
-    let defs = variants.iter().map(|v| {
+    let defs = variants.iter().filter(|v| !v.attrs.ignore).map(|v| {
         let variant_name = &v.ident.named();
 
         quote! {
@@ -56,8 +58,34 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
         }
     });
 
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
+    let used_params: HashSet<String> = input
+        .generics
+        .params
+        .iter()
+        .flat_map(|gp: &GenericParam| match gp {
+            GenericParam::Type(TypeParam { ident, .. }) => Some(ident.to_string()),
+            _ => None,
+        })
+        .collect();
+
+    let gen_new_param = |name: &str| {
+        let mut candidate: String = name.into();
+        let mut count = 1usize;
+        while used_params.contains(&candidate) {
+            candidate = format!("{}_{}", name, count);
+            count += 1;
+        }
+        Ident::new(&candidate, Span::call_site())
+    };
+
+    let func_ty_par = gen_new_param("F");
+    let val_ty_par = gen_new_param("V");
+
     let impls: Vec<_> = variants
         .iter()
+        .filter(|v| !v.attrs.ignore)
         .map(|v| {
             let variant_name = &v.ident.named();
             let field = if let Some(field) = v.fields.iter().next() {
@@ -118,23 +146,45 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
             };
 
             let quote = quote! {
-                impl druid::Prism<#ty, #field_ty> for #twizzled_name::#variant_name {
+                impl #impl_generics druid::Prism<
+                    #ty#ty_generics,
+                    #field_ty
+                > for #twizzled_name::#variant_name
+                #where_clause {
 
-                    fn with<V, F: FnOnce(&#field_ty) -> V>(&self, data: &#ty, f: F) -> Option<V> {
+                    fn with<
+                        #val_ty_par,
+                        #func_ty_par: FnOnce(&#field_ty) -> #val_ty_par
+                    > (
+                        &self,
+                        data: &#ty#ty_generics,
+                        f: #func_ty_par
+                    ) -> Option<#val_ty_par> {
                         #with_expr
                     }
 
-                    fn with_mut<V, F: FnOnce(&mut #field_ty) -> V>(
+                    fn with_mut<
+                        #val_ty_par,
+                        #func_ty_par: FnOnce(&mut #field_ty) -> #val_ty_par
+                    > (
                         &self,
-                        data: &mut #ty,
-                        f: F,
-                    ) -> Option<V> {
+                        data: &mut #ty#ty_generics,
+                        f: #func_ty_par,
+                    ) -> Option<#val_ty_par> {
                         #with_expr
                     }
                 }
 
-                impl druid::optics::Replace<#ty, #field_ty> for #twizzled_name::#variant_name {
-                    fn replace<'a>(&self, data: &'a mut #ty, v: #field_ty) -> &'a mut #ty {
+                impl #impl_generics druid::optics::Replace<
+                    #ty#ty_generics,
+                    #field_ty
+                > for #twizzled_name::#variant_name
+                #where_clause {
+                    fn replace<'a>(
+                        &self,
+                        data: &'a mut #ty#ty_generics,
+                        v: #field_ty
+                    ) -> &'a mut #ty#ty_generics {
                         #replace_expr
                         data
                     }
@@ -144,7 +194,7 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
         })
         .collect::<Result<_, _>>()?;
 
-    let associated_items = variants.iter().map(|v| {
+    let associated_items = variants.iter().filter(|v| !v.attrs.ignore).map(|v| {
         let variant_name = &v.ident.named();
         let prism_variant_name = match v.attrs.prism_name_override.as_ref() {
             Some(name) => name.clone(),
@@ -167,8 +217,6 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
         })
     }).collect::<Result<Vec<_>, _>>()?;
     let associated_items = associated_items.iter();
-
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let expanded = quote! {
         pub mod #twizzled_name {

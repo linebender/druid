@@ -136,8 +136,9 @@ fn mix_with_data_prism() {
     enum State {
         // ignoring a variant makes it always
         // the same as any other variant
-        #[data(ignore)]
         Text(String),
+        #[data(ignore)]
+        Ignored(String),
         #[prism(name = "prism_number")]
         Number(#[data(same_fn = "same_sign")] f64),
     }
@@ -183,12 +184,12 @@ fn mix_with_data_prism() {
     let two_text = State::Text("666".into());
     let two_number = State::Number(200.0);
 
-    assert!(state_text.same(&two_text));
-    assert!(state_number.same(&two_number));
-
     // ignored variants are always the same as any other variant
-    assert!(state_text.same(&two_number));
-    assert!(state_number.same(&two_text));
+    let state_ignored = State::Ignored("I'm ignored for Data as well".into());
+    assert!(state_ignored.same(&two_number));
+    assert!(state_ignored.same(&two_text));
+    assert!(state_ignored.same(&state_number));
+    assert!(state_ignored.same(&state_text));
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
