@@ -232,7 +232,7 @@ where
         let lens = &self.lens;
         lens.with(old_data, |old_data| {
             lens.with(data, |data| {
-                if !old_data.same(data) {
+                if ctx.has_requested_update() || !old_data.same(data) {
                     inner.update(ctx, old_data, data, env);
                 }
             })
