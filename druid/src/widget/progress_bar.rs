@@ -52,8 +52,8 @@ impl Widget<f64> for ProgressBar {
     ) -> Size {
         bc.debug_check("ProgressBar");
         bc.constrain(Size::new(
-            env.get(theme::WIDE_WIDGET_WIDTH),
-            env.get(theme::BASIC_WIDGET_HEIGHT),
+            env.get(theme::WIDE_WIDGET_WIDTH) * env.get(theme::SCALE),
+            env.get(theme::BASIC_WIDGET_HEIGHT) * env.get(theme::SCALE),
         ))
     }
 
@@ -66,7 +66,7 @@ impl Widget<f64> for ProgressBar {
             Point::ORIGIN,
             (Size {
                 width: ctx.size().width,
-                height: env.get(theme::BASIC_WIDGET_HEIGHT),
+                height: ctx.size().height,
             })
             .to_vec2(),
         )
@@ -94,7 +94,7 @@ impl Widget<f64> for ProgressBar {
             Point::new(-inset, 0.),
             (Size {
                 width: calculated_bar_width,
-                height: env.get(theme::BASIC_WIDGET_HEIGHT),
+                height: ctx.size().height,
             })
             .to_vec2(),
         )

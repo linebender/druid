@@ -8,6 +8,7 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Highlights
 
 ### Added
+- Scaling support for widgets. ([#1158] by @rhzk)
 - `OPEN_PANEL_CANCELLED` and `SAVE_PANEL_CANCELLED` commands. ([#1061] by @cmyr)
 - Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
@@ -272,6 +273,7 @@ Last release without a changelog :(
 [@sysint64]: https://github.com/sysint64
 [@justinmoon]: https://github.com/justinmoon
 [@rjwittams]: https://github.com/rjwittams
+[@rhzk]: https://github.com/rhzk
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -401,6 +403,7 @@ Last release without a changelog :(
 [#1145]: https://github.com/linebender/druid/pull/1145
 [#1152]: https://github.com/linebender/druid/pull/1152
 [#1151]: https://github.com/linebender/druid/pull/1151
+[#1158]: https://github.com/linebender/druid/pull/1158
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

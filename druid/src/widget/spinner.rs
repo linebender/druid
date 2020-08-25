@@ -100,8 +100,8 @@ impl<T: Data> Widget<T> for Spinner {
             bc.max()
         } else {
             bc.constrain(Size::new(
-                env.get(theme::BASIC_WIDGET_HEIGHT),
-                env.get(theme::BASIC_WIDGET_HEIGHT),
+                env.get(theme::BASIC_WIDGET_HEIGHT) * env.get(theme::SCALE),
+                env.get(theme::BASIC_WIDGET_HEIGHT) * env.get(theme::SCALE),
             ))
         }
     }

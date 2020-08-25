@@ -91,7 +91,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
         let label_size = self.child_label.layout(ctx, &bc, data, env);
         let padding = 5.0;
-        let label_x_offset = env.get(theme::BASIC_WIDGET_HEIGHT) + padding;
+        let label_x_offset = env.get(theme::BASIC_WIDGET_HEIGHT) * env.get(theme::SCALE) + padding;
         let origin = Point::new(label_x_offset, 0.0);
 
         self.child_label.set_layout_rect(
@@ -108,9 +108,10 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let size = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let scale = env.get(theme::SCALE);
+        let size = env.get(theme::BASIC_WIDGET_HEIGHT) * scale;
 
-        let circle = Circle::new((size / 2., size / 2.), 7.);
+        let circle = Circle::new((size / 2., size / 2.), 7. * scale);
 
         // Paint the background
         let background_gradient = LinearGradient::new(
@@ -134,7 +135,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
         // Check if data enum matches our variant
         if *data == self.variant {
-            let inner_circle = Circle::new((size / 2., size / 2.), 2.);
+            let inner_circle = Circle::new((size / 2., size / 2.), 2. * scale);
 
             ctx.fill(inner_circle, &env.get(theme::LABEL_COLOR));
         }

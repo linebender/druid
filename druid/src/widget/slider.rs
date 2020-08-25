@@ -31,7 +31,8 @@ pub struct Slider {
     max: f64,
     knob_pos: Point,
     knob_hovered: bool,
-    x_offset: f64,
+    mouse_origin_x: f64,
+    slider_position: f64,
 }
 
 impl Slider {
@@ -42,7 +43,8 @@ impl Slider {
             max: 1.,
             knob_pos: Default::default(),
             knob_hovered: Default::default(),
-            x_offset: Default::default(),
+            mouse_origin_x: Default::default(),
+            slider_position: Default::default(),
         }
     }
 
@@ -62,13 +64,6 @@ impl Slider {
         knob_circle.winding(mouse_pos) > 0
     }
 
-    fn calculate_value(&self, mouse_x: f64, knob_width: f64, slider_width: f64) -> f64 {
-        let scalar = ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
-            .max(0.0)
-            .min(1.0);
-        self.min + scalar * (self.max - self.min)
-    }
-
     fn normalize(&self, data: f64) -> f64 {
         (data.max(self.min).min(self.max) - self.min) / (self.max - self.min)
     }
@@ -76,30 +71,42 @@ impl Slider {
 
 impl Widget<f64> for Slider {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
-        let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
-        let slider_width = ctx.size().width;
+        let knob_size = ctx.size().height;
+        // Its not perfect behavior but if the widget is scaled to small a tiny bit
+        // of mouse movement would mean a large jump in value, so we restrict it
+        let slider_width = ctx.size().width.max(env.get(theme::WIDE_WIDGET_WIDTH)) - knob_size;
 
         match event {
             Event::MouseDown(mouse) => {
-                ctx.set_active(true);
                 if self.knob_hit_test(knob_size, mouse.pos) {
-                    self.x_offset = self.knob_pos.x - mouse.pos.x
+                    ctx.set_active(true);
+                    // Slider position in precentage.
+                    self.slider_position = (*data - self.min) / (self.max - self.min);
+                    // Position the mouse was clicked
+                    self.mouse_origin_x = mouse.window_pos.x;
                 } else {
-                    self.x_offset = 0.;
-                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
+                    let scalar = ((mouse.pos.x - knob_size / 2.) / (slider_width))
+                        .max(0.0)
+                        .min(1.0);
+                    let value = self.min + scalar * (self.max - self.min);
+                    *data = value;
                 }
                 ctx.request_paint();
             }
-            Event::MouseUp(mouse) => {
+            Event::MouseUp(_mouse) => {
                 if ctx.is_active() {
                     ctx.set_active(false);
-                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                     ctx.request_paint();
                 }
             }
             Event::MouseMove(mouse) => {
                 if ctx.is_active() {
-                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
+                    let mouse_distance = mouse.window_pos.x - self.mouse_origin_x;
+                    let scalar = ((mouse_distance / slider_width) + self.slider_position)
+                        .min(1.0)
+                        .max(0.0);
+                    let value = scalar * (self.max - self.min) + self.min;
+                    *data = value;
                     ctx.request_paint();
                 }
                 if ctx.is_hot() {
@@ -128,18 +135,19 @@ impl Widget<f64> for Slider {
         env: &Env,
     ) -> Size {
         bc.debug_check("Slider");
-        let height = env.get(theme::BASIC_WIDGET_HEIGHT);
-        let width = env.get(theme::WIDE_WIDGET_WIDTH);
+        let height = env.get(theme::BASIC_WIDGET_HEIGHT) * env.get(theme::SCALE);
+        let width = env.get(theme::WIDE_WIDGET_WIDTH) * env.get(theme::SCALE);
         bc.constrain((width, height))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
+        let scale = env.get(theme::SCALE);
         let clamped = self.normalize(*data);
         let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
-        let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
-        let track_thickness = 4.;
+        let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT) * scale;
+        let track_thickness = 4. * scale;
         let border_width = 2.;
-        let knob_stroke_width = 2.;
+        let knob_stroke_width = 2. * scale;
 
         //Paint the background
         let background_width = rect.width() - knob_size;

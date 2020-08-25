@@ -22,7 +22,7 @@ use crate::{Affine, Data, Insets, LinearGradient, Point, Rect, RenderContext, Un
 // the minimum padding added to a button.
 // NOTE: these values are chosen to match the existing look of TextBox; these
 // should be reevaluated at some point.
-const LABEL_INSETS: Insets = Insets::uniform_xy(8., 2.);
+const LABEL_INSETS: Insets = Insets::uniform_xy(8., 3.);
 
 /// A button with a text label.
 pub struct Button<T> {
@@ -122,7 +122,10 @@ impl<T: Data> Widget<T> for Button<T> {
         env: &Env,
     ) -> Size {
         bc.debug_check("Button");
-        let padding = Size::new(LABEL_INSETS.x_value(), LABEL_INSETS.y_value());
+        let padding = Size::new(
+            LABEL_INSETS.x_value() * env.get(theme::SCALE),
+            LABEL_INSETS.y_value() * env.get(theme::SCALE),
+        );
         let label_bc = bc.shrink(padding).loosen();
         self.label_size = self.label.layout(layout_ctx, &label_bc, data, env);
         // HACK: to make sure we look okay at default sizes when beside a textbox,

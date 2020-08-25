@@ -17,6 +17,7 @@
 use std::f64::INFINITY;
 
 use crate::shell::kurbo::Size;
+use crate::theme;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
     UpdateCtx, Widget, WidgetId,
@@ -98,13 +99,13 @@ impl<T> SizedBox<T> {
         self
     }
 
-    fn child_constraints(&self, bc: &BoxConstraints) -> BoxConstraints {
+    fn child_constraints(&self, bc: &BoxConstraints, scale: f64) -> BoxConstraints {
         // if we don't have a width/height, we don't change that axis.
         // if we have a width/height, we clamp it on that axis.
         let (min_width, max_width) = match self.width {
             Some(width) => {
                 let w = width.max(bc.min().width).min(bc.max().width);
-                (w, w)
+                (w * scale, w * scale)
             }
             None => (bc.min().width, bc.max().width),
         };
@@ -112,7 +113,7 @@ impl<T> SizedBox<T> {
         let (min_height, max_height) = match self.height {
             Some(height) => {
                 let h = height.max(bc.min().height).min(bc.max().height);
-                (h, h)
+                (h * scale, h * scale)
             }
             None => (bc.min().height, bc.max().height),
         };
@@ -151,7 +152,7 @@ impl<T: Data> Widget<T> for SizedBox<T> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("SizedBox");
 
-        let child_bc = self.child_constraints(bc);
+        let child_bc = self.child_constraints(bc, env.get(theme::SCALE));
         let size = match self.inner.as_mut() {
             Some(inner) => inner.layout(ctx, &child_bc, data, env),
             None => bc.constrain((self.width.unwrap_or(0.0), self.height.unwrap_or(0.0))),
@@ -188,7 +189,7 @@ mod tests {
     fn expand() {
         let expand = SizedBox::<()>::new(Label::new("hello!")).expand();
         let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
-        let child_bc = expand.child_constraints(&bc);
+        let child_bc = expand.child_constraints(&bc, 1.0);
         assert_eq!(child_bc.min(), Size::new(400., 400.,));
     }
 
@@ -196,7 +197,7 @@ mod tests {
     fn no_width() {
         let expand = SizedBox::<()>::new(Label::new("hello!")).height(200.);
         let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
-        let child_bc = expand.child_constraints(&bc);
+        let child_bc = expand.child_constraints(&bc, 1.0);
         assert_eq!(child_bc.min(), Size::new(0., 200.,));
         assert_eq!(child_bc.max(), Size::new(400., 200.,));
     }

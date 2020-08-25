@@ -128,7 +128,7 @@ impl Widget<f64> for Stepper {
             .to_rounded_rect(4.0);
 
         let height = ctx.size().height;
-        let width = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let width = env.get(theme::BASIC_WIDGET_HEIGHT) * env.get(theme::SCALE);
         let button_size = Size::new(width, height / 2.);
 
         ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), stroke_width);
@@ -190,13 +190,13 @@ impl Widget<f64> for Stepper {
         env: &Env,
     ) -> Size {
         bc.constrain(Size::new(
-            env.get(theme::BASIC_WIDGET_HEIGHT),
-            env.get(theme::BORDERED_WIDGET_HEIGHT),
+            env.get(theme::BASIC_WIDGET_HEIGHT) * env.get(theme::SCALE),
+            env.get(theme::BORDERED_WIDGET_HEIGHT) * env.get(theme::SCALE),
         ))
     }
 
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
-        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let height = env.get(theme::BORDERED_WIDGET_HEIGHT) * env.get(theme::SCALE);
 
         match event {
             Event::MouseDown(mouse) => {

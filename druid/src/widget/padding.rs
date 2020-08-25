@@ -15,6 +15,7 @@
 //! A widget that just adds padding during layout.
 
 use crate::kurbo::{Insets, Point, Rect, Size};
+use crate::theme;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
     UpdateCtx, Widget, WidgetPod,
@@ -88,12 +89,13 @@ impl<T: Data> Widget<T> for Padding<T> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Padding");
 
-        let hpad = self.left + self.right;
-        let vpad = self.top + self.bottom;
+        let scale = env.get(theme::SCALE);
+        let hpad = (self.left + self.right) * scale;
+        let vpad = (self.top + self.bottom) * scale;
 
         let child_bc = bc.shrink((hpad, vpad));
         let size = self.child.layout(ctx, &child_bc, data, env);
-        let origin = Point::new(self.left, self.top);
+        let origin = Point::new(self.left * scale, self.top * scale);
         self.child
             .set_layout_rect(ctx, data, env, Rect::from_origin_size(origin, size));
 

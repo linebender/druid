@@ -190,8 +190,8 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     }
 
     fn calc_vertical_bar_bounds(&self, viewport: Rect, env: &Env) -> Rect {
-        let bar_width = env.get(theme::SCROLLBAR_WIDTH);
-        let bar_pad = env.get(theme::SCROLLBAR_PAD);
+        let bar_width = env.get(theme::SCROLLBAR_WIDTH) * env.get(theme::SCALE);
+        let bar_pad = env.get(theme::SCROLLBAR_PAD) * env.get(theme::SCALE);
 
         let percent_visible = viewport.height() / self.child_size.height;
         let percent_scrolled = self.scroll_offset.y / (self.child_size.height - viewport.height());
@@ -215,8 +215,8 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     }
 
     fn calc_horizontal_bar_bounds(&self, viewport: Rect, env: &Env) -> Rect {
-        let bar_width = env.get(theme::SCROLLBAR_WIDTH);
-        let bar_pad = env.get(theme::SCROLLBAR_PAD);
+        let bar_width = env.get(theme::SCROLLBAR_WIDTH) * env.get(theme::SCALE);
+        let bar_pad = env.get(theme::SCROLLBAR_PAD) * env.get(theme::SCALE);
 
         let percent_visible = viewport.width() / self.child_size.width;
         let percent_scrolled = self.scroll_offset.x / (self.child_size.width - viewport.width());
@@ -254,8 +254,8 @@ impl<T, W: Widget<T>> Scroll<T, W> {
                 .with_alpha(self.scrollbars.opacity),
         );
 
-        let radius = env.get(theme::SCROLLBAR_RADIUS);
-        let edge_width = env.get(theme::SCROLLBAR_EDGE_WIDTH);
+        let radius = env.get(theme::SCROLLBAR_RADIUS) * env.get(theme::SCALE);
+        let edge_width = env.get(theme::SCROLLBAR_EDGE_WIDTH) * env.get(theme::SCALE);
 
         // Vertical bar
         if viewport.height() < self.child_size.height {

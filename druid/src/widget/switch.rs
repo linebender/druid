@@ -51,10 +51,11 @@ impl Switch {
     }
 
     fn paint_labels(&mut self, ctx: &mut PaintCtx, env: &Env, switch_width: f64) {
+        let scale = env.get(theme::SCALE);
         let font_name = env.get(theme::FONT_NAME);
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL) * scale;
         let text_color = env.get(theme::LABEL_COLOR);
-        let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT) * scale;
         let knob_size = switch_height - 2. * SWITCH_PADDING;
 
         let font = ctx
@@ -101,7 +102,8 @@ impl Switch {
 
 impl Widget<bool> for Switch {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut bool, env: &Env) {
-        let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let scale = env.get(theme::SCALE);
+        let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT) * scale;
         let switch_width = switch_height * SWITCH_WIDTH_RATIO;
         let knob_size = switch_height - 2. * SWITCH_PADDING;
         let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
@@ -143,8 +145,9 @@ impl Widget<bool> for Switch {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &bool, env: &Env) {
         if let LifeCycle::AnimFrame(interval) = event {
+            let scale = env.get(theme::SCALE);
             let delta = Duration::from_nanos(*interval).as_secs_f64();
-            let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+            let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT) * scale;
             let switch_width = switch_height * SWITCH_WIDTH_RATIO;
             let knob_size = switch_height - 2. * SWITCH_PADDING;
             let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
@@ -184,12 +187,16 @@ impl Widget<bool> for Switch {
         _data: &bool,
         env: &Env,
     ) -> Size {
-        let width = env.get(theme::BORDERED_WIDGET_HEIGHT) * SWITCH_WIDTH_RATIO;
-        bc.constrain(Size::new(width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
+        let width =
+            env.get(theme::BORDERED_WIDGET_HEIGHT) * env.get(theme::SCALE) * SWITCH_WIDTH_RATIO;
+        bc.constrain(Size::new(
+            width,
+            env.get(theme::BORDERED_WIDGET_HEIGHT) * env.get(theme::SCALE),
+        ))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {
-        let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT) * env.get(theme::SCALE);
         let switch_width = switch_height * SWITCH_WIDTH_RATIO;
         let knob_size = switch_height - 2. * SWITCH_PADDING;
         let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;

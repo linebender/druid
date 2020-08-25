@@ -193,7 +193,7 @@ impl<T: Data> Label<T> {
 
     fn get_layout(&mut self, t: &mut PietText, env: &Env) -> PietTextLayout {
         let font_name = self.font.resolve(env);
-        let font_size = self.size.resolve(env);
+        let font_size = self.size.resolve(env) * env.get(theme::SCALE);
         let color = self.color.resolve(env);
 
         // TODO: caching of both the format and the layout
@@ -266,7 +266,9 @@ impl<T: Data> Widget<T> for Label<T> {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         bc.debug_check("Label");
-
+        if env.get(theme::SCALE) <= 0.0 {
+            return Size::new(0.0, 0.0);
+        }
         let text_layout = self.get_layout(&mut ctx.text(), env);
         let text_size = text_layout.size();
         bc.constrain(Size::new(

@@ -90,7 +90,7 @@ impl TextBox {
         use_placeholder_color: bool,
     ) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let font_size = env.get(theme::TEXT_SIZE_NORMAL) * env.get(theme::SCALE);
         let default_color = if use_placeholder_color {
             env.get(theme::PLACEHOLDER_COLOR)
         } else {
@@ -255,6 +255,10 @@ impl TextBox {
 
 impl Widget<String> for TextBox {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
+        let scale = env.get(theme::SCALE);
+        if scale <= 0.0 {
+            return;
+        }
         // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);
 
@@ -387,8 +391,8 @@ impl Widget<String> for TextBox {
         _data: &String,
         env: &Env,
     ) -> Size {
-        let width = env.get(theme::WIDE_WIDGET_WIDTH);
-        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let width = env.get(theme::WIDE_WIDGET_WIDTH) * env.get(theme::SCALE);
+        let height = env.get(theme::BORDERED_WIDGET_HEIGHT) * env.get(theme::SCALE);
 
         let size = bc.constrain((width, height));
         self.width = size.width;
@@ -396,6 +400,10 @@ impl Widget<String> for TextBox {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &String, env: &Env) {
+        let scale = env.get(theme::SCALE);
+        if scale <= 0.0 {
+            return;
+        }
         // Guard against changes in data following `event`
         let content = if data.is_empty() {
             &self.placeholder
@@ -405,7 +413,7 @@ impl Widget<String> for TextBox {
 
         self.selection = self.selection.constrain_to(content);
 
-        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let height = env.get(theme::BORDERED_WIDGET_HEIGHT) * scale;
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let selection_color = env.get(theme::SELECTION_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);

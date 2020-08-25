@@ -76,7 +76,8 @@ impl Widget<bool> for Checkbox {
 
         let label_size = self.child_label.layout(ctx, &bc, data, env);
         let padding = 8.0;
-        let label_x_offset = env.get(theme::BASIC_WIDGET_HEIGHT) + padding;
+        let label_x_offset =
+            (env.get(theme::BASIC_WIDGET_HEIGHT) + padding) * env.get(theme::SCALE);
         let origin = Point::new(label_x_offset, 0.0);
 
         self.child_label.set_layout_rect(
@@ -93,7 +94,8 @@ impl Widget<bool> for Checkbox {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {
-        let size = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let scale = env.get(theme::SCALE);
+        let size = env.get(theme::BASIC_WIDGET_HEIGHT) * scale;
         let border_width = 1.;
 
         let rect = Size::new(size, size)
@@ -124,9 +126,9 @@ impl Widget<bool> for Checkbox {
         if *data {
             // Paint the checkmark
             let mut path = BezPath::new();
-            path.move_to((4.0, 9.0));
-            path.line_to((8.0, 13.0));
-            path.line_to((14.0, 5.0));
+            path.move_to((4.0 * scale, 9.0 * scale));
+            path.line_to((8.0 * scale, 13.0 * scale));
+            path.line_to((14.0 * scale, 5.0 * scale));
 
             let mut style = StrokeStyle::new();
             style.set_line_cap(LineCap::Round);
