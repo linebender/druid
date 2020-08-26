@@ -205,7 +205,5 @@ fn build_tab_widget(tab_config: &TabConfig) -> impl Widget<AppState> {
         .with_tab("Page 6", Label::new("Basic kind of stuff"))
         .with_tab("Page 7", Label::new("Basic kind of stuff"));
 
-    let col = Split::rows(main_tabs, dyn_tabs).draggable(true);
-
-    col
+    Split::rows(main_tabs, dyn_tabs).draggable(true)
 }

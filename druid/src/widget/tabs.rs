@@ -833,7 +833,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
     }
 
     pub fn make_scope(&self, tabs_from_data: TP) -> WidgetPod<TP::Input, TabsScope<TP>> {
-        let (bar, body) = (
+        let (tabs_bar, tabs_body) = (
             (TabBar::new(self.axis, self.cross, self.rotation), 0.0),
             (
                 TabsBody::new(self.axis)
@@ -846,11 +846,11 @@ impl<TP: TabsPolicy> Tabs<TP> {
         let mut layout: Flex<TabsState<TP>> = Flex::for_axis(self.axis.cross());
 
         if let CrossAxisAlignment::End = self.cross {
-            layout.add_flex_child(body.0, body.1);
-            layout.add_flex_child(bar.0, bar.1);
+            layout.add_flex_child(tabs_body.0, tabs_body.1);
+            layout.add_flex_child(tabs_bar.0, tabs_bar.1);
         } else {
-            layout.add_flex_child(bar.0, bar.1);
-            layout.add_flex_child(body.0, body.1);
+            layout.add_flex_child(tabs_bar.0, tabs_bar.1);
+            layout.add_flex_child(tabs_body.0, tabs_body.1);
         };
 
         WidgetPod::new(Scope::new(
