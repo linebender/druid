@@ -149,6 +149,7 @@ mod data;
 mod env;
 mod event;
 mod ext_event;
+#[macro_use]
 pub mod lens;
 mod localization;
 mod menu;

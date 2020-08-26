@@ -34,6 +34,7 @@ mod painter;
 mod parse;
 mod progress_bar;
 mod radio;
+mod rotated;
 mod scope;
 mod scroll;
 mod sized_box;
@@ -45,6 +46,7 @@ mod stepper;
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 mod svg;
 mod switch;
+mod tabs;
 mod textbox;
 mod view_switcher;
 #[allow(clippy::module_inception)]
@@ -61,7 +63,7 @@ pub use container::Container;
 pub use controller::{Controller, ControllerHost};
 pub use either::Either;
 pub use env_scope::EnvScope;
-pub use flex::{CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
+pub use flex::{Axis, CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
 pub use identity_wrapper::IdentityWrapper;
 pub use label::{Label, LabelText};
 pub use list::{List, ListIter};
@@ -70,6 +72,7 @@ pub use painter::{BackgroundBrush, Painter};
 pub use parse::Parse;
 pub use progress_bar::ProgressBar;
 pub use radio::{Radio, RadioGroup};
+pub use rotated::Rotated;
 pub use scope::{DefaultScopePolicy, LensScopeTransfer, Scope, ScopePolicy, ScopeTransfer};
 pub use scroll::Scroll;
 pub use sized_box::SizedBox;
@@ -80,6 +83,7 @@ pub use stepper::Stepper;
 #[cfg(feature = "svg")]
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
+pub use tabs::{TabInfo, TabOrientation, Tabs, TabsPolicy, TabsState};
 pub use textbox::TextBox;
 pub use view_switcher::ViewSwitcher;
 #[doc(hidden)]

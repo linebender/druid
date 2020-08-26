@@ -19,6 +19,8 @@ You can find its changes [documented below](#060---2020-06-01).
 - `request_update` in `EventCtx`. ([#1128] by [@raphlinus])
 - `ExtEventSink`s can now be obtained from widget methods. ([#1152] by [@jneem])
 - 'Scope' widget to allow encapsulation of reactive state. ([#1151] by [@rjwittams])
+- 'Rotated' widget to allow widgets to be rotated by an integral number of quarter turns ([#1159] by [@rjwittams])
+- 'Tabs' widget allowing static and dynamic tabbed layouts. ([#1159] by [@rjwittams])
 
 ### Changed
 
@@ -403,6 +405,7 @@ Last release without a changelog :(
 [#1151]: https://github.com/linebender/druid/pull/1151
 [#1152]: https://github.com/linebender/druid/pull/1152
 [#1157]: https://github.com/linebender/druid/pull/1157
+[#1158]: https://github.com/linebender/druid/pull/1158
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

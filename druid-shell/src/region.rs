@@ -1,4 +1,4 @@
-use kurbo::{BezPath, Rect, Shape, Vec2};
+use kurbo::{Affine, BezPath, Rect, Shape, Vec2};
 
 /// A union of rectangles, useful for describing an area that needs to be repainted.
 #[derive(Clone, Debug)]
@@ -80,6 +80,12 @@ impl Region {
             *r = r.intersect(rect);
         }
         self.rects.retain(|r| r.area() > 0.0)
+    }
+
+    pub fn transform_by(&mut self, transform: Affine) {
+        for rect in &mut self.rects {
+            *rect = transform.transform_rect_bbox(*rect)
+        }
     }
 }
 

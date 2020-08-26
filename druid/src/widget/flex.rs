@@ -195,8 +195,8 @@ pub struct FlexParams {
     alignment: Option<CrossAxisAlignment>,
 }
 
-#[derive(Clone, Copy)]
-pub(crate) enum Axis {
+#[derive(Data, Debug, Clone, Copy, PartialEq)]
+pub enum Axis {
     Horizontal,
     Vertical,
 }
@@ -279,11 +279,40 @@ impl<T> ChildWidget<T> {
 }
 
 impl Axis {
+    pub fn cross(self) -> Axis {
+        match self {
+            Axis::Horizontal => Axis::Vertical,
+            Axis::Vertical => Axis::Horizontal,
+        }
+    }
+
     pub(crate) fn major(self, coords: Size) -> f64 {
         match self {
             Axis::Horizontal => coords.width,
             Axis::Vertical => coords.height,
         }
+    }
+
+    pub fn major_span(self, rect: &Rect) -> (f64, f64) {
+        match self {
+            Axis::Horizontal => (rect.x0, rect.x1),
+            Axis::Vertical => (rect.y0, rect.y1),
+        }
+    }
+
+    pub fn minor_span(self, rect: &Rect) -> (f64, f64) {
+        self.cross().major_span(rect)
+    }
+
+    pub fn major_pos(self, pos: Point) -> f64 {
+        match self {
+            Axis::Horizontal => pos.x,
+            Axis::Vertical => pos.y,
+        }
+    }
+
+    pub fn minor_pos(self, pos: Point) -> f64 {
+        self.cross().major_pos(pos)
     }
 
     pub(crate) fn minor(self, coords: Size) -> f64 {
@@ -316,12 +345,9 @@ impl Axis {
 }
 
 impl<T: Data> Flex<T> {
-    /// Create a new horizontal stack.
-    ///
-    /// The child widgets are laid out horizontally, from left to right.
-    pub fn row() -> Self {
+    pub fn for_axis(axis: Axis) -> Self {
         Flex {
-            direction: Axis::Horizontal,
+            direction: axis,
             children: Vec::new(),
             cross_alignment: CrossAxisAlignment::Center,
             main_alignment: MainAxisAlignment::Start,
@@ -329,17 +355,19 @@ impl<T: Data> Flex<T> {
         }
     }
 
+    /// Create a new horizontal stack.
+    ///
+    /// The child widgets are laid out horizontally, from left to right.
+    ///
+    pub fn row() -> Self {
+        Self::for_axis(Axis::Horizontal)
+    }
+
     /// Create a new vertical stack.
     ///
     /// The child widgets are laid out vertically, from top to bottom.
     pub fn column() -> Self {
-        Flex {
-            direction: Axis::Vertical,
-            children: Vec::new(),
-            cross_alignment: CrossAxisAlignment::Center,
-            main_alignment: MainAxisAlignment::Start,
-            fill_major_axis: false,
-        }
+        Self::for_axis(Axis::Vertical)
     }
 
     /// Builder-style method for specifying the childrens' [`CrossAxisAlignment`].
