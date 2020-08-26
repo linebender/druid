@@ -116,6 +116,12 @@ impl<T> StaticTabs<T> {
     }
 }
 
+impl<T> Default for StaticTabs<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: Data> Data for StaticTabs<T> {
     fn same(&self, _other: &Self) -> bool {
         // Changing the tabs after construction shouldn't be possible for static tabs
@@ -478,11 +484,7 @@ impl<TP: TabsPolicy> TabsBody<TP> {
             &mut self.children,
             &data.policy,
             &data.inner,
-            |policy, key| {
-                policy
-                    .tab_body(key.clone(), &data.inner)
-                    .map(WidgetPod::new)
-            },
+            |policy, key| policy.tab_body(key, &data.inner).map(WidgetPod::new),
         )
     }
 
@@ -650,10 +652,8 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
                     child.paint_raw(ctx, &data.inner, env);
                 })
             }
-        } else {
-            if let Some(ref mut child) = Self::child(&mut self.children, data.selected) {
-                child.paint_raw(ctx, &data.inner, env);
-            }
+        } else if let Some(ref mut child) = Self::child(&mut self.children, data.selected) {
+            child.paint_raw(ctx, &data.inner, env);
         }
     }
 }
@@ -753,6 +753,12 @@ pub struct Tabs<TP: TabsPolicy> {
 impl<T: Data> Tabs<StaticTabs<T>> {
     pub fn new() -> Self {
         Tabs::building(Vec::new())
+    }
+}
+
+impl<T: Data> Default for Tabs<StaticTabs<T>> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
