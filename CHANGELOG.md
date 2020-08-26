@@ -18,6 +18,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - The Lens derive now supports an `ignore` attribute. ([#1133] by [@jneem])
 - `request_update` in `EventCtx`. ([#1128] by [@raphlinus])
 - `ExtEventSink`s can now be obtained from widget methods. ([#1152] by [@jneem])
+- 'Scope' widget to allow encapsulation of reactive state. ([#1151] by [@rjwittams])
 
 ### Changed
 
@@ -399,6 +400,7 @@ Last release without a changelog :(
 [#1133]: https://github.com/linebender/druid/pull/1133
 [#1143]: https://github.com/linebender/druid/pull/1143
 [#1145]: https://github.com/linebender/druid/pull/1145
+[#1151]: https://github.com/linebender/druid/pull/1151
 [#1152]: https://github.com/linebender/druid/pull/1152
 [#1157]: https://github.com/linebender/druid/pull/1157
 

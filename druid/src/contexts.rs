@@ -510,6 +510,12 @@ impl EventCtx<'_, '_> {
     }
 }
 
+impl UpdateCtx<'_, '_> {
+    pub fn has_requested_update(&mut self) -> bool {
+        self.widget_state.request_update
+    }
+}
+
 impl LifeCycleCtx<'_, '_> {
     /// Registers a child widget.
     ///
