@@ -54,6 +54,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Allow submit_command from the layout method in Widgets ([#1119] by [@rjwittams])
 - Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
 - Switch widget: Toggle animation being window refresh rate dependent ([#1145] by [@ForLoveOfCats])
+- Multi-click on Windows, partial fix for #859 ([#1157] by [@raphlinus])
 
 ### Visual
 
@@ -399,8 +400,9 @@ Last release without a changelog :(
 [#1133]: https://github.com/linebender/druid/pull/1133
 [#1143]: https://github.com/linebender/druid/pull/1143
 [#1145]: https://github.com/linebender/druid/pull/1145
-[#1152]: https://github.com/linebender/druid/pull/1152
 [#1151]: https://github.com/linebender/druid/pull/1151
+[#1152]: https://github.com/linebender/druid/pull/1152
+[#1157]: https://github.com/linebender/druid/pull/1157
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
