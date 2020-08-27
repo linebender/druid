@@ -106,8 +106,11 @@ fn propogate_hot() {
         assert!(harness.get_state(empty).is_hot);
         assert!(!harness.get_state(pad).is_hot);
 
-        assert_matches!(root_rec.next(), Record::L(LifeCycle::HotChanged(true)));
-        assert_matches!(root_rec.next(), Record::E(Event::MouseMove(_)));
+        assert!(matches!(
+            root_rec.next(),
+            Record::L(LifeCycle::HotChanged(true))
+        ));
+        assert!(matches!(root_rec.next(), Record::E(Event::MouseMove(_))));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
         harness.event(Event::MouseMove(move_mouse(210., 10.)));
@@ -117,9 +120,12 @@ fn propogate_hot() {
         assert!(!harness.get_state(button).is_hot);
         assert!(harness.get_state(pad).is_hot);
 
-        assert_matches!(root_rec.next(), Record::E(Event::MouseMove(_)));
-        assert_matches!(padding_rec.next(), Record::L(LifeCycle::HotChanged(true)));
-        assert_matches!(padding_rec.next(), Record::E(Event::MouseMove(_)));
+        assert!(matches!(root_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(
+            padding_rec.next(),
+            Record::L(LifeCycle::HotChanged(true))
+        ));
+        assert!(matches!(padding_rec.next(), Record::E(Event::MouseMove(_))));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
         harness.event(Event::MouseMove(move_mouse(260., 60.)));
@@ -128,10 +134,13 @@ fn propogate_hot() {
         assert!(harness.get_state(button).is_hot);
         assert!(harness.get_state(pad).is_hot);
 
-        assert_matches!(root_rec.next(), Record::E(Event::MouseMove(_)));
-        assert_matches!(padding_rec.next(), Record::E(Event::MouseMove(_)));
-        assert_matches!(button_rec.next(), Record::L(LifeCycle::HotChanged(true)));
-        assert_matches!(button_rec.next(), Record::E(Event::MouseMove(_)));
+        assert!(matches!(root_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(padding_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(
+            button_rec.next(),
+            Record::L(LifeCycle::HotChanged(true))
+        ));
+        assert!(matches!(button_rec.next(), Record::E(Event::MouseMove(_))));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
         harness.event(Event::MouseMove(move_mouse(10., 10.)));
@@ -140,11 +149,17 @@ fn propogate_hot() {
         assert!(!harness.get_state(button).is_hot);
         assert!(!harness.get_state(pad).is_hot);
 
-        assert_matches!(root_rec.next(), Record::E(Event::MouseMove(_)));
-        assert_matches!(padding_rec.next(), Record::L(LifeCycle::HotChanged(false)));
-        assert_matches!(padding_rec.next(), Record::E(Event::MouseMove(_)));
-        assert_matches!(button_rec.next(), Record::L(LifeCycle::HotChanged(false)));
-        assert_matches!(button_rec.next(), Record::E(Event::MouseMove(_)));
+        assert!(matches!(root_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(
+            padding_rec.next(),
+            Record::L(LifeCycle::HotChanged(false))
+        ));
+        assert!(matches!(padding_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(
+            button_rec.next(),
+            Record::L(LifeCycle::HotChanged(false))
+        ));
+        assert!(matches!(button_rec.next(), Record::E(Event::MouseMove(_))));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
     });
 }
@@ -325,9 +340,9 @@ fn simple_lifecyle() {
     let widget = SizedBox::empty().record(&record);
     Harness::create_simple(true, widget, |harness| {
         harness.send_initial_events();
-        assert_matches!(record.next(), Record::L(LifeCycle::WidgetAdded));
-        assert_matches!(record.next(), Record::E(Event::WindowConnected));
-        assert_matches!(record.next(), Record::E(Event::WindowSize(_)));
+        assert!(matches!(record.next(), Record::L(LifeCycle::WidgetAdded)));
+        assert!(matches!(record.next(), Record::E(Event::WindowConnected)));
+        assert!(matches!(record.next(), Record::E(Event::WindowSize(_))));
         assert!(record.is_empty());
     })
 }
@@ -349,17 +364,20 @@ fn adding_child_lifecycle() {
     Harness::create_simple(String::new(), widget, |harness| {
         harness.send_initial_events();
 
-        assert_matches!(record.next(), Record::L(LifeCycle::WidgetAdded));
-        assert_matches!(record.next(), Record::E(Event::WindowConnected));
+        assert!(matches!(record.next(), Record::L(LifeCycle::WidgetAdded)));
+        assert!(matches!(record.next(), Record::E(Event::WindowConnected)));
         assert!(record.is_empty());
 
         assert!(record_new_child.is_empty());
 
         harness.submit_command(REPLACE_CHILD, None);
 
-        assert_matches!(record.next(), Record::E(Event::Command(_)));
+        assert!(matches!(record.next(), Record::E(Event::Command(_))));
 
-        assert_matches!(record_new_child.next(), Record::L(LifeCycle::WidgetAdded));
+        assert!(matches!(
+            record_new_child.next(),
+            Record::L(LifeCycle::WidgetAdded)
+        ));
         assert!(record_new_child.is_empty());
     })
 }

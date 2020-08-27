@@ -22,17 +22,6 @@ use std::rc::Rc;
 
 use crate::*;
 
-// taken from the matches crate; useful for the Recorder widget.
-#[macro_export]
-macro_rules! assert_matches {
-     ($expression:expr, $($pattern:tt)+) => {
-         match $expression {
-             $($pattern)+ => (),
-             ref e => panic!("assertion failed: `{:?}` does not match `{}`", e, stringify!($($pattern)+)),
-         }
-     }
- }
-
 pub type EventFn<S, T> = dyn FnMut(&mut S, &mut EventCtx, &Event, &mut T, &Env);
 pub type LifeCycleFn<S, T> = dyn FnMut(&mut S, &mut LifeCycleCtx, &LifeCycle, &T, &Env);
 pub type UpdateFn<S, T> = dyn FnMut(&mut S, &mut UpdateCtx, &T, &T, &Env);
