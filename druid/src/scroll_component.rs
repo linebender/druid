@@ -465,7 +465,7 @@ impl ScrollComponent {
 
             let mut visible = ctx.region().clone();
             visible += self.scroll_offset;
-            f(visible.into(), ctx);
+            f(visible, ctx);
 
             self.draw_bars(ctx, viewport, env);
         });
