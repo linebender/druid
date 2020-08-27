@@ -299,10 +299,6 @@ impl<T: Data> Window<T> {
 
     /// Get ready for painting, by doing layout and sending an `AnimFrame` event.
     pub(crate) fn prepare_paint(&mut self, queue: &mut CommandQueue, data: &mut T, env: &Env) {
-        if self.root.state().needs_layout {
-            self.layout(queue, data, env);
-        }
-
         let now = Instant::now();
         // TODO: this calculation uses wall-clock time of the paint call, which
         // potentially has jitter.
@@ -314,6 +310,11 @@ impl<T: Data> Window<T> {
         if self.wants_animation_frame() {
             self.event(queue, Event::AnimFrame(elapsed_ns), data, env);
         }
+
+        if self.root.state().needs_layout {
+            self.layout(queue, data, env);
+        }
+
         if self.wants_animation_frame() {
             self.last_anim = Some(now);
         }

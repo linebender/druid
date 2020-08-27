@@ -297,7 +297,6 @@ impl<T: Data> Inner<T> {
             win.prepare_paint(&mut self.command_queue, &mut self.data, &self.env);
         }
         self.do_update();
-        self.invalidate_and_finalize();
     }
 
     fn paint(&mut self, window_id: WindowId, piet: &mut Piet, invalid: &Region) {
