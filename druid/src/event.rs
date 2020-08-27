@@ -113,6 +113,11 @@ pub enum Event {
     /// On the first frame when transitioning from idle to animating, `interval`
     /// will be 0. (This logic is presently per-window but might change to
     /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
+    ///
+    /// The `paint` method will be called shortly after this event is finished.
+    /// As a result, you should try to avoid doing anything computationally
+    /// intensive in response to an `AnimFrame` event: it might make Druid miss
+    /// the monitor's refresh, causing lag or jerky animation.
     AnimFrame(u64),
     /// Called with an arbitrary [`Command`], submitted from elsewhere in
     /// the application.
