@@ -213,7 +213,7 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<Vec<T>>) {
 impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.scroll_component.event(ctx, event, env);
-        if !ctx.is_handled {
+        if !ctx.is_handled() {
             let viewport = Rect::from_origin_size(Point::ORIGIN, ctx.size());
             let scroll_offset = self.scroll_component.scroll_offset;
             let mut children = self.children.iter_mut();

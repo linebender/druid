@@ -51,7 +51,8 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// Create a new scroll container.
     ///
     /// This method will allow scrolling in all directions if child's bounds
-    /// are larger than the viewport.
+    /// are larger than the viewport. Use [vertical](#method.vertical) and
+    /// [horizontal](#method.horizontal) methods to limit scrolling to a specific axis.
     pub fn new(child: W) -> Scroll<T, W> {
         Scroll {
             child: WidgetPod::new(child),
@@ -60,13 +61,13 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         }
     }
 
-    /// Restrict scrolling to the vertical axis while locking child width
+    /// Restrict scrolling to the vertical axis while locking child width.
     pub fn vertical(mut self) -> Self {
         self.direction = ScrollDirection::Vertical;
         self
     }
 
-    /// Restrict scrolling to the horizontal axis while locking child height
+    /// Restrict scrolling to the horizontal axis while locking child height.
     pub fn horizontal(mut self) -> Self {
         self.direction = ScrollDirection::Horizontal;
         self
@@ -96,7 +97,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.scroll_component.event(ctx, event, env);
-        if !ctx.is_handled {
+        if !ctx.is_handled() {
             let viewport = Rect::from_origin_size(Point::ORIGIN, ctx.size());
 
             let force_event = self.child.is_hot() || self.child.is_active();

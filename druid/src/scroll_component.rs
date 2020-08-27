@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A component for embedding in another widget to provide consistant and
+//! A component for embedding in another widget to provide consistent and
 //! extendable scrolling behavior
 
 use std::time::Duration;
@@ -87,20 +87,22 @@ impl ScrollbarsState {
 /// control over its scrolling state or doesn't make sense to exist alone
 /// without scrolling behavior.
 ///
-/// `ScrollComponent` contains the unified and consistant scroll logic
+/// `ScrollComponent` contains the unified and consistent scroll logic
 /// used by both [`Scroll`] and [`List`]. This can be used to add this
 /// logic to a custom widget when the need arises.
 ///
-/// To use, instance in your widget's new fn and place in a field, keep
-/// the [`content_size`] field updated as scrollable content size changes,
-/// call [`event`] and [`lifecycle`] with all event and lifecycle events,
-/// call [`handle_scroll`] with all events after all other event handling
-/// code and finally perform painting from within a closure provided to
-/// [`paint_content`].
+/// It should be used like this:
+/// - Store an instance of `ScrollComponent` in your widget's struct.
+/// - During layout, set the [`content_size`] field to the child's size.
+/// - Call [`event`] and [`lifecycle`] with all event and lifecycle events before propagating them to children.
+/// - Call [`handle_scroll`] with all events after handling / propagating them.
+/// - And finally perform painting using the provided [`paint_content`] function.
+///
+/// Also, taking a look at the [`Scroll`] source code can be helpful.
 ///
 /// [`Scroll`]: ../widget/struct.Scroll.html
 /// [`List`]: ../widget/struct.List.html
-/// [`content_size`]: struct.ScrollComponent.html#field.content_size
+/// [`content_size`]: struct.ScrollComponent.html#structfield.content_size
 /// [`event`]: struct.ScrollComponent.html#method.event
 /// [`handle_scroll`]: struct.ScrollComponent.html#method.handle_scroll
 /// [`lifecycle`]: struct.ScrollComponent.html#method.lifecycle
@@ -123,21 +125,24 @@ impl Default for ScrollComponent {
 impl ScrollComponent {
     pub fn new() -> ScrollComponent {
         ScrollComponent {
-            content_size: Default::default(),
+            content_size: Size::default(),
             scroll_offset: Vec2::new(0.0, 0.0),
             scrollbars: ScrollbarsState::default(),
         }
     }
 
-    /// Update the scroll.
+    /// Scroll `delta` units.
     ///
-    /// Returns `true` if the scroll has been updated.
-    pub fn scroll(&mut self, delta: Vec2, size: Size) -> bool {
+    /// Returns `true` if the scroll offset has changed.
+    pub fn scroll(&mut self, delta: Vec2, layout_size: Size) -> bool {
         let mut offset = self.scroll_offset + delta;
-        offset.x = offset.x.min(self.content_size.width - size.width).max(0.0);
+        offset.x = offset
+            .x
+            .min(self.content_size.width - layout_size.width)
+            .max(0.0);
         offset.y = offset
             .y
-            .min(self.content_size.height - size.height)
+            .min(self.content_size.height - layout_size.height)
             .max(0.0);
         if (offset - self.scroll_offset).hypot2() > 1e-12 {
             self.scroll_offset = offset;
@@ -152,7 +157,6 @@ impl ScrollComponent {
     where
         F: FnOnce(Duration) -> TimerToken,
     {
-        // Display scroll bars and schedule their disappearance
         self.scrollbars.opacity = env.get(theme::SCROLLBAR_MAX_OPACITY);
         let fade_delay = env.get(theme::SCROLLBAR_FADE_DELAY);
         let deadline = Duration::from_millis(fade_delay);
@@ -408,7 +412,7 @@ impl ScrollComponent {
         }
     }
 
-    /// Perform any nessesary action prompted by a lifecycle event
+    /// Perform any necessary action prompted by a lifecycle event
     ///
     /// Make sure to call on every lifecycle event
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, env: &Env) {

@@ -14,7 +14,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
 - `TextBox` now supports ctrl and shift hotkeys. ([#1076] by [@vkahl])
 - Added selection text color to textbox. ([#1093] by [@sysint64])
-- `scroll_component` for ease of adding consistant, customized, scrolling behavior to a widget. ([#1107] by [@ForLoveOfCats])
+- `ScrollComponent` for ease of adding consistent, customized, scrolling behavior to a widget. ([#1107] by [@ForLoveOfCats])
 
 ### Changed
 
