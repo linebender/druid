@@ -224,11 +224,13 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    /// Builder-style method to set whether this window can be resized.
     pub fn resizable(mut self, resizable: bool) -> Self {
         self.resizable = resizable;
         self
     }
 
+    /// Builder-style method to set whether this window's titlebar is visible.
     pub fn show_titlebar(mut self, show_titlebar: bool) -> Self {
         self.show_titlebar = show_titlebar;
         self

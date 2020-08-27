@@ -251,6 +251,7 @@ impl<T: Data, W: Widget<T> + 'static> WidgetExt<T> for W {}
 // will choose an impl on a type over an impl in a trait for methods with the same
 // name.
 
+#[doc(hidden)]
 impl<T: Data> SizedBox<T> {
     pub fn fix_width(self, width: f64) -> SizedBox<T> {
         self.width(width)

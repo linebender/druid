@@ -24,6 +24,7 @@ use crate::{HotKey, KbKey, KeyEvent, Modifiers, SysMods};
 
 /// An enum that represents actions in a text buffer.
 #[derive(Debug, PartialEq, Clone)]
+#[allow(missing_docs)]
 pub enum EditAction {
     Move(Movement),
     ModifySelection(Movement),
@@ -40,12 +41,14 @@ pub enum EditAction {
 
 /// Extra information related to mouse actions
 #[derive(PartialEq, Debug, Clone)]
+#[allow(missing_docs)]
 pub struct MouseAction {
     pub row: usize,
     pub column: usize,
     pub mods: Modifiers,
 }
 
+/// A trait for types that map keyboard events to possible edit actions.
 pub trait TextInput {
     /// Handle a key event and return an edit action to be executed
     /// for the key event
@@ -58,6 +61,7 @@ pub trait TextInput {
 pub struct BasicTextInput {}
 
 impl BasicTextInput {
+    /// Create a new `BasicTextInput`.
     pub fn new() -> Self {
         Self {}
     }
