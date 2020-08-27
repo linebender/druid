@@ -14,7 +14,7 @@
 
 use std::any::Any;
 
-use std::time::{Instant};
+use std::time::Instant;
 
 use druid_shell::kurbo::{Point, Rect, Size};
 use druid_shell::piet::{Color, Piet, RenderContext};
