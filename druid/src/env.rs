@@ -97,6 +97,7 @@ pub struct Key<T> {
 // Also consider Box<Any> (though this would also impact debug).
 /// A dynamic type representing all values that can be stored in an environment.
 #[derive(Clone)]
+#[allow(missing_docs)]
 // ANCHOR: value_type
 pub enum Value {
     Point(Point),
@@ -119,7 +120,14 @@ pub enum Value {
 /// [`Env`]: struct.Env.html
 #[derive(Clone)]
 pub enum KeyOrValue<T> {
+    /// A concrete [`Value`] of type `T`.
+    ///
+    /// [`Value`]: enum.Value.html
     Concrete(Value),
+    /// A [`Key<T>`] that can be resolved to a value in the [`Env`].
+    ///
+    /// [`Key<T>`]: struct.Key.html
+    /// [`Env`]: struct.Env.html
     Key(Key<T>),
 }
 
@@ -531,6 +539,10 @@ impl_value_type_owned!(Size, Size);
 impl_value_type_borrowed!(str, String, String);
 
 impl<'a, T: ValueType<'a>> KeyOrValue<T> {
+    /// Resolve the concrete type `T` from this `KeyOrValue`, using the provided
+    /// [`Env`] if required.
+    ///
+    /// [`Env`]: struct.Env.html
     pub fn resolve(&'a self, env: &'a Env) -> T {
         match self {
             KeyOrValue::Concrete(value) => value.to_inner_unchecked(),

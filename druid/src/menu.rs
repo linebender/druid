@@ -389,6 +389,7 @@ impl<T: Data> MenuDesc<T> {
 }
 
 impl<T> ContextMenu<T> {
+    /// Create a new `ContextMenu`.
     pub fn new(menu: MenuDesc<T>, location: Point) -> Self {
         ContextMenu { menu, location }
     }

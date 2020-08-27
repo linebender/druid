@@ -88,6 +88,7 @@ pub struct Painter<T>(Box<dyn FnMut(&mut PaintCtx, &T, &Env)>);
 /// [`Data`]: ../trait.Data.html
 /// [`Env`]: ../struct.Env.html
 #[non_exhaustive]
+#[allow(missing_docs)]
 pub enum BackgroundBrush<T> {
     Color(Color),
     ColorKey(Key<Color>),

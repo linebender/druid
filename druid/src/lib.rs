@@ -120,7 +120,7 @@
 //! [`usvg` crate]: https://crates.io/crates/usvg
 //! [`image` crate]: https://crates.io/crates/image
 
-#![deny(intra_doc_link_resolution_failure, unsafe_code)]
+#![deny(intra_doc_link_resolution_failure, missing_docs, unsafe_code)]
 #![allow(clippy::new_ret_no_self, clippy::needless_doctest_main)]
 #![deny(clippy::trivially_copy_pass_by_ref)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -209,4 +209,5 @@ pub(crate) use event::{StateCell, StateCheckFn};
 pub type KeyCode = KbKey;
 
 #[deprecated(since = "0.7.0", note = "Use Modifiers instead")]
+/// See [`Modifiers`](struct.Modifiers.html).
 pub type KeyModifiers = Modifiers;

@@ -14,6 +14,7 @@
 
 //! Theme keys and initial values.
 
+#![allow(missing_docs)]
 use crate::piet::Color;
 
 use crate::{Env, Key};

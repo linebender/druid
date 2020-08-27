@@ -251,6 +251,7 @@ impl_context_method!(
 // methods on event, update, and lifecycle
 impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, {
     #[deprecated(since = "0.5.0", note = "use request_paint instead")]
+    #[allow(missing_docs)]
     pub fn invalidate(&mut self) {
         self.request_paint();
     }
@@ -511,6 +512,11 @@ impl EventCtx<'_, '_> {
 }
 
 impl UpdateCtx<'_, '_> {
+    /// Returns `true` if this widget or a descendent as explicitly requested
+    /// an update call. This should only be needed in advanced cases;
+    /// See [`EventCtx::request_update`] for more information.
+    ///
+    /// [`EventCtx::request_update`]: struct.EventCtx.html#method.request_update
     pub fn has_requested_update(&mut self) -> bool {
         self.widget_state.request_update
     }
