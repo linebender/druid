@@ -38,6 +38,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Replaced uses of `Option<Target>` with the new `Target::Auto`. ([#1185] by [@finnerale])
 - Moved `Target` parameter from `submit_command` to `Command::new` and `Command::to`. ([#1185] by [@finnerale])
 - `Movement::RightOfLine` to `Movement::NextLineBreak`, and `Movement::LeftOfLine` to `Movement::PrecedingLineBreak`. ([#1092] by [@sysint64])
+- `AnimFrame` was moved from `lifecycle` to `event` ([#1155] by [@jneem])
 
 ### Deprecated
 
@@ -414,6 +415,7 @@ Last release without a changelog :(
 [#1145]: https://github.com/linebender/druid/pull/1145
 [#1151]: https://github.com/linebender/druid/pull/1151
 [#1152]: https://github.com/linebender/druid/pull/1152
+[#1155]: https://github.com/linebender/druid/pull/1155
 [#1157]: https://github.com/linebender/druid/pull/1157
 [#1171]: https://github.com/linebender/druid/pull/1171
 [#1172]: https://github.com/linebender/druid/pull/1172
