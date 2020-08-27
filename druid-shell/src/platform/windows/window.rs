@@ -1290,7 +1290,12 @@ impl WindowHandle {
 
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(w) = self.state.upgrade() {
-            w.invalid.borrow_mut().add_rect(rect);
+            let scale = w.scale.get();
+            // We need to invalidate an integer number of pixels, but we also want to keep
+            // the invalid region in display points, since that's what we need to pass
+            // to WinHandler::paint.
+            w.invalid.borrow_mut().add_rect(rect.to_px(scale).expand().to_dp(scale));
+
         }
         self.request_anim_frame();
     }

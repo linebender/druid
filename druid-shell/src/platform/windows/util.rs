@@ -130,12 +130,12 @@ pub(crate) fn recti_to_rect(rect: RECT) -> Rect {
 }
 
 /// Converts a `Region` into a vec of winapi `RECT`, with a scaling applied.
-/// If necessary, the rectangles are expanded to the nearest pixel border.
+/// If necessary, the rectangles are rounded to the nearest pixel border.
 pub(crate) fn region_to_rectis(region: &Region, scale: Scale) -> Vec<RECT> {
     region
         .rects()
         .iter()
-        .map(|r| rect_to_recti(r.to_px(scale).expand()))
+        .map(|r| rect_to_recti(r.to_px(scale).round()))
         .collect()
 }
 
