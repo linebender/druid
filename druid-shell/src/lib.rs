@@ -46,6 +46,7 @@ mod keyboard;
 mod menu;
 mod mouse;
 mod platform;
+mod region;
 mod scale;
 mod window;
 
@@ -58,6 +59,7 @@ pub use hotkey::{HotKey, RawMods, SysMods};
 pub use keyboard::{Code, IntoKey, KbKey, KeyEvent, KeyState, Location, Modifiers};
 pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+pub use region::Region;
 pub use scale::{Scalable, Scale, ScaledArea};
 pub use window::{
     IdleHandle, IdleToken, Text, TimerToken, WinHandler, WindowBuilder, WindowHandle,

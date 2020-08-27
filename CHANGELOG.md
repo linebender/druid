@@ -9,12 +9,18 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Added
 - `OPEN_PANEL_CANCELLED` and `SAVE_PANEL_CANCELLED` commands. ([#1061] by @cmyr)
-
 - Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
 - `TextBox` now supports ctrl and shift hotkeys. ([#1076] by [@vkahl])
 - Added selection text color to textbox. ([#1093] by [@sysint64])
 - `ScrollComponent` for ease of adding consistent, customized, scrolling behavior to a widget. ([#1107] by [@ForLoveOfCats])
+- Selection text color to textbox. ([#1093] by [@sysint64])
+- `BoxConstraints::UNBOUNDED` constant. ([#1126] by [@danieldulaney])
+- Close requests from the shell can now be intercepted ([#1118] by [@jneem])
+- The Lens derive now supports an `ignore` attribute. ([#1133] by [@jneem])
+- `request_update` in `EventCtx`. ([#1128] by [@raphlinus])
+- `ExtEventSink`s can now be obtained from widget methods. ([#1152] by [@jneem])
+- 'Scope' widget to allow encapsulation of reactive state. ([#1151] by [@rjwittams])
 
 ### Changed
 
@@ -22,6 +28,8 @@ You can find its changes [documented below](#060---2020-06-01).
 - Major rework of keyboard event handling. ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
 - `List` handles its own scrolling on either the vertical or horizontal axis. ([#1107] by [@ForLoveOfCats])
+- `request_anim_frame` no longer invalidates the entire window. ([#1057] by [@jneem])
+- Use new Piet text api ([#1143] by [@cmyr])
 
 ### Deprecated
 
@@ -47,7 +55,9 @@ You can find its changes [documented below](#060---2020-06-01).
 - `ViewSwitcher` now skips the update after switching widgets. ([#1113] by [@finnerale])
 - Key and KeyOrValue derive Clone ([#1119] by [@rjwittams])
 - Allow submit_command from the layout method in Widgets ([#1119] by [@rjwittams])
--  Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
+- Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
+- Switch widget: Toggle animation being window refresh rate dependent ([#1145] by [@ForLoveOfCats])
+- Multi-click on Windows, partial fix for #859 ([#1157] by [@raphlinus])
 
 ### Visual
 
@@ -372,6 +382,7 @@ Last release without a changelog :(
 [#1049]: https://github.com/linebender/druid/pull/1049
 [#1050]: https://github.com/linebender/druid/pull/1050
 [#1054]: https://github.com/linebender/druid/pull/1054
+[#1057]: https://github.com/linebender/druid/pull/1057
 [#1058]: https://github.com/linebender/druid/pull/1058
 [#1061]: https://github.com/linebender/druid/pull/1061
 [#1062]: https://github.com/linebender/druid/pull/1062
@@ -385,8 +396,17 @@ Last release without a changelog :(
 [#1100]: https://github.com/linebender/druid/pull/1100
 [#1103]: https://github.com/linebender/druid/pull/1103
 [#1107]: https://github.com/linebender/druid/pull/1107
+[#1118]: https://github.com/linebender/druid/pull/1118
 [#1119]: https://github.com/linebender/druid/pull/1119
 [#1120]: https://github.com/linebender/druid/pull/1120
+[#1126]: https://github.com/linebender/druid/pull/1120
+[#1128]: https://github.com/linebender/druid/pull/1128
+[#1133]: https://github.com/linebender/druid/pull/1133
+[#1143]: https://github.com/linebender/druid/pull/1143
+[#1145]: https://github.com/linebender/druid/pull/1145
+[#1151]: https://github.com/linebender/druid/pull/1151
+[#1152]: https://github.com/linebender/druid/pull/1152
+[#1157]: https://github.com/linebender/druid/pull/1157
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

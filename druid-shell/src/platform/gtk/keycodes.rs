@@ -14,12 +14,12 @@
 
 //! GTK code handling.
 
-use gdk::enums::key::*;
+use gdk::keys::constants::*;
 
 pub use super::super::shared::hardware_keycode_to_code;
 use crate::keyboard_types::{Key, Location};
 
-pub type RawKey = gdk::enums::key::Key;
+pub type RawKey = gdk::keys::Key;
 
 #[allow(clippy::just_underscores_and_digits, non_upper_case_globals)]
 pub fn raw_key_to_key(raw: RawKey) -> Option<Key> {
@@ -111,7 +111,7 @@ pub fn raw_key_to_location(raw: RawKey) -> Location {
 }
 
 #[allow(non_upper_case_globals)]
-pub fn key_to_raw_key(src: &Key) -> Option<u32> {
+pub fn key_to_raw_key(src: &Key) -> Option<RawKey> {
     Some(match src {
         Key::Escape => Escape,
         Key::Backspace => BackSpace,

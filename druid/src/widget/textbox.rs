@@ -21,9 +21,10 @@ use crate::{
     LifeCycleCtx, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,
 };
 
-use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
+use crate::kurbo::{Affine, Line, Point, Size, Vec2};
 use crate::piet::{
-    FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
+    FontFamily, PietText, PietTextLayout, RenderContext, Text, TextAttribute, TextLayout,
+    TextLayoutBuilder,
 };
 use crate::theme;
 
@@ -81,17 +82,35 @@ impl TextBox {
     }
 
     /// Calculate the PietTextLayout from the given text, font, and font size
-    fn get_layout(&self, piet_text: &mut PietText, text: &str, env: &Env) -> PietTextLayout {
+    fn get_layout(
+        &self,
+        piet_text: &mut PietText,
+        text: &str,
+        env: &Env,
+        use_placeholder_color: bool,
+    ) -> PietTextLayout {
         let font_name = env.get(theme::FONT_NAME);
         let font_size = env.get(theme::TEXT_SIZE_NORMAL);
+        let default_color = if use_placeholder_color {
+            env.get(theme::PLACEHOLDER_COLOR)
+        } else {
+            env.get(theme::LABEL_COLOR)
+        };
+        let selection_text_color = env.get(theme::SELECTION_TEXT_COLOR);
+
         // TODO: caching of both the format and the layout
         let font = piet_text
-            .new_font_by_name(font_name, font_size)
-            .build()
-            .unwrap();
+            .font_family(font_name)
+            .unwrap_or(FontFamily::SYSTEM_UI);
 
         piet_text
-            .new_text_layout(&font, &text.to_string(), std::f64::INFINITY)
+            .new_text_layout(&text.to_string())
+            .font(font, font_size)
+            .default_attribute(TextAttribute::ForegroundColor(default_color))
+            .range_attribute(
+                self.selection.range(),
+                TextAttribute::ForegroundColor(selection_text_color),
+            )
             .build()
             .unwrap()
     }
@@ -192,24 +211,19 @@ impl TextBox {
         // We need to account for hscroll_offset state and TextBox's padding.
         let translated_point = Point::new(point.x + self.hscroll_offset - PADDING_LEFT, point.y);
         let hit_test = layout.hit_test_point(translated_point);
-        hit_test.metrics.text_position
+        hit_test.idx
     }
 
     /// Given an offset (in bytes) of a valid grapheme cluster, return
     /// the corresponding x coordinate of that grapheme on the screen.
     fn x_for_offset(&self, layout: &PietTextLayout, offset: usize) -> f64 {
-        if let Some(position) = layout.hit_test_text_position(offset) {
-            position.point.x
-        } else {
-            //TODO: what is the correct fallback here?
-            0.0
-        }
+        layout.hit_test_text_position(offset).point.x
     }
 
     /// Calculate a stateful scroll offset
     fn update_hscroll(&mut self, layout: &PietTextLayout) {
         let cursor_x = self.x_for_offset(layout, self.cursor());
-        let overall_text_width = layout.width();
+        let overall_text_width = layout.size().width;
 
         let padding = PADDING_LEFT * 2.;
         if overall_text_width < self.width {
@@ -244,7 +258,7 @@ impl Widget<String> for TextBox {
         // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);
 
-        let mut text_layout = self.get_layout(&mut ctx.text(), &data, env);
+        let mut text_layout = self.get_layout(&mut ctx.text(), &data, env, data.is_empty());
         let mut edit_action = None;
 
         match event {
@@ -347,7 +361,7 @@ impl Widget<String> for TextBox {
             self.reset_cursor_blink(ctx);
 
             if !is_select_all {
-                text_layout = self.get_layout(&mut ctx.text(), &data, env);
+                text_layout = self.get_layout(&mut ctx.text(), &data, env, data.is_empty());
                 self.update_hscroll(&text_layout);
             }
         }
@@ -391,13 +405,9 @@ impl Widget<String> for TextBox {
 
         self.selection = self.selection.constrain_to(content);
 
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let selection_color = env.get(theme::SELECTION_COLOR);
-        let selection_text_color = env.get(theme::SELECTION_TEXT_COLOR);
-        let text_color = env.get(theme::LABEL_COLOR);
-        let placeholder_color = env.get(theme::PLACEHOLDER_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
 
         let is_focused = ctx.is_focused();
@@ -421,49 +431,34 @@ impl Widget<String> for TextBox {
             rc.clip(clip_rect);
 
             // Calculate layout
-            let text_layout = self.get_layout(&mut rc.text(), &content, env);
+            let text_layout = self.get_layout(&mut rc.text(), &content, env, data.is_empty());
+            let text_size = text_layout.size();
 
             // Shift everything inside the clip by the hscroll_offset
             rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
 
             // Layout, measure, and draw text
-            let text_height = font_size * 0.8;
-            let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
-            let color = if data.is_empty() {
-                &placeholder_color
-            } else {
-                &text_color
-            };
-
-            rc.draw_text(&text_layout, text_pos, color);
+            let top_padding = (height - text_size.height).min(PADDING_TOP).max(0.);
+            let text_pos = Point::new(PADDING_LEFT, top_padding);
 
             // Draw selection rect
             if !self.selection.is_caret() {
-                let (left, right) = (self.selection.min(), self.selection.max());
-                let left_offset = self.x_for_offset(&text_layout, left);
-                let right_offset = self.x_for_offset(&text_layout, right);
-
-                let selection_width = right_offset - left_offset;
-
-                let selection_pos = Point::new(left_offset + PADDING_LEFT - 1., PADDING_TOP - 2.);
-
-                let selection_rect = RoundedRect::from_origin_size(
-                    selection_pos,
-                    Size::new(selection_width + 2., font_size + 4.).to_vec2(),
-                    1.,
-                );
-                rc.fill(selection_rect, &selection_color);
-
-                // Draw selection text
-                rc.clip(selection_rect);
-                rc.draw_text(&text_layout, text_pos, &selection_text_color);
+                for sel in text_layout.rects_for_range(self.selection.range()) {
+                    let sel = sel + Vec2::new(PADDING_LEFT, top_padding);
+                    let rounded = sel.to_rounded_rect(1.0);
+                    rc.fill(rounded, &selection_color);
+                }
             }
 
+            rc.draw_text(&text_layout, text_pos);
+
             // Paint the cursor if focused and there's no selection
-            if is_focused && self.cursor_on && self.selection.is_caret() {
-                let cursor_x = self.x_for_offset(&text_layout, self.cursor());
-                let xy = text_pos + Vec2::new(cursor_x, 2. - font_size);
-                let x2y2 = xy + Vec2::new(0., font_size + 2.);
+            if is_focused && self.cursor_on {
+                let pos = text_layout.hit_test_text_position(self.cursor());
+                let metrics = text_layout.line_metric(pos.line).unwrap();
+                //let cursor_x = self.x_for_offset(&text_layout, self.cursor());
+                let xy = text_pos + Vec2::new(pos.point.x, 0.0);
+                let x2y2 = xy + Vec2::new(0., metrics.height);
                 let line = Line::new(xy, x2y2);
 
                 rc.stroke(line, &cursor_color, 1.);

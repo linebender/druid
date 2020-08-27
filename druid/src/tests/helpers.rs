@@ -91,7 +91,7 @@ pub enum Record {
     /// A `LifeCycle` event.
     L(LifeCycle),
     Layout(Size),
-    Update(Rect),
+    Update(Region),
     Paint,
     // instead of always returning an Option<Record>, we have a none variant;
     // this would be code smell elsewhere but here I think it makes the tests
@@ -299,7 +299,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.inner.update(ctx, old_data, data, env);
         self.recording
-            .push(Record::Update(ctx.widget_state.invalid.to_rect()));
+            .push(Record::Update(ctx.widget_state.invalid.clone()));
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
