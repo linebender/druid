@@ -427,6 +427,18 @@ impl ScrollComponent {
                     if self.scrollbars.opacity > 0.0 {
                         ctx.request_anim_frame();
                     }
+
+                    let viewport = ctx.size().to_rect();
+                    if viewport.width() < self.content_size.width {
+                        ctx.request_paint_rect(
+                            self.calc_horizontal_bar_bounds(viewport, env) - self.scroll_offset,
+                        );
+                    }
+                    if viewport.height() < self.content_size.height {
+                        ctx.request_paint_rect(
+                            self.calc_vertical_bar_bounds(viewport, env) - self.scroll_offset,
+                        );
+                    }
                 }
             }
 
@@ -451,7 +463,8 @@ impl ScrollComponent {
             ctx.clip(viewport);
             ctx.transform(Affine::translate(-self.scroll_offset));
 
-            let visible = ctx.region().to_rect() + self.scroll_offset;
+            let mut visible = ctx.region().clone();
+            visible += self.scroll_offset;
             f(visible.into(), ctx);
 
             self.draw_bars(ctx, viewport, env);
