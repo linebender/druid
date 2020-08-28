@@ -5,24 +5,35 @@ use crate::{
 };
 use std::marker::PhantomData;
 
-/// A policy that controls how a Scope will interact with its surrounding application data.
-/// Specifically, how to create an initial State from the Input, and how to synchronise the two using a ScopeTransfer.
+/// A policy that controls how a [`Scope`] will interact with its surrounding
+/// application data. Specifically, how to create an initial State from the
+/// input, and how to synchronise the two using a [`ScopeTransfer`].
+///
+/// [`Scope`]: struct.Scope.html
+/// [`ScopeTransfer`]: trait.ScopeTransfer.html
 pub trait ScopePolicy {
     /// The type of data that comes in from the surrounding application or scope.
     type In: Data;
-    /// The type of data that the Scope will maintain internally.
+    /// The type of data that the `Scope` will maintain internally.
     /// This will usually be larger than the input data, and will embed the input data.
     type State: Data;
     /// The type of transfer that will be used to synchronise internal and application state
     type Transfer: ScopeTransfer<In = Self::In, State = Self::State>;
     /// Make a new state and transfer from the input.
-    /// This consumes the policy, so non cloneable items can make their way into the state this way.
+    ///
+    /// This consumes the policy, so non-cloneable items can make their way
+    /// into the state this way.
     fn create(self, inner: &Self::In) -> (Self::State, Self::Transfer);
 }
 
-/// A ScopeTransfer knows how to synchronise input data with its counterpart within a Scope
-/// It is separate from the policy mainly to allow easy use of Lenses to do synchronisation,
-/// with a custom ScopePolicy
+/// A `ScopeTransfer` knows how to synchronise input data with its counterpart
+/// within a [`Scope`].
+///
+/// It is separate from the policy mainly to allow easy use of lenses to do
+/// synchronisation, with a custom [`ScopePolicy`].
+///
+/// [`Scope`]: struct.Scope.html
+/// [`ScopePolicy`]: trait.ScopePolicy.html
 pub trait ScopeTransfer {
     /// The type of data that comes in from the surrounding application or scope.
     type In: Data;
@@ -36,7 +47,9 @@ pub trait ScopeTransfer {
     fn write_back_input(&self, state: &Self::State, inner: &mut Self::In);
 }
 
-/// A default implementation of scope policy that takes a function and a transfer
+/// A default implementation of [`ScopePolicy`] that takes a function and a transfer.
+///
+/// [`ScopePolicy`]: trait.ScopePolicy.html
 pub struct DefaultScopePolicy<F: FnOnce(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer> {
     make_state: F,
     transfer: Transfer,
@@ -45,7 +58,7 @@ pub struct DefaultScopePolicy<F: FnOnce(Transfer::In) -> Transfer::State, Transf
 impl<F: FnOnce(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer>
     DefaultScopePolicy<F, Transfer>
 {
-    /// Create a ScopePolicy from a factory function and a ScopeTransfer
+    /// Create a `ScopePolicy` from a factory function and a `ScopeTransfer`.
     pub fn new(make_state: F, transfer: Transfer) -> Self {
         DefaultScopePolicy {
             make_state,
@@ -57,7 +70,8 @@ impl<F: FnOnce(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer>
 impl<F: FnOnce(In) -> State, L: Lens<State, In>, In: Data, State: Data>
     DefaultScopePolicy<F, LensScopeTransfer<L, In, State>>
 {
-    /// Create a ScopePolicy from a factory function and a lens onto that Scope's state.
+    /// Create a `ScopePolicy` from a factory function and a lens onto that
+    /// `Scope`'s state.
     pub fn from_lens(make_state: F, lens: L) -> Self {
         Self::new(make_state, LensScopeTransfer::new(lens))
     }
@@ -76,7 +90,8 @@ impl<F: Fn(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer> ScopePolic
     }
 }
 
-/// A scope transfer that uses a Lens to synchronise between a large internal state and a small input.
+/// A `ScopeTransfer` that uses a Lens to synchronise between a large internal
+/// state and a small input.
 pub struct LensScopeTransfer<L: Lens<State, In>, In, State> {
     lens: L,
     phantom_in: PhantomData<In>,
@@ -84,7 +99,7 @@ pub struct LensScopeTransfer<L: Lens<State, In>, In, State> {
 }
 
 impl<L: Lens<State, In>, In, State> LensScopeTransfer<L, In, State> {
-    /// Create a ScopeTransfer from a Lens onto a portion of the Scope's state.
+    /// Create a `ScopeTransfer` from a Lens onto a portion of the `Scope`'s state.
     pub fn new(lens: L) -> Self {
         LensScopeTransfer {
             lens,
