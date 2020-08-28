@@ -1,9 +1,7 @@
 use druid::im::Vector;
-use druid::widget::{
-    Axis, Button, CrossAxisAlignment, Flex, Label, MainAxisAlignment, Padding, RadioGroup,
-    SizedBox, Split, TabInfo, TabOrientation, Tabs, TabsPolicy, ViewSwitcher,
-};
+use druid::widget::{Axis, Button, CrossAxisAlignment, Flex, Label, MainAxisAlignment, Padding, RadioGroup, SizedBox, Split, TabInfo, TabsOrientation, Tabs, TabsPolicy, ViewSwitcher, TabsTransition, TextBox};
 use druid::{theme, AppLauncher, Color, Data, Env, Lens, LensExt, Widget, WidgetExt, WindowDesc};
+use instant::Duration;
 
 #[derive(Data, Clone)]
 struct Basic {}
@@ -47,7 +45,8 @@ impl Advanced {
 struct TabConfig {
     axis: Axis,
     cross: CrossAxisAlignment,
-    rotation: TabOrientation,
+    rotation: TabsOrientation,
+    transition: TabsTransition,
 }
 
 #[derive(Data, Clone, Lens)]
@@ -55,6 +54,7 @@ struct AppState {
     tab_config: TabConfig,
     basic: Basic,
     advanced: Advanced,
+    text: String
 }
 
 pub fn main() {
@@ -68,10 +68,12 @@ pub fn main() {
         tab_config: TabConfig {
             axis: Axis::Horizontal,
             cross: CrossAxisAlignment::Start,
-            rotation: TabOrientation::Standard,
+            rotation: TabsOrientation::Standard,
+            transition: Default::default(),
         },
         basic: Basic {},
         advanced: Advanced::new(2),
+        text: "Interesting placeholder".into()
     };
 
     // start the application
@@ -115,13 +117,22 @@ fn build_root_widget() -> impl Widget<AppState> {
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .with_child(decor(Label::new("Tab rotation")))
         .with_child(RadioGroup::new(vec![
-            ("Standard", TabOrientation::Standard),
-            ("None", TabOrientation::Turns(0)),
-            ("Up", TabOrientation::Turns(3)),
-            ("Down", TabOrientation::Turns(1)),
-            ("Aussie", TabOrientation::Turns(2)),
+            ("Standard", TabsOrientation::Standard),
+            ("None", TabsOrientation::Turns(0)),
+            ("Up", TabsOrientation::Turns(3)),
+            ("Down", TabsOrientation::Turns(1)),
+            ("Aussie", TabsOrientation::Turns(2)),
         ]))
         .lens(AppState::tab_config.then(TabConfig::rotation));
+
+    let transit_picker = Flex::column()
+        .cross_axis_alignment( CrossAxisAlignment::Start)
+        .with_child( decor(Label::new("Transition")))
+        .with_child(  RadioGroup::new( vec![
+            ("Instant", TabsTransition::Instant),
+            ("Slide", TabsTransition::Slide( Duration::from_millis(250).as_nanos() as u64))
+        ]))
+        .lens(AppState::tab_config.then(TabConfig::transition)) ;
 
     let sidebar = Flex::column()
         .main_axis_alignment(MainAxisAlignment::Start)
@@ -129,6 +140,7 @@ fn build_root_widget() -> impl Widget<AppState> {
         .with_child(group(axis_picker))
         .with_child(group(cross_picker))
         .with_child(group(rot_picker))
+        .with_child( group(transit_picker) )
         .with_flex_spacer(1.)
         .fix_width(200.0);
 
@@ -181,6 +193,7 @@ fn build_tab_widget(tab_config: &TabConfig) -> impl Widget<AppState> {
         .with_axis(tab_config.axis)
         .with_cross_axis_alignment(tab_config.cross)
         .with_rotation(tab_config.rotation)
+        .with_transition(tab_config.transition)
         .lens(AppState::advanced);
 
     let adv = Flex::column()
@@ -197,13 +210,14 @@ fn build_tab_widget(tab_config: &TabConfig) -> impl Widget<AppState> {
         .with_axis(tab_config.axis)
         .with_cross_axis_alignment(tab_config.cross)
         .with_rotation(tab_config.rotation)
+        .with_transition(tab_config.transition)
         .with_tab("Basic", Label::new("Basic kind of stuff"))
         .with_tab("Advanced", adv)
         .with_tab("Page 3", Label::new("Basic kind of stuff"))
         .with_tab("Page 4", Label::new("Basic kind of stuff"))
         .with_tab("Page 5", Label::new("Basic kind of stuff"))
         .with_tab("Page 6", Label::new("Basic kind of stuff"))
-        .with_tab("Page 7", Label::new("Basic kind of stuff"));
+        .with_tab("Page 7", TextBox::new().lens(AppState::text) );
 
     Split::rows(main_tabs, dyn_tabs).draggable(true)
 }

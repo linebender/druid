@@ -29,13 +29,13 @@ use crate::{
     theme, Affine, BoxConstraints, Data, Env, Event, EventCtx, Insets, LayoutCtx, Lens, LifeCycle,
     LifeCycleCtx, PaintCtx, Point, Rect, SingleUse, Size, UpdateCtx, Widget, WidgetExt, WidgetPod,
 };
+use instant::Duration;
 
 type TabsScope<TP> = Scope<TabsScopePolicy<TP>, Box<dyn Widget<TabsState<TP>>>>;
 type TabBodyPod<TP> = WidgetPod<<TP as TabsPolicy>::Input, <TP as TabsPolicy>::BodyWidget>;
 type TabBarPod<TP> = WidgetPod<TabsState<TP>, Box<dyn Widget<TabsState<TP>>>>;
 type TabIndex = usize;
-
-const MILLIS: u64 = 1_000_000; // Number of nanos
+type Nanos = u64; // TODO: Make Duration Data?
 
 pub struct TabInfo {
     pub name: String,
@@ -198,14 +198,14 @@ impl<TP: TabsPolicy> TabsState<TP> {
 pub struct TabBar<TP: TabsPolicy> {
     axis: Axis,
     cross: CrossAxisAlignment,
-    orientation: TabOrientation,
+    orientation: TabsOrientation,
     tabs: Vec<(TP::Key, TabBarPod<TP>)>,
     hot: Option<TabIndex>,
     phantom_tp: PhantomData<TP>,
 }
 
 impl<TP: TabsPolicy> TabBar<TP> {
-    pub fn new(axis: Axis, cross: CrossAxisAlignment, orientation: TabOrientation) -> Self {
+    pub fn new(axis: Axis, cross: CrossAxisAlignment, orientation: TabsOrientation) -> Self {
         TabBar {
             axis,
             cross,
@@ -397,29 +397,29 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
     }
 }
 
-pub struct TabsTransition {
+pub struct TabsTransitionState {
     previous_idx: TabIndex,
     current_time: u64,
-    length: u64,
+    duration: Nanos,
     increasing: bool,
 }
 
-impl TabsTransition {
-    pub fn new(previous_idx: TabIndex, length: u64, increasing: bool) -> Self {
-        TabsTransition {
+impl TabsTransitionState {
+    pub fn new(previous_idx: TabIndex, duration: Nanos, increasing: bool) -> Self {
+        TabsTransitionState {
             previous_idx,
             current_time: 0,
-            length,
+            duration,
             increasing,
         }
     }
 
     pub fn live(&self) -> bool {
-        self.current_time < self.length
+        self.current_time < self.duration
     }
 
     pub fn fraction(&self) -> f64 {
-        (self.current_time as f64) / (self.length as f64)
+        (self.current_time as f64) / (self.duration as f64)
     }
 
     pub fn previous_transform(&self, axis: Axis, main: f64) -> Affine {
@@ -464,17 +464,19 @@ fn ensure_for_tabs<Content, TP: TabsPolicy + ?Sized>(
 
 pub struct TabsBody<TP: TabsPolicy> {
     children: Vec<(TP::Key, Option<TabBodyPod<TP>>)>,
-    transition: Option<TabsTransition>,
     axis: Axis,
+    transition: TabsTransition,
+    transition_state: Option<TabsTransitionState>,
     phantom_tp: PhantomData<TP>,
 }
 
 impl<TP: TabsPolicy> TabsBody<TP> {
-    pub fn new(axis: Axis) -> TabsBody<TP> {
+    pub fn new(axis: Axis, transition: TabsTransition) -> TabsBody<TP> {
         TabsBody {
             children: vec![],
-            transition: None,
             axis,
+            transition,
+            transition_state: None,
             phantom_tp: Default::default(),
         }
     }
@@ -566,13 +568,14 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
             child.lifecycle(ctx, event, &data.inner, env);
         }
 
-        if let (Some(trans), LifeCycle::AnimFrame(interval)) = (&mut self.transition, event) {
-            trans.current_time += *interval;
-            if trans.live() {
+        if let (Some(t_state), LifeCycle::AnimFrame(interval)) = (&mut self.transition_state, event) {
+            t_state.current_time += *interval;
+            if t_state.live() {
                 ctx.request_anim_frame();
             } else {
-                self.transition = None;
+                self.transition_state = None;
             }
+            ctx.request_paint();
         }
     }
 
@@ -592,13 +595,12 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         };
 
         if old_data.selected != data.selected {
-            self.transition = Some(TabsTransition::new(
-                old_data.selected,
-                250 * MILLIS,
-                old_data.selected < data.selected,
-            ));
+            self.transition_state = self.transition.tab_changed(old_data.selected, data.selected);
             ctx.request_layout();
-            ctx.request_anim_frame();
+
+            if self.transition_state.is_some() {
+                ctx.request_anim_frame();
+            }
         }
 
         // Make sure to only pass events to initialised children
@@ -633,7 +635,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &TabsState<TP>, env: &Env) {
-        if let Some(trans) = &self.transition {
+        if let Some(trans) = &self.transition_state {
             let axis = self.axis;
             let size = ctx.size();
             let major = axis.major(size);
@@ -687,12 +689,37 @@ impl<TP: TabsPolicy> ScopePolicy for TabsScopePolicy<TP> {
 }
 
 #[derive(Data, Copy, Clone, Debug, PartialOrd, PartialEq)]
-pub enum TabOrientation {
+pub enum TabsOrientation {
     Standard,
     Turns(u8), // These represent 90 degree rotations clockwise.
 }
 
-impl TabOrientation {
+#[derive(Data, Copy, Clone, Debug, PartialOrd, PartialEq)]
+pub enum TabsTransition {
+    Instant,
+    Slide(Nanos)
+}
+
+impl Default for TabsTransition{
+    fn default() -> Self {
+        TabsTransition::Slide(Duration::from_millis(250).as_nanos() as Nanos)
+    }
+}
+
+impl TabsTransition{
+    fn tab_changed(&self, old: TabIndex, new: TabIndex)->Option<TabsTransitionState>{
+        match self{
+            TabsTransition::Instant=>None,
+            TabsTransition::Slide(dur)=>Some(TabsTransitionState::new(
+                old,
+                *dur,
+                old < new,
+            ))
+        }
+    }
+}
+
+impl TabsOrientation {
     pub fn rotate_and_box<W: Widget<T> + 'static, T: Data>(
         self,
         widget: W,
@@ -746,7 +773,8 @@ enum TabsContent<TP: TabsPolicy> {
 pub struct Tabs<TP: TabsPolicy> {
     axis: Axis,
     cross: CrossAxisAlignment, // Not sure if this should have another enum. Middle means nothing here
-    rotation: TabOrientation,
+    rotation: TabsOrientation,
+    transition: TabsTransition,
     content: TabsContent<TP>,
 }
 
@@ -767,7 +795,8 @@ impl<TP: TabsPolicy> Tabs<TP> {
         Tabs {
             axis: Axis::Horizontal,
             cross: CrossAxisAlignment::Start,
-            rotation: TabOrientation::Standard,
+            rotation: TabsOrientation::Standard,
+            transition: Default::default(),
             content,
         }
     }
@@ -790,13 +819,18 @@ impl<TP: TabsPolicy> Tabs<TP> {
         self
     }
 
-    pub fn with_rotation(mut self, rotation: TabOrientation) -> Self {
+    pub fn with_rotation(mut self, rotation: TabsOrientation) -> Self {
         self.rotation = rotation;
         self
     }
 
     pub fn with_cross_axis_alignment(mut self, cross: CrossAxisAlignment) -> Self {
         self.cross = cross;
+        self
+    }
+
+    pub fn with_transition(mut self, transition: TabsTransition) -> Self {
+        self.transition = transition;
         self
     }
 
@@ -828,6 +862,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
             axis: self.axis,
             cross: self.cross,
             rotation: self.rotation,
+            transition: self.transition,
             content: TabsContent::Complete { tabs },
         }
     }
@@ -836,7 +871,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
         let (tabs_bar, tabs_body) = (
             (TabBar::new(self.axis, self.cross, self.rotation), 0.0),
             (
-                TabsBody::new(self.axis)
+                TabsBody::new(self.axis, self.transition)
                     .padding(5.)
                     .border(theme::BORDER_DARK, 0.5)
                     .expand(),
