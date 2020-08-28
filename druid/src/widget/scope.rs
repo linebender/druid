@@ -6,7 +6,7 @@ use crate::{
 use std::marker::PhantomData;
 
 /// A policy that controls how a Scope will interact with its surrounding application data.
-/// Specifically, how to create an initial State from the Input, and how to synchronise the two.
+/// Specifically, how to create an initial State from the Input, and how to synchronise the two using a ScopeTransfer.
 pub trait ScopePolicy {
     /// The type of data that comes in from the surrounding application or scope.
     type In: Data;
@@ -20,8 +20,13 @@ pub trait ScopePolicy {
     fn create(self, inner: &Self::In) -> (Self::State, Self::Transfer);
 }
 
+/// A ScopeTransfer knows how to synchronise input data with its counterpart within a Scope
+/// It is separate from the policy mainly to allow easy use of Lenses to do synchronisation,
+/// with a custom ScopePolicy
 pub trait ScopeTransfer {
+    /// The type of data that comes in from the surrounding application or scope.
     type In: Data;
+    /// The type of data that the Scope will maintain internally.
     type State: Data;
 
     /// Replace the input we have within our State with a new one from outside
@@ -40,6 +45,7 @@ pub struct DefaultScopePolicy<F: FnOnce(Transfer::In) -> Transfer::State, Transf
 impl<F: FnOnce(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer>
     DefaultScopePolicy<F, Transfer>
 {
+    /// Create a ScopePolicy from a factory function and a ScopeTransfer
     pub fn new(make_state: F, transfer: Transfer) -> Self {
         DefaultScopePolicy {
             make_state,
@@ -51,6 +57,7 @@ impl<F: FnOnce(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer>
 impl<F: FnOnce(In) -> State, L: Lens<State, In>, In: Data, State: Data>
     DefaultScopePolicy<F, LensScopeTransfer<L, In, State>>
 {
+    /// Create a ScopePolicy from a factory function and a lens onto that Scope's state.
     pub fn from_lens(make_state: F, lens: L) -> Self {
         Self::new(make_state, LensScopeTransfer::new(lens))
     }
@@ -77,6 +84,7 @@ pub struct LensScopeTransfer<L: Lens<State, In>, In, State> {
 }
 
 impl<L: Lens<State, In>, In, State> LensScopeTransfer<L, In, State> {
+    /// Create a ScopeTransfer from a Lens onto a portion of the Scope's state.
     pub fn new(lens: L) -> Self {
         LensScopeTransfer {
             lens,
@@ -121,7 +129,7 @@ enum ScopeContent<SP: ScopePolicy> {
 ///
 /// This is useful in circumstances where
 /// * A (potentially reusable) widget is composed of a tree of multiple cooperating child widgets
-/// * Those widgets communicate amongst themselves using Druids reactive data mechanisms
+/// * Those widgets communicate amongst themselves using Druid's reactive data mechanisms
 /// * It is undesirable to complicate the surrounding application state with the internal details
 ///   of the widget.
 ///
