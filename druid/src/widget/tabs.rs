@@ -568,7 +568,8 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
             child.lifecycle(ctx, event, &data.inner, env);
         }
 
-        if let (Some(t_state), LifeCycle::AnimFrame(interval)) = (&mut self.transition_state, event) {
+        if let (Some(t_state), LifeCycle::AnimFrame(interval)) = (&mut self.transition_state, event)
+        {
             t_state.current_time += *interval;
             if t_state.live() {
                 ctx.request_anim_frame();
@@ -595,7 +596,9 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         };
 
         if old_data.selected != data.selected {
-            self.transition_state = self.transition.tab_changed(old_data.selected, data.selected);
+            self.transition_state = self
+                .transition
+                .tab_changed(old_data.selected, data.selected);
             ctx.request_layout();
 
             if self.transition_state.is_some() {
@@ -695,24 +698,20 @@ pub enum TabsOrientation {
 #[derive(Data, Copy, Clone, Debug, PartialOrd, PartialEq)]
 pub enum TabsTransition {
     Instant,
-    Slide(Nanos)
+    Slide(Nanos),
 }
 
-impl Default for TabsTransition{
+impl Default for TabsTransition {
     fn default() -> Self {
         TabsTransition::Slide(Duration::from_millis(250).as_nanos() as Nanos)
     }
 }
 
-impl TabsTransition{
-    fn tab_changed(&self, old: TabIndex, new: TabIndex)->Option<TabsTransitionState>{
-        match self{
-            TabsTransition::Instant=>None,
-            TabsTransition::Slide(dur)=>Some(TabsTransitionState::new(
-                old,
-                *dur,
-                old < new,
-            ))
+impl TabsTransition {
+    fn tab_changed(self, old: TabIndex, new: TabIndex) -> Option<TabsTransitionState> {
+        match self {
+            TabsTransition::Instant => None,
+            TabsTransition::Slide(dur) => Some(TabsTransitionState::new(old, dur, old < new)),
         }
     }
 }
