@@ -120,9 +120,13 @@
 //! [`usvg` crate]: https://crates.io/crates/usvg
 //! [`image` crate]: https://crates.io/crates/image
 
-#![deny(intra_doc_link_resolution_failure, missing_docs, unsafe_code)]
+#![deny(
+    intra_doc_link_resolution_failure,
+    unsafe_code,
+    clippy::trivially_copy_pass_by_ref
+)]
+#![warn(missing_docs)]
 #![allow(clippy::new_ret_no_self, clippy::needless_doctest_main)]
-#![deny(clippy::trivially_copy_pass_by_ref)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 // Allows to use macros from druid_derive in this crate
