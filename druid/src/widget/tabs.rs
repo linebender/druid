@@ -628,10 +628,8 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
             let inner = &data.inner;
             let size = child.layout(ctx, bc, inner, env);
             child.set_layout_rect(ctx, inner, env, Rect::from_origin_size(Point::ORIGIN, size));
-            size
-        } else {
-            bc.max()
         }
+        bc.max()
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &TabsState<TP>, env: &Env) {
@@ -873,8 +871,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
             (
                 TabsBody::new(self.axis, self.transition)
                     .padding(5.)
-                    .border(theme::BORDER_DARK, 0.5)
-                    .expand(),
+                    .border(theme::BORDER_DARK, 0.5),
                 1.0,
             ),
         );
