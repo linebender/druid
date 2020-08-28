@@ -113,31 +113,31 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         self.then(other)
     }
 
-    fn then_lens<Other, C>(self, other: Other) -> traversal::ThenLens<Self, Other, B>
+    fn then_lens<L, C>(self, lens: L) -> traversal::ThenLens<Self, L, B>
     where
-        Other: lens::Lens<B, C> + Sized,
+        L: lens::Lens<B, C> + Sized,
         C: ?Sized,
         Self: Sized,
     {
-        traversal::ThenLens::new(self, other)
+        traversal::ThenLens::new(self, lens)
     }
 
-    fn and_lens<Other, C>(self, other: Other) -> traversal::AndLens<Self, Other, B>
+    fn and_lens<L, C>(self, lens: L) -> traversal::AndLens<Self, L, B>
     where
-        Other: lens::Lens<A, C> + Sized,
+        L: lens::Lens<A, C> + Sized,
         C: ?Sized,
         Self: Sized,
     {
-        traversal::AndLens::new(self, other)
+        traversal::AndLens::new(self, lens)
     }
 
-    fn after_lens<Other, BeforeA>(self, other: Other) -> traversal::ThenAfterLens<Other, Self, A>
+    fn after_lens<L, BeforeA>(self, lens: L) -> traversal::ThenAfterLens<L, Self, A>
     where
-        Other: lens::Lens<BeforeA, A> + Sized,
+        L: lens::Lens<BeforeA, A> + Sized,
         BeforeA: ?Sized,
         Self: Sized,
     {
-        traversal::ThenAfterLens::new(other, self)
+        traversal::ThenAfterLens::new(lens, self)
     }
 
     fn map<Get, Put, C>(self, get: Get, put: Put) -> Then<Self, Map<Get, Put>, B>

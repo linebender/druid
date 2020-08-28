@@ -91,13 +91,13 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         Then::new(self, other)
     }
 
-    fn then_prism<Other, C>(self, other: Other) -> traversal::ThenAfterLens<Self, Other, B>
+    fn then_prism<P, C>(self, prism: P) -> traversal::ThenAfterLens<Self, P, B>
     where
-        Other: prism::Prism<B, C> + Sized,
+        P: prism::Prism<B, C> + Sized,
         C: ?Sized,
         Self: Sized,
     {
-        traversal::ThenAfterLens::new(self, other)
+        traversal::ThenAfterLens::new(self, prism)
     }
 
     /// Combine a `Lens<A, B>` with a function that can transform a `B` and its inverse.
@@ -327,9 +327,9 @@ macro_rules! lens {
 
 /// `Lens` composed of two lenses joined together
 #[derive(Debug, Copy, PartialEq)]
-pub struct Then<S, A, B: ?Sized> {
-    left: S,
-    right: A,
+pub struct Then<L1, L2, B: ?Sized> {
+    left: L1,
+    right: L2,
     _marker: PhantomData<B>,
 }
 
