@@ -169,7 +169,10 @@ mod window;
 
 // Types from kurbo & piet that are required by public API.
 pub use kurbo::{Affine, Insets, Point, Rect, Size, Vec2};
-pub use piet::{Color, LinearGradient, RadialGradient, RenderContext, UnitPoint};
+pub use piet::{
+    Color, FontFamily, FontStyle, FontWeight, LinearGradient, RadialGradient, RenderContext,
+    UnitPoint,
+};
 // these are the types from shell that we expose; others we only use internally.
 pub use shell::keyboard_types;
 pub use shell::{
@@ -193,6 +196,7 @@ pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
+pub use text::FontDescriptor;
 pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};

@@ -23,6 +23,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use crate::localization::L10nManager;
+use crate::text::FontDescriptor;
 use crate::{ArcStr, Color, Data, Point, Rect, Size};
 
 /// An environment passed down through all widget traversals.
@@ -108,6 +109,7 @@ pub enum Value {
     Bool(bool),
     UnsignedInt(u64),
     String(ArcStr),
+    Font(FontDescriptor),
 }
 // ANCHOR_END: value_type
 
@@ -376,6 +378,7 @@ impl Value {
             (Bool(_), Bool(_)) => true,
             (UnsignedInt(_), UnsignedInt(_)) => true,
             (String(_), String(_)) => true,
+            (Font(_), Font(_)) => true,
             _ => false,
         }
     }
@@ -392,6 +395,7 @@ impl Debug for Value {
             Value::Bool(b) => write!(f, "Bool {}", b),
             Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
             Value::String(s) => write!(f, "String {:?}", s),
+            Value::Font(font) => write!(f, "Font {:?}", font),
         }
     }
 }
@@ -410,6 +414,7 @@ impl Data for Value {
             (Bool(b1), Bool(b2)) => b1 == b2,
             (UnsignedInt(f1), UnsignedInt(f2)) => f1.same(&f2),
             (String(s1), String(s2)) => s1.same(s2),
+            (Font(s1), Font(s2)) => s1.same(s2),
             _ => false,
         }
     }
@@ -536,6 +541,7 @@ impl_value_type!(Rect, Rect);
 impl_value_type!(Point, Point);
 impl_value_type!(Size, Size);
 impl_value_type!(ArcStr, String);
+impl_value_type!(FontDescriptor, Font);
 
 impl<T: ValueType> KeyOrValue<T> {
     /// Resolve the concrete type `T` from this `KeyOrValue`, using the provided
