@@ -19,12 +19,11 @@ use std::collections::{HashMap, VecDeque};
 use crate::bloom::Bloom;
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
-use crate::piet::{FontFamily, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder};
 use crate::util::ExtendDrain;
 use crate::{
     BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget,
-    WidgetId,
+    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext, Target, TextLayout,
+    TimerToken, UpdateCtx, Widget, WidgetId,
 };
 
 /// Our queue type
@@ -51,7 +50,7 @@ pub struct WidgetPod<T, W> {
     env: Option<Env>,
     inner: W,
     // stashed layout so we don't recompute this when debugging
-    debug_widget_text: Option<PietTextLayout>,
+    debug_widget_text: TextLayout,
 }
 
 /// Generic state for all widgets in the hierarchy.
@@ -145,7 +144,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             old_data: None,
             env: None,
             inner,
-            debug_widget_text: None,
+            debug_widget_text: TextLayout::new(""),
         }
     }
 
@@ -429,7 +428,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 
     fn make_widget_id_layout_if_needed(&mut self, id: WidgetId, ctx: &mut PaintCtx, env: &Env) {
-        if self.debug_widget_text.is_none() {
+        if self.debug_widget_text.needs_rebuild() {
             // switch text color based on background, this is meh and that's okay
             let border_color = env.get_debug_color(id.to_raw());
             let (r, g, b, _) = border_color.as_rgba8();
@@ -439,34 +438,29 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             } else {
                 Color::BLACK
             };
-
             let id_string = id.to_raw().to_string();
-            self.debug_widget_text = ctx
-                .text()
-                .new_text_layout(id_string)
-                .font(FontFamily::SYSTEM_UI, 10.0)
-                .text_color(text_color)
-                .build()
-                .ok();
+            self.debug_widget_text.set_text(id_string);
+            self.debug_widget_text.set_text_size(10.0);
+            self.debug_widget_text.set_text_color(text_color);
+            self.debug_widget_text
+                .rebuild_if_needed(&mut ctx.text(), env);
         }
     }
 
     fn debug_paint_widget_ids(&self, ctx: &mut PaintCtx, env: &Env) {
         // we clone because we need to move it for paint_with_z_index
         let text = self.debug_widget_text.clone();
-        if let Some(text) = text {
-            let text_size = text.size();
-            let origin = ctx.size().to_vec2() - text_size.to_vec2();
-            let border_color = env.get_debug_color(ctx.widget_id().to_raw());
-            self.debug_paint_layout_bounds(ctx, env);
+        let text_size = text.size();
+        let origin = ctx.size().to_vec2() - text_size.to_vec2();
+        let border_color = env.get_debug_color(ctx.widget_id().to_raw());
+        self.debug_paint_layout_bounds(ctx, env);
 
-            ctx.paint_with_z_index(ctx.depth(), move |ctx| {
-                let origin = Point::new(origin.x.max(0.0), origin.y.max(0.0));
-                let text_rect = Rect::from_origin_size(origin, text_size);
-                ctx.fill(text_rect, &border_color);
-                ctx.draw_text(&text, origin);
-            })
-        }
+        ctx.paint_with_z_index(ctx.depth(), move |ctx| {
+            let origin = Point::new(origin.x.max(0.0), origin.y.max(0.0));
+            let text_rect = Rect::from_origin_size(origin, text_size);
+            ctx.fill(text_rect, &border_color);
+            text.draw(ctx, origin);
+        })
     }
 
     fn debug_paint_layout_bounds(&self, ctx: &mut PaintCtx, env: &Env) {
@@ -1008,7 +1002,7 @@ mod tests {
             state: &mut state,
         };
 
-        let env = Env::default();
+        let env = crate::theme::init();
 
         widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &None, &env);
         assert!(ctx.widget_state.children.may_contain(&ID_1));

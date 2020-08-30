@@ -24,6 +24,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Command::to` and `Command::target` to set and get a commands target. ([#1185] by [@finnerale])
 - `Menu` commands can now choose a custom target. ([#1185] by [@finnerale])
 - `Movement::StartOfDocument`, `Movement::EndOfDocument`. ([#1092] by [@sysint64])
+- `TextLayout` type simplifies drawing text ([#1182] by [@cmyr])
 
 ### Changed
 
@@ -418,6 +419,7 @@ Last release without a changelog :(
 [#1171]: https://github.com/linebender/druid/pull/1171
 [#1172]: https://github.com/linebender/druid/pull/1172
 [#1173]: https://github.com/linebender/druid/pull/1173
+[#1182]: https://github.com/linebender/druid/pull/1185
 [#1185]: https://github.com/linebender/druid/pull/1185
 [#1092]: https://github.com/linebender/druid/pull/1092
 
