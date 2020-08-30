@@ -109,7 +109,7 @@ impl HotKey {
 
     /// Returns `true` if this [`KeyboardEvent`] matches this `HotKey`.
     ///
-    /// [`KeyboardEvent`]: KeyEvent
+    /// [`KeyEvent`]: KeyEvent
     pub fn matches(&self, event: impl Borrow<KeyEvent>) -> bool {
         // Should be a const but const bit_or doesn't work here.
         let base_mods = Modifiers::SHIFT | Modifiers::CONTROL | Modifiers::ALT | Modifiers::META;
