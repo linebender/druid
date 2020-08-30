@@ -14,13 +14,10 @@
 
 //! A label widget.
 
-use crate::piet::{
-    Color, FontFamily, PietText, PietTextLayout, RenderContext, Text, TextLayout,
-    TextLayoutBuilder, UnitPoint,
-};
+use crate::piet::{Color, PietText, UnitPoint};
 use crate::{
-    theme, ArcStr, BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, PaintCtx, Point, Size, UpdateCtx, Widget,
+    BoxConstraints, Data, Env, Event, EventCtx, FontDescriptor, KeyOrValue, LayoutCtx, LifeCycle,
+    LifeCycleCtx, LocalizedString, PaintCtx, Point, Size, TextLayout, UpdateCtx, Widget,
 };
 
 // added padding between the edges of the widget and the text.
@@ -53,9 +50,10 @@ pub struct Dynamic<T> {
 /// A label that displays some text.
 pub struct Label<T> {
     text: LabelText<T>,
-    color: KeyOrValue<Color>,
-    size: KeyOrValue<f64>,
-    font: KeyOrValue<ArcStr>,
+    layout: TextLayout,
+    // if our text is manually changed we need to rebuild the layout
+    // before using it again.
+    needs_update_text: bool,
 }
 
 impl<T: Data> Label<T> {
@@ -77,11 +75,11 @@ impl<T: Data> Label<T> {
     /// ```
     pub fn new(text: impl Into<LabelText<T>>) -> Self {
         let text = text.into();
+        let layout = TextLayout::new(text.display_text());
         Self {
             text,
-            color: theme::LABEL_COLOR.into(),
-            size: theme::TEXT_SIZE_NORMAL.into(),
-            font: theme::FONT_NAME.into(),
+            layout,
+            needs_update_text: true,
         }
     }
 
@@ -122,7 +120,7 @@ impl<T: Data> Label<T> {
     ///
     /// [`Key<Color>`]: ../struct.Key.html
     pub fn with_text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
-        self.color = color.into();
+        self.set_text_color(color);
         self
     }
 
@@ -132,31 +130,27 @@ impl<T: Data> Label<T> {
     ///
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
-        self.size = size.into();
+        self.set_text_size(size);
         self
     }
 
     /// Builder-style method for setting the font.
     ///
-    /// The argument can be a `&str`, `String`, or [`Key<&str>`].
+    /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
+    /// that refers to a font defined in the [`Env`].
     ///
-    /// [`Key<&str>`]: ../struct.Key.html
-    pub fn with_font(mut self, font: impl Into<KeyOrValue<ArcStr>>) -> Self {
-        self.font = font.into();
+    /// [`Env`]: ../struct.Env.html
+    /// [`FontDescriptor`]: ../struct.FontDescriptor.html
+    /// [`Key<FontDescriptor>`]: ../struct.Key.html
+    pub fn with_font(mut self, font: impl Into<KeyOrValue<FontDescriptor>>) -> Self {
+        self.set_font(font);
         self
     }
 
-    /// Set a new text.
-    ///
-    /// Takes an already resolved string as input.
-    ///
-    /// If you're looking for full [`LabelText`] support,
-    /// then you need to create a new [`Label`].
-    ///
-    /// [`Label`]: #method.new
-    /// [`LabelText`]: enum.LabelText.html
-    pub fn set_text(&mut self, text: impl Into<String>) {
-        self.text = LabelText::Specific(text.into());
+    /// Set the label's text.
+    pub fn set_text(&mut self, text: impl Into<LabelText<T>>) {
+        self.text = text.into();
+        self.needs_update_text = true;
     }
 
     /// Returns this label's current text.
@@ -170,7 +164,7 @@ impl<T: Data> Label<T> {
     ///
     /// [`Key<Color>`]: ../struct.Key.html
     pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
-        self.color = color.into();
+        self.layout.set_text_color(color);
     }
 
     /// Set the text size.
@@ -179,32 +173,28 @@ impl<T: Data> Label<T> {
     ///
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
-        self.size = size.into();
+        self.layout.set_text_size(size);
     }
 
     /// Set the font.
     ///
-    /// The argument can be a `&str`, `String`, or [`Key<&str>`].
+    /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
+    /// that refers to a font defined in the [`Env`].
     ///
-    /// [`Key<&str>`]: ../struct.Key.html
-    pub fn set_font(&mut self, font: impl Into<KeyOrValue<ArcStr>>) {
-        self.font = font.into();
+    /// [`Env`]: ../struct.Env.html
+    /// [`FontDescriptor`]: ../struct.FontDescriptor.html
+    /// [`Key<FontDescriptor>`]: ../struct.Key.html
+    pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
+        self.layout.set_font(font);
     }
 
-    fn get_layout(&mut self, t: &mut PietText, env: &Env) -> PietTextLayout {
-        let font_name = self.font.resolve(env);
-        let font_size = self.size.resolve(env);
-        let color = self.color.resolve(env);
-
-        // TODO: caching of both the format and the layout
-        self.text.with_display_text(|text| {
-            let font = t.font_family(&font_name).unwrap_or(FontFamily::SYSTEM_UI);
-            t.new_text_layout(text)
-                .font(font, font_size)
-                .text_color(color.clone())
-                .build()
-                .unwrap()
-        })
+    fn update_text_if_needed(&mut self, factory: &mut PietText, data: &T, env: &Env) {
+        if self.needs_update_text {
+            self.text.resolve(data, env);
+            self.layout.set_text(self.text.display_text());
+            self.layout.rebuild_if_needed(factory, env);
+            self.needs_update_text = false;
+        }
     }
 }
 
@@ -252,36 +242,35 @@ impl<T: Data> LabelText<T> {
 impl<T: Data> Widget<T> for Label<T> {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
-            self.text.resolve(data, env);
+            self.update_text_if_needed(&mut ctx.text(), data, env);
         }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        if !old_data.same(data) && self.text.resolve(data, env) {
+        if !old_data.same(data) | self.text.resolve(data, env) {
+            self.layout.set_text(self.text.display_text());
             ctx.request_layout();
         }
+        //FIXME: this should only happen if the env has changed.
+        self.layout.rebuild_if_needed(&mut ctx.text(), env);
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
+    fn layout(&mut self, _ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, _env: &Env) -> Size {
         bc.debug_check("Label");
 
-        let text_layout = self.get_layout(&mut ctx.text(), env);
-        let text_size = text_layout.size();
+        let text_size = self.layout.size();
         bc.constrain(Size::new(
             text_size.width + 2. * LABEL_X_PADDING,
             text_size.height,
         ))
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
-        let text_layout = self.get_layout(&mut ctx.text(), env);
-
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         // Find the origin for the text
         let origin = Point::new(LABEL_X_PADDING, 0.0);
-
-        ctx.draw_text(&text_layout, origin);
+        self.layout.draw(ctx, origin)
     }
 }
 

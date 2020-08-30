@@ -43,6 +43,7 @@ impl RadioGroup {
 /// A single radio button
 pub struct Radio<T> {
     variant: T,
+    //FIXME: this should be using a TextUi struct
     child_label: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
@@ -76,14 +77,18 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &T, _env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.child_label.lifecycle(ctx, event, data, env);
         if let LifeCycle::HotChanged(_) = event {
             ctx.request_paint();
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {
-        ctx.request_paint();
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+        self.child_label.update(ctx, data, env);
+        if !old_data.same(data) {
+            ctx.request_paint();
+        }
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
