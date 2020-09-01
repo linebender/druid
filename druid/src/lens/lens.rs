@@ -307,10 +307,10 @@ where
 #[macro_export]
 macro_rules! lens {
     ($ty:ty, [$index:expr]) => {
-        $crate::lens::Field::new::<$ty, _>(|x| &x[$index], |x| &mut x[$index])
+        $crate::lens::Field::new::<$ty, _>(move |x| &x[$index], move |x| &mut x[$index])
     };
     ($ty:ty, $field:tt) => {
-        $crate::lens::Field::new::<$ty, _>(|x| &x.$field, |x| &mut x.$field)
+        $crate::lens::Field::new::<$ty, _>(move |x| &x.$field, move |x| &mut x.$field)
     };
 }
 
