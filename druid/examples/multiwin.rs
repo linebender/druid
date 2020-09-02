@@ -38,8 +38,6 @@ struct State {
 }
 
 pub fn main() {
-    #[cfg(not(target_arch = "wasm32"))]
-    simple_logger::init().unwrap();
     let main_window = WindowDesc::new(ui_builder)
         .menu(make_menu(&State::default()))
         .title(
@@ -49,6 +47,7 @@ pub fn main() {
         .delegate(Delegate {
             windows: Vec::new(),
         })
+        .use_simple_logger()
         .launch(State::default())
         .expect("launch failed");
 }
