@@ -128,6 +128,8 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     /// Invoke a type's `AsRef` and `AsMut` impl.
     ///
     /// It also allows indexing arrays with the [`index`] lens as shown in the example.
+    /// This is necessary, because the `Index` trait in Rust is only implemented
+    /// for slices (`[T]`), but not for arrays (`[T; N]`).
     ///
     /// # Examples
     ///
