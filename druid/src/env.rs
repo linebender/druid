@@ -23,7 +23,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use crate::localization::L10nManager;
-use crate::{Color, Data, Point, Rect, Size};
+use crate::{ArcStr, Color, Data, Point, Rect, Size};
 
 /// An environment passed down through all widget traversals.
 ///
@@ -52,7 +52,7 @@ pub struct Env(Arc<EnvImpl>);
 
 #[derive(Clone)]
 struct EnvImpl {
-    map: HashMap<String, Value>,
+    map: HashMap<ArcStr, Value>,
     debug_colors: Vec<Color>,
     l10n: Arc<L10nManager>,
 }
@@ -107,7 +107,7 @@ pub enum Value {
     Float(f64),
     Bool(bool),
     UnsignedInt(u64),
-    String(String),
+    String(ArcStr),
 }
 // ANCHOR_END: value_type
 
@@ -132,17 +132,9 @@ pub enum KeyOrValue<T> {
 }
 
 /// Values which can be stored in an environment.
-///
-/// Note that for "expensive" types this is the reference. For example,
-/// for strings, this trait is implemented on `&'a str`. The trait is
-/// parametrized on a lifetime so that it can be used for references in
-/// this way.
-pub trait ValueType<'a>: Sized {
-    /// The corresponding owned type.
-    type Owned: Into<Value>;
-
+pub trait ValueType: Sized + Into<Value> {
     /// Attempt to convert the generic `Value` into this type.
-    fn try_from_value(v: &'a Value) -> Result<Self, ValueTypeError>;
+    fn try_from_value(v: &Value) -> Result<Self, ValueTypeError>;
 }
 
 /// The error type for environment access.
@@ -214,7 +206,7 @@ impl Env {
     /// # Panics
     ///
     /// Panics if the key is not found, or if it is present with the wrong type.
-    pub fn get<'a, V: ValueType<'a>>(&'a self, key: impl Borrow<Key<V>>) -> V {
+    pub fn get<V: ValueType>(&self, key: impl Borrow<Key<V>>) -> V {
         match self.try_get(key) {
             Ok(value) => value,
             Err(err) => panic!("{}", err),
@@ -228,10 +220,7 @@ impl Env {
     /// # Panics
     ///
     /// Panics if the value for the key is found, but has the wrong type.
-    pub fn try_get<'a, V: ValueType<'a>>(
-        &'a self,
-        key: impl Borrow<Key<V>>,
-    ) -> Result<V, MissingKeyError> {
+    pub fn try_get<V: ValueType>(&self, key: impl Borrow<Key<V>>) -> Result<V, MissingKeyError> {
         self.0
             .map
             .get(key.borrow().key)
@@ -277,12 +266,12 @@ impl Env {
     ///
     /// *WARNING:* This is not intended for general use, but only for inspecting an `Env` e.g.
     /// for debugging, theme editing, and theme loading.
-    pub fn get_all(&self) -> impl ExactSizeIterator<Item = (&String, &Value)> {
+    pub fn get_all(&self) -> impl ExactSizeIterator<Item = (&ArcStr, &Value)> {
         self.0.map.iter()
     }
 
     /// Adds a key/value, acting like a builder.
-    pub fn adding<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) -> Env {
+    pub fn adding<V: ValueType>(mut self, key: Key<V>, value: impl Into<V>) -> Env {
         let env = Arc::make_mut(&mut self.0);
         env.map.insert(key.into(), value.into().into());
         self
@@ -294,7 +283,7 @@ impl Env {
     ///
     /// Panics if the environment already has a value for the key, but it is
     /// of a different type.
-    pub fn set<'a, V: ValueType<'a>>(&'a mut self, key: Key<V>, value: impl Into<V::Owned>) {
+    pub fn set<V: ValueType>(&mut self, key: Key<V>, value: impl Into<V>) {
         let env = Arc::make_mut(&mut self.0);
         let value = value.into().into();
         let key = key.into();
@@ -369,7 +358,7 @@ impl Value {
     /// # Panics
     ///
     /// Panics when the value variant doesn't match the provided type.
-    pub fn to_inner_unchecked<'a, V: ValueType<'a>>(&'a self) -> V {
+    pub fn to_inner_unchecked<V: ValueType>(&self) -> V {
         match ValueType::try_from_value(self) {
             Ok(v) => v,
             Err(s) => panic!("{}", s),
@@ -420,7 +409,7 @@ impl Data for Value {
             (Float(f1), Float(f2)) => f1.same(&f2),
             (Bool(b1), Bool(b2)) => b1 == b2,
             (UnsignedInt(f1), UnsignedInt(f2)) => f1.same(&f2),
-            (String(s1), String(s2)) => s1 == s2,
+            (String(s1), String(s2)) => s1.same(s2),
             _ => false,
         }
     }
@@ -482,9 +471,9 @@ impl Default for Env {
     }
 }
 
-impl<T> From<Key<T>> for String {
-    fn from(src: Key<T>) -> String {
-        String::from(src.key)
+impl<T> From<Key<T>> for ArcStr {
+    fn from(src: Key<T>) -> ArcStr {
+        ArcStr::from(src.key)
     }
 }
 
@@ -520,10 +509,9 @@ impl std::error::Error for ValueTypeError {}
 impl std::error::Error for MissingKeyError {}
 
 /// Use this macro for types which are cheap to clone (ie all `Copy` types).
-macro_rules! impl_value_type_owned {
+macro_rules! impl_value_type {
     ($ty:ty, $var:ident) => {
-        impl<'a> ValueType<'a> for $ty {
-            type Owned = $ty;
+        impl ValueType for $ty {
             fn try_from_value(value: &Value) -> Result<Self, ValueTypeError> {
                 match value {
                     Value::$var(f) => Ok(f.to_owned()),
@@ -540,43 +528,21 @@ macro_rules! impl_value_type_owned {
     };
 }
 
-/// Use this macro for types which require allocation but are not too
-/// expensive to clone.
-macro_rules! impl_value_type_borrowed {
-    ($ty:ty, $owned:ty, $var:ident) => {
-        impl<'a> ValueType<'a> for &'a $ty {
-            type Owned = $owned;
-            fn try_from_value(value: &'a Value) -> Result<Self, ValueTypeError> {
-                match value {
-                    Value::$var(f) => Ok(f),
-                    other => Err(ValueTypeError::new(any::type_name::<$ty>(), other.clone())),
-                }
-            }
-        }
+impl_value_type!(f64, Float);
+impl_value_type!(bool, Bool);
+impl_value_type!(u64, UnsignedInt);
+impl_value_type!(Color, Color);
+impl_value_type!(Rect, Rect);
+impl_value_type!(Point, Point);
+impl_value_type!(Size, Size);
+impl_value_type!(ArcStr, String);
 
-        impl Into<Value> for $owned {
-            fn into(self) -> Value {
-                Value::$var(self)
-            }
-        }
-    };
-}
-
-impl_value_type_owned!(f64, Float);
-impl_value_type_owned!(bool, Bool);
-impl_value_type_owned!(u64, UnsignedInt);
-impl_value_type_owned!(Color, Color);
-impl_value_type_owned!(Rect, Rect);
-impl_value_type_owned!(Point, Point);
-impl_value_type_owned!(Size, Size);
-impl_value_type_borrowed!(str, String, String);
-
-impl<'a, T: ValueType<'a>> KeyOrValue<T> {
+impl<T: ValueType> KeyOrValue<T> {
     /// Resolve the concrete type `T` from this `KeyOrValue`, using the provided
     /// [`Env`] if required.
     ///
     /// [`Env`]: struct.Env.html
-    pub fn resolve(&'a self, env: &'a Env) -> T {
+    pub fn resolve(&self, env: &Env) -> T {
         match self {
             KeyOrValue::Concrete(value) => value.to_inner_unchecked(),
             KeyOrValue::Key(key) => env.get(key),
@@ -584,13 +550,13 @@ impl<'a, T: ValueType<'a>> KeyOrValue<T> {
     }
 }
 
-impl<'a, V: Into<Value>, T: ValueType<'a, Owned = V>> From<V> for KeyOrValue<T> {
-    fn from(value: V) -> KeyOrValue<T> {
+impl<T: Into<Value>> From<T> for KeyOrValue<T> {
+    fn from(value: T) -> KeyOrValue<T> {
         KeyOrValue::Concrete(value.into())
     }
 }
 
-impl<'a, T: ValueType<'a>> From<Key<T>> for KeyOrValue<T> {
+impl<T: ValueType> From<Key<T>> for KeyOrValue<T> {
     fn from(key: Key<T>) -> KeyOrValue<T> {
         KeyOrValue::Key(key)
     }
@@ -602,12 +568,12 @@ mod tests {
 
     #[test]
     fn string_key_or_value() {
-        const MY_KEY: Key<&str> = Key::new("test.my-string-key");
-        let env = Env::default().adding(MY_KEY, "Owned".to_string());
-        assert_eq!(env.get(MY_KEY), "Owned");
+        const MY_KEY: Key<ArcStr> = Key::new("test.my-string-key");
+        let env = Env::default().adding(MY_KEY, "Owned");
+        assert_eq!(env.get(MY_KEY).as_ref(), "Owned");
 
-        let key: KeyOrValue<&str> = MY_KEY.into();
-        let value: KeyOrValue<&str> = "Owned".to_string().into();
+        let key: KeyOrValue<ArcStr> = MY_KEY.into();
+        let value: KeyOrValue<ArcStr> = ArcStr::from("Owned").into();
 
         assert_eq!(key.resolve(&env), value.resolve(&env));
     }

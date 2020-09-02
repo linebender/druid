@@ -17,7 +17,7 @@
 #![allow(missing_docs)]
 use crate::piet::Color;
 
-use crate::{Env, Key};
+use crate::{ArcStr, Env, Key};
 
 pub const WINDOW_BACKGROUND_COLOR: Key<Color> = Key::new("window_background_color");
 
@@ -41,7 +41,7 @@ pub const SELECTION_COLOR: Key<Color> = Key::new("selection_color");
 pub const SELECTION_TEXT_COLOR: Key<Color> = Key::new("selection_text_color");
 pub const CURSOR_COLOR: Key<Color> = Key::new("cursor_color");
 
-pub const FONT_NAME: Key<&str> = Key::new("font_name");
+pub const FONT_NAME: Key<ArcStr> = Key::new("font_name");
 pub const TEXT_SIZE_NORMAL: Key<f64> = Key::new("text_size_normal");
 pub const TEXT_SIZE_LARGE: Key<f64> = Key::new("text_size_large");
 pub const BASIC_WIDGET_HEIGHT: Key<f64> = Key::new("basic_widget_height");
