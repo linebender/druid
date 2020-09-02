@@ -59,7 +59,7 @@ impl Switch {
 
         let font = ctx
             .text()
-            .font_family(font_name)
+            .font_family(&font_name)
             .unwrap_or(FontFamily::SYSTEM_UI);
 
         // off/on labels

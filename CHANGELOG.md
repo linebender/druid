@@ -30,6 +30,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Use new Piet text api ([#1143] by [@cmyr])
 - `Env::try_get` (and related methods) return a `Result` instead of an `Option`. ([#1172] by [@cmyr])
 - `lens!` macro to use move semantics for the index. ([#1171] by [@finnerale])
+- `Env` stores `Arc<str>` instead of `String` ([#1173] by [@cmyr])
 
 ### Deprecated
 
@@ -408,6 +409,7 @@ Last release without a changelog :(
 [#1157]: https://github.com/linebender/druid/pull/1157
 [#1171]: https://github.com/linebender/druid/pull/1171
 [#1172]: https://github.com/linebender/druid/pull/1172
+[#1173]: https://github.com/linebender/druid/pull/1173
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
