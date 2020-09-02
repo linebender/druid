@@ -156,6 +156,16 @@ pub struct ValueTypeError {
     found: Value,
 }
 
+/// An error type for when a key is missing from the [`Env`].
+///
+/// [`Env`]: struct.Env.html
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct MissingKeyError {
+    /// The raw key.
+    key: Arc<str>,
+}
+
 impl Env {
     /// State for whether or not to paint colorful rectangles for layout
     /// debugging.
@@ -205,24 +215,30 @@ impl Env {
     ///
     /// Panics if the key is not found, or if it is present with the wrong type.
     pub fn get<'a, V: ValueType<'a>>(&'a self, key: impl Borrow<Key<V>>) -> V {
-        let key = key.borrow();
-        if let Some(value) = self.0.map.get(key.key) {
-            value.to_inner_unchecked()
-        } else {
-            panic!("key for {} not found", key.key)
+        match self.try_get(key) {
+            Ok(value) => value,
+            Err(err) => panic!("{}", err),
         }
     }
 
-    /// Gets a value from the environment.
+    /// Trys to get a value from the environment.
+    ///
+    /// If the value is not found, the raw key is returned as the error.
     ///
     /// # Panics
     ///
     /// Panics if the value for the key is found, but has the wrong type.
-    pub fn try_get<'a, V: ValueType<'a>>(&'a self, key: impl Borrow<Key<V>>) -> Option<V> {
+    pub fn try_get<'a, V: ValueType<'a>>(
+        &'a self,
+        key: impl Borrow<Key<V>>,
+    ) -> Result<V, MissingKeyError> {
         self.0
             .map
             .get(key.borrow().key)
             .map(|value| value.to_inner_unchecked())
+            .ok_or(MissingKeyError {
+                key: key.borrow().key.into(),
+            })
     }
 
     /// Gets a value from the environment, in its encapsulated [`Value`] form,
@@ -233,25 +249,28 @@ impl Env {
     ///
     /// # Panics
     ///
-    /// Panics if the key is not found
+    /// Panics if the key is not found.
+    ///
     /// [`Value`]: enum.Value.html
     pub fn get_untyped(&self, key: impl Borrow<Key<()>>) -> &Value {
-        let key = key.borrow();
-        if let Some(value) = self.0.map.get(key.key) {
-            value
-        } else {
-            panic!("key for {} not found", key.key)
+        match self.try_get_untyped(key) {
+            Ok(val) => val,
+            Err(err) => panic!("{}", err),
         }
     }
 
     /// Gets a value from the environment, in its encapsulated [`Value`] form,
-    /// returning None if a value isn't found.
+    /// returning `None` if a value isn't found.
     ///
-    /// *WARNING:* This is not intended for general use, but only for inspecting an `Env` e.g.
-    /// for debugging, theme editing, and theme loading.
+    /// # Note
+    /// This is not intended for general use, but only for inspecting an `Env`
+    /// e.g. for debugging, theme editing, and theme loading.
+    ///
     /// [`Value`]: enum.Value.html
-    pub fn try_get_untyped(&self, key: impl Borrow<Key<()>>) -> Option<&Value> {
-        self.0.map.get(key.borrow().key)
+    pub fn try_get_untyped(&self, key: impl Borrow<Key<()>>) -> Result<&Value, MissingKeyError> {
+        self.0.map.get(key.borrow().key).ok_or(MissingKeyError {
+            key: key.borrow().key.into(),
+        })
     }
 
     /// Gets the entire contents of the `Env`, in key-value pairs.
@@ -484,7 +503,21 @@ impl std::fmt::Display for ValueTypeError {
     }
 }
 
+impl MissingKeyError {
+    /// The raw key that was missing.
+    pub fn raw_key(&self) -> &str {
+        &self.key
+    }
+}
+
+impl std::fmt::Display for MissingKeyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Missing key: '{}'", self.key)
+    }
+}
+
 impl std::error::Error for ValueTypeError {}
+impl std::error::Error for MissingKeyError {}
 
 /// Use this macro for types which are cheap to clone (ie all `Copy` types).
 macro_rules! impl_value_type_owned {

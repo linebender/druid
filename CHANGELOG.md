@@ -27,6 +27,8 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
 - `request_anim_frame` no longer invalidates the entire window. ([#1057] by [@jneem])
 - Use new Piet text api ([#1143] by [@cmyr])
+- `Env::try_get` (and related methods) return a `Result` instead of an `Option`.
+  ([#1172] by [@cmyr])
 
 ### Deprecated
 
@@ -403,6 +405,7 @@ Last release without a changelog :(
 [#1151]: https://github.com/linebender/druid/pull/1151
 [#1152]: https://github.com/linebender/druid/pull/1152
 [#1157]: https://github.com/linebender/druid/pull/1157
+[#1172]: https://github.com/linebender/druid/pull/1157
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
