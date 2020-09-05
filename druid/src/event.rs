@@ -19,7 +19,7 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
 use crate::mouse::MouseEvent;
-use crate::{Command, Target, WidgetId};
+use crate::{Command, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -142,7 +142,7 @@ pub enum InternalEvent {
     /// but we know that we've stopped receiving the mouse events.
     MouseLeave,
     /// A command still in the process of being dispatched.
-    TargetedCommand(Target, Command),
+    TargetedCommand(Command),
     /// Used for routing timer events.
     RouteTimer(TimerToken, WidgetId),
 }

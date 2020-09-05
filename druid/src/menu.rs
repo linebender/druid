@@ -266,7 +266,7 @@ impl<T: Data> MenuDesc<T> {
     /// # Examples
     ///
     /// ```
-    /// use druid::{Command, LocalizedString, MenuDesc, MenuItem, Selector};
+    /// use druid::{Command, LocalizedString, MenuDesc, MenuItem, Selector, Target};
     ///
     /// let num_items: usize = 4;
     /// const MENU_COUNT_ACTION: Selector<usize> = Selector::new("menu-count-action");
@@ -275,7 +275,7 @@ impl<T: Data> MenuDesc<T> {
     ///     .append_iter(|| (0..num_items).map(|i| {
     ///         MenuItem::new(
     ///             LocalizedString::new("hello-counter").with_arg("count", move |_, _| i.into()),
-    ///             Command::new(MENU_COUNT_ACTION, i),
+    ///             Command::new(MENU_COUNT_ACTION, i, Target::Auto),
     ///        )
     ///     })
     /// );

@@ -28,7 +28,7 @@ use crate::{
 };
 
 /// Our queue type
-pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
+pub(crate) type CommandQueue = VecDeque<Command>;
 
 /// A container for one widget in the hierarchy.
 ///
@@ -578,21 +578,22 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     );
                     had_active || hot_changed
                 }
-                InternalEvent::TargetedCommand(target, cmd) => {
-                    match target {
-                        Target::Widget(id) if *id == self.id() => {
+                InternalEvent::TargetedCommand(cmd) => {
+                    match cmd.target() {
+                        Target::Widget(id) if id == self.id() => {
                             modified_event = Some(Event::Command(cmd.clone()));
                             true
                         }
                         Target::Widget(id) => {
                             // Recurse when the target widget could be our descendant.
                             // The bloom filter we're checking can return false positives.
-                            self.state.children.may_contain(id)
+                            self.state.children.may_contain(&id)
                         }
                         Target::Global | Target::Window(_) => {
                             modified_event = Some(Event::Command(cmd.clone()));
                             true
                         }
+                        _ => false,
                     }
                 }
                 InternalEvent::RouteTimer(token, widget_id) => {

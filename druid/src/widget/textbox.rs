@@ -371,7 +371,7 @@ impl Widget<String> for TextBox {
         match event {
             LifeCycle::WidgetAdded => ctx.register_for_focus(),
             // an open question: should we be able to schedule timers here?
-            LifeCycle::FocusChanged(true) => ctx.submit_command(RESET_BLINK, ctx.widget_id()),
+            LifeCycle::FocusChanged(true) => ctx.submit_command(RESET_BLINK.to(ctx.widget_id())),
             _ => (),
         }
     }

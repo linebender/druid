@@ -22,7 +22,7 @@ use crate::shell::IdleHandle;
 use crate::win_handler::EXT_EVENT_IDLE_TOKEN;
 use crate::{command::SelectorSymbol, Command, Selector, Target, WindowId};
 
-pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Option<Target>);
+pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Target);
 
 /// A thing that can move into other threads and be used to submit commands back
 /// to the running application.
@@ -75,12 +75,12 @@ impl ExtEventHost {
         !self.queue.lock().unwrap().is_empty()
     }
 
-    pub(crate) fn recv(&mut self) -> Option<(Option<Target>, Command)> {
+    pub(crate) fn recv(&mut self) -> Option<Command> {
         self.queue
             .lock()
             .unwrap()
             .pop_front()
-            .map(|(sel, obj, targ)| (targ, Command::from_ext(sel, obj)))
+            .map(|(selector, payload, target)| Command::from_ext(selector, payload, target))
     }
 }
 
@@ -106,7 +106,7 @@ impl ExtEventSink {
         &self,
         selector: Selector<T>,
         payload: impl Into<Box<T>>,
-        target: impl Into<Option<Target>>,
+        target: impl Into<Target>,
     ) -> Result<(), ExtEventError> {
         let target = target.into();
         let payload = payload.into();
