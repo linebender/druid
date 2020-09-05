@@ -33,9 +33,9 @@ use std::time::Duration;
 use druid::kurbo::RoundedRect;
 use druid::widget::{Button, CrossAxisAlignment, Flex, WidgetId};
 use druid::{
-    AppLauncher, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, LayoutCtx, Lens,
-    LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size,
-    TimerToken, UpdateCtx, Widget, WidgetExt, WindowDesc,
+    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
+    LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size, TimerToken,
+    UpdateCtx, Widget, WidgetExt, WindowDesc,
 };
 
 const CYCLE_DURATION: Duration = Duration::from_millis(100);
@@ -173,13 +173,14 @@ fn make_ui() -> impl Widget<OurData> {
                 .with_spacer(10.0)
                 .with_child(
                     Button::<OurData>::new("freeze").on_click(move |ctx, data, _env| {
-                        ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), ID_ONE)
+                        ctx.submit_command(FREEZE_COLOR.with(data.color.clone()).to(ID_ONE))
                     }),
                 )
                 .with_spacer(10.0)
                 .with_child(
-                    Button::<OurData>::new("unfreeze")
-                        .on_click(move |ctx, _, _env| ctx.submit_command(UNFREEZE_COLOR, ID_ONE)),
+                    Button::<OurData>::new("unfreeze").on_click(move |ctx, _, _env| {
+                        ctx.submit_command(UNFREEZE_COLOR.to(ID_ONE))
+                    }),
                 ),
             0.5,
         )
@@ -191,13 +192,14 @@ fn make_ui() -> impl Widget<OurData> {
                 .with_spacer(10.0)
                 .with_child(
                     Button::<OurData>::new("freeze").on_click(move |ctx, data, _env| {
-                        ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_two)
+                        ctx.submit_command(FREEZE_COLOR.with(data.color.clone()).to(id_two))
                     }),
                 )
                 .with_spacer(10.0)
                 .with_child(
-                    Button::<OurData>::new("unfreeze")
-                        .on_click(move |ctx, _, _env| ctx.submit_command(UNFREEZE_COLOR, id_two)),
+                    Button::<OurData>::new("unfreeze").on_click(move |ctx, _, _env| {
+                        ctx.submit_command(UNFREEZE_COLOR.to(id_two))
+                    }),
                 ),
             0.5,
         )
@@ -209,13 +211,14 @@ fn make_ui() -> impl Widget<OurData> {
                 .with_spacer(10.0)
                 .with_child(
                     Button::<OurData>::new("freeze").on_click(move |ctx, data, _env| {
-                        ctx.submit_command(Command::new(FREEZE_COLOR, data.color.clone()), id_three)
+                        ctx.submit_command(FREEZE_COLOR.with(data.color.clone()).to(id_three))
                     }),
                 )
                 .with_spacer(10.0)
                 .with_child(
-                    Button::<OurData>::new("unfreeze")
-                        .on_click(move |ctx, _, _env| ctx.submit_command(UNFREEZE_COLOR, id_three)),
+                    Button::<OurData>::new("unfreeze").on_click(move |ctx, _, _env| {
+                        ctx.submit_command(UNFREEZE_COLOR.to(id_three))
+                    }),
                 ),
             0.5,
         )

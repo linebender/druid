@@ -336,12 +336,8 @@ impl_context_method!(
         ///
         /// [`Command`]: struct.Command.html
         /// [`update`]: trait.Widget.html#tymethod.update
-        pub fn submit_command(
-            &mut self,
-            cmd: impl Into<Command>,
-            target: impl Into<Option<Target>>,
-        ) {
-            self.state.submit_command(cmd.into(), target.into())
+        pub fn submit_command(&mut self, cmd: impl Into<Command>) {
+            self.state.submit_command(cmd.into())
         }
 
         /// Returns an [`ExtEventSink`] that can be moved between threads,
@@ -387,8 +383,9 @@ impl EventCtx<'_, '_> {
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
         if self.state.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::NEW_WINDOW, SingleUse::new(Box::new(desc))),
-                Target::Global,
+                commands::NEW_WINDOW
+                    .with(SingleUse::new(Box::new(desc)))
+                    .to(Target::Global),
             );
         } else {
             const MSG: &str = "WindowDesc<T> - T must match the application data type.";
@@ -407,8 +404,9 @@ impl EventCtx<'_, '_> {
     pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
         if self.state.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::SHOW_CONTEXT_MENU, Box::new(menu)),
-                Target::Window(self.state.window_id),
+                commands::SHOW_CONTEXT_MENU
+                    .with(Box::new(menu))
+                    .to(Target::Window(self.state.window_id)),
             );
         } else {
             const MSG: &str = "ContextMenu<T> - T must match the application data type.";
@@ -680,16 +678,16 @@ impl<'a> ContextState<'a> {
         }
     }
 
-    fn submit_command(&mut self, command: Command, target: Option<Target>) {
-        let target = target.unwrap_or_else(|| self.window_id.into());
-        self.command_queue.push_back((target, command))
+    fn submit_command(&mut self, command: Command) {
+        self.command_queue.push_back(command)
     }
 
     fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
         if self.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::SET_MENU, Box::new(menu)),
-                Some(Target::Window(self.window_id)),
+                commands::SET_MENU
+                    .with(Box::new(menu))
+                    .to(Target::Window(self.window_id)),
             );
         } else {
             const MSG: &str = "MenuDesc<T> - T must match the application data type.";
