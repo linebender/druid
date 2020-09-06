@@ -21,6 +21,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `request_update` in `EventCtx`. ([#1128] by [@raphlinus])
 - `ExtEventSink`s can now be obtained from widget methods. ([#1152] by [@jneem])
 - 'Scope' widget to allow encapsulation of reactive state. ([#1151] by [@rjwittams])
+- `Ref` lens that applies `AsRef` and thus allow indexing arrays. ([#1171] by [@finnerale])
 
 ### Changed
 
@@ -29,6 +30,9 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
 - `request_anim_frame` no longer invalidates the entire window. ([#1057] by [@jneem])
 - Use new Piet text api ([#1143] by [@cmyr])
+- `Env::try_get` (and related methods) return a `Result` instead of an `Option`. ([#1172] by [@cmyr])
+- `lens!` macro to use move semantics for the index. ([#1171] by [@finnerale])
+- `Env` stores `Arc<str>` instead of `String` ([#1173] by [@cmyr])
 
 ### Deprecated
 
@@ -406,6 +410,9 @@ Last release without a changelog :(
 [#1151]: https://github.com/linebender/druid/pull/1151
 [#1152]: https://github.com/linebender/druid/pull/1152
 [#1157]: https://github.com/linebender/druid/pull/1157
+[#1171]: https://github.com/linebender/druid/pull/1171
+[#1172]: https://github.com/linebender/druid/pull/1172
+[#1173]: https://github.com/linebender/druid/pull/1173
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

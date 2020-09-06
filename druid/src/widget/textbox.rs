@@ -100,7 +100,7 @@ impl TextBox {
 
         // TODO: caching of both the format and the layout
         let font = piet_text
-            .font_family(font_name)
+            .font_family(&font_name)
             .unwrap_or(FontFamily::SYSTEM_UI);
 
         piet_text

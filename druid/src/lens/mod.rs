@@ -48,6 +48,6 @@
 
 #[allow(clippy::module_inception)]
 mod lens;
-pub use lens::{Deref, Field, Id, InArc, Index, Map, Then};
+pub use lens::{Deref, Field, Id, InArc, Index, Map, Ref, Then};
 #[doc(hidden)]
 pub use lens::{Lens, LensExt, LensWrap};

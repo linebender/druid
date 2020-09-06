@@ -19,7 +19,7 @@ use crate::piet::{
     TextLayoutBuilder, UnitPoint,
 };
 use crate::{
-    theme, BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
+    theme, ArcStr, BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
     LifeCycleCtx, LocalizedString, PaintCtx, Point, Size, UpdateCtx, Widget,
 };
 
@@ -55,7 +55,7 @@ pub struct Label<T> {
     text: LabelText<T>,
     color: KeyOrValue<Color>,
     size: KeyOrValue<f64>,
-    font: KeyOrValue<&'static str>,
+    font: KeyOrValue<ArcStr>,
 }
 
 impl<T: Data> Label<T> {
@@ -141,7 +141,7 @@ impl<T: Data> Label<T> {
     /// The argument can be a `&str`, `String`, or [`Key<&str>`].
     ///
     /// [`Key<&str>`]: ../struct.Key.html
-    pub fn with_font(mut self, font: impl Into<KeyOrValue<&'static str>>) -> Self {
+    pub fn with_font(mut self, font: impl Into<KeyOrValue<ArcStr>>) -> Self {
         self.font = font.into();
         self
     }
@@ -187,7 +187,7 @@ impl<T: Data> Label<T> {
     /// The argument can be a `&str`, `String`, or [`Key<&str>`].
     ///
     /// [`Key<&str>`]: ../struct.Key.html
-    pub fn set_font(&mut self, font: impl Into<KeyOrValue<&'static str>>) {
+    pub fn set_font(&mut self, font: impl Into<KeyOrValue<ArcStr>>) {
         self.font = font.into();
     }
 
@@ -198,7 +198,7 @@ impl<T: Data> Label<T> {
 
         // TODO: caching of both the format and the layout
         self.text.with_display_text(|text| {
-            let font = t.font_family(font_name).unwrap_or(FontFamily::SYSTEM_UI);
+            let font = t.font_family(&font_name).unwrap_or(FontFamily::SYSTEM_UI);
             t.new_text_layout(&text)
                 .font(font, font_size)
                 .text_color(color.clone())

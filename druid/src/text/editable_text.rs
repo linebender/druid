@@ -58,8 +58,10 @@ pub trait EditableText: Sized {
     /// Get the next codepoint offset from the given offset, if it exists.
     fn next_codepoint_offset(&self, offset: usize) -> Option<usize>;
 
+    /// Returns `true` if this text has 0 length.
     fn is_empty(&self) -> bool;
 
+    /// Construct an instance of this type from a `&str`.
     fn from_str(s: &str) -> Self;
 }
 

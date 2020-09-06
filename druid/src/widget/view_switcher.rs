@@ -25,6 +25,7 @@ use crate::{
 type ChildPicker<T, U> = dyn Fn(&T, &Env) -> U;
 type ChildBuilder<T, U> = dyn Fn(&U, &T, &Env) -> Box<dyn Widget<T>>;
 
+/// A widget that dynamically switches between two children.
 pub struct ViewSwitcher<T, U> {
     child_picker: Box<ChildPicker<T, U>>,
     child_builder: Box<ChildBuilder<T, U>>,

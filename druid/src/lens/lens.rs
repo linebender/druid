@@ -125,6 +125,53 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         self.then(Deref)
     }
 
+    /// Invoke a type's `AsRef` and `AsMut` impl.
+    ///
+    /// It also allows indexing arrays with the [`index`] lens as shown in the example.
+    /// This is necessary, because the `Index` trait in Rust is only implemented
+    /// for slices (`[T]`), but not for arrays (`[T; N]`).
+    ///
+    /// # Examples
+    ///
+    /// Using `ref` this works:
+    ///
+    /// ```
+    /// use druid::{widget::TextBox, Data, Lens, LensExt, Widget, WidgetExt};
+    ///
+    /// #[derive(Clone, Default, Data, Lens)]
+    /// struct State {
+    ///     data: [String; 2],
+    /// }
+    ///
+    /// fn with_ref() -> impl Widget<State> {
+    ///     TextBox::new().lens(State::data.as_ref().index(1))
+    /// }
+    /// ```
+    ///
+    /// While this fails:
+    ///
+    /// ```compile_fail
+    /// # use druid::*;
+    /// # #[derive(Clone, Default, Data, Lens)]
+    /// # struct State {
+    /// #     data: [String; 2],
+    /// # }
+    /// fn without_ref() -> impl Widget<State> {
+    ///     // results in: `[std::string::String; 2]` cannot be mutably indexed by `usize`
+    ///     TextBox::new().lens(State::data.index(1))
+    /// }
+    /// ```
+    ///
+    /// [`Lens`]: ./trait.Lens.html
+    /// [`index`]: #method.index
+    fn as_ref<T: ?Sized>(self) -> Then<Self, Ref, B>
+    where
+        B: AsRef<T> + AsMut<T>,
+        Self: Sized,
+    {
+        self.then(Ref)
+    }
+
     /// Access an index in a container
     ///
     /// ```
@@ -307,10 +354,10 @@ where
 #[macro_export]
 macro_rules! lens {
     ($ty:ty, [$index:expr]) => {
-        $crate::lens::Field::new::<$ty, _>(|x| &x[$index], |x| &mut x[$index])
+        $crate::lens::Field::new::<$ty, _>(move |x| &x[$index], move |x| &mut x[$index])
     };
     ($ty:ty, $field:tt) => {
-        $crate::lens::Field::new::<$ty, _>(|x| &x.$field, |x| &mut x.$field)
+        $crate::lens::Field::new::<$ty, _>(move |x| &x.$field, move |x| &mut x.$field)
     };
 }
 
@@ -418,6 +465,28 @@ where
     }
     fn with_mut<V, F: FnOnce(&mut T::Target) -> V>(&self, data: &mut T, f: F) -> V {
         f(data.deref_mut())
+    }
+}
+
+/// [`Lens`] for invoking `AsRef` and `AsMut` on a type.
+///
+/// [`LensExt::ref`] offers an easy way to apply this,
+/// as well as more information and examples.
+///
+/// [`Lens`]: ../trait.Lens.html
+/// [`LensExt::ref`]: ../trait.LensExt.html#method.as_ref
+#[derive(Debug, Copy, Clone)]
+pub struct Ref;
+
+impl<T: ?Sized, U: ?Sized> Lens<T, U> for Ref
+where
+    T: AsRef<U> + AsMut<U>,
+{
+    fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> V {
+        f(data.as_ref())
+    }
+    fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> V {
+        f(data.as_mut())
     }
 }
 

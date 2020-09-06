@@ -136,7 +136,7 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
-    simple_logger::init().expect("Failed to init simple logger");
+    simple_logger::SimpleLogger::new();
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
     let perf_test = PerfTest {

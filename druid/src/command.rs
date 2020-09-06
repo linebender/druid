@@ -354,6 +354,7 @@ impl Command {
 }
 
 impl<T: Any> SingleUse<T> {
+    /// Create a new single-use payload.
     pub fn new(data: T) -> Self {
         SingleUse(Mutex::new(Some(data)))
     }

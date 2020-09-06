@@ -721,6 +721,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.widget_state.merge_up(&mut self.state);
     }
 
+    /// Propagate a [`LifeCycle`] event.
+    ///
+    /// [`LifeCycle`]: enum.LifeCycle.html
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         // in the case of an internal routing event, if we are at our target
         // we may send an extra event after the actual event
