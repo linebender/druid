@@ -539,9 +539,13 @@ impl<T: Data> AppState<T> {
     /// is open but a menu exists, as on macOS) it will be `None`.
     fn handle_system_cmd(&mut self, cmd_id: u32, window_id: Option<WindowId>) {
         let cmd = self.inner.borrow().get_menu_cmd(window_id, cmd_id);
-        let target = window_id.map(Into::into).unwrap_or(Target::Global);
         match cmd {
-            Some(cmd) => self.inner.borrow_mut().append_command(cmd.to(target)),
+            Some(cmd) => {
+                let default_target = window_id.map(Into::into).unwrap_or(Target::Global);
+                self.inner
+                    .borrow_mut()
+                    .append_command(cmd.default_to(default_target))
+            }
             None => log::warn!("No command for menu id {}", cmd_id),
         }
         self.process_commands();
