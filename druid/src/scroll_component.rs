@@ -24,16 +24,24 @@ use crate::{
 };
 
 //TODO: Add this to env
+/// Minimum length for any scrollbar to be when measured on that
+/// scrollbar's primary axis.
 pub const SCROLLBAR_MIN_SIZE: f64 = 45.0;
 
+/// Denotes which scrollbar, if any, is currently being hovered over
+/// by the mouse.
 #[derive(Debug, Copy, Clone)]
 pub enum BarHoveredState {
+    /// Neither scrollbar is being hovered by the mouse.
     None,
+    /// The vertical scrollbar is being hovered by the mouse.
     Vertical,
+    /// The horizontal scrollbar is being hovered by the mouse.
     Horizontal,
 }
 
 impl BarHoveredState {
+    /// Determines if any scrollbar is currently being hovered by the mouse.
     pub fn is_hovered(self) -> bool {
         matches!(
             self,
@@ -42,22 +50,29 @@ impl BarHoveredState {
     }
 }
 
+/// Denotes which scrollbar, if any, is currently being dragged.
 #[derive(Debug, Copy, Clone)]
 pub enum BarHeldState {
+    /// Neither scrollbar is being dragged.
     None,
     /// Vertical scrollbar is being dragged. Contains an `f64` with
-    /// the initial y-offset of the dragging input
+    /// the initial y-offset of the dragging input.
     Vertical(f64),
     /// Horizontal scrollbar is being dragged. Contains an `f64` with
-    /// the initial x-offset of the dragging input
+    /// the initial x-offset of the dragging input.
     Horizontal(f64),
 }
 
+/// Backing struct for storing scrollbar state
 #[derive(Debug, Copy, Clone)]
 pub struct ScrollbarsState {
+    /// Current opacity for both scrollbars
     pub opacity: f64,
+    /// ID for the timer which schedules scrollbar fade out
     pub timer_id: TimerToken,
+    /// Which if any scrollbar is currently hovered by the mouse
     pub hovered: BarHoveredState,
+    /// Which if any scrollbar is currently being dragged by the mouse
     pub held: BarHeldState,
 }
 
@@ -112,7 +127,9 @@ pub struct ScrollComponent {
     /// The size of the scrollable content, make sure to keep up this
     /// accurate to the content being scrolled
     pub content_size: Size,
+    /// Current offset of the scrolling content
     pub scroll_offset: Vec2,
+    /// Current state of both scrollbars
     pub scrollbars: ScrollbarsState,
 }
 
@@ -123,6 +140,7 @@ impl Default for ScrollComponent {
 }
 
 impl ScrollComponent {
+    /// Constructs a new [`ScrollComponent`](struct.ScrollComponent.html) for use.
     pub fn new() -> ScrollComponent {
         ScrollComponent {
             content_size: Size::default(),
