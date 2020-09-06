@@ -120,6 +120,9 @@ pub enum Target {
     /// The target is a specific widget.
     Widget(WidgetId),
     /// The target will be determined automatically.
+    ///
+    /// How this behaves depends on the context used to submit the command.
+    /// Each `submit_command` function should have documentation about the specific behavior.
     Auto,
 }
 
@@ -251,7 +254,7 @@ impl Selector<()> {
     /// A selector that does nothing.
     pub const NOOP: Selector = Selector::new("");
 
-    /// Set the commands target.
+    /// Turns this into a command with the specified target.
     pub fn to(self, target: impl Into<Target>) -> Command {
         Command::from(self).to(target.into())
     }
@@ -275,7 +278,12 @@ impl<T: Any> Selector<T> {
     /// If the payload is `()` there is no need to call this,
     /// as `Selector<()>` implements `Into<Command>`.
     ///
+    /// By default, the command will have [`Target::Auto`].
+    /// The [`Command::to`] method can be used to override this.
+    ///
     /// [`Command::new`]: struct.Command.html#method.new
+    /// [`Command::to`]: struct.Command.html#method.to
+    /// [`Target::Auto`]: enum.Target.html#variant.Auto
     pub fn with(self, payload: T) -> Command {
         Command::new(self, payload, Target::Auto)
     }
