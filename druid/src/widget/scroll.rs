@@ -125,8 +125,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
         let max_bc = match self.direction {
             ScrollDirection::Bidirectional => Size::new(INFINITY, INFINITY),
-            ScrollDirection::Vertical => Size::new(bc.min().width, INFINITY),
-            ScrollDirection::Horizontal => Size::new(INFINITY, bc.min().height),
+            ScrollDirection::Vertical => Size::new(bc.max().width, INFINITY),
+            ScrollDirection::Horizontal => Size::new(INFINITY, bc.max().height),
         };
 
         let child_bc = BoxConstraints::new(Size::ZERO, max_bc);
