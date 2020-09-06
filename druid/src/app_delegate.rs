@@ -36,6 +36,8 @@ impl<'a> DelegateCtx<'a> {
     /// submitted during the handling of an event are executed before
     /// the [`update()`] method is called.
     ///
+    /// [`Target::Auto`] commands will be sent to every window (`Target::Global`).
+    ///
     /// [`Command`]: struct.Command.html
     /// [`update()`]: trait.Widget.html#tymethod.update
     pub fn submit_command(&mut self, command: impl Into<Command>) {

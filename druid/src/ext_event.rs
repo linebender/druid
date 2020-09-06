@@ -93,15 +93,16 @@ impl ExtEventSink {
     ///
     /// The `payload` must implement `Any + Send + Sync`.
     ///
-    /// If no explicit `Target` is submitted, the `Command` will be sent to
+    /// If submitted with `Target::Auto`, the [`Command`] will be sent to
     /// the application's first window; if that window is subsequently closed,
     /// then the command will be sent to *an arbitrary other window*.
     ///
     /// This behavior may be changed in the future; in any case, you should
-    /// probably provide an explicit `Target`.
+    /// probably provide an explicit [`Target`].
     ///
     /// [`Command`]: struct.Command.html
     /// [`Selector`]: struct.Selector.html
+    /// [`Target`]: struct.Target.html
     pub fn submit_command<T: Any + Send>(
         &self,
         selector: Selector<T>,

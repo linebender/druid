@@ -334,6 +334,8 @@ impl_context_method!(
         /// the [`update`] method is called; events submitted during [`update`]
         /// are handled after painting.
         ///
+        /// [`Target::Auto`] commands will be sent to the window containing the widget.
+        ///
         /// [`Command`]: struct.Command.html
         /// [`update`]: trait.Widget.html#tymethod.update
         pub fn submit_command(&mut self, cmd: impl Into<Command>) {
