@@ -94,7 +94,7 @@ impl ScrollbarsState {
     }
 }
 
-/// Embedable component exposing reusable scroll handling logic.
+/// Embeddable component exposing reusable scroll handling logic.
 ///
 /// In most situations composing [`Scroll`] or [`List`] is a better idea
 /// for general UI construction. However some cases are not covered by
