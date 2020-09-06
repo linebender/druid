@@ -340,6 +340,7 @@ impl ScrollComponent {
                             let mouse_y = event.pos.y + self.scroll_offset.y;
                             let delta = mouse_y - bounds.y0 - offset;
                             self.scroll(Vec2::new(0f64, (delta / scale_y).ceil()), size);
+                            ctx.set_handled();
                         }
                         BarHeldState::Horizontal(offset) => {
                             let scale_x = viewport.width() / self.content_size.width;
@@ -347,6 +348,7 @@ impl ScrollComponent {
                             let mouse_x = event.pos.x + self.scroll_offset.x;
                             let delta = mouse_x - bounds.x0 - offset;
                             self.scroll(Vec2::new((delta / scale_x).ceil(), 0f64), size);
+                            ctx.set_handled();
                         }
                         _ => (),
                     }
@@ -360,6 +362,8 @@ impl ScrollComponent {
                         self.scrollbars.hovered = BarHoveredState::None;
                         self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
                     }
+
+                    ctx.set_handled();
                 }
                 _ => (), // other events are a noop
             }
@@ -370,13 +374,16 @@ impl ScrollComponent {
                     let offset_pos = event.pos + self.scroll_offset;
                     if self.point_hits_vertical_bar(viewport, offset_pos, env) {
                         self.scrollbars.hovered = BarHoveredState::Vertical;
-                    } else {
+                    } else if self.point_hits_horizontal_bar(viewport, offset_pos, env) {
                         self.scrollbars.hovered = BarHoveredState::Horizontal;
+                    } else {
+                        unreachable!();
                     }
 
                     self.scrollbars.opacity = env.get(theme::SCROLLBAR_MAX_OPACITY);
                     self.scrollbars.timer_id = TimerToken::INVALID; // Cancel any fade out in progress
                     ctx.request_paint();
+                    ctx.set_handled();
                 }
                 Event::MouseDown(event) => {
                     let pos = event.pos + self.scroll_offset;
@@ -391,7 +398,11 @@ impl ScrollComponent {
                         self.scrollbars.held = BarHeldState::Horizontal(
                             pos.x - self.calc_horizontal_bar_bounds(viewport, env).x0,
                         );
+                    } else {
+                        unreachable!();
                     }
+
+                    ctx.set_handled();
                 }
                 // if the mouse was downed elsewhere, moved over a scroll bar and released: noop.
                 Event::MouseUp(_) => (),
