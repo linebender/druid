@@ -60,6 +60,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
 - Switch widget: Toggle animation being window refresh rate dependent ([#1145] by [@ForLoveOfCats])
 - Multi-click on Windows, partial fix for #859 ([#1157] by [@raphlinus])
+- Windows: fix crash on resize from incompatible resources ([#1191 by [@raphlinus]])
 
 ### Visual
 
@@ -412,6 +413,7 @@ Last release without a changelog :(
 [#1171]: https://github.com/linebender/druid/pull/1171
 [#1172]: https://github.com/linebender/druid/pull/1172
 [#1173]: https://github.com/linebender/druid/pull/1173
+[#1191]: https://github.com/linebender/druid/pull/1191
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
