@@ -145,10 +145,21 @@ impl<T: Data> Widget<T> for Image {
     ) -> Size {
         bc.debug_check("Image");
 
-        if bc.is_width_bounded() {
-            bc.max()
-        } else {
-            bc.constrain(self.image_data.get_size())
+		// If either the width or height is constrained calculate a value so that the image fits
+		// in the size exactly. If it is unconstrained by both width and height take the size of
+		// the image.
+		if !bc.is_height_bounded() && bc.is_width_bounded() {
+			let mut  size = bc.max();
+			let ratio = size.width / self.image_data.x_pixels as f64;
+			size.height = ratio * self.image_data.y_pixels as f64;
+			size
+        } else if !bc.is_width_bounded() && bc.is_height_bounded(){
+			let mut  size = bc.max();
+			let ratio = size.height / self.image_data.y_pixels as f64;
+			size.width = ratio * self.image_data.x_pixels as f64;
+			size 
+		} else {
+			bc.constrain(self.image_data.get_size())
         }
     }
 
@@ -437,5 +448,56 @@ mod tests {
                 target.into_png(tmp_dir.join("image.png")).unwrap();
             },
         );
+	}
+	
+	#[test]
+    fn height_bound_paint() {
+        use crate::{tests::harness::Harness, WidgetId};
+        let _id_1 = WidgetId::next();
+        let image_data = ImageData {
+            pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            x_pixels: 2,
+            y_pixels: 2,
+            format: ImageFormat::Rgb,
+        };
+
+        let image_widget =
+            Image::new(image_data).interpolation_mode(InterpolationMode::NearestNeighbor);
+
+        Harness::create_with_render(
+            true,
+            image_widget,
+            Size::new(f64::INFINITY, 400.),
+            |harness| {
+                harness.send_initial_events();
+                harness.just_layout();
+                harness.paint();
+            },
+            |target| {
+				// the width should be calculated to be 400.
+				let width = 400;
+                let raw_pixels = target.into_raw();
+                assert_eq!(raw_pixels.len(), 400 * width * 4);
+
+                // Being a height bound widget every row will have no padding at the start and end._id_1
+
+                // The image starts at (0,0), so 200 black and then 200 white.
+                let expecting: Vec<u8> = [
+                    vec![0, 0, 0, 255].repeat(200),
+                    vec![255, 255, 255, 255].repeat(200),
+                ]
+                .concat();
+                assert_eq!(raw_pixels[0 * width * 4..1 * width * 4], expecting[..]);
+
+                // The final row of 600 pixels is 100 padding 200 black, 200 white and then 100 padding.
+                let expecting: Vec<u8> = [
+                    vec![255, 255, 255, 255].repeat(200),
+                    vec![0, 0, 0, 255].repeat(200),
+                ]
+                .concat();
+                assert_eq!(raw_pixels[399 * width * 4..400 * width * 4], expecting[..]);
+            },
+        );
     }
+
 }
