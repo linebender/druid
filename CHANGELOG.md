@@ -33,6 +33,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Env::try_get` (and related methods) return a `Result` instead of an `Option`. ([#1172] by [@cmyr])
 - `lens!` macro to use move semantics for the index. ([#1171] by [@finnerale])
 - `Env` stores `Arc<str>` instead of `String` ([#1173] by [@cmyr])
+- `Movement::RightOfLine` to `Movement::NextLineBreak`, and `Movement::LeftOfLine` to `Movement::PrecedingLineBreak`. ([#1092] by [@sysint64])
 
 ### Deprecated
 
