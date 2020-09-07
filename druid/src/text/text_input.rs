@@ -80,11 +80,11 @@ impl TextInput for BasicTextInput {
             }
             // Select to home (Shift+Home)
             k_e if (HotKey::new(SysMods::Shift, KbKey::Home)).matches(k_e) => {
-                EditAction::ModifySelection(Movement::LeftOfLine)
+                EditAction::ModifySelection(Movement::PrecedingLineBreak)
             }
             // Select to end (Shift+End)
             k_e if (HotKey::new(SysMods::Shift, KbKey::End)).matches(k_e) => {
-                EditAction::ModifySelection(Movement::RightOfLine)
+                EditAction::ModifySelection(Movement::NextLineBreak)
             }
             // Select left (Shift+ArrowLeft)
             k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowLeft)).matches(k_e) => {
@@ -126,11 +126,11 @@ impl TextInput for BasicTextInput {
             k_e if (HotKey::new(None, KbKey::Delete)).matches(k_e) => EditAction::Delete,
             // Home
             k_e if (HotKey::new(None, KbKey::Home)).matches(k_e) => {
-                EditAction::Move(Movement::LeftOfLine)
+                EditAction::Move(Movement::PrecedingLineBreak)
             }
             // End
             k_e if (HotKey::new(None, KbKey::End)).matches(k_e) => {
-                EditAction::Move(Movement::RightOfLine)
+                EditAction::Move(Movement::NextLineBreak)
             }
             // Actual typing
             k_e if key_event_is_printable(k_e) => {

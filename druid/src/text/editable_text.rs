@@ -58,6 +58,12 @@ pub trait EditableText: Sized {
     /// Get the next codepoint offset from the given offset, if it exists.
     fn next_codepoint_offset(&self, offset: usize) -> Option<usize>;
 
+    /// Get the preceding line break offset from the given offset
+    fn preceding_line_break(&self, offset: usize) -> usize;
+
+    /// Get the next line break offset from the given offset
+    fn next_line_break(&self, offset: usize) -> usize;
+
     /// Returns `true` if this text has 0 length.
     fn is_empty(&self) -> bool;
 
@@ -155,6 +161,32 @@ impl EditableText for String {
 
     fn from_str(s: &str) -> Self {
         s.to_string()
+    }
+
+    fn preceding_line_break(&self, from: usize) -> usize {
+        let mut offset = from;
+
+        for byte in self.get(0..from).unwrap_or("").bytes().rev() {
+            if byte == 0x0a {
+                return offset;
+            }
+            offset -= 1;
+        }
+
+        0
+    }
+
+    fn next_line_break(&self, from: usize) -> usize {
+        let mut offset = from;
+
+        for char in self.get(from..).unwrap_or("").bytes() {
+            if char == 0x0a {
+                return offset;
+            }
+            offset += 1;
+        }
+
+        self.len()
     }
 }
 
@@ -409,5 +441,39 @@ mod tests {
         assert_eq!(Some(35), a.next_word_offset(20));
         assert_eq!(Some(35), a.next_word_offset(26));
         assert_eq!(Some(35), a.next_word_offset(35));
+    }
+
+    #[test]
+    fn preceding_line_break() {
+        let a = String::from("Technically\na word:\n ৬藏A\u{030a}\n\u{110b}\u{1161}");
+        assert_eq!(0, a.preceding_line_break(0));
+        assert_eq!(0, a.preceding_line_break(11));
+        assert_eq!(12, a.preceding_line_break(12));
+        assert_eq!(12, a.preceding_line_break(13));
+        assert_eq!(20, a.preceding_line_break(21));
+        assert_eq!(31, a.preceding_line_break(31));
+        assert_eq!(31, a.preceding_line_break(34));
+
+        let b = String::from("Technically a word: ৬藏A\u{030a}\u{110b}\u{1161}");
+        assert_eq!(0, b.preceding_line_break(0));
+        assert_eq!(0, b.preceding_line_break(11));
+        assert_eq!(0, b.preceding_line_break(13));
+        assert_eq!(0, b.preceding_line_break(21));
+    }
+
+    #[test]
+    fn next_line_break() {
+        let a = String::from("Technically\na word:\n ৬藏A\u{030a}\n\u{110b}\u{1161}");
+        assert_eq!(11, a.next_line_break(0));
+        assert_eq!(11, a.next_line_break(11));
+        assert_eq!(19, a.next_line_break(13));
+        assert_eq!(30, a.next_line_break(21));
+        assert_eq!(a.len(), a.next_line_break(31));
+
+        let b = String::from("Technically a word: ৬藏A\u{030a}\u{110b}\u{1161}");
+        assert_eq!(b.len(), b.next_line_break(0));
+        assert_eq!(b.len(), b.next_line_break(11));
+        assert_eq!(b.len(), b.next_line_break(13));
+        assert_eq!(b.len(), b.next_line_break(19));
     }
 }
