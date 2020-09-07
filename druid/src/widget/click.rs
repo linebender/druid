@@ -59,7 +59,7 @@ impl<T: Data, W: Widget<T>> Controller<T, W> for Click<T> {
                 }
             }
             Event::MouseUp(mouse_event) => {
-                if mouse_event.button == MouseButton::Left {
+                if ctx.is_active() && mouse_event.button == MouseButton::Left {
                     ctx.set_active(false);
                     if ctx.is_hot() {
                         (self.action)(ctx, data, env);
