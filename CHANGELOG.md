@@ -8,7 +8,6 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Highlights
 
 ### Added
-
 - `OPEN_PANEL_CANCELLED` and `SAVE_PANEL_CANCELLED` commands. ([#1061] by @cmyr)
 - Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
@@ -244,22 +243,17 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 Last release without a changelog :(
 
 ## [0.4.0] - 2019-12-28
-
 ## [0.3.2] - 2019-11-05
-
 ## [0.3.1] - 2019-11-04
-
 ## 0.3.0 - 2019-11-02
-
 ## 0.1.1 - 2018-11-02
-
 ## 0.1.0 - 2018-11-02
 
 [@futurepaul]: https://github.com/futurepaul
 [@finnerale]: https://github.com/finnerale
 [@totsteps]: https://github.com/totsteps
 [@cmyr]: https://github.com/cmyr
-[@xstrom]: https://github.com/xStrom
+[@xStrom]: https://github.com/xStrom
 [@teddemunnik]: https://github.com/teddemunnik
 [@crsaracco]: https://github.com/crsaracco
 [@pyroxymat]: https://github.com/pyroxymat
@@ -278,13 +272,14 @@ Last release without a changelog :(
 [@covercash2]: https://github.com/covercash2
 [@raphlinus]: https://github.com/raphlinus
 [@binomial0]: https://github.com/binomial0
-[@forloveofcats]: https://github.com/ForLoveOfCats
+[@ForLoveOfCats]: https://github.com/ForLoveOfCats
 [@chris-zen]: https://github.com/chris-zen
 [@vkahl]: https://github.com/vkahl
 [@psychon]: https://github.com/psychon
 [@sysint64]: https://github.com/sysint64
 [@justinmoon]: https://github.com/justinmoon
 [@rjwittams]: https://github.com/rjwittams
+
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
 [#695]: https://github.com/linebender/druid/pull/695
@@ -418,6 +413,7 @@ Last release without a changelog :(
 [#1171]: https://github.com/linebender/druid/pull/1171
 [#1172]: https://github.com/linebender/druid/pull/1172
 [#1173]: https://github.com/linebender/druid/pull/1173
+
 [unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/linebender/druid/compare/v0.4.0...v0.5.0
