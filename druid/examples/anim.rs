@@ -34,6 +34,7 @@ impl Widget<u32> for AnimWidget {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &u32, _env: &Env) {
         if let LifeCycle::AnimFrame(interval) = event {
+            ctx.request_paint();
             self.t += (*interval as f64) * 1e-9;
             if self.t < 1.0 {
                 ctx.request_anim_frame();

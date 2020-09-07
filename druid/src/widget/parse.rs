@@ -29,6 +29,7 @@ pub struct Parse<T> {
 }
 
 impl<T> Parse<T> {
+    /// Create a new `Parse` widget.
     pub fn new(widget: T) -> Self {
         Self {
             widget,

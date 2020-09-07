@@ -91,14 +91,14 @@ impl<T: Data> AppLauncher<T> {
     /// Panics if the logger fails to initialize.
     pub fn use_simple_logger(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
-        simple_logger::init().expect("Failed to init simple logger");
+        simple_logger::SimpleLogger::new();
         #[cfg(target_arch = "wasm32")]
         console_log::init_with_level(log::Level::Trace).expect("Failed to init simple logger");
         self
     }
 
     /// Returns an [`ExtEventSink`] that can be moved between threads,
-    /// and can be used to submit events back to the application.
+    /// and can be used to submit commands back to the application.
     ///
     /// [`ExtEventSink`]: struct.ExtEventSink.html
     pub fn get_external_handle(&self) -> ExtEventSink {
@@ -224,11 +224,13 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    /// Builder-style method to set whether this window can be resized.
     pub fn resizable(mut self, resizable: bool) -> Self {
         self.resizable = resizable;
         self
     }
 
+    /// Builder-style method to set whether this window's titlebar is visible.
     pub fn show_titlebar(mut self, show_titlebar: bool) -> Self {
         self.show_titlebar = show_titlebar;
         self

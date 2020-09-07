@@ -26,6 +26,7 @@ use crate::kurbo::{Point, Rect, Size};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
+use crate::region::Region;
 use crate::scale::Scale;
 
 // It's possible we'll want to make this type alias at a lower level,
@@ -128,9 +129,21 @@ impl WindowHandle {
         self.0.bring_to_front_and_focus()
     }
 
+    /// Request that [`prepare_paint`] and [`paint`] next time there's the opportunity
+    /// to render another frame. This differs from [`invalidate`] and [`invalidate_rect`]
+    /// in that it doesn't invalidate any part of the window.
+    ///
+    /// [`prepare_paint`]: trait.WinHandler.html#tymethod.prepare_paint
+    /// [`paint`]: trait.WinHandler.html#tymethod.paint
+    /// [`invalidate`]: struct.WindowHandle.html#tymethod.invalidate
+    /// [`invalidate_rect`]: struct.WindowHandle.html#tymethod.invalidate_rect
+    pub fn request_anim_frame(&self) {
+        self.0.request_anim_frame();
+    }
+
     /// Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
-        self.0.invalidate()
+        self.0.invalidate();
     }
 
     /// Request invalidation of a region of the window.
@@ -318,13 +331,21 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn scale(&mut self, scale: Scale) {}
 
-    /// Request the handler to paint the window contents. Return value
-    /// indicates whether window is animating, i.e. whether another paint
-    /// should be scheduled for the next animation frame. `invalid_rect` is the
-    /// rectangle in [display points] that needs to be repainted.
+    /// Request the handler to prepare to paint the window contents.
+    /// In particular, if there are any regions that need to be repainted
+    /// on the next call to `paint`, the handler should invalidate those regions
+    /// by calling [`WindowHandle::invalidate_rect`] or [`WindowHandle::invalidate`].
+    ///
+    /// [`WindowHandle::invalidate_rect`]: trait.WindowHandle:#tymethod.invalidate_rect
+    /// [`WindowHandle::invalidate`]: trait.WindowHandle:#tymethod.invalidate
+    fn prepare_paint(&mut self);
+
+    /// Request the handler to paint the window contents.
+    /// `invalid` is the region in [display points] that needs to be repainted;
+    /// painting outside the invalid region will have no effect.
     ///
     /// [display points]: struct.Scale.html
-    fn paint(&mut self, piet: &mut piet_common::Piet, invalid_rect: Rect) -> bool;
+    fn paint(&mut self, piet: &mut piet_common::Piet, invalid: &Region);
 
     /// Called when the resources need to be rebuilt.
     ///

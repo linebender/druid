@@ -16,14 +16,14 @@
 
 use druid::widget::{Checkbox, Flex, Label, MainAxisAlignment, Painter, Parse, Stepper, TextBox};
 use druid::{
-    theme, AppLauncher, Color, Data, Key, Lens, LensExt, LensWrap, LocalizedString, PlatformError,
-    RenderContext, Widget, WidgetExt, WindowDesc,
+    theme, AppLauncher, ArcStr, Color, Data, Key, Lens, LensExt, LensWrap, LocalizedString,
+    PlatformError, RenderContext, Widget, WidgetExt, WindowDesc,
 };
 use std::fmt::Display;
 
 // This is a custom key we'll use with Env to set and get our text size.
 const MY_CUSTOM_TEXT_SIZE: Key<f64> = Key::new("styled_text.custom_text_size");
-const MY_CUSTOM_FONT: Key<&str> = Key::new("styled_text.custom_font");
+const MY_CUSTOM_FONT: Key<ArcStr> = Key::new("styled_text.custom_font");
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
@@ -99,7 +99,7 @@ fn ui_builder() -> impl Widget<AppData> {
             if data.mono {
                 env.set(MY_CUSTOM_FONT, "monospace");
             } else {
-                env.set(MY_CUSTOM_FONT, env.get(theme::FONT_NAME).to_string());
+                env.set(MY_CUSTOM_FONT, env.get(theme::FONT_NAME));
             }
         });
 

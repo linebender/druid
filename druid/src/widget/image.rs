@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! An Image widget.
-//! Please consider using SVG and the SVG wideget as it scales much better.
+//! Please consider using SVG and the SVG widget as it scales much better.
 
 use std::fmt;
 #[cfg(feature = "image")]

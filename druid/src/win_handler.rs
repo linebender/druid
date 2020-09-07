@@ -19,13 +19,13 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use crate::kurbo::{Rect, Size};
+use crate::kurbo::Size;
 use crate::piet::Piet;
-use crate::shell::{Application, IdleToken, MouseEvent, Scale, WinHandler, WindowHandle};
+use crate::shell::{Application, IdleToken, MouseEvent, Region, Scale, WinHandler, WindowHandle};
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
-use crate::ext_event::ExtEventHost;
+use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
@@ -89,9 +89,9 @@ struct Windows<T> {
 }
 
 impl<T> Windows<T> {
-    fn connect(&mut self, id: WindowId, handle: WindowHandle) {
+    fn connect(&mut self, id: WindowId, handle: WindowHandle, ext_handle: ExtEventSink) {
         if let Some(pending) = self.pending.remove(&id) {
-            let win = Window::new(id, handle, pending);
+            let win = Window::new(id, handle, pending, ext_handle);
             assert!(self.windows.insert(id, win).is_none(), "duplicate window");
         } else {
             log::error!("no window for connecting handle {:?}", id);
@@ -211,7 +211,8 @@ impl<T: Data> Inner<T> {
     }
 
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
-        self.windows.connect(id, handle);
+        self.windows
+            .connect(id, handle, self.ext_event_host.make_sink());
 
         // If the external event host has no handle, it cannot wake us
         // when an event arrives.
@@ -291,18 +292,22 @@ impl<T: Data> Inner<T> {
         }
     }
 
-    /// Returns `true` if an animation frame was requested.
-    fn paint(&mut self, window_id: WindowId, piet: &mut Piet, rect: Rect) -> bool {
+    fn prepare_paint(&mut self, window_id: WindowId) {
         if let Some(win) = self.windows.get_mut(window_id) {
-            win.do_paint(piet, rect, &mut self.command_queue, &self.data, &self.env);
-            if win.wants_animation_frame() {
-                win.handle.invalidate();
-                true
-            } else {
-                false
-            }
-        } else {
-            false
+            win.prepare_paint(&mut self.command_queue, &self.data, &self.env);
+        }
+        self.invalidate_and_finalize();
+    }
+
+    fn paint(&mut self, window_id: WindowId, piet: &mut Piet, invalid: &Region) {
+        if let Some(win) = self.windows.get_mut(window_id) {
+            win.do_paint(
+                piet,
+                invalid,
+                &mut self.command_queue,
+                &self.data,
+                &self.env,
+            );
         }
     }
 
@@ -481,8 +486,12 @@ impl<T: Data> AppState<T> {
         result
     }
 
-    fn paint_window(&mut self, window_id: WindowId, piet: &mut Piet, rect: Rect) -> bool {
-        self.inner.borrow_mut().paint(window_id, piet, rect)
+    fn prepare_paint_window(&mut self, window_id: WindowId) {
+        self.inner.borrow_mut().prepare_paint(window_id);
+    }
+
+    fn paint_window(&mut self, window_id: WindowId, piet: &mut Piet, invalid: &Region) {
+        self.inner.borrow_mut().paint(window_id, piet, invalid);
     }
 
     fn idle(&mut self, token: IdleToken) {
@@ -672,8 +681,12 @@ impl<T: Data> WinHandler for DruidHandler<T> {
         self.app_state.do_window_event(event, self.window_id);
     }
 
-    fn paint(&mut self, piet: &mut Piet, rect: Rect) -> bool {
-        self.app_state.paint_window(self.window_id, piet, rect)
+    fn prepare_paint(&mut self) {
+        self.app_state.prepare_paint_window(self.window_id);
+    }
+
+    fn paint(&mut self, piet: &mut Piet, region: &Region) {
+        self.app_state.paint_window(self.window_id, piet, region);
     }
 
     fn size(&mut self, size: Size) {

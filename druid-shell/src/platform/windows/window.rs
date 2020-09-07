@@ -22,6 +22,7 @@ use std::mem;
 use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use log::{debug, error, warn};
 use winapi::ctypes::{c_int, c_void};
@@ -59,7 +60,8 @@ use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyState};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::scale::{Scale, Scalable, ScaledArea};
+use crate::region::Region;
+use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
 
 /// The platform target DPI.
@@ -137,6 +139,7 @@ struct WindowState {
     hwnd: Cell<HWND>,
     scale: Cell<Scale>,
     area: Cell<ScaledArea>,
+    invalid: RefCell<Region>,
     has_menu: Cell<bool>,
     wndproc: Box<dyn WndProc>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
@@ -178,6 +181,8 @@ struct WndState {
     // Is this window the topmost window under the mouse cursor
     has_mouse_focus: bool,
     //TODO: track surrogate orphan
+    last_click_time: Instant,
+    click_count: u8,
 }
 
 /// State for DXGI swapchains.
@@ -254,22 +259,15 @@ impl WndState {
     }
 
     // Renders but does not present.
-    fn render(
-        &mut self,
-        d2d: &D2DFactory,
-        dw: &DwriteFactory,
-        handle: &RefCell<WindowHandle>,
-        invalid_rect: Rect,
-    ) {
+    fn render(&mut self, d2d: &D2DFactory, dw: &DwriteFactory, invalid: &Region) {
         let rt = self.render_target.as_mut().unwrap();
         rt.begin_draw();
-        let anim;
         {
-            let mut piet_ctx = Piet::new(d2d, dw, rt);
+            let mut piet_ctx = Piet::new(d2d, dw.clone(), rt);
             // The documentation on DXGI_PRESENT_PARAMETERS says we "must not update any
             // pixel outside of the dirty rectangles."
-            piet_ctx.clip(invalid_rect);
-            anim = self.handler.paint(&mut piet_ctx, invalid_rect);
+            piet_ctx.clip(invalid.to_bez_path());
+            self.handler.paint(&mut piet_ctx, invalid);
             if let Err(e) = piet_ctx.finish() {
                 error!("piet error on render: {:?}", e);
             }
@@ -278,12 +276,6 @@ impl WndState {
         let res = rt.end_draw();
         if let Err(e) = res {
             error!("EndDraw error: {:?}", e);
-        }
-        if anim {
-            let handle = handle.borrow().get_idle_handle().unwrap();
-            // Note: maybe add WindowHandle as arg to idle handler so we don't need this.
-            let handle2 = handle.clone();
-            handle.add_idle_callback(move |_| handle2.invalidate());
         }
     }
 
@@ -330,6 +322,17 @@ impl MyWndProc {
 
     fn scale(&self) -> Scale {
         self.with_window_state(|state| state.scale.get())
+    }
+
+    /// Takes the invalid region and returns it, replacing it with the empty region.
+    fn take_invalid(&self) -> Region {
+        self.with_window_state(|state| {
+            std::mem::replace(&mut *state.invalid.borrow_mut(), Region::EMPTY)
+        })
+    }
+
+    fn invalidate_rect(&self, rect: Rect) {
+        self.with_window_state(|state| state.invalid.borrow_mut().add_rect(rect));
     }
 
     fn set_area(&self, area: ScaledArea) {
@@ -397,27 +400,34 @@ impl WndProc for MyWndProc {
             }
             WM_PAINT => unsafe {
                 if let Ok(mut s) = self.state.try_borrow_mut() {
-                    let mut rect: RECT = mem::zeroed();
-                    GetUpdateRect(hwnd, &mut rect, FALSE);
                     let s = s.as_mut().unwrap();
-                    s.handler.rebuild_resources();
-                    let rect_dp = util::recti_to_rect(rect).to_dp(self.scale());
-                    s.render(
-                        &self.d2d_factory,
-                        &self.dwrite_factory,
-                        &self.handle,
-                        rect_dp,
-                    );
-                    if let Some(ref mut ds) = s.dxgi_state {
-                        let params = DXGI_PRESENT_PARAMETERS {
-                            DirtyRectsCount: 1,
-                            pDirtyRects: &mut rect,
-                            pScrollRect: null_mut(),
-                            pScrollOffset: null_mut(),
-                        };
-                        (*ds.swap_chain).Present1(1, 0, &params);
-                    }
+                    // We call prepare_paint before GetUpdateRect, so that anything invalidated during
+                    // prepare_paint will be reflected in GetUpdateRect.
+                    s.handler.prepare_paint();
+
+                    let mut rect: RECT = mem::zeroed();
+                    // TODO: use GetUpdateRgn for more conservative invalidation
+                    GetUpdateRect(hwnd, &mut rect, FALSE);
                     ValidateRect(hwnd, null_mut());
+                    let rect_dp = util::recti_to_rect(rect).to_dp(self.scale());
+                    if rect_dp.area() != 0.0 {
+                        self.invalidate_rect(rect_dp);
+                    }
+                    let invalid = self.take_invalid();
+                    if !invalid.rects().is_empty() {
+                        s.handler.rebuild_resources();
+                        s.render(&self.d2d_factory, &self.dwrite_factory, &invalid);
+                        if let Some(ref mut ds) = s.dxgi_state {
+                            let mut dirty_rects = util::region_to_rectis(&invalid, self.scale());
+                            let params = DXGI_PRESENT_PARAMETERS {
+                                DirtyRectsCount: dirty_rects.len() as u32,
+                                pDirtyRects: dirty_rects.as_mut_ptr(),
+                                pScrollRect: null_mut(),
+                                pScrollOffset: null_mut(),
+                            };
+                            (*ds.swap_chain).Present1(1, 0, &params);
+                        }
+                    }
                 } else {
                     self.log_dropped_msg(hwnd, msg, wparam, lparam);
                 }
@@ -449,8 +459,7 @@ impl WndProc for MyWndProc {
                         s.render(
                             &self.d2d_factory,
                             &self.dwrite_factory,
-                            &self.handle,
-                            size_dp.to_rect(),
+                            &size_dp.to_rect().into(),
                         );
                         if let Some(ref mut dxgi_state) = s.dxgi_state {
                             (*dxgi_state.swap_chain).Present(0, 0);
@@ -611,8 +620,10 @@ impl WndProc for MyWndProc {
                 }
                 Some(0)
             }
-            // TODO: not clear where double-click processing should happen. Currently disabled
-            // because CS_DBLCLKS is not set
+            // Note: we handle the double-click events out of caution here, but we don't expect
+            // to actually receive any, because we don't set CS_DBLCLKS on the window class style.
+            // And the reason for that is that we want click counts that go above 2, so it just
+            // makes a lot more sense to do the click count logic ourselves.
             WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_RBUTTONDBLCLK
             | WM_RBUTTONDOWN | WM_RBUTTONUP | WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP
             | WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
@@ -636,18 +647,28 @@ impl WndProc for MyWndProc {
                 } {
                     if let Ok(mut s) = self.state.try_borrow_mut() {
                         let s = s.as_mut().unwrap();
-                        let count = match msg {
-                            WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN => 1,
-                            WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK
-                            | WM_XBUTTONDBLCLK => 2,
-                            WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP | WM_XBUTTONUP => 0,
-                            _ => unreachable!(),
-                        };
+                        let down = matches!(msg,  WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_XBUTTONDOWN |
+                                                        WM_LBUTTONDBLCLK | WM_MBUTTONDBLCLK | WM_RBUTTONDBLCLK
+                                                        | WM_XBUTTONDBLCLK);
                         let x = LOWORD(lparam as u32) as i16 as i32;
                         let y = HIWORD(lparam as u32) as i16 as i32;
                         let pos = Point::new(x as f64, y as f64).to_dp(self.scale());
                         let mods = s.keyboard_state.get_modifiers();
                         let buttons = get_buttons(wparam);
+                        let dct = unsafe { GetDoubleClickTime() };
+                        let threshold = Duration::from_millis(dct as u64);
+                        let count = if down {
+                            // TODO: it may be more precise to use the timestamp from the event.
+                            let this_click = Instant::now();
+                            if this_click - s.last_click_time >= threshold {
+                                s.click_count = 0;
+                            }
+                            s.click_count = s.click_count.saturating_add(1);
+                            s.last_click_time = this_click;
+                            s.click_count
+                        } else {
+                            0
+                        };
                         let event = MouseEvent {
                             pos,
                             buttons,
@@ -841,6 +862,7 @@ impl WindowBuilder {
                 hwnd: Cell::new(0 as HWND),
                 scale: Cell::new(scale),
                 area: Cell::new(area),
+                invalid: RefCell::new(Region::EMPTY),
                 has_menu: Cell::new(has_menu),
                 wndproc: Box::new(wndproc),
                 idle_queue: Default::default(),
@@ -860,6 +882,8 @@ impl WindowBuilder {
                 keyboard_state: KeyboardState::new(),
                 captured_mouse_buttons: MouseButtons::new(),
                 has_mouse_focus: false,
+                last_click_time: Instant::now(),
+                click_count: 0,
             };
             win.wndproc.connect(&handle, state);
 
@@ -1097,13 +1121,16 @@ impl WindowHandle {
         log::warn!("bring_to_front_and_focus not yet implemented on windows");
     }
 
-    pub fn invalidate(&self) {
+    pub fn request_anim_frame(&self) {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
-                if InvalidateRect(hwnd, null(), FALSE) == FALSE {
+                // With the RDW_INTERNALPAINT flag, RedrawWindow causes a WM_PAINT message, but without
+                // invalidating anything. We do this because we won't know the final invalidated region
+                // until after calling prepare_paint.
+                if RedrawWindow(hwnd, null(), null_mut(), RDW_INTERNALPAINT) == 0 {
                     log::warn!(
-                        "InvalidateRect failed: {}",
+                        "RedrawWindow failed: {}",
                         Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                     );
                 }
@@ -1111,19 +1138,25 @@ impl WindowHandle {
         }
     }
 
+    pub fn invalidate(&self) {
+        if let Some(w) = self.state.upgrade() {
+            w.invalid
+                .borrow_mut()
+                .set_rect(w.area.get().size_dp().to_rect());
+        }
+        self.request_anim_frame();
+    }
+
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(w) = self.state.upgrade() {
-            let rect = util::rect_to_recti(rect.to_px(w.scale.get()).expand());
-            let hwnd = w.hwnd.get();
-            unsafe {
-                if InvalidateRect(hwnd, &rect, FALSE) == FALSE {
-                    log::warn!(
-                        "InvalidateRect failed: {}",
-                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                    );
-                }
-            }
+            let scale = w.scale.get();
+            // We need to invalidate an integer number of pixels, but we also want to keep
+            // the invalid region in display points, since that's what we need to pass
+            // to WinHandler::paint.
+            w.invalid.borrow_mut().add_rect(rect.to_px(scale).expand().to_dp(scale));
+
         }
+        self.request_anim_frame();
     }
 
     /// Set the title for this menu.
@@ -1210,7 +1243,7 @@ impl WindowHandle {
     }
 
     pub fn text(&self) -> Text {
-        Text::new(&self.dwrite_factory)
+        Text::new(self.dwrite_factory.clone())
     }
 
     /// Request a timer event.
@@ -1343,17 +1376,6 @@ impl IdleHandle {
             }
         }
         queue.push(IdleKind::Token(token));
-    }
-
-    fn invalidate(&self) {
-        unsafe {
-            if InvalidateRect(self.hwnd, null(), FALSE) == FALSE {
-                log::warn!(
-                    "InvalidateRect failed: {}",
-                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                );
-            }
-        }
     }
 }
 
