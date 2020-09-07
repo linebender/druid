@@ -21,7 +21,7 @@ use std::{convert::AsRef, error::Error, path::Path};
 
 use crate::{
     piet::{Image as PietImage, ImageFormat, InterpolationMode},
-    widget::{common::FillStrat, },
+    widget::common::FillStrat,
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Rect,
     RenderContext, Size, UpdateCtx, Widget,
 };
@@ -145,21 +145,21 @@ impl<T: Data> Widget<T> for Image {
     ) -> Size {
         bc.debug_check("Image");
 
-		// If either the width or height is constrained calculate a value so that the image fits
-		// in the size exactly. If it is unconstrained by both width and height take the size of
-		// the image.
-		if !bc.is_height_bounded() && bc.is_width_bounded() {
-			let mut  size = bc.max();
-			let ratio = size.width / self.image_data.x_pixels as f64;
-			size.height = ratio * self.image_data.y_pixels as f64;
-			size
-        } else if !bc.is_width_bounded() && bc.is_height_bounded(){
-			let mut  size = bc.max();
-			let ratio = size.height / self.image_data.y_pixels as f64;
-			size.width = ratio * self.image_data.x_pixels as f64;
-			size 
-		} else {
-			bc.constrain(self.image_data.get_size())
+        // If either the width or height is constrained calculate a value so that the image fits
+        // in the size exactly. If it is unconstrained by both width and height take the size of
+        // the image.
+        if !bc.is_height_bounded() && bc.is_width_bounded() {
+            let mut size = bc.max();
+            let ratio = size.width / self.image_data.x_pixels as f64;
+            size.height = ratio * self.image_data.y_pixels as f64;
+            size
+        } else if !bc.is_width_bounded() && bc.is_height_bounded() {
+            let mut size = bc.max();
+            let ratio = size.height / self.image_data.y_pixels as f64;
+            size.width = ratio * self.image_data.x_pixels as f64;
+            size
+        } else {
+            bc.constrain(self.image_data.get_size())
         }
     }
 
@@ -448,11 +448,11 @@ mod tests {
                 target.into_png(tmp_dir.join("image.png")).unwrap();
             },
         );
-	}
-	
-	#[test]
+    }
+
+    #[test]
     fn width_bound_paint() {
-        use crate::{tests::harness::Harness, WidgetId, widget::Scroll};
+        use crate::{tests::harness::Harness, widget::Scroll, WidgetId};
         let _id_1 = WidgetId::next();
         let image_data = ImageData {
             pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
@@ -474,8 +474,8 @@ mod tests {
                 harness.paint();
             },
             |target| {
-				// the width should be calculated to be 400.
-				let width = 400;
+                // the width should be calculated to be 400.
+                let width = 400;
                 let raw_pixels = target.into_raw();
                 assert_eq!(raw_pixels.len(), 400 * width * 4);
 
@@ -498,11 +498,11 @@ mod tests {
                 assert_eq!(raw_pixels[200 * width * 4..201 * width * 4], expecting[..]);
             },
         );
-	}
-	
-	#[test]
+    }
+
+    #[test]
     fn height_bound_paint() {
-        use crate::{tests::harness::Harness, WidgetId, widget::Scroll};
+        use crate::{tests::harness::Harness, widget::Scroll, WidgetId};
         let _id_1 = WidgetId::next();
         let image_data = ImageData {
             pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
@@ -524,8 +524,8 @@ mod tests {
                 harness.paint();
             },
             |target| {
-				// the width should be calculated to be 400.
-				let width = 400;
+                // the width should be calculated to be 400.
+                let width = 400;
                 let raw_pixels = target.into_raw();
                 assert_eq!(raw_pixels.len(), 400 * width * 4);
 
