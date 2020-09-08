@@ -294,9 +294,9 @@ impl<T: Data> Inner<T> {
 
     fn prepare_paint(&mut self, window_id: WindowId) {
         if let Some(win) = self.windows.get_mut(window_id) {
-            win.prepare_paint(&mut self.command_queue, &self.data, &self.env);
+            win.prepare_paint(&mut self.command_queue, &mut self.data, &self.env);
         }
-        self.invalidate_and_finalize();
+        self.do_update();
     }
 
     fn paint(&mut self, window_id: WindowId, piet: &mut Piet, invalid: &Region) {
