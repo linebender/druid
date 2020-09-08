@@ -160,7 +160,8 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     }
 
     /// Control the events of this widget with a [`Click`] widget. The closure
-    /// provided will be called when the widget is clicked.
+    /// provided will be called when the widget is clicked with the left mouse
+    /// button.
     ///
     /// The child widget will also be updated on [`LifeCycle::HotChanged`] and
     /// mouse down, which can be useful for painting based on `ctx.is_active()`
