@@ -148,16 +148,14 @@ impl<T: Data> Widget<T> for Image {
         // If either the width or height is constrained calculate a value so that the image fits
         // in the size exactly. If it is unconstrained by both width and height take the size of
         // the image.
-        if !bc.is_height_bounded() && bc.is_width_bounded() {
-            let mut size = bc.max();
-            let ratio = size.width / self.image_data.x_pixels as f64;
-            size.height = ratio * self.image_data.y_pixels as f64;
-            size
-        } else if !bc.is_width_bounded() && bc.is_height_bounded() {
-            let mut size = bc.max();
-            let ratio = size.height / self.image_data.y_pixels as f64;
-            size.width = ratio * self.image_data.x_pixels as f64;
-            size
+        if bc.is_width_bounded() && !bc.is_height_bounded() {
+            let max = bc.max();
+            let ratio = max.width / self.image_data.x_pixels as f64;
+            Size::new(max.width, ratio * self.image_data.y_pixels as f64)
+        } else if bc.is_height_bounded() && !bc.is_width_bounded() {
+            let max = bc.max();
+            let ratio = max.height / self.image_data.y_pixels as f64;
+            Size::new(ratio * self.image_data.x_pixels as f64, max.height)
         } else {
             bc.constrain(self.image_data.get_size())
         }
