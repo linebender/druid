@@ -199,7 +199,7 @@ impl<T: Data> Label<T> {
         // TODO: caching of both the format and the layout
         self.text.with_display_text(|text| {
             let font = t.font_family(&font_name).unwrap_or(FontFamily::SYSTEM_UI);
-            t.new_text_layout(&text)
+            t.new_text_layout(text)
                 .font(font, font_size)
                 .text_color(color.clone())
                 .build()

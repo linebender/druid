@@ -443,7 +443,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let id_string = id.to_raw().to_string();
             self.debug_widget_text = ctx
                 .text()
-                .new_text_layout(&id_string)
+                .new_text_layout(id_string)
                 .font(FontFamily::SYSTEM_UI, 10.0)
                 .text_color(text_color)
                 .build()
