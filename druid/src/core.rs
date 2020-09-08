@@ -462,12 +462,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
             ctx.paint_with_z_index(ctx.depth(), move |ctx| {
                 let origin = Point::new(origin.x.max(0.0), origin.y.max(0.0));
-
-                let text_pos = origin + Vec2::new(0., 8.0);
                 let text_rect = Rect::from_origin_size(origin, text_size);
-
                 ctx.fill(text_rect, &border_color);
-                ctx.draw_text(&text, text_pos);
+                ctx.draw_text(&text, origin);
             })
         }
     }
