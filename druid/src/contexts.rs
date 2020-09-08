@@ -449,6 +449,15 @@ impl EventCtx<'_, '_> {
         self.widget_state.request_focus = Some(FocusChange::Focus(id));
     }
 
+    /// Transfer focus to the widget with the given `WidgetId`.
+    ///
+    /// See [`is_focused`] for more information about focus.
+    ///
+    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
+    pub fn set_focus(&mut self, target: WidgetId) {
+        self.widget_state.request_focus = Some(FocusChange::Focus(target));
+    }
+
     /// Transfer focus to the next focusable widget.
     ///
     /// This should only be called by a widget that currently has focus.
