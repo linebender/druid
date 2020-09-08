@@ -104,7 +104,7 @@ impl TextBox {
             .unwrap_or(FontFamily::SYSTEM_UI);
 
         piet_text
-            .new_text_layout(&text.to_string())
+            .new_text_layout(text.to_string())
             .font(font, font_size)
             .default_attribute(TextAttribute::ForegroundColor(default_color))
             .range_attribute(

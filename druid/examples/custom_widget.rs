@@ -85,7 +85,7 @@ impl Widget<String> for CustomWidget {
         // Here's where we actually use the UI state
         let layout = ctx
             .text()
-            .new_text_layout(data)
+            .new_text_layout(data.as_str())
             .font(FontFamily::SYSTEM_UI, 24.0)
             .text_color(fill_color)
             .build()
