@@ -89,7 +89,7 @@ impl Widget<String> for CustomWidget {
         let mut layout = TextLayout::new(data.as_str());
         layout.set_font(FontDescriptor::new(FontFamily::SERIF).with_size(24.0));
         layout.set_text_color(fill_color);
-        layout.rebuild_if_needed(&mut ctx.text(), env);
+        layout.rebuild_if_needed(ctx.text(), env);
 
         // Let's rotate our text slightly. First we save our current (default) context:
         ctx.with_save(|ctx| {

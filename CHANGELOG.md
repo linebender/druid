@@ -40,6 +40,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Moved `Target` parameter from `submit_command` to `Command::new` and `Command::to`. ([#1185] by [@finnerale])
 - `Movement::RightOfLine` to `Movement::NextLineBreak`, and `Movement::LeftOfLine` to `Movement::PrecedingLineBreak`. ([#1092] by [@sysint64])
 - `AnimFrame` was moved from `lifecycle` to `event` ([#1155] by [@jneem])
+- Contexts' `text()` methods return `&mut PietText` instead of cloning ([#1205] by [@cmyr])
 
 ### Deprecated
 
@@ -425,6 +426,7 @@ Last release without a changelog :(
 [#1185]: https://github.com/linebender/druid/pull/1185
 [#1092]: https://github.com/linebender/druid/pull/1092
 [#1204]: https://github.com/linebender/druid/pull/1204
+[#1205]: https://github.com/linebender/druid/pull/1205
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
