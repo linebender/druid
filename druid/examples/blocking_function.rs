@@ -18,10 +18,13 @@ use std::{thread, time};
 
 use druid::{
     AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, ExtEventSink, Lens, LocalizedString,
-    Selector, Target, Widget, WidgetExt, WindowDesc,
+    Selector, Widget, WidgetExt, WindowDesc,
 };
 
-use druid::widget::{Button, Either, Flex, Label, Spinner};
+use druid::{
+    widget::{Button, Either, Flex, Label, Spinner},
+    Target,
+};
 
 const FINISH_SLOW_FUNCTION: Selector<u32> = Selector::new("finish_slow_function");
 
@@ -43,7 +46,7 @@ fn slow_function(number: u32) -> u32 {
 fn wrapped_slow_function(sink: ExtEventSink, number: u32) {
     thread::spawn(move || {
         let number = slow_function(number);
-        sink.submit_command(FINISH_SLOW_FUNCTION, number, None)
+        sink.submit_command(FINISH_SLOW_FUNCTION, number, Target::Auto)
             .expect("command failed to submit");
     });
 }

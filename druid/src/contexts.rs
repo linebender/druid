@@ -21,12 +21,11 @@ use std::{
 };
 
 use crate::core::{CommandQueue, FocusChange, WidgetState};
-use crate::piet::Piet;
-use crate::piet::RenderContext;
+use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
 use crate::{
     commands, Affine, Command, ContextMenu, Cursor, ExtEventSink, Insets, MenuDesc, Point, Rect,
-    SingleUse, Size, Target, Text, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
+    SingleUse, Size, Target, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -49,6 +48,7 @@ pub(crate) struct ContextState<'a> {
     pub(crate) ext_handle: &'a ExtEventSink,
     pub(crate) window_id: WindowId,
     pub(crate) window: &'a WindowHandle,
+    pub(crate) text: PietText,
     /// The id of the widget that currently has focus.
     pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) root_app_data_type: TypeId,
@@ -155,8 +155,8 @@ impl_context_method!(
         }
 
         /// Get an object which can create text layouts.
-        pub fn text(&self) -> Text {
-            self.state.window.text()
+        pub fn text(&mut self) -> &mut PietText {
+            &mut self.state.text
         }
     }
 );
@@ -251,6 +251,7 @@ impl_context_method!(
 // methods on event, update, and lifecycle
 impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, {
     #[deprecated(since = "0.5.0", note = "use request_paint instead")]
+    #[allow(missing_docs)]
     pub fn invalidate(&mut self) {
         self.request_paint();
     }
@@ -333,14 +334,12 @@ impl_context_method!(
         /// the [`update`] method is called; events submitted during [`update`]
         /// are handled after painting.
         ///
+        /// [`Target::Auto`] commands will be sent to the window containing the widget.
+        ///
         /// [`Command`]: struct.Command.html
         /// [`update`]: trait.Widget.html#tymethod.update
-        pub fn submit_command(
-            &mut self,
-            cmd: impl Into<Command>,
-            target: impl Into<Option<Target>>,
-        ) {
-            self.state.submit_command(cmd.into(), target.into())
+        pub fn submit_command(&mut self, cmd: impl Into<Command>) {
+            self.state.submit_command(cmd.into())
         }
 
         /// Returns an [`ExtEventSink`] that can be moved between threads,
@@ -386,8 +385,9 @@ impl EventCtx<'_, '_> {
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
         if self.state.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::NEW_WINDOW, SingleUse::new(Box::new(desc))),
-                Target::Global,
+                commands::NEW_WINDOW
+                    .with(SingleUse::new(Box::new(desc)))
+                    .to(Target::Global),
             );
         } else {
             const MSG: &str = "WindowDesc<T> - T must match the application data type.";
@@ -406,8 +406,9 @@ impl EventCtx<'_, '_> {
     pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
         if self.state.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::SHOW_CONTEXT_MENU, Box::new(menu)),
-                Target::Window(self.state.window_id),
+                commands::SHOW_CONTEXT_MENU
+                    .with(Box::new(menu))
+                    .to(Target::Window(self.state.window_id)),
             );
         } else {
             const MSG: &str = "ContextMenu<T> - T must match the application data type.";
@@ -446,6 +447,15 @@ impl EventCtx<'_, '_> {
         // to deliver on the "last focus request wins" promise.
         let id = self.widget_id();
         self.widget_state.request_focus = Some(FocusChange::Focus(id));
+    }
+
+    /// Transfer focus to the widget with the given `WidgetId`.
+    ///
+    /// See [`is_focused`] for more information about focus.
+    ///
+    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
+    pub fn set_focus(&mut self, target: WidgetId) {
+        self.widget_state.request_focus = Some(FocusChange::Focus(target));
     }
 
     /// Transfer focus to the next focusable widget.
@@ -511,6 +521,11 @@ impl EventCtx<'_, '_> {
 }
 
 impl UpdateCtx<'_, '_> {
+    /// Returns `true` if this widget or a descendent as explicitly requested
+    /// an update call. This should only be needed in advanced cases;
+    /// See [`EventCtx::request_update`] for more information.
+    ///
+    /// [`EventCtx::request_update`]: struct.EventCtx.html#method.request_update
     pub fn has_requested_update(&mut self) -> bool {
         self.widget_state.request_update
     }
@@ -661,20 +676,22 @@ impl<'a> ContextState<'a> {
             window,
             window_id,
             focus_widget,
+            text: window.text(),
             root_app_data_type: TypeId::of::<T>(),
         }
     }
 
-    fn submit_command(&mut self, command: Command, target: Option<Target>) {
-        let target = target.unwrap_or_else(|| self.window_id.into());
-        self.command_queue.push_back((target, command))
+    fn submit_command(&mut self, command: Command) {
+        self.command_queue
+            .push_back(command.default_to(self.window_id));
     }
 
     fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
         if self.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::SET_MENU, Box::new(menu)),
-                Some(Target::Window(self.window_id)),
+                commands::SET_MENU
+                    .with(Box::new(menu))
+                    .to(Target::Window(self.window_id)),
             );
         } else {
             const MSG: &str = "MenuDesc<T> - T must match the application data type.";

@@ -62,11 +62,11 @@ pub struct Selector<T = ()>(SelectorSymbol, PhantomData<*const T>);
 ///
 /// # Examples
 /// ```
-/// use druid::{Command, Selector};
+/// use druid::{Command, Selector, Target};
 ///
 /// let selector = Selector::new("process_rows");
 /// let rows = vec![1, 3, 10, 12];
-/// let command = Command::new(selector, rows);
+/// let command = Command::new(selector, rows, Target::Auto);
 ///
 /// assert_eq!(command.get(selector), Some(&vec![1, 3, 10, 12]));
 /// ```
@@ -78,6 +78,7 @@ pub struct Selector<T = ()>(SelectorSymbol, PhantomData<*const T>);
 pub struct Command {
     symbol: SelectorSymbol,
     payload: Arc<dyn Any>,
+    target: Target,
 }
 
 /// A wrapper type for [`Command`] payloads that should only be used once.
@@ -87,13 +88,13 @@ pub struct Command {
 ///
 /// # Examples
 /// ```
-/// use druid::{Command, Selector, SingleUse};
+/// use druid::{Command, Selector, SingleUse, Target};
 ///
 /// struct CantClone(u8);
 ///
 /// let selector = Selector::new("use-once");
 /// let num = CantClone(42);
-/// let command = Command::new(selector, SingleUse::new(num));
+/// let command = Command::new(selector, SingleUse::new(num), Target::Auto);
 ///
 /// let payload: &SingleUse<CantClone> = command.get_unchecked(selector);
 /// if let Some(num) = payload.take() {
@@ -118,6 +119,11 @@ pub enum Target {
     Window(WindowId),
     /// The target is a specific widget.
     Widget(WidgetId),
+    /// The target will be determined automatically.
+    ///
+    /// How this behaves depends on the context used to submit the command.
+    /// Each `submit_command` function should have documentation about the specific behavior.
+    Auto,
 }
 
 /// Commands with special meaning, defined by druid.
@@ -247,6 +253,11 @@ pub mod sys {
 impl Selector<()> {
     /// A selector that does nothing.
     pub const NOOP: Selector = Selector::new("");
+
+    /// Turns this into a command with the specified target.
+    pub fn to(self, target: impl Into<Target>) -> Command {
+        Command::from(self).to(target.into())
+    }
 }
 
 impl<T> Selector<T> {
@@ -267,9 +278,14 @@ impl<T: Any> Selector<T> {
     /// If the payload is `()` there is no need to call this,
     /// as `Selector<()>` implements `Into<Command>`.
     ///
+    /// By default, the command will have [`Target::Auto`].
+    /// The [`Command::to`] method can be used to override this.
+    ///
     /// [`Command::new`]: struct.Command.html#method.new
+    /// [`Command::to`]: struct.Command.html#method.to
+    /// [`Target::Auto`]: enum.Target.html#variant.Auto
     pub fn with(self, payload: T) -> Command {
-        Command::new(self, payload)
+        Command::new(self, payload, Target::Auto)
     }
 }
 
@@ -282,19 +298,49 @@ impl Command {
     ///
     /// [`Selector`]: struct.Selector.html
     /// [`Selector::with`]: struct.Selector.html#method.with
-    pub fn new<T: Any>(selector: Selector<T>, payload: T) -> Self {
+    pub fn new<T: Any>(selector: Selector<T>, payload: T, target: impl Into<Target>) -> Self {
         Command {
             symbol: selector.symbol(),
             payload: Arc::new(payload),
+            target: target.into(),
         }
     }
 
     /// Used to create a command from the types sent via an `ExtEventSink`.
-    pub(crate) fn from_ext(symbol: SelectorSymbol, payload: Box<dyn Any>) -> Self {
+    pub(crate) fn from_ext(
+        symbol: SelectorSymbol,
+        payload: Box<dyn Any>,
+        target: impl Into<Target>,
+    ) -> Self {
         Command {
             symbol,
             payload: payload.into(),
+            target: target.into(),
         }
+    }
+
+    /// Set the commands target.
+    ///
+    /// [`Command::target`] can be used to get the current target.
+    ///
+    /// [`Command::target`]: #method.target
+    pub fn to(mut self, target: impl Into<Target>) -> Self {
+        self.target = target.into();
+        self
+    }
+
+    pub(crate) fn default_to(mut self, target: impl Into<Target>) -> Self {
+        self.target.default(target.into());
+        self
+    }
+
+    /// Returns the commands target.
+    ///
+    /// [`Command::to`] can be used to change the target.
+    ///
+    /// [`Command::to`]: #method.to
+    pub fn target(&self) -> Target {
+        self.target
     }
 
     /// Returns `true` if `self` matches this `selector`.
@@ -354,6 +400,7 @@ impl Command {
 }
 
 impl<T: Any> SingleUse<T> {
+    /// Create a new single-use payload.
     pub fn new(data: T) -> Self {
         SingleUse(Mutex::new(Some(data)))
     }
@@ -369,6 +416,7 @@ impl From<Selector> for Command {
         Command {
             symbol: selector.symbol(),
             payload: Arc::new(()),
+            target: Target::Auto,
         }
     }
 }
@@ -385,6 +433,15 @@ impl<T> Copy for Selector<T> {}
 impl<T> Clone for Selector<T> {
     fn clone(&self) -> Self {
         *self
+    }
+}
+
+impl Target {
+    /// If `self` is `Auto` it will be replaced with `target`.
+    pub(crate) fn default(&mut self, target: Target) {
+        if self == &Target::Auto {
+            *self = target;
+        }
     }
 }
 
@@ -420,7 +477,7 @@ mod tests {
     fn get_payload() {
         let sel = Selector::new("my-selector");
         let payload = vec![0, 1, 2];
-        let command = Command::new(sel, payload);
+        let command = Command::new(sel, payload, Target::Auto);
         assert_eq!(command.get(sel), Some(&vec![0, 1, 2]));
     }
 }

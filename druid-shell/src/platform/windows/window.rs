@@ -45,7 +45,7 @@ use piet_common::dwrite::DwriteFactory;
 use crate::platform::windows::HwndRenderTarget;
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
-use crate::piet::{Piet, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
 use super::accels::register_accel;
 use super::application::Application;
@@ -65,7 +65,7 @@ use crate::keyboard::{KbKey, KeyState};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::window::{IdleToken, TimerToken, WinHandler};
 
 /// The platform target DPI.
 ///
@@ -1290,7 +1290,12 @@ impl WindowHandle {
 
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(w) = self.state.upgrade() {
-            w.invalid.borrow_mut().add_rect(rect);
+            let scale = w.scale.get();
+            // We need to invalidate an integer number of pixels, but we also want to keep
+            // the invalid region in display points, since that's what we need to pass
+            // to WinHandler::paint.
+            w.invalid.borrow_mut().add_rect(rect.to_px(scale).expand().to_dp(scale));
+
         }
         self.request_anim_frame();
     }
@@ -1378,8 +1383,8 @@ impl WindowHandle {
         }
     }
 
-    pub fn text(&self) -> Text {
-        Text::new(self.dwrite_factory.clone())
+    pub fn text(&self) -> PietText {
+        PietText::new(self.dwrite_factory.clone())
     }
 
     /// Request a timer event.
