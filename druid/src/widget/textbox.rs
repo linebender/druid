@@ -361,7 +361,7 @@ impl Widget<String> for TextBox {
             self.do_edit_action(edit_action, data);
             self.reset_cursor_blink(ctx);
             self.text.set_text(data.as_str());
-            self.text.rebuild_if_needed(&mut ctx.text(), env);
+            self.text.rebuild_if_needed(ctx.text(), env);
 
             if !is_select_all {
                 self.update_hscroll();
@@ -374,7 +374,7 @@ impl Widget<String> for TextBox {
             LifeCycle::WidgetAdded => {
                 ctx.register_for_focus();
                 self.text.set_text(data.clone());
-                self.text.rebuild_if_needed(&mut ctx.text(), env);
+                self.text.rebuild_if_needed(ctx.text(), env);
             }
             // an open question: should we be able to schedule timers here?
             LifeCycle::FocusChanged(true) => ctx.submit_command(RESET_BLINK.to(ctx.widget_id())),
@@ -400,7 +400,7 @@ impl Widget<String> for TextBox {
             }
         }
 
-        self.text.rebuild_if_needed(&mut ctx.text(), env);
+        self.text.rebuild_if_needed(ctx.text(), env);
         ctx.request_paint();
     }
 

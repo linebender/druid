@@ -48,6 +48,7 @@ pub(crate) struct ContextState<'a> {
     pub(crate) ext_handle: &'a ExtEventSink,
     pub(crate) window_id: WindowId,
     pub(crate) window: &'a WindowHandle,
+    pub(crate) text: PietText,
     /// The id of the widget that currently has focus.
     pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) root_app_data_type: TypeId,
@@ -154,8 +155,8 @@ impl_context_method!(
         }
 
         /// Get an object which can create text layouts.
-        pub fn text(&self) -> PietText {
-            self.state.window.text()
+        pub fn text(&mut self) -> &mut PietText {
+            &mut self.state.text
         }
     }
 );
@@ -675,6 +676,7 @@ impl<'a> ContextState<'a> {
             window,
             window_id,
             focus_widget,
+            text: window.text(),
             root_app_data_type: TypeId::of::<T>(),
         }
     }

@@ -442,8 +442,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             self.debug_widget_text.set_text(id_string);
             self.debug_widget_text.set_text_size(10.0);
             self.debug_widget_text.set_text_color(text_color);
-            self.debug_widget_text
-                .rebuild_if_needed(&mut ctx.text(), env);
+            self.debug_widget_text.rebuild_if_needed(ctx.text(), env);
         }
     }
 
@@ -986,16 +985,16 @@ mod tests {
 
         let mut command_queue: CommandQueue = VecDeque::new();
         let mut widget_state = WidgetState::new(WidgetId::next(), None);
+        let window = WindowHandle::default();
         let ext_host = ExtEventHost::default();
         let ext_handle = ext_host.make_sink();
-        let mut state = ContextState {
-            command_queue: &mut command_queue,
-            ext_handle: &ext_handle,
-            window_id: WindowId::next(),
-            window: &WindowHandle::default(),
-            root_app_data_type: std::any::TypeId::of::<Option<u32>>(),
-            focus_widget: None,
-        };
+        let mut state = ContextState::new::<Option<u32>>(
+            &mut command_queue,
+            &ext_handle,
+            &window,
+            WindowId::next(),
+            None,
+        );
 
         let mut ctx = LifeCycleCtx {
             widget_state: &mut widget_state,
