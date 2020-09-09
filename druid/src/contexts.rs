@@ -21,11 +21,12 @@ use std::{
 };
 
 use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
 use crate::{
-    commands, Affine, Command, ContextMenu, Cursor, ExtEventSink, Insets, MenuDesc, Point, Rect,
-    SingleUse, Size, Target, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
+    commands, Affine, Command, ContextMenu, Cursor, Env, ExtEventSink, Insets, MenuDesc, Point,
+    Rect, SingleUse, Size, Target, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -91,6 +92,8 @@ pub struct LifeCycleCtx<'a, 'b> {
 pub struct UpdateCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
+    pub(crate) prev_env: Option<&'a Env>,
+    pub(crate) env: &'a Env,
 }
 
 /// A context provided to layout handling methods of widgets.
@@ -516,12 +519,40 @@ impl EventCtx<'_, '_> {
 
 impl UpdateCtx<'_, '_> {
     /// Returns `true` if this widget or a descendent as explicitly requested
-    /// an update call. This should only be needed in advanced cases;
-    /// See [`EventCtx::request_update`] for more information.
+    /// an update call.
+    ///
+    /// This should only be needed in advanced cases;
+    /// see [`EventCtx::request_update`] for more information.
     ///
     /// [`EventCtx::request_update`]: struct.EventCtx.html#method.request_update
     pub fn has_requested_update(&mut self) -> bool {
         self.widget_state.request_update
+    }
+
+    /// Returns `true` if the current [`Env`] has changed since the previous
+    /// [`update`] call.
+    ///
+    /// [`Env`]: struct.Env.html
+    /// [`update`]: trait.Widget.html#tymethod.update
+    pub fn env_changed(&self) -> bool {
+        self.prev_env.is_some()
+    }
+
+    /// Returns `true` if the given key has changed since the last [`update`]
+    /// call.
+    ///
+    /// The argument can be anything that is resolveable from the [`Env`],
+    /// such as a [`Key`] or a [`KeyOrValue`].
+    ///
+    /// [`update`]: trait.Widget.html#tymethod.update
+    /// [`Env`]: struct.Env.html
+    /// [`Key`]: struct.Key.html
+    /// [`KeyOrValue`]: enum.KeyOrValue.html
+    pub fn env_key_changed<T>(&self, key: &impl KeyLike<T>) -> bool {
+        match self.prev_env.as_ref() {
+            Some(prev) => key.changed(prev, self.env),
+            None => false,
+        }
     }
 }
 

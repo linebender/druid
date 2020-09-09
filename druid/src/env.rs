@@ -133,6 +133,35 @@ pub enum KeyOrValue<T> {
     Key(Key<T>),
 }
 
+/// A trait for anything that can resolve a value of some type from the [`Env`].
+///
+/// This is a generalization of the idea of [`KeyOrValue`], mostly motivated
+/// by wanting to improve the API used for checking if items in the [`Env`] have changed.
+///
+/// [`Env`]: struct.Env.html
+/// [`KeyOrValue`]: enum.KeyOrValue.html
+pub trait KeyLike<T> {
+    /// Returns `true` if this item has changed between the old and new [`Env`].
+    ///
+    /// [`Env`]: struct.Env.html
+    fn changed(&self, old: &Env, new: &Env) -> bool;
+}
+
+impl<T: ValueType> KeyLike<T> for Key<T> {
+    fn changed(&self, old: &Env, new: &Env) -> bool {
+        !old.get_untyped(self).same(new.get_untyped(self))
+    }
+}
+
+impl<T> KeyLike<T> for KeyOrValue<T> {
+    fn changed(&self, old: &Env, new: &Env) -> bool {
+        match self {
+            KeyOrValue::Concrete(_) => false,
+            KeyOrValue::Key(key) => !old.get_untyped(key).same(new.get_untyped(key)),
+        }
+    }
+}
+
 /// Values which can be stored in an environment.
 pub trait ValueType: Sized + Into<Value> {
     /// Attempt to convert the generic `Value` into this type.
@@ -244,7 +273,7 @@ impl Env {
     /// Panics if the key is not found.
     ///
     /// [`Value`]: enum.Value.html
-    pub fn get_untyped(&self, key: impl Borrow<Key<()>>) -> &Value {
+    pub fn get_untyped<V>(&self, key: impl Borrow<Key<V>>) -> &Value {
         match self.try_get_untyped(key) {
             Ok(val) => val,
             Err(err) => panic!("{}", err),
@@ -259,7 +288,7 @@ impl Env {
     /// e.g. for debugging, theme editing, and theme loading.
     ///
     /// [`Value`]: enum.Value.html
-    pub fn try_get_untyped(&self, key: impl Borrow<Key<()>>) -> Result<&Value, MissingKeyError> {
+    pub fn try_get_untyped<V>(&self, key: impl Borrow<Key<V>>) -> Result<&Value, MissingKeyError> {
         self.0.map.get(key.borrow().key).ok_or(MissingKeyError {
             key: key.borrow().key.into(),
         })

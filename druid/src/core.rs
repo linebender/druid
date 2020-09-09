@@ -847,9 +847,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
         }
 
+        let prev_env = self.env.as_ref().filter(|p| !p.same(env));
+
         let mut child_ctx = UpdateCtx {
             state: ctx.state,
             widget_state: &mut self.state,
+            prev_env,
+            env,
         };
 
         self.inner
