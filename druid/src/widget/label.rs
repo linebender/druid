@@ -14,7 +14,7 @@
 
 //! A label widget.
 
-use crate::piet::{Color, PietText, UnitPoint};
+use crate::piet::{Color, PietText};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, FontDescriptor, KeyOrValue, LayoutCtx, LifeCycle,
     LifeCycleCtx, LocalizedString, PaintCtx, Point, Size, TextLayout, UpdateCtx, Widget,
@@ -53,7 +53,7 @@ pub struct Label<T> {
     layout: TextLayout,
     // if our text is manually changed we need to rebuild the layout
     // before using it again.
-    needs_update_text: bool,
+    needs_rebuild: bool,
 }
 
 impl<T: Data> Label<T> {
@@ -79,7 +79,7 @@ impl<T: Data> Label<T> {
         Self {
             text,
             layout,
-            needs_update_text: true,
+            needs_rebuild: true,
         }
     }
 
@@ -106,12 +106,6 @@ impl<T: Data> Label<T> {
     pub fn dynamic(text: impl Fn(&T, &Env) -> String + 'static) -> Self {
         let text: LabelText<T> = text.into();
         Label::new(text)
-    }
-
-    /// Set text alignment.
-    #[deprecated(since = "0.5.0", note = "Use an Align widget instead")]
-    pub fn text_align(self, _align: UnitPoint) -> Self {
-        self
     }
 
     /// Builder-style method for setting the text color.
@@ -150,7 +144,7 @@ impl<T: Data> Label<T> {
     /// Set the label's text.
     pub fn set_text(&mut self, text: impl Into<LabelText<T>>) {
         self.text = text.into();
-        self.needs_update_text = true;
+        self.needs_rebuild = true;
     }
 
     /// Returns this label's current text.
@@ -165,6 +159,7 @@ impl<T: Data> Label<T> {
     /// [`Key<Color>`]: ../struct.Key.html
     pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
         self.layout.set_text_color(color);
+        self.needs_rebuild = true;
     }
 
     /// Set the text size.
@@ -174,6 +169,7 @@ impl<T: Data> Label<T> {
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         self.layout.set_text_size(size);
+        self.needs_rebuild = true;
     }
 
     /// Set the font.
@@ -186,14 +182,15 @@ impl<T: Data> Label<T> {
     /// [`Key<FontDescriptor>`]: ../struct.Key.html
     pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
         self.layout.set_font(font);
+        self.needs_rebuild = true;
     }
 
-    fn update_text_if_needed(&mut self, factory: &mut PietText, data: &T, env: &Env) {
-        if self.needs_update_text {
+    fn rebuild_if_needed(&mut self, factory: &mut PietText, data: &T, env: &Env) {
+        if self.needs_rebuild {
             self.text.resolve(data, env);
             self.layout.set_text(self.text.display_text());
             self.layout.rebuild_if_needed(factory, env);
-            self.needs_update_text = false;
+            self.needs_rebuild = false;
         }
     }
 }
@@ -242,23 +239,19 @@ impl<T: Data> LabelText<T> {
 impl<T: Data> Widget<T> for Label<T> {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        if let LifeCycle::WidgetAdded = event {
-            self.update_text_if_needed(&mut ctx.text(), data, env);
-        }
-    }
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        if !old_data.same(data) | self.text.resolve(data, env) {
-            self.layout.set_text(self.text.display_text());
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, _env: &Env) {
+        //FIXME: this should also be checking if anything in the env has changed
+        if !old_data.same(data) {
+            self.needs_rebuild = true;
             ctx.request_layout();
         }
-        //FIXME: this should only happen if the env has changed.
-        self.layout.rebuild_if_needed(&mut ctx.text(), env);
     }
 
-    fn layout(&mut self, _ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, _env: &Env) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Label");
+        self.rebuild_if_needed(&mut ctx.text(), data, env);
 
         let text_size = self.layout.size();
         bc.constrain(Size::new(
