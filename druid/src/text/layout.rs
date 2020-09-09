@@ -18,7 +18,7 @@ use std::ops::Range;
 
 use crate::kurbo::{Line, Point, Rect, Size};
 use crate::piet::{
-    Color, PietText, PietTextLayout, Text as _, TextAttribute, TextLayout as _,
+    Color, PietText, PietTextLayout, Text as _, TextAlignment, TextAttribute, TextLayout as _,
     TextLayoutBuilder as _,
 };
 use crate::{ArcStr, Data, Env, FontDescriptor, KeyOrValue, PaintCtx, RenderContext};
@@ -55,6 +55,7 @@ pub struct TextLayout {
     // the underlying layout object. This is constructed lazily.
     layout: Option<PietTextLayout>,
     wrap_width: f64,
+    alignment: TextAlignment,
 }
 
 impl TextLayout {
@@ -75,6 +76,7 @@ impl TextLayout {
             cached_text_size: None,
             layout: None,
             wrap_width: f64::INFINITY,
+            alignment: Default::default(),
         }
     }
 
@@ -134,6 +136,14 @@ impl TextLayout {
         if let Some(layout) = self.layout.as_mut() {
             let _ = layout.update_width(width);
         }
+    }
+
+    /// Set the [`TextAlignment`] for this layout.
+    ///
+    /// [`TextAlignment`]: enum.TextAlignment.html
+    pub fn set_text_alignment(&mut self, alignment: TextAlignment) {
+        self.alignment = alignment;
+        self.layout = None;
     }
 
     /// The size of the laid-out text.
@@ -239,6 +249,7 @@ impl TextLayout {
                 factory
                     .new_text_layout(self.text.clone())
                     .max_width(self.wrap_width)
+                    .alignment(self.alignment)
                     .font(descriptor.family.clone(), descriptor.size)
                     .default_attribute(descriptor.weight)
                     .default_attribute(descriptor.style)
