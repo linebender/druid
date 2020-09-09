@@ -204,26 +204,26 @@ fn take_focus() {
         assert!(right_focus.get().is_none());
 
         // this is sent to all widgets; the last widget to request focus should get it
-        harness.submit_command(TAKE_FOCUS, None);
+        harness.submit_command(TAKE_FOCUS);
         assert_eq!(harness.window().focus, Some(id_2));
         assert_eq!(left_focus.get(), None);
         assert_eq!(right_focus.get(), Some(true));
 
         // this is sent to all widgets; the last widget to request focus should still get it
         // NOTE: This tests siblings in particular, so careful when moving away from Split.
-        harness.submit_command(TAKE_FOCUS, None);
+        harness.submit_command(TAKE_FOCUS);
         assert_eq!(harness.window().focus, Some(id_2));
         assert_eq!(left_focus.get(), None);
         assert_eq!(right_focus.get(), Some(true));
 
         // this is sent to a specific widget; it should get focus
-        harness.submit_command(TAKE_FOCUS, id_1);
+        harness.submit_command(TAKE_FOCUS.to(id_1));
         assert_eq!(harness.window().focus, Some(id_1));
         assert_eq!(left_focus.get(), Some(true));
         assert_eq!(right_focus.get(), Some(false));
 
         // this is sent to a specific widget; it should get focus
-        harness.submit_command(TAKE_FOCUS, id_2);
+        harness.submit_command(TAKE_FOCUS.to(id_2));
         assert_eq!(harness.window().focus, Some(id_2));
         assert_eq!(left_focus.get(), Some(false));
         assert_eq!(right_focus.get(), Some(true));
@@ -291,42 +291,42 @@ fn focus_changed() {
         harness.send_initial_events();
 
         // focus none -> a
-        harness.submit_command(TAKE_FOCUS, id_a);
+        harness.submit_command(TAKE_FOCUS.to(id_a));
         assert_eq!(harness.window().focus, Some(id_a));
         assert!(changed(&a_rec, true));
         assert!(no_change(&b_rec));
         assert!(no_change(&c_rec));
 
         // focus a -> b
-        harness.submit_command(TAKE_FOCUS, id_b);
+        harness.submit_command(TAKE_FOCUS.to(id_b));
         assert_eq!(harness.window().focus, Some(id_b));
         assert!(changed(&a_rec, false));
         assert!(changed(&b_rec, true));
         assert!(no_change(&c_rec));
 
         // focus b -> c
-        harness.submit_command(TAKE_FOCUS, id_c);
+        harness.submit_command(TAKE_FOCUS.to(id_c));
         assert_eq!(harness.window().focus, Some(id_c));
         assert!(no_change(&a_rec));
         assert!(changed(&b_rec, false));
         assert!(changed(&c_rec, true));
 
         // focus c -> a
-        harness.submit_command(TAKE_FOCUS, id_a);
+        harness.submit_command(TAKE_FOCUS.to(id_a));
         assert_eq!(harness.window().focus, Some(id_a));
         assert!(changed(&a_rec, true));
         assert!(no_change(&b_rec));
         assert!(changed(&c_rec, false));
 
         // all focus before passing down the event
-        harness.submit_command(ALL_TAKE_FOCUS_BEFORE, None);
+        harness.submit_command(ALL_TAKE_FOCUS_BEFORE);
         assert_eq!(harness.window().focus, Some(id_c));
         assert!(changed(&a_rec, false));
         assert!(no_change(&b_rec));
         assert!(changed(&c_rec, true));
 
         // all focus after passing down the event
-        harness.submit_command(ALL_TAKE_FOCUS_AFTER, None);
+        harness.submit_command(ALL_TAKE_FOCUS_AFTER);
         assert_eq!(harness.window().focus, Some(id_a));
         assert!(changed(&a_rec, true));
         assert!(no_change(&b_rec));
@@ -370,7 +370,7 @@ fn adding_child_lifecycle() {
 
         assert!(record_new_child.is_empty());
 
-        harness.submit_command(REPLACE_CHILD, None);
+        harness.submit_command(REPLACE_CHILD);
 
         assert!(matches!(record.next(), Record::E(Event::Command(_))));
 
@@ -410,7 +410,7 @@ fn participate_in_autofocus() {
         assert_eq!(harness.window().focus_chain(), &[id_1, id_2, id_3, id_4]);
 
         // tell the replacer widget to swap its children
-        harness.submit_command(REPLACE_CHILD, None);
+        harness.submit_command(REPLACE_CHILD);
 
         // verify that the two new children are registered for focus.
         assert_eq!(
@@ -471,7 +471,7 @@ fn register_after_adding_child() {
         assert!(harness.get_state(id_5).children.may_contain(&id_4));
         assert_eq!(harness.get_state(id_5).children.entry_count(), 3);
 
-        harness.submit_command(REPLACE_CHILD, None);
+        harness.submit_command(REPLACE_CHILD);
 
         assert!(harness.get_state(id_5).children.may_contain(&id_6));
         assert!(harness.get_state(id_5).children.may_contain(&id_4));
@@ -501,7 +501,7 @@ fn request_update() {
     Harness::create_simple((), widget, |harness| {
         harness.send_initial_events();
         assert!(!updated.get());
-        harness.submit_command(REQUEST_UPDATE, None);
+        harness.submit_command(REQUEST_UPDATE);
         assert!(updated.get());
     })
 }

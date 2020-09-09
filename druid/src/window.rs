@@ -83,9 +83,9 @@ impl<T> Window<T> {
 }
 
 impl<T: Data> Window<T> {
-    /// `true` iff any child requested an animation frame during the last `AnimFrame` event.
+    /// `true` iff any child requested an animation frame since the last `AnimFrame` event.
     pub(crate) fn wants_animation_frame(&self) -> bool {
-        self.last_anim.is_some()
+        self.root.state().request_anim
     }
 
     pub(crate) fn focus_chain(&self) -> &[WidgetId] {
@@ -150,9 +150,6 @@ impl<T: Data> Window<T> {
         self.timers.extend_drain(&mut widget_state.timers);
 
         // If we need a new paint pass, make sure druid-shell knows it.
-        if widget_state.request_anim && self.last_anim.is_none() {
-            self.last_anim = Some(Instant::now());
-        }
         if self.wants_animation_frame() {
             self.handle.request_anim_frame();
         }
@@ -263,21 +260,6 @@ impl<T: Data> Window<T> {
         env: &Env,
         process_commands: bool,
     ) {
-        // for AnimFrame, the event the window receives doesn't have the correct
-        // elapsed time; we calculate it here.
-        let now = Instant::now();
-        let substitute_event = if let LifeCycle::AnimFrame(_) = event {
-            // TODO: this calculation uses wall-clock time of the paint call, which
-            // potentially has jitter.
-            //
-            // See https://github.com/linebender/druid/issues/85 for discussion.
-            let last = self.last_anim.take();
-            let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
-            Some(LifeCycle::AnimFrame(elapsed_ns))
-        } else {
-            None
-        };
-
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let mut state =
             ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
@@ -285,13 +267,7 @@ impl<T: Data> Window<T> {
             state: &mut state,
             widget_state: &mut widget_state,
         };
-        let event = substitute_event.as_ref().unwrap_or(event);
         self.root.lifecycle(&mut ctx, event, data, env);
-
-        if substitute_event.is_some() && ctx.widget_state.request_anim {
-            self.last_anim = Some(now);
-        }
-
         self.post_event_processing(&mut widget_state, queue, data, env, process_commands);
     }
 
@@ -322,12 +298,30 @@ impl<T: Data> Window<T> {
     }
 
     /// Get ready for painting, by doing layout and sending an `AnimFrame` event.
-    pub(crate) fn prepare_paint(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
-        // FIXME: only do AnimFrame if root has requested_anim?
-        self.lifecycle(queue, &LifeCycle::AnimFrame(0), data, env, true);
+    pub(crate) fn prepare_paint(&mut self, queue: &mut CommandQueue, data: &mut T, env: &Env) {
+        let now = Instant::now();
+        // TODO: this calculation uses wall-clock time of the paint call, which
+        // potentially has jitter.
+        //
+        // See https://github.com/linebender/druid/issues/85 for discussion.
+        let last = self.last_anim.take();
+        let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
 
         if self.root.state().needs_layout {
             self.layout(queue, data, env);
+        }
+
+        // Here, `self.wants_animation_frame()` refers to the animation frame that is currently
+        // being prepared for. (This is relying on the fact that `self.layout()` can't request
+        // an animation frame.)
+        if self.wants_animation_frame() {
+            self.event(queue, Event::AnimFrame(elapsed_ns), data, env);
+        }
+
+        // Here, `self.wants_animation_frame()` is true if we want *another* animation frame after
+        // the current one. (It got modified in the call to `self.event` above.)
+        if self.wants_animation_frame() {
+            self.last_anim = Some(now);
         }
     }
 
