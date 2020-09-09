@@ -35,8 +35,9 @@ You can find its changes [documented below](#060---2020-06-01).
 - Implementation of `Data` trait for `i128` and `u128` primitive data types. ([#1214] by [@koutoftimer])
 - `LineBreaking` enum allows configuration of label line-breaking ([#1195] by [@cmyr])
 - `TextAlignment` support in `TextLayout` and `Label` ([#1210] by [@cmyr])`
+- `UpdateCtx` gets `env_changed` and `env_key_changed` methods ([#1207] by [@cmyr])
 - `Button::from_label` to construct a `Button` with a provided `Label`. ([#1226] by [@ForLoveOfCats])
-- Lens: Added Unit lens for type erased / display only widgets that do not need data. ([#1232] by [@rjwittams]) 
+- Lens: Added Unit lens for type erased / display only widgets that do not need data. ([#1232] by [@rjwittams])
 - `WindowLevel` to control system window Z order, with Mac and GTK implementations  ([#1231] by [@rjwittams])
 
 ### Changed
@@ -448,6 +449,7 @@ Last release without a changelog :(
 [#1195]: https://github.com/linebender/druid/pull/1195
 [#1204]: https://github.com/linebender/druid/pull/1204
 [#1205]: https://github.com/linebender/druid/pull/1205
+[#1207]: https://github.com/linebender/druid/pull/1207
 [#1210]: https://github.com/linebender/druid/pull/1210
 [#1214]: https://github.com/linebender/druid/pull/1214
 [#1226]: https://github.com/linebender/druid/pull/1226
