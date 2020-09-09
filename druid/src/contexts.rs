@@ -21,12 +21,11 @@ use std::{
 };
 
 use crate::core::{CommandQueue, FocusChange, WidgetState};
-use crate::piet::Piet;
-use crate::piet::RenderContext;
+use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
 use crate::{
     commands, Affine, Command, ContextMenu, Cursor, ExtEventSink, Insets, MenuDesc, Point, Rect,
-    SingleUse, Size, Target, Text, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
+    SingleUse, Size, Target, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -155,7 +154,7 @@ impl_context_method!(
         }
 
         /// Get an object which can create text layouts.
-        pub fn text(&self) -> Text {
+        pub fn text(&self) -> PietText {
             self.state.window.text()
         }
     }

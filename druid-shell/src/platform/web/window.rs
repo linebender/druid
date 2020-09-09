@@ -27,7 +27,7 @@ use wasm_bindgen::JsCast;
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
 
-use crate::piet::RenderContext;
+use crate::piet::{RenderContext, PietText};
 
 use super::application::Application;
 use super::error::Error;
@@ -41,7 +41,7 @@ use crate::scale::{Scale, ScaledArea};
 use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::window::{IdleToken, TimerToken, WinHandler};
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
@@ -461,13 +461,13 @@ impl WindowHandle {
         self.render_soon();
     }
 
-    pub fn text(&self) -> Text {
+    pub fn text(&self) -> PietText {
         let s = self
             .0
             .upgrade()
             .unwrap_or_else(|| panic!("Failed to produce a text context"));
 
-        Text::new(s.context.clone())
+        PietText::new(s.context.clone())
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
