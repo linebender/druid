@@ -512,6 +512,7 @@ fn hidden_should_receive_event(evt: &Event) -> bool {
         Event::WindowConnected
         | Event::WindowSize(_)
         | Event::Timer(_)
+        | Event::AnimFrame(_)
         | Event::Command(_)
         | Event::Internal(_) => true,
         Event::MouseDown(_)
@@ -529,7 +530,6 @@ fn hidden_should_receive_lifecycle(lc: &LifeCycle) -> bool {
     match lc {
         LifeCycle::WidgetAdded | LifeCycle::Internal(_) => true,
         LifeCycle::Size(_)
-        | LifeCycle::AnimFrame(_)
         | LifeCycle::HotChanged(_)
         | LifeCycle::FocusChanged(_) => false,
     }
@@ -543,6 +543,17 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
             }
         } else if let Some(child) = self.active_child(data) {
             child.event(ctx, event, &mut data.inner, env);
+        }
+
+        if let (Some(t_state), Event::AnimFrame(interval)) = (&mut self.transition_state, event)
+        {
+            t_state.current_time += *interval;
+            if t_state.live() {
+                ctx.request_anim_frame();
+            } else {
+                self.transition_state = None;
+            }
+            ctx.request_paint();
         }
     }
 
@@ -568,16 +579,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
             child.lifecycle(ctx, event, &data.inner, env);
         }
 
-        if let (Some(t_state), LifeCycle::AnimFrame(interval)) = (&mut self.transition_state, event)
-        {
-            t_state.current_time += *interval;
-            if t_state.live() {
-                ctx.request_anim_frame();
-            } else {
-                self.transition_state = None;
-            }
-            ctx.request_paint();
-        }
+
     }
 
     fn update(
