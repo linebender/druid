@@ -21,7 +21,7 @@ use crate::piet::{
     Color, PietText, PietTextLayout, Text as _, TextAlignment, TextAttribute, TextLayout as _,
     TextLayoutBuilder as _,
 };
-use crate::{ArcStr, Data, Env, FontDescriptor, KeyOrValue, PaintCtx, RenderContext};
+use crate::{ArcStr, Env, FontDescriptor, KeyOrValue, PaintCtx, RenderContext, UpdateCtx};
 
 /// A component for displaying text on screen.
 ///
@@ -31,28 +31,26 @@ use crate::{ArcStr, Data, Env, FontDescriptor, KeyOrValue, PaintCtx, RenderConte
 /// invalidating and rebuilding it as required.
 ///
 /// This object is not valid until the [`rebuild_if_needed`] method has been
-/// called. Additionally, this method must be called anytime the text or
-/// other properties have changed, or if any  items in the [`Env`] that are
-/// referenced in this layout change. In general, you should just call this
-/// method as part of your widget's `update` method.
+/// called. You should generally do this in your widget's [`layout`] method.
+/// Additionally, you should call [`needs_rebuild_after_update`]
+/// as part of your widget's [`update`] method; if this returns `true`, you will need
+/// to call [`rebuild_if_needed`] again, generally by scheduling another [`layout`]
+/// pass.
 ///
+/// [`layout`]: trait.Widget.html#tymethod.layout
+/// [`update`]: trait.Widget.html#tymethod.update
+/// [`needs_rebuild_after_update`]: #method.needs_rebuild_after_update
 /// [`rebuild_if_needed`]: #method.rebuild_if_needed
 /// [`Env`]: struct.Env.html
 #[derive(Clone)]
 pub struct TextLayout {
     text: ArcStr,
     font: KeyOrValue<FontDescriptor>,
-    text_size_override: Option<KeyOrValue<f64>>,
-    text_color: KeyOrValue<Color>,
-    //FIXME: all this caching stuff can go away when we have a simple way of
-    // checking if something has changed in the env.
-    cached_text_color: Color,
-    cached_font: FontDescriptor,
     // when set, this will be used to override the size in he font descriptor.
     // This provides an easy way to change only the font size, while still
     // using a `FontDescriptor` in the `Env`.
-    cached_text_size: Option<f64>,
-    // the underlying layout object. This is constructed lazily.
+    text_size_override: Option<KeyOrValue<f64>>,
+    text_color: KeyOrValue<Color>,
     layout: Option<PietTextLayout>,
     wrap_width: f64,
     alignment: TextAlignment,
@@ -69,11 +67,8 @@ impl TextLayout {
         TextLayout {
             text: text.into(),
             font: crate::theme::UI_FONT.into(),
-            cached_font: Default::default(),
             text_color: crate::theme::LABEL_COLOR.into(),
-            cached_text_color: Color::BLACK,
             text_size_override: None,
-            cached_text_size: None,
             layout: None,
             wrap_width: f64::INFINITY,
             alignment: Default::default(),
@@ -213,38 +208,47 @@ impl TextLayout {
     /// will check to see if any used environment items have changed,
     /// and invalidate itself as needed.
     ///
-    /// Returns `true` if an item has changed, indicating that the text object
-    /// needs layout.
+    /// Returns `true` if the text item needs to be rebuilt.
+    pub fn needs_rebuild_after_update(&mut self, ctx: &mut UpdateCtx) -> bool {
+        if ctx.env_changed() && self.layout.is_some() {
+            let rebuild = ctx.env_key_changed(&self.font)
+                || ctx.env_key_changed(&self.text_color)
+                || self
+                    .text_size_override
+                    .as_ref()
+                    .map(|k| ctx.env_key_changed(k))
+                    .unwrap_or(false);
+
+            if rebuild {
+                self.layout = None;
+            }
+        }
+        self.layout.is_none()
+    }
+
+    /// Rebuild the inner layout as needed.
     ///
-    /// # Note
+    /// This `TextLayout` object manages a lower-level layout object that may
+    /// need to be rebuilt in response to changes to the text or attributes
+    /// like the font.
     ///
-    /// After calling this method, the layout may be invalid until the next call
-    /// to [`rebuild_layout_if_needed`], [`layout`], or [`paint`].
+    /// This method should be called whenever any of these things may have changed.
+    /// A simple way to ensure this is correct is to always call this method
+    /// as part of your widget's [`layout`] method.
     ///
-    /// [`layout`]: #method.layout
-    /// [`paint`]: #method.paint
-    /// [`rebuild_layout_if_needed`]: #method.rebuild_layout_if_needed
+    /// [`layout`]: trait.Widget.html#method.layout
     pub fn rebuild_if_needed(&mut self, factory: &mut PietText, env: &Env) {
-        let new_font = self.font.resolve(env);
-        let new_color = self.text_color.resolve(env);
-        let new_size = self.text_size_override.as_ref().map(|key| key.resolve(env));
+        if self.layout.is_none() {
+            let font = self.font.resolve(env);
+            let color = self.text_color.resolve(env);
+            let size_override = self.text_size_override.as_ref().map(|key| key.resolve(env));
 
-        let needs_rebuild = !new_font.same(&self.cached_font)
-            || !new_color.same(&self.cached_text_color)
-            || new_size != self.cached_text_size
-            || self.layout.is_none();
-
-        self.cached_font = new_font;
-        self.cached_text_color = new_color;
-        self.cached_text_size = new_size;
-
-        if needs_rebuild {
-            let descriptor = if let Some(size) = &self.cached_text_size {
-                self.cached_font.clone().with_size(*size)
+            let descriptor = if let Some(size) = size_override {
+                font.with_size(size)
             } else {
-                self.cached_font.clone()
+                font
             };
-            let text_color = self.cached_text_color.clone();
+
             self.layout = Some(
                 factory
                     .new_text_layout(self.text.clone())
@@ -253,7 +257,7 @@ impl TextLayout {
                     .font(descriptor.family.clone(), descriptor.size)
                     .default_attribute(descriptor.weight)
                     .default_attribute(descriptor.style)
-                    .default_attribute(TextAttribute::ForegroundColor(text_color))
+                    .default_attribute(TextAttribute::ForegroundColor(color))
                     .build()
                     .unwrap(),
             )
