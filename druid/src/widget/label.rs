@@ -17,7 +17,8 @@
 use crate::piet::{Color, PietText};
 use crate::widget::prelude::*;
 use crate::{
-    BoxConstraints, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, Size, TextLayout,
+    BoxConstraints, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, Size, TextAlignment,
+    TextLayout,
 };
 
 // added padding between the edges of the widget and the text.
@@ -162,6 +163,14 @@ impl<T: Data> Label<T> {
         self
     }
 
+    /// Builder-style method to set the [`TextAlignment`].
+    ///
+    /// [`TextAlignment`]: enum.TextAlignment.html
+    pub fn with_text_alignment(mut self, alignment: TextAlignment) -> Self {
+        self.set_text_alignment(alignment);
+        self
+    }
+
     /// Set the label's text.
     ///
     /// If you change this property, you are responsible for calling
@@ -232,6 +241,14 @@ impl<T: Data> Label<T> {
     /// [`LineBreaking`]: enum.LineBreaking.html
     pub fn set_line_break_mode(&mut self, mode: LineBreaking) {
         self.line_break_mode = mode;
+    }
+
+    /// Set the [`TextAlignment`] for this layout.
+    ///
+    /// [`TextAlignment`]: enum.TextAlignment.html
+    pub fn set_text_alignment(&mut self, alignment: TextAlignment) {
+        self.layout.set_text_alignment(alignment);
+        self.needs_rebuild = true;
     }
 
     fn rebuild_if_needed(&mut self, factory: &mut PietText, data: &T, env: &Env) {

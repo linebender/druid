@@ -16,7 +16,8 @@
 
 use druid::widget::{Controller, Flex, Label, LineBreaking, RadioGroup, Scroll};
 use druid::{
-    AppLauncher, Color, Data, Env, Lens, LocalizedString, UpdateCtx, Widget, WidgetExt, WindowDesc,
+    AppLauncher, Color, Data, Env, Lens, LocalizedString, TextAlignment, UpdateCtx, Widget,
+    WidgetExt, WindowDesc,
 };
 
 const WINDOW_TITLE: LocalizedString<AppState> = LocalizedString::new("Text Options");
@@ -28,8 +29,8 @@ const SPACER_SIZE: f64 = 8.0;
 
 #[derive(Clone, Data, Lens)]
 struct AppState {
-    ///  the width at which to wrap lines.
     line_break_mode: LineBreaking,
+    alignment: TextAlignment,
 }
 
 /// A controller that sets properties on a label.
@@ -49,6 +50,9 @@ impl Controller<AppState, Label<AppState>> for LabelController {
             child.set_line_break_mode(data.line_break_mode);
             ctx.request_layout();
         }
+        if old_data.alignment != data.alignment {
+            child.set_text_alignment(data.alignment);
+        }
         child.update(ctx, old_data, data, env);
     }
 }
@@ -62,6 +66,7 @@ pub fn main() {
     // create the initial app state
     let initial_state = AppState {
         line_break_mode: LineBreaking::Clip,
+        alignment: Default::default(),
     };
 
     // start the application
@@ -93,9 +98,26 @@ fn build_root_widget() -> impl Widget<AppState> {
         ]))
         .lens(AppState::line_break_mode);
 
-    Flex::column()
+    let alignment_picker = Flex::column()
+        .with_child(Label::new("Justification"))
+        .with_spacer(SPACER_SIZE)
+        .with_child(RadioGroup::new(vec![
+            ("Start", TextAlignment::Start),
+            ("End", TextAlignment::End),
+            ("Center", TextAlignment::Center),
+            ("Justified", TextAlignment::Justified),
+        ]))
+        .lens(AppState::alignment);
+
+    let controls = Flex::row()
+        .cross_axis_alignment(druid::widget::CrossAxisAlignment::Start)
+        .with_child(alignment_picker)
         .with_spacer(SPACER_SIZE)
         .with_child(line_break_chooser)
-        .with_spacer(SPACER_SIZE)
+        .padding(SPACER_SIZE);
+
+    Flex::column()
+        .cross_axis_alignment(druid::widget::CrossAxisAlignment::Start)
+        .with_child(controls)
         .with_flex_child(label, 1.0)
 }

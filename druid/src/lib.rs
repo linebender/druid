@@ -172,7 +172,7 @@ mod window;
 pub use kurbo::{Affine, Insets, Point, Rect, Size, Vec2};
 pub use piet::{
     Color, FontFamily, FontStyle, FontWeight, LinearGradient, RadialGradient, RenderContext,
-    UnitPoint,
+    TextAlignment, UnitPoint,
 };
 // these are the types from shell that we expose; others we only use internally.
 pub use shell::keyboard_types;
