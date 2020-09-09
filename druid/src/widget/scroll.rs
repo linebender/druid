@@ -92,6 +92,13 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     pub fn offset(&self) -> Vec2 {
         self.scroll_component.scroll_offset
     }
+
+    /// Scroll `delta` units.
+    ///
+    /// Returns `true` if the scroll offset has changed.
+    pub fn scroll(&mut self, delta: Vec2, layout_size: Size) -> bool {
+        self.scroll_component.scroll(delta, layout_size)
+    }
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
