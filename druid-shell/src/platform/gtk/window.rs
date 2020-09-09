@@ -33,7 +33,7 @@ use gtk::prelude::*;
 use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
-use crate::piet::{Piet, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
@@ -42,7 +42,7 @@ use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::window::{IdleToken, TimerToken, WinHandler};
 
 use super::application::Application;
 use super::dialog;
@@ -705,8 +705,8 @@ impl WindowHandle {
         }
     }
 
-    pub fn text(&self) -> Text {
-        Text::new()
+    pub fn text(&self) -> PietText {
+        PietText::new()
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {

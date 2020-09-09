@@ -179,8 +179,7 @@ pub use shell::keyboard_types;
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Code, Cursor, Error as PlatformError,
     FileDialogOptions, FileInfo, FileSpec, FormatId, HotKey, KbKey, KeyEvent, Location, Modifiers,
-    MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, SysMods, Text, TimerToken,
-    WindowHandle,
+    MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, SysMods, TimerToken, WindowHandle,
 };
 
 pub use crate::core::WidgetPod;

@@ -61,8 +61,6 @@ pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 pub use region::Region;
 pub use scale::{Scalable, Scale, ScaledArea};
-pub use window::{
-    IdleHandle, IdleToken, Text, TimerToken, WinHandler, WindowBuilder, WindowHandle,
-};
+pub use window::{IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle};
 
 pub use keyboard_types;

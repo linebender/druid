@@ -28,11 +28,7 @@ use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
 use crate::region::Region;
 use crate::scale::Scale;
-
-// It's possible we'll want to make this type alias at a lower level,
-// see https://github.com/linebender/piet/pull/37 for more discussion.
-/// The platform text factory, reexported from piet.
-pub type Text<'a> = <piet_common::Piet<'a> as piet_common::RenderContext>::Text;
+use piet_common::PietText;
 
 /// A token that uniquely identifies a running timer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
@@ -162,7 +158,7 @@ impl WindowHandle {
     }
 
     /// Get access to a type that can perform text layout.
-    pub fn text(&self) -> Text {
+    pub fn text(&self) -> PietText {
         self.0.text()
     }
 
