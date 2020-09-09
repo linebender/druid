@@ -158,7 +158,11 @@ impl Widget<bool> for Switch {
         }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &bool, _env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &bool, env: &Env) {
+        if matches!(event, LifeCycle::WidgetAdded) {
+            self.on_text.rebuild_if_needed(&mut ctx.text(), env);
+            self.off_text.rebuild_if_needed(&mut ctx.text(), env);
+        }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &bool, data: &bool, _env: &Env) {
