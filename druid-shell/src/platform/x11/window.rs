@@ -906,7 +906,7 @@ impl Window {
         if client_message.type_ == self.atoms.WM_PROTOCOLS && client_message.format == 32 {
             let protocol = client_message.data.as_data32()[0];
             if protocol == self.atoms.WM_DELETE_WINDOW {
-                self.close();
+                self.handler.borrow_mut().request_close();
             }
         }
         Ok(())
