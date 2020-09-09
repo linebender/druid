@@ -525,7 +525,7 @@ impl<T: Data> AppState<T> {
         loop {
             let ext_cmd = self.inner.borrow_mut().ext_event_host.recv();
             match ext_cmd {
-                Some(cmd) => self.handle_cmd(cmd),
+                Some(cmd) => self.handle_cmd(cmd.default_to(Target::Global)),
                 None => break,
             }
         }
