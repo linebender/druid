@@ -21,6 +21,10 @@ You can find its changes [documented below](#060---2020-06-01).
 - `ExtEventSink`s can now be obtained from widget methods. ([#1152] by [@jneem])
 - 'Scope' widget to allow encapsulation of reactive state. ([#1151] by [@rjwittams])
 - `Ref` lens that applies `AsRef` and thus allow indexing arrays. ([#1171] by [@finnerale])
+- `Command::to` and `Command::target` to set and get a commands target. ([#1185] by [@finnerale])
+- `Menu` commands can now choose a custom target. ([#1185] by [@finnerale])
+- `Movement::StartOfDocument`, `Movement::EndOfDocument`. ([#1092] by [@sysint64])
+- `TextLayout` type simplifies drawing text ([#1182] by [@cmyr])
 
 ### Changed
 
@@ -32,6 +36,10 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Env::try_get` (and related methods) return a `Result` instead of an `Option`. ([#1172] by [@cmyr])
 - `lens!` macro to use move semantics for the index. ([#1171] by [@finnerale])
 - `Env` stores `Arc<str>` instead of `String` ([#1173] by [@cmyr])
+- Replaced uses of `Option<Target>` with the new `Target::Auto`. ([#1185] by [@finnerale])
+- Moved `Target` parameter from `submit_command` to `Command::new` and `Command::to`. ([#1185] by [@finnerale])
+- `Movement::RightOfLine` to `Movement::NextLineBreak`, and `Movement::LeftOfLine` to `Movement::PrecedingLineBreak`. ([#1092] by [@sysint64])
+- `AnimFrame` was moved from `lifecycle` to `event` ([#1155] by [@jneem])
 
 ### Deprecated
 
@@ -410,10 +418,14 @@ Last release without a changelog :(
 [#1145]: https://github.com/linebender/druid/pull/1145
 [#1151]: https://github.com/linebender/druid/pull/1151
 [#1152]: https://github.com/linebender/druid/pull/1152
+[#1155]: https://github.com/linebender/druid/pull/1155
 [#1157]: https://github.com/linebender/druid/pull/1157
 [#1171]: https://github.com/linebender/druid/pull/1171
 [#1172]: https://github.com/linebender/druid/pull/1172
 [#1173]: https://github.com/linebender/druid/pull/1173
+[#1182]: https://github.com/linebender/druid/pull/1185
+[#1185]: https://github.com/linebender/druid/pull/1185
+[#1092]: https://github.com/linebender/druid/pull/1092
 [#1186]: https://github.com/linebender/druid/pull/1186
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
