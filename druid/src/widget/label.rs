@@ -308,8 +308,7 @@ impl<T: Data> Widget<T> for Label<T> {
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, _env: &Env) {
-        //FIXME: this should also be checking if anything in the env has changed
-        if !old_data.same(data) {
+        if !old_data.same(data) | self.layout.needs_rebuild_after_update(ctx) {
             self.needs_rebuild = true;
             ctx.request_layout();
         }
