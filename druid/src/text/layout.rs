@@ -244,7 +244,14 @@ impl TextLayout {
     ///
     ///  [`rebuild_if_needed`]: #method.rebuild_if_needed
     pub fn draw(&self, ctx: &mut PaintCtx, point: impl Into<Point>) {
-        ctx.draw_text(self.layout.as_ref().unwrap(), point)
+        debug_assert!(
+            self.layout.is_some(),
+            "TextLayout::draw called without rebuilding layout object. Text was '{}'",
+            &self.text
+        );
+        if let Some(layout) = self.layout.as_ref() {
+            ctx.draw_text(layout, point);
+        }
     }
 }
 
