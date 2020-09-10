@@ -37,12 +37,17 @@ type TabBarPod<TP> = WidgetPod<TabsState<TP>, Box<dyn Widget<TabsState<TP>>>>;
 type TabIndex = usize;
 type Nanos = u64; // TODO: Make Duration Data?
 
+/// Information about a tab that may be used by the TabPolicy to
+/// drive the visual presentation and behaviour of its label
 pub struct TabInfo {
+    /// Name of the tab
     pub name: String,
+    /// Should the user be able to close the tab?
     pub can_close: bool,
 }
 
 impl TabInfo {
+    /// Create a new TabInfo
     pub fn new(name: String, can_close: bool) -> Self {
         TabInfo { name, can_close }
     }
@@ -51,9 +56,11 @@ impl TabInfo {
 /// A policy that determines how a Tabs instance derives its tabs from its app data
 pub trait TabsPolicy: Data {
     /// The identity of a tab.
-    type Key: Hash + Eq + Clone + Debug;
+    type Key: Hash + Eq + Clone;
 
-    /// The input data that will a) be used to derive the tab and b) also be the input data of all the child widgets.
+    /// The input data that will
+    /// a) be used to derive the tabs present
+    /// b) also be the input data for all of the child widgets.
     type Input: Data;
 
     /// The common type for all body widgets in this set of tabs.
@@ -64,21 +71,25 @@ pub trait TabsPolicy: Data {
     /// Usually this would be Label<Self::Input>
     type LabelWidget: Widget<Self::Input>;
 
-    /// This policy whilst it is being built.
-    /// This is only be useful for implementations supporting AddTab, such as StaticTabs.
-    /// It can be filled in with () by other implementations until associated type defaults are stable
+    /// The information required to build up this policy.
+    /// This is to support policies where at least some tabs are provided up front during widget
+    /// construction. If the Build type implements the AddTab trait, the add_tab and with_tab
+    /// methods will be available on the Tabs instance to allow the
+    /// It can be filled in with () by implementations that do not require it.
     type Build;
 
-    /// Have the tabs changed. Expected to be cheap, eg pointer or numeric comparison.
+    /// Examining the input data, has the set of tabs present changed?
+    /// Expected to be cheap, eg pointer or numeric comparison.
     fn tabs_changed(&self, old_data: &Self::Input, data: &Self::Input) -> bool;
 
-    /// What are the current tabs set in order.
+    /// From the input data, return the new set of tabs
     fn tabs(&self, data: &Self::Input) -> Vec<Self::Key>;
 
-    /// Presentation information for the tab
+    /// For this tab key, return the relevant tab information that will drive label construction
     fn tab_info(&self, key: Self::Key, data: &Self::Input) -> TabInfo;
 
-    /// Body widget for the tab
+    /// For this tab key, return the body widget, or None if the widget can not be returned.
+    /// This is to support the static tabs case, where ownership transfer is a one time operation.
     fn tab_body(&self, key: Self::Key, data: &Self::Input) -> Option<Self::BodyWidget>;
 
     /// Label widget for the tab.
@@ -91,16 +102,19 @@ pub trait TabsPolicy: Data {
 
     #[allow(unused_variables)]
     /// Construct an instance of this TabsFromData from its Build type.
-    /// This should only be implemented if supporting AddTab - possibly only StaticTabs needs to.
+    /// The main use case for this is StaticTabs, where the tabs are provided by the app developer up front.
     fn build(build: Self::Build) -> Self {
-        unimplemented!()
+        panic!("TabsPolicy::Build called on a policy that does not support incremental building")
     }
 
+    /// A default implementation for make label, if you do not wish to construct a custom widget.
     fn default_make_label(info: &TabInfo) -> Label<Self::Input> {
         Label::new(info.name.clone()).with_text_color(theme::FOREGROUND_LIGHT)
     }
 }
 
+/// A TabsPolicy that allows the app developer to provide static tabs up front when building the
+/// widget.
 #[derive(Clone)]
 pub struct StaticTabs<T> {
     // This needs be able to avoid cloning the widgets we are given -
@@ -108,24 +122,17 @@ pub struct StaticTabs<T> {
     tabs: Rc<Vec<InitialTab<T>>>,
 }
 
-impl<T> StaticTabs<T> {
-    pub fn new() -> Self {
+impl<T> Default for StaticTabs<T> {
+    fn default() -> Self {
         StaticTabs {
             tabs: Rc::new(Vec::new()),
         }
     }
 }
 
-impl<T> Default for StaticTabs<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl<T: Data> Data for StaticTabs<T> {
     fn same(&self, _other: &Self) -> bool {
         // Changing the tabs after construction shouldn't be possible for static tabs
-        // It seems pointless to compare them
         true
     }
 }
@@ -150,7 +157,11 @@ impl<T: Data> TabsPolicy for StaticTabs<T> {
     }
 
     fn tab_body(&self, key: Self::Key, _data: &T) -> Option<Self::BodyWidget> {
-        self.tabs[key].child.take()
+        // This only allows a static tab to be retrieved once, but as we never indicate that the tabs have changed,
+        // it should only be called once.
+        self.tabs
+            .get(key)
+            .and_then(|initial_tab| initial_tab.child.take())
     }
 
     fn tab_label(&self, _key: Self::Key, info: &TabInfo, _data: &Self::Input) -> Self::LabelWidget {
@@ -164,28 +175,35 @@ impl<T: Data> TabsPolicy for StaticTabs<T> {
     }
 }
 
+/// AddTabs is an extension to TabsPolicy.
+/// If a policy implements AddTab,
 pub trait AddTab: TabsPolicy {
+    /// Add a tab to the build type.
     fn add_tab(
-        tabs: &mut Self::Build,
+        build: &mut Self::Build,
         name: impl Into<String>,
         child: impl Widget<Self::Input> + 'static,
     );
 }
 
 impl<T: Data> AddTab for StaticTabs<T> {
-    fn add_tab(tabs: &mut Self::Build, name: impl Into<String>, child: impl Widget<T> + 'static) {
-        tabs.push(InitialTab::new(name, child))
+    fn add_tab(build: &mut Self::Build, name: impl Into<String>, child: impl Widget<T> + 'static) {
+        build.push(InitialTab::new(name, child))
     }
 }
 
+/// This is the current state of the tabs widget as a whole.
+/// This expands the input data to include a policy that determines how tabs are derived,
+/// and the index of the currently selected tab
 #[derive(Clone, Lens, Data)]
 pub struct TabsState<TP: TabsPolicy> {
-    pub inner: TP::Input,
-    pub selected: TabIndex,
-    pub policy: TP,
+    inner: TP::Input,
+    selected: TabIndex,
+    policy: TP,
 }
 
 impl<TP: TabsPolicy> TabsState<TP> {
+    /// Create a new TabsState
     pub fn new(inner: TP::Input, selected: usize, policy: TP) -> Self {
         TabsState {
             inner,
@@ -197,19 +215,18 @@ impl<TP: TabsPolicy> TabsState<TP> {
 
 pub struct TabBar<TP: TabsPolicy> {
     axis: Axis,
-    cross: CrossAxisAlignment,
-    orientation: TabsOrientation,
+    cross_axis_alignment: CrossAxisAlignment,
     tabs: Vec<(TP::Key, TabBarPod<TP>)>,
     hot: Option<TabIndex>,
     phantom_tp: PhantomData<TP>,
 }
 
 impl<TP: TabsPolicy> TabBar<TP> {
-    pub fn new(axis: Axis, cross: CrossAxisAlignment, orientation: TabsOrientation) -> Self {
+    /// Create a new TabBar widget.
+    pub fn new(axis: Axis, cross_axis_alignment: CrossAxisAlignment) -> Self {
         TabBar {
             axis,
-            cross,
-            orientation,
+            cross_axis_alignment,
             tabs: vec![],
             hot: None,
             phantom_tp: Default::default(),
@@ -234,11 +251,6 @@ impl<TP: TabsPolicy> TabBar<TP> {
     }
 
     fn ensure_tabs(&mut self, data: &TabsState<TP>) {
-        // Borrow checker/ type inference fun
-        let (orientation, axis, cross) = (self.orientation, self.axis, self.cross);
-        let finish_row = |w| WidgetPod::new(orientation.rotate_and_box(w, axis, cross));
-        let finish_label = |w| WidgetPod::new(orientation.rotate_and_box(w, axis, cross));
-
         ensure_for_tabs(&mut self.tabs, &data.policy, &data.inner, |policy, key| {
             let info = policy.tab_info(key.clone(), &data.inner);
 
@@ -247,7 +259,7 @@ impl<TP: TabsPolicy> TabBar<TP> {
                 .tab_label(key.clone(), &info, &data.inner)
                 // TODO: Type inference fails here because both sides of the lens are dependent on
                 // associated types of the policy. Needs changes to lens derivation to embed PhantomData of the (relevant?) type params)
-                // of the lensed types into the lens, to type inference has something to grab hold of
+                // of the lensed types into the lens, so type inference has something to grab hold of
                 .lens::<TabsState<TP>, tabs_state_derived_lenses::inner>(TabsState::<TP>::inner)
                 .padding(Insets::uniform_xy(9., 5.));
 
@@ -259,9 +271,9 @@ impl<TP: TabsPolicy> TabBar<TP> {
                             data.policy.close_tab(key.clone(), &mut data.inner);
                         },
                     ));
-                finish_row(row)
+                WidgetPod::new(Box::new(row))
             } else {
-                finish_label(label)
+                WidgetPod::new(Box::new(label))
             }
         });
     }
@@ -363,7 +375,6 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &TabsState<TP>, env: &Env) {
         let hl_thickness = 2.;
         let highlight = env.get(theme::PRIMARY_LIGHT);
-        // TODO: allow reversing tab order (makes more sense in some rotations)
         for (idx, (_, tab)) in self.tabs.iter_mut().enumerate() {
             let rect = tab.layout_rect();
             let rect = Rect::from_origin_size(rect.origin(), rect.size());
@@ -376,9 +387,9 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
 
             tab.paint(ctx, data, env);
             if idx == data.selected {
-                let (maj_near, maj_far) = self.axis.major_span(&rect);
-                let (min_near, min_far) = self.axis.minor_span(&rect);
-                let minor_pos = if let CrossAxisAlignment::End = self.cross {
+                let (maj_near, maj_far) = self.axis.major_span(rect);
+                let (min_near, min_far) = self.axis.minor_span(rect);
+                let minor_pos = if let CrossAxisAlignment::End = self.cross_axis_alignment {
                     min_near + (hl_thickness / 2.)
                 } else {
                     min_far - (hl_thickness / 2.)
@@ -529,9 +540,7 @@ fn hidden_should_receive_event(evt: &Event) -> bool {
 fn hidden_should_receive_lifecycle(lc: &LifeCycle) -> bool {
     match lc {
         LifeCycle::WidgetAdded | LifeCycle::Internal(_) => true,
-        LifeCycle::Size(_)
-        | LifeCycle::HotChanged(_)
-        | LifeCycle::FocusChanged(_) => false,
+        LifeCycle::Size(_) | LifeCycle::HotChanged(_) | LifeCycle::FocusChanged(_) => false,
     }
 }
 
@@ -545,8 +554,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
             child.event(ctx, event, &mut data.inner, env);
         }
 
-        if let (Some(t_state), Event::AnimFrame(interval)) = (&mut self.transition_state, event)
-        {
+        if let (Some(t_state), Event::AnimFrame(interval)) = (&mut self.transition_state, event) {
             t_state.current_time += *interval;
             if t_state.live() {
                 ctx.request_anim_frame();
@@ -578,8 +586,6 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
             // Pick which events go to all and which just to active
             child.lifecycle(ctx, event, &data.inner, env);
         }
-
-
     }
 
     fn update(
@@ -629,11 +635,18 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         data: &TabsState<TP>,
         env: &Env,
     ) -> Size {
+        let inner = &data.inner;
         if let Some(ref mut child) = self.active_child(data) {
-            let inner = &data.inner;
             let size = child.layout(ctx, bc, inner, env);
             child.set_layout_rect(ctx, inner, env, Rect::from_origin_size(Point::ORIGIN, size));
         }
+        if let Some(ref mut trans_state) = self.transition_state {
+            if let Some(child) = Self::child(&mut self.children, trans_state.previous_idx) {
+                let size = child.layout(ctx, bc, inner, env);
+                child.set_layout_rect(ctx, inner, env, Rect::from_origin_size(Point::ORIGIN, size));
+            }
+        }
+
         bc.max()
     }
 
@@ -691,15 +704,12 @@ impl<TP: TabsPolicy> ScopePolicy for TabsScopePolicy<TP> {
     }
 }
 
-#[derive(Data, Copy, Clone, Debug, PartialOrd, PartialEq)]
-pub enum TabsOrientation {
-    Standard,
-    Turns(u8), // These represent 90 degree rotations clockwise.
-}
-
+/// Determines whether the tabs will have a transition animation when a new tab is selected.
 #[derive(Data, Copy, Clone, Debug, PartialOrd, PartialEq)]
 pub enum TabsTransition {
+    /// Change tabs instantly with no animation
     Instant,
+    /// Slide tabs across in the appropriate direction. The argument is the duration in nanoseconds
     Slide(Nanos),
 }
 
@@ -714,30 +724,6 @@ impl TabsTransition {
         match self {
             TabsTransition::Instant => None,
             TabsTransition::Slide(dur) => Some(TabsTransitionState::new(old, dur, old < new)),
-        }
-    }
-}
-
-impl TabsOrientation {
-    pub fn rotate_and_box<W: Widget<T> + 'static, T: Data>(
-        self,
-        widget: W,
-        axis: Axis,
-        cross: CrossAxisAlignment,
-    ) -> Box<dyn Widget<T>> {
-        let turns = match self {
-            Self::Standard => match (axis, cross) {
-                (Axis::Horizontal, _) => 0,
-                (Axis::Vertical, CrossAxisAlignment::Start) => 3,
-                (Axis::Vertical, _) => 1,
-            },
-            Self::Turns(turns) => turns,
-        };
-
-        if turns == 0 {
-            Box::new(widget)
-        } else {
-            Box::new(widget.rotate(turns))
         }
     }
 }
@@ -769,15 +755,40 @@ enum TabsContent<TP: TabsPolicy> {
     Swapping,
 }
 
+/// A tabs widget.
+///
+/// The tabs can be provided up front, using Tabs::new() and add_tab()/with_tab().
+///
+/// Or, the tabs can be derived from the input data by implementing TabsPolicy, and providing it to
+/// Tabs::from_policy()
+///
+/// ```
+/// use druid::widget::{Tabs, Label, WidgetExt};
+/// use druid::{Data, Lens};
+///
+/// #[derive(Data, Clone, Lens)]
+/// struct AppState{
+///     name: String
+/// }
+///
+/// let tabs = Tabs::new()
+///     .with_tab("Connection", Label::new("Connection information"))
+///     .with_tab("Proxy", Label::new("Proxy settings"))
+///     .lens(AppState::name);
+///
+///
+/// ```
+///
 pub struct Tabs<TP: TabsPolicy> {
     axis: Axis,
     cross: CrossAxisAlignment, // Not sure if this should have another enum. Middle means nothing here
-    rotation: TabsOrientation,
     transition: TabsTransition,
     content: TabsContent<TP>,
 }
 
 impl<T: Data> Tabs<StaticTabs<T>> {
+    /// Create a new Tabs widget, using the static tabs policy.
+    /// Use with_tab or add_tab to configure the set of tabs available.
     pub fn new() -> Self {
         Tabs::building(Vec::new())
     }
@@ -794,17 +805,21 @@ impl<TP: TabsPolicy> Tabs<TP> {
         Tabs {
             axis: Axis::Horizontal,
             cross: CrossAxisAlignment::Start,
-            rotation: TabsOrientation::Standard,
             transition: Default::default(),
             content,
         }
     }
 
+    /// Create a Tabs widget using the provided policy.
+    /// This is useful for tabs derived from data.
     pub fn for_policy(tabs: TP) -> Self {
         Self::of_content(TabsContent::Complete { tabs })
     }
 
-    pub fn building(tabs_from_data: TP::Build) -> Self
+    // This could be public if there is a case for custom policies that support static tabs - ie the AddTab method.
+    // It seems very likely that the whole way we do dynamic vs static will change before that
+    // becomes an issue.
+    fn building(tabs_from_data: TP::Build) -> Self
     where
         TP: AddTab,
     {
@@ -813,26 +828,27 @@ impl<TP: TabsPolicy> Tabs<TP> {
         })
     }
 
+    /// Lay out the tab bar along the provided axis.
     pub fn with_axis(mut self, axis: Axis) -> Self {
         self.axis = axis;
         self
     }
 
-    pub fn with_rotation(mut self, rotation: TabsOrientation) -> Self {
-        self.rotation = rotation;
-        self
-    }
-
+    /// Put the tab bar at the corresponding end of the cross axis.
+    /// Defaults to Start. Note that Middle has the same effect as Start.
     pub fn with_cross_axis_alignment(mut self, cross: CrossAxisAlignment) -> Self {
         self.cross = cross;
         self
     }
 
+    /// Use the provided transition when tabs change
     pub fn with_transition(mut self, transition: TabsTransition) -> Self {
         self.transition = transition;
         self
     }
 
+    /// Available when the policy implements AddTab - e.g StaticTabs.
+    /// Return this Tabs widget with the named tab added.
     pub fn with_tab(
         mut self,
         name: impl Into<String>,
@@ -845,6 +861,8 @@ impl<TP: TabsPolicy> Tabs<TP> {
         self
     }
 
+    /// Available when the policy implements AddTab - e.g StaticTabs.
+    /// Return this Tabs widget with the named tab added.
     pub fn add_tab(&mut self, name: impl Into<String>, child: impl Widget<TP::Input> + 'static)
     where
         TP: AddTab,
@@ -856,19 +874,9 @@ impl<TP: TabsPolicy> Tabs<TP> {
         }
     }
 
-    pub fn with_tabs<TabsFromD: TabsPolicy>(self, tabs: TabsFromD) -> Tabs<TabsFromD> {
-        Tabs {
-            axis: self.axis,
-            cross: self.cross,
-            rotation: self.rotation,
-            transition: self.transition,
-            content: TabsContent::Complete { tabs },
-        }
-    }
-
-    pub fn make_scope(&self, tabs_from_data: TP) -> WidgetPod<TP::Input, TabsScope<TP>> {
+    fn make_scope(&self, tabs_from_data: TP) -> WidgetPod<TP::Input, TabsScope<TP>> {
         let (tabs_bar, tabs_body) = (
-            (TabBar::new(self.axis, self.cross, self.rotation), 0.0),
+            (TabBar::new(self.axis, self.cross), 0.0),
             (
                 TabsBody::new(self.axis, self.transition)
                     .padding(5.)

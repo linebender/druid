@@ -34,7 +34,6 @@ mod painter;
 mod parse;
 mod progress_bar;
 mod radio;
-mod rotated;
 mod scope;
 mod scroll;
 mod sized_box;
@@ -72,7 +71,6 @@ pub use painter::{BackgroundBrush, Painter};
 pub use parse::Parse;
 pub use progress_bar::ProgressBar;
 pub use radio::{Radio, RadioGroup};
-pub use rotated::Rotated;
 pub use scope::{DefaultScopePolicy, LensScopeTransfer, Scope, ScopePolicy, ScopeTransfer};
 pub use scroll::Scroll;
 pub use sized_box::SizedBox;
@@ -83,7 +81,7 @@ pub use stepper::Stepper;
 #[cfg(feature = "svg")]
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
-pub use tabs::{TabInfo, Tabs, TabsOrientation, TabsPolicy, TabsState, TabsTransition};
+pub use tabs::{TabInfo, Tabs, TabsPolicy, TabsState, TabsTransition};
 pub use textbox::TextBox;
 pub use view_switcher::ViewSwitcher;
 #[doc(hidden)]

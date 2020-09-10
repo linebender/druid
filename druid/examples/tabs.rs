@@ -1,8 +1,7 @@
 use druid::im::Vector;
 use druid::widget::{
     Axis, Button, CrossAxisAlignment, Flex, Label, MainAxisAlignment, Padding, RadioGroup,
-    SizedBox, Split, TabInfo, Tabs, TabsOrientation, TabsPolicy, TabsTransition, TextBox,
-    ViewSwitcher,
+    SizedBox, Split, TabInfo, Tabs, TabsPolicy, TabsTransition, TextBox, ViewSwitcher,
 };
 use druid::{theme, AppLauncher, Color, Data, Env, Lens, LensExt, Widget, WidgetExt, WindowDesc};
 use instant::Duration;
@@ -49,7 +48,6 @@ impl Advanced {
 struct TabConfig {
     axis: Axis,
     cross: CrossAxisAlignment,
-    rotation: TabsOrientation,
     transition: TabsTransition,
 }
 
@@ -72,7 +70,6 @@ pub fn main() {
         tab_config: TabConfig {
             axis: Axis::Horizontal,
             cross: CrossAxisAlignment::Start,
-            rotation: TabsOrientation::Standard,
             transition: Default::default(),
         },
         basic: Basic {},
@@ -117,18 +114,6 @@ fn build_root_widget() -> impl Widget<AppState> {
         ]))
         .lens(AppState::tab_config.then(TabConfig::cross));
 
-    let rot_picker = Flex::column()
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .with_child(decor(Label::new("Tab rotation")))
-        .with_child(RadioGroup::new(vec![
-            ("Standard", TabsOrientation::Standard),
-            ("None", TabsOrientation::Turns(0)),
-            ("Up", TabsOrientation::Turns(3)),
-            ("Down", TabsOrientation::Turns(1)),
-            ("Aussie", TabsOrientation::Turns(2)),
-        ]))
-        .lens(AppState::tab_config.then(TabConfig::rotation));
-
     let transit_picker = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .with_child(decor(Label::new("Transition")))
@@ -146,7 +131,6 @@ fn build_root_widget() -> impl Widget<AppState> {
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .with_child(group(axis_picker))
         .with_child(group(cross_picker))
-        .with_child(group(rot_picker))
         .with_child(group(transit_picker))
         .with_flex_spacer(1.)
         .fix_width(200.0);
@@ -199,7 +183,6 @@ fn build_tab_widget(tab_config: &TabConfig) -> impl Widget<AppState> {
     let dyn_tabs = Tabs::for_policy(NumberedTabs)
         .with_axis(tab_config.axis)
         .with_cross_axis_alignment(tab_config.cross)
-        .with_rotation(tab_config.rotation)
         .with_transition(tab_config.transition)
         .lens(AppState::advanced);
 
@@ -216,7 +199,6 @@ fn build_tab_widget(tab_config: &TabConfig) -> impl Widget<AppState> {
     let main_tabs = Tabs::new()
         .with_axis(tab_config.axis)
         .with_cross_axis_alignment(tab_config.cross)
-        .with_rotation(tab_config.rotation)
         .with_transition(tab_config.transition)
         .with_tab("Basic", Label::new("Basic kind of stuff"))
         .with_tab("Advanced", adv)
