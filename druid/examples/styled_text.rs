@@ -118,7 +118,7 @@ fn ui_builder() -> impl Widget<AppData> {
     let mono_checkbox = Checkbox::new("Monospace").lens(AppData::mono);
 
     let input = TextBox::new()
-        .with_text_size(38.0)
+        .with_placeholder("Your sample text here :)")
         .fix_width(200.0)
         .lens(AppData::text);
 
@@ -133,5 +133,4 @@ fn ui_builder() -> impl Widget<AppData> {
         .with_child(mono_checkbox)
         .with_spacer(8.0)
         .with_child(input.padding(5.0))
-        .debug_widget_id()
 }
