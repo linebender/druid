@@ -120,9 +120,13 @@
 //! [`usvg` crate]: https://crates.io/crates/usvg
 //! [`image` crate]: https://crates.io/crates/image
 
-#![deny(intra_doc_link_resolution_failure, unsafe_code)]
+#![deny(
+    intra_doc_link_resolution_failure,
+    unsafe_code,
+    clippy::trivially_copy_pass_by_ref
+)]
+#![warn(missing_docs)]
 #![allow(clippy::new_ret_no_self, clippy::needless_doctest_main)]
-#![deny(clippy::trivially_copy_pass_by_ref)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 // Allows to use macros from druid_derive in this crate
@@ -153,6 +157,7 @@ pub mod lens;
 mod localization;
 mod menu;
 mod mouse;
+pub mod scroll_component;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests;
@@ -165,14 +170,16 @@ mod window;
 
 // Types from kurbo & piet that are required by public API.
 pub use kurbo::{Affine, Insets, Point, Rect, Size, Vec2};
-pub use piet::{Color, LinearGradient, RadialGradient, RenderContext, UnitPoint};
+pub use piet::{
+    Color, FontFamily, FontStyle, FontWeight, LinearGradient, RadialGradient, RenderContext,
+    UnitPoint,
+};
 // these are the types from shell that we expose; others we only use internally.
 pub use shell::keyboard_types;
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Code, Cursor, Error as PlatformError,
     FileDialogOptions, FileInfo, FileSpec, FormatId, HotKey, KbKey, KeyEvent, Location, Modifiers,
-    Monitor, MouseButton, MouseButtons, RawMods, Scalable, Scale, Screen, SysMods, Text,
-    TimerToken, WindowHandle, WindowState,
+    Monitor, MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen, SysMods, TimerToken, WindowHandle, WindowState,
 };
 
 pub use crate::core::WidgetPod;
@@ -180,8 +187,8 @@ pub use app::{AppLauncher, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
 pub use command::{sys as commands, Command, Selector, SingleUse, Target};
-pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, Region, UpdateCtx};
-pub use data::Data;
+pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx};
+pub use data::{ArcStr, Data};
 pub use env::{Env, Key, KeyOrValue, Value, ValueType};
 pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle};
 pub use ext_event::{ExtEventError, ExtEventSink};
@@ -189,6 +196,7 @@ pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
+pub use text::{FontDescriptor, TextLayout};
 pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
@@ -209,4 +217,5 @@ pub(crate) use event::{StateCell, StateCheckFn};
 pub type KeyCode = KbKey;
 
 #[deprecated(since = "0.7.0", note = "Use Modifiers instead")]
+/// See [`Modifiers`](struct.Modifiers.html).
 pub type KeyModifiers = Modifiers;

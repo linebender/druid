@@ -41,6 +41,8 @@ use winapi::um::wincon::{AttachConsole, ATTACH_PARENT_PROCESS};
 use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
 
 use crate::kurbo::Rect;
+use crate::region::Region;
+use crate::scale::{Scalable, Scale};
 
 use super::error::Error;
 
@@ -125,6 +127,16 @@ pub(crate) fn recti_to_rect(rect: RECT) -> Rect {
         rect.right as f64,
         rect.bottom as f64,
     )
+}
+
+/// Converts a `Region` into a vec of winapi `RECT`, with a scaling applied.
+/// If necessary, the rectangles are rounded to the nearest pixel border.
+pub(crate) fn region_to_rectis(region: &Region, scale: Scale) -> Vec<RECT> {
+    region
+        .rects()
+        .iter()
+        .map(|r| rect_to_recti(r.to_px(scale).round()))
+        .collect()
 }
 
 // Types for functions we want to load, which are only supported on newer windows versions

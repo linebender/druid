@@ -14,9 +14,10 @@
 
 //! Theme keys and initial values.
 
+#![allow(missing_docs)]
 use crate::piet::Color;
 
-use crate::{Env, Key};
+use crate::{Env, FontDescriptor, FontFamily, Key};
 
 pub const WINDOW_BACKGROUND_COLOR: Key<Color> = Key::new("window_background_color");
 
@@ -40,10 +41,12 @@ pub const SELECTION_COLOR: Key<Color> = Key::new("selection_color");
 pub const SELECTION_TEXT_COLOR: Key<Color> = Key::new("selection_text_color");
 pub const CURSOR_COLOR: Key<Color> = Key::new("cursor_color");
 
-pub const FONT_NAME: Key<&str> = Key::new("font_name");
 pub const TEXT_SIZE_NORMAL: Key<f64> = Key::new("text_size_normal");
 pub const TEXT_SIZE_LARGE: Key<f64> = Key::new("text_size_large");
 pub const BASIC_WIDGET_HEIGHT: Key<f64> = Key::new("basic_widget_height");
+
+/// The default font for labels, buttons, text boxes, and other UI elements.
+pub const UI_FONT: Key<FontDescriptor> = Key::new("druid.builtin.ui-font-descriptor");
 
 /// The default minimum width for a 'wide' widget; a textbox, slider, progress bar, etc.
 pub const WIDE_WIDGET_WIDTH: Key<f64> = Key::new("druid.widgets.long-widget-width");
@@ -62,7 +65,7 @@ pub const SCROLLBAR_EDGE_WIDTH: Key<f64> = Key::new("scrollbar_edge_width");
 
 /// An initial theme.
 pub fn init() -> Env {
-    let mut env = Env::default()
+    Env::default()
         .adding(WINDOW_BACKGROUND_COLOR, Color::rgb8(0x29, 0x29, 0x29))
         .adding(LABEL_COLOR, Color::rgb8(0xf0, 0xf0, 0xea))
         .adding(PLACEHOLDER_COLOR, Color::rgb8(0x80, 0x80, 0x80))
@@ -95,21 +98,9 @@ pub fn init() -> Env {
         .adding(SCROLLBAR_WIDTH, 8.)
         .adding(SCROLLBAR_PAD, 2.)
         .adding(SCROLLBAR_RADIUS, 5.)
-        .adding(SCROLLBAR_EDGE_WIDTH, 1.);
-
-    #[cfg(target_os = "windows")]
-    {
-        env = env.adding(FONT_NAME, "Segoe UI");
-    }
-    #[cfg(target_os = "macos")]
-    {
-        // Ideally this would be a reference to San Francisco, but Cairo's
-        // "toy text" API doesn't seem to be able to access it easily.
-        env = env.adding(FONT_NAME, "Arial");
-    }
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    {
-        env = env.adding(FONT_NAME, "sans-serif");
-    }
-    env
+        .adding(SCROLLBAR_EDGE_WIDTH, 1.)
+        .adding(
+            UI_FONT,
+            FontDescriptor::new(FontFamily::SYSTEM_UI).with_size(15.0),
+        )
 }

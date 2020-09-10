@@ -19,7 +19,19 @@ You can find its changes [documented below](#060---2020-06-01).
 - Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
 - `TextBox` now supports ctrl and shift hotkeys. ([#1076] by [@vkahl])
-- Added selection text color to textbox. ([#1093] by [@sysint64])
+- `ScrollComponent` for ease of adding consistent, customized, scrolling behavior to a widget. ([#1107] by [@ForLoveOfCats])
+- Selection text color to textbox. ([#1093] by [@sysint64])
+- `BoxConstraints::UNBOUNDED` constant. ([#1126] by [@danieldulaney])
+- Close requests from the shell can now be intercepted ([#1118] by [@jneem], [#1204] by [@psychon])
+- The Lens derive now supports an `ignore` attribute. ([#1133] by [@jneem])
+- `request_update` in `EventCtx`. ([#1128] by [@raphlinus])
+- `ExtEventSink`s can now be obtained from widget methods. ([#1152] by [@jneem])
+- 'Scope' widget to allow encapsulation of reactive state. ([#1151] by [@rjwittams])
+- `Ref` lens that applies `AsRef` and thus allow indexing arrays. ([#1171] by [@finnerale])
+- `Command::to` and `Command::target` to set and get a commands target. ([#1185] by [@finnerale])
+- `Menu` commands can now choose a custom target. ([#1185] by [@finnerale])
+- `Movement::StartOfDocument`, `Movement::EndOfDocument`. ([#1092] by [@sysint64])
+- `TextLayout` type simplifies drawing text ([#1182] by [@cmyr])
 
 ### Changed
 
@@ -28,6 +40,16 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 - Major rework of keyboard event handling. ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
+- `request_anim_frame` no longer invalidates the entire window. ([#1057] by [@jneem])
+- Use new Piet text api ([#1143] by [@cmyr])
+- `Env::try_get` (and related methods) return a `Result` instead of an `Option`. ([#1172] by [@cmyr])
+- `lens!` macro to use move semantics for the index. ([#1171] by [@finnerale])
+- `Env` stores `Arc<str>` instead of `String` ([#1173] by [@cmyr])
+- Replaced uses of `Option<Target>` with the new `Target::Auto`. ([#1185] by [@finnerale])
+- Moved `Target` parameter from `submit_command` to `Command::new` and `Command::to`. ([#1185] by [@finnerale])
+- `Movement::RightOfLine` to `Movement::NextLineBreak`, and `Movement::LeftOfLine` to `Movement::PrecedingLineBreak`. ([#1092] by [@sysint64])
+- `AnimFrame` was moved from `lifecycle` to `event` ([#1155] by [@jneem])
+- Contexts' `text()` methods return `&mut PietText` instead of cloning ([#1205] by [@cmyr])
 
 ### Deprecated
 
@@ -53,7 +75,9 @@ You can find its changes [documented below](#060---2020-06-01).
 - `ViewSwitcher` now skips the update after switching widgets. ([#1113] by [@finnerale])
 - Key and KeyOrValue derive Clone ([#1119] by [@rjwittams])
 - Allow submit_command from the layout method in Widgets ([#1119] by [@rjwittams])
--  Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
+- Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
+- Switch widget: Toggle animation being window refresh rate dependent ([#1145] by [@ForLoveOfCats])
+- Multi-click on Windows, partial fix for #859 ([#1157] by [@raphlinus])
 
 ### Visual
 
@@ -380,6 +404,7 @@ Last release without a changelog :(
 [#1049]: https://github.com/linebender/druid/pull/1049
 [#1050]: https://github.com/linebender/druid/pull/1050
 [#1054]: https://github.com/linebender/druid/pull/1054
+[#1057]: https://github.com/linebender/druid/pull/1057
 [#1058]: https://github.com/linebender/druid/pull/1058
 [#1061]: https://github.com/linebender/druid/pull/1061
 [#1062]: https://github.com/linebender/druid/pull/1062
@@ -392,8 +417,27 @@ Last release without a changelog :(
 [#1093]: https://github.com/linebender/druid/pull/1093
 [#1100]: https://github.com/linebender/druid/pull/1100
 [#1103]: https://github.com/linebender/druid/pull/1103
+[#1107]: https://github.com/linebender/druid/pull/1107
+[#1118]: https://github.com/linebender/druid/pull/1118
 [#1119]: https://github.com/linebender/druid/pull/1119
 [#1120]: https://github.com/linebender/druid/pull/1120
+[#1126]: https://github.com/linebender/druid/pull/1120
+[#1128]: https://github.com/linebender/druid/pull/1128
+[#1133]: https://github.com/linebender/druid/pull/1133
+[#1143]: https://github.com/linebender/druid/pull/1143
+[#1145]: https://github.com/linebender/druid/pull/1145
+[#1151]: https://github.com/linebender/druid/pull/1151
+[#1152]: https://github.com/linebender/druid/pull/1152
+[#1155]: https://github.com/linebender/druid/pull/1155
+[#1157]: https://github.com/linebender/druid/pull/1157
+[#1171]: https://github.com/linebender/druid/pull/1171
+[#1172]: https://github.com/linebender/druid/pull/1172
+[#1173]: https://github.com/linebender/druid/pull/1173
+[#1182]: https://github.com/linebender/druid/pull/1185
+[#1185]: https://github.com/linebender/druid/pull/1185
+[#1092]: https://github.com/linebender/druid/pull/1092
+[#1204]: https://github.com/linebender/druid/pull/1204
+[#1205]: https://github.com/linebender/druid/pull/1205
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

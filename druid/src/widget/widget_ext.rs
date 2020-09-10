@@ -160,7 +160,8 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     }
 
     /// Control the events of this widget with a [`Click`] widget. The closure
-    /// provided will be called when the widget is clicked.
+    /// provided will be called when the widget is clicked with the left mouse
+    /// button.
     ///
     /// The child widget will also be updated on [`LifeCycle::HotChanged`] and
     /// mouse down, which can be useful for painting based on `ctx.is_active()`
@@ -251,6 +252,7 @@ impl<T: Data, W: Widget<T> + 'static> WidgetExt<T> for W {}
 // will choose an impl on a type over an impl in a trait for methods with the same
 // name.
 
+#[doc(hidden)]
 impl<T: Data> SizedBox<T> {
     pub fn fix_width(self, width: f64) -> SizedBox<T> {
         self.width(width)

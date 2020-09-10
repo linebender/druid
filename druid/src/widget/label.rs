@@ -14,19 +14,12 @@
 
 //! A label widget.
 
-use crate::piet::{
-    Color, FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout,
-    TextLayoutBuilder, UnitPoint,
-};
+use crate::piet::{Color, PietText};
 use crate::{
-    theme, BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, PaintCtx, Point, Size, UpdateCtx, Widget,
+    BoxConstraints, Data, Env, Event, EventCtx, FontDescriptor, KeyOrValue, LayoutCtx, LifeCycle,
+    LifeCycleCtx, LocalizedString, PaintCtx, Point, Size, TextLayout, UpdateCtx, Widget,
 };
 
-// a fudgey way to get an approximate line height from a font size
-const LINE_HEIGHT_FACTOR: f64 = 1.2;
-// a fudgey way of figuring out where to put the baseline, relative to line height
-const BASELINE_GUESS_FACTOR: f64 = 0.8;
 // added padding between the edges of the widget and the text.
 const LABEL_X_PADDING: f64 = 2.0;
 
@@ -57,9 +50,10 @@ pub struct Dynamic<T> {
 /// A label that displays some text.
 pub struct Label<T> {
     text: LabelText<T>,
-    color: KeyOrValue<Color>,
-    size: KeyOrValue<f64>,
-    font: KeyOrValue<&'static str>,
+    layout: TextLayout,
+    // if our text is manually changed we need to rebuild the layout
+    // before using it again.
+    needs_rebuild: bool,
 }
 
 impl<T: Data> Label<T> {
@@ -81,11 +75,11 @@ impl<T: Data> Label<T> {
     /// ```
     pub fn new(text: impl Into<LabelText<T>>) -> Self {
         let text = text.into();
+        let layout = TextLayout::new(text.display_text());
         Self {
             text,
-            color: theme::LABEL_COLOR.into(),
-            size: theme::TEXT_SIZE_NORMAL.into(),
-            font: theme::FONT_NAME.into(),
+            layout,
+            needs_rebuild: true,
         }
     }
 
@@ -114,19 +108,13 @@ impl<T: Data> Label<T> {
         Label::new(text)
     }
 
-    /// Set text alignment.
-    #[deprecated(since = "0.5.0", note = "Use an Align widget instead")]
-    pub fn text_align(self, _align: UnitPoint) -> Self {
-        self
-    }
-
     /// Builder-style method for setting the text color.
     ///
     /// The argument can be either a `Color` or a [`Key<Color>`].
     ///
     /// [`Key<Color>`]: ../struct.Key.html
     pub fn with_text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
-        self.color = color.into();
+        self.set_text_color(color);
         self
     }
 
@@ -136,31 +124,27 @@ impl<T: Data> Label<T> {
     ///
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
-        self.size = size.into();
+        self.set_text_size(size);
         self
     }
 
     /// Builder-style method for setting the font.
     ///
-    /// The argument can be a `&str`, `String`, or [`Key<&str>`].
+    /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
+    /// that refers to a font defined in the [`Env`].
     ///
-    /// [`Key<&str>`]: ../struct.Key.html
-    pub fn with_font(mut self, font: impl Into<KeyOrValue<&'static str>>) -> Self {
-        self.font = font.into();
+    /// [`Env`]: ../struct.Env.html
+    /// [`FontDescriptor`]: ../struct.FontDescriptor.html
+    /// [`Key<FontDescriptor>`]: ../struct.Key.html
+    pub fn with_font(mut self, font: impl Into<KeyOrValue<FontDescriptor>>) -> Self {
+        self.set_font(font);
         self
     }
 
-    /// Set a new text.
-    ///
-    /// Takes an already resolved string as input.
-    ///
-    /// If you're looking for full [`LabelText`] support,
-    /// then you need to create a new [`Label`].
-    ///
-    /// [`Label`]: #method.new
-    /// [`LabelText`]: enum.LabelText.html
-    pub fn set_text(&mut self, text: impl Into<String>) {
-        self.text = LabelText::Specific(text.into());
+    /// Set the label's text.
+    pub fn set_text(&mut self, text: impl Into<LabelText<T>>) {
+        self.text = text.into();
+        self.needs_rebuild = true;
     }
 
     /// Returns this label's current text.
@@ -174,7 +158,8 @@ impl<T: Data> Label<T> {
     ///
     /// [`Key<Color>`]: ../struct.Key.html
     pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
-        self.color = color.into();
+        self.layout.set_text_color(color);
+        self.needs_rebuild = true;
     }
 
     /// Set the text size.
@@ -183,29 +168,30 @@ impl<T: Data> Label<T> {
     ///
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
-        self.size = size.into();
+        self.layout.set_text_size(size);
+        self.needs_rebuild = true;
     }
 
     /// Set the font.
     ///
-    /// The argument can be a `&str`, `String`, or [`Key<&str>`].
+    /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
+    /// that refers to a font defined in the [`Env`].
     ///
-    /// [`Key<&str>`]: ../struct.Key.html
-    pub fn set_font(&mut self, font: impl Into<KeyOrValue<&'static str>>) {
-        self.font = font.into();
+    /// [`Env`]: ../struct.Env.html
+    /// [`FontDescriptor`]: ../struct.FontDescriptor.html
+    /// [`Key<FontDescriptor>`]: ../struct.Key.html
+    pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
+        self.layout.set_font(font);
+        self.needs_rebuild = true;
     }
 
-    fn get_layout(&mut self, t: &mut PietText, env: &Env) -> PietTextLayout {
-        let font_name = self.font.resolve(env);
-        let font_size = self.size.resolve(env);
-
-        // TODO: caching of both the format and the layout
-        let font = t.new_font_by_name(font_name, font_size).build().unwrap();
-        self.text.with_display_text(|text| {
-            t.new_text_layout(&font, &text, std::f64::INFINITY)
-                .build()
-                .unwrap()
-        })
+    fn rebuild_if_needed(&mut self, factory: &mut PietText, data: &T, env: &Env) {
+        if self.needs_rebuild {
+            self.text.resolve(data, env);
+            self.layout.set_text(self.text.display_text());
+            self.layout.rebuild_if_needed(factory, env);
+            self.needs_rebuild = false;
+        }
     }
 }
 
@@ -253,39 +239,31 @@ impl<T: Data> LabelText<T> {
 impl<T: Data> Widget<T> for Label<T> {
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        if let LifeCycle::WidgetAdded = event {
-            self.text.resolve(data, env);
-        }
-    }
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        if !old_data.same(data) && self.text.resolve(data, env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, _env: &Env) {
+        //FIXME: this should also be checking if anything in the env has changed
+        if !old_data.same(data) {
+            self.needs_rebuild = true;
             ctx.request_layout();
         }
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Label");
+        self.rebuild_if_needed(&mut ctx.text(), data, env);
 
-        let font_size = self.size.resolve(env);
-        let text_layout = self.get_layout(&mut ctx.text(), env);
+        let text_size = self.layout.size();
         bc.constrain(Size::new(
-            text_layout.width() + 2. * LABEL_X_PADDING,
-            font_size * LINE_HEIGHT_FACTOR,
+            text_size.width + 2. * LABEL_X_PADDING,
+            text_size.height,
         ))
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
-        let font_size = self.size.resolve(env);
-        let text_layout = self.get_layout(&mut ctx.text(), env);
-        let line_height = font_size * LINE_HEIGHT_FACTOR;
-
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         // Find the origin for the text
-        let origin = Point::new(LABEL_X_PADDING, line_height * BASELINE_GUESS_FACTOR);
-        let color = self.color.resolve(env);
-
-        ctx.draw_text(&text_layout, origin, &color);
+        let origin = Point::new(LABEL_X_PADDING, 0.0);
+        self.layout.draw(ctx, origin)
     }
 }
 

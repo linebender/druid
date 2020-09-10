@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::attr::{FieldKind, Fields};
+use super::attr::{FieldKind, Fields, LensAttrs};
 use proc_macro2::{Ident, Span};
 use quote::quote;
 use std::collections::HashSet;
@@ -38,7 +38,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     let ty = &input.ident;
 
     let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
-        Fields::parse_ast(fields)?
+        Fields::<LensAttrs>::parse_ast(fields)?
     } else {
         return Err(syn::Error::new(
             input.span(),
@@ -64,7 +64,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     };
 
     // Define lens types for each field
-    let defs = fields.iter().map(|f| {
+    let defs = fields.iter().filter(|f| !f.attrs.ignore).map(|f| {
         let field_name = &f.ident.unwrap_named();
 
         quote! {
@@ -99,7 +99,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     let func_ty_par = gen_new_param("F");
     let val_ty_par = gen_new_param("V");
 
-    let impls = fields.iter().map(|f| {
+    let impls = fields.iter().filter(|f| !f.attrs.ignore).map(|f| {
         let field_name = &f.ident.unwrap_named();
         let field_ty = &f.ty;
 
@@ -116,9 +116,9 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         }
     });
 
-    let associated_items = fields.iter().map(|f| {
+    let associated_items = fields.iter().filter(|f| !f.attrs.ignore).map(|f| {
         let field_name = &f.ident.unwrap_named();
-        let lens_field_name = f.lens_name_override.as_ref().unwrap_or(&field_name);
+        let lens_field_name = f.attrs.lens_name_override.as_ref().unwrap_or(&field_name);
 
         quote! {
             /// Lens for the corresponding field

@@ -26,21 +26,23 @@ use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
 use anyhow::anyhow;
+use cairo::Surface;
 use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt};
 use gio::ApplicationExt;
 use gtk::prelude::*;
 use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
-use crate::piet::{Piet, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
-use crate::keyboard::{KbKey, KeyState, KeyEvent, Modifiers};
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::scale::{Scale, Scalable, ScaledArea};
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
+use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent}
+use crate::region::Region;
+use crate::scale::{Scalable, Scale, ScaledArea};
+use crate::window::{IdleToken, TimerToken, WinHandler};
 use crate::window;
 
 use super::application::Application;
@@ -117,7 +119,25 @@ pub(crate) struct WindowState {
     window: ApplicationWindow,
     scale: Cell<Scale>,
     area: Cell<ScaledArea>,
+    /// Used to determine whether to honor close requests from the system: we inhibit them unless
+    /// this is true, and this gets set to true when our client requests a close.
+    closing: Cell<bool>,
     drawing_area: DrawingArea,
+    // A cairo surface for us to render to; we copy this to the drawing_area whenever necessary.
+    // This extra buffer is necessitated by DrawingArea's painting model: when our paint callback
+    // is called, we are given a cairo context that's already clipped to the invalid region. This
+    // doesn't match up with our painting model, because we need to call `prepare_paint` before we
+    // know what the invalid region is.
+    //
+    // The way we work around this is by always invalidating the entire DrawingArea whenever we
+    // need repainting; this ensures that GTK gives us an unclipped cairo context. Meanwhile, we
+    // keep track of the actual invalid region. We use that region to render onto `surface`, which
+    // we then copy onto `drawing_area`.
+    surface: RefCell<Option<Surface>>,
+    // The size of `surface` in pixels. This could be bigger than `drawing_area`.
+    surface_size: RefCell<(i32, i32)>,
+    // The invalid region, in display points.
+    invalid: RefCell<Region>,
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     current_keycode: RefCell<Option<u16>>,
@@ -185,11 +205,8 @@ impl WindowBuilder {
         window.set_decorated(self.show_titlebar);
 
         // Get the scale factor based on the GTK reported DPI
-        let scale_factor = window
-            .get_display()
-            .map(|c| c.get_default_screen().get_resolution())
-            .unwrap_or(SCALE_TARGET_DPI)
-            / SCALE_TARGET_DPI;
+        let scale_factor =
+            window.get_display().get_default_screen().get_resolution() / SCALE_TARGET_DPI;
         let scale = Scale::new(scale_factor, scale_factor);
         let area = ScaledArea::from_dp(self.size, scale);
         let size_px = area.size_px();
@@ -207,7 +224,11 @@ impl WindowBuilder {
             window,
             scale: Cell::new(scale),
             area: Cell::new(area),
+            closing: Cell::new(false),
             drawing_area,
+            surface: RefCell::new(None),
+            surface_size: RefCell::new((0, 0)),
+            invalid: RefCell::new(Region::EMPTY),
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
             current_keycode: RefCell::new(None),
@@ -285,36 +306,65 @@ impl WindowBuilder {
                     }
                 }
 
-                // Check if the size of the window has changed
+                // Create a new cairo surface if necessary (either because there is no surface, or
+                // because the size or scale changed).
                 let extents = widget.get_allocation();
                 let size_px = Size::new(extents.width as f64, extents.height as f64);
-                if scale_changed || state.area.get().size_px() != size_px {
+                let no_surface = state.surface.try_borrow().map(|x| x.is_none()).ok() == Some(true);
+                if no_surface || scale_changed || state.area.get().size_px() != size_px {
                     let area = ScaledArea::from_px(size_px, scale);
                     let size_dp = area.size_dp();
                     state.area.set(area);
+                    if let Err(e) = state.resize_surface(extents.width, extents.height) {
+                        log::error!("Failed to resize surface: {}", e);
+                    }
                     if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
                         handler_borrow.size(size_dp);
                     } else {
                         log::warn!("Failed to inform the handler of a resize because it was already borrowed");
                     }
+                    state.invalidate_rect(size_dp.to_rect());
                 }
 
                 if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                    // For some reason piet needs a mutable context, so give it one I guess.
-                    let mut context = context.clone();
-                    context.scale(scale.x(), scale.y());
-                    let (x0, y0, x1, y1) = context.clip_extents();
-                    let invalid_rect = Rect::new(x0, y0, x1, y1);
+                    // Note that we aren't holding any RefCell borrows here (except for the
+                    // WinHandler itself), because prepare_paint can call back into our WindowHandle
+                    // (most likely for invalidation).
+                    handler_borrow.prepare_paint();
 
-                    let mut piet_context = Piet::new(&mut context);
-                    let anim = handler_borrow
-                        .paint(&mut piet_context, invalid_rect);
-                    if let Err(e) = piet_context.finish() {
-                        eprintln!("piet error on render: {:?}", e);
-                    }
+                    let surface = state.surface.try_borrow();
+                    if let Ok(Some(surface)) = surface.as_ref().map(|s| s.as_ref()) {
+                        if let Ok(mut invalid) = state.invalid.try_borrow_mut() {
+                            let surface_context = cairo::Context::new(surface);
 
-                    if anim {
-                        widget.queue_draw();
+                            // Clip to the invalid region, in order that our surface doesn't get
+                            // messed up if there's any painting outside them.
+                            for rect in invalid.rects() {
+                                surface_context.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
+                            }
+                            surface_context.clip();
+
+                            surface_context.scale(scale.x(), scale.y());
+                            let mut piet_context = Piet::new(&surface_context);
+                            handler_borrow.paint(&mut piet_context, &invalid);
+                            if let Err(e) = piet_context.finish() {
+                                log::error!("piet error on render: {:?}", e);
+                            }
+
+                            // Copy the entire surface to the drawing area (not just the invalid
+                            // region, because there might be parts of the drawing area that were
+                            // invalidated by external forces).
+                            let alloc = widget.get_allocation();
+                            context.set_source_surface(&surface, 0.0, 0.0);
+                            context.rectangle(0.0, 0.0, alloc.width as f64, alloc.height as f64);
+                            context.fill();
+
+                            invalid.clear();
+                        } else {
+                            log::warn!("Drawing was skipped because the invalid region was borrowed");
+                        }
+                    } else {
+                        log::warn!("Drawing was skipped because there was no surface");
                     }
                 } else {
                     log::warn!("Drawing was skipped because the handler was already borrowed");
@@ -519,6 +569,17 @@ impl WindowBuilder {
         }));
 
         win_state
+            .window
+            .connect_delete_event(clone!(handle => move |_widget, _ev| {
+                if let Some(state) = handle.state.upgrade() {
+                    state.handler.borrow_mut().request_close();
+                    Inhibit(!state.closing.get())
+                } else {
+                    Inhibit(false)
+                }
+            }));
+
+        win_state
             .drawing_area
             .connect_destroy(clone!(handle => move |_widget| {
                 if let Some(state) = handle.state.upgrade() {
@@ -540,6 +601,58 @@ impl WindowBuilder {
         handler.size(self.size);
 
         Ok(handle)
+    }
+}
+
+impl WindowState {
+    fn resize_surface(&self, width: i32, height: i32) -> Result<(), anyhow::Error> {
+        fn next_size(x: i32) -> i32 {
+            // We round up to the nearest multiple of `accuracy`, which is between x/2 and x/4.
+            // Don't bother rounding to anything smaller than 32 = 2^(7-1).
+            let accuracy = 1 << ((32 - x.leading_zeros()).max(7) - 2);
+            let mask = accuracy - 1;
+            (x + mask) & !mask
+        }
+
+        let mut surface = self.surface.borrow_mut();
+        let mut cur_size = self.surface_size.borrow_mut();
+        let (width, height) = (next_size(width), next_size(height));
+        if surface.is_none() || *cur_size != (width, height) {
+            *cur_size = (width, height);
+            if let Some(s) = surface.as_ref() {
+                s.finish();
+            }
+            *surface = None;
+
+            if let Some(w) = self.drawing_area.get_window() {
+                *surface = w.create_similar_surface(cairo::Content::Color, width, height);
+                if surface.is_none() {
+                    return Err(anyhow!("create_similar_surface failed"));
+                }
+            } else {
+                return Err(anyhow!("drawing area has no window"));
+            }
+        }
+        Ok(())
+    }
+
+    /// Queues a call to `prepare_paint` and `paint`, but without marking any region for
+    /// invalidation.
+    fn request_anim_frame(&self) {
+        self.window.queue_draw();
+    }
+
+    /// Invalidates a rectangle, given in display points.
+    fn invalidate_rect(&self, rect: Rect) {
+        if let Ok(mut region) = self.invalid.try_borrow_mut() {
+            let scale = self.scale.get();
+            // We prefer to invalidate an integer number of pixels.
+            let rect = rect.to_px(scale).expand().to_dp(scale);
+            region.add_rect(rect);
+            self.window.queue_draw();
+        } else {
+            log::warn!("Not invalidating rect because region already borrowed");
+        }
     }
 }
 
@@ -596,6 +709,7 @@ impl WindowHandle {
     /// Close the window.
     pub fn close(&self) {
         if let Some(state) = self.state.upgrade() {
+            state.closing.set(true);
             state.window.close();
         }
     }
@@ -609,30 +723,30 @@ impl WindowHandle {
         }
     }
 
-    // Request invalidation of the entire window contents.
+    /// Request a new paint, but without invalidating anything.
+    pub fn request_anim_frame(&self) {
+        if let Some(state) = self.state.upgrade() {
+            state.request_anim_frame();
+        }
+    }
+
+    /// Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
         if let Some(state) = self.state.upgrade() {
-            state.window.queue_draw();
+            self.invalidate_rect(state.area.get().size_dp().to_rect());
         }
     }
 
-    /// Request invalidation of one rectangle, which is given relative to the drawing area.
+    /// Request invalidation of one rectangle, which is given in display points relative to the
+    /// drawing area.
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(state) = self.state.upgrade() {
-            // GTK takes rects with non-negative integer width/height.
-            let r = rect.abs().to_px(state.scale.get()).expand();
-            let origin = state.drawing_area.get_allocation();
-            state.window.queue_draw_area(
-                r.x0 as i32 + origin.x,
-                r.y0 as i32 + origin.y,
-                r.width() as i32,
-                r.height() as i32,
-            );
+            state.invalidate_rect(rect);
         }
     }
 
-    pub fn text(&self) -> Text {
-        Text::new()
+    pub fn text(&self) -> PietText {
+        PietText::new()
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
@@ -651,14 +765,14 @@ impl WindowHandle {
         let token = TimerToken::next();
         let handle = self.clone();
 
-        gdk::threads_add_timeout(interval, move || {
+        glib::timeout_add(interval, move || {
             if let Some(state) = handle.state.upgrade() {
                 if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
                     handler_borrow.timer(token);
-                    return false;
+                    return glib::Continue(false);
                 }
             }
-            true
+            glib::Continue(true)
         });
         token
     }
@@ -818,7 +932,7 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
 }
 
 fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cursor> {
-    gdk::Cursor::new_from_name(
+    gdk::Cursor::from_name(
         &gdk_window.get_display(),
         match cursor {
             // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
@@ -906,9 +1020,9 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
     let keyval = key.get_keyval();
     let hardware_keycode = key.get_hardware_keycode();
 
-    let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval);
+    let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or_else(|| keyval.clone());
 
-    let text = gdk::keyval_to_unicode(keyval);
+    let text = gdk::keys::keyval_to_unicode(*keyval);
     let mods = get_modifiers(key.get_state());
     let key = keycodes::raw_key_to_key(keyval).unwrap_or_else(|| {
         if let Some(c) = text {
@@ -938,7 +1052,8 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
 
 /// Map a hardware keycode to a keyval by performing a lookup in the keymap and finding the
 /// keyval with the lowest group and level
-fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
+fn hardware_keycode_to_keyval(keycode: u16) -> Option<keycodes::RawKey> {
+    use glib::translate::FromGlib;
     unsafe {
         let keymap = gdk_sys::gdk_keymap_get_default();
 
@@ -961,7 +1076,7 @@ fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
 
             let resolved_keyval = keys_slice.iter().enumerate().find_map(|(i, key)| {
                 if key.group == 0 && key.level == 0 {
-                    Some(keyvals_slice[i])
+                    Some(keycodes::RawKey::from_glib(keyvals_slice[i]))
                 } else {
                     None
                 }
