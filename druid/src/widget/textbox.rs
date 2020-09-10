@@ -392,7 +392,7 @@ impl Widget<String> for TextBox {
         // setting text color rebuilds layout, so don't do it if we don't have to
         if !old_data.same(data) {
             self.selection = self.selection.constrain_to(content);
-            self.text.set_text(data.as_str());
+            self.text.set_text(content.as_str());
             if data.is_empty() {
                 self.text.set_text_color(theme::PLACEHOLDER_COLOR);
             } else {
