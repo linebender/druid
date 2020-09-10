@@ -54,6 +54,7 @@ pub struct TextLayout {
     cached_text_size: Option<f64>,
     // the underlying layout object. This is constructed lazily.
     layout: Option<PietTextLayout>,
+    wrap_width: f64,
 }
 
 impl TextLayout {
@@ -73,6 +74,7 @@ impl TextLayout {
             text_size_override: None,
             cached_text_size: None,
             layout: None,
+            wrap_width: f64::INFINITY,
         }
     }
 
@@ -121,6 +123,17 @@ impl TextLayout {
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         self.text_size_override = Some(size.into());
         self.layout = None;
+    }
+
+    /// Set the width at which to wrap words.
+    ///
+    /// You may pass `f64::INFINITY` to disable word wrapping
+    /// (the default behaviour).
+    pub fn set_wrap_width(&mut self, width: f64) {
+        self.wrap_width = width;
+        if let Some(layout) = self.layout.as_mut() {
+            let _ = layout.update_width(width);
+        }
     }
 
     /// The size of the laid-out text.
@@ -225,6 +238,7 @@ impl TextLayout {
             self.layout = Some(
                 factory
                     .new_text_layout(self.text.clone())
+                    .max_width(self.wrap_width)
                     .font(descriptor.family.clone(), descriptor.size)
                     .default_attribute(descriptor.weight)
                     .default_attribute(descriptor.style)

@@ -26,6 +26,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Movement::StartOfDocument`, `Movement::EndOfDocument`. ([#1092] by [@sysint64])
 - `TextLayout` type simplifies drawing text ([#1182] by [@cmyr])
 - Implementation of `Data` trait for `i128` and `u128` primitive data types. ([#1214] by [@koutoftimer])
+- `LineBreaking` enum allows configuration of label line-breaking ([#1195] by [@cmyr])
 
 ### Changed
 
@@ -424,9 +425,10 @@ Last release without a changelog :(
 [#1171]: https://github.com/linebender/druid/pull/1171
 [#1172]: https://github.com/linebender/druid/pull/1172
 [#1173]: https://github.com/linebender/druid/pull/1173
-[#1182]: https://github.com/linebender/druid/pull/1185
+[#1182]: https://github.com/linebender/druid/pull/1182
 [#1185]: https://github.com/linebender/druid/pull/1185
 [#1092]: https://github.com/linebender/druid/pull/1092
+[#1195]: https://github.com/linebender/druid/pull/1195
 [#1204]: https://github.com/linebender/druid/pull/1204
 [#1205]: https://github.com/linebender/druid/pull/1205
 [#1214]: https://github.com/linebender/druid/pull/1214
