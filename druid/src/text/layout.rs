@@ -181,7 +181,7 @@ impl TextLayout {
                 let line_metrics = layout.line_metric(pos.line).unwrap();
                 let p1 = (pos.point.x, line_metrics.y_offset);
                 let p2 = (pos.point.x, (line_metrics.y_offset + line_metrics.height));
-                dbg!(Line::new(p1, p2))
+                Line::new(p1, p2)
             })
             .unwrap_or_else(|| Line::new(Point::ZERO, Point::ZERO))
     }
