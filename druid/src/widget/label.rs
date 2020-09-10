@@ -15,9 +15,9 @@
 //! A label widget.
 
 use crate::piet::{Color, PietText};
+use crate::widget::prelude::*;
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, FontDescriptor, KeyOrValue, LayoutCtx, LifeCycle,
-    LifeCycleCtx, LocalizedString, PaintCtx, Point, Size, TextLayout, UpdateCtx, Widget,
+    BoxConstraints, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, Size, TextLayout,
 };
 
 // added padding between the edges of the widget and the text.
@@ -51,9 +51,21 @@ pub struct Dynamic<T> {
 pub struct Label<T> {
     text: LabelText<T>,
     layout: TextLayout,
+    line_break_mode: LineBreaking,
     // if our text is manually changed we need to rebuild the layout
     // before using it again.
     needs_rebuild: bool,
+}
+
+/// Options for handling lines that are too wide for the label.
+#[derive(Debug, Clone, Copy, PartialEq, Data)]
+pub enum LineBreaking {
+    /// Lines are broken at word boundaries.
+    WordWrap,
+    /// Lines are truncated to the width of the label.
+    Clip,
+    /// Lines overflow the label.
+    Overflow,
 }
 
 impl<T: Data> Label<T> {
@@ -79,6 +91,7 @@ impl<T: Data> Label<T> {
         Self {
             text,
             layout,
+            line_break_mode: LineBreaking::Clip,
             needs_rebuild: true,
         }
     }
@@ -141,7 +154,20 @@ impl<T: Data> Label<T> {
         self
     }
 
+    /// Builder-style method to set the [`LineBreaking`] behaviour.
+    ///
+    /// [`LineBreaking`]: enum.LineBreaking.html
+    pub fn with_line_break_mode(mut self, mode: LineBreaking) -> Self {
+        self.set_line_break_mode(mode);
+        self
+    }
+
     /// Set the label's text.
+    ///
+    /// If you change this property, you are responsible for calling
+    /// [`request_layout`] to ensure the label is updated.
+    ///
+    /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
     pub fn set_text(&mut self, text: impl Into<LabelText<T>>) {
         self.text = text.into();
         self.needs_rebuild = true;
@@ -156,6 +182,10 @@ impl<T: Data> Label<T> {
     ///
     /// The argument can be either a `Color` or a [`Key<Color>`].
     ///
+    /// If you change this property, you are responsible for calling
+    /// [`request_layout`] to ensure the label is updated.
+    ///
+    /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
     /// [`Key<Color>`]: ../struct.Key.html
     pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
         self.layout.set_text_color(color);
@@ -166,6 +196,10 @@ impl<T: Data> Label<T> {
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
     ///
+    /// If you change this property, you are responsible for calling
+    /// [`request_layout`] to ensure the label is updated.
+    ///
+    /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         self.layout.set_text_size(size);
@@ -177,12 +211,27 @@ impl<T: Data> Label<T> {
     /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
     /// that refers to a font defined in the [`Env`].
     ///
+    /// If you change this property, you are responsible for calling
+    /// [`request_layout`] to ensure the label is updated.
+    ///
+    /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
     /// [`Env`]: ../struct.Env.html
     /// [`FontDescriptor`]: ../struct.FontDescriptor.html
     /// [`Key<FontDescriptor>`]: ../struct.Key.html
     pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
         self.layout.set_font(font);
         self.needs_rebuild = true;
+    }
+
+    /// Set the [`LineBreaking`] behaviour.
+    ///
+    /// If you change this property, you are responsible for calling
+    /// [`request_layout`] to ensure the label is updated.
+    ///
+    /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
+    /// [`LineBreaking`]: enum.LineBreaking.html
+    pub fn set_line_break_mode(&mut self, mode: LineBreaking) {
+        self.line_break_mode = mode;
     }
 
     fn rebuild_if_needed(&mut self, factory: &mut PietText, data: &T, env: &Env) {
@@ -251,18 +300,27 @@ impl<T: Data> Widget<T> for Label<T> {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Label");
-        self.rebuild_if_needed(&mut ctx.text(), data, env);
 
-        let text_size = self.layout.size();
-        bc.constrain(Size::new(
-            text_size.width + 2. * LABEL_X_PADDING,
-            text_size.height,
-        ))
+        let width = match self.line_break_mode {
+            LineBreaking::WordWrap => bc.max().width - LABEL_X_PADDING * 2.0,
+            _ => f64::INFINITY,
+        };
+
+        self.rebuild_if_needed(&mut ctx.text(), data, env);
+        self.layout.set_wrap_width(width);
+
+        let mut text_size = self.layout.size();
+        text_size.width += 2. * LABEL_X_PADDING;
+        bc.constrain(text_size)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
-        // Find the origin for the text
         let origin = Point::new(LABEL_X_PADDING, 0.0);
+        let label_size = ctx.size();
+
+        if self.line_break_mode == LineBreaking::Clip {
+            ctx.clip(label_size.to_rect());
+        }
         self.layout.draw(ctx, origin)
     }
 }
