@@ -176,7 +176,8 @@ impl<T: Data> TabsPolicy for StaticTabs<T> {
 }
 
 /// AddTabs is an extension to TabsPolicy.
-/// If a policy implements AddTab,
+/// If a policy implements AddTab, then the add_tab and with_tab methods will be available on
+/// the Tabs instance.
 pub trait AddTab: TabsPolicy {
     /// Add a tab to the build type.
     fn add_tab(
@@ -213,7 +214,8 @@ impl<TP: TabsPolicy> TabsState<TP> {
     }
 }
 
-pub struct TabBar<TP: TabsPolicy> {
+/// This widget is the tab bar. It contains widgets that when pressed switch the active tab.
+struct TabBar<TP: TabsPolicy> {
     axis: Axis,
     cross_axis_alignment: CrossAxisAlignment,
     tabs: Vec<(TP::Key, TabBarPod<TP>)>,
@@ -408,7 +410,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
     }
 }
 
-pub struct TabsTransitionState {
+struct TabsTransitionState {
     previous_idx: TabIndex,
     current_time: u64,
     duration: Nanos,
@@ -473,7 +475,9 @@ fn ensure_for_tabs<Content, TP: TabsPolicy + ?Sized>(
     existing_idx
 }
 
-pub struct TabsBody<TP: TabsPolicy> {
+/// This widget is the tabs body. It shows the active tab, keeps other tabs hidden, and can
+/// animate transitions between them.
+struct TabsBody<TP: TabsPolicy> {
     children: Vec<(TP::Key, Option<TabBodyPod<TP>>)>,
     axis: Axis,
     transition: TabsTransition,
@@ -518,6 +522,7 @@ impl<TP: TabsPolicy> TabsBody<TP> {
     }
 }
 
+/// Possibly should be moved to Event
 fn hidden_should_receive_event(evt: &Event) -> bool {
     match evt {
         Event::WindowConnected
@@ -537,6 +542,7 @@ fn hidden_should_receive_event(evt: &Event) -> bool {
     }
 }
 
+/// Possibly should be moved to event.
 fn hidden_should_receive_lifecycle(lc: &LifeCycle) -> bool {
     match lc {
         LifeCycle::WidgetAdded | LifeCycle::Internal(_) => true,
@@ -677,7 +683,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
 }
 
 // This only needs to exist to be able to give a reasonable type to the TabScope
-pub struct TabsScopePolicy<TP> {
+struct TabsScopePolicy<TP> {
     tabs_from_data: TP,
     selected: TabIndex,
 }

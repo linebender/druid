@@ -25,7 +25,6 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Menu` commands can now choose a custom target. ([#1185] by [@finnerale])
 - `Movement::StartOfDocument`, `Movement::EndOfDocument`. ([#1092] by [@sysint64])
 - `TextLayout` type simplifies drawing text ([#1182] by [@cmyr])
-- 'Rotated' widget to allow widgets to be rotated by an integral number of quarter turns ([#1160] by [@rjwittams])
 - 'Tabs' widget allowing static and dynamic tabbed layouts. ([#1160] by [@rjwittams])
 
 ### Changed

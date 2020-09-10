@@ -23,7 +23,7 @@ use druid::{
     AppLauncher, Color, Data, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc,
 };
 
-#[cfg(feature = "svg")]
+#[cfg(not(target_arch = "wasm32"))]
 use druid::widget::{Svg, SvgData};
 
 const XI_IMAGE: &[u8] = include_bytes!("assets/xi.image");
@@ -67,7 +67,7 @@ pub fn main() {
 }
 
 fn ui_builder() -> impl Widget<AppData> {
-    #[cfg(feature = "svg")]
+    #[cfg(not(target_arch = "wasm32"))]
     let svg_example = label_widget(
         Svg::new(
             include_str!("./assets/tiger.svg")
@@ -77,8 +77,8 @@ fn ui_builder() -> impl Widget<AppData> {
         "Svg",
     );
 
-    #[cfg(not(feature = "svg"))]
-    let svg_example = label_widget(Label::new("SVG not supported (yet)").center(), "Svg");
+    #[cfg(target_arch = "wasm32")]
+    let svg_example = label_widget(Label::new("no SVG on wasm (yet)").center(), "Svg");
 
     Scroll::new(
         SquaresGrid::new()
