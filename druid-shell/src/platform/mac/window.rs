@@ -56,9 +56,9 @@ use crate::keyboard_types::KeyState;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::scale::Scale;
 use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::window;
 use crate::Error;
 
-use crate::window::WindowState as WindowSizeState; // Avoid name conflict.
 
 #[allow(non_upper_case_globals)]
 const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
@@ -153,7 +153,7 @@ impl WindowBuilder {
         log::warn!("WindowBuilder::set_position is currently unimplemented for mac platforms.");
     }
 
-    pub fn set_window_state(&self, _state: WindowSizeState) {
+    pub fn set_window_state(&self, _state: window::WindowState) {
         log::warn!("WindowBuilder::set_window_state is currently unimplemented for mac platforms.");
     }
 
@@ -866,13 +866,13 @@ impl WindowHandle {
         Size::new(0.0, 0.0)
     }
 
-    pub fn set_window_state(&self, _state: WindowSizeState) {
+    pub fn set_window_state(&self, _state: window::WindowState) {
         log::warn!("WindowHandle::set_window_state is currently unimplemented for Mac.");
     }
 
-    pub fn get_window_state(&self) -> WindowSizeState {
+    pub fn get_window_state(&self) -> window::WindowState {
         log::warn!("WindowHandle::get_window_state is currently unimplemented for Mac.");
-        WindowSizeState::RESTORED
+        window::WindowState::RESTORED
     }
 
     pub fn handle_titlebar(&self, _val: bool) {

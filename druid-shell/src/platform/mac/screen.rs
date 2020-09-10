@@ -18,5 +18,5 @@ use crate::screen::Monitor;
 
 pub(crate) fn get_monitors() -> Vec<Monitor> {
     log::warn!("Screen::get_monitors() is currently unimplemented for Mac.");
-    Vec::<Monitor>::new()
+    Vec::new()
 }

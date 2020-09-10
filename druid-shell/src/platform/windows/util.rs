@@ -132,6 +132,7 @@ pub(crate) fn recti_to_rect(rect: RECT) -> Rect {
 type GetDpiForSystem = unsafe extern "system" fn() -> UINT;
 type GetDpiForWindow = unsafe extern "system" fn(HWND) -> UINT;
 type SetProcessDpiAwarenessContext = unsafe extern "system" fn(winapi::shared::windef::DPI_AWARENESS_CONTEXT) -> BOOL;
+type GetSystemMetricsForDpi = unsafe extern "system" fn(winapi::ctypes::c_int, UINT) -> winapi::ctypes::c_int;
 // from shcore.dll
 type GetDpiForMonitor = unsafe extern "system" fn(HMONITOR, MONITOR_DPI_TYPE, *mut UINT, *mut UINT);
 type SetProcessDpiAwareness = unsafe extern "system" fn(PROCESS_DPI_AWARENESS) -> HRESULT;
@@ -150,6 +151,7 @@ pub struct OptionalFunctions {
     pub SetProcessDpiAwarenessContext: Option<SetProcessDpiAwarenessContext>,
     pub GetDpiForMonitor: Option<GetDpiForMonitor>,
     pub SetProcessDpiAwareness: Option<SetProcessDpiAwareness>,
+    pub GetSystemMetricsForDpi: Option<GetSystemMetricsForDpi>,
     pub DCompositionCreateDevice2: Option<DCompositionCreateDevice2>,
     pub CreateDXGIFactory2: Option<CreateDXGIFactory2>,
 }
@@ -205,6 +207,7 @@ fn load_optional_functions() -> OptionalFunctions {
     let mut GetDpiForWindow = None;
     let mut SetProcessDpiAwarenessContext = None;
     let mut SetProcessDpiAwareness = None;
+    let mut GetSystemMetricsForDpi = None;
     let mut DCompositionCreateDevice2 = None;
     let mut CreateDXGIFactory2 = None;
 
@@ -221,6 +224,7 @@ fn load_optional_functions() -> OptionalFunctions {
         load_function!(user32, GetDpiForSystem, "10");
         load_function!(user32, GetDpiForWindow, "10");
         load_function!(user32, SetProcessDpiAwarenessContext, "10");
+        load_function!(user32, GetSystemMetricsForDpi, "10");
     }
 
     if !dcomp.is_null() {
@@ -237,6 +241,7 @@ fn load_optional_functions() -> OptionalFunctions {
         SetProcessDpiAwarenessContext,
         GetDpiForMonitor,
         SetProcessDpiAwareness,
+        GetSystemMetricsForDpi,
         DCompositionCreateDevice2,
         CreateDXGIFactory2,
     }

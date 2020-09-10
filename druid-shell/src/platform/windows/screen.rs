@@ -27,8 +27,6 @@ use std::mem::size_of;
 use crate::screen::Monitor;
 use crate::kurbo::Rect;
 
-static mut MONITORS : Vec<Monitor> = Vec::new();
-
 unsafe extern "system" fn monitorenumproc(hmonitor : HMONITOR, _hdc : HDC, _lprect : LPRECT, _lparam : LPARAM) -> BOOL {
     let rect = RECT { left: 0, top: 0, right: 0, bottom: 0};
     let mut info = MONITORINFO { cbSize : size_of::<MONITORINFO>() as u32, rcMonitor : rect, rcWork : rect, dwFlags : 0};
@@ -41,21 +39,21 @@ unsafe extern "system" fn monitorenumproc(hmonitor : HMONITOR, _hdc : HDC, _lpre
     let primary = info.dwFlags == MONITORINFOF_PRIMARY;
     let rect = Rect::new(info.rcMonitor.left as f64, info.rcMonitor.top as f64, info.rcMonitor.right as f64, info.rcMonitor.bottom as f64);
     let work_rect = Rect::new(info.rcWork.left as f64, info.rcWork.top as f64, info.rcWork.right as f64, info.rcWork.bottom as f64);
-    let m = Monitor::new(primary, rect, work_rect);
-    MONITORS.push(m);
+    let monitors = _lparam as *mut Vec::<Monitor>;
+    (*monitors).push(Monitor::new(primary, rect, work_rect));
     TRUE
 }
 
-
 pub(crate) fn get_monitors() -> Vec<Monitor> {
     unsafe {
-        MONITORS = Vec::new();
-        if EnumDisplayMonitors(null_mut(), null_mut(), Some(monitorenumproc), 0) == 0{
+        let monitors = Vec::<Monitor>::new();
+        let ptr = &monitors as *const Vec::<Monitor>;
+        if EnumDisplayMonitors(null_mut(), null_mut(), Some(monitorenumproc), ptr as isize) == 0{
             warn!(
                 "Failed to Enumerate Display Monitors: {}",
                 Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
             );
         };
-        MONITORS.clone()
+        monitors
     }
 }
