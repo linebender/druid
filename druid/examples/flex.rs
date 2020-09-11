@@ -54,6 +54,7 @@ struct Params {
 #[derive(Clone, Copy, PartialEq, Data)]
 enum Spacers {
     None,
+    Default,
     Flex,
     Fixed,
 }
@@ -168,11 +169,11 @@ fn make_control_row() -> impl Widget<AppState> {
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .with_child(Label::new("Misc:").padding((0., 0., 0., 10.)))
                 .with_child(Checkbox::new("Debug layout").lens(Params::debug_layout))
-                .with_spacer(10.)
+                .with_default_spacer()
                 .with_child(Checkbox::new("Fill main axis").lens(Params::fill_major_axis))
-                .with_spacer(10.)
+                .with_default_spacer()
                 .with_child(Checkbox::new("Fix minor axis size").lens(Params::fix_minor_axis))
-                .with_spacer(10.)
+                .with_default_spacer()
                 .with_child(Checkbox::new("Fix major axis size").lens(Params::fix_major_axis))
                 .padding(5.0),
         )
@@ -188,6 +189,7 @@ fn make_spacer_select() -> impl Widget<Params> {
         .with_child(
             RadioGroup::new(vec![
                 ("None", Spacers::None),
+                ("Default", Spacers::Default),
                 ("Flex", Spacers::Flex),
                 ("Fixed:", Spacers::Fixed),
             ])
@@ -217,6 +219,7 @@ fn make_spacer_select() -> impl Widget<Params> {
 fn space_if_needed<T: Data>(flex: &mut Flex<T>, params: &Params) {
     match params.spacers {
         Spacers::None => (),
+        Spacers::Default => flex.add_default_spacer(),
         Spacers::Fixed => flex.add_spacer(params.spacer_size),
         Spacers::Flex => flex.add_flex_spacer(1.0),
     }
@@ -231,7 +234,11 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
     .main_axis_alignment(state.main_alignment)
     .must_fill_main_axis(state.fill_major_axis);
 
-    let mut flex = flex.with_child(TextBox::new().lens(DemoState::input_text));
+    let mut flex = flex.with_child(
+        TextBox::new()
+            .with_placeholder("Sample text")
+            .lens(DemoState::input_text),
+    );
     space_if_needed(&mut flex, state);
 
     flex.add_child(
@@ -264,10 +271,6 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
     space_if_needed(&mut flex, state);
     flex.add_child(Switch::new().lens(DemoState::enabled));
 
-    let flex = flex
-        .background(Color::rgba8(0, 0, 0xFF, 0x30))
-        .lens(AppState::demo_state);
-
     let mut flex = SizedBox::new(flex);
     if state.fix_minor_axis {
         match state.axis {
@@ -283,6 +286,12 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
         }
     }
 
+    let flex = flex
+        .padding(8.0)
+        .border(Color::grey(0.6), 2.0)
+        .rounded(5.0)
+        .lens(AppState::demo_state);
+
     if state.debug_layout {
         flex.debug_paint_layout().boxed()
     } else {
@@ -294,14 +303,14 @@ fn make_ui() -> impl Widget<AppState> {
     Flex::column()
         .must_fill_main_axis(true)
         .with_child(make_control_row())
-        .with_spacer(20.)
-        .with_flex_child(Rebuilder::new(), 1.0)
+        .with_default_spacer()
+        .with_flex_child(Rebuilder::new().center(), 1.0)
         .padding(10.0)
 }
 
 pub fn main() -> Result<(), PlatformError> {
     let main_window = WindowDesc::new(make_ui)
-        .window_size((620., 600.00))
+        .window_size((720., 600.00))
         .with_min_size((620., 265.00))
         .title(LocalizedString::new("Flex Container Options"));
 

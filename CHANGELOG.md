@@ -38,6 +38,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Button::from_label` to construct a `Button` with a provided `Label`. ([#1226] by [@ForLoveOfCats])
 - Lens: Added Unit lens for type erased / display only widgets that do not need data. ([#1232] by [@rjwittams]) 
 - `WindowLevel` to control system window Z order, with Mac and GTK implementations  ([#1231] by [@rjwittams])
+- WIDGET_PADDING items added to theme and `Flex::with_default_spacer`/`Flex::add_default_spacer` ([#1220] by [@cmyr])
 
 ### Changed
 
@@ -450,9 +451,13 @@ Last release without a changelog :(
 [#1205]: https://github.com/linebender/druid/pull/1205
 [#1210]: https://github.com/linebender/druid/pull/1210
 [#1214]: https://github.com/linebender/druid/pull/1214
+<<<<<<< HEAD
 [#1226]: https://github.com/linebender/druid/pull/1226
 [#1232]: https://github.com/linebender/druid/pull/1232
 [#1231]: https://github.com/linebender/druid/pull/1231
+=======
+[#1220]: https://github.com/linebender/druid/pull/1220
+>>>>>>> fb98400c... Add default horizontal & vertical padding to theme
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

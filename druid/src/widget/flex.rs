@@ -112,7 +112,7 @@ use crate::{
 ///     .cross_axis_alignment(CrossAxisAlignment::Center)
 ///     .must_fill_main_axis(true)
 ///     .with_child(Label::new("hello"))
-///     .with_spacer(8.0)
+///     .with_default_spacer()
 ///     .with_flex_child(Slider::new(), 1.0);
 /// ```
 ///
@@ -125,7 +125,7 @@ use crate::{
 /// my_row.set_must_fill_main_axis(true);
 /// my_row.set_cross_axis_alignment(CrossAxisAlignment::Center);
 /// my_row.add_child(Label::new("hello"));
-/// my_row.add_spacer(8.0);
+/// my_row.add_default_spacer();
 /// my_row.add_flex_child(Slider::new(), 1.0);
 /// ```
 ///
@@ -420,7 +420,21 @@ impl<T: Data> Flex<T> {
         self
     }
 
+    /// Builder-style method to add a spacer widget with a standard size.
+    ///
+    /// The actual value of this spacer depends on whether this container is
+    /// a row or column, as well as theme settings.
+    pub fn with_default_spacer(mut self) -> Self {
+        self.add_default_spacer();
+        self
+    }
+
     /// Builder-style method for adding a fixed-size spacer to the container.
+    ///
+    /// If you are laying out standard controls in this container, you should
+    /// generally prefer to use [`add_default_spacer`].
+    ///
+    /// [`add_default_spacer`]: #method.add_default_spacer
     pub fn with_spacer(mut self, len: impl Into<KeyOrValue<f64>>) -> Self {
         self.add_spacer(len);
         self
@@ -495,7 +509,24 @@ impl<T: Data> Flex<T> {
         self.children.push(child);
     }
 
-    /// Add an empty spacer widget with the given length.
+    /// Add a spacer widget with a standard size.
+    ///
+    /// The actual value of this spacer depends on whether this container is
+    /// a row or column, as well as theme settings.
+    pub fn add_default_spacer(&mut self) {
+        let key = match self.direction {
+            Axis::Vertical => crate::theme::WIDGET_PADDING_VERTICAL,
+            Axis::Horizontal => crate::theme::WIDGET_PADDING_HORIZONTAL,
+        };
+        self.add_spacer(key);
+    }
+
+    /// Add an empty spacer widget with the given size.
+    ///
+    /// If you are laying out standard controls in this container, you should
+    /// generally prefer to use [`add_default_spacer`].
+    ///
+    /// [`add_default_spacer`]: #method.add_default_spacer
     pub fn add_spacer(&mut self, len: impl Into<KeyOrValue<f64>>) {
         let spacer = Spacer {
             axis: self.direction,
