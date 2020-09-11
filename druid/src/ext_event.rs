@@ -89,20 +89,16 @@ impl ExtEventSink {
     ///
     /// [`Command`] is not thread safe, so you cannot submit it directly;
     /// instead you have to pass the [`Selector`] and the payload
-    /// separately, and it will be turned into a `Command` when it is received.
+    /// separately, and it will be turned into a [`Command`] when it is received.
     ///
-    /// The `payload` must implement `Any + Send + Sync`.
+    /// The `payload` must implement `Any + Send`.
     ///
-    /// If submitted with `Target::Auto`, the [`Command`] will be sent to
-    /// the application's first window; if that window is subsequently closed,
-    /// then the command will be sent to *an arbitrary other window*.
-    ///
-    /// This behavior may be changed in the future; in any case, you should
-    /// probably provide an explicit [`Target`].
+    /// If the [`Target::Auto`] is equivalent to [`Target::Global`].
     ///
     /// [`Command`]: struct.Command.html
     /// [`Selector`]: struct.Selector.html
-    /// [`Target`]: struct.Target.html
+    /// [`Target::Auto`]: enum.Target.html#variant.Auto
+    /// [`Target::Global`]: enum.Target.html#variant.Global
     pub fn submit_command<T: Any + Send>(
         &self,
         selector: Selector<T>,
