@@ -360,7 +360,11 @@ impl Widget<String> for TextBox {
 
             self.do_edit_action(edit_action, data);
             self.reset_cursor_blink(ctx);
-            self.text.set_text(data.as_str());
+            if data.is_empty() {
+                self.text.set_text(self.placeholder.as_str());
+            } else {
+                self.text.set_text(data.as_str());
+            }
             self.text.rebuild_if_needed(ctx.text(), env);
 
             if !is_select_all {
@@ -373,7 +377,12 @@ impl Widget<String> for TextBox {
         match event {
             LifeCycle::WidgetAdded => {
                 ctx.register_for_focus();
-                self.text.set_text(data.clone());
+                if data.is_empty() {
+                    self.text.set_text(self.placeholder.as_str());
+                    self.text.set_text_color(theme::PLACEHOLDER_COLOR);
+                } else {
+                    self.text.set_text(data.as_str());
+                }
                 self.text.rebuild_if_needed(ctx.text(), env);
             }
             // an open question: should we be able to schedule timers here?
