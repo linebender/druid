@@ -80,7 +80,7 @@ pub(crate) struct WindowBuilder {
     present_strategy: PresentStrategy,
     resizable: bool,
     show_titlebar: bool,
-    size: Size,
+    size: Option<Size>,
     min_size: Option<Size>,
     position: Point,
     state: window::WindowState,
@@ -1109,7 +1109,7 @@ impl WindowBuilder {
             resizable: true,
             show_titlebar: true,
             present_strategy: Default::default(),
-            size: Size::new(CW_USEDEFAULT as f64, CW_USEDEFAULT as f64),
+            size: None,
             min_size: None,
             position: Point::new(CW_USEDEFAULT as f64, CW_USEDEFAULT as f64),
             state: window::WindowState::RESTORED,
@@ -1122,7 +1122,7 @@ impl WindowBuilder {
     }
 
     pub fn set_size(&mut self, size: Size) {
-        self.size = size;
+        self.size = Some(size);
     }
 
     pub fn set_min_size(&mut self, size: Size) {
@@ -1168,8 +1168,12 @@ impl WindowBuilder {
             };
 
             let scale = Scale::new(1.0, 1.0);
-            let area = ScaledArea::from_dp(self.size, scale);
-            let size_px = area.size_px();
+            let mut area = ScaledArea::default();
+            let (width, height) = self.size.map(|size| {
+                area = ScaledArea::from_dp(size, scale);
+                let size_px = area.size_px();
+                (size_px.width as i32, size_px.height as i32)
+            }).unwrap_or((CW_USEDEFAULT, CW_USEDEFAULT));
 
             let (hmenu, accels, has_menu) = match self.menu {
                 Some(menu) => {
@@ -1231,8 +1235,8 @@ impl WindowBuilder {
                 dwStyle,
                 self.position.x as i32,
                 self.position.y as i32,
-                size_px.width as i32,
-                size_px.height as i32,
+                width,
+                height,
                 0 as HWND,
                 hmenu,
                 0 as HINSTANCE,
@@ -1247,7 +1251,12 @@ impl WindowBuilder {
                 register_accel(hwnd, &accels);
             }
 
-            handle.set_size(handle.get_size());
+            if let Some(size) = self.size {
+                // TODO: because this is deferred, it causes some flashing.
+                // Investigate a proper fix that gets the window created with
+                // the correct size.
+                handle.set_size(size);
+            }
             handle.set_window_state(self.state);
 
             Ok(handle)
