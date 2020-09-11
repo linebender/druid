@@ -178,7 +178,7 @@ impl DeferredQueue {
                     unsafe {
                         if SetWindowPos(hwnd, HWND_TOPMOST,  0, 0, (size.width * proc.scale().x()) as i32, (size.height * proc.scale().y())  as i32, SWP_NOMOVE | SWP_NOZORDER) == 0 {
                             warn!(
-                                "failed to move window: {}",
+                                "failed to resize window: {}",
                                 Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                             );
                         };
@@ -1376,6 +1376,7 @@ impl WindowBuilder {
                 register_accel(hwnd, &accels);
             }
 
+            handle.set_size(size_px);
             handle.set_window_state(self.state);
 
             Ok(handle)
