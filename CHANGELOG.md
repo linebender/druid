@@ -8,7 +8,6 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Highlights
 
 ### Added
-- Implementation of `Data` trait for `i128` and `u128` primitive data types. ([#1061] by @koutoftimer)
 - `OPEN_PANEL_CANCELLED` and `SAVE_PANEL_CANCELLED` commands. ([#1061] by @cmyr)
 - Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
@@ -26,6 +25,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Menu` commands can now choose a custom target. ([#1185] by [@finnerale])
 - `Movement::StartOfDocument`, `Movement::EndOfDocument`. ([#1092] by [@sysint64])
 - `TextLayout` type simplifies drawing text ([#1182] by [@cmyr])
+- Implementation of `Data` trait for `i128` and `u128` primitive data types. ([#1214] by @koutoftimer)
 
 ### Changed
 
