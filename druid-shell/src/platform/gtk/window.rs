@@ -39,7 +39,7 @@ use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent}
+use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window::{IdleToken, TimerToken, WinHandler};
