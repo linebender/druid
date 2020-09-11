@@ -8,6 +8,13 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Highlights
 
 ### Added
+
+- Windows: Added Screen module to get information about monitors and the screen. ([#1037] by [@rhzk])
+- Added documentation to resizable() and show_titlebar() in WindowDesc. ([#1037] by [@rhzk])
+- Windows: Added internal functions to handle Re-entrancy. ([#1037] by [@rhzk])
+- Windows: WindowDesc: Create window with disabled titlebar, maximized or minimized state, and with position. ([#1037] by [@rhzk])
+- Windows: WindowHandle: Change window state. Toggle titlebar. Change size and position of window. ([#1037] by [@rhzk])
+- Windows: WindowHandle: Added handle_titlebar(), Allowing a custom titlebar to behave like the OS one. ([#1037] by [@rhzk])
 - `OPEN_PANEL_CANCELLED` and `SAVE_PANEL_CANCELLED` commands. ([#1061] by @cmyr)
 - Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
@@ -15,15 +22,22 @@ You can find its changes [documented below](#060---2020-06-01).
 - `ScrollComponent` for ease of adding consistent, customized, scrolling behavior to a widget. ([#1107] by [@ForLoveOfCats])
 - Selection text color to textbox. ([#1093] by [@sysint64])
 - `BoxConstraints::UNBOUNDED` constant. ([#1126] by [@danieldulaney])
-- Close requests from the shell can now be intercepted ([#1118] by [@jneem])
+- Close requests from the shell can now be intercepted ([#1118] by [@jneem], [#1204] by [@psychon])
 - The Lens derive now supports an `ignore` attribute. ([#1133] by [@jneem])
 - `request_update` in `EventCtx`. ([#1128] by [@raphlinus])
 - `ExtEventSink`s can now be obtained from widget methods. ([#1152] by [@jneem])
 - 'Scope' widget to allow encapsulation of reactive state. ([#1151] by [@rjwittams])
 - `Ref` lens that applies `AsRef` and thus allow indexing arrays. ([#1171] by [@finnerale])
+- `Command::to` and `Command::target` to set and get a commands target. ([#1185] by [@finnerale])
+- `Menu` commands can now choose a custom target. ([#1185] by [@finnerale])
+- `Movement::StartOfDocument`, `Movement::EndOfDocument`. ([#1092] by [@sysint64])
+- `TextLayout` type simplifies drawing text ([#1182] by [@cmyr])
+- Implementation of `Data` trait for `i128` and `u128` primitive data types. ([#1214] by [@koutoftimer])
 
 ### Changed
 
+- Windows: Improved DPI handling. Druid should now redraw correctly when dpi changes. ([#1037] by [@rhzk])
+- windows: Window created with OS default size if not set. ([#1037] by [@rhzk])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 - Major rework of keyboard event handling. ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
@@ -32,6 +46,11 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Env::try_get` (and related methods) return a `Result` instead of an `Option`. ([#1172] by [@cmyr])
 - `lens!` macro to use move semantics for the index. ([#1171] by [@finnerale])
 - `Env` stores `Arc<str>` instead of `String` ([#1173] by [@cmyr])
+- Replaced uses of `Option<Target>` with the new `Target::Auto`. ([#1185] by [@finnerale])
+- Moved `Target` parameter from `submit_command` to `Command::new` and `Command::to`. ([#1185] by [@finnerale])
+- `Movement::RightOfLine` to `Movement::NextLineBreak`, and `Movement::LeftOfLine` to `Movement::PrecedingLineBreak`. ([#1092] by [@sysint64])
+- `AnimFrame` was moved from `lifecycle` to `event` ([#1155] by [@jneem])
+- Contexts' `text()` methods return `&mut PietText` instead of cloning ([#1205] by [@cmyr])
 
 ### Deprecated
 
@@ -279,6 +298,8 @@ Last release without a changelog :(
 [@sysint64]: https://github.com/sysint64
 [@justinmoon]: https://github.com/justinmoon
 [@rjwittams]: https://github.com/rjwittams
+[@rhzk]: https://github.com/rhzk
+[@koutoftimer]: https://github.com/koutoftimer
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -380,6 +401,7 @@ Last release without a changelog :(
 [#1018]: https://github.com/linebender/druid/pull/1018
 [#1025]: https://github.com/linebender/druid/pull/1025
 [#1028]: https://github.com/linebender/druid/pull/1028
+[#1037]: https://github.com/linebender/druid/pull/1037
 [#1042]: https://github.com/linebender/druid/pull/1042
 [#1043]: https://github.com/linebender/druid/pull/1043
 [#1049]: https://github.com/linebender/druid/pull/1049
@@ -409,11 +431,18 @@ Last release without a changelog :(
 [#1145]: https://github.com/linebender/druid/pull/1145
 [#1151]: https://github.com/linebender/druid/pull/1151
 [#1152]: https://github.com/linebender/druid/pull/1152
+[#1155]: https://github.com/linebender/druid/pull/1155
 [#1157]: https://github.com/linebender/druid/pull/1157
 [#1171]: https://github.com/linebender/druid/pull/1171
 [#1172]: https://github.com/linebender/druid/pull/1172
 [#1173]: https://github.com/linebender/druid/pull/1173
+[#1182]: https://github.com/linebender/druid/pull/1185
+[#1185]: https://github.com/linebender/druid/pull/1185
 [#1191]: https://github.com/linebender/druid/pull/1191
+[#1092]: https://github.com/linebender/druid/pull/1092
+[#1204]: https://github.com/linebender/druid/pull/1204
+[#1205]: https://github.com/linebender/druid/pull/1205
+[#1214]: https://github.com/linebender/druid/pull/1214
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

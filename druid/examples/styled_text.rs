@@ -16,14 +16,13 @@
 
 use druid::widget::{Checkbox, Flex, Label, MainAxisAlignment, Painter, Parse, Stepper, TextBox};
 use druid::{
-    theme, AppLauncher, ArcStr, Color, Data, Key, Lens, LensExt, LensWrap, LocalizedString,
-    PlatformError, RenderContext, Widget, WidgetExt, WindowDesc,
+    theme, AppLauncher, Color, Data, FontDescriptor, FontFamily, Key, Lens, LensExt, LensWrap,
+    LocalizedString, PlatformError, RenderContext, Widget, WidgetExt, WindowDesc,
 };
 use std::fmt::Display;
 
-// This is a custom key we'll use with Env to set and get our text size.
-const MY_CUSTOM_TEXT_SIZE: Key<f64> = Key::new("styled_text.custom_text_size");
-const MY_CUSTOM_FONT: Key<ArcStr> = Key::new("styled_text.custom_font");
+// This is a custom key we'll use with Env to set and get our font.
+const MY_CUSTOM_FONT: Key<FontDescriptor> = Key::new("styled_text.custom_font");
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
@@ -73,7 +72,7 @@ fn ui_builder() -> impl Widget<AppData> {
     });
 
     // This is druid's default text style.
-    // It's set by theme::LABEL_COLOR, theme::TEXT_SIZE_NORMAL, and theme::FONT_NAME
+    // It's set by theme::LABEL_COLOR and theme::UI_FONT
     let label =
         Label::new(|data: &String, _env: &_| format!("Default: {}", data)).lens(AppData::text);
 
@@ -88,19 +87,19 @@ fn ui_builder() -> impl Widget<AppData> {
     // to the default font)
     let styled_label = Label::new(|data: &AppData, _env: &_| format!("{}", data))
         .with_text_color(theme::PRIMARY_LIGHT)
-        .with_text_size(MY_CUSTOM_TEXT_SIZE)
         .with_font(MY_CUSTOM_FONT)
         .background(my_painter)
         .on_click(|_, data, _| {
             data.size *= 1.1;
         })
         .env_scope(|env: &mut druid::Env, data: &AppData| {
-            env.set(MY_CUSTOM_TEXT_SIZE, data.size);
-            if data.mono {
-                env.set(MY_CUSTOM_FONT, "monospace");
+            let new_font = if data.mono {
+                FontDescriptor::new(FontFamily::MONOSPACE)
             } else {
-                env.set(MY_CUSTOM_FONT, env.get(theme::FONT_NAME));
+                FontDescriptor::new(FontFamily::SYSTEM_UI)
             }
+            .with_size(data.size);
+            env.set(MY_CUSTOM_FONT, new_font);
         });
 
     let stepper = Stepper::new()
@@ -118,7 +117,10 @@ fn ui_builder() -> impl Widget<AppData> {
 
     let mono_checkbox = Checkbox::new("Monospace").lens(AppData::mono);
 
-    let input = TextBox::new().fix_width(200.0).lens(AppData::text);
+    let input = TextBox::new()
+        .with_text_size(38.0)
+        .fix_width(200.0)
+        .lens(AppData::text);
 
     Flex::column()
         .main_axis_alignment(MainAxisAlignment::Center)
@@ -131,4 +133,5 @@ fn ui_builder() -> impl Widget<AppData> {
         .with_child(mono_checkbox)
         .with_spacer(8.0)
         .with_child(input.padding(5.0))
+        .debug_widget_id()
 }

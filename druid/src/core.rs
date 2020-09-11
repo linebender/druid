@@ -19,16 +19,15 @@ use std::collections::{HashMap, VecDeque};
 use crate::bloom::Bloom;
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
-use crate::piet::{FontFamily, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder};
 use crate::util::ExtendDrain;
 use crate::{
     BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, Target, TimerToken, UpdateCtx, Widget,
-    WidgetId,
+    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext, Target, TextLayout,
+    TimerToken, UpdateCtx, Widget, WidgetId,
 };
 
 /// Our queue type
-pub(crate) type CommandQueue = VecDeque<(Target, Command)>;
+pub(crate) type CommandQueue = VecDeque<Command>;
 
 /// A container for one widget in the hierarchy.
 ///
@@ -51,7 +50,7 @@ pub struct WidgetPod<T, W> {
     env: Option<Env>,
     inner: W,
     // stashed layout so we don't recompute this when debugging
-    debug_widget_text: Option<PietTextLayout>,
+    debug_widget_text: TextLayout,
 }
 
 /// Generic state for all widgets in the hierarchy.
@@ -145,7 +144,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             old_data: None,
             env: None,
             inner,
-            debug_widget_text: None,
+            debug_widget_text: TextLayout::new(""),
         }
     }
 
@@ -429,7 +428,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 
     fn make_widget_id_layout_if_needed(&mut self, id: WidgetId, ctx: &mut PaintCtx, env: &Env) {
-        if self.debug_widget_text.is_none() {
+        if self.debug_widget_text.needs_rebuild() {
             // switch text color based on background, this is meh and that's okay
             let border_color = env.get_debug_color(id.to_raw());
             let (r, g, b, _) = border_color.as_rgba8();
@@ -439,37 +438,28 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             } else {
                 Color::BLACK
             };
-
             let id_string = id.to_raw().to_string();
-            self.debug_widget_text = ctx
-                .text()
-                .new_text_layout(&id_string)
-                .font(FontFamily::SYSTEM_UI, 10.0)
-                .text_color(text_color)
-                .build()
-                .ok();
+            self.debug_widget_text.set_text(id_string);
+            self.debug_widget_text.set_text_size(10.0);
+            self.debug_widget_text.set_text_color(text_color);
+            self.debug_widget_text.rebuild_if_needed(ctx.text(), env);
         }
     }
 
     fn debug_paint_widget_ids(&self, ctx: &mut PaintCtx, env: &Env) {
         // we clone because we need to move it for paint_with_z_index
         let text = self.debug_widget_text.clone();
-        if let Some(text) = text {
-            let text_size = text.size();
-            let origin = ctx.size().to_vec2() - text_size.to_vec2();
-            let border_color = env.get_debug_color(ctx.widget_id().to_raw());
-            self.debug_paint_layout_bounds(ctx, env);
+        let text_size = text.size();
+        let origin = ctx.size().to_vec2() - text_size.to_vec2();
+        let border_color = env.get_debug_color(ctx.widget_id().to_raw());
+        self.debug_paint_layout_bounds(ctx, env);
 
-            ctx.paint_with_z_index(ctx.depth(), move |ctx| {
-                let origin = Point::new(origin.x.max(0.0), origin.y.max(0.0));
-
-                let text_pos = origin + Vec2::new(0., 8.0);
-                let text_rect = Rect::from_origin_size(origin, text_size);
-
-                ctx.fill(text_rect, &border_color);
-                ctx.draw_text(&text, text_pos);
-            })
-        }
+        ctx.paint_with_z_index(ctx.depth(), move |ctx| {
+            let origin = Point::new(origin.x.max(0.0), origin.y.max(0.0));
+            let text_rect = Rect::from_origin_size(origin, text_size);
+            ctx.fill(text_rect, &border_color);
+            text.draw(ctx, origin);
+        })
     }
 
     fn debug_paint_layout_bounds(&self, ctx: &mut PaintCtx, env: &Env) {
@@ -581,21 +571,22 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     );
                     had_active || hot_changed
                 }
-                InternalEvent::TargetedCommand(target, cmd) => {
-                    match target {
-                        Target::Widget(id) if *id == self.id() => {
+                InternalEvent::TargetedCommand(cmd) => {
+                    match cmd.target() {
+                        Target::Widget(id) if id == self.id() => {
                             modified_event = Some(Event::Command(cmd.clone()));
                             true
                         }
                         Target::Widget(id) => {
                             // Recurse when the target widget could be our descendant.
                             // The bloom filter we're checking can return false positives.
-                            self.state.children.may_contain(id)
+                            self.state.children.may_contain(&id)
                         }
                         Target::Global | Target::Window(_) => {
                             modified_event = Some(Event::Command(cmd.clone()));
                             true
                         }
+                        _ => false,
                     }
                 }
                 InternalEvent::RouteTimer(token, widget_id) => {
@@ -690,6 +681,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 } else {
                     false
                 }
+            }
+            Event::AnimFrame(_) => {
+                let r = self.state.request_anim;
+                self.state.request_anim = false;
+                r
             }
             Event::KeyDown(_) => self.state.has_focus,
             Event::KeyUp(_) => self.state.has_focus,
@@ -788,11 +784,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     true
                 }
             },
-            LifeCycle::AnimFrame(_) => {
-                let r = self.state.request_anim;
-                self.state.request_anim = false;
-                r
-            }
             LifeCycle::WidgetAdded => {
                 assert!(self.old_data.is_none());
 
@@ -994,23 +985,23 @@ mod tests {
 
         let mut command_queue: CommandQueue = VecDeque::new();
         let mut widget_state = WidgetState::new(WidgetId::next(), None);
+        let window = WindowHandle::default();
         let ext_host = ExtEventHost::default();
         let ext_handle = ext_host.make_sink();
-        let mut state = ContextState {
-            command_queue: &mut command_queue,
-            ext_handle: &ext_handle,
-            window_id: WindowId::next(),
-            window: &WindowHandle::default(),
-            root_app_data_type: std::any::TypeId::of::<Option<u32>>(),
-            focus_widget: None,
-        };
+        let mut state = ContextState::new::<Option<u32>>(
+            &mut command_queue,
+            &ext_handle,
+            &window,
+            WindowId::next(),
+            None,
+        );
 
         let mut ctx = LifeCycleCtx {
             widget_state: &mut widget_state,
             state: &mut state,
         };
 
-        let env = Env::default();
+        let env = crate::theme::init();
 
         widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &None, &env);
         assert!(ctx.widget_state.children.may_contain(&ID_1));

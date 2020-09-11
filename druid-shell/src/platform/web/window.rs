@@ -27,7 +27,7 @@ use wasm_bindgen::JsCast;
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
 
-use crate::piet::RenderContext;
+use crate::piet::{RenderContext, PietText};
 
 use super::application::Application;
 use super::error::Error;
@@ -41,7 +41,8 @@ use crate::scale::{Scale, ScaledArea};
 use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::window::{IdleToken, TimerToken, WinHandler};
+use crate::window;
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
@@ -348,6 +349,14 @@ impl WindowBuilder {
         // Ignored
     }
 
+    pub fn set_position(&mut self, _position: Point) {
+        // Ignored
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        // Ignored
+    }
+
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
         self.title = title.into();
     }
@@ -433,6 +442,37 @@ impl WindowHandle {
         log::warn!("show_titlebar unimplemented for web");
     }
 
+    pub fn set_position(&self, _position: Point) {
+        log::warn!("WindowHandle::set_position unimplemented for web");
+    }
+
+    pub fn get_position(&self) -> Point {
+        log::warn!("WindowHandle::get_position unimplemented for web.");
+        Point::new(0.0, 0.0)
+    }
+
+    pub fn set_size(&self, _size: Size) {
+        log::warn!("WindowHandle::set_size unimplemented for web.");
+    }
+
+    pub fn get_size(&self) -> Size {
+        log::warn!("WindowHandle::get_size unimplemented for web.");
+        Size::new(0.0, 0.0)
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        log::warn!("WindowHandle::set_window_state unimplemented for web.");
+    }
+
+    pub fn get_window_state(&self) -> window::WindowState {
+        log::warn!("WindowHandle::get_window_state unimplemented for web.");
+        window::WindowState::RESTORED
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar unimplemented for web.");
+    }
+
     pub fn close(&self) {
         // TODO
     }
@@ -461,13 +501,13 @@ impl WindowHandle {
         self.render_soon();
     }
 
-    pub fn text(&self) -> Text {
+    pub fn text(&self) -> PietText {
         let s = self
             .0
             .upgrade()
             .unwrap_or_else(|| panic!("Failed to produce a text context"));
 
-        Text::new(s.context.clone())
+        PietText::new(s.context.clone())
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {

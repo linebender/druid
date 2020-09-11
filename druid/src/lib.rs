@@ -179,8 +179,8 @@ pub use shell::keyboard_types;
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Code, Cursor, Error as PlatformError,
     FileDialogOptions, FileInfo, FileSpec, FormatId, HotKey, KbKey, KeyEvent, Location, Modifiers,
-    MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, SysMods, Text, TimerToken,
-    WindowHandle,
+    Monitor, MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen, SysMods,
+    TimerToken, WindowHandle, WindowState,
 };
 
 pub use crate::core::WidgetPod;
@@ -197,7 +197,7 @@ pub use lens::{Lens, LensExt, LensWrap};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
-pub use text::FontDescriptor;
+pub use text::{FontDescriptor, TextLayout};
 pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};

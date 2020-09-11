@@ -25,6 +25,7 @@ use crate::{
 
 /// A checkbox that toggles a `bool`.
 pub struct Checkbox {
+    //FIXME: this should be a TextUi struct
     child_label: WidgetPod<bool, Box<dyn Widget<bool>>>,
 }
 
@@ -61,13 +62,15 @@ impl Widget<bool> for Checkbox {
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &bool, _env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &bool, env: &Env) {
+        self.child_label.lifecycle(ctx, event, data, env);
         if let LifeCycle::HotChanged(_) = event {
             ctx.request_paint();
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &bool, _data: &bool, _env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &bool, data: &bool, env: &Env) {
+        self.child_label.update(ctx, data, env);
         ctx.request_paint();
     }
 

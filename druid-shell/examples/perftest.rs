@@ -68,7 +68,7 @@ impl WinHandler for PerfTest {
         self.last_time = now;
         let layout = piet
             .text()
-            .new_text_layout(&msg)
+            .new_text_layout(msg)
             .font(FontFamily::MONOSPACE, 15.0)
             .text_color(FG_COLOR)
             .build()
@@ -80,7 +80,7 @@ impl WinHandler for PerfTest {
 
         let layout = piet
             .text()
-            .new_text_layout(&msg)
+            .new_text_layout(msg)
             .text_color(color)
             .font(FontFamily::MONOSPACE, 48.0)
             .build()

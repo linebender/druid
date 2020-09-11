@@ -214,9 +214,9 @@ impl<T: Data> Harness<'_, T> {
     }
 
     /// Send a command to a target.
-    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
-        let target = target.into().unwrap_or_else(|| self.inner.window.id.into());
-        let event = Event::Internal(InternalEvent::TargetedCommand(target, cmd.into()));
+    pub fn submit_command(&mut self, cmd: impl Into<Command>) {
+        let command = cmd.into().default_to(self.inner.window.id);
+        let event = Event::Internal(InternalEvent::TargetedCommand(command));
         self.event(event);
     }
 
@@ -243,9 +243,7 @@ impl<T: Data> Harness<'_, T> {
         loop {
             let cmd = self.inner.cmds.pop_front();
             match cmd {
-                Some((target, cmd)) => {
-                    self.event(Event::Internal(InternalEvent::TargetedCommand(target, cmd)))
-                }
+                Some(cmd) => self.event(Event::Internal(InternalEvent::TargetedCommand(cmd))),
                 None => break,
             }
         }

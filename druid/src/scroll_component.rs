@@ -423,6 +423,31 @@ impl ScrollComponent {
                     self.scrollbars.timer_id = TimerToken::INVALID;
                     ctx.set_handled();
                 }
+                Event::AnimFrame(interval) => {
+                    // Guard by the timer id being invalid, otherwise the scroll bars would fade
+                    // immediately if some other widget started animating.
+                    if self.scrollbars.timer_id == TimerToken::INVALID {
+                        // Animate scroll bars opacity
+                        let diff = 2.0 * (*interval as f64) * 1e-9;
+                        self.scrollbars.opacity -= diff;
+                        if self.scrollbars.opacity > 0.0 {
+                            ctx.request_anim_frame();
+                        }
+
+                        let viewport = ctx.size().to_rect();
+                        if viewport.width() < self.content_size.width {
+                            ctx.request_paint_rect(
+                                self.calc_horizontal_bar_bounds(viewport, env) - self.scroll_offset,
+                            );
+                        }
+                        if viewport.height() < self.content_size.height {
+                            ctx.request_paint_rect(
+                                self.calc_vertical_bar_bounds(viewport, env) - self.scroll_offset,
+                            );
+                        }
+                    }
+                }
+
                 _ => (),
             }
         }
@@ -445,38 +470,9 @@ impl ScrollComponent {
     ///
     /// Make sure to call on every lifecycle event
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, env: &Env) {
-        match event {
-            LifeCycle::AnimFrame(interval) => {
-                // Guard by the timer id being invalid, otherwise the scroll bars would fade
-                // immediately if some other widget started animating.
-                if self.scrollbars.timer_id == TimerToken::INVALID {
-                    // Animate scroll bars opacity
-                    let diff = 2.0 * (*interval as f64) * 1e-9;
-                    self.scrollbars.opacity -= diff;
-                    if self.scrollbars.opacity > 0.0 {
-                        ctx.request_anim_frame();
-                    }
-
-                    let viewport = ctx.size().to_rect();
-                    if viewport.width() < self.content_size.width {
-                        ctx.request_paint_rect(
-                            self.calc_horizontal_bar_bounds(viewport, env) - self.scroll_offset,
-                        );
-                    }
-                    if viewport.height() < self.content_size.height {
-                        ctx.request_paint_rect(
-                            self.calc_vertical_bar_bounds(viewport, env) - self.scroll_offset,
-                        );
-                    }
-                }
-            }
-
+        if let LifeCycle::Size(_) = event {
             // Show the scrollbars any time our size changes
-            LifeCycle::Size(_) => {
-                self.reset_scrollbar_fade(|d| ctx.request_timer(d), &env);
-            }
-
-            _ => {}
+            self.reset_scrollbar_fade(|d| ctx.request_timer(d), &env);
         }
     }
 

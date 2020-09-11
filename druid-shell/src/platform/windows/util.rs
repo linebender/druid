@@ -24,9 +24,9 @@ use std::ptr;
 use std::slice;
 
 use lazy_static::lazy_static;
-use winapi::shared::minwindef::{HMODULE, UINT};
+use winapi::shared::minwindef::{HMODULE, UINT, BOOL};
 use winapi::shared::ntdef::{HRESULT, LPWSTR};
-use winapi::shared::windef::{HMONITOR, RECT};
+use winapi::shared::windef::{HMONITOR, RECT, HWND};
 use winapi::shared::winerror::SUCCEEDED;
 use winapi::um::fileapi::{CreateFileA, GetFileType, OPEN_EXISTING};
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
@@ -137,17 +137,23 @@ pub(crate) fn region_to_rectis(region: &Region, scale: Scale) -> Vec<RECT> {
 }
 
 // Types for functions we want to load, which are only supported on newer windows versions
-// from shcore.dll
-type GetDpiForSystem = unsafe extern "system" fn() -> UINT;
-type GetDpiForMonitor = unsafe extern "system" fn(HMONITOR, MONITOR_DPI_TYPE, *mut UINT, *mut UINT);
 // from user32.dll
+type GetDpiForSystem = unsafe extern "system" fn() -> UINT;
+type GetDpiForWindow = unsafe extern "system" fn(HWND) -> UINT;
+type SetProcessDpiAwarenessContext = unsafe extern "system" fn(winapi::shared::windef::DPI_AWARENESS_CONTEXT) -> BOOL;
+type GetSystemMetricsForDpi = unsafe extern "system" fn(winapi::ctypes::c_int, UINT) -> winapi::ctypes::c_int;
+// from shcore.dll
+type GetDpiForMonitor = unsafe extern "system" fn(HMONITOR, MONITOR_DPI_TYPE, *mut UINT, *mut UINT);
 type SetProcessDpiAwareness = unsafe extern "system" fn(PROCESS_DPI_AWARENESS) -> HRESULT;
 
 #[allow(non_snake_case)] // For member fields
 pub struct OptionalFunctions {
     pub GetDpiForSystem: Option<GetDpiForSystem>,
+    pub GetDpiForWindow: Option<GetDpiForWindow>,
+    pub SetProcessDpiAwarenessContext: Option<SetProcessDpiAwarenessContext>,
     pub GetDpiForMonitor: Option<GetDpiForMonitor>,
     pub SetProcessDpiAwareness: Option<SetProcessDpiAwareness>,
+    pub GetSystemMetricsForDpi: Option<GetSystemMetricsForDpi>,
 }
 
 #[allow(non_snake_case)] // For local variables
@@ -196,7 +202,10 @@ fn load_optional_functions() -> OptionalFunctions {
 
     let mut GetDpiForSystem = None;
     let mut GetDpiForMonitor = None;
+    let mut GetDpiForWindow = None;
+    let mut SetProcessDpiAwarenessContext = None;
     let mut SetProcessDpiAwareness = None;
+    let mut GetSystemMetricsForDpi = None;
 
     if shcore.is_null() {
         log::info!("No shcore.dll");
@@ -209,12 +218,18 @@ fn load_optional_functions() -> OptionalFunctions {
         log::info!("No user32.dll");
     } else {
         load_function!(user32, GetDpiForSystem, "10");
+        load_function!(user32, GetDpiForWindow, "10");
+        load_function!(user32, SetProcessDpiAwarenessContext, "10");
+        load_function!(user32, GetSystemMetricsForDpi, "10");
     }
 
     OptionalFunctions {
         GetDpiForSystem,
+        GetDpiForWindow,
+        SetProcessDpiAwarenessContext,
         GetDpiForMonitor,
         SetProcessDpiAwareness,
+        GetSystemMetricsForDpi,
     }
 }
 
