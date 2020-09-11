@@ -15,7 +15,7 @@
 //! Window building and app lifecycle.
 
 use crate::ext_event::{ExtEventHost, ExtEventSink};
-use crate::kurbo::Size;
+use crate::kurbo::{Point, Size};
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle};
 use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
@@ -23,6 +23,8 @@ use crate::window::WindowId;
 use crate::{
     theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget, WidgetExt,
 };
+
+use druid_shell::WindowState;
 
 /// A function that modifies the initial environment.
 type EnvSetupFn<T> = dyn FnOnce(&mut Env, &T);
@@ -44,9 +46,11 @@ pub struct WindowDesc<T> {
     pub(crate) title: LabelText<T>,
     pub(crate) size: Option<Size>,
     pub(crate) min_size: Option<Size>,
+    pub(crate) position: Option<Point>,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) resizable: bool,
     pub(crate) show_titlebar: bool,
+    pub(crate) state: WindowState,
     /// The `WindowId` that will be assigned to this window.
     ///
     /// This can be used to track a window from when it is launched and when
@@ -163,9 +167,11 @@ impl<T: Data> WindowDesc<T> {
             title: LocalizedString::new("app-name").into(),
             size: None,
             min_size: None,
+            position: None,
             menu: MenuDesc::platform_default(),
             resizable: true,
             show_titlebar: true,
+            state: WindowState::RESTORED,
             id: WindowId::next(),
         }
     }
@@ -236,6 +242,21 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    /// Sets the initial window position in virtual screen coordinates.
+    /// [`position`] Position in pixels.
+    ///
+    /// [`position`]: struct.Point.html
+    pub fn set_position(mut self, position: Point) -> Self {
+        self.position = Some(position);
+        self
+    }
+
+    /// Set initial state for the window.
+    pub fn set_window_state(mut self, state: WindowState) -> Self {
+        self.state = state;
+        self
+    }
+
     /// Attempt to create a platform window from this `WindowDesc`.
     pub(crate) fn build_native(
         mut self,
@@ -261,6 +282,12 @@ impl<T: Data> WindowDesc<T> {
         if let Some(min_size) = self.min_size {
             builder.set_min_size(min_size);
         }
+
+        if let Some(position) = self.position {
+            builder.set_position(position);
+        }
+
+        builder.set_window_state(self.state);
 
         builder.set_title(self.title.display_text());
         if let Some(menu) = platform_menu {

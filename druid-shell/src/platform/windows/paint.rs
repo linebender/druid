@@ -45,6 +45,7 @@ use super::window::SCALE_TARGET_DPI;
 pub(crate) unsafe fn create_render_target(
     d2d_factory: &D2DFactory,
     hwnd: HWND,
+    scale: Scale,
 ) -> Result<DeviceContext, Error> {
     let mut rect: RECT = mem::zeroed();
     if GetClientRect(hwnd, &mut rect) == 0 {
@@ -53,7 +54,20 @@ pub(crate) unsafe fn create_render_target(
     } else {
         let width = (rect.right - rect.left) as u32;
         let height = (rect.bottom - rect.top) as u32;
-        let res = HwndRenderTarget::create(d2d_factory, hwnd, width, height);
+
+        let props = D2D1_RENDER_TARGET_PROPERTIES {
+            _type: D2D1_RENDER_TARGET_TYPE_DEFAULT,
+            pixelFormat: D2D1_PIXEL_FORMAT {
+                format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                alphaMode: D2D1_ALPHA_MODE_IGNORE,
+            },
+            dpiX: (scale.x() * SCALE_TARGET_DPI) as f32,
+            dpiY: (scale.y() * SCALE_TARGET_DPI) as f32,
+            usage: D2D1_RENDER_TARGET_USAGE_NONE,
+            minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
+        };
+
+        let res = HwndRenderTarget::create(d2d_factory, hwnd, width, height, props);
 
         if let Err(ref e) = res {
             log::error!("Creating hwnd render target failed: {:?}", e);

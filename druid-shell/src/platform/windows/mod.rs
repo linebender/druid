@@ -26,6 +26,7 @@ pub mod paint;
 mod timers;
 pub mod util;
 pub mod window;
+pub mod screen;
 
 // https://docs.microsoft.com/en-us/windows/win32/direct2d/render-targets-overview
 // ID2D1RenderTarget is the interface. The other resources inherit from it.
@@ -53,7 +54,6 @@ use winapi::um::d2d1::{
     ID2D1HwndRenderTarget, ID2D1RenderTarget, D2D1_HWND_RENDER_TARGET_PROPERTIES,
     D2D1_RENDER_TARGET_PROPERTIES, D2D1_SIZE_U,
 };
-use winapi::um::dcommon::D2D1_PIXEL_FORMAT;
 use wio::com::ComPtr;
 
 #[derive(Clone)]
@@ -67,11 +67,8 @@ impl HwndRenderTarget {
         hwnd: HWND,
         width: u32,
         height: u32,
+        rt_props: D2D1_RENDER_TARGET_PROPERTIES,
     ) -> Result<Self, Error> {
-        // hardcode
-        // - RenderTargetType::Default
-        // - AlphaMode::Unknown
-        let rt_props = DEFAULT_PROPS;
         let mut hwnd_props = DEFAULT_HWND_PROPS;
 
         hwnd_props.hwnd = hwnd;
@@ -111,19 +108,6 @@ impl HwndRenderTarget {
         &self.ptr
     }
 }
-
-// props for creating hwnd render target
-const DEFAULT_PROPS: D2D1_RENDER_TARGET_PROPERTIES = D2D1_RENDER_TARGET_PROPERTIES {
-    _type: 0u32, //RenderTargetType::Default
-    pixelFormat: D2D1_PIXEL_FORMAT {
-        format: 87u32, //Format::B8G8R8A8Unorm, see https://docs.rs/dxgi/0.3.0-alpha4/src/dxgi/enums/format.rs.html#631
-        alphaMode: 0u32, //AlphaMode::Unknown
-    },
-    dpiX: 0.0,
-    dpiY: 0.0,
-    usage: 0,
-    minLevel: 0,
-};
 
 const DEFAULT_HWND_PROPS: D2D1_HWND_RENDER_TARGET_PROPERTIES = D2D1_HWND_RENDER_TARGET_PROPERTIES {
     hwnd: std::ptr::null_mut(),

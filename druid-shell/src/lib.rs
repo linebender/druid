@@ -48,6 +48,7 @@ mod mouse;
 mod platform;
 mod region;
 mod scale;
+mod screen;
 mod window;
 
 pub use application::{AppHandler, Application};
@@ -61,6 +62,9 @@ pub use menu::Menu;
 pub use mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 pub use region::Region;
 pub use scale::{Scalable, Scale, ScaledArea};
-pub use window::{IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle};
+pub use screen::{Monitor, Screen};
+pub use window::{
+    IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle, WindowState,
+};
 
 pub use keyboard_types;

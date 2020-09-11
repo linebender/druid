@@ -92,6 +92,14 @@ impl IdleToken {
     }
 }
 
+/// Contains the different states a Window can be in.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum WindowState {
+    MAXIMIZED,
+    MINIMIZED,
+    RESTORED,
+}
+
 /// A handle to a platform window object.
 #[derive(Clone, Default)]
 pub struct WindowHandle(platform::WindowHandle);
@@ -115,9 +123,78 @@ impl WindowHandle {
         self.0.resizable(resizable)
     }
 
-    /// Set whether the window should show titlebar
+    /// Sets the state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn set_window_state(&self, state: WindowState) {
+        self.0.set_window_state(state);
+    }
+
+    /// Gets the state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn get_window_state(&self) -> WindowState {
+        self.0.get_window_state()
+    }
+
+    /// Allows the operating system to handle a custom titlebar
+    /// like the default one.
+    ///
+    /// It should be used on Event::MouseMove in a widget:
+    /// `Event::MouseMove(_) => {
+    ///    if ctx.is_hot() {
+    ///        ctx.window().handle_titlebar(true);
+    ///    } else {
+    ///        ctx.window().handle_titlebar(false);
+    ///    }
+    ///}`
+    ///
+    /// This might not work or behave the same across all platforms.
+    pub fn handle_titlebar(&self, val: bool) {
+        self.0.handle_titlebar(val);
+    }
+
+    /// Set whether the window should show titlebar.
     pub fn show_titlebar(&self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
+    }
+
+    /// Sets the position of the window in virtual screen coordinates.
+    /// [`position`] The position in pixels.
+    ///
+    /// [`position`]: struct.Point.html
+    pub fn set_position(&self, position: Point) {
+        self.0.set_position(position)
+    }
+
+    /// Returns the position in virtual screen coordinates.
+    /// [`Point`] The position in pixels.
+    ///
+    /// [`Point`]: struct.Point.html
+    pub fn get_position(&self) -> Point {
+        self.0.get_position()
+    }
+
+    /// Set the window's size in [display points].
+    ///
+    /// The actual window size in pixels will depend on the platform DPI settings.
+    ///
+    /// This should be considered a request to the platform to set the size of the window.
+    /// The platform might increase the size a tiny bit due to DPI.
+    /// To know the actual size of the window you should handle the [`WinHandler::size`] method.
+    ///
+    /// [`WinHandler::size`]: trait.WinHandler.html#method.size
+    /// [display points]: struct.Scale.html
+    pub fn set_size(&self, size: Size) {
+        self.0.set_size(size)
+    }
+
+    /// Gets the window size.
+    /// [`Size`] Window size in pixels.
+    ///
+    /// [`Size`]: struct.Size.html
+    pub fn get_size(&self) -> Size {
+        self.0.get_size()
     }
 
     /// Bring this window to the front of the window stack and give it focus.
@@ -268,14 +345,22 @@ impl WindowBuilder {
         self.0.set_min_size(size)
     }
 
-    /// Set whether the window should be resizable
+    /// Set whether the window should be resizable.
     pub fn resizable(&mut self, resizable: bool) {
         self.0.resizable(resizable)
     }
 
-    /// Set whether the window should have a titlebar and decorations
+    /// Set whether the window should have a titlebar and decorations.
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
+    }
+
+    /// Sets the initial window position in virtual screen coordinates.
+    /// [`position`] Position in pixels.
+    ///
+    /// [`position`]: struct.Point.html
+    pub fn set_position(&mut self, position: Point) {
+        self.0.set_position(position);
     }
 
     /// Set the window's initial title.
@@ -286,6 +371,13 @@ impl WindowBuilder {
     /// Set the window's menu.
     pub fn set_menu(&mut self, menu: Menu) {
         self.0.set_menu(menu.into_inner())
+    }
+
+    /// Sets the initial state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn set_window_state(&mut self, state: WindowState) {
+        self.0.set_window_state(state);
     }
 
     /// Attempt to construct the platform window.

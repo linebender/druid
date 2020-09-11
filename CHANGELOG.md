@@ -8,6 +8,13 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Highlights
 
 ### Added
+
+- Windows: Added Screen module to get information about monitors and the screen. ([#1037] by [@rhzk])
+- Added documentation to resizable() and show_titlebar() in WindowDesc. ([#1037] by [@rhzk])
+- Windows: Added internal functions to handle Re-entrancy. ([#1037] by [@rhzk])
+- Windows: WindowDesc: Create window with disabled titlebar, maximized or minimized state, and with position. ([#1037] by [@rhzk])
+- Windows: WindowHandle: Change window state. Toggle titlebar. Change size and position of window. ([#1037] by [@rhzk])
+- Windows: WindowHandle: Added handle_titlebar(), Allowing a custom titlebar to behave like the OS one. ([#1037] by [@rhzk])
 - `OPEN_PANEL_CANCELLED` and `SAVE_PANEL_CANCELLED` commands. ([#1061] by @cmyr)
 - Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
 - Re-export `druid_shell::Scalable` under `druid` namespace. ([#1075] by [@ForLoveOfCats])
@@ -29,6 +36,8 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Changed
 
+- Windows: Improved DPI handling. Druid should now redraw correctly when dpi changes. ([#1037] by [@rhzk])
+- windows: Window created with OS default size if not set. ([#1037] by [@rhzk])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
 - Major rework of keyboard event handling. ([#1049] by [@raphlinus])
 - `Container::rounded` takes `KeyOrValue<f64>` instead of `f64`. ([#1054] by [@binomial0])
@@ -288,6 +297,7 @@ Last release without a changelog :(
 [@sysint64]: https://github.com/sysint64
 [@justinmoon]: https://github.com/justinmoon
 [@rjwittams]: https://github.com/rjwittams
+[@rhzk]: https://github.com/rhzk
 [@koutoftimer]: https://github.com/koutoftimer
 
 [#599]: https://github.com/linebender/druid/pull/599
@@ -390,6 +400,7 @@ Last release without a changelog :(
 [#1018]: https://github.com/linebender/druid/pull/1018
 [#1025]: https://github.com/linebender/druid/pull/1025
 [#1028]: https://github.com/linebender/druid/pull/1028
+[#1037]: https://github.com/linebender/druid/pull/1037
 [#1042]: https://github.com/linebender/druid/pull/1042
 [#1043]: https://github.com/linebender/druid/pull/1043
 [#1049]: https://github.com/linebender/druid/pull/1049
