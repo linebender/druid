@@ -645,9 +645,7 @@ impl WndProc for MyWndProc {
                     let mut rect: RECT = mem::zeroed();
                     // TODO: use GetUpdateRgn for more conservative invalidation
                     GetUpdateRect(hwnd, &mut rect, FALSE);
-
                     ValidateRect(hwnd, null_mut());
-                  
                     let rect_dp = util::recti_to_rect(rect).to_dp(self.scale());
                     if rect_dp.area() != 0.0 {
                         self.invalidate_rect(rect_dp);
@@ -655,7 +653,7 @@ impl WndProc for MyWndProc {
                     let invalid = self.take_invalid();
                     if !invalid.rects().is_empty() {
                         if s.render_target.is_none() {
-                            let rt = paint::create_render_target(&self.d2d_factory, hwnd);
+                            let rt = paint::create_render_target(&self.d2d_factory, hwnd, self.scale());
                             s.render_target = rt.ok();
                         }
                         s.handler.rebuild_resources();
@@ -695,12 +693,8 @@ impl WndProc for MyWndProc {
                         {
                             let rect_dp = self.area().size_dp().to_rect();
                             s.handler.rebuild_resources();
-                            s.render(
-                                &self.d2d_factory,
-                                &self.dwrite_factory,
-                                &self.handle,
-                                rect_dp,
-                            );
+                            s.render(&self.d2d_factory, &self.dwrite_factory, &rect_dp.into());
+                            self.clear_invalid();
                         }
 
                         if let Some(ref mut ds) = s.dcomp_state {
@@ -730,7 +724,7 @@ impl WndProc for MyWndProc {
                     if let Some(mut s) = s.as_mut() {
                         if let Some(func) = OPTIONAL_FUNCTIONS.GetSystemMetricsForDpi {
                             // This function is only supported on windows 10
-                            let dpi = self.scale().x() * 96.;
+                            let dpi = self.scale().x() * SCALE_TARGET_DPI;
                             // Height of the different parts that make the titlebar
                             let border = func(SM_CXPADDEDBORDER, dpi as u32);
                             let frame = func(SM_CYSIZEFRAME, dpi as u32);
