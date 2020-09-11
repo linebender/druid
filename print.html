@@ -753,7 +753,7 @@ replace it with any other type.</p>
 <p>Druid includes a <a href="https://docs.rs/druid/0.6.0/druid/enum.KeyOrValue.html"><code>KeyOrValue</code></a> type that is used for setting certain properties
 of widgets. This is a type that can be <em>either</em> a concrete instance of some
 type, <em>or</em> a <code>Key</code> that can be used to get that type from the <code>Env</code>.</p>
-<pre><code class="language-rust noplaypen">const IMPORTANT_LABEL_COLOR: Key&lt;Color&gt; = Key::new(&quot;my-app.important-label-color&quot;);
+<pre><code class="language-rust noplaypen">const IMPORTANT_LABEL_COLOR: Key&lt;Color&gt; = Key::new(&quot;org.linebender.example.important-label-color&quot;);
 const RED: Color = Color::rgb8(0xFF, 0, 0);
 
 fn make_labels() {
