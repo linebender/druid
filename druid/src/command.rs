@@ -109,13 +109,24 @@ pub struct Command {
 /// [`Command`]: struct.Command.html
 pub struct SingleUse<T>(Mutex<Option<T>>);
 
-/// The target of a command.
+/// The target of a [`Command`].
+///
+/// [`Command`]: struct.Command.html
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Target {
     /// The target is the top-level application.
+    ///
+    /// The `Command` will be delivered to all open windows, and all widgets
+    /// in each window. Delivery will stop if the event is [`handled`].
+    ///
+    /// [`handled`]: struct.EventCtx.html#set_handled
     Global,
-    /// The target is a window; the event will be delivered to all
-    /// widgets in that window.
+    /// The target is a specific window.
+    ///
+    /// The `Command` will be delivered to all widgets in that window.
+    /// Delivery will stop if the event is [`handled`].
+    ///
+    /// [`handled`]: struct.EventCtx.html#set_handled
     Window(WindowId),
     /// The target is a specific widget.
     Widget(WidgetId),
@@ -254,7 +265,9 @@ impl Selector<()> {
     /// A selector that does nothing.
     pub const NOOP: Selector = Selector::new("");
 
-    /// Turns this into a command with the specified target.
+    /// Turns this into a command with the specified [`Target`].
+    ///
+    /// [`Target`]: enum.Target.html
     pub fn to(self, target: impl Into<Target>) -> Command {
         Command::from(self).to(target.into())
     }
@@ -290,7 +303,7 @@ impl<T: Any> Selector<T> {
 }
 
 impl Command {
-    /// Create a new `Command` with a payload.
+    /// Create a new `Command` with a payload and a [`Target`].
     ///
     /// [`Selector::with`] can be used to create `Command`s more conveniently.
     ///
@@ -298,6 +311,7 @@ impl Command {
     ///
     /// [`Selector`]: struct.Selector.html
     /// [`Selector::with`]: struct.Selector.html#method.with
+    /// [`Target`]: enum.Target.html
     pub fn new<T: Any>(selector: Selector<T>, payload: T, target: impl Into<Target>) -> Self {
         Command {
             symbol: selector.symbol(),
@@ -306,39 +320,39 @@ impl Command {
         }
     }
 
-    /// Used to create a command from the types sent via an `ExtEventSink`.
-    pub(crate) fn from_ext(
-        symbol: SelectorSymbol,
-        payload: Box<dyn Any>,
-        target: impl Into<Target>,
-    ) -> Self {
+    /// Used to create a `Command` from the types sent via an `ExtEventSink`.
+    pub(crate) fn from_ext(symbol: SelectorSymbol, payload: Box<dyn Any>, target: Target) -> Self {
         Command {
             symbol,
             payload: payload.into(),
-            target: target.into(),
+            target,
         }
+        .default_to(Target::Global)
     }
 
-    /// Set the commands target.
+    /// Set the `Command`'s [`Target`].
     ///
-    /// [`Command::target`] can be used to get the current target.
+    /// [`Command::target`] can be used to get the current [`Target`].
     ///
     /// [`Command::target`]: #method.target
+    /// [`Target`]: enum.Target.html
     pub fn to(mut self, target: impl Into<Target>) -> Self {
         self.target = target.into();
         self
     }
 
-    pub(crate) fn default_to(mut self, target: impl Into<Target>) -> Self {
-        self.target.default(target.into());
+    /// Set the correct default target when target is `Auto`.
+    pub(crate) fn default_to(mut self, target: Target) -> Self {
+        self.target.default(target);
         self
     }
 
-    /// Returns the commands target.
+    /// Returns the `Command`'s [`Target`].
     ///
-    /// [`Command::to`] can be used to change the target.
+    /// [`Command::to`] can be used to change the [`Target`].
     ///
     /// [`Command::to`]: #method.to
+    /// [`Target`]: enum.Target.html
     pub fn target(&self) -> Target {
         self.target
     }

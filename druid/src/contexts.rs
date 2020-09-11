@@ -683,7 +683,7 @@ impl<'a> ContextState<'a> {
 
     fn submit_command(&mut self, command: Command) {
         self.command_queue
-            .push_back(command.default_to(self.window_id));
+            .push_back(command.default_to(self.window_id.into()));
     }
 
     fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {

@@ -215,7 +215,7 @@ impl<T: Data> Harness<'_, T> {
 
     /// Send a command to a target.
     pub fn submit_command(&mut self, cmd: impl Into<Command>) {
-        let command = cmd.into().default_to(self.inner.window.id);
+        let command = cmd.into().default_to(self.inner.window.id.into());
         let event = Event::Internal(InternalEvent::TargetedCommand(command));
         self.event(event);
     }
