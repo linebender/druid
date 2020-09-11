@@ -128,16 +128,19 @@ fn make_control_row() -> impl Widget<AppState> {
         .with_child(
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Label::new("Type:").padding(5.0))
+                .with_child(Label::new("Type:"))
+                .with_default_spacer()
                 .with_child(
                     RadioGroup::new(vec![("Row", FlexType::Row), ("Column", FlexType::Column)])
                         .lens(Params::axis),
                 ),
         )
+        .with_default_spacer()
         .with_child(
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Label::new("CrossAxis:").padding(5.0))
+                .with_child(Label::new("CrossAxis:"))
+                .with_default_spacer()
                 .with_child(
                     RadioGroup::new(vec![
                         ("Start", CrossAxisAlignment::Start),
@@ -147,10 +150,12 @@ fn make_control_row() -> impl Widget<AppState> {
                     .lens(Params::cross_alignment),
                 ),
         )
+        .with_default_spacer()
         .with_child(
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Label::new("MainAxis:").padding(5.0))
+                .with_child(Label::new("MainAxis:"))
+                .with_default_spacer()
                 .with_child(
                     RadioGroup::new(vec![
                         ("Start", MainAxisAlignment::Start),
@@ -163,20 +168,23 @@ fn make_control_row() -> impl Widget<AppState> {
                     .lens(Params::main_alignment),
                 ),
         )
+        .with_default_spacer()
         .with_child(make_spacer_select())
+        .with_default_spacer()
         .with_child(
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Label::new("Misc:").padding((0., 0., 0., 10.)))
+                .with_child(Label::new("Misc:"))
+                .with_default_spacer()
                 .with_child(Checkbox::new("Debug layout").lens(Params::debug_layout))
                 .with_default_spacer()
                 .with_child(Checkbox::new("Fill main axis").lens(Params::fill_major_axis))
                 .with_default_spacer()
                 .with_child(Checkbox::new("Fix minor axis size").lens(Params::fix_minor_axis))
                 .with_default_spacer()
-                .with_child(Checkbox::new("Fix major axis size").lens(Params::fix_major_axis))
-                .padding(5.0),
+                .with_child(Checkbox::new("Fix major axis size").lens(Params::fix_major_axis)),
         )
+        .padding(10.0)
         .border(Color::grey(0.6), 2.0)
         .rounded(5.0)
         .lens(AppState::params)
@@ -185,7 +193,8 @@ fn make_control_row() -> impl Widget<AppState> {
 fn make_spacer_select() -> impl Widget<Params> {
     Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .with_child(Label::new("Insert Spacers:").padding(5.0))
+        .with_child(Label::new("Insert Spacers:"))
+        .with_default_spacer()
         .with_child(
             RadioGroup::new(vec![
                 ("None", Spacers::None),
@@ -195,6 +204,7 @@ fn make_spacer_select() -> impl Widget<Params> {
             ])
             .lens(Params::spacers),
         )
+        .with_default_spacer()
         .with_child(
             Flex::row()
                 .with_child(
@@ -206,13 +216,13 @@ fn make_spacer_select() -> impl Widget<Params> {
                         )
                         .fix_width(60.0),
                 )
+                .with_spacer(druid::theme::WIDGET_CONTROL_COMPONENT_PADDING)
                 .with_child(
                     Stepper::new()
                         .with_range(2.0, 50.0)
                         .with_step(2.0)
                         .lens(Params::spacer_size),
-                )
-                .padding((8.0, 5.0)),
+                ),
         )
 }
 
