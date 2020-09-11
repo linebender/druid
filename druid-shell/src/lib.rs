@@ -63,6 +63,8 @@ pub use mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 pub use region::Region;
 pub use scale::{Scalable, Scale, ScaledArea};
 pub use screen::{Monitor, Screen};
-pub use window::{IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle, WindowState};
+pub use window::{
+    IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle, WindowState,
+};
 
 pub use keyboard_types;
