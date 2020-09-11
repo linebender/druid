@@ -22,8 +22,7 @@ use druid::{
 use std::fmt::Display;
 
 // This is a custom key we'll use with Env to set and get our font.
-const MY_CUSTOM_FONT: Key<FontDescriptor> =
-    Key::new("org.linebender.druid.theme.styled_text.custom_font");
+const MY_CUSTOM_FONT: Key<FontDescriptor> = Key::new("org.linebender.example.my-custom-font");
 
 #[derive(Clone, Lens, Data)]
 struct AppData {

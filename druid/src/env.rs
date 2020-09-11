@@ -68,7 +68,7 @@ struct EnvImpl {
 ///
 /// ```
 ///# use druid::{Key, Color, WindowDesc, AppLauncher, widget::Label};
-/// const IMPORTANT_LABEL_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.my-app.important-label-color");
+/// const IMPORTANT_LABEL_COLOR: Key<Color> = Key::new("org.linebender.example.important-label-color");
 ///
 /// fn important_label() -> Label<()> {
 ///     Label::new("Warning!").with_text_color(IMPORTANT_LABEL_COLOR)
@@ -167,7 +167,7 @@ impl Env {
     /// Set by the `debug_paint_layout()` method on [`WidgetExt`]'.
     ///
     /// [`WidgetExt`]: trait.WidgetExt.html
-    pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("org.linebender.druid.theme.debug-paint");
+    pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("org.linebender.druid.built-in.debug-paint");
 
     /// State for whether or not to paint `WidgetId`s, for event debugging.
     ///
@@ -175,7 +175,7 @@ impl Env {
     ///
     /// [`WidgetExt`]: trait.WidgetExt.html
     pub(crate) const DEBUG_WIDGET_ID: Key<bool> =
-        Key::new("org.linebender.druid.theme.debug-widget-id");
+        Key::new("org.linebender.druid.built-in.debug-widget-id");
 
     /// A key used to tell widgets to print additional debug information.
     ///
@@ -198,7 +198,7 @@ impl Env {
     /// ```
     ///
     /// [`WidgetExt::debug_widget`]: trait.WidgetExt.html#method.debug_widget
-    pub const DEBUG_WIDGET: Key<bool> = Key::new("org.linebender.druid.theme.debug-widget");
+    pub const DEBUG_WIDGET: Key<bool> = Key::new("org.linebender.druid.built-in.debug-widget");
 
     /// Gets a value from the environment, expecting it to be present.
     ///
@@ -328,8 +328,8 @@ impl<T> Key<T> {
     /// use druid::Key;
     /// use druid::piet::Color;
     ///
-    /// let float_key: Key<f64> = Key::new("org.linebender.druid.theme.a.very.good.float");
-    /// let color_key: Key<Color> = Key::new("org.linebender.druid.theme.a.very.nice.color");
+    /// let float_key: Key<f64> = Key::new("org.linebender.example.a.very.good.float");
+    /// let color_key: Key<Color> = Key::new("org.linebender.example.a.very.nice.color");
     /// ```
     pub const fn new(key: &'static str) -> Self {
         Key {
@@ -575,7 +575,7 @@ mod tests {
 
     #[test]
     fn string_key_or_value() {
-        const MY_KEY: Key<ArcStr> = Key::new("org.linebender.druid.theme.test.my-string-key");
+        const MY_KEY: Key<ArcStr> = Key::new("org.linebender.test.my-string-key");
         let env = Env::default().adding(MY_KEY, "Owned");
         assert_eq!(env.get(MY_KEY).as_ref(), "Owned");
 
