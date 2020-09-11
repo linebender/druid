@@ -1376,7 +1376,7 @@ impl WindowBuilder {
                 register_accel(hwnd, &accels);
             }
 
-            handle.set_size(size_px);
+            handle.set_size(handle.get_size());
             handle.set_window_state(self.state);
 
             Ok(handle)
