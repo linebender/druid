@@ -234,12 +234,6 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         }
     }
 
-    #[deprecated(since = "0.5.0", note = "use layout_rect() instead")]
-    #[doc(hidden)]
-    pub fn get_layout_rect(&self) -> Rect {
-        self.layout_rect()
-    }
-
     /// Returns the layout [`Rect`].
     ///
     /// This will be the same [`Rect`] that was set by [`set_layout_rect`].

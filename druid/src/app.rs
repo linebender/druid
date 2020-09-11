@@ -111,14 +111,6 @@ impl<T: Data> AppLauncher<T> {
         self.ext_event_host.make_sink()
     }
 
-    /// Paint colorful rectangles for layout debugging.
-    ///
-    /// The rectangles are drawn around each widget's layout rect.
-    #[deprecated(since = "0.5.0", note = "Use WidgetExt::debug_paint_layout instead.")]
-    pub fn debug_paint_layout(self) -> Self {
-        self
-    }
-
     /// Build the windows and start the runloop.
     ///
     /// Returns an error if a window cannot be instantiated. This is usually
