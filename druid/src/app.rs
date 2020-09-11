@@ -95,9 +95,11 @@ impl<T: Data> AppLauncher<T> {
     /// Panics if the logger fails to initialize.
     pub fn use_simple_logger(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
-        simple_logger::SimpleLogger::new();
+        simple_logger::SimpleLogger::new()
+            .init()
+            .expect("Failed to initialize logger.");
         #[cfg(target_arch = "wasm32")]
-        console_log::init_with_level(log::Level::Trace).expect("Failed to init simple logger");
+        console_log::init_with_level(log::Level::Trace).expect("Failed to initialize logger.");
         self
     }
 

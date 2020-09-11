@@ -102,7 +102,7 @@ impl WinHandler for InvalidateTest {
 }
 
 fn main() {
-    simple_logger::SimpleLogger::new();
+    simple_logger::SimpleLogger::new().init().unwrap();
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
     let inv_test = InvalidateTest {
