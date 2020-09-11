@@ -126,7 +126,7 @@ impl WindowHandle {
     /// Sets the state of the window.
     ///
     /// [`state`]: enum.WindowState.html
-    pub fn set_window_state(&self, state: WindowState) {
+    pub fn set_window_state(&mut self, state: WindowState) {
         self.0.set_window_state(state);
     }
 
