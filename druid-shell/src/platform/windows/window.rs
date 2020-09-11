@@ -1658,6 +1658,7 @@ impl WindowHandle {
 
     // Sets the position of the window in virtual screen coordinates
     pub fn set_position(&self, position: Point) {
+        DeferredQueue::add(self.state.clone(), DeferredOp::SetWindowSizeState(window::WindowState::RESTORED));
         DeferredQueue::add(self.state.clone(), DeferredOp::SetPosition(position));
     }
 
