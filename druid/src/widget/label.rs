@@ -92,7 +92,7 @@ impl<T: Data> Label<T> {
         Self {
             text,
             layout,
-            line_break_mode: LineBreaking::Clip,
+            line_break_mode: LineBreaking::Overflow,
             needs_rebuild: true,
         }
     }
