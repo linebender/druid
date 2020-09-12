@@ -263,13 +263,22 @@ impl<T: Data> Harness<'_, T> {
         self.inner.layout()
     }
 
-    pub fn paint_rect(&mut self, invalid_rect: Rect) {
-        self.inner.paint_rect(&mut self.piet, invalid_rect)
+    /// Paints just the part of the window that was invalidated by calls to `request_paint` or
+    /// `request_paint_rect`.
+    ///
+    /// Also resets the invalid region.
+    #[allow(dead_code)]
+    pub fn paint_invalid(&mut self) {
+        let invalid = std::mem::replace(self.window_mut().invalid_mut(), Region::EMPTY);
+        self.inner.paint_region(&mut self.piet, &invalid);
     }
 
+    /// Paints the entire window and resets the invalid region.
     #[allow(dead_code)]
     pub fn paint(&mut self) {
-        self.paint_rect(self.window_size.to_rect())
+        self.window_mut().invalid_mut().clear();
+        self.inner
+            .paint_region(&mut self.piet, &self.window_size.to_rect().into());
     }
 }
 
@@ -294,14 +303,9 @@ impl<T: Data> Inner<T> {
     }
 
     #[allow(dead_code)]
-    fn paint_rect(&mut self, piet: &mut Piet, invalid_rect: Rect) {
-        self.window.do_paint(
-            piet,
-            &invalid_rect.into(),
-            &mut self.cmds,
-            &self.data,
-            &self.env,
-        );
+    fn paint_region(&mut self, piet: &mut Piet, invalid: &Region) {
+        self.window
+            .do_paint(piet, &invalid, &mut self.cmds, &self.data, &self.env);
     }
 }
 

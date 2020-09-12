@@ -297,6 +297,18 @@ impl<T: Data> Window<T> {
         }
     }
 
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub(crate) fn invalid(&self) -> &Region {
+        &self.invalid
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub(crate) fn invalid_mut(&mut self) -> &mut Region {
+        &mut self.invalid
+    }
+
     /// Get ready for painting, by doing layout and sending an `AnimFrame` event.
     pub(crate) fn prepare_paint(&mut self, queue: &mut CommandQueue, data: &mut T, env: &Env) {
         let now = Instant::now();
