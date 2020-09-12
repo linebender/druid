@@ -436,6 +436,7 @@ impl Widget<String> for TextBox {
         // Guard against changes in data following `event`
         if data.is_empty() {
             self.selection = Selection::caret(0);
+            self.hscroll_offset = 0.;
         } else {
             self.selection = self.selection.constrain_to(data);
         };
