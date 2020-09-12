@@ -434,13 +434,11 @@ impl Widget<String> for TextBox {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &String, env: &Env) {
         // Guard against changes in data following `event`
-        let content = if data.is_empty() {
-            &self.placeholder
+        if data.is_empty() {
+            self.selection = Selection::caret(0);
         } else {
-            data
+            self.selection = self.selection.constrain_to(data);
         };
-
-        self.selection = self.selection.constrain_to(content);
 
         let height = ctx.size().height;
         let background_color = env.get(theme::BACKGROUND_LIGHT);
