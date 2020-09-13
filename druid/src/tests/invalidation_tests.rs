@@ -66,7 +66,6 @@ fn invalidate_scroll() {
 
     impl<T: Data> Widget<T> for Invalidator {
         fn event(&mut self, ctx: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {
-            dbg!(self.invalid);
             ctx.request_paint_rect(RECT);
         }
 
