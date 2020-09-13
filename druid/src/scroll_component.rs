@@ -17,10 +17,11 @@
 
 use std::time::Duration;
 
-use crate::kurbo::{Affine, Point, Rect, RoundedRect, Size, Vec2};
+use crate::kurbo::{Point, Rect, Vec2};
 use crate::theme;
+use crate::widget::Viewport;
 use crate::{
-    Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext, TimerToken,
+    Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken, Widget,
 };
 
 //TODO: Add this to env
@@ -124,11 +125,6 @@ impl ScrollbarsState {
 /// [`paint_content`]: struct.ScrollComponent.html#method.paint_content
 #[derive(Debug, Copy, Clone)]
 pub struct ScrollComponent {
-    /// The size of the scrollable content, make sure to keep up this
-    /// accurate to the content being scrolled
-    pub content_size: Size,
-    /// Current offset of the scrolling content
-    pub scroll_offset: Vec2,
     /// Current state of both scrollbars
     pub scrollbars: ScrollbarsState,
 }
@@ -143,30 +139,7 @@ impl ScrollComponent {
     /// Constructs a new [`ScrollComponent`](struct.ScrollComponent.html) for use.
     pub fn new() -> ScrollComponent {
         ScrollComponent {
-            content_size: Size::default(),
-            scroll_offset: Vec2::new(0.0, 0.0),
             scrollbars: ScrollbarsState::default(),
-        }
-    }
-
-    /// Scroll `delta` units.
-    ///
-    /// Returns `true` if the scroll offset has changed.
-    pub fn scroll(&mut self, delta: Vec2, layout_size: Size) -> bool {
-        let mut offset = self.scroll_offset + delta;
-        offset.x = offset
-            .x
-            .min(self.content_size.width - layout_size.width)
-            .max(0.0);
-        offset.y = offset
-            .y
-            .min(self.content_size.height - layout_size.height)
-            .max(0.0);
-        if (offset - self.scroll_offset).hypot2() > 1e-12 {
-            self.scroll_offset = offset;
-            true
-        } else {
-            false
         }
     }
 
@@ -181,73 +154,92 @@ impl ScrollComponent {
         self.scrollbars.timer_id = request_timer(deadline);
     }
 
-    /// Calculates the paint rect of the vertical scrollbar.
-    ///
-    /// Returns `Rect::ZERO` if the vertical scrollbar is not visible.
-    pub fn calc_vertical_bar_bounds(&self, viewport: Rect, env: &Env) -> Rect {
-        if viewport.height() >= self.content_size.height {
-            return Rect::ZERO;
+    /// Calculates the paint rect of the vertical scrollbar, or `None` if the vertical scrollbar is
+    /// not visible.
+    pub fn calc_vertical_bar_bounds<T, W: Widget<T>>(
+        &self,
+        viewport: &Viewport<T, W>,
+        env: &Env,
+    ) -> Option<Rect> {
+        let viewport_size = viewport.viewport_size();
+        let content_size = viewport.content_size();
+        let scroll_offset = viewport.viewport_offset();
+
+        if viewport_size.height >= content_size.height {
+            return None;
         }
 
         let bar_width = env.get(theme::SCROLLBAR_WIDTH);
         let bar_pad = env.get(theme::SCROLLBAR_PAD);
 
-        let percent_visible = viewport.height() / self.content_size.height;
-        let percent_scrolled =
-            self.scroll_offset.y / (self.content_size.height - viewport.height());
+        let percent_visible = viewport_size.height / content_size.height;
+        let percent_scrolled = scroll_offset.y / (content_size.height - viewport_size.height);
 
-        let length = (percent_visible * viewport.height()).ceil();
+        let length = (percent_visible * viewport_size.height).ceil();
         let length = length.max(SCROLLBAR_MIN_SIZE);
 
         let vertical_padding = bar_pad + bar_pad + bar_width;
 
         let top_y_offset =
-            ((viewport.height() - length - vertical_padding) * percent_scrolled).ceil();
+            ((viewport_size.height - length - vertical_padding) * percent_scrolled).ceil();
         let bottom_y_offset = top_y_offset + length;
 
-        let x0 = self.scroll_offset.x + viewport.width() - bar_width - bar_pad;
-        let y0 = self.scroll_offset.y + top_y_offset + bar_pad;
+        let x0 = scroll_offset.x + viewport_size.width - bar_width - bar_pad;
+        let y0 = scroll_offset.y + top_y_offset + bar_pad;
 
-        let x1 = self.scroll_offset.x + viewport.width() - bar_pad;
-        let y1 = self.scroll_offset.y + bottom_y_offset;
+        let x1 = scroll_offset.x + viewport_size.width - bar_pad;
+        let y1 = scroll_offset.y + bottom_y_offset;
 
-        Rect::new(x0, y0, x1, y1)
+        Some(Rect::new(x0, y0, x1, y1))
     }
 
-    /// Calculates the paint rect of the horizontal scrollbar.
-    ///
-    /// Returns `Rect::ZERO` if the horizontal scrollbar is not visible.
-    pub fn calc_horizontal_bar_bounds(&self, viewport: Rect, env: &Env) -> Rect {
-        if viewport.width() >= self.content_size.width {
-            return Rect::ZERO;
+    /// Calculates the paint rect of the horizontal scrollbar, or `None` if the horizontal
+    /// scrollbar is not visible.
+    pub fn calc_horizontal_bar_bounds<T, W: Widget<T>>(
+        &self,
+        viewport: &Viewport<T, W>,
+        env: &Env,
+    ) -> Option<Rect> {
+        let viewport_size = viewport.viewport_size();
+        let content_size = viewport.content_size();
+        let scroll_offset = viewport.viewport_offset();
+
+        if viewport_size.width >= content_size.width {
+            return None;
         }
 
         let bar_width = env.get(theme::SCROLLBAR_WIDTH);
         let bar_pad = env.get(theme::SCROLLBAR_PAD);
 
-        let percent_visible = viewport.width() / self.content_size.width;
-        let percent_scrolled = self.scroll_offset.x / (self.content_size.width - viewport.width());
+        let percent_visible = viewport_size.width / content_size.width;
+        let percent_scrolled = scroll_offset.x / (content_size.width - viewport_size.width);
 
-        let length = (percent_visible * viewport.width()).ceil();
+        let length = (percent_visible * viewport_size.width).ceil();
         let length = length.max(SCROLLBAR_MIN_SIZE);
 
         let horizontal_padding = bar_pad + bar_pad + bar_width;
 
         let left_x_offset =
-            ((viewport.width() - length - horizontal_padding) * percent_scrolled).ceil();
+            ((viewport_size.width - length - horizontal_padding) * percent_scrolled).ceil();
         let right_x_offset = left_x_offset + length;
 
-        let x0 = self.scroll_offset.x + left_x_offset + bar_pad;
-        let y0 = self.scroll_offset.y + viewport.height() - bar_width - bar_pad;
+        let x0 = scroll_offset.x + left_x_offset + bar_pad;
+        let y0 = scroll_offset.y + viewport_size.height - bar_width - bar_pad;
 
-        let x1 = self.scroll_offset.x + right_x_offset;
-        let y1 = self.scroll_offset.y + viewport.height() - bar_pad;
+        let x1 = scroll_offset.x + right_x_offset;
+        let y1 = scroll_offset.y + viewport_size.height - bar_pad;
 
-        Rect::new(x0, y0, x1, y1)
+        Some(Rect::new(x0, y0, x1, y1))
     }
 
     /// Draw scroll bars.
-    pub fn draw_bars(&self, ctx: &mut PaintCtx, viewport: Rect, env: &Env) {
+    pub fn draw_bars<T, W: Widget<T>>(
+        &self,
+        ctx: &mut PaintCtx,
+        viewport: &Viewport<T, W>,
+        env: &Env,
+    ) {
+        let scroll_offset = viewport.viewport_offset();
         if self.scrollbars.opacity <= 0.0 {
             return;
         }
@@ -265,21 +257,19 @@ impl ScrollComponent {
         let edge_width = env.get(theme::SCROLLBAR_EDGE_WIDTH);
 
         // Vertical bar
-        if viewport.height() < self.content_size.height {
-            let bounds = self
-                .calc_vertical_bar_bounds(viewport, env)
-                .inset(-edge_width / 2.0);
-            let rect = RoundedRect::from_rect(bounds, radius);
+        if let Some(bounds) = self.calc_vertical_bar_bounds(viewport, env) {
+            let rect = (bounds - scroll_offset)
+                .inset(-edge_width / 2.0)
+                .to_rounded_rect(radius);
             ctx.render_ctx.fill(rect, &brush);
             ctx.render_ctx.stroke(rect, &border_brush, edge_width);
         }
 
         // Horizontal bar
-        if viewport.width() < self.content_size.width {
-            let bounds = self
-                .calc_horizontal_bar_bounds(viewport, env)
-                .inset(-edge_width / 2.0);
-            let rect = RoundedRect::from_rect(bounds, radius);
+        if let Some(bounds) = self.calc_horizontal_bar_bounds(viewport, env) {
+            let rect = (bounds - scroll_offset)
+                .inset(-edge_width / 2.0)
+                .to_rounded_rect(radius);
             ctx.render_ctx.fill(rect, &brush);
             ctx.render_ctx.stroke(rect, &border_brush, edge_width);
         }
@@ -288,11 +278,18 @@ impl ScrollComponent {
     /// Tests if the specified point overlaps the vertical scrollbar
     ///
     /// Returns false if the vertical scrollbar is not visible
-    pub fn point_hits_vertical_bar(&self, viewport: Rect, pos: Point, env: &Env) -> bool {
-        if viewport.height() < self.content_size.height {
+    pub fn point_hits_vertical_bar<T, W: Widget<T>>(
+        &self,
+        viewport: &Viewport<T, W>,
+        pos: Point,
+        env: &Env,
+    ) -> bool {
+        let viewport_size = viewport.viewport_size();
+        let scroll_offset = viewport.viewport_offset();
+
+        if let Some(mut bounds) = self.calc_vertical_bar_bounds(viewport, env) {
             // Stretch hitbox to edge of widget
-            let mut bounds = self.calc_vertical_bar_bounds(viewport, env);
-            bounds.x1 = self.scroll_offset.x + viewport.width();
+            bounds.x1 = scroll_offset.x + viewport_size.width;
             bounds.contains(pos)
         } else {
             false
@@ -302,11 +299,18 @@ impl ScrollComponent {
     /// Tests if the specified point overlaps the horizontal scrollbar
     ///
     /// Returns false if the horizontal scrollbar is not visible
-    pub fn point_hits_horizontal_bar(&self, viewport: Rect, pos: Point, env: &Env) -> bool {
-        if viewport.width() < self.content_size.width {
+    pub fn point_hits_horizontal_bar<T, W: Widget<T>>(
+        &self,
+        viewport: &Viewport<T, W>,
+        pos: Point,
+        env: &Env,
+    ) -> bool {
+        let viewport_size = viewport.viewport_size();
+        let scroll_offset = viewport.viewport_offset();
+
+        if let Some(mut bounds) = self.calc_horizontal_bar_bounds(viewport, env) {
             // Stretch hitbox to edge of widget
-            let mut bounds = self.calc_horizontal_bar_bounds(viewport, env);
-            bounds.y1 = self.scroll_offset.y + viewport.height();
+            bounds.y1 = scroll_offset.y + viewport_size.height;
             bounds.contains(pos)
         } else {
             false
@@ -316,13 +320,20 @@ impl ScrollComponent {
     /// Checks if the event applies to the scroll behavior, uses it, and marks it handled
     ///
     /// Make sure to call on every event
-    pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) {
-        let size = ctx.size();
-        let viewport = Rect::from_origin_size(Point::ORIGIN, size);
+    pub fn event<T, W: Widget<T>>(
+        &mut self,
+        viewport: &mut Viewport<T, W>,
+        ctx: &mut EventCtx,
+        event: &Event,
+        env: &Env,
+    ) {
+        let viewport_size = viewport.viewport_size();
+        let content_size = viewport.content_size();
+        let scroll_offset = viewport.viewport_offset();
 
         let scrollbar_is_hovered = match event {
             Event::MouseMove(e) | Event::MouseUp(e) | Event::MouseDown(e) => {
-                let offset_pos = e.pos + self.scroll_offset;
+                let offset_pos = e.pos + viewport.viewport_offset();
                 self.point_hits_vertical_bar(viewport, offset_pos, env)
                     || self.point_hits_horizontal_bar(viewport, offset_pos, env)
             }
@@ -335,19 +346,23 @@ impl ScrollComponent {
                 Event::MouseMove(event) => {
                     match self.scrollbars.held {
                         BarHeldState::Vertical(offset) => {
-                            let scale_y = viewport.height() / self.content_size.height;
-                            let bounds = self.calc_vertical_bar_bounds(viewport, env);
-                            let mouse_y = event.pos.y + self.scroll_offset.y;
+                            let scale_y = viewport_size.height / content_size.height;
+                            let bounds = self
+                                .calc_vertical_bar_bounds(viewport, env)
+                                .unwrap_or(Rect::ZERO);
+                            let mouse_y = event.pos.y + viewport.viewport_offset().y;
                             let delta = mouse_y - bounds.y0 - offset;
-                            self.scroll(Vec2::new(0f64, (delta / scale_y).ceil()), size);
+                            viewport.scroll_by(Vec2::new(0f64, (delta / scale_y).ceil()));
                             ctx.set_handled();
                         }
                         BarHeldState::Horizontal(offset) => {
-                            let scale_x = viewport.width() / self.content_size.width;
-                            let bounds = self.calc_horizontal_bar_bounds(viewport, env);
-                            let mouse_x = event.pos.x + self.scroll_offset.x;
+                            let scale_x = viewport_size.height / content_size.width;
+                            let bounds = self
+                                .calc_horizontal_bar_bounds(viewport, env)
+                                .unwrap_or(Rect::ZERO);
+                            let mouse_x = event.pos.x + viewport.viewport_offset().x;
                             let delta = mouse_x - bounds.x0 - offset;
-                            self.scroll(Vec2::new((delta / scale_x).ceil(), 0f64), size);
+                            viewport.scroll_by(Vec2::new((delta / scale_x).ceil(), 0f64));
                             ctx.set_handled();
                         }
                         _ => (),
@@ -371,7 +386,7 @@ impl ScrollComponent {
             // if we're over a scrollbar but not dragging
             match event {
                 Event::MouseMove(event) => {
-                    let offset_pos = event.pos + self.scroll_offset;
+                    let offset_pos = event.pos + scroll_offset;
                     if self.point_hits_vertical_bar(viewport, offset_pos, env) {
                         self.scrollbars.hovered = BarHoveredState::Vertical;
                     } else if self.point_hits_horizontal_bar(viewport, offset_pos, env) {
@@ -386,17 +401,19 @@ impl ScrollComponent {
                     ctx.set_handled();
                 }
                 Event::MouseDown(event) => {
-                    let pos = event.pos + self.scroll_offset;
+                    let pos = event.pos + scroll_offset;
 
                     if self.point_hits_vertical_bar(viewport, pos, env) {
                         ctx.set_active(true);
                         self.scrollbars.held = BarHeldState::Vertical(
-                            pos.y - self.calc_vertical_bar_bounds(viewport, env).y0,
+                            // The bounds must be non-empty, because the point hits the scrollbar.
+                            pos.y - self.calc_vertical_bar_bounds(viewport, env).unwrap().y0,
                         );
                     } else if self.point_hits_horizontal_bar(viewport, pos, env) {
                         ctx.set_active(true);
                         self.scrollbars.held = BarHeldState::Horizontal(
-                            pos.x - self.calc_horizontal_bar_bounds(viewport, env).x0,
+                            // The bounds must be non-empty, because the point hits the scrollbar.
+                            pos.x - self.calc_horizontal_bar_bounds(viewport, env).unwrap().x0,
                         );
                     } else {
                         unreachable!();
@@ -434,16 +451,11 @@ impl ScrollComponent {
                             ctx.request_anim_frame();
                         }
 
-                        let viewport = ctx.size().to_rect();
-                        if viewport.width() < self.content_size.width {
-                            ctx.request_paint_rect(
-                                self.calc_horizontal_bar_bounds(viewport, env) - self.scroll_offset,
-                            );
+                        if let Some(bounds) = self.calc_horizontal_bar_bounds(viewport, env) {
+                            ctx.request_paint_rect(bounds - scroll_offset);
                         }
-                        if viewport.height() < self.content_size.height {
-                            ctx.request_paint_rect(
-                                self.calc_vertical_bar_bounds(viewport, env) - self.scroll_offset,
-                            );
+                        if let Some(bounds) = self.calc_vertical_bar_bounds(viewport, env) {
+                            ctx.request_paint_rect(bounds - scroll_offset);
                         }
                     }
                 }
@@ -454,10 +466,16 @@ impl ScrollComponent {
     }
 
     /// Applies mousewheel scrolling if the event has not already been handled
-    pub fn handle_scroll(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) {
+    pub fn handle_scroll<T, W: Widget<T>>(
+        &mut self,
+        viewport: &mut Viewport<T, W>,
+        ctx: &mut EventCtx,
+        event: &Event,
+        env: &Env,
+    ) {
         if !ctx.is_handled() {
             if let Event::Wheel(mouse) = event {
-                if self.scroll(mouse.wheel_delta, ctx.size()) {
+                if viewport.scroll_by(mouse.wheel_delta) {
                     ctx.request_paint();
                     ctx.set_handled();
                     self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
@@ -474,25 +492,5 @@ impl ScrollComponent {
             // Show the scrollbars any time our size changes
             self.reset_scrollbar_fade(|d| ctx.request_timer(d), &env);
         }
-    }
-
-    /// Helper function to paint a closure at the correct offset with clipping and scrollbars
-    pub fn paint_content(
-        self,
-        ctx: &mut PaintCtx,
-        env: &Env,
-        f: impl FnOnce(Region, &mut PaintCtx),
-    ) {
-        let viewport = ctx.size().to_rect();
-        ctx.with_save(|ctx| {
-            ctx.clip(viewport);
-            ctx.transform(Affine::translate(-self.scroll_offset));
-
-            let mut visible = ctx.region().clone();
-            visible += self.scroll_offset;
-            f(visible, ctx);
-
-            self.draw_bars(ctx, viewport, env);
-        });
     }
 }
