@@ -22,7 +22,7 @@ use std::fmt::Display;
 /// Monitor struct containing data about a monitor on the system
 ///
 /// Use Screen::get_monitors() to return a Vec<Monitor> of all the monitors on the system
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Monitor {
     primary: bool,
     rect: Rect,
