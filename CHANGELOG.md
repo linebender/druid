@@ -35,6 +35,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Implementation of `Data` trait for `i128` and `u128` primitive data types. ([#1214] by [@koutoftimer])
 - `LineBreaking` enum allows configuration of label line-breaking ([#1195] by [@cmyr])
 - `TextAlignment` support in `TextLayout` and `Label` ([#1210] by [@cmyr])`
+- `Button::from_label` to construct a `Button` with a provided `Label`. ([#1226] by [@ForLoveOfCats])
 
 ### Changed
 
@@ -447,6 +448,7 @@ Last release without a changelog :(
 [#1205]: https://github.com/linebender/druid/pull/1205
 [#1210]: https://github.com/linebender/druid/pull/1210
 [#1214]: https://github.com/linebender/druid/pull/1214
+[#1226]: https://github.com/linebender/druid/pull/1226
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
