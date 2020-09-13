@@ -14,24 +14,35 @@
 
 //! Platform specific implementations.
 
-cfg_if::cfg_if! {
-    if #[cfg(target_os = "windows")] {
-        mod windows;
-        pub use windows::*;
-    } else if #[cfg(target_os = "macos")] {
-        mod mac;
-        pub use mac::*;
-        pub(crate) mod shared;
-    } else if #[cfg(all(feature = "x11", target_os = "linux"))] {
-        mod x11;
-        pub use x11::*;
-        pub(crate) mod shared;
-    } else if #[cfg(target_os = "linux")] {
-        mod gtk;
-        pub use self::gtk::*;
-        pub(crate) mod shared;
-    } else if #[cfg(target_arch = "wasm32")] {
-        mod web;
-        pub use web::*;
-    }
-}
+// It would be clearer to use cfg_if! macros here, but that breaks rustfmt.
+
+#[cfg(target_os = "windows")]
+mod windows;
+#[cfg(target_os = "windows")]
+pub use windows::*;
+
+#[cfg(target_os = "macos")]
+mod mac;
+#[cfg(target_os = "macos")]
+pub use mac::*;
+#[cfg(target_os = "macos")]
+pub(crate) mod shared;
+
+#[cfg(all(feature = "x11", target_os = "linux"))]
+mod x11;
+#[cfg(all(feature = "x11", target_os = "linux"))]
+pub use x11::*;
+#[cfg(all(feature = "x11", target_os = "linux"))]
+pub(crate) mod shared;
+
+#[cfg(all(not(feature = "x11"), target_os = "linux"))]
+mod gtk;
+#[cfg(all(not(feature = "x11"), target_os = "linux"))]
+pub use self::gtk::*;
+#[cfg(all(not(feature = "x11"), target_os = "linux"))]
+pub(crate) mod shared;
+
+#[cfg(target_arch = "wasm32")]
+mod web;
+#[cfg(target_arch = "wasm32")]
+pub use web::*;
