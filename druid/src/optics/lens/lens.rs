@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::optics::{prism, traversal};
+use druid::optics::traversal;
 
 use std::marker::PhantomData;
 use std::ops;
@@ -74,32 +74,6 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         self.with_mut(data, |x| *x = value);
     }
 
-    /// Compose a `Lens<A, B>` with a `Lens<B, C>` to produce a `Lens<A, C>`
-    ///
-    /// ```
-    /// # use druid::*;
-    /// struct Foo { x: (u32, bool) }
-    /// let lens = lens!(Foo, x).then(lens!((u32, bool), 1));
-    /// assert_eq!(lens.get(&Foo { x: (0, true) }), true);
-    /// ```
-    fn then<Other, C>(self, other: Other) -> Then<Self, Other, B>
-    where
-        Other: Lens<B, C> + Sized,
-        C: ?Sized,
-        Self: Sized,
-    {
-        Then::new(self, other)
-    }
-
-    fn then_prism<P, C>(self, prism: P) -> traversal::ThenAfterLens<Self, P, B>
-    where
-        P: prism::Prism<B, C> + Sized,
-        C: ?Sized,
-        Self: Sized,
-    {
-        traversal::ThenAfterLens::new(self, prism)
-    }
-
     /// Combine a `Lens<A, B>` with a function that can transform a `B` and its inverse.
     ///
     /// Useful for cases where the desired value doesn't physically exist in `A`, but can be
@@ -119,7 +93,10 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         Put: Fn(&mut B, C),
         Self: Sized,
     {
-        self.then(Map::new(get, put))
+        traversal::ThenAffineTraversal::<Map<Get, Put>, A, B, C, _, _>::then(
+            self,
+            Map::new(get, put),
+        )
     }
 
     /// Invoke a type's `Deref` impl
@@ -133,7 +110,9 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         B: ops::Deref + ops::DerefMut,
         Self: Sized,
     {
-        self.then(Deref)
+        traversal::ThenAffineTraversal::<Deref, A, B, <B as ops::Deref>::Target, _, _>::then(
+            self, Deref,
+        )
     }
 
     /// Access an index in a container
@@ -148,7 +127,10 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         B: ops::Index<I> + ops::IndexMut<I>,
         Self: Sized,
     {
-        self.then(Index::new(index))
+        traversal::ThenAffineTraversal::<Index<I>, A, B, <B as ops::Index<I>>::Output, _, _>::then(
+            self,
+            Index::new(index),
+        )
     }
 
     /// Adapt to operate on the contents of an `Arc` with efficient copy-on-write semantics

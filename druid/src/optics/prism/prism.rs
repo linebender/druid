@@ -93,35 +93,6 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         });
     }
 
-    // TODO: use something like an IntoAffineTraversal
-    // so this method can be used with lenses and prism
-    fn then<Other, C>(self, other: Other) -> Then<Self, Other, B>
-    where
-        Other: Prism<B, C> + Sized,
-        C: ?Sized,
-        Self: Sized,
-    {
-        Then::new(self, other)
-    }
-
-    fn then_prism<Other, C>(self, other: Other) -> Then<Self, Other, B>
-    where
-        Other: Prism<B, C> + Sized,
-        C: ?Sized,
-        Self: Sized,
-    {
-        self.then(other)
-    }
-
-    fn then_lens<L, C>(self, lens: L) -> traversal::ThenLens<Self, L, B>
-    where
-        L: lens::Lens<B, C> + Sized,
-        C: ?Sized,
-        Self: Sized,
-    {
-        traversal::ThenLens::new(self, lens)
-    }
-
     fn and_lens<L, C>(self, lens: L) -> traversal::AndLens<Self, L, B>
     where
         L: lens::Lens<A, C> + Sized,
@@ -146,7 +117,10 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         Put: Fn(&mut B, C),
         Self: Sized,
     {
-        self.then(Map::new(get, put))
+        traversal::ThenAffineTraversal::<Map<Get, Put>, A, B, C, _, _>::then(
+            self,
+            Map::new(get, put),
+        )
     }
 
     fn deref(self) -> Then<Self, Deref, B>
@@ -154,7 +128,9 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         B: ops::Deref + ops::DerefMut,
         Self: Sized,
     {
-        self.then(Deref)
+        traversal::ThenAffineTraversal::<Deref, A, B, <B as ops::Deref>::Target, _, _>::then(
+            self, Deref,
+        )
     }
 
     fn index<I>(self, index: I) -> Then<Self, Index<I>, B>
@@ -163,7 +139,10 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         B: ops::Index<I> + ops::IndexMut<I>,
         Self: Sized,
     {
-        self.then(Index::new(index))
+        traversal::ThenAffineTraversal::<Index<I>, A, B, <B as ops::Index<I>>::Output, _, _>::then(
+            self,
+            Index::new(index),
+        )
     }
 
     fn in_arc(self) -> InArc<Self>

@@ -18,7 +18,7 @@ fn one_plain_param() {
     assert_eq!(wrap.x, val)
 }
 
-#[derive(Lens)]
+#[derive(Lens, Debug)]
 struct DebugWrapper<T: Debug> {
     x: T,
 }

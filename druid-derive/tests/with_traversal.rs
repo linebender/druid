@@ -82,26 +82,36 @@ fn derive_traversal() {
     let apt_number = Apartment::apartment_number; // lens
 
     // traversal for A -> B -> C -> D -> E -> F
-    let person_apt_number = {
-        use druid::{LensExt, PrismExt};
+    let _person_apt_number = {
+        use druid::traversal::ThenAffineTraversal;
         (Person::addr) // A -> B
-            .then_prism(Addr::extensive) // B -> C
-            .then_lens(ExtensiveAddr::place) // C -> D
-            .then_prism(Place::apartment) // D -> E
-            .then_lens(Apartment::apartment_number) // E -> F
+            .then(Addr::extensive) // B -> C
+            .then(ExtensiveAddr::place) // C -> D
+            .then(Place::apartment) // D -> E
+            .then(Apartment::apartment_number) // E -> F
+    };
+
+    // traversal for A -> B -> C -> D -> E -> F
+    let person_apt_number = {
+        use druid::traversal::ThenAffineTraversal;
+        (Person::addr) // A -> B
+            .then(Addr::extensive) // B -> C
+            .then(ExtensiveAddr::place) // C -> D
+            .then(Place::apartment) // D -> E
+            .then(Apartment::apartment_number) // E -> F
     };
 
     // alternative traversal for A -> B -> C -> D -> E -> F
     // (the outer type ends up different)
     let person_apt_number_2 = {
-        use druid::{LensExt, PrismExt};
-        let place_apt_number = place_apt.then_lens(apt_number); // D -> E -> F
-        let addr_ext_place = addr_extensive.then_lens(ext_place); // B -> C -> D
+        use druid::traversal::ThenAffineTraversal;
+        let place_apt_number = place_apt.then(apt_number); // D -> E -> F
+        let addr_ext_place = addr_extensive.then(ext_place); // B -> C -> D
 
         // B -> C -> D -> E -> F
-        let addr_apt_number = addr_ext_place.then_prism(place_apt_number);
+        let addr_apt_number = addr_ext_place.then(place_apt_number);
         // A -> B -> C -> D -> E -> F
-        person_addr.then_prism(addr_apt_number)
+        person_addr.then(addr_apt_number)
     };
 
     // gets the apartment number (only bob has)
@@ -130,10 +140,10 @@ fn derive_traversal() {
 
     // traversal for A -> B -> C -> D
     let person_place = {
-        use druid::{LensExt, PrismExt};
+        use druid::traversal::ThenAffineTraversal;
         (Person::addr) // A -> B
-            .then_prism(Addr::extensive) // B -> C
-            .then_lens(ExtensiveAddr::place) // C -> D
+            .then(Addr::extensive) // B -> C
+            .then(ExtensiveAddr::place) // C -> D
     };
 
     // alice will change from a House into a new Apartment

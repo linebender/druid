@@ -1,4 +1,4 @@
-use crate::optics::{prism, Lens};
+use crate::optics::{lens, prism, Lens};
 
 use std::marker::PhantomData;
 
@@ -9,6 +9,106 @@ use std::marker::PhantomData;
 // since affine means 0-or-1 (same as Option<T>), and Traversal
 // may be 0-or-1-or-many.
 pub use crate::optics::Prism as Traversal;
+
+pub use then_affine_traversal::ThenAffineTraversal;
+
+mod then_affine_traversal {
+    use super::{lens, prism};
+
+    pub trait ThenAffineTraversal<
+        Other,
+        A: ?Sized,
+        B: ?Sized,
+        C: ?Sized,
+        OriginPhantom,
+        DestinationPhantom,
+    >
+    {
+        type Target;
+        fn then(self, other: Other) -> Self::Target;
+    }
+
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct LensUnit;
+
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct PrismUnit;
+
+    /// Compose a `Lens<A, B>` with a `Lens<B, C>` to produce a `Lens<A, C>`.
+    ///
+    /// ```
+    /// # use druid::{*, optics::traversal::ThenAffineTraversal};
+    /// struct Foo { x: (u32, bool) }
+    /// let lens = lens!(Foo, x).then(lens!((u32, bool), 1));
+    /// assert_eq!(lens.get(&Foo { x: (0, true) }), true);
+    /// ```
+    impl<L1, L2, A, B, C> ThenAffineTraversal<L2, A, B, C, LensUnit, LensUnit> for L1
+    where
+        A: ?Sized,
+        B: ?Sized,
+        C: ?Sized,
+        L1: lens::Lens<A, B>, /*+ Sized*/
+        L2: lens::Lens<B, C>,
+        // C: Sized,
+        // Self: Sized,
+    {
+        type Target = lens::Then<L1, L2, B>;
+        fn then(self, lens: L2) -> Self::Target {
+            lens::Then::new(self, lens)
+        }
+    }
+
+    /// Compose a `Lens<A, B>` with a `Prism<B, C>` to produce a `Prism<A, C>`.
+    impl<L1, P2, A, B, C> ThenAffineTraversal<P2, A, B, C, LensUnit, PrismUnit> for L1
+    where
+        A: ?Sized,
+        B: ?Sized,
+        C: ?Sized,
+        L1: lens::Lens<A, B>, /* + Sized*/
+        P2: prism::Prism<B, C>,
+        // C: Sized,
+        // Self: Sized,
+    {
+        type Target = super::ThenAfterLens<Self, P2, B>;
+        fn then(self, prism: P2) -> Self::Target {
+            super::ThenAfterLens::new(self, prism)
+        }
+    }
+
+    /// Compose a `Prism<A, B>` with a `Lens<B, C>` to produce a `Prism<A, C>`.
+    impl<P1, L2, A, B, C> ThenAffineTraversal<L2, A, B, C, PrismUnit, LensUnit> for P1
+    where
+        A: ?Sized,
+        B: ?Sized,
+        C: ?Sized,
+        P1: prism::Prism<A, B>, /*+ Sized*/
+        L2: lens::Lens<B, C>,
+        // C: Sized,
+        // Self: Sized,
+    {
+        type Target = super::ThenLens<P1, L2, B>;
+        fn then(self, lens: L2) -> Self::Target {
+            super::ThenLens::new(self, lens)
+        }
+    }
+
+    /// Compose a `Prism<A, B>` with a `Prism<B, C>` to produce a `Prism<A, C>`.
+    impl<P1, P2, A, B, C> ThenAffineTraversal<P2, A, B, C, PrismUnit, PrismUnit> for P1
+    where
+        A: ?Sized,
+        B: ?Sized,
+        C: ?Sized,
+        P1: prism::Prism<A, B>, /*+ Sized*/
+        P2: prism::Prism<B, C>,
+        // C: Sized,
+        // Self: Sized,
+    {
+        type Target = prism::Then<P1, P2, B>;
+        fn then(self, prism: P2) -> Self::Target {
+            prism::Then::new(self, prism)
+        }
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub struct LensWrap<L> {

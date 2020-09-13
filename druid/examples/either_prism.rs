@@ -2,10 +2,10 @@ use druid::widget::{Checkbox, Flex, Label, Slider};
 use druid::{AppLauncher, Data, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 use druid::Prism;
+use druid::PrismExt;
 use druid::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
 };
-use druid::{LensExt, PrismExt};
 
 #[derive(Clone, Default, Data, Lens)]
 struct AppState {
@@ -102,6 +102,8 @@ pub fn main() {
 }
 
 fn ui_builder() -> impl Widget<AppState> {
+    use druid::optics::traversal::ThenAffineTraversal;
+
     let label = Label::new("Click to reveal slider");
 
     let mut col = Flex::column();
@@ -113,13 +115,13 @@ fn ui_builder() -> impl Widget<AppState> {
     let panel_slider = Slider::new()
         .prism(
             (AppState::panel)
-                .then_prism(SliderOrLabel::slider)
+                .then(SliderOrLabel::slider)
                 .and_lens(AppState::value),
         )
         .padding(5.0);
     let panel_label = label
         .padding(5.0)
-        .prism((AppState::panel).then_prism(SliderOrLabel::label));
+        .prism((AppState::panel).then(SliderOrLabel::label));
     col.add_child(panel_slider);
     col.add_child(panel_label);
     col

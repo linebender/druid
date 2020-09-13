@@ -146,6 +146,7 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
             };
 
             let quote = quote! {
+                // TODO: rename into PartialPrism
                 impl #impl_generics druid::Prism<
                     #ty#ty_generics,
                     #field_ty
@@ -175,6 +176,7 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
                     }
                 }
 
+                // TODO: move into another derivation
                 impl #impl_generics druid::optics::Replace<
                     #ty#ty_generics,
                     #field_ty
