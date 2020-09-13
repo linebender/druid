@@ -37,6 +37,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `TextAlignment` support in `TextLayout` and `Label` ([#1210] by [@cmyr])`
 - `Button::from_label` to construct a `Button` with a provided `Label`. ([#1226] by [@ForLoveOfCats])
 - Lens: Added Unit lens for type erased / display only widgets that do not need data. ([#1232] by [@rjwittams]) 
+- `WindowLevel` to control system window Z order, with Mac and GTK implementations  ([#1231] by [@rjwittams])
 
 ### Changed
 
@@ -451,6 +452,7 @@ Last release without a changelog :(
 [#1214]: https://github.com/linebender/druid/pull/1214
 [#1226]: https://github.com/linebender/druid/pull/1226
 [#1232]: https://github.com/linebender/druid/pull/1232
+[#1231]: https://github.com/linebender/druid/pull/1231
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

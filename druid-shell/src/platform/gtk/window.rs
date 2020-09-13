@@ -27,7 +27,7 @@ use std::time::Instant;
 
 use anyhow::anyhow;
 use cairo::Surface;
-use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt};
+use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
 use gio::ApplicationExt;
 use gtk::prelude::*;
 use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
@@ -42,8 +42,8 @@ use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
-use crate::window::{IdleToken, TimerToken, WinHandler};
 use crate::window;
+use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel};
 
 use super::application::Application;
 use super::dialog;
@@ -98,6 +98,7 @@ pub(crate) struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     position: Option<Point>,
+    level: Option<WindowLevel>,
     state: Option<window::WindowState>,
     size: Size,
     min_size: Option<Size>,
@@ -154,6 +155,7 @@ impl WindowBuilder {
             menu: None,
             size: Size::new(500.0, 400.0),
             position: None,
+            level: None,
             state: None,
             min_size: None,
             resizable: true,
@@ -183,6 +185,10 @@ impl WindowBuilder {
 
     pub fn set_position(&mut self, position: Point) {
         self.position = Some(position);
+    }
+
+    pub fn set_level(&mut self, level: WindowLevel) {
+        self.level = Some(level);
     }
 
     pub fn set_window_state(&mut self, state: window::WindowState) {
@@ -250,6 +256,9 @@ impl WindowBuilder {
         let mut handle = WindowHandle {
             state: Arc::downgrade(&win_state),
         };
+        if let Some(level) = self.level {
+            handle.set_level(level);
+        }
         if let Some(pos) = self.position {
             handle.set_position(pos);
         }
@@ -692,41 +701,54 @@ impl WindowHandle {
     }
 
     pub fn get_position(&self) -> Point {
-        if let Some(state) = self.state.upgrade(){
+        if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.get_position();
             Point::new(x as f64, y as f64)
-        }else{
+        } else {
             Point::new(0.0, 0.0)
         }
     }
 
+    pub fn set_level(&self, level: WindowLevel) {
+        if let Some(state) = self.state.upgrade() {
+            let hint = match level {
+                WindowLevel::AppWindow => WindowTypeHint::Normal,
+                WindowLevel::Tooltip => WindowTypeHint::Tooltip,
+                WindowLevel::DropDown => WindowTypeHint::DropdownMenu,
+                WindowLevel::Modal => WindowTypeHint::Dialog,
+            };
+
+            state.window.set_type_hint(hint);
+        }
+    }
+
     pub fn set_size(&self, size: Size) {
-        if let Some(state) = self.state.upgrade(){
+        if let Some(state) = self.state.upgrade() {
             state.window.resize(size.width as i32, size.height as i32)
         }
     }
 
     pub fn get_size(&self) -> Size {
-        if let Some(state) = self.state.upgrade(){
+        if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.get_size();
             Size::new(x as f64, y as f64)
-        } else{
+        } else {
             log::warn!("Could not get size for GTK window");
-            Size::new(0. , 0.)
+            Size::new(0., 0.)
         }
     }
 
     pub fn set_window_state(&mut self, size_state: window::WindowState) {
-        use window::WindowState::{MINIMIZED, MAXIMIZED, RESTORED};
+        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
         let cur_size_state = self.get_window_state();
-        if let Some(state) = self.state.upgrade(){
+        if let Some(state) = self.state.upgrade() {
             match (size_state, cur_size_state) {
                 (s1, s2) if s1 == s2 => (),
                 (MAXIMIZED, _) => state.window.maximize(),
                 (MINIMIZED, _) => state.window.iconify(),
                 (RESTORED, MAXIMIZED) => state.window.unmaximize(),
                 (RESTORED, MINIMIZED) => state.window.deiconify(),
-                (RESTORED, RESTORED) => () // Unreachable
+                (RESTORED, RESTORED) => (), // Unreachable
             }
 
             state.window.unmaximize();
@@ -734,14 +756,14 @@ impl WindowHandle {
     }
 
     pub fn get_window_state(&self) -> window::WindowState {
-        use window::WindowState::{MINIMIZED, MAXIMIZED, RESTORED};
+        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
         if let Some(state) = self.state.upgrade() {
             if state.window.is_maximized() {
-                return MAXIMIZED
+                return MAXIMIZED;
             } else if let Some(window) = state.window.get_parent_window() {
                 let state = window.get_state();
                 if (state & gdk::WindowState::ICONIFIED) == gdk::WindowState::ICONIFIED {
-                    return MINIMIZED
+                    return MINIMIZED;
                 }
             }
         }
