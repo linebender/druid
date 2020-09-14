@@ -3,21 +3,57 @@ use crate::optics::{lens, prism, Lens};
 use std::marker::PhantomData;
 
 pub use crate::optics::PartialPrism as AffineTraversal;
-pub use then_affine_traversal::Then;
+pub use then::Then;
+pub use wrap::Wrap;
 
-mod then_affine_traversal {
-    use super::{lens, prism};
+mod layer {
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct Lens;
 
-    pub trait Then<Other, A: ?Sized, B: ?Sized, C: ?Sized, OriginPhantom, DestinationPhantom> {
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct Prism;
+}
+
+mod wrap {
+    use super::{layer, lens, prism};
+
+    pub trait Wrap<Layer, A: ?Sized, B: ?Sized, LayerKind> {
+        type Target;
+        fn wrap(self, layer: Layer) -> Self::Target;
+    }
+
+    impl<L, S, A, W> Wrap<L, S, A, layer::Lens> for W
+    where
+        L: lens::Lens<S, A>,
+        S: ?Sized,
+        A: Sized,
+    {
+        type Target = lens::LensWrap<A, L, W>;
+        fn wrap(self, lens: L) -> Self::Target {
+            lens::LensWrap::new(self, lens)
+        }
+    }
+
+    impl<P, S, A, W> Wrap<P, S, A, layer::Prism> for W
+    where
+        P: prism::Prism<S, A>,
+        S: ?Sized,
+        A: Sized,
+    {
+        type Target = prism::PrismWrap<A, P, W>;
+        fn wrap(self, prism: P) -> Self::Target {
+            prism::PrismWrap::new(self, prism)
+        }
+    }
+}
+
+mod then {
+    use super::{layer, lens, prism};
+
+    pub trait Then<Other, A: ?Sized, B: ?Sized, C: ?Sized, LayerKind1, LayerKind2> {
         type Target;
         fn then(self, other: Other) -> Self::Target;
     }
-
-    #[derive(Clone, Debug, PartialEq)]
-    pub struct LensUnit;
-
-    #[derive(Clone, Debug, PartialEq)]
-    pub struct PrismUnit;
 
     /// Compose a `Lens<A, B>` with a `Lens<B, C>` to produce a `Lens<A, C>`.
     ///
@@ -27,7 +63,7 @@ mod then_affine_traversal {
     /// let lens = lens!(Foo, x).then(lens!((u32, bool), 1));
     /// assert_eq!(lens.get(&Foo { x: (0, true) }), true);
     /// ```
-    impl<L1, L2, A, B, C> Then<L2, A, B, C, LensUnit, LensUnit> for L1
+    impl<L1, L2, A, B, C> Then<L2, A, B, C, layer::Lens, layer::Lens> for L1
     where
         A: ?Sized,
         B: ?Sized,
@@ -51,7 +87,7 @@ mod then_affine_traversal {
     /// assert_eq!(aff.get(&Foo { x: Ok(7) }), Some(7));
     /// assert_eq!(aff.get(&Foo { x: Err(true) }), None);
     /// ```
-    impl<L1, P2, A, B, C> Then<P2, A, B, C, LensUnit, PrismUnit> for L1
+    impl<L1, P2, A, B, C> Then<P2, A, B, C, layer::Lens, layer::Prism> for L1
     where
         A: ?Sized,
         B: ?Sized,
@@ -75,7 +111,7 @@ mod then_affine_traversal {
     /// assert_eq!(aff.get(&Outer::Ok((3, true))), Some(true));
     /// assert_eq!(aff.get(&Outer::Err(5.5)), None);
     /// ```
-    impl<P1, L2, A, B, C> Then<L2, A, B, C, PrismUnit, LensUnit> for P1
+    impl<P1, L2, A, B, C> Then<L2, A, B, C, layer::Prism, layer::Lens> for P1
     where
         A: ?Sized,
         B: ?Sized,
@@ -100,7 +136,7 @@ mod then_affine_traversal {
     /// assert_eq!(aff.get(&Outer::Err(5.5)), None);
     /// assert_eq!(aff.get(&Outer::Ok(Inner::Ok(1u32))), None);
     /// ```
-    impl<P1, P2, A, B, C> Then<P2, A, B, C, PrismUnit, PrismUnit> for P1
+    impl<P1, P2, A, B, C> Then<P2, A, B, C, layer::Prism, layer::Prism> for P1
     where
         A: ?Sized,
         B: ?Sized,
