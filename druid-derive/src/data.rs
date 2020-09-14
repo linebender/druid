@@ -15,7 +15,7 @@
 //! The implementation for #[derive(Data)]
 
 use crate::field_attr::{DataAttrs, Field, FieldKind, Fields};
-use crate::variant_attr::Variants;
+use crate::variant_attr::{self, Variants};
 
 use quote::{quote, quote_spanned};
 use syn::{spanned::Spanned, Data, DataEnum, DataStruct};
@@ -98,8 +98,9 @@ fn derive_enum(
         return Ok(res);
     }
 
-    let variants = Variants::<DataAttrs, DataAttrs>::parse_ast(&s.variants)?;
-    let (to_test, to_ignore): (Vec<_>, Vec<_>) = variants.iter().partition(|v| !v.attrs.ignore);
+    let variants = Variants::<variant_attr::DataAttrs, DataAttrs>::parse_ast(&s.variants)?;
+    let (to_test, to_ignore): (Vec<_>, Vec<_>) =
+        variants.iter().partition(|v| !v.attrs.ignore_variant);
     let to_test = to_test.iter().map(|v| {
         let variant_ident = &v.ident.named();
         // TODO: incoming: Fields<DataAttrs>

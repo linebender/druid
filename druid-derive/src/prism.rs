@@ -8,15 +8,22 @@ use quote::quote;
 use std::collections::HashSet;
 use syn::{spanned::Spanned, Data, Error, GenericParam, TypeParam};
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum Kind {
+    PartialPrismOnly,
+    PartialPrismAndPrism,
+}
+
 pub(crate) fn derive_prism_impl(
     input: syn::DeriveInput,
+    kind: Kind,
 ) -> Result<proc_macro2::TokenStream, syn::Error> {
     match &input.data {
         Data::Struct(s) => Err(syn::Error::new(
             s.struct_token.span(),
             "Prism implementations cannot be derived from structs",
         )),
-        Data::Enum(_) => derive_enum(&input),
+        Data::Enum(_) => derive_enum(&input, kind),
         Data::Union(u) => Err(syn::Error::new(
             u.union_token.span(),
             "Prism implementations cannot be derived from unions",
@@ -24,7 +31,10 @@ pub(crate) fn derive_prism_impl(
     }
 }
 
-fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn::Error> {
+fn derive_enum(
+    input: &syn::DeriveInput,
+    kind: Kind,
+) -> Result<proc_macro2::TokenStream, syn::Error> {
     let ty = &input.ident;
 
     let variants = if let syn::Data::Enum(syn::DataEnum { variants, .. }) = &input.data {
@@ -37,7 +47,8 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
     };
 
     let twizzled_name = if is_camel_case(&ty.to_string()) {
-        let temp_name = format!("{}_derived_prism", to_snake_case(&ty.to_string()));
+        let temp_name = format!("{}_derived_partial_prism", to_snake_case(&ty.to_string()));
+
         proc_macro2::Ident::new(&temp_name, proc_macro2::Span::call_site())
     } else {
         return Err(syn::Error::new(
@@ -47,16 +58,18 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
     };
 
     // Define prism types for each variant
-    let defs = variants.iter().filter(|v| !v.attrs.ignore).map(|v| {
-        let variant_name = &v.ident.named();
-
-        quote! {
-            /// Prism for the variant on (the enum)
-            #[allow(non_camel_case_types)]
-            #[derive(Debug, Copy, Clone, PartialEq)]
-            pub struct #variant_name;
-        }
-    });
+    let defs = variants
+        .iter()
+        .filter(|v| !v.attrs.ignore_variant)
+        .map(|v| {
+            let variant_name = &v.ident.named();
+            quote! {
+                /// Prism for the variant on (the enum)
+                #[allow(non_camel_case_types)]
+                #[derive(Debug, Copy, Clone, PartialEq)]
+                pub struct #variant_name;
+            }
+        });
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
@@ -85,7 +98,7 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
 
     let impls: Vec<_> = variants
         .iter()
-        .filter(|v| !v.attrs.ignore)
+        .filter(|v| !v.attrs.ignore_variant)
         .map(|v| {
             let variant_name = &v.ident.named();
             let field = if let Some(field) = v.fields.iter().next() {
@@ -145,9 +158,8 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
                 FieldIdent::Unnamed(_) => unreachable!(),
             };
 
-            let quote = quote! {
-                // TODO: rename into PartialPrism
-                impl #impl_generics druid::Prism<
+            let partial_prism_impl = quote! {
+                impl #impl_generics druid::PartialPrism<
                     #ty#ty_generics,
                     #field_ty
                 > for #twizzled_name::#variant_name
@@ -175,28 +187,37 @@ fn derive_enum(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, syn
                         #with_expr
                     }
                 }
+            };
 
-                // TODO: move into another derivation
-                impl #impl_generics druid::optics::Replace<
-                    #ty#ty_generics,
-                    #field_ty
-                > for #twizzled_name::#variant_name
-                #where_clause {
-                    fn replace<'a>(
-                        &self,
-                        data: &'a mut #ty#ty_generics,
-                        v: #field_ty
-                    ) -> &'a mut #ty#ty_generics {
-                        #replace_expr
-                        data
+            let maybe_prism_impl = if let Kind::PartialPrismAndPrism = kind {
+                quote! {
+                    impl #impl_generics druid::optics::Prism<
+                        #ty#ty_generics,
+                        #field_ty
+                    > for #twizzled_name::#variant_name
+                    #where_clause {
+                        fn replace<'a>(
+                            &self,
+                            data: &'a mut #ty#ty_generics,
+                            v: #field_ty
+                        ) -> &'a mut #ty#ty_generics {
+                            #replace_expr
+                            data
+                        }
                     }
                 }
+            } else {
+                quote! {}
             };
-            Ok(quote)
+
+            Ok(quote! {
+                #partial_prism_impl
+                #maybe_prism_impl
+            })
         })
         .collect::<Result<_, _>>()?;
 
-    let associated_items = variants.iter().filter(|v| !v.attrs.ignore).map(|v| {
+    let associated_items = variants.iter().filter(|v| !v.attrs.ignore_variant).map(|v| {
         let variant_name = &v.ident.named();
         let prism_variant_name = match v.attrs.prism_name_override.as_ref() {
             Some(name) => name.clone(),

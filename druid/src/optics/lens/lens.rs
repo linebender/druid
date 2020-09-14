@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::optics::traversal;
+use druid::optics::affine_traversal;
 
 use std::marker::PhantomData;
 use std::ops;
@@ -93,10 +93,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         Put: Fn(&mut B, C),
         Self: Sized,
     {
-        traversal::ThenAffineTraversal::<Map<Get, Put>, A, B, C, _, _>::then(
-            self,
-            Map::new(get, put),
-        )
+        affine_traversal::Then::<Map<Get, Put>, A, B, C, _, _>::then(self, Map::new(get, put))
     }
 
     /// Invoke a type's `Deref` impl
@@ -110,9 +107,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         B: ops::Deref + ops::DerefMut,
         Self: Sized,
     {
-        traversal::ThenAffineTraversal::<Deref, A, B, <B as ops::Deref>::Target, _, _>::then(
-            self, Deref,
-        )
+        affine_traversal::Then::<Deref, A, B, <B as ops::Deref>::Target, _, _>::then(self, Deref)
     }
 
     /// Access an index in a container
@@ -127,7 +122,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         B: ops::Index<I> + ops::IndexMut<I>,
         Self: Sized,
     {
-        traversal::ThenAffineTraversal::<Index<I>, A, B, <B as ops::Index<I>>::Output, _, _>::then(
+        affine_traversal::Then::<Index<I>, A, B, <B as ops::Index<I>>::Output, _, _>::then(
             self,
             Index::new(index),
         )

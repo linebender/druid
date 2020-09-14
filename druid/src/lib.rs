@@ -127,8 +127,7 @@
 
 // Allows to use macros from druid_derive in this crate
 extern crate self as druid;
-pub use druid_derive::Lens;
-pub use druid_derive::Prism;
+pub use druid_derive::{Lens, PartialPrism, Prism};
 
 use druid_shell as shell;
 #[doc(inline)]
@@ -189,9 +188,9 @@ pub use ext_event::{ExtEventError, ExtEventSink};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
-pub use optics::traversal;
+pub use optics::affine_traversal;
 pub use optics::{lens, Lens, LensExt, LensWrap};
-pub use optics::{prism, Prism, PrismExt, PrismWrap};
+pub use optics::{prism, PartialPrism, PrismExt, PrismWrap};
 pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};

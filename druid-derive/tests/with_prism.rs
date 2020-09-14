@@ -1,7 +1,7 @@
 use float_cmp::approx_eq;
 
 use druid::Data;
-use druid::Prism;
+use druid::{PartialPrism, Prism};
 
 #[test]
 fn derive_prism() {
@@ -53,7 +53,7 @@ fn derive_prism() {
     assert!(approx_eq!(f64, num, 2.0));
 
     {
-        use druid::optics::prism::{DefaultUpgrade, Replace};
+        use druid::optics::prism::{DefaultUpgrade, Prism};
 
         impl Default for State {
             fn default() -> Self {
@@ -77,7 +77,7 @@ fn derive_prism() {
 
 #[test]
 fn named_derive_prism() {
-    #[derive(Debug, Prism, PartialEq)]
+    #[derive(Debug, PartialPrism, PartialEq)]
     pub enum State {
         Text {
             s: String,
@@ -132,13 +132,15 @@ fn named_derive_prism() {
 
 #[test]
 fn mix_with_data_prism() {
-    #[derive(Clone, Prism, Data)]
+    #[derive(Clone, PartialPrism, Data)]
     enum State {
-        // ignoring a variant makes it always
-        // the same as any other variant
         Text(String),
-        #[data(ignore)]
+
+        /// Ignoring a variant makes it always
+        /// the same as any other variant.
+        #[data(ignore_variant)]
         Ignored(String),
+
         #[prism(name = "prism_number")]
         Number(#[data(same_fn = "same_sign")] f64),
     }

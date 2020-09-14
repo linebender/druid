@@ -20,8 +20,8 @@ use super::{
     IdentityWrapper, Padding, Parse, SizedBox, WidgetId,
 };
 use crate::{
-    Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LensWrap, Prism, PrismWrap, UnitPoint,
-    Widget,
+    Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LensWrap, PartialPrism, PrismWrap,
+    UnitPoint, Widget,
 };
 
 /// A trait that provides extra methods for combining `Widget`s.
@@ -221,7 +221,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         LensWrap::new(self, lens)
     }
 
-    fn prism<S: Data, P: Prism<S, T>>(self, prism: P) -> PrismWrap<T, P, Self> {
+    fn prism<S: Data, P: PartialPrism<S, T>>(self, prism: P) -> PrismWrap<T, P, Self> {
         PrismWrap::new(self, prism)
     }
 

@@ -6,7 +6,7 @@ pub use lens::{Lens, LensExt, LensWrap};
 #[allow(clippy::module_inception)]
 pub mod prism;
 #[doc(hidden)]
-pub use prism::{DefaultUpgrade, Prism, PrismExt, PrismWrap, /*PrismRefReplacer,*/ Replace};
+pub use prism::{DefaultUpgrade, PartialPrism, /*PrismRefReplacer,*/ Prism, PrismExt, PrismWrap,};
 
 #[allow(clippy::module_inception)]
-pub mod traversal;
+pub mod affine_traversal;

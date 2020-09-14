@@ -1,4 +1,4 @@
-use crate::optics::{lens, traversal};
+use crate::optics::{affine_traversal, lens};
 
 use std::marker::PhantomData;
 use std::ops;
@@ -8,26 +8,23 @@ use crate::kurbo::Size;
 use crate::widget::prelude::*;
 use crate::Data;
 
-// TODO: rename to PartialPrism? or is it AffineTraversal? maybe both
-// since a complete Prism also have the replace and upgrade stuff,
-// which neither this nor the AffineTraversal has
-pub trait Prism<S: ?Sized, A: ?Sized> {
+pub trait PartialPrism<S: ?Sized, A: ?Sized> {
     fn with<V, F: FnOnce(&A) -> V>(&self, data: &S, f: F) -> Option<V>;
     fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut S, f: F) -> Option<V>;
 }
 
-pub trait Replace<S: ?Sized, A: ?Sized>: Prism<S, A> {
+pub trait Prism<S: ?Sized, A: ?Sized>: PartialPrism<S, A> {
     fn replace<'a>(&self, data: &'a mut S, v: A) -> &'a mut S
     where
         A: Sized;
 }
 
-pub trait DefaultUpgrade<S: ?Sized, A: ?Sized>: Prism<S, A> {
+pub trait DefaultUpgrade<S: ?Sized, A: ?Sized>: PartialPrism<S, A> {
     fn default_upgrade(&self, v: A) -> S
     where
         A: Sized,
         S: Default + Sized,
-        Self: Replace<S, A>,
+        Self: Prism<S, A>,
     {
         let mut base = S::default();
         self.replace(&mut base, v);
@@ -35,27 +32,25 @@ pub trait DefaultUpgrade<S: ?Sized, A: ?Sized>: Prism<S, A> {
     }
 }
 
-impl<S: ?Sized, A: ?Sized, P> DefaultUpgrade<S, A> for P where P: Prism<S, A> {}
+impl<S: ?Sized, A: ?Sized, P> DefaultUpgrade<S, A> for P where P: PartialPrism<S, A> {}
 
-// TODO: rename to Prism?
-// TODO: see if is necessary
-pub trait RefReplace<S: ?Sized, A: ?Sized>: Prism<S, A> {
+pub trait RefPrism<S: ?Sized, A: ?Sized>: PartialPrism<S, A> {
     fn ref_replace<'a>(&self, data: &'a mut S, v: &A) -> &'a mut S
     where
         A: Clone,
-        Self: Replace<S, A>,
+        Self: Prism<S, A>,
     {
         self.replace(data, v.clone())
     }
 }
 
 // TODO: see if is necessary
-pub trait RefUpgrade<S: ?Sized, A: ?Sized>: Prism<S, A> {
-    fn ref_upgrade(&self, v: &A) -> S
+pub trait RefDefaultPrism<S: ?Sized, A: ?Sized>: PartialPrism<S, A> {
+    fn ref_default_upgrade(&self, v: &A) -> S
     where
         A: Clone,
         S: Default + Sized,
-        Self: Replace<S, A> + RefReplace<S, A>,
+        Self: Prism<S, A> + RefPrism<S, A>,
     {
         let mut data = S::default();
         self.ref_replace(&mut data, v);
@@ -63,7 +58,7 @@ pub trait RefUpgrade<S: ?Sized, A: ?Sized>: Prism<S, A> {
     }
 }
 
-pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
+pub trait PrismExt<A: ?Sized, B: ?Sized>: PartialPrism<A, B> {
     /// Copy the targeted value out of `data`
     fn get(&self, data: &A) -> Option<B>
     where
@@ -93,22 +88,22 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         });
     }
 
-    fn and_lens<L, C>(self, lens: L) -> traversal::AndLens<Self, L, B>
+    fn and_lens<L, C>(self, lens: L) -> affine_traversal::AndLens<Self, L, B>
     where
         L: lens::Lens<A, C> + Sized,
         C: ?Sized,
         Self: Sized,
     {
-        traversal::AndLens::new(self, lens)
+        affine_traversal::AndLens::new(self, lens)
     }
 
-    fn after_lens<L, BeforeA>(self, lens: L) -> traversal::ThenAfterLens<L, Self, A>
+    fn after_lens<L, BeforeA>(self, lens: L) -> affine_traversal::ThenAfterLens<L, Self, A>
     where
         L: lens::Lens<BeforeA, A> + Sized,
         BeforeA: ?Sized,
         Self: Sized,
     {
-        traversal::ThenAfterLens::new(lens, self)
+        affine_traversal::ThenAfterLens::new(lens, self)
     }
 
     fn map<Get, Put, C>(self, get: Get, put: Put) -> Then<Self, Map<Get, Put>, B>
@@ -117,10 +112,7 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         Put: Fn(&mut B, C),
         Self: Sized,
     {
-        traversal::ThenAffineTraversal::<Map<Get, Put>, A, B, C, _, _>::then(
-            self,
-            Map::new(get, put),
-        )
+        affine_traversal::Then::<Map<Get, Put>, A, B, C, _, _>::then(self, Map::new(get, put))
     }
 
     fn deref(self) -> Then<Self, Deref, B>
@@ -128,9 +120,7 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         B: ops::Deref + ops::DerefMut,
         Self: Sized,
     {
-        traversal::ThenAffineTraversal::<Deref, A, B, <B as ops::Deref>::Target, _, _>::then(
-            self, Deref,
-        )
+        affine_traversal::Then::<Deref, A, B, <B as ops::Deref>::Target, _, _>::then(self, Deref)
     }
 
     fn index<I>(self, index: I) -> Then<Self, Index<I>, B>
@@ -139,7 +129,7 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
         B: ops::Index<I> + ops::IndexMut<I>,
         Self: Sized,
     {
-        traversal::ThenAffineTraversal::<Index<I>, A, B, <B as ops::Index<I>>::Output, _, _>::then(
+        affine_traversal::Then::<Index<I>, A, B, <B as ops::Index<I>>::Output, _, _>::then(
             self,
             Index::new(index),
         )
@@ -155,7 +145,7 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: Prism<A, B> {
     }
 }
 
-impl<S: ?Sized, A: ?Sized, P: Prism<S, A>> PrismExt<S, A> for P {}
+impl<S: ?Sized, A: ?Sized, P: PartialPrism<S, A>> PrismExt<S, A> for P {}
 
 pub struct PrismWrap<U, P, W> {
     inner: W,
@@ -178,7 +168,7 @@ impl<S, A, P, W> Widget<S> for PrismWrap<A, P, W>
 where
     S: Data,
     A: Data,
-    P: Prism<S, A>,
+    P: PartialPrism<S, A>,
     W: Widget<A>,
 {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut S, env: &Env) {
@@ -290,7 +280,7 @@ impl<Get, GetMut, Replace> Variant<Get, GetMut, Replace> {
     }
 }
 
-impl<S, A, Get, GetMut, Replace> Prism<S, A> for Variant<Get, GetMut, Replace>
+impl<S, A, Get, GetMut, Replace> PartialPrism<S, A> for Variant<Get, GetMut, Replace>
 where
     S: ?Sized,
     A: Sized,
@@ -307,7 +297,7 @@ where
     }
 }
 
-impl<S, A, Get, GetMut, Replacer> Replace<S, A> for Variant<Get, GetMut, Replacer>
+impl<S, A, Get, GetMut, Replacer> Prism<S, A> for Variant<Get, GetMut, Replacer>
 where
     S: ?Sized,
     A: Sized,
@@ -372,8 +362,8 @@ pub struct Then<P1, P2, B: ?Sized> {
 impl<P1, P2, B: ?Sized> Then<P1, P2, B> {
     pub fn new<A: ?Sized, C: ?Sized>(left: P1, right: P2) -> Self
     where
-        P1: Prism<A, B>,
-        P2: Prism<B, C>,
+        P1: PartialPrism<A, B>,
+        P2: PartialPrism<B, C>,
     {
         Self {
             left,
@@ -383,13 +373,13 @@ impl<P1, P2, B: ?Sized> Then<P1, P2, B> {
     }
 }
 
-impl<P1, P2, A, B, C> Prism<A, C> for Then<P1, P2, B>
+impl<P1, P2, A, B, C> PartialPrism<A, C> for Then<P1, P2, B>
 where
     A: ?Sized,
     B: ?Sized,
     C: ?Sized,
-    P1: Prism<A, B>,
-    P2: Prism<B, C>,
+    P1: PartialPrism<A, B>,
+    P2: PartialPrism<B, C>,
 {
     fn with<V, F: FnOnce(&C) -> V>(&self, data: &A, f: F) -> Option<V> {
         self.left.with(data, |b| self.right.with(b, f)).flatten()
@@ -402,13 +392,13 @@ where
     }
 }
 
-impl<P1, P2, A, B, C> Replace<A, C> for Then<P1, P2, B>
+impl<P1, P2, A, B, C> Prism<A, C> for Then<P1, P2, B>
 where
     A: ?Sized + Default,
     B: ?Sized + Default,
     C: Sized + Clone,
-    P1: Prism<A, B> + Replace<A, B> + RefReplace<A, B>,
-    P2: Prism<B, C> + Replace<B, C> + RefReplace<B, C>,
+    P1: PartialPrism<A, B> + Prism<A, B> + RefPrism<A, B>,
+    P2: PartialPrism<B, C> + Prism<B, C> + RefPrism<B, C>,
 {
     /// Given the matching path of `A` -> `B` -> `C`,
     /// it is guaranteed that `A` will end up matching
@@ -475,7 +465,7 @@ impl<Get, Put> Map<Get, Put> {
     }
 }
 
-impl<A: ?Sized, B, Get, Put> Prism<A, B> for Map<Get, Put>
+impl<A: ?Sized, B, Get, Put> PartialPrism<A, B> for Map<Get, Put>
 where
     Get: Fn(&A) -> Option<B>,
     Put: Fn(&mut A, B),
@@ -494,7 +484,7 @@ where
     }
 }
 
-impl<A, B, Get, Put> Replace<A, B> for Map<Get, Put>
+impl<A, B, Get, Put> Prism<A, B> for Map<Get, Put>
 where
     Get: Fn(&A) -> Option<B>,
     Put: Fn(&mut A, B),
@@ -508,7 +498,7 @@ where
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Deref;
 
-impl<S> Prism<S, S::Target> for Deref
+impl<S> PartialPrism<S, S::Target> for Deref
 where
     S: ?Sized + ops::Deref + ops::DerefMut,
 {
@@ -521,7 +511,7 @@ where
     }
 }
 
-impl<S> Replace<S, S::Target> for Deref
+impl<S> Prism<S, S::Target> for Deref
 where
     S: ?Sized + ops::DerefMut,
     S::Target: Sized,
@@ -543,7 +533,7 @@ impl<I> Index<I> {
     }
 }
 
-impl<S, I> Prism<S, S::Output> for Index<I>
+impl<S, I> PartialPrism<S, S::Output> for Index<I>
 where
     S: ?Sized + ops::Index<I> + ops::IndexMut<I>,
     I: Clone,
@@ -556,7 +546,7 @@ where
     }
 }
 
-impl<S, I> Replace<S, S::Output> for Index<I>
+impl<S, I> Prism<S, S::Output> for Index<I>
 where
     S: ?Sized + ops::Index<I> + ops::IndexMut<I>,
     I: Clone,
@@ -571,7 +561,7 @@ where
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Id;
 
-impl<S: ?Sized> Prism<S, S> for Id {
+impl<S: ?Sized> PartialPrism<S, S> for Id {
     fn with<V, F: FnOnce(&S) -> V>(&self, data: &S, f: F) -> Option<V> {
         Some(f(data))
     }
@@ -581,7 +571,7 @@ impl<S: ?Sized> Prism<S, S> for Id {
     }
 }
 
-impl<S> Replace<S, S> for Id {
+impl<S> Prism<S, S> for Id {
     fn replace<'a>(&self, data: &'a mut S, v: S) -> &'a mut S {
         *data = v;
         data
@@ -598,17 +588,17 @@ impl<P> InArc<P> {
     where
         S: Clone,
         A: Data,
-        P: Prism<S, A>,
+        P: PartialPrism<S, A>,
     {
         Self { inner }
     }
 }
 
-impl<S, A, P> Prism<Arc<S>, A> for InArc<P>
+impl<S, A, P> PartialPrism<Arc<S>, A> for InArc<P>
 where
     S: Clone,
     A: Data,
-    P: Prism<S, A>,
+    P: PartialPrism<S, A>,
 {
     fn with<V, F: FnOnce(&A) -> V>(&self, data: &Arc<S>, f: F) -> Option<V> {
         self.inner.with(data, f)
@@ -630,11 +620,11 @@ where
     }
 }
 
-impl<S, A, P> Replace<Arc<S>, A> for InArc<P>
+impl<S, A, P> Prism<Arc<S>, A> for InArc<P>
 where
     S: Clone + Default,
     A: Data,
-    P: Replace<S, A> + DefaultUpgrade<S, A>,
+    P: Prism<S, A> + DefaultUpgrade<S, A>,
     Arc<S>: ops::DerefMut,
 {
     fn replace<'a>(&self, data: &'a mut Arc<S>, v: A) -> &'a mut Arc<S> {

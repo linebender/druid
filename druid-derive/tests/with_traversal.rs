@@ -1,4 +1,4 @@
-use druid::{Lens, Prism};
+use druid::{Lens, PartialPrism, Prism};
 
 #[derive(Debug, Lens, PartialEq, Clone, Default)]
 struct Person {
@@ -83,7 +83,7 @@ fn derive_traversal() {
 
     // traversal for A -> B -> C -> D -> E -> F
     let _person_apt_number = {
-        use druid::traversal::ThenAffineTraversal;
+        use druid::affine_traversal::Then;
         (Person::addr) // A -> B
             .then(Addr::extensive) // B -> C
             .then(ExtensiveAddr::place) // C -> D
@@ -93,7 +93,7 @@ fn derive_traversal() {
 
     // traversal for A -> B -> C -> D -> E -> F
     let person_apt_number = {
-        use druid::traversal::ThenAffineTraversal;
+        use druid::affine_traversal::Then;
         (Person::addr) // A -> B
             .then(Addr::extensive) // B -> C
             .then(ExtensiveAddr::place) // C -> D
@@ -104,7 +104,7 @@ fn derive_traversal() {
     // alternative traversal for A -> B -> C -> D -> E -> F
     // (the outer type ends up different)
     let person_apt_number_2 = {
-        use druid::traversal::ThenAffineTraversal;
+        use druid::affine_traversal::Then;
         let place_apt_number = place_apt.then(apt_number); // D -> E -> F
         let addr_ext_place = addr_extensive.then(ext_place); // B -> C -> D
 
@@ -140,7 +140,7 @@ fn derive_traversal() {
 
     // traversal for A -> B -> C -> D
     let person_place = {
-        use druid::traversal::ThenAffineTraversal;
+        use druid::affine_traversal::Then;
         (Person::addr) // A -> B
             .then(Addr::extensive) // B -> C
             .then(ExtensiveAddr::place) // C -> D
@@ -148,7 +148,7 @@ fn derive_traversal() {
 
     // alice will change from a House into a new Apartment
     {
-        use druid::optics::Replace;
+        use druid::optics::Prism;
 
         // required for replace/upgrade (which is forceful)
         impl Default for Place {
@@ -178,7 +178,7 @@ fn derive_traversal() {
 
     // carl will move into bob's place
     {
-        use druid::optics::Replace;
+        use druid::optics::Prism;
 
         // required for replace/upgrade (which is forceful)
         impl Default for Addr {

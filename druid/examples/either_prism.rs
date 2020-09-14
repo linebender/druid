@@ -1,7 +1,7 @@
 use druid::widget::{Checkbox, Flex, Label, Slider};
 use druid::{AppLauncher, Data, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
-use druid::Prism;
+use druid::PartialPrism;
 use druid::PrismExt;
 use druid::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
@@ -13,7 +13,7 @@ struct AppState {
     panel: SliderOrLabel,
 }
 
-#[derive(Clone, Data, Prism)]
+#[derive(Clone, Data, PartialPrism)]
 pub enum SliderOrLabel {
     Slider {
         // TODO
@@ -102,7 +102,7 @@ pub fn main() {
 }
 
 fn ui_builder() -> impl Widget<AppState> {
-    use druid::optics::traversal::ThenAffineTraversal;
+    use druid::optics::affine_traversal::Then;
 
     let label = Label::new("Click to reveal slider");
 
