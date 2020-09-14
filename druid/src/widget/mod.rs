@@ -47,6 +47,7 @@ mod svg;
 mod switch;
 mod textbox;
 mod view_switcher;
+mod viewport;
 #[allow(clippy::module_inception)]
 mod widget;
 mod widget_ext;
@@ -82,6 +83,7 @@ pub use svg::{Svg, SvgData};
 pub use switch::Switch;
 pub use textbox::TextBox;
 pub use view_switcher::ViewSwitcher;
+pub use viewport::Viewport;
 #[doc(hidden)]
 pub use widget::{Widget, WidgetId};
 #[doc(hidden)]
