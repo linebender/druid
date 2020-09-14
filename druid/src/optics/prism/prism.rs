@@ -112,7 +112,7 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: PartialPrism<A, B> {
         Put: Fn(&mut B, C),
         Self: Sized,
     {
-        affine_traversal::Then::<Map<Get, Put>, A, B, C, _, _>::then(self, Map::new(get, put))
+        Then::new(self, Map::new(get, put))
     }
 
     fn deref(self) -> Then<Self, Deref, B>
@@ -120,7 +120,7 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: PartialPrism<A, B> {
         B: ops::Deref + ops::DerefMut,
         Self: Sized,
     {
-        affine_traversal::Then::<Deref, A, B, <B as ops::Deref>::Target, _, _>::then(self, Deref)
+        Then::new(self, Deref)
     }
 
     fn index<I>(self, index: I) -> Then<Self, Index<I>, B>
@@ -129,10 +129,7 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: PartialPrism<A, B> {
         B: ops::Index<I> + ops::IndexMut<I>,
         Self: Sized,
     {
-        affine_traversal::Then::<Index<I>, A, B, <B as ops::Index<I>>::Output, _, _>::then(
-            self,
-            Index::new(index),
-        )
+        Then::new(self, Index::new(index))
     }
 
     fn in_arc(self) -> InArc<Self>
@@ -316,28 +313,28 @@ where
 #[macro_export]
 macro_rules! prism {
     // enum type, variant name
-    ($ty:ident, $variant:ident) => {{
-        $crate::optics::prism::Variant::new::<$ty, _>(
+    ($ty:ident < $( $N:ident ),* >, $variant:ident) => {{
+        $crate::optics::prism::Variant::new::<$ty < $( $N ),* > , _>(
             // get
-            |x: &$ty| {
-                if let $ty::$variant(ref v) = x {
+            |x: &$ty< $( $N ),* >| {
+                if let $ty::< $( $N ),* >::$variant(ref v) = x {
                     Some(v)
                 } else {
                     None
                 }
             },
             // get mut
-            |x: &mut $ty| {
-                if let $ty::$variant(ref mut v) = x {
+            |x: &mut $ty< $( $N ),* >| {
+                if let $ty::< $( $N ),* >::$variant(ref mut v) = x {
                     Some(v)
                 } else {
                     None
                 }
             },
             // replace
-            |x: &mut $ty, v: _| {
+            |x: &mut $ty< $( $N ),* >, v: _| {
                 // only works for newtype-like variants
-                if let $ty::$variant(ref mut refv) = x {
+                if let $ty::< $( $N ),* >::$variant(ref mut refv) = x {
                     // replace variant's value in-place
                     *refv = v;
                     x
@@ -349,6 +346,9 @@ macro_rules! prism {
                 }
             },
         )
+    }};
+    ($ty:ident, $variant:ident) => {{
+        $crate::prism!($ty<>, $variant)
     }};
 }
 

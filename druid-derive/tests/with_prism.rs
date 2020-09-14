@@ -198,3 +198,16 @@ fn mix_with_data_prism() {
 fn same_sign(one: &f64, two: &f64) -> bool {
     one.signum() == two.signum()
 }
+
+#[test]
+fn prism_result_from_macro() {
+    use druid::{optics::affine_traversal::Then, *};
+
+    struct Foo {
+        x: Result<bool, u8>,
+    }
+
+    let aff = lens!(Foo, x).then(prism!(Result<bool, u8>, Ok));
+    assert_eq!(aff.get(&Foo { x: Ok(true) }), Some(true));
+    assert_eq!(aff.get(&Foo { x: Err(1) }), None);
+}

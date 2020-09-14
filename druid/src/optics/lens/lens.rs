@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::optics::affine_traversal;
-
 use std::marker::PhantomData;
 use std::ops;
 use std::sync::Arc;
@@ -93,7 +91,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         Put: Fn(&mut B, C),
         Self: Sized,
     {
-        affine_traversal::Then::<Map<Get, Put>, A, B, C, _, _>::then(self, Map::new(get, put))
+        Then::new(self, Map::new(get, put))
     }
 
     /// Invoke a type's `Deref` impl
@@ -107,7 +105,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         B: ops::Deref + ops::DerefMut,
         Self: Sized,
     {
-        affine_traversal::Then::<Deref, A, B, <B as ops::Deref>::Target, _, _>::then(self, Deref)
+        Then::new(self, Deref)
     }
 
     /// Access an index in a container
@@ -122,10 +120,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         B: ops::Index<I> + ops::IndexMut<I>,
         Self: Sized,
     {
-        affine_traversal::Then::<Index<I>, A, B, <B as ops::Index<I>>::Output, _, _>::then(
-            self,
-            Index::new(index),
-        )
+        Then::new(self, Index::new(index))
     }
 
     /// Adapt to operate on the contents of an `Arc` with efficient copy-on-write semantics

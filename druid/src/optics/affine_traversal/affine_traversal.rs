@@ -22,7 +22,7 @@ mod then_affine_traversal {
     /// Compose a `Lens<A, B>` with a `Lens<B, C>` to produce a `Lens<A, C>`.
     ///
     /// ```
-    /// # use druid::{*, optics::affine_traversal::Then};
+    /// # use druid::{optics::affine_traversal::Then, *};
     /// struct Foo { x: (u32, bool) }
     /// let lens = lens!(Foo, x).then(lens!((u32, bool), 1));
     /// assert_eq!(lens.get(&Foo { x: (0, true) }), true);
@@ -32,10 +32,8 @@ mod then_affine_traversal {
         A: ?Sized,
         B: ?Sized,
         C: ?Sized,
-        L1: lens::Lens<A, B>, /*+ Sized*/
+        L1: lens::Lens<A, B>,
         L2: lens::Lens<B, C>,
-        // C: Sized,
-        // Self: Sized,
     {
         type Target = lens::Then<L1, L2, B>;
         fn then(self, lens: L2) -> Self::Target {
@@ -44,15 +42,22 @@ mod then_affine_traversal {
     }
 
     /// Compose a `Lens<A, B>` with a `Prism<B, C>` to produce a `Prism<A, C>`.
+    ///
+    /// ```
+    /// # use druid::{optics::affine_traversal::Then, *};
+    /// struct Foo { x: Result<u32, bool> }
+    /// let aff = lens!(Foo, x)
+    ///     .then(prism!(Result<u32, bool>, Ok));
+    /// assert_eq!(aff.get(&Foo { x: Ok(7) }), Some(7));
+    /// assert_eq!(aff.get(&Foo { x: Err(true) }), None);
+    /// ```
     impl<L1, P2, A, B, C> Then<P2, A, B, C, LensUnit, PrismUnit> for L1
     where
         A: ?Sized,
         B: ?Sized,
         C: ?Sized,
-        L1: lens::Lens<A, B>, /* + Sized*/
+        L1: lens::Lens<A, B>,
         P2: prism::PartialPrism<B, C>,
-        // C: Sized,
-        // Self: Sized,
     {
         type Target = super::ThenAfterLens<Self, P2, B>;
         fn then(self, prism: P2) -> Self::Target {
@@ -61,15 +66,22 @@ mod then_affine_traversal {
     }
 
     /// Compose a `Prism<A, B>` with a `Lens<B, C>` to produce a `Prism<A, C>`.
+    /// ```
+    /// # use druid::{optics::affine_traversal::Then, *};
+    /// type Outer = Result<Inner, f32>;
+    /// type Inner = (u32, bool);
+    /// let aff = prism!(Outer, Ok)
+    ///     .then(lens!(Inner, 1));
+    /// assert_eq!(aff.get(&Outer::Ok((3, true))), Some(true));
+    /// assert_eq!(aff.get(&Outer::Err(5.5)), None);
+    /// ```
     impl<P1, L2, A, B, C> Then<L2, A, B, C, PrismUnit, LensUnit> for P1
     where
         A: ?Sized,
         B: ?Sized,
         C: ?Sized,
-        P1: prism::PartialPrism<A, B>, /*+ Sized*/
+        P1: prism::PartialPrism<A, B>,
         L2: lens::Lens<B, C>,
-        // C: Sized,
-        // Self: Sized,
     {
         type Target = super::ThenLens<P1, L2, B>;
         fn then(self, lens: L2) -> Self::Target {
@@ -78,15 +90,23 @@ mod then_affine_traversal {
     }
 
     /// Compose a `Prism<A, B>` with a `Prism<B, C>` to produce a `Prism<A, C>`.
+    /// ```
+    /// # use druid::{optics::affine_traversal::Then, *};
+    /// type Outer = Result<Inner, f32>;
+    /// type Inner = Result<u32, bool>;
+    /// let aff = prism!(Outer, Ok)
+    ///     .then(prism!(Inner, Err));
+    /// assert_eq!(aff.get(&Outer::Ok(Inner::Err(true))), Some(true));
+    /// assert_eq!(aff.get(&Outer::Err(5.5)), None);
+    /// assert_eq!(aff.get(&Outer::Ok(Inner::Ok(1u32))), None);
+    /// ```
     impl<P1, P2, A, B, C> Then<P2, A, B, C, PrismUnit, PrismUnit> for P1
     where
         A: ?Sized,
         B: ?Sized,
         C: ?Sized,
-        P1: prism::PartialPrism<A, B>, /*+ Sized*/
+        P1: prism::PartialPrism<A, B>,
         P2: prism::PartialPrism<B, C>,
-        // C: Sized,
-        // Self: Sized,
     {
         type Target = prism::Then<P1, P2, B>;
         fn then(self, prism: P2) -> Self::Target {
