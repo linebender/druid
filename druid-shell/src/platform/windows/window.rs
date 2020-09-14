@@ -63,7 +63,7 @@ use crate::keyboard::{KbKey, KeyState};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
-use crate::window::{IdleToken, TimerToken, WinHandler};
+use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel};
 use crate::window;
 
 /// The platform target DPI.
@@ -1153,6 +1153,10 @@ impl WindowBuilder {
         self.state = state;
     }
 
+    pub fn set_level(&mut self, _level:WindowLevel) {
+        log::warn!("WindowBuilder::set_level  is currently unimplemented for Windows platforms.");
+    }
+
     pub fn build(self) -> Result<WindowHandle, Error> {
         unsafe {
             let class_name = super::util::CLASS_NAME.to_wide();
@@ -1523,6 +1527,10 @@ impl WindowHandle {
     pub fn set_position(&self, position: Point) {
         DeferredQueue::add(self.state.clone(), DeferredOp::SetWindowSizeState(window::WindowState::RESTORED));
         DeferredQueue::add(self.state.clone(), DeferredOp::SetPosition(position));
+    }
+
+    pub fn set_level(&self, _level:WindowLevel) {
+        warn!("Window level unimplemented for Windows!");
     }
 
     // Gets the position of the window in virtual screen coordinates

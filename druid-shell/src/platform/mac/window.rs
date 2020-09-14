@@ -56,12 +56,38 @@ use crate::keyboard_types::KeyState;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::Scale;
-use crate::window::{IdleToken, TimerToken, WinHandler, WindowState};
+use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel, WindowState};
 use crate::Error;
-
 
 #[allow(non_upper_case_globals)]
 const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
+
+#[allow(dead_code)]
+#[allow(non_upper_case_globals)]
+mod levels {
+    use crate::window::WindowLevel;
+
+    // These are the levels that AppKit seems to have.
+    pub const NSModalPanelLevel: i32 = 24;
+    pub const NSNormalWindowLevel: i32 = 0;
+    pub const NSFloatingWindowLevel: i32 = 3;
+    pub const NSTornOffMenuWindowLevel: i32 = NSFloatingWindowLevel;
+    pub const NSSubmenuWindowLevel: i32 = NSFloatingWindowLevel;
+    pub const NSModalPanelWindowLevel: i32 = 8;
+    pub const NSStatusWindowLevel: i32 = 25;
+    pub const NSPopUpMenuWindowLevel: i32 = 101;
+    pub const NSScreenSaverWindowLevel: i32 = 1000;
+
+    pub fn as_raw_window_level(window_level: WindowLevel) -> i32 {
+        use WindowLevel::*;
+        match window_level {
+            AppWindow => NSNormalWindowLevel,
+            Tooltip => NSFloatingWindowLevel,
+            DropDown => NSFloatingWindowLevel,
+            Modal => NSModalPanelWindowLevel,
+        }
+    }
+}
 
 #[derive(Clone)]
 pub(crate) struct WindowHandle {
@@ -88,6 +114,7 @@ pub(crate) struct WindowBuilder {
     size: Size,
     min_size: Option<Size>,
     position: Option<Point>,
+    level: Option<WindowLevel>,
     window_state: Option<WindowState>,
     resizable: bool,
     show_titlebar: bool,
@@ -127,6 +154,7 @@ impl WindowBuilder {
             size: Size::new(500.0, 400.0),
             min_size: None,
             position: None,
+            level: None,
             window_state: None,
             resizable: true,
             show_titlebar: true,
@@ -150,10 +178,12 @@ impl WindowBuilder {
     }
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
-        // TODO: Use this in `self.build`
         self.show_titlebar = show_titlebar;
     }
 
+    pub fn set_level(&mut self, level: WindowLevel) {
+        self.level = Some(level);
+    }
 
     pub fn set_position(&mut self, position: Point) {
         self.position = Some(position)
@@ -174,9 +204,8 @@ impl WindowBuilder {
     pub fn build(self) -> Result<WindowHandle, Error> {
         assert_main_thread();
         unsafe {
-
             let mut style_mask = NSWindowStyleMask::NSClosableWindowMask
-                        | NSWindowStyleMask::NSMiniaturizableWindowMask;
+                | NSWindowStyleMask::NSMiniaturizableWindowMask;
 
             if self.show_titlebar {
                 style_mask |= NSWindowStyleMask::NSTitledWindowMask;
@@ -191,7 +220,8 @@ impl WindowBuilder {
                 NSSize::new(self.size.width, self.size.height),
             );
 
-            let window = NSWindow::alloc(nil).initWithContentRect_styleMask_backing_defer_(
+            let window: id = msg_send![WINDOW_CLASS.0, alloc];
+            let window = window.initWithContentRect_styleMask_backing_defer_(
                 rect,
                 style_mask,
                 NSBackingStoreBuffered,
@@ -225,11 +255,15 @@ impl WindowBuilder {
                 idle_queue,
             };
 
-            if let Some(pos) = self.position{
+            if let Some(pos) = self.position {
                 handle.set_position(pos);
             }
             if let Some(window_state) = self.window_state {
                 handle.set_window_state(window_state);
+            }
+
+            if let Some(level) = self.level {
+                handle.set_level(level)
             }
 
             (*view_state).handler.connect(&handle.clone().into());
@@ -419,6 +453,24 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
 
         (view.autorelease(), queue_handle)
     }
+}
+
+struct WindowClass(*const Class);
+unsafe impl Sync for WindowClass {}
+
+lazy_static! {
+    static ref WINDOW_CLASS: WindowClass = unsafe {
+        let mut decl =
+            ClassDecl::new("DruidWindow", class!(NSWindow)).expect("Window class defined");
+        decl.add_method(
+            sel!(canBecomeKeyWindow),
+            canBecomeKeyWindow as extern "C" fn(&Object, Sel) -> BOOL,
+        );
+        extern "C" fn canBecomeKeyWindow(_this: &Object, _sel: Sel) -> BOOL {
+            YES
+        }
+        WindowClass(decl.register())
+    };
 }
 
 extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
@@ -897,13 +949,13 @@ impl WindowHandle {
         unsafe {
             // TODO this should be the max y in orig mac coords
             let screen_height = crate::Screen::get_display_rect().height();
-            let window: id =  msg_send![*self.nsview.load(), window];
-            let frame :NSRect = msg_send![ window , frame];
+            let window: id = msg_send![*self.nsview.load(), window];
+            let frame: NSRect = msg_send![window, frame];
 
             let mut new_frame = frame;
             new_frame.origin.x = position.x;
-            new_frame.origin.y = screen_height - position.y - frame.size.height ; // Flip back
-            let  () = msg_send![window, setFrame: new_frame display: YES];
+            new_frame.origin.y = screen_height - position.y - frame.size.height; // Flip back
+            let () = msg_send![window, setFrame: new_frame display: YES];
         }
     }
 
@@ -912,42 +964,53 @@ impl WindowHandle {
             // TODO this should be the max y in orig mac coords
             let screen_height = crate::Screen::get_display_rect().height();
 
-            let window: id =  msg_send![*self.nsview.load(), window];
-            let current_frame:NSRect = msg_send![ window , frame];
+            let window: id = msg_send![*self.nsview.load(), window];
+            let current_frame: NSRect = msg_send![window, frame];
 
-            Point::new(current_frame.origin.x, screen_height - current_frame.origin.y - current_frame.size.height )
+            Point::new(
+                current_frame.origin.x,
+                screen_height - current_frame.origin.y - current_frame.size.height,
+            )
+        }
+    }
+
+    pub fn set_level(&self, level: WindowLevel) {
+        unsafe {
+            let level = levels::as_raw_window_level(level);
+            let window: id = msg_send![*self.nsview.load(), window];
+            let () = msg_send![window, setLevel: level];
         }
     }
 
     pub fn set_size(&self, size: Size) {
         unsafe {
             let window: id = msg_send![*self.nsview.load(), window];
-            let current_frame: NSRect = msg_send![ window , frame];
+            let current_frame: NSRect = msg_send![window, frame];
             let mut new_frame = current_frame;
             new_frame.size.width = size.width;
             new_frame.size.height = size.height;
-            let  () = msg_send![window, setFrame: new_frame display: YES];
+            let () = msg_send![window, setFrame: new_frame display: YES];
         }
     }
 
     pub fn get_size(&self) -> Size {
         unsafe {
             let window: id = msg_send![*self.nsview.load(), window];
-            let current_frame: NSRect = msg_send![ window , frame];
+            let current_frame: NSRect = msg_send![window, frame];
             Size::new(current_frame.size.width, current_frame.size.height)
         }
     }
 
     pub fn get_window_state(&self) -> WindowState {
-        unsafe{
+        unsafe {
             let window: id = msg_send![*self.nsview.load(), window];
             let isMin: BOOL = msg_send![window, isMiniaturized];
             if isMin != NO {
-                return WindowState::MINIMIZED
+                return WindowState::MINIMIZED;
             }
             let isZoomed: BOOL = msg_send![window, isZoomed];
             if isZoomed != NO {
-                return WindowState::MAXIMIZED
+                return WindowState::MAXIMIZED;
             }
         }
         WindowState::RESTORED
@@ -957,19 +1020,19 @@ impl WindowHandle {
         let cur_state = self.get_window_state();
         unsafe {
             let window: id = msg_send![*self.nsview.load(), window];
-            match (state, cur_state){
+            match (state, cur_state) {
                 (s1, s2) if s1 == s2 => (),
-                (WindowState::MINIMIZED,_)=>{
-                    let () = msg_send![window, performMiniaturize:self];
-                },
-                (WindowState::MAXIMIZED,_)=>{
-                    let () = msg_send![window, performZoom:self];
+                (WindowState::MINIMIZED, _) => {
+                    let () = msg_send![window, performMiniaturize: self];
+                }
+                (WindowState::MAXIMIZED, _) => {
+                    let () = msg_send![window, performZoom: self];
                 }
                 (WindowState::RESTORED, WindowState::MAXIMIZED) => {
-                    let () = msg_send![window, performZoom:self];
+                    let () = msg_send![window, performZoom: self];
                 }
                 (WindowState::RESTORED, WindowState::MINIMIZED) => {
-                    let () = msg_send![window, deminiaturize:self];
+                    let () = msg_send![window, deminiaturize: self];
                 }
                 (WindowState::RESTORED, WindowState::RESTORED) => {} // Can't be reached
             }

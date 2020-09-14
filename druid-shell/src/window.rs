@@ -92,6 +92,21 @@ impl IdleToken {
     }
 }
 
+/// Levels in the window system - Z order for display purposes.
+/// Describes the purpose of a window and should be mapped appropriately to match platform
+/// conventions.
+#[derive(Copy, Clone, Debug)]
+pub enum WindowLevel {
+    /// A top level app window.
+    AppWindow,
+    /// A window that should stay above app windows - like a tooltip
+    Tooltip,
+    /// A user interface element such as a dropdown menu or combo box
+    DropDown,
+    /// A modal dialog
+    Modal,
+}
+
 /// Contains the different states a Window can be in.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum WindowState {
@@ -195,6 +210,17 @@ impl WindowHandle {
     /// [`Size`]: struct.Size.html
     pub fn get_size(&self) -> Size {
         self.0.get_size()
+    }
+
+    /// Sets the [`WindowLevel`] - ie Z order in the Window system / compositor
+    ///
+    /// We do not currently have a getter method - because it may imply keeping extra state in the WindowHandle if
+    /// multiple Druid levels map to one underlying system level.
+    /// If there is a use case it can be added.
+    ///
+    /// [`WindowLevel`]: enum.WindowLevel.html
+    pub fn set_level(&self, level: WindowLevel) {
+        self.0.set_level(level)
     }
 
     /// Bring this window to the front of the window stack and give it focus.
@@ -361,6 +387,13 @@ impl WindowBuilder {
     /// [`position`]: struct.Point.html
     pub fn set_position(&mut self, position: Point) {
         self.0.set_position(position);
+    }
+
+    /// Sets the initial [`WindowLevel`]
+    ///
+    /// [`WindowLevel`]: enum.WindowLevel.html
+    pub fn set_level(&mut self, level: WindowLevel) {
+        self.0.set_level(level);
     }
 
     /// Set the window's initial title.
