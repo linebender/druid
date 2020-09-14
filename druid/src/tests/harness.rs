@@ -16,6 +16,7 @@
 
 use std::path::Path;
 
+use crate::app::PendingWindow;
 use crate::core::{CommandQueue, WidgetState};
 use crate::ext_event::ExtEventHost;
 use crate::piet::{BitmapTarget, Device, Error, ImageFormat, Piet};
@@ -144,8 +145,8 @@ impl<T: Data> Harness<'_, T> {
         {
             let piet = target.0.as_mut().unwrap().render_context();
 
-            let desc = WindowDesc::new(|| root);
-            let window = Window::new(WindowId::next(), Default::default(), desc, ext_handle);
+            let pending = PendingWindow::new(|| root);
+            let window = Window::new(WindowId::next(), Default::default(), pending, ext_handle);
 
             let inner = Inner {
                 data,

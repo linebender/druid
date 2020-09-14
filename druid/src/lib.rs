@@ -184,7 +184,7 @@ pub use shell::{
 };
 
 pub use crate::core::WidgetPod;
-pub use app::{AppLauncher, WindowDesc};
+pub use app::{AppLauncher, WindowConfig, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
 pub use command::{sys as commands, Command, Selector, SingleUse, Target};
