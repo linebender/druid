@@ -999,7 +999,7 @@ mod tests {
             state: &mut state,
         };
 
-        let env = crate::theme::init();
+        let env = Env::default();
 
         widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &None, &env);
         assert!(ctx.widget_state.children.may_contain(&ID_1));

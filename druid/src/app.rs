@@ -20,9 +20,7 @@ use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHan
 use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
-use crate::{
-    theme, AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget, WidgetExt,
-};
+use crate::{AppDelegate, Data, DruidHandler, Env, LocalizedString, MenuDesc, Widget, WidgetExt};
 
 use druid_shell::WindowState;
 
@@ -118,7 +116,7 @@ impl<T: Data> AppLauncher<T> {
     pub fn launch(mut self, data: T) -> Result<(), PlatformError> {
         let app = Application::new()?;
 
-        let mut env = theme::init();
+        let mut env = Env::default();
         if let Some(f) = self.env_setup.take() {
             f(&mut env, &data);
         }

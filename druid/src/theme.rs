@@ -15,6 +15,7 @@
 //! Theme keys and initial values.
 
 #![allow(missing_docs)]
+
 use crate::piet::Color;
 
 use crate::{Env, FontDescriptor, FontFamily, Key};
@@ -85,9 +86,8 @@ pub const SCROLLBAR_EDGE_WIDTH: Key<f64> =
     Key::new("org.linebender.druid.theme.scrollbar_edge_width");
 
 /// An initial theme.
-pub fn init() -> Env {
-    Env::default()
-        .adding(WINDOW_BACKGROUND_COLOR, Color::rgb8(0x29, 0x29, 0x29))
+pub(crate) fn add_to_env(env: Env) -> Env {
+    env.adding(WINDOW_BACKGROUND_COLOR, Color::rgb8(0x29, 0x29, 0x29))
         .adding(LABEL_COLOR, Color::rgb8(0xf0, 0xf0, 0xea))
         .adding(PLACEHOLDER_COLOR, Color::rgb8(0x80, 0x80, 0x80))
         .adding(PRIMARY_LIGHT, Color::rgb8(0x5c, 0xc4, 0xff))
@@ -127,4 +127,9 @@ pub fn init() -> Env {
             UI_FONT,
             FontDescriptor::new(FontFamily::SYSTEM_UI).with_size(15.0),
         )
+}
+
+#[deprecated(since = "0.7.0", note = "use Env::default() instead")]
+pub fn init() -> Env {
+    Env::default()
 }

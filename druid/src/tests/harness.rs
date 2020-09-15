@@ -149,7 +149,7 @@ impl<T: Data> Harness<'_, T> {
 
             let inner = Inner {
                 data,
-                env: theme::init(),
+                env: Env::default(),
                 window,
                 cmds: Default::default(),
             };
