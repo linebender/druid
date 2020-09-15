@@ -499,10 +499,12 @@ impl Default for Env {
             debug_colors,
         };
 
-        Env(Arc::new(inner))
+        let env = Env(Arc::new(inner))
             .adding(Env::DEBUG_PAINT, false)
             .adding(Env::DEBUG_WIDGET_ID, false)
-            .adding(Env::DEBUG_WIDGET, false)
+            .adding(Env::DEBUG_WIDGET, false);
+
+        crate::theme::add_to_env(env)
     }
 }
 
