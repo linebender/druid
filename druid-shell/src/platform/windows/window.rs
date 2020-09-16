@@ -1062,6 +1062,15 @@ impl WndProc for MyWndProc {
 
                 Some(0)
             }
+            WM_CLOSE => {
+                if let Ok(mut s) = self.state.try_borrow_mut() {
+                    let s = s.as_mut().unwrap();
+                    s.handler.request_close();
+                    Some(0)
+                } else {
+                    None
+                }
+            }
             DS_REQUEST_DESTROY => {
                 unsafe {
                     DestroyWindow(hwnd);

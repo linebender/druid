@@ -22,7 +22,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `ScrollComponent` for ease of adding consistent, customized, scrolling behavior to a widget. ([#1107] by [@ForLoveOfCats])
 - Selection text color to textbox. ([#1093] by [@sysint64])
 - `BoxConstraints::UNBOUNDED` constant. ([#1126] by [@danieldulaney])
-- Close requests from the shell can now be intercepted ([#1118] by [@jneem], [#1204] by [@psychon])
+- Close requests from the shell can now be intercepted ([#1118] by [@jneem], [#1204] by [@psychon], [#1238] by [@tay64])
 - The Lens derive now supports an `ignore` attribute. ([#1133] by [@jneem])
 - `request_update` in `EventCtx`. ([#1128] by [@raphlinus])
 - `ExtEventSink`s can now be obtained from widget methods. ([#1152] by [@jneem])
@@ -307,6 +307,7 @@ Last release without a changelog :(
 [@rjwittams]: https://github.com/rjwittams
 [@rhzk]: https://github.com/rhzk
 [@koutoftimer]: https://github.com/koutoftimer
+[@tay64]: https://github.com/tay64
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -453,13 +454,11 @@ Last release without a changelog :(
 [#1207]: https://github.com/linebender/druid/pull/1207
 [#1210]: https://github.com/linebender/druid/pull/1210
 [#1214]: https://github.com/linebender/druid/pull/1214
-<<<<<<< HEAD
 [#1226]: https://github.com/linebender/druid/pull/1226
 [#1232]: https://github.com/linebender/druid/pull/1232
 [#1231]: https://github.com/linebender/druid/pull/1231
-=======
 [#1220]: https://github.com/linebender/druid/pull/1220
->>>>>>> fb98400c... Add default horizontal & vertical padding to theme
+[#1238]: https://github.com/linebender/druid/pull/1238
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
