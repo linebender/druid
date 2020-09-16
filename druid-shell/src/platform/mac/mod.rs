@@ -23,6 +23,6 @@ pub mod dialog;
 pub mod error;
 mod keyboard;
 pub mod menu;
+pub mod screen;
 pub mod util;
 pub mod window;
-pub mod screen;

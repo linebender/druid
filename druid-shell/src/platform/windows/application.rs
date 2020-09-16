@@ -22,14 +22,14 @@ use std::rc::Rc;
 
 use winapi::shared::minwindef::{FALSE, HINSTANCE};
 use winapi::shared::ntdef::LPCWSTR;
-use winapi::shared::windef::{HCURSOR, HWND, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2};
+use winapi::shared::windef::{DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, HCURSOR, HWND};
 use winapi::shared::winerror::HRESULT_FROM_WIN32;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellscalingapi::PROCESS_PER_MONITOR_DPI_AWARE;
 use winapi::um::winuser::{
     DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PostMessageW, PostQuitMessage,
-    RegisterClassW, TranslateAcceleratorW, TranslateMessage, GA_ROOT, IDI_APPLICATION, MSG,
-    WNDCLASSW, SendMessageW
+    RegisterClassW, SendMessageW, TranslateAcceleratorW, TranslateMessage, GA_ROOT,
+    IDI_APPLICATION, MSG, WNDCLASSW,
 };
 
 use crate::application::AppHandler;
@@ -38,7 +38,7 @@ use super::accels;
 use super::clipboard::Clipboard;
 use super::error::Error;
 use super::util::{self, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
-use super::window::{self, DS_REQUEST_DESTROY, DS_HANDLE_DEFERRED};
+use super::window::{self, DS_HANDLE_DEFERRED, DS_REQUEST_DESTROY};
 
 #[derive(Clone)]
 pub(crate) struct Application {
@@ -49,8 +49,6 @@ struct State {
     quitting: bool,
     windows: HashSet<HWND>,
 }
-
-
 
 impl Application {
     pub fn new() -> Result<Application, Error> {
@@ -71,8 +69,7 @@ impl Application {
             unsafe {
                 func(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
             }
-        }
-        else if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
+        } else if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
             unsafe {
                 func(PROCESS_PER_MONITOR_DPI_AWARE);
             }
@@ -114,7 +111,7 @@ impl Application {
             loop {
                 if let Ok(state) = self.state.try_borrow() {
                     for hwnd in &state.windows {
-                        SendMessageW(*hwnd, DS_HANDLE_DEFERRED, 0,0);
+                        SendMessageW(*hwnd, DS_HANDLE_DEFERRED, 0, 0);
                     }
                 }
                 let mut msg = mem::MaybeUninit::uninit();

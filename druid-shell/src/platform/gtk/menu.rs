@@ -170,14 +170,8 @@ fn modifiers_to_gdk_modifier_type(raw_modifiers: RawMods) -> gdk::ModifierType {
     let modifiers: Modifiers = raw_modifiers.into();
 
     result.set(ModifierType::MOD1_MASK, modifiers.alt());
-    result.set(
-        ModifierType::CONTROL_MASK,
-        modifiers.ctrl(),
-    );
-    result.set(
-        ModifierType::SHIFT_MASK,
-        modifiers.shift(),
-    );
+    result.set(ModifierType::CONTROL_MASK, modifiers.ctrl());
+    result.set(ModifierType::SHIFT_MASK, modifiers.shift());
     result.set(ModifierType::META_MASK, modifiers.meta());
 
     result
