@@ -14,12 +14,12 @@
 
 //! macOS Monitors and Screen information.
 
-use crate::screen::Monitor;
 use crate::kurbo::Rect;
-use cocoa::foundation::NSArray;
-use cocoa::base::{id};
-use objc::{class, msg_send, sel, sel_impl};
+use crate::screen::Monitor;
 use cocoa::appkit::NSScreen;
+use cocoa::base::id;
+use cocoa::foundation::NSArray;
+use objc::{class, msg_send, sel, sel_impl};
 
 pub(crate) fn get_monitors() -> Vec<Monitor> {
     unsafe {
@@ -29,12 +29,18 @@ pub(crate) fn get_monitors() -> Vec<Monitor> {
 
         for idx in 0..screens.count() {
             let screen = screens.objectAtIndex(idx);
-            let frame =  NSScreen::frame(screen);
+            let frame = NSScreen::frame(screen);
 
-            let frame_r = Rect::from_origin_size((frame.origin.x, frame.origin.y), (frame.size.width,  frame.size.height));
+            let frame_r = Rect::from_origin_size(
+                (frame.origin.x, frame.origin.y),
+                (frame.size.width, frame.size.height),
+            );
             let vis_frame = NSScreen::visibleFrame(screen);
-            let vis_frame_r = Rect::from_origin_size(  (vis_frame.origin.x, vis_frame.origin.y), (vis_frame.size.width,  vis_frame.size.height) );
-            monitors.push( (frame_r, vis_frame_r) );
+            let vis_frame_r = Rect::from_origin_size(
+                (vis_frame.origin.x, vis_frame.origin.y),
+                (vis_frame.size.width, vis_frame.size.height),
+            );
+            monitors.push((frame_r, vis_frame_r));
             total_rect = total_rect.union(frame_r)
         }
         // TODO save this total_rect.y1 for screen coord transformations in get_position/set_position
@@ -44,75 +50,81 @@ pub(crate) fn get_monitors() -> Vec<Monitor> {
 }
 
 fn transform_coords(monitors_build: Vec<(Rect, Rect)>, max_y: f64) -> Vec<Monitor> {
-
     //Flip y and move to opposite horizontal edges (On mac, Y goes up and origin is bottom left corner)
-    let fix_rect = |frame: &Rect| Rect::new(frame.x0, (max_y - frame.y0) - frame.height(),
-                                           frame.x1, (max_y - frame.y1) + frame.height());
+    let fix_rect = |frame: &Rect| {
+        Rect::new(
+            frame.x0,
+            (max_y - frame.y0) - frame.height(),
+            frame.x1,
+            (max_y - frame.y1) + frame.height(),
+        )
+    };
 
-    monitors_build.iter().enumerate().map(|(idx, (frame, vis_frame))|{
-        Monitor::new(idx == 0, fix_rect(frame), fix_rect(vis_frame))
-    }).collect()
+    monitors_build
+        .iter()
+        .enumerate()
+        .map(|(idx, (frame, vis_frame))| {
+            Monitor::new(idx == 0, fix_rect(frame), fix_rect(vis_frame))
+        })
+        .collect()
 }
 
 #[cfg(test)]
-mod test{
-    use kurbo::Rect;
+mod test {
     use crate::platform::mac::screen::transform_coords;
     use crate::Monitor;
+    use kurbo::Rect;
 
-    fn pair(rect: Rect)->(Rect, Rect){
+    fn pair(rect: Rect) -> (Rect, Rect) {
         (rect, rect)
     }
 
-    fn monitor(primary: bool, rect:Rect)->Monitor{
+    fn monitor(primary: bool, rect: Rect) -> Monitor {
         Monitor::new(primary, rect, rect)
     }
 
     #[test]
-    fn test_transform_coords_1(){
-        let mons = transform_coords(
-            vec![
-                pair(Rect::new(0., 0., 100., 100.))
-            ] , 100. );
+    fn test_transform_coords_1() {
+        let mons = transform_coords(vec![pair(Rect::new(0., 0., 100., 100.))], 100.);
 
-        assert_eq!(vec![monitor(true, Rect::new(0., 0., 100., 100.))],
-                   mons)
+        assert_eq!(vec![monitor(true, Rect::new(0., 0., 100., 100.))], mons)
     }
 
     #[test]
-    fn test_transform_coords_2_right(){
+    fn test_transform_coords_2_right() {
         let mons = transform_coords(
             vec![
                 pair(Rect::new(0., 0., 100., 100.)),
                 pair(Rect::new(100., 0., 200., 100.)),
-            ] ,
-            100. );
+            ],
+            100.,
+        );
 
-        assert_eq!(vec![
-            monitor(true, Rect::new(0., 0., 100., 100.), ),
-            monitor(false, Rect::new(100., 0., 200., 100.))
-
-        ],
-                   mons)
+        assert_eq!(
+            vec![
+                monitor(true, Rect::new(0., 0., 100., 100.),),
+                monitor(false, Rect::new(100., 0., 200., 100.))
+            ],
+            mons
+        )
     }
 
     #[test]
-    fn test_transform_coords_2_up(){
+    fn test_transform_coords_2_up() {
         let mons = transform_coords(
             vec![
                 pair(Rect::new(0., 0., 100., 100.)),
                 pair(Rect::new(0., 100., 0., 200.)),
-            ] ,
-             100. );
+            ],
+            100.,
+        );
 
-        assert_eq!(vec![
-            monitor(true, Rect::new(0., 0., 100., 100.), ),
-            monitor(false, Rect::new(0., -100., 0., 0.0))
-
-        ],
-                   mons)
+        assert_eq!(
+            vec![
+                monitor(true, Rect::new(0., 0., 100., 100.),),
+                monitor(false, Rect::new(0., -100., 0., 0.0))
+            ],
+            mons
+        )
     }
-
-
-
 }
