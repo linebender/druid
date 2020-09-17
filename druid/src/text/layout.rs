@@ -87,14 +87,20 @@ impl TextLayout {
 
     /// Set the text to display.
     pub fn set_text(&mut self, text: impl Into<ArcStr>) {
-        self.text = text.into();
-        self.layout = None;
+        let text = text.into();
+        if text != self.text {
+            self.text = text;
+            self.layout = None;
+        }
     }
 
     /// Set the default text color for this layout.
     pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
-        self.text_color = color.into();
-        self.layout = None;
+        let color = color.into();
+        if color != self.text_color {
+            self.text_color = color;
+            self.layout = None;
+        }
     }
 
     /// Set the default font.
@@ -106,9 +112,12 @@ impl TextLayout {
     /// [`Env`]: struct.Env.html
     /// [`Key<FontDescriptor>`]: struct.Key.html
     pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
-        self.font = font.into();
-        self.layout = None;
-        self.text_size_override = None;
+        let font = font.into();
+        if font != self.font {
+            self.font = font;
+            self.layout = None;
+            self.text_size_override = None;
+        }
     }
 
     /// Set the font size.
@@ -118,8 +127,11 @@ impl TextLayout {
     /// [`set_font`]: #method.set_font.html
     /// [`FontDescriptor`]: struct.FontDescriptor.html
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
-        self.text_size_override = Some(size.into());
-        self.layout = None;
+        let size = size.into();
+        if Some(&size) != self.text_size_override.as_ref() {
+            self.text_size_override = Some(size);
+            self.layout = None;
+        }
     }
 
     /// Set the width at which to wrap words.
@@ -127,9 +139,10 @@ impl TextLayout {
     /// You may pass `f64::INFINITY` to disable word wrapping
     /// (the default behaviour).
     pub fn set_wrap_width(&mut self, width: f64) {
-        self.wrap_width = width;
-        if let Some(layout) = self.layout.as_mut() {
-            let _ = layout.update_width(width);
+        // 1e-4 is an arbitrary small-enough value that we don't care to rewrap
+        if (width - self.wrap_width).abs() > 1e-4 {
+            self.wrap_width = width;
+            self.layout = None;
         }
     }
 
@@ -137,8 +150,10 @@ impl TextLayout {
     ///
     /// [`TextAlignment`]: enum.TextAlignment.html
     pub fn set_text_alignment(&mut self, alignment: TextAlignment) {
-        self.alignment = alignment;
-        self.layout = None;
+        if self.alignment != alignment {
+            self.alignment = alignment;
+            self.layout = None;
+        }
     }
 
     /// The size of the laid-out text.

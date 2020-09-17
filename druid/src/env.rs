@@ -87,7 +87,7 @@ struct EnvImpl {
 ///
 /// [`ValueType`]: trait.ValueType.html
 /// [`Env`]: struct.Env.html
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Key<T> {
     key: &'static str,
     value_type: PhantomData<*const T>,
@@ -97,7 +97,7 @@ pub struct Key<T> {
 // could be defined per-app
 // Also consider Box<Any> (though this would also impact debug).
 /// A dynamic type representing all values that can be stored in an environment.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 #[allow(missing_docs)]
 // ANCHOR: value_type
 pub enum Value {
@@ -120,7 +120,7 @@ pub enum Value {
 ///
 /// [`Key<T>`]: struct.Key.html
 /// [`Env`]: struct.Env.html
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum KeyOrValue<T> {
     /// A concrete [`Value`] of type `T`.
     ///
