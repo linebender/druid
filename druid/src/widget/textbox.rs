@@ -362,6 +362,7 @@ impl Widget<String> for TextBox {
             self.reset_cursor_blink(ctx);
             if data.is_empty() {
                 self.text.set_text(self.placeholder.as_str());
+                self.selection = Selection::caret(0);
             } else {
                 self.text.set_text(data.as_str());
             }
