@@ -277,6 +277,7 @@ impl<T: Data> Label<T> {
     /// [`LineBreaking`]: enum.LineBreaking.html
     pub fn set_line_break_mode(&mut self, mode: LineBreaking) {
         self.line_break_mode = mode;
+        self.needs_rebuild = true;
     }
 
     /// Set the [`TextAlignment`] for this layout.
@@ -297,7 +298,7 @@ impl<T: Data> Label<T> {
     }
 
     fn rebuild_if_needed(&mut self, factory: &mut PietText, data: &T, env: &Env) {
-        if self.needs_rebuild {
+        if self.needs_rebuild || self.layout.needs_rebuild() {
             self.text.resolve(data, env);
             self.layout.set_text(self.text.display_text());
             self.layout.rebuild_if_needed(factory, env);
@@ -367,8 +368,8 @@ impl<T: Data> Widget<T> for Label<T> {
             _ => f64::INFINITY,
         };
 
-        self.rebuild_if_needed(&mut ctx.text(), data, env);
         self.layout.set_wrap_width(width);
+        self.rebuild_if_needed(&mut ctx.text(), data, env);
 
         let mut text_size = self.layout.size();
         text_size.width += 2. * LABEL_X_PADDING;
