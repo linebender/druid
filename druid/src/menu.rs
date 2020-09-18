@@ -347,7 +347,7 @@ impl<T: Data> MenuDesc<T> {
                     item.platform_id = MenuItemId::next();
                     menu.add_item(
                         item.platform_id.as_u32(),
-                        item.title.localized_str(),
+                        &item.title.localized_str(),
                         item.hotkey.as_ref(),
                         item.enabled,
                         item.selected,

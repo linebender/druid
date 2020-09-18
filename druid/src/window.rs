@@ -423,7 +423,7 @@ impl<T: Data> Window<T> {
 
     pub(crate) fn update_title(&mut self, data: &T, env: &Env) {
         if self.title.resolve(data, env) {
-            self.handle.set_title(self.title.display_text());
+            self.handle.set_title(&self.title.display_text());
         }
     }
 
