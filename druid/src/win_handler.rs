@@ -700,7 +700,7 @@ impl<T: Data> AppState<T> {
         let env = self.env();
 
         pending.title.resolve(&data, &env);
-        builder.set_title(pending.title.display_text());
+        builder.set_title(pending.title.display_text().to_string());
 
         let platform_menu = pending
             .menu

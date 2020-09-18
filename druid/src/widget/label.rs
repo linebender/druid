@@ -17,8 +17,8 @@
 use crate::piet::{Color, PietText};
 use crate::widget::prelude::*;
 use crate::{
-    BoxConstraints, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, Size, TextAlignment,
-    TextLayout,
+    ArcStr, BoxConstraints, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, Size,
+    TextAlignment, TextLayout,
 };
 
 // added padding between the edges of the widget and the text.
@@ -26,32 +26,45 @@ const LABEL_X_PADDING: f64 = 2.0;
 
 /// The text for the label.
 ///
-/// This can be one of three things; either a `String`, a [`LocalizedString`],
+/// This can be one of three things; either a [`ArcStr`], a [`LocalizedString`],
 /// or a closure with the signature, `Fn(&T, &Env) -> String`, where `T` is
-/// the `Data` at this point in the tree.
+/// the [`Data`] at this point in the tree.
 ///
+/// [`ArcStr`]: ../type.ArcStr.html
 /// [`LocalizedString`]: ../struct.LocalizedString.html
+/// [`Data`]: ../trait.Data.html
 pub enum LabelText<T> {
     /// Localized string that will be resolved through `Env`.
     Localized(LocalizedString<T>),
-    /// Specific text
-    Specific(String),
+    /// Static text.
+    Static(Static),
     /// The provided closure is called on update, and its return
     /// value is used as the text for the label.
     Dynamic(Dynamic<T>),
 }
 
 /// Text that is computed dynamically.
-#[doc(hidden)]
 pub struct Dynamic<T> {
     f: Box<dyn Fn(&T, &Env) -> String>,
-    resolved: String,
+    resolved: ArcStr,
+}
+
+/// Static text.
+pub struct Static {
+    /// The text.
+    string: ArcStr,
+    /// Whether or not the `resolved` method has been called yet.
+    ///
+    /// We want to return `true` from that method when it is first called,
+    /// so that callers will know to retrieve the text. This matches
+    /// the behaviour of the other variants.
+    resolved: bool,
 }
 
 /// A label that draws some text.
 ///
 /// A label is the easiest way to display text in Druid. A label is instantiated
-/// with some [`LabelText`] type, such as a `String` or a [`LocalizedString`],
+/// with some [`LabelText`] type, such as an [`ArcStr`] or a [`LocalizedString`],
 /// and also has methods for setting the default font, font-size, text color,
 /// and other attributes.
 ///
@@ -80,7 +93,7 @@ pub struct Dynamic<T> {
 /// # let _ = SizedBox::<()>::new(important_label);
 /// ```
 ///
-///
+/// [`ArcStr`]: ../type.ArcStr.html
 /// [`LabelText`]: struct.LabelText.html
 /// [`LocalizedString`]: ../struct.LocalizedString.html
 /// [`draw_at`]: #method.draw_at
@@ -218,11 +231,6 @@ impl<T: Data> Label<T> {
         self.needs_rebuild = true;
     }
 
-    /// Returns this label's current text.
-    pub fn text(&self) -> &str {
-        self.text.display_text()
-    }
-
     /// Set the text color.
     ///
     /// The argument can be either a `Color` or a [`Key<Color>`].
@@ -307,11 +315,26 @@ impl<T: Data> Label<T> {
     }
 }
 
+impl Static {
+    fn new(s: ArcStr) -> Self {
+        Static {
+            string: s,
+            resolved: false,
+        }
+    }
+
+    fn resolve(&mut self) -> bool {
+        let is_first_call = self.resolved;
+        self.resolved = true;
+        is_first_call
+    }
+}
+
 impl<T> Dynamic<T> {
     fn resolve(&mut self, data: &T, env: &Env) -> bool {
         let new = (self.f)(data, env);
-        let changed = new != self.resolved;
-        self.resolved = new;
+        let changed = new.as_str() != self.resolved.as_ref();
+        self.resolved = new.into();
         changed
     }
 }
@@ -320,18 +343,18 @@ impl<T: Data> LabelText<T> {
     /// Call callback with the text that should be displayed.
     pub fn with_display_text<V>(&self, mut cb: impl FnMut(&str) -> V) -> V {
         match self {
-            LabelText::Specific(s) => cb(s.as_str()),
-            LabelText::Localized(s) => cb(s.localized_str()),
-            LabelText::Dynamic(s) => cb(s.resolved.as_str()),
+            LabelText::Static(s) => cb(&s.string),
+            LabelText::Localized(s) => cb(&s.localized_str()),
+            LabelText::Dynamic(s) => cb(&s.resolved),
         }
     }
 
     /// Return the current resolved text.
-    pub fn display_text(&self) -> &str {
+    pub fn display_text(&self) -> ArcStr {
         match self {
-            LabelText::Specific(s) => s.as_str(),
+            LabelText::Static(s) => s.string.clone(),
             LabelText::Localized(s) => s.localized_str(),
-            LabelText::Dynamic(s) => s.resolved.as_str(),
+            LabelText::Dynamic(s) => s.resolved.clone(),
         }
     }
 
@@ -341,7 +364,7 @@ impl<T: Data> LabelText<T> {
     /// Returns `true` if the string has changed.
     pub fn resolve(&mut self, data: &T, env: &Env) -> bool {
         match self {
-            LabelText::Specific(_) => false,
+            LabelText::Static(s) => s.resolve(),
             LabelText::Localized(s) => s.resolve(data, env),
             LabelText::Dynamic(s) => s.resolve(data, env),
         }
@@ -389,13 +412,19 @@ impl<T: Data> Widget<T> for Label<T> {
 
 impl<T> From<String> for LabelText<T> {
     fn from(src: String) -> LabelText<T> {
-        LabelText::Specific(src)
+        LabelText::Static(Static::new(src.into()))
     }
 }
 
 impl<T> From<&str> for LabelText<T> {
     fn from(src: &str) -> LabelText<T> {
-        LabelText::Specific(src.to_string())
+        LabelText::Static(Static::new(src.into()))
+    }
+}
+
+impl<T> From<ArcStr> for LabelText<T> {
+    fn from(string: ArcStr) -> LabelText<T> {
+        LabelText::Static(Static::new(string))
     }
 }
 
@@ -410,7 +439,7 @@ impl<T, F: Fn(&T, &Env) -> String + 'static> From<F> for LabelText<T> {
         let f = Box::new(src);
         LabelText::Dynamic(Dynamic {
             f,
-            resolved: String::default(),
+            resolved: ArcStr::from(""),
         })
     }
 }
