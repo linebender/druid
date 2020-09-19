@@ -15,6 +15,7 @@
 //! Common widgets.
 
 mod align;
+mod composite;
 mod button;
 mod checkbox;
 mod click;
@@ -53,6 +54,7 @@ mod widget_ext;
 
 pub use self::image::{Image, ImageData};
 pub use align::Align;
+pub use composite::{CompositeBuild, CompositeWidget};
 pub use button::Button;
 pub use checkbox::Checkbox;
 pub use click::Click;
