@@ -14,8 +14,8 @@ rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
 
 [features]
-x11 = ["x11rb", "nix", "cairo-sys-rs", "cairo-rs"]
-gtk = ["cairo-rs", "gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs"]
+x11 = ["x11rb", "nix", "cairo-sys-rs"]
+gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs"]
 default = ["gtk"]
 
 [dependencies]
@@ -32,9 +32,6 @@ instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 anyhow = "1.0.32"
 keyboard-types = { version = "0.5.0", default_features = false }
 
-# TODO(x11/dependencies): only use feature "xcb" if using X11
-cairo-rs = { version = "0.9.1", default_features = false, features = ["xcb"], optional = true }
-
 [target.'cfg(target_os="windows")'.dependencies]
 wio = "0.2.2"
 
@@ -50,8 +47,11 @@ objc = "0.2.7"
 core-graphics = "0.22.0"
 foreign-types = "0.3.2"
 bitflags = "1.2.1"
+cairo-rs = { version = "0.9.1", default_features = false, optional = true }
 
 [target.'cfg(target_os="linux")'.dependencies]
+# TODO(x11/dependencies): only use feature "xcb" if using X11
+cairo-rs = { version = "0.9.1", default_features = false, features = ["xcb"] }
 cairo-sys-rs = { version = "0.10.0", default_features = false, optional = true }
 gio = { version = "0.9.1", optional = true }
 gdk = { version = "0.13.2", optional = true }
