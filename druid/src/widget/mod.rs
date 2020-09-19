@@ -64,7 +64,7 @@ pub use either::Either;
 pub use env_scope::EnvScope;
 pub use flex::{CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
 pub use identity_wrapper::IdentityWrapper;
-pub use label::{Label, LabelText, LineBreaking};
+pub use label::{Label, LabelText, LineBreaking, RawLabel};
 pub use lens_wrap::LensWrap;
 pub use list::{List, ListIter};
 pub use padding::Padding;
