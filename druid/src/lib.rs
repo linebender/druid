@@ -178,9 +178,9 @@ pub use piet::{
 pub use shell::keyboard_types;
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Code, Cursor, Error as PlatformError,
-    FileDialogOptions, FileInfo, FileSpec, FormatId, HotKey, KbKey, KeyEvent, Location, Modifiers,
-    Monitor, MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen, SysMods,
-    TimerToken, WindowHandle, WindowState,
+    FileDialogOptions, FileInfo, FileSpec, FormatId, HotKey, ImageBuf, KbKey, KeyEvent, Location,
+    Modifiers, Monitor, MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen,
+    SysMods, TimerToken, WindowHandle, WindowState,
 };
 
 pub use crate::core::WidgetPod;
