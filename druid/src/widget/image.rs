@@ -449,8 +449,14 @@ mod tests {
 
     #[test]
     fn width_bound_paint() {
-        use crate::{tests::harness::Harness, widget::Scroll, WidgetId};
-        let _id_1 = WidgetId::next();
+        use crate::{
+            tests::harness::Harness,
+            widget::{Container, Scroll},
+            WidgetExt, WidgetId,
+        };
+        use float_cmp::approx_eq;
+
+        let id_1 = WidgetId::next();
         let image_data = ImageData {
             pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
             x_pixels: 2,
@@ -458,49 +464,26 @@ mod tests {
             format: ImageFormat::Rgb,
         };
 
-        let image_widget =
-            Image::new(image_data).interpolation_mode(InterpolationMode::NearestNeighbor);
+        let image_widget = Scroll::new(Container::new(Image::new(image_data)).with_id(id_1));
 
-        Harness::create_with_render(
-            true,
-            Scroll::new(image_widget).vertical(),
-            Size::new(400., 400.),
-            |harness| {
-                harness.send_initial_events();
-                harness.just_layout();
-                harness.paint();
-            },
-            |target| {
-                // the width should be calculated to be 400.
-                let width = 400;
-                let raw_pixels = target.into_raw();
-                assert_eq!(raw_pixels.len(), 400 * width * 4);
-
-                // Being a height bound widget every row will have no padding at the start and end._id_1
-
-                // the last white-black line starts at (199,0), so 200 white and then 200 black.
-                let expecting: Vec<u8> = [
-                    vec![255, 255, 255, 255].repeat(200),
-                    vec![0, 0, 0, 255].repeat(200),
-                ]
-                .concat();
-                assert_eq!(raw_pixels[199 * width * 4..200 * width * 4], expecting[..]);
-
-                // The first row of black-white line starts at (200,0) so 200 black and then 200 white.
-                let expecting: Vec<u8> = [
-                    vec![0, 0, 0, 255].repeat(200),
-                    vec![255, 255, 255, 255].repeat(200),
-                ]
-                .concat();
-                assert_eq!(raw_pixels[200 * width * 4..201 * width * 4], expecting[..]);
-            },
-        );
+        Harness::create_simple(true, image_widget, |harness| {
+            harness.send_initial_events();
+            harness.just_layout();
+            let state = harness.get_state(id_1);
+            assert!(approx_eq!(f64, state.layout_rect().x1, 400.0));
+        })
     }
 
     #[test]
     fn height_bound_paint() {
-        use crate::{tests::harness::Harness, widget::Scroll, WidgetId};
-        let _id_1 = WidgetId::next();
+        use crate::{
+            tests::harness::Harness,
+            widget::{Container, Scroll},
+            WidgetExt, WidgetId,
+        };
+        use float_cmp::approx_eq;
+
+        let id_1 = WidgetId::next();
         let image_data = ImageData {
             pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
             x_pixels: 2,
@@ -509,41 +492,13 @@ mod tests {
         };
 
         let image_widget =
-            Image::new(image_data).interpolation_mode(InterpolationMode::NearestNeighbor);
+            Scroll::new(Container::new(Image::new(image_data)).with_id(id_1)).horizontal();
 
-        Harness::create_with_render(
-            true,
-            Scroll::new(image_widget).horizontal(),
-            Size::new(400., 400.),
-            |harness| {
-                harness.send_initial_events();
-                harness.just_layout();
-                harness.paint();
-            },
-            |target| {
-                // the width should be calculated to be 400.
-                let width = 400;
-                let raw_pixels = target.into_raw();
-                assert_eq!(raw_pixels.len(), 400 * width * 4);
-
-                // Being a height bound widget every row will have no padding at the start and end._id_1
-
-                // the last white-black line starts at (199,0), so 200 white and then 200 black.
-                let expecting: Vec<u8> = [
-                    vec![255, 255, 255, 255].repeat(200),
-                    vec![0, 0, 0, 255].repeat(200),
-                ]
-                .concat();
-                assert_eq!(raw_pixels[199 * width * 4..200 * width * 4], expecting[..]);
-
-                // The first row of black-white line starts at (200,0) so 200 black and then 200 white.
-                let expecting: Vec<u8> = [
-                    vec![0, 0, 0, 255].repeat(200),
-                    vec![255, 255, 255, 255].repeat(200),
-                ]
-                .concat();
-                assert_eq!(raw_pixels[200 * width * 4..201 * width * 4], expecting[..]);
-            },
-        );
+        Harness::create_simple(true, image_widget, |harness| {
+            harness.send_initial_events();
+            harness.just_layout();
+            let state = harness.get_state(id_1);
+            assert!(approx_eq!(f64, state.layout_rect().x1, 400.0));
+        })
     }
 }
