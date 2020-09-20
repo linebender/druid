@@ -58,7 +58,7 @@ pub use button::Button;
 pub use checkbox::Checkbox;
 pub use click::Click;
 pub use common::FillStrat;
-pub use composite::{CompositeBuild, CompositeMeta, CompositeWidget};
+pub use composite::CompositeMeta;
 pub use container::Container;
 pub use controller::{Controller, ControllerHost};
 pub use either::Either;
