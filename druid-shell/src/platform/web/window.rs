@@ -39,7 +39,7 @@ use crate::error::Error as ShellError;
 use crate::scale::{Scale, ScaledArea};
 
 use crate::keyboard::{KbKey, KeyState, Modifiers};
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::window;
 use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel};
@@ -98,6 +98,10 @@ struct WindowState {
     context: web_sys::CanvasRenderingContext2d,
     invalid: RefCell<Region>,
 }
+
+// TODO: support custom cursors
+#[derive(Clone)]
+pub struct CustomCursor;
 
 impl WindowState {
     fn render(&self) {
@@ -555,6 +559,11 @@ impl WindowHandle {
         }
     }
 
+    pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
+        log::warn!("Custom cursors are not yet supported in the web backend");
+        None
+    }
+
     pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
         log::warn!("open_file_sync is currently unimplemented for web.");
         self.file_dialog(FileDialogType::Open, options)
@@ -704,6 +713,8 @@ fn set_cursor(canvas: &web_sys::HtmlCanvasElement, cursor: &Cursor) {
                 Cursor::NotAllowed => "not-allowed",
                 Cursor::ResizeLeftRight => "ew-resize",
                 Cursor::ResizeUpDown => "ns-resize",
+                // TODO: support custom cursors
+                Cursor::Custom(_) => "default",
             },
         )
         .unwrap_or_else(|_| log::warn!("Failed to set cursor"));

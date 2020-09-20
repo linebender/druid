@@ -32,6 +32,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Menu` commands can now choose a custom target. ([#1185] by [@finnerale])
 - `Movement::StartOfDocument`, `Movement::EndOfDocument`. ([#1092] by [@sysint64])
 - `TextLayout` type simplifies drawing text ([#1182] by [@cmyr])
+- Added support for custom mouse cursors ([#1183] by [@jneem])
 - Implementation of `Data` trait for `i128` and `u128` primitive data types. ([#1214] by [@koutoftimer])
 - `LineBreaking` enum allows configuration of label line-breaking ([#1195] by [@cmyr])
 - `TextAlignment` support in `TextLayout` and `Label` ([#1210] by [@cmyr])

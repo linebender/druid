@@ -24,7 +24,7 @@ use crate::error::Error;
 use crate::keyboard::KeyEvent;
 use crate::kurbo::{Point, Rect, Size};
 use crate::menu::Menu;
-use crate::mouse::{Cursor, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc, MouseEvent};
 use crate::platform::window as platform;
 use crate::region::Region;
 use crate::scale::Scale;
@@ -284,6 +284,10 @@ impl WindowHandle {
     /// Set the cursor icon.
     pub fn set_cursor(&mut self, cursor: &Cursor) {
         self.0.set_cursor(cursor)
+    }
+
+    pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+        self.0.make_cursor(desc)
     }
 
     /// Prompt the user to chose a file to open.

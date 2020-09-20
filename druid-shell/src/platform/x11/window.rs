@@ -41,7 +41,7 @@ use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KeyEvent, KeyState, Modifiers};
 use crate::kurbo::{Point, Rect, Size, Vec2};
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::region::Region;
 use crate::scale::Scale;
@@ -514,6 +514,9 @@ struct PresentData {
     /// define the units, but it appears to be in microseconds.
     last_ust: Option<u64>,
 }
+
+#[derive(Clone)]
+pub struct CustomCursor(xproto::Cursor);
 
 impl Window {
     fn connect(&self, handle: WindowHandle) -> Result<(), Error> {
@@ -1462,6 +1465,11 @@ impl WindowHandle {
 
     pub fn set_cursor(&mut self, _cursor: &Cursor) {
         // TODO(x11/cursors): implement WindowHandle::set_cursor
+    }
+
+    pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
+        log::warn!("Custom cursors are not yet supported in the X11 backend");
+        None
     }
 
     pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {

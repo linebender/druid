@@ -25,6 +25,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use log::{debug, error, warn};
+use scopeguard::defer;
 use winapi::ctypes::{c_int, c_void};
 use winapi::shared::dxgi::*;
 use winapi::shared::dxgi1_2::*;
@@ -36,6 +37,7 @@ use winapi::shared::winerror::*;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellscalingapi::MDT_EFFECTIVE_DPI;
 use winapi::um::unknwnbase::*;
+use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
 
@@ -60,7 +62,7 @@ use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyState};
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window;
@@ -333,6 +335,19 @@ struct WndState {
 /// State for DXGI swapchains.
 struct DxgiState {
     swap_chain: *mut IDXGISwapChain1,
+}
+
+#[derive(Clone)]
+pub struct CustomCursor(Arc<HCursor>);
+
+struct HCursor(HCURSOR);
+
+impl Drop for HCursor {
+    fn drop(&mut self) {
+        unsafe {
+            DestroyIcon(self.0);
+        }
+    }
 }
 
 /// Message indicating there are idle tasks to run.
@@ -1476,8 +1491,8 @@ unsafe fn create_window(
 }
 
 impl Cursor {
-    fn get_lpcwstr(&self) -> LPCWSTR {
-        match self {
+    fn get_hcursor(&self) -> HCURSOR {
+        let name = match self {
             Cursor::Arrow => IDC_ARROW,
             Cursor::IBeam => IDC_IBEAM,
             Cursor::Crosshair => IDC_CROSS,
@@ -1485,7 +1500,11 @@ impl Cursor {
             Cursor::NotAllowed => IDC_NO,
             Cursor::ResizeLeftRight => IDC_SIZEWE,
             Cursor::ResizeUpDown => IDC_SIZENS,
-        }
+            Cursor::Custom(c) => {
+                return (c.0).0;
+            }
+        };
+        unsafe { LoadCursorW(0 as HINSTANCE, name) }
     }
 }
 
@@ -1743,8 +1762,76 @@ impl WindowHandle {
     /// Set the cursor icon.
     pub fn set_cursor(&mut self, cursor: &Cursor) {
         unsafe {
-            let cursor = LoadCursorW(0 as HINSTANCE, cursor.get_lpcwstr());
-            SetCursor(cursor);
+            SetCursor(cursor.get_hcursor());
+        }
+    }
+
+    pub fn make_cursor(&self, cursor_desc: &CursorDesc) -> Option<Cursor> {
+        if let Some(hwnd) = self.get_hwnd() {
+            unsafe {
+                let hdc = GetDC(hwnd);
+                if hdc.is_null() {
+                    return None;
+                }
+                defer!(ReleaseDC(null_mut(), hdc););
+
+                let mask_dc = CreateCompatibleDC(hdc);
+                if mask_dc.is_null() {
+                    return None;
+                }
+                defer!(DeleteDC(mask_dc););
+
+                let bmp_dc = CreateCompatibleDC(hdc);
+                if bmp_dc.is_null() {
+                    return None;
+                }
+                defer!(DeleteDC(bmp_dc););
+
+                let width = cursor_desc.image.width();
+                let height = cursor_desc.image.height();
+                let mask = CreateCompatibleBitmap(hdc, width as c_int, height as c_int);
+                if mask.is_null() {
+                    return None;
+                }
+                defer!(DeleteObject(mask as _););
+
+                let bmp = CreateCompatibleBitmap(hdc, width as c_int, height as c_int);
+                if bmp.is_null() {
+                    return None;
+                }
+                defer!(DeleteObject(bmp as _););
+
+                let old_mask = SelectObject(mask_dc, mask as *mut c_void);
+                let old_bmp = SelectObject(bmp_dc, bmp as *mut c_void);
+
+                for (row_idx, row) in cursor_desc.image.pixel_colors().enumerate() {
+                    for (col_idx, p) in row.enumerate() {
+                        let (r, g, b, a) = p.as_rgba8();
+                        // TODO: what's the story on partial transparency? I couldn't find documentation.
+                        let mask_px = RGB(255 - a, 255 - a, 255 - a);
+                        let bmp_px = RGB(r, g, b);
+                        SetPixel(mask_dc, col_idx as i32, row_idx as i32, mask_px);
+                        SetPixel(bmp_dc, col_idx as i32, row_idx as i32, bmp_px);
+                    }
+                }
+
+                SelectObject(mask_dc, old_mask);
+                SelectObject(bmp_dc, old_bmp);
+
+                let mut icon_info = ICONINFO {
+                    // 0 means it's a cursor, not an icon.
+                    fIcon: 0,
+                    xHotspot: cursor_desc.hot.x as DWORD,
+                    yHotspot: cursor_desc.hot.y as DWORD,
+                    hbmMask: mask,
+                    hbmColor: bmp,
+                };
+                let icon = CreateIconIndirect(&mut icon_info);
+
+                Some(Cursor::Custom(CustomCursor(Arc::new(HCursor(icon)))))
+            }
+        } else {
+            None
         }
     }
 
