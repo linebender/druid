@@ -14,7 +14,7 @@
 
 use wasm_bindgen::prelude::*;
 
-// This line includes an automatically generated (in composite) examples module.
+// This line includes an automatically generated (in build.rs) examples module.
 // This particular mechanism is chosen to avoid any kinds of modifications to committed files at
 // build time, keeping the source tree clean from build artifacts.
 include!("examples.in");
@@ -53,7 +53,7 @@ macro_rules! impl_example {
 }
 
 // Below is a list of examples that can be built for the web.
-// Please add the examples that cannot be built to the EXCEPTIONS list in composite.
+// Please add the examples that cannot be built to the EXCEPTIONS list in build.rs.
 impl_example!(anim);
 impl_example!(calc);
 impl_example!(custom_widget);

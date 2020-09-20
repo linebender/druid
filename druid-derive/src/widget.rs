@@ -80,7 +80,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         ));
     }
 
-    let meta_field = fields.iter().filter(|f| f.attrs.meta).next().unwrap();
+    let meta_field = fields.iter().find(|f| f.attrs.meta).unwrap();
     let meta_ident = if let FieldIdent::Named(ident) = &meta_field.ident {
         Ident::new(ident, Span::call_site())
     } else {
