@@ -98,6 +98,47 @@ pub fn derive_lens(input: TokenStream) -> TokenStream {
         .into()
 }
 
+/// Generates implementations of the `Widget` trait.
+///
+/// An associated constant is defined on the struct for each field,
+/// having the same name as the field.
+///
+/// This macro supports a `widget` field attribute with the following arguments:
+///
+/// - `#[widget(meta)]` required attribute to mark field as meta information.
+///
+/// # Example
+///
+/// ```rust
+/// use druid_derive::Widget;
+/// use druid::widget::{
+///     Align, CompositeMeta, CrossAxisAlignment, Flex, Label, TextBox, Widget, WidgetExt,
+/// };
+///
+/// #[derive(Widget)]
+/// pub struct TextBoxWithLabel {
+///     #[widget(meta)]
+///     meta: CompositeMeta<String>,
+///     label: String,
+/// }
+///
+/// impl TextBoxWithLabel {
+///     fn new(label: impl Into<String>) -> Self {
+///         TextBoxWithLabel {
+///             meta: CompositeMeta::default(),
+///             label: label.into(),
+///         }
+///     }
+///
+///     fn build(&self) -> impl Widget<String> + 'static {
+///         Flex::column()
+///             .cross_axis_alignment(CrossAxisAlignment::Start)
+///             .with_child(Label::new(self.label.clone()))
+///             .with_spacer(4.)
+///             .with_child(TextBox::new().with_placeholder(String::from("Test")))
+///     }
+/// }
+/// ```
 #[proc_macro_derive(Widget, attributes(widget))]
 pub fn derive_widget(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
