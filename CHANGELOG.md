@@ -68,7 +68,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
 - Switch widget: Toggle animation being window refresh rate dependent ([#1145] by [@ForLoveOfCats])
 - Multi-click on Windows, partial fix for #859 ([#1157] by [@raphlinus])
-- `widget::Imge` now computes the layout correctly when unbound in one direction. ([#1189] by [@JAicewizard])
+- `widget::Image` now computes the layout correctly when unbound in one direction. ([#1189] by [@JAicewizard])
 
 ### Visual
 

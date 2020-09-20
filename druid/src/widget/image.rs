@@ -478,7 +478,7 @@ mod tests {
 
                 // Being a height bound widget every row will have no padding at the start and end._id_1
 
-                // The image starts at (0,0), so 200 white and then 200 black.
+                // the last white-black line starts at (199,0), so 200 white and then 200 black.
                 let expecting: Vec<u8> = [
                     vec![255, 255, 255, 255].repeat(200),
                     vec![0, 0, 0, 255].repeat(200),
@@ -486,7 +486,7 @@ mod tests {
                 .concat();
                 assert_eq!(raw_pixels[199 * width * 4..200 * width * 4], expecting[..]);
 
-                // The final row of 400 pixels is 200 white and then 200 black.
+                // The first row of black-white line starts at (200,0) so 200 black and then 200 white.
                 let expecting: Vec<u8> = [
                     vec![0, 0, 0, 255].repeat(200),
                     vec![255, 255, 255, 255].repeat(200),
@@ -528,7 +528,7 @@ mod tests {
 
                 // Being a height bound widget every row will have no padding at the start and end._id_1
 
-                // The image starts at (0,0), so 200 black and then 200 white.
+                // the last white-black line starts at (199,0), so 200 white and then 200 black.
                 let expecting: Vec<u8> = [
                     vec![255, 255, 255, 255].repeat(200),
                     vec![0, 0, 0, 255].repeat(200),
@@ -536,7 +536,7 @@ mod tests {
                 .concat();
                 assert_eq!(raw_pixels[199 * width * 4..200 * width * 4], expecting[..]);
 
-                // The final row of 400 pixels is 200 white and then 200 black.
+                // The first row of black-white line starts at (200,0) so 200 black and then 200 white.
                 let expecting: Vec<u8> = [
                     vec![0, 0, 0, 255].repeat(200),
                     vec![255, 255, 255, 255].repeat(200),
