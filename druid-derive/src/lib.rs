@@ -21,6 +21,7 @@ extern crate proc_macro;
 mod attr;
 mod data;
 mod lens;
+mod utils;
 mod widget;
 
 use proc_macro::TokenStream;

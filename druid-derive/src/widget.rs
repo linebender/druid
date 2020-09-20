@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::attr::{FieldIdent, FieldKind, Fields, WidgetAttrs};
+use crate::utils::*;
 use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::{spanned::Spanned, Data, GenericArgument, PathArguments, Type};
@@ -118,33 +119,33 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
 
             impl Widget<#data_ty> for #ty {
                 fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut #data_ty, env: &Env) {
-                    if let Some(child) = &mut self.#meta_ident.child {
-                        child.event(ctx, event, data, env);
+                    if let Some(widget) = &mut self.#meta_ident.widget {
+                        widget.event(ctx, event, data, env);
                     }
                 }
 
                 fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &#data_ty, env: &Env) {
                     if let LifeCycle::WidgetAdded = event {
-                        self.#meta_ident.child.replace(WidgetPod::new(self.build()).boxed());
+                        self.#meta_ident.widget.replace(WidgetPod::new(self.build()).boxed());
                     }
 
-                    if let Some(child) = &mut self.#meta_ident.child {
-                        child.lifecycle(ctx, event, data, env);
+                    if let Some(widget) = &mut self.#meta_ident.widget {
+                        widget.lifecycle(ctx, event, data, env);
                     }
                 }
 
                 fn update(&mut self, ctx: &mut UpdateCtx, _: &#data_ty, data: &#data_ty, env: &Env) {
-                    if let Some(child) = &mut self.#meta_ident.child {
-                        child.update(ctx, data, env);
+                    if let Some(widget) = &mut self.#meta_ident.widget {
+                        widget.update(ctx, data, env);
                     }
                 }
 
                 fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &#data_ty, env: &Env) -> Size {
-                    match &mut self.#meta_ident.child {
-                        Some(child) => {
-                            let size = child.layout(ctx, &bc, data, env);
+                    match &mut self.#meta_ident.widget {
+                        Some(widget) => {
+                            let size = widget.layout(ctx, &bc, data, env);
                             let rect = Rect::from_origin_size(Point::ORIGIN, size);
-                            child.set_layout_rect(ctx, data, env, rect);
+                            widget.set_layout_rect(ctx, data, env, rect);
                             size
                         }
                         None => Size::ZERO,
@@ -152,8 +153,8 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
                 }
 
                 fn paint(&mut self, ctx: &mut PaintCtx, data: &#data_ty, env: &Env) {
-                    if let Some(child) = &mut self.#meta_ident.child {
-                        child.paint(ctx, data, env);
+                    if let Some(widget) = &mut self.#meta_ident.widget {
+                        widget.paint(ctx, data, env);
                     }
                 }
             }
@@ -163,54 +164,4 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     };
 
     Ok(expanded)
-}
-
-fn char_has_case(c: char) -> bool {
-    c.is_lowercase() || c.is_uppercase()
-}
-
-fn is_camel_case(name: &str) -> bool {
-    let name = name.trim_matches('_');
-    if name.is_empty() {
-        return true;
-    }
-
-    // start with a non-lowercase letter rather than non-uppercase
-    // ones (some scripts don't have a concept of upper/lowercase)
-    !name.chars().next().unwrap().is_lowercase()
-        && !name.contains("__")
-        && !name.chars().collect::<Vec<_>>().windows(2).any(|pair| {
-            // contains a capitalisable character followed by, or preceded by, an underscore
-            char_has_case(pair[0]) && pair[1] == '_' || char_has_case(pair[1]) && pair[0] == '_'
-        })
-}
-
-fn to_snake_case(mut str: &str) -> String {
-    let mut words = vec![];
-    // Preserve leading underscores
-    str = str.trim_start_matches(|c: char| {
-        if c == '_' {
-            words.push(String::new());
-            true
-        } else {
-            false
-        }
-    });
-    for s in str.split('_') {
-        let mut last_upper = false;
-        let mut buf = String::new();
-        if s.is_empty() {
-            continue;
-        }
-        for ch in s.chars() {
-            if !buf.is_empty() && buf != "'" && ch.is_uppercase() && !last_upper {
-                words.push(buf);
-                buf = String::new();
-            }
-            last_upper = ch.is_uppercase();
-            buf.extend(ch.to_lowercase());
-        }
-        words.push(buf);
-    }
-    words.join("_")
 }
