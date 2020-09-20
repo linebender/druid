@@ -24,7 +24,9 @@ use quote::{quote, quote_spanned};
 const BASE_DRUID_DEPRECATED_ATTR_PATH: &str = "druid";
 const BASE_DATA_ATTR_PATH: &str = "data";
 const BASE_LENS_ATTR_PATH: &str = "lens";
+const BASE_WIDGET_ATTR_PATH: &str = "widget";
 const IGNORE_ATTR_PATH: &str = "ignore";
+const META_ATTR_PATH: &str = "meta";
 const DATA_SAME_FN_ATTR_PATH: &str = "same_fn";
 const LENS_NAME_OVERRIDE_ATTR_PATH: &str = "name";
 
@@ -81,6 +83,12 @@ pub struct LensAttrs {
     pub lens_name_override: Option<Ident>,
 }
 
+#[derive(Debug)]
+pub struct WidgetAttrs {
+    /// `true` if this field is a meta information.
+    pub meta: bool,
+}
+
 impl Fields<DataAttrs> {
     pub fn parse_ast(fields: &syn::Fields) -> Result<Self, Error> {
         let kind = match fields {
@@ -109,6 +117,23 @@ impl Fields<LensAttrs> {
             .iter()
             .enumerate()
             .map(|(i, field)| Field::<LensAttrs>::parse_ast(field, i))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Fields { kind, fields })
+    }
+}
+
+impl Fields<WidgetAttrs> {
+    pub fn parse_ast(fields: &syn::Fields) -> Result<Self, Error> {
+        let kind = match fields {
+            syn::Fields::Named(_) => FieldKind::Named,
+            syn::Fields::Unnamed(_) | syn::Fields::Unit => FieldKind::Unnamed,
+        };
+
+        let fields = fields
+            .iter()
+            .enumerate()
+            .map(|(i, field)| Field::<WidgetAttrs>::parse_ast(field, i))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Fields { kind, fields })
@@ -264,6 +289,57 @@ impl Field<LensAttrs> {
             attrs: LensAttrs {
                 ignore,
                 lens_name_override,
+            },
+        })
+    }
+}
+
+impl Field<WidgetAttrs> {
+    pub fn parse_ast(field: &syn::Field, index: usize) -> Result<Self, Error> {
+        let ident = match field.ident.as_ref() {
+            Some(ident) => FieldIdent::Named(ident.to_string().trim_start_matches("r#").to_owned()),
+            None => FieldIdent::Unnamed(index),
+        };
+
+        let ty = field.ty.clone();
+
+        let mut widget_attr_meta = false;
+
+        for attr in field.attrs.iter() {
+            if attr.path.is_ident(BASE_WIDGET_ATTR_PATH) {
+                match attr.parse_meta()? {
+                    Meta::List(meta) => {
+                        for nested in meta.nested.iter() {
+                            match nested {
+                                NestedMeta::Meta(Meta::Path(path))
+                                    if path.is_ident(META_ATTR_PATH) =>
+                                {
+                                    if widget_attr_meta {
+                                        return Err(Error::new(
+                                            nested.span(),
+                                            "Duplicate attribute",
+                                        ));
+                                    }
+                                    widget_attr_meta = true;
+                                }
+                                other => return Err(Error::new(other.span(), "Unknown attribute")),
+                            }
+                        }
+                    }
+                    other => {
+                        return Err(Error::new(
+                            other.span(),
+                            "Expected attribute list (the form #[lens(one, two)])",
+                        ));
+                    }
+                }
+            }
+        }
+        Ok(Field {
+            ident,
+            ty,
+            attrs: WidgetAttrs {
+                meta: widget_attr_meta,
             },
         })
     }

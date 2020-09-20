@@ -6,6 +6,16 @@ use crate::{
     UpdateCtx, Widget, WidgetPod,
 };
 
+pub struct CompositeMeta<T> {
+    pub child: Option<WidgetPod<T, Box<dyn Widget<T>>>>,
+}
+
+impl<T> Default for CompositeMeta<T> {
+    fn default() -> Self {
+        CompositeMeta { child: None }
+    }
+}
+
 /// Composable widget
 pub struct CompositeWidget<T, W: Widget<T> + 'static, B: CompositeBuild<T, W>> {
     child: Option<WidgetPod<T, Box<dyn Widget<T>>>>,

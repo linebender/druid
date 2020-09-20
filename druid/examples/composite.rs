@@ -14,28 +14,28 @@
 
 //! Demonstrates alignment of children in the flex container.
 
-use druid::widget::prelude::*;
 use druid::widget::{
-    Align, Button, Checkbox, CompositeBuild, CompositeWidget, CrossAxisAlignment, Flex, Label,
-    MainAxisAlignment, ProgressBar, RadioGroup, SizedBox, Slider, Stepper, Switch, TextBox,
-    WidgetExt,
+    Align, CompositeMeta, CrossAxisAlignment, Flex, Label, TextBox, Widget, WidgetExt,
 };
 use druid::{AppLauncher, LocalizedString, WindowDesc};
+use druid_derive::Widget;
 
+#[derive(Widget)]
 pub struct TextBoxWithLabel {
+    #[widget(meta)]
+    meta: CompositeMeta<String>,
     label: String,
 }
 
 impl TextBoxWithLabel {
     fn new(label: impl Into<String>) -> Self {
         TextBoxWithLabel {
+            meta: CompositeMeta::default(),
             label: label.into(),
         }
     }
-}
 
-impl CompositeBuild<String, Flex<String>> for TextBoxWithLabel {
-    fn build(&self) -> Flex<String> {
+    fn build(&self) -> impl Widget<String> + 'static {
         Flex::column()
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .with_child(Label::new(self.label.clone()))
@@ -47,7 +47,7 @@ impl CompositeBuild<String, Flex<String>> for TextBoxWithLabel {
 fn make_ui() -> impl Widget<String> {
     Align::centered(
         Flex::column()
-            .with_child(CompositeWidget::new(TextBoxWithLabel::new("My text box")))
+            .with_child(TextBoxWithLabel::new("My text box"))
             .padding(10.0),
     )
 }
