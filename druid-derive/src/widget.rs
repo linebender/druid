@@ -110,7 +110,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
 
     let expanded = quote! {
         mod #twizzled_name {
-            use super::#ty;
+            use super::*;
             use druid::kurbo::{Point, Rect, Size};
             use druid::{
                 BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,

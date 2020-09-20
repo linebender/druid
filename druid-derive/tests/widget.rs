@@ -5,7 +5,7 @@ use druid::Widget;
 use druid_derive::Widget;
 
 #[derive(Widget)]
-pub struct TextBoxWithLabel {
+struct TextBoxWithLabel {
     #[widget(meta)]
     meta: CompositeMeta<String>,
     label: String,
