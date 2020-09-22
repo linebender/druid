@@ -14,6 +14,7 @@
 
 //! Text editing utilities.
 
+mod attribute;
 pub mod backspace;
 mod editable_text;
 mod font_descriptor;
@@ -22,6 +23,7 @@ pub mod movement;
 pub mod selection;
 mod text_input;
 
+pub use self::attribute::{Attribute, AttributeSpans};
 pub use self::backspace::offset_for_delete_backwards;
 pub use self::editable_text::{EditableText, EditableTextCursor, StringCursor};
 pub use self::font_descriptor::FontDescriptor;
