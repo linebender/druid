@@ -87,6 +87,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Switch widget: Toggle animation being window refresh rate dependent ([#1145] by [@ForLoveOfCats])
 - Multi-click on Windows, partial fix for #859 ([#1157] by [@raphlinus])
 - Windows: fix crash on resize from incompatible resources ([#1191 by [@raphlinus]])
+- GTK: Related dependencies are now optional, facilitating a pure X11 build. ([#1241] by [@finnerale])
 
 ### Visual
 
@@ -459,6 +460,7 @@ Last release without a changelog :(
 [#1231]: https://github.com/linebender/druid/pull/1231
 [#1220]: https://github.com/linebender/druid/pull/1220
 [#1238]: https://github.com/linebender/druid/pull/1238
+[#1241]: https://github.com/linebender/druid/pull/1241
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

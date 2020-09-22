@@ -30,6 +30,12 @@
 #![allow(clippy::new_without_default)]
 #![deny(clippy::trivially_copy_pass_by_ref)]
 
+// Rename `gtk_rs` back to `gtk`.
+// This allows us to use `gtk` as the feature name.
+// The `target_os` requirement is there to exclude anything `wasm` like.
+#[cfg(all(target_os = "linux", feature = "gtk"))]
+extern crate gtk_rs as gtk;
+
 pub use kurbo;
 pub use piet_common as piet;
 
