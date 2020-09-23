@@ -50,4 +50,4 @@
 mod lens;
 pub use lens::{Deref, Field, Id, InArc, Index, Map, Ref, Then, Unit};
 #[doc(hidden)]
-pub use lens::{Lens, LensExt, LensWrap};
+pub use lens::{Lens, LensExt};

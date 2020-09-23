@@ -58,6 +58,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Movement::RightOfLine` to `Movement::NextLineBreak`, and `Movement::LeftOfLine` to `Movement::PrecedingLineBreak`. ([#1092] by [@sysint64])
 - `AnimFrame` was moved from `lifecycle` to `event` ([#1155] by [@jneem])
 - Contexts' `text()` methods return `&mut PietText` instead of cloning ([#1205] by [@cmyr])
+- `LensWrap` widget moved into widget module ([#1251] by [@cmyr])
 
 ### Deprecated
 
@@ -461,6 +462,7 @@ Last release without a changelog :(
 [#1220]: https://github.com/linebender/druid/pull/1220
 [#1238]: https://github.com/linebender/druid/pull/1238
 [#1241]: https://github.com/linebender/druid/pull/1241
+[#1251]: https://github.com/linebender/druid/pull/1251
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
