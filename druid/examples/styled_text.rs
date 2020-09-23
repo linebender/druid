@@ -14,9 +14,11 @@
 
 //! Example of dynamic text styling
 
-use druid::widget::{Checkbox, Flex, Label, MainAxisAlignment, Painter, Parse, Stepper, TextBox};
+use druid::widget::{
+    Checkbox, Flex, Label, LensWrap, MainAxisAlignment, Painter, Parse, Stepper, TextBox,
+};
 use druid::{
-    theme, AppLauncher, Color, Data, FontDescriptor, FontFamily, Key, Lens, LensExt, LensWrap,
+    theme, AppLauncher, Color, Data, FontDescriptor, FontFamily, Key, Lens, LensExt,
     LocalizedString, PlatformError, RenderContext, Widget, WidgetExt, WindowDesc,
 };
 use std::fmt::Display;

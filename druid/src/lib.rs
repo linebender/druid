@@ -193,7 +193,7 @@ pub use data::{ArcStr, Data};
 pub use env::{Env, Key, KeyOrValue, Value, ValueType};
 pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle};
 pub use ext_event::{ExtEventError, ExtEventSink};
-pub use lens::{Lens, LensExt, LensWrap};
+pub use lens::{Lens, LensExt};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
@@ -205,6 +205,10 @@ pub use window::{Window, WindowId};
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 pub(crate) use event::{StateCell, StateCheckFn};
+
+#[deprecated(since = "0.7.0", note = "use druid::widget::LensWrap instead")]
+#[allow(missing_docs)]
+pub type LensWrap<A, B, C> = widget::LensWrap<A, B, C>;
 
 /// The meaning (mapped value) of a keypress.
 ///
