@@ -272,7 +272,7 @@ impl TextLayout {
                     .font(descriptor.family.clone(), descriptor.size)
                     .default_attribute(descriptor.weight)
                     .default_attribute(descriptor.style)
-                    .default_attribute(TextAttribute::ForegroundColor(color))
+                    .default_attribute(TextAttribute::TextColor(color))
                     .build()
                     .unwrap(),
             )
