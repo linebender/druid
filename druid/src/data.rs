@@ -119,12 +119,6 @@ pub trait Data: Clone + 'static {
     //// ANCHOR_END: same_fn
 }
 
-/// A reference counted string slice.
-///
-/// This is a data-friendly way to represent strings in druid. Unlike `String`
-/// it cannot be mutated, but unlike `String` it can be cheaply cloned.
-pub type ArcStr = Arc<str>;
-
 /// An impl of `Data` suitable for simple types.
 ///
 /// The `same` method is implemented with equality, so the type should
