@@ -18,8 +18,8 @@ use std::time::Duration;
 
 use crate::widget::prelude::*;
 use crate::{
-    Application, BoxConstraints, Cursor, Data, Env, FontDescriptor, HotKey, KbKey, KeyOrValue,
-    Selector, SysMods, TimerToken,
+    Application, ArcStr, BoxConstraints, Cursor, Data, Env, FontDescriptor, HotKey, KbKey,
+    KeyOrValue, Selector, SysMods, TimerToken,
 };
 
 use crate::kurbo::{Affine, Insets, Point, Size};
@@ -41,7 +41,7 @@ const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 #[derive(Debug, Clone)]
 pub struct TextBox {
     placeholder: String,
-    text: TextLayout,
+    text: TextLayout<ArcStr>,
     width: f64,
     hscroll_offset: f64,
     selection: Selection,
@@ -56,7 +56,7 @@ impl TextBox {
 
     /// Create a new TextBox widget
     pub fn new() -> TextBox {
-        let text = TextLayout::new("");
+        let text = TextLayout::new();
         Self {
             width: 0.0,
             hscroll_offset: 0.,
@@ -361,10 +361,10 @@ impl Widget<String> for TextBox {
             self.do_edit_action(edit_action, data);
             self.reset_cursor_blink(ctx);
             if data.is_empty() {
-                self.text.set_text(self.placeholder.as_str());
+                self.text.set_text(self.placeholder.as_str().into());
                 self.selection = Selection::caret(0);
             } else {
-                self.text.set_text(data.as_str());
+                self.text.set_text(data.as_str().into());
             }
             self.text.rebuild_if_needed(ctx.text(), env);
 
@@ -379,10 +379,10 @@ impl Widget<String> for TextBox {
             LifeCycle::WidgetAdded => {
                 ctx.register_for_focus();
                 if data.is_empty() {
-                    self.text.set_text(self.placeholder.as_str());
+                    self.text.set_text(self.placeholder.as_str().into());
                     self.text.set_text_color(theme::PLACEHOLDER_COLOR);
                 } else {
-                    self.text.set_text(data.as_str());
+                    self.text.set_text(data.as_str().into());
                 }
                 self.text.rebuild_if_needed(ctx.text(), env);
             }
@@ -402,7 +402,7 @@ impl Widget<String> for TextBox {
         // setting text color rebuilds layout, so don't do it if we don't have to
         if !old_data.same(data) {
             self.selection = self.selection.constrain_to(content);
-            self.text.set_text(content.as_str());
+            self.text.set_text(content.as_str().into());
             if data.is_empty() {
                 self.text.set_text_color(theme::PLACEHOLDER_COLOR);
             } else {

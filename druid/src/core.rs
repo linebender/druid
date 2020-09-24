@@ -21,9 +21,9 @@ use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::util::ExtendDrain;
 use crate::{
-    BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext, Target, TextLayout,
-    TimerToken, UpdateCtx, Widget, WidgetId,
+    ArcStr, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext, Target,
+    TextLayout, TimerToken, UpdateCtx, Widget, WidgetId,
 };
 
 /// Our queue type
@@ -50,7 +50,7 @@ pub struct WidgetPod<T, W> {
     env: Option<Env>,
     inner: W,
     // stashed layout so we don't recompute this when debugging
-    debug_widget_text: TextLayout,
+    debug_widget_text: TextLayout<ArcStr>,
 }
 
 /// Generic state for all widgets in the hierarchy.
@@ -144,7 +144,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             old_data: None,
             env: None,
             inner,
-            debug_widget_text: TextLayout::new(""),
+            debug_widget_text: TextLayout::new(),
         }
     }
 
@@ -433,7 +433,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Color::BLACK
             };
             let id_string = id.to_raw().to_string();
-            self.debug_widget_text.set_text(id_string);
+            self.debug_widget_text.set_text(id_string.into());
             self.debug_widget_text.set_text_size(10.0);
             self.debug_widget_text.set_text_color(text_color);
             self.debug_widget_text.rebuild_if_needed(ctx.text(), env);

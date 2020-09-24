@@ -16,6 +16,7 @@
 
 use std::ops::{Deref, DerefMut};
 
+use crate::text::TextStorage;
 use crate::widget::prelude::*;
 use crate::{
     ArcStr, BoxConstraints, Color, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, Size,
@@ -74,7 +75,7 @@ const LABEL_X_PADDING: f64 = 2.0;
 /// [`draw_at`]: #method.draw_at
 /// [`Widget`]: ../trait.Widget.html
 pub struct Label<T> {
-    label: RawLabel,
+    label: RawLabel<ArcStr>,
     current_text: ArcStr,
     text: LabelText<T>,
     // for debuging, we track if the user modifies the text and we don't get
@@ -88,8 +89,8 @@ pub struct Label<T> {
 /// localized text, use [`Label`].
 ///
 /// [`Label`]: struct.Label.html
-pub struct RawLabel {
-    layout: TextLayout,
+pub struct RawLabel<T> {
+    layout: TextLayout<T>,
     line_break_mode: LineBreaking,
 }
 
@@ -141,12 +142,11 @@ pub struct Static {
     resolved: bool,
 }
 
-impl RawLabel {
+impl<T: TextStorage> RawLabel<T> {
     /// Create a new `RawLabel`.
     pub fn new() -> Self {
-        let layout = TextLayout::new("");
         Self {
-            layout,
+            layout: TextLayout::new(),
             line_break_mode: LineBreaking::Overflow,
         }
     }
@@ -270,6 +270,15 @@ impl RawLabel {
     }
 }
 
+impl<T: TextStorage> Label<T> {
+    /// Create a new [`RawLabel`].
+    ///
+    /// This can display text `Data` directly.
+    pub fn raw() -> RawLabel<T> {
+        RawLabel::new()
+    }
+}
+
 impl<T: Data> Label<T> {
     /// Construct a new `Label` widget.
     ///
@@ -296,13 +305,6 @@ impl<T: Data> Label<T> {
             label: RawLabel::new(),
             text_should_be_updated: true,
         }
-    }
-
-    /// Create a new [`RawLabel`].
-    ///
-    /// This can display text `Data` directly.
-    pub fn raw() -> RawLabel {
-        RawLabel::new()
     }
 
     /// Construct a new dynamic label.
@@ -502,15 +504,15 @@ impl<T: Data> Widget<T> for Label<T> {
     }
 }
 
-impl Widget<ArcStr> for RawLabel {
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut ArcStr, _env: &Env) {}
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &ArcStr, _env: &Env) {
+impl<T: TextStorage> Widget<T> for RawLabel<T> {
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, _env: &Env) {
         if matches!(event, LifeCycle::WidgetAdded) {
-            self.layout.set_text(data.clone());
+            self.layout.set_text(data.to_owned());
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &ArcStr, data: &ArcStr, _env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, _env: &Env) {
         if !old_data.same(data) {
             self.layout.set_text(data.clone());
             ctx.request_layout();
@@ -520,13 +522,7 @@ impl Widget<ArcStr> for RawLabel {
         }
     }
 
-    fn layout(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &ArcStr,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         bc.debug_check("Label");
 
         let width = match self.line_break_mode {
@@ -542,7 +538,7 @@ impl Widget<ArcStr> for RawLabel {
         bc.constrain(text_size)
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &ArcStr, _env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         let origin = Point::new(LABEL_X_PADDING, 0.0);
         let label_size = ctx.size();
 
@@ -553,14 +549,14 @@ impl Widget<ArcStr> for RawLabel {
     }
 }
 
-impl Default for RawLabel {
+impl<T: TextStorage> Default for RawLabel<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl<T> Deref for Label<T> {
-    type Target = RawLabel;
+    type Target = RawLabel<ArcStr>;
     fn deref(&self) -> &Self::Target {
         &self.label
     }

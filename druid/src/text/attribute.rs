@@ -132,12 +132,11 @@ impl AttributeSpans {
                 .iter()
                 .map(|s| (s.range.clone(), PietAttr::Weight(s.attr))),
         );
-        items.extend(self.fg_color.iter().map(|s| {
-            (
-                s.range.clone(),
-                PietAttr::TextColor(s.attr.resolve(env)),
-            )
-        }));
+        items.extend(
+            self.fg_color
+                .iter()
+                .map(|s| (s.range.clone(), PietAttr::TextColor(s.attr.resolve(env)))),
+        );
         items.extend(
             self.style
                 .iter()
@@ -214,6 +213,9 @@ impl<T: Clone> SpanSet<T> {
     /// `new_len` is the length of the inserted text.
     //TODO: we could be smarter here about just extending the existing spans
     //as requred for insertions in the interior of a span.
+    //TODO: this isn't currently used; it should be used if we use spans with
+    //some editable type.
+    #[allow(dead_code)]
     fn edit(&mut self, changed: Range<usize>, new_len: usize) {
         let old_len = changed.len();
         let mut to_insert = None;
