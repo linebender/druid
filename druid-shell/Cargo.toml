@@ -21,7 +21,7 @@ default = ["gtk"]
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "0.2.0-pre3"
+piet-common = "0.2.0-pre4"
 kurbo = "0.6.3"
 
 log = "0.4.11"
@@ -73,5 +73,5 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent"]
 
 [dev-dependencies]
-piet-common = { version = "0.2.0-pre3", features = ["png"] }
+piet-common = { version = "0.2.0-pre4", features = ["png"] }
 simple_logger = { version = "1.9.0", default-features = false }
