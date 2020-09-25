@@ -40,6 +40,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Lens: Added Unit lens for type erased / display only widgets that do not need data. ([#1232] by [@rjwittams])
 - `WindowLevel` to control system window Z order, with Mac and GTK implementations  ([#1231] by [@rjwittams])
 - WIDGET_PADDING items added to theme and `Flex::with_default_spacer`/`Flex::add_default_spacer` ([#1220] by [@cmyr])
+- CONFIGURE_WINDOW command to allow reconfiguration of an existing window. ([#1235] by [@rjwittams])
 
 ### Changed
 
@@ -58,6 +59,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Movement::RightOfLine` to `Movement::NextLineBreak`, and `Movement::LeftOfLine` to `Movement::PrecedingLineBreak`. ([#1092] by [@sysint64])
 - `AnimFrame` was moved from `lifecycle` to `event` ([#1155] by [@jneem])
 - Contexts' `text()` methods return `&mut PietText` instead of cloning ([#1205] by [@cmyr])
+- Window construction: WindowDesc decomposed to PendingWindow and WindowConfig to allow for sub-windows and reconfiguration. ([#1235] by [@rjwittams])
 - `LensWrap` widget moved into widget module ([#1251] by [@cmyr])
 
 ### Deprecated
