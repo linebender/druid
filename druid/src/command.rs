@@ -146,7 +146,7 @@ pub mod sys {
     use std::any::Any;
 
     use super::Selector;
-    use crate::{FileDialogOptions, FileInfo, SingleUse, WindowConfig};
+    use crate::{FileDialogOptions, FileInfo, SingleUse, SubWindowRequirement, WindowConfig};
 
     /// Quit the running application. This command is handled by the druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
@@ -188,6 +188,15 @@ pub mod sys {
     /// [`ContextMenu`]: ../struct.ContextMenu.html
     pub(crate) const SHOW_CONTEXT_MENU: Selector<Box<dyn Any>> =
         Selector::new("druid-builtin.show-context-menu");
+
+    pub(crate) const NEW_SUB_WINDOW: Selector<SingleUse<SubWindowRequirement>> =
+        Selector::new("druid-builtin.new-sub-window");
+
+    pub(crate) const SUB_WINDOW_PARENT_TO_HOST: Selector<Box<dyn Any>> =
+        Selector::new("druid-builtin.parent_to_host");
+
+    pub(crate) const SUB_WINDOW_HOST_TO_PARENT: Selector<Box<dyn Any>> =
+        Selector::new("druid-builtin.host_to_parent");
 
     /// The selector for a command to set the window's menu. The payload should
     /// be a [`MenuDesc`] object.

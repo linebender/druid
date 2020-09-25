@@ -574,6 +574,11 @@ impl<T: Data> AppState<T> {
                     log::error!("failed to create window: '{}'", e);
                 }
             }
+            _ if cmd.is(sys_cmd::NEW_SUB_WINDOW) => {
+                if let Err(e) = self.new_sub_window(cmd) {
+                    log::error!("failed to create sub window: '{}'", e);
+                }
+            }
             _ if cmd.is(sys_cmd::CLOSE_ALL_WINDOWS) => self.request_close_all_windows(),
             // these should come from a window
             // FIXME: we need to be able to open a file without a window handle
@@ -629,7 +634,6 @@ impl<T: Data> AppState<T> {
             .windows
             .get_mut(window_id)
             .map(|w| w.handle.clone());
-
         let result = handle.and_then(|mut handle| handle.save_as_sync(options));
         self.inner.borrow_mut().dispatch_cmd({
             if let Some(info) = result {
@@ -648,6 +652,26 @@ impl<T: Data> AppState<T> {
         let window = desc.build_native(self)?;
         window.show();
         Ok(())
+    }
+
+    fn new_sub_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(transfer) = cmd.get(sys_cmd::NEW_SUB_WINDOW) {
+            if let Some(swr) = transfer.take() {
+                let window = swr.make_sub_window(self)?;
+                window.show();
+                Ok(())
+            } else {
+                panic!(
+                    "{} command must carry a SubWindowRequirement internally",
+                    sys_cmd::NEW_SUB_WINDOW
+                )
+            }
+        } else {
+            panic!(
+                "{} command must carry a SingleUse<SubWindowRequirement>",
+                sys_cmd::NEW_SUB_WINDOW
+            )
+        }
     }
 
     fn request_close_window(&mut self, id: WindowId) {

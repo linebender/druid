@@ -41,6 +41,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `WindowLevel` to control system window Z order, with Mac and GTK implementations  ([#1231] by [@rjwittams])
 - WIDGET_PADDING items added to theme and `Flex::with_default_spacer`/`Flex::add_default_spacer` ([#1220] by [@cmyr])
 - CONFIGURE_WINDOW command to allow reconfiguration of an existing window. ([#1235] by [@rjwittams])
+- Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#XXXX] by [@rjwittams])
 
 ### Changed
 

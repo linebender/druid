@@ -26,7 +26,8 @@ use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
 use crate::{
     commands, Affine, Command, ContextMenu, Cursor, Env, ExtEventSink, Insets, MenuDesc, Point,
-    Rect, SingleUse, Size, Target, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
+    Rect, SingleUse, Size, SubWindowRequirement, Target, TimerToken, WidgetId, WindowDesc,
+    WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -314,6 +315,17 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
         self.state.set_menu(menu);
+    }
+
+    /// Create a new sub window that will have its app data synchronised with the nearest surrounding widget pod.
+    // TODO - dynamically check that the type of the pod we are registering this on is the same as the type of the
+    // requirement. Needs type ids recorded. This goes wrong if you don't have a pod between you and a lens.
+    pub fn new_sub_window(&mut self, requirement: SubWindowRequirement) {
+        if let Some(id) = requirement.host_id {
+            self.widget_state.add_sub_window_host(id);
+        }
+
+        self.submit_command(commands::NEW_SUB_WINDOW.with(SingleUse::new(requirement)));
     }
 });
 
