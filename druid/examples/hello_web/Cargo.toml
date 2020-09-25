@@ -3,7 +3,7 @@ name = "hello-web"
 version = "0.1.0"
 license = "Apache-2.0"
 description = "Minimal web example"
-repository = "https://github.com/xi-editor/druid"
+repository = "https://github.com/linebender/druid"
 edition = "2018"
 publish = false
 
@@ -13,5 +13,5 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 druid = { path="../.." }
 
-wasm-bindgen = "0.2.63"
+wasm-bindgen = "0.2.67"
 console_error_panic_hook = "0.1.6"

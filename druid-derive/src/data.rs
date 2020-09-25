@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 //! The implementation for #[derive(Data)]
 
-use crate::attr::{Field, FieldKind, Fields};
+use crate::attr::{DataAttrs, Field, FieldKind, Fields};
 
 use quote::{quote, quote_spanned};
 use syn::{spanned::Spanned, Data, DataEnum, DataStruct};
@@ -36,25 +36,28 @@ fn derive_struct(
     input: &syn::DeriveInput,
     s: &DataStruct,
 ) -> Result<proc_macro2::TokenStream, syn::Error> {
-    let generics_bounds = generics_bounds(&input.generics);
-    let generics = &input.generics;
+    let ident = &input.ident;
+    let impl_generics = generics_bounds(&input.generics);
+    let (_, ty_generics, where_clause) = &input.generics.split_for_impl();
 
-    let ty = &input.ident;
-    let fields = Fields::parse_ast(&s.fields)?;
+    let fields = Fields::<DataAttrs>::parse_ast(&s.fields)?;
 
     let diff = if fields.len() > 0 {
         let same_fns = fields
             .iter()
-            .filter(|f| !f.ignore)
+            .filter(|f| !f.attrs.ignore)
             .map(Field::same_fn_path_tokens);
-        let fields = fields.iter().filter(|f| !f.ignore).map(Field::ident_tokens);
+        let fields = fields
+            .iter()
+            .filter(|f| !f.attrs.ignore)
+            .map(Field::ident_tokens);
         quote!( #( #same_fns(&self.#fields, &other.#fields) )&&* )
     } else {
         quote!(true)
     };
 
     let res = quote! {
-        impl<#generics_bounds> druid::Data for #ty #generics {
+        impl<#impl_generics> ::druid::Data for #ident #ty_generics #where_clause {
             fn same(&self, other: &Self) -> bool {
                 #diff
             }
@@ -80,14 +83,13 @@ fn derive_enum(
     input: &syn::DeriveInput,
     s: &DataEnum,
 ) -> Result<proc_macro2::TokenStream, syn::Error> {
-    let ty = &input.ident;
+    let ident = &input.ident;
+    let impl_generics = generics_bounds(&input.generics);
+    let (_, ty_generics, where_clause) = &input.generics.split_for_impl();
 
     if is_c_style_enum(&s) {
-        let generics_bounds = generics_bounds(&input.generics);
-        let generics = &input.generics;
-
         let res = quote! {
-            impl<#generics_bounds> ::druid::Data for #ty #generics {
+            impl<#impl_generics> ::druid::Data for #ident #ty_generics #where_clause {
                 fn same(&self, other: &Self) -> bool { self == other }
             }
         };
@@ -98,13 +100,13 @@ fn derive_enum(
         .variants
         .iter()
         .map(|variant| {
-            let fields = Fields::parse_ast(&variant.fields)?;
+            let fields = Fields::<DataAttrs>::parse_ast(&variant.fields)?;
             let variant = &variant.ident;
 
             // the various inner `same()` calls, to the right of the match arm.
             let tests: Vec<_> = fields
                 .iter()
-                .filter(|field| !field.ignore)
+                .filter(|field| !field.attrs.ignore)
                 .map(|field| {
                     let same_fn = field.same_fn_path_tokens();
                     let var_left = ident_from_str(&format!("__self_{}", field.ident_string()));
@@ -132,7 +134,7 @@ fn derive_enum(
                     .collect();
 
                 Ok(quote! {
-                    (#ty :: #variant { #( #lefts ),* }, #ty :: #variant { #( #rights ),* }) => {
+                    (#ident :: #variant { #( #lefts ),* }, #ident :: #variant { #( #rights ),* }) => {
                         #( #tests )&&*
                     }
                 })
@@ -146,26 +148,23 @@ fn derive_enum(
                     .map(|field| ident_from_str(&format!("__other_{}", field.ident_string())))
                     .collect();
 
-                if fields.iter().filter(|field| !field.ignore).count() > 0 {
+                if fields.iter().count() > 0 {
                     Ok(quote! {
-                        ( #ty :: #variant( #(#vars_left),* ),  #ty :: #variant( #(#vars_right),* )) => {
+                        ( #ident :: #variant( #(#vars_left),* ),  #ident :: #variant( #(#vars_right),* )) => {
                             #( #tests )&&*
                         }
                     })
                 } else {
                     Ok(quote! {
-                       ( #ty :: #variant ,  #ty :: #variant ) => { true }
+                        ( #ident :: #variant ,  #ident :: #variant ) => { true }
                     })
                 }
             }
         })
         .collect::<Result<Vec<proc_macro2::TokenStream>, syn::Error>>()?;
 
-    let generics_bounds = generics_bounds(&input.generics);
-    let generics = &input.generics;
-
     let res = quote! {
-        impl<#generics_bounds> ::druid::Data for #ty #generics {
+        impl<#impl_generics> ::druid::Data for #ident #ty_generics #where_clause {
             fn same(&self, other: &Self) -> bool {
                 match (self, other) {
                     #( #cases ),*
@@ -182,7 +181,15 @@ fn generics_bounds(generics: &syn::Generics) -> proc_macro2::TokenStream {
     let res = generics.params.iter().map(|gp| {
         use syn::GenericParam::*;
         match gp {
-            Type(ty) => quote_spanned!(ty.span()=> #ty : ::druid::Data),
+            Type(ty) => {
+                let ident = &ty.ident;
+                let bounds = &ty.bounds;
+                if bounds.is_empty() {
+                    quote_spanned!(ty.span()=> #ident : ::druid::Data)
+                } else {
+                    quote_spanned!(ty.span()=> #ident : #bounds + ::druid::Data)
+                }
+            }
             Lifetime(lf) => quote!(#lf),
             Const(cst) => quote!(#cst),
         }

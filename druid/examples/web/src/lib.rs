@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -79,3 +79,5 @@ impl_example!(styled_text.unwrap());
 impl_example!(switches);
 impl_example!(timer);
 impl_example!(view_switcher);
+impl_example!(widget_gallery);
+impl_example!(text);

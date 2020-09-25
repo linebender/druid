@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,15 +25,21 @@ use druid::{
 struct AppData {
     left: Vector<u32>,
     right: Vector<u32>,
+    l_index: usize,
+    r_index: usize,
 }
 
 pub fn main() {
     let main_window = WindowDesc::new(ui_builder)
         .title(LocalizedString::new("list-demo-window-title").with_placeholder("List Demo"));
     // Set our initial data
+    let left = vector![1, 2];
+    let right = vector![1, 2, 3];
     let data = AppData {
-        left: vector![1, 2],
-        right: vector![1, 2, 3],
+        l_index: left.len(),
+        r_index: right.len(),
+        left,
+        right,
     };
     AppLauncher::with_window(main_window)
         .use_simple_logger()
@@ -49,12 +55,12 @@ fn ui_builder() -> impl Widget<AppData> {
         Button::new("Add")
             .on_click(|_, data: &mut AppData, _| {
                 // Add child to left list
-                let value = data.left.len() + 1;
-                data.left.push_back(value as u32);
+                data.l_index += 1;
+                data.left.push_back(data.l_index as u32);
 
                 // Add child to right list
-                let value = data.right.len() + 1;
-                data.right.push_back(value as u32);
+                data.r_index += 1;
+                data.right.push_back(data.r_index as u32);
             })
             .fix_height(30.0)
             .expand_width(),

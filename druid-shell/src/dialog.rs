@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,14 +33,13 @@ pub enum FileDialogType {
 
 /// Options for file dialogs.
 #[derive(Debug, Clone, Default)]
+#[non_exhaustive]
 pub struct FileDialogOptions {
     pub show_hidden: bool,
     pub allowed_types: Option<Vec<FileSpec>>,
     pub default_type: Option<FileSpec>,
     pub select_directories: bool,
     pub multi_selection: bool,
-    // we don't want a library user to be able to construct this type directly
-    __non_exhaustive: (),
 }
 
 /// A description of a filetype, for specifiying allowed types in a file dialog.

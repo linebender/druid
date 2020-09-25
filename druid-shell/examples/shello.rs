@@ -1,4 +1,4 @@
-// Copyright 2018 The xi-editor Authors.
+// Copyright 2018 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
 
 use std::any::Any;
 
-use druid_shell::kurbo::{Line, Rect, Size};
+use druid_shell::kurbo::{Line, Size};
 use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
-    Application, Cursor, FileDialogOptions, FileSpec, HotKey, KeyEvent, Menu, MouseEvent, SysMods,
-    TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    Application, Cursor, FileDialogOptions, FileSpec, HotKey, KeyEvent, Menu, MouseEvent, Region,
+    SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
@@ -36,11 +36,12 @@ impl WinHandler for HelloState {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut piet_common::Piet, _: Rect) -> bool {
+    fn prepare_paint(&mut self) {}
+
+    fn paint(&mut self, piet: &mut piet_common::Piet, _: &Region) {
         let rect = self.size.to_rect();
         piet.fill(rect, &BG_COLOR);
         piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &FG_COLOR, 1.0);
-        false
     }
 
     fn command(&mut self, id: u32) {
@@ -63,11 +64,12 @@ impl WinHandler for HelloState {
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
-        let deadline = std::time::Duration::from_millis(500);
-        let id = self.handle.request_timer(deadline);
-        println!("keydown: {:?}, timer id = {:?}", event, id);
-
+        println!("keydown: {:?}", event);
         false
+    }
+
+    fn key_up(&mut self, event: KeyEvent) {
+        println!("keyup: {:?}", event);
     }
 
     fn wheel(&mut self, event: &MouseEvent) {
@@ -95,6 +97,10 @@ impl WinHandler for HelloState {
         self.size = size;
     }
 
+    fn request_close(&mut self) {
+        self.handle.close();
+    }
+
     fn destroy(&mut self) {
         Application::global().quit()
     }
@@ -105,6 +111,7 @@ impl WinHandler for HelloState {
 }
 
 fn main() {
+    simple_logger::SimpleLogger::new().init().unwrap();
     let mut file_menu = Menu::new();
     file_menu.add_item(
         0x100,

@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,9 @@ use std::time::Duration;
 
 use druid::kurbo::RoundedRect;
 use druid::widget::prelude::*;
-use druid::{AppLauncher, Color, Data, LocalizedString, Rect, Selector, WidgetExt, WindowDesc};
+use druid::{
+    AppLauncher, Color, Data, LocalizedString, Rect, Selector, Target, WidgetExt, WindowDesc,
+};
 
 const SET_COLOR: Selector<Color> = Selector::new("event-example.set-color");
 
@@ -109,7 +111,7 @@ pub fn main() {
 
             // if this fails we're shutting down
             if event_sink
-                .submit_command(SET_COLOR, new_color, None)
+                .submit_command(SET_COLOR, new_color, Target::Auto)
                 .is_err()
             {
                 break;

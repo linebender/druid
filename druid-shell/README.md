@@ -22,4 +22,4 @@ Interacting with system APIs is inherently unsafe. One of the goals of
 `druid-shell` is to handle all interaction with these APIs, exposing
 a safe interface to `druid` and other possible consumers.
 
-[druid]: https://github.com/xi-editor/druid
+[druid]: https://github.com/linebender/druid

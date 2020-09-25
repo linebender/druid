@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,8 +38,6 @@ struct State {
 }
 
 pub fn main() {
-    #[cfg(not(target_arch = "wasm32"))]
-    simple_logger::init().unwrap();
     let main_window = WindowDesc::new(ui_builder)
         .menu(make_menu(&State::default()))
         .title(
@@ -49,6 +47,7 @@ pub fn main() {
         .delegate(Delegate {
             windows: Vec::new(),
         })
+        .use_simple_logger()
         .launch(State::default())
         .expect("launch failed");
 }
@@ -58,11 +57,11 @@ fn ui_builder() -> impl Widget<State> {
         .with_arg("count", |data: &State, _env| data.menu_count.into());
     let label = Label::new(text);
     let inc_button = Button::<State>::new("Add menu item")
-        .on_click(|ctx, _data, _env| ctx.submit_command(MENU_INCREMENT_ACTION, Global));
+        .on_click(|ctx, _data, _env| ctx.submit_command(MENU_INCREMENT_ACTION.to(Global)));
     let dec_button = Button::<State>::new("Remove menu item")
-        .on_click(|ctx, _data, _env| ctx.submit_command(MENU_DECREMENT_ACTION, Global));
+        .on_click(|ctx, _data, _env| ctx.submit_command(MENU_DECREMENT_ACTION.to(Global)));
     let new_button = Button::<State>::new("New window").on_click(|ctx, _data, _env| {
-        ctx.submit_command(sys_cmds::NEW_FILE, Target::Global);
+        ctx.submit_command(sys_cmds::NEW_FILE.to(Global));
     });
     let quit_button = Button::<State>::new("Quit app").on_click(|_ctx, _data, _env| {
         Application::global().quit();
@@ -240,7 +239,7 @@ fn make_menu<T: Data>(state: &State) -> MenuDesc<T> {
                     MenuItem::new(
                         LocalizedString::new("hello-counter")
                             .with_arg("count", move |_, _| i.into()),
-                        Command::new(MENU_COUNT_ACTION, i),
+                        MENU_COUNT_ACTION.with(i),
                     )
                     .disabled_if(|| i % 3 == 0)
                     .selected_if(|| i == state.selected)

@@ -7,10 +7,10 @@ This tutorial will first walk you through setting up the dependencies for develo
 application, then it will show you how to set up a basic application, build it and run it.
 
 ## Setting up Druid dependencies
-In addition to including the druid library in your project
+In addition to including the `druid` library in your project
 
 ### Linux
-On Linux, druid requires gtk+3.
+On Linux, Druid requires gtk+3.
 
 On Ubuntu this can be installed with
 ```no_compile
@@ -34,7 +34,7 @@ and adding the druid dependency to your Cargo.toml
 [dependencies]
 druid = "0.6.0"
 // or to be on the bleeding edge:
-druid = { git = "https://github.com/xi-editor/druid.git" }
+druid = { git = "https://github.com/linebender/druid.git" }
 ```
 
 [gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html

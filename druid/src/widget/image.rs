@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,9 @@
 // limitations under the License.
 
 //! An Image widget.
-//! Please consider using SVG and the SVG wideget as it scales much better.
+//! Please consider using SVG and the SVG widget as it scales much better.
 
+use std::fmt;
 #[cfg(feature = "image")]
 use std::{convert::AsRef, error::Error, path::Path};
 
@@ -286,6 +287,17 @@ impl ImageData {
 impl Default for ImageData {
     fn default() -> Self {
         ImageData::empty()
+    }
+}
+
+impl fmt::Debug for ImageData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("ImageData")
+            .field("size", &self.pixels.len())
+            .field("width", &self.x_pixels)
+            .field("height", &self.y_pixels)
+            .field("format", &format_args!("{:?}", self.format))
+            .finish()
     }
 }
 

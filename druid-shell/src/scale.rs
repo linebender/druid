@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ use crate::kurbo::{Insets, Line, Point, Rect, Size, Vec2};
 ///
 /// [`x`]: #method.x
 /// [`y`]: #method.y
-/// [in the druid book]: https://xi-editor.io/druid/resolution_independence.html
+/// [in the druid book]: https://linebender.org/druid/resolution_independence.html
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Scale {
     /// The scale factor on the x axis.
@@ -116,14 +116,6 @@ impl Scale {
         self.y
     }
 
-    /// Converts the `item` from display points into pixels,
-    /// using the x axis scale factor for coordinates on the x axis
-    /// and the y axis scale factor for coordinates on the y axis.
-    #[inline]
-    pub fn to_px<T: Scalable>(self, item: &T) -> T {
-        item.to_px(self)
-    }
-
     /// Converts from pixels into display points, using the x axis scale factor.
     #[inline]
     pub fn px_to_dp_x<T: Into<f64>>(self, x: T) -> f64 {
@@ -141,14 +133,6 @@ impl Scale {
     #[inline]
     pub fn px_to_dp_xy<T: Into<f64>>(self, x: T, y: T) -> (f64, f64) {
         (x.into() / self.x, y.into() / self.y)
-    }
-
-    /// Converts the `item` from pixels into display points,
-    /// using the x axis scale factor for coordinates on the x axis
-    /// and the y axis scale factor for coordinates on the y axis.
-    #[inline]
-    pub fn to_dp<T: Scalable>(self, item: &T) -> T {
-        item.to_dp(self)
     }
 }
 

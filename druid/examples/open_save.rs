@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,22 +42,18 @@ fn ui_builder() -> impl Widget<String> {
 
     let input = TextBox::new();
     let save = Button::new("Save").on_click(move |ctx, _, _| {
-        ctx.submit_command(
-            Command::new(
-                druid::commands::SHOW_SAVE_PANEL,
-                save_dialog_options.clone(),
-            ),
-            None,
-        )
+        ctx.submit_command(Command::new(
+            druid::commands::SHOW_SAVE_PANEL,
+            save_dialog_options.clone(),
+            Target::Auto,
+        ))
     });
     let open = Button::new("Open").on_click(move |ctx, _, _| {
-        ctx.submit_command(
-            Command::new(
-                druid::commands::SHOW_OPEN_PANEL,
-                open_dialog_options.clone(),
-            ),
-            None,
-        )
+        ctx.submit_command(Command::new(
+            druid::commands::SHOW_OPEN_PANEL,
+            open_dialog_options.clone(),
+            Target::Auto,
+        ))
     });
 
     let mut col = Flex::column();

@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,21 +14,35 @@
 
 //! Platform specific implementations.
 
-cfg_if::cfg_if! {
-    if #[cfg(target_os = "windows")] {
-        mod windows;
-        pub use windows::*;
-    } else if #[cfg(target_os = "macos")] {
-        mod mac;
-        pub use mac::*;
-    } else if #[cfg(all(feature = "x11", target_os = "linux"))] {
-        mod x11;
-        pub use x11::*;
-    } else if #[cfg(target_os = "linux")] {
-        mod gtk;
-        pub use self::gtk::*;
-    } else if #[cfg(target_arch = "wasm32")] {
-        mod web;
-        pub use web::*;
-    }
-}
+// It would be clearer to use cfg_if! macros here, but that breaks rustfmt.
+
+#[cfg(target_os = "windows")]
+mod windows;
+#[cfg(target_os = "windows")]
+pub use windows::*;
+
+#[cfg(target_os = "macos")]
+mod mac;
+#[cfg(target_os = "macos")]
+pub use mac::*;
+#[cfg(target_os = "macos")]
+pub(crate) mod shared;
+
+#[cfg(all(feature = "x11", target_os = "linux"))]
+mod x11;
+#[cfg(all(feature = "x11", target_os = "linux"))]
+pub use x11::*;
+#[cfg(all(feature = "x11", target_os = "linux"))]
+pub(crate) mod shared;
+
+#[cfg(all(not(feature = "x11"), target_os = "linux"))]
+mod gtk;
+#[cfg(all(not(feature = "x11"), target_os = "linux"))]
+pub use self::gtk::*;
+#[cfg(all(not(feature = "x11"), target_os = "linux"))]
+pub(crate) mod shared;
+
+#[cfg(target_arch = "wasm32")]
+mod web;
+#[cfg(target_arch = "wasm32")]
+pub use web::*;

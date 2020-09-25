@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,18 +18,17 @@ use std::{thread, time};
 
 use druid::{
     AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, ExtEventSink, Lens, LocalizedString,
-    Selector, Target, Widget, WidgetExt, WindowDesc,
+    Selector, Widget, WidgetExt, WindowDesc,
 };
 
-use druid::widget::{Button, Either, Flex, Label, Spinner};
-
-const START_SLOW_FUNCTION: Selector<u32> = Selector::new("start_slow_function");
+use druid::{
+    widget::{Button, Either, Flex, Label, Spinner},
+    Target,
+};
 
 const FINISH_SLOW_FUNCTION: Selector<u32> = Selector::new("finish_slow_function");
 
-struct Delegate {
-    eventsink: ExtEventSink,
-}
+struct Delegate {}
 
 #[derive(Clone, Default, Data, Lens)]
 struct AppState {
@@ -47,7 +46,7 @@ fn slow_function(number: u32) -> u32 {
 fn wrapped_slow_function(sink: ExtEventSink, number: u32) {
     thread::spawn(move || {
         let number = slow_function(number);
-        sink.submit_command(FINISH_SLOW_FUNCTION, number, None)
+        sink.submit_command(FINISH_SLOW_FUNCTION, number, Target::Auto)
             .expect("command failed to submit");
     });
 }
@@ -61,10 +60,6 @@ impl AppDelegate<AppState> for Delegate {
         data: &mut AppState,
         _env: &Env,
     ) -> bool {
-        if cmd.is(START_SLOW_FUNCTION) {
-            data.processing = true;
-            wrapped_slow_function(self.eventsink.clone(), data.value);
-        }
         if let Some(number) = cmd.get(FINISH_SLOW_FUNCTION) {
             data.processing = false;
             data.value = *number;
@@ -75,9 +70,9 @@ impl AppDelegate<AppState> for Delegate {
 
 fn ui_builder() -> impl Widget<AppState> {
     let button = Button::new("Start slow increment")
-        .on_click(|ctx, _data: &mut AppState, _env| {
-            let cmd = Command::new(START_SLOW_FUNCTION, 0);
-            ctx.submit_command(cmd, None);
+        .on_click(|ctx, data: &mut AppState, _env| {
+            data.processing = true;
+            wrapped_slow_function(ctx.get_external_handle(), data.value);
         })
         .padding(5.0);
     let button_placeholder = Flex::column()
@@ -95,9 +90,7 @@ fn ui_builder() -> impl Widget<AppState> {
 fn main() {
     let main_window = WindowDesc::new(ui_builder).title(LocalizedString::new("Blocking functions"));
     let app = AppLauncher::with_window(main_window);
-    let delegate = Delegate {
-        eventsink: app.get_external_handle(),
-    };
+    let delegate = Delegate {};
     app.delegate(delegate)
         .use_simple_logger()
         .launch(AppState::default())

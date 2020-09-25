@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 use std::borrow::Cow;
 use std::ops::Range;
 
-use unicode_segmentation::GraphemeCursor;
+use unicode_segmentation::{GraphemeCursor, UnicodeSegmentation};
 
 /// An EditableText trait.
 pub trait EditableText: Sized {
@@ -40,20 +40,34 @@ pub trait EditableText: Sized {
     /// Get length of text (in bytes).
     fn len(&self) -> usize;
 
+    /// Get the previous word offset from the given offset, if it exists.
+    fn prev_word_offset(&self, offset: usize) -> Option<usize>;
+
+    /// Get the next word offset from the given offset, if it exists.
+    fn next_word_offset(&self, offset: usize) -> Option<usize>;
+
     /// Get the next grapheme offset from the given offset, if it exists.
     fn prev_grapheme_offset(&self, offset: usize) -> Option<usize>;
 
-    /// Get the previous grapheme offset from the given offset, if it exists.
+    /// Get the next grapheme offset from the given offset, if it exists.
     fn next_grapheme_offset(&self, offset: usize) -> Option<usize>;
 
-    /// Get the next codepoint offset from the given offset, if it exists.
+    /// Get the previous codepoint offset from the given offset, if it exists.
     fn prev_codepoint_offset(&self, offset: usize) -> Option<usize>;
 
-    /// Get the previous codepoint offset from the given offset, if it exists.
+    /// Get the next codepoint offset from the given offset, if it exists.
     fn next_codepoint_offset(&self, offset: usize) -> Option<usize>;
 
+    /// Get the preceding line break offset from the given offset
+    fn preceding_line_break(&self, offset: usize) -> usize;
+
+    /// Get the next line break offset from the given offset
+    fn next_line_break(&self, offset: usize) -> usize;
+
+    /// Returns `true` if this text has 0 length.
     fn is_empty(&self) -> bool;
 
+    /// Construct an instance of this type from a `&str`.
     fn from_str(s: &str) -> Self;
 }
 
@@ -111,12 +125,68 @@ impl EditableText for String {
         }
     }
 
+    fn prev_word_offset(&self, from: usize) -> Option<usize> {
+        let mut offset = from;
+        let mut passed_alphanumeric = false;
+        for prev_grapheme in self.get(0..from)?.graphemes(true).rev() {
+            let is_alphanumeric = prev_grapheme.chars().next()?.is_alphanumeric();
+            if is_alphanumeric {
+                passed_alphanumeric = true;
+            } else if passed_alphanumeric {
+                return Some(offset);
+            }
+            offset -= prev_grapheme.len();
+        }
+        None
+    }
+
+    fn next_word_offset(&self, from: usize) -> Option<usize> {
+        let mut offset = from;
+        let mut passed_alphanumeric = false;
+        for next_grapheme in self.get(from..)?.graphemes(true) {
+            let is_alphanumeric = next_grapheme.chars().next()?.is_alphanumeric();
+            if is_alphanumeric {
+                passed_alphanumeric = true;
+            } else if passed_alphanumeric {
+                return Some(offset);
+            }
+            offset += next_grapheme.len();
+        }
+        Some(self.len())
+    }
+
     fn is_empty(&self) -> bool {
         self.is_empty()
     }
 
     fn from_str(s: &str) -> Self {
         s.to_string()
+    }
+
+    fn preceding_line_break(&self, from: usize) -> usize {
+        let mut offset = from;
+
+        for byte in self.get(0..from).unwrap_or("").bytes().rev() {
+            if byte == 0x0a {
+                return offset;
+            }
+            offset -= 1;
+        }
+
+        0
+    }
+
+    fn next_line_break(&self, from: usize) -> usize {
+        let mut offset = from;
+
+        for char in self.get(from..).unwrap_or("").bytes() {
+            if char == 0x0a {
+                return offset;
+            }
+            offset += 1;
+        }
+
+        self.len()
     }
 }
 
@@ -343,5 +413,67 @@ mod tests {
         assert_eq!(Some(9), a.next_grapheme_offset(3));
         assert_eq!(Some(17), a.next_grapheme_offset(9));
         assert_eq!(None, a.next_grapheme_offset(17));
+    }
+
+    #[test]
+    fn prev_word_offset() {
+        let a = String::from("Technically a word: ৬藏A\u{030a}\u{110b}\u{1161}");
+        assert_eq!(Some(20), a.prev_word_offset(35));
+        assert_eq!(Some(20), a.prev_word_offset(27));
+        assert_eq!(Some(20), a.prev_word_offset(23));
+        assert_eq!(Some(14), a.prev_word_offset(20));
+        assert_eq!(Some(14), a.prev_word_offset(19));
+        assert_eq!(Some(12), a.prev_word_offset(13));
+        assert_eq!(None, a.prev_word_offset(12));
+        assert_eq!(None, a.prev_word_offset(11));
+        assert_eq!(None, a.prev_word_offset(0));
+    }
+
+    #[test]
+    fn next_word_offset() {
+        let a = String::from("Technically a word: ৬藏A\u{030a}\u{110b}\u{1161}");
+        assert_eq!(Some(11), a.next_word_offset(0));
+        assert_eq!(Some(11), a.next_word_offset(7));
+        assert_eq!(Some(13), a.next_word_offset(11));
+        assert_eq!(Some(18), a.next_word_offset(14));
+        assert_eq!(Some(35), a.next_word_offset(18));
+        assert_eq!(Some(35), a.next_word_offset(19));
+        assert_eq!(Some(35), a.next_word_offset(20));
+        assert_eq!(Some(35), a.next_word_offset(26));
+        assert_eq!(Some(35), a.next_word_offset(35));
+    }
+
+    #[test]
+    fn preceding_line_break() {
+        let a = String::from("Technically\na word:\n ৬藏A\u{030a}\n\u{110b}\u{1161}");
+        assert_eq!(0, a.preceding_line_break(0));
+        assert_eq!(0, a.preceding_line_break(11));
+        assert_eq!(12, a.preceding_line_break(12));
+        assert_eq!(12, a.preceding_line_break(13));
+        assert_eq!(20, a.preceding_line_break(21));
+        assert_eq!(31, a.preceding_line_break(31));
+        assert_eq!(31, a.preceding_line_break(34));
+
+        let b = String::from("Technically a word: ৬藏A\u{030a}\u{110b}\u{1161}");
+        assert_eq!(0, b.preceding_line_break(0));
+        assert_eq!(0, b.preceding_line_break(11));
+        assert_eq!(0, b.preceding_line_break(13));
+        assert_eq!(0, b.preceding_line_break(21));
+    }
+
+    #[test]
+    fn next_line_break() {
+        let a = String::from("Technically\na word:\n ৬藏A\u{030a}\n\u{110b}\u{1161}");
+        assert_eq!(11, a.next_line_break(0));
+        assert_eq!(11, a.next_line_break(11));
+        assert_eq!(19, a.next_line_break(13));
+        assert_eq!(30, a.next_line_break(21));
+        assert_eq!(a.len(), a.next_line_break(31));
+
+        let b = String::from("Technically a word: ৬藏A\u{030a}\u{110b}\u{1161}");
+        assert_eq!(b.len(), b.next_line_break(0));
+        assert_eq!(b.len(), b.next_line_break(11));
+        assert_eq!(b.len(), b.next_line_break(13));
+        assert_eq!(b.len(), b.next_line_break(19));
     }
 }

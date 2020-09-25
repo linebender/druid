@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,20 +14,18 @@
 
 //! Customizing application-level behaviour.
 
-use std::{
-    any::{Any, TypeId},
-    collections::VecDeque,
-};
+use std::any::{Any, TypeId};
 
 use crate::{
-    commands, Command, Data, Env, Event, MenuDesc, SingleUse, Target, WindowDesc, WindowId,
+    commands, core::CommandQueue, Command, Data, Env, Event, MenuDesc, SingleUse, Target,
+    WindowDesc, WindowId,
 };
 
 /// A context passed in to [`AppDelegate`] functions.
 ///
 /// [`AppDelegate`]: trait.AppDelegate.html
 pub struct DelegateCtx<'a> {
-    pub(crate) command_queue: &'a mut VecDeque<(Target, Command)>,
+    pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) app_data_type: TypeId,
 }
 
@@ -38,16 +36,13 @@ impl<'a> DelegateCtx<'a> {
     /// submitted during the handling of an event are executed before
     /// the [`update()`] method is called.
     ///
+    /// [`Target::Auto`] commands will be sent to every window (`Target::Global`).
+    ///
     /// [`Command`]: struct.Command.html
     /// [`update()`]: trait.Widget.html#tymethod.update
-    pub fn submit_command(
-        &mut self,
-        command: impl Into<Command>,
-        target: impl Into<Option<Target>>,
-    ) {
-        let command = command.into();
-        let target = target.into().unwrap_or(Target::Global);
-        self.command_queue.push_back((target, command))
+    pub fn submit_command(&mut self, command: impl Into<Command>) {
+        self.command_queue
+            .push_back(command.into().default_to(Target::Global))
     }
 
     /// Create a new window.
@@ -57,8 +52,9 @@ impl<'a> DelegateCtx<'a> {
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
         if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::NEW_WINDOW, SingleUse::new(Box::new(desc))),
-                Target::Global,
+                commands::NEW_WINDOW
+                    .with(SingleUse::new(Box::new(desc)))
+                    .to(Target::Global),
             );
         } else {
             const MSG: &str = "WindowDesc<T> - T must match the application data type.";
@@ -77,8 +73,9 @@ impl<'a> DelegateCtx<'a> {
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>, window: WindowId) {
         if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::SET_MENU, Box::new(menu)),
-                Target::Window(window),
+                commands::SET_MENU
+                    .with(Box::new(menu))
+                    .to(Target::Window(window)),
             );
         } else {
             const MSG: &str = "MenuDesc<T> - T must match the application data type.";
