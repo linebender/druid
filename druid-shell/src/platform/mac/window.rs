@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,8 +24,7 @@ use std::time::Instant;
 
 use cocoa::appkit::{
     CGFloat, NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSEvent,
-    NSEventModifierFlags, NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow,
-    NSWindowStyleMask,
+    NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
 };
 use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{
@@ -41,24 +40,54 @@ use objc::runtime::{Class, Object, Sel};
 use objc::{class, msg_send, sel, sel_impl};
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
-use crate::piet::{Piet, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
-use super::appkit::{NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt};
+use super::appkit::{
+    NSRunLoopCommonModes, NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt,
+};
 use super::application::Application;
 use super::dialog;
+use super::keyboard::{make_modifiers, KeyboardState};
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
-use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::keycodes::KeyCode;
+use crate::keyboard_types::KeyState;
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::region::Region;
 use crate::scale::Scale;
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel, WindowState};
 use crate::Error;
 
 #[allow(non_upper_case_globals)]
 const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
+
+#[allow(dead_code)]
+#[allow(non_upper_case_globals)]
+mod levels {
+    use crate::window::WindowLevel;
+
+    // These are the levels that AppKit seems to have.
+    pub const NSModalPanelLevel: i32 = 24;
+    pub const NSNormalWindowLevel: i32 = 0;
+    pub const NSFloatingWindowLevel: i32 = 3;
+    pub const NSTornOffMenuWindowLevel: i32 = NSFloatingWindowLevel;
+    pub const NSSubmenuWindowLevel: i32 = NSFloatingWindowLevel;
+    pub const NSModalPanelWindowLevel: i32 = 8;
+    pub const NSStatusWindowLevel: i32 = 25;
+    pub const NSPopUpMenuWindowLevel: i32 = 101;
+    pub const NSScreenSaverWindowLevel: i32 = 1000;
+
+    pub fn as_raw_window_level(window_level: WindowLevel) -> i32 {
+        use WindowLevel::*;
+        match window_level {
+            AppWindow => NSNormalWindowLevel,
+            Tooltip => NSFloatingWindowLevel,
+            DropDown => NSFloatingWindowLevel,
+            Modal => NSModalPanelWindowLevel,
+        }
+    }
+}
 
 #[derive(Clone)]
 pub(crate) struct WindowHandle {
@@ -84,6 +113,9 @@ pub(crate) struct WindowBuilder {
     menu: Option<Menu>,
     size: Size,
     min_size: Option<Size>,
+    position: Option<Point>,
+    level: Option<WindowLevel>,
+    window_state: Option<WindowState>,
     resizable: bool,
     show_titlebar: bool,
 }
@@ -105,11 +137,12 @@ struct ViewState {
     nsview: WeakPtr,
     handler: Box<dyn WinHandler>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
-    last_mods: KeyModifiers,
     /// Tracks window focusing left clicks
     focus_click: bool,
     // Tracks whether we have already received the mouseExited event
     mouse_left: bool,
+    keyboard_state: KeyboardState,
+    text: PietText,
 }
 
 impl WindowBuilder {
@@ -120,6 +153,9 @@ impl WindowBuilder {
             menu: None,
             size: Size::new(500.0, 400.0),
             min_size: None,
+            position: None,
+            level: None,
+            window_state: None,
             resizable: true,
             show_titlebar: true,
         }
@@ -142,8 +178,19 @@ impl WindowBuilder {
     }
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
-        // TODO: Use this in `self.build`
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_level(&mut self, level: WindowLevel) {
+        self.level = Some(level);
+    }
+
+    pub fn set_position(&mut self, position: Point) {
+        self.position = Some(position)
+    }
+
+    pub fn set_window_state(&mut self, state: WindowState) {
+        self.window_state = Some(state);
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -157,9 +204,12 @@ impl WindowBuilder {
     pub fn build(self) -> Result<WindowHandle, Error> {
         assert_main_thread();
         unsafe {
-            let mut style_mask = NSWindowStyleMask::NSTitledWindowMask
-                | NSWindowStyleMask::NSClosableWindowMask
+            let mut style_mask = NSWindowStyleMask::NSClosableWindowMask
                 | NSWindowStyleMask::NSMiniaturizableWindowMask;
+
+            if self.show_titlebar {
+                style_mask |= NSWindowStyleMask::NSTitledWindowMask;
+            }
 
             if self.resizable {
                 style_mask |= NSWindowStyleMask::NSResizableWindowMask;
@@ -170,7 +220,8 @@ impl WindowBuilder {
                 NSSize::new(self.size.width, self.size.height),
             );
 
-            let window = NSWindow::alloc(nil).initWithContentRect_styleMask_backing_defer_(
+            let window: id = msg_send![WINDOW_CLASS.0, alloc];
+            let window = window.initWithContentRect_styleMask_backing_defer_(
                 rect,
                 style_mask,
                 NSBackingStoreBuffered,
@@ -199,10 +250,22 @@ impl WindowBuilder {
             content_view.addSubview_(view);
             let view_state: *mut c_void = *(*view).get_ivar("viewState");
             let view_state = &mut *(view_state as *mut ViewState);
-            let handle = WindowHandle {
+            let mut handle = WindowHandle {
                 nsview: view_state.nsview.clone(),
                 idle_queue,
             };
+
+            if let Some(pos) = self.position {
+                handle.set_position(pos);
+            }
+            if let Some(window_state) = self.window_state {
+                handle.set_window_state(window_state);
+            }
+
+            if let Some(level) = self.level {
+                handle.set_level(level)
+            }
+
             (*view_state).handler.connect(&handle.clone().into());
             (*view_state).handler.scale(Scale::default());
             (*view_state)
@@ -333,6 +396,7 @@ lazy_static! {
             draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
         );
         decl.add_method(sel!(runIdle), run_idle as extern "C" fn(&mut Object, Sel));
+        decl.add_method(sel!(viewWillDraw), view_will_draw as extern "C" fn(&mut Object, Sel));
         decl.add_method(sel!(redraw), redraw as extern "C" fn(&mut Object, Sel));
         decl.add_method(
             sel!(handleTimer:),
@@ -360,13 +424,15 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
     unsafe {
         let view: id = msg_send![VIEW_CLASS.0, new];
         let nsview = WeakPtr::new(view);
+        let keyboard_state = KeyboardState::new();
         let state = ViewState {
             nsview,
             handler,
             idle_queue,
-            last_mods: KeyModifiers::default(),
             focus_click: false,
             mouse_left: true,
+            keyboard_state,
+            text: PietText::new_with_unique_state(),
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
@@ -387,6 +453,24 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
 
         (view.autorelease(), queue_handle)
     }
+}
+
+struct WindowClass(*const Class);
+unsafe impl Sync for WindowClass {}
+
+lazy_static! {
+    static ref WINDOW_CLASS: WindowClass = unsafe {
+        let mut decl =
+            ClassDecl::new("DruidWindow", class!(NSWindow)).expect("Window class defined");
+        decl.add_method(
+            sel!(canBecomeKeyWindow),
+            canBecomeKeyWindow as extern "C" fn(&Object, Sel) -> BOOL,
+        );
+        extern "C" fn canBecomeKeyWindow(_this: &Object, _sel: Sel) -> BOOL {
+            YES
+        }
+        WindowClass(decl.register())
+    };
 }
 
 extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
@@ -589,24 +673,23 @@ extern "C" fn pinch_event(this: &mut Object, _: Sel, nsevent: id) {
 }
 
 extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
-    let event = make_key_event(nsevent);
-
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    (*view_state).handler.key_down(event);
-    view_state.last_mods = event.mods;
+    if let Some(event) = (*view_state).keyboard_state.process_native_event(nsevent) {
+        (*view_state).handler.key_down(event);
+    }
 }
 
 extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
-    let event = make_key_event(nsevent);
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    (*view_state).handler.key_up(event);
-    view_state.last_mods = event.mods;
+    if let Some(event) = (*view_state).keyboard_state.process_native_event(nsevent) {
+        (*view_state).handler.key_up(event);
+    }
 }
 
 extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
@@ -614,12 +697,20 @@ extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    let (down, event) = mods_changed_key_event(view_state.last_mods, nsevent);
-    view_state.last_mods = event.mods;
-    if down {
-        (*view_state).handler.key_down(event);
-    } else {
-        (*view_state).handler.key_up(event);
+    if let Some(event) = (*view_state).keyboard_state.process_native_event(nsevent) {
+        if event.state == KeyState::Down {
+            (*view_state).handler.key_down(event);
+        } else {
+            (*view_state).handler.key_up(event);
+        }
+    }
+}
+
+extern "C" fn view_will_draw(this: &mut Object, _: Sel) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        (*view_state).handler.prepare_paint();
     }
 }
 
@@ -632,22 +723,21 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
             msg_send![context, CGContext];
         let cgcontext_ref = CGContextRef::from_ptr_mut(cgcontext_ptr);
 
+        // FIXME: use the actual invalid region instead of just this bounding box.
+        // https://developer.apple.com/documentation/appkit/nsview/1483772-getrectsbeingdrawn?language=objc
         let rect = Rect::from_origin_size(
             (dirtyRect.origin.x, dirtyRect.origin.y),
             (dirtyRect.size.width, dirtyRect.size.height),
         );
-        let mut piet_ctx = Piet::new_y_down(cgcontext_ref);
+        let invalid = Region::from(rect);
+
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let anim = (*view_state).handler.paint(&mut piet_ctx, rect);
+        let mut piet_ctx = Piet::new_y_down(cgcontext_ref, Some(view_state.text.clone()));
+
+        (*view_state).handler.paint(&mut piet_ctx, &invalid);
         if let Err(e) = piet_ctx.finish() {
             error!("{}", e)
-        }
-
-        if anim {
-            // TODO: synchronize with screen refresh rate using CVDisplayLink instead.
-            let () = msg_send!(this as *const _, performSelectorOnMainThread: sel!(redraw)
-                withObject: nil waitUntilDone: NO);
         }
 
         let superclass = msg_send![this, superclass];
@@ -759,6 +849,14 @@ impl WindowHandle {
         }
     }
 
+    pub fn request_anim_frame(&self) {
+        unsafe {
+            // TODO: synchronize with screen refresh rate using CVDisplayLink instead.
+            let () = msg_send![*self.nsview.load(), performSelectorOnMainThread: sel!(redraw)
+                withObject: nil waitUntilDone: NO];
+        }
+    }
+
     // Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
         unsafe {
@@ -804,13 +902,24 @@ impl WindowHandle {
             let user_info: id = msg_send![nsnumber, numberWithUnsignedInteger: token.into_raw()];
             let selector = sel!(handleTimer:);
             let view = self.nsview.load();
-            let _: id = msg_send![nstimer, scheduledTimerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
+            let timer: id = msg_send![nstimer, timerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
+            let runloop: id = msg_send![class!(NSRunLoop), currentRunLoop];
+            let () = msg_send![runloop, addTimer: timer forMode: NSRunLoopCommonModes];
         }
         token
     }
 
-    pub fn text(&self) -> Text {
-        Text::new()
+    pub fn text(&self) -> PietText {
+        let view = self.nsview.load();
+        unsafe {
+            if let Some(view) = (*view).as_ref() {
+                let state: *mut c_void = *view.get_ivar("viewState");
+                (*(state as *mut ViewState)).text.clone()
+            } else {
+                // this codepath should only happen during tests in druid, when view is nil
+                PietText::new_with_unique_state()
+            }
+        }
     }
 
     pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
@@ -834,6 +943,105 @@ impl WindowHandle {
 
     // TODO: Implement this
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
+
+    // Need to translate mac y coords, as they start from bottom left
+    pub fn set_position(&self, position: Point) {
+        unsafe {
+            // TODO this should be the max y in orig mac coords
+            let screen_height = crate::Screen::get_display_rect().height();
+            let window: id = msg_send![*self.nsview.load(), window];
+            let frame: NSRect = msg_send![window, frame];
+
+            let mut new_frame = frame;
+            new_frame.origin.x = position.x;
+            new_frame.origin.y = screen_height - position.y - frame.size.height; // Flip back
+            let () = msg_send![window, setFrame: new_frame display: YES];
+        }
+    }
+
+    pub fn get_position(&self) -> Point {
+        unsafe {
+            // TODO this should be the max y in orig mac coords
+            let screen_height = crate::Screen::get_display_rect().height();
+
+            let window: id = msg_send![*self.nsview.load(), window];
+            let current_frame: NSRect = msg_send![window, frame];
+
+            Point::new(
+                current_frame.origin.x,
+                screen_height - current_frame.origin.y - current_frame.size.height,
+            )
+        }
+    }
+
+    pub fn set_level(&self, level: WindowLevel) {
+        unsafe {
+            let level = levels::as_raw_window_level(level);
+            let window: id = msg_send![*self.nsview.load(), window];
+            let () = msg_send![window, setLevel: level];
+        }
+    }
+
+    pub fn set_size(&self, size: Size) {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let current_frame: NSRect = msg_send![window, frame];
+            let mut new_frame = current_frame;
+            new_frame.size.width = size.width;
+            new_frame.size.height = size.height;
+            let () = msg_send![window, setFrame: new_frame display: YES];
+        }
+    }
+
+    pub fn get_size(&self) -> Size {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let current_frame: NSRect = msg_send![window, frame];
+            Size::new(current_frame.size.width, current_frame.size.height)
+        }
+    }
+
+    pub fn get_window_state(&self) -> WindowState {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let isMin: BOOL = msg_send![window, isMiniaturized];
+            if isMin != NO {
+                return WindowState::MINIMIZED;
+            }
+            let isZoomed: BOOL = msg_send![window, isZoomed];
+            if isZoomed != NO {
+                return WindowState::MAXIMIZED;
+            }
+        }
+        WindowState::RESTORED
+    }
+
+    pub fn set_window_state(&mut self, state: WindowState) {
+        let cur_state = self.get_window_state();
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            match (state, cur_state) {
+                (s1, s2) if s1 == s2 => (),
+                (WindowState::MINIMIZED, _) => {
+                    let () = msg_send![window, performMiniaturize: self];
+                }
+                (WindowState::MAXIMIZED, _) => {
+                    let () = msg_send![window, performZoom: self];
+                }
+                (WindowState::RESTORED, WindowState::MAXIMIZED) => {
+                    let () = msg_send![window, performZoom: self];
+                }
+                (WindowState::RESTORED, WindowState::MINIMIZED) => {
+                    let () = msg_send![window, deminiaturize: self];
+                }
+                (WindowState::RESTORED, WindowState::RESTORED) => {} // Can't be reached
+            }
+        }
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for Mac.");
+    }
 
     pub fn resizable(&self, resizable: bool) {
         unsafe {
@@ -880,7 +1088,7 @@ impl WindowHandle {
     /// Get the `Scale` of the window.
     pub fn get_scale(&self) -> Result<Scale, Error> {
         // TODO: Get actual Scale
-        Ok(Scale::from_dpi(96.0, 96.0))
+        Ok(Scale::new(1.0, 1.0))
     }
 }
 
@@ -940,54 +1148,5 @@ fn time_interval_from_deadline(deadline: std::time::Instant) -> f64 {
         let secs = t.as_secs() as f64;
         let subsecs = f64::from(t.subsec_micros()) * 0.000_001;
         secs + subsecs
-    }
-}
-
-fn make_key_event(event: id) -> KeyEvent {
-    unsafe {
-        let chars = event.characters();
-        let slice = std::slice::from_raw_parts(chars.UTF8String() as *const _, chars.len());
-        let text = std::str::from_utf8_unchecked(slice);
-
-        let unmodified_chars = event.charactersIgnoringModifiers();
-        let slice = std::slice::from_raw_parts(
-            unmodified_chars.UTF8String() as *const _,
-            unmodified_chars.len(),
-        );
-        let unmodified_text = std::str::from_utf8_unchecked(slice);
-
-        let virtual_key = event.keyCode();
-        let is_repeat: bool = msg_send!(event, isARepeat);
-        let modifiers = event.modifierFlags();
-        let modifiers = make_modifiers(modifiers);
-        KeyEvent::new(virtual_key, is_repeat, modifiers, text, unmodified_text)
-    }
-}
-
-fn mods_changed_key_event(prev: KeyModifiers, event: id) -> (bool, KeyEvent) {
-    unsafe {
-        let key_code: KeyCode = event.keyCode().into();
-        let is_repeat = false;
-        let modifiers = event.modifierFlags();
-        let modifiers = make_modifiers(modifiers);
-
-        let down = match key_code {
-            KeyCode::LeftShift | KeyCode::RightShift if prev.shift => false,
-            KeyCode::LeftAlt | KeyCode::RightAlt if prev.alt => false,
-            KeyCode::LeftControl | KeyCode::RightControl if prev.ctrl => false,
-            KeyCode::LeftMeta | KeyCode::RightMeta if prev.meta => false,
-            _ => true,
-        };
-        let event = KeyEvent::new(key_code, is_repeat, modifiers, "", "");
-        (down, event)
-    }
-}
-
-fn make_modifiers(raw: NSEventModifierFlags) -> KeyModifiers {
-    KeyModifiers {
-        shift: raw.contains(NSEventModifierFlags::NSShiftKeyMask),
-        alt: raw.contains(NSEventModifierFlags::NSAlternateKeyMask),
-        ctrl: raw.contains(NSEventModifierFlags::NSControlKeyMask),
-        meta: raw.contains(NSEventModifierFlags::NSCommandKeyMask),
     }
 }

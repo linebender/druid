@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ include!("examples.in");
 // 3. impl_example!(<wasm_fn_name>, <path_to_example_main_fn>());
 //    Creates a wasm binding named <wasm_fn_name>, which calls into the Rust example fn given by
 //    <path_to_example_main_fn>. This can be used to make a different wasm binding name than the
-//    name of the original example itself (e.g. it is used for the `switch` example to avoid name
+//    name of the original example itself (e.g. it was used for the `switch` example to avoid name
 //    collisions with the JavaScript `switch` statement).
 macro_rules! impl_example {
     ($wasm_fn:ident, $expr:expr) => {
@@ -52,13 +52,12 @@ macro_rules! impl_example {
     };
 }
 
-// Below is a list of examples that can be built for WASM.
+// Below is a list of examples that can be built for the web.
 // Please add the examples that cannot be built to the EXCEPTIONS list in build.rs.
 impl_example!(anim);
 impl_example!(calc);
 impl_example!(custom_widget);
 impl_example!(either);
-//impl_example!(ext_event); // No thread support on wasm
 impl_example!(flex.unwrap());
 impl_example!(game_of_life);
 impl_example!(hello);
@@ -76,7 +75,8 @@ impl_example!(scroll_colors);
 impl_example!(scroll);
 impl_example!(split_demo);
 impl_example!(styled_text.unwrap());
-//impl_example!(svg); // usvg doesn't compile on usvg at the time of this writing
-impl_example!(switch_demo, examples::switch::main());
+impl_example!(switches);
 impl_example!(timer);
 impl_example!(view_switcher);
+impl_example!(widget_gallery);
+impl_example!(text);

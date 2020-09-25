@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,35 +53,35 @@ pub(crate) fn get_file_dialog_path(
 
     dialog.set_show_hidden(options.show_hidden);
 
-    dialog.set_select_multiple(options.multi_selection);
+    if action != FileChooserAction::Save {
+        dialog.set_select_multiple(options.multi_selection);
+    }
 
-    let mut found_default_filter = false;
-    if let Some(file_types) = &options.allowed_types {
-        for f in file_types {
-            let filter = file_filter(f);
-            dialog.add_filter(&filter);
+    // Don't set the filters when showing the folder selection dialog,
+    // because then folder traversing won't work.
+    if action != FileChooserAction::SelectFolder {
+        let mut found_default_filter = false;
+        if let Some(file_types) = &options.allowed_types {
+            for f in file_types {
+                let filter = file_filter(f);
+                dialog.add_filter(&filter);
 
-            if let Some(default) = &options.default_type {
-                if default == f {
-                    // Note that we're providing the same FileFilter object to
-                    // add_filter and set_filter, because gtk checks them for
-                    // identity, not structural equality.
-                    dialog.set_filter(&filter);
-                    found_default_filter = true;
+                if let Some(default) = &options.default_type {
+                    if default == f {
+                        // Note that we're providing the same FileFilter object to
+                        // add_filter and set_filter, because gtk checks them for
+                        // identity, not structural equality.
+                        dialog.set_filter(&filter);
+                        found_default_filter = true;
+                    }
                 }
             }
         }
-    }
 
-    if let Some(default_file_type) = &options.default_type {
-        if options.allowed_types.is_some() && !found_default_filter {
-            // It's ok to set a default file filter without providing a list of
-            // allowed filters, but it's not ok (or at least, doesn't work in gtk)
-            // to provide a default filter that isn't in the (present) list
-            // of allowed filters.
-            log::warn!("default file type not found in allowed types");
-        } else if !found_default_filter {
-            dialog.set_filter(&file_filter(default_file_type));
+        if let Some(dt) = &options.default_type {
+            if !found_default_filter {
+                log::warn!("The default type {:?} is not present in allowed types.", dt);
+            }
         }
     }
 

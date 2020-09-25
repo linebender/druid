@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,10 +63,16 @@ use crate::{
 /// [`ControllerHost`]: struct.ControllerHost.html
 /// [`WidgetExt::controller`]: ../trait.WidgetExt.html#tymethod.controller
 pub trait Controller<T, W: Widget<T>> {
+    /// Analogous to [`Widget::event`].
+    ///
+    /// [`Widget::event`]: ../trait.Widget.html#tymethod.event
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         child.event(ctx, event, data, env)
     }
 
+    /// Analogous to [`Widget::lifecycle`].
+    ///
+    /// [`Widget::lifecycle`]: ../trait.Widget.html#tymethod.lifecycle
     fn lifecycle(
         &mut self,
         child: &mut W,
@@ -78,6 +84,9 @@ pub trait Controller<T, W: Widget<T>> {
         child.lifecycle(ctx, event, data, env)
     }
 
+    /// Analogous to [`Widget::update`].
+    ///
+    /// [`Widget::update`]: ../trait.Widget.html#tymethod.update
     fn update(&mut self, child: &mut W, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         child.update(ctx, old_data, data, env)
     }

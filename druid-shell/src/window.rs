@@ -1,4 +1,4 @@
-// Copyright 2018 The xi-editor Authors.
+// Copyright 2018 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,12 +26,9 @@ use crate::kurbo::{Point, Rect, Size};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, MouseEvent};
 use crate::platform::window as platform;
+use crate::region::Region;
 use crate::scale::Scale;
-
-// It's possible we'll want to make this type alias at a lower level,
-// see https://github.com/linebender/piet/pull/37 for more discussion.
-/// The platform text factory, reexported from piet.
-pub type Text<'a> = <piet_common::Piet<'a> as piet_common::RenderContext>::Text;
+use piet_common::PietText;
 
 /// A token that uniquely identifies a running timer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
@@ -95,6 +92,29 @@ impl IdleToken {
     }
 }
 
+/// Levels in the window system - Z order for display purposes.
+/// Describes the purpose of a window and should be mapped appropriately to match platform
+/// conventions.
+#[derive(Copy, Clone, Debug)]
+pub enum WindowLevel {
+    /// A top level app window.
+    AppWindow,
+    /// A window that should stay above app windows - like a tooltip
+    Tooltip,
+    /// A user interface element such as a dropdown menu or combo box
+    DropDown,
+    /// A modal dialog
+    Modal,
+}
+
+/// Contains the different states a Window can be in.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum WindowState {
+    MAXIMIZED,
+    MINIMIZED,
+    RESTORED,
+}
+
 /// A handle to a platform window object.
 #[derive(Clone, Default)]
 pub struct WindowHandle(platform::WindowHandle);
@@ -118,9 +138,89 @@ impl WindowHandle {
         self.0.resizable(resizable)
     }
 
-    /// Set whether the window should show titlebar
+    /// Sets the state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn set_window_state(&mut self, state: WindowState) {
+        self.0.set_window_state(state);
+    }
+
+    /// Gets the state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn get_window_state(&self) -> WindowState {
+        self.0.get_window_state()
+    }
+
+    /// Allows the operating system to handle a custom titlebar
+    /// like the default one.
+    ///
+    /// It should be used on Event::MouseMove in a widget:
+    /// `Event::MouseMove(_) => {
+    ///    if ctx.is_hot() {
+    ///        ctx.window().handle_titlebar(true);
+    ///    } else {
+    ///        ctx.window().handle_titlebar(false);
+    ///    }
+    ///}`
+    ///
+    /// This might not work or behave the same across all platforms.
+    pub fn handle_titlebar(&self, val: bool) {
+        self.0.handle_titlebar(val);
+    }
+
+    /// Set whether the window should show titlebar.
     pub fn show_titlebar(&self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
+    }
+
+    /// Sets the position of the window in virtual screen coordinates.
+    /// [`position`] The position in pixels.
+    ///
+    /// [`position`]: struct.Point.html
+    pub fn set_position(&self, position: Point) {
+        self.0.set_position(position)
+    }
+
+    /// Returns the position in virtual screen coordinates.
+    /// [`Point`] The position in pixels.
+    ///
+    /// [`Point`]: struct.Point.html
+    pub fn get_position(&self) -> Point {
+        self.0.get_position()
+    }
+
+    /// Set the window's size in [display points].
+    ///
+    /// The actual window size in pixels will depend on the platform DPI settings.
+    ///
+    /// This should be considered a request to the platform to set the size of the window.
+    /// The platform might increase the size a tiny bit due to DPI.
+    /// To know the actual size of the window you should handle the [`WinHandler::size`] method.
+    ///
+    /// [`WinHandler::size`]: trait.WinHandler.html#method.size
+    /// [display points]: struct.Scale.html
+    pub fn set_size(&self, size: Size) {
+        self.0.set_size(size)
+    }
+
+    /// Gets the window size.
+    /// [`Size`] Window size in pixels.
+    ///
+    /// [`Size`]: struct.Size.html
+    pub fn get_size(&self) -> Size {
+        self.0.get_size()
+    }
+
+    /// Sets the [`WindowLevel`] - ie Z order in the Window system / compositor
+    ///
+    /// We do not currently have a getter method - because it may imply keeping extra state in the WindowHandle if
+    /// multiple Druid levels map to one underlying system level.
+    /// If there is a use case it can be added.
+    ///
+    /// [`WindowLevel`]: enum.WindowLevel.html
+    pub fn set_level(&self, level: WindowLevel) {
+        self.0.set_level(level)
     }
 
     /// Bring this window to the front of the window stack and give it focus.
@@ -128,9 +228,21 @@ impl WindowHandle {
         self.0.bring_to_front_and_focus()
     }
 
+    /// Request that [`prepare_paint`] and [`paint`] next time there's the opportunity
+    /// to render another frame. This differs from [`invalidate`] and [`invalidate_rect`]
+    /// in that it doesn't invalidate any part of the window.
+    ///
+    /// [`prepare_paint`]: trait.WinHandler.html#tymethod.prepare_paint
+    /// [`paint`]: trait.WinHandler.html#tymethod.paint
+    /// [`invalidate`]: struct.WindowHandle.html#tymethod.invalidate
+    /// [`invalidate_rect`]: struct.WindowHandle.html#tymethod.invalidate_rect
+    pub fn request_anim_frame(&self) {
+        self.0.request_anim_frame();
+    }
+
     /// Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
-        self.0.invalidate()
+        self.0.invalidate();
     }
 
     /// Request invalidation of a region of the window.
@@ -149,7 +261,7 @@ impl WindowHandle {
     }
 
     /// Get access to a type that can perform text layout.
-    pub fn text(&self) -> Text {
+    pub fn text(&self) -> PietText {
         self.0.text()
     }
 
@@ -259,14 +371,29 @@ impl WindowBuilder {
         self.0.set_min_size(size)
     }
 
-    /// Set whether the window should be resizable
+    /// Set whether the window should be resizable.
     pub fn resizable(&mut self, resizable: bool) {
         self.0.resizable(resizable)
     }
 
-    /// Set whether the window should have a titlebar and decorations
+    /// Set whether the window should have a titlebar and decorations.
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
+    }
+
+    /// Sets the initial window position in virtual screen coordinates.
+    /// [`position`] Position in pixels.
+    ///
+    /// [`position`]: struct.Point.html
+    pub fn set_position(&mut self, position: Point) {
+        self.0.set_position(position);
+    }
+
+    /// Sets the initial [`WindowLevel`]
+    ///
+    /// [`WindowLevel`]: enum.WindowLevel.html
+    pub fn set_level(&mut self, level: WindowLevel) {
+        self.0.set_level(level);
     }
 
     /// Set the window's initial title.
@@ -277,6 +404,13 @@ impl WindowBuilder {
     /// Set the window's menu.
     pub fn set_menu(&mut self, menu: Menu) {
         self.0.set_menu(menu.into_inner())
+    }
+
+    /// Sets the initial state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn set_window_state(&mut self, state: WindowState) {
+        self.0.set_window_state(state);
     }
 
     /// Attempt to construct the platform window.
@@ -318,13 +452,21 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn scale(&mut self, scale: Scale) {}
 
-    /// Request the handler to paint the window contents. Return value
-    /// indicates whether window is animating, i.e. whether another paint
-    /// should be scheduled for the next animation frame. `invalid_rect` is the
-    /// rectangle in [display points] that needs to be repainted.
+    /// Request the handler to prepare to paint the window contents.
+    /// In particular, if there are any regions that need to be repainted
+    /// on the next call to `paint`, the handler should invalidate those regions
+    /// by calling [`WindowHandle::invalidate_rect`] or [`WindowHandle::invalidate`].
+    ///
+    /// [`WindowHandle::invalidate_rect`]: trait.WindowHandle:#tymethod.invalidate_rect
+    /// [`WindowHandle::invalidate`]: trait.WindowHandle:#tymethod.invalidate
+    fn prepare_paint(&mut self);
+
+    /// Request the handler to paint the window contents.
+    /// `invalid` is the region in [display points] that needs to be repainted;
+    /// painting outside the invalid region will have no effect.
     ///
     /// [display points]: struct.Scale.html
-    fn paint(&mut self, piet: &mut piet_common::Piet, invalid_rect: Rect) -> bool;
+    fn paint(&mut self, piet: &mut piet_common::Piet, invalid: &Region);
 
     /// Called when the resources need to be rebuilt.
     ///
@@ -395,6 +537,16 @@ pub trait WinHandler {
     /// Called when this window becomes the focused window.
     #[allow(unused_variables)]
     fn got_focus(&mut self) {}
+
+    /// Called when the shell requests to close the window, for example because the user clicked
+    /// the little "X" in the titlebar.
+    ///
+    /// If you want to actually close the window in response to this request, call
+    /// [`WindowHandle::close`]. If you don't implement this method, clicking the titlebar "X" will
+    /// have no effect.
+    ///
+    /// [`WindowHandle::close`]: struct.WindowHandle.html#tymethod.close
+    fn request_close(&mut self) {}
 
     /// Called when the window is being destroyed. Note that this happens
     /// earlier in the sequence than drop (at WM_DESTROY, while the latter is

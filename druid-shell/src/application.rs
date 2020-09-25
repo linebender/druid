@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ impl Application {
     ///
     /// This may change in the future. See [druid#771] for discussion.
     ///
-    /// [druid#771]: https://github.com/xi-editor/druid/issues/771
+    /// [druid#771]: https://github.com/linebender/druid/issues/771
     pub fn new() -> Result<Application, Error> {
         if APPLICATION_CREATED.compare_and_swap(false, true, Ordering::AcqRel) {
             return Err(Error::ApplicationAlreadyExists);

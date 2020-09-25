@@ -1,4 +1,4 @@
-// Copyright 2018 The xi-editor Authors.
+// Copyright 2018 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ use winapi::shared::windef::*;
 use winapi::um::winuser::*;
 
 use super::util::ToWide;
-use crate::hotkey::{HotKey, KeyCompare};
-use crate::KeyModifiers;
+use crate::hotkey::HotKey;
+use crate::keyboard::Modifiers;
 
 /// A menu object, which can be either a top-level menubar or a
 /// submenu.
@@ -135,43 +135,39 @@ impl Menu {
     }
 }
 
+/// Convert a hotkey to an accelerator.
+///
+/// Note that this conversion is dependent on the keyboard map.
+/// Therefore, when the keyboard map changes (WM_INPUTLANGCHANGE),
+/// we should be rebuilding the accelerator map.
 fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
     let mut virt_key = FVIRTKEY;
-    let key_mods: KeyModifiers = key.mods.into();
-    if key_mods.ctrl {
+    let key_mods: Modifiers = key.mods.into();
+    if key_mods.ctrl() {
         virt_key |= FCONTROL;
     }
-    if key_mods.alt {
+    if key_mods.alt() {
         virt_key |= FALT;
     }
-    if key_mods.shift {
+    if key_mods.shift() {
         virt_key |= FSHIFT;
     }
 
-    let raw_key = match key.key {
-        KeyCompare::Code(code) => code.to_i32()?,
-        KeyCompare::Text(text) => {
-            // See https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscana
-            let wchar = match text.encode_utf16().next() {
-                Some(it) => it,
-                None => {
-                    log::error!("The text of Hotkey is empty");
-                    return None;
-                }
-            };
-            let code = unsafe { VkKeyScanW(wchar) };
-            let ctrl_code = code >> 8;
-            if ctrl_code & 0x1 != 0 {
-                virt_key |= FSHIFT;
-            }
-            if ctrl_code & 0x02 != 0 {
-                virt_key |= FCONTROL;
-            }
-            if ctrl_code & 0x04 != 0 {
-                virt_key |= FALT;
-            }
-            (code & 0x00ff) as i32
+    let raw_key = if let Some(vk_code) = super::keyboard::key_to_vk(&key.key) {
+        let mod_code = vk_code >> 8;
+        if mod_code & 0x1 != 0 {
+            virt_key |= FSHIFT;
         }
+        if mod_code & 0x02 != 0 {
+            virt_key |= FCONTROL;
+        }
+        if mod_code & 0x04 != 0 {
+            virt_key |= FALT;
+        }
+        vk_code & 0x00ff
+    } else {
+        log::error!("Failed to convert key {:?} into virtual key code", key.key);
+        return None;
     };
 
     Some(ACCEL {

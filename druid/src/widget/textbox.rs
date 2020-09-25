@@ -1,4 +1,4 @@
-// Copyright 2018 The xi-editor Authors.
+// Copyright 2018 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,34 +16,32 @@
 
 use std::time::Duration;
 
+use crate::widget::prelude::*;
 use crate::{
-    Application, BoxConstraints, Cursor, Env, Event, EventCtx, HotKey, KeyCode, LayoutCtx,
-    LifeCycle, LifeCycleCtx, PaintCtx, Selector, SysMods, TimerToken, UpdateCtx, Widget,
+    Application, BoxConstraints, Cursor, Data, Env, FontDescriptor, HotKey, KbKey, KeyOrValue,
+    Selector, SysMods, TimerToken,
 };
 
-use crate::kurbo::{Affine, Line, Point, RoundedRect, Size, Vec2};
-use crate::piet::{
-    FontBuilder, PietText, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder,
-};
+use crate::kurbo::{Affine, Insets, Point, Size};
 use crate::theme;
 
 use crate::text::{
     movement, offset_for_delete_backwards, BasicTextInput, EditAction, EditableText, MouseAction,
-    Movement, Selection, TextInput,
+    Movement, Selection, TextInput, TextLayout,
 };
 
 const BORDER_WIDTH: f64 = 1.;
-const PADDING_TOP: f64 = 5.;
-const PADDING_LEFT: f64 = 4.;
+const TEXT_INSETS: Insets = Insets::new(4.0, 2.0, 0.0, 2.0);
 
 // we send ourselves this when we want to reset blink, which must be done in event.
 const RESET_BLINK: Selector = Selector::new("druid-builtin.reset-textbox-blink");
-const CURSOR_BLINK_DRUATION: Duration = Duration::from_millis(500);
+const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
 pub struct TextBox {
     placeholder: String,
+    text: TextLayout,
     width: f64,
     hscroll_offset: f64,
     selection: Selection,
@@ -58,9 +56,11 @@ impl TextBox {
 
     /// Create a new TextBox widget
     pub fn new() -> TextBox {
+        let text = TextLayout::new("");
         Self {
             width: 0.0,
             hscroll_offset: 0.,
+            text,
             selection: Selection::caret(0),
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
@@ -74,26 +74,48 @@ impl TextBox {
         self
     }
 
-    #[deprecated(since = "0.5.0", note = "Use TextBox::new instead")]
-    #[doc(hidden)]
-    pub fn raw() -> TextBox {
-        Self::new()
+    /// Builder-style method for setting the text size.
+    ///
+    /// The argument can be either an `f64` or a [`Key<f64>`].
+    ///
+    /// [`Key<f64>`]: ../struct.Key.html
+    pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
+        self.set_text_size(size);
+        self
     }
 
-    /// Calculate the PietTextLayout from the given text, font, and font size
-    fn get_layout(&self, piet_text: &mut PietText, text: &str, env: &Env) -> PietTextLayout {
-        let font_name = env.get(theme::FONT_NAME);
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        // TODO: caching of both the format and the layout
-        let font = piet_text
-            .new_font_by_name(font_name, font_size)
-            .build()
-            .unwrap();
+    /// Builder-style method for setting the font.
+    ///
+    /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
+    /// that refers to a font defined in the [`Env`].
+    ///
+    /// [`Env`]: ../struct.Env.html
+    /// [`FontDescriptor`]: ../struct.FontDescriptor.html
+    /// [`Key<FontDescriptor>`]: ../struct.Key.html
+    pub fn with_font(mut self, font: impl Into<KeyOrValue<FontDescriptor>>) -> Self {
+        self.set_font(font);
+        self
+    }
 
-        piet_text
-            .new_text_layout(&font, &text.to_string(), std::f64::INFINITY)
-            .build()
-            .unwrap()
+    /// Set the text size.
+    ///
+    /// The argument can be either an `f64` or a [`Key<f64>`].
+    ///
+    /// [`Key<f64>`]: ../struct.Key.html
+    pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
+        self.text.set_text_size(size);
+    }
+
+    /// Set the font.
+    ///
+    /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
+    /// that refers to a font defined in the [`Env`].
+    ///
+    /// [`Env`]: ../struct.Env.html
+    /// [`FontDescriptor`]: ../struct.FontDescriptor.html
+    /// [`Key<FontDescriptor>`]: ../struct.Key.html
+    pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
+        self.text.set_font(font);
     }
 
     /// Insert text at the cursor position.
@@ -130,11 +152,19 @@ impl TextBox {
             EditAction::Insert(chars) | EditAction::Paste(chars) => self.insert(text, &chars),
             EditAction::Backspace => self.delete_backward(text),
             EditAction::Delete => self.delete_forward(text),
+            EditAction::JumpDelete(movement) => {
+                self.move_selection(movement, text, true);
+                self.delete_forward(text)
+            }
+            EditAction::JumpBackspace(movement) => {
+                self.move_selection(movement, text, true);
+                self.delete_backward(text)
+            }
             EditAction::Move(movement) => self.move_selection(movement, text, false),
             EditAction::ModifySelection(movement) => self.move_selection(movement, text, true),
             EditAction::SelectAll => self.selection.all(text),
             EditAction::Click(action) => {
-                if action.mods.shift {
+                if action.mods.shift() {
                     self.selection.end = action.column;
                 } else {
                     self.caret_to(text, action.column);
@@ -179,31 +209,26 @@ impl TextBox {
 
     /// For a given point, returns the corresponding offset (in bytes) of
     /// the grapheme cluster closest to that point.
-    fn offset_for_point(&self, point: Point, layout: &PietTextLayout) -> usize {
+    fn offset_for_point(&self, point: Point) -> usize {
         // Translating from screenspace to Piet's text layout representation.
         // We need to account for hscroll_offset state and TextBox's padding.
-        let translated_point = Point::new(point.x + self.hscroll_offset - PADDING_LEFT, point.y);
-        let hit_test = layout.hit_test_point(translated_point);
-        hit_test.metrics.text_position
+        let translated_point = Point::new(point.x + self.hscroll_offset - TEXT_INSETS.x0, point.y);
+        self.text.text_position_for_point(translated_point)
     }
 
     /// Given an offset (in bytes) of a valid grapheme cluster, return
     /// the corresponding x coordinate of that grapheme on the screen.
-    fn x_for_offset(&self, layout: &PietTextLayout, offset: usize) -> f64 {
-        if let Some(position) = layout.hit_test_text_position(offset) {
-            position.point.x
-        } else {
-            //TODO: what is the correct fallback here?
-            0.0
-        }
+    fn x_pos_for_offset(&self, offset: usize) -> f64 {
+        self.text.point_for_text_position(offset).x
     }
 
     /// Calculate a stateful scroll offset
-    fn update_hscroll(&mut self, layout: &PietTextLayout) {
-        let cursor_x = self.x_for_offset(layout, self.cursor());
-        let overall_text_width = layout.width();
+    fn update_hscroll(&mut self) {
+        let cursor_x = self.x_pos_for_offset(self.cursor());
+        let overall_text_width = self.text.size().width;
 
-        let padding = PADDING_LEFT * 2.;
+        // when advancing the cursor, we want some additional padding
+        let padding = TEXT_INSETS.x0 * 2.;
         if overall_text_width < self.width {
             // There's no offset if text is smaller than text box
             //
@@ -227,7 +252,7 @@ impl TextBox {
 
     fn reset_cursor_blink(&mut self, ctx: &mut EventCtx) {
         self.cursor_on = true;
-        self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DRUATION);
+        self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DURATION);
     }
 }
 
@@ -235,8 +260,6 @@ impl Widget<String> for TextBox {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
         // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);
-
-        let mut text_layout = self.get_layout(&mut ctx.text(), &data, env);
         let mut edit_action = None;
 
         match event {
@@ -245,7 +268,7 @@ impl Widget<String> for TextBox {
                 ctx.set_active(true);
 
                 if !mouse.focus {
-                    let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
+                    let cursor_offset = self.offset_for_point(mouse.pos);
                     edit_action = Some(EditAction::Click(MouseAction {
                         row: 0,
                         column: cursor_offset,
@@ -258,7 +281,7 @@ impl Widget<String> for TextBox {
             Event::MouseMove(mouse) => {
                 ctx.set_cursor(&Cursor::IBeam);
                 if ctx.is_active() {
-                    let cursor_offset = self.offset_for_point(mouse.pos, &text_layout);
+                    let cursor_offset = self.offset_for_point(mouse.pos);
                     edit_action = Some(EditAction::Drag(MouseAction {
                         row: 0,
                         column: cursor_offset,
@@ -277,7 +300,7 @@ impl Widget<String> for TextBox {
                 if *id == self.cursor_timer {
                     self.cursor_on = !self.cursor_on;
                     ctx.request_paint();
-                    self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DRUATION);
+                    self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DURATION);
                 }
             }
             Event::Command(ref cmd)
@@ -306,15 +329,15 @@ impl Widget<String> for TextBox {
             Event::KeyDown(key_event) => {
                 let event_handled = match key_event {
                     // Tab and shift+tab
-                    k_e if HotKey::new(None, KeyCode::Tab).matches(k_e) => {
+                    k_e if HotKey::new(None, KbKey::Tab).matches(k_e) => {
                         ctx.focus_next();
                         true
                     }
-                    k_e if HotKey::new(SysMods::Shift, KeyCode::Tab).matches(k_e) => {
+                    k_e if HotKey::new(SysMods::Shift, KbKey::Tab).matches(k_e) => {
                         ctx.focus_prev();
                         true
                     }
-                    k_e if HotKey::new(None, KeyCode::Return).matches(k_e) => {
+                    k_e if HotKey::new(None, KbKey::Enter).matches(k_e) => {
                         // 'enter' should do something, maybe?
                         // but for now we are suppressing it, because we don't want
                         // newlines.
@@ -333,44 +356,77 @@ impl Widget<String> for TextBox {
         }
 
         if let Some(edit_action) = edit_action {
-            let is_select_all = if let EditAction::SelectAll = &edit_action {
-                true
-            } else {
-                false
-            };
+            let is_select_all = matches!(edit_action, EditAction::SelectAll);
 
             self.do_edit_action(edit_action, data);
             self.reset_cursor_blink(ctx);
+            if data.is_empty() {
+                self.text.set_text(self.placeholder.as_str());
+                self.selection = Selection::caret(0);
+            } else {
+                self.text.set_text(data.as_str());
+            }
+            self.text.rebuild_if_needed(ctx.text(), env);
 
             if !is_select_all {
-                text_layout = self.get_layout(&mut ctx.text(), &data, env);
-                self.update_hscroll(&text_layout);
+                self.update_hscroll();
             }
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &String, _env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &String, env: &Env) {
         match event {
-            LifeCycle::WidgetAdded => ctx.register_for_focus(),
+            LifeCycle::WidgetAdded => {
+                ctx.register_for_focus();
+                if data.is_empty() {
+                    self.text.set_text(self.placeholder.as_str());
+                    self.text.set_text_color(theme::PLACEHOLDER_COLOR);
+                } else {
+                    self.text.set_text(data.as_str());
+                }
+                self.text.rebuild_if_needed(ctx.text(), env);
+            }
             // an open question: should we be able to schedule timers here?
-            LifeCycle::FocusChanged(true) => ctx.submit_command(RESET_BLINK, ctx.widget_id()),
+            LifeCycle::FocusChanged(true) => ctx.submit_command(RESET_BLINK.to(ctx.widget_id())),
             _ => (),
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &String, _data: &String, _env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &String, data: &String, env: &Env) {
+        let content = if data.is_empty() {
+            &self.placeholder
+        } else {
+            data
+        };
+
+        // setting text color rebuilds layout, so don't do it if we don't have to
+        if !old_data.same(data) {
+            self.selection = self.selection.constrain_to(content);
+            self.text.set_text(content.as_str());
+            if data.is_empty() {
+                self.text.set_text_color(theme::PLACEHOLDER_COLOR);
+            } else {
+                self.text.set_text_color(theme::LABEL_COLOR);
+            }
+        }
+
+        self.text.rebuild_if_needed(ctx.text(), env);
         ctx.request_paint();
     }
 
     fn layout(
         &mut self,
-        _layout_ctx: &mut LayoutCtx,
+        _ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         _data: &String,
         env: &Env,
     ) -> Size {
         let width = env.get(theme::WIDE_WIDGET_WIDTH);
-        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let min_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+
+        let text_metrics = self.text.size();
+        let text_height = text_metrics.height + TEXT_INSETS.y_value();
+        let height = text_height.max(min_height);
 
         let size = bc.constrain((width, height));
         self.width = size.width;
@@ -387,12 +443,9 @@ impl Widget<String> for TextBox {
 
         self.selection = self.selection.constrain_to(content);
 
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let height = ctx.size().height;
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let selection_color = env.get(theme::SELECTION_COLOR);
-        let text_color = env.get(theme::LABEL_COLOR);
-        let placeholder_color = env.get(theme::PLACEHOLDER_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
 
         let is_focused = ctx.is_focused();
@@ -404,11 +457,10 @@ impl Widget<String> for TextBox {
         };
 
         // Paint the background
-        let clip_rect = RoundedRect::from_origin_size(
-            Point::ORIGIN,
-            Size::new(self.width - BORDER_WIDTH, height).to_vec2(),
-            env.get(theme::TEXTBOX_BORDER_RADIUS),
-        );
+        let clip_rect = Size::new(self.width - BORDER_WIDTH, height)
+            .to_rect()
+            .inset(-BORDER_WIDTH / 2.0)
+            .to_rounded_rect(env.get(theme::TEXTBOX_BORDER_RADIUS));
 
         ctx.fill(clip_rect, &background_color);
 
@@ -417,47 +469,30 @@ impl Widget<String> for TextBox {
             rc.clip(clip_rect);
 
             // Calculate layout
-            let text_layout = self.get_layout(rc.text(), &content, env);
+            let text_size = self.text.size();
 
             // Shift everything inside the clip by the hscroll_offset
             rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
 
+            // Layout, measure, and draw text
+            let extra_padding = (height - text_size.height - TEXT_INSETS.y_value()).max(0.) / 2.;
+            let text_pos = Point::new(TEXT_INSETS.x0, TEXT_INSETS.y0 + extra_padding);
+
             // Draw selection rect
             if !self.selection.is_caret() {
-                let (left, right) = (self.selection.min(), self.selection.max());
-                let left_offset = self.x_for_offset(&text_layout, left);
-                let right_offset = self.x_for_offset(&text_layout, right);
-
-                let selection_width = right_offset - left_offset;
-
-                let selection_pos = Point::new(left_offset + PADDING_LEFT - 1., PADDING_TOP - 2.);
-
-                let selection_rect = RoundedRect::from_origin_size(
-                    selection_pos,
-                    Size::new(selection_width + 2., font_size + 4.).to_vec2(),
-                    1.,
-                );
-                rc.fill(selection_rect, &selection_color);
+                for sel in self.text.rects_for_range(self.selection.range()) {
+                    let sel = sel + text_pos.to_vec2();
+                    let rounded = sel.to_rounded_rect(1.0);
+                    rc.fill(rounded, &selection_color);
+                }
             }
 
-            // Layout, measure, and draw text
-            let text_height = font_size * 0.8;
-            let text_pos = Point::new(0.0 + PADDING_LEFT, text_height + PADDING_TOP);
-            let color = if data.is_empty() {
-                &placeholder_color
-            } else {
-                &text_color
-            };
-
-            rc.draw_text(&text_layout, text_pos, color);
+            self.text.draw(rc, text_pos);
 
             // Paint the cursor if focused and there's no selection
-            if is_focused && self.cursor_on && self.selection.is_caret() {
-                let cursor_x = self.x_for_offset(&text_layout, self.cursor());
-                let xy = text_pos + Vec2::new(cursor_x, 2. - font_size);
-                let x2y2 = xy + Vec2::new(0., font_size + 2.);
-                let line = Line::new(xy, x2y2);
-
+            if is_focused && self.cursor_on {
+                let line = self.text.cursor_line_for_text_position(self.cursor());
+                let line = line + text_pos.to_vec2();
                 rc.stroke(line, &cursor_color, 1.);
             }
         });

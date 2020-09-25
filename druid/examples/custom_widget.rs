@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,9 +15,12 @@
 //! An example of a custom drawing widget.
 
 use druid::kurbo::BezPath;
-use druid::piet::{FontBuilder, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
+use druid::piet::{FontFamily, ImageFormat, InterpolationMode};
 use druid::widget::prelude::*;
-use druid::{Affine, AppLauncher, Color, LocalizedString, Point, Rect, WindowDesc};
+use druid::{
+    Affine, AppLauncher, Color, FontDescriptor, LocalizedString, Point, Rect, TextLayout,
+    WindowDesc,
+};
 
 struct CustomWidget;
 
@@ -54,7 +57,7 @@ impl Widget<String> for CustomWidget {
     // The paint method gets called last, after an event flow.
     // It goes event -> update -> layout -> paint, and each method can influence the next.
     // Basically, anything that changes the appearance of a widget causes a paint.
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &String, _env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &String, env: &Env) {
         // Let's draw a picture with Piet!
 
         // Clear the whole widget with the color of your choice
@@ -81,24 +84,18 @@ impl Widget<String> for CustomWidget {
         let fill_color = Color::rgba8(0x00, 0x00, 0x00, 0x7F);
         ctx.fill(rect, &fill_color);
 
-        // Text is easy, if you ignore all these unwraps. Just pick a font and a size.
-        let font = ctx
-            .text()
-            .new_font_by_name("Segoe UI", 24.0)
-            .build()
-            .unwrap();
-        // Here's where we actually use the UI state
-        let layout = ctx
-            .text()
-            .new_text_layout(&font, data, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        // Text is easy; in real use TextLayout should be stored in the widget
+        // and reused.
+        let mut layout = TextLayout::new(data.as_str());
+        layout.set_font(FontDescriptor::new(FontFamily::SERIF).with_size(24.0));
+        layout.set_text_color(fill_color);
+        layout.rebuild_if_needed(ctx.text(), env);
 
         // Let's rotate our text slightly. First we save our current (default) context:
         ctx.with_save(|ctx| {
             // Now we can rotate the context (or set a clip path, for instance):
             ctx.transform(Affine::rotate(0.1));
-            ctx.draw_text(&layout, (80.0, 40.0), &fill_color);
+            layout.draw(ctx, (80.0, 40.0));
         });
         // When we exit with_save, the original context's rotation is restored
 

@@ -1,4 +1,4 @@
-// Copyright 2018 The xi-editor Authors.
+// Copyright 2018 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,20 +25,21 @@ mod either;
 mod env_scope;
 mod flex;
 mod identity_wrapper;
-#[cfg(feature = "image")]
-#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
 mod image;
 mod invalidation;
 mod label;
+mod lens_wrap;
 mod list;
 mod padding;
 mod painter;
 mod parse;
 mod progress_bar;
 mod radio;
+mod scope;
 mod scroll;
 mod sized_box;
 mod slider;
+mod spinner;
 mod split;
 mod stepper;
 #[cfg(feature = "svg")]
@@ -51,8 +52,6 @@ mod view_switcher;
 mod widget;
 mod widget_ext;
 
-#[cfg(feature = "image")]
-#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
 pub use self::image::{Image, ImageData};
 pub use align::Align;
 pub use button::Button;
@@ -65,20 +64,22 @@ pub use either::Either;
 pub use env_scope::EnvScope;
 pub use flex::{CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
 pub use identity_wrapper::IdentityWrapper;
-pub use label::{Label, LabelText};
+pub use label::{Label, LabelText, LineBreaking, RawLabel};
+pub use lens_wrap::LensWrap;
 pub use list::{List, ListIter};
 pub use padding::Padding;
 pub use painter::{BackgroundBrush, Painter};
 pub use parse::Parse;
 pub use progress_bar::ProgressBar;
 pub use radio::{Radio, RadioGroup};
+pub use scope::{DefaultScopePolicy, LensScopeTransfer, Scope, ScopePolicy, ScopeTransfer};
 pub use scroll::Scroll;
 pub use sized_box::SizedBox;
 pub use slider::Slider;
+pub use spinner::Spinner;
 pub use split::Split;
 pub use stepper::Stepper;
 #[cfg(feature = "svg")]
-#[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
 pub use textbox::TextBox;

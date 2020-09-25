@@ -1,11 +1,11 @@
 # Create custom widgets
 
-The `Widget` trait is the heart of druid, and in any serious application you
+The `Widget` trait is the heart of Druid, and in any serious application you
 will eventually need to create and use custom `Widget`s.
 
 ## `Painter` and `Controller`
 
-There are two helper widgets in druid that let you customize widget behaviour
+There are two helper widgets in Druid that let you customize widget behaviour
 without needing to implement the full widget trait: [`Painter`] and
 [`Controller`].
 
@@ -80,10 +80,10 @@ v controller, painter
 - request paint & request layout
 - changing widgets at runtime
 
-[`Controller`]: https://docs.rs/druid/0.5.0/druid/widget/trait.Controller.html
+[`Controller`]: https://docs.rs/druid/0.6.0/druid/widget/trait.Controller.html
 [`Widget`]: ./widget.md
-[`Painter`]: https://docs.rs/druid/0.5.0/druid/widget/struct.Painter.html
-[`SizedBox`]: https://docs.rs/druid/0.5.0/druid/widget/struct.SizedBox.html
-[`Container`]: https://docs.rs/druid/0.5.0/druid/widget/struct.Container.html
-[`WidgetExt`]: https://docs.rs/druid/0.5.0/druid/trait.WidgetExt.html
-[`background`]: https://docs.rs/druid/0.5.0/druid/trait.WidgetExt.html#background
+[`Painter`]: https://docs.rs/druid/0.6.0/druid/widget/struct.Painter.html
+[`SizedBox`]: https://docs.rs/druid/0.6.0/druid/widget/struct.SizedBox.html
+[`Container`]: https://docs.rs/druid/0.6.0/druid/widget/struct.Container.html
+[`WidgetExt`]: https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html
+[`background`]: https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html#background

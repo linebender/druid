@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -58,20 +58,16 @@ impl Widget<f64> for ProgressBar {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
+        let height = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let corner_radius = env.get(theme::PROGRESS_BAR_RADIUS);
         let clamped = data.max(0.0).min(1.0);
         let stroke_width = 2.0;
         let inset = -stroke_width / 2.0;
-
-        let rounded_rect = Rect::from_origin_size(
-            Point::ORIGIN,
-            (Size {
-                width: ctx.size().width,
-                height: env.get(theme::BASIC_WIDGET_HEIGHT),
-            })
-            .to_vec2(),
-        )
-        .inset(inset)
-        .to_rounded_rect(4.0);
+        let size = ctx.size();
+        let rounded_rect = Size::new(size.width, height)
+            .to_rect()
+            .inset(inset)
+            .to_rounded_rect(corner_radius);
 
         // Paint the border
         ctx.stroke(rounded_rect, &env.get(theme::BORDER_DARK), stroke_width);
@@ -92,14 +88,10 @@ impl Widget<f64> for ProgressBar {
 
         let rounded_rect = Rect::from_origin_size(
             Point::new(-inset, 0.),
-            (Size {
-                width: calculated_bar_width,
-                height: env.get(theme::BASIC_WIDGET_HEIGHT),
-            })
-            .to_vec2(),
+            Size::new(calculated_bar_width, height),
         )
         .inset((0.0, inset))
-        .to_rounded_rect(env.get(theme::PROGRESS_BAR_RADIUS));
+        .to_rounded_rect(corner_radius);
 
         let bar_gradient = LinearGradient::new(
             UnitPoint::TOP,

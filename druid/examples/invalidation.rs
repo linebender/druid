@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,10 +15,13 @@
 //! Demonstrates how to debug invalidation regions, and also shows the
 //! invalidation behavior of several build-in widgets.
 
-use druid::kurbo::{Circle, Shape};
+use druid::im::Vector;
+use druid::kurbo::{self, Shape};
 use druid::widget::prelude::*;
 use druid::widget::{Button, Flex, Scroll, Split, TextBox};
 use druid::{AppLauncher, Color, Data, Lens, LocalizedString, Point, WidgetExt, WindowDesc};
+
+use instant::Instant;
 
 pub fn main() {
     let window = WindowDesc::new(build_widget).title(
@@ -26,7 +29,7 @@ pub fn main() {
     );
     let state = AppState {
         label: "My label".into(),
-        circle_pos: Point::new(0.0, 0.0),
+        circles: Vector::new(),
     };
     AppLauncher::with_window(window)
         .use_simple_logger()
@@ -37,7 +40,7 @@ pub fn main() {
 #[derive(Clone, Data, Lens)]
 struct AppState {
     label: String,
-    circle_pos: Point,
+    circles: Vector<Circle>,
 }
 
 fn build_widget() -> impl Widget<AppState> {
@@ -46,43 +49,99 @@ fn build_widget() -> impl Widget<AppState> {
     for i in 0..30 {
         col.add_child(Button::new(format!("Button {}", i)).padding(3.0));
     }
-    Split::columns(Scroll::new(col), CircleView.lens(AppState::circle_pos)).debug_invalidation()
+    Split::columns(Scroll::new(col), CircleView.lens(AppState::circles)).debug_invalidation()
 }
 
 struct CircleView;
 
+#[derive(Clone, Data)]
+struct Circle {
+    pos: Point,
+    #[data(same_fn = "PartialEq::eq")]
+    time: Instant,
+}
+
 const RADIUS: f64 = 25.0;
 
-impl Widget<Point> for CircleView {
-    fn event(&mut self, ctx: &mut EventCtx, ev: &Event, data: &mut Point, _env: &Env) {
+impl Widget<Vector<Circle>> for CircleView {
+    fn event(&mut self, ctx: &mut EventCtx, ev: &Event, data: &mut Vector<Circle>, _env: &Env) {
         if let Event::MouseDown(ev) = ev {
-            // Move the circle to a new location, invalidating both the old and new locations.
-            ctx.request_paint_rect(Circle::new(*data, RADIUS).bounding_box());
-            ctx.request_paint_rect(Circle::new(ev.pos, RADIUS).bounding_box());
-            *data = ev.pos;
+            if ev.mods.shift() {
+                data.push_back(Circle {
+                    pos: ev.pos,
+                    time: Instant::now(),
+                });
+            } else if ev.mods.ctrl() {
+                data.retain(|c| {
+                    if (c.pos - ev.pos).hypot() > RADIUS {
+                        true
+                    } else {
+                        ctx.request_paint_rect(kurbo::Circle::new(c.pos, RADIUS).bounding_box());
+                        false
+                    }
+                });
+            } else {
+                // Move the circle to a new location, invalidating the old locations. The new location
+                // will be invalidated during AnimFrame.
+                for c in data.iter() {
+                    ctx.request_paint_rect(kurbo::Circle::new(c.pos, RADIUS).bounding_box());
+                }
+                data.clear();
+                data.push_back(Circle {
+                    pos: ev.pos,
+                    time: Instant::now(),
+                });
+            }
+            ctx.request_anim_frame();
+        } else if let Event::AnimFrame(_) = ev {
+            for c in &*data {
+                ctx.request_paint_rect(kurbo::Circle::new(c.pos, RADIUS).bounding_box());
+            }
+            if !data.is_empty() {
+                ctx.request_anim_frame();
+            }
         }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _ev: &LifeCycle, _data: &Point, _env: &Env) {}
+    fn lifecycle(
+        &mut self,
+        _ctx: &mut LifeCycleCtx,
+        _ev: &LifeCycle,
+        _data: &Vector<Circle>,
+        _env: &Env,
+    ) {
+    }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old: &Point, _new: &Point, _env: &Env) {}
+    fn update(
+        &mut self,
+        _ctx: &mut UpdateCtx,
+        _old: &Vector<Circle>,
+        _new: &Vector<Circle>,
+        _env: &Env,
+    ) {
+    }
 
     fn layout(
         &mut self,
         _ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _data: &Point,
+        _data: &Vector<Circle>,
         _env: &Env,
     ) -> Size {
         bc.max()
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &Point, _env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &Vector<Circle>, _env: &Env) {
         ctx.with_save(|ctx| {
             let rect = ctx.size().to_rect();
             ctx.clip(rect);
             ctx.fill(rect, &Color::WHITE);
-            ctx.fill(Circle::new(*data, RADIUS), &Color::BLACK);
-        })
+            let now = Instant::now();
+            for c in data {
+                let color =
+                    Color::BLACK.with_alpha(now.duration_since(c.time).as_secs_f64().cos().abs());
+                ctx.fill(kurbo::Circle::new(c.pos, RADIUS), &color);
+            }
+        });
     }
 }

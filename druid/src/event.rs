@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
 use crate::mouse::MouseEvent;
-use crate::{Command, Target, WidgetId};
+use crate::{Command, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -85,12 +85,6 @@ pub enum Event {
     /// Called when the mouse wheel or trackpad is scrolled.
     Wheel(MouseEvent),
     /// Called when a key is pressed.
-    ///
-    /// Note: the intent is for each physical key press to correspond to
-    /// a single `KeyDown` event. This is sometimes different than the
-    /// raw events provided by the platform. In particular, Windows sends
-    /// one or both of WM_KEYDOWN (a raw key code) and WM_CHAR (the
-    /// Unicode value), depending on the actual key.
     KeyDown(KeyEvent),
     /// Called when a key is released.
     ///
@@ -114,6 +108,17 @@ pub enum Event {
     ///
     /// [`EventCtx::request_timer()`]: struct.EventCtx.html#method.request_timer
     Timer(TimerToken),
+    /// Called at the beginning of a new animation frame.
+    ///
+    /// On the first frame when transitioning from idle to animating, `interval`
+    /// will be 0. (This logic is presently per-window but might change to
+    /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
+    ///
+    /// The `paint` method will be called shortly after this event is finished.
+    /// As a result, you should try to avoid doing anything computationally
+    /// intensive in response to an `AnimFrame` event: it might make Druid miss
+    /// the monitor's refresh, causing lag or jerky animation.
+    AnimFrame(u64),
     /// Called with an arbitrary [`Command`], submitted from elsewhere in
     /// the application.
     ///
@@ -148,7 +153,7 @@ pub enum InternalEvent {
     /// but we know that we've stopped receiving the mouse events.
     MouseLeave,
     /// A command still in the process of being dispatched.
-    TargetedCommand(Target, Command),
+    TargetedCommand(Command),
     /// Used for routing timer events.
     RouteTimer(TimerToken, WidgetId),
 }
@@ -188,12 +193,6 @@ pub enum LifeCycle {
     /// [`Rect`]: struct.Rect.html
     /// [`WidgetPod::set_layout_rect`]: struct.WidgetPod.html#method.set_layout_rect
     Size(Size),
-    /// Called at the beginning of a new animation frame.
-    ///
-    /// On the first frame when transitioning from idle to animating, `interval`
-    /// will be 0. (This logic is presently per-window but might change to
-    /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
-    AnimFrame(u64),
     /// Called when the "hot" status changes.
     ///
     /// This will always be called _before_ the event that triggered it; that is,

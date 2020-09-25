@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,9 +21,8 @@ use objc::{msg_send, sel, sel_impl};
 
 use super::util::make_nsstring;
 use crate::common_util::strip_access_key;
-use crate::hotkey::{HotKey, KeyCompare};
-use crate::keyboard::KeyModifiers;
-use crate::keycodes::KeyCode;
+use crate::hotkey::HotKey;
+use crate::keyboard::{KbKey, Modifiers};
 
 pub struct Menu {
     pub menu: id,
@@ -112,65 +111,65 @@ impl HotKey {
     ///
     /// Returns the empty string if no key equivalent is known.
     fn key_equivalent(&self) -> &str {
-        match self.key {
-            KeyCompare::Text(t) => t,
+        match &self.key {
+            KbKey::Character(t) => t,
 
             // from NSText.h
-            KeyCompare::Code(KeyCode::Return) => "\u{0003}",
-            KeyCompare::Code(KeyCode::Backspace) => "\u{0008}",
-            KeyCompare::Code(KeyCode::Delete) => "\u{007f}",
+            KbKey::Enter => "\u{0003}",
+            KbKey::Backspace => "\u{0008}",
+            KbKey::Delete => "\u{007f}",
             // from NSEvent.h
-            KeyCompare::Code(KeyCode::Insert) => "\u{F727}",
-            KeyCompare::Code(KeyCode::Home) => "\u{F729}",
-            KeyCompare::Code(KeyCode::End) => "\u{F72B}",
-            KeyCompare::Code(KeyCode::PageUp) => "\u{F72C}",
-            KeyCompare::Code(KeyCode::PageDown) => "\u{F72D}",
-            KeyCompare::Code(KeyCode::PrintScreen) => "\u{F72E}",
-            KeyCompare::Code(KeyCode::ScrollLock) => "\u{F72F}",
-            KeyCompare::Code(KeyCode::ArrowUp) => "\u{F700}",
-            KeyCompare::Code(KeyCode::ArrowDown) => "\u{F701}",
-            KeyCompare::Code(KeyCode::ArrowLeft) => "\u{F702}",
-            KeyCompare::Code(KeyCode::ArrowRight) => "\u{F703}",
-            KeyCompare::Code(KeyCode::F1) => "\u{F704}",
-            KeyCompare::Code(KeyCode::F2) => "\u{F705}",
-            KeyCompare::Code(KeyCode::F3) => "\u{F706}",
-            KeyCompare::Code(KeyCode::F4) => "\u{F707}",
-            KeyCompare::Code(KeyCode::F5) => "\u{F708}",
-            KeyCompare::Code(KeyCode::F6) => "\u{F709}",
-            KeyCompare::Code(KeyCode::F7) => "\u{F70A}",
-            KeyCompare::Code(KeyCode::F8) => "\u{F70B}",
-            KeyCompare::Code(KeyCode::F9) => "\u{F70C}",
-            KeyCompare::Code(KeyCode::F10) => "\u{F70D}",
-            //KeyCompare::Code(KeyCode::F11)            => "\u{F70E}",
-            //KeyCompare::Code(KeyCode::F12)            => "\u{F70F}",
-            //KeyCompare::Code(KeyCode::F13)            => "\u{F710}",
-            //KeyCompare::Code(KeyCode::F14)            => "\u{F711}",
-            //KeyCompare::Code(KeyCode::F15)            => "\u{F712}",
-            //KeyCompare::Code(KeyCode::F16)            => "\u{F713}",
-            //KeyCompare::Code(KeyCode::F17)            => "\u{F714}",
-            //KeyCompare::Code(KeyCode::F18)            => "\u{F715}",
-            //KeyCompare::Code(KeyCode::F19)            => "\u{F716}",
-            //KeyCompare::Code(KeyCode::F20)            => "\u{F717}",
-            KeyCompare::Code(other) => {
-                eprintln!("no key equivalent for {:?}", other);
+            KbKey::Insert => "\u{F727}",
+            KbKey::Home => "\u{F729}",
+            KbKey::End => "\u{F72B}",
+            KbKey::PageUp => "\u{F72C}",
+            KbKey::PageDown => "\u{F72D}",
+            KbKey::PrintScreen => "\u{F72E}",
+            KbKey::ScrollLock => "\u{F72F}",
+            KbKey::ArrowUp => "\u{F700}",
+            KbKey::ArrowDown => "\u{F701}",
+            KbKey::ArrowLeft => "\u{F702}",
+            KbKey::ArrowRight => "\u{F703}",
+            KbKey::F1 => "\u{F704}",
+            KbKey::F2 => "\u{F705}",
+            KbKey::F3 => "\u{F706}",
+            KbKey::F4 => "\u{F707}",
+            KbKey::F5 => "\u{F708}",
+            KbKey::F6 => "\u{F709}",
+            KbKey::F7 => "\u{F70A}",
+            KbKey::F8 => "\u{F70B}",
+            KbKey::F9 => "\u{F70C}",
+            KbKey::F10 => "\u{F70D}",
+            KbKey::F11 => "\u{F70E}",
+            KbKey::F12 => "\u{F70F}",
+            //KbKey::F13            => "\u{F710}",
+            //KbKey::F14            => "\u{F711}",
+            //KbKey::F15            => "\u{F712}",
+            //KbKey::F16            => "\u{F713}",
+            //KbKey::F17            => "\u{F714}",
+            //KbKey::F18            => "\u{F715}",
+            //KbKey::F19            => "\u{F716}",
+            //KbKey::F20            => "\u{F717}",
+            _ => {
+                eprintln!("no key equivalent for {:?}", self);
                 ""
             }
         }
     }
 
     fn key_modifier_mask(&self) -> NSEventModifierFlags {
-        let mods: KeyModifiers = self.mods.into();
+        let mods: Modifiers = self.mods.into();
         let mut flags = NSEventModifierFlags::empty();
-        if mods.shift {
+        if mods.shift() {
             flags.insert(NSEventModifierFlags::NSShiftKeyMask);
         }
-        if mods.meta {
+        if mods.meta() {
             flags.insert(NSEventModifierFlags::NSCommandKeyMask);
         }
-        if mods.alt {
+        if mods.alt() {
             flags.insert(NSEventModifierFlags::NSAlternateKeyMask);
         }
-        if mods.ctrl {
+        if mods.ctrl() {
             flags.insert(NSEventModifierFlags::NSControlKeyMask);
         }
         flags

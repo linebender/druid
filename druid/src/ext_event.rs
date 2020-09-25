@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ use crate::shell::IdleHandle;
 use crate::win_handler::EXT_EVENT_IDLE_TOKEN;
 use crate::{command::SelectorSymbol, Command, Selector, Target, WindowId};
 
-pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Option<Target>);
+pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Target);
 
 /// A thing that can move into other threads and be used to submit commands back
 /// to the running application.
@@ -40,8 +40,9 @@ pub struct ExtEventSink {
 pub(crate) struct ExtEventHost {
     /// A shared queue of items that have been sent to us.
     queue: Arc<Mutex<VecDeque<ExtCommand>>>,
-    /// This doesn't exist when the app starts and it can go away if a window
-    /// closes, so we keep a reference here and can update it when needed.
+    /// This doesn't exist when the app starts and it can go away if a window closes, so we keep a
+    /// reference here and can update it when needed. Note that this reference is shared with all
+    /// `ExtEventSink`s, so that we can update them too.
     handle: Arc<Mutex<Option<IdleHandle>>>,
     /// The window that the handle belongs to, so we can keep track of when
     /// we need to get a new handle.
@@ -74,12 +75,12 @@ impl ExtEventHost {
         !self.queue.lock().unwrap().is_empty()
     }
 
-    pub(crate) fn recv(&mut self) -> Option<(Option<Target>, Command)> {
+    pub(crate) fn recv(&mut self) -> Option<Command> {
         self.queue
             .lock()
             .unwrap()
             .pop_front()
-            .map(|(sel, obj, targ)| (targ, Command::from_ext(sel, obj)))
+            .map(|(selector, payload, target)| Command::from_ext(selector, payload, target))
     }
 }
 
@@ -88,23 +89,21 @@ impl ExtEventSink {
     ///
     /// [`Command`] is not thread safe, so you cannot submit it directly;
     /// instead you have to pass the [`Selector`] and the payload
-    /// separately, and it will be turned into a `Command` when it is received.
+    /// separately, and it will be turned into a [`Command`] when it is received.
     ///
-    /// The `payload` must implement `Any + Send + Sync`.
+    /// The `payload` must implement `Any + Send`.
     ///
-    /// If no explicit `Target` is submitted, the `Command` will be sent to
-    /// the application's first window; if that window is subsequently closed,
-    /// then the command will be sent to *an arbitrary other window*.
-    ///
-    /// This limitation may be removed in the future.
+    /// If the [`Target::Auto`] is equivalent to [`Target::Global`].
     ///
     /// [`Command`]: struct.Command.html
     /// [`Selector`]: struct.Selector.html
-    pub fn submit_command<T: Any + Send + Sync>(
+    /// [`Target::Auto`]: enum.Target.html#variant.Auto
+    /// [`Target::Global`]: enum.Target.html#variant.Global
+    pub fn submit_command<T: Any + Send>(
         &self,
         selector: Selector<T>,
         payload: impl Into<Box<T>>,
-        target: impl Into<Option<Target>>,
+        target: impl Into<Target>,
     ) -> Result<(), ExtEventError> {
         let target = target.into();
         let payload = payload.into();

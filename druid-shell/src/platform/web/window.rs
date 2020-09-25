@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,34 +27,41 @@ use wasm_bindgen::JsCast;
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
 
-use crate::piet::RenderContext;
+use crate::piet::{PietText, RenderContext};
 
 use super::application::Application;
 use super::error::Error;
-use super::keycodes::key_to_text;
+use super::keycodes::convert_keyboard_event;
 use super::menu::Menu;
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::scale::{Scale, ScaledArea};
 
-use crate::keyboard;
-use crate::keycodes::KeyCode;
+use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
-use crate::KeyModifiers;
+use crate::region::Region;
+use crate::window;
+use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel};
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
 macro_rules! get_modifiers {
-    ($event:ident) => {
-        KeyModifiers {
-            shift: $event.shift_key(),
-            alt: $event.alt_key(),
-            ctrl: $event.ctrl_key(),
-            meta: $event.meta_key(),
-        }
-    };
+    ($event:ident) => {{
+        let mut result = Modifiers::default();
+        result.set(Modifiers::SHIFT, $event.shift_key());
+        result.set(Modifiers::ALT, $event.alt_key());
+        result.set(Modifiers::CONTROL, $event.ctrl_key());
+        result.set(Modifiers::META, $event.meta_key());
+        result.set(Modifiers::ALT_GRAPH, $event.get_modifier_state("AltGraph"));
+        result.set(Modifiers::CAPS_LOCK, $event.get_modifier_state("CapsLock"));
+        result.set(Modifiers::NUM_LOCK, $event.get_modifier_state("NumLock"));
+        result.set(
+            Modifiers::SCROLL_LOCK,
+            $event.get_modifier_state("ScrollLock"),
+        );
+        result
+    }};
 }
 
 /// Builder abstraction for creating new windows.
@@ -89,16 +96,18 @@ struct WindowState {
     window: web_sys::Window,
     canvas: web_sys::HtmlCanvasElement,
     context: web_sys::CanvasRenderingContext2d,
-    invalid_rect: Cell<Rect>,
+    invalid: RefCell<Region>,
 }
 
 impl WindowState {
-    fn render(&self, invalid_rect: Rect) -> bool {
+    fn render(&self) {
+        self.handler.borrow_mut().prepare_paint();
+
         let mut piet_ctx = piet_common::Piet::new(self.context.clone(), self.window.clone());
-        let mut want_anim_frame = false;
         if let Err(e) = piet_ctx.with_save(|mut ctx| {
-            ctx.clip(invalid_rect);
-            want_anim_frame = self.handler.borrow_mut().paint(&mut ctx, invalid_rect);
+            let invalid = self.invalid.borrow();
+            ctx.clip(invalid.to_bez_path());
+            self.handler.borrow_mut().paint(&mut ctx, &invalid);
             Ok(())
         }) {
             log::error!("piet error on render: {:?}", e);
@@ -106,7 +115,7 @@ impl WindowState {
         if let Err(e) = piet_ctx.finish() {
             log::error!("piet error finishing render: {:?}", e);
         }
-        want_anim_frame
+        self.invalid.borrow_mut().clear();
     }
 
     fn process_idle_queue(&self) {
@@ -137,12 +146,12 @@ impl WindowState {
     /// Updates the canvas size and scale factor and returns `Scale` and `ScaledArea`.
     fn update_scale_and_area(&self) -> (Scale, ScaledArea) {
         let (css_width, css_height, dpr) = self.get_window_size_and_dpr();
-        let scale = Scale::from_scale(dpr, dpr);
-        let area = ScaledArea::from_dp(Size::new(css_width, css_height), &scale);
+        let scale = Scale::new(dpr, dpr);
+        let area = ScaledArea::from_dp(Size::new(css_width, css_height), scale);
         let size_px = area.size_px();
         self.canvas.set_width(size_px.width as u32);
         self.canvas.set_height(size_px.height as u32);
-        let _ = self.context.scale(scale.scale_x(), scale.scale_y());
+        let _ = self.context.scale(scale.x(), scale.y());
         self.scale.set(scale);
         self.area.set(area);
         (scale, area)
@@ -252,30 +261,22 @@ fn setup_resize_callback(ws: &Rc<WindowState>) {
 fn setup_keyup_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_window_event_listener(ws, "keyup", move |event: web_sys::KeyboardEvent| {
-        let code = KeyCode::from((event.key_code(), event.location()));
-        let mods = get_modifiers!(event);
-        let key = event.key();
-        let text = key_to_text(key.as_str());
-        let repeat = event.repeat();
-        let event = keyboard::KeyEvent::new(code, repeat, mods, text, text);
-        state.handler.borrow_mut().key_up(event);
+        let modifiers = get_modifiers!(event);
+        let kb_event = convert_keyboard_event(&event, modifiers, KeyState::Up);
+        state.handler.borrow_mut().key_up(kb_event);
     });
 }
 
 fn setup_keydown_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_window_event_listener(ws, "keydown", move |event: web_sys::KeyboardEvent| {
-        let code = KeyCode::from((event.key_code(), event.location()));
-        let mods = get_modifiers!(event);
-        let key = event.key();
-        let text = key_to_text(key.as_str());
-        let repeat = event.repeat();
-        if let KeyCode::Backspace = code {
+        let modifiers = get_modifiers!(event);
+        let kb_event = convert_keyboard_event(&event, modifiers, KeyState::Down);
+        if kb_event.key == KbKey::Backspace {
             // Prevent the browser from going back a page by default.
             event.prevent_default();
         }
-        let event = keyboard::KeyEvent::new(code, repeat, mods, text, text);
-        state.handler.borrow_mut().key_down(event);
+        state.handler.borrow_mut().key_down(kb_event);
     });
 }
 
@@ -348,6 +349,18 @@ impl WindowBuilder {
         // Ignored
     }
 
+    pub fn set_position(&mut self, _position: Point) {
+        // Ignored
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        // Ignored
+    }
+
+    pub fn set_level(&mut self, _level: WindowLevel) {
+        // ignored
+    }
+
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
         self.title = title.into();
     }
@@ -373,17 +386,17 @@ impl WindowBuilder {
         // Create the Scale for resolution scaling
         let scale = {
             let dpr = window.device_pixel_ratio();
-            Scale::from_scale(dpr, dpr)
+            Scale::new(dpr, dpr)
         };
         let area = {
             // The initial size in display points isn't necessarily the final size in display points
             let size_dp = Size::new(canvas.offset_width() as f64, canvas.offset_height() as f64);
-            ScaledArea::from_dp(size_dp, &scale)
+            ScaledArea::from_dp(size_dp, scale)
         };
         let size_px = area.size_px();
         canvas.set_width(size_px.width as u32);
         canvas.set_height(size_px.height as u32);
-        let _ = context.scale(scale.scale_x(), scale.scale_y());
+        let _ = context.scale(scale.x(), scale.y());
         let size_dp = area.size_dp();
 
         set_cursor(&canvas, &self.cursor);
@@ -398,7 +411,7 @@ impl WindowBuilder {
             window,
             canvas,
             context,
-            invalid_rect: Cell::new(Rect::ZERO),
+            invalid: RefCell::new(Region::EMPTY),
         });
 
         setup_web_callbacks(&window);
@@ -433,6 +446,41 @@ impl WindowHandle {
         log::warn!("show_titlebar unimplemented for web");
     }
 
+    pub fn set_position(&self, _position: Point) {
+        log::warn!("WindowHandle::set_position unimplemented for web");
+    }
+
+    pub fn set_level(&self, _level: WindowLevel) {
+        log::warn!("WindowHandle::set_level  is currently unimplemented for web.");
+    }
+
+    pub fn get_position(&self) -> Point {
+        log::warn!("WindowHandle::get_position unimplemented for web.");
+        Point::new(0.0, 0.0)
+    }
+
+    pub fn set_size(&self, _size: Size) {
+        log::warn!("WindowHandle::set_size unimplemented for web.");
+    }
+
+    pub fn get_size(&self) -> Size {
+        log::warn!("WindowHandle::get_size unimplemented for web.");
+        Size::new(0.0, 0.0)
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        log::warn!("WindowHandle::set_window_state unimplemented for web.");
+    }
+
+    pub fn get_window_state(&self) -> window::WindowState {
+        log::warn!("WindowHandle::get_window_state unimplemented for web.");
+        window::WindowState::RESTORED
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar unimplemented for web.");
+    }
+
     pub fn close(&self) {
         // TODO
     }
@@ -441,32 +489,33 @@ impl WindowHandle {
         log::warn!("bring_to_frontand_focus unimplemented for web");
     }
 
+    pub fn request_anim_frame(&self) {
+        self.render_soon();
+    }
+
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(s) = self.0.upgrade() {
-            let cur_rect = s.invalid_rect.get();
-            if cur_rect.width() == 0.0 || cur_rect.height() == 0.0 {
-                s.invalid_rect.set(rect);
-            } else if rect.width() != 0.0 && rect.height() != 0.0 {
-                s.invalid_rect.set(cur_rect.union(rect));
-            }
+            s.invalid.borrow_mut().add_rect(rect);
         }
         self.render_soon();
     }
 
     pub fn invalidate(&self) {
         if let Some(s) = self.0.upgrade() {
-            s.invalid_rect.set(s.area.get().size_dp().to_rect());
+            s.invalid
+                .borrow_mut()
+                .add_rect(s.area.get().size_dp().to_rect());
         }
         self.render_soon();
     }
 
-    pub fn text(&self) -> Text {
+    pub fn text(&self) -> PietText {
         let s = self
             .0
             .upgrade()
             .unwrap_or_else(|| panic!("Failed to produce a text context"));
 
-        Text::new(s.context.clone(), s.window.clone())
+        PietText::new(s.context.clone())
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
@@ -522,15 +571,9 @@ impl WindowHandle {
 
     fn render_soon(&self) {
         if let Some(s) = self.0.upgrade() {
-            let handle = self.clone();
-            let rect = s.invalid_rect.get();
-            s.invalid_rect.set(Rect::ZERO);
             let state = s.clone();
             s.request_animation_frame(move || {
-                let want_anim_frame = state.render(rect);
-                if want_anim_frame {
-                    handle.render_soon();
-                }
+                state.render();
             })
             .expect("Failed to request animation frame");
         }

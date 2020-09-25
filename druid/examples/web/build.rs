@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,11 +16,12 @@ use std::io::{ErrorKind, Result};
 use std::path::{Path, PathBuf};
 use std::{env, fs};
 
-/// Examples known to not work with WASM are skipped. Ideally this list will eventually be empty.
+/// Examples known to not work with the web backend are skipped.
+/// Ideally this list will eventually be empty.
 const EXCEPTIONS: &[&str] = &[
-    "svg",               // usvg doesn't currently build with WASM.
-    "ext_event",         // WASM doesn't currently support spawning threads.
-    "blocking_function", // WASM doesn't currently support spawning threads.
+    "svg",               // usvg doesn't currently build as Wasm.
+    "ext_event",         // the web backend doesn't currently support spawning threads.
+    "blocking_function", // the web backend doesn't currently support spawning threads.
 ];
 
 /// Create a platform specific link from `src` to the `dst` directory.
@@ -96,15 +97,14 @@ mod examples {
 "#
     .to_string();
 
-    let mut index_html = r#"
-<!DOCTYPE html>
+    let mut index_html = r#"<!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <title>Druid WASM examples - index</title>
+        <title>Druid web examples</title>
     </head>
     <body>
-        <h1>Druid WASM examples</h1>
+        <h1>Druid web examples</h1>
         <ul>
 "#
     .to_string();
@@ -122,21 +122,13 @@ mod examples {
         if let Some(example) = path.file_stem() {
             let example_str = example.to_string_lossy();
 
-            // Skip examples that are known to not work with wasm.
+            // Skip examples that are known to not work.
             if EXCEPTIONS.contains(&example_str.as_ref()) {
                 continue;
             }
 
             // Record the valid example module we found to add to the generated examples.in
             examples_in.push_str(&format!("    pub mod {};\n", example_str));
-
-            // The "switch" example name would conflict with JavaScript's switch statement. So we
-            // rename it here to switch_demo.
-            let js_entry_fn_name = if &example_str == "switch" {
-                "switch_demo".to_string()
-            } else {
-                example_str.to_string()
-            };
 
             // Add an entry to the index.html file.
             let index_entry = format!(
@@ -153,7 +145,7 @@ mod examples {
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <title>Druid WASM examples - {name}</title>
+        <title>Druid web examples - {name}</title>
         <style>
             html, body, canvas {{
                 margin: 0px;
@@ -165,10 +157,10 @@ mod examples {
         </style>
     </head>
     <body>
-        <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
+        <noscript>This page contains WebAssembly and JavaScript content, please enable JavaScript in your browser.</noscript>
         <canvas id="canvas"></canvas>
         <script type="module">
-            import init, {{ {name} }} from '../pkg/druid_wasm_examples.js';
+            import init, {{ {name} }} from '../pkg/druid_web_examples.js';
 
             async function run() {{
                 await init();
@@ -179,7 +171,7 @@ mod examples {
         </script>
     </body>
 </html>"#,
-                name = js_entry_fn_name
+                name = example_str.to_string()
             );
 
             // Write out the html file into a designated html directory located in crate root.

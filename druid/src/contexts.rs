@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,18 +21,35 @@ use std::{
 };
 
 use crate::core::{CommandQueue, FocusChange, WidgetState};
-use crate::piet::Piet;
-use crate::piet::RenderContext;
+use crate::env::KeyLike;
+use crate::piet::{Piet, PietText, RenderContext};
+use crate::shell::Region;
 use crate::{
-    commands, Affine, Command, ContextMenu, Cursor, Insets, MenuDesc, Point, Rect, SingleUse, Size,
-    Target, Text, TimerToken, Vec2, WidgetId, WindowDesc, WindowHandle, WindowId,
+    commands, Affine, Command, ContextMenu, Cursor, Env, ExtEventSink, Insets, MenuDesc, Point,
+    Rect, SingleUse, Size, Target, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
 };
+
+/// A macro for implementing methods on multiple contexts.
+///
+/// There are a lot of methods defined on multiple contexts; this lets us only
+/// have to write them out once.
+macro_rules! impl_context_method {
+    ($ty:ty,  { $($method:item)+ } ) => {
+        impl $ty { $($method)+ }
+    };
+    ( $ty:ty, $($more:ty),+, { $($method:item)+ } ) => {
+        impl_context_method!($ty, { $($method)+ });
+        impl_context_method!($($more),+, { $($method)+ });
+    };
+}
 
 /// Static state that is shared between most contexts.
 pub(crate) struct ContextState<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
+    pub(crate) ext_handle: &'a ExtEventSink,
     pub(crate) window_id: WindowId,
     pub(crate) window: &'a WindowHandle,
+    pub(crate) text: PietText,
     /// The id of the widget that currently has focus.
     pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) root_app_data_type: TypeId,
@@ -45,12 +62,9 @@ pub(crate) struct ContextState<'a> {
 ///
 /// [`request_paint`]: #method.request_paint
 pub struct EventCtx<'a, 'b> {
-    // Note: there's a bunch of state that's just passed down, might
-    // want to group that into a single struct.
     pub(crate) state: &'a mut ContextState<'b>,
-    pub(crate) cursor: &'a mut Option<Cursor>,
-    /// Commands submitted to be run after this event.
     pub(crate) widget_state: &'a mut WidgetState,
+    pub(crate) cursor: &'a mut Option<Cursor>,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
 }
@@ -78,6 +92,8 @@ pub struct LifeCycleCtx<'a, 'b> {
 pub struct UpdateCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
+    pub(crate) prev_env: Option<&'a Env>,
+    pub(crate) env: &'a Env,
 }
 
 /// A context provided to layout handling methods of widgets.
@@ -85,10 +101,9 @@ pub struct UpdateCtx<'a, 'b> {
 /// As of now, the main service provided is access to a factory for
 /// creating text layout objects, which are likely to be useful
 /// during widget layout.
-pub struct LayoutCtx<'a, 'b, 'c: 'a> {
+pub struct LayoutCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
-    pub(crate) text_factory: &'a mut Text<'c>,
     pub(crate) mouse_pos: Option<Point>,
 }
 
@@ -119,35 +134,139 @@ pub struct PaintCtx<'a, 'b, 'c> {
     pub(crate) depth: u32,
 }
 
-/// A region of a widget, generally used to describe what needs to be drawn.
-///
-/// This is currently just a single `Rect`, but may become more complicated in the future.  Although
-/// this is just a wrapper around `Rect`, it has some different conventions. Mainly, "signed"
-/// invalidation regions don't make sense. Therefore, a rectangle with non-positive width or height
-/// is considered "empty", and all empty rectangles are treated the same.
-#[derive(Debug, Clone)]
-pub struct Region(Rect);
+// methods on everyone
+impl_context_method!(
+    EventCtx<'_, '_>,
+    UpdateCtx<'_, '_>,
+    LifeCycleCtx<'_, '_>,
+    PaintCtx<'_, '_, '_>,
+    LayoutCtx<'_, '_>,
+    {
+        /// get the `WidgetId` of the current widget.
+        pub fn widget_id(&self) -> WidgetId {
+            self.widget_state.id
+        }
 
-impl EventCtx<'_, '_> {
-    #[deprecated(since = "0.5.0", note = "use request_paint instead")]
-    pub fn invalidate(&mut self) {
-        self.request_paint();
+        /// Returns a reference to the current `WindowHandle`.
+        pub fn window(&self) -> &WindowHandle {
+            &self.state.window
+        }
+
+        /// Get the `WindowId` of the current window.
+        pub fn window_id(&self) -> WindowId {
+            self.state.window_id
+        }
+
+        /// Get an object which can create text layouts.
+        pub fn text(&mut self) -> &mut PietText {
+            &mut self.state.text
+        }
     }
+);
 
-    /// Request a [`paint`] pass. This is equivalent to calling [`request_paint_rect`] for the
-    /// widget's [`paint_rect`].
+// methods on everyone but layoutctx
+impl_context_method!(
+    EventCtx<'_, '_>,
+    UpdateCtx<'_, '_>,
+    LifeCycleCtx<'_, '_>,
+    PaintCtx<'_, '_, '_>,
+    {
+        /// The layout size.
+        ///
+        /// This is the layout size as ultimately determined by the parent
+        /// container, on the previous layout pass.
+        ///
+        /// Generally it will be the same as the size returned by the child widget's
+        /// [`layout`] method.
+        ///
+        /// [`layout`]: trait.Widget.html#tymethod.layout
+        pub fn size(&self) -> Size {
+            self.widget_state.size()
+        }
+
+        /// The "hot" (aka hover) status of a widget.
+        ///
+        /// A widget is "hot" when the mouse is hovered over it. Widgets will
+        /// often change their appearance as a visual indication that they
+        /// will respond to mouse interaction.
+        ///
+        /// The hot status is computed from the widget's layout rect. In a
+        /// container hierarchy, all widgets with layout rects containing the
+        /// mouse position have hot status.
+        ///
+        /// Discussion: there is currently some confusion about whether a
+        /// widget can be considered hot when some other widget is active (for
+        /// example, when clicking to one widget and dragging to the next).
+        /// The documentation should clearly state the resolution.
+        pub fn is_hot(&self) -> bool {
+            self.widget_state.is_hot
+        }
+
+        /// The active status of a widget.
+        ///
+        /// Active status generally corresponds to a mouse button down. Widgets
+        /// with behavior similar to a button will call [`set_active`] on mouse
+        /// down and then up.
+        ///
+        /// When a widget is active, it gets mouse events even when the mouse
+        /// is dragged away.
+        ///
+        /// [`set_active`]: struct.EventCtx.html#method.set_active
+        pub fn is_active(&self) -> bool {
+            self.widget_state.is_active
+        }
+
+        /// The focus status of a widget.
+        ///
+        /// Returns `true` if this specific widget is focused.
+        /// To check if any descendants are focused use [`has_focus`].
+        ///
+        /// Focus means that the widget receives keyboard events.
+        ///
+        /// A widget can request focus using the [`request_focus`] method.
+        /// It's also possible to register for automatic focus via [`register_for_focus`].
+        ///
+        /// If a widget gains or loses focus it will get a [`LifeCycle::FocusChanged`] event.
+        ///
+        /// Only one widget at a time is focused. However due to the way events are routed,
+        /// all ancestors of that widget will also receive keyboard events.
+        ///
+        /// [`request_focus`]: struct.EventCtx.html#method.request_focus
+        /// [`register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
+        /// [`LifeCycle::FocusChanged`]: enum.LifeCycle.html#variant.FocusChanged
+        /// [`has_focus`]: #method.has_focus
+        pub fn is_focused(&self) -> bool {
+            self.state.focus_widget == Some(self.widget_id())
+        }
+
+        /// The (tree) focus status of a widget.
+        ///
+        /// Returns `true` if either this specific widget or any one of its descendants is focused.
+        /// To check if only this specific widget is focused use [`is_focused`],
+        ///
+        /// [`is_focused`]: #method.is_focused
+        pub fn has_focus(&self) -> bool {
+            self.widget_state.has_focus
+        }
+    }
+);
+
+// methods on event, update, and lifecycle
+impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, {
+    /// Request a [`paint`] pass. This is equivalent to calling
+    /// [`request_paint_rect`] for the widget's [`paint_rect`].
     ///
     /// [`paint`]: trait.Widget.html#tymethod.paint
-    /// [`request_paint_rect`]: struct.EventCtx.html#method.request_paint_rect
+    /// [`request_paint_rect`]: #method.request_paint_rect
     /// [`paint_rect`]: struct.WidgetPod.html#method.paint_rect
     pub fn request_paint(&mut self) {
-        self.request_paint_rect(
+        self.widget_state.invalid.set_rect(
             self.widget_state.paint_rect() - self.widget_state.layout_rect().origin().to_vec2(),
         );
     }
 
-    /// Request a [`paint`] pass for redrawing a rectangle, which is given relative to our layout
-    /// rectangle.
+    /// Request a [`paint`] pass for redrawing a rectangle, which is given
+    /// relative to our layout rectangle.
     ///
     /// [`paint`]: trait.Widget.html#tymethod.paint
     pub fn request_paint_rect(&mut self, rect: Rect) {
@@ -168,6 +287,19 @@ impl EventCtx<'_, '_> {
         self.widget_state.needs_layout = true;
     }
 
+    /// Request an animation frame.
+    pub fn request_anim_frame(&mut self) {
+        self.widget_state.request_anim = true;
+    }
+
+    /// Request a timer event.
+    ///
+    /// The return value is a token, which can be used to associate the
+    /// request with the event.
+    pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
+        self.state.request_timer(&mut self.widget_state, deadline)
+    }
+
     /// Indicate that your children have changed.
     ///
     /// Widgets must call this method after adding a new child.
@@ -176,11 +308,48 @@ impl EventCtx<'_, '_> {
         self.request_layout();
     }
 
-    /// Get an object which can create text layouts.
-    pub fn text(&mut self) -> Text {
-        self.state.window.text()
+    /// Set the menu of the window containing the current widget.
+    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
+    ///
+    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
+        self.state.set_menu(menu);
     }
+});
 
+// methods on event, update, and lifecycle
+impl_context_method!(
+    EventCtx<'_, '_>,
+    UpdateCtx<'_, '_>,
+    LifeCycleCtx<'_, '_>,
+    LayoutCtx<'_, '_>,
+    {
+        /// Submit a [`Command`] to be run after this event is handled.
+        ///
+        /// Commands are run in the order they are submitted; all commands
+        /// submitted during the handling of an event are executed before
+        /// the [`update`] method is called; events submitted during [`update`]
+        /// are handled after painting.
+        ///
+        /// [`Target::Auto`] commands will be sent to the window containing the widget.
+        ///
+        /// [`Command`]: struct.Command.html
+        /// [`update`]: trait.Widget.html#tymethod.update
+        pub fn submit_command(&mut self, cmd: impl Into<Command>) {
+            self.state.submit_command(cmd.into())
+        }
+
+        /// Returns an [`ExtEventSink`] that can be moved between threads,
+        /// and can be used to submit commands back to the application.
+        ///
+        /// [`ExtEventSink`]: struct.ExtEventSink.html
+        pub fn get_external_handle(&self) -> ExtEventSink {
+            self.state.ext_handle.clone()
+        }
+    }
+);
+
+impl EventCtx<'_, '_> {
     /// Set the cursor icon.
     ///
     /// Call this when handling a mouse move event, to set the cursor for the
@@ -206,43 +375,6 @@ impl EventCtx<'_, '_> {
         // TODO: plumb mouse grab through to platform (through druid-shell)
     }
 
-    /// The "hot" (aka hover) status of a widget.
-    ///
-    /// A widget is "hot" when the mouse is hovered over it. Widgets will
-    /// often change their appearance as a visual indication that they
-    /// will respond to mouse interaction.
-    ///
-    /// The hot status is computed from the widget's layout rect. In a
-    /// container hierarchy, all widgets with layout rects containing the
-    /// mouse position have hot status.
-    ///
-    /// Discussion: there is currently some confusion about whether a
-    /// widget can be considered hot when some other widget is active (for
-    /// example, when clicking to one widget and dragging to the next).
-    /// The documentation should clearly state the resolution.
-    pub fn is_hot(&self) -> bool {
-        self.widget_state.is_hot
-    }
-
-    /// The active status of a widget.
-    ///
-    /// Active status generally corresponds to a mouse button down. Widgets
-    /// with behavior similar to a button will call [`set_active`] on mouse
-    /// down and then up.
-    ///
-    /// When a widget is active, it gets mouse events even when the mouse
-    /// is dragged away.
-    ///
-    /// [`set_active`]: struct.EventCtx.html#method.set_active
-    pub fn is_active(&self) -> bool {
-        self.widget_state.is_active
-    }
-
-    /// Returns a reference to the current `WindowHandle`.
-    pub fn window(&self) -> &WindowHandle {
-        &self.state.window
-    }
-
     /// Create a new window.
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
@@ -250,8 +382,9 @@ impl EventCtx<'_, '_> {
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
         if self.state.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::NEW_WINDOW, SingleUse::new(Box::new(desc))),
-                Target::Global,
+                commands::NEW_WINDOW
+                    .with(SingleUse::new(Box::new(desc)))
+                    .to(Target::Global),
             );
         } else {
             const MSG: &str = "WindowDesc<T> - T must match the application data type.";
@@ -263,14 +396,6 @@ impl EventCtx<'_, '_> {
         }
     }
 
-    /// Set the menu of the window containing the current widget.
-    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
-    ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        self.state.set_menu(menu);
-    }
-
     /// Show the context menu in the window containing the current widget.
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
@@ -278,8 +403,9 @@ impl EventCtx<'_, '_> {
     pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
         if self.state.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::SHOW_CONTEXT_MENU, Box::new(menu)),
-                Target::Window(self.state.window_id),
+                commands::SHOW_CONTEXT_MENU
+                    .with(Box::new(menu))
+                    .to(Target::Window(self.state.window_id)),
             );
         } else {
             const MSG: &str = "ContextMenu<T> - T must match the application data type.";
@@ -302,41 +428,6 @@ impl EventCtx<'_, '_> {
         self.is_handled
     }
 
-    /// The focus status of a widget.
-    ///
-    /// Returns `true` if this specific widget is focused.
-    /// To check if any descendants are focused use [`has_focus`].
-    ///
-    /// Focus means that the widget receives keyboard events.
-    ///
-    /// A widget can request focus using the [`request_focus`] method.
-    /// It's also possible to register for automatic focus via [`register_for_focus`].
-    ///
-    /// If a widget gains or loses focus it will get a [`LifeCycle::FocusChanged`] event.
-    ///
-    /// Only one widget at a time is focused. However due to the way events are routed,
-    /// all ancestors of that widget will also receive keyboard events.
-    ///
-    /// [`request_focus`]: struct.EventCtx.html#method.request_focus
-    /// [`register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
-    /// [`LifeCycle::FocusChanged`]: enum.LifeCycle.html#variant.FocusChanged
-    /// [`has_focus`]: struct.EventCtx.html#method.has_focus
-    pub fn is_focused(&self) -> bool {
-        self.state.focus_widget == Some(self.widget_id())
-    }
-
-    /// The (tree) focus status of a widget.
-    ///
-    /// Returns `true` if either this specific widget or any one of its descendants is focused.
-    /// To check if only this specific widget is focused use [`is_focused`].
-    ///
-    /// See [`is_focused`] for more information about focus.
-    ///
-    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
-    pub fn has_focus(&self) -> bool {
-        self.widget_state.has_focus
-    }
-
     /// Request keyboard focus.
     ///
     /// Because only one widget can be focused at a time, multiple focus requests
@@ -353,6 +444,15 @@ impl EventCtx<'_, '_> {
         // to deliver on the "last focus request wins" promise.
         let id = self.widget_id();
         self.widget_state.request_focus = Some(FocusChange::Focus(id));
+    }
+
+    /// Transfer focus to the widget with the given `WidgetId`.
+    ///
+    /// See [`is_focused`] for more information about focus.
+    ///
+    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
+    pub fn set_focus(&mut self, target: WidgetId) {
+        self.widget_state.request_focus = Some(FocusChange::Focus(target));
     }
 
     /// Transfer focus to the next focusable widget.
@@ -403,96 +503,60 @@ impl EventCtx<'_, '_> {
         }
     }
 
-    /// Request an animation frame.
-    pub fn request_anim_frame(&mut self) {
-        self.widget_state.request_anim = true;
-        self.request_paint();
+    /// Request an update cycle.
+    ///
+    /// After this, `update` will be called on the widget in the next update cycle, even
+    /// if there's not a data change.
+    ///
+    /// The use case for this method is when a container widget synthesizes data for its
+    /// children. This is appropriate in specialized cases, but before reaching for this
+    /// method, consider whether it might be better to refactor to be more idiomatic, in
+    /// particular to make that data available in the app state.
+    pub fn request_update(&mut self) {
+        self.widget_state.request_update = true;
+    }
+}
+
+impl UpdateCtx<'_, '_> {
+    /// Returns `true` if this widget or a descendent as explicitly requested
+    /// an update call.
+    ///
+    /// This should only be needed in advanced cases;
+    /// see [`EventCtx::request_update`] for more information.
+    ///
+    /// [`EventCtx::request_update`]: struct.EventCtx.html#method.request_update
+    pub fn has_requested_update(&mut self) -> bool {
+        self.widget_state.request_update
     }
 
-    /// Request a timer event.
+    /// Returns `true` if the current [`Env`] has changed since the previous
+    /// [`update`] call.
     ///
-    /// The return value is a token, which can be used to associate the
-    /// request with the event.
-    pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
-        self.state.request_timer(&mut self.widget_state, deadline)
-    }
-
-    /// The layout size.
-    ///
-    /// This is the layout size as ultimately determined by the parent
-    /// container, on the previous layout pass.
-    ///
-    /// Generally it will be the same as the size returned by the child widget's
-    /// [`layout`] method.
-    ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
-    pub fn size(&self) -> Size {
-        self.widget_state.size()
-    }
-
-    /// Submit a [`Command`] to be run after this event is handled.
-    ///
-    /// Commands are run in the order they are submitted; all commands
-    /// submitted during the handling of an event are executed before
-    /// the [`update`] method is called.
-    ///
-    /// [`Command`]: struct.Command.html
+    /// [`Env`]: struct.Env.html
     /// [`update`]: trait.Widget.html#tymethod.update
-    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
-        self.state.submit_command(cmd.into(), target.into())
+    pub fn env_changed(&self) -> bool {
+        self.prev_env.is_some()
     }
 
-    /// Get the window id.
-    pub fn window_id(&self) -> WindowId {
-        self.state.window_id
-    }
-
-    /// get the `WidgetId` of the current widget.
-    pub fn widget_id(&self) -> WidgetId {
-        self.widget_state.id
+    /// Returns `true` if the given key has changed since the last [`update`]
+    /// call.
+    ///
+    /// The argument can be anything that is resolveable from the [`Env`],
+    /// such as a [`Key`] or a [`KeyOrValue`].
+    ///
+    /// [`update`]: trait.Widget.html#tymethod.update
+    /// [`Env`]: struct.Env.html
+    /// [`Key`]: struct.Key.html
+    /// [`KeyOrValue`]: enum.KeyOrValue.html
+    pub fn env_key_changed<T>(&self, key: &impl KeyLike<T>) -> bool {
+        match self.prev_env.as_ref() {
+            Some(prev) => key.changed(prev, self.env),
+            None => false,
+        }
     }
 }
 
 impl LifeCycleCtx<'_, '_> {
-    #[deprecated(since = "0.5.0", note = "use request_paint instead")]
-    pub fn invalidate(&mut self) {
-        self.request_paint();
-    }
-
-    /// Request a [`paint`] pass. This is equivalent to calling [`request_paint_rect`] for the
-    /// widget's [`paint_rect`].
-    ///
-    /// [`paint`]: trait.Widget.html#tymethod.paint
-    /// [`request_paint_rect`]: struct.LifeCycleCtx.html#method.request_paint_rect
-    /// [`paint_rect`]: struct.WidgetPod.html#method.paint_rect
-    pub fn request_paint(&mut self) {
-        self.request_paint_rect(
-            self.widget_state.paint_rect() - self.widget_state.layout_rect().origin().to_vec2(),
-        );
-    }
-
-    /// Request a [`paint`] pass for redrawing a rectangle, which is given relative to our layout
-    /// rectangle.
-    ///
-    /// [`paint`]: trait.Widget.html#tymethod.paint
-    pub fn request_paint_rect(&mut self, rect: Rect) {
-        self.widget_state.invalid.add_rect(rect);
-    }
-
-    /// Request layout.
-    ///
-    /// See [`EventCtx::request_layout`] for more information.
-    ///
-    /// [`EventCtx::request_layout`]: struct.EventCtx.html#method.request_layout
-    pub fn request_layout(&mut self) {
-        self.widget_state.needs_layout = true;
-    }
-
-    /// Returns the current widget's `WidgetId`.
-    pub fn widget_id(&self) -> WidgetId {
-        self.widget_state.id
-    }
-
     /// Registers a child widget.
     ///
     /// This should only be called in response to a `LifeCycle::WidgetAdded` event.
@@ -514,188 +578,9 @@ impl LifeCycleCtx<'_, '_> {
     pub fn register_for_focus(&mut self) {
         self.widget_state.focus_chain.push(self.widget_id());
     }
-
-    /// Indicate that your children have changed.
-    ///
-    /// Widgets must call this method after adding a new child.
-    pub fn children_changed(&mut self) {
-        self.widget_state.children_changed = true;
-        self.request_layout();
-    }
-
-    /// Request an animation frame.
-    pub fn request_anim_frame(&mut self) {
-        self.widget_state.request_anim = true;
-        self.request_paint();
-    }
-
-    /// Request a timer event.
-    ///
-    /// The return value is a token, which can be used to associate the
-    /// request with the event.
-    pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
-        self.state.request_timer(&mut self.widget_state, deadline)
-    }
-
-    /// The layout size.
-    ///
-    /// This is the layout size as ultimately determined by the parent
-    /// container, on the previous layout pass.
-    ///
-    /// Generally it will be the same as the size returned by the child widget's
-    /// [`layout`] method.
-    ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
-    pub fn size(&self) -> Size {
-        self.widget_state.size()
-    }
-
-    /// Submit a [`Command`] to be run after this event is handled.
-    ///
-    /// Commands are run in the order they are submitted; all commands
-    /// submitted during the handling of an event are executed before
-    /// the [`update`] method is called.
-    ///
-    /// [`Command`]: struct.Command.html
-    /// [`update`]: trait.Widget.html#tymethod.update
-    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
-        self.state.submit_command(cmd.into(), target.into())
-    }
-
-    /// Set the menu of the window containing the current widget.
-    /// `T` must be the application's root `Data` type (the type provided
-    /// to [`AppLauncher::launch`]).
-    ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        self.state.set_menu(menu);
-    }
 }
 
-impl<'a, 'b> UpdateCtx<'a, 'b> {
-    #[deprecated(since = "0.5.0", note = "use request_paint instead")]
-    pub fn invalidate(&mut self) {
-        self.request_paint();
-    }
-
-    /// Request a [`paint`] pass. This is equivalent to calling [`request_paint_rect`] for the
-    /// widget's [`paint_rect`].
-    ///
-    /// [`paint`]: trait.Widget.html#tymethod.paint
-    /// [`request_paint_rect`]: struct.UpdateCtx.html#method.request_paint_rect
-    /// [`paint_rect`]: struct.WidgetPod.html#method.paint_rect
-    pub fn request_paint(&mut self) {
-        self.request_paint_rect(
-            self.widget_state.paint_rect() - self.widget_state.layout_rect().origin().to_vec2(),
-        );
-    }
-
-    /// Request a [`paint`] pass for redrawing a rectangle, which is given relative to our layout
-    /// rectangle.
-    ///
-    /// [`paint`]: trait.Widget.html#tymethod.paint
-    pub fn request_paint_rect(&mut self, rect: Rect) {
-        self.widget_state.invalid.add_rect(rect);
-    }
-
-    /// Request layout.
-    ///
-    /// See [`EventCtx::request_layout`] for more information.
-    ///
-    /// [`EventCtx::request_layout`]: struct.EventCtx.html#method.request_layout
-    pub fn request_layout(&mut self) {
-        self.widget_state.needs_layout = true;
-    }
-
-    /// Indicate that your children have changed.
-    ///
-    /// Widgets must call this method after adding a new child.
-    pub fn children_changed(&mut self) {
-        self.widget_state.children_changed = true;
-        self.request_layout();
-    }
-
-    /// Request an animation frame.
-    pub fn request_anim_frame(&mut self) {
-        self.widget_state.request_anim = true;
-        self.request_paint();
-    }
-
-    /// Request a timer event.
-    ///
-    /// The return value is a token, which can be used to associate the
-    /// request with the event.
-    pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
-        self.state.request_timer(&mut self.widget_state, deadline)
-    }
-
-    /// The layout size.
-    ///
-    /// This is the layout size as ultimately determined by the parent
-    /// container, on the previous layout pass.
-    ///
-    /// Generally it will be the same as the size returned by the child widget's
-    /// [`layout`] method.
-    ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
-    pub fn size(&self) -> Size {
-        self.widget_state.size()
-    }
-
-    /// Submit a [`Command`] to be run after layout and paint finish.
-    ///
-    /// **Note:**
-    ///
-    /// Commands submited during an `update` call are handled *after* update,
-    /// layout, and paint have completed; this will trigger a new event cycle.
-    ///
-    /// [`Command`]: struct.Command.html
-    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
-        self.state.submit_command(cmd.into(), target.into());
-    }
-
-    /// Set the menu of the window containing the current widget.
-    /// `T` must be the application's root `Data` type (the type provided
-    /// to [`AppLauncher::launch`]).
-    ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        self.state.set_menu(menu)
-    }
-
-    /// Get an object which can create text layouts.
-    pub fn text(&mut self) -> Text {
-        self.state.window.text()
-    }
-
-    /// Returns a reference to the current `WindowHandle`.
-    //TODO: can we delete this? where is it used?
-    pub fn window(&self) -> &WindowHandle {
-        &self.state.window
-    }
-
-    /// Get the window id.
-    pub fn window_id(&self) -> WindowId {
-        self.state.window_id
-    }
-
-    /// get the `WidgetId` of the current widget.
-    pub fn widget_id(&self) -> WidgetId {
-        self.widget_state.id
-    }
-}
-
-impl<'c> LayoutCtx<'_, '_, 'c> {
-    /// Get an object which can create text layouts.
-    pub fn text(&mut self) -> &mut Text<'c> {
-        &mut self.text_factory
-    }
-
-    /// Get the window id.
-    pub fn window_id(&self) -> WindowId {
-        self.state.window_id
-    }
-
+impl LayoutCtx<'_, '_> {
     /// Set explicit paint [`Insets`] for this widget.
     ///
     /// You are not required to set explicit paint bounds unless you need
@@ -713,61 +598,6 @@ impl<'c> LayoutCtx<'_, '_, 'c> {
 }
 
 impl PaintCtx<'_, '_, '_> {
-    /// get the `WidgetId` of the current widget.
-    pub fn widget_id(&self) -> WidgetId {
-        self.widget_state.id
-    }
-
-    /// Query the "hot" state of the widget.
-    ///
-    /// See [`EventCtx::is_hot`](struct.EventCtx.html#method.is_hot) for
-    /// additional information.
-    pub fn is_hot(&self) -> bool {
-        self.widget_state.is_hot
-    }
-
-    /// Query the "active" state of the widget.
-    ///
-    /// See [`EventCtx::is_active`](struct.EventCtx.html#method.is_active) for
-    /// additional information.
-    pub fn is_active(&self) -> bool {
-        self.widget_state.is_active
-    }
-
-    /// Returns the layout size of the current widget.
-    ///
-    /// See [`EventCtx::size`](struct.EventCtx.html#method.size) for
-    /// additional information.
-    pub fn size(&self) -> Size {
-        self.widget_state.size()
-    }
-
-    /// The focus status of a widget.
-    ///
-    /// Returns `true` if this specific widget is focused.
-    /// To check if any descendants are focused use [`has_focus`].
-    ///
-    /// See [`EventCtx::is_focused`] for more information about focus.
-    ///
-    /// [`has_focus`]: #method.has_focus
-    /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
-    pub fn is_focused(&self) -> bool {
-        self.state.focus_widget == Some(self.widget_id())
-    }
-
-    /// The (tree) focus status of a widget.
-    ///
-    /// Returns `true` if either this specific widget or any one of its descendants is focused.
-    /// To check if only this specific widget is focused use [`is_focused`].
-    ///
-    /// See [`EventCtx::is_focused`] for more information about focus.
-    ///
-    /// [`is_focused`]: #method.is_focused
-    /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
-    pub fn has_focus(&self) -> bool {
-        self.widget_state.has_focus
-    }
-
     /// The depth in the tree of the currently painting widget.
     ///
     /// This may be used in combination with [`paint_with_z_index`] in order
@@ -782,9 +612,7 @@ impl PaintCtx<'_, '_, '_> {
         self.depth
     }
 
-    /// Returns the currently visible [`Region`].
-    ///
-    /// [`Region`]: struct.Region.html
+    /// Returns the region that needs to be repainted.
     #[inline]
     pub fn region(&self) -> &Region {
         &self.region
@@ -862,29 +690,33 @@ impl PaintCtx<'_, '_, '_> {
 impl<'a> ContextState<'a> {
     pub(crate) fn new<T: 'static>(
         command_queue: &'a mut CommandQueue,
+        ext_handle: &'a ExtEventSink,
         window: &'a WindowHandle,
         window_id: WindowId,
         focus_widget: Option<WidgetId>,
     ) -> Self {
         ContextState {
             command_queue,
+            ext_handle,
             window,
             window_id,
             focus_widget,
+            text: window.text(),
             root_app_data_type: TypeId::of::<T>(),
         }
     }
 
-    fn submit_command(&mut self, command: Command, target: Option<Target>) {
-        let target = target.unwrap_or_else(|| self.window_id.into());
-        self.command_queue.push_back((target, command))
+    fn submit_command(&mut self, command: Command) {
+        self.command_queue
+            .push_back(command.default_to(self.window_id.into()));
     }
 
     fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
         if self.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
-                Command::new(commands::SET_MENU, Box::new(menu)),
-                Some(Target::Window(self.window_id)),
+                commands::SET_MENU
+                    .with(Box::new(menu))
+                    .to(Target::Window(self.window_id)),
             );
         } else {
             const MSG: &str = "MenuDesc<T> - T must match the application data type.";
@@ -900,68 +732,6 @@ impl<'a> ContextState<'a> {
         let timer_token = self.window.request_timer(deadline);
         widget_state.add_timer(timer_token);
         timer_token
-    }
-}
-
-impl Region {
-    /// An empty region.
-    pub const EMPTY: Region = Region(Rect::ZERO);
-
-    /// Returns the smallest `Rect` that encloses the entire region.
-    pub fn to_rect(&self) -> Rect {
-        self.0
-    }
-
-    /// Returns `true` if `self` intersects with `other`.
-    #[inline]
-    pub fn intersects(&self, other: Rect) -> bool {
-        self.0.intersect(other).area() > 0.
-    }
-
-    /// Returns `true` if this region is empty.
-    pub fn is_empty(&self) -> bool {
-        self.0.width() <= 0.0 || self.0.height() <= 0.0
-    }
-
-    /// Adds a new `Rect` to this region.
-    ///
-    /// This differs from `Rect::union` in its treatment of empty rectangles: an empty rectangle has
-    /// no effect on the union.
-    pub(crate) fn add_rect(&mut self, rect: Rect) {
-        if self.is_empty() {
-            self.0 = rect;
-        } else if rect.width() > 0.0 && rect.height() > 0.0 {
-            self.0 = self.0.union(rect);
-        }
-    }
-
-    /// Modifies this region by including everything in the other region.
-    pub(crate) fn merge_with(&mut self, other: Region) {
-        self.add_rect(other.0);
-    }
-
-    /// Modifies this region by intersecting it with the given rectangle.
-    pub(crate) fn intersect_with(&mut self, rect: Rect) {
-        self.0 = self.0.intersect(rect);
-    }
-}
-
-impl std::ops::AddAssign<Vec2> for Region {
-    fn add_assign(&mut self, offset: Vec2) {
-        self.0 = self.0 + offset;
-    }
-}
-
-impl std::ops::SubAssign<Vec2> for Region {
-    fn sub_assign(&mut self, offset: Vec2) {
-        self.0 = self.0 - offset;
-    }
-}
-
-impl From<Rect> for Region {
-    fn from(src: Rect) -> Region {
-        // We maintain the invariant that the width/height of the rect are non-negative.
-        Region(src.abs())
     }
 }
 

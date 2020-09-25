@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,22 +13,74 @@
 // limitations under the License.
 
 //! An Image widget.
-//! Please consider using SVG and the SVG wideget as it scales much better.
+//! Please consider using SVG and the SVG widget as it scales much better.
 
-use std::convert::AsRef;
-use std::error::Error;
-use std::path::Path;
+use std::fmt;
+#[cfg(feature = "image")]
+use std::{convert::AsRef, error::Error, path::Path};
 
 use crate::{
-    piet::{ImageFormat, InterpolationMode},
+    piet::{Image as PietImage, ImageFormat, InterpolationMode},
     widget::common::FillStrat,
-    Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Rect, RenderContext, Size, UpdateCtx, Widget,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Rect,
+    RenderContext, Size, UpdateCtx, Widget,
 };
 
-/// A widget that renders an Image
+/// A widget that renders a bitmap Image.
+///
+/// Contains data about how to fill the given space and interpolate pixels.
+/// Configuration options are provided via the builder pattern.
+///
+/// Note: when [scaling a bitmap image], such as supporting multiple
+/// screen sizes and resolutions, interpolation can lead to blurry
+/// or pixelated images and so is not recommended for things like icons.
+/// Instead consider using [SVG files] and enabling the `svg` feature with `cargo`.
+///
+/// (See also:
+/// [`ImageData`],
+/// [`FillStrat`],
+/// [`InterpolationMode`]
+/// )
+///
+/// # Example
+///
+/// Create an image widget and configure it using builder methods
+/// ```
+/// use druid::{
+///     widget::{Image, ImageData, FillStrat},
+///     piet::InterpolationMode,
+/// };
+///
+/// let image_data = ImageData::empty();
+/// let image_widget = Image::new(image_data)
+///     // set the fill strategy
+///     .fill_mode(FillStrat::Fill)
+///     // set the interpolation mode
+///     .interpolation_mode(InterpolationMode::Bilinear);
+/// ```
+/// Create an image widget and configure it using setters
+/// ```
+/// use druid::{
+///     widget::{Image, ImageData, FillStrat},
+///     piet::InterpolationMode,
+/// };
+///
+/// let image_data = ImageData::empty();
+/// let mut image_widget = Image::new(image_data);
+/// // set the fill strategy
+/// image_widget.set_fill_mode(FillStrat::FitWidth);
+/// // set the interpolation mode
+/// image_widget.set_interpolation_mode(InterpolationMode::Bilinear);
+/// ```
+///
+/// [scaling a bitmap image]: ../struct.Scale.html#pixels-and-display-points
+/// [SVG files]: https://en.wikipedia.org/wiki/Scalable_Vector_Graphics
+/// [`ImageData`]: struct.ImageData.html
+/// [`FillStrat`]: ../widget/enum.FillStrat.html
+/// [`InterpolationMode`]: ../piet/enum.InterpolationMode.html
 pub struct Image {
     image_data: ImageData,
+    paint_data: Option<PietImage>,
     fill: FillStrat,
     interpolation: InterpolationMode,
 }
@@ -36,10 +88,17 @@ pub struct Image {
 impl Image {
     /// Create an image drawing widget from `ImageData`.
     ///
-    /// The Image will scale to fit its box constraints.
+    /// By default, the Image will scale to fit its box constraints
+    /// ([`FillStrat::Fill`])
+    /// and will be scaled bilinearly
+    /// ([`InterpolationMode::Bilinear`])
+    ///
+    /// [`FillStrat::Fill`]: ../widget/enum.FillStrat.html#variant.Fill
+    /// [`InterpolationMode::Bilinear`]: ../piet/enum.InterpolationMode.html#variant.Bilinear
     pub fn new(image_data: ImageData) -> Self {
         Image {
             image_data,
+            paint_data: None,
             fill: FillStrat::default(),
             interpolation: InterpolationMode::Bilinear,
         }
@@ -51,9 +110,10 @@ impl Image {
         self
     }
 
-    /// Modify the widget's `FillStrat`.
+    /// Modify the widget's fill strategy.
     pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
+        self.paint_data = None;
     }
 
     /// A builder-style method for specifying the interpolation strategy.
@@ -62,9 +122,10 @@ impl Image {
         self
     }
 
-    /// Modify the widget's `InterpolationMode`.
+    /// Modify the widget's interpolation mode.
     pub fn set_interpolation_mode(&mut self, interpolation: InterpolationMode) {
         self.interpolation = interpolation;
+        self.paint_data = None;
     }
 }
 
@@ -102,12 +163,34 @@ impl<T: Data> Widget<T> for Image {
             let clip_rect = Rect::ZERO.with_size(ctx.size());
             ctx.clip(clip_rect);
         }
-        self.image_data
-            .to_piet(offset_matrix, ctx, self.interpolation);
+
+        ctx.with_save(|ctx| {
+            let piet_image = {
+                let image_data = &self.image_data;
+                self.paint_data
+                    .get_or_insert_with(|| image_data.to_piet(ctx))
+            };
+            ctx.transform(offset_matrix);
+            ctx.draw_image(
+                piet_image,
+                self.image_data.get_size().to_rect(),
+                self.interpolation,
+            );
+        });
     }
 }
 
-/// Stored Image data.
+/// Processed image data.
+///
+/// By default, Druid does not parse image data.
+/// However, enabling [the `image` feature]
+/// provides several
+/// methods by which you can load image files.
+///
+/// Contains raw bytes, dimensions, and image format ([`piet::ImageFormat`]).
+///
+/// [the `image` feature]: ../index.html#optional-features
+/// [`piet::ImageFormat`]: ../piet/enum.ImageFormat.html
 #[derive(Clone)]
 pub struct ImageData {
     pixels: Vec<u8>,
@@ -127,9 +210,35 @@ impl ImageData {
         }
     }
 
+    /// Get the size in pixels of the contained image.
+    fn get_size(&self) -> Size {
+        Size::new(self.x_pixels as f64, self.y_pixels as f64)
+    }
+
+    /// Convert ImageData into Piet draw instructions.
+    fn to_piet(&self, ctx: &mut PaintCtx) -> PietImage {
+        ctx.make_image(
+            self.get_size().width as usize,
+            self.get_size().height as usize,
+            &self.pixels,
+            self.format,
+        )
+        .unwrap()
+    }
+}
+
+#[cfg(feature = "image")]
+#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
+impl ImageData {
     /// Load an image from a DynamicImage from the image crate
     pub fn from_dynamic_image(image_data: image::DynamicImage) -> ImageData {
-        if has_alpha_channel(&image_data) {
+        use image::ColorType::*;
+        let has_alpha_channel = match image_data.color() {
+            La8 | Rgba8 | La16 | Rgba16 | Bgra8 => true,
+            _ => false,
+        };
+
+        if has_alpha_channel {
             Self::from_dynamic_image_with_alpha(image_data)
         } else {
             Self::from_dynamic_image_without_alpha(image_data)
@@ -173,41 +282,22 @@ impl ImageData {
         let image_data = image::open(path).map_err(|e| e)?;
         Ok(ImageData::from_dynamic_image(image_data))
     }
-
-    /// Get the size in pixels of the contained image.
-    fn get_size(&self) -> Size {
-        Size::new(self.x_pixels as f64, self.y_pixels as f64)
-    }
-
-    /// Convert ImageData into Piet draw instructions.
-    fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, interpolation: InterpolationMode) {
-        ctx.with_save(|ctx| {
-            ctx.transform(offset_matrix);
-            let size = self.get_size();
-            let im = ctx
-                .make_image(
-                    size.width as usize,
-                    size.height as usize,
-                    &self.pixels,
-                    self.format,
-                )
-                .unwrap();
-            ctx.draw_image(&im, size.to_rect(), interpolation);
-        })
-    }
-}
-
-fn has_alpha_channel(image: &image::DynamicImage) -> bool {
-    use image::ColorType::*;
-    match image.color() {
-        La8 | Rgba8 | La16 | Rgba16 | Bgra8 => true,
-        _ => false,
-    }
 }
 
 impl Default for ImageData {
     fn default() -> Self {
         ImageData::empty()
+    }
+}
+
+impl fmt::Debug for ImageData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("ImageData")
+            .field("size", &self.pixels.len())
+            .field("width", &self.x_pixels)
+            .field("height", &self.y_pixels)
+            .field("format", &format_args!("{:?}", self.format))
+            .finish()
     }
 }
 

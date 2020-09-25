@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@ use std::borrow::Borrow;
 
 use log::warn;
 
-use crate::keyboard::{KeyEvent, KeyModifiers};
-use crate::keycodes::KeyCode;
+use crate::{IntoKey, KbKey, KeyEvent, Modifiers};
+
+// TODO: fix docstring
 
 /// A description of a keyboard shortcut.
 ///
@@ -31,40 +32,33 @@ use crate::keycodes::KeyCode;
 /// [`SysMods`] matches the Command key on macOS and Ctrl elsewhere:
 ///
 /// ```
-/// use druid_shell::{HotKey, KeyEvent, KeyCode, RawMods, SysMods};
+/// use druid_shell::{HotKey, KbKey, KeyEvent, RawMods, SysMods};
 ///
 /// let hotkey = HotKey::new(SysMods::Cmd, "a");
 ///
 /// #[cfg(target_os = "macos")]
-/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Meta, "a", KeyCode::KeyA)));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Meta, "a")));
 ///
 /// #[cfg(target_os = "windows")]
-/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "a", KeyCode::KeyA)));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "a")));
 /// ```
 ///
 /// `None` matches only the key without modifiers:
 ///
 /// ```
-/// use druid_shell::{HotKey, KeyEvent, KeyCode, RawMods, SysMods};
+/// use druid_shell::{HotKey, KbKey, KeyEvent, RawMods, SysMods};
 ///
-/// let hotkey = HotKey::new(None, KeyCode::ArrowLeft);
+/// let hotkey = HotKey::new(None, KbKey::ArrowLeft);
 ///
-/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::None, "", KeyCode::ArrowLeft)));
-/// assert!(!hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, "", KeyCode::ArrowLeft)));
+/// assert!(hotkey.matches(KeyEvent::for_test(RawMods::None, KbKey::ArrowLeft)));
+/// assert!(!hotkey.matches(KeyEvent::for_test(RawMods::Ctrl, KbKey::ArrowLeft)));
 /// ```
 ///
 /// [`SysMods`]: enum.SysMods.html
 #[derive(Debug, Clone)]
 pub struct HotKey {
     pub(crate) mods: RawMods,
-    pub(crate) key: KeyCompare,
-}
-
-/// Something that can be compared with a keyboard key.
-#[derive(Debug, Clone, PartialEq)]
-pub enum KeyCompare {
-    Code(KeyCode),
-    Text(&'static str),
+    pub(crate) key: KbKey,
 }
 
 impl HotKey {
@@ -75,40 +69,34 @@ impl HotKey {
     /// 'Command' key on macOS with the 'Ctrl' key on other platforms.
     ///
     /// The second argument describes the non-modifier key. This can be either
-    /// a `&'static str` or a [`KeyCode`]. If it is a `&str`, it will be compared
-    /// against the [`unmodified text`] for a given key event; if it is a [`KeyCode`]
-    /// it will be compared against the event's key code.
-    ///
-    /// In general, [`KeyCode`] should be preferred for non-printing keys, like
-    /// the arrows or backspace.
+    /// a `&str` or a [`KbKey`]; the former is merely a convenient
+    /// shorthand for `KbKey::Character()`.
     ///
     /// # Examples
     /// ```
-    /// use druid_shell::{HotKey, KeyEvent, KeyCode, RawMods, SysMods};
+    /// use druid_shell::{HotKey, KbKey, RawMods, SysMods};
     ///
     /// let select_all = HotKey::new(SysMods::Cmd, "a");
-    /// let esc = HotKey::new(None, KeyCode::Escape);
+    /// let esc = HotKey::new(None, KbKey::Escape);
     /// let macos_fullscreen = HotKey::new(RawMods::CtrlMeta, "f");
     /// ```
     ///
-    /// [`KeyCode`]: enum.KeyCode.html
+    /// [`Key`]: keyboard_types::Key
     /// [`SysMods`]: enum.SysMods.html
     /// [`RawMods`]: enum.RawMods.html
-    /// [`unmodified text`]: struct.KeyEvent.html#method.unmod_text
-    pub fn new(mods: impl Into<Option<RawMods>>, key: impl Into<KeyCompare>) -> Self {
+    pub fn new(mods: impl Into<Option<RawMods>>, key: impl IntoKey) -> Self {
         HotKey {
             mods: mods.into().unwrap_or(RawMods::None),
-            key: key.into(),
+            key: key.into_key(),
         }
         .warn_if_needed()
     }
 
-    //TODO: figure out if we need to be normalizing case or something? This requires
-    //correctly documenting the expected behaviour of `unmod_text`.
+    //TODO: figure out if we need to be normalizing case or something?
     fn warn_if_needed(self) -> Self {
-        if let KeyCompare::Text(s) = self.key {
-            let km: KeyModifiers = self.mods.into();
-            if km.shift && s.chars().any(|c| c.is_uppercase()) {
+        if let KbKey::Character(s) = &self.key {
+            let km: Modifiers = self.mods.into();
+            if km.shift() && s.chars().any(|c| c.is_lowercase()) {
                 warn!(
                     "warning: HotKey {:?} includes shift, but text is lowercase. \
                      Text is matched literally; this may cause problems.",
@@ -121,14 +109,12 @@ impl HotKey {
 
     /// Returns `true` if this [`KeyEvent`] matches this `HotKey`.
     ///
-    /// [`KeyEvent`]: struct.KeyEvent.html
+    /// [`KeyEvent`]: KeyEvent
     pub fn matches(&self, event: impl Borrow<KeyEvent>) -> bool {
+        // Should be a const but const bit_or doesn't work here.
+        let base_mods = Modifiers::SHIFT | Modifiers::CONTROL | Modifiers::ALT | Modifiers::META;
         let event = event.borrow();
-        self.mods == event.mods
-            && match self.key {
-                KeyCompare::Code(code) => code == event.key_code,
-                KeyCompare::Text(text) => Some(text) == event.text(),
-            }
+        self.mods == event.mods & base_mods && self.key == event.key
     }
 }
 
@@ -153,7 +139,7 @@ pub enum SysMods {
 //TODO: should something like this just _replace_ keymodifiers?
 /// A representation of the active modifier keys.
 ///
-/// This is intended to be clearer than `KeyModifiers`, when describing hotkeys.
+/// This is intended to be clearer than `Modifiers`, when describing hotkeys.
 #[derive(Debug, Clone, Copy)]
 pub enum RawMods {
     None,
@@ -174,35 +160,35 @@ pub enum RawMods {
     AltCtrlMetaShift,
 }
 
-impl std::cmp::PartialEq<KeyModifiers> for RawMods {
-    fn eq(&self, other: &KeyModifiers) -> bool {
-        let mods: KeyModifiers = (*self).into();
+impl std::cmp::PartialEq<Modifiers> for RawMods {
+    fn eq(&self, other: &Modifiers) -> bool {
+        let mods: Modifiers = (*self).into();
         mods == *other
     }
 }
 
-impl std::cmp::PartialEq<RawMods> for KeyModifiers {
+impl std::cmp::PartialEq<RawMods> for Modifiers {
     fn eq(&self, other: &RawMods) -> bool {
         other == self
     }
 }
 
-impl std::cmp::PartialEq<KeyModifiers> for SysMods {
-    fn eq(&self, other: &KeyModifiers) -> bool {
+impl std::cmp::PartialEq<Modifiers> for SysMods {
+    fn eq(&self, other: &Modifiers) -> bool {
         let mods: RawMods = (*self).into();
         mods == *other
     }
 }
 
-impl std::cmp::PartialEq<SysMods> for KeyModifiers {
+impl std::cmp::PartialEq<SysMods> for Modifiers {
     fn eq(&self, other: &SysMods) -> bool {
         let other: RawMods = (*other).into();
         &other == self
     }
 }
 
-impl From<RawMods> for KeyModifiers {
-    fn from(src: RawMods) -> KeyModifiers {
+impl From<RawMods> for Modifiers {
+    fn from(src: RawMods) -> Modifiers {
         let (alt, ctrl, meta, shift) = match src {
             RawMods::None => (false, false, false, false),
             RawMods::Alt => (true, false, false, false),
@@ -221,12 +207,12 @@ impl From<RawMods> for KeyModifiers {
             RawMods::CtrlMetaShift => (false, true, true, true),
             RawMods::AltCtrlMetaShift => (true, true, true, true),
         };
-        KeyModifiers {
-            alt,
-            ctrl,
-            meta,
-            shift,
-        }
+        let mut mods = Modifiers::empty();
+        mods.set(Modifiers::ALT, alt);
+        mods.set(Modifiers::CONTROL, ctrl);
+        mods.set(Modifiers::META, meta);
+        mods.set(Modifiers::SHIFT, shift);
+        mods
     }
 }
 
@@ -257,17 +243,5 @@ impl From<SysMods> for RawMods {
             SysMods::CmdShift => RawMods::CtrlShift,
             SysMods::AltCmdShift => RawMods::AltCtrlShift,
         }
-    }
-}
-
-impl From<KeyCode> for KeyCompare {
-    fn from(src: KeyCode) -> KeyCompare {
-        KeyCompare::Code(src)
-    }
-}
-
-impl From<&'static str> for KeyCompare {
-    fn from(src: &'static str) -> KeyCompare {
-        KeyCompare::Text(src)
     }
 }

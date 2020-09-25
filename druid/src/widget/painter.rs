@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -88,6 +88,7 @@ pub struct Painter<T>(Box<dyn FnMut(&mut PaintCtx, &T, &Env)>);
 /// [`Data`]: ../trait.Data.html
 /// [`Env`]: ../struct.Env.html
 #[non_exhaustive]
+#[allow(missing_docs)]
 pub enum BackgroundBrush<T> {
     Color(Color),
     ColorKey(Key<Color>),

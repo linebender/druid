@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,6 +48,6 @@
 
 #[allow(clippy::module_inception)]
 mod lens;
-pub use lens::{Deref, Field, Id, InArc, Index, Map, Then};
+pub use lens::{Deref, Field, Id, InArc, Index, Map, Ref, Then, Unit};
 #[doc(hidden)]
-pub use lens::{Lens, LensExt, LensWrap};
+pub use lens::{Lens, LensExt};

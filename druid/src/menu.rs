@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -107,9 +107,10 @@
 
 use std::num::NonZeroU32;
 
+use crate::keyboard_types::Key;
 use crate::kurbo::Point;
-use crate::shell::{HotKey, KeyCompare, Menu as PlatformMenu, RawMods, SysMods};
-use crate::{commands, Command, Data, Env, KeyCode, LocalizedString, Selector};
+use crate::shell::{HotKey, IntoKey, Menu as PlatformMenu, RawMods, SysMods};
+use crate::{commands, Command, Data, Env, LocalizedString, Selector};
 
 /// A platform-agnostic description of an application, window, or context
 /// menu.
@@ -195,7 +196,7 @@ impl<T> MenuItem<T> {
     /// # // hide the type param in or example code by letting it be inferred here
     /// # MenuDesc::<u32>::empty().append(item);
     /// ```
-    pub fn hotkey(mut self, mods: impl Into<Option<RawMods>>, key: impl Into<KeyCompare>) -> Self {
+    pub fn hotkey(mut self, mods: impl Into<Option<RawMods>>, key: impl IntoKey) -> Self {
         self.hotkey = Some(HotKey::new(mods, key));
         self
     }
@@ -265,7 +266,7 @@ impl<T: Data> MenuDesc<T> {
     /// # Examples
     ///
     /// ```
-    /// use druid::{Command, LocalizedString, MenuDesc, MenuItem, Selector};
+    /// use druid::{Command, LocalizedString, MenuDesc, MenuItem, Selector, Target};
     ///
     /// let num_items: usize = 4;
     /// const MENU_COUNT_ACTION: Selector<usize> = Selector::new("menu-count-action");
@@ -274,7 +275,7 @@ impl<T: Data> MenuDesc<T> {
     ///     .append_iter(|| (0..num_items).map(|i| {
     ///         MenuItem::new(
     ///             LocalizedString::new("hello-counter").with_arg("count", move |_, _| i.into()),
-    ///             Command::new(MENU_COUNT_ACTION, i),
+    ///             Command::new(MENU_COUNT_ACTION, i, Target::Auto),
     ///        )
     ///     })
     /// );
@@ -346,7 +347,7 @@ impl<T: Data> MenuDesc<T> {
                     item.platform_id = MenuItemId::next();
                     menu.add_item(
                         item.platform_id.as_u32(),
-                        item.title.localized_str(),
+                        &item.title.localized_str(),
                         item.hotkey.as_ref(),
                         item.enabled,
                         item.selected,
@@ -388,6 +389,7 @@ impl<T: Data> MenuDesc<T> {
 }
 
 impl<T> ContextMenu<T> {
+    /// Create a new `ContextMenu`.
     pub fn new(menu: MenuDesc<T>, location: Point) -> Self {
         ContextMenu { menu, location }
     }
@@ -492,7 +494,7 @@ pub mod sys {
             }
             #[cfg(not(target_os = "windows"))]
             {
-                item.hotkey(SysMods::CmdShift, "z")
+                item.hotkey(SysMods::CmdShift, "Z")
             }
         }
     }
@@ -581,7 +583,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-save-as"),
                     commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
-                .hotkey(RawMods::CtrlShift, "s")
+                .hotkey(RawMods::CtrlShift, "S")
             }
 
             /// The 'Print...' menu item.
@@ -615,7 +617,7 @@ pub mod sys {
                     LocalizedString::new("win-menu-file-exit"),
                     commands::QUIT_APP,
                 )
-                .hotkey(RawMods::Alt, KeyCode::F4)
+                .hotkey(RawMods::Alt, Key::F4)
             }
         }
     }
@@ -786,7 +788,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-save-as"),
                     commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
-                .hotkey(RawMods::MetaShift, "s")
+                .hotkey(RawMods::MetaShift, "S")
             }
 
             /// The 'Page Setup...' menu item.
@@ -795,7 +797,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-page-setup"),
                     commands::PRINT_SETUP,
                 )
-                .hotkey(RawMods::MetaShift, "p")
+                .hotkey(RawMods::MetaShift, "P")
             }
 
             /// The 'Print...' menu item.

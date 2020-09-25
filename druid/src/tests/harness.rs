@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,9 @@
 
 use std::path::Path;
 
+use crate::app::PendingWindow;
 use crate::core::{CommandQueue, WidgetState};
+use crate::ext_event::ExtEventHost;
 use crate::piet::{BitmapTarget, Device, Error, ImageFormat, Piet};
 use crate::*;
 
@@ -66,8 +68,8 @@ impl<'a> TargetGuard<'a> {
     /// Turns the TargetGuard into a array of pixels
     #[allow(dead_code)]
     pub fn into_raw(mut self) -> Vec<u8> {
-        let raw_target = self.0.take().unwrap();
-        let raw_pixels: Vec<u8> = raw_target.into_raw_pixels(ImageFormat::RgbaPremul).unwrap();
+        let mut raw_target = self.0.take().unwrap();
+        let raw_pixels: Vec<u8> = raw_target.raw_pixels(ImageFormat::RgbaPremul).unwrap();
         raw_pixels
     }
 
@@ -133,6 +135,8 @@ impl<T: Data> Harness<'_, T> {
         mut harness_closure: impl FnMut(&mut Harness<T>),
         mut render_context_closure: impl FnMut(TargetGuard),
     ) {
+        let ext_host = ExtEventHost::default();
+        let ext_handle = ext_host.make_sink();
         let mut device = Device::new().expect("harness failed to get device");
         let target = device
             .bitmap_target(window_size.width as usize, window_size.height as usize, 1.0)
@@ -141,12 +145,12 @@ impl<T: Data> Harness<'_, T> {
         {
             let piet = target.0.as_mut().unwrap().render_context();
 
-            let desc = WindowDesc::new(|| root);
-            let window = Window::new(WindowId::next(), Default::default(), desc);
+            let pending = PendingWindow::new(|| root);
+            let window = Window::new(WindowId::next(), Default::default(), pending, ext_handle);
 
             let inner = Inner {
                 data,
-                env: theme::init(),
+                env: Env::default(),
                 window,
                 cmds: Default::default(),
             };
@@ -211,9 +215,9 @@ impl<T: Data> Harness<'_, T> {
     }
 
     /// Send a command to a target.
-    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
-        let target = target.into().unwrap_or_else(|| self.inner.window.id.into());
-        let event = Event::Internal(InternalEvent::TargetedCommand(target, cmd.into()));
+    pub fn submit_command(&mut self, cmd: impl Into<Command>) {
+        let command = cmd.into().default_to(self.inner.window.id.into());
+        let event = Event::Internal(InternalEvent::TargetedCommand(command));
         self.event(event);
     }
 
@@ -240,9 +244,7 @@ impl<T: Data> Harness<'_, T> {
         loop {
             let cmd = self.inner.cmds.pop_front();
             match cmd {
-                Some((target, cmd)) => {
-                    self.event(Event::Internal(InternalEvent::TargetedCommand(target, cmd)))
-                }
+                Some(cmd) => self.event(Event::Internal(InternalEvent::TargetedCommand(cmd))),
                 None => break,
             }
         }
@@ -259,16 +261,25 @@ impl<T: Data> Harness<'_, T> {
 
     /// Only do a layout pass, without painting
     pub fn just_layout(&mut self) {
-        self.inner.layout(&mut self.piet)
+        self.inner.layout()
     }
 
-    pub fn paint_rect(&mut self, invalid_rect: Rect) {
-        self.inner.paint_rect(&mut self.piet, invalid_rect)
+    /// Paints just the part of the window that was invalidated by calls to `request_paint` or
+    /// `request_paint_rect`.
+    ///
+    /// Also resets the invalid region.
+    #[allow(dead_code)]
+    pub fn paint_invalid(&mut self) {
+        let invalid = std::mem::replace(self.window_mut().invalid_mut(), Region::EMPTY);
+        self.inner.paint_region(&mut self.piet, &invalid);
     }
 
+    /// Paints the entire window and resets the invalid region.
     #[allow(dead_code)]
     pub fn paint(&mut self) {
-        self.paint_rect(self.window_size.to_rect())
+        self.window_mut().invalid_mut().clear();
+        self.inner
+            .paint_region(&mut self.piet, &self.window_size.to_rect().into());
     }
 }
 
@@ -287,15 +298,15 @@ impl<T: Data> Inner<T> {
         self.window.update(&mut self.cmds, &self.data, &self.env);
     }
 
-    fn layout(&mut self, piet: &mut Piet) {
+    fn layout(&mut self) {
         self.window
-            .just_layout(piet, &mut self.cmds, &self.data, &self.env);
+            .just_layout(&mut self.cmds, &self.data, &self.env);
     }
 
     #[allow(dead_code)]
-    fn paint_rect(&mut self, piet: &mut Piet, invalid_rect: Rect) {
+    fn paint_region(&mut self, piet: &mut Piet, invalid: &Region) {
         self.window
-            .do_paint(piet, invalid_rect, &mut self.cmds, &self.data, &self.env);
+            .do_paint(piet, &invalid, &mut self.cmds, &self.data, &self.env);
     }
 }
 
@@ -315,6 +326,6 @@ impl Drop for TargetGuard<'_> {
         let _ = self
             .0
             .take()
-            .map(|t| t.into_raw_pixels(piet::ImageFormat::RgbaPremul));
+            .map(|mut t| t.raw_pixels(piet::ImageFormat::RgbaPremul));
     }
 }

@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,16 +17,16 @@
 use crate::kurbo::Size;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetId,
+    UpdateCtx, Widget, WidgetPod,
 };
 
 /// A widget that accepts a closure to update the environment for its child.
 pub struct EnvScope<T, W> {
     pub(crate) f: Box<dyn Fn(&mut Env, &T)>,
-    pub(crate) child: W,
+    pub(crate) child: WidgetPod<T, W>,
 }
 
-impl<T, W> EnvScope<T, W> {
+impl<T, W: Widget<T>> EnvScope<T, W> {
     /// Create a widget that updates the environment for its descendants.
     ///
     /// Accepts a closure that sets Env values.
@@ -53,7 +53,7 @@ impl<T, W> EnvScope<T, W> {
     pub fn new(f: impl Fn(&mut Env, &T) + 'static, child: W) -> EnvScope<T, W> {
         EnvScope {
             f: Box::new(f),
-            child,
+            child: WidgetPod::new(child),
         }
     }
 }
@@ -69,29 +69,25 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);
-        self.child.lifecycle(ctx, event, data, env)
+        self.child.lifecycle(ctx, event, data, &new_env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);
 
-        self.child.update(ctx, old_data, data, &new_env);
+        self.child.update(ctx, data, &new_env);
     }
 
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("EnvScope");
 
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);
 
-        self.child.layout(layout_ctx, &bc, data, &new_env)
+        let size = self.child.layout(ctx, &bc, data, &new_env);
+        self.child.set_layout_rect(ctx, data, env, size.to_rect());
+        size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
@@ -99,9 +95,5 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         (self.f)(&mut new_env, &data);
 
         self.child.paint(ctx, data, &new_env);
-    }
-
-    fn id(&self) -> Option<WidgetId> {
-        self.child.id()
     }
 }

@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,10 +23,18 @@ pub enum Movement {
     Left,
     /// Move to the right by one grapheme cluster.
     Right,
+    /// Move to the left by one word.
+    LeftWord,
+    /// Move to the right by one word.
+    RightWord,
     /// Move to left end of visible line.
-    LeftOfLine,
+    PrecedingLineBreak,
     /// Move to right end of visible line.
-    RightOfLine,
+    NextLineBreak,
+    /// Move to the beginning of the document
+    StartOfDocument,
+    /// Move to the end of the document
+    EndOfDocument,
 }
 
 /// Compute the result of movement on a selection .
@@ -34,29 +42,39 @@ pub fn movement(m: Movement, s: Selection, text: &impl EditableText, modify: boo
     let offset = match m {
         Movement::Left => {
             if s.is_caret() || modify {
-                if let Some(offset) = text.prev_grapheme_offset(s.end) {
-                    offset
-                } else {
-                    0
-                }
+                text.prev_grapheme_offset(s.end).unwrap_or(0)
             } else {
                 s.min()
             }
         }
         Movement::Right => {
             if s.is_caret() || modify {
-                if let Some(offset) = text.next_grapheme_offset(s.end) {
-                    offset
-                } else {
-                    s.end
-                }
+                text.next_grapheme_offset(s.end).unwrap_or(s.end)
             } else {
                 s.max()
             }
         }
 
-        Movement::LeftOfLine => 0,
-        Movement::RightOfLine => text.len(),
+        Movement::PrecedingLineBreak => text.preceding_line_break(s.end),
+        Movement::NextLineBreak => text.next_line_break(s.end),
+
+        Movement::StartOfDocument => 0,
+        Movement::EndOfDocument => text.len(),
+
+        Movement::LeftWord => {
+            if s.is_caret() || modify {
+                text.prev_word_offset(s.end).unwrap_or(0)
+            } else {
+                s.min()
+            }
+        }
+        Movement::RightWord => {
+            if s.is_caret() || modify {
+                text.next_word_offset(s.end).unwrap_or(s.end)
+            } else {
+                s.max()
+            }
+        }
     };
     Selection::new(if modify { s.start } else { offset }, offset)
 }
