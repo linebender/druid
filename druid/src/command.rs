@@ -388,7 +388,7 @@ impl Command {
                 panic!(
                     "The selector \"{}\" exists twice with different types. See druid::Command::get for more information",
                     selector.symbol()
-                )
+                );
             }))
         } else {
             None

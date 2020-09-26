@@ -145,6 +145,9 @@ pub use im;
 #[macro_use]
 pub mod lens;
 
+#[macro_use]
+mod util;
+
 mod app;
 mod app_delegate;
 mod bloom;
@@ -165,7 +168,6 @@ pub mod scroll_component;
 mod tests;
 pub mod text;
 pub mod theme;
-mod util;
 pub mod widget;
 mod win_handler;
 mod window;
