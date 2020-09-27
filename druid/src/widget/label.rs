@@ -506,7 +506,11 @@ impl Widget<ArcStr> for RawLabel {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &ArcStr, data: &ArcStr, _env: &Env) {
-        if !old_data.same(data) | self.layout.needs_rebuild_after_update(ctx) {
+        if !old_data.same(data) {
+            self.layout.set_text(data.clone());
+            ctx.request_layout();
+        }
+        if self.layout.needs_rebuild_after_update(ctx) {
             ctx.request_layout();
         }
     }
