@@ -45,6 +45,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Changed
 
+- Windows: Fixed flashing on window creation ([#1261] by [@rhzk])
 - Windows: Improved DPI handling. Druid should now redraw correctly when dpi changes. ([#1037] by [@rhzk])
 - windows: Window created with OS default size if not set. ([#1037] by [@rhzk])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
@@ -469,6 +470,7 @@ Last release without a changelog :(
 [#1245]: https://github.com/linebender/druid/pull/1245
 [#1251]: https://github.com/linebender/druid/pull/1251
 [#1252]: https://github.com/linebender/druid/pull/1252
+[#1261]: https://github.com/linebender/druid/pull/1261
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

@@ -82,7 +82,7 @@ pub(crate) struct WindowBuilder {
     show_titlebar: bool,
     size: Option<Size>,
     min_size: Option<Size>,
-    position: Point,
+    position: Option<Point>,
     state: window::WindowState,
 }
 
@@ -550,26 +550,6 @@ impl WndProc for MyWndProc {
         //println!("wndproc msg: {}", msg);
         match msg {
             WM_CREATE => {
-                // Only supported on Windows 10, Could remove this as the 8.1 version below also works on 10..
-                let scale_factor = if let Some(func) = OPTIONAL_FUNCTIONS.GetDpiForWindow {
-                    unsafe { func(hwnd) as f64 / SCALE_TARGET_DPI }
-                }
-                // Windows 8.1 Support
-                else if let Some(func) = OPTIONAL_FUNCTIONS.GetDpiForMonitor {
-                    unsafe {
-                        let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-                        let mut dpiX = 0;
-                        let mut dpiY = 0;
-                        func(monitor, MDT_EFFECTIVE_DPI, &mut dpiX, &mut dpiY);
-                        dpiX as f64 / SCALE_TARGET_DPI
-                    }
-                } else {
-                    1.0
-                };
-
-                let scale = Scale::new(scale_factor, scale_factor);
-                self.set_scale(scale);
-
                 if let Some(state) = self.handle.borrow().state.upgrade() {
                     state.hwnd.set(hwnd);
                 }
@@ -673,25 +653,6 @@ impl WndProc for MyWndProc {
                     (*rect).bottom - (*rect).top,
                     SWP_NOZORDER | SWP_FRAMECHANGED | SWP_DRAWFRAME,
                 );
-                /*
-                if let Ok(mut s) = self.state.try_borrow_mut() {
-                    let s = s.as_mut().unwrap();
-                    if s.dxgi_state.is_some() {
-                        let scale = self.scale();
-                        let rt = paint::create_render_target(&self.d2d_factory, hwnd, scale);
-                        s.render_target = rt.ok();
-                        {
-                            let rect_dp = self.area().size_dp().to_rect();
-                            s.handler.rebuild_resources();
-                            s.render(&self.d2d_factory, &self.dwrite_factory, &rect_dp.into());
-                            self.clear_invalid();
-                        }
-
-                    }
-                } else {
-                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
-                }
-                */
                 Some(0)
             },
             WM_NCCALCSIZE => unsafe {
@@ -1159,7 +1120,7 @@ impl WindowBuilder {
             present_strategy: Default::default(),
             size: None,
             min_size: None,
-            position: Point::new(CW_USEDEFAULT as f64, CW_USEDEFAULT as f64),
+            position: None,
             state: window::WindowState::RESTORED,
         }
     }
@@ -1194,7 +1155,7 @@ impl WindowBuilder {
     }
 
     pub fn set_position(&mut self, position: Point) {
-        self.position = position;
+        self.position = Some(position);
     }
 
     pub fn set_window_state(&mut self, state: window::WindowState) {
@@ -1219,7 +1180,30 @@ impl WindowBuilder {
                 present_strategy: self.present_strategy,
             };
 
-            let scale = Scale::new(1.0, 1.0);
+            let position = match self.position {
+                Some(pos) => pos,
+                None => Point::new(CW_USEDEFAULT as f64, CW_USEDEFAULT as f64),
+            };
+
+            let scale_factor = if let Some(func) = OPTIONAL_FUNCTIONS.GetDpiForMonitor {
+                let point = match self.position {
+                    Some(pos) => POINT {
+                        x: pos.x as i32,
+                        y: pos.y as i32,
+                    },
+                    None => POINT { x: 0, y: 0 },
+                };
+                let monitor = MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST);
+                let mut dpiX = 0;
+                let mut dpiY = 0;
+                func(monitor, MDT_EFFECTIVE_DPI, &mut dpiX, &mut dpiY);
+                dpiX as f64 / SCALE_TARGET_DPI
+            } else {
+                1.0
+            };
+
+            let scale = Scale::new(scale_factor, scale_factor);
+
             let mut area = ScaledArea::default();
             let (width, height) = self
                 .size
@@ -1283,13 +1267,19 @@ impl WindowBuilder {
                 dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
             }
 
+            match self.state {
+                window::WindowState::MAXIMIZED => dwStyle |= WS_MAXIMIZE,
+                window::WindowState::MINIMIZED => dwStyle |= WS_MINIMIZE,
+                _ => (),
+            };
+
             let hwnd = create_window(
                 dwExStyle,
                 class_name.as_ptr(),
                 self.title.to_wide().as_ptr(),
                 dwStyle,
-                self.position.x as i32,
-                self.position.y as i32,
+                position.x as i32,
+                position.y as i32,
                 width,
                 height,
                 0 as HWND,
@@ -1305,14 +1295,6 @@ impl WindowBuilder {
             if let Some(accels) = accels {
                 register_accel(hwnd, &accels);
             }
-
-            if let Some(size) = self.size {
-                // TODO: because this is deferred, it causes some flashing.
-                // Investigate a proper fix that gets the window created with
-                // the correct size.
-                handle.set_size(size);
-            }
-            handle.set_window_state(self.state);
 
             Ok(handle)
         }
@@ -1494,7 +1476,12 @@ impl WindowHandle {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
-                ShowWindow(hwnd, SW_SHOWNORMAL);
+                let show = match self.get_window_state() {
+                    window::WindowState::MAXIMIZED => SW_MAXIMIZE,
+                    window::WindowState::MINIMIZED => SW_MINIMIZE,
+                    _ => SW_SHOWNORMAL,
+                };
+                ShowWindow(hwnd, show);
                 UpdateWindow(hwnd);
             }
         }
@@ -1647,7 +1634,7 @@ impl WindowHandle {
     }
 
     // Sets the window state.
-    pub fn set_window_state(&self, state: window::WindowState) {
+    pub fn set_window_state(&mut self, state: window::WindowState) {
         DeferredQueue::add(self.state.clone(), DeferredOp::SetWindowSizeState(state));
     }
 
