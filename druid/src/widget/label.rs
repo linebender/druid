@@ -330,6 +330,11 @@ impl<T: Data> Label<T> {
         Label::new(text)
     }
 
+    /// Return the current value of the label's text.
+    pub fn text(&self) -> ArcStr {
+        self.text.display_text()
+    }
+
     /// Set the label's text.
     ///
     /// # Note
