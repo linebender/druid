@@ -163,6 +163,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `WinHandler::scale` method to inform of scale changes. ([#904] by [@xStrom])
 - `WidgetExt::debug_widget_id`, for displaying widget ids on hover. ([#876] by [@cmyr])
 - `LifeCycle::Size` event to inform widgets that their size changed. ([#953] by [@xStrom])
+- `FileDialogOptions` methods `default_name`, `name_label`, `title`, `button_text`, `packages_as_directories`, `force_starting_directory`. ([#960] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `Spinner` widget to represent loading states. ([#1003] by [@futurepaul])
 
@@ -205,6 +206,9 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - Open file menu item works again. ([#851] by [@kindlychung])
 - Built-in open and save menu items now show the correct label and submit the right commands. ([#930] by [@finnerale])
 - Wheel events now properly update hot state. ([#951] by [@xStrom])
+- macOS: Support `FileDialogOptions::default_type`. ([#960] by [@xStrom])
+- macOS: Show the save dialog even with `FileDialogOptions` `select_directories` and `multi_selection` set. ([#960] by [@xStrom])
+- X11: Support mouse scrolling. ([#961] by [@jneem])
 - `Painter` now properly repaints on data change in `Container`. ([#991] by [@cmyr])
 - Windows: Terminate app when all windows have closed. ([#763] by [@xStrom])
 - Windows: Respect the minimum window size. ([#727] by [@teddemunnik])
@@ -389,6 +393,7 @@ Last release without a changelog :(
 [#954]: https://github.com/linebender/druid/pull/954
 [#957]: https://github.com/linebender/druid/pull/957
 [#959]: https://github.com/linebender/druid/pull/959
+[#960]: https://github.com/linebender/druid/pull/960
 [#961]: https://github.com/linebender/druid/pull/961
 [#963]: https://github.com/linebender/druid/pull/963
 [#964]: https://github.com/linebender/druid/pull/964
