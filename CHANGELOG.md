@@ -53,6 +53,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Checkbox::set_text` to update the label. ([#1346] by [@finnerale])
 - `Event::should_propagate_to_hidden` and `Lifecycle::should_propagate_to_hidden` to determine whether an event should be sent to hidden widgets (e.g. in `Tabs` or `Either`). ([#1351] by [@andrewhickman])
 - `set_cursor` can be called in the `update` method. ([#1361] by [@jneem])
+- `WidgetPod::is_initialized` to check if a widget has received `WidgetAdded`. ([#1259] by [@finnerale])
 
 ### Changed
 
@@ -118,6 +119,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Improve Windows 7 DXGI compatibility ([#1311] by [@raphlinus])
 - Fixed `Either` not passing events to its hidden child correctly. ([#1351] by [@andrewhickman])
 - Don't drop events while showing file dialogs ([#1302], [#1328] by [@jneem])
+- Ensure that `LifeCycle::WidgetAdded` is the first thing a widget sees. ([#1259] by [@finnerale])
 
 ### Visual
 
@@ -138,6 +140,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 - Standardized web targeting terminology. ([#1013] by [@xStrom])
 - X11: Ported the X11 backend to [`x11rb`](https://github.com/psychon/x11rb). ([#1025] by [@jneem])
+- Add `debug_panic` macro for when a backtrace is useful but a panic unnecessary. ([#1259] by [@finnerale])
 
 ### Outside News
 
@@ -524,6 +527,7 @@ Last release without a changelog :(
 [#1328]: https://github.com/linebender/druid/pull/1328
 [#1346]: https://github.com/linebender/druid/pull/1346
 [#1351]: https://github.com/linebender/druid/pull/1351
+[#1259]: https://github.com/linebender/druid/pull/1259
 [#1361]: https://github.com/linebender/druid/pull/1361
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
