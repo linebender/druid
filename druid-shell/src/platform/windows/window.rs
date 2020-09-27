@@ -84,7 +84,7 @@ pub(crate) struct WindowBuilder {
     show_titlebar: bool,
     size: Option<Size>,
     min_size: Option<Size>,
-    position: Point,
+    position: Option<Point>,
     state: window::WindowState,
 }
 
@@ -582,7 +582,6 @@ impl WndProc for MyWndProc {
                 } else {
                     1.0
                 };
-
                 let scale = Scale::new(scale_factor, scale_factor);
                 self.set_scale(scale);
 
@@ -689,25 +688,6 @@ impl WndProc for MyWndProc {
                     (*rect).bottom - (*rect).top,
                     SWP_NOZORDER | SWP_FRAMECHANGED | SWP_DRAWFRAME,
                 );
-                /*
-                if let Ok(mut s) = self.state.try_borrow_mut() {
-                    let s = s.as_mut().unwrap();
-                    if s.dxgi_state.is_some() {
-                        let scale = self.scale();
-                        let rt = paint::create_render_target(&self.d2d_factory, hwnd, scale);
-                        s.render_target = rt.ok();
-                        {
-                            let rect_dp = self.area().size_dp().to_rect();
-                            s.handler.rebuild_resources();
-                            s.render(&self.d2d_factory, &self.dwrite_factory, &rect_dp.into());
-                            self.clear_invalid();
-                        }
-
-                    }
-                } else {
-                    self.log_dropped_msg(hwnd, msg, wparam, lparam);
-                }
-                */
                 Some(0)
             },
             WM_NCCALCSIZE => unsafe {
@@ -1180,7 +1160,7 @@ impl WindowBuilder {
             present_strategy: Default::default(),
             size: None,
             min_size: None,
-            position: Point::new(CW_USEDEFAULT as f64, CW_USEDEFAULT as f64),
+            position: None,
             state: window::WindowState::RESTORED,
         }
     }
@@ -1215,7 +1195,7 @@ impl WindowBuilder {
     }
 
     pub fn set_position(&mut self, position: Point) {
-        self.position = position;
+        self.position = Some(position);
     }
 
     pub fn set_window_state(&mut self, state: window::WindowState) {
@@ -1240,7 +1220,12 @@ impl WindowBuilder {
                 present_strategy: self.present_strategy,
             };
 
+            let (pos_x, pos_y) = match self.position {
+                Some(pos) => (pos.x as i32, pos.y as i32),
+                None => (CW_USEDEFAULT, CW_USEDEFAULT),
+            };
             let scale = Scale::new(1.0, 1.0);
+
             let mut area = ScaledArea::default();
             let (width, height) = self
                 .size
@@ -1305,13 +1290,19 @@ impl WindowBuilder {
                 dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
             }
 
+            match self.state {
+                window::WindowState::MAXIMIZED => dwStyle |= WS_MAXIMIZE,
+                window::WindowState::MINIMIZED => dwStyle |= WS_MINIMIZE,
+                _ => (),
+            };
+
             let hwnd = create_window(
                 dwExStyle,
                 class_name.as_ptr(),
                 self.title.to_wide().as_ptr(),
                 dwStyle,
-                self.position.x as i32,
-                self.position.y as i32,
+                pos_x,
+                pos_y,
                 width,
                 height,
                 0 as HWND,
@@ -1322,20 +1313,32 @@ impl WindowBuilder {
             if hwnd.is_null() {
                 return Err(Error::NullHwnd);
             }
+
+            if let Some(size) = self.size {
+                if let Ok(scale) = handle.get_scale() {
+                    if SetWindowPos(
+                        hwnd,
+                        HWND_TOPMOST,
+                        0,
+                        0,
+                        (size.width * scale.x()) as i32,
+                        (size.height * scale.y()) as i32,
+                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
+                    ) == 0
+                    {
+                        warn!(
+                            "failed to resize window: {}",
+                            Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                        );
+                    };
+                }
+            }
+
             self.app.add_window(hwnd);
 
             if let Some(accels) = accels {
                 register_accel(hwnd, &accels);
             }
-
-            if let Some(size) = self.size {
-                // TODO: because this is deferred, it causes some flashing.
-                // Investigate a proper fix that gets the window created with
-                // the correct size.
-                handle.set_size(size);
-            }
-            handle.set_window_state(self.state);
-
             Ok(handle)
         }
     }
@@ -1520,7 +1523,12 @@ impl WindowHandle {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
             unsafe {
-                ShowWindow(hwnd, SW_SHOWNORMAL);
+                let show = match self.get_window_state() {
+                    window::WindowState::MAXIMIZED => SW_MAXIMIZE,
+                    window::WindowState::MINIMIZED => SW_MINIMIZE,
+                    _ => SW_SHOWNORMAL,
+                };
+                ShowWindow(hwnd, show);
                 UpdateWindow(hwnd);
             }
         }
@@ -1673,7 +1681,7 @@ impl WindowHandle {
     }
 
     // Sets the window state.
-    pub fn set_window_state(&self, state: window::WindowState) {
+    pub fn set_window_state(&mut self, state: window::WindowState) {
         DeferredQueue::add(self.state.clone(), DeferredOp::SetWindowSizeState(state));
     }
 
