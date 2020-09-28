@@ -125,7 +125,7 @@ pub enum KeyOrValue<T> {
     /// A concrete [`Value`] of type `T`.
     ///
     /// [`Value`]: enum.Value.html
-    Concrete(Value),
+    Concrete(T),
     /// A [`Key<T>`] that can be resolved to a value in the [`Env`].
     ///
     /// [`Key<T>`]: struct.Key.html
@@ -163,7 +163,7 @@ impl<T> KeyLike<T> for KeyOrValue<T> {
 }
 
 /// Values which can be stored in an environment.
-pub trait ValueType: Sized + Into<Value> {
+pub trait ValueType: Sized + Clone + Into<Value> {
     /// Attempt to convert the generic `Value` into this type.
     fn try_from_value(v: &Value) -> Result<Self, ValueTypeError>;
 }
@@ -582,7 +582,7 @@ impl<T: ValueType> KeyOrValue<T> {
     /// [`Env`]: struct.Env.html
     pub fn resolve(&self, env: &Env) -> T {
         match self {
-            KeyOrValue::Concrete(value) => value.to_inner_unchecked(),
+            KeyOrValue::Concrete(ref value) => value.to_owned(),
             KeyOrValue::Key(key) => env.get(key),
         }
     }
@@ -590,7 +590,7 @@ impl<T: ValueType> KeyOrValue<T> {
 
 impl<T: Into<Value>> From<T> for KeyOrValue<T> {
     fn from(value: T) -> KeyOrValue<T> {
-        KeyOrValue::Concrete(value.into())
+        KeyOrValue::Concrete(value)
     }
 }
 
