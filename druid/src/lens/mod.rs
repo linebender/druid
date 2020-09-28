@@ -47,6 +47,7 @@
 //! ```
 
 #[allow(clippy::module_inception)]
+#[macro_use]
 mod lens;
 pub use lens::{Deref, Field, Id, InArc, Index, Map, Ref, Then, Unit};
 #[doc(hidden)]

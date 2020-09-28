@@ -142,6 +142,9 @@ pub use druid_shell::{kurbo, piet};
 #[doc(inline)]
 pub use im;
 
+#[macro_use]
+pub mod lens;
+
 mod app;
 mod app_delegate;
 mod bloom;
@@ -153,7 +156,6 @@ mod data;
 mod env;
 mod event;
 mod ext_event;
-pub mod lens;
 mod localization;
 mod menu;
 mod mouse;

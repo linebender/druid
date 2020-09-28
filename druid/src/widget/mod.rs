@@ -46,6 +46,7 @@ mod stepper;
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 mod svg;
 mod switch;
+mod tabs;
 mod textbox;
 mod view_switcher;
 #[allow(clippy::module_inception)]
@@ -62,7 +63,7 @@ pub use container::Container;
 pub use controller::{Controller, ControllerHost};
 pub use either::Either;
 pub use env_scope::EnvScope;
-pub use flex::{CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
+pub use flex::{Axis, CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
 pub use identity_wrapper::IdentityWrapper;
 pub use label::{Label, LabelText, LineBreaking, RawLabel};
 pub use lens_wrap::LensWrap;
@@ -82,6 +83,7 @@ pub use stepper::Stepper;
 #[cfg(feature = "svg")]
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
+pub use tabs::{TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
 pub use textbox::TextBox;
 pub use view_switcher::ViewSwitcher;
 #[doc(hidden)]

@@ -73,5 +73,9 @@ name = "svg"
 required-features = ["svg"]
 
 [[example]]
+name = "tabs"
+required-features = ["im"]
+
+[[example]]
 name = "widget_gallery"
 required-features = ["svg", "im", "image"]

@@ -42,6 +42,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - WIDGET_PADDING items added to theme and `Flex::with_default_spacer`/`Flex::add_default_spacer` ([#1220] by [@cmyr])
 - CONFIGURE_WINDOW command to allow reconfiguration of an existing window. ([#1235] by [@rjwittams])
 - `RawLabel` widget displays text `Data`. ([#1252] by [@cmyr])
+- 'Tabs' widget allowing static and dynamic tabbed layouts. ([#1160] by [@rjwittams])
 
 ### Changed
 
@@ -452,6 +453,7 @@ Last release without a changelog :(
 [#1152]: https://github.com/linebender/druid/pull/1152
 [#1155]: https://github.com/linebender/druid/pull/1155
 [#1157]: https://github.com/linebender/druid/pull/1157
+[#1160]: https://github.com/linebender/druid/pull/1160
 [#1171]: https://github.com/linebender/druid/pull/1171
 [#1172]: https://github.com/linebender/druid/pull/1172
 [#1173]: https://github.com/linebender/druid/pull/1173
