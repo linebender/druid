@@ -40,7 +40,10 @@ const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
 pub struct TextBox {
-    placeholder: String,
+    // this has a different inner type just to keep us honest; in a future
+    // patch this will have to be the case, which means we can't use the two layouts
+    // interchangeably.
+    placeholder: TextLayout<String>,
     text: TextLayout<ArcStr>,
     width: f64,
     hscroll_offset: f64,
@@ -57,6 +60,8 @@ impl TextBox {
     /// Create a new TextBox widget
     pub fn new() -> TextBox {
         let text = TextLayout::new();
+        let mut placeholder = TextLayout::from_text("");
+        placeholder.set_text_color(theme::PLACEHOLDER_COLOR);
         Self {
             width: 0.0,
             hscroll_offset: 0.,
@@ -64,13 +69,13 @@ impl TextBox {
             selection: Selection::caret(0),
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
-            placeholder: String::new(),
+            placeholder,
         }
     }
 
     /// Builder-style method to set the `TextBox`'s placeholder text.
     pub fn with_placeholder(mut self, placeholder: impl Into<String>) -> Self {
-        self.placeholder = placeholder.into();
+        self.placeholder.set_text(placeholder.into());
         self
     }
 
@@ -103,7 +108,9 @@ impl TextBox {
     ///
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
-        self.text.set_text_size(size);
+        let size = size.into();
+        self.text.set_text_size(size.clone());
+        self.placeholder.set_text_size(size);
     }
 
     /// Set the font.
@@ -115,7 +122,9 @@ impl TextBox {
     /// [`FontDescriptor`]: ../struct.FontDescriptor.html
     /// [`Key<FontDescriptor>`]: ../struct.Key.html
     pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
-        self.text.set_font(font);
+        let font = font.into();
+        self.text.set_font(font.clone());
+        self.placeholder.set_font(font);
     }
 
     /// Insert text at the cursor position.
@@ -257,7 +266,7 @@ impl TextBox {
 }
 
 impl Widget<String> for TextBox {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, _env: &Env) {
         // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);
         let mut edit_action = None;
@@ -360,13 +369,6 @@ impl Widget<String> for TextBox {
 
             self.do_edit_action(edit_action, data);
             self.reset_cursor_blink(ctx);
-            if data.is_empty() {
-                self.text.set_text(self.placeholder.as_str().into());
-                self.selection = Selection::caret(0);
-            } else {
-                self.text.set_text(data.as_str().into());
-            }
-            self.text.rebuild_if_needed(ctx.text(), env);
 
             if !is_select_all {
                 self.update_hscroll();
@@ -374,17 +376,11 @@ impl Widget<String> for TextBox {
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &String, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &String, _env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
                 ctx.register_for_focus();
-                if data.is_empty() {
-                    self.text.set_text(self.placeholder.as_str().into());
-                    self.text.set_text_color(theme::PLACEHOLDER_COLOR);
-                } else {
-                    self.text.set_text(data.as_str().into());
-                }
-                self.text.rebuild_if_needed(ctx.text(), env);
+                self.text.set_text(data.as_str().into());
             }
             // an open question: should we be able to schedule timers here?
             LifeCycle::FocusChanged(true) => ctx.submit_command(RESET_BLINK.to(ctx.widget_id())),
@@ -392,39 +388,40 @@ impl Widget<String> for TextBox {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &String, data: &String, env: &Env) {
-        let content = if data.is_empty() {
-            &self.placeholder
-        } else {
-            data
-        };
-
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &String, data: &String, _env: &Env) {
         // setting text color rebuilds layout, so don't do it if we don't have to
         if !old_data.same(data) {
-            self.selection = self.selection.constrain_to(content);
-            self.text.set_text(content.as_str().into());
-            if data.is_empty() {
-                self.text.set_text_color(theme::PLACEHOLDER_COLOR);
-            } else {
-                self.text.set_text_color(theme::LABEL_COLOR);
-            }
+            self.selection = self.selection.constrain_to(data);
+            self.text.set_text(data.as_str().into());
+            ctx.request_layout();
         }
 
-        self.text.rebuild_if_needed(ctx.text(), env);
-        ctx.request_paint();
+        if ctx.env_changed()
+            && self.placeholder.needs_rebuild_after_update(ctx)
+                | self.text.needs_rebuild_after_update(ctx)
+        {
+            ctx.request_layout();
+        }
     }
 
     fn layout(
         &mut self,
-        _ctx: &mut LayoutCtx,
+        ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _data: &String,
+        data: &String,
         env: &Env,
     ) -> Size {
+        self.placeholder.rebuild_if_needed(ctx.text(), env);
+        self.text.rebuild_if_needed(ctx.text(), env);
+        let text_metrics = if data.is_empty() {
+            self.placeholder.size()
+        } else {
+            self.text.size()
+        };
+
         let width = env.get(theme::WIDE_WIDGET_WIDTH);
         let min_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
-        let text_metrics = self.text.size();
         let text_height = text_metrics.height + TEXT_INSETS.y_value();
         let height = text_height.max(min_height);
 
@@ -434,15 +431,6 @@ impl Widget<String> for TextBox {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &String, env: &Env) {
-        // Guard against changes in data following `event`
-        let content = if data.is_empty() {
-            &self.placeholder
-        } else {
-            data
-        };
-
-        self.selection = self.selection.constrain_to(content);
-
         let height = ctx.size().height;
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let selection_color = env.get(theme::SELECTION_COLOR);
@@ -469,7 +457,11 @@ impl Widget<String> for TextBox {
             rc.clip(clip_rect);
 
             // Calculate layout
-            let text_size = self.text.size();
+            let text_size = if data.is_empty() {
+                self.placeholder.size()
+            } else {
+                self.text.size()
+            };
 
             // Shift everything inside the clip by the hscroll_offset
             rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
@@ -479,7 +471,7 @@ impl Widget<String> for TextBox {
             let text_pos = Point::new(TEXT_INSETS.x0, TEXT_INSETS.y0 + extra_padding);
 
             // Draw selection rect
-            if !self.selection.is_caret() {
+            if !data.is_empty() && !self.selection.is_caret() {
                 for sel in self.text.rects_for_range(self.selection.range()) {
                     let sel = sel + text_pos.to_vec2();
                     let rounded = sel.to_rounded_rect(1.0);
@@ -487,7 +479,11 @@ impl Widget<String> for TextBox {
                 }
             }
 
-            self.text.draw(rc, text_pos);
+            if data.is_empty() {
+                self.placeholder.draw(rc, text_pos);
+            } else {
+                self.text.draw(rc, text_pos);
+            }
 
             // Paint the cursor if focused and there's no selection
             if is_focused && self.cursor_on {
