@@ -15,20 +15,21 @@
 //! Text attributes and spans.
 
 use std::ops::Range;
+use std::rc::Rc;
 
+use crate::env::{Concrete, KeyLike, KeyOrValue, MapValue};
 use crate::piet::{Color, FontFamily, FontStyle, FontWeight, TextAttribute as PietAttr};
-use crate::{Env, FontDescriptor, KeyOrValue};
+use crate::{Env, FontDescriptor};
 
 /// A collection of spans of attributes of various kinds.
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct AttributeSpans {
-    family: SpanSet<FontFamily>,
-    size: SpanSet<KeyOrValue<f64>>,
-    weight: SpanSet<FontWeight>,
+    family: SpanSet<Rc<dyn KeyLike<FontFamily>>>,
+    size: SpanSet<Rc<dyn KeyLike<f64>>>,
+    weight: SpanSet<Rc<dyn KeyLike<FontWeight>>>,
     fg_color: SpanSet<KeyOrValue<Color>>,
-    style: SpanSet<FontStyle>,
-    underline: SpanSet<bool>,
-    font_descriptor: SpanSet<KeyOrValue<FontDescriptor>>,
+    style: SpanSet<Rc<dyn KeyLike<FontStyle>>>,
+    underline: SpanSet<Concrete<bool>>,
 }
 
 /// A set of spans for a given attribute.
@@ -97,30 +98,30 @@ impl AttributeSpans {
     /// Add a new [`Attribute`] over the provided [`Range`].
     pub fn add(&mut self, range: Range<usize>, attr: Attribute) {
         match attr {
-            Attribute::FontFamily(attr) => self.family.add(Span::new(range, attr)),
-            Attribute::FontSize(attr) => self.size.add(Span::new(range, attr)),
-            Attribute::Weight(attr) => self.weight.add(Span::new(range, attr)),
+            Attribute::FontFamily(attr) => {
+                self.family.add(Span::new(range, Rc::new(Concrete(attr))))
+            }
+            Attribute::FontSize(attr) => self.size.add(Span::new(range, Rc::new(attr))),
+            Attribute::Weight(attr) => self.weight.add(Span::new(range, Rc::new(Concrete(attr)))),
             Attribute::TextColor(attr) => self.fg_color.add(Span::new(range, attr)),
-            Attribute::Style(attr) => self.style.add(Span::new(range, attr)),
-            Attribute::Underline(attr) => self.underline.add(Span::new(range, attr)),
-            Attribute::Descriptor(attr) => self.font_descriptor.add(Span::new(range, attr)),
+            Attribute::Style(attr) => self.style.add(Span::new(range, Rc::new(Concrete(attr)))),
+            Attribute::Underline(attr) => self.underline.add(Span::new(range, Concrete(attr))),
+            Attribute::Descriptor(attr) => {
+                let (family, size, weight, style) = split_font_desc(attr);
+                self.family.add(Span::new(range.clone(), family));
+                self.size.add(Span::new(range.clone(), size));
+                self.weight.add(Span::new(range.clone(), weight));
+                self.style.add(Span::new(range, style));
+            }
         }
     }
 
     pub(crate) fn to_piet_attrs(&self, env: &Env) -> Vec<(Range<usize>, PietAttr)> {
         let mut items = Vec::new();
-        for Span { range, attr } in self.font_descriptor.iter() {
-            let font = attr.resolve(env);
-            items.push((range.clone(), PietAttr::FontFamily(font.family)));
-            items.push((range.clone(), PietAttr::FontSize(font.size)));
-            items.push((range.clone(), PietAttr::Weight(font.weight)));
-            items.push((range.clone(), PietAttr::Style(font.style)));
-        }
-
         items.extend(
             self.family
                 .iter()
-                .map(|s| (s.range.clone(), PietAttr::FontFamily(s.attr.clone()))),
+                .map(|s| (s.range.clone(), PietAttr::FontFamily(s.attr.resolve(env)))),
         );
         items.extend(
             self.size
@@ -130,7 +131,7 @@ impl AttributeSpans {
         items.extend(
             self.weight
                 .iter()
-                .map(|s| (s.range.clone(), PietAttr::Weight(s.attr))),
+                .map(|s| (s.range.clone(), PietAttr::Weight(s.attr.resolve(env)))),
         );
         items.extend(
             self.fg_color
@@ -140,18 +141,42 @@ impl AttributeSpans {
         items.extend(
             self.style
                 .iter()
-                .map(|s| (s.range.clone(), PietAttr::Style(s.attr))),
+                .map(|s| (s.range.clone(), PietAttr::Style(s.attr.resolve(env)))),
         );
         items.extend(
             self.underline
                 .iter()
-                .map(|s| (s.range.clone(), PietAttr::Underline(s.attr))),
+                .map(|s| (s.range.clone(), PietAttr::Underline(s.attr.resolve(env)))),
         );
 
-        // sort by ascending start order; this is a stable sort
-        // so items that come from FontDescriptor will stay at the front
         items.sort_by(|a, b| a.0.start.cmp(&b.0.start));
         items
+    }
+}
+
+/// Split a font descriptor into its member parts
+#[allow(clippy::type_complexity)]
+fn split_font_desc(
+    fd: KeyOrValue<FontDescriptor>,
+) -> (
+    Rc<dyn KeyLike<FontFamily>>,
+    Rc<dyn KeyLike<f64>>,
+    Rc<dyn KeyLike<FontWeight>>,
+    Rc<dyn KeyLike<FontStyle>>,
+) {
+    match fd {
+        KeyOrValue::Key(k) => (
+            Rc::new(MapValue::new(k.clone(), |fd| fd.family.clone())),
+            Rc::new(MapValue::new(k.clone(), |fd| fd.size)),
+            Rc::new(MapValue::new(k.clone(), |fd| fd.weight)),
+            Rc::new(MapValue::new(k, |fd| fd.style)),
+        ),
+        KeyOrValue::Concrete(val) => (
+            Rc::new(Concrete(val.family)),
+            Rc::new(Concrete(val.size)),
+            Rc::new(Concrete(val.weight)),
+            Rc::new(Concrete(val.style)),
+        ),
     }
 }
 

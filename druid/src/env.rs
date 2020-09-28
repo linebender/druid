@@ -145,19 +145,73 @@ pub trait KeyLike<T> {
     ///
     /// [`Env`]: struct.Env.html
     fn changed(&self, old: &Env, new: &Env) -> bool;
+
+    /// Resolve the concrete type `T` from this object, using the provided
+    /// [`Env`] if required.
+    ///
+    /// [`Env`]: struct.Env.html
+    fn resolve(&self, env: &Env) -> T;
+}
+
+/// A concrete type, or use with `KeyLike`.
+#[derive(Debug, Clone)]
+pub(crate) struct Concrete<T>(pub(crate) T);
+
+impl<T: Clone> KeyLike<T> for Concrete<T> {
+    fn changed(&self, _old: &Env, _new: &Env) -> bool {
+        false
+    }
+
+    fn resolve(&self, _env: &Env) -> T {
+        self.0.clone()
+    }
+}
+
+/// A type that can map from an item in the key to an item of another type.
+pub(crate) struct MapValue<U, T> {
+    key: Key<U>,
+    extractor: Box<dyn Fn(&U) -> T>,
 }
 
 impl<T: ValueType> KeyLike<T> for Key<T> {
     fn changed(&self, old: &Env, new: &Env) -> bool {
         !old.get_untyped(self).same(new.get_untyped(self))
     }
+
+    fn resolve(&self, env: &Env) -> T {
+        env.get(self)
+    }
 }
 
-impl<T> KeyLike<T> for KeyOrValue<T> {
+impl<T: ValueType> KeyLike<T> for KeyOrValue<T> {
     fn changed(&self, old: &Env, new: &Env) -> bool {
         match self {
             KeyOrValue::Concrete(_) => false,
             KeyOrValue::Key(key) => !old.get_untyped(key).same(new.get_untyped(key)),
+        }
+    }
+
+    fn resolve(&self, env: &Env) -> T {
+        KeyOrValue::resolve(self, env)
+    }
+}
+
+impl<U: ValueType, T> KeyLike<T> for MapValue<U, T> {
+    fn changed(&self, old: &Env, new: &Env) -> bool {
+        !old.get_untyped(&self.key).same(new.get_untyped(&self.key))
+    }
+
+    fn resolve(&self, env: &Env) -> T {
+        let val = env.get(&self.key);
+        (self.extractor)(&val)
+    }
+}
+
+impl<U, T> MapValue<U, T> {
+    pub(crate) fn new(key: Key<U>, f: impl Fn(&U) -> T + 'static) -> Self {
+        MapValue {
+            key,
+            extractor: Box::new(f),
         }
     }
 }

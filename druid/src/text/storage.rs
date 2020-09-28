@@ -38,7 +38,7 @@ pub trait TextStorage: PietTextStorage + Data {
 pub type ArcStr = Arc<str>;
 
 /// Text with optional style spans.
-#[derive(Debug, Clone, Data)]
+#[derive(Clone, Data)]
 pub struct RichText {
     buffer: ArcStr,
     attrs: Arc<AttributeSpans>,
