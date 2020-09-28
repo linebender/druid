@@ -25,9 +25,7 @@ use crate::kurbo::Line;
 use crate::piet::RenderContext;
 use crate::widget::prelude::*;
 
-use crate::widget::{
-    Axis, CrossAxisAlignment, Flex, Label, LabelText, LensScopeTransfer, Scope, ScopePolicy,
-};
+use crate::widget::{Axis, Flex, Label, LabelText, LensScopeTransfer, Scope, ScopePolicy};
 use crate::{theme, Affine, Data, Insets, Lens, Point, Rect, SingleUse, WidgetExt, WidgetPod};
 
 type TabsScope<TP> = Scope<TabsScopePolicy<TP>, Box<dyn Widget<TabsState<TP>>>>;
@@ -243,7 +241,7 @@ impl<TP: TabsPolicy> TabsState<TP> {
 /// This widget is the tab bar. It contains widgets that when pressed switch the active tab.
 struct TabBar<TP: TabsPolicy> {
     axis: Axis,
-    cross_axis_alignment: CrossAxisAlignment,
+    edge: TabsEdge,
     tabs: Vec<(TP::Key, TabBarPod<TP>)>,
     hot: Option<TabIndex>,
     phantom_tp: PhantomData<TP>,
@@ -251,10 +249,10 @@ struct TabBar<TP: TabsPolicy> {
 
 impl<TP: TabsPolicy> TabBar<TP> {
     /// Create a new TabBar widget.
-    fn new(axis: Axis, cross_axis_alignment: CrossAxisAlignment) -> Self {
+    fn new(axis: Axis, edge: TabsEdge) -> Self {
         TabBar {
             axis,
-            cross_axis_alignment,
+            edge,
             tabs: vec![],
             hot: None,
             phantom_tp: Default::default(),
@@ -423,7 +421,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
             if idx == data.selected {
                 let (maj_near, maj_far) = self.axis.major_span(rect);
                 let (min_near, min_far) = self.axis.minor_span(rect);
-                let minor_pos = if let CrossAxisAlignment::End = self.cross_axis_alignment {
+                let minor_pos = if let TabsEdge::Trailing = self.edge {
                     min_near + (hl_thickness / 2.)
                 } else {
                     min_far - (hl_thickness / 2.)
@@ -761,6 +759,21 @@ impl TabsTransition {
     }
 }
 
+/// Determines where the tab bar should be placed relative to the cross axis
+#[derive(Debug, Copy, Clone, PartialEq, Data)]
+pub enum TabsEdge {
+    /// For horizontal tabs, top. For vertical tabs, left.
+    Leading,
+    /// For horizontal tabs, bottom. For vertical tabs, right.
+    Trailing,
+}
+
+impl Default for TabsEdge {
+    fn default() -> Self {
+        Self::Leading
+    }
+}
+
 pub struct InitialTab<T> {
     name: SingleUse<LabelText<T>>, // This is to avoid cloning provided label texts
     child: SingleUse<Box<dyn Widget<T>>>, // This is to avoid cloning provided tabs
@@ -814,7 +827,7 @@ enum TabsContent<TP: TabsPolicy> {
 ///
 pub struct Tabs<TP: TabsPolicy> {
     axis: Axis,
-    cross: CrossAxisAlignment, // Not sure if this should have another enum. Middle means nothing here
+    edge: TabsEdge,
     transition: TabsTransition,
     content: TabsContent<TP>,
 }
@@ -837,7 +850,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
     fn of_content(content: TabsContent<TP>) -> Self {
         Tabs {
             axis: Axis::Horizontal,
-            cross: CrossAxisAlignment::Start,
+            edge: Default::default(),
             transition: Default::default(),
             content,
         }
@@ -867,10 +880,9 @@ impl<TP: TabsPolicy> Tabs<TP> {
         self
     }
 
-    /// Put the tab bar at the corresponding end of the cross axis.
-    /// Defaults to Start. Note that Middle has the same effect as Start.
-    pub fn with_cross_axis_alignment(mut self, cross: CrossAxisAlignment) -> Self {
-        self.cross = cross;
+    /// Put the tab bar on the specified edge of the cross axis.
+    pub fn with_edge(mut self, edge: TabsEdge) -> Self {
+        self.edge = edge;
         self
     }
 
@@ -912,7 +924,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
 
     fn make_scope(&self, tabs_from_data: TP) -> WidgetPod<TP::Input, TabsScope<TP>> {
         let (tabs_bar, tabs_body) = (
-            (TabBar::new(self.axis, self.cross), 0.0),
+            (TabBar::new(self.axis, self.edge), 0.0),
             (
                 TabsBody::new(self.axis, self.transition)
                     .padding(5.)
@@ -922,7 +934,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
         );
         let mut layout: Flex<TabsState<TP>> = Flex::for_axis(self.axis.cross());
 
-        if let CrossAxisAlignment::End = self.cross {
+        if let TabsEdge::Trailing = self.edge {
             layout.add_flex_child(tabs_body.0, tabs_body.1);
             layout.add_flex_child(tabs_bar.0, tabs_bar.1);
         } else {
@@ -952,10 +964,9 @@ impl<TP: TabsPolicy> Widget<TP::Input> for Tabs<TP> {
         env: &Env,
     ) {
         if let LifeCycle::WidgetAdded = event {
-            let mut temp = TabsContent::Swapping;
-            std::mem::swap(&mut self.content, &mut temp);
+            let content = std::mem::replace(&mut self.content, TabsContent::Swapping);
 
-            self.content = match temp {
+            self.content = match content {
                 TabsContent::Building { tabs } => {
                     ctx.children_changed();
                     TabsContent::Running {
@@ -968,7 +979,7 @@ impl<TP: TabsPolicy> Widget<TP::Input> for Tabs<TP> {
                         scope: self.make_scope(tabs),
                     }
                 }
-                _ => temp,
+                _ => content,
             };
         }
         if let TabsContent::Running { scope } = &mut self.content {

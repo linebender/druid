@@ -14,10 +14,10 @@
 
 use druid::im::Vector;
 use druid::widget::{
-    Axis, Button, CrossAxisAlignment, Flex, Label, MainAxisAlignment, Padding, RadioGroup,
-    SizedBox, Split, TabInfo, Tabs, TabsPolicy, TabsTransition, TextBox, ViewSwitcher,
+    Axis, Button, CrossAxisAlignment, Flex, Label, MainAxisAlignment, RadioGroup, Split, TabInfo,
+    Tabs, TabsEdge, TabsPolicy, TabsTransition, TextBox, ViewSwitcher,
 };
-use druid::{theme, AppLauncher, Color, Data, Env, Lens, LensExt, Widget, WidgetExt, WindowDesc};
+use druid::{theme, AppLauncher, Color, Data, Env, Lens, Widget, WidgetExt, WindowDesc};
 use instant::Duration;
 
 #[derive(Data, Clone, Lens)]
@@ -59,7 +59,7 @@ impl DynamicTabData {
 #[derive(Data, Clone, Lens)]
 struct TabConfig {
     axis: Axis,
-    cross: CrossAxisAlignment,
+    edge: TabsEdge,
     transition: TabsTransition,
 }
 
@@ -80,7 +80,7 @@ pub fn main() {
     let initial_state = AppState {
         tab_config: TabConfig {
             axis: Axis::Horizontal,
-            cross: CrossAxisAlignment::Start,
+            edge: TabsEdge::Leading,
             transition: Default::default(),
         },
         first_tab_name: "First tab".into(),
@@ -95,55 +95,61 @@ pub fn main() {
 }
 
 fn build_root_widget() -> impl Widget<AppState> {
-    fn decor<T: Data>(label: Label<T>) -> SizedBox<T> {
-        label
-            .padding(5.)
-            .background(theme::PLACEHOLDER_COLOR)
-            .expand_width()
+    fn group<T: Data, W: Widget<T> + 'static>(text: &str, w: W) -> impl Widget<T> {
+        Flex::column()
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .with_child(
+                Label::new(text)
+                    .background(theme::PLACEHOLDER_COLOR)
+                    .expand_width(),
+            )
+            .with_default_spacer()
+            .with_child(w)
+            .with_default_spacer()
+            .border(Color::WHITE, 0.5)
     }
 
-    fn group<T: Data, W: Widget<T> + 'static>(w: W) -> Padding<T> {
-        w.border(Color::WHITE, 0.5).padding(5.)
-    }
-
-    let axis_picker = Flex::column()
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .with_child(decor(Label::new("Tab bar axis")))
-        .with_child(RadioGroup::new(vec![
+    let axis_picker = group(
+        "Tab bar axis",
+        RadioGroup::new(vec![
             ("Horizontal", Axis::Horizontal),
             ("Vertical", Axis::Vertical),
-        ]))
-        .lens(AppState::tab_config.then(TabConfig::axis));
+        ])
+        .lens(TabConfig::axis),
+    );
 
-    let cross_picker = Flex::column()
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .with_child(decor(Label::new("Tab bar alignment")))
-        .with_child(RadioGroup::new(vec![
-            ("Start", CrossAxisAlignment::Start),
-            ("End", CrossAxisAlignment::End),
-        ]))
-        .lens(AppState::tab_config.then(TabConfig::cross));
+    let cross_picker = group(
+        "Tab bar edge",
+        RadioGroup::new(vec![
+            ("Leading", TabsEdge::Leading),
+            ("Trailing", TabsEdge::Trailing),
+        ])
+        .lens(TabConfig::edge),
+    );
 
-    let transit_picker = Flex::column()
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .with_child(decor(Label::new("Transition")))
-        .with_child(RadioGroup::new(vec![
+    let transit_picker = group(
+        "Transition",
+        RadioGroup::new(vec![
             ("Instant", TabsTransition::Instant),
             (
                 "Slide",
                 TabsTransition::Slide(Duration::from_millis(250).as_nanos() as u64),
             ),
-        ]))
-        .lens(AppState::tab_config.then(TabConfig::transition));
+        ])
+        .lens(TabConfig::transition),
+    );
 
     let sidebar = Flex::column()
         .main_axis_alignment(MainAxisAlignment::Start)
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .with_child(group(axis_picker))
-        .with_child(group(cross_picker))
-        .with_child(group(transit_picker))
+        .with_child(axis_picker)
+        .with_default_spacer()
+        .with_child(cross_picker)
+        .with_default_spacer()
+        .with_child(transit_picker)
         .with_flex_spacer(1.)
-        .fix_width(200.0);
+        .fix_width(200.0)
+        .lens(AppState::tab_config);
 
     let vs = ViewSwitcher::new(
         |app_s: &AppState, _| app_s.tab_config.clone(),
@@ -197,7 +203,7 @@ impl TabsPolicy for NumberedTabs {
 fn build_tab_widget(tab_config: &TabConfig) -> impl Widget<AppState> {
     let dyn_tabs = Tabs::for_policy(NumberedTabs)
         .with_axis(tab_config.axis)
-        .with_cross_axis_alignment(tab_config.cross)
+        .with_edge(tab_config.edge)
         .with_transition(tab_config.transition)
         .lens(AppState::advanced);
 
@@ -217,7 +223,7 @@ fn build_tab_widget(tab_config: &TabConfig) -> impl Widget<AppState> {
 
     let main_tabs = Tabs::new()
         .with_axis(tab_config.axis)
-        .with_cross_axis_alignment(tab_config.cross)
+        .with_edge(tab_config.edge)
         .with_transition(tab_config.transition)
         .with_tab(
             |app_state: &AppState, _: &Env| app_state.first_tab_name.to_string(),
