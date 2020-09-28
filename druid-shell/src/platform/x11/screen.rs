@@ -1,4 +1,4 @@
-// Copyright 2019 The Druid Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! macOS druid-shell backend.
+//! X11 Monitors and Screen information.
 
-#![allow(clippy::let_unit_value)]
+use crate::screen::Monitor;
 
-pub mod appkit;
-pub mod application;
-pub mod clipboard;
-pub mod dialog;
-pub mod error;
-mod keyboard;
-pub mod menu;
-pub mod screen;
-pub mod util;
-pub mod window;
+pub(crate) fn get_monitors() -> Vec<Monitor> {
+    log::warn!("Screen::get_monitors() is currently unimplemented for X11 platforms.");
+    Vec::new()
+}

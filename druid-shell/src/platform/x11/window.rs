@@ -45,7 +45,8 @@ use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::region::Region;
 use crate::scale::Scale;
-use crate::window::{IdleToken, TimerToken, WinHandler};
+use crate::window;
+use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel};
 
 use super::application::Application;
 use super::keycodes;
@@ -125,6 +126,18 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, _show_titlebar: bool) {
         log::warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_position(&mut self, _position: Point) {
+        log::warn!("WindowBuilder::set_position is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_level(&mut self, _level: window::WindowLevel) {
+        log::warn!("WindowBuilder::set_level  is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        log::warn!("WindowBuilder::set_window_state is currently unimplemented for X11 platforms.");
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -1348,6 +1361,41 @@ impl WindowHandle {
         } else {
             log::error!("Window {} has already been dropped", self.id);
         }
+    }
+
+    pub fn set_position(&self, _position: Point) {
+        log::warn!("WindowHandle::set_position is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn get_position(&self) -> Point {
+        log::warn!("WindowHandle::get_position is currently unimplemented for X11 platforms.");
+        Point::new(0.0, 0.0)
+    }
+
+    pub fn set_level(&self, _level: WindowLevel) {
+        log::warn!("WindowHandle::set_level  is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_size(&self, _size: Size) {
+        log::warn!("WindowHandle::set_size is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn get_size(&self) -> Size {
+        log::warn!("WindowHandle::get_size is currently unimplemented for X11 platforms.");
+        Size::new(0.0, 0.0)
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        log::warn!("WindowHandle::set_window_state is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn get_window_state(&self) -> window::WindowState {
+        log::warn!("WindowHandle::get_window_state is currently unimplemented for X11 platforms.");
+        window::WindowState::RESTORED
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 platforms.");
     }
 
     pub fn bring_to_front_and_focus(&self) {

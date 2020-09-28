@@ -234,12 +234,6 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         }
     }
 
-    #[deprecated(since = "0.5.0", note = "use layout_rect() instead")]
-    #[doc(hidden)]
-    pub fn get_layout_rect(&self) -> Rect {
-        self.layout_rect()
-    }
-
     /// Returns the layout [`Rect`].
     ///
     /// This will be the same [`Rect`] that was set by [`set_layout_rect`].
@@ -853,9 +847,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
         }
 
+        let prev_env = self.env.as_ref().filter(|p| !p.same(env));
+
         let mut child_ctx = UpdateCtx {
             state: ctx.state,
             widget_state: &mut self.state,
+            prev_env,
+            env,
         };
 
         self.inner
@@ -1001,7 +999,7 @@ mod tests {
             state: &mut state,
         };
 
-        let env = crate::theme::init();
+        let env = Env::default();
 
         widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &None, &env);
         assert!(ctx.widget_state.children.may_contain(&ID_1));

@@ -67,7 +67,7 @@ impl WinHandler for QuitState {
 }
 
 fn main() {
-    simple_logger::SimpleLogger::new();
+    simple_logger::SimpleLogger::new().init().unwrap();
     let app = Application::new().unwrap();
     let mut file_menu = Menu::new();
     file_menu.add_item(

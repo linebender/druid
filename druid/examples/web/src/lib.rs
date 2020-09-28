@@ -80,3 +80,4 @@ impl_example!(timer);
 impl_example!(tabs);
 impl_example!(view_switcher);
 impl_example!(widget_gallery);
+impl_example!(text);

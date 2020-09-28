@@ -34,7 +34,7 @@ fn ui_builder() -> impl Widget<Option<u32>> {
 
     let mut col = Flex::column();
     col.add_child(label);
-    col.add_spacer(8.0);
+    col.add_default_spacer();
     col.add_child(input);
     Align::centered(col)
 }

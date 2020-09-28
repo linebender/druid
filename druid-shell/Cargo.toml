@@ -15,11 +15,13 @@ default-target = "x86_64-pc-windows-msvc"
 
 [features]
 x11 = ["x11rb", "nix", "cairo-sys-rs"]
+gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs"]
+default = ["gtk"]
 
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "0.2.0-pre3"
+piet-common = "0.2.0-pre4"
 kurbo = "0.6.3"
 
 log = "0.4.11"
@@ -29,19 +31,6 @@ cfg-if = "0.1.10"
 instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 anyhow = "1.0.32"
 keyboard-types = { version = "0.5.0", default_features = false }
-
-# Optional dependencies
-cairo-rs = { version = "0.9.1", default_features = false, optional = true }
-cairo-sys-rs = { version = "0.10.0", default_features = false, optional = true }
-gio = { version = "0.9.1", optional = true }
-gdk = { version = "0.13.2", optional = true }
-gdk-sys = { version = "0.10.0", optional = true }
-gtk = { version = "0.9.2", optional = true }
-glib = { version = "0.10.1", optional = true }
-glib-sys = { version = "0.10.0", optional = true }
-gtk-sys = { version = "0.10.0", optional = true }
-nix = { version = "0.18.0", optional = true }
-x11rb = { version = "0.6.0", features = ["allow-unsafe-code", "present", "randr", "xfixes"], optional = true }
 
 [target.'cfg(target_os="windows")'.dependencies]
 wio = "0.2.2"
@@ -58,17 +47,22 @@ objc = "0.2.7"
 core-graphics = "0.22.0"
 foreign-types = "0.3.2"
 bitflags = "1.2.1"
+cairo-rs = { version = "0.9.1", default_features = false, optional = true }
 
-# TODO(x11/dependencies): only use feature "xcb" if using X11
 [target.'cfg(target_os="linux")'.dependencies]
+# TODO(x11/dependencies): only use feature "xcb" if using X11
 cairo-rs = { version = "0.9.1", default_features = false, features = ["xcb"] }
-gio = "0.9.1"
-gdk = "0.13.2"
-gdk-sys = "0.10.0"
-glib = "0.10.1"
-glib-sys = "0.10.0"
-gtk-sys = "0.10.0"
-gtk = { version = "0.9.2", features = ["v3_20"] }
+cairo-sys-rs = { version = "0.10.0", default_features = false, optional = true }
+gio = { version = "0.9.1", optional = true }
+gdk = { version = "0.13.2", optional = true }
+gdk-sys = { version = "0.10.0", optional = true }
+# `gtk` gets renamed to `gtk-rs` so that we can use `gtk` as the feature name.
+gtk-rs = { version = "0.9.2", features = ["v3_22"], package = "gtk", optional = true }
+glib = { version = "0.10.1", optional = true }
+glib-sys = { version = "0.10.0", optional = true }
+gtk-sys = { version = "0.10.0", optional = true }
+nix = { version = "0.18.0", optional = true }
+x11rb = { version = "0.6.0", features = ["allow-unsafe-code", "present", "randr", "xfixes"], optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 wasm-bindgen = "0.2.67"
@@ -79,5 +73,5 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent"]
 
 [dev-dependencies]
-piet-common = { version = "0.2.0-pre3", features = ["png"] }
+piet-common = { version = "0.2.0-pre4", features = ["png"] }
 simple_logger = { version = "1.9.0", default-features = false }

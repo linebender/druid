@@ -21,10 +21,12 @@ default-target = "x86_64-pc-windows-msvc"
 
 [features]
 x11 = ["druid-shell/x11"]
+gtk = ["druid-shell/gtk"]
 svg = ["usvg", "harfbuzz-sys"]
+default = ["gtk"]
 
 [dependencies]
-druid-shell = { version = "0.6.0", path = "../druid-shell" }
+druid-shell = { version = "0.6.0", default-features = false, path = "../druid-shell" }
 druid-derive = { version = "0.3.1", path = "../druid-derive" }
 
 log = "0.4.11"
@@ -52,7 +54,7 @@ console_log = "0.2.0"
 [dev-dependencies]
 float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
 tempfile = "3.1.0"
-piet-common = { version = "0.2.0-pre2", features = ["png"] }
+piet-common = { version = "0.2.0-pre4", features = ["png"] }
 
 [[example]]
 name = "image"

@@ -13,9 +13,10 @@
 // limitations under the License.
 
 use druid::widget::{
-    Checkbox, Flex, Label, MainAxisAlignment, Padding, Parse, Stepper, Switch, TextBox, WidgetExt,
+    Checkbox, Flex, Label, LensWrap, MainAxisAlignment, Padding, Parse, Stepper, Switch, TextBox,
+    WidgetExt,
 };
-use druid::{AppLauncher, Data, Lens, LensExt, LensWrap, LocalizedString, Widget, WindowDesc};
+use druid::{AppLauncher, Data, Lens, LensExt, LocalizedString, Widget, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct DemoState {

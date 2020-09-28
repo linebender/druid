@@ -14,15 +14,17 @@
 
 //! Example of dynamic text styling
 
-use druid::widget::{Checkbox, Flex, Label, MainAxisAlignment, Painter, Parse, Stepper, TextBox};
+use druid::widget::{
+    Checkbox, Flex, Label, LensWrap, MainAxisAlignment, Painter, Parse, Stepper, TextBox,
+};
 use druid::{
-    theme, AppLauncher, Color, Data, FontDescriptor, FontFamily, Key, Lens, LensExt, LensWrap,
+    theme, AppLauncher, Color, Data, FontDescriptor, FontFamily, Key, Lens, LensExt,
     LocalizedString, PlatformError, RenderContext, Widget, WidgetExt, WindowDesc,
 };
 use std::fmt::Display;
 
 // This is a custom key we'll use with Env to set and get our font.
-const MY_CUSTOM_FONT: Key<FontDescriptor> = Key::new("styled_text.custom_font");
+const MY_CUSTOM_FONT: Key<FontDescriptor> = Key::new("org.linebender.example.my-custom-font");
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
@@ -118,20 +120,19 @@ fn ui_builder() -> impl Widget<AppData> {
     let mono_checkbox = Checkbox::new("Monospace").lens(AppData::mono);
 
     let input = TextBox::new()
-        .with_text_size(38.0)
+        .with_placeholder("Your sample text here :)")
         .fix_width(200.0)
         .lens(AppData::text);
 
     Flex::column()
         .main_axis_alignment(MainAxisAlignment::Center)
         .with_child(label)
-        .with_spacer(8.0)
+        .with_default_spacer()
         .with_child(styled_label)
         .with_spacer(32.0)
         .with_child(stepper_row)
-        .with_spacer(8.0)
+        .with_default_spacer()
         .with_child(mono_checkbox)
-        .with_spacer(8.0)
+        .with_default_spacer()
         .with_child(input.padding(5.0))
-        .debug_widget_id()
 }
