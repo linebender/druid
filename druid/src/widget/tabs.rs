@@ -542,7 +542,7 @@ fn hidden_should_receive_event(evt: &Event) -> bool {
     }
 }
 
-/// Possibly should be moved to event.
+/// Possibly should be moved to Lifecycle.
 fn hidden_should_receive_lifecycle(lc: &LifeCycle) -> bool {
     match lc {
         LifeCycle::WidgetAdded | LifeCycle::Internal(_) => true,
@@ -642,15 +642,10 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         env: &Env,
     ) -> Size {
         let inner = &data.inner;
-        if let Some(ref mut child) = self.active_child(data) {
+        // Laying out all children so events can be delivered to them.
+        for child in self.child_pods() {
             let size = child.layout(ctx, bc, inner, env);
             child.set_layout_rect(ctx, inner, env, Rect::from_origin_size(Point::ORIGIN, size));
-        }
-        if let Some(ref mut trans_state) = self.transition_state {
-            if let Some(child) = Self::child(&mut self.children, trans_state.previous_idx) {
-                let size = child.layout(ctx, bc, inner, env);
-                child.set_layout_rect(ctx, inner, env, Rect::from_origin_size(Point::ORIGIN, size));
-            }
         }
 
         bc.max()
