@@ -20,19 +20,16 @@ use druid::widget::{
 use druid::{theme, AppLauncher, Color, Data, Env, Lens, LensExt, Widget, WidgetExt, WindowDesc};
 use instant::Duration;
 
-#[derive(Data, Clone)]
-struct Basic;
-
 #[derive(Data, Clone, Lens)]
-struct Advanced {
+struct DynamicTabData {
     highest_tab: usize,
     removed_tabs: usize,
     tab_labels: Vector<usize>,
 }
 
-impl Advanced {
+impl DynamicTabData {
     fn new(highest_tab: usize) -> Self {
-        Advanced {
+        DynamicTabData {
             highest_tab,
             removed_tabs: 0,
             tab_labels: (1..=highest_tab).collect(),
@@ -53,6 +50,7 @@ impl Advanced {
         }
     }
 
+    // This provides a key that will monotonically increase as interactions occur.
     fn tabs_key(&self) -> (usize, usize) {
         (self.highest_tab, self.removed_tabs)
     }
@@ -68,9 +66,8 @@ struct TabConfig {
 #[derive(Data, Clone, Lens)]
 struct AppState {
     tab_config: TabConfig,
-    basic: Basic,
-    advanced: Advanced,
-    text: String,
+    advanced: DynamicTabData,
+    first_tab_name: String,
 }
 
 pub fn main() {
@@ -86,9 +83,8 @@ pub fn main() {
             cross: CrossAxisAlignment::Start,
             transition: Default::default(),
         },
-        basic: Basic {},
-        advanced: Advanced::new(2),
-        text: "Interesting placeholder".into(),
+        first_tab_name: "First tab".into(),
+        advanced: DynamicTabData::new(2),
     };
 
     // start the application
@@ -162,33 +158,38 @@ struct NumberedTabs;
 impl TabsPolicy for NumberedTabs {
     type Key = usize;
     type Build = ();
-    type Input = Advanced;
-    type LabelWidget = Label<Advanced>;
-    type BodyWidget = Label<Advanced>;
+    type Input = DynamicTabData;
+    type LabelWidget = Label<DynamicTabData>;
+    type BodyWidget = Label<DynamicTabData>;
 
-    fn tabs_changed(&self, old_data: &Advanced, data: &Advanced) -> bool {
+    fn tabs_changed(&self, old_data: &DynamicTabData, data: &DynamicTabData) -> bool {
         old_data.tabs_key() != data.tabs_key()
     }
 
-    fn tabs(&self, data: &Advanced) -> Vec<Self::Key> {
+    fn tabs(&self, data: &DynamicTabData) -> Vec<Self::Key> {
         data.tab_labels.iter().copied().collect()
     }
 
-    fn tab_info(&self, key: Self::Key, _data: &Advanced) -> TabInfo {
+    fn tab_info(&self, key: Self::Key, _data: &DynamicTabData) -> TabInfo<DynamicTabData> {
         TabInfo::new(format!("Tab {:?}", key), true)
     }
 
-    fn tab_body(&self, key: Self::Key, _data: &Advanced) -> Option<Label<Advanced>> {
-        Some(Label::new(format!("Dynamic tab body {:?}", key)))
+    fn tab_body(&self, key: Self::Key, _data: &DynamicTabData) -> Label<DynamicTabData> {
+        Label::new(format!("Dynamic tab body {:?}", key))
     }
 
-    fn close_tab(&self, key: Self::Key, data: &mut Advanced) {
+    fn close_tab(&self, key: Self::Key, data: &mut DynamicTabData) {
         if let Some(idx) = data.tab_labels.index_of(&key) {
             data.remove_tab(idx)
         }
     }
 
-    fn tab_label(&self, _key: Self::Key, info: &TabInfo, _data: &Self::Input) -> Self::LabelWidget {
+    fn tab_label(
+        &self,
+        _key: Self::Key,
+        info: TabInfo<Self::Input>,
+        _data: &Self::Input,
+    ) -> Self::LabelWidget {
         Self::default_make_label(info)
     }
 }
@@ -200,27 +201,33 @@ fn build_tab_widget(tab_config: &TabConfig) -> impl Widget<AppState> {
         .with_transition(tab_config.transition)
         .lens(AppState::advanced);
 
-    let adv = Flex::column()
+    let control_dynamic = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .with_child(Label::new("Control dynamic tabs"))
-        .with_child(Button::new("Add a tab").on_click(|_c, d: &mut Advanced, _e| d.add_tab()))
-        .with_child(Label::new(|adv: &Advanced, _e: &Env| {
+        .with_child(Button::new("Add a tab").on_click(|_c, d: &mut DynamicTabData, _e| d.add_tab()))
+        .with_child(Label::new(|adv: &DynamicTabData, _e: &Env| {
             format!("Highest tab number is {}", adv.highest_tab)
         }))
         .with_spacer(20.)
         .lens(AppState::advanced);
 
+    let first_static_tab = Flex::row()
+        .with_child(Label::new("Rename tab:"))
+        .with_child(TextBox::new().lens(AppState::first_tab_name));
+
     let main_tabs = Tabs::new()
         .with_axis(tab_config.axis)
         .with_cross_axis_alignment(tab_config.cross)
         .with_transition(tab_config.transition)
-        .with_tab("Basic", Label::new("Basic kind of stuff"))
-        .with_tab("Advanced", adv)
-        .with_tab("Page 3", Label::new("Basic kind of stuff"))
-        .with_tab("Page 4", Label::new("Basic kind of stuff"))
-        .with_tab("Page 5", Label::new("Basic kind of stuff"))
-        .with_tab("Page 6", Label::new("Basic kind of stuff"))
-        .with_tab("Page 7", TextBox::new().lens(AppState::text));
+        .with_tab(
+            |app_state: &AppState, _: &Env| app_state.first_tab_name.to_string(),
+            first_static_tab,
+        )
+        .with_tab("Dynamic", control_dynamic)
+        .with_tab("Page 3", Label::new("Page 3 content"))
+        .with_tab("Page 4", Label::new("Page 4 content"))
+        .with_tab("Page 5", Label::new("Page 5 content"))
+        .with_tab("Page 6", Label::new("Page 6 content"));
 
     Split::rows(main_tabs, dyn_tabs).draggable(true)
 }

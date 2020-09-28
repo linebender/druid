@@ -195,7 +195,9 @@ pub struct FlexParams {
     alignment: Option<CrossAxisAlignment>,
 }
 
-/// An axis in visual space. Most often used by widgets to describe
+/// An axis in visual space.
+///
+/// Most often used by widgets to describe
 /// the direction in which they grow as their number of children increases.
 /// Has some methods for manipulating geometry with respect to the axis.
 #[derive(Data, Debug, Clone, Copy, PartialEq)]
