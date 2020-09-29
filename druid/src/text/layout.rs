@@ -57,7 +57,7 @@ pub struct TextLayout<T> {
     alignment: TextAlignment,
 }
 
-impl<T: TextStorage> TextLayout<T> {
+impl<T> TextLayout<T> {
     /// Create a new `TextLayout` object.
     ///
     /// You must set the text ([`set_text`]) before using this object.
@@ -82,24 +82,6 @@ impl<T: TextStorage> TextLayout<T> {
         TextLayout {
             text: Some(text.into()),
             ..TextLayout::new()
-        }
-    }
-
-    /// Returns `true` if this layout needs to be rebuilt.
-    ///
-    /// This happens (for instance) after style attributes are modified.
-    ///
-    /// This does not account for things like the text changing, handling that
-    /// is the responsibility of the user.
-    pub fn needs_rebuild(&self) -> bool {
-        self.layout.is_none()
-    }
-
-    /// Set the text to display.
-    pub fn set_text(&mut self, text: T) {
-        if self.text.is_none() || self.text.as_ref().unwrap().as_str() != text.as_str() {
-            self.text = Some(text);
-            self.layout = None;
         }
     }
 
@@ -161,6 +143,26 @@ impl<T: TextStorage> TextLayout<T> {
     pub fn set_text_alignment(&mut self, alignment: TextAlignment) {
         if self.alignment != alignment {
             self.alignment = alignment;
+            self.layout = None;
+        }
+    }
+}
+
+impl<T: TextStorage> TextLayout<T> {
+    /// Returns `true` if this layout needs to be rebuilt.
+    ///
+    /// This happens (for instance) after style attributes are modified.
+    ///
+    /// This does not account for things like the text changing, handling that
+    /// is the responsibility of the user.
+    pub fn needs_rebuild(&self) -> bool {
+        self.layout.is_none()
+    }
+
+    /// Set the text to display.
+    pub fn set_text(&mut self, text: T) {
+        if self.text.is_none() || self.text.as_ref().unwrap().as_str() != text.as_str() {
+            self.text = Some(text);
             self.layout = None;
         }
     }
