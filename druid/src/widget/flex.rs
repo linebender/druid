@@ -112,7 +112,7 @@ use crate::{
 ///     .cross_axis_alignment(CrossAxisAlignment::Center)
 ///     .must_fill_main_axis(true)
 ///     .with_child(Label::new("hello"))
-///     .with_spacer(8.0)
+///     .with_default_spacer()
 ///     .with_flex_child(Slider::new(), 1.0);
 /// ```
 ///
@@ -125,7 +125,7 @@ use crate::{
 /// my_row.set_must_fill_main_axis(true);
 /// my_row.set_cross_axis_alignment(CrossAxisAlignment::Center);
 /// my_row.add_child(Label::new("hello"));
-/// my_row.add_spacer(8.0);
+/// my_row.add_default_spacer();
 /// my_row.add_flex_child(Slider::new(), 1.0);
 /// ```
 ///
@@ -195,10 +195,89 @@ pub struct FlexParams {
     alignment: Option<CrossAxisAlignment>,
 }
 
-#[derive(Clone, Copy)]
-pub(crate) enum Axis {
+/// An axis in visual space.
+///
+/// Most often used by widgets to describe
+/// the direction in which they grow as their number of children increases.
+/// Has some methods for manipulating geometry with respect to the axis.
+#[derive(Data, Debug, Clone, Copy, PartialEq)]
+pub enum Axis {
+    /// The x axis
     Horizontal,
+    /// The y axis
     Vertical,
+}
+
+impl Axis {
+    /// Get the axis perpendicular to this one.
+    pub fn cross(self) -> Axis {
+        match self {
+            Axis::Horizontal => Axis::Vertical,
+            Axis::Vertical => Axis::Horizontal,
+        }
+    }
+
+    /// Extract from the argument the magnitude along this axis
+    pub fn major(self, coords: Size) -> f64 {
+        match self {
+            Axis::Horizontal => coords.width,
+            Axis::Vertical => coords.height,
+        }
+    }
+
+    /// Extract from the argument the magnitude along the perpendicular axis
+    pub fn minor(self, coords: Size) -> f64 {
+        self.cross().major(coords)
+    }
+
+    /// Extract the extent of the argument in this axis as a pair.
+    pub fn major_span(self, rect: Rect) -> (f64, f64) {
+        match self {
+            Axis::Horizontal => (rect.x0, rect.x1),
+            Axis::Vertical => (rect.y0, rect.y1),
+        }
+    }
+
+    /// Extract the extent of the argument in the minor axis as a pair.
+    pub fn minor_span(self, rect: Rect) -> (f64, f64) {
+        self.cross().major_span(rect)
+    }
+
+    /// Extract the coordinate locating the argument with respect to this axis.
+    pub fn major_pos(self, pos: Point) -> f64 {
+        match self {
+            Axis::Horizontal => pos.x,
+            Axis::Vertical => pos.y,
+        }
+    }
+
+    /// Extract the coordinate locating the argument with respect to the perpendicular axis.
+    pub fn minor_pos(self, pos: Point) -> f64 {
+        self.cross().major_pos(pos)
+    }
+
+    /// Arrange the major and minor measurements with respect to this axis such that it forms
+    /// an (x, y) pair.
+    pub fn pack(self, major: f64, minor: f64) -> (f64, f64) {
+        match self {
+            Axis::Horizontal => (major, minor),
+            Axis::Vertical => (minor, major),
+        }
+    }
+
+    /// Generate constraints with new values on the major axis.
+    fn constraints(self, bc: &BoxConstraints, min_major: f64, major: f64) -> BoxConstraints {
+        match self {
+            Axis::Horizontal => BoxConstraints::new(
+                Size::new(min_major, bc.min().height),
+                Size::new(major, bc.max().height),
+            ),
+            Axis::Vertical => BoxConstraints::new(
+                Size::new(bc.min().width, min_major),
+                Size::new(bc.max().width, major),
+            ),
+        }
+    }
 }
 
 /// The alignment of the widgets on the container's cross (or minor) axis.
@@ -278,68 +357,31 @@ impl<T> ChildWidget<T> {
     }
 }
 
-impl Axis {
-    pub(crate) fn major(self, coords: Size) -> f64 {
-        match self {
-            Axis::Horizontal => coords.width,
-            Axis::Vertical => coords.height,
-        }
-    }
-
-    pub(crate) fn minor(self, coords: Size) -> f64 {
-        match self {
-            Axis::Horizontal => coords.height,
-            Axis::Vertical => coords.width,
-        }
-    }
-
-    pub(crate) fn pack(self, major: f64, minor: f64) -> (f64, f64) {
-        match self {
-            Axis::Horizontal => (major, minor),
-            Axis::Vertical => (minor, major),
-        }
-    }
-
-    /// Generate constraints with new values on the major axis.
-    fn constraints(self, bc: &BoxConstraints, min_major: f64, major: f64) -> BoxConstraints {
-        match self {
-            Axis::Horizontal => BoxConstraints::new(
-                Size::new(min_major, bc.min().height),
-                Size::new(major, bc.max().height),
-            ),
-            Axis::Vertical => BoxConstraints::new(
-                Size::new(bc.min().width, min_major),
-                Size::new(bc.max().width, major),
-            ),
-        }
-    }
-}
-
 impl<T: Data> Flex<T> {
-    /// Create a new horizontal stack.
-    ///
-    /// The child widgets are laid out horizontally, from left to right.
-    pub fn row() -> Self {
+    /// Create a new Flex oriented along the provided axis.
+    pub fn for_axis(axis: Axis) -> Self {
         Flex {
-            direction: Axis::Horizontal,
+            direction: axis,
             children: Vec::new(),
             cross_alignment: CrossAxisAlignment::Center,
             main_alignment: MainAxisAlignment::Start,
             fill_major_axis: false,
         }
+    }
+
+    /// Create a new horizontal stack.
+    ///
+    /// The child widgets are laid out horizontally, from left to right.
+    ///
+    pub fn row() -> Self {
+        Self::for_axis(Axis::Horizontal)
     }
 
     /// Create a new vertical stack.
     ///
     /// The child widgets are laid out vertically, from top to bottom.
     pub fn column() -> Self {
-        Flex {
-            direction: Axis::Vertical,
-            children: Vec::new(),
-            cross_alignment: CrossAxisAlignment::Center,
-            main_alignment: MainAxisAlignment::Start,
-            fill_major_axis: false,
-        }
+        Self::for_axis(Axis::Vertical)
     }
 
     /// Builder-style method for specifying the childrens' [`CrossAxisAlignment`].
@@ -420,7 +462,21 @@ impl<T: Data> Flex<T> {
         self
     }
 
+    /// Builder-style method to add a spacer widget with a standard size.
+    ///
+    /// The actual value of this spacer depends on whether this container is
+    /// a row or column, as well as theme settings.
+    pub fn with_default_spacer(mut self) -> Self {
+        self.add_default_spacer();
+        self
+    }
+
     /// Builder-style method for adding a fixed-size spacer to the container.
+    ///
+    /// If you are laying out standard controls in this container, you should
+    /// generally prefer to use [`add_default_spacer`].
+    ///
+    /// [`add_default_spacer`]: #method.add_default_spacer
     pub fn with_spacer(mut self, len: impl Into<KeyOrValue<f64>>) -> Self {
         self.add_spacer(len);
         self
@@ -495,7 +551,24 @@ impl<T: Data> Flex<T> {
         self.children.push(child);
     }
 
-    /// Add an empty spacer widget with the given length.
+    /// Add a spacer widget with a standard size.
+    ///
+    /// The actual value of this spacer depends on whether this container is
+    /// a row or column, as well as theme settings.
+    pub fn add_default_spacer(&mut self) {
+        let key = match self.direction {
+            Axis::Vertical => crate::theme::WIDGET_PADDING_VERTICAL,
+            Axis::Horizontal => crate::theme::WIDGET_PADDING_HORIZONTAL,
+        };
+        self.add_spacer(key);
+    }
+
+    /// Add an empty spacer widget with the given size.
+    ///
+    /// If you are laying out standard controls in this container, you should
+    /// generally prefer to use [`add_default_spacer`].
+    ///
+    /// [`add_default_spacer`]: #method.add_default_spacer
     pub fn add_spacer(&mut self, len: impl Into<KeyOrValue<f64>>) {
         let spacer = Spacer {
             axis: self.direction,

@@ -119,12 +119,6 @@ pub trait Data: Clone + 'static {
     //// ANCHOR_END: same_fn
 }
 
-/// A reference counted string slice.
-///
-/// This is a data-friendly way to represent strings in druid. Unlike `String`
-/// it cannot be mutated, but unlike `String` it can be cheaply cloned.
-pub type ArcStr = Arc<str>;
-
 /// An impl of `Data` suitable for simple types.
 ///
 /// The `same` method is implemented with equality, so the type should
@@ -143,11 +137,13 @@ impl_data_simple!(i8);
 impl_data_simple!(i16);
 impl_data_simple!(i32);
 impl_data_simple!(i64);
+impl_data_simple!(i128);
 impl_data_simple!(isize);
 impl_data_simple!(u8);
 impl_data_simple!(u16);
 impl_data_simple!(u32);
 impl_data_simple!(u64);
+impl_data_simple!(u128);
 impl_data_simple!(usize);
 impl_data_simple!(char);
 impl_data_simple!(bool);
@@ -408,6 +404,12 @@ impl Data for piet::FontWeight {
 }
 
 impl Data for piet::FontStyle {
+    fn same(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
+impl Data for piet::TextAlignment {
     fn same(&self, other: &Self) -> bool {
         self == other
     }

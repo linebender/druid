@@ -27,22 +27,24 @@ use std::time::Instant;
 
 use anyhow::anyhow;
 use cairo::Surface;
-use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt};
+use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
 use gio::ApplicationExt;
 use gtk::prelude::*;
 use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
-use crate::piet::{Piet, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::window;
+use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel};
 
 use super::application::Application;
 use super::dialog;
@@ -96,6 +98,9 @@ pub(crate) struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     menu: Option<Menu>,
+    position: Option<Point>,
+    level: Option<WindowLevel>,
+    state: Option<window::WindowState>,
     size: Size,
     min_size: Option<Size>,
     resizable: bool,
@@ -142,6 +147,9 @@ pub(crate) struct WindowState {
     current_keycode: RefCell<Option<u16>>,
 }
 
+#[derive(Clone)]
+pub struct CustomCursor(gdk::Cursor);
+
 impl WindowBuilder {
     pub fn new(app: Application) -> WindowBuilder {
         WindowBuilder {
@@ -150,6 +158,9 @@ impl WindowBuilder {
             title: String::new(),
             menu: None,
             size: Size::new(500.0, 400.0),
+            position: None,
+            level: None,
+            state: None,
             min_size: None,
             resizable: true,
             show_titlebar: true,
@@ -174,6 +185,18 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_position(&mut self, position: Point) {
+        self.position = Some(position);
+    }
+
+    pub fn set_level(&mut self, level: WindowLevel) {
+        self.level = Some(level);
+    }
+
+    pub fn set_window_state(&mut self, state: window::WindowState) {
+        self.state = Some(state);
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -234,9 +257,18 @@ impl WindowBuilder {
                 let _ = &win_state;
             }));
 
-        let handle = WindowHandle {
+        let mut handle = WindowHandle {
             state: Arc::downgrade(&win_state),
         };
+        if let Some(level) = self.level {
+            handle.set_level(level);
+        }
+        if let Some(pos) = self.position {
+            handle.set_position(pos);
+        }
+        if let Some(state) = self.state {
+            handle.set_window_state(state)
+        }
 
         if let Some(menu) = self.menu {
             let menu = menu.into_gtk_menubar(&handle, &accel_group);
@@ -666,6 +698,86 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_position(&self, position: Point) {
+        if let Some(state) = self.state.upgrade() {
+            state.window.move_(position.x as i32, position.y as i32)
+        }
+    }
+
+    pub fn get_position(&self) -> Point {
+        if let Some(state) = self.state.upgrade() {
+            let (x, y) = state.window.get_position();
+            Point::new(x as f64, y as f64)
+        } else {
+            Point::new(0.0, 0.0)
+        }
+    }
+
+    pub fn set_level(&self, level: WindowLevel) {
+        if let Some(state) = self.state.upgrade() {
+            let hint = match level {
+                WindowLevel::AppWindow => WindowTypeHint::Normal,
+                WindowLevel::Tooltip => WindowTypeHint::Tooltip,
+                WindowLevel::DropDown => WindowTypeHint::DropdownMenu,
+                WindowLevel::Modal => WindowTypeHint::Dialog,
+            };
+
+            state.window.set_type_hint(hint);
+        }
+    }
+
+    pub fn set_size(&self, size: Size) {
+        if let Some(state) = self.state.upgrade() {
+            state.window.resize(size.width as i32, size.height as i32)
+        }
+    }
+
+    pub fn get_size(&self) -> Size {
+        if let Some(state) = self.state.upgrade() {
+            let (x, y) = state.window.get_size();
+            Size::new(x as f64, y as f64)
+        } else {
+            log::warn!("Could not get size for GTK window");
+            Size::new(0., 0.)
+        }
+    }
+
+    pub fn set_window_state(&mut self, size_state: window::WindowState) {
+        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
+        let cur_size_state = self.get_window_state();
+        if let Some(state) = self.state.upgrade() {
+            match (size_state, cur_size_state) {
+                (s1, s2) if s1 == s2 => (),
+                (MAXIMIZED, _) => state.window.maximize(),
+                (MINIMIZED, _) => state.window.iconify(),
+                (RESTORED, MAXIMIZED) => state.window.unmaximize(),
+                (RESTORED, MINIMIZED) => state.window.deiconify(),
+                (RESTORED, RESTORED) => (), // Unreachable
+            }
+
+            state.window.unmaximize();
+        }
+    }
+
+    pub fn get_window_state(&self) -> window::WindowState {
+        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
+        if let Some(state) = self.state.upgrade() {
+            if state.window.is_maximized() {
+                return MAXIMIZED;
+            } else if let Some(window) = state.window.get_parent_window() {
+                let state = window.get_state();
+                if (state & gdk::WindowState::ICONIFIED) == gdk::WindowState::ICONIFIED {
+                    return MINIMIZED;
+                }
+            }
+        }
+        RESTORED
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for gtk.");
+    }
+
     /// Close the window.
     pub fn close(&self) {
         if let Some(state) = self.state.upgrade() {
@@ -705,8 +817,8 @@ impl WindowHandle {
         }
     }
 
-    pub fn text(&self) -> Text {
-        Text::new()
+    pub fn text(&self) -> PietText {
+        PietText::new()
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
@@ -741,6 +853,38 @@ impl WindowHandle {
         if let Some(gdk_window) = self.state.upgrade().and_then(|s| s.window.get_window()) {
             let cursor = make_gdk_cursor(cursor, &gdk_window);
             gdk_window.set_cursor(cursor.as_ref());
+        }
+    }
+
+    pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+        if let Some(state) = self.state.upgrade() {
+            if let Some(gdk_window) = state.window.get_window() {
+                // TODO: gtk::Pixbuf expects unpremultiplied alpha. We should convert.
+                let has_alpha = !matches!(desc.image.format(), ImageFormat::Rgb);
+                let bytes_per_pixel = desc.image.format().bytes_per_pixel();
+                let pixbuf = gdk_pixbuf::Pixbuf::from_mut_slice(
+                    desc.image.raw_pixels().to_owned(),
+                    gdk_pixbuf::Colorspace::Rgb,
+                    has_alpha,
+                    // bits_per_sample
+                    8,
+                    desc.image.width() as i32,
+                    desc.image.height() as i32,
+                    // row stride (in bytes)
+                    (desc.image.width() * bytes_per_pixel) as i32,
+                );
+                let c = gdk::Cursor::from_pixbuf(
+                    &gdk_window.get_display(),
+                    &pixbuf,
+                    desc.hot.x.round() as i32,
+                    desc.hot.y.round() as i32,
+                );
+                Some(Cursor::Custom(CustomCursor(c)))
+            } else {
+                None
+            }
+        } else {
+            None
         }
     }
 
@@ -892,19 +1036,24 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
 }
 
 fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cursor> {
-    gdk::Cursor::from_name(
-        &gdk_window.get_display(),
-        match cursor {
-            // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
-            Cursor::Arrow => "default",
-            Cursor::IBeam => "text",
-            Cursor::Crosshair => "crosshair",
-            Cursor::OpenHand => "grab",
-            Cursor::NotAllowed => "not-allowed",
-            Cursor::ResizeLeftRight => "ew-resize",
-            Cursor::ResizeUpDown => "ns-resize",
-        },
-    )
+    if let Cursor::Custom(custom) = cursor {
+        Some(custom.0.clone())
+    } else {
+        gdk::Cursor::from_name(
+            &gdk_window.get_display(),
+            match cursor {
+                // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
+                Cursor::Arrow => "default",
+                Cursor::IBeam => "text",
+                Cursor::Crosshair => "crosshair",
+                Cursor::OpenHand => "grab",
+                Cursor::NotAllowed => "not-allowed",
+                Cursor::ResizeLeftRight => "ew-resize",
+                Cursor::ResizeUpDown => "ns-resize",
+                Cursor::Custom(_) => unreachable!(),
+            },
+        )
+    }
 }
 
 fn get_mouse_button(button: u32) -> Option<MouseButton> {

@@ -21,9 +21,9 @@ use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::util::ExtendDrain;
 use crate::{
-    BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext, Target, TextLayout,
-    TimerToken, UpdateCtx, Widget, WidgetId,
+    ArcStr, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext, Target,
+    TextLayout, TimerToken, UpdateCtx, Widget, WidgetId,
 };
 
 /// Our queue type
@@ -50,7 +50,7 @@ pub struct WidgetPod<T, W> {
     env: Option<Env>,
     inner: W,
     // stashed layout so we don't recompute this when debugging
-    debug_widget_text: TextLayout,
+    debug_widget_text: TextLayout<ArcStr>,
 }
 
 /// Generic state for all widgets in the hierarchy.
@@ -144,7 +144,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             old_data: None,
             env: None,
             inner,
-            debug_widget_text: TextLayout::new(""),
+            debug_widget_text: TextLayout::new(),
         }
     }
 
@@ -232,12 +232,6 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         if needs_merge {
             ctx.widget_state.merge_up(&mut self.state);
         }
-    }
-
-    #[deprecated(since = "0.5.0", note = "use layout_rect() instead")]
-    #[doc(hidden)]
-    pub fn get_layout_rect(&self) -> Rect {
-        self.layout_rect()
     }
 
     /// Returns the layout [`Rect`].
@@ -439,11 +433,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Color::BLACK
             };
             let id_string = id.to_raw().to_string();
-            self.debug_widget_text.set_text(id_string);
+            self.debug_widget_text.set_text(id_string.into());
             self.debug_widget_text.set_text_size(10.0);
             self.debug_widget_text.set_text_color(text_color);
-            self.debug_widget_text
-                .rebuild_if_needed(&mut ctx.text(), env);
+            self.debug_widget_text.rebuild_if_needed(ctx.text(), env);
         }
     }
 
@@ -854,9 +847,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
         }
 
+        let prev_env = self.env.as_ref().filter(|p| !p.same(env));
+
         let mut child_ctx = UpdateCtx {
             state: ctx.state,
             widget_state: &mut self.state,
+            prev_env,
+            env,
         };
 
         self.inner
@@ -986,23 +983,23 @@ mod tests {
 
         let mut command_queue: CommandQueue = VecDeque::new();
         let mut widget_state = WidgetState::new(WidgetId::next(), None);
+        let window = WindowHandle::default();
         let ext_host = ExtEventHost::default();
         let ext_handle = ext_host.make_sink();
-        let mut state = ContextState {
-            command_queue: &mut command_queue,
-            ext_handle: &ext_handle,
-            window_id: WindowId::next(),
-            window: &WindowHandle::default(),
-            root_app_data_type: std::any::TypeId::of::<Option<u32>>(),
-            focus_widget: None,
-        };
+        let mut state = ContextState::new::<Option<u32>>(
+            &mut command_queue,
+            &ext_handle,
+            &window,
+            WindowId::next(),
+            None,
+        );
 
         let mut ctx = LifeCycleCtx {
             widget_state: &mut widget_state,
             state: &mut state,
         };
 
-        let env = crate::theme::init();
+        let env = Env::default();
 
         widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &None, &env);
         assert!(ctx.widget_state.children.may_contain(&ID_1));

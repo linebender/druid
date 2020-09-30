@@ -18,7 +18,7 @@ use druid::kurbo::BezPath;
 use druid::piet::{FontFamily, ImageFormat, InterpolationMode};
 use druid::widget::prelude::*;
 use druid::{
-    Affine, AppLauncher, Color, FontDescriptor, LocalizedString, Point, Rect, TextLayout,
+    Affine, AppLauncher, ArcStr, Color, FontDescriptor, LocalizedString, Point, Rect, TextLayout,
     WindowDesc,
 };
 
@@ -86,10 +86,10 @@ impl Widget<String> for CustomWidget {
 
         // Text is easy; in real use TextLayout should be stored in the widget
         // and reused.
-        let mut layout = TextLayout::new(data.as_str());
+        let mut layout = TextLayout::<ArcStr>::from_text(data.to_owned());
         layout.set_font(FontDescriptor::new(FontFamily::SERIF).with_size(24.0));
         layout.set_text_color(fill_color);
-        layout.rebuild_if_needed(&mut ctx.text(), env);
+        layout.rebuild_if_needed(ctx.text(), env);
 
         // Let's rotate our text slightly. First we save our current (default) context:
         ctx.with_save(|ctx| {

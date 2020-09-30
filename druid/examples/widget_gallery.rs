@@ -17,10 +17,10 @@ use druid::{
     kurbo::{Affine, BezPath, Circle},
     piet::{FixedLinearGradient, GradientStop, InterpolationMode},
     widget::{
-        prelude::*, Button, Checkbox, FillStrat, Flex, Image, ImageData, Label, List, Painter,
-        ProgressBar, RadioGroup, Scroll, Slider, Spinner, Stepper, Switch, TextBox,
+        prelude::*, Button, Checkbox, FillStrat, Flex, Image, Label, List, Painter, ProgressBar,
+        RadioGroup, Scroll, Slider, Spinner, Stepper, Switch, TextBox,
     },
-    AppLauncher, Color, Data, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc,
+    AppLauncher, Color, Data, ImageBuf, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -182,7 +182,7 @@ fn ui_builder() -> impl Widget<AppData> {
             ))
             .with_child(label_widget(
                 Image::new(
-                    ImageData::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap(),
+                    ImageBuf::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap(),
                 )
                 .fill_mode(FillStrat::Fill)
                 .interpolation_mode(InterpolationMode::Bilinear),

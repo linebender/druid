@@ -41,11 +41,12 @@ use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KeyEvent, KeyState, Modifiers};
 use crate::kurbo::{Point, Rect, Size, Vec2};
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::piet::{Piet, RenderContext};
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::piet::{Piet, PietText, RenderContext};
 use crate::region::Region;
 use crate::scale::Scale;
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::window;
+use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel};
 
 use super::application::Application;
 use super::keycodes;
@@ -125,6 +126,18 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, _show_titlebar: bool) {
         log::warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_position(&mut self, _position: Point) {
+        log::warn!("WindowBuilder::set_position is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_level(&mut self, _level: window::WindowLevel) {
+        log::warn!("WindowBuilder::set_level  is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        log::warn!("WindowBuilder::set_window_state is currently unimplemented for X11 platforms.");
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -501,6 +514,9 @@ struct PresentData {
     /// define the units, but it appears to be in microseconds.
     last_ust: Option<u64>,
 }
+
+#[derive(Clone)]
+pub struct CustomCursor(xproto::Cursor);
 
 impl Window {
     fn connect(&self, handle: WindowHandle) -> Result<(), Error> {
@@ -906,7 +922,7 @@ impl Window {
         if client_message.type_ == self.atoms.WM_PROTOCOLS && client_message.format == 32 {
             let protocol = client_message.data.as_data32()[0];
             if protocol == self.atoms.WM_DELETE_WINDOW {
-                self.close();
+                self.handler.borrow_mut().request_close();
             }
         }
         Ok(())
@@ -1350,6 +1366,41 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_position(&self, _position: Point) {
+        log::warn!("WindowHandle::set_position is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn get_position(&self) -> Point {
+        log::warn!("WindowHandle::get_position is currently unimplemented for X11 platforms.");
+        Point::new(0.0, 0.0)
+    }
+
+    pub fn set_level(&self, _level: WindowLevel) {
+        log::warn!("WindowHandle::set_level  is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_size(&self, _size: Size) {
+        log::warn!("WindowHandle::set_size is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn get_size(&self) -> Size {
+        log::warn!("WindowHandle::get_size is currently unimplemented for X11 platforms.");
+        Size::new(0.0, 0.0)
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        log::warn!("WindowHandle::set_window_state is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn get_window_state(&self) -> window::WindowState {
+        log::warn!("WindowHandle::get_window_state is currently unimplemented for X11 platforms.");
+        window::WindowState::RESTORED
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 platforms.");
+    }
+
     pub fn bring_to_front_and_focus(&self) {
         if let Some(w) = self.window.upgrade() {
             w.bring_to_front_and_focus();
@@ -1398,9 +1449,8 @@ impl WindowHandle {
         }
     }
 
-    pub fn text(&self) -> Text {
-        // I'm not entirely sure what this method is doing here, so here's a Text.
-        Text::new()
+    pub fn text(&self) -> PietText {
+        PietText::new()
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
@@ -1415,6 +1465,11 @@ impl WindowHandle {
 
     pub fn set_cursor(&mut self, _cursor: &Cursor) {
         // TODO(x11/cursors): implement WindowHandle::set_cursor
+    }
+
+    pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
+        log::warn!("Custom cursors are not yet supported in the X11 backend");
+        None
     }
 
     pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {

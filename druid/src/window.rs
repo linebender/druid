@@ -24,6 +24,7 @@ use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::shell::{Counter, Cursor, Region, WindowHandle};
 
+use crate::app::PendingWindow;
 use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
 use crate::util::ExtendDrain;
@@ -32,7 +33,7 @@ use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, ExtEventSink, InternalEvent,
     InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken,
-    UpdateCtx, Widget, WidgetId, WidgetPod, WindowDesc,
+    UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
 /// A unique identifier for a window.
@@ -61,16 +62,16 @@ impl<T> Window<T> {
     pub(crate) fn new(
         id: WindowId,
         handle: WindowHandle,
-        desc: WindowDesc<T>,
+        pending: PendingWindow<T>,
         ext_handle: ExtEventSink,
     ) -> Window<T> {
         Window {
             id,
-            root: WidgetPod::new(desc.root),
+            root: WidgetPod::new(pending.root),
             size: Size::ZERO,
             invalid: Region::EMPTY,
-            title: desc.title,
-            menu: desc.menu,
+            title: pending.title,
+            menu: pending.menu,
             context_menu: None,
             last_anim: None,
             last_mouse_pos: None,
@@ -97,7 +98,7 @@ impl<T: Data> Window<T> {
     /// However when this returns `false` the widget is definitely not in this window.
     pub(crate) fn may_contain_widget(&self, widget_id: WidgetId) -> bool {
         // The bloom filter we're checking can return false positives.
-        self.root.state().children.may_contain(&widget_id)
+        widget_id == self.root.id() || self.root.state().children.may_contain(&widget_id)
     }
 
     pub(crate) fn set_menu(&mut self, mut menu: MenuDesc<T>, data: &T, env: &Env) {
@@ -280,6 +281,8 @@ impl<T: Data> Window<T> {
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
             state: &mut state,
+            prev_env: None,
+            env,
         };
 
         self.root.update(&mut update_ctx, data, env);
@@ -295,6 +298,18 @@ impl<T: Data> Window<T> {
             }
             self.invalid.clear();
         }
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub(crate) fn invalid(&self) -> &Region {
+        &self.invalid
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub(crate) fn invalid_mut(&mut self) -> &mut Region {
+        &mut self.invalid
     }
 
     /// Get ready for painting, by doing layout and sending an `AnimFrame` event.
@@ -408,7 +423,7 @@ impl<T: Data> Window<T> {
 
     pub(crate) fn update_title(&mut self, data: &T, env: &Env) {
         if self.title.resolve(data, env) {
-            self.handle.set_title(self.title.display_text());
+            self.handle.set_title(&self.title.display_text());
         }
     }
 

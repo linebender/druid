@@ -2,7 +2,7 @@ use druid::widget::Label;
 use druid::{Color, Key, WidgetExt};
 
 // ANCHOR: key_or_value
-const IMPORTANT_LABEL_COLOR: Key<Color> = Key::new("my-app.important-label-color");
+const IMPORTANT_LABEL_COLOR: Key<Color> = Key::new("org.linebender.example.important-label-color");
 const RED: Color = Color::rgb8(0xFF, 0, 0);
 
 fn make_labels() {
