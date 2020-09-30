@@ -95,12 +95,9 @@ You can find its changes [documented below](#060---2020-06-01).
 - Allow derivation of lenses for generic types ([#1120]) by [@rjwittams])
 - Switch widget: Toggle animation being window refresh rate dependent ([#1145] by [@ForLoveOfCats])
 - Multi-click on Windows, partial fix for #859 ([#1157] by [@raphlinus])
-<<<<<<< HEAD
-- `widget::Image` now computes the layout correctly when unbound in one direction. ([#1189] by [@JAicewizard])
-=======
 - Windows: fix crash on resize from incompatible resources ([#1191 by [@raphlinus]])
 - GTK: Related dependencies are now optional, facilitating a pure X11 build. ([#1241] by [@finnerale])
->>>>>>> 59f6750122095033fb368c29609afbc7e0ce6371
+- `widget::Image` now computes the layout correctly when unbound in one direction. ([#1189] by [@JAicewizard])
 
 ### Visual
 
