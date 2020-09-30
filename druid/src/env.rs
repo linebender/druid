@@ -68,7 +68,7 @@ struct EnvImpl {
 ///
 /// ```
 ///# use druid::{Key, Color, WindowDesc, AppLauncher, widget::Label};
-/// const IMPORTANT_LABEL_COLOR: Key<Color> = Key::new("my-app.important-label-color");
+/// const IMPORTANT_LABEL_COLOR: Key<Color> = Key::new("org.linebender.example.important-label-color");
 ///
 /// fn important_label() -> Label<()> {
 ///     Label::new("Warning!").with_text_color(IMPORTANT_LABEL_COLOR)
@@ -87,7 +87,7 @@ struct EnvImpl {
 ///
 /// [`ValueType`]: trait.ValueType.html
 /// [`Env`]: struct.Env.html
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Key<T> {
     key: &'static str,
     value_type: PhantomData<*const T>,
@@ -97,7 +97,7 @@ pub struct Key<T> {
 // could be defined per-app
 // Also consider Box<Any> (though this would also impact debug).
 /// A dynamic type representing all values that can be stored in an environment.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 #[allow(missing_docs)]
 // ANCHOR: value_type
 pub enum Value {
@@ -120,12 +120,12 @@ pub enum Value {
 ///
 /// [`Key<T>`]: struct.Key.html
 /// [`Env`]: struct.Env.html
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum KeyOrValue<T> {
     /// A concrete [`Value`] of type `T`.
     ///
     /// [`Value`]: enum.Value.html
-    Concrete(Value),
+    Concrete(T),
     /// A [`Key<T>`] that can be resolved to a value in the [`Env`].
     ///
     /// [`Key<T>`]: struct.Key.html
@@ -133,8 +133,37 @@ pub enum KeyOrValue<T> {
     Key(Key<T>),
 }
 
+/// A trait for anything that can resolve a value of some type from the [`Env`].
+///
+/// This is a generalization of the idea of [`KeyOrValue`], mostly motivated
+/// by wanting to improve the API used for checking if items in the [`Env`] have changed.
+///
+/// [`Env`]: struct.Env.html
+/// [`KeyOrValue`]: enum.KeyOrValue.html
+pub trait KeyLike<T> {
+    /// Returns `true` if this item has changed between the old and new [`Env`].
+    ///
+    /// [`Env`]: struct.Env.html
+    fn changed(&self, old: &Env, new: &Env) -> bool;
+}
+
+impl<T: ValueType> KeyLike<T> for Key<T> {
+    fn changed(&self, old: &Env, new: &Env) -> bool {
+        !old.get_untyped(self).same(new.get_untyped(self))
+    }
+}
+
+impl<T> KeyLike<T> for KeyOrValue<T> {
+    fn changed(&self, old: &Env, new: &Env) -> bool {
+        match self {
+            KeyOrValue::Concrete(_) => false,
+            KeyOrValue::Key(key) => !old.get_untyped(key).same(new.get_untyped(key)),
+        }
+    }
+}
+
 /// Values which can be stored in an environment.
-pub trait ValueType: Sized + Into<Value> {
+pub trait ValueType: Sized + Clone + Into<Value> {
     /// Attempt to convert the generic `Value` into this type.
     fn try_from_value(v: &Value) -> Result<Self, ValueTypeError>;
 }
@@ -167,14 +196,15 @@ impl Env {
     /// Set by the `debug_paint_layout()` method on [`WidgetExt`]'.
     ///
     /// [`WidgetExt`]: trait.WidgetExt.html
-    pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("druid.built-in.debug-paint");
+    pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("org.linebender.druid.built-in.debug-paint");
 
     /// State for whether or not to paint `WidgetId`s, for event debugging.
     ///
     /// Set by the `debug_widget_id()` method on [`WidgetExt`].
     ///
     /// [`WidgetExt`]: trait.WidgetExt.html
-    pub(crate) const DEBUG_WIDGET_ID: Key<bool> = Key::new("druid.built-in.debug-widget-id");
+    pub(crate) const DEBUG_WIDGET_ID: Key<bool> =
+        Key::new("org.linebender.druid.built-in.debug-widget-id");
 
     /// A key used to tell widgets to print additional debug information.
     ///
@@ -197,7 +227,7 @@ impl Env {
     /// ```
     ///
     /// [`WidgetExt::debug_widget`]: trait.WidgetExt.html#method.debug_widget
-    pub const DEBUG_WIDGET: Key<bool> = Key::new("druid.built-in.debug-widget");
+    pub const DEBUG_WIDGET: Key<bool> = Key::new("org.linebender.druid.built-in.debug-widget");
 
     /// Gets a value from the environment, expecting it to be present.
     ///
@@ -243,7 +273,7 @@ impl Env {
     /// Panics if the key is not found.
     ///
     /// [`Value`]: enum.Value.html
-    pub fn get_untyped(&self, key: impl Borrow<Key<()>>) -> &Value {
+    pub fn get_untyped<V>(&self, key: impl Borrow<Key<V>>) -> &Value {
         match self.try_get_untyped(key) {
             Ok(val) => val,
             Err(err) => panic!("{}", err),
@@ -258,7 +288,7 @@ impl Env {
     /// e.g. for debugging, theme editing, and theme loading.
     ///
     /// [`Value`]: enum.Value.html
-    pub fn try_get_untyped(&self, key: impl Borrow<Key<()>>) -> Result<&Value, MissingKeyError> {
+    pub fn try_get_untyped<V>(&self, key: impl Borrow<Key<V>>) -> Result<&Value, MissingKeyError> {
         self.0.map.get(key.borrow().key).ok_or(MissingKeyError {
             key: key.borrow().key.into(),
         })
@@ -327,8 +357,8 @@ impl<T> Key<T> {
     /// use druid::Key;
     /// use druid::piet::Color;
     ///
-    /// let float_key: Key<f64> = Key::new("a.very.good.float");
-    /// let color_key: Key<Color> = Key::new("a.very.nice.color");
+    /// let float_key: Key<f64> = Key::new("org.linebender.example.a.very.good.float");
+    /// let color_key: Key<Color> = Key::new("org.linebender.example.a.very.nice.color");
     /// ```
     pub const fn new(key: &'static str) -> Self {
         Key {
@@ -469,10 +499,12 @@ impl Default for Env {
             debug_colors,
         };
 
-        Env(Arc::new(inner))
+        let env = Env(Arc::new(inner))
             .adding(Env::DEBUG_PAINT, false)
             .adding(Env::DEBUG_WIDGET_ID, false)
-            .adding(Env::DEBUG_WIDGET, false)
+            .adding(Env::DEBUG_WIDGET, false);
+
+        crate::theme::add_to_env(env)
     }
 }
 
@@ -550,7 +582,7 @@ impl<T: ValueType> KeyOrValue<T> {
     /// [`Env`]: struct.Env.html
     pub fn resolve(&self, env: &Env) -> T {
         match self {
-            KeyOrValue::Concrete(value) => value.to_inner_unchecked(),
+            KeyOrValue::Concrete(ref value) => value.to_owned(),
             KeyOrValue::Key(key) => env.get(key),
         }
     }
@@ -558,7 +590,7 @@ impl<T: ValueType> KeyOrValue<T> {
 
 impl<T: Into<Value>> From<T> for KeyOrValue<T> {
     fn from(value: T) -> KeyOrValue<T> {
-        KeyOrValue::Concrete(value.into())
+        KeyOrValue::Concrete(value)
     }
 }
 
@@ -574,7 +606,7 @@ mod tests {
 
     #[test]
     fn string_key_or_value() {
-        const MY_KEY: Key<ArcStr> = Key::new("test.my-string-key");
+        const MY_KEY: Key<ArcStr> = Key::new("org.linebender.test.my-string-key");
         let env = Env::default().adding(MY_KEY, "Owned");
         assert_eq!(env.get(MY_KEY).as_ref(), "Owned");
 

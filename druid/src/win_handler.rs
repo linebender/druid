@@ -29,11 +29,13 @@ use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, Target, TimerToken, WindowDesc,
-    WindowId,
+    Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, PlatformError, Target,
+    TimerToken, WindowDesc, WindowId,
 };
 
+use crate::app::{PendingWindow, WindowConfig};
 use crate::command::sys as sys_cmd;
+use druid_shell::WindowBuilder;
 
 pub(crate) const RUN_COMMANDS_TOKEN: IdleToken = IdleToken::new(1);
 
@@ -84,7 +86,7 @@ struct Inner<T> {
 
 /// All active windows.
 struct Windows<T> {
-    pending: HashMap<WindowId, WindowDesc<T>>,
+    pending: HashMap<WindowId, PendingWindow<T>>,
     windows: HashMap<WindowId, Window<T>>,
 }
 
@@ -98,7 +100,7 @@ impl<T> Windows<T> {
         }
     }
 
-    fn add(&mut self, id: WindowId, win: WindowDesc<T>) {
+    fn add(&mut self, id: WindowId, win: PendingWindow<T>) {
         assert!(self.pending.insert(id, win).is_none(), "duplicate pending");
     }
 
@@ -292,6 +294,12 @@ impl<T: Data> Inner<T> {
         }
     }
 
+    fn configure_window(&mut self, config: &WindowConfig, id: WindowId) {
+        if let Some(win) = self.windows.get_mut(id) {
+            config.apply_to_handle(&mut win.handle);
+        }
+    }
+
     fn prepare_paint(&mut self, window_id: WindowId) {
         if let Some(win) = self.windows.get_mut(window_id) {
             win.prepare_paint(&mut self.command_queue, &mut self.data, &self.env);
@@ -459,7 +467,7 @@ impl<T: Data> AppState<T> {
         self.inner.borrow().env.clone()
     }
 
-    pub(crate) fn add_window(&self, id: WindowId, window: WindowDesc<T>) {
+    pub(crate) fn add_window(&self, id: WindowId, window: PendingWindow<T>) {
         self.inner.borrow_mut().windows.add(id, window);
     }
 
@@ -571,6 +579,7 @@ impl<T: Data> AppState<T> {
             // FIXME: we need to be able to open a file without a window handle
             T::Window(id) if cmd.is(sys_cmd::SHOW_OPEN_PANEL) => self.show_open_panel(cmd, id),
             T::Window(id) if cmd.is(sys_cmd::SHOW_SAVE_PANEL) => self.show_save_panel(cmd, id),
+            T::Window(id) if cmd.is(sys_cmd::CONFIGURE_WINDOW) => self.configure_window(cmd, id),
             T::Window(id) if cmd.is(sys_cmd::CLOSE_WINDOW) => {
                 if !self.inner.borrow_mut().dispatch_cmd(cmd) {
                     self.request_close_window(id);
@@ -653,6 +662,12 @@ impl<T: Data> AppState<T> {
         self.inner.borrow_mut().show_window(id);
     }
 
+    fn configure_window(&mut self, cmd: Command, id: WindowId) {
+        if let Some(config) = cmd.get(sys_cmd::CONFIGURE_WINDOW) {
+            self.inner.borrow_mut().configure_window(config, id);
+        }
+    }
+
     fn do_paste(&mut self, window_id: WindowId) {
         let event = Event::Paste(self.inner.borrow().app.clipboard());
         self.inner.borrow_mut().do_window_event(window_id, event);
@@ -670,6 +685,36 @@ impl<T: Data> AppState<T> {
     fn hide_others(&mut self) {
         #[cfg(target_os = "macos")]
         self.inner.borrow().app.hide_others()
+    }
+
+    pub(crate) fn build_native_window(
+        &mut self,
+        id: WindowId,
+        mut pending: PendingWindow<T>,
+        config: WindowConfig,
+    ) -> Result<WindowHandle, PlatformError> {
+        let mut builder = WindowBuilder::new(self.app());
+        config.apply_to_builder(&mut builder);
+
+        let data = self.data();
+        let env = self.env();
+
+        pending.title.resolve(&data, &env);
+        builder.set_title(pending.title.display_text().to_string());
+
+        let platform_menu = pending
+            .menu
+            .as_mut()
+            .map(|m| m.build_window_menu(&data, &env));
+        if let Some(menu) = platform_menu {
+            builder.set_menu(menu);
+        }
+
+        let handler = DruidHandler::new_shared((*self).clone(), id);
+        builder.set_handler(Box::new(handler));
+
+        self.add_window(id, pending);
+        builder.build()
     }
 }
 

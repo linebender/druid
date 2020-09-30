@@ -50,12 +50,12 @@ fn ui_builder() -> impl Widget<MyComplexState> {
     Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .with_child(label)
-        .with_spacer(8.0)
+        .with_default_spacer()
         .with_child(
             Flex::row()
                 .cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_child(searchbar)
-                .with_spacer(8.0)
+                .with_default_spacer()
                 .with_child(slider),
         )
         .center()

@@ -14,14 +14,16 @@
 
 //! A radio button widget.
 
-use crate::kurbo::{Circle, Point, Rect, Size};
+use crate::kurbo::{Circle, Size};
 use crate::theme;
-use crate::widget::{CrossAxisAlignment, Flex, Label, LabelText, Padding};
+use crate::widget::{CrossAxisAlignment, Flex, Label, LabelText};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
-    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget, WidgetExt, WidgetPod,
+    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
 };
 
+const DEFAULT_RADIO_RADIUS: f64 = 7.0;
+const INNER_CIRCLE_RADIUS: f64 = 2.0;
 /// A group of radio buttons
 #[derive(Debug, Clone)]
 pub struct RadioGroup;
@@ -32,9 +34,14 @@ impl RadioGroup {
         variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T)>,
     ) -> impl Widget<T> {
         let mut col = Flex::column().cross_axis_alignment(CrossAxisAlignment::Start);
+        let mut is_first = true;
         for (label, variant) in variants.into_iter() {
+            if !is_first {
+                col.add_default_spacer();
+            }
             let radio = Radio::new(label, variant);
-            col.add_child(Padding::new(5.0, radio));
+            col.add_child(radio);
+            is_first = false;
         }
         col
     }
@@ -43,8 +50,7 @@ impl RadioGroup {
 /// A single radio button
 pub struct Radio<T> {
     variant: T,
-    //FIXME: this should be using a TextUi struct
-    child_label: WidgetPod<T, Box<dyn Widget<T>>>,
+    child_label: Label<T>,
 }
 
 impl<T: Data> Radio<T> {
@@ -52,7 +58,7 @@ impl<T: Data> Radio<T> {
     pub fn new(label: impl Into<LabelText<T>>, variant: T) -> Radio<T> {
         Radio {
             variant,
-            child_label: WidgetPod::new(Label::new(label).boxed()),
+            child_label: Label::new(label),
         }
     }
 }
@@ -85,7 +91,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        self.child_label.update(ctx, data, env);
+        self.child_label.update(ctx, old_data, data, env);
         if !old_data.same(data) {
             ctx.request_paint();
         }
@@ -95,27 +101,21 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         bc.debug_check("Radio");
 
         let label_size = self.child_label.layout(ctx, &bc, data, env);
-        let padding = 5.0;
-        let label_x_offset = env.get(theme::BASIC_WIDGET_HEIGHT) + padding;
-        let origin = Point::new(label_x_offset, 0.0);
+        let radio_diam = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 
-        self.child_label.set_layout_rect(
-            ctx,
-            data,
-            env,
-            Rect::from_origin_size(origin, label_size),
+        let desired_size = Size::new(
+            label_size.width + radio_diam + x_padding,
+            radio_diam.max(label_size.height),
         );
-
-        bc.constrain(Size::new(
-            label_x_offset + label_size.width,
-            env.get(theme::BASIC_WIDGET_HEIGHT).max(label_size.height),
-        ))
+        bc.constrain(desired_size)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 
-        let circle = Circle::new((size / 2., size / 2.), 7.);
+        let circle = Circle::new((size / 2., size / 2.), DEFAULT_RADIO_RADIUS);
 
         // Paint the background
         let background_gradient = LinearGradient::new(
@@ -139,12 +139,12 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
         // Check if data enum matches our variant
         if *data == self.variant {
-            let inner_circle = Circle::new((size / 2., size / 2.), 2.);
+            let inner_circle = Circle::new((size / 2., size / 2.), INNER_CIRCLE_RADIUS);
 
             ctx.fill(inner_circle, &env.get(theme::LABEL_COLOR));
         }
 
         // Paint the text label
-        self.child_label.paint(ctx, data, env);
+        self.child_label.draw_at(ctx, (size + x_padding, 0.0));
     }
 }

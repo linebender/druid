@@ -20,11 +20,14 @@ rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
 
 [features]
-x11 = ["druid-shell/x11"]
+default = ["gtk"]
+gtk = ["druid-shell/gtk"]
+image = ["druid-shell/image"]
 svg = ["usvg", "harfbuzz-sys"]
+x11 = ["druid-shell/x11"]
 
 [dependencies]
-druid-shell = { version = "0.6.0", path = "../druid-shell" }
+druid-shell = { version = "0.6.0", default-features = false, path = "../druid-shell" }
 druid-derive = { version = "0.3.1", path = "../druid-derive" }
 
 log = "0.4.11"
@@ -44,7 +47,6 @@ usvg = { version = "0.11.0", optional = true }
 # We don't depend directly on harfbuzz-sys, it comes through usvg. But we need to pin
 # the version, because the latest release of harfbuzz_rs is broken with harfbuzz-sys 0.5.
 harfbuzz-sys = { version = "0.5.0", optional = true }
-image = { version = "0.23.9", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 console_log = "0.2.0"
@@ -52,7 +54,11 @@ console_log = "0.2.0"
 [dev-dependencies]
 float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
 tempfile = "3.1.0"
-piet-common = { version = "0.2.0-pre2", features = ["png"] }
+piet-common = { version = "0.2.0-pre4", features = ["png"] }
+
+[[example]]
+name = "cursor"
+required-features = ["image"]
 
 [[example]]
 name = "image"
@@ -69,6 +75,10 @@ required-features = ["im"]
 [[example]]
 name = "svg"
 required-features = ["svg"]
+
+[[example]]
+name = "tabs"
+required-features = ["im"]
 
 [[example]]
 name = "widget_gallery"

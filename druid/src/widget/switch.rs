@@ -20,8 +20,8 @@ use crate::kurbo::{Circle, Point, Shape, Size};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::theme;
 use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, TextLayout,
-    UpdateCtx, Widget,
+    ArcStr, BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    TextLayout, UpdateCtx, Widget,
 };
 
 const SWITCH_CHANGE_TIME: f64 = 0.2;
@@ -35,8 +35,8 @@ pub struct Switch {
     knob_hovered: bool,
     knob_dragged: bool,
     animation_in_progress: bool,
-    on_text: TextLayout,
-    off_text: TextLayout,
+    on_text: TextLayout<ArcStr>,
+    off_text: TextLayout<ArcStr>,
 }
 
 impl Default for Switch {
@@ -47,8 +47,8 @@ impl Default for Switch {
             knob_dragged: false,
             animation_in_progress: false,
             //TODO: use localized strings, also probably make these configurable?
-            on_text: TextLayout::new("ON"),
-            off_text: TextLayout::new("OFF"),
+            on_text: TextLayout::from_text("ON"),
+            off_text: TextLayout::from_text("OFF"),
         }
     }
 }
@@ -158,7 +158,11 @@ impl Widget<bool> for Switch {
         }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &bool, _env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &bool, env: &Env) {
+        if matches!(event, LifeCycle::WidgetAdded) {
+            self.on_text.rebuild_if_needed(ctx.text(), env);
+            self.off_text.rebuild_if_needed(ctx.text(), env);
+        }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &bool, data: &bool, _env: &Env) {

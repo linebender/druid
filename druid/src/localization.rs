@@ -40,8 +40,7 @@ use std::{fs, io};
 
 use log::{debug, error, warn};
 
-use crate::env::Env;
-use crate::shell::Application;
+use crate::{Application, ArcStr, Env};
 
 use fluent_bundle::{
     FluentArgs, FluentBundle, FluentError, FluentMessage, FluentResource, FluentValue,
@@ -91,9 +90,9 @@ struct ArgSource<T>(ArgClosure<T>);
 #[derive(Debug, Clone)]
 pub struct LocalizedString<T> {
     pub(crate) key: &'static str,
-    placeholder: Option<String>,
+    placeholder: Option<ArcStr>,
     args: Option<Vec<(&'static str, ArgSource<T>)>>,
-    resolved: Option<String>,
+    resolved: Option<ArcStr>,
     resolved_lang: Option<LanguageIdentifier>,
 }
 
@@ -253,7 +252,7 @@ impl L10nManager {
         &'args self,
         key: &str,
         args: impl Into<Option<&'args FluentArgs<'args>>>,
-    ) -> Option<String> {
+    ) -> Option<ArcStr> {
         let args = args.into();
         let value = match self
             .current_bundle
@@ -281,10 +280,11 @@ impl L10nManager {
                 result
                     .chars()
                     .filter(|c| c != &START_ISOLATE && c != &END_ISOLATE)
-                    .collect(),
+                    .collect::<String>()
+                    .into(),
             )
         } else {
-            Some(result)
+            Some(result.into())
         }
     }
     //TODO: handle locale change
@@ -305,18 +305,18 @@ impl<T> LocalizedString<T> {
     /// Add a placeholder value. This will be used if localization fails.
     ///
     /// This is intended for use during prototyping.
-    pub fn with_placeholder(mut self, placeholder: impl Into<String>) -> Self {
+    pub fn with_placeholder(mut self, placeholder: impl Into<ArcStr>) -> Self {
         self.placeholder = Some(placeholder.into());
         self
     }
 
     /// Return the localized value for this string, or the placeholder, if
     /// the localization is missing, or the key if there is no placeholder.
-    pub fn localized_str(&self) -> &str {
+    pub fn localized_str(&self) -> ArcStr {
         self.resolved
-            .as_deref()
-            .or_else(|| self.placeholder.as_deref())
-            .unwrap_or(self.key)
+            .clone()
+            .or_else(|| self.placeholder.clone())
+            .unwrap_or_else(|| self.key.into())
     }
 
     /// Add a named argument and a corresponding closure. This closure

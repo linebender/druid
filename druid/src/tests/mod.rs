@@ -16,6 +16,7 @@
 
 pub(crate) mod harness;
 mod helpers;
+mod invalidation_tests;
 mod layout_tests;
 
 use std::cell::Cell;
@@ -28,6 +29,34 @@ use crate::*;
 use harness::*;
 use helpers::*;
 use kurbo::Vec2;
+
+fn move_mouse(p: impl Into<Point>) -> MouseEvent {
+    let pos = p.into();
+    MouseEvent {
+        pos,
+        window_pos: pos,
+        buttons: MouseButtons::default(),
+        mods: Modifiers::default(),
+        count: 0,
+        focus: false,
+        button: MouseButton::None,
+        wheel_delta: Vec2::ZERO,
+    }
+}
+
+fn scroll_mouse(p: impl Into<Point>, delta: impl Into<Vec2>) -> MouseEvent {
+    let pos = p.into();
+    MouseEvent {
+        pos,
+        window_pos: pos,
+        buttons: MouseButtons::default(),
+        mods: Modifiers::default(),
+        count: 0,
+        focus: false,
+        button: MouseButton::None,
+        wheel_delta: delta.into(),
+    }
+}
 
 /// This function creates a temporary directory and returns a PathBuf to it.
 ///
@@ -53,7 +82,7 @@ pub fn temp_dir_for_test() -> std::path::PathBuf {
 
 /// test that the first widget to request focus during an event gets it.
 #[test]
-fn propogate_hot() {
+fn propagate_hot() {
     let (button, pad, root, empty) = widget_id4();
 
     let root_rec = Recording::default();
@@ -72,19 +101,6 @@ fn propogate_hot() {
     .record(&root_rec)
     .with_id(root);
 
-    fn move_mouse(x: f64, y: f64) -> MouseEvent {
-        let pos = Point::new(x, y);
-        MouseEvent {
-            pos,
-            window_pos: pos,
-            buttons: MouseButtons::default(),
-            mods: Modifiers::default(),
-            count: 0,
-            focus: false,
-            button: MouseButton::None,
-            wheel_delta: Vec2::ZERO,
-        }
-    }
     #[allow(clippy::cognitive_complexity)]
     Harness::create_simple((), widget, |harness| {
         harness.send_initial_events();
@@ -101,7 +117,7 @@ fn propogate_hot() {
         // and verifying both the widget's `is_hot` status and also that
         // each widget received the expected HotChanged messages.
 
-        harness.event(Event::MouseMove(move_mouse(10., 10.)));
+        harness.event(Event::MouseMove(move_mouse((10., 10.))));
         assert!(harness.get_state(root).is_hot);
         assert!(harness.get_state(empty).is_hot);
         assert!(!harness.get_state(pad).is_hot);
@@ -113,7 +129,7 @@ fn propogate_hot() {
         assert!(matches!(root_rec.next(), Record::E(Event::MouseMove(_))));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMove(move_mouse(210., 10.)));
+        harness.event(Event::MouseMove(move_mouse((210., 10.))));
 
         assert!(harness.get_state(root).is_hot);
         assert!(!harness.get_state(empty).is_hot);
@@ -128,7 +144,7 @@ fn propogate_hot() {
         assert!(matches!(padding_rec.next(), Record::E(Event::MouseMove(_))));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMove(move_mouse(260., 60.)));
+        harness.event(Event::MouseMove(move_mouse((260., 60.))));
         assert!(harness.get_state(root).is_hot);
         assert!(!harness.get_state(empty).is_hot);
         assert!(harness.get_state(button).is_hot);
@@ -143,7 +159,7 @@ fn propogate_hot() {
         assert!(matches!(button_rec.next(), Record::E(Event::MouseMove(_))));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMove(move_mouse(10., 10.)));
+        harness.event(Event::MouseMove(move_mouse((10., 10.))));
         assert!(harness.get_state(root).is_hot);
         assert!(harness.get_state(empty).is_hot);
         assert!(!harness.get_state(button).is_hot);
