@@ -328,7 +328,7 @@ mod tests {
     }
 
     #[test]
-    fn width_bound_paint() {
+    fn width_bound_layout() {
         use crate::{
             tests::harness::Harness,
             widget::{Container, Scroll},
@@ -344,7 +344,8 @@ mod tests {
             2,
         );
 
-        let image_widget = Scroll::new(Container::new(Image::new(image_data)).with_id(id_1));
+        let image_widget =
+            Scroll::new(Container::new(Image::new(image_data)).with_id(id_1)).vertical();
 
         Harness::create_simple(true, image_widget, |harness| {
             harness.send_initial_events();
@@ -355,7 +356,7 @@ mod tests {
     }
 
     #[test]
-    fn height_bound_paint() {
+    fn height_bound_layout() {
         use crate::{
             tests::harness::Harness,
             widget::{Container, Scroll},
