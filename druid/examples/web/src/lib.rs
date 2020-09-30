@@ -56,6 +56,7 @@ macro_rules! impl_example {
 // Please add the examples that cannot be built to the EXCEPTIONS list in build.rs.
 impl_example!(anim);
 impl_example!(calc);
+impl_example!(cursor);
 impl_example!(custom_widget);
 impl_example!(either);
 impl_example!(flex.unwrap());

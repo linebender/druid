@@ -39,7 +39,8 @@ use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window;
@@ -145,6 +146,9 @@ pub(crate) struct WindowState {
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     current_keycode: RefCell<Option<u16>>,
 }
+
+#[derive(Clone)]
+pub struct CustomCursor(gdk::Cursor);
 
 impl WindowBuilder {
     pub fn new(app: Application) -> WindowBuilder {
@@ -852,6 +856,38 @@ impl WindowHandle {
         }
     }
 
+    pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+        if let Some(state) = self.state.upgrade() {
+            if let Some(gdk_window) = state.window.get_window() {
+                // TODO: gtk::Pixbuf expects unpremultiplied alpha. We should convert.
+                let has_alpha = !matches!(desc.image.format(), ImageFormat::Rgb);
+                let bytes_per_pixel = desc.image.format().bytes_per_pixel();
+                let pixbuf = gdk_pixbuf::Pixbuf::from_mut_slice(
+                    desc.image.raw_pixels().to_owned(),
+                    gdk_pixbuf::Colorspace::Rgb,
+                    has_alpha,
+                    // bits_per_sample
+                    8,
+                    desc.image.width() as i32,
+                    desc.image.height() as i32,
+                    // row stride (in bytes)
+                    (desc.image.width() * bytes_per_pixel) as i32,
+                );
+                let c = gdk::Cursor::from_pixbuf(
+                    &gdk_window.get_display(),
+                    &pixbuf,
+                    desc.hot.x.round() as i32,
+                    desc.hot.y.round() as i32,
+                );
+                Some(Cursor::Custom(CustomCursor(c)))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
     pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
         self.file_dialog(FileDialogType::Open, options)
             .ok()
@@ -1000,19 +1036,24 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
 }
 
 fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cursor> {
-    gdk::Cursor::from_name(
-        &gdk_window.get_display(),
-        match cursor {
-            // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
-            Cursor::Arrow => "default",
-            Cursor::IBeam => "text",
-            Cursor::Crosshair => "crosshair",
-            Cursor::OpenHand => "grab",
-            Cursor::NotAllowed => "not-allowed",
-            Cursor::ResizeLeftRight => "ew-resize",
-            Cursor::ResizeUpDown => "ns-resize",
-        },
-    )
+    if let Cursor::Custom(custom) = cursor {
+        Some(custom.0.clone())
+    } else {
+        gdk::Cursor::from_name(
+            &gdk_window.get_display(),
+            match cursor {
+                // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
+                Cursor::Arrow => "default",
+                Cursor::IBeam => "text",
+                Cursor::Crosshair => "crosshair",
+                Cursor::OpenHand => "grab",
+                Cursor::NotAllowed => "not-allowed",
+                Cursor::ResizeLeftRight => "ew-resize",
+                Cursor::ResizeUpDown => "ns-resize",
+                Cursor::Custom(_) => unreachable!(),
+            },
+        )
+    }
 }
 
 fn get_mouse_button(button: u32) -> Option<MouseButton> {
