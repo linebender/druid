@@ -149,12 +149,13 @@ impl<T: Data> Widget<T> for Image {
         // in the size exactly. If it is unconstrained by both width and height take the size of
         // the image.
         let max = bc.max();
+        let image_size = self.image_data.size();
         if bc.is_width_bounded() && !bc.is_height_bounded() {
-            let ratio = max.width / self.image_data.x_pixels as f64;
-            Size::new(max.width, ratio * self.image_data.y_pixels as f64)
+            let ratio = max.width / image_size.width;
+            Size::new(max.width, ratio * image_size.height)
         } else if bc.is_height_bounded() && !bc.is_width_bounded() {
-            let ratio = max.height / self.image_data.y_pixels as f64;
-            Size::new(ratio * self.image_data.x_pixels as f64, max.height)
+            let ratio = max.height / image_size.height;
+            Size::new(ratio * image_size.width, max.height)
         } else {
             bc.constrain(self.image_data.size())
         }
@@ -336,12 +337,12 @@ mod tests {
         use float_cmp::approx_eq;
 
         let id_1 = WidgetId::next();
-        let image_data = ImageData {
-            pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
-            x_pixels: 2,
-            y_pixels: 2,
-            format: ImageFormat::Rgb,
-        };
+        let image_data = ImageBuf::from_raw(
+            vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            ImageFormat::Rgb,
+            2,
+            2,
+        );
 
         let image_widget = Scroll::new(Container::new(Image::new(image_data)).with_id(id_1));
 
@@ -363,12 +364,12 @@ mod tests {
         use float_cmp::approx_eq;
 
         let id_1 = WidgetId::next();
-        let image_data = ImageData {
-            pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
-            x_pixels: 2,
-            y_pixels: 2,
-            format: ImageFormat::Rgb,
-        };
+        let image_data = ImageBuf::from_raw(
+            vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            ImageFormat::Rgb,
+            2,
+            2,
+        );
 
         let image_widget =
             Scroll::new(Container::new(Image::new(image_data)).with_id(id_1)).horizontal();
