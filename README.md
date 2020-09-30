@@ -90,8 +90,7 @@ druid = { git = "https://github.com/linebender/druid.git" }
 
 #### Linux
 
-On Linux, Druid requires gtk+3; see [gtk-rs dependencies] for installation
-instructions.
+On Linux, Druid requires gtk+3; see [GTK installation page].
 
 Alternatively, there is an X11 backend available, although it is currently
 [missing quite a few features](https://github.com/linebender/druid/issues?q=is%3Aopen+is%3Aissue+label%3Ashell%2Fx11+label%3Amissing).
@@ -296,7 +295,7 @@ active and friendly community.
 [basic utility and layout widgets]: ./druid/src/widget
 [Flutter's box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
 [value types]: https://sinusoid.es/lager/model.html#id2
-[gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html
+[GTK installation page]: https://www.gtk.org/docs/installations/linux/
 [Rust-native GUI experiments]: https://areweguiyet.com
 [CONTRIBUTING.md]: ./CONTRIBUTING.md
 [Zulip chat instance]: https://xi.zulipchat.com
