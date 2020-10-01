@@ -97,6 +97,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Multi-click on Windows, partial fix for #859 ([#1157] by [@raphlinus])
 - Windows: fix crash on resize from incompatible resources ([#1191 by [@raphlinus]])
 - GTK: Related dependencies are now optional, facilitating a pure X11 build. ([#1241] by [@finnerale])
+- `widget::Image` now computes the layout correctly when unbound in one direction. ([#1189] by [@JAicewizard])
 
 ### Visual
 
@@ -322,6 +323,7 @@ Last release without a changelog :(
 [@rhzk]: https://github.com/rhzk
 [@koutoftimer]: https://github.com/koutoftimer
 [@tay64]: https://github.com/tay64
+[@JAicewizard]: https://github.com/JAicewizard
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -465,6 +467,7 @@ Last release without a changelog :(
 [#1185]: https://github.com/linebender/druid/pull/1185
 [#1191]: https://github.com/linebender/druid/pull/1191
 [#1092]: https://github.com/linebender/druid/pull/1092
+[#1189]: https://github.com/linebender/druid/pull/1189
 [#1195]: https://github.com/linebender/druid/pull/1195
 [#1204]: https://github.com/linebender/druid/pull/1204
 [#1205]: https://github.com/linebender/druid/pull/1205

@@ -145,8 +145,17 @@ impl<T: Data> Widget<T> for Image {
     ) -> Size {
         bc.debug_check("Image");
 
-        if bc.is_width_bounded() {
-            bc.max()
+        // If either the width or height is constrained calculate a value so that the image fits
+        // in the size exactly. If it is unconstrained by both width and height take the size of
+        // the image.
+        let max = bc.max();
+        let image_size = self.image_data.size();
+        if bc.is_width_bounded() && !bc.is_height_bounded() {
+            let ratio = max.width / image_size.width;
+            Size::new(max.width, ratio * image_size.height)
+        } else if bc.is_height_bounded() && !bc.is_width_bounded() {
+            let ratio = max.height / image_size.height;
+            Size::new(ratio * image_size.width, max.height)
         } else {
             bc.constrain(self.image_data.size())
         }
@@ -316,5 +325,61 @@ mod tests {
                 target.into_png(tmp_dir.join("image.png")).unwrap();
             },
         );
+    }
+
+    #[test]
+    fn width_bound_layout() {
+        use crate::{
+            tests::harness::Harness,
+            widget::{Container, Scroll},
+            WidgetExt, WidgetId,
+        };
+        use float_cmp::approx_eq;
+
+        let id_1 = WidgetId::next();
+        let image_data = ImageBuf::from_raw(
+            vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            ImageFormat::Rgb,
+            2,
+            2,
+        );
+
+        let image_widget =
+            Scroll::new(Container::new(Image::new(image_data)).with_id(id_1)).vertical();
+
+        Harness::create_simple(true, image_widget, |harness| {
+            harness.send_initial_events();
+            harness.just_layout();
+            let state = harness.get_state(id_1);
+            assert!(approx_eq!(f64, state.layout_rect().x1, 400.0));
+        })
+    }
+
+    #[test]
+    fn height_bound_layout() {
+        use crate::{
+            tests::harness::Harness,
+            widget::{Container, Scroll},
+            WidgetExt, WidgetId,
+        };
+        use float_cmp::approx_eq;
+
+        let id_1 = WidgetId::next();
+        let image_data = ImageBuf::from_raw(
+            vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            ImageFormat::Rgb,
+            2,
+            2,
+        );
+
+        let image_widget =
+            Scroll::new(Container::new(Image::new(image_data)).with_id(id_1)).horizontal();
+
+        Harness::create_simple(true, image_widget, |harness| {
+            harness.send_initial_events();
+            harness.just_layout();
+            let state = harness.get_state(id_1);
+            assert!(approx_eq!(f64, state.layout_rect().x1, 400.0));
+        })
     }
 }
