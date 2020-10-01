@@ -467,7 +467,7 @@ Last release without a changelog :(
 [#1185]: https://github.com/linebender/druid/pull/1185
 [#1191]: https://github.com/linebender/druid/pull/1191
 [#1092]: https://github.com/linebender/druid/pull/1092
-[#1186]: https://github.com/linebender/druid/pull/1186
+[#1189]: https://github.com/linebender/druid/pull/1189
 [#1195]: https://github.com/linebender/druid/pull/1195
 [#1204]: https://github.com/linebender/druid/pull/1204
 [#1205]: https://github.com/linebender/druid/pull/1205
