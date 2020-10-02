@@ -167,6 +167,13 @@ impl<T: TextStorage> TextLayout<T> {
         }
     }
 
+    /// Returns the [`TextStorage`] backing this layout, if it exists.
+    ///
+    /// [`TextStorage`]: trait.TextStorage.html
+    pub fn text(&self) -> Option<&T> {
+        self.text.as_ref()
+    }
+
     /// The size of the laid-out text.
     ///
     /// This is not meaningful until [`rebuild_if_needed`] has been called.
