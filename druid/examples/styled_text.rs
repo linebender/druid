@@ -15,7 +15,8 @@
 //! Example of dynamic text styling
 
 use druid::widget::{
-    Checkbox, Flex, Label, LensWrap, MainAxisAlignment, Painter, Parse, Stepper, TextBox,
+    Checkbox, CrossAxisAlignment, Flex, Label, LensWrap, MainAxisAlignment, Painter, Parse, Scroll,
+    Stepper, TextBox,
 };
 use druid::{
     theme, AppLauncher, Color, Data, FontDescriptor, FontFamily, Key, Lens, LensExt,
@@ -25,6 +26,8 @@ use std::fmt::Display;
 
 // This is a custom key we'll use with Env to set and get our font.
 const MY_CUSTOM_FONT: Key<FontDescriptor> = Key::new("org.linebender.example.my-custom-font");
+
+const COLUMN_WIDTH: f64 = 360.0;
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
@@ -104,6 +107,16 @@ fn ui_builder() -> impl Widget<AppData> {
             env.set(MY_CUSTOM_FONT, new_font);
         });
 
+    let labels = Scroll::new(
+        Flex::column()
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .with_child(label)
+            .with_default_spacer()
+            .with_child(styled_label),
+    )
+    .expand_height()
+    .fix_width(COLUMN_WIDTH);
+
     let stepper = Stepper::new()
         .with_range(0.0, 100.0)
         .with_step(1.0)
@@ -115,24 +128,26 @@ fn ui_builder() -> impl Widget<AppData> {
         AppData::size.map(|x| Some(*x), |x, y| *x = y.unwrap_or(24.0)),
     );
 
-    let stepper_row = Flex::row().with_child(stepper_textbox).with_child(stepper);
-
     let mono_checkbox = Checkbox::new("Monospace").lens(AppData::mono);
+    let stepper_row = Flex::row()
+        .with_child(stepper_textbox)
+        .with_child(stepper)
+        .with_default_spacer()
+        .with_child(mono_checkbox);
 
-    let input = TextBox::new()
+    let input = TextBox::multiline()
         .with_placeholder("Your sample text here :)")
-        .fix_width(200.0)
+        .fix_width(COLUMN_WIDTH)
+        .fix_height(140.0)
         .lens(AppData::text);
 
     Flex::column()
         .main_axis_alignment(MainAxisAlignment::Center)
-        .with_child(label)
         .with_default_spacer()
-        .with_child(styled_label)
-        .with_spacer(32.0)
+        .with_flex_child(labels, 1.0)
+        .with_default_spacer()
+        .with_child(input)
+        .with_default_spacer()
         .with_child(stepper_row)
         .with_default_spacer()
-        .with_child(mono_checkbox)
-        .with_default_spacer()
-        .with_child(input.padding(5.0))
 }

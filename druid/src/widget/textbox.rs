@@ -16,7 +16,7 @@
 
 use std::time::Duration;
 
-use crate::kurbo::{Affine, Insets, Point, Size};
+use crate::kurbo::{Affine, Insets, Point, Size, Vec2};
 use crate::text::{BasicTextInput, EditAction, Editor, TextInput, TextLayout};
 use crate::theme;
 use crate::widget::prelude::*;
@@ -42,6 +42,7 @@ pub struct TextBox {
     suppress_adjust_hscroll: bool,
     cursor_timer: TimerToken,
     cursor_on: bool,
+    multiline: bool,
 }
 
 impl TextBox {
@@ -61,7 +62,16 @@ impl TextBox {
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
             placeholder,
+            multiline: false,
         }
+    }
+
+    /// Create a new multi-line `TextBox`.
+    pub fn multiline() -> TextBox {
+        let mut this = TextBox::new();
+        this.editor.set_multiline(true);
+        this.multiline = true;
+        this
     }
 
     /// Builder-style method to set the `TextBox`'s placeholder text.
@@ -244,7 +254,7 @@ impl Widget<String> for TextBox {
 
     fn update(&mut self, ctx: &mut UpdateCtx, _: &String, data: &String, env: &Env) {
         self.editor.update(ctx, data, env);
-        if !self.suppress_adjust_hscroll {
+        if !self.suppress_adjust_hscroll && !self.multiline {
             self.update_hscroll(ctx.size().width);
         }
         if ctx.env_changed() && self.placeholder.needs_rebuild_after_update(ctx) {
@@ -260,6 +270,10 @@ impl Widget<String> for TextBox {
         env: &Env,
     ) -> Size {
         self.placeholder.rebuild_if_needed(ctx.text(), env);
+        if self.multiline {
+            self.editor
+                .set_wrap_width(bc.max().width - TEXT_INSETS.x_value());
+        }
         self.editor.rebuild_if_needed(ctx.text(), env);
         let size = self.editor.layout().size();
 
@@ -304,9 +318,12 @@ impl Widget<String> for TextBox {
 
             // in the case that our text is smaller than the default size,
             // we draw it vertically centered.
-            // TODO: this will need to be rethought for multi-line
-            let extra_padding =
-                (size.height - text_size.height - TEXT_INSETS.y_value()).max(0.) / 2.;
+            let extra_padding = if self.multiline {
+                0.
+            } else {
+                (size.height - text_size.height - TEXT_INSETS.y_value()).max(0.) / 2.
+            };
+
             let text_pos = Point::new(TEXT_INSETS.x0, TEXT_INSETS.y0 + extra_padding);
 
             // Draw selection rect
@@ -323,7 +340,14 @@ impl Widget<String> for TextBox {
 
             // Paint the cursor if focused and there's no selection
             if is_focused && self.cursor_on {
-                let cursor = self.editor.cursor_line() + text_pos.to_vec2();
+                // the cursor position can extend past the edge of the layout
+                // (commonly when there is trailing whitespace) so we clamp it
+                // to the right edge.
+                let mut cursor = self.editor.cursor_line() + text_pos.to_vec2();
+                let dx = size.width - TEXT_INSETS.x_value() - cursor.p0.x;
+                if dx < 0.0 {
+                    cursor = cursor + Vec2::new(dx, 0.);
+                }
                 rc.stroke(cursor, &cursor_color, 1.);
             }
         });
