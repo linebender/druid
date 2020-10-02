@@ -16,18 +16,13 @@
 
 use std::time::Duration;
 
+use crate::kurbo::{Affine, Insets, Point, Size};
+use crate::text::{BasicTextInput, EditAction, Editor, TextInput, TextLayout};
+use crate::theme;
 use crate::widget::prelude::*;
 use crate::{
-    Application, ArcStr, BoxConstraints, Cursor, Data, Env, FontDescriptor, HotKey, KbKey,
-    KeyOrValue, Selector, SysMods, TimerToken,
-};
-
-use crate::kurbo::{Affine, Insets, Point, Size};
-use crate::theme;
-
-use crate::text::{
-    movement, offset_for_delete_backwards, BasicTextInput, EditAction, EditableText, MouseAction,
-    Movement, Selection, TextInput, TextLayout,
+    BoxConstraints, Cursor, Env, FontDescriptor, HotKey, KbKey, KeyOrValue, Selector, SysMods,
+    TimerToken,
 };
 
 const BORDER_WIDTH: f64 = 1.;
@@ -38,14 +33,13 @@ const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
 pub struct TextBox {
-    // this has a different inner type just to keep us honest; in a future
-    // patch this will have to be the case, which means we can't use the two layouts
-    // interchangeably.
     placeholder: TextLayout<String>,
-    text: TextLayout<ArcStr>,
-    width: f64,
+    editor: Editor<String>,
+    // this can be Box<dyn TextInput> in the future
+    input_handler: BasicTextInput,
     hscroll_offset: f64,
-    selection: Selection,
+    // in cases like SelectAll, we don't adjust the viewport after an event.
+    suppress_adjust_hscroll: bool,
     cursor_timer: TimerToken,
     cursor_on: bool,
 }
@@ -57,14 +51,13 @@ impl TextBox {
 
     /// Create a new TextBox widget
     pub fn new() -> TextBox {
-        let text = TextLayout::new();
         let mut placeholder = TextLayout::from_text("");
         placeholder.set_text_color(theme::PLACEHOLDER_COLOR);
         Self {
-            width: 0.0,
+            editor: Editor::new(),
+            input_handler: BasicTextInput::default(),
             hscroll_offset: 0.,
-            text,
-            selection: Selection::caret(0),
+            suppress_adjust_hscroll: false,
             cursor_timer: TimerToken::INVALID,
             cursor_on: false,
             placeholder,
@@ -107,7 +100,7 @@ impl TextBox {
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         let size = size.into();
-        self.text.set_text_size(size.clone());
+        self.editor.layout().set_text_size(size.clone());
         self.placeholder.set_text_size(size);
     }
 
@@ -121,133 +114,29 @@ impl TextBox {
     /// [`Key<FontDescriptor>`]: ../struct.Key.html
     pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
         let font = font.into();
-        self.text.set_font(font.clone());
+        self.editor.layout().set_font(font.clone());
         self.placeholder.set_font(font);
     }
 
-    /// Insert text at the cursor position.
-    /// Replaces selected text if there's a selection.
-    fn insert(&mut self, src: &mut String, new: &str) {
-        // EditableText's edit method will panic if selection is greater than
-        // src length, hence we try to constrain it.
-        //
-        // This is especially needed when data was modified externally.
-        // TODO: perhaps this belongs in update?
-        let selection = self.selection.constrain_to(src);
-
-        src.edit(selection.range(), new);
-        self.selection = Selection::caret(selection.min() + new.len());
-    }
-
-    /// Set the selection to be a caret at the given offset, if that's a valid
-    /// codepoint boundary.
-    fn caret_to(&mut self, text: &mut String, to: usize) {
-        match text.cursor(to) {
-            Some(_) => self.selection = Selection::caret(to),
-            None => log::error!("You can't move the cursor there."),
-        }
-    }
-
-    /// Return the active edge of the current selection or cursor.
-    // TODO: is this the right name?
-    fn cursor(&self) -> usize {
-        self.selection.end
-    }
-
-    fn do_edit_action(&mut self, edit_action: EditAction, text: &mut String) {
-        match edit_action {
-            EditAction::Insert(chars) | EditAction::Paste(chars) => self.insert(text, &chars),
-            EditAction::Backspace => self.delete_backward(text),
-            EditAction::Delete => self.delete_forward(text),
-            EditAction::JumpDelete(movement) => {
-                self.move_selection(movement, text, true);
-                self.delete_forward(text)
-            }
-            EditAction::JumpBackspace(movement) => {
-                self.move_selection(movement, text, true);
-                self.delete_backward(text)
-            }
-            EditAction::Move(movement) => self.move_selection(movement, text, false),
-            EditAction::ModifySelection(movement) => self.move_selection(movement, text, true),
-            EditAction::SelectAll => self.selection.all(text),
-            EditAction::Click(action) => {
-                if action.mods.shift() {
-                    self.selection.end = action.column;
-                } else {
-                    self.caret_to(text, action.column);
-                }
-            }
-            EditAction::Drag(action) => self.selection.end = action.column,
-        }
-    }
-
-    /// Edit a selection using a `Movement`.
-    fn move_selection(&mut self, mvmnt: Movement, text: &impl EditableText, modify: bool) {
-        // This movement function should ensure all movements are legit.
-        // If they aren't, that's a problem with the movement function.
-        self.selection = movement(mvmnt, self.selection, text, modify);
-    }
-
-    /// Delete to previous grapheme if in caret mode.
-    /// Otherwise just delete everything inside the selection.
-    fn delete_backward(&mut self, text: &mut String) {
-        if self.selection.is_caret() {
-            let cursor = self.cursor();
-            let new_cursor = offset_for_delete_backwards(&self.selection, text);
-            text.edit(new_cursor..cursor, "");
-            self.caret_to(text, new_cursor);
-        } else {
-            text.edit(self.selection.range(), "");
-            self.caret_to(text, self.selection.min());
-        }
-    }
-
-    fn delete_forward(&mut self, text: &mut String) {
-        if self.selection.is_caret() {
-            // Never touch the characters before the cursor.
-            if text.next_grapheme_offset(self.cursor()).is_some() {
-                self.move_selection(Movement::Right, text, false);
-                self.delete_backward(text);
-            }
-        } else {
-            self.delete_backward(text);
-        }
-    }
-
-    /// For a given point, returns the corresponding offset (in bytes) of
-    /// the grapheme cluster closest to that point.
-    fn offset_for_point(&self, point: Point) -> usize {
-        // Translating from screenspace to Piet's text layout representation.
-        // We need to account for hscroll_offset state and TextBox's padding.
-        let translated_point = Point::new(point.x + self.hscroll_offset - TEXT_INSETS.x0, point.y);
-        self.text.text_position_for_point(translated_point)
-    }
-
-    /// Given an offset (in bytes) of a valid grapheme cluster, return
-    /// the corresponding x coordinate of that grapheme on the screen.
-    fn x_pos_for_offset(&self, offset: usize) -> f64 {
-        self.text.point_for_text_position(offset).x
-    }
-
     /// Calculate a stateful scroll offset
-    fn update_hscroll(&mut self) {
-        let cursor_x = self.x_pos_for_offset(self.cursor());
-        let overall_text_width = self.text.size().width;
+    fn update_hscroll(&mut self, self_width: f64) {
+        let cursor_x = self.editor.cursor_line().p0.x;
+        let overall_text_width = self.editor.layout().size().width;
 
-        // when advancing the cursor, we want some additional padding
+        //// when advancing the cursor, we want some additional padding
         let padding = TEXT_INSETS.x0 * 2.;
-        if overall_text_width < self.width {
+        if overall_text_width < self_width {
             // There's no offset if text is smaller than text box
             //
             // [***I*  ]
             // ^
             self.hscroll_offset = 0.;
-        } else if cursor_x > self.width + self.hscroll_offset - padding {
+        } else if cursor_x > self_width + self.hscroll_offset - padding {
             // If cursor goes past right side, bump the offset
             //       ->
             // **[****I]****
             //   ^
-            self.hscroll_offset = cursor_x - self.width + padding;
+            self.hscroll_offset = cursor_x - self_width + padding;
         } else if cursor_x < self.hscroll_offset {
             // If cursor goes past left side, match the offset
             //    <-
@@ -265,22 +154,15 @@ impl TextBox {
 
 impl Widget<String> for TextBox {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, _env: &Env) {
-        // Guard against external changes in data?
-        self.selection = self.selection.constrain_to(data);
-        let mut edit_action = None;
-
+        self.suppress_adjust_hscroll = false;
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
                 ctx.set_active(true);
 
                 if !mouse.focus {
-                    let cursor_offset = self.offset_for_point(mouse.pos);
-                    edit_action = Some(EditAction::Click(MouseAction {
-                        row: 0,
-                        column: cursor_offset,
-                        mods: mouse.mods,
-                    }));
+                    self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
+                    self.editor.click(mouse, data);
                 }
 
                 ctx.request_paint();
@@ -288,12 +170,7 @@ impl Widget<String> for TextBox {
             Event::MouseMove(mouse) => {
                 ctx.set_cursor(&Cursor::IBeam);
                 if ctx.is_active() {
-                    let cursor_offset = self.offset_for_point(mouse.pos);
-                    edit_action = Some(EditAction::Drag(MouseAction {
-                        row: 0,
-                        column: cursor_offset,
-                        mods: mouse.mods,
-                    }));
+                    self.editor.drag(mouse, data);
                     ctx.request_paint();
                 }
             }
@@ -310,78 +187,39 @@ impl Widget<String> for TextBox {
                     self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DURATION);
                 }
             }
-            Event::Command(ref cmd)
-                if ctx.is_focused()
-                    && (cmd.is(crate::commands::COPY) || cmd.is(crate::commands::CUT)) =>
-            {
-                if let Some(text) = data.slice(self.selection.range()) {
-                    Application::global().clipboard().put_string(text);
-                }
-                if !self.selection.is_caret() && cmd.is(crate::commands::CUT) {
-                    edit_action = Some(EditAction::Delete);
-                }
+            Event::Command(ref cmd) if ctx.is_focused() && cmd.is(crate::commands::COPY) => {
+                self.editor.copy(data);
+                ctx.set_handled();
+            }
+            Event::Command(ref cmd) if ctx.is_focused() && cmd.is(crate::commands::CUT) => {
+                self.editor.cut(data);
                 ctx.set_handled();
             }
             Event::Command(cmd) if cmd.is(TextBox::PERFORM_EDIT) => {
                 let edit = cmd.get_unchecked(TextBox::PERFORM_EDIT);
-                self.do_edit_action(edit.to_owned(), data);
+                self.editor.do_edit(edit.to_owned(), data);
             }
             Event::Paste(ref item) => {
                 if let Some(string) = item.get_string() {
-                    edit_action = Some(EditAction::Paste(string));
-                    ctx.request_paint();
+                    self.editor.paste(string, data);
                 }
             }
             Event::KeyDown(key_event) => {
-                let event_handled = match key_event {
+                match key_event {
                     // Tab and shift+tab
-                    k_e if HotKey::new(None, KbKey::Tab).matches(k_e) => {
-                        ctx.focus_next();
-                        true
+                    k_e if HotKey::new(None, KbKey::Tab).matches(k_e) => ctx.focus_next(),
+                    k_e if HotKey::new(SysMods::Shift, KbKey::Tab).matches(k_e) => ctx.focus_prev(),
+                    k_e => {
+                        if let Some(edit) = self.input_handler.handle_event(k_e) {
+                            self.suppress_adjust_hscroll = matches!(edit, EditAction::SelectAll);
+                            self.editor.do_edit(edit, data);
+                            // an explicit request update in case the selection
+                            // state has changed, but the data hasn't.
+                            ctx.request_update();
+                            ctx.request_paint();
+                        }
                     }
-                    k_e if HotKey::new(SysMods::Shift, KbKey::Tab).matches(k_e) => {
-                        ctx.focus_prev();
-                        true
-                    }
-                    k_e if HotKey::new(None, KbKey::Enter).matches(k_e) => {
-                        // 'enter' should do something, maybe?
-                        // but for now we are suppressing it, because we don't want
-                        // newlines.
-                        true
-                    }
-                    _ => false,
                 };
-
-                if !event_handled {
-                    edit_action = BasicTextInput::new().handle_event(key_event);
-                }
-
-                ctx.request_paint();
-            }
-            _ => (),
-        }
-
-        if let Some(edit_action) = edit_action {
-            let is_select_all = matches!(edit_action, EditAction::SelectAll);
-
-            self.do_edit_action(edit_action, data);
-            self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
-
-            if !is_select_all {
-                self.update_hscroll();
-            }
-        }
-    }
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &String, _env: &Env) {
-        match event {
-            LifeCycle::WidgetAdded => {
-                ctx.register_for_focus();
-                self.text.set_text(data.as_str().into());
-            }
-            LifeCycle::FocusChanged(_) => {
-                self.move_selection(Movement::StartOfDocument, data, false);
-                self.update_hscroll();
                 self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
                 ctx.request_paint();
             }
@@ -389,18 +227,27 @@ impl Widget<String> for TextBox {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &String, data: &String, _env: &Env) {
-        // setting text color rebuilds layout, so don't do it if we don't have to
-        if !old_data.same(data) {
-            self.selection = self.selection.constrain_to(data);
-            self.text.set_text(data.as_str().into());
-            ctx.request_layout();
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &String, env: &Env) {
+        match event {
+            LifeCycle::WidgetAdded => {
+                ctx.register_for_focus();
+                self.editor.set_text(data.to_owned());
+                self.editor.rebuild_if_needed(ctx.text(), env);
+            }
+            LifeCycle::FocusChanged(_) => {
+                self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
+                ctx.request_paint();
+            }
+            _ => (),
         }
+    }
 
-        if ctx.env_changed()
-            && self.placeholder.needs_rebuild_after_update(ctx)
-                | self.text.needs_rebuild_after_update(ctx)
-        {
+    fn update(&mut self, ctx: &mut UpdateCtx, _: &String, data: &String, env: &Env) {
+        self.editor.update(ctx, data, env);
+        if !self.suppress_adjust_hscroll {
+            self.update_hscroll(ctx.size().width);
+        }
+        if ctx.env_changed() && self.placeholder.needs_rebuild_after_update(ctx) {
             ctx.request_layout();
         }
     }
@@ -409,30 +256,25 @@ impl Widget<String> for TextBox {
         &mut self,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        data: &String,
+        _data: &String,
         env: &Env,
     ) -> Size {
         self.placeholder.rebuild_if_needed(ctx.text(), env);
-        self.text.rebuild_if_needed(ctx.text(), env);
-        let text_metrics = if data.is_empty() {
-            self.placeholder.size()
-        } else {
-            self.text.size()
-        };
+        self.editor.rebuild_if_needed(ctx.text(), env);
+        let size = self.editor.layout().size();
 
         let width = env.get(theme::WIDE_WIDGET_WIDTH);
         let min_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
-        let text_height = text_metrics.height + TEXT_INSETS.y_value();
+        let text_height = size.height + TEXT_INSETS.y_value();
         let height = text_height.max(min_height);
 
-        let size = bc.constrain((width, height));
-        self.width = size.width;
-        size
+        bc.constrain((width, height))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &String, env: &Env) {
-        let height = ctx.size().height;
+        let size = ctx.size();
+        let text_size = self.editor.layout().size();
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let selection_color = env.get(theme::SELECTION_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
@@ -446,7 +288,7 @@ impl Widget<String> for TextBox {
         };
 
         // Paint the background
-        let clip_rect = Size::new(self.width - BORDER_WIDTH, height)
+        let clip_rect = Size::new(size.width - BORDER_WIDTH, size.height)
             .to_rect()
             .inset(-BORDER_WIDTH / 2.0)
             .to_rounded_rect(env.get(theme::TEXTBOX_BORDER_RADIUS));
@@ -457,40 +299,32 @@ impl Widget<String> for TextBox {
         ctx.with_save(|rc| {
             rc.clip(clip_rect);
 
-            // Calculate layout
-            let text_size = if data.is_empty() {
-                self.placeholder.size()
-            } else {
-                self.text.size()
-            };
-
             // Shift everything inside the clip by the hscroll_offset
             rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
 
-            // Layout, measure, and draw text
-            let extra_padding = (height - text_size.height - TEXT_INSETS.y_value()).max(0.) / 2.;
+            // in the case that our text is smaller than the default size,
+            // we draw it vertically centered.
+            // TODO: this will need to be rethought for multi-line
+            let extra_padding =
+                (size.height - text_size.height - TEXT_INSETS.y_value()).max(0.) / 2.;
             let text_pos = Point::new(TEXT_INSETS.x0, TEXT_INSETS.y0 + extra_padding);
 
             // Draw selection rect
-            if !data.is_empty() && !self.selection.is_caret() {
-                for sel in self.text.rects_for_range(self.selection.range()) {
+            if !data.is_empty() {
+                for sel in self.editor.selection_rects() {
                     let sel = sel + text_pos.to_vec2();
                     let rounded = sel.to_rounded_rect(1.0);
                     rc.fill(rounded, &selection_color);
                 }
-            }
-
-            if data.is_empty() {
-                self.placeholder.draw(rc, text_pos);
+                self.editor.draw(rc, text_pos);
             } else {
-                self.text.draw(rc, text_pos);
+                self.placeholder.draw(rc, text_pos);
             }
 
             // Paint the cursor if focused and there's no selection
             if is_focused && self.cursor_on {
-                let line = self.text.cursor_line_for_text_position(self.cursor());
-                let line = line + text_pos.to_vec2();
-                rc.stroke(line, &cursor_color, 1.);
+                let cursor = self.editor.cursor_line() + text_pos.to_vec2();
+                rc.stroke(cursor, &cursor_color, 1.);
             }
         });
 
@@ -502,68 +336,5 @@ impl Widget<String> for TextBox {
 impl Default for TextBox {
     fn default() -> Self {
         TextBox::new()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Test that when data is mutated externally widget
-    /// can still be used to insert characters.
-    #[test]
-    fn data_can_be_changed_externally() {
-        let mut widget = TextBox::new();
-        let mut data = "".to_string();
-
-        // First insert some chars
-        widget.insert(&mut data, "o");
-        widget.insert(&mut data, "n");
-        widget.insert(&mut data, "e");
-
-        assert_eq!("one", data);
-        assert_eq!(3, widget.selection.start);
-        assert_eq!(3, widget.selection.end);
-
-        // Modify data externally (e.g data was changed in the parent widget)
-        data = "".to_string();
-
-        // Insert again
-        widget.insert(&mut data, "a");
-    }
-
-    /// Test backspace on the combo character o̷
-    #[test]
-    fn backspace_combining() {
-        let mut widget = TextBox::new();
-        let mut data = "".to_string();
-
-        widget.insert(&mut data, "\u{0073}\u{006F}\u{0337}\u{0073}");
-
-        widget.delete_backward(&mut data);
-        widget.delete_backward(&mut data);
-
-        assert_eq!(data, String::from("\u{0073}\u{006F}"))
-    }
-
-    /// Devanagari codepoints are 3 utf-8 code units each.
-    #[test]
-    fn backspace_devanagari() {
-        let mut widget = TextBox::new();
-        let mut data = "".to_string();
-
-        widget.insert(&mut data, "हिन्दी");
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from("हिन्द"));
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from("हिन्"));
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from("हिन"));
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from("हि"));
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from("ह"));
-        widget.delete_backward(&mut data);
-        assert_eq!(data, String::from(""));
     }
 }

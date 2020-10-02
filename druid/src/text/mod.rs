@@ -17,6 +17,7 @@
 mod attribute;
 pub mod backspace;
 mod editable_text;
+mod editor;
 mod font_descriptor;
 mod layout;
 pub mod movement;
@@ -32,4 +33,5 @@ pub use self::layout::TextLayout;
 pub use self::movement::{movement, Movement};
 pub use self::selection::Selection;
 pub use self::text_input::{BasicTextInput, EditAction, MouseAction, TextInput};
+pub use editor::Editor;
 pub use storage::{ArcStr, RichText, TextStorage};
