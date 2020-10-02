@@ -33,8 +33,6 @@ use crate::text::{
 const BORDER_WIDTH: f64 = 1.;
 const TEXT_INSETS: Insets = Insets::new(4.0, 2.0, 0.0, 2.0);
 
-// we send ourselves this when we want to reset blink, which must be done in event.
-const RESET_BLINK: Selector = Selector::new("druid-builtin.reset-textbox-blink");
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 
 /// A widget that allows user text input.
@@ -259,9 +257,9 @@ impl TextBox {
         }
     }
 
-    fn reset_cursor_blink(&mut self, ctx: &mut EventCtx) {
+    fn reset_cursor_blink(&mut self, token: TimerToken) {
         self.cursor_on = true;
-        self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DURATION);
+        self.cursor_timer = token;
     }
 }
 
@@ -324,7 +322,6 @@ impl Widget<String> for TextBox {
                 }
                 ctx.set_handled();
             }
-            Event::Command(cmd) if cmd.is(RESET_BLINK) => self.reset_cursor_blink(ctx),
             Event::Command(cmd) if cmd.is(TextBox::PERFORM_EDIT) => {
                 let edit = cmd.get_unchecked(TextBox::PERFORM_EDIT);
                 self.do_edit_action(edit.to_owned(), data);
@@ -368,7 +365,7 @@ impl Widget<String> for TextBox {
             let is_select_all = matches!(edit_action, EditAction::SelectAll);
 
             self.do_edit_action(edit_action, data);
-            self.reset_cursor_blink(ctx);
+            self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
 
             if !is_select_all {
                 self.update_hscroll();
@@ -382,8 +379,9 @@ impl Widget<String> for TextBox {
                 ctx.register_for_focus();
                 self.text.set_text(data.as_str().into());
             }
-            // an open question: should we be able to schedule timers here?
-            LifeCycle::FocusChanged(true) => ctx.submit_command(RESET_BLINK.to(ctx.widget_id())),
+            LifeCycle::FocusChanged(true) => {
+                self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION))
+            }
             _ => (),
         }
     }
