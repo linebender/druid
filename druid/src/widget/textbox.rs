@@ -17,7 +17,9 @@
 use std::time::Duration;
 
 use crate::kurbo::{Affine, Insets, Point, Size, Vec2};
-use crate::text::{BasicTextInput, EditAction, Editor, TextInput, TextLayout};
+use crate::text::{
+    BasicTextInput, EditAction, EditableText, Editor, TextInput, TextLayout, TextStorage,
+};
 use crate::theme;
 use crate::widget::prelude::*;
 use crate::{
@@ -32,9 +34,9 @@ const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 
 /// A widget that allows user text input.
 #[derive(Debug, Clone)]
-pub struct TextBox {
+pub struct TextBox<T> {
     placeholder: TextLayout<String>,
-    editor: Editor<String>,
+    editor: Editor<T>,
     // this can be Box<dyn TextInput> in the future
     input_handler: BasicTextInput,
     hscroll_offset: f64,
@@ -45,13 +47,15 @@ pub struct TextBox {
     multiline: bool,
 }
 
-impl TextBox {
+impl TextBox<()> {
     /// Perform an `EditAction`. The payload *must* be an `EditAction`.
     pub const PERFORM_EDIT: Selector<EditAction> =
         Selector::new("druid-builtin.textbox.perform-edit");
+}
 
+impl<T> TextBox<T> {
     /// Create a new TextBox widget
-    pub fn new() -> TextBox {
+    pub fn new() -> Self {
         let mut placeholder = TextLayout::from_text("");
         placeholder.set_text_color(theme::PLACEHOLDER_COLOR);
         Self {
@@ -67,7 +71,7 @@ impl TextBox {
     }
 
     /// Create a new multi-line `TextBox`.
-    pub fn multiline() -> TextBox {
+    pub fn multiline() -> Self {
         let mut this = TextBox::new();
         this.editor.set_multiline(true);
         this.multiline = true;
@@ -127,7 +131,9 @@ impl TextBox {
         self.editor.layout().set_font(font.clone());
         self.placeholder.set_font(font);
     }
+}
 
+impl<T: TextStorage + EditableText> TextBox<T> {
     /// Calculate a stateful scroll offset
     fn update_hscroll(&mut self, self_width: f64) {
         let cursor_x = self.editor.cursor_line().p0.x;
@@ -162,8 +168,8 @@ impl TextBox {
     }
 }
 
-impl Widget<String> for TextBox {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, _env: &Env) {
+impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, _env: &Env) {
         self.suppress_adjust_hscroll = false;
         match event {
             Event::MouseDown(mouse) => {
@@ -237,7 +243,7 @@ impl Widget<String> for TextBox {
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &String, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
                 ctx.register_for_focus();
@@ -252,7 +258,7 @@ impl Widget<String> for TextBox {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _: &String, data: &String, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _: &T, data: &T, env: &Env) {
         self.editor.update(ctx, data, env);
         if !self.suppress_adjust_hscroll && !self.multiline {
             self.update_hscroll(ctx.size().width);
@@ -262,13 +268,7 @@ impl Widget<String> for TextBox {
         }
     }
 
-    fn layout(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &String,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         self.placeholder.rebuild_if_needed(ctx.text(), env);
         if self.multiline {
             self.editor
@@ -286,7 +286,7 @@ impl Widget<String> for TextBox {
         bc.constrain((width, height))
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &String, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let size = ctx.size();
         let text_size = self.editor.layout().size();
         let background_color = env.get(theme::BACKGROUND_LIGHT);
@@ -357,7 +357,7 @@ impl Widget<String> for TextBox {
     }
 }
 
-impl Default for TextBox {
+impl<T> Default for TextBox<T> {
     fn default() -> Self {
         TextBox::new()
     }

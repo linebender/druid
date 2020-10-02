@@ -49,10 +49,10 @@ impl TextBoxActionController {
     }
 }
 
-impl Controller<String, TextBox> for TextBoxActionController {
+impl Controller<String, TextBox<String>> for TextBoxActionController {
     fn event(
         &mut self,
-        child: &mut TextBox,
+        child: &mut TextBox<String>,
         ctx: &mut EventCtx,
         event: &Event,
         data: &mut String,
