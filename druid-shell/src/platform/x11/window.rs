@@ -374,7 +374,9 @@ impl WindowBuilder {
 // a) We never call into the system as a result of 2. As a consequence, we never get 1
 //    re-entrantly.
 // b) We *almost* never call into the `WinHandler` while holding any of the other RefCells. There's
-//    an exception for `paint`.
+//    an exception for `paint`. This is enforced by the `with_handler` method.
+//    (TODO: we could try to encode this exception statically, by making the data accessible in
+//    case 2 smaller than the data accessible in case 1).
 pub(crate) struct Window {
     id: u32,
     gc: Gcontext,

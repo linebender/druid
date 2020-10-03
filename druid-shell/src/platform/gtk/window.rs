@@ -120,6 +120,9 @@ enum IdleKind {
     Token(IdleToken),
 }
 
+// We use RefCells for interior mutability, but we try to structure things so that double-borrows
+// are impossible. See the documentation on crate::platform::x11::window::Window for more details,
+// since the idea there is basically the same.
 pub(crate) struct WindowState {
     window: ApplicationWindow,
     scale: Cell<Scale>,
