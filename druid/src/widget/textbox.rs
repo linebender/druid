@@ -182,7 +182,7 @@ impl TextBox {
     }
 
     /// Edit a selection using a `Movement`.
-    fn move_selection(&mut self, mvmnt: Movement, text: &String, modify: bool) {
+    fn move_selection(&mut self, mvmnt: Movement, text: &impl EditableText, modify: bool) {
         // This movement function should ensure all movements are legit.
         // If they aren't, that's a problem with the movement function.
         self.selection = movement(mvmnt, self.selection, text, modify);
