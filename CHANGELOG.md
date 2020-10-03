@@ -98,6 +98,8 @@ You can find its changes [documented below](#060---2020-06-01).
 - Windows: fix crash on resize from incompatible resources ([#1191 by [@raphlinus]])
 - GTK: Related dependencies are now optional, facilitating a pure X11 build. ([#1241] by [@finnerale])
 - `widget::Image` now computes the layout correctly when unbound in one direction. ([#1189] by [@JAicewizard])
+- TextBox doesn't reset position after unfocused. ([#todo] by [@sysint64])
+- Able to select text in multiple TextBoxes at once. ([#todo] by [@sysint64])
 
 ### Visual
 
