@@ -154,7 +154,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         self.child.set_viewport_offset(self.offset());
 
         if old_size != self.scroll_component.content_size {
-            self.scroll_component.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
+            self.scroll_component
+                .reset_scrollbar_fade(|d| ctx.request_timer(d), env);
         }
 
         self_size
