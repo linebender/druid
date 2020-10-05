@@ -322,6 +322,7 @@ impl<T: Data> Inner<T> {
     /// Returns `true` if the command was handled.
     fn dispatch_cmd(&mut self, cmd: Command) -> bool {
         if !self.delegate_cmd(&cmd) {
+            self.do_update();
             return true;
         }
 

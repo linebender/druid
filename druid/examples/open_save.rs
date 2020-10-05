@@ -89,7 +89,7 @@ impl AppDelegate<String> for Delegate {
             if let Err(e) = std::fs::write(file_info.path(), &data[..]) {
                 println!("Error writing file: {}", e);
             }
-            return true;
+            return false;
         }
         if let Some(file_info) = cmd.get(commands::OPEN_FILE) {
             match std::fs::read_to_string(file_info.path()) {
@@ -101,8 +101,8 @@ impl AppDelegate<String> for Delegate {
                     println!("Error opening file: {}", e);
                 }
             }
-            return true;
+            return false;
         }
-        false
+        true
     }
 }
