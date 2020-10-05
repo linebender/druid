@@ -15,6 +15,7 @@
 //! A widget with predefined size.
 
 use std::f64::INFINITY;
+use std::marker::PhantomData;
 
 use crate::shell::kurbo::Size;
 use crate::{
@@ -31,28 +32,36 @@ use crate::{
 /// If not given a child, SizedBox will try to size itself as close to the specified height
 /// and width as possible given the parent's constraints. If height or width is not set,
 /// it will be treated as zero.
-pub struct SizedBox<T> {
-    inner: Option<Box<dyn Widget<T>>>,
+pub struct SizedBox<T, W> {
+    inner: W,
+    is_empty: bool,
     width: Option<f64>,
     height: Option<f64>,
+    _phantom: PhantomData<T>,
 }
 
-impl<T> SizedBox<T> {
-    /// Construct container with child, and both width and height not set.
-    pub fn new(inner: impl Widget<T> + 'static) -> Self {
-        Self {
-            inner: Some(Box::new(inner)),
-            width: None,
-            height: None,
-        }
-    }
-
+impl<T> SizedBox<T, EmptyWidget> {
     /// Construct container without child, and both width and height not set.
     pub fn empty() -> Self {
         Self {
-            inner: None,
+            inner: EmptyWidget,
+            is_empty: true,
             width: None,
             height: None,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<T, W: Widget<T>> SizedBox<T, W> {
+    /// Construct container with child, and both width and height not set.
+    pub fn new(inner: W) -> Self {
+        Self {
+            inner,
+            is_empty: false,
+            width: None,
+            height: None,
+            _phantom: PhantomData,
         }
     }
 
@@ -129,32 +138,27 @@ impl<T> SizedBox<T> {
     }
 }
 
-impl<T: Data> Widget<T> for SizedBox<T> {
+impl<T: Data, W: Widget<T>> Widget<T> for SizedBox<T, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        if let Some(ref mut inner) = self.inner {
-            inner.event(ctx, event, data, env);
-        }
+        self.inner.event(ctx, event, data, env);
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        if let Some(ref mut inner) = self.inner {
-            inner.lifecycle(ctx, event, data, env)
-        }
+        self.inner.lifecycle(ctx, event, data, env)
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        if let Some(ref mut inner) = self.inner {
-            inner.update(ctx, old_data, data, env);
-        }
+        self.inner.update(ctx, old_data, data, env);
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("SizedBox");
 
         let child_bc = self.child_constraints(bc);
-        let size = match self.inner.as_mut() {
-            Some(inner) => inner.layout(ctx, &child_bc, data, env),
-            None => bc.constrain((self.width.unwrap_or(0.0), self.height.unwrap_or(0.0))),
+        let size = if self.is_empty {
+            bc.constrain((self.width.unwrap_or(0.0), self.height.unwrap_or(0.0)))
+        } else {
+            self.inner.layout(ctx, &child_bc, data, env)
         };
 
         if size.width.is_infinite() {
@@ -169,24 +173,48 @@ impl<T: Data> Widget<T> for SizedBox<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        if let Some(ref mut inner) = self.inner {
-            inner.paint(ctx, data, env);
-        }
+        self.inner.paint(ctx, data, env);
     }
 
     fn id(&self) -> Option<WidgetId> {
-        self.inner.as_ref().and_then(|inner| inner.id())
+        self.inner.id()
+    }
+}
+
+/// A widget with no size or behaviour.
+pub struct EmptyWidget;
+
+impl<T: Data> Widget<T> for EmptyWidget {
+    fn event(&mut self, _: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {}
+    fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &T, _: &Env) {}
+    fn update(&mut self, _: &mut UpdateCtx, _: &T, _: &T, _: &Env) {}
+    fn layout(&mut self, _: &mut LayoutCtx, _: &BoxConstraints, _: &T, _: &Env) -> Size {
+        Size::ZERO
+    }
+    fn paint(&mut self, _: &mut PaintCtx, _: &T, _: &Env) {}
+}
+
+impl<T, W: Widget<T>> std::ops::Deref for SizedBox<T, W> {
+    type Target = W;
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<T, W: Widget<T>> std::ops::DerefMut for SizedBox<T, W> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::widget::Label;
+    use crate::widget::Slider;
 
     #[test]
     fn expand() {
-        let expand = SizedBox::<()>::new(Label::new("hello!")).expand();
+        let expand = SizedBox::new(Slider::new()).expand();
         let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
         let child_bc = expand.child_constraints(&bc);
         assert_eq!(child_bc.min(), Size::new(400., 400.,));
@@ -194,7 +222,7 @@ mod tests {
 
     #[test]
     fn no_width() {
-        let expand = SizedBox::<()>::new(Label::new("hello!")).height(200.);
+        let expand = SizedBox::new(Slider::new()).height(200.);
         let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
         let child_bc = expand.child_constraints(&bc);
         assert_eq!(child_bc.min(), Size::new(0., 200.,));

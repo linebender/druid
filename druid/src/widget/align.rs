@@ -23,65 +23,65 @@ use crate::{
 use crate::piet::UnitPoint;
 
 /// A widget that aligns its child.
-pub struct Align<T> {
+pub struct Align<T, W> {
     align: UnitPoint,
-    child: WidgetPod<T, Box<dyn Widget<T>>>,
+    child: WidgetPod<T, W>,
     width_factor: Option<f64>,
     height_factor: Option<f64>,
 }
 
-impl<T> Align<T> {
+impl<T, W: Widget<T> + 'static> Align<T, W> {
     /// Create widget with alignment.
     ///
     /// Note that the `align` parameter is specified as a `UnitPoint` in
     /// terms of left and right. This is inadequate for bidi-aware layout
     /// and thus the API will change when druid gains bidi capability.
-    pub fn new(align: UnitPoint, child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn new(align: UnitPoint, child: W) -> Align<T, W> {
         Align {
             align,
-            child: WidgetPod::new(child).boxed(),
+            child: WidgetPod::new(child),
             width_factor: None,
             height_factor: None,
         }
     }
 
     /// Create centered widget.
-    pub fn centered(child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn centered(child: W) -> Align<T, W> {
         Align::new(UnitPoint::CENTER, child)
     }
 
     /// Create right-aligned widget.
-    pub fn right(child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn right(child: W) -> Align<T, W> {
         Align::new(UnitPoint::RIGHT, child)
     }
 
     /// Create left-aligned widget.
-    pub fn left(child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn left(child: W) -> Align<T, W> {
         Align::new(UnitPoint::LEFT, child)
     }
 
     /// Align only in the horizontal axis, keeping the child's size in the vertical.
-    pub fn horizontal(align: UnitPoint, child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn horizontal(align: UnitPoint, child: W) -> Align<T, W> {
         Align {
             align,
-            child: WidgetPod::new(child).boxed(),
+            child: WidgetPod::new(child),
             width_factor: None,
             height_factor: Some(1.0),
         }
     }
 
     /// Align only in the vertical axis, keeping the child's size in the horizontal.
-    pub fn vertical(align: UnitPoint, child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn vertical(align: UnitPoint, child: W) -> Align<T, W> {
         Align {
             align,
-            child: WidgetPod::new(child).boxed(),
+            child: WidgetPod::new(child),
             width_factor: Some(1.0),
             height_factor: None,
         }
     }
 }
 
-impl<T: Data> Widget<T> for Align<T> {
+impl<T: Data, W: Widget<T>> Widget<T> for Align<T, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.child.event(ctx, event, data, env)
     }
@@ -142,5 +142,18 @@ fn log_size_warnings(size: Size) {
 
     if size.height.is_infinite() {
         log::warn!("Align widget's child has an infinite height.");
+    }
+}
+
+impl<T, W: Widget<T>> std::ops::Deref for Align<T, W> {
+    type Target = W;
+    fn deref(&self) -> &Self::Target {
+        self.child.widget()
+    }
+}
+
+impl<T, W: Widget<T>> std::ops::DerefMut for Align<T, W> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.child.widget_mut()
     }
 }

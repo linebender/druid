@@ -62,7 +62,7 @@ const LABEL_X_PADDING: f64 = 2.0;
 ///     .with_text_color(Color::rgb(1.0, 0.2, 0.2));
 /// # // our data type T isn't known; this is just a trick for the compiler
 /// # // to keep our example clean
-/// # let _ = SizedBox::<()>::new(important_label);
+/// # let _ = SizedBox::<(), Label<()>>::new(important_label);
 /// ```
 ///
 /// [`ArcStr`]: ../type.ArcStr.html

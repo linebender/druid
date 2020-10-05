@@ -27,63 +27,63 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// [`Padding`]: widget/struct.Padding.html
     /// [`Insets`]: kurbo/struct.Insets.html
-    fn padding(self, insets: impl Into<Insets>) -> Padding<T> {
+    fn padding(self, insets: impl Into<Insets>) -> Padding<T, Self> {
         Padding::new(insets, self)
     }
 
     /// Wrap this widget in an [`Align`] widget, configured to center it.
     ///
     /// [`Align`]: widget/struct.Align.html
-    fn center(self) -> Align<T> {
+    fn center(self) -> Align<T, Self> {
         Align::centered(self)
     }
 
     /// Wrap this widget in an [`Align`] widget, configured to align left.
     ///
     /// [`Align`]: widget/struct.Align.html
-    fn align_left(self) -> Align<T> {
+    fn align_left(self) -> Align<T, Self> {
         Align::left(self)
     }
 
     /// Wrap this widget in an [`Align`] widget, configured to align right.
     ///
     /// [`Align`]: widget/struct.Align.html
-    fn align_right(self) -> Align<T> {
+    fn align_right(self) -> Align<T, Self> {
         Align::right(self)
     }
 
     /// Wrap this widget in an [`Align`] widget, configured to align vertically.
     ///
     /// [`Align`]: widget/struct.Align.html
-    fn align_vertical(self, align: UnitPoint) -> Align<T> {
+    fn align_vertical(self, align: UnitPoint) -> Align<T, Self> {
         Align::vertical(align, self)
     }
 
     /// Wrap this widget in an [`Align`] widget, configured to align horizontally.
     ///
     /// [`Align`]: widget/struct.Align.html
-    fn align_horizontal(self, align: UnitPoint) -> Align<T> {
+    fn align_horizontal(self, align: UnitPoint) -> Align<T, Self> {
         Align::horizontal(align, self)
     }
 
     /// Wrap this widget in a [`SizedBox`] with an explicit width.
     ///
     /// [`SizedBox`]: widget/struct.SizedBox.html
-    fn fix_width(self, width: f64) -> SizedBox<T> {
+    fn fix_width(self, width: f64) -> SizedBox<T, Self> {
         SizedBox::new(self).width(width)
     }
 
     /// Wrap this widget in a [`SizedBox`] with an explicit width.
     ///
     /// [`SizedBox`]: widget/struct.SizedBox.html
-    fn fix_height(self, height: f64) -> SizedBox<T> {
+    fn fix_height(self, height: f64) -> SizedBox<T, Self> {
         SizedBox::new(self).height(height)
     }
 
     /// Wrap this widget in an [`SizedBox`] with an explicit width and height
     ///
     /// [`SizedBox`]: widget/struct.SizedBox.html
-    fn fix_size(self, width: f64, height: f64) -> SizedBox<T> {
+    fn fix_size(self, width: f64, height: f64) -> SizedBox<T, Self> {
         SizedBox::new(self).width(width).height(height)
     }
 
@@ -96,7 +96,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`expand_height`]: #method.expand_height
     /// [`expand_width`]: #method.expand_width
     /// [`SizedBox`]: widget/struct.SizedBox.html
-    fn expand(self) -> SizedBox<T> {
+    fn expand(self) -> SizedBox<T, Self> {
         SizedBox::new(self).expand()
     }
 
@@ -105,7 +105,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// This will force the child to use all available space on the x-axis.
     ///
     /// [`SizedBox`]: widget/struct.SizedBox.html
-    fn expand_width(self) -> SizedBox<T> {
+    fn expand_width(self) -> SizedBox<T, Self> {
         SizedBox::new(self).expand_width()
     }
 
@@ -114,7 +114,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// This will force the child to use all available space on the y-axis.
     ///
     /// [`SizedBox`]: widget/struct.SizedBox.html
-    fn expand_height(self) -> SizedBox<T> {
+    fn expand_height(self) -> SizedBox<T, Self> {
         SizedBox::new(self).expand_height()
     }
 
@@ -253,12 +253,12 @@ impl<T: Data, W: Widget<T> + 'static> WidgetExt<T> for W {}
 // name.
 
 #[doc(hidden)]
-impl<T: Data> SizedBox<T> {
-    pub fn fix_width(self, width: f64) -> SizedBox<T> {
+impl<T: Data, W: Widget<T>> SizedBox<T, W> {
+    pub fn fix_width(self, width: f64) -> SizedBox<T, W> {
         self.width(width)
     }
 
-    pub fn fix_height(self, height: f64) -> SizedBox<T> {
+    pub fn fix_height(self, height: f64) -> SizedBox<T, W> {
         self.height(height)
     }
 }
@@ -316,5 +316,17 @@ mod tests {
         // this should be SizedBox<TextBox>
         let widget = TextBox::new().fix_height(10.0).fix_width(1.0);
         assert_eq!(widget.width_and_height(), (Some(1.0), Some(10.0)));
+    }
+
+    #[test]
+    fn deref() {
+        use crate::widget::Label;
+        let mut widget = Label::<()>::new("hello")
+            .padding(5.0)
+            .align_left()
+            .expand_width()
+            .padding(10.)
+            .fix_height(205.);
+        widget.set_text("what!?");
     }
 }
