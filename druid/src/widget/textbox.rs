@@ -328,10 +328,12 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
             // Draw selection rect
             if !data.is_empty() {
-                for sel in self.editor.selection_rects() {
-                    let sel = sel + text_pos.to_vec2();
-                    let rounded = sel.to_rounded_rect(1.0);
-                    rc.fill(rounded, &selection_color);
+                if is_focused {
+                    for sel in self.editor.selection_rects() {
+                        let sel = sel + text_pos.to_vec2();
+                        let rounded = sel.to_rounded_rect(1.0);
+                        rc.fill(rounded, &selection_color);
+                    }
                 }
                 self.editor.draw(rc, text_pos);
             } else {
