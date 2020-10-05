@@ -99,6 +99,8 @@ You can find its changes [documented below](#060---2020-06-01).
 - Windows: fix crash on resize from incompatible resources ([#1191 by [@raphlinus]])
 - GTK: Related dependencies are now optional, facilitating a pure X11 build. ([#1241] by [@finnerale])
 - `widget::Image` now computes the layout correctly when unbound in one direction. ([#1189] by [@JAicewizard])
+- TextBox doesn't reset position after unfocused. ([#1276] by [@sysint64])
+- Able to select text in multiple TextBoxes at once. ([#1276] by [@sysint64])
 - The scroll bar now shows when the contents of a scrollable area change size. ([#1278] by [@Majora320])
 
 ### Visual
@@ -486,6 +488,7 @@ Last release without a changelog :(
 [#1251]: https://github.com/linebender/druid/pull/1251
 [#1252]: https://github.com/linebender/druid/pull/1252
 [#1255]: https://github.com/linebender/druid/pull/1255
+[#1276]: https://github.com/linebender/druid/pull/1276
 [#1278]: https://github.com/linebender/druid/pull/1278
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master

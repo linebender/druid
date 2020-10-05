@@ -182,7 +182,7 @@ impl TextBox {
     }
 
     /// Edit a selection using a `Movement`.
-    fn move_selection(&mut self, mvmnt: Movement, text: &mut String, modify: bool) {
+    fn move_selection(&mut self, mvmnt: Movement, text: &impl EditableText, modify: bool) {
         // This movement function should ensure all movements are legit.
         // If they aren't, that's a problem with the movement function.
         self.selection = movement(mvmnt, self.selection, text, modify);
@@ -379,8 +379,11 @@ impl Widget<String> for TextBox {
                 ctx.register_for_focus();
                 self.text.set_text(data.as_str().into());
             }
-            LifeCycle::FocusChanged(true) => {
-                self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION))
+            LifeCycle::FocusChanged(_) => {
+                self.move_selection(Movement::StartOfDocument, data, false);
+                self.update_hscroll();
+                self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
+                ctx.request_paint();
             }
             _ => (),
         }
