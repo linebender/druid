@@ -292,14 +292,6 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.widget_state.request_anim = true;
     }
 
-    /// Request a timer event.
-    ///
-    /// The return value is a token, which can be used to associate the
-    /// request with the event.
-    pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
-        self.state.request_timer(&mut self.widget_state, deadline)
-    }
-
     /// Indicate that your children have changed.
     ///
     /// Widgets must call this method after adding a new child.
@@ -317,7 +309,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     }
 });
 
-// methods on event, update, and lifecycle
+// methods on everyone but paintctx
 impl_context_method!(
     EventCtx<'_, '_>,
     UpdateCtx<'_, '_>,
@@ -345,6 +337,14 @@ impl_context_method!(
         /// [`ExtEventSink`]: struct.ExtEventSink.html
         pub fn get_external_handle(&self) -> ExtEventSink {
             self.state.ext_handle.clone()
+        }
+
+        /// Request a timer event.
+        ///
+        /// The return value is a token, which can be used to associate the
+        /// request with the event.
+        pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
+            self.state.request_timer(&mut self.widget_state, deadline)
         }
     }
 );
