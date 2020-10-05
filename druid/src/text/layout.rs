@@ -174,6 +174,13 @@ impl<T: TextStorage> TextLayout<T> {
         self.text.as_ref()
     }
 
+    /// Returns the inner Piet [`TextLayout`] type.
+    ///
+    /// [`TextLayout`]: ./piet/trait.TextLayout.html
+    pub fn layout(&self) -> Option<&PietTextLayout> {
+        self.layout.as_ref()
+    }
+
     /// The size of the laid-out text.
     ///
     /// This is not meaningful until [`rebuild_if_needed`] has been called.

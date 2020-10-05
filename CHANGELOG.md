@@ -46,6 +46,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - 'Tabs' widget allowing static and dynamic tabbed layouts. ([#1160] by [@rjwittams])
 - `RichText` and `Attribute` types for creating rich text ([#1255] by [@cmyr])
 - `request_timer` can now be called from `LayoutCtx` ([#1278] by [@Majora320])
+- TextBox supports vertical movement ([#1280] by [@cmyr])
 
 ### Changed
 
@@ -490,6 +491,7 @@ Last release without a changelog :(
 [#1255]: https://github.com/linebender/druid/pull/1255
 [#1276]: https://github.com/linebender/druid/pull/1276
 [#1278]: https://github.com/linebender/druid/pull/1278
+[#1280]: https://github.com/linebender/druid/pull/1280
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
