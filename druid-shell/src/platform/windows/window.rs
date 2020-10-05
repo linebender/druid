@@ -66,7 +66,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window;
-use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
 /// The platform target DPI.
 ///
@@ -1856,6 +1856,11 @@ impl WindowHandle {
         }
     }
 
+    pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        // TODO: implement this and remove open_file_sync
+        None
+    }
+
     /// Prompt the user to chose a file to open.
     ///
     /// Blocks while the user picks the file.
@@ -1868,6 +1873,11 @@ impl WindowHandle {
                     path: os_str.into(),
                 })
         }
+    }
+
+    pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        // TODO: implement this and remove save_as_sync
+        None
     }
 
     /// Get the raw HWND handle, for uses that are not wrapped in

@@ -92,6 +92,42 @@ impl IdleToken {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
+pub struct FileDialogToken(usize);
+
+impl FileDialogToken {
+    /// Create a new `FileDialogToken` with the given raw `usize` id.
+    pub const fn new(raw: usize) -> FileDialogToken {
+        FileDialogToken(raw)
+    }
+}
+
+/// An enumeration of operations that might need to be deferred until the `WinHandler` is dropped.
+///
+/// We work hard to avoid calling into `WinHandler` re-entrantly. Since most of our backends use
+/// the system's event loop, and since the `WinHandler` gets a `WindowHandle` to use, this implies
+/// that none of the `WindowHandle`'s methods can return control to the system's event loop
+/// (because if it did, the system could call back into druid-shell with some mouse event, and then
+/// we'd try to call the `WinHandler` again).
+///
+/// The solution is that for every `WindowHandle` method that *wants* to return control to the
+/// system's event loop, instead of doing that we queue up a deferrred operation and return
+/// immediately. The deferred operations will run whenever the currently running `WinHandler`
+/// method returns.
+///
+/// An example call trace might look like:
+/// 1. the system hands a mouse click event to druid-shell
+/// 2. druid-shell calls `WinHandler::mouse_up`
+/// 3. after some processing, the `WinHandler` calls `WindowHandle::save_as`, which schedules a
+///   deferred op and returns immediately
+/// 4. after some more processing, `WinHandler::mouse_up` returns
+/// 5. druid-shell displays the "save as" dialog that was requested in step 3.
+#[allow(dead_code)]
+pub(crate) enum DeferredOp {
+    SaveAs(FileDialogOptions, FileDialogToken),
+    Open(FileDialogOptions, FileDialogToken),
+}
+
 /// Levels in the window system - Z order for display purposes.
 /// Describes the purpose of a window and should be mapped appropriately to match platform
 /// conventions.
@@ -290,18 +326,40 @@ impl WindowHandle {
         self.0.make_cursor(desc)
     }
 
-    /// Prompt the user to chose a file to open.
+    /// Prompt the user to choose a file to open.
     ///
     /// Blocks while the user picks the file.
     pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
         self.0.open_file_sync(options)
     }
 
-    /// Prompt the user to chose a path for saving.
+    /// Prompt the user to choose a file to open.
+    ///
+    /// This won't block immediately; the file dialog will be shown whenever control returns to
+    /// `druid-shell`, and the [`WinHandler::open`] method will be called when the dialog is
+    /// closed.
+    ///
+    /// [`WinHandler::open()`]: trait.WinHandler.html#tymethod.open
+    pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.0.open_file(options)
+    }
+
+    /// Prompt the user to choose a path for saving.
     ///
     /// Blocks while the user picks a file.
     pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
         self.0.save_as_sync(options)
+    }
+
+    /// Prompt the user to choose a path for saving.
+    ///
+    /// This won't block immediately; the file dialog will be shown whenever control returns to
+    /// `druid-shell`, and the [`WinHandler::save_as`] method will be called when the dialog is
+    /// closed.
+    ///
+    /// [`WinHandler::open()`]: trait.WinHandler.html#tymethod.open
+    pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.0.save_as(options)
     }
 
     /// Display a pop-up menu at the given position.
@@ -483,6 +541,24 @@ pub trait WinHandler {
     /// Called when a menu item is selected.
     #[allow(unused_variables)]
     fn command(&mut self, id: u32) {}
+
+    /// Called when a "Save As" dialog is closed.
+    ///
+    /// `token` is the value returned by [`WindowHandle::save_as`]. `file` contains the information
+    /// of the chosen path, or `None` if the save dialog was cancelled.
+    ///
+    /// [`WindowHandle::save_as`]: trait.WindowHandle:#tymethod.save_as
+    #[allow(unused_variables)]
+    fn save_as(&mut self, token: FileDialogToken, file: Option<FileInfo>) {}
+
+    /// Called when an "Open" dialog is closed.
+    ///
+    /// `token` is the value returned by [`WindowHandle::open_file`]. `file` contains the information
+    /// of the chosen path, or `None` if the save dialog was cancelled.
+    ///
+    /// [`WindowHandle::open_file`]: trait.WindowHandle:#tymethod.open_file
+    #[allow(unused_variables)]
+    fn open_file(&mut self, token: FileDialogToken, file: Option<FileInfo>) {}
 
     /// Called on a key down event.
     ///

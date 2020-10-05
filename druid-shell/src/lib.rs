@@ -72,8 +72,8 @@ pub use region::Region;
 pub use scale::{Scalable, Scale, ScaledArea};
 pub use screen::{Monitor, Screen};
 pub use window::{
-    IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle, WindowLevel,
-    WindowState,
+    FileDialogToken, IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    WindowLevel, WindowState,
 };
 
 pub use keyboard_types;

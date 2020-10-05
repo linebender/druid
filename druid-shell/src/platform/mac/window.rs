@@ -56,7 +56,7 @@ use crate::keyboard_types::KeyState;
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::Scale;
-use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel, WindowState};
+use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel, WindowState};
 use crate::Error;
 
 #[allow(non_upper_case_globals)]
@@ -938,9 +938,19 @@ impl WindowHandle {
             .map(|s| FileInfo { path: s.into() })
     }
 
+    pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        // TODO: implement this and get rid of open_file_sync
+        None
+    }
+
     pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
         dialog::get_file_dialog_path(FileDialogType::Save, options)
             .map(|s| FileInfo { path: s.into() })
+    }
+
+    pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        // TODO: implement this and get rid of save_as_sync
+        None
     }
 
     /// Set the title for this menu.
