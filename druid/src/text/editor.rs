@@ -173,16 +173,18 @@ impl<T: TextStorage + EditableText> Editor<T> {
             EditAction::Delete => self.delete_forward(data),
             EditAction::JumpDelete(mvmt) | EditAction::JumpBackspace(mvmt) => {
                 let to_delete = if self.selection.is_caret() {
-                    movement(mvmt, self.selection, data, true)
+                    movement(mvmt, self.selection, &self.layout, true)
                 } else {
                     self.selection
                 };
                 data.edit(to_delete.range(), "");
                 self.selection = Selection::caret(to_delete.min());
             }
-            EditAction::Move(mvmt) => self.selection = movement(mvmt, self.selection, data, false),
+            EditAction::Move(mvmt) => {
+                self.selection = movement(mvmt, self.selection, &self.layout, false)
+            }
             EditAction::ModifySelection(mvmt) => {
-                self.selection = movement(mvmt, self.selection, data, true)
+                self.selection = movement(mvmt, self.selection, &self.layout, true)
             }
             EditAction::Click(action) => {
                 if action.mods.shift() {
@@ -240,7 +242,7 @@ impl<T: TextStorage + EditableText> Editor<T> {
 
     fn delete_forward(&mut self, data: &mut T) {
         let to_delete = if self.selection.is_caret() {
-            movement(Movement::Right, self.selection, data, true)
+            movement(Movement::Right, self.selection, &self.layout, true)
         } else {
             self.selection
         };

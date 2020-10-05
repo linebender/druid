@@ -112,6 +112,18 @@ impl TextInput for BasicTextInput {
             k_e if (HotKey::new(None, KbKey::ArrowRight)).matches(k_e) => {
                 EditAction::Move(Movement::Right)
             }
+            k_e if (HotKey::new(None, KbKey::ArrowUp)).matches(k_e) => {
+                EditAction::Move(Movement::Up)
+            }
+            k_e if (HotKey::new(None, KbKey::ArrowDown)).matches(k_e) => {
+                EditAction::Move(Movement::Down)
+            }
+            k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowUp)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::Up)
+            }
+            k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowDown)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::Down)
+            }
             // Delete left word
             k_e if (HotKey::new(SysMods::Cmd, KbKey::Backspace)).matches(k_e) => {
                 EditAction::JumpBackspace(Movement::LeftWord)

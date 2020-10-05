@@ -28,13 +28,20 @@ pub struct Selection {
 
     /// The active edge of a selection, as a byte offset.
     pub end: usize,
+
+    /// The saved horizontal position, during vertical movement.
+    pub h_pos: Option<f64>,
 }
 
 impl Selection {
     /// Create a selection that begins at start and goes to end.
     /// Like dragging a mouse from start to end.
     pub fn new(start: usize, end: usize) -> Self {
-        Selection { start, end }
+        Selection {
+            start,
+            end,
+            h_pos: None,
+        }
     }
 
     /// Create a selection that starts at the beginning and ends at text length.
@@ -49,7 +56,14 @@ impl Selection {
         Selection {
             start: pos,
             end: pos,
+            h_pos: None,
         }
+    }
+
+    /// Construct a new selection from this selection, with the provided h_pos.
+    pub fn with_h_pos(mut self, h_pos: Option<f64>) -> Self {
+        self.h_pos = h_pos;
+        self
     }
 
     /// If start == end, it's a caret
