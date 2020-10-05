@@ -53,13 +53,6 @@ impl Selection {
         self
     }
 
-    /// Create a selection that starts at the beginning and ends at text length.
-    /// TODO: can text length be at a non-codepoint or a non-grapheme?
-    pub fn all(&mut self, text: &impl EditableText) {
-        self.start = 0;
-        self.end = text.len();
-    }
-
     /// Create a caret, which is just a selection with the same and start and end.
     pub fn caret(pos: usize) -> Self {
         Selection {

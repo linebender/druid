@@ -72,6 +72,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `LocalizedString` and `LabelText` use `ArcStr` instead of String ([#1245] by [@cmyr])
 - `LensWrap` widget moved into widget module ([#1251] by [@cmyr])
 - `Delegate::command` now returns `Handled`, not `bool` ([#1298] by [@jneem])
+- `TextBox` selects all contents when tabbed to on macOS ([#1283] by [@cmyr])
 
 ### Deprecated
 
@@ -498,6 +499,7 @@ Last release without a changelog :(
 [#1276]: https://github.com/linebender/druid/pull/1276
 [#1278]: https://github.com/linebender/druid/pull/1278
 [#1280]: https://github.com/linebender/druid/pull/1280
+[#1283]: https://github.com/linebender/druid/pull/1283
 [#1295]: https://github.com/linebender/druid/pull/1280
 [#1298]: https://github.com/linebender/druid/pull/1298
 [#1299]: https://github.com/linebender/druid/pull/1299
