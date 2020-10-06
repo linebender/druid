@@ -57,6 +57,9 @@ impl<T: Data, U: Data> ViewSwitcher<T, U> {
 }
 
 impl<T: Data, U: Data> Widget<T> for ViewSwitcher<T, U> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Some(child) = self.active_child.as_mut() {
             child.event(ctx, event, data, env);

@@ -120,6 +120,9 @@ impl Default for Stepper {
 }
 
 impl Widget<f64> for Stepper {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &f64, env: &Env) {
         let stroke_width = 2.0;
         let rounded_rect = ctx

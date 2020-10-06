@@ -130,6 +130,9 @@ impl Image {
 }
 
 impl<T: Data> Widget<T> for Image {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}

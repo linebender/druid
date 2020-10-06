@@ -35,7 +35,7 @@ pub struct Split<T> {
     child2: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
-impl<T> Split<T> {
+impl<T: Data> Split<T> {
     /// Create a new split panel, with the specified axis being split in two.
     ///
     /// Horizontal split axis means that the children are left and right.
@@ -266,6 +266,9 @@ impl<T> Split<T> {
 }
 
 impl<T: Data> Widget<T> for Split<T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.child1.is_active() {
             self.child1.event(ctx, event, data, env);

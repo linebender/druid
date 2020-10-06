@@ -30,13 +30,13 @@ pub struct Align<T> {
     height_factor: Option<f64>,
 }
 
-impl<T> Align<T> {
+impl<T: Data> Align<T> {
     /// Create widget with alignment.
     ///
     /// Note that the `align` parameter is specified as a `UnitPoint` in
     /// terms of left and right. This is inadequate for bidi-aware layout
     /// and thus the API will change when druid gains bidi capability.
-    pub fn new(align: UnitPoint, child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn new(align: UnitPoint, child: impl Widget<T>) -> Align<T> {
         Align {
             align,
             child: WidgetPod::new(child).boxed(),
@@ -46,22 +46,22 @@ impl<T> Align<T> {
     }
 
     /// Create centered widget.
-    pub fn centered(child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn centered(child: impl Widget<T>) -> Align<T> {
         Align::new(UnitPoint::CENTER, child)
     }
 
     /// Create right-aligned widget.
-    pub fn right(child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn right(child: impl Widget<T>) -> Align<T> {
         Align::new(UnitPoint::RIGHT, child)
     }
 
     /// Create left-aligned widget.
-    pub fn left(child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn left(child: impl Widget<T>) -> Align<T> {
         Align::new(UnitPoint::LEFT, child)
     }
 
     /// Align only in the horizontal axis, keeping the child's size in the vertical.
-    pub fn horizontal(align: UnitPoint, child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn horizontal(align: UnitPoint, child: impl Widget<T>) -> Align<T> {
         Align {
             align,
             child: WidgetPod::new(child).boxed(),
@@ -71,7 +71,7 @@ impl<T> Align<T> {
     }
 
     /// Align only in the vertical axis, keeping the child's size in the horizontal.
-    pub fn vertical(align: UnitPoint, child: impl Widget<T> + 'static) -> Align<T> {
+    pub fn vertical(align: UnitPoint, child: impl Widget<T>) -> Align<T> {
         Align {
             align,
             child: WidgetPod::new(child).boxed(),
@@ -82,6 +82,14 @@ impl<T> Align<T> {
 }
 
 impl<T: Data> Widget<T> for Align<T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn child(&self) -> Option<&dyn Widget<T>> {
+        Some(self.child.widget())
+    }
+
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.child.event(ctx, event, data, env)
     }

@@ -232,6 +232,9 @@ impl GameOfLifeWidget {
 }
 
 impl Widget<AppData> for GameOfLifeWidget {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppData, _env: &Env) {
         match event {
             Event::WindowConnected => {

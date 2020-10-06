@@ -308,6 +308,9 @@ impl<TP: TabsPolicy> TabBar<TP> {
 }
 
 impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut TabsState<TP>, env: &Env) {
         match event {
             Event::MouseDown(e) => {
@@ -581,6 +584,9 @@ fn hidden_should_receive_lifecycle(lc: &LifeCycle) -> bool {
 }
 
 impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut TabsState<TP>, env: &Env) {
         if hidden_should_receive_event(event) {
             for child in self.child_pods() {
@@ -950,6 +956,9 @@ impl<TP: TabsPolicy> Tabs<TP> {
 }
 
 impl<TP: TabsPolicy> Widget<TP::Input> for Tabs<TP> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut TP::Input, env: &Env) {
         if let TabsContent::Running { scope } = &mut self.content {
             scope.event(ctx, event, data, env);

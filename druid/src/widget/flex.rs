@@ -348,8 +348,8 @@ impl FlexParams {
     }
 }
 
-impl<T> ChildWidget<T> {
-    fn new(child: impl Widget<T> + 'static, params: FlexParams) -> Self {
+impl<T: Data> ChildWidget<T> {
+    fn new(child: impl Widget<T>, params: FlexParams) -> Self {
         ChildWidget {
             widget: WidgetPod::new(Box::new(child)),
             params,
@@ -588,6 +588,9 @@ impl<T: Data> Flex<T> {
 }
 
 impl<T: Data> Widget<T> for Flex<T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         for child in &mut self.children {
             child.widget.event(ctx, event, data, env);
@@ -834,6 +837,9 @@ impl Iterator for Spacing {
 }
 
 impl<T: Data> Widget<T> for Spacer {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, _: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {}
     fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &T, _: &Env) {}
     fn update(&mut self, _: &mut UpdateCtx, _: &T, _: &T, _: &Env) {}

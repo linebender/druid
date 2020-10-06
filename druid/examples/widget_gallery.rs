@@ -267,7 +267,7 @@ pub struct SquaresGrid<T> {
     spacing: f64,
 }
 
-impl<T> SquaresGrid<T> {
+impl<T: 'static> SquaresGrid<T> {
     pub fn new() -> Self {
         SquaresGrid {
             widgets: vec![],
@@ -293,7 +293,7 @@ impl<T> SquaresGrid<T> {
     }
 }
 
-impl<T> Default for SquaresGrid<T> {
+impl<T: 'static> Default for SquaresGrid<T> {
     fn default() -> Self {
         Self::new()
     }
@@ -384,5 +384,9 @@ impl<T: Data> Widget<T> for SquaresGrid<T> {
         for widget in self.widgets.iter_mut().take(self.drawable_widgets) {
             widget.paint(ctx, data, env);
         }
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }

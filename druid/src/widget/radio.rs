@@ -64,6 +64,9 @@ impl<T: Data> Radio<T> {
 }
 
 impl<T: Data + PartialEq> Widget<T> for Radio<T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, _env: &Env) {
         match event {
             Event::MouseDown(_) => {

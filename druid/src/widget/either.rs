@@ -28,7 +28,7 @@ pub struct Either<T> {
     current: bool,
 }
 
-impl<T> Either<T> {
+impl<T: Data> Either<T> {
     /// Create a new widget that switches between two views.
     ///
     /// The given closure is evaluated on data change. If its value is `true`, then
@@ -48,6 +48,9 @@ impl<T> Either<T> {
 }
 
 impl<T: Data> Widget<T> for Either<T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.current {
             self.true_branch.event(ctx, event, data, env)

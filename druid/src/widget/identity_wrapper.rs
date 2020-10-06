@@ -34,6 +34,9 @@ impl<W> IdentityWrapper<W> {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<W> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.inner.event(ctx, event, data, env);
     }

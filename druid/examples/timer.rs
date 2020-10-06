@@ -45,6 +45,9 @@ impl TimerWidget {
 }
 
 impl Widget<u32> for TimerWidget {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut u32, env: &Env) {
         match event {
             Event::WindowConnected => {
@@ -86,6 +89,9 @@ impl Widget<u32> for TimerWidget {
 struct SimpleBox;
 
 impl Widget<u32> for SimpleBox {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut u32, _env: &Env) {}
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &u32, _env: &Env) {

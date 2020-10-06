@@ -65,6 +65,9 @@ fn invalidate_scroll() {
     }
 
     impl<T: Data> Widget<T> for Invalidator {
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
         fn event(&mut self, ctx: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {
             ctx.request_paint_rect(RECT);
         }

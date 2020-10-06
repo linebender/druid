@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::any::Any;
 use std::num::NonZeroU64;
 use std::ops::{Deref, DerefMut};
 
@@ -89,7 +90,7 @@ pub struct WidgetId(NonZeroU64);
 /// [`Data`]: trait.Data.html
 /// [`Env`]: struct.Env.html
 /// [`WidgetPod`]: struct.WidgetPod.html
-pub trait Widget<T> {
+pub trait Widget<T>: 'static {
     /// Handle an event.
     ///
     /// A number of different events (in the [`Event`] enum) are handled in this
@@ -197,7 +198,45 @@ pub trait Widget<T> {
     fn type_name(&self) -> &'static str {
         std::any::type_name::<Self>()
     }
+
+    /// If this widget is a single-child container, return the child.
+    fn child(&self) -> Option<&dyn Widget<T>> {
+        None
+    }
+
+    /// Return a dynamic reference to this widget.
+    fn as_any(&self) -> &dyn Any;
 }
+
+/// A helper trait for dynamically accessing a child that is wrapped in
+/// an arbitrary number of container widgets.
+///
+/// This is a separate trait because it is not object safe.
+trait AnyWidget<T: 'static>: Widget<T> {
+    fn downcast_child<C: Widget<T>>(&self) -> Option<&C> {
+        if let Some(child) = self.as_any().downcast_ref::<C>() {
+            return Some(child);
+        }
+
+        let mut child = self.child();
+
+        loop {
+            //eprintln!("child is {}", std::any::type_name)
+            match child {
+                None => return None,
+                Some(inner) => {
+                    eprintln!("child: {}", inner.type_name());
+                    match inner.as_any().downcast_ref::<C>() {
+                        Some(child) => return Some(child),
+                        None => child = inner.child(),
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl<T: 'static, W: Widget<T>> AnyWidget<T> for W {}
 
 impl WidgetId {
     /// Allocate a new, unique `WidgetId`.
@@ -234,7 +273,15 @@ impl WidgetId {
     }
 }
 
-impl<T> Widget<T> for Box<dyn Widget<T>> {
+impl<T: 'static> Widget<T> for Box<dyn Widget<T>> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self.deref().as_any()
+    }
+
+    fn child(&self) -> Option<&dyn Widget<T>> {
+        self.deref().child()
+    }
+
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.deref_mut().event(ctx, event, data, env)
     }
@@ -261,5 +308,28 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 
     fn type_name(&self) -> &'static str {
         self.deref().type_name()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::widget::*;
+    use crate::*;
+
+    #[test]
+    fn dynamism() {
+        let widget = Slider::new()
+            .padding(5.0)
+            .align_left()
+            .expand()
+            .background(Color::BLACK);
+
+        assert!(widget.downcast_child::<Slider>().is_some());
+        let widget = widget.padding(10.0);
+        assert!(widget.downcast_child::<Slider>().is_some());
+        // get an intermediate widget:
+        assert!(widget.downcast_child::<Padding<f64>>().is_some());
+        assert!(widget.downcast_child::<Align<f64>>().is_some());
     }
 }

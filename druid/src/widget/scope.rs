@@ -11,7 +11,7 @@ use std::marker::PhantomData;
 ///
 /// [`Scope`]: struct.Scope.html
 /// [`ScopeTransfer`]: trait.ScopeTransfer.html
-pub trait ScopePolicy {
+pub trait ScopePolicy: 'static {
     /// The type of data that comes in from the surrounding application or scope.
     type In: Data;
     /// The type of data that the `Scope` will maintain internally.
@@ -34,7 +34,7 @@ pub trait ScopePolicy {
 ///
 /// [`Scope`]: struct.Scope.html
 /// [`ScopePolicy`]: trait.ScopePolicy.html
-pub trait ScopeTransfer {
+pub trait ScopeTransfer: 'static {
     /// The type of data that comes in from the surrounding application or scope.
     type In: Data;
     /// The type of data that the Scope will maintain internally.
@@ -77,7 +77,7 @@ impl<F: FnOnce(In) -> State, L: Lens<State, In>, In: Data, State: Data>
     }
 }
 
-impl<F: Fn(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer> ScopePolicy
+impl<F: Fn(Transfer::In) -> Transfer::State + 'static, Transfer: ScopeTransfer> ScopePolicy
     for DefaultScopePolicy<F, Transfer>
 {
     type In = Transfer::In;
@@ -109,7 +109,9 @@ impl<L: Lens<State, In>, In, State> LensScopeTransfer<L, In, State> {
     }
 }
 
-impl<L: Lens<State, In>, In: Data, State: Data> ScopeTransfer for LensScopeTransfer<L, In, State> {
+impl<L: Lens<State, In> + 'static, In: Data, State: Data> ScopeTransfer
+    for LensScopeTransfer<L, In, State>
+{
     type In = In;
     type State = State;
 
@@ -271,6 +273,9 @@ impl<In: Data, State: Data, F: Fn(In) -> State, L: Lens<State, In>, W: Widget<St
 }
 
 impl<SP: ScopePolicy, W: Widget<SP::State>> Widget<SP::In> for Scope<SP, W> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut SP::In, env: &Env) {
         self.with_state(data, |state, inner| inner.event(ctx, event, state, env));
         self.write_back_input(data);

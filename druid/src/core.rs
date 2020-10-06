@@ -866,7 +866,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 }
 
-impl<T, W: Widget<T> + 'static> WidgetPod<T, W> {
+impl<T: 'static, W: Widget<T>> WidgetPod<T, W> {
     /// Box the contained widget.
     ///
     /// Convert a `WidgetPod` containing a widget of a specific concrete type

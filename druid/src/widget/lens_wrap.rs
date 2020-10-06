@@ -68,9 +68,12 @@ impl<T, U, L, W> Widget<T> for LensWrap<U, L, W>
 where
     T: Data,
     U: Data,
-    L: Lens<T, U>,
+    L: Lens<T, U> + 'static,
     W: Widget<U>,
 {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let inner = &mut self.inner;
         self.lens

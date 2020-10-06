@@ -104,6 +104,10 @@ impl<T: Data> Widget<T> for Svg {
         ctx.clip(clip_rect);
         self.svg_data.to_piet(offset_matrix, ctx);
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Stored SVG data.

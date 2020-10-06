@@ -125,6 +125,9 @@ impl<T: Data> BackgroundBrush<T> {
 }
 
 impl<T: Data> Widget<T> for Painter<T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, _: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {}
     fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &T, _: &Env) {}
     fn update(&mut self, ctx: &mut UpdateCtx, old: &T, new: &T, _: &Env) {

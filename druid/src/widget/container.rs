@@ -132,6 +132,12 @@ impl<T: Data> Container<T> {
 }
 
 impl<T: Data> Widget<T> for Container<T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn child(&self) -> Option<&dyn Widget<T>> {
+        Some(self.inner.widget())
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.inner.event(ctx, event, data, env);
     }

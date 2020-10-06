@@ -111,6 +111,9 @@ impl<T: Data> Button<T> {
 }
 
 impl<T: Data> Widget<T> for Button<T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         match event {
             Event::MouseDown(_) => {

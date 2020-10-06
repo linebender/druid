@@ -90,7 +90,7 @@ struct Windows<T> {
     windows: HashMap<WindowId, Window<T>>,
 }
 
-impl<T> Windows<T> {
+impl<T: Data> Windows<T> {
     fn connect(&mut self, id: WindowId, handle: WindowHandle, ext_handle: ExtEventSink) {
         if let Some(pending) = self.pending.remove(&id) {
             let win = Window::new(id, handle, pending, ext_handle);

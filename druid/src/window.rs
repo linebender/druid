@@ -58,7 +58,7 @@ pub struct Window<T> {
     // delegate?
 }
 
-impl<T> Window<T> {
+impl<T: Data> Window<T> {
     pub(crate) fn new(
         id: WindowId,
         handle: WindowHandle,
@@ -81,9 +81,7 @@ impl<T> Window<T> {
             ext_handle,
         }
     }
-}
 
-impl<T: Data> Window<T> {
     /// `true` iff any child requested an animation frame since the last `AnimFrame` event.
     pub(crate) fn wants_animation_frame(&self) -> bool {
         self.root.state().request_anim

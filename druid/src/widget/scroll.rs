@@ -104,6 +104,9 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.scroll_component.event(ctx, event, env);
         if !ctx.is_handled() {

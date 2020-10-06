@@ -194,6 +194,9 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<Vec<T>>) {
 }
 
 impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut children = self.children.iter_mut();
         data.for_each_mut(|child_data, _| {

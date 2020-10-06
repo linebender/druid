@@ -92,6 +92,9 @@ impl<W> Glow<W> {
 }
 
 impl<W: Widget<State>> Widget<State> for Glow<W> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut State, env: &Env) {
         self.inner.event(ctx, event, data, env);
     }

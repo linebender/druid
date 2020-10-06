@@ -151,7 +151,10 @@ impl<S, T> ModularWidget<S, T> {
     }
 }
 
-impl<S, T: Data> Widget<T> for ModularWidget<S, T> {
+impl<S: 'static, T: Data> Widget<T> for ModularWidget<S, T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Some(f) = self.event.as_mut() {
             f(&mut self.state, ctx, event, data, env)
@@ -201,6 +204,9 @@ impl<T: Data> ReplaceChild<T> {
 }
 
 impl<T: Data> Widget<T> for ReplaceChild<T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Event::Command(cmd) = event {
             if cmd.is(REPLACE_CHILD) {
@@ -266,6 +272,9 @@ impl Recording {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.recording.push(Record::E(event.clone()));
         self.inner.event(ctx, event, data, env)

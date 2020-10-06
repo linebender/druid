@@ -53,6 +53,9 @@ impl ColorWell {
 }
 
 impl Widget<MyColor> for ColorWell {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut MyColor, _env: &Env) {
         match event {
             Event::Command(cmd) if cmd.is(SET_COLOR) => {

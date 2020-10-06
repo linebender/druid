@@ -264,6 +264,9 @@ impl TextBox {
 }
 
 impl Widget<String> for TextBox {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, _env: &Env) {
         // Guard against external changes in data?
         self.selection = self.selection.constrain_to(data);

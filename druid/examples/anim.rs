@@ -25,6 +25,9 @@ struct AnimWidget {
 }
 
 impl Widget<u32> for AnimWidget {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut u32, _env: &Env) {
         match event {
             Event::MouseDown(_) => {

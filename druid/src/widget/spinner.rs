@@ -67,6 +67,9 @@ impl Default for Spinner {
 }
 
 impl<T: Data> Widget<T> for Spinner {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         if let Event::AnimFrame(interval) = event {
             self.t += (*interval as f64) * 1e-9;

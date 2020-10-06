@@ -62,7 +62,7 @@ use crate::{
 /// [`TextBox`]: struct.TextBox.html
 /// [`ControllerHost`]: struct.ControllerHost.html
 /// [`WidgetExt::controller`]: ../trait.WidgetExt.html#tymethod.controller
-pub trait Controller<T, W: Widget<T>> {
+pub trait Controller<T, W: Widget<T>>: 'static {
     /// Analogous to [`Widget::event`].
     ///
     /// [`Widget::event`]: ../trait.Widget.html#tymethod.event
@@ -109,6 +109,9 @@ impl<W, C> ControllerHost<W, C> {
 }
 
 impl<T, W: Widget<T>, C: Controller<T, W>> Widget<T> for ControllerHost<W, C> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.controller
             .event(&mut self.widget, ctx, event, data, env)

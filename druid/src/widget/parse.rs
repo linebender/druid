@@ -39,6 +39,9 @@ impl<T> Parse<T> {
 }
 
 impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse<W> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Option<T>, env: &Env) {
         self.widget.event(ctx, event, &mut self.state, env);
         *data = self.state.parse().ok();

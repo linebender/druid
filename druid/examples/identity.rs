@@ -93,6 +93,9 @@ impl ColorWell {
 }
 
 impl Widget<OurData> for ColorWell {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut OurData, _env: &Env) {
         match event {
             Event::Timer(t) if t == &self.token => {

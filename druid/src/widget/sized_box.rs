@@ -130,6 +130,16 @@ impl<T> SizedBox<T> {
 }
 
 impl<T: Data> Widget<T> for SizedBox<T> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn child(&self) -> Option<&dyn Widget<T>> {
+        match self.inner.as_ref() {
+            Some(inner) => Some(inner),
+            None => None,
+        }
+    }
+
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.event(ctx, event, data, env);

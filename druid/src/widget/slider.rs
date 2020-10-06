@@ -75,6 +75,9 @@ impl Slider {
 }
 
 impl Widget<f64> for Slider {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let slider_width = ctx.size().width;

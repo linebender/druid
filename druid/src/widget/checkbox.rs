@@ -38,6 +38,9 @@ impl Checkbox {
 }
 
 impl Widget<bool> for Checkbox {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut bool, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
