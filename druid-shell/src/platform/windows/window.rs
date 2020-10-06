@@ -329,6 +329,7 @@ struct WndState {
     has_mouse_focus: bool,
     //TODO: track surrogate orphan
     last_click_time: Instant,
+    last_click_pos: (i32, i32),
     click_count: u8,
 }
 
@@ -1027,15 +1028,20 @@ impl WndProc for MyWndProc {
                         let mods = s.keyboard_state.get_modifiers();
                         let buttons = get_buttons(wparam);
                         let dct = unsafe { GetDoubleClickTime() };
-                        let threshold = Duration::from_millis(dct as u64);
                         let count = if down {
                             // TODO: it may be more precise to use the timestamp from the event.
                             let this_click = Instant::now();
-                            if this_click - s.last_click_time >= threshold {
+                            let thresh_x = unsafe { GetSystemMetrics(SM_CXDOUBLECLK) };
+                            let thresh_y = unsafe { GetSystemMetrics(SM_CYDOUBLECLK) };
+                            let in_box = (x - s.last_click_pos.0).abs() <= thresh_x / 2
+                                && (y - s.last_click_pos.1).abs() <= thresh_y / 2;
+                            let threshold = Duration::from_millis(dct as u64);
+                            if this_click - s.last_click_time >= threshold || !in_box {
                                 s.click_count = 0;
                             }
                             s.click_count = s.click_count.saturating_add(1);
                             s.last_click_time = this_click;
+                            s.last_click_pos = (x, y);
                             s.click_count
                         } else {
                             0
@@ -1282,6 +1288,7 @@ impl WindowBuilder {
                 captured_mouse_buttons: MouseButtons::new(),
                 has_mouse_focus: false,
                 last_click_time: Instant::now(),
+                last_click_pos: (0, 0),
                 click_count: 0,
             };
             win.wndproc.connect(&handle, state);
