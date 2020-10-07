@@ -154,7 +154,7 @@ pub trait Widget<T> {
     ///
     /// A container widget will recursively call [`WidgetPod::layout`] on its
     /// child widgets, providing each of them an appropriate box constraint,
-    /// compute layout, then call [`set_layout_rect`] on each of its children.
+    /// compute layout, then call [`set_origin`] on each of its children.
     /// Finally, it should return the size of the container. The container
     /// can recurse in any order, which can be helpful to, for example, compute
     /// the size of non-flex widgets first, to determine the amount of space
@@ -166,7 +166,7 @@ pub trait Widget<T> {
     /// The layout strategy is strongly inspired by Flutter.
     ///
     /// [`WidgetPod::layout`]: struct.WidgetPod.html#method.layout
-    /// [`set_layout_rect`]: struct.WidgetPod.html#method.set_layout_rect
+    /// [`set_origin`]: struct.WidgetPod.html#method.set_origin
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
     /// Paint the widget appearance.
