@@ -15,13 +15,9 @@
 //! A widget that arranges its children in a one-dimensional array.
 
 use crate::kurbo::common::FloatExt;
-use crate::kurbo::{Point, Rect, Size};
-
+use crate::widget::prelude::*;
 use crate::widget::SizedBox;
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, UpdateCtx, Widget, WidgetPod,
-};
+use crate::{Data, KeyOrValue, Point, Rect, WidgetPod};
 
 /// A container with either horizontal or vertical layout.
 ///
@@ -632,7 +628,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 major_non_flex += self.direction.major(child_size).expand();
                 minor = minor.max(self.direction.minor(child_size).expand());
                 // Stash size.
-                let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
+                let rect = child_size.to_rect();
                 child.widget.set_layout_rect(ctx, data, env, rect);
             }
         }
@@ -659,7 +655,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 major_flex += self.direction.major(child_size).expand();
                 minor = minor.max(self.direction.minor(child_size).expand());
                 // Stash size.
-                let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
+                let rect = child_size.to_rect();
                 child.widget.set_layout_rect(ctx, data, env, rect);
             }
         }

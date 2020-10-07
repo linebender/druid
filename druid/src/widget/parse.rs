@@ -16,11 +16,8 @@ use std::fmt::Display;
 use std::mem;
 use std::str::FromStr;
 
-use crate::kurbo::Size;
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetId,
-};
+use crate::widget::prelude::*;
+use crate::Data;
 
 /// Converts a `Widget<String>` to a `Widget<Option<T>>`, mapping parse errors to None
 pub struct Parse<T> {

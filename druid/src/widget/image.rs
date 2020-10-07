@@ -20,8 +20,8 @@ use druid_shell::ImageBuf;
 use crate::{
     piet::{Image as PietImage, InterpolationMode},
     widget::common::FillStrat,
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Rect,
-    RenderContext, Size, UpdateCtx, Widget,
+    widget::prelude::*,
+    Data,
 };
 
 /// A widget that renders a bitmap Image.
@@ -167,7 +167,7 @@ impl<T: Data> Widget<T> for Image {
         // The ImageData's to_piet function does not clip to the image's size
         // CairoRenderContext is very like druids but with some extra goodies like clip
         if self.fill != FillStrat::Contain {
-            let clip_rect = Rect::ZERO.with_size(ctx.size());
+            let clip_rect = ctx.size().to_rect();
             ctx.clip(clip_rect);
         }
 

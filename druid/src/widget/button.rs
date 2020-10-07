@@ -13,11 +13,10 @@
 // limitations under the License.
 
 //! A button widget.
-use crate::theme;
+
 use crate::widget::prelude::*;
 use crate::widget::{Click, ControllerHost, Label, LabelText};
-
-use crate::{Affine, Data, Insets, LinearGradient, Point, Rect, RenderContext, UnitPoint, Widget};
+use crate::{theme, Affine, Data, Insets, LinearGradient, UnitPoint};
 
 // the minimum padding added to a button.
 // NOTE: these values are chosen to match the existing look of TextBox; these
@@ -165,7 +164,8 @@ impl<T: Data> Widget<T> for Button<T> {
         let size = ctx.size();
         let stroke_width = env.get(theme::BUTTON_BORDER_WIDTH);
 
-        let rounded_rect = Rect::from_origin_size(Point::ORIGIN, size)
+        let rounded_rect = size
+            .to_rect()
             .inset(-stroke_width / 2.0)
             .to_rounded_rect(env.get(theme::BUTTON_BORDER_RADIUS));
 

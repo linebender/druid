@@ -19,8 +19,8 @@ use std::ops::{Deref, DerefMut};
 use crate::text::TextStorage;
 use crate::widget::prelude::*;
 use crate::{
-    ArcStr, BoxConstraints, Color, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, Size,
-    TextAlignment, TextLayout,
+    ArcStr, Color, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, TextAlignment,
+    TextLayout,
 };
 
 // added padding between the edges of the widget and the text.

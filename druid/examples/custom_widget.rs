@@ -63,7 +63,7 @@ impl Widget<String> for CustomWidget {
         // Clear the whole widget with the color of your choice
         // (ctx.size() returns the size of the layout rect we're painting in)
         let size = ctx.size();
-        let rect = Rect::from_origin_size(Point::ORIGIN, size);
+        let rect = size.to_rect();
         ctx.fill(rect, &Color::WHITE);
 
         // Note: ctx also has a `clear` method, but that clears the whole context,
@@ -105,11 +105,7 @@ impl Widget<String> for CustomWidget {
             .make_image(256, 256, &image_data, ImageFormat::RgbaSeparate)
             .unwrap();
         // The image is automatically scaled to fit the rect you pass to draw_image
-        ctx.draw_image(
-            &image,
-            Rect::from_origin_size(Point::ORIGIN, size),
-            InterpolationMode::Bilinear,
-        );
+        ctx.draw_image(&image, size.to_rect(), InterpolationMode::Bilinear);
     }
 }
 

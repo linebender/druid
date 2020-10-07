@@ -22,9 +22,7 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 
 use crate::kurbo::Line;
-use crate::piet::RenderContext;
 use crate::widget::prelude::*;
-
 use crate::widget::{Axis, Flex, Label, LabelText, LensScopeTransfer, Scope, ScopePolicy};
 use crate::{theme, Affine, Data, Insets, Lens, Point, Rect, SingleUse, WidgetExt, WidgetPod};
 
@@ -675,7 +673,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         // Laying out all children so events can be delivered to them.
         for child in self.child_pods() {
             let size = child.layout(ctx, bc, inner, env);
-            child.set_layout_rect(ctx, inner, env, Rect::from_origin_size(Point::ORIGIN, size));
+            child.set_layout_rect(ctx, inner, env, size.to_rect());
         }
 
         bc.max()
@@ -686,7 +684,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
             let axis = self.axis;
             let size = ctx.size();
             let major = axis.major(size);
-            ctx.clip(Rect::from_origin_size(Point::ZERO, size));
+            ctx.clip(size.to_rect());
 
             let children = &mut self.children;
             if let Some(ref mut prev) = Self::child(children, trans.previous_idx) {

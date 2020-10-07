@@ -16,15 +16,14 @@
 
 use std::time::Duration;
 
-use crate::kurbo::{Affine, Insets, Point, Size, Vec2};
+use crate::kurbo::Vec2;
 use crate::text::{
     BasicTextInput, EditAction, EditableText, Editor, TextInput, TextLayout, TextStorage,
 };
-use crate::theme;
 use crate::widget::prelude::*;
 use crate::{
-    BoxConstraints, Cursor, Env, FontDescriptor, HotKey, KbKey, KeyOrValue, Selector, SysMods,
-    TimerToken,
+    theme, Affine, Cursor, FontDescriptor, HotKey, Insets, KbKey, KeyOrValue, Point, Selector,
+    SysMods, TimerToken,
 };
 
 const BORDER_WIDTH: f64 = 1.;
