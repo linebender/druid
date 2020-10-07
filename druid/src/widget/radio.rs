@@ -14,13 +14,10 @@
 
 //! A radio button widget.
 
-use crate::kurbo::{Circle, Size};
-use crate::theme;
+use crate::kurbo::Circle;
+use crate::widget::prelude::*;
 use crate::widget::{CrossAxisAlignment, Flex, Label, LabelText};
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
-    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
-};
+use crate::{theme, Data, LinearGradient, UnitPoint};
 
 const DEFAULT_RADIO_RADIUS: f64 = 7.0;
 const INNER_CIRCLE_RADIUS: f64 = 2.0;

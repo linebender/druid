@@ -14,11 +14,8 @@
 
 //! A widget that provides an explicit identity to a child.
 
-use crate::kurbo::Size;
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetId,
-};
+use crate::widget::prelude::*;
+use crate::Data;
 
 /// A wrapper that adds an identity to an otherwise anonymous widget.
 pub struct IdentityWrapper<W> {

@@ -17,15 +17,10 @@
 use std::f64::EPSILON;
 use std::time::Duration;
 
-use crate::kurbo::{BezPath, Rect};
+use crate::kurbo::BezPath;
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
-use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
-    TimerToken, UpdateCtx, Widget,
-};
-
-use crate::theme;
-use crate::Point;
+use crate::widget::prelude::*;
+use crate::{theme, Point, Rect, TimerToken};
 
 // Delay until stepper starts automatically changing valued when one of the button is held down.
 const STEPPER_REPEAT_DELAY: Duration = Duration::from_millis(500);
@@ -137,8 +132,7 @@ impl Widget<f64> for Stepper {
 
         // draw buttons for increase/decrease
         let increase_button_origin = Point::ORIGIN;
-        let mut decrease_button_origin = Point::ORIGIN;
-        decrease_button_origin.y += height / 2.;
+        let decrease_button_origin = Point::new(0., height / 2.0);
 
         let increase_button_rect = Rect::from_origin_size(increase_button_origin, button_size);
         let decrease_button_rect = Rect::from_origin_size(decrease_button_origin, button_size);

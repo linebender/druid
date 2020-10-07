@@ -318,7 +318,7 @@ impl ScrollComponent {
     /// Make sure to call on every event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, env: &Env) {
         let size = ctx.size();
-        let viewport = Rect::from_origin_size(Point::ORIGIN, size);
+        let viewport = size.to_rect();
 
         let scrollbar_is_hovered = match event {
             Event::MouseMove(e) | Event::MouseUp(e) | Event::MouseDown(e) => {

@@ -20,7 +20,6 @@ use std::mem;
 // Automatically defaults to std::time::Instant on non Wasm platforms
 use instant::Instant;
 
-use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::shell::{Counter, Cursor, Region, WindowHandle};
 
@@ -32,8 +31,8 @@ use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
     BoxConstraints, Command, Data, Env, Event, EventCtx, ExtEventSink, InternalEvent,
-    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken,
-    UpdateCtx, Widget, WidgetId, WidgetPod,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, Point, Size,
+    TimerToken, UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
 /// A unique identifier for a window.
@@ -366,12 +365,8 @@ impl<T: Data> Window<T> {
         };
         let bc = BoxConstraints::tight(self.size);
         let size = self.root.layout(&mut layout_ctx, &bc, data, env);
-        self.root.set_layout_rect(
-            &mut layout_ctx,
-            data,
-            env,
-            Rect::from_origin_size(Point::ORIGIN, size),
-        );
+        self.root
+            .set_layout_rect(&mut layout_ctx, data, env, size.to_rect());
         self.post_event_processing(&mut widget_state, queue, data, env, true);
     }
 

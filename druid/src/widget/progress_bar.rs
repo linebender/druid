@@ -14,12 +14,8 @@
 
 //! A progress bar widget.
 
-use crate::kurbo::{Point, Rect, Size};
-use crate::theme;
-use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
-    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
-};
+use crate::widget::prelude::*;
+use crate::{theme, LinearGradient, Point, Rect, UnitPoint};
 
 /// A progress bar, displaying a numeric progress value.
 ///

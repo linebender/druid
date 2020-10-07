@@ -17,11 +17,7 @@
 use crate::kurbo::{BezPath, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
-use crate::widget::{Label, LabelText};
-use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
-    Widget,
-};
+use crate::widget::{prelude::*, Label, LabelText};
 
 /// A checkbox that toggles a `bool`.
 pub struct Checkbox {

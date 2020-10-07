@@ -14,10 +14,7 @@
 
 //! A widget-controlling widget.
 
-use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
-    UpdateCtx, Widget, WidgetId,
-};
+use crate::widget::prelude::*;
 
 /// A trait for types that modify behaviour of a child widget.
 ///

@@ -14,12 +14,9 @@
 
 //! A slider widget.
 
-use crate::kurbo::{Circle, Point, Rect, Shape, Size};
-use crate::theme;
-use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
-    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
-};
+use crate::kurbo::{Circle, Shape};
+use crate::widget::prelude::*;
+use crate::{theme, LinearGradient, Point, Rect, UnitPoint};
 
 /// A slider, allowing interactive update of a numeric value.
 ///
@@ -135,7 +132,7 @@ impl Widget<f64> for Slider {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = self.normalize(*data);
-        let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
+        let rect = ctx.size().to_rect();
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let track_thickness = 4.;
         let border_width = 2.;

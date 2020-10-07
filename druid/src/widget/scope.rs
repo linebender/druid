@@ -1,9 +1,7 @@
-use crate::kurbo::{Point, Rect};
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle, LifeCycleCtx, PaintCtx,
-    Size, UpdateCtx, Widget, WidgetPod,
-};
 use std::marker::PhantomData;
+
+use crate::widget::prelude::*;
+use crate::{Data, Lens, WidgetPod};
 
 /// A policy that controls how a [`Scope`] will interact with its surrounding
 /// application data. Specifically, how to create an initial State from the
@@ -294,7 +292,7 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Widget<SP::In> for Scope<SP, W> {
     ) -> Size {
         self.with_state(data, |state, inner| {
             let size = inner.layout(ctx, bc, state, env);
-            inner.set_layout_rect(ctx, state, env, Rect::from_origin_size(Point::ORIGIN, size));
+            inner.set_layout_rect(ctx, state, env, size.to_rect());
             size
         })
     }

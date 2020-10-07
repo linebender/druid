@@ -16,13 +16,10 @@
 
 use std::time::Duration;
 
-use crate::kurbo::{Circle, Point, Shape, Size};
+use crate::kurbo::{Circle, Shape};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
-use crate::theme;
-use crate::{
-    ArcStr, BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    TextLayout, UpdateCtx, Widget,
-};
+use crate::widget::prelude::*;
+use crate::{theme, ArcStr, Point, TextLayout};
 
 const SWITCH_CHANGE_TIME: f64 = 0.2;
 const SWITCH_PADDING: f64 = 3.;
