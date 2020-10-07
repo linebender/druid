@@ -27,6 +27,8 @@ use crate::{Application, Env, MouseEvent, PaintCtx, Point, Rect, UpdateCtx};
 /// `Editor` manages an [`EditableText`] type, applying edits and maintaining
 /// selection state.
 ///
+/// The type parameter `T` is the text data being edited.
+///
 /// [`EditableText`]: trait.EditableText.html
 #[derive(Debug, Clone)]
 pub struct Editor<T> {
@@ -64,7 +66,6 @@ impl<T> Editor<T> {
         self.layout.set_wrap_width(width);
     }
 
-    //TODO discussion: should this deref/deref_mut?
     /// Return the inner [`TextLayout`] objects.
     ///
     /// [`TextLayout`]: struct.TextLayout.html
@@ -191,7 +192,7 @@ impl<T: TextStorage + EditableText> Editor<T> {
                 }
             }
             EditAction::Drag(action) => self.selection.end = action.column,
-            _ => (),
+            EditAction::SelectAll => self.selection = Selection::new(0, data.len()),
         }
     }
 
@@ -222,8 +223,7 @@ impl<T: TextStorage + EditableText> Editor<T> {
         self.selection = Selection::caret(self.selection.min() + text.len());
     }
 
-    /// Delete to previous grapheme if in caret mode.
-    /// Otherwise just delete everything inside the selection.
+    /// Delete backwards, using fancy logic when in caret mode.
     fn delete_backward(&mut self, data: &mut T) {
         let cursor_pos = if self.selection.is_caret() {
             let del_end = self.selection.end;
@@ -240,7 +240,7 @@ impl<T: TextStorage + EditableText> Editor<T> {
 
     fn delete_forward(&mut self, data: &mut T) {
         let to_delete = if self.selection.is_caret() {
-            movement(Movement::Right, self.selection, data, false)
+            movement(Movement::Right, self.selection, data, true)
         } else {
             self.selection
         };
