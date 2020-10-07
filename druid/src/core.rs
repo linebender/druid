@@ -71,10 +71,14 @@ pub struct WidgetPod<T, W> {
 #[derive(Clone)]
 pub(crate) struct WidgetState {
     pub(crate) id: WidgetId,
-    /// The frame of this widget in its parents coordinate space.
-    /// This should always be set; it is only an `Option` so that we
-    /// can more easily track (and help debug) if it hasn't been set.
-    layout_rect: Option<Rect>,
+    /// The size of the child; this is the value returned by the child's layout
+    /// method.
+    size: Size,
+    /// The origin of the child in the parent's coordinate space; together with
+    /// `size` these constitute the child's layout rect.
+    origin: Point,
+    /// A flag used to track and debug missing calls to set_origin.
+    is_expecting_set_origin_call: bool,
     /// The insets applied to the layout rect to generate the paint rect.
     /// In general, these will be zero; the exception is for things like
     /// drop shadows or overflowing text.
@@ -203,9 +207,21 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
 
     /// Set the layout [`Rect`].
     ///
+    /// This is soft-deprecated; you should use [`set_origin`] instead for new code.
+    ///
+    /// [`set_origin`]: WidgetPod::set_origin
+    pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, layout_rect: Rect) {
+        if layout_rect.size() != self.state.size {
+            log::warn!("set_layout_rect passed different size than returned by layout method");
+        }
+        self.set_origin(ctx, data, env, layout_rect.origin());
+    }
+
+    /// Set the origin of this widget, in the parent's coordinate space.
+    ///
     /// A container widget should call the [`Widget::layout`] method on its children in
-    /// its own [`Widget::layout`] implementation, then possibly modify the returned [`Size`], and
-    /// finally call this `set_layout_rect` method on the child to set the final layout [`Rect`].
+    /// its own [`Widget::layout`] implementation, and then call `set_origin` to
+    /// position those children.
     ///
     /// The child will receive the [`LifeCycle::Size`] event informing them of the final [`Size`].
     ///
@@ -213,24 +229,13 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`Rect`]: struct.Rect.html
     /// [`Size`]: struct.Size.html
     /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
-    pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, layout_rect: Rect) {
-        let mut needs_merge = false;
+    pub fn set_origin(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, origin: Point) {
+        self.state.origin = origin;
+        self.state.is_expecting_set_origin_call = false;
+        let layout_rect = self.layout_rect();
 
-        let old_size = self.state.layout_rect.map(|r| r.size());
-        let new_size = layout_rect.size();
-
-        self.state.layout_rect = Some(layout_rect);
-
-        if old_size.is_none() || old_size.unwrap() != new_size {
-            let mut child_ctx = LifeCycleCtx {
-                widget_state: &mut self.state,
-                state: ctx.state,
-            };
-            let size_event = LifeCycle::Size(new_size);
-            self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
-            needs_merge = true;
-        }
-
+        // if the widget has moved, it may have moved under the mouse, in which
+        // case we need to handle that.
         if WidgetPod::set_hot_state(
             &mut self.inner,
             &mut self.state,
@@ -240,22 +245,21 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             data,
             env,
         ) {
-            needs_merge = true;
-        }
-
-        if needs_merge {
             ctx.widget_state.merge_up(&mut self.state);
         }
     }
 
     /// Returns the layout [`Rect`].
     ///
-    /// This will be the same [`Rect`] that was set by [`set_layout_rect`].
+    /// This will be a [`Rect`] with a [`Size`] determined by the child's [`layout`]
+    /// method, and the origin that was set by [`set_origin`].
     ///
     /// [`Rect`]: struct.Rect.html
-    /// [`set_layout_rect`]: #method.set_layout_rect
+    /// [`Size`]: struct.Size.html
+    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`set_origin`]: WidgetPod::set_origin
     pub fn layout_rect(&self) -> Rect {
-        self.state.layout_rect.unwrap_or_default()
+        self.state.layout_rect()
     }
 
     /// Set the viewport offset.
@@ -513,20 +517,38 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         self.state.needs_layout = false;
+        self.state.is_expecting_set_origin_call = true;
 
         let child_mouse_pos = match ctx.mouse_pos {
             Some(pos) => Some(pos - self.layout_rect().origin().to_vec2()),
             None => None,
         };
+        let prev_size = self.state.size;
+
         let mut child_ctx = LayoutCtx {
             widget_state: &mut self.state,
             state: ctx.state,
             mouse_pos: child_mouse_pos,
         };
-        let size = self.inner.layout(&mut child_ctx, bc, data, env);
+
+        let new_size = self.inner.layout(&mut child_ctx, bc, data, env);
+        if new_size != prev_size {
+            let mut child_ctx = LifeCycleCtx {
+                widget_state: child_ctx.widget_state,
+                state: child_ctx.state,
+            };
+            let size_event = LifeCycle::Size(new_size);
+            self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
+        }
 
         ctx.widget_state.merge_up(&mut child_ctx.widget_state);
+        self.state.size = new_size;
+        self.log_layout_issues(new_size);
 
+        new_size
+    }
+
+    fn log_layout_issues(&self, size: Size) {
         if size.width.is_infinite() {
             let name = self.widget().type_name();
             log::warn!("Widget `{}` has an infinite width.", name);
@@ -535,7 +557,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let name = self.widget().type_name();
             log::warn!("Widget `{}` has an infinite height.", name);
         }
-        size
     }
 
     /// Execute the closure with this widgets `EventCtx`.
@@ -573,7 +594,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         // log if we seem not to be laid out when we should be
-        if self.state.layout_rect.is_none() && !event.should_propagate_to_hidden() {
+        if self.state.is_expecting_set_origin_call && !event.should_propagate_to_hidden() {
             debug_panic!(
                 "{:?} received an event ({:?}) without having been laid out. \
                 This likely indicates a missed call to set_layout_rect.",
@@ -590,7 +611,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             return;
         }
         let had_active = self.state.has_active;
-        let rect = self.state.layout_rect.unwrap_or_default();
+        let rect = self.layout_rect();
 
         // If we need to replace either the event or its data.
         let mut modified_event = None;
@@ -935,7 +956,9 @@ impl WidgetState {
     pub(crate) fn new(id: WidgetId, size: Option<Size>) -> WidgetState {
         WidgetState {
             id,
-            layout_rect: size.map(|s| s.to_rect()),
+            origin: Point::ORIGIN,
+            size: size.unwrap_or_default(),
+            is_expecting_set_origin_call: true,
             paint_insets: Insets::ZERO,
             invalid: Region::EMPTY,
             viewport_offset: Vec2::ZERO,
@@ -994,7 +1017,7 @@ impl WidgetState {
 
     #[inline]
     pub(crate) fn size(&self) -> Size {
-        self.layout_rect.unwrap_or_default().size()
+        self.size
     }
 
     /// The paint region for this widget.
@@ -1003,11 +1026,11 @@ impl WidgetState {
     ///
     /// [`WidgetPod::paint_rect`]: struct.WidgetPod.html#method.paint_rect
     pub(crate) fn paint_rect(&self) -> Rect {
-        self.layout_rect.unwrap_or_default() + self.paint_insets
+        self.layout_rect() + self.paint_insets
     }
 
     pub(crate) fn layout_rect(&self) -> Rect {
-        self.layout_rect.unwrap_or_default()
+        Rect::from_origin_size(self.origin, self.size)
     }
 }
 

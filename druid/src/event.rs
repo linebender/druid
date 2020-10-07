@@ -185,13 +185,13 @@ pub enum LifeCycle {
     /// [`WidgetPod`]: struct.WidgetPod.html
     /// [`LifeCycleCtx::register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
     WidgetAdded,
-    /// Called when the size of the widget changes.
+    /// Called when the [`Size`] of the widget changes.
     ///
-    /// The [`Size`] is derived from the [`Rect`] that was set with [`WidgetPod::set_layout_rect`].
+    /// This will be called after [`Widget::layout`], if the [`Size`] returned
+    /// by the widget differs from its previous size.
     ///
     /// [`Size`]: struct.Size.html
-    /// [`Rect`]: struct.Rect.html
-    /// [`WidgetPod::set_layout_rect`]: struct.WidgetPod.html#method.set_layout_rect
+    /// [`Widget::layout`]: trait.Widget.html#tymethod.layout
     Size(Size),
     /// Called when the "hot" status changes.
     ///
